@@ -18,10 +18,10 @@ import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { HISTORICAL_CONTENT_TYPES } from '@/content/typeAffinity';
 import { isEligibleAt } from '@/content/lifecycle';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
-import { validDecisionMeasurement } from '@/ledger/records';
+import { isOffLimitsLayoutRecord, validDecisionMeasurement } from '@/ledger/records';
 import type { ContentCatalog, DecisionInputs, DecisionRecord, LearnConfig, SlotCatalog, SlotStrategy } from '@/content/types';
 import { liftArchiveKey } from './fan';
-import type { LiftSnapshot } from './stats';
+import { DEFAULT_STATS, type LiftSnapshot } from './stats';
 
 export interface ReplayDiff { field: string; served: unknown; replayed: unknown }
 /**
@@ -102,6 +102,8 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.contextPrior', served.explain.contextPrior, replayed.explain.contextPrior);
   // P04: the rule that placed a module and the position it set, by value (keys sorted); absent on both for any other record.
   eq('explain.moduleRule', served.explain.moduleRule, replayed.explain.moduleRule);
+  // P29: the layout reason of the record's declared layout slot, by value (keys sorted); a record written without it replays without it.
+  eq('explain.layoutReason', served.explain.layoutReason, replayed.explain.layoutReason);
   return diff;
 }
 
@@ -178,7 +180,7 @@ function manifestVersionRefusal(value: unknown): string | null {
   return `page replay manifest version ${value.version} is not supported`;
 }
 
-function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig, floor: { tenant: number; signals: unknown }): Manifest | null {
+function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig, floor: { tenant: number; signals: unknown }, offLimits = false): Manifest | null {
   if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend' && key !== 'signalFloor' && key !== 'moduleRules').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
@@ -223,7 +225,7 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
   if (!target || !configured) return null;
   const prefixPolicy = value.pins === 'prefix-reserved-v2';
   const ids = prefixPolicy ? slotPins(configured) : [];
-  const pinPosition = prefixPolicy && served.position < ids.length;
+  const pinPosition = !offLimits && prefixPolicy && served.position < ids.length;
   // P04: under the module-rules marker a position after the prefix may hold a
   // module a position pin or an off-limits mark placed — authority `pin`, the
   // rule and its position on the record and consistent with the revision, no
@@ -231,9 +233,15 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
   // the ranked positions before it, which those fixed positions do not join;
   // the replay decides the page again and compares both.
   const ruled = own(value, 'moduleRules');
-  const rule = ruled && served.authority === 'pin' && !pinPosition ? served.explain?.moduleRule as unknown : undefined;
+  const rule = !offLimits && ruled && served.authority === 'pin' && !pinPosition ? served.explain?.moduleRule as unknown : undefined;
   const fixedPosition = rule !== undefined;
-  if (prefixPolicy) {
+  // P29 (decision D2): the record of an off-limits declared layout slot, written
+  // under the current policies only, holds position 0 for the site's own
+  // default, with no ranking ordinal and no snapshot.
+  if (offLimits) {
+    if (!prefixPolicy || !own(value, 'layout') || served.position !== 0 || served.authority !== 'default' || own(served, 'ranking_position')
+      || served.versions.lift !== 0 || served.versions.prior !== 0) return null;
+  } else if (prefixPolicy) {
     if (!identity(served.position) || served.position >= configured.take) return null;
     if (pinPosition) {
       if (served.authority !== 'pin' || served.item_id !== ids[served.position] || own(served, 'ranking_position') || served.versions.lift !== 0 || served.versions.prior !== 0) return null;
@@ -326,13 +334,20 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   if (!catalog) return fail(served, `catalog revision ${v.catalog} is not in the store`);
   if (!slots) return fail(served, `slots revision ${v.slots} is not in the store`);
   if (!learn) return fail(served, `learn revision ${v.learn} is not in the store`);
-  if ((learn.slots?.[served.slot]?.measurementBasis ?? 'served-v1') !== (served.measurementBasis ?? 'served-v1')) return fail(served, 'recorded measurement basis differs from its configuration');
+  // P29 (decision D2): the record of an off-limits declared layout slot names no
+  // module and measures nothing — it is recorded served-v1 whatever its slot's
+  // basis — and is replayed by deciding the page again and comparing the
+  // off-limits record that decision writes.
+  const offLimitsRecord = isOffLimitsLayoutRecord(served) && (served.measurementBasis ?? 'served-v1') === 'served-v1'
+    && (slots.pages[served.page] ?? []).some(slot => slot.slot === served.slot && slot.layout === true && slot.offLimits === true);
+  if (!offLimitsRecord && (learn.slots?.[served.slot]?.measurementBasis ?? 'served-v1') !== (served.measurementBasis ?? 'served-v1')) return fail(served, 'recorded measurement basis differs from its configuration');
   const inputs = served.inputs;
   const page = slots.pages[served.page] ?? [], targetIndex = page.findIndex(slot => slot.slot === served.slot);
   if (targetIndex < 0) return fail(served, 'the recorded slot is absent from the page revision');
   const target = page[targetIndex]!;
   const hasManifest = own(inputs, 'replay');
-  const manifest = hasManifest ? manifestOf(inputs.replay, page, served, learn, { tenant: slots.signalFloor ?? 0, signals: inputs.signals }) : null;
+  const manifest = hasManifest ? manifestOf(inputs.replay, page, served, learn, { tenant: slots.signalFloor ?? 0, signals: inputs.signals }, offLimitsRecord) : null;
+  if (offLimitsRecord && !manifest) return fail(served, 'invalid page replay manifest');
   if (hasManifest && !manifest) return fail(served, manifestVersionRefusal(inputs.replay) ?? 'invalid page replay manifest');
   // W28.R2 (amendment A20): the exploration rules the record was decided under
   // are the ones it STATES, beside the manifest (`inputs.explorationRules`). A
@@ -342,10 +357,13 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   const rules = recordedExplorationRules(inputs);
   if (rules === 'invalid') return fail(served, 'invalid exploration rules marker');
   const prefixPolicy = manifest?.pins === 'prefix-reserved-v2';
-  const pinned = prefixPolicy ? served.position < slotPins(target).length : Boolean(target.pinnedPieceId);
+  const pinned = !offLimitsRecord && (prefixPolicy ? served.position < slotPins(target).length : Boolean(target.pinnedPieceId));
   const pinId = prefixPolicy ? slotPins(target)[served.position] : target.pinnedPieceId;
   if (pinned && !catalog.pieces.some(piece => piece.id === pinId && piece.id === served.item_id && isEligibleAt(piece, served.ts))) return fail(served, 'the recorded item is not the eligible catalog pin');
-  const rankingSlots = prefixPolicy ? new Set(pinned ? [] : page.slice(0, targetIndex + 1).map(slot => slot.slot)) : undefined;
+  // P29: a pinned position that carries its layout slot's reason is replayed with
+  // the page executed again up to its slot, because the reason is a fact about
+  // the whole slot, not about the pin; any other pinned position as before.
+  const rankingSlots = prefixPolicy ? new Set(pinned && served.explain.layoutReason === undefined ? [] : page.slice(0, targetIndex + 1).map(slot => slot.slot)) : undefined;
   const selected = prefixPolicy ? page : manifest?.pins === 'reserved-eligible-v1'
     ? page.filter((slot, index) => Boolean(slot.pinnedPieceId) || (!pinned && index <= targetIndex))
     : pinned ? [target] : page.slice(0, targetIndex + 1);
@@ -388,6 +406,12 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     ? { channel: recordedContext.channel, events: recordedContext.events, lambda: recordedContext.lambda, level: recordedContext.level,
       version: recordedContext.version, visitBucket: recordedContext.visitBucket, share: inputs.context_share }
     : null;
+  // P29: the priors' weights the record states for its layout reason (`inputs.prior_lambda`), with the shares it carries.
+  const lambdas = inputs.prior_lambda;
+  const layoutPriors = lambdas ? {
+    ...(typeof lambdas.regional === 'number' && inputs.regional_share ? { regional: { lambda: lambdas.regional, share: inputs.regional_share } } : {}),
+    ...(typeof lambdas.context === 'number' && inputs.context_share ? { context: { lambda: lambdas.context, share: inputs.context_share } } : {}),
+  } : null;
   const extCfg = learn.external ?? null;
   let set: ReturnType<typeof decideContent>;
   requireRetention(env, served.retention?.ledger, served.tenant, 'ledger');
@@ -402,7 +426,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     pieces: catalog.pieces, slots: (manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared)).map(slot => manifest?.orders === ORDER_RULES ? slot : unordered(slot))
       .map(slot => manifest?.moduleRules === MODULE_RULES ? slot : unruled(slot)),
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
-    affinity: { dims: inputs.affinity }, regional, ...(contextBlend ? { contextBlend } : {}), cell: served.cell, arm: served.arm,
+    affinity: { dims: inputs.affinity }, regional, ...(contextBlend ? { contextBlend } : {}), ...(layoutPriors ? { layoutPriors } : {}), cell: served.cell, arm: served.arm,
     versions: { ...served.versions }, configLabel: served.config_label,
     candidateLimit: manifest?.candidateLimit ?? Math.max(10, served.candidates.length),
     learning: learning ? {
@@ -410,7 +434,9 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
       gammaOf: (slot) => learn.slots?.[slot]?.gamma ?? 0,
       exploreOf: (slot) => learn.slots?.[slot]?.exploration ?? null,
       controlOf: (slot, item) => learn.slots?.[slot]?.items?.[item] ?? null,
-      metadataOf: (slot) => ({ reward: learn.slots?.[slot]?.reward ?? 'click', objective: learn.slots?.[slot]?.objective ?? 'unit', measurementBasis: learn.slots?.[slot]?.measurementBasis ?? 'served-v1' }),
+      metadataOf: (slot) => ({ reward: learn.slots?.[slot]?.reward ?? 'click', objective: learn.slots?.[slot]?.objective ?? 'unit', measurementBasis: learn.slots?.[slot]?.measurementBasis ?? 'served-v1',
+        // P29: the constants the decision read nMin from where no snapshot was in force.
+        stats: learn.stats ?? DEFAULT_STATS }),
       // P28: a record that states the blend marker is replayed with the blend its
       // learn revision opts into; one that states none, without it, which is
       // what that decision did.
@@ -435,10 +461,13 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,
   manifest?.governance === 'slot-gates-v2' ? undefined : manifest?.governance === 'slot-gates-v1' ? HISTORICAL_GOVERNANCE_V1 : HISTORICAL_GOVERNANCE,
   rules === 'current' ? undefined : HISTORICAL_EXPLORATION_RULES); } catch { return fail(served, 'recorded replay inputs could not be evaluated'); }
-  const replayed = set.records.find((r) => r.slot === served.slot && r.position === served.position) ?? null;
+  const replayed = (offLimitsRecord ? set.offLimitsRecords?.find((r) => r.slot === served.slot)
+    : set.records.find((r) => r.slot === served.slot && r.position === served.position)) ?? null;
   // Rendering is an authenticated later observation, not a new ranking time.
   // Preserve that observation while recomputing the original decision inputs.
   if (replayed) {
+    // P29: a record written without the layout reason replays without it, as before.
+    if (served.explain.layoutReason === undefined) delete replayed.explain.layoutReason;
     if (served.measurementBasis) replayed.measurementBasis = served.measurementBasis;
     if (served.rendered) replayed.rendered = { ...served.rendered };
     if (replayed.explain.lift && served.explain.lift) {

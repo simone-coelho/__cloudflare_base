@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-12, evening: P29 closed (8/25); P31 active; programme 2 at 3/5 with P40 active
+
+- **Parity `tapestry-parity-build`:** Local done 8/25 · Final 0/25 · `check` PASS. P29 closed after two specification fix rounds (R-P56 and its amendment, R-P57: the move term is the term by which a moved module differs most from the modules it passed or that passed it, taken together; rule-placed modules compared like any other; artifact 54ea5272; merge bfa79bdc; receipt 051ce562). **P31 ACTIVE** at 143d781b, building in `/home/simonecoelho/rem/build-p31` (brief `_evidence/parity-step3/P31/implementer/BRIEF.md`). Order after P31: P05 P06 P12 P13 P34 P30 P33 P32 P09 P11 P14 P35 P08 P15 P16 P26.
+- **Programme 2 `tapestry-parity-customer-answers`:** 3/5 · P36 (d8434259, receipt b7fdbae1), P37 (5ac68687, receipt 109693bd), P38 (fdf43873, receipt 1f06a248) closed; **P40 ACTIVE** at 40dd0b40, building in `/home/simonecoelho/rem/build-p40`; P39 staged (`build-p39`, work order, brief with @@INT_SHA@@).
+- **Owner-visible residuals, unassigned:** P07's context prior only for the six channel words and three buckets (regionTrend.ts:65-81); P29's nothing_else_eligible fallback wording for the data-science lead's LIVE2; P38's enrichment publication path publishing tags without the vocabulary check and the exact-match rule (every source spelling a listed synonym for LIVE2); the rest per ticket in `_evidence/parity-step3/AMENDMENTS.md`.
+- **Lead tools and lanes:** `/home/simonecoelho/rem/_evidence/_lead-tools/`; every WSL lane under `/home/simonecoelho/rem/` locked, never pruned. Bootstrap: `docs/remediation/BOOTSTRAP-LEAD.md`.
+
 ## 2026-10-12, midday: P07 and P04 closed (7/25); P29 active; P36 in fix round 2
 
 - **Parity `tapestry-parity-build`:** Local done 7/25 · Final 0/25 · `check` PASS. P07 closed (artifact 30c29623 after one specification fix round, R-P53; receipt abbe715b); P04 closed (artifact 3742e05d; merge 1f7fcefd; receipt f4594d4b). **P29 ACTIVE** at 9bf4fdca, building in `/home/simonecoelho/rem/build-p29` (`rem/p29-build` from `rem/tkt/P29` bc567ba5; brief `_evidence/parity-step3/P29/implementer/BRIEF.md`). P31 staged (`build-p31` from `rem/tkt/P31` 4c62cdab; brief with @@INT_SHA@@). Order after P29: P31 P05 P06 P12 P13 P34 P30 P33 P32 P09 P11 P14 P35 P08 P15 P16 P26.

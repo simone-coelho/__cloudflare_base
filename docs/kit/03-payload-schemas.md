@@ -124,7 +124,8 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
 | `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
 | `explain.moduleRule` | A position pin or an off-limits mark of the layout slot placed this module: `{ position, rule }`, keys sorted, `rule` `pinned` (the module pinned at a position, served there) or `off_limits` (the off-limits module held at its baseline position), and `position` the position the rule set, counted from 1. Present only on such a record, whose authority is `pin`, and compared by value in replay; the shopper's receipt carries the same block as `moduleRule` and says the rule and the position in words ([position pins and off-limits modules](#position-pins-and-off-limits-modules)) |
-| `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
+| `explain.layoutReason` | The layout reason of the page's declared layout slot: `{ cause, slot, status }` (with `n` and `nMin` for the cause `no_level_reached_nmin`) when the served order is unchanged against the slot's baseline, or `{ moves, slot, status }` when it changed, each move `{ from, module, term, to }`; keys sorted. The same value on every record of the slot and on the decision set, present only on a declared layout slot's records, and compared by value in replay; the shopper's receipt carries it as `layoutReason` and says it in words ([the layout reason](#the-layout-reason)) |
+| `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. Where a population prior applied and the page's declared layout slot ranked above the signal floor, `prior_lambda: { context?, regional? }` (keys sorted) states each prior's weight λ, so the layout reason replays exactly from any record of the page. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
 
@@ -320,8 +321,9 @@ and `removed` `null` — when that revision could not be read.
 Current slot writes accept an absent marker or `governanceVersion: 1 | 2 | 3 | 4` and emit version 3, or
 version 4 for a document marked 4 and for an unmarked one that declares a layout slot or carries
 per-context orders ([the slot document](#the-slot-document)); any other explicit version refuses. `offLimits` is an optional boolean; true hands the slot to the site's own
-default on every arm, without candidates, decisions or records. A dormant pin and all other settings
-are retained. Re-enabling must pass active pin take/uniqueness/exclusion validation.
+default on every arm, without candidates, decisions or records; a declared layout slot marked off-limits
+also writes one record naming why to the ledger, never to the shopper's ring ([the layout reason](#the-layout-reason)).
+A dormant pin and all other settings are retained. Re-enabling must pass active pin take/uniqueness/exclusion validation.
 `excludedPieceIds` is an optional JSON array of up to 1000 distinct exact internal catalog IDs,
 each 1–1024 UTF-16 units: no trimming, case conversion, customer-ID alias or tag expression.
 Absent/false/[] are neutral. Unknown IDs are harmless; explicit nulls and duplicates refuse.
@@ -653,6 +655,60 @@ The record of a module either rule placed carries `explain.moduleRule: { positio
 off-limits mark decided something writes `inputs.replay.moduleRules: "module-rules-v1"`, and its replay
 re-applies both rules and compares the record exactly; every other decision, every slot without either
 member, and every stored document marked 1, 2 or 3 decides and replays exactly as before.
+
+#### The layout reason
+
+```json
+{ "cause": "no_level_reached_nmin", "n": 10, "nMin": 30, "slot": "pdp-modules", "status": "unchanged" }
+{ "moves": [{ "from": 3, "module": "module.PDP.reco.2", "term": "affinity", "to": 1 },
+  { "from": 4, "module": "module.PDP.editorial.1", "term": "affinity", "to": 2 }], "slot": "pdp-modules", "status": "changed" }
+```
+
+Every decision on the page's declared layout slot carries one reason, `layoutReason`, comparing the served
+order with the slot's baseline: the merchandiser's fixed positions (prefix pins, modules pinned at a
+position, off-limits modules at their baseline position) where their rules put them, and on every other
+position the configured order for the shopper's context where one matches, else the modules the slot can
+serve (after eligibility, its exclusions and what the page already served or reserved) in catalogue order.
+A `layoutReason` is either `status` `unchanged` with exactly one `cause`, or `status` `changed` with its
+`moves`, keys sorted in both, and it is the same value on the decision set, on every record of the slot
+(`explain.layoutReason`) and on every receipt of the slot (`layoutReason`). The cause of an unchanged
+layout is the first of these that holds, in this order: `pinned` (pins, with any off-limits modules, hold
+every position), `off_limits` (the slot is off-limits, or off-limits modules hold every position),
+`holdout_or_consent` (the holdout's `default` arm, the arm of a shopper without personalization consent
+too), `below_signal_floor` (decided on context alone), `blend_or_trust_zero` (the blend's `p` at 0 on an
+opted-in slot, a configured order served exactly on a slot that does not opt in, or γ at 0),
+`no_level_reached_nmin` (no ladder level reached nMin for any module the slot ranked, with `n`, the most
+evidence any of them holds at any level of the shopper's cell, and `nMin`), `zero_base` (no ranked module
+had a base score above 0), `catalogue_order_ties` (a served module's score tied another's) and
+`nothing_else_eligible` (the slot could rank at most one module, or its ranking placed every module where
+the baseline does); a later release may add causes. Each of the moves of a changed layout is
+`{ from, module, term, to }`, positions counted from 1 within the slot (a module the baseline places
+past the take keeps its place in that order, so `from` can exceed the take; `from` is null for a module
+the baseline does not hold), for every module served away from its baseline position, and its `term`
+is the term that moved it: `affinity`, `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`,
+`freshness`, `fatigue`, `merchandising`, `lift`, `blend`, `exploration` or `diversity`: `exploration` for a
+module exploration itself placed, `diversity` for one the diversity rule itself made yield or placed by
+relaxing it, and for any other the term that changed its place, the term by which it differs most from the modules it passed
+(moved up) or that passed it (moved down) taken together, each term's difference averaged over those
+modules and the largest in the direction it moved named, an exact tie going to the earlier term in the
+engine's order `affinity`, `regional_prior`, `context_prior`, `completes`, `seed`, `external`, `stage`,
+`freshness`, `fatigue`, `merchandising`, `lift`, `blend`. The modules compared are the slot's ranked
+modules other than a fixed position, a module that exploration or the diversity rule placed or displaced
+being compared like any other, including for a module moved up every module the baseline placed ahead of
+it that is not served; only where no term separates it from them by more than 0.0005, or there is none to
+compare, does a rule name it: `exploration` or `diversity` when one of them was placed or displaced by that
+rule, else its own largest term in the direction it moved, else the term of the first module that passed
+it or that it passed.
+
+An off-limits declared layout slot writes one record, never into the shopper's decision ring, so it
+carries no exposure, no receipt reads it and no outcome is credited to it: position 0, `item_id`
+`"(off-limits)"`, `customer_item_id` empty, no candidates, authority `default`, `measurementBasis`
+`served-v1`, the decision's own arm, cell and versions (lift and prior 0), and `explain.layoutReason` with
+the cause `off_limits`. It goes to the ledger, and so rides the export, under the shopper's tracking
+consent and only for a layout slot measured on `rendered-v1`, so every report and learning fold sets it
+aside as a row recorded under another basis than its slot's; its replay decides the page again and
+compares it. The reason rides every exported decision record unchanged, and a record written before it
+replays without it.
 
 ### The signal floor
 

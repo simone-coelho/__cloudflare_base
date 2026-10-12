@@ -7,8 +7,9 @@
 
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
 } from './types';
+import { OFF_LIMITS_ITEM } from '@/ledger/records';
 import { contextSpecificity, validateSeedRules } from './kinds';
 import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, type RecencyBucket } from '@/services/visit';
 import { TODAY_TERMS, type ContextTerms } from './cell';
@@ -70,7 +71,9 @@ export interface DecideInput {
     /** Doc 22 §12.2, per slot: a merchandiser's control over an item's learned lift. */
     controlOf?: (slot: string, item: string) => ItemControl | null;
     /** Pinned slot authority, including when a compatible lift is unavailable. */
-    metadataOf?: (slot: string) => { reward: import('@/ledger/records').RewardType; objective?: 'unit' | 'revenue' | 'margin'; measurementBasis?: import('./types').MeasurementBasis };
+    metadataOf?: (slot: string) => { reward: import('@/ledger/records').RewardType; objective?: 'unit' | 'revenue' | 'margin'; measurementBasis?: import('./types').MeasurementBasis;
+      /** P29: the slot's statistics constants, of which the layout reason reads nMin where no snapshot is in force. */
+      stats?: { nMin: number } };
     /**
      * P28 (decision D1), per slot: the layout blend the slot's learn dials opt
      * into, or null (`layoutBlendOf`). Read only for the page's declared layout
@@ -162,6 +165,15 @@ export interface DecideInput {
    * replay passes the shares the record carries (`inputs.context_share`).
    */
   contextBlendShare?: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  /**
+   * P29: the population priors a replayed page was blended with, as its record
+   * carries them (`inputs.prior_lambda` beside `inputs.regional_share` and
+   * `inputs.context_share`), for the layout reason's itemisation of what a
+   * prior moved where the replayed record itself itemises no prior. Read only
+   * by the layout reason; the serving path passes none, its blends carrying λ.
+   */
+  layoutPriors?: { regional?: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> };
+    context?: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } } | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -297,6 +309,41 @@ export function slotDocumentConstraintDiagnostics(pieces: readonly ContentPiece[
 
 /** Three decimals, the grain every itemised delta on a receipt is recorded at. */
 const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; return v === 0 ? 0 : v; };
+
+/** P29: half that grain — a score term smaller than this moved nothing a receipt could show. */
+const LAYOUT_TERM_GRAIN = 0.0005;
+
+/** P29: a ranked module's score itemised term by term, in the engine's fixed order (`scoreTerms` in `decideContent`). */
+type ScoreTerms = ReadonlyArray<readonly [LayoutMoveTerm, number]>;
+
+/** P29: the term that contributed most to a score — its largest positive term (`sign` 1) or its largest negative one (−1) — or null when no term reaches the grain. */
+function largestTerm(terms: ScoreTerms, sign: 1 | -1): LayoutMoveTerm | null {
+  let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
+  for (const [term, value] of terms) if (sign * value > size) { best = term; size = sign * value; }
+  return best;
+}
+
+/**
+ * R-P56: the term by which a moved module differs most from the modules it passed
+ * (`sign` 1) or that passed it (`sign` −1), those modules taken together: each
+ * term's difference averaged over them, read at a billionth so that the same
+ * value reached along two floating-point paths is one value, the largest in the
+ * direction it moved named, an exact tie going to the earlier term of the fixed
+ * order. Null when there is no module to compare or no term separates it from
+ * them by more than the grain.
+ */
+function differingTerm(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): LayoutMoveTerm | null {
+  if (!others.length) return null;
+  let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
+  for (let j = 0; j < own.length; j++) {
+    const [term, value] = own[j]!;
+    let total = 0;
+    for (const other of others) total += sign * (value - (other[j]?.[1] ?? 0));
+    const mean = Math.round((total / others.length) * 1e9) / 1e9;
+    if (mean > size) { best = term; size = mean; }
+  }
+  return best;
+}
 
 const authorityOf = (strategy: string): Authority =>
   strategy === 'tenant-pinned' ? 'pin' : strategy === 'default' ? 'default' : 'engine';
@@ -770,7 +817,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     blendedSlots.add(slot);
     return R + (1 - blend.p) * B + blend.p * Q;
   };
-  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue || seedRules.size ? (p, slot, base0, rank) => {
+  const adjustScore: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue || seedRules.size ? (p, slot, base0, rank) => {
     const key = `${slot}:${p.id}`;
     // The seeds enter where the slot's own tag sum lands, before merchandising,
     // because a seed supplies the missing interest for a canonical tag this
@@ -808,6 +855,21 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const lifted = base * Math.pow(look.lift, gamma);
     liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied: r3(lifted - base), ...(look.prior ? { prior: look.prior } : {}) });
     return lifted;
+  } : undefined;
+  // P29: per candidate, the score the composer handed over (the tag sum and any
+  // anchor bonus) and the score it ranked by, and per slot the candidates it
+  // scored, so the layout reason reads the ranking the composer actually ran.
+  // Recording only: the adjusted score is returned unchanged.
+  const tagOf = new Map<string, number>(), finalOf = new Map<string, number>(), scoredIn = new Map<string, Set<string>>();
+  const adjust: ScoreAdjust | undefined = adjustScore ? (p, slot, base0, rank) => {
+    const value = adjustScore(p, slot, base0, rank), key = `${slot}:${p.id}`;
+    tagOf.set(key, base0);
+    // The composer ranks by the adjusted score where it takes it, else by the tag sum (`composeContentDetailed`).
+    finalOf.set(key, Number.isFinite(value) && (value >= 0 || rank !== undefined) ? value : base0);
+    let scored = scoredIn.get(slot);
+    if (!scored) { scored = new Set<string>(); scoredIn.set(slot, scored); }
+    scored.add(p.id);
+    return value;
   } : undefined;
   const controlOf = new Map<string, 'reject' | 'freeze'>();
   // Exploration (doc 22 §7): decided per slot from the ranked candidates, deterministic in its inputs.
@@ -987,6 +1049,18 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // any slot personalized, it is the shopper's vector as before, and the context view is
   // derived again from the recorded prior shares.
   const contextOnlyPage = below.size > 0 && i.slots.every((slot) => slot.offLimits || below.has(slot.slot));
+  // P29: the population priors the layout reason itemises — each one's λ and
+  // shares — from the blends on the serving path and, on a replay, from what the
+  // record carries (`layoutPriors`). A page whose declared layout slot ranks
+  // above the signal floor while a prior applied states each prior's λ on its
+  // records (`inputs.prior_lambda`, keys sorted), so the reason replays exactly
+  // whichever record is replayed; below the floor each prior is at λ 1, which
+  // the record already implies.
+  const regionalPrior = i.arm === 'default' ? null : i.layoutPriors?.regional ?? (i.regional ? { lambda: i.regional.lambda, share: i.regional.share } : null);
+  const contextPriorTerm = i.arm === 'default' ? null : i.layoutPriors?.context ?? (i.contextBlend ? { lambda: i.contextBlend.lambda, share: i.contextBlend.share } : null);
+  const layoutRanksAbove = i.slots.some((slot) => slot.layout === true && !slot.offLimits && !below.has(slot.slot));
+  const priorLambda = layoutRanksAbove && (regionalPrior || contextPriorTerm)
+    ? { ...(contextPriorTerm ? { context: contextPriorTerm.lambda } : {}), ...(regionalPrior ? { regional: regionalPrior.lambda } : {}) } : null;
   const inputs: DecisionInputs & { explorationRules?: ExplorationRules } = {
     affinity: plain((contextOnlyPage ? contextView : affinity).dims) as DecisionInputs['affinity'],
     replay: {
@@ -1009,11 +1083,216 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
     // P07: the context prior's shares, written only when it applied (keys sorted).
     ...(i.contextBlend && i.arm !== 'default' ? { context_share: sortedShares(i.contextBlend.share) } : {}),
+    ...(priorLambda ? { prior_lambda: priorLambda } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
     ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
     ...(below.size ? { signals: signalCount } : {}),
     ...rules,
   };
+
+  // ── P29 (decisions D1, D2): the layout reason of each declared layout slot ──
+  //
+  // The served order is compared with the slot's BASELINE: the merchandiser's
+  // fixed positions — prefix pins, modules pinned at a position and off-limits
+  // modules held at their place (P04) — where their rules put them, and on every
+  // other position the configured order this decision resolved for the
+  // shopper's context (P01), else the slot's eligible modules in catalogue order
+  // (R-P23 C7: after lifecycle eligibility, the slot's own exclusions and gates,
+  // and what the page served or reserved before it). Where they agree the
+  // layout is unchanged, with one cause: the first that holds in the ticket's
+  // own order. Where they differ it changed, and each module served away from
+  // its baseline position names the term that moved it. Read only from what
+  // this decision already computed, so it can neither fail nor change what is
+  // served; only under the current pin and governance policies, which every
+  // declared layout slot is decided under, and never for a slot a bounded
+  // replay did not re-execute.
+  const layoutReasons = new Map<string, LayoutReason>();
+  if (!historicalPins && historicalGovernance === undefined) {
+    const slotIndex = new Map(i.slots.map((slot, index) => [slot.slot, index] as const));
+    const live = eligible.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
+    const pinRefused = new Set((pinDiagnostics ?? []).map((d) => d.slot));
+    for (const [index, s] of i.slots.entries()) {
+      if (s.layout !== true || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))) continue;
+      // An off-limits layout slot serves nothing: its record (below) is all it writes.
+      if (s.offLimits) { layoutReasons.set(s.slot, { cause: 'off_limits', slot: s.slot, status: 'unchanged' }); continue; }
+      const served = decisions.filter((d) => d.slot === s.slot);
+      // P04's whole-slot refusal: a refused pin left the slot serving nothing and writing no record, so there is no reason to give.
+      if (!served.length && pinRefused.has(s.slot)) continue;
+      const reason = layoutReasonOf(s, index, served, slotIndex, live, pinRefused);
+      layoutReasons.set(s.slot, reason);
+    }
+  }
+  /** P29: one declared layout slot's reason, as the comment above defines it. */
+  function layoutReasonOf(s: SlotStrategy, index: number, served: typeof decisions, slotIndex: ReadonlyMap<string, number>,
+    live: readonly ContentPiece[], pinRefused: ReadonlySet<string>): LayoutReason {
+    const spec = specOf.get(s.slot)!, keyOf = (id: string) => `${s.slot}:${id}`;
+    const fixed = (d: (typeof decisions)[number]) => d.strategy === 'tenant-pinned';
+    // What the slot could fill around its fixed positions, pooled as the composer pools it.
+    const gate = compileSlotConstraints(spec, true);
+    const before = new Set(decisions.filter((d) => (slotIndex.get(d.slot) ?? Number.POSITIVE_INFINITY) < index).map((d) => d.contentId));
+    const reserved = new Set<string>();
+    for (const other of i.slots) {
+      if (other.slot === s.slot || other.offLimits || pinRefused.has(other.slot)) continue;
+      for (const id of other.pinnedPieceIds ?? []) reserved.add(id);
+      for (const pin of other.positionPins ?? []) reserved.add(pin.pieceId);
+      if (other.pinnedPieceId) reserved.add(other.pinnedPieceId);
+    }
+    const own = new Set(served.filter(fixed).map((d) => d.contentId)), marks = new Set(spec.offLimitsPieceIds ?? []);
+    const pool = live.filter((p) => p.slotTypes.includes(s.slot) && !(gate.active && gate.reason(p)) && !before.has(p.id) && !reserved.has(p.id)
+      && !own.has(p.id) && !marks.has(p.id)).map((p) => p.id);
+    const order = configured.get(s.slot), inPool = new Set(pool);
+    const sequence = order ? [...new Set(order.modules)].filter((id) => inPool.has(id)) : pool;
+    // The baseline, position by position: a fixed module where the composer placed
+    // it (the same positions, ranking and baseline filling the same number of
+    // free positions), the baseline sequence on every other position.
+    let next = 0;
+    const baseline = served.map((d) => (fixed(d) ? d.contentId : sequence[next++]));
+    const fromOf = new Map<string, number>();
+    baseline.forEach((id, k) => { if (id !== undefined && !fromOf.has(id)) fromOf.set(id, k + 1); });
+    let beyond = served.length;
+    for (const id of sequence.slice(next)) if (!fromOf.has(id)) fromOf.set(id, ++beyond);
+    const scored = [...(scoredIn.get(s.slot) ?? pool)];
+    const support = new Map((candidates[s.slot] ?? []).map((c) => [c.contentId, c.score] as const));
+    if (baseline.every((id, k) => id === served[k]!.contentId)) {
+      // Unchanged: the first cause that holds, in the ticket's own order (decision D1).
+      const fixedAll = served.length > 0 && served.length === s.take && served.every(fixed);
+      const blend = blends.get(s.slot);
+      const answered = scored.some((id) => liftOf.has(keyOf(id)));
+      const scoreOf = (id: string) => finalOf.get(keyOf(id)) ?? support.get(id);
+      const ranked = served.filter((d) => !fixed(d));
+      let cause: LayoutReasonCause, ladder: { n: number; nMin: number } | null = null;
+      if (fixedAll) cause = served.some((d) => ruleOf.get(keyOf(d.contentId))?.rule !== 'off_limits') ? 'pinned' : 'off_limits';
+      else if (i.arm === 'default') cause = 'holdout_or_consent';
+      else if (below.has(s.slot)) cause = 'below_signal_floor';
+      // The learned term is held at zero: the blend's p at 0 (or the no-learning
+      // arm, whose Q is 0); a configured order served exactly, which nothing but
+      // the blend could move (freeze sheet items 8 and 17); or a trust dial γ at 0.
+      else if (blend ? blend.p === 0 || i.arm === 'no_learning' : orderedSlots.has(s.slot) || !learning || learning.gammaOf(s.slot) <= 0) cause = 'blend_or_trust_zero';
+      else if (scored.length && !answered) {
+        cause = 'no_level_reached_nmin';
+        // The n the ladder has — the most evidence any candidate holds at any level of the shopper's cell — and the nMin it needs.
+        const snapshot = learning?.snapshots[s.slot] ?? null, levels = levelKeys(i.cell);
+        let n = 0;
+        for (const id of scored) for (const level of levels) { const held = snapshot?.items[id]?.[level]?.n; if (typeof held === 'number' && Number.isFinite(held) && held > n) n = held; }
+        ladder = { n: r3(n), nMin: snapshot?.nMin ?? learning?.metadataOf?.(s.slot)?.stats?.nMin ?? DEFAULT_STATS.nMin };
+      } else if (scored.length && scored.every((id) => (baseOf.get(keyOf(id)) ?? support.get(id) ?? 0) === 0)) cause = 'zero_base';
+      else if (ranked.some((d) => scored.some((id) => id !== d.contentId && scoreOf(id) !== undefined && scoreOf(id) === scoreOf(d.contentId)))) cause = 'catalogue_order_ties';
+      // The slot could rank at most one module, or — the vocabulary naming no
+      // other — its ranking placed every module exactly where the baseline does.
+      else cause = 'nothing_else_eligible';
+      return ladder ? { cause, n: ladder.n, nMin: ladder.nMin, slot: s.slot, status: 'unchanged' } : { cause, slot: s.slot, status: 'unchanged' };
+    }
+    // Changed: each module served away from its baseline position, and the term that moved it.
+    const pick = explored.get(s.slot), firstRanked = served.find((d) => !fixed(d));
+    const exploredIds = new Set<string>(pick?.ranking ? served.filter((d) => !fixed(d)).map((d) => d.contentId)
+      : pick && firstRanked?.contentId === pick.pieceId ? [pick.pieceId] : []);
+    const yielded = new Set(served.flatMap((d) => (d.explain.diversity ? [...d.explain.diversity.skipped, ...(d.explain.diversity.relaxed ? [d.contentId] : [])] : [])));
+    const moves = served.flatMap((d, k) => {
+      const from = fromOf.get(d.contentId) ?? null;
+      return from === k + 1 ? [] : [{ module: d.contentId, from, to: k + 1 }];
+    });
+    // R-P56 and R-P57: a moved module names the term that changed its place. A
+    // module that exploration itself placed names `exploration`, one the
+    // diversity rule itself made yield or placed by relaxing it `diversity`. Any
+    // other moved module is compared with the modules it passed (moved up) or
+    // that passed it (moved down): the slot's ranked modules other than a fixed
+    // position — a module exploration or the diversity rule placed or displaced
+    // compared like any other — served, or, for a module moved up, placed ahead
+    // of it by the baseline and not served. Each score is itemised term by term
+    // (`scoreTerms`), each term's difference is taken together over those
+    // modules (averaged), and the term by which the module differs most in the
+    // direction it moved is named, an exact tie going to the earlier term of the
+    // fixed order (`differingTerm`). Only where no term separates it from them by
+    // the grain, or there are none, does a rule name it: the rule that placed or
+    // displaced the first of them whose place a rule set, else its own largest
+    // term in that direction.
+    const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
+      (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
+    const servedIds = new Set(served.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
+    const placedByRule = (id: string) => exploredIds.has(id) || yielded.has(id);
+    const termsMemo = new Map<string, ScoreTerms | null>();
+    const termsFor = (id: string, score: number | undefined): ScoreTerms | null => {
+      if (!termsMemo.has(id)) termsMemo.set(id, scoreTerms(id, s.slot, score));
+      return termsMemo.get(id) ?? null;
+    };
+    const termOf = new Map<string, LayoutMoveTerm>();
+    for (const move of moves) {
+      const d = served[move.to - 1]!;
+      const up = move.from === null || move.to < move.from;
+      let term: LayoutMoveTerm | null = exploredIds.has(d.contentId) ? 'exploration' : yielded.has(d.contentId) ? 'diversity' : null;
+      if (!term) {
+        const others: ScoreTerms[] = [];
+        // The rule that placed or displaced the first module it passed, or that
+        // passed it, whose place a rule set: its term only when no term separates.
+        let ruled: LayoutMoveTerm | null = null;
+        const compare = (id: string, score: number | undefined) => {
+          if (placedByRule(id)) ruled ??= exploredIds.has(id) ? 'exploration' : 'diversity';
+          const terms = termsFor(id, score);
+          if (terms) others.push(terms);
+        };
+        for (const [k, o] of served.entries()) {
+          if (o === d || fixed(o)) continue;
+          const at = { from: fromOf.get(o.contentId) ?? null, to: k + 1 };
+          if (up ? passed(move, at) : passed(at, move)) compare(o.contentId, o.score);
+        }
+        // A module moved up also passed every module the baseline placed ahead of it that is no longer served.
+        if (up) for (const id of sequence) {
+          if (servedIds.has(id) || !((fromOf.get(id) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
+          if (scoredHere ? scoredHere.has(id) : support.has(id)) compare(id, support.get(id));
+          else if (placedByRule(id)) ruled ??= exploredIds.has(id) ? 'exploration' : 'diversity';
+        }
+        const own = termsFor(d.contentId, d.score), sign = up ? 1 : -1;
+        term = (own ? differingTerm(own, others, sign) : null) ?? ruled ?? (own ? largestTerm(own, sign) : null);
+      }
+      if (term) termOf.set(d.contentId, term);
+    }
+    // A module with no term of its own moved because another did: a module moved
+    // down names the term of the first module that passed it, one moved up the
+    // term of the first module it passed.
+    const fallback = moves.map((m) => termOf.get(m.module)).find((t) => t !== undefined) ?? 'affinity';
+    return { moves: moves.map((m): LayoutMove => {
+      const own = termOf.get(m.module), up = m.from === null || m.to < m.from;
+      const other = own ? undefined : moves.filter((o) => o.module !== m.module && termOf.has(o.module) && (up ? passed(m, o) : passed(o, m))).sort((a, b) => a.to - b.to)[0];
+      return { from: m.from, module: m.module, term: own ?? (other ? termOf.get(other.module)! : fallback), to: m.to };
+    }), slot: s.slot, status: 'changed' };
+  }
+  /**
+   * P29: a ranked module's score itemised term by term, in the engine's fixed
+   * order (R-P56 resolves an exact tie to the earlier term): the shopper's own
+   * interests, each population prior, the anchor bonus, the seed rules, their
+   * model, the stage, freshness, fatigue, merchandising, and the learned lift
+   * (or, under the layout blend, the behaviour terms at 1 − p and the blend's
+   * learned term p × Q). Null when the module's score is unknown.
+   */
+  function scoreTerms(id: string, slot: string, score: number | undefined): ScoreTerms | null {
+    const key = `${slot}:${id}`, piece = byId.get(id), spec = specOf.get(slot);
+    const tag = tagOf.get(key) ?? score;
+    if (tag === undefined) return null;
+    const blendOf = blendTerms.get(key), scale = blendOf ? 1 - blendOf.p : 1;
+    const full = below.has(slot);
+    const share = (prior: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } | null, own: Readonly<Record<string, Readonly<Record<string, number>>>> | null) => {
+      const shares = full ? own : prior?.share ?? null, lambda = full ? 1 : prior?.lambda ?? 0;
+      if (!shares || !piece || !spec || !lambda) return 0;
+      let total = 0;
+      for (const [dim, values] of Object.entries(piece.tags)) {
+        const w = spec.weights[dim] ?? 0; if (!w) continue;
+        for (const v of values) total += lambda * (shares[dim]?.[v] ?? 0) * w;
+      }
+      return total;
+    };
+    // Below the signal floor the slot is scored on the context view, the priors at λ 1.
+    const regional = share(regionalPrior, full ? i.contextPrior ?? i.regional?.share ?? null : null);
+    const context = share(contextPriorTerm, full ? i.contextBlendShare ?? i.contextBlend?.share ?? null : null);
+    const completes = complementsOf.has(slot) && piece && completesAnchor(piece) ? complementsOf.get(slot)! : 0;
+    const base = baseOf.get(key), merch = merchOf.get(key);
+    return [
+      ['affinity', scale * (tag - completes - regional - context)], ['regional_prior', scale * regional], ['context_prior', scale * context],
+      ['completes', scale * completes], ['seed', scale * (seedOf.get(key)?.applied ?? 0)], ['external', scale * (extOf.get(key)?.contribution ?? 0)],
+      ['stage', scale * (stageOf.get(key)?.applied ?? 0)], ['freshness', scale * (freshOf.get(key)?.applied ?? 0)], ['fatigue', scale * (fatigueOf.get(key)?.applied ?? 0)],
+      ['merchandising', scale * (merch && base !== undefined ? merch.scoreFinal - base : 0)],
+      ['lift', blendOf ? 0 : liftOf.get(key)?.applied ?? 0], ['blend', blendOf ? blendOf.p * blendOf.Q : 0],
+    ];
+  }
 
   const positionIn = new Map<string, number>();
   // The ordinal of a ranked position among its slot's ranked positions: after the
@@ -1072,10 +1351,33 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         // module held at its place in the configured order for the shopper's context carries that order.
         ...(moduleRule ? { moduleRule: { position: moduleRule.position, rule: moduleRule.rule } } : {}),
         ...(moduleRule?.baseline === 'order' && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
+        // P29: the layout reason of the declared layout slot, the same on every record of the slot, keys sorted.
+        ...(layoutReasons.has(d.slot) ? { layoutReason: layoutReasonRecord(layoutReasons.get(d.slot)!) } : {}),
       },
       inputs,
     };
   });
+  // P29 (decision D2): the record of each off-limits declared layout slot,
+  // naming the off-limits cause. Kept apart from `records`, which are what the
+  // shopper's decision ring receives, so it carries no exposure, no receipt
+  // reads it and no outcome is credited to it; the decision path writes it to
+  // the ledger. It names no module and no candidate, and the site's own default
+  // has the slot (`authority` default), on the decision's own arm and cell.
+  const offLimitsRecords: DecisionRecord[] = [];
+  for (const s of i.slots) {
+    const reason = layoutReasons.get(s.slot);
+    if (s.offLimits !== true || !reason) continue;
+    offLimitsRecords.push({
+      decision_id: `${i.tenant}:${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${s.slot}:0${hasNonce ? `:n1:${i.requestId}` : ''}`,
+      ...(hasNonce ? { request_id: i.requestId } : {}),
+      tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
+      page: i.page, slot: s.slot, position: 0, item_id: OFF_LIMITS_ITEM, customer_item_id: '', candidates: [],
+      cell: i.cell, arm: i.arm, explored: false, authority: 'default', versions: { ...i.versions, lift: 0, prior: 0 }, config_label: i.configLabel,
+      explain: { drivers: [], note: OFF_LIMITS_LAYOUT_NOTE, score_base: 0, lift: null, score_final: 0, layoutReason: layoutReasonRecord(reason) },
+      inputs,
+    });
+  }
+  const pageReason = i.slots.map((s) => layoutReasons.get(s.slot)).find((reason) => reason !== undefined);
 
   return {
     tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
@@ -1085,5 +1387,17 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(shortTakes.length ? { shortTakes } : {}),
     ...(seedDiagnostics.length ? { seedDiagnostics } : {}),
     ...(constraintDiagnostics ? { constraintDiagnostics } : {}),
+    ...(pageReason ? { layoutReason: layoutReasonRecord(pageReason) } : {}),
+    ...(offLimitsRecords.length ? { offLimitsRecords } : {}),
   };
+}
+
+/** P29: what the record of an off-limits declared layout slot says in words. */
+export const OFF_LIMITS_LAYOUT_NOTE = 'off-limits layout slot — it served nothing and the site’s own default has it; this record names why, for the ledger and the export only';
+
+/** P29: a layout reason as the set, a record and a receipt carry it: keys sorted, the moves copied. */
+export function layoutReasonRecord(reason: LayoutReason): LayoutReason {
+  return reason.status === 'changed'
+    ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed' }
+    : { cause: reason.cause, ...(reason.n !== undefined ? { n: reason.n } : {}), ...(reason.nMin !== undefined ? { nMin: reason.nMin } : {}), slot: reason.slot, status: 'unchanged' };
 }

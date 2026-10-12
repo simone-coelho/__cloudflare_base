@@ -3,7 +3,7 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { DecisionRecord, LayoutBlendTerms } from '@/content/types';
+import type { DecisionRecord, LayoutBlendTerms, LayoutReason, LayoutReasonCause } from '@/content/types';
 import type { Names } from './rows';
 
 export interface Receipt {
@@ -82,6 +82,14 @@ export interface Receipt {
    * keys sorted; absent on every other position.
    */
   moduleRule?: NonNullable<DecisionRecord['explain']['moduleRule']>;
+  /**
+   * P29 (decision D1): the layout reason of the declared layout slot this
+   * position belongs to, exactly as the record carries it — unchanged against
+   * the baseline with one cause, or changed with the term that moved each moved
+   * module — keys sorted; the last sentence of `why` says it in words. Absent on
+   * every position of any other slot and on a record written before it.
+   */
+  layoutReason?: LayoutReason;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -178,10 +186,57 @@ function moduleRuleSentence(r: DecisionRecord, rule: NonNullable<DecisionRecord[
   return `Off-limits: the merchandiser marked this module never to move, so it holds its baseline position ${rule.position}, ${baseline}; the engine never ranked it, and no term and no exploration moved it.${served}`;
 }
 
+/** P29: each cause of an unchanged layout in words (decision D1). A cause a later build adds is quoted as written. */
+const CAUSE_WORDS: Readonly<Record<LayoutReasonCause, string>> = {
+  pinned: 'the merchandiser pinned every position',
+  off_limits: 'the merchandiser holds it off-limits',
+  holdout_or_consent: "the shopper is served the site's own defaults (the holdout's default arm, or personalization is off)",
+  below_signal_floor: 'the shopper is below the signal floor, so it was decided on context alone',
+  blend_or_trust_zero: 'the layout blend or the trust dial is at zero, so no learned term could move it',
+  no_level_reached_nmin: 'no level of the learned ladder reached nMin',
+  zero_base: "no module's base score was above zero",
+  catalogue_order_ties: 'tied scores were broken by catalogue order',
+  nothing_else_eligible: 'nothing else eligible took a position from it',
+};
+
+/**
+ * P29: the layout reason in words — unchanged against the baseline with its
+ * cause (and the n the ladder has beside the nMin it needs), or changed with
+ * each moved module, the positions it moved between and the term that moved it.
+ */
+function layoutReasonSentence(reason: LayoutReason): string {
+  if (reason.status === 'changed') {
+    return `Layout changed against its baseline: ${reason.moves.map((m) => `${m.module} from ${m.from === null ? 'outside the baseline' : `position ${m.from}`} to ${m.to}, moved by ${m.term.replace(/_/g, ' ')}`).join('; ')}.`;
+  }
+  const ladder = reason.cause === 'no_level_reached_nmin' && reason.n !== undefined && reason.nMin !== undefined ? ` (n ${r3(reason.n)} of the ${reason.nMin} it needs)` : '';
+  return `Layout unchanged against its baseline: ${CAUSE_WORDS[reason.cause] ?? reason.cause}${ladder}.`;
+}
+
+/** P29: the layout reason as the record carries it, keys sorted, the moves copied. */
+const layoutReasonOf = (reason: LayoutReason): LayoutReason => (reason.status === 'changed'
+  ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed' }
+  : { cause: reason.cause, ...(reason.n !== undefined ? { n: reason.n } : {}), ...(reason.nMin !== undefined ? { nMin: reason.nMin } : {}), slot: reason.slot, status: 'unchanged' });
+
+/** P29: does the interest vector the page was scored on hold any interest at all? */
+const holdsInterest = (affinity: Record<string, Record<string, number>> | undefined): boolean =>
+  Object.values(affinity ?? {}).some((values) => values !== null && typeof values === 'object' && Object.values(values).some((a) => typeof a === 'number' && a > 0));
+
+/**
+ * P29 (R3): a position of a declared layout slot that no interest of the shopper's
+ * reached, when the shopper does hold interests: they lie on dimensions or values
+ * this layout's weights give this module nothing for. "No interest signal yet"
+ * stays for a shopper with no interest at all.
+ */
+const NO_LAYOUT_INTEREST = "No interest on the dimensions this layout weights matched this module: this shopper's interests lie elsewhere";
+
 /** The record as sentences. Every number on the record has a place here, so nothing is said that the record does not carry. */
 export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const why: string[] = [];
   const e = r.explain;
+  // P29 (R3): on a declared layout slot's position, a shopper who holds interests
+  // that reached none of this module's weighted tags is told so, never that the
+  // shopper has no interest; a record without the layout reason reads as before.
+  const interestElsewhere = e.layoutReason !== undefined && holdsInterest(r.inputs?.affinity);
   // W23 X1.02: set exactly where the learned-lift sentence is written, so the
   // terms and the sentence can never describe two different decisions.
   let liftTerms: LiftTerms | undefined;
@@ -240,7 +295,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
       why.push(`Rank base R ${r3(b.R)} from the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered, ranked with them by the layout blend; a module the order does not list is not shown in this context.`);
     } else why.push(`Rank base R ${r3(b.R)} from the slot's catalogue order of the modules it could serve.`);
-    behaviour(e.signalFloor ? 'No context term moved it: the behaviour term B is 0.' : 'No interest signal yet for this shopper: the behaviour term B is 0.');
+    behaviour(e.signalFloor ? 'No context term moved it: the behaviour term B is 0.'
+      : interestElsewhere ? `${NO_LAYOUT_INTEREST}, so the behaviour term B is 0.` : 'No interest signal yet for this shopper: the behaviour term B is 0.');
     if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece: the performance term Q is 0.');
     else if (e.lift) {
       const l = e.lift;
@@ -264,7 +320,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
   } else {
     if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
-    behaviour(e.signalFloor ? 'No context term moved it: the slot served its catalogue order.' : 'No interest signal yet for this shopper: the slot served its catalogue order.');
+    behaviour(e.signalFloor ? 'No context term moved it: the slot served its catalogue order.'
+      : interestElsewhere ? `${NO_LAYOUT_INTEREST}, so its base score is 0.` : 'No interest signal yet for this shopper: the slot served its catalogue order.');
     if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece; it competes on its base score alone.');
     if (e.lift) {
       const l = e.lift;
@@ -300,6 +357,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   // ranking of this piece, so it is read out for a pinned position exactly as
   // for a ranked one — the way every other block on `explain` is read out.
   if (e.shortTake) why.push(`Short take: ${e.shortTake.sentence}.`);
+  // P29: the layout reason is a fact about the whole layout, so it is read out last, on every position of the slot.
+  if (e.layoutReason) why.push(layoutReasonSentence(e.layoutReason));
   const nm = names.get(r.item_id);
   return {
     measurementBasis: r.measurementBasis ?? 'served-v1', renderedAt: r.rendered?.at ?? null,
@@ -314,6 +373,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.blend ? { blend: { B: e.blend.B, Q: e.blend.Q, R: e.blend.R, p: e.blend.p } } : {}),
     ...(e.signalFloor ? { signalFloor: { floor: e.signalFloor.floor, signals: e.signalFloor.signals } } : {}),
     ...(e.moduleRule ? { moduleRule: { position: e.moduleRule.position, rule: e.moduleRule.rule } } : {}),
+    ...(e.layoutReason ? { layoutReason: layoutReasonOf(e.layoutReason) } : {}),
     why,
   };
 }

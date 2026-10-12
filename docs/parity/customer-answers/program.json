@@ -735,15 +735,22 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "e06c860c079aa3078ad568f66b2d3ea8c9978513 on rem/spec-parity-e (batch S5 fix round 1; P40 reviewed PASS at this revision after the S5 review at da5aaea4; the per-ticket branch is cut from the batch head after S5 fix round 2 so the shared harness src/units/_parity5.ts is final; it carries src/routes/realtime.sdkContract.test.ts with the R10 correction of R-P48)",
+        "reviewedRevision": "224a929fb4e1a3446e12245fe4085efe1888a432 on rem/spec-p40-fix1 (fix round 1, R-P58: the EV4 buffered-door leg per host with its placed-value control, over the build head c1481f0a; specification review PASS; the S5 fix-1 gate at e06c860c kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P40/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P40/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P40/fix1/reviewer-spec/logs/green-p40.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P40/fix1/reviewer-spec/logs/green-sdk.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P40/fix1/reviewer-spec/logs/head-p40.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P40/fix1/reviewer-spec/logs/refused-w2207.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P40/fix1/specifier/logs/green-scratch.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/standin-P40-accept-types.json",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/standin-ev4-P40.json",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/sdkContract-ev4-corrected-tests.log"

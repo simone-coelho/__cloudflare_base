@@ -1204,7 +1204,7 @@
     {
       "id": "P29",
       "title": "A layout reason: why the order did or did not change",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
@@ -1384,7 +1384,7 @@
     {
       "id": "P31",
       "title": "\"Nothing to show\": module eligibility by page signal and by context",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
@@ -1487,6 +1487,7 @@
         "src/content/decide.ts",
         "src/content/service.ts",
         "src/routes/decisions.ts",
+        "src/routes/content.ts",
         "src/learn/receipts.ts",
         "src/learn/replay.ts",
         "src/sdk/listen.ts",
