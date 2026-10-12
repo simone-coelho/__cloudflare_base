@@ -1487,6 +1487,7 @@
         "src/content/decide.ts",
         "src/content/service.ts",
         "src/routes/decisions.ts",
+        "src/routes/content.ts",
         "src/learn/receipts.ts",
         "src/learn/replay.ts",
         "src/sdk/listen.ts",
