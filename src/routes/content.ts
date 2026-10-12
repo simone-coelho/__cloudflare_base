@@ -25,11 +25,12 @@ import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
-import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, SLOTS_KIND } from '@/content/kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog } from '@/content/kinds';
+import { contextTermsOf } from '@/content/cell';
 import { REFLEX_KIND } from '@/reflex/configStore';
-import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, type PriorsDoc } from '@/learn/priors';
+import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
-import type { ContentCatalog, ContentPiece, DocumentEnvelope, SlotCatalog } from '@/content/types';
+import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
@@ -126,15 +127,85 @@ function inputCollection(kind: string, candidate: unknown): void {
  * checked against the unit its slot learns in, and the import is refused rather
  * than published unchecked. An absent learning document is not an unreadable
  * one — the compiled default learns in units, and the import proceeds.
+ *
+ * P36 fix round 1 (R-P54): the learning document is the one the same request
+ * publishes when it carries one (`learnCandidate`: the primary document or a
+ * `publicationChanges` member of the learn kind, `requestLearnDocument`), so a
+ * prior is read under the grammar and the objectives the tenant reads it under
+ * once the request is published; otherwise the one in force. A learn member its
+ * own validator refuses is left to that validator, which refuses the whole
+ * request, so nothing is written either way.
  */
-async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+async function priorUnitRefusals(c: Context<Ctx>, scope: string, candidate: unknown, learnCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
   const valid = PRIORS_KIND.validate(candidate);
-  if (!valid.ok) return null;
-  let learn;
-  try { learn = (await readPublication(c.env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
-  catch { return { status: 503, errors: ['learn: the learning document is unavailable, so a prior cannot be checked against the unit its slot learns in'] }; }
-  const errors = priorUnitErrors(valid.value as PriorsDoc, (slot) => learn.slots?.[slot]?.objective ?? 'unit');
+  // P36: a document that declares the grammar it was exported under is checked
+  // against the tenant's grammar in force, so it is read whether or not the
+  // store's own validator admits it; a row error in an undeclared document is
+  // left to that validator, as before.
+  const declares = candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate)
+    && (candidate as Record<string, unknown>).cellGrammar !== undefined;
+  if (!valid.ok && !declares) return null;
+  let learn: LearnConfig;
+  if (learnCandidate !== undefined) {
+    const checked = LEARN_KIND.validate(learnCandidate);
+    if (!checked.ok) return null;
+    learn = checked.value;
+  } else {
+    try { learn = (await readPublication(c.env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
+    catch { return { status: 503, errors: ['learn: the learning document is unavailable, so a prior cannot be checked against the unit its slot learns in'] }; }
+  }
+  // P36 (R-P46, W25): the cell grammar follows the tenant's published context
+  // vocabulary — today's grammar for a tenant without the settings — and a file
+  // exported under another one is refused by name, with the re-export named.
+  const tenant = validatePriors(candidate, cellGrammarFor(learn.contextVocabulary));
+  if (!tenant.ok) return { status: 422, errors: tenant.errors };
+  const errors = priorUnitErrors(tenant.value, (slot) => learn.slots?.[slot]?.objective ?? 'unit');
   return errors.length ? { status: 422, errors } : null;
+}
+
+/**
+ * P36 fix round 1 (R-P54): the learn document one PUT publishes — the primary
+ * document, or else the first `publicationChanges` member whose kind `kindOf`
+ * resolves to the learn kind (`learn`, `Learn`, `LEARN` are one kind) — or
+ * undefined when the request publishes none, so the learn document in force
+ * applies. A malformed member is skipped here; the member loop refuses it.
+ */
+function requestLearnDocument(primary: DocumentKind<unknown>, candidate: unknown, related: unknown): unknown {
+  if (primary.name === LEARN_KIND.name) return candidate;
+  if (!Array.isArray(related)) return undefined;
+  for (const entry of related as unknown[]) {
+    if (!entry || typeof entry !== 'object') continue;
+    const { kind, document } = entry as { kind?: unknown; document?: unknown };
+    if (typeof kind === 'string' && kindOf(kind)?.kind.name === LEARN_KIND.name) return document;
+  }
+  return undefined;
+}
+
+/**
+ * P36 (R-P46): a slots document that names what a tenant's context vocabulary
+ * decides — a seed rule on the channel, the source platform or the landing-page
+ * type, or a per-context order's channel and visit buckets — is checked against
+ * the tenant's own vocabulary: its channel ids, the names of its published cut,
+ * its source platforms and landing-page types, or today's six words and
+ * buckets for a tenant without the settings, every refusal worded as the
+ * validator words it. The learn document is the one published with it in the
+ * same request when there is one, otherwise the one in force. A slots document
+ * naming none of these is never touched: no read is made for it. Fail closed: a
+ * learn document that cannot be read refuses the publication.
+ */
+async function vocabularyRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unknown, learnCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  if (!slotsNameContext(slotsCandidate)) return null;
+  let learn: LearnConfig;
+  if (learnCandidate !== undefined) {
+    const checked = LEARN_KIND.validate(learnCandidate);
+    if (!checked.ok) return null;
+    learn = checked.value;
+  } else {
+    try { learn = (await readPublication(c.env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
+    catch { return { status: 503, errors: ['learn: the learning document is unavailable, so the channels, visit buckets, source platforms and landing-page types this slots document names cannot be checked against the tenant\'s context vocabulary'] }; }
+  }
+  const checked = validateSlotCatalog(slotsCandidate, contextTermsOf(learn.contextVocabulary));
+  return checked.ok ? null : { status: 422, errors: checked.errors };
 }
 
 /**
@@ -174,6 +245,20 @@ async function orderRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unk
  * the whole request, so no member of it is written.
  */
 interface PublishedMember { kind: DocumentKind<unknown>; document: unknown; at: string | null }
+/** P36: every slots member one request publishes, against the learn member it publishes or else the learn document in force. */
+async function requestVocabularyRefusals(c: Context<Ctx>, scope: string, members: readonly PublishedMember[]): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const learn = members.find(member => member.kind.name === LEARN_KIND.name)?.document;
+  const errors: string[] = [];
+  for (const member of members) {
+    if (member.kind.name !== SLOTS_KIND.name) continue;
+    const refused = await vocabularyRefusals(c, scope, member.document, learn);
+    if (!refused) continue;
+    const named = member.at === null ? refused.errors : refused.errors.map(error => `${member.at}: ${error}`);
+    if (refused.status === 503) return { status: 503, errors: named };
+    errors.push(...named);
+  }
+  return errors.length ? { status: 422, errors } : null;
+}
 async function requestOrderRefusals(c: Context<Ctx>, scope: string, members: readonly PublishedMember[]): Promise<{ errors: string[]; status: 422 | 503 } | null> {
   const catalogue = members.find(member => member.kind.name === CONTENT_KIND.name)?.document;
   const errors: string[] = [];
@@ -471,6 +556,9 @@ contentRoutes.post('/:kind/validate', async (c) => {
     if (unit) return c.json({ valid: false, errors: unit.errors }, unit.status);
   }
   if (k.kind.name === SLOTS_KIND.name) {
+    // P36 (R-P46): the tenant's own vocabulary, before the catalogue check.
+    const vocabulary = await vocabularyRefusals(c, scope, candidate);
+    if (vocabulary) return c.json({ valid: false, errors: vocabulary.errors }, vocabulary.status);
     const refused = await orderRefusals(c, scope, candidate);
     if (refused) return c.json({ valid: false, errors: refused.errors }, refused.status);
   }
@@ -510,9 +598,20 @@ contentRoutes.put('/:kind', async (c) => {
     note = noteOf(n);
   }
   inputCollection(k.kind.name, candidate);
+  // P36 fix round 1 (R-P54): every priors document this request publishes, the
+  // primary or a related member, is read under the learn document it publishes,
+  // or else the one in force.
+  const learnDocument = requestLearnDocument(k.kind, candidate, related);
   if (k.kind.name === PRIORS_KIND.name) {
-    const unit = await priorUnitRefusals(c, scope, candidate);
+    const unit = await priorUnitRefusals(c, scope, candidate, learnDocument);
     if (unit) return c.json({ ok: false, errors: unit.errors }, unit.status);
+  }
+  // P36 (R-P46): a slots document published alone names only the tenant's own
+  // channels, buckets, source platforms and landing-page types; one published
+  // with related members is checked below, against the learn member among them.
+  if (k.kind.name === SLOTS_KIND.name && related === undefined) {
+    const vocabulary = await vocabularyRefusals(c, scope, candidate);
+    if (vocabulary) return c.json({ ok: false, errors: vocabulary.errors }, vocabulary.status);
   }
   // A replacement is self-contained: reject invalid new drafts before any
   // authority read. Original v1 receipt resolution is deliberately read-only
@@ -531,12 +630,23 @@ contentRoutes.put('/:kind', async (c) => {
       const target = entry.kind === 'reflex' ? { kind: REFLEX_KIND } : kindOf(entry.kind);
       if (!target) throw new PublicationError('Unsupported related document kind', 422, 'invalid_document');
       inputCollection(target.kind.name, entry.document);
+      // P36 fix round 1 (R-P54): a priors member is read at the door the primary
+      // is read at, before the store's own validator (which holds no tenant), and
+      // a refusal names the member and refuses the whole request.
+      if (target.kind.name === PRIORS_KIND.name) {
+        const unit = await priorUnitRefusals(c, scope, entry.document, learnDocument);
+        if (unit) return c.json({ ok: false, errors: unit.errors.map(error => `publicationChanges[${index}]: ${error}`) }, unit.status);
+      }
       const valid = target.kind.validate(entry.document);
       if (!valid.ok) return c.json({ ok: false, errors: valid.errors }, 422);
       changes.push({ kind: target.kind, scope: entry.kind === 'reflex' && scope === 'brighthour' ? 'tenant:brighthour' : scope,
         request: { type: 'replace', candidate: entry.document }, candidate: () => entry.document });
       members.push({ kind: target.kind, document: entry.document, at: `publicationChanges[${index}]` });
     }
+    // P36 (R-P46): every slots member against the tenant's context vocabulary,
+    // the learn member this request publishes or else the one in force.
+    const vocabulary = await requestVocabularyRefusals(c, scope, members);
+    if (vocabulary) return c.json({ ok: false, errors: vocabulary.errors }, vocabulary.status);
     // P01 (R-P24): the per-context orders of every slots member, against the
     // catalogue this request publishes or else the one in force.
     const orders = await requestOrderRefusals(c, scope, members);

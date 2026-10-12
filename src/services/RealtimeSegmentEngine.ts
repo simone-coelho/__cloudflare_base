@@ -23,7 +23,7 @@ import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { ReflexConfig } from '@/reflex/core';
-import { liveVisit, projectVisit, validEntry, visitBucket, type ChannelSignals } from '@/services/visit';
+import { liveVisit, projectVisit, validEntry, visitBucket, type ChannelSignals, type VisitInputs } from '@/services/visit';
 import type { Env } from '@/types/env';
 import { assertOwnerScope, ownerRelay, retainOwnerWork, sessionAuthorityKV, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { externalRetentionBirths, retentionBirth } from '@/retention';
@@ -57,7 +57,7 @@ import {
   type RecognitionSignals,
   type ReflexResult,
 } from '@/reflex/core';
-import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
+import { tenantCatalogVocabulary, tenantContextVocabulary, type CatalogVocabularySource } from '@/content/service';
 import {
   DEFAULT_GENERATOR_CONFIG,
   generateAffinityAudiences,
@@ -463,6 +463,16 @@ export class RealtimeSegmentEngine {
         }
         sessionData = { ...sessionData, preferences: { ...sessionData.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } };
       }
+      // P36: the tenant's published context vocabulary classifies the arrival
+      // and names the visit's source platform and landing-page type. Read once,
+      // only for an event that carries an arrival or a page type; it cannot fail
+      // the event (unreadable or absent: today's six-word tables).
+      let contextInputs: Promise<VisitInputs> | undefined;
+      const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
+        const pageType = (event.data as Record<string, unknown> | undefined)?.pageType;
+        const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof pageType === 'string';
+        return { vocabulary: arrives ? await tenantContextVocabulary(this.env, this.tenant) : null, pageType };
+      })());
       // W16 C8.03: what the engine could and could not place in THIS event. Set
       // where the touches are built below, so the answer and the taste can never
       // tell two different stories about the same input.
@@ -589,9 +599,17 @@ export class RealtimeSegmentEngine {
         // Unsigned legacy traffic and the default tenant's BrightHour demo have
         // no tenant population reader. A real BrightHour tenant owns its counts.
         if (this.principal && !(this.principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
+          // P07: and into the population of the visit's arrival context — the
+          // entry channel and visit bucket of the visit this event belongs to,
+          // derived exactly as the stored visit is (SessionManager), under the
+          // tenant's published vocabulary from the one read the stored visit
+          // uses (visitInputs, R-P55). An unknown channel counts nothing there
+          // (R-P9), and neither does a channel outside the six words.
+          const arrival = liveVisit(stored?.metadata, stored?.metadata.lastSeen, now, event.entry, await visitInputs());
           (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
             tenant: this.principal.tenant, geo: event.geo, now: nowMs, touches,
             w: reflexConfig.weights[action] ?? 0,
+            context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
           }));
         }
       }
@@ -601,7 +619,7 @@ export class RealtimeSegmentEngine {
           ...sessionData, attributes: newAttributes, surface, journey: newJourney,
           reflex: reflex ? reflex.state : sessionData.reflex,
           metadata: { ...sessionData.metadata, engagementScore: newEngagementScore },
-        }, event.entry, undefined, ownedSnapshot);
+        }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
         return answer(null);
       }
 
@@ -699,7 +717,7 @@ export class RealtimeSegmentEngine {
             engagementScore: newEngagementScore,
             journeyStage
           }
-        }, event.entry, undefined, ownedSnapshot);
+        }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
         return answer(null);
       }
 
@@ -722,7 +740,7 @@ export class RealtimeSegmentEngine {
           lastSegmentUpdate: Date.now(),
           journeyStage
         }
-      }, event.entry, undefined, ownedSnapshot);
+      }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
 
       // 6. Decide the storefront modules through the Optimizely FX seam.
       const personalizationConfig = await this.getPersonalizationConfig(sessionData, currentSessionId, reflexConfig);

@@ -35,6 +35,58 @@ export type VisitBucket = '1' | '2-3' | '4+';
 /** Doc 22 section 5.4's channel values. */
 export type EntryChannel =
   | 'direct' | 'paid_social' | 'paid_search' | 'email' | 'organic' | 'referral';
+/** The six channel words, the channel values of every tenant that publishes no context vocabulary. */
+export const ENTRY_CHANNELS: readonly EntryChannel[] = ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'];
+
+/**
+ * P36: a value of a tenant's context vocabulary — a channel, a source platform
+ * or a landing-page type — is an id: lower case letters, digits and
+ * underscores, starting with a letter, at most 64 characters. `unknown` and
+ * `any` are the cell's and the order context's own words, so they are never an id.
+ */
+export const CONTEXT_ID = /^[a-z][a-z0-9_]{0,63}$/;
+export const isContextId = (v: unknown): v is string => typeof v === 'string' && CONTEXT_ID.test(v) && v !== 'unknown' && v !== 'any';
+
+/**
+ * P36 (decision D1): one published classification rule. Every condition it
+ * names must hold: `utmMedium` lists mediums; `utmSource` lists sources, each
+ * matched whole or as a token of a token-form source; `utmCampaign` lists
+ * tokens of the campaign; `referrer` is `none` (a page view whose referrer is
+ * empty or the site's own host), `external` (a referrer host that is not the
+ * site's own) or registrable domains (dot-boundary); `untagged` means no
+ * utm_medium, utm_source or utm_campaign is declared.
+ */
+export interface ChannelRule {
+  channel: string;
+  utmMedium?: string[];
+  utmSource?: string[];
+  utmCampaign?: string[];
+  referrer?: 'none' | 'external' | string[];
+  untagged?: true;
+}
+
+/**
+ * P36: the learn document's member `contextVocabulary`, a tenant's published,
+ * versioned context settings: its channel values and the rules that classify an
+ * arrival into them, its source platforms and the networks that name them, its
+ * landing-page types, and optionally its visit-bucket cut and ladder depth.
+ */
+export interface ContextVocabulary {
+  channels: Array<{ id: string; name: string }>;
+  rules: ChannelRule[];
+  sourcePlatforms: Array<{ id: string; name: string; networks: string[] }>;
+  landingPageTypes: Array<{ id: string; name: string }>;
+  /** Whole-number lower bounds ascending from 1; omitted: today's cut [1, 2, 4]. */
+  visitBuckets?: number[];
+  /** Today's order c, v, s, r, a (R-P51) and the depth consulted; omitted: depth 5. */
+  ladder?: { order: string[]; depth: number };
+}
+
+/**
+ * P36: the published vocabulary as an arrival is classified under it, with the
+ * learn revision that published it (recorded beside what it classified).
+ */
+export interface PublishedVocabulary { revision: number; vocabulary: ContextVocabulary }
 
 export interface ChannelSignals {
   utmMedium?: string | null;
@@ -46,6 +98,12 @@ export interface ChannelSignals {
    * persisted to the shopper record, the cell or any downstream payload.
    */
   utmTerm?: string | null;
+  /**
+   * P36: the campaign name the link declared (`utm_campaign`). Read only by a
+   * tenant's published `utmCampaign` rule (the brand split); today's classifier
+   * never reads it, and it is never persisted.
+   */
+  utmCampaign?: string | null;
   /** Full referrer URL or bare host; both are accepted. */
   referrer?: string | null;
   /** The site's own host, so a same-site referrer is not read as a referral. */
@@ -54,7 +112,9 @@ export interface ChannelSignals {
 
 /** The same bounded input contract at HTTP, socket and snapshot boundaries. */
 export const ENTRY_QUERY_LIMIT = 4096;
-const ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 } as const;
+const ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, utmCampaign: 256, referrer: 2048, siteHost: 253 } as const;
+/** P36: the bound on a campaign name, the same one `utm_source` carries. */
+export const ENTRY_CAMPAIGN_LIMIT: number = ENTRY_LIMITS.utmCampaign;
 /** The bound on a campaign term, the same one `utm_source` carries. */
 export const ENTRY_TERM_LIMIT: number = ENTRY_LIMITS.utmTerm;
 /** The one place a host string is parsed: a full URL, or a bare authority. Null when unusable. */
@@ -121,7 +181,19 @@ export function validEntry(value: unknown, hostOnly = false): value is ChannelSi
 export function entryChannelOf(value: unknown): EntryChannel | null {
   if (typeof value !== 'string') return null;
   const channel = value.trim().toLowerCase();
-  return ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'].includes(channel) ? channel as EntryChannel : null;
+  return (ENTRY_CHANNELS as readonly string[]).includes(channel) ? channel as EntryChannel : null;
+}
+
+/**
+ * P36: the channel a value names in the vocabulary in force — one of the six
+ * words for a tenant without the settings, one of the tenant's published channel
+ * ids otherwise — or null. Trimmed and lower-cased as `entryChannelOf` reads.
+ */
+export function channelIn(value: unknown, channels: ReadonlySet<string> | null | undefined): string | null {
+  if (!channels) return entryChannelOf(value);
+  if (typeof value !== 'string') return null;
+  const channel = value.trim().toLowerCase();
+  return channels.has(channel) ? channel : null;
 }
 
 /**
@@ -141,10 +213,72 @@ function pageView(entry: ChannelSignals): boolean {
  * tag with no referrer and no site host is not evidence of a direct arrival, and
  * unknown stays unknown (R14, unit W16.C2.04).
  */
-function observedChannel(entry?: ChannelSignals): EntryChannel | undefined {
+function observedChannel(entry?: ChannelSignals, vocabulary?: ContextVocabulary | null): string | undefined {
   if (!validEntry(entry) || !entry || !Object.values(entry).some(v => typeof v === 'string')) return undefined;
+  // P36: a tenant's published mapping classifies, first rule that holds; an
+  // arrival no rule names records unknown, never a guess (R-P9, R-P23 C10).
+  if (vocabulary) return classifyByVocabulary(entry, vocabulary) ?? undefined;
   const channel = classifyEntryChannel(entry);
   return channel !== 'direct' || pageView(entry) ? channel : undefined;
+}
+
+/** P36: a source or campaign split into its tokens, on `_`, `-` and white space. */
+const tokensOf = (value: string): string[] => value.split(/[\s_-]+/).filter(token => token !== '');
+
+/** P36: whether every condition a published rule names holds for this arrival. */
+function ruleHolds(rule: ChannelRule, entry: ChannelSignals): boolean {
+  const medium = norm(entry.utmMedium), source = norm(entry.utmSource), campaign = norm(entry.utmCampaign);
+  if (rule.utmMedium && (medium === '' || !rule.utmMedium.some(m => norm(m) === medium))) return false;
+  if (rule.utmSource && (source === '' || !rule.utmSource.some(s => {
+    const wanted = norm(s);
+    return wanted === source || (!source.includes('.') && tokensOf(source).includes(wanted));
+  }))) return false;
+  if (rule.utmCampaign && (campaign === '' || !rule.utmCampaign.some(t => tokensOf(campaign).includes(norm(t))))) return false;
+  if (rule.untagged === true && (medium !== '' || source !== '' || campaign !== '')) return false;
+  if (rule.referrer !== undefined) {
+    const host = hostOf(norm(entry.referrer)), site = siteOf(entry.siteHost);
+    const sameSite = host !== '' && site !== '' && (host === site || host.endsWith(`.${site}`));
+    if (rule.referrer === 'none') { if (!pageView(entry) || (host !== '' && !sameSite)) return false; }
+    else if (rule.referrer === 'external') { if (host === '' || sameSite) return false; }
+    else if (!matches(host, rule.referrer.map(domain => norm(domain)))) return false;
+  }
+  return true;
+}
+
+/** P36: the channel the tenant's published rules give this arrival — the first rule that holds — or null. */
+export function classifyByVocabulary(entry: ChannelSignals, vocabulary: ContextVocabulary): string | null {
+  for (const rule of vocabulary.rules) if (ruleHolds(rule, entry)) return rule.channel;
+  return null;
+}
+
+/**
+ * P36: the source platform an arrival names under the tenant's published
+ * platforms: a utm_source that is a host, or a token-form utm_source naming a
+ * recognised network (the classifier's own tokens and aliases), is the
+ * declaration and is read first; else the referrer's host. A platform names a
+ * network by the registrable domains it lists (dot-boundary). None: absent.
+ */
+export function sourcePlatformOf(entry: ChannelSignals | null | undefined, vocabulary: ContextVocabulary): string | undefined {
+  if (!entry || !validEntry(entry)) return undefined;
+  const platforms = vocabulary.sourcePlatforms;
+  const byHost = (host: string) => platforms.find(p => matches(host, p.networks.map(n => norm(n))))?.id;
+  const source = norm(entry.utmSource);
+  if (source !== '') {
+    if (source.includes('.')) { const id = byHost(hostOf(source)); if (id) return id; }
+    else for (const token of sourceTokens(source)) {
+      if (!SOCIAL_SOURCES.has(token) && !SEARCH_SOURCES.has(token)) continue;
+      const id = platforms.find(p => p.networks.some(n => norm(n).split('.')[0] === token))?.id;
+      if (id) return id;
+    }
+  }
+  return byHost(hostOf(norm(entry.referrer)));
+}
+
+/** P36: the landing-page type an event's `data.pageType` names, when it is one of the tenant's ids. */
+export function landingPageTypeOf(pageType: unknown, vocabulary: ContextVocabulary): string | undefined {
+  if (typeof pageType !== 'string') return undefined;
+  const id = pageType.trim().toLowerCase();
+  return vocabulary.landingPageTypes.some(t => t.id === id) ? id : undefined;
 }
 
 /** Snapshot URLs carry host-only referrers; raw URL/path/query is never sent. */
@@ -157,30 +291,90 @@ export function snapshotEntry(entry: ChannelSignals): string | undefined {
   return json.length <= ENTRY_QUERY_LIMIT ? json : undefined;
 }
 
-export interface VisitContext { visitCount?: number; lastVisitAt?: number; entryChannel?: EntryChannel }
+/**
+ * The visit as it is stored inside the shopper's existing record. P36: a visit
+ * classified under a tenant's published vocabulary may carry one of its channel
+ * ids, its source platform and its landing-page type, and then names the learn
+ * revision whose vocabulary classified it (`vocabularyRevision`). All three are
+ * written only when there is something to write, so a tenant without the
+ * settings stores exactly what it stored before.
+ */
+export interface VisitContext {
+  visitCount?: number; lastVisitAt?: number; entryChannel?: string;
+  sourcePlatform?: string; landingPageType?: string; vocabularyRevision?: number;
+}
+/** A positive whole revision: the mark of a visit classified under a published vocabulary. */
+const vocabularyMark = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 1;
 export function validVisitContext(value: unknown): value is VisitContext {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const v = value as VisitContext;
+  // P36: only a visit marked with the vocabulary that classified it may carry a
+  // value outside the six words; an unmarked unknown value stays invalid.
+  const marked = vocabularyMark(v.vocabularyRevision);
   return (v.visitCount === undefined || (Number.isSafeInteger(v.visitCount) && v.visitCount >= 1))
     && (v.lastVisitAt === undefined || (Number.isSafeInteger(v.lastVisitAt) && v.lastVisitAt >= 0))
-    && (v.entryChannel === undefined || entryChannelOf(v.entryChannel) === v.entryChannel);
+    && (v.vocabularyRevision === undefined || marked)
+    && (v.entryChannel === undefined || entryChannelOf(v.entryChannel) === v.entryChannel || (marked && isContextId(v.entryChannel)))
+    && (v.sourcePlatform === undefined || (marked && isContextId(v.sourcePlatform)))
+    && (v.landingPageType === undefined || (marked && isContextId(v.landingPageType)));
 }
+
+/** P36: what an accepted event tells the visit beyond its arrival, and the published vocabulary it is read under. */
+export interface VisitInputs {
+  /** The tenant's published context vocabulary with its learn revision; absent or null: today's six words. */
+  vocabulary?: PublishedVocabulary | null;
+  /** The event's own `data.pageType`: the landing-page type when it names one of the vocabulary's ids. */
+  pageType?: unknown;
+}
+
+/** Whether a visit carries a value only a published vocabulary could have given it. */
+const needsMark = (v: VisitContext): boolean =>
+  (v.entryChannel !== undefined && entryChannelOf(v.entryChannel) !== v.entryChannel) || v.sourcePlatform !== undefined || v.landingPageType !== undefined;
 
 /** Only an accepted live event uses this candidate; readers use projectVisit. */
-export function liveVisit(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number, entry?: ChannelSignals): VisitContext {
+export function liveVisit(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number, entry?: ChannelSignals, inputs?: VisitInputs): VisitContext {
   const prior = previous && validVisitContext(previous) ? previous : undefined;
   const opening = isNewVisit(lastSeen, now);
-  return { visitCount: nextVisitCount(prior?.visitCount, lastSeen, now),
+  const carried = !opening ? prior : undefined;
+  const published = inputs?.vocabulary ?? null;
+  const out: VisitContext = { visitCount: nextVisitCount(prior?.visitCount, lastSeen, now),
     lastVisitAt: opening ? now : prior?.lastVisitAt ?? now,
-    entryChannel: (!opening ? prior?.entryChannel : undefined) ?? observedChannel(entry) };
+    entryChannel: carried?.entryChannel ?? observedChannel(entry, published?.vocabulary) };
+  // P36: the source platform from the visit's arrival and the landing-page type
+  // from its first event naming one of the tenant's types, kept for the visit;
+  // written only when there is one, beside the revision that classified it.
+  const sourcePlatform = carried?.sourcePlatform ?? (published ? sourcePlatformOf(entry, published.vocabulary) : undefined);
+  const landingPageType = carried?.landingPageType ?? (published ? landingPageTypeOf(inputs?.pageType, published.vocabulary) : undefined);
+  if (sourcePlatform !== undefined) out.sourcePlatform = sourcePlatform;
+  if (landingPageType !== undefined) out.landingPageType = landingPageType;
+  if (needsMark(out)) {
+    const mark = published?.revision ?? carried?.vocabularyRevision;
+    if (vocabularyMark(mark)) out.vocabularyRevision = mark;
+  }
+  return out;
 }
 
+/** P36: the visit as a decision reads it; `sourcePlatform` and `landingPageType` only when there is one. */
+export interface ProjectedVisit { visitNumber: number | null; entryChannel: string | null; sourcePlatform?: string; landingPageType?: string }
+
 /** Stable, non-mutating view: an unknown legacy count is not evidence of visit 1. */
-export function projectVisit(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number, entry?: ChannelSignals): { visitNumber: number | null; entryChannel: EntryChannel | null } {
+export function projectVisit(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number, entry?: ChannelSignals,
+  vocabulary?: ContextVocabulary | null): ProjectedVisit {
   const prior = previous && validVisitContext(previous) ? previous : undefined;
   const known = prior?.visitCount !== undefined && typeof lastSeen === 'number' && Number.isFinite(lastSeen) && lastSeen >= 0;
+  const continuing = !isNewVisit(lastSeen, now) ? prior : undefined;
+  const sourcePlatform = continuing?.sourcePlatform ?? (vocabulary ? sourcePlatformOf(entry, vocabulary) : undefined);
+  const landingPageType = continuing?.landingPageType;
   return { visitNumber: known ? nextVisitCount(prior.visitCount, lastSeen, now) : null,
-    entryChannel: (!isNewVisit(lastSeen, now) ? prior?.entryChannel : undefined) ?? observedChannel(entry) ?? null };
+    entryChannel: continuing?.entryChannel ?? observedChannel(entry, vocabulary) ?? null,
+    ...(sourcePlatform !== undefined ? { sourcePlatform } : {}), ...(landingPageType !== undefined ? { landingPageType } : {}) };
+}
+
+/** P36: a visit's context attributes and the revision that classified them, only those it records. */
+export function visitContextMembers(v: VisitContext | null | undefined): Pick<VisitContext, 'sourcePlatform' | 'landingPageType' | 'vocabularyRevision'> {
+  return { ...(v?.sourcePlatform !== undefined ? { sourcePlatform: v.sourcePlatform } : {}),
+    ...(v?.landingPageType !== undefined ? { landingPageType: v.landingPageType } : {}),
+    ...(v?.vocabularyRevision !== undefined ? { vocabularyRevision: v.vocabularyRevision } : {}) };
 }
 
 /** Existing link policy: sum known counts, take entry from the later visit start. */
@@ -188,7 +382,9 @@ export function mergeVisits(base?: VisitContext | null, from?: VisitContext | nu
   const a = base && validVisitContext(base) ? base : undefined, b = from && validVisitContext(from) ? from : undefined;
   const later = (b?.lastVisitAt ?? 0) > (a?.lastVisitAt ?? 0) ? b : a;
   return { visitCount: (a?.visitCount ?? 0) + (b?.visitCount ?? 0) || undefined,
-    lastVisitAt: later?.lastVisitAt, entryChannel: later?.entryChannel };
+    lastVisitAt: later?.lastVisitAt, entryChannel: later?.entryChannel,
+    // P36: the later visit's own context attributes travel with its channel.
+    ...visitContextMembers(later) };
 }
 
 // -- Visit boundaries -------------------------------------------------------

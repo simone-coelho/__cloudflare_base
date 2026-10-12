@@ -479,12 +479,17 @@ export interface LiftLookup { measurementBasis: import('@/content/types').Measur
 /** What a row's lift was measured against, from the row itself. */
 export const liftReferenceOf = (st: Pick<LevelStat, 'p0' | 'liftReference'>): LiftReference => st.liftReference ?? (st.p0 > 0 ? 'slot-rate' : 'none');
 
-/** The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet. */
-export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell): LiftLookup | null {
+/**
+ * The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet.
+ * P36 (R-P46): `depth` is how many levels below everyone the tenant's published
+ * ladder consults (5, every level, when it publishes none); a level beyond it is
+ * never read. The counts at finer levels are kept, never discarded by a depth.
+ */
+export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell, depth = 5): LiftLookup | null {
   if (!snap) return null;
   const byKey = snap.items[item];
   if (!byKey) return null;
-  const keys = levelKeys(cell);
+  const keys = levelKeys(cell).slice(0, (Number.isSafeInteger(depth) && depth >= 0 && depth < 5 ? depth : 5) + 1);
   for (let i = keys.length - 1; i >= 0; i--) {
     const st = byKey[keys[i]!];
     // A level with an imported prior counts the prior's strength toward the threshold (doc 22 §8).

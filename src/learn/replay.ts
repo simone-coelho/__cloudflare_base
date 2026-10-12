@@ -11,7 +11,7 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { BLEND_RULES, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, ORDER_RULES, SIGNAL_FLOOR_RULES } from '@/content/decide';
+import { BLEND_RULES, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
@@ -98,6 +98,10 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.blend', served.explain.blend, replayed.explain.blend);
   // P10: the signal floor a context-only position was decided under and the count, by value (keys sorted).
   eq('explain.signalFloor', served.explain.signalFloor, replayed.explain.signalFloor);
+  // P07: the context prior's itemisation, by value (keys sorted); absent on both for a record decided without it.
+  eq('explain.contextPrior', served.explain.contextPrior, replayed.explain.contextPrior);
+  // P04: the rule that placed a module and the position it set, by value (keys sorted); absent on both for any other record.
+  eq('explain.moduleRule', served.explain.moduleRule, replayed.explain.moduleRule);
   return diff;
 }
 
@@ -175,7 +179,7 @@ function manifestVersionRefusal(value: unknown): string | null {
 }
 
 function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig, floor: { tenant: number; signals: unknown }): Manifest | null {
-  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend' && key !== 'signalFloor').sort().join(',') !== 'candidateLimit,learning,slots,version'
+  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend' && key !== 'signalFloor' && key !== 'moduleRules').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
     || (own(value, 'contentTypes') && value.contentTypes !== 'catalog-tags-v1')
@@ -198,6 +202,11 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     || (own(value, 'signalFloor') && (value.signalFloor !== SIGNAL_FLOOR_RULES || served.arm === 'default'
       || !(typeof floor.signals === 'number' && Number.isSafeInteger(floor.signals) && floor.signals >= 0)
       || contextOnlySlots(page, { floor: floor.tenant, signals: floor.signals }, served.arm).size === 0))
+    // P04: the module-rules marker is written only on a decision under the
+    // current pin policy on which a position pin or an off-limits mark of the
+    // page's declared layout slot decided something.
+    || (own(value, 'moduleRules') && (value.moduleRules !== MODULE_RULES || !own(value, 'layout') || value.pins !== 'prefix-reserved-v2'
+      || !page.some(slot => slot.layout === true && Boolean(slot.positionPins?.length || slot.offLimitsPieceIds?.length))))
     || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
     || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
@@ -215,13 +224,28 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
   const prefixPolicy = value.pins === 'prefix-reserved-v2';
   const ids = prefixPolicy ? slotPins(configured) : [];
   const pinPosition = prefixPolicy && served.position < ids.length;
+  // P04: under the module-rules marker a position after the prefix may hold a
+  // module a position pin or an off-limits mark placed — authority `pin`, the
+  // rule and its position on the record and consistent with the revision, no
+  // ranking ordinal and no snapshot — and a ranked position's ordinal counts
+  // the ranked positions before it, which those fixed positions do not join;
+  // the replay decides the page again and compares both.
+  const ruled = own(value, 'moduleRules');
+  const rule = ruled && served.authority === 'pin' && !pinPosition ? served.explain?.moduleRule as unknown : undefined;
+  const fixedPosition = rule !== undefined;
   if (prefixPolicy) {
     if (!identity(served.position) || served.position >= configured.take) return null;
     if (pinPosition) {
       if (served.authority !== 'pin' || served.item_id !== ids[served.position] || own(served, 'ranking_position') || served.versions.lift !== 0 || served.versions.prior !== 0) return null;
-    } else if (served.authority === 'pin' || !identity(served.ranking_position) || served.ranking_position > 49 || served.ranking_position !== served.position - ids.length) return null;
+    } else if (fixedPosition) {
+      if (!object(rule) || Object.keys(rule).sort().join(',') !== 'position,rule' || !identity(rule.position) || rule.position <= ids.length || rule.position > configured.take
+        || (rule.rule === 'pinned' ? !(configured.positionPins ?? []).some(pin => pin.pieceId === served.item_id && pin.position === rule.position)
+          : rule.rule !== 'off_limits' || !(configured.offLimitsPieceIds ?? []).includes(served.item_id))
+        || own(served, 'ranking_position') || served.versions.lift !== 0 || served.versions.prior !== 0) return null;
+    } else if (served.authority === 'pin' || !identity(served.ranking_position) || served.ranking_position > 49
+      || (ruled ? served.ranking_position > served.position - ids.length : served.ranking_position !== served.position - ids.length)) return null;
   }
-  if (!pinPosition && (target.lift !== served.versions.lift || target.prior !== served.versions.prior)) return null;
+  if (!pinPosition && !fixedPosition && (target.lift !== served.versions.lift || target.prior !== served.versions.prior)) return null;
   return { version: 1, learning: value.learning, candidateLimit: value.candidateLimit, slots: rows,
     ...(own(value, 'exploration') ? { exploration: 'supported-only' as const } : {}),
     ...(own(value, 'pins') ? { pins: value.pins as NonNullable<Manifest['pins']> } : {}),
@@ -230,7 +254,8 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     ...(own(value, 'layout') ? { layout: LAYOUT_RULES } : {}),
     ...(own(value, 'orders') ? { orders: ORDER_RULES } : {}),
     ...(own(value, 'blend') ? { blend: BLEND_RULES } : {}),
-    ...(own(value, 'signalFloor') ? { signalFloor: SIGNAL_FLOOR_RULES } : {}) };
+    ...(own(value, 'signalFloor') ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
+    ...(ruled ? { moduleRules: MODULE_RULES } : {}) };
 }
 
 /** A slot as a page decided before the layout declaration existed reads it: without the declaration. */
@@ -243,6 +268,13 @@ const undeclared = (slot: SlotStrategy): SlotStrategy => {
 const unordered = (slot: SlotStrategy): SlotStrategy => {
   if (slot.orders === undefined) return slot;
   const { orders: _orders, ...rest } = slot; void _orders;
+  return rest;
+};
+
+/** P04: a slot as a decision on which no position pin or off-limits mark decided anything reads it: without them. */
+const unruled = (slot: SlotStrategy): SlotStrategy => {
+  if (slot.positionPins === undefined && slot.offLimitsPieceIds === undefined) return slot;
+  const { positionPins: _pins, offLimitsPieceIds: _marks, ...rest } = slot; void _pins; void _marks;
   return rest;
 };
 
@@ -348,6 +380,14 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   const regional = served.explain.regional && inputs.regional_share
     ? (({ contribution: _c, ...summary }) => ({ ...summary, share: inputs.regional_share! }))(served.explain.regional)
     : null;
+  // P07: the context prior is already in the recorded interest vector; the record's
+  // itemisation and the shares it carries let the replay itemise it again. A
+  // record that carries no shares was decided without it and replays as before.
+  const recordedContext = served.explain.contextPrior;
+  const contextBlend = recordedContext && inputs.context_share
+    ? { channel: recordedContext.channel, events: recordedContext.events, lambda: recordedContext.lambda, level: recordedContext.level,
+      version: recordedContext.version, visitBucket: recordedContext.visitBucket, share: inputs.context_share }
+    : null;
   const extCfg = learn.external ?? null;
   let set: ReturnType<typeof decideContent>;
   requireRetention(env, served.retention?.ledger, served.tenant, 'ledger');
@@ -358,9 +398,11 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     // P02: a record that states no layout marker is replayed as its page was
     // decided — without the declaration — whatever the revision carries.
     // P01: and a record that states no orders marker without the page's orders.
-    pieces: catalog.pieces, slots: (manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared)).map(slot => manifest?.orders === ORDER_RULES ? slot : unordered(slot)),
+    // P04: and a record that states no module-rules marker without its position pins and off-limits marks.
+    pieces: catalog.pieces, slots: (manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared)).map(slot => manifest?.orders === ORDER_RULES ? slot : unordered(slot))
+      .map(slot => manifest?.moduleRules === MODULE_RULES ? slot : unruled(slot)),
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
-    affinity: { dims: inputs.affinity }, regional, cell: served.cell, arm: served.arm,
+    affinity: { dims: inputs.affinity }, regional, ...(contextBlend ? { contextBlend } : {}), cell: served.cell, arm: served.arm,
     versions: { ...served.versions }, configLabel: served.config_label,
     candidateLimit: manifest?.candidateLimit ?? Math.max(10, served.candidates.length),
     learning: learning ? {
@@ -385,7 +427,9 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     // context-only slots scored on the prior shares it recorded; one that
     // states none, with no floor, which is what that decision did.
     ...(manifest?.signalFloor === SIGNAL_FLOOR_RULES
-      ? { signalFloor: { floor: slots.signalFloor ?? 0, signals: inputs.signals as number }, contextPrior: inputs.regional_share ?? null } : {}),
+      ? { signalFloor: { floor: slots.signalFloor ?? 0, signals: inputs.signals as number }, contextPrior: inputs.regional_share ?? null,
+        // P07: and the context prior's recorded shares beside the region's, when it applied.
+        contextBlendShare: inputs.context_share ?? null } : {}),
   }, manifest?.exploration === 'supported-only' ? undefined : HISTORICAL_EXPLORATION,
   prefixPolicy ? undefined : manifest?.pins === 'reserved-eligible-v1' ? HISTORICAL_PINS_V1 : HISTORICAL_PINS,
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,
