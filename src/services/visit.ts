@@ -21,6 +21,8 @@
 // tested without a KV binding or a Request.
 // ---------------------------------------------------------------------------
 
+import { deviceClassOf, type DeviceClass } from './platform';
+
 /**
  * Idle gap that ends a visit. Thirty minutes is the long-standing analytics
  * convention, which matters here for a specific reason: the customer will
@@ -31,6 +33,33 @@ export const VISIT_GAP_MS = 30 * 60 * 1000;
 
 /** Doc 22 section 5.4's visit bucket. */
 export type VisitBucket = '1' | '2-3' | '4+';
+
+/**
+ * P37 (decision D2, ruling R-P47): the recency of a visit, from the shopper's
+ * stored last visit to the moment this visit opens, in whole days: the same
+ * day (under one full day), within 7 days (1 to 7 full days), 8 to 30 days (at
+ * least 8 and fewer than 30 full days) and 30 and more (30 full days or more).
+ * A first visit has none: there is no stored last visit to measure from.
+ */
+export type RecencyBucket = 'same_day' | 'within_7_days' | '8_to_30_days' | '30_and_more';
+/** The vocabulary a `recency` seed rule may name, exactly, in order. */
+export const RECENCY_BUCKETS: readonly RecencyBucket[] = ['same_day', 'within_7_days', '8_to_30_days', '30_and_more'];
+/** The bucket itself when it is one of the four, else null. */
+export function recencyBucketOf(value: unknown): RecencyBucket | null {
+  return value === 'same_day' || value === 'within_7_days' || value === '8_to_30_days' || value === '30_and_more' ? value : null;
+}
+/**
+ * The bucket of the whole days from the stored last visit's start to `now`, or
+ * undefined when there is no usable stored last visit (a first visit, a record
+ * written before the visit was kept, a clock that runs backwards): unknown stays
+ * unknown, never a guess.
+ */
+export function recencyOf(lastVisitAt: number | null | undefined, now: number): RecencyBucket | undefined {
+  if (typeof lastVisitAt !== 'number' || !Number.isFinite(lastVisitAt) || !Number.isFinite(now) || now < lastVisitAt) return undefined;
+  // Whole days of 24 hours (86 400 000 ms), counted down: 29 days and 23 hours is 29.
+  const days = Math.floor((now - lastVisitAt) / 86_400_000);
+  return days < 1 ? 'same_day' : days <= 7 ? 'within_7_days' : days < 30 ? '8_to_30_days' : '30_and_more';
+}
 
 /** Doc 22 section 5.4's channel values. */
 export type EntryChannel =
@@ -302,6 +331,12 @@ export function snapshotEntry(entry: ChannelSignals): string | undefined {
 export interface VisitContext {
   visitCount?: number; lastVisitAt?: number; entryChannel?: string;
   sourcePlatform?: string; landingPageType?: string; vocabularyRevision?: number;
+  /**
+   * P37: the device class the request that opened this visit reported, and the
+   * recency of this visit from the stored last visit. Written only by the event
+   * that opens the visit, only when there is one, and carried for the visit.
+   */
+  device?: DeviceClass; recency?: RecencyBucket;
 }
 /** A positive whole revision: the mark of a visit classified under a published vocabulary. */
 const vocabularyMark = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 1;
@@ -316,7 +351,9 @@ export function validVisitContext(value: unknown): value is VisitContext {
     && (v.vocabularyRevision === undefined || marked)
     && (v.entryChannel === undefined || entryChannelOf(v.entryChannel) === v.entryChannel || (marked && isContextId(v.entryChannel)))
     && (v.sourcePlatform === undefined || (marked && isContextId(v.sourcePlatform)))
-    && (v.landingPageType === undefined || (marked && isContextId(v.landingPageType)));
+    && (v.landingPageType === undefined || (marked && isContextId(v.landingPageType)))
+    && (v.device === undefined || deviceClassOf(v.device) === v.device)
+    && (v.recency === undefined || recencyBucketOf(v.recency) === v.recency);
 }
 
 /** P36: what an accepted event tells the visit beyond its arrival, and the published vocabulary it is read under. */
@@ -325,6 +362,8 @@ export interface VisitInputs {
   vocabulary?: PublishedVocabulary | null;
   /** The event's own `data.pageType`: the landing-page type when it names one of the vocabulary's ids. */
   pageType?: unknown;
+  /** P37: the device class the event's own request reported (`deviceOf`); absent or null: no device. */
+  device?: DeviceClass | null;
 }
 
 /** Whether a visit carries a value only a published vocabulary could have given it. */
@@ -347,6 +386,14 @@ export function liveVisit(previous: VisitContext | null | undefined, lastSeen: n
   const landingPageType = carried?.landingPageType ?? (published ? landingPageTypeOf(inputs?.pageType, published.vocabulary) : undefined);
   if (sourcePlatform !== undefined) out.sourcePlatform = sourcePlatform;
   if (landingPageType !== undefined) out.landingPageType = landingPageType;
+  // P37: the visit's device and recency, written by the event that opens it —
+  // the device its own request reported, the recency from the stored last
+  // visit's start — and carried unchanged for the rest of the visit; each only
+  // when there is one (a request reporting no device, a first visit).
+  const device = opening ? deviceClassOf(inputs?.device) ?? undefined : carried?.device;
+  const recency = opening ? recencyOf(prior?.lastVisitAt, now) : carried?.recency;
+  if (device !== undefined) out.device = device;
+  if (recency !== undefined) out.recency = recency;
   if (needsMark(out)) {
     const mark = published?.revision ?? carried?.vocabularyRevision;
     if (vocabularyMark(mark)) out.vocabularyRevision = mark;
@@ -370,11 +417,29 @@ export function projectVisit(previous: VisitContext | null | undefined, lastSeen
     ...(sourcePlatform !== undefined ? { sourcePlatform } : {}), ...(landingPageType !== undefined ? { landingPageType } : {}) };
 }
 
-/** P36: a visit's context attributes and the revision that classified them, only those it records. */
-export function visitContextMembers(v: VisitContext | null | undefined): Pick<VisitContext, 'sourcePlatform' | 'landingPageType' | 'vocabularyRevision'> {
+/**
+ * P37: the arrival context a read answers beside the visit (`GET /realtime/reflex`
+ * `arrival`): the device and the recency the visit in progress recorded; for a
+ * visit that would open now, the recency the stored last visit gives it (the
+ * device is the opening request's own, so none is claimed before it). Each
+ * member only when there is one; a shopper with no stored visit answers {}.
+ */
+export interface ProjectedArrival { device?: DeviceClass; recency?: RecencyBucket }
+export function projectArrival(previous: VisitContext | null | undefined, lastSeen: number | null | undefined, now: number): ProjectedArrival {
+  const prior = previous && validVisitContext(previous) ? previous : undefined;
+  if (!prior) return {};
+  if (!isNewVisit(lastSeen, now)) return { ...(prior.device !== undefined ? { device: prior.device } : {}), ...(prior.recency !== undefined ? { recency: prior.recency } : {}) };
+  const recency = recencyOf(prior.lastVisitAt, now);
+  return recency !== undefined ? { recency } : {};
+}
+
+/** P36: a visit's context attributes and the revision that classified them, only those it records; P37: and its device and recency. */
+export function visitContextMembers(v: VisitContext | null | undefined): Pick<VisitContext, 'sourcePlatform' | 'landingPageType' | 'vocabularyRevision' | 'device' | 'recency'> {
   return { ...(v?.sourcePlatform !== undefined ? { sourcePlatform: v.sourcePlatform } : {}),
     ...(v?.landingPageType !== undefined ? { landingPageType: v.landingPageType } : {}),
-    ...(v?.vocabularyRevision !== undefined ? { vocabularyRevision: v.vocabularyRevision } : {}) };
+    ...(v?.vocabularyRevision !== undefined ? { vocabularyRevision: v.vocabularyRevision } : {}),
+    ...(v?.device !== undefined ? { device: v.device } : {}),
+    ...(v?.recency !== undefined ? { recency: v.recency } : {}) };
 }
 
 /** Existing link policy: sum known counts, take entry from the later visit start. */

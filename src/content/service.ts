@@ -16,8 +16,8 @@ import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
   journeyWordOf, PERSISTED_STAGE, type JourneyWord,
 } from '@/services/JourneyStage';
-import { channelIn, projectVisit, validEntry, validVisitContext, type ChannelSignals, type PublishedVocabulary, type VisitContext } from '@/services/visit';
-import { platformWordOf, type PlatformWord } from '@/services/platform';
+import { channelIn, projectArrival, projectVisit, validEntry, validVisitContext, type ChannelSignals, type PublishedVocabulary, type VisitContext } from '@/services/visit';
+import { deviceClassOf, platformWordOf, type DeviceClass, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from './kinds';
@@ -64,6 +64,8 @@ export interface ServeRequest {
   entry?: ChannelSignals;
   /** The OS family the request reports (src/services/platform.ts), for `platform` seed rules: the OS family is read from the request; the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept. */
   platform?: PlatformWord | null;
+  /** P37: the device class the request reports (src/services/platform.ts), for `device` seed rules and configured orders whose context names a device: the class is read from the request; the user agent itself is never kept. */
+  device?: DeviceClass | null;
   nowMs?: number;
   /** The brand whose shopper state this request reads, as the tenancy middleware resolved it. */
   stateTenant?: TenantId;
@@ -528,6 +530,13 @@ export async function serveContentDecisions(
   const vocabulary = learn.contextVocabulary ?? null;
   const terms = contextTermsOf(vocabulary);
   const visit = projectVisit(shopper.visit, shopper.lastSeen, now, consent.tracking ? r.entry : undefined, vocabulary);
+  // P37: first-paint context. The device is the one this request reports; the
+  // recency is the visit's — the bucket the visit in progress recorded, or for a
+  // visit about to open the bucket its stored last visit gives it. Both read off
+  // what is already held (the request, the shopper read above): no read of their
+  // own, so they can neither fail nor wait. Under the arrival's tracking gate.
+  const device = consent.tracking ? deviceClassOf(r.device) : null;
+  const recency = consent.tracking ? projectArrival(shopper.visit, shopper.lastSeen, now).recency ?? null : null;
   const cell = cellFor({
     cf: consent.tracking ? r.cf : null, snap: personalized ? shopper.affinity : null, cfg,
     // A caller cannot relabel an already-established visit. The explicit
@@ -713,6 +722,10 @@ export async function serveContentDecisions(
     // The OS family the request reports, under the same gate as the arrival,
     // and her own memberships for a seed rule's dampen (none without consent).
     ...(consent.tracking && platformWordOf(r.platform) ? { platform: platformWordOf(r.platform) } : {}),
+    // P37: the request's device class and the visit's recency bucket, for the
+    // seed rules and configured orders that name them; each only when there is one.
+    ...(device ? { device } : {}),
+    ...(recency ? { recency } : {}),
     ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
     ...(signalFloor ? { signalFloor } : {}),
     // P36: a tenant's published terms, and the context its shopper's visit

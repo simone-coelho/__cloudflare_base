@@ -24,6 +24,7 @@ import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { ReflexConfig } from '@/reflex/core';
 import { liveVisit, projectVisit, validEntry, visitBucket, type ChannelSignals, type VisitInputs } from '@/services/visit';
+import type { DeviceClass } from '@/services/platform';
 import type { Env } from '@/types/env';
 import { assertOwnerScope, ownerRelay, retainOwnerWork, sessionAuthorityKV, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { externalRetentionBirths, retentionBirth } from '@/retention';
@@ -115,6 +116,12 @@ export interface ActionEvent {
   entry?: ChannelSignals;
   /** Coarse request geolocation, set by the route from request.cf. Population aggregates only (CW6). */
   geo?: { country?: string | null; regionCode?: string | null };
+  /**
+   * P37: the device class the event's own request reported (client hint, else
+   * user agent), set by the route and never by the client. Read only when the
+   * event opens a visit, which records it; the user agent itself is never kept.
+   */
+  device?: DeviceClass;
 }
 
 export interface UserProfile {
@@ -471,7 +478,8 @@ export class RealtimeSegmentEngine {
       const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
         const pageType = (event.data as Record<string, unknown> | undefined)?.pageType;
         const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof pageType === 'string';
-        return { vocabulary: arrives ? await tenantContextVocabulary(this.env, this.tenant) : null, pageType };
+        // P37: the device the event's own request reported, for the visit it opens; no read.
+        return { vocabulary: arrives ? await tenantContextVocabulary(this.env, this.tenant) : null, pageType, device: event.device ?? null };
       })());
       // W16 C8.03: what the engine could and could not place in THIS event. Set
       // where the touches are built below, so the answer and the taste can never

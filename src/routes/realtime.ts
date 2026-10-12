@@ -17,7 +17,8 @@ import { outcomeEnrollment } from '@/content/holdout';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
-import { projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
+import { projectArrival, projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
+import { deviceOf } from '@/services/platform';
 import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, persistedStageOf, readTimeStageChange } from '@/services/JourneyStage';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
@@ -173,6 +174,10 @@ realtimeRoutes.post('/action', async (c) => {
     // still applies to a buffered delivery's original time, unchanged.
     const engineNow = Date.now();
     const admittedTimestamp = Math.min(validatedEvent.timestamp ?? engineNow, engineNow);
+    // P37: the device class this request reports (client hint, else user agent),
+    // read here at the edge and never taken from the body; the visit the event
+    // opens records it. A request reporting neither carries none.
+    const device = deviceOf(c.req.raw.headers);
     const actionEvent = {
       ...validatedEvent,
       eventId: validatedEvent.eventId,
@@ -181,6 +186,7 @@ realtimeRoutes.post('/action', async (c) => {
       // CW6: coarse request geolocation rides the event so the scoring host can
       // fan the touches into the shopper's region. Aggregates only, never stored per person.
       ...(cfGeo?.country ? { geo: { country: cfGeo.country, regionCode: cfGeo.regionCode ?? null } } : {}),
+      ...(device ? { device } : {}),
     } as ActionEvent;
 
     // Browsing attribution is separate from the signed profile session. Capture
@@ -503,7 +509,7 @@ realtimeRoutes.get('/reflex', async (c) => {
       const cold = await resolveTenantReflexConfig(c.env, shopperPrincipal(c.req.raw).tenant,
         resolveSurface({ surface: c.req.query('surface') }));
       return c.json({ ok: true, now: Date.now(), config: reflexConfigView(cold),
-        affinity: null, journeyStage: null, visit: null, consent: await currentOwnerConsent() ?? storedConsent(undefined) });
+        affinity: null, journeyStage: null, visit: null, arrival: null, consent: await currentOwnerConsent() ?? storedConsent(undefined) });
     }
     const { sessionId, sessionData, reflexConfig } = owned;
     const consent = consentOf(sessionData);
@@ -574,6 +580,10 @@ realtimeRoutes.get('/reflex', async (c) => {
       // on both hosts (the DO host answers from ShopperReflex.handleSnapshot).
       // The object's internal `projection=content` shape stays internal.
       visit: personalizes(consent) ? projectVisit(sessionData.metadata, sessionData.metadata.lastSeen, now) : null,
+      // P37: the visit's arrival context beside it — the device and the recency
+      // the visit recorded, each only when there is one — always present and null
+      // exactly where `visit` is, identically on the object host.
+      arrival: personalizes(consent) ? projectArrival(sessionData.metadata, sessionData.metadata.lastSeen, now) : null,
       consent,
     });
   } catch (error) {
