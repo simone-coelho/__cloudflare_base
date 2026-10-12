@@ -1028,8 +1028,13 @@ buckets `1`, `2-3`, `4+` and the full ladder, exactly. A vocabulary with nine ch
 - The grammar bump: when `contextVocabulary` changes the channel values (as a set), the cut or the depth, `cellGrammar` changes with it:
   `ladder-cell` at a version derived from those three members, its order today's order cut at the depth.
   A priors file exported under the previous vocabulary is then refused by
-  `PUT /content/priors` naming `cellGrammar`, the grammar in force and the re-export; a file declaring nothing is
-  read under the current grammar. A vocabulary that changes none of the three keeps `ladder-cell` version 2.
+  `PUT /content/priors` and `POST /content/priors/validate` naming `cellGrammar`, the grammar in force and the re-export,
+  and so is one published as a `publicationChanges` member of any `PUT /content/{kind}` (its kind matched in any
+  case, the refusal prefixed with `publicationChanges[i]`, the whole request refused and no member written). The
+  grammar in force is the one the learn document published in the same request derives (the primary document or a
+  `publicationChanges` member of the learn kind, in any case of the word), or else the learn document in force; a
+  file declaring nothing is read under the current grammar. A vocabulary that changes none of the three keeps
+  `ladder-cell` version 2.
 - What is stored: a tenant without the settings stores no new member; a visit classified under a vocabulary
   stores the channel id, the source platform and the landing-page type it records, with the learn revision that
   classified it, inside the shopper's existing record.
