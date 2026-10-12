@@ -667,8 +667,9 @@ engine's order `affinity`, `regional_prior`, `context_prior`, `completes`, `seed
 `freshness`, `fatigue`, `merchandising`, `lift`, `blend`. The modules compared are the slot's ranked
 modules, never a fixed position nor a module exploration or the diversity rule placed, including for a
 module moved up every module the baseline placed ahead of it that is not served; where no term separates
-it from them by more than 0.0005, or there is none to compare, it names its own largest term in the
-direction it moved, else the term of the first module that passed it or that it passed.
+it from them by more than 0.0005, or there is none to compare, it names `exploration` or `diversity` when
+it passed, or was passed by, a module that rule placed, else its own largest term in the direction it
+moved, else the term of the first module that passed it or that it passed.
 
 An off-limits declared layout slot writes one record, never into the shopper's decision ring, so it
 carries no exposure, no receipt reads it and no outcome is credited to it: position 0, `item_id`

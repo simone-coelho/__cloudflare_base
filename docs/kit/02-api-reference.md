@@ -430,8 +430,9 @@ going to the earlier term in the engine's fixed order (`affinity`, `regional_pri
 modules compared are the slot's ranked modules, never a fixed position nor a module exploration or the
 diversity rule placed, and for a module moved up they include every module the baseline placed ahead of
 it that is not served; where no term separates it from them by more than 0.0005, or there is none to
-compare, it names the term that contributed most to its own score in the direction it moved, else the term
-of the first module that passed it or that it passed. On a declared
+compare, it names `exploration` or `diversity` when it passed, or was passed by, a module that rule placed,
+else the term that contributed most to its own score in the direction it moved, else the term of the first
+module that passed it or that it passed. On a declared
 layout slot a receipt says "No interest signal yet for this shopper" only when the interest vector the page
 was scored on holds no interest at all; a shopper whose interests reached none of a module's weighted tags
 reads "No interest on the dimensions this layout weights matched this module" instead, and a receipt of
