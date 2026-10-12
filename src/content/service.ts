@@ -16,13 +16,13 @@ import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
   journeyWordOf, PERSISTED_STAGE, type JourneyWord,
 } from '@/services/JourneyStage';
-import { projectVisit, validEntry, validVisitContext, entryChannelOf, type ChannelSignals, type VisitContext } from '@/services/visit';
+import { channelIn, projectVisit, validEntry, validVisitContext, type ChannelSignals, type PublishedVocabulary, type VisitContext } from '@/services/visit';
 import { platformWordOf, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from './kinds';
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
-import { cellFor, type CfLike } from './cell';
+import { cellFor, contextTermsOf, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { contextOnlySlots, decideContent, layoutBlendOf } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
@@ -420,6 +420,24 @@ export async function tenantCatalogVocabulary(
 }
 
 /**
+ * P36: the tenant's published context vocabulary, with the learn revision that
+ * published it, for the event path that classifies an arrival on either host
+ * (ShopperReflex.ingest, RealtimeSegmentEngine.processAction). It reads the
+ * learn document through the publication's serving cache, as the decision path
+ * does. It cannot fail the event: a learn document that cannot be read, or one
+ * that publishes no vocabulary, answers null, and the arrival is then
+ * classified by today's six-word tables exactly as before (the decision's cell
+ * still records any word outside the tenant's vocabulary as unknown).
+ */
+export async function tenantContextVocabulary(env: Env, tenant: string): Promise<PublishedVocabulary | null> {
+  try {
+    const learn = await readPublication(env, LEARN_KIND, tenant, true);
+    const vocabulary = learn?.value?.contextVocabulary;
+    return vocabulary && typeof learn.revision === 'number' ? { revision: learn.revision, vocabulary } : null;
+  } catch { return null; }
+}
+
+/**
  * The region a caller asserted, as a region key, when it may select the
  * regional prior: on the demo profile only. Null everywhere else, and for a
  * value that is not a region key, so the edge region stays the prior's input.
@@ -504,12 +522,19 @@ export async function serveContentDecisions(
   // experiment keeps her where she is and the served experience says `default`.
   const unreadable = shopper.unreadable === true;
   const personalized = personalizes(consent) && !unreadable;
-  const visit = projectVisit(shopper.visit, shopper.lastSeen, now, consent.tracking ? r.entry : undefined);
+  // P36: the tenant's published context vocabulary, read off the learn
+  // document already held above — no read of its own, so it can neither fail
+  // nor wait. Absent: today's six words, classification, buckets and ladder.
+  const vocabulary = learn.contextVocabulary ?? null;
+  const terms = contextTermsOf(vocabulary);
+  const visit = projectVisit(shopper.visit, shopper.lastSeen, now, consent.tracking ? r.entry : undefined, vocabulary);
   const cell = cellFor({
     cf: consent.tracking ? r.cf : null, snap: personalized ? shopper.affinity : null, cfg,
     // A caller cannot relabel an already-established visit. The explicit
-    // channel is only a bounded fallback when owned state has no entry yet.
-    channel: consent.tracking ? visit.entryChannel ?? entryChannelOf(r.channel) : null,
+    // channel is only a bounded fallback when owned state has no entry yet,
+    // and only a value of the tenant's vocabulary (today's six words) (P36).
+    channel: consent.tracking ? visit.entryChannel ?? channelIn(r.channel, terms.published ? terms.channels : null) : null,
+    terms,
     visitNumber: personalized ? visit.visitNumber : null,
     // R32(2): the ONE mapping point from the reported vocabulary to the
     // persisted cell token, so the ladder key and every learning statistic keyed
@@ -690,6 +715,13 @@ export async function serveContentDecisions(
     ...(consent.tracking && platformWordOf(r.platform) ? { platform: platformWordOf(r.platform) } : {}),
     ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
     ...(signalFloor ? { signalFloor } : {}),
+    // P36: a tenant's published terms, and the context its shopper's visit
+    // records, under the same tracking gate as the arrival; a tenant without
+    // the settings passes neither, so it decides exactly as before.
+    ...(terms.published ? { contextTerms: terms } : {}),
+    ...(consent.tracking && (visit.sourcePlatform !== undefined || visit.landingPageType !== undefined)
+      ? { visitContext: { ...(visit.sourcePlatform !== undefined ? { sourcePlatform: visit.sourcePlatform } : {}),
+        ...(visit.landingPageType !== undefined ? { landingPageType: visit.landingPageType } : {}) } } : {}),
   });
 
   lap('decide');

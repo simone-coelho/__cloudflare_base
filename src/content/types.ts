@@ -8,6 +8,7 @@ import type { ContentPieceLike, ContentDecision, SlotCandidate, PinDiagnostic } 
 import type { SlotConstraintReason } from './slotConstraints';
 import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
+import type { ContextVocabulary } from '@/services/visit';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
@@ -225,10 +226,13 @@ export type SignalFloor = number | 'never';
  * words) or `any`, with one or more visit buckets or `any`. A shopper whose
  * channel or visit bucket is unknown matches no context, not even one that
  * names `any`. Specificity is the number of parts that are not `any`.
+ * P36 (R-P46): on a tenant that publishes a context vocabulary the channel is
+ * one of its channel ids and the buckets are the names of its published cut;
+ * a tenant without the settings keeps the six words and 1, 2-3, 4+.
  */
 export interface OrderContext {
-  channel: 'direct' | 'paid_social' | 'paid_search' | 'email' | 'organic' | 'referral' | 'any';
-  visitBuckets: Array<'1' | '2-3' | '4+'> | 'any';
+  channel: string;
+  visitBuckets: string[] | 'any';
 }
 
 /**
@@ -248,7 +252,7 @@ export interface ComplementsRule { weight: number }
  * evidence. `platform` is the OS family the request itself reports (`ios` or
  * `android`, nothing finer; src/services/platform.ts).
  */
-export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform';
+export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform' | 'source_platform' | 'landing_page_type';
 
 /**
  * A rule's weight is multiplied by `factor` while the shopper's OWN evidence
@@ -269,9 +273,12 @@ export interface SeedRule {
   signal: SeedSignal;
   /**
    * The value of that signal this rule fires on: one of the six channel words
-   * for `entry_channel`, the campaign term verbatim for `campaign_term`, a known
-   * network's registrable domain for `referrer_network`, `ios` or `android` for
-   * `platform`.
+   * for `entry_channel` (P36: one of the tenant's channel ids when it publishes
+   * a context vocabulary), the campaign term verbatim for `campaign_term`, a
+   * known network's registrable domain for `referrer_network`, `ios` or
+   * `android` for `platform`, and one of the tenant's source platform ids or
+   * landing-page type ids for `source_platform` and `landing_page_type` (P36,
+   * read off the shopper's visit).
    */
   value: string;
   /** The canonical tags this arrival is evidence for; each dimension must be one the slot weights. */
@@ -500,6 +507,13 @@ export interface LearnConfig {
   slots?: Record<string, SlotDials>;
   /** Doc 22 §9: their model, one per tenant; each slot dials its weight. */
   external?: ExternalModelConfig;
+  /**
+   * P36: the tenant's context vocabulary — channel values with the rules that
+   * classify an arrival into them, source platforms, landing-page types, and
+   * optionally the visit-bucket cut and the ladder depth. Absent: today's six
+   * words, classification, buckets and ladder, exactly.
+   */
+  contextVocabulary?: ContextVocabulary;
 }
 
 /** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
@@ -566,7 +580,8 @@ export type IdentityAnchor = 'visitor' | 'session' | 'none';
 /** Doc 22 §5.4. Components not yet available are recorded as unknown, not guessed. */
 export interface Cell {
   channel: string;
-  visit_bucket: '1' | '2-3' | '4+' | 'unknown';
+  /** `1`, `2-3`, `4+` or `unknown`; P36: the bucket names of a tenant's published cut. */
+  visit_bucket: string;
   region: string | null;
   /** The leading interest above its entry threshold, as `dim:value`, or null. */
   affinity: string | null;

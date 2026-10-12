@@ -18,7 +18,8 @@ import { attributionContractOf, policyOf } from '@/learn/route';
 import { loadTombstone } from '@/ledger/erasure';
 import { requireRetention } from '@/retention';
 import { learningEffectId, recoveryDigest, RECOVERY_LIMITS, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
-import { entryChannelOf } from '@/services/visit';
+import { channelIn } from '@/services/visit';
+import { contextTermsOf, TODAY_TERMS, type ContextTerms } from '@/content/cell';
 
 const PUBLISH_DELAY_MS = 30_000;
 /** Conservative application budgets, not a measurement of a provider limit. */
@@ -518,6 +519,12 @@ export class LearnStats {
       // exactly; a row stamped after it is still counted, at the present.
       const engineNow = Date.now();
       const journal = !managed && kind === 'exposures' ? await this.seenExposures() : null;
+      // P36 (R-P52): a bounded object counts each row under the tenant's own
+      // terms — its channel ids and its published cut's buckets — so a tenant
+      // with a context vocabulary learns in its own cells; anything else, and
+      // every value of a tenant without the settings outside today's six words
+      // and three buckets, is counted under unknown exactly as before.
+      const terms = candidate.stats.bounded ? await this.contextTerms(tenant) : TODAY_TERMS;
       const applied = journal ? new Set(journal.map(row => `${row.id}:${row.digest}`)) : null;
       const added: SeenExposure[] = [];
       let newlyApplied = 0, alreadyApplied = 0, suppressed = 0;
@@ -560,8 +567,8 @@ export class LearnStats {
           if (applied.has(key)) continue;
           applied.add(key); added.push({ id: row.decision, digest: row.digest, ts: row.ts });
         }
-        const cell = candidate.stats.bounded ? { ...row.cell, channel: entryChannelOf(row.cell.channel) ?? 'unknown',
-          visit_bucket: ['1', '2-3', '4+'].includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
+        const cell = candidate.stats.bounded ? { ...row.cell, channel: channelIn(row.cell.channel, terms.published ? terms.channels : null) ?? 'unknown',
+          visit_bucket: terms.buckets.includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
         if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
         else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
@@ -897,6 +904,20 @@ export class LearnStats {
       await this.state.storage.setAlarm(Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(d)));
       throw new Error('Snapshot publication unavailable');
     }
+  }
+
+  /**
+   * P36 (R-P52): the tenant's context terms, from its current learn publication,
+   * read as this object already reads that document (`attributionContract`,
+   * `priorsFor`). It cannot refuse a write: a publication that cannot be read
+   * answers today's terms, so a row is then counted exactly as before.
+   */
+  private async contextTerms(tenant: string): Promise<ContextTerms> {
+    try {
+      const pin = await pinPublication(this.env, tenant, true);
+      const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
+      return contextTermsOf(learn.value.contextVocabulary);
+    } catch { return TODAY_TERMS; }
   }
 
   /** The tenant's published attribution policy, as this object's own snapshot
