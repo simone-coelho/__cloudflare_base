@@ -1191,20 +1191,21 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const from = fromOf.get(d.contentId) ?? null;
       return from === k + 1 ? [] : [{ module: d.contentId, from, to: k + 1 }];
     });
-    // R-P56: a moved module names the term that changed its place. A module that
-    // exploration placed names `exploration`, one the diversity rule made yield
-    // or placed by relaxing it `diversity`. Any other moved module is compared
-    // with the modules it passed (moved up) or that passed it (moved down): the
-    // slot's ranked modules — never a fixed position, nor a module exploration or
-    // the diversity rule placed, whose place no score term set — served, or, for a
-    // module moved up, placed ahead of it by the baseline and not served. Each
-    // score is itemised term by term (`scoreTerms`), each term's difference is
-    // taken together over those modules (averaged), and the term by which the
-    // module differs most in the direction it moved is named, an exact tie going
-    // to the earlier term of the fixed order (`differingTerm`). Where no term
-    // separates it from them by the grain, or there are none, it names the rule
-    // of the first module it passed or that passed it whose place exploration or
-    // the diversity rule set, else its own largest term in that direction.
+    // R-P56 and R-P57: a moved module names the term that changed its place. A
+    // module that exploration itself placed names `exploration`, one the
+    // diversity rule itself made yield or placed by relaxing it `diversity`. Any
+    // other moved module is compared with the modules it passed (moved up) or
+    // that passed it (moved down): the slot's ranked modules other than a fixed
+    // position — a module exploration or the diversity rule placed or displaced
+    // compared like any other — served, or, for a module moved up, placed ahead
+    // of it by the baseline and not served. Each score is itemised term by term
+    // (`scoreTerms`), each term's difference is taken together over those
+    // modules (averaged), and the term by which the module differs most in the
+    // direction it moved is named, an exact tie going to the earlier term of the
+    // fixed order (`differingTerm`). Only where no term separates it from them by
+    // the grain, or there are none, does a rule name it: the rule that placed or
+    // displaced the first of them whose place a rule set, else its own largest
+    // term in that direction.
     const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
       (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
     const servedIds = new Set(served.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
@@ -1221,24 +1222,24 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       let term: LayoutMoveTerm | null = exploredIds.has(d.contentId) ? 'exploration' : yielded.has(d.contentId) ? 'diversity' : null;
       if (!term) {
         const others: ScoreTerms[] = [];
-        // The first module it passed, or that passed it, whose place a rule set: that rule's term.
+        // The rule that placed or displaced the first module it passed, or that
+        // passed it, whose place a rule set: its term only when no term separates.
         let ruled: LayoutMoveTerm | null = null;
-        const ruleOf = (id: string): LayoutMoveTerm => (exploredIds.has(id) ? 'exploration' : 'diversity');
+        const compare = (id: string, score: number | undefined) => {
+          if (placedByRule(id)) ruled ??= exploredIds.has(id) ? 'exploration' : 'diversity';
+          const terms = termsFor(id, score);
+          if (terms) others.push(terms);
+        };
         for (const [k, o] of served.entries()) {
           if (o === d || fixed(o)) continue;
           const at = { from: fromOf.get(o.contentId) ?? null, to: k + 1 };
-          if (!(up ? passed(move, at) : passed(at, move))) continue;
-          if (placedByRule(o.contentId)) { ruled ??= ruleOf(o.contentId); continue; }
-          const terms = termsFor(o.contentId, o.score);
-          if (terms) others.push(terms);
+          if (up ? passed(move, at) : passed(at, move)) compare(o.contentId, o.score);
         }
         // A module moved up also passed every module the baseline placed ahead of it that is no longer served.
         if (up) for (const id of sequence) {
           if (servedIds.has(id) || !((fromOf.get(id) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
-          if (placedByRule(id)) { ruled ??= ruleOf(id); continue; }
-          if (scoredHere ? !scoredHere.has(id) : !support.has(id)) continue;
-          const terms = termsFor(id, support.get(id));
-          if (terms) others.push(terms);
+          if (scoredHere ? scoredHere.has(id) : support.has(id)) compare(id, support.get(id));
+          else if (placedByRule(id)) ruled ??= exploredIds.has(id) ? 'exploration' : 'diversity';
         }
         const own = termsFor(d.contentId, d.score), sign = up ? 1 : -1;
         term = (own ? differingTerm(own, others, sign) : null) ?? ruled ?? (own ? largestTerm(own, sign) : null);

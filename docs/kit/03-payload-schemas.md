@@ -667,21 +667,23 @@ evidence any of them holds at any level of the shopper's cell, and `nMin`), `zer
 had a base score above 0), `catalogue_order_ties` (a served module's score tied another's) and
 `nothing_else_eligible` (the slot could rank at most one module, or its ranking placed every module where
 the baseline does); a later release may add causes. Each of the moves of a changed layout is
-`{ from, module, term, to }`, positions counted from 1 within the slot (`from` null for a module the
-baseline does not hold), for every module served away from its baseline position, and its `term` is the
-term that moved it: `affinity`, `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`,
+`{ from, module, term, to }`, positions counted from 1 within the slot (a module the baseline places
+past the take keeps its place in that order, so `from` can exceed the take; `from` is null for a module
+the baseline does not hold), for every module served away from its baseline position, and its `term`
+is the term that moved it: `affinity`, `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`,
 `freshness`, `fatigue`, `merchandising`, `lift`, `blend`, `exploration` or `diversity`: `exploration` for a
-module exploration placed, `diversity` for one the diversity rule made yield or placed by relaxing it, and
-for any other the term that changed its place, the term by which it differs most from the modules it passed
+module exploration itself placed, `diversity` for one the diversity rule itself made yield or placed by
+relaxing it, and for any other the term that changed its place, the term by which it differs most from the modules it passed
 (moved up) or that passed it (moved down) taken together, each term's difference averaged over those
 modules and the largest in the direction it moved named, an exact tie going to the earlier term in the
 engine's order `affinity`, `regional_prior`, `context_prior`, `completes`, `seed`, `external`, `stage`,
 `freshness`, `fatigue`, `merchandising`, `lift`, `blend`. The modules compared are the slot's ranked
-modules, never a fixed position nor a module exploration or the diversity rule placed, including for a
-module moved up every module the baseline placed ahead of it that is not served; where no term separates
-it from them by more than 0.0005, or there is none to compare, it names `exploration` or `diversity` when
-it passed, or was passed by, a module that rule placed, else its own largest term in the direction it
-moved, else the term of the first module that passed it or that it passed.
+modules other than a fixed position, a module that exploration or the diversity rule placed or displaced
+being compared like any other, including for a module moved up every module the baseline placed ahead of
+it that is not served; only where no term separates it from them by more than 0.0005, or there is none to
+compare, does a rule name it: `exploration` or `diversity` when one of them was placed or displaced by that
+rule, else its own largest term in the direction it moved, else the term of the first module that passed
+it or that it passed.
 
 An off-limits declared layout slot writes one record, never into the shopper's decision ring, so it
 carries no exposure, no receipt reads it and no outcome is credited to it: position 0, `item_id`

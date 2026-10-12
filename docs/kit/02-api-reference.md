@@ -419,23 +419,25 @@ module's score tied another module's, so catalogue order broke the tie) and `not
 slot could rank at most one module, or its ranking placed every module exactly where the baseline does).
 Later releases may add causes, so read a cause this reference does not name as one it does not describe
 yet. A changed layout's `moves` lists each module served at a position other than its baseline position
-as `{ from, module, term, to }` (keys sorted, positions counted from 1 within the slot, `from` null for a
-module the baseline does not hold), and its `term` names what moved it: `affinity` (the shopper's own
-interests), `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`, `freshness`,
+as `{ from, module, term, to }` (keys sorted, positions counted from 1 within the slot, a module the
+baseline places past the take keeping its place in that order so that `from` can exceed the take, and
+`from` null for a module the baseline does not hold), and its `term` names what moved it: `affinity`
+(the shopper's own interests), `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`, `freshness`,
 `fatigue`, `merchandising`, `lift`, `blend` (the layout blend's learned term `p × Q`), `exploration` or
-`diversity`. A module that exploration placed names `exploration`, and one the diversity rule made yield,
-or placed by relaxing it, names `diversity`. Any other moved module names the term that changed its place:
-the term by which it differs most from the modules it passed, if it moved up, or from the modules that
+`diversity`. A module that exploration itself placed names `exploration`, and one the diversity rule
+itself made yield, or placed by relaxing it, names `diversity`. Any other moved module names the term
+that changed its place: the term by which it differs most from the modules it passed, if it moved up, or from the modules that
 passed it, if it moved down, those modules taken together, so each term's difference is averaged over all
 of them and the term with the largest difference in the direction the module moved is named, an exact tie
 going to the earlier term in the engine's fixed order (`affinity`, `regional_prior`, `context_prior`,
 `completes`, `seed`, `external`, `stage`, `freshness`, `fatigue`, `merchandising`, `lift`, `blend`). The
-modules compared are the slot's ranked modules, never a fixed position nor a module exploration or the
-diversity rule placed, and for a module moved up they include every module the baseline placed ahead of
-it that is not served; where no term separates it from them by more than 0.0005, or there is none to
-compare, it names `exploration` or `diversity` when it passed, or was passed by, a module that rule placed,
-else the term that contributed most to its own score in the direction it moved, else the term of the first
-module that passed it or that it passed. On a declared
+modules compared are the slot's ranked modules other than a fixed position, a module that exploration
+or the diversity rule placed or displaced being compared like any other, and for a module moved up they
+include every module the baseline placed ahead of it that is not served. Only where no term separates it
+from them by more than 0.0005, or there is none to compare, does a rule name it: `exploration` or
+`diversity` when one of them was placed or displaced by that rule, else the term that contributed most to
+its own score in the direction it moved, else the term of the first module that passed it or that it
+passed. On a declared
 layout slot a receipt says "No interest signal yet for this shopper" only when the interest vector the page
 was scored on holds no interest at all; a shopper whose interests reached none of a module's weighted tags
 reads "No interest on the dimensions this layout weights matched this module" instead, and a receipt of
