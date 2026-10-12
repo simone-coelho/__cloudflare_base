@@ -393,6 +393,11 @@ measured where it lands — in the final pre-lift base, after merchandising — 
 delta it actually caused in `explain.lift.applied`. Seeds are context, never learned evidence: they change
 no statistic, and the default arm has none. Publication, revisions and rollback are the slots document's own.
 
+On a tenant that publishes a context vocabulary ([the learn document's `contextVocabulary`](#the-context-vocabulary)),
+an `entry_channel` rule names one of the tenant's channel ids exactly (for example `sms` or
+`paid_search_brand`), and any other word, one of today's six included, is refused naming `entry_channel`; a
+tenant without the settings keeps the six words exactly. Two more signals read the shopper's visit: `source_platform` names one of the tenant's source platform ids and `landing_page_type` one of its landing-page type ids, and a rule fires for a shopper whose visit records that value, at `weight × the slot's weight`, itemised on `explain.contextual` and the receipt's "Arrival context" sentence as every seed rule is. A tenant without the settings publishes neither and a rule naming either is refused.
+
 ### Content format affinity
 
 `type` remains the rendering kind. For a known `contentId`, both event hosts learn the held tenant
@@ -730,6 +735,59 @@ what it changes.
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
 | `slots.{slot}.blend` | `{ p }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. Publication refuses a `p` outside 0 to 1, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the member exactly as published | absent (no blend); `p` 0 when the dial names none |
 | `slots.{slot}.external.weight` | Historical-only scoring weight; does not re-enable withdrawn runtime scoring | inactive |
+| `contextVocabulary` | The tenant's context vocabulary: `channels`, `rules`, `sourcePlatforms`, `landingPageTypes`, optionally `visitBuckets` and `ladder` ([below](#the-context-vocabulary)) | absent: the six channel words, today's classification, buckets `1`, `2-3`, `4+`, depth 5 |
+
+### The context vocabulary
+
+```json
+{
+  "contextVocabulary": {
+    "channels": [
+      { "id": "paid_social", "name": "Paid social" }, { "id": "paid_search_brand", "name": "Paid search (brand)" },
+      { "id": "paid_search_nonbrand", "name": "Paid search (non-brand)" }, { "id": "organic", "name": "Organic search" },
+      { "id": "email", "name": "Email" }, { "id": "sms", "name": "SMS" }, { "id": "affiliate", "name": "Affiliate" },
+      { "id": "referral", "name": "Referral" }, { "id": "direct", "name": "Direct" }
+    ],
+    "rules": [
+      { "channel": "sms", "utmMedium": ["sms"] },
+      { "channel": "email", "utmMedium": ["email", "newsletter"] },
+      { "channel": "affiliate", "utmMedium": ["affiliate"] },
+      { "channel": "paid_social", "utmMedium": ["paid_social", "cpc"], "utmSource": ["facebook", "instagram", "tiktok"] },
+      { "channel": "paid_search_brand", "utmMedium": ["cpc", "ppc"], "utmCampaign": ["brand"] },
+      { "channel": "paid_search_nonbrand", "utmMedium": ["cpc", "ppc"] },
+      { "channel": "organic", "untagged": true, "referrer": ["google.com", "bing.com"] },
+      { "channel": "referral", "untagged": true, "referrer": "external" },
+      { "channel": "direct", "untagged": true, "referrer": "none" }
+    ],
+    "sourcePlatforms": [{ "id": "meta", "name": "Meta", "networks": ["facebook.com", "instagram.com"] }],
+    "landingPageTypes": [{ "id": "homepage", "name": "Homepage" }, { "id": "product", "name": "Product page" }],
+    "visitBuckets": [1, 2, 4],
+    "ladder": { "order": ["c", "v", "s", "r", "a"], "depth": 5 }
+  }
+}
+```
+
+`contextVocabulary` is an optional member of the learn document whose `channels` are the tenant's channel values,
+published, stamped and versioned with the learn document's own revision (`PUT /content/learn`), so a change
+takes effect with no deployment. The example names nine channel values: `paid_social`, `paid_search_brand`, `paid_search_nonbrand`, `organic`, `email`, `sms`, `affiliate`, `referral` and `direct`.
+
+| Member | Meaning |
+|---|---|
+| `channels` | `{ id, name }` values. An id is lower case letters, digits and underscores, starting with a letter, at most 64 characters, never `unknown` or `any`, and listed once |
+| `rules` | The published mapping, read in order: a rule names a `channel` of the vocabulary and at least one condition, every one of which must hold: `utmMedium` (mediums), `utmSource` (sources, matched whole or as a token of a token-form source split on `_`, `-` and white space), `utmCampaign` (tokens of the campaign, split the same way: the brand split), `referrer` (`none`: a page view whose referrer is empty or the site's own host; `external`: a referrer host that is not the site's own; or a list of registrable domains, dot-boundary), `untagged: true` (no utm_medium, utm_source or utm_campaign declared). The first rule that holds classifies the arrival; when none holds it records as unknown (`null` on the visit, `unknown` on the cell), never a guess |
+| `sourcePlatforms` | `{ id, name, networks }`: the platform whose `networks` hold the referrer's host, or the network a token-form `utm_source` names (`facebook_ads` names facebook.com), is the visit's source platform |
+| `landingPageTypes` | `{ id, name }`: the `data.pageType` of the visit's first event naming one of these ids is the visit's landing-page type, kept for the visit |
+| `visitBuckets` | Optional. Lower bounds, whole numbers strictly ascending from 1: `[1, 2, 3, 6]` names the buckets `1`, `2`, `3-5`, `6+`. Omitted: `[1, 2, 4]`, today's `1`, `2-3`, `4+` |
+| `ladder` | Optional. `{ order, depth }`: the order is exactly `c`, `v`, `s`, `r`, `a`; the depth, 1 to 5, is how many levels below everyone a learned lift is read from. Omitted: depth 5 |
+
+Every member is validated as the document is published, and any error refuses it whole with 422 naming
+`contextVocabulary`, the member and the offending value; a refused document writes no revision. The source
+platform and the landing-page type are recorded on the visit and are the seed-signal keys `source_platform` and
+`landing_page_type` ([contextual seed rules](#contextual-seed-rules)); they are context attributes, not
+learning-cell levels. The cell carries the tenant's channel id and the bucket of its cut, the learning counts
+it there, and a per-context order names the tenant's channel ids and the buckets of its cut. The arrival
+contract carries `utmCampaign` (256 characters, like `utmSource`), sent only when the landing URL has
+`utm_campaign` and never stored. A change of the channel values (as a set), the cut or the depth in `contextVocabulary` changes `cellGrammar`: see [the priors document](#the-priors-document).
 
 ### The context prior
 
@@ -770,7 +828,7 @@ everyone or `k=v` pairs joined by `|` in the ladder's own order and as a PREFIX 
 does not have, with a level skipped, or with a level past the end is refused by row, naming the expected
 order, because it would name a cell no snapshot ever builds. The ladder order is versioned: `cellGrammar`
 declares the grammar a file was exported under, anything but the current one is refused with the migration
-named, and a document that declares nothing is read under the current grammar. `p_prior` is the rate your team estimated
+named, and a document that declares nothing is read under the current grammar. A tenant whose published `contextVocabulary` changes the channel values, the visit-bucket cut or the ladder depth reads another `cellGrammar`: `ladder-cell` at a version derived from those three members (3 plus a 32-bit FNV-1a of the sorted channel ids, the cut and the depth) and the order cut at the depth, so a file exported under the previous vocabulary is refused naming `cellGrammar`, the grammar in force and the re-export, and a row on a cell finer than the depth is refused by row; a vocabulary that changes none of the three keeps `ladder-cell` version 2. `p_prior` is the rate your team estimated
 elsewhere in the selected objective unit, and because it is a probability it is refused for a slot whose
 objective is `revenue` or `margin`, naming the slot, its objective and the unit; `n_equiv` is how many exposures it should be worth. The imported value supplies the smoothing target and strength, not a replacement for the slot's own `p0` lift denominator. Every receipt names the prior document's
 revision. A slot whose only evidence is an imported prior publishes a snapshot with `events: 0` and its

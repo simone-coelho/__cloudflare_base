@@ -377,7 +377,7 @@
   });
 
   // ══════════════════════════════════════════════════════════ Dials ══════════
-  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null };
+  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '' };
   const dialsFor = () => { dl.draft.slots = dl.draft.slots || {}; return (dl.draft.slots[S.slot] = dl.draft.slots[S.slot] || {}); };
   function diffPaths(a, b, path = '') {
     const out = [];
@@ -415,12 +415,14 @@
     dl.revision = data.revision || 0;
     dl.source = data.source || 'compiled-default';
     dl.errors = [];
+    dl.vocabularyText = null; dl.vocabularyError = '';
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     dl.authored = C.authored(res.data);
     dl.doc = res.data.document; dl.draft = copy(dl.doc); dl.revision = res.data.revision; dl.source = 'stored';
+    dl.vocabularyText = null; dl.vocabularyError = '';
     document.getElementById('note').value = '';
     C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Published; serving refreshes within the documented 30-second read bound.`);
     await C.loadSlots();
@@ -487,6 +489,32 @@
     );
   }
 
+  // P36: the brand's context vocabulary — its channel values with the rules that
+  // classify an arrival into them, its source platforms, its landing-page types,
+  // and optionally its visit-bucket cut and ladder depth — edited as the JSON it
+  // is published as, inside the learn document. Malformed text cannot be saved;
+  // the platform validates the draft as it does every other dial.
+  function vocabularyEditor(D) {
+    const path = 'contextVocabulary';
+    const el = h('textarea', { class: `txt${changed(path)}`, rows: 14, spellcheck: 'false', 'data-focus-key': path, disabled: !C.canEdit() || null });
+    el.value = dl.vocabularyText !== null ? dl.vocabularyText : (D.contextVocabulary ? JSON.stringify(D.contextVocabulary, null, 2) : '');
+    el.addEventListener('input', () => {
+      dl.vocabularyText = el.value;
+      const text = el.value.trim();
+      if (!text) { delete D.contextVocabulary; dl.vocabularyError = ''; scheduleCheck(); return; }
+      try {
+        const value = JSON.parse(text);
+        if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('not an object');
+        D.contextVocabulary = value; dl.vocabularyError = '';
+        scheduleCheck();
+      } catch {
+        dl.vocabularyError = 'contextVocabulary: the vocabulary must be a valid JSON object of channels, rules, sourcePlatforms and landingPageTypes (visitBuckets and ladder optional). Empty removes it; malformed text cannot be saved.';
+        C.render();
+      }
+    });
+    return el;
+  }
+
   function brandDials(host) {
     const D = dl.draft;
     D.holdout = D.holdout || { share: 0.05, salt: '', arms: ['default'] };
@@ -529,6 +557,9 @@
         num(reg.kBlend, (v) => { D.regional = { ...reg, kBlend: v ?? 1 }; scheduleCheck(); }, 'regional.kBlend', { min: 0.01, max: 100, step: 0.1 })) : null,
       reg && reg.enabled ? dial('Before a region counts', 'Events a region needs before its trend is used; below it the country answers, then everyone.',
         num(reg.minEvents, (v) => { D.regional = { ...reg, minEvents: v ?? 30 }; scheduleCheck(); }, 'regional.minEvents', { min: 1, step: 1 })) : null,
+      h('div', { class: 'subhead' }, 'How arrivals are read: the context vocabulary'),
+      dial('Channels, sources and landing pages', 'The brand\u2019s own channel values and the published rules that classify an arrival into them, read in order, the first that holds deciding; an arrival no rule names records as unknown, never a guess. Source platforms name the networks they own; landing-page types are the page types the page reports. Optionally the visit-bucket cut (whole numbers ascending from 1) and the ladder depth (1 to 5, order c, v, s, r, a). A change to the channel values, the cut or the depth changes the cell grammar: a priors file exported before it is refused and must be re-exported. Empty means the six built-in channel words.',
+        vocabularyEditor(D), dl.vocabularyError ? h('span', { class: 'err' }, dl.vocabularyError) : (D.contextVocabulary ? `${(D.contextVocabulary.channels || []).length} channel values, ${(D.contextVocabulary.rules || []).length} rules` : 'Not published: the six built-in channel words.')),
       h('div', { class: 'subhead' }, 'Their own model, for every slot'),
       dial('Where it lives', 'Service: a worker they own behind a binding, or an https address. Table: a scoring table they publish. Workers AI: a hosted model that answers in the agreed shape.',
         sel(ext ? ext.kind : 'none', [['none', 'none'], ['service', 'service'], ['table', 'table'], ['workers_ai', 'workers AI']], (v) => {
@@ -554,9 +585,9 @@
       C.dirty({
         count: n,
         checking: dl.checking,
-        blocked: dl.errors.length > 0,
+        blocked: dl.errors.length > 0 || dl.vocabularyError !== '',
         save: saveDials,
-        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; C.render(); },
+        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; C.render(); },
       });
       if (dl.errors.length) host.append(h('div', { class: 'msg err' }, 'The dials as drafted were refused:', h('ul', {}, ...dl.errors.map((e) => h('li', {}, String(e))))));
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },

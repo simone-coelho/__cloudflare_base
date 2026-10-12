@@ -50,7 +50,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
-import { liveVisit, mergeVisits, projectVisit, validEntry, validVisitContext, visitBucket, type VisitContext } from '@/services/visit';
+import { liveVisit, mergeVisits, projectVisit, validEntry, validVisitContext, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
@@ -94,7 +94,7 @@ import {
   type ReflexResult,
   type ReflexState,
 } from '@/reflex/core';
-import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
+import { tenantCatalogVocabulary, tenantContextVocabulary, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
 import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, readTimeStageChange, storedJourneyStage, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
@@ -774,7 +774,12 @@ export class ShopperReflex {
             // same derivation the SDK hydrate answers with.
             journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), journeyThresholdsInForce(cfg)),
             visit: this.pipeline ? { visitCount: this.pipeline.visitCount, lastVisitAt: this.pipeline.lastVisitAt,
-              entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen } : null,
+              entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen,
+              // P36: the visit's context attributes and the vocabulary revision
+              // that classified them, only when the visit records them.
+              ...(this.pipeline.sourcePlatform !== undefined ? { sourcePlatform: this.pipeline.sourcePlatform } : {}),
+              ...(this.pipeline.landingPageType !== undefined ? { landingPageType: this.pipeline.landingPageType } : {}),
+              ...(this.pipeline.vocabularyRevision !== undefined ? { vocabularyRevision: this.pipeline.vocabularyRevision } : {}) } : null,
             // P10: the shopper's count of signals, read off the state this object already
             // holds (no read of its own), for the slots that publish a signal
             // floor. Present only when there is one; absent reads as 0.
@@ -1314,6 +1319,18 @@ export class ShopperReflex {
     applyEventToAttributes(attributes, event, surfaceCatalog);
     const engagementScore = calculateEngagementScore(attributes);
 
+    // P36: the tenant's published context vocabulary classifies the arrival and
+    // names the visit's source platform and landing-page type. Read at most once
+    // per event, and only for an event that carries an arrival or a page type;
+    // the population fan-in and the visit this object stores share that one read,
+    // so both read the arrival one way (R-P55). It cannot fail the event: an
+    // unreadable or absent vocabulary classifies by today's six-word tables.
+    let contextInputs: Promise<VisitInputs> | undefined;
+    const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
+      const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof eventData.pageType === 'string';
+      return { vocabulary: arrives ? await tenantContextVocabulary(this.env, tenant) : null, pageType: eventData.pageType };
+    })());
+
     // 2. The pure core (§4): decay-then-accumulate + hysteresis evaluation.
     let reflex: ReflexResult | null = null;
     if (reflexOn) {
@@ -1347,9 +1364,10 @@ export class ShopperReflex {
       if (principal && !(principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
         // P07: and into the population of the visit's arrival context — the
         // entry channel and visit bucket of the visit this event belongs to,
-        // derived exactly as the pipeline stores it below. An unknown channel
-        // counts nothing there (R-P9).
-        const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry);
+        // derived exactly as the pipeline stores it below, under the tenant's
+        // published vocabulary (R-P55). An unknown channel counts nothing there
+        // (R-P9), and neither does a channel outside the six words.
+        const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, await visitInputs());
         keepAlive(fanInRegionTrend(this.env, {
           tenant: principal.tenant, geo: event.geo, now, touches, w: cfg.weights[action] ?? 0,
           context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
@@ -1464,6 +1482,9 @@ export class ShopperReflex {
       lastSeen: now,
       configVersion: cfg.version,
     };
+    // P36: the visit under the tenant's published context vocabulary, from the
+    // one read the fan-in above shares (visitInputs).
+    const nextVisit = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, await visitInputs());
     const nextPipeline: PipelineRecord = {
       profileEnrichment: pipe.profileEnrichment,
       attributes,
@@ -1474,7 +1495,7 @@ export class ShopperReflex {
       visitorId: pipe.visitorId,
       firstSeen: pipe.firstSeen,
       sessionCount: pipe.sessionCount + 1,
-      ...liveVisit(pipe, this.affinity?.lastSeen, now, event.entry),
+      ...nextVisit,
       ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
 
@@ -3258,6 +3279,8 @@ export class ShopperReflex {
             pipeline = { attributes: session.attributes, segments: session.segments, journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE],
               sessionId: sid, visitorId: context.subject, firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount,
               visitCount: session.metadata.visitCount, lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
+              // P36: the visit's context attributes travel with its channel, only when recorded.
+              ...visitContextMembers(session.metadata),
               surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
               // W16 R1: the adopted record keeps the visit journey the session carries.
               ...(session.journey === undefined ? {} : { journey: session.journey }) };
@@ -3720,6 +3743,8 @@ export class ShopperReflex {
             journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId: grant.sessionId, visitorId: session.userId,
             firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,
             lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel,
+            // P36: the visit's context attributes travel with its channel, only when recorded.
+            ...visitContextMembers(session.metadata),
             surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
             // W16 R1: the adopted record keeps the visit journey the session carries.
             ...(session.journey === undefined ? {} : { journey: session.journey }) };
@@ -3916,6 +3941,9 @@ export class ShopperReflex {
       ...(isShopperId(context.subject) ? { identity: original?.identity ?? { shopperId: context.subject, linkedAt: pipe.firstSeen } } : {}),
       metadata: { ...original?.metadata, firstSeen: pipe.firstSeen, lastSeen: affinity.lastSeen, sessionCount: pipe.sessionCount,
         visitCount: pipe.visitCount, lastVisitAt: pipe.lastVisitAt, entryChannel: pipe.entryChannel,
+        // P36: the visit's context attributes as the pipeline holds them now, so
+        // a projection never keeps an earlier visit's (absent ones are not written).
+        sourcePlatform: pipe.sourcePlatform, landingPageType: pipe.landingPageType, vocabularyRevision: pipe.vocabularyRevision,
         engagementScore: calculateEngagementScore(pipe.attributes), journeyStage: pipe.journeyStage,
         lastSegmentUpdate: original?.metadata.lastSegmentUpdate ?? affinity.lastSeen },
       preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization,

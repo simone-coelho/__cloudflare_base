@@ -69,7 +69,7 @@ One event. Site key.
 | `data` | yes | The event's payload, by type: see the [payload schemas](./03-payload-schemas.md#event-payloads-by-type) |
 | `source` | yes | Names the caller |
 | `eventId` | no | Logical event nonce:1–128 ASCII letters/digits/`_`/`-`. When supplied, an explicit timestamp is required; invalid values are refused, never downgraded |
-| `entry` | no | How this page load arrived: optional `utmMedium` (128), `utmSource` (256), `utmTerm` (256), `referrer` (2048) and `siteHost` (253) strings, captured once per load, sent with every event, used only when a new visit opens. Anything longer, or any other key, is refused rather than trimmed. `siteHost` is a hostname in the `hostname[:port]` form, never a URL, a path or free text. `utmTerm` is the campaign's search keyword: it may seed contextual content rules for the slots that publish them, it never changes the classified entry channel, and it is never stored on the shopper record, the decision cell or a connector payload |
+| `entry` | no | How this page load arrived: optional `utmMedium` (128), `utmSource` (256), `utmTerm` (256), `utmCampaign` (256), `referrer` (2048) and `siteHost` (253) strings, captured once per load, sent with every event, used only when a new visit opens. Anything longer, or any other key, is refused rather than trimmed. `siteHost` is a hostname in the `hostname[:port]` form, never a URL, a path or free text. `utmTerm` is the campaign's search keyword: it may seed contextual content rules for the slots that publish them, it never changes the classified entry channel, and it is never stored on the shopper record, the decision cell or a connector payload. `utmCampaign` is the campaign name: the SDK sends it only when the landing URL carries `utm_campaign`, only a tenant's published `utmCampaign` classification rule reads it ([the context vocabulary](#the-context-vocabulary-contextvocabulary)), and it is never stored |
 | `timestamp` | no | Nonnegative safe integer milliseconds representable as a Date; zero is valid with `eventId`. Without a nonce, absent/zero uses server time. The engine still uses its own processing clock |
 
 The SDK core exposes the arrival it captured as read-only observables. `core.entry` is the cached entry for this page load, and `core.entrySessionId` names the browsing session that produced the cached entry signals — empty while tracking is not allowed, and deliberately not the current browsing session: after an idle rollover it still names the session the cached entry belongs to, until the next entry read recomputes from the current document. Reading either never rolls a session over, recomputes the entry or writes anything. The cached entry is cleared, before any recomputation, on a consent transition, an identity-generation change and a browsing-session rollover.
@@ -368,8 +368,16 @@ document turns it on with its own `kBlend` (its K) and `minEvents`, in the regio
 into population shares per tenant, entry channel and visit bucket (`1`, `2-3`, `4+`) through the same
 population-trend objects the regional prior uses, which hold no visitor or session identifier; an event whose
 entry channel is unknown, or from a shopper who refused tracking, counts nothing there, and the hourly roll-up
-(on demand, `POST /v1/{tenant}/trend/rollup`) sums each channel's visit buckets into the channel alone. A
-decision reads the shares of the shopper's entry channel and visit bucket when that pair has at least
+(on demand, `POST /v1/{tenant}/trend/rollup`) sums each channel's visit buckets into the channel alone. Only
+the six channel words (`direct`, `paid_social`, `paid_search`, `email`, `organic`, `referral`) and today's
+three visit buckets (`1`, `2-3`, `4+`) have a context population. On a tenant that publishes a context
+vocabulary, an event counts under the channel its visit records, read by that vocabulary's rules, so an
+arrival the vocabulary leaves unknown counts nowhere, the `direct` population holds direct arrivals alone,
+and a channel of the vocabulary outside the six words (such as `sms`, `affiliate`, `paid_search_brand` or
+`paid_search_nonbrand`) has no population and gets no context prior. A bucket of a published cut
+(`visitBuckets`) outside the three, such as `3-5`, has no population of its own: the visit's events count in
+today's bucket for its visit number, and a decision in that bucket reads the shares of the channel alone.
+A decision reads the shares of the shopper's entry channel and visit bucket when that pair has at least
 `minEvents` events, else the shares of the channel alone over every visit bucket, never everyone's, so the
 regional prior's population is not counted twice. Its weight is λ = kBlend / (kBlend + Σ personal affinity),
 so a first-time visitor's λ is 1 and it fades as the shopper's own interests grow; with the regional prior also
@@ -1084,6 +1092,57 @@ from one of your revisions. The version a decision and a receipt name is otherwi
 revision identity, because the thresholds are part of it. A block that was stored but can no longer be read
 is never silently replaced by the default: the engine falls closed to the first stage, claims no version and
 says so on `reason`.
+
+### The context vocabulary (`contextVocabulary`)
+
+A tenant's entry channels, the published mapping that classifies an arrival into them, its source platforms,
+its landing-page types, its visit buckets and its ladder depth are one versioned setting: the learn document's
+member `contextVocabulary`, published with `PUT /content/learn` like every other dial, with no deployment
+([schema](./03-payload-schemas.md#the-context-vocabulary)). A tenant that publishes none keeps today's six words
+(`direct`, `paid_social`, `paid_search`, `email`, `organic`, `referral`), today's classification, the visit
+buckets `1`, `2-3`, `4+` and the full ladder, exactly. A vocabulary with nine channel values names, for example,
+`paid_social`, `paid_search_brand`, `paid_search_nonbrand`, `organic`, `email`, `sms`, `affiliate`, `referral` and `direct`.
+
+- The document: `contextVocabulary` holds `channels` (`{ id, name }`), `rules`, `sourcePlatforms`
+  (`{ id, name, networks }`), `landingPageTypes` (`{ id, name }`), and optionally `visitBuckets` (lower bounds,
+  whole numbers strictly ascending from 1; omitted, `[1, 2, 4]`) and `ladder` (`{ order, depth }`, the order
+  exactly `c`, `v`, `s`, `r`, `a` and the depth 1 to 5; omitted, depth 5). An id is lower case letters, digits
+  and underscores, starting with a letter, at most 64 characters, and never `unknown` or `any`.
+- The mapping: each of the `rules` names a `channel` and at least one condition, `utmMedium`, `utmSource`, `utmCampaign`, `referrer` or `untagged`.
+  `utmSource` matches whole or as a token of a token-form source; `utmCampaign` matches a token of the campaign,
+  so `brand` splits `brand_spring` from `nonbrand_spring`; `referrer` is `none` (a page view whose referrer is
+  empty or the site's own host), `external` or registrable domains; `untagged` means no utm_medium, utm_source or
+  utm_campaign is declared. The rules are read in order and the first that holds classifies the arrival; when
+  none holds the arrival records as unknown, never a guess.
+- Refusals: a channel id outside the id grammar, a duplicate id, a rule naming a channel the vocabulary does not
+  list, a ladder order other than today's, a depth outside 1 to 5 or a cut that is not whole numbers strictly
+  ascending from 1 answers 422 naming `contextVocabulary`, the member and the offending value, and writes no
+  revision.
+- Where a channel is named: a seed rule's `entry_channel` and a per-context order's `channel` admit exactly the
+  tenant's channel ids, and an order's `visitBuckets` exactly the names of its cut (`[1, 2, 3, 6]` names `1`, `2`,
+  `3-5`, `6+`) or `any`; any other word is refused as before. The page's own `channel` (the snapshot's `channel`,
+  `HydrateOptions.channel`) is admitted only as one of the tenant's channel ids; any other word is ignored.
+- Visit attributes and seed keys: the visit records its source platform (the platform whose `networks` hold the
+  referrer's host, or the network a token-form `utm_source` names) and its landing-page type (the `data.pageType`
+  of the visit's first event naming one of the tenant's types, kept for the visit), and the seed signals
+  `source_platform` and `landing_page_type` read them; a fired rule is itemised on `explain.contextual` and on the
+  receipt as every seed rule is. They are context attributes, never learning-cell levels.
+- The cell and the learning: a decision's cell carries the tenant's channel id and the bucket of its cut, and the
+  statistics count it under that cell; a learned lift is read from the finest consulted level, never beyond the
+  published depth (the counts at finer levels are kept).
+- The grammar bump: when `contextVocabulary` changes the channel values (as a set), the cut or the depth, `cellGrammar` changes with it:
+  `ladder-cell` at a version derived from those three members, its order today's order cut at the depth.
+  A priors file exported under the previous vocabulary is then refused by
+  `PUT /content/priors` and `POST /content/priors/validate` naming `cellGrammar`, the grammar in force and the re-export,
+  and so is one published as a `publicationChanges` member of any `PUT /content/{kind}` (its kind matched in any
+  case, the refusal prefixed with `publicationChanges[i]`, the whole request refused and no member written). The
+  grammar in force is the one the learn document published in the same request derives (the primary document or a
+  `publicationChanges` member of the learn kind, in any case of the word), or else the learn document in force; a
+  file declaring nothing is read under the current grammar. A vocabulary that changes none of the three keeps
+  `ladder-cell` version 2.
+- What is stored: a tenant without the settings stores no new member; a visit classified under a vocabulary
+  stores the channel id, the source platform and the landing-page type it records, with the learn revision that
+  classified it, inside the shopper's existing record.
 
 ## 5. Learning and transparency
 
