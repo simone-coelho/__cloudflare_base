@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-12, midday: P07 and P04 closed (7/25); P29 active; P36 in fix round 2
+
+- **Parity `tapestry-parity-build`:** Local done 7/25 · Final 0/25 · `check` PASS. P07 closed (artifact 30c29623 after one specification fix round, R-P53; receipt abbe715b); P04 closed (artifact 3742e05d; merge 1f7fcefd; receipt f4594d4b). **P29 ACTIVE** at 9bf4fdca, building in `/home/simonecoelho/rem/build-p29` (`rem/p29-build` from `rem/tkt/P29` bc567ba5; brief `_evidence/parity-step3/P29/implementer/BRIEF.md`). P31 staged (`build-p31` from `rem/tkt/P31` 4c62cdab; brief with @@INT_SHA@@). Order after P29: P31 P05 P06 P12 P13 P34 P30 P33 P32 P09 P11 P14 P35 P08 P15 P16 P26.
+- **Programme 2 `tapestry-parity-customer-answers`:** 0/5 · **P36 ACTIVE**. P36 built at `rem/p36-build` 7c6e0e22 (88e39487 + fix round 1 R-P54 + the P07 merge + the door check; 43/43; gate 52/0); its verification FAILED on a P07/P36 interaction (the P07 fan-in classifies an arrival without the tenant vocabulary, ShopperReflex.ts:1357 and RealtimeSegmentEngine.ts:606; `P36/fix1/reviewer/REPORT.md`). Ruling R-P55; fix round 2 specifying on `rem/spec-p36-fix2` (cut from 7c6e0e22; briefs under `P36/fix2/`). Then: spec review, `record-program-gate.cjs`, a fresh implementer on `build-p36`, a scoped verification, `program-receipt-and-merge.sh docs/parity/customer-answers P36 rem/p36-build <sha> <acceptance log>`, then P37 ACTIVE (`build-p37` staged). Order after P36: P37 P38 P40 P39.
+- **Owner-visible residual, unassigned:** P07's context prior exists only for the six channel words and today's three visit buckets (regionTrend.ts:65-81); a vocabulary tenant's other channels and cut buckets get no prior. Other owed work: as the 2026-10-09 sections below and `_evidence/parity-step3/AMENDMENTS.md` (closures and residuals per ticket).
+- **Lead tools and lanes:** `/home/simonecoelho/rem/_evidence/_lead-tools/` (receipts/, gates/, lanes/); every WSL lane under `/home/simonecoelho/rem/` locked, never pruned. Bootstrap: `docs/remediation/BOOTSTRAP-LEAD.md`.
+
 ## 2026-10-09, night: amendment 1 (a second programme, S5 specified); P10 closed; P07 active
 
 - **Owner decision (2026-10-09, one question):** "second programme, no pause". The sheet: `docs/BTI-Parity-Amendment-2026-10-09.md` (owner tree; sections 7 and 8 by the active lead) and the freeze sheet's section G (items 55 to 62, all yes); copies under `docs/parity/authority/amendment-1/`.
