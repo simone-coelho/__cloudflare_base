@@ -80,6 +80,38 @@ export interface ContentCatalog {
 }
 
 /**
+ * P38: one value of an attribute in the tenant's published vocabulary. `id` is
+ * the value every store and every interest carries (lower-case letters and
+ * digits, words joined by single underscores, at most 64 characters); `name` is
+ * the display name, kept exactly as the tenant authored it; `synonyms` are the
+ * source systems' own words for the value; `parent` names the category a
+ * product type belongs to (exactly one on every `productType` value).
+ */
+export interface VocabularyValue {
+  id: string;
+  name: string;
+  synonyms?: string[];
+  parent?: string;
+}
+/** P38: one attribute of the vocabulary, keyed by the registry dimension and catalogue tag key it governs. */
+export interface VocabularyAttribute { values: VocabularyValue[] }
+/** P38: the `vocabulary` document kind, as authored. A stored revision governs nothing until it is approved. */
+export interface VocabularyDocument {
+  version?: string;
+  attributes: Record<string, VocabularyAttribute>;
+}
+/**
+ * P38 (decision D1): the approval in effect — the vocabulary revision the
+ * tenant's operator approved and the document of that revision, carried whole so
+ * the ingest hosts read one member of the publication set and never an older
+ * revision body.
+ */
+export interface VocabularyApproval {
+  revision: number;
+  document: VocabularyDocument;
+}
+
+/**
  * W32 E1.01 (F32 §2.4-§2.6, §4 item 8, §6.2): what a stored configuration
  * document costs against the ceiling it is published under, answered beside the
  * document so an operator sees the size BEFORE a publish is refused for it.

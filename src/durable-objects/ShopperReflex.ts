@@ -95,7 +95,7 @@ import {
   type ReflexResult,
   type ReflexState,
 } from '@/reflex/core';
-import { tenantCatalogVocabulary, tenantContextVocabulary, type CatalogVocabularySource } from '@/content/service';
+import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
 import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, readTimeStageChange, storedJourneyStage, type JourneyWord, type VisitJourney } from '@/services/JourneyStage';
@@ -1166,7 +1166,24 @@ export class ShopperReflex {
       if (!await bufferedEventAllowed(this.env, tenant, principal.subject, event.timestamp)) return answer(false, 'erased');
       if (!consent.personalization) return answer(false);
       requireConsentPurpose(consent, 'personalization');
-      const interest = await bufferedInterest(this.env, tenant, event, { ...pipeline, reflex: affinity.reflex,
+      // P38 (VA3, decision D2): a buffered delivery is placed by its own door
+      // (bufferedInterest), so its governed values are mapped before it is handed
+      // over, by the rule and the table the live door uses, and what maps to
+      // nothing is counted in the tenant's rejection report. No approval in
+      // effect: the delivery is handed over exactly as sent.
+      const governed = (this.env.REFLEX_ENABLED ?? 'true') !== 'false' ? await tenantVocabularyInEffect(this.env, tenant) : null;
+      let delivered = event;
+      if (governed) {
+        const surface = resolveSurface({ surface: pipeline.surface }), data = (event.data ?? {}) as Record<string, unknown>;
+        const cfg = await resolveTenantReflexConfig(this.env, tenant, surface), governing = governedEventData(data, cfg, governed);
+        const pid = data.productId ?? data.product_id ?? data.sku;
+        const held = pid ? (await resolveTenantCatalog(tenant, surface))?.getProduct(String(pid)) : undefined;
+        if (governing.rejected.length && (isContentAction(actionOf(event)) || (!held && cfg.eventAttributes === 'event-when-unknown'))) {
+          retainOwnerWork(recordVocabularyRejections(this.env, tenant, governed.revision, governing.rejected, now));
+        }
+        delivered = { ...event, data: governing.data };
+      }
+      const interest = await bufferedInterest(this.env, tenant, delivered, { ...pipeline, reflex: affinity.reflex,
         attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...pipeline.attributes }, odpSeed: affinity.odpSeed, odpContext: affinity.odpContext,
         ...{ externalRetention: affinity.externalRetention } }, getConnectors(this.env, tenant).segments, now);
       assertSessionTarget(principal, event.userId);
@@ -1254,17 +1271,33 @@ export class ShopperReflex {
     const heldProduct = product as unknown as Record<string, unknown> | undefined;
     const contentEvent = isContentAction(actionOf(event));
     const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
-    const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(eventData, heldProduct, cfg))
+    // P38 (VA3, decision D2, DI-9): with an approved vocabulary in effect, the
+    // event's governed values are mapped before any door below places them — a
+    // synonym to its id, an id to itself — and a value that maps to nothing is
+    // removed, builds no interest and is counted in the tenant's rejection report,
+    // the event otherwise processed as before. No approval in effect (or one the
+    // authority cannot answer): nothing here changes, and no storage is read for it.
+    const governed = reflexOn ? await tenantVocabularyInEffect(this.env, tenant) : null;
+    const governing = governed ? governedEventData(eventData, cfg, governed) : null;
+    const placing = governing ? governing.data : eventData;
+    if (governed && governing?.rejected.length && (contentEvent || (!product && cfg.eventAttributes === 'event-when-unknown'))) {
+      const counted = recordVocabularyRejections(this.env, tenant, governed.revision, governing.rejected, now);
+      if (principal) retainOwnerWork(counted); else void counted;
+    }
+    const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, heldProduct, cfg))
       ? await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null)
       : EMPTY_VOCABULARY;
-    const placed = placeEvent(eventData, heldProduct, cfg, vocabulary);
-    let signals: RecognitionSignals = placed.signals;
+    const placed = placeEvent(placing, heldProduct, cfg, vocabulary);
+    const governedPlacement = governed ? governedTouches(placed.touches, governed, cfg) : null;
+    let signals: RecognitionSignals = governedPlacement ? { ...placed.signals, recognized: governedPlacement.length > 0 } : placed.signals;
     // CW24: where the scope scores event-carried attributes, an unknown id with
     // registry attributes on it is a customer's product, not an abuse attempt —
     // but a value on a dimension the tenant's own catalogue names, that the
     // catalogue does not name, stays unknown and builds nothing (HANDOFF §12),
     // so an event whose every value is refused reaches the drop below.
-    const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown' ? placed.touches : [];
+    // P38: on a governed attribute the vocabulary decides instead (DI-9), so an
+    // event whose value maps is placed under the id and never dropped here.
+    const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown' ? (governedPlacement ?? placed.touches) : [];
     if (pid != null && !product && eventTouches.length === 0) {
       this.dropped.unknownProduct++;
       return {
@@ -1286,8 +1319,10 @@ export class ShopperReflex {
     }
 
     // Resolve before changing the audience owner or any aliased pipeline state.
-    const contentEventTouches = reflexOn && contentEvent
-      ? await resolvedContentTouches(this.env, tenant, eventData, cfg, vocabulary) : null;
+    const resolvedTouches = reflexOn && contentEvent
+      ? await resolvedContentTouches(this.env, tenant, placing, cfg, vocabulary) : null;
+    // P38 (DI-9): a content piece's own tags on a governed attribute answer to the same table.
+    const contentEventTouches = resolvedTouches && governed ? governedTouches(resolvedTouches, governed, cfg) : resolvedTouches;
     // A content event is placed by the tenant's content catalogue against the
     // same vocabulary, so its diagnostic answers from the touches that read
     // produced — the same "at least one value built taste" rule (R64).
@@ -1344,7 +1379,9 @@ export class ShopperReflex {
     let reflex: ReflexResult | null = null;
     if (reflexOn) {
       const action = actionOf(event);
-      const touches = contentEventTouches ?? (product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches);
+      // P38 (DI-9): a held product's attributes on a governed attribute answer to the same table.
+      const productTouches = product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : null;
+      const touches = contentEventTouches ?? (productTouches ? (governed ? governedTouches(productTouches, governed, cfg) : productTouches) : eventTouches);
       // W41: once per sign-in, a recognized shopper's interests are restored
       // from her tenant's ODP profile at her first event after it, merged into
       // what she holds and BEFORE the event is applied — the one shared rule
