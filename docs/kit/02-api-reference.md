@@ -385,6 +385,49 @@ events, lambda, level, version, visitBucket }` (keys sorted, `level` `channel_vi
 value in replay; a record without the shares was decided without the prior and replays as before, and no new
 replay marker is written.
 
+**The layout reason.** Every decision on a page's declared layout slot says whether the served order
+changed against the slot's baseline, and why. The baseline is the merchandiser's fixed positions — prefix
+pins, modules pinned at a position and off-limits modules held at their place — where their rules put them,
+and on every other position the configured order for the shopper's context where one matches, else the
+modules the slot can serve (after eligibility, its exclusions and what the page already served or
+reserved) in catalogue order. The reason, `layoutReason`, is either `{ cause, slot, status: "unchanged" }`
+with exactly one cause or `{ moves, slot, status: "changed" }`, keys sorted, and it is the same value on the
+decision set, on every record of the slot (`explain.layoutReason`, compared by value in replay) and on
+every receipt of the slot (`layoutReason`), whose last sentence says it in words. An unchanged layout names
+the first of these causes that holds, in this order: `pinned` (pins, with any off-limits modules, hold
+every position of the take), `off_limits` (the slot is off-limits, or off-limits modules hold every
+position), `holdout_or_consent` (the holdout's `default` arm, which is also the arm of a shopper without
+personalization consent), `below_signal_floor` (the slot was decided on context alone), `blend_or_trust_zero`
+(the learned term is held at zero: the layout blend's `p` at 0 on a slot that opts in, a configured order
+served exactly on a slot that does not, or the trust dial γ at 0), `no_level_reached_nmin` (no level of
+the learned ladder reached nMin for any module the slot ranked; the reason then carries `n`, the most
+evidence any of them holds at any level of the shopper's cell, and `nMin`, the evidence a level needs),
+`zero_base` (no module the slot ranked had a base score above 0), `catalogue_order_ties` (a served
+module's score tied another module's, so catalogue order broke the tie) and `nothing_else_eligible` (the
+slot could rank at most one module, or its ranking placed every module exactly where the baseline does).
+Later releases may add causes, so read a cause this reference does not name as one it does not describe
+yet. A changed layout's `moves` lists each module served at a position other than its baseline position
+as `{ from, module, term, to }` (keys sorted, positions counted from 1 within the slot, `from` null for a
+module the baseline does not hold), and its `term` names what moved it: `affinity` (the shopper's own
+interests), `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`, `freshness`,
+`fatigue`, `merchandising`, `lift`, `blend` (the layout blend's learned term `p × Q`), `exploration` or
+`diversity`. A module moved up names the term that contributed most to its score; a module moved down
+names its own largest negative term, else the term of the first module that passed it. On a declared
+layout slot a receipt says "No interest signal yet for this shopper" only when the interest vector the page
+was scored on holds no interest at all; a shopper whose interests reached none of a module's weighted tags
+reads "No interest on the dimensions this layout weights matched this module" instead, and a receipt of
+any other slot reads as before. An off-limits declared layout slot writes one record naming the
+`off_limits` cause to the ledger, and so to the export, never to the shopper's decision ring: it carries no
+exposure, no receipt reads it and no outcome is credited to it. That record holds position 0 with
+`item_id` `"(off-limits)"`, no candidates, authority `default`, `measurementBasis` `served-v1`, the
+decision's own arm and cell, and the same `explain.layoutReason`; it is written only under the shopper's
+tracking consent and for a layout slot measured on `rendered-v1`, so every report and learning fold sets
+it aside as a row recorded under another basis than its slot's, and its replay decides the page again. A
+layout slot that a refused pin refuses whole writes no record and has no reason. Where a population prior
+applied and the layout slot ranked above the signal floor, every record of the page carries
+`inputs.prior_lambda: { context?, regional? }`, each prior's weight λ, so the reason's `regional_prior`
+and `context_prior` terms replay exactly; a record written before the reason replays without it.
+
 **An unreadable record.** Her stored record can exist and still not be readable: the retained-data
 authority it was born under is no longer the one in force (for example, you published the next
 revision of your profile retention policy). `POST /v1/{tenant}/decisions/snapshot` then still
@@ -866,7 +909,9 @@ Current slot validation/publication accepts absent/1/2/3/4 markers and emits `go
 document marked 4 and for an unmarked document that declares a layout slot or carries per-context orders (below), with optional per-slot
 `offLimits`, exact `excludedPieceIds`, OR `excludedTags` pairs and `allowedTypes` controls ([schema](./03-payload-schemas.md#hard-slot-controls)).
 Off-limits slots return no engine candidates, decisions or records on any arm, including pinned
-slots; their pin and ranking settings remain dormant. Excluded IDs cannot reach scoring, exploration
+slots; their pin and ranking settings remain dormant. The one exception is a page's declared layout slot
+marked off-limits, which writes a single record naming why to the ledger and the export, never to the
+shopper's decision ring and never on the answer ([the layout reason](./03-payload-schemas.md#the-layout-reason)). Excluded IDs cannot reach scoring, exploration
 or diversity, and an active excluded pin is rejected at publication. No arbitrary replacement is
 chosen. A decision set whose published hard controls refused a piece the slot could otherwise have served carries advisory `constraintDiagnostics: {warningCount, omittedWarningCount, warnings: [{slot, contentId, reason: off_limits | excluded | type_not_allowed | excluded_tag, dimension?, value?}]}`, in the same bounded-sample idiom the catalog and pin channels use: every refused eligible piece is counted, at most50 are named in slot order then catalogue order, `omittedWarningCount` is the difference, and an excluded-tag refusal names the published pair that matched rather than leaving a merchandiser to guess which of up to 1000 pairs applied. A slot that refuses nobody, a slot the composer never ranks and a retained receipt replayed before these controls existed carry no such member at all, so a slot that comes back short says which control emptied it instead of reading as a thin catalog. It is advice, never serving authority, and is never carried on a stored record; the operator reads the same refusals for the whole stored document on the slots current GET (above). Exact rendering types match `piece.type`, not affinity tags. Tag matching is literal for explicit own tags;
 only absent own `contentType` uses the existing safe rendering-type fallback, equally on every arm.
