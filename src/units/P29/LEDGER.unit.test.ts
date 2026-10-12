@@ -51,6 +51,18 @@
 //       the receipts are read through the route after a render acknowledgement
 //       of every drawn module, as R5 reads the export (R-P18: a declared
 //       served-v1 layout is never captured at serve time, P02.A3 D1).
+//       R-P56 (fix round 1): a moved module names the term that changed its
+//       place relative to the modules it passed (moved up) or that passed it
+//       (moved down), the learned lift included. Four modules of identical
+//       interest (EQUAL) at γ 1 on rendered-v1, so the one term by which they
+//       differ is the lift a merchandiser froze: (a) story.3 frozen at 2 (the
+//       delivery review's probe C4c) passes story.1 and story.2, and all three
+//       moves name `lift`; (b) story.1 frozen at 0.5 (probe C4f) is passed by
+//       story.2, story.3 and story.4, and all four moves name `lift`; the whole
+//       `moves` list is asserted, keys sorted (so a module moved down is never
+//       left out), on the set, every record and every receipt. The control:
+//       every module frozen at the same lift is unchanged, its one cause
+//       `catalogue_order_ties` (D1's order; R2's tie scenario).
 //   R2  Each cause from its own scenario, on both hosts.
 //   R3  A shopper with no interest at all reads "No interest signal yet for this
 //       shopper"; a shopper whose only interest is on a dimension the layout
@@ -64,6 +76,11 @@
 //   R5  The record in the R2 decision partition carries the reason exactly as
 //       the decision set states it; docs/kit/02 and 03 document the reason, its
 //       two statuses and each cause word.
+//       R-P56: both kit documents state that a move names the term that changed
+//       the module's place relative to the modules it passed or that passed it
+//       (02:414-416, 03:656-658), and the API reference names an unreadable
+//       record among `holdout_or_consent` (02:399, reading 8); stable words, so
+//       the sentences are the implementer's to phrase.
 //
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // `layoutReason` on the decision set, the record's explain and the receipt. No
@@ -116,6 +133,14 @@ async function acknowledgedReceipts(m: Mounted, s: Shopper, label: string): Prom
   await m.drainLedger();
   return (await receiptsOf(m, s.subject)).filter(r => r.slot === LAYOUT);
 }
+/** R-P56: the layout on rendered-v1 (so its receipts exist once acknowledged, R-P18) with γ 1 and the named dials. */
+const renderedLearn = (dials: Record<string, unknown> = {}) => learnDocument({ [LAYOUT]: { measurementBasis: 'rendered-v1', reward: 'click', gamma: 1, ...dials } });
+/** A value as its keys are written, in order, so an assertion holds the keys sorted as the kit states (02:394-396, 03:641-642). */
+const keyed = (v: unknown): unknown => (Array.isArray(v) ? v.map(keyed)
+  : v && typeof v === 'object' ? Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, keyed(x)]) : v);
+/** A reason as keyed, its moves taken by served position (the witness does not order the list; it lists every move). */
+const byPlace = (reason: Reason | string): unknown => (typeof reason === 'string' || !Array.isArray(reason.moves) ? keyed(reason)
+  : keyed({ ...reason, moves: [...(reason.moves as Array<{ to: number }>)].sort((a, b) => a.to - b.to) }));
 
 // ===========================================================================
 // unit:P29.R1 — one reason on the set, every record and every receipt
@@ -148,6 +173,55 @@ describe('unit:P29.R1', () => {
         expect.soft(receipts.map(r => [r.item, r.layoutReason ?? null]), `${host}: P29.R1 (${name}) — and every receipt`)
           .toEqual(receipts.map(r => [r.item, typeof reason === 'string' ? 'the set’s reason' : reason]));
       }
+    }, 60_000);
+
+    // R-P56: the learned lift is a term that moves a module. EQUAL gives every module the same interest, so the lift is the
+    // only term by which one differs from another; ties between equal scores are broken by catalogue order (D1).
+    it(`host (${host}): R-P56 — a module moved by its lift names the term lift, as does every module it passed or that passed it: the whole moves list, keys sorted, on the decision set, every record and every receipt (rendered-v1, read through the route with render acknowledgements)`, async () => {
+      const [s1, s2, s3, s4] = EQUAL_IDS as [string, string, string, string];
+      const worlds: Array<{ name: string; label: string; items: Record<string, unknown>; served: string[]; moves: Array<[string, number, number]>; says: string }> = [
+        { name: 'story.3 frozen at a lift of 2', label: 'p29-r1-lift-up', items: { [s3]: { mode: 'freeze', lift: 2 } }, served: [s3, s1, s2, s4],
+          moves: [[s3, 3, 1], [s1, 1, 2], [s2, 2, 3]],
+          says: 'story.3 moved from 3 to 1 by its lift of 2, past story.1 (1 → 2) and story.2 (2 → 3), each move named lift; story.4 keeps position 4 and is not listed' },
+        { name: 'story.1 frozen at a lift of 0.5', label: 'p29-r1-lift-down', items: { [s1]: { mode: 'freeze', lift: 0.5 } }, served: [s2, s3, s4, s1],
+          moves: [[s2, 2, 1], [s3, 3, 2], [s4, 4, 3], [s1, 1, 4]],
+          says: 'story.2 (2 → 1), story.3 (3 → 2) and story.4 (4 → 3) each passed story.1, whose lift of 0.5 moved it from 1 to 4; every move named lift, nothing else listed' },
+      ];
+      for (const world of worlds) {
+        const m = await mount(host, { pieces: EQUAL, slots: slots(), learn: renderedLearn({ items: world.items }) });
+        expectPublished(m, `P29.R1 (R-P56, ${world.name}) — the declared layout slot and the frozen lift publish`);
+        const s = await shopper(m);
+        const set = await servePage(m, s, 'pdp');
+        const records = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+        expect(records.map(r => r.item_id), `${host}: PRECONDITION (${world.name}) — the frozen lift at γ 1 orders the four equal modules, ties in catalogue order`).toEqual(world.served);
+        const reason = reasonOfSet(set);
+        const expected = { moves: world.moves.map(([module, from, to]) => ({ from, module, term: 'lift', to })), slot: LAYOUT, status: 'changed' };
+        expect.soft(byPlace(reason), `${host}: P29.R1 (R-P56, ${world.name}) — ${world.says}`).toEqual(keyed(expected));
+        expect.soft(records.map(r => [r.item_id, keyed(reasonOf(r) ?? null)]), `${host}: P29.R1 (R-P56, ${world.name}) — every record of the layout carries the set's reason, keys sorted`)
+          .toEqual(records.map(r => [r.item_id, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
+        const receipts = await acknowledgedReceipts(m, s, world.label);
+        expect(receipts.length, `${host}: PRECONDITION (${world.name}) — a receipt for every acknowledged layout position`).toBe(4);
+        expect.soft(receipts.map(r => [r.item, keyed(r.layoutReason ?? null)]), `${host}: P29.R1 (R-P56, ${world.name}) — and every receipt, read through the route`)
+          .toEqual(receipts.map(r => [r.item, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
+      }
+    }, 60_000);
+
+    it(`host (${host}): R-P56 control — the same four modules with every lift answered equal (each frozen at 2) are unchanged against the baseline with one cause, catalogue_order_ties, on the decision set, every record and every receipt`, async () => {
+      const m = await mount(host, { pieces: EQUAL, slots: slots(), learn: renderedLearn({ items: Object.fromEntries(EQUAL_IDS.map(id => [id, { mode: 'freeze', lift: 2 }])) }) });
+      expectPublished(m, 'P29.R1 (R-P56 control) — the declared layout slot and the equal frozen lifts publish');
+      const s = await shopper(m);
+      const set = await servePage(m, s, 'pdp');
+      const records = set.records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+      expect(records.map(r => r.item_id), `${host}: PRECONDITION (control) — equal lifts leave the four equal modules in catalogue order`).toEqual(EQUAL_IDS);
+      const reason = reasonOfSet(set);
+      expect.soft(keyed(reason), `${host}: P29.R1 (R-P56 control) — every lift answered equal: unchanged, its one cause the tie broken by catalogue order`)
+        .toEqual(keyed({ cause: 'catalogue_order_ties', slot: LAYOUT, status: 'unchanged' }));
+      expect.soft(records.map(r => [r.item_id, keyed(reasonOf(r) ?? null)]), `${host}: P29.R1 (R-P56 control) — every record of the layout carries the set's reason`)
+        .toEqual(records.map(r => [r.item_id, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
+      const receipts = await acknowledgedReceipts(m, s, 'p29-r1-lift-equal');
+      expect(receipts.length, `${host}: PRECONDITION (control) — a receipt for every acknowledged layout position`).toBe(4);
+      expect.soft(receipts.map(r => [r.item, keyed(r.layoutReason ?? null)]), `${host}: P29.R1 (R-P56 control) — and every receipt, read through the route`)
+        .toEqual(receipts.map(r => [r.item, typeof reason === 'string' ? 'the set’s reason' : keyed(reason)]));
     }, 60_000);
   }
 });
@@ -295,5 +369,20 @@ describe('unit:P29.R5', () => {
       ...causes.map(cause => ({ name: `the cause ${cause}`, test: (x: string) => x.includes(cause) })),
     ]);
     expect(missing, 'P29.R5 — the kit documents the reason and its causes').toEqual([]);
+  });
+
+  it('logic: R-P56 — the API reference and the payload schemas state that a move names the term that changed the module’s place relative to the modules it passed or that passed it, and the API reference names an unreadable record among holdout_or_consent', () => {
+    const missing = [
+      ...missingStatements(['docs/kit/02-api-reference.md', 'docs/kit/03-payload-schemas.md'], [
+        { name: 'a move names the term that changed the module’s place relative to the modules it passed or that passed it (R-P56)',
+          test: x => /\bterm\b/.test(x) && /\bit passed\b/i.test(x) && /\bpassed (it|by)\b/i.test(x) },
+      ]),
+      ...missingStatements(['docs/kit/02-api-reference.md'], [
+        { name: 'an unreadable record is among holdout_or_consent (R-P56, reading 8)',
+          test: x => x.includes('holdout_or_consent') && /\bunreadable\b/i.test(x)
+            && (!x.includes('below_signal_floor') || /holdout_or_consent[^]*?\bunreadable\b[^]*?below_signal_floor/i.test(x)) },
+      ]),
+    ];
+    expect(missing, 'P29.R5 (R-P56) — the kit states the move-term rule and names the unreadable record').toEqual([]);
   });
 });
