@@ -10,6 +10,7 @@
 //   Dials      the learn document for this slot, and for the brand
 //   Proposals  historical records, read-only and unverified
 //   Erasures   the tombstones the ledger honours, and the rewrite
+//   Vocabulary P38: the attribute vocabulary, its approval and what it refused
 //
 // The two rules that shape every table here: cells are a DRILL-DOWN and never
 // rows (doc 28 §3.4), and nothing renders as "null", "undefined" or "NaN".
@@ -377,7 +378,7 @@
   });
 
   // ══════════════════════════════════════════════════════════ Dials ══════════
-  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null };
+  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '' };
   const dialsFor = () => { dl.draft.slots = dl.draft.slots || {}; return (dl.draft.slots[S.slot] = dl.draft.slots[S.slot] || {}); };
   function diffPaths(a, b, path = '') {
     const out = [];
@@ -415,12 +416,14 @@
     dl.revision = data.revision || 0;
     dl.source = data.source || 'compiled-default';
     dl.errors = [];
+    dl.vocabularyText = null; dl.vocabularyError = '';
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     dl.authored = C.authored(res.data);
     dl.doc = res.data.document; dl.draft = copy(dl.doc); dl.revision = res.data.revision; dl.source = 'stored';
+    dl.vocabularyText = null; dl.vocabularyError = '';
     document.getElementById('note').value = '';
     C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Published; serving refreshes within the documented 30-second read bound.`);
     await C.loadSlots();
@@ -487,6 +490,32 @@
     );
   }
 
+  // P36: the brand's context vocabulary — its channel values with the rules that
+  // classify an arrival into them, its source platforms, its landing-page types,
+  // and optionally its visit-bucket cut and ladder depth — edited as the JSON it
+  // is published as, inside the learn document. Malformed text cannot be saved;
+  // the platform validates the draft as it does every other dial.
+  function vocabularyEditor(D) {
+    const path = 'contextVocabulary';
+    const el = h('textarea', { class: `txt${changed(path)}`, rows: 14, spellcheck: 'false', 'data-focus-key': path, disabled: !C.canEdit() || null });
+    el.value = dl.vocabularyText !== null ? dl.vocabularyText : (D.contextVocabulary ? JSON.stringify(D.contextVocabulary, null, 2) : '');
+    el.addEventListener('input', () => {
+      dl.vocabularyText = el.value;
+      const text = el.value.trim();
+      if (!text) { delete D.contextVocabulary; dl.vocabularyError = ''; scheduleCheck(); return; }
+      try {
+        const value = JSON.parse(text);
+        if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('not an object');
+        D.contextVocabulary = value; dl.vocabularyError = '';
+        scheduleCheck();
+      } catch {
+        dl.vocabularyError = 'contextVocabulary: the vocabulary must be a valid JSON object of channels, rules, sourcePlatforms and landingPageTypes (visitBuckets and ladder optional). Empty removes it; malformed text cannot be saved.';
+        C.render();
+      }
+    });
+    return el;
+  }
+
   function brandDials(host) {
     const D = dl.draft;
     D.holdout = D.holdout || { share: 0.05, salt: '', arms: ['default'] };
@@ -529,6 +558,9 @@
         num(reg.kBlend, (v) => { D.regional = { ...reg, kBlend: v ?? 1 }; scheduleCheck(); }, 'regional.kBlend', { min: 0.01, max: 100, step: 0.1 })) : null,
       reg && reg.enabled ? dial('Before a region counts', 'Events a region needs before its trend is used; below it the country answers, then everyone.',
         num(reg.minEvents, (v) => { D.regional = { ...reg, minEvents: v ?? 30 }; scheduleCheck(); }, 'regional.minEvents', { min: 1, step: 1 })) : null,
+      h('div', { class: 'subhead' }, 'How arrivals are read: the context vocabulary'),
+      dial('Channels, sources and landing pages', 'The brand\u2019s own channel values and the published rules that classify an arrival into them, read in order, the first that holds deciding; an arrival no rule names records as unknown, never a guess. Source platforms name the networks they own; landing-page types are the page types the page reports. Optionally the visit-bucket cut (whole numbers ascending from 1) and the ladder depth (1 to 5, order c, v, s, r, a). A change to the channel values, the cut or the depth changes the cell grammar: a priors file exported before it is refused and must be re-exported. Empty means the six built-in channel words.',
+        vocabularyEditor(D), dl.vocabularyError ? h('span', { class: 'err' }, dl.vocabularyError) : (D.contextVocabulary ? `${(D.contextVocabulary.channels || []).length} channel values, ${(D.contextVocabulary.rules || []).length} rules` : 'Not published: the six built-in channel words.')),
       h('div', { class: 'subhead' }, 'Their own model, for every slot'),
       dial('Where it lives', 'Service: a worker they own behind a binding, or an https address. Table: a scoring table they publish. Workers AI: a hosted model that answers in the agreed shape.',
         sel(ext ? ext.kind : 'none', [['none', 'none'], ['service', 'service'], ['table', 'table'], ['workers_ai', 'workers AI']], (v) => {
@@ -554,9 +586,9 @@
       C.dirty({
         count: n,
         checking: dl.checking,
-        blocked: dl.errors.length > 0,
+        blocked: dl.errors.length > 0 || dl.vocabularyError !== '',
         save: saveDials,
-        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; C.render(); },
+        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; C.render(); },
       });
       if (dl.errors.length) host.append(h('div', { class: 'msg err' }, 'The dials as drafted were refused:', h('ul', {}, ...dl.errors.map((e) => h('li', {}, String(e))))));
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
@@ -639,4 +671,76 @@
     er.pending = again.ok ? again.data.pending || [] : er.pending;
     C.render();
   }
+
+  // ═════════════════════════════════════════════════════ Vocabulary ══════════
+  // P38: the brand's attribute vocabulary. A stored revision governs nothing
+  // until the brand's operator approves it here; the screen always says which
+  // revision is in effect, read from the platform's effectiveRevision, never
+  // from the latest stored revision.
+  const vc = { data: null, report: null, error: '', busy: false };
+  async function loadVocabulary() {
+    const [res, rejections] = await Promise.all([C.content('/vocabulary'), C.content('/vocabulary/rejections')]);
+    vc.data = res.ok ? res.data : null;
+    vc.report = rejections.ok ? rejections.data : null;
+    vc.error = res.ok ? '' : (res.status === 401 || res.status === 403 ? 'Sign in to read the vocabulary.' : res.data.error || 'Could not read the vocabulary.');
+  }
+  async function approveLatest() {
+    const d = vc.data, latest = d && Number.isSafeInteger(d.revision) ? d.revision : 0;
+    if (!latest || vc.busy) return;
+    if (!confirm(`Approve revision ${fmt(latest)} of the vocabulary? From then on the catalogue and every event are held to it: a value it does not list is refused.`)) return;
+    vc.busy = true; C.render();
+    const res = await C.write(`/content/vocabulary/approve/${latest}?scope=${encodeURIComponent(S.scope)}`, 'POST', {}, C.authored(d));
+    vc.busy = false;
+    if (!res.ok || res.data.ok === false) { C.render(); return; }
+    await loadVocabulary();
+    C.flash(`Approved revision ${fmt(res.data.effectiveRevision)} of the vocabulary.`);
+  }
+  const VALUES_SHOWN = 50;
+  C.view({
+    id: 'vocabulary', group: 'This brand', title: 'Vocabulary', heading: 'The values an attribute may take',
+    hint: 'Each attribute lists its values: the id every store and every interest carries, the display name in your wording, the words your source systems send for it, and for a product type its category. A revision takes effect only when it is approved here.',
+    async enter() { await loadVocabulary(); },
+    render(host) {
+      if (vc.error) { host.append(h('div', { class: 'msg note' }, vc.error)); return; }
+      const d = vc.data;
+      if (!d) { host.append(h('div', { class: 'empty' }, 'Reading the vocabulary.')); return; }
+      const effective = Number.isSafeInteger(d.effectiveRevision) ? d.effectiveRevision : 0;
+      const latest = Number.isSafeInteger(d.revision) ? d.revision : 0;
+      const approval = d.approval && d.approval.revision === effective ? d.approval : null;
+      host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
+        effective > 0
+          ? `Revision ${fmt(effective)} in effect${approval && approval.actor ? `, approved by ${approval.actor}` : ''}${approval && when(approval.at) ? ` on ${when(approval.at)}` : ''}.`
+          : 'No revision is approved yet: the vocabulary governs nothing, and every attribute value is kept as it is sent.'));
+      const pending = latest > 0 && latest !== effective;
+      host.append(card('Approval', 'Approving puts the latest stored revision in effect for this brand. A later revision changes nothing until it is approved in turn.',
+        h('div', { class: 'body' },
+          h('div', { class: 'toolbar' },
+            h('span', { class: 'sub' }, latest === 0 ? 'No vocabulary is stored for this brand.'
+              : pending ? `The latest stored revision, ${fmt(latest)}, is waiting for approval.` : `The latest stored revision, ${fmt(latest)}, is the approved one.`),
+            h('span', { class: 'spacer' }),
+            h('button', { class: 'small', 'data-focus-key': 'vocabulary.approve', disabled: !C.canEdit() || !pending || vc.busy, onclick: approveLatest },
+              latest > 0 ? `Approve revision ${fmt(latest)}` : 'Approve')))));
+      const stored = d.document && typeof d.document === 'object' && d.document.attributes && typeof d.document.attributes === 'object' ? d.document : null;
+      if (stored) {
+        for (const [key, attribute] of Object.entries(stored.attributes)) {
+          const values = Array.isArray(attribute && attribute.values) ? attribute.values : [];
+          const rows = values.slice(0, VALUES_SHOWN).map((v) => h('tr', {},
+            h('td', {}, h('div', { class: 'itemid' }, String(v.id))),
+            h('td', {}, String(v.name)),
+            h('td', {}, Array.isArray(v.synonyms) ? v.synonyms.join(', ') : ''),
+            h('td', {}, typeof v.parent === 'string' ? v.parent : '')));
+          host.append(card(`${key}`, `${plural(values.length, 'value')} in revision ${fmt(latest)}${values.length > VALUES_SHOWN ? `, the first ${fmt(VALUES_SHOWN)} shown` : ''}.`,
+            C.table([{ key: 'id', label: 'Id' }, { key: 'name', label: 'Display name' }, { key: 'synonyms', label: 'Synonyms' }, { key: 'parent', label: 'Parent' }], rows)));
+        }
+      }
+      const refused = vc.report && vc.report.rejections && typeof vc.report.rejections === 'object' ? Object.entries(vc.report.rejections) : [];
+      if (effective > 0) {
+        const rows = refused.flatMap(([attribute, counts]) => Object.entries(counts || {}).map(([value, n]) => h('tr', {},
+          h('td', {}, attribute), h('td', {}, h('div', { class: 'itemid' }, value)), h('td', { class: 'num' }, fmt(n)))));
+        host.append(card('Refused at ingest', 'Values events carried on a governed attribute that the approved vocabulary does not list: they built no interest. Add them as synonyms, or fix the source.',
+          rows.length ? C.table([{ key: 'attribute', label: 'Attribute' }, { key: 'value', label: 'Value' }, { key: 'n', label: 'Events', num: true }], rows)
+            : h('div', { class: 'empty' }, 'Nothing refused since this revision was approved.')));
+      }
+    },
+  });
 })();

@@ -8,6 +8,8 @@ import type { ContentPieceLike, ContentDecision, SlotCandidate, PinDiagnostic } 
 import type { SlotConstraintReason } from './slotConstraints';
 import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
+import type { ContextVocabulary } from '@/services/visit';
+import type { DeviceClass } from '@/services/platform';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
@@ -75,6 +77,38 @@ export interface EligibilityRule {
 export interface ContentCatalog {
   version?: string;
   pieces: ContentPiece[];
+}
+
+/**
+ * P38: one value of an attribute in the tenant's published vocabulary. `id` is
+ * the value every store and every interest carries (lower-case letters and
+ * digits, words joined by single underscores, at most 64 characters); `name` is
+ * the display name, kept exactly as the tenant authored it; `synonyms` are the
+ * source systems' own words for the value; `parent` names the category a
+ * product type belongs to (exactly one on every `productType` value).
+ */
+export interface VocabularyValue {
+  id: string;
+  name: string;
+  synonyms?: string[];
+  parent?: string;
+}
+/** P38: one attribute of the vocabulary, keyed by the registry dimension and catalogue tag key it governs. */
+export interface VocabularyAttribute { values: VocabularyValue[] }
+/** P38: the `vocabulary` document kind, as authored. A stored revision governs nothing until it is approved. */
+export interface VocabularyDocument {
+  version?: string;
+  attributes: Record<string, VocabularyAttribute>;
+}
+/**
+ * P38 (decision D1): the approval in effect — the vocabulary revision the
+ * tenant's operator approved and the document of that revision, carried whole so
+ * the ingest hosts read one member of the publication set and never an older
+ * revision body.
+ */
+export interface VocabularyApproval {
+  revision: number;
+  document: VocabularyDocument;
 }
 
 /**
@@ -180,7 +214,38 @@ export interface SlotStrategy {
    * page's declared layout slot. Absent means the tenant's floor applies.
    */
   signalFloor?: SignalFloor;
+  /**
+   * P04: modules pinned at a position of the page's declared layout slot
+   * (version 4 only), each at a position counted from 1 to the slot's `take`,
+   * after any prefix pins. A pinned module is reserved page-wide before any slot
+   * ranks and is served at exactly its position on every arm, never scored or
+   * explored, while the other positions are ranked around it. A pinned module
+   * that is missing, ineligible or excluded refuses the whole slot (decision
+   * D1), as a refused prefix pin does. Absent means the slot decides exactly as
+   * before.
+   */
+  positionPins?: PositionPin[];
+  /**
+   * P04: modules marked off-limits on the page's declared layout slot (version
+   * 4 only). An off-limits module holds its BASELINE position — its place in
+   * the configured order for the shopper's context where one matches (P01), else
+   * among the modules the slot could serve in catalogue order — on every arm,
+   * and no term and no exploration moves it, while the others are ranked around
+   * it; one whose baseline position lies beyond the take is not served. Absent
+   * means the slot decides exactly as before.
+   */
+  offLimitsPieceIds?: string[];
 }
+
+/** P04: one module pinned at a position of a slot, counted from 1. */
+export interface PositionPin { pieceId: string; position: number }
+
+/**
+ * P04: the rule that placed a module and the position it set, counted from 1:
+ * `pinned` at its pinned position, `off_limits` at its baseline position. Keys
+ * sorted, as every explain member a replay compares.
+ */
+export interface ModuleRule { position: number; rule: 'pinned' | 'off_limits' }
 
 /**
  * P10: a signal floor — a whole number of signals, 0 or more, or `never` (the
@@ -194,10 +259,18 @@ export type SignalFloor = number | 'never';
  * words) or `any`, with one or more visit buckets or `any`. A shopper whose
  * channel or visit bucket is unknown matches no context, not even one that
  * names `any`. Specificity is the number of parts that are not `any`.
+ * P36 (R-P46): on a tenant that publishes a context vocabulary the channel is
+ * one of its channel ids and the buckets are the names of its published cut;
+ * a tenant without the settings keeps the six words and 1, 2-3, 4+.
+ * P37: a context may also name a device class (`mobile` or `desktop`, a tablet
+ * counting as desktop), one more part of its specificity; a context that names
+ * none matches every device, and a shopper whose request reports no device
+ * matches no context that names one.
  */
 export interface OrderContext {
-  channel: 'direct' | 'paid_social' | 'paid_search' | 'email' | 'organic' | 'referral' | 'any';
-  visitBuckets: Array<'1' | '2-3' | '4+'> | 'any';
+  channel: string;
+  device?: DeviceClass;
+  visitBuckets: string[] | 'any';
 }
 
 /**
@@ -215,9 +288,13 @@ export interface ComplementsRule { weight: number }
 /**
  * The arrival signals a seed rule may read. Each is context, never learned
  * evidence. `platform` is the OS family the request itself reports (`ios` or
- * `android`, nothing finer; src/services/platform.ts).
+ * `android`, nothing finer; src/services/platform.ts). P37: `device` is the
+ * device class the request itself reports (`mobile` or `desktop`), and
+ * `recency` the recency bucket of the shopper's visit from the stored last visit
+ * (`same_day`, `within_7_days`, `8_to_30_days` or `30_and_more`; a first visit
+ * has none and fires no recency rule).
  */
-export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform';
+export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform' | 'source_platform' | 'landing_page_type' | 'device' | 'recency';
 
 /**
  * A rule's weight is multiplied by `factor` while the shopper's OWN evidence
@@ -238,9 +315,13 @@ export interface SeedRule {
   signal: SeedSignal;
   /**
    * The value of that signal this rule fires on: one of the six channel words
-   * for `entry_channel`, the campaign term verbatim for `campaign_term`, a known
-   * network's registrable domain for `referrer_network`, `ios` or `android` for
-   * `platform`.
+   * for `entry_channel` (P36: one of the tenant's channel ids when it publishes
+   * a context vocabulary), the campaign term verbatim for `campaign_term`, a
+   * known network's registrable domain for `referrer_network`, `ios` or
+   * `android` for `platform`, and one of the tenant's source platform ids or
+   * landing-page type ids for `source_platform` and `landing_page_type` (P36,
+   * read off the shopper's visit); P37: `mobile` or `desktop` for `device`, and
+   * one of the four bucket ids for `recency`.
    */
   value: string;
   /** The canonical tags this arrival is evidence for; each dimension must be one the slot weights. */
@@ -384,6 +465,17 @@ export interface RegionalConfig {
   dimensions?: string[];
 }
 
+/**
+ * P07 (decision D1, freeze items 22 and 37): the context prior, in the regional
+ * prior's grammar — its own block and K. The population's interests per entry
+ * channel and visit bucket (`1`, `2-3`, `4+`), blended into the shopper's view
+ * with λ = kBlend / (kBlend + Σ personal affinity). A decision reads the shares
+ * of the shopper's channel and visit bucket when that pair has at least
+ * `minEvents` events, else the shares of the channel alone over every visit
+ * bucket, never everyone's. Off when the block is absent.
+ */
+export type ContextPriorConfig = RegionalConfig;
+
 /** Doc 22 §4: the learning policy's four axes and the per-reward windows. */
 export interface LearnPolicyConfig {
   scope: 'session' | 'visitor';
@@ -450,12 +542,21 @@ export interface LearnConfig {
   version?: string;
   holdout: HoldoutConfig;
   regional?: RegionalConfig;
+  /** P07: the context prior per entry channel and visit bucket, beside the regional prior; absent is off. */
+  contextPrior?: ContextPriorConfig;
   policy?: LearnPolicyConfig;
   stats?: LearnStatsConfig;
   /** slot → dials. A slot absent here runs at γ = 0 on the click reward. */
   slots?: Record<string, SlotDials>;
   /** Doc 22 §9: their model, one per tenant; each slot dials its weight. */
   external?: ExternalModelConfig;
+  /**
+   * P36: the tenant's context vocabulary — channel values with the rules that
+   * classify an arrival into them, source platforms, landing-page types, and
+   * optionally the visit-bucket cut and the ladder depth. Absent: today's six
+   * words, classification, buckets and ladder, exactly.
+   */
+  contextVocabulary?: ContextVocabulary;
 }
 
 /** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
@@ -494,6 +595,22 @@ export interface RegionalBlend {
   events: number;
 }
 
+/**
+ * P07: what the context prior contributed, in the regional blend's form: the
+ * shopper's entry channel and visit bucket, the level whose shares were read
+ * (`channel_visit` for the pair, `channel` for the channel alone when the pair
+ * had fewer events than the block's minimum), the weight λ, and the published
+ * snapshot's version and event count.
+ */
+export interface ContextPriorBlend {
+  channel: string;
+  visitBucket: Cell['visit_bucket'];
+  level: 'channel_visit' | 'channel';
+  lambda: number;
+  version: number;
+  events: number;
+}
+
 export type Authority = 'engine' | 'pin' | 'default';
 
 /**
@@ -506,7 +623,8 @@ export type IdentityAnchor = 'visitor' | 'session' | 'none';
 /** Doc 22 §5.4. Components not yet available are recorded as unknown, not guessed. */
 export interface Cell {
   channel: string;
-  visit_bucket: '1' | '2-3' | '4+' | 'unknown';
+  /** `1`, `2-3`, `4+` or `unknown`; P36: the bucket names of a tenant's published cut. */
+  visit_bucket: string;
   region: string | null;
   /** The leading interest above its entry threshold, as `dim:value`, or null. */
   affinity: string | null;
@@ -586,11 +704,24 @@ export interface DecisionInputs {
      * replays the page with no floor, independently of the other policies.
      */
     signalFloor?: 'signal-floor-v1';
+    /**
+     * P04: present only on a decision on which a position pin or an
+     * off-limits mark of the page's layout slot decided something (C11);
+     * absence replays the page without its position pins and off-limits marks,
+     * independently of the other policies.
+     */
+    moduleRules?: 'module-rules-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;
   };
   regional_share?: Record<string, Record<string, number>>;
+  /**
+   * P07: the context prior's shares the decision used (the form of
+   * `regional_share`, keys sorted), written only when the prior applied, so a
+   * replay itemises it exactly; a record without it was decided without it.
+   */
+  context_share?: Record<string, Record<string, number>>;
   external?: { version: string; scores: Record<string, number> };
   /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, as read from the ring at decision time. */
   served?: Record<string, Record<string, number>>;
@@ -658,6 +789,12 @@ export interface DecisionRecord {
     /** The population prior's share of the base score, when one applied. */
     regional?: RegionalBlend & { contribution: number };
     /**
+     * P07: the context prior's share of the base score, when it contributed:
+     * `{ channel, contribution, events, lambda, level, version, visitBucket }`,
+     * keys sorted, compared by value in replay.
+     */
+    contextPrior?: ContextPriorBlend & { contribution: number };
+    /**
      * W16 C3/C7: what the arrival's context contributed to this candidate, when
      * the slot has a seed rule set. `applied` is measured where it lands — in the
      * final pre-lift base, after merchandising — so a candidate merchandised to
@@ -719,6 +856,13 @@ export interface DecisionRecord {
      * sorted. Present on every record of such a slot and on no other.
      */
     signalFloor?: { floor: SignalFloor; signals: number };
+    /**
+     * P04: a position pin or an off-limits mark placed this module: the rule and
+     * the position it set, counted from 1 (`pinned` at its pinned position,
+     * `off_limits` at its baseline position), keys sorted. Present only on such
+     * a record; compared by value in replay.
+     */
+    moduleRule?: ModuleRule;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

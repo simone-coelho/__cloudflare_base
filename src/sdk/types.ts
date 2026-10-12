@@ -131,9 +131,11 @@ export type SdkEventType =
  * `utmTerm` is the campaign's search keyword, present only when the page load
  * carries one within its bound: a keyword is a seeding signal, never evidence of
  * a channel, and an absent one is absent rather than empty so the arrival every
- * other page load sends is unchanged.
+ * other page load sends is unchanged. `utmCampaign` is the campaign name, under
+ * the same rule: present only when the landing URL carries `utm_campaign`, read
+ * only by a tenant's published classification rule, never stored (P36).
  */
-export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; referrer: string; siteHost: string }
+export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; utmCampaign?: string; referrer: string; siteHost: string }
 
 /** The envelope POST /realtime/action validates. Field for field what the demo storefront sends. */
 export interface ActionEnvelope {

@@ -22,7 +22,7 @@
     {
       "id": "P36",
       "title": "Vocabularies as tenant settings: channel words, visit buckets, ladder order and depth (**in scope since amendment 1, 2026-10-09**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
@@ -176,9 +176,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "d8073bdd51eaef08d961c31c2ab169bc769b491b on rem/spec-parity-e (batch S5 fix round 3; P36 reviewed PASS at this revision after the S5 review at da5aaea4 and fix rounds 1 and 2; LearnStats.ts in the boundary under R-P52; the per-ticket branch cut from this head)",
+        "reviewedRevision": "a943eab8ad9577740319f7a9c86a58759f41dfbd on rem/spec-p36-fix2 (fix round 2, R-P55: the CH2 fan-in leg RED on both hosts with its no-settings lock and the CH6 kit lock, over the build head 7c6e0e22; specification review PASS; the fix-1 gate at 437908e0 and the S5 gate at d8073bdd kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
@@ -189,6 +193,15 @@
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-sdkContract.baseline.txt",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-sdkContract.json",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-sdkContract.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fxkit-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/head-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/standin-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/control-L1.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/control-M13.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-nocoerce.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-cutall.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-standin-aware3.log",
@@ -201,7 +214,7 @@
     {
       "id": "P37",
       "title": "Device and recency as first-paint context",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
@@ -376,7 +389,7 @@
     {
       "id": "P38",
       "title": "The published vocabulary as the authority for product and content attributes",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
@@ -546,7 +559,7 @@
     {
       "id": "P40",
       "title": "Module events as the customer defines them",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",

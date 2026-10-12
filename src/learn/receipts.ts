@@ -76,6 +76,12 @@ export interface Receipt {
    * every position of a slot that personalized.
    */
   signalFloor?: NonNullable<DecisionRecord['explain']['signalFloor']>;
+  /**
+   * P04: a position pin or an off-limits mark placed this module — the rule and
+   * the position it set, counted from 1, exactly as the record carries them,
+   * keys sorted; absent on every other position.
+   */
+  moduleRule?: NonNullable<DecisionRecord['explain']['moduleRule']>;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -121,10 +127,29 @@ export function contextOf(cell: DecisionRecord['cell']): string {
   return `${cell.channel === 'unknown' ? 'channel unknown' : `from ${cell.channel}`}, ${visit}, ${stage}, ${cell.region ? `in ${cell.region}` : 'region unknown'}, ${cell.affinity ? `leaning ${cell.affinity.replace(':', ' ')}` : 'no leading interest yet'}`;
 }
 
-/** P01: a published context in words: its channel, or any channel; its visit buckets, or any visit. */
+/** P01: a published context in words: its channel, or any channel; its visit buckets, or any visit; P37: and its device, when it names one. */
 function orderContextOf(context: NonNullable<DecisionRecord['explain']['configuredOrder']>['context']): string {
   const visit = (bucket: string) => (bucket === '1' ? 'first visit' : `visit ${bucket}`);
-  return `${context.channel === 'any' ? 'any channel' : `from ${context.channel}`}, ${context.visitBuckets === 'any' ? 'any visit' : context.visitBuckets.map(visit).join(' or ')}`;
+  return `${context.channel === 'any' ? 'any channel' : `from ${context.channel}`}, ${context.visitBuckets === 'any' ? 'any visit' : context.visitBuckets.map(visit).join(' or ')}${context.device === undefined ? '' : `, on ${context.device}`}`;
+}
+
+/** P37: a recency bucket in words, as the kit names it. */
+const RECENCY_WORDS: Readonly<Record<string, string>> = { same_day: 'same day', within_7_days: 'within 7 days', '8_to_30_days': '8 to 30 days', '30_and_more': '30 and more' };
+/** W16 C3: a fired seed's signal and value in words; P37: a recency bucket named in words, never by its id. */
+const seedValueOf = (signal: string, value: string): string => (signal === 'recency' ? RECENCY_WORDS[value] ?? value : value);
+
+/**
+ * P07: the context prior in words — "population prior", the shopper's entry
+ * channel and, where the channel-and-visit population answered, the visit
+ * ("population prior, paid social, first visit"); where the channel alone
+ * answered, no visit is claimed — and what it contributed with its weight.
+ */
+function contextPriorSentence(c: NonNullable<DecisionRecord['explain']['contextPrior']>): string {
+  const channel = c.channel.replace(/_/g, ' ');
+  const context = c.level === 'channel_visit'
+    ? `${channel}, ${c.visitBucket === '1' ? 'first visit' : `visit ${c.visitBucket}`}`
+    : `${channel}, every visit (${c.visitBucket === 'unknown' ? 'the visit number is unknown' : 'the channel and visit together had fewer events than the minimum'})`;
+  return `Population prior, ${context}: what visitors arriving this way engage with contributed ${r3(c.contribution)} (the prior's share of the score: ${r3(c.lambda)}).`;
 }
 
 /**
@@ -136,6 +161,21 @@ function signalFloorSentence(f: NonNullable<DecisionRecord['explain']['signalFlo
   return f.floor === 'never'
     ? `Below the signal floor: this shopper has ${count} and this slot's floor is never, so it is decided on context alone for every shopper; no term that reads the individual shopper applies.`
     : `Below the signal floor: this shopper has ${count} and the floor in force is ${f.floor}, so this slot was decided on context alone and no term that reads the individual shopper applied; the first personalized decision follows signal ${f.floor + 1}.`;
+}
+
+/**
+ * P04: the rule that placed a module, in words, with the position it set, and
+ * the position it was served at where a layout with fewer modules than the
+ * positions before it moved it up. A prefix pin keeps the sentence it has
+ * always had.
+ */
+function moduleRuleSentence(r: DecisionRecord, rule: NonNullable<DecisionRecord['explain']['moduleRule']>): string {
+  const served = r.position + 1 !== rule.position ? ` It was served at position ${r.position + 1}, because fewer modules could be served than the positions before it.` : '';
+  if (rule.rule === 'pinned') return `Pinned by the merchandiser at position ${rule.position} of this slot; the engine never ranked or explored it.${served}`;
+  const baseline = r.explain.configuredOrder
+    ? `its place in the configured order for this context (${orderContextOf(r.explain.configuredOrder.context)})`
+    : 'its place among the modules this slot could serve, in catalogue order';
+  return `Off-limits: the merchandiser marked this module never to move, so it holds its baseline position ${rule.position}, ${baseline}; the engine never ranked it, and no term and no exploration moved it.${served}`;
 }
 
 /** The record as sentences. Every number on the record has a place here, so nothing is said that the record does not carry. */
@@ -161,9 +201,10 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     // caused. A candidate the rules never named says nothing here rather than
     // claiming a context it did not have.
     if (e.contextual && e.contextual.drivers.length) {
-      why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${d.value} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
+      why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${seedValueOf(d.signal, d.value)} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
     }
     if (e.regional) why.push(`What is trending ${e.regional.region === '*' ? 'everywhere' : `in ${e.regional.region}`} contributed ${r3(e.regional.contribution)} (the trend's share of the score: ${r3(e.regional.lambda)}).`);
+    if (e.contextPrior) why.push(contextPriorSentence(e.contextPrior));
     if (e.external) {
       if ('status' in e.external) why.push(`Their model (${e.external.ref}) was unavailable: ${e.external.reason}; the term was omitted.`);
       else why.push(`Their model (${e.external.ref}, ${e.external.version}) scored it ${r3(e.external.score)}; at weight ${r3(e.external.weight)} that added ${r3(e.external.contribution)}.`);
@@ -186,7 +227,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   // P10: a slot decided below the signal floor says so before any term, with both
   // numbers, so no sentence after it is read as a claim about the shopper's own interests.
   if (e.signalFloor) why.push(signalFloorSentence(e.signalFloor));
-  if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
+  if (r.authority === 'pin') why.push(e.moduleRule ? moduleRuleSentence(r, e.moduleRule) : 'Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
   else if (e.blend) {
     // P28 (decision D1, R-P42): the layout blend ranked this position, so the
@@ -272,6 +313,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.configuredOrder ? { configuredOrder: e.configuredOrder } : {}),
     ...(e.blend ? { blend: { B: e.blend.B, Q: e.blend.Q, R: e.blend.R, p: e.blend.p } } : {}),
     ...(e.signalFloor ? { signalFloor: { floor: e.signalFloor.floor, signals: e.signalFloor.signals } } : {}),
+    ...(e.moduleRule ? { moduleRule: { position: e.moduleRule.position, rule: e.moduleRule.rule } } : {}),
     why,
   };
 }

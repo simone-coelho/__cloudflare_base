@@ -90,6 +90,42 @@ export interface ContentSlotSpec {
    * Absent, the slot is scored on the page's view exactly as before.
    */
   affinity?: AffinityViewLike;
+  /**
+   * P04: modules pinned at a position of this slot, counted from 1 to `take`
+   * after any prefix pins. Each is reserved page-wide before any slot ranks,
+   * with the prefix pins, and served at exactly its position, never scored or
+   * explored; the other positions are ranked around it. One pin that is missing,
+   * ineligible, refused by a gate or owned by an earlier slot refuses the whole
+   * slot, prefix included (decision D1), and the pin diagnostic names its
+   * position. Applied under the current pin policy only.
+   */
+  positionPins?: ReadonlyArray<{ pieceId: string; position: number }>;
+  /**
+   * P04: modules marked off-limits in this slot. Each holds its BASELINE
+   * position — its place, counted from 1, among the modules the slot could
+   * serve (its own pins included) in the order the caller resolved (`order`),
+   * else in catalogue order — and is never scored, explored or moved by any
+   * term, while the others are ranked around it. One whose baseline position
+   * lies beyond the take or on a pinned position is not served by this slot,
+   * and one the slot could not serve holds nothing. Applied under the current
+   * pin policy only.
+   */
+  offLimitsPieceIds?: readonly string[];
+}
+
+/** P04: what a module pinned at a position says on its explain. */
+export const positionPinNote = (position: number) => `pinned at position ${position} — the merchandiser’s module at exactly this position; ranking and exploration never ran for this piece`;
+/** P04: what an off-limits module held at its baseline position says on its explain. */
+export const offLimitsNote = (position: number) => `off-limits module held at its baseline position ${position} — no term and no exploration moved it; ranking never ran for this piece`;
+
+/** P04: a module a position pin or an off-limits mark placed, with the rule and the position it set, counted from 1. */
+export interface ModulePlacement {
+  slot: string;
+  contentId: string;
+  rule: 'pinned' | 'off_limits';
+  position: number;
+  /** For `off_limits`: whether the baseline was the slot's `order` or its catalogue order. */
+  baseline?: 'order' | 'catalogue';
 }
 
 /**
@@ -140,6 +176,8 @@ export interface PinDiagnostic {
   reason: 'invalid_take' | 'missing_or_ineligible' | 'slot_type' | 'duplicate_pin' | SlotConstraintReason;
   ownerSlot?: string;
   pinIndex?: number;
+  /** P04: the refused position pin's position, counted from 1; absent on prefix and scalar pins. */
+  position?: number;
 }
 
 export interface ComposeContentResult {
@@ -154,6 +192,16 @@ export interface ComposeContentResult {
   pinDiagnostics?: PinDiagnostic[];
   /** P01: the slots that served their configured `order` on this decision, in page order. Absent when none did. */
   ordered?: string[];
+  /** P04: the modules a position pin or an off-limits mark placed, in page order. Absent when none did. */
+  moduleRules?: ModulePlacement[];
+  /**
+   * P04: the slots on which a position pin or an off-limits mark decided
+   * something — a pin placed or refused, or a marked module the slot could have
+   * ranked held or withheld — in page order. Absent when none did.
+   */
+  ruled?: string[];
+  /** P04: the slots whose `order` supplied the baseline of an off-limits mark that decided something, in page order. */
+  orderBaseline?: string[];
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -205,10 +253,17 @@ export function composeContentDetailed(
     prefixes.set(slot, { ids: [...slot.pinnedPieceIds], take: slot.take, pieces: [],
       ...(slot.diversity ? { diversity: { ...slot.diversity } } : {}), seeds: [] });
   }
+  // The slots a pin refused whole: a prefix pin, or (P04) a position pin.
   const refusedPrefixes = new Set<ContentSlotSpec>();
   const prefixOwnedPieces = new Set<ContentPieceLike>();
   const prefixCatalog = new Map<string, ContentPieceLike>();
-  if (prefixes.size) for (const piece of live) if (!prefixCatalog.has(piece.id)) prefixCatalog.set(piece.id, piece);
+  // P04: a slot's position pins, under the current pin policy only; the valid
+  // ones of a slot that was not refused, by position; and the slots on which a
+  // position pin or an off-limits mark decided something.
+  const positionPinsOf = (slot: ContentSlotSpec) => (!historicalPins && slot.positionPins?.length ? slot.positionPins : null);
+  const positioned = new Map<ContentSlotSpec, Map<number, ContentPieceLike>>();
+  const ruled = new Set<ContentSlotSpec>();
+  if (prefixes.size || slots.some(positionPinsOf)) for (const piece of live) if (!prefixCatalog.has(piece.id)) prefixCatalog.set(piece.id, piece);
   // Capture settings AND each piece's result before any caller hook can mutate
   // a later slot or its candidate tags. Unconstrained slots need no piece map.
   const offLimits = new Set<ContentSlotSpec>();
@@ -228,24 +283,66 @@ export function composeContentDetailed(
     // inherited duplicates belong to the first valid pin in page order.
     for (const slot of slots) {
       const prefix = prefixes.get(slot);
-      if (prefix) {
-        const malformed = Boolean(slot.pinnedPieceId) || prefix.ids.length > 50 || prefix.ids.length > prefix.take
-          || new Set(prefix.ids).size !== prefix.ids.length || prefix.ids.some(id => typeof id !== 'string' || !id.length);
-        let invalid = malformed;
-        for (const [pinIndex, id] of prefix.ids.entries()) {
-          const piece = prefixCatalog.get(id), ownerSlot = reserved.get(id);
-          const blocked = piece ? (offLimits.has(slot) ? 'off_limits' : forbidden.get(slot)?.get(piece)) : gates.get(slot)?.reason(undefined, id);
-          const reason = blocked ?? (malformed ? 'invalid_take' : !piece ? 'missing_or_ineligible'
-            : !piece.slotTypes.includes(slot.slot) ? 'slot_type' : ownerSlot !== undefined ? 'duplicate_pin' : null);
-          if (reason) { invalid = true; pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: id, pinIndex, reason,
-            ...(ownerSlot !== undefined ? { ownerSlot } : {}) }); }
-          if (piece) prefix.pieces.push({ ...piece });
+      const pins = positionPinsOf(slot);
+      if (prefix || pins) {
+        let invalid = false;
+        if (prefix) {
+          const malformed = Boolean(slot.pinnedPieceId) || prefix.ids.length > 50 || prefix.ids.length > prefix.take
+            || new Set(prefix.ids).size !== prefix.ids.length || prefix.ids.some(id => typeof id !== 'string' || !id.length);
+          invalid = malformed;
+          for (const [pinIndex, id] of prefix.ids.entries()) {
+            const piece = prefixCatalog.get(id), ownerSlot = reserved.get(id);
+            const blocked = piece ? (offLimits.has(slot) ? 'off_limits' : forbidden.get(slot)?.get(piece)) : gates.get(slot)?.reason(undefined, id);
+            const reason = blocked ?? (malformed ? 'invalid_take' : !piece ? 'missing_or_ineligible'
+              : !piece.slotTypes.includes(slot.slot) ? 'slot_type' : ownerSlot !== undefined ? 'duplicate_pin' : null);
+            if (reason) { invalid = true; pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: id, pinIndex, reason,
+              ...(ownerSlot !== undefined ? { ownerSlot } : {}) }); }
+            if (piece) prefix.pieces.push({ ...piece });
+          }
+        }
+        // P04 (decision D1): every position pin passes eligibility, the slot's
+        // gates and page ownership, exactly as a prefix pin does, before any pin
+        // of the slot is reserved. One that fails refuses the whole slot — its
+        // prefix too — and is named with its position; nothing is shifted and
+        // nothing is ranked in its place. A position must lie after the prefix
+        // and within the take, and a position or a module is pinned once.
+        const placed = new Map<number, ContentPieceLike>();
+        if (pins) {
+          const lowest = (prefix?.ids.length ?? 0) + 1, prefixIds = new Set(prefix?.ids ?? []);
+          const positions = new Set<number>(), ids = new Set<string>();
+          let malformed = Boolean(slot.pinnedPieceId) || pins.length > 50 || pins.length > slot.take;
+          for (const pin of pins) {
+            const id = pin?.pieceId, position = pin?.position;
+            if (typeof id !== 'string' || !id.length || typeof position !== 'number' || !Number.isSafeInteger(position) || position < lowest
+              || position > slot.take || positions.has(position) || ids.has(id) || prefixIds.has(id)) malformed = true;
+            positions.add(position); ids.add(id);
+          }
+          let refusedPin = false;
+          for (const pin of pins) {
+            const id = pin.pieceId, piece = prefixCatalog.get(id), ownerSlot = reserved.get(id);
+            const blocked = piece ? (offLimits.has(slot) ? 'off_limits' : forbidden.get(slot)?.get(piece)) : gates.get(slot)?.reason(undefined, id);
+            const reason = blocked ?? (malformed ? 'invalid_take' : !piece ? 'missing_or_ineligible'
+              : !piece.slotTypes.includes(slot.slot) ? 'slot_type' : ownerSlot !== undefined ? 'duplicate_pin' : null);
+            if (reason) {
+              invalid = true; refusedPin = true;
+              pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: id, position: pin.position, reason, ...(ownerSlot !== undefined ? { ownerSlot } : {}) });
+            } else placed.set(pin.position, { ...piece! });
+          }
+          // An off-limits slot serves nothing whatever its pins say, so its dormant pins decide nothing.
+          if (refusedPin && !offLimits.has(slot)) ruled.add(slot);
         }
         if (invalid) refusedPrefixes.add(slot);
-        else for (const piece of prefix.pieces) {
-          reserved.set(piece.id, slot.slot);
-          prefixOwnedPieces.add(prefixCatalog.get(piece.id)!);
-          if (prefix.diversity) prefix.seeds.push(...(piece.tags[prefix.diversity.dimension] ?? []));
+        else {
+          if (prefix) for (const piece of prefix.pieces) {
+            reserved.set(piece.id, slot.slot);
+            prefixOwnedPieces.add(prefixCatalog.get(piece.id)!);
+            if (prefix.diversity) prefix.seeds.push(...(piece.tags[prefix.diversity.dimension] ?? []));
+          }
+          for (const piece of placed.values()) {
+            reserved.set(piece.id, slot.slot);
+            prefixOwnedPieces.add(prefixCatalog.get(piece.id)!);
+          }
+          if (placed.size) positioned.set(slot, placed);
         }
         continue;
       }
@@ -268,6 +365,9 @@ export function composeContentDetailed(
   }
   let order = 0;
   const ordered: string[] = [];
+  // P04: what the slots' position pins and off-limits marks placed, and the slots whose order supplied a mark's baseline.
+  const placements: ModulePlacement[] = [];
+  const orderBaseline = new Set<ContentSlotSpec>();
 
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
@@ -296,6 +396,43 @@ export function composeContentDetailed(
     if ((prefix && remaining <= 0) || (rankingSlots && !rankingSlots.has(slot.slot))) continue;
     const excluded = forbidden.get(slot);
     const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !used.has(p.id) && !reserved.has(p.id) && !prefixOwnedPieces.has(p));
+    // P04: the slot's own fixed positions — its modules pinned at a position
+    // (reserved above), and its off-limits modules, each held at its BASELINE
+    // position: its place, counted from 1, among the modules the slot could
+    // serve (its own pins included, what other slots served or reserved
+    // excluded) in the order the caller resolved for this decision, else in
+    // catalogue order. A held module is never ranked; one whose baseline
+    // position lies beyond the take or on a pinned position is not served here,
+    // and one the slot could not serve holds nothing. A slot with neither rule
+    // decides exactly as before.
+    const pinsAt = positioned.get(slot) ?? new Map<number, ContentPieceLike>();
+    const marks = !historicalPins && slot.offLimitsPieceIds?.length ? new Set(slot.offLimitsPieceIds) : null;
+    const fixedSlot = pinsAt.size > 0 || marks !== null;
+    const prefixLength = prefix ? prefix.ids.length : 0;
+    const held = new Map<number, ContentPieceLike>();
+    let marksDecided = false;
+    if (marks) {
+      const own = new Set([...(prefix?.ids ?? []), ...[...pinsAt.values()].map((p) => p.id)]);
+      const servable = new Map<string, ContentPieceLike>();
+      for (const p of live) {
+        if (servable.has(p.id) || !p.slotTypes.includes(slot.slot) || excluded?.has(p)) continue;
+        if (own.has(p.id) || (!used.has(p.id) && !reserved.has(p.id) && !prefixOwnedPieces.has(p))) servable.set(p.id, p);
+      }
+      const baseline = slot.order ? [...new Set(slot.order)].filter((id) => servable.has(id)) : [...servable.keys()];
+      for (const id of new Set(slot.offLimitsPieceIds)) {
+        // A pinned module is placed by its pin; publication refuses a module both pinned and off-limits.
+        if (own.has(id)) continue;
+        const position = baseline.indexOf(id) + 1;
+        if (position < 1 || position > slot.take || position <= prefixLength || pinsAt.has(position)) continue;
+        held.set(position, servable.get(id)!);
+      }
+      // A mark decides something only for a module this slot could have ranked.
+      marksDecided = eligible.some((p) => marks.has(p.id));
+    }
+    // The ranking pool: what the slot could serve, its off-limits modules removed.
+    const rankable = marks ? eligible.filter((p) => !marks.has(p.id)) : eligible;
+    // The positions ranking fills: the take less the prefix, the position pins and the held modules.
+    const free = fixedSlot ? Math.max(0, slot.take - prefixLength - pinsAt.size - held.size) : prefix ? remaining : slot.take;
     // P28 (decision D1): on a slot that opted into the layout blend, each
     // candidate's rank base R = (M − i) / M over a baseline of M modules, i
     // counted from 0 (so the first module's R is 1). The slot's own baseline is
@@ -325,7 +462,7 @@ export function composeContentDetailed(
       if (adjust) { const adjusted = R === undefined ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R }); if (Number.isFinite(adjusted) && (adjusted >= 0 || R !== undefined)) score = adjusted; }
       return { p, score, drivers };
     };
-    const scored = eligible.map((p) => scoreOf(p, catalogueBase?.get(p.id)))
+    const scored = rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id)))
       .sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
 
     // W28.C1.01(b) (F23 §4.2): where an exploration moved ONE piece to the front,
@@ -338,7 +475,8 @@ export function composeContentDetailed(
     let byScore: typeof scored | null = null;
     let promoted: string | null = null;
     let picked = false;
-    if (explore && scored.length > 1) {
+    // P04: exploration acts on the ranked positions only, so a slot whose every position is fixed does not explore.
+    if (explore && scored.length > 1 && (!fixedSlot || free > 0)) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
       picked = Boolean(pick);
       if (pick?.ranking) {
@@ -364,8 +502,14 @@ export function composeContentDetailed(
     const rule = diversity && diversity.max >= 1 && diversity.dimension ? diversity : null;
     const seen = new Map<string, number>();
     if (prefix && rule) for (const value of prefix.seeds) seen.set(value, (seen.get(value) ?? 0) + 1);
+    // P04: the slot's fixed modules count toward the rule as its prefix pins do.
+    if (fixedSlot && rule) for (const p of [...pinsAt.values(), ...held.values()]) for (const value of p.tags[rule.dimension] ?? []) seen.set(value, (seen.get(value) ?? 0) + 1);
     const yielded: typeof scored = [];
     let pendingSkips: string[] = [];
+    // P04: on a slot with fixed positions the ranked decisions are collected
+    // first and placed around the fixed ones below, so every decision of the
+    // slot is numbered in position order; any other slot is served as before.
+    const rankedOut: ContentDecision[] | null = fixedSlot ? [] : null;
     const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity'], note?: string) => {
       const drivers: ContentDecision['explain']['drivers'] = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
@@ -375,10 +519,11 @@ export function composeContentDetailed(
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       const cold = s.score <= 0;
       used.add(s.p.id);
-      out.push({ contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
-        slot: slot.slot, order: order++, score: round3(s.score),
+      const decision: ContentDecision = { contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
+        slot: slot.slot, order: rankedOut ? -1 : order++, score: round3(s.score),
         strategy: cold ? 'default' : 'affinity',
-        explain: { drivers: drivers.slice(0, 4), ...(note ? { note } : cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } });
+        explain: { drivers: drivers.slice(0, 4), ...(note ? { note } : cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } };
+      if (rankedOut) rankedOut.push(decision); else out.push(decision);
     };
     // P01: the configured order, when the caller resolved one and exploration
     // picked nothing on this decision. Exactly its modules, in its order, up to
@@ -386,8 +531,10 @@ export function composeContentDetailed(
     // not serve (ineligible now, refused by a gate, served or reserved elsewhere
     // on the page, or one of this slot's own pins) is passed over, never
     // replaced, and an unlisted module is never served here.
+    // P04: the capacity is the positions the slot's fixed modules leave free,
+    // and an off-limits module is never served from the order: it holds its place.
     if (slot.order && !picked) {
-      const capacity = prefix ? remaining : slot.take;
+      const capacity = free;
       if (blended) {
         // P28 (R-P41): on a slot that opted into the blend, the order supplies
         // the rank base — the listed modules the slot could serve, in the
@@ -401,7 +548,7 @@ export function composeContentDetailed(
           if (p && !used.has(p.id) && !seen.has(p.id)) { seen.add(p.id); listed.push(p); }
         }
         const base = rankBase(listed), at = new Map(listed.map((p, i) => [p.id, i] as const));
-        const ranked = listed.map((p) => scoreOf(p, base.get(p.id))).sort((x, y) => y.score - x.score || at.get(x.p.id)! - at.get(y.p.id)!);
+        const ranked = (marks ? listed.filter((p) => !marks.has(p.id)) : listed).map((p) => scoreOf(p, base.get(p.id))).sort((x, y) => y.score - x.score || at.get(x.p.id)! - at.get(y.p.id)!);
         candidates[slot.slot] = ranked.slice(0, limit).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
         for (const s of ranked.slice(0, capacity)) serve(s, undefined, BLENDED_ORDER_NOTE);
       } else {
@@ -416,28 +563,55 @@ export function composeContentDetailed(
         }
       }
       ordered.push(slot.slot);
-      continue;
-    }
-    const takeNote = blended ? BLENDED_NOTE : undefined;
-    let taken = 0;
-    for (const s of scored) {
-      if (taken >= (prefix ? remaining : slot.take)) break;
-      if (rule) {
-        const values = s.p.tags[rule.dimension] ?? [];
-        if (values.some((v) => (seen.get(v) ?? 0) >= rule.max)) { yielded.push(s); pendingSkips.push(s.p.id); continue; }
-        for (const v of values) seen.set(v, (seen.get(v) ?? 0) + 1);
+    } else {
+      const takeNote = blended ? BLENDED_NOTE : undefined;
+      let taken = 0;
+      for (const s of scored) {
+        if (taken >= free) break;
+        if (rule) {
+          const values = s.p.tags[rule.dimension] ?? [];
+          if (values.some((v) => (seen.get(v) ?? 0) >= rule.max)) { yielded.push(s); pendingSkips.push(s.p.id); continue; }
+          for (const v of values) seen.set(v, (seen.get(v) ?? 0) + 1);
+        }
+        const skipped = pendingSkips; pendingSkips = [];
+        serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(', ')} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : undefined, takeNote);
+        taken += 1;
       }
-      const skipped = pendingSkips; pendingSkips = [];
-      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(', ')} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : undefined, takeNote);
-      taken += 1;
+      for (const s of yielded) {
+        if (taken >= free) break;
+        serve(s, { dimension: rule!.dimension, max: rule!.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule!.max} per ${rule!.dimension}: nothing else was eligible` }, takeNote);
+        taken += 1;
+      }
     }
-    for (const s of yielded) {
-      if (taken >= (prefix ? remaining : slot.take)) break;
-      serve(s, { dimension: rule!.dimension, max: rule!.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule!.max} per ${rule!.dimension}: nothing else was eligible` }, takeNote);
-      taken += 1;
+    // P04: the slot's positions after its prefix, in order: a pinned module at
+    // its position, an off-limits module at its baseline position, and the
+    // ranked modules in rank order on every other position. A layout has no
+    // holes, so when fewer modules could be ranked than the positions before a
+    // fixed module, the fixed module follows the last one served; its record
+    // names the position its rule set.
+    if (rankedOut) {
+      let next = 0;
+      const place = (p: ContentPieceLike, rule: ModulePlacement['rule'], position: number) => {
+        used.add(p.id);
+        out.push({ contentId: p.id, customerContentId: p.customerContentId, type: p.type,
+          slot: slot.slot, order: order++, score: 0, strategy: 'tenant-pinned',
+          explain: { drivers: [], note: rule === 'pinned' ? positionPinNote(position) : offLimitsNote(position) } });
+        placements.push({ slot: slot.slot, contentId: p.id, rule, position, ...(rule === 'off_limits' ? { baseline: slot.order ? 'order' as const : 'catalogue' as const } : {}) });
+      };
+      for (let position = prefixLength + 1; position <= slot.take; position++) {
+        const pinnedHere = pinsAt.get(position), heldHere = held.get(position);
+        if (pinnedHere) place(pinnedHere, 'pinned', position);
+        else if (heldHere) place(heldHere, 'off_limits', position);
+        else if (next < rankedOut.length) { const d = rankedOut[next++]!; d.order = order++; out.push(d); }
+      }
+      if (pinsAt.size || marksDecided) ruled.add(slot);
+      if (marksDecided && slot.order) orderBaseline.add(slot);
     }
   }
-  return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}), ...(ordered.length ? { ordered } : {}) };
+  const pageOrder = (set: ReadonlySet<ContentSlotSpec>) => slots.filter((slot) => set.has(slot)).map((slot) => slot.slot);
+  return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}), ...(ordered.length ? { ordered } : {}),
+    ...(placements.length ? { moduleRules: placements } : {}), ...(ruled.size ? { ruled: pageOrder(ruled) } : {}),
+    ...(orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}) };
 }
 
 /** The delivery contract alone: one decision per slot position, in page order. */

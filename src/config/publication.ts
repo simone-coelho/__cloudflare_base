@@ -9,7 +9,16 @@ export const PUBLICATION_CACHE_MS = 30_000;
 const LIMIT = 50, MEMBERS = 16, CACHE_ENTRIES = 32, CACHE_BYTES = 8 * 1024 * 1024;
 const encoder = new TextEncoder(), HASH = /^[0-9a-f]{64}$/;
 const OPERATION = /^(0|[1-9][0-9]*):[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals']);
+const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval']);
+/**
+ * P38: the members a coherent set may lack and a publication may ADD. A tenant
+ * that never published a vocabulary has a set without one, and that set stays
+ * exactly as it is (an absent member reads as absent through the optional door);
+ * the first publication of such a member creates it at revision 1, against the
+ * authored precondition of revision 0, inside the same one-CAS set publication
+ * every other member uses. No other member can be created or removed this way.
+ */
+const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval']);
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= max && v.trim() === v;
@@ -100,28 +109,37 @@ interface Pending { set: PublicationPin; documents: Envelope<unknown>[] }
 interface Head { schema: 'configuration-head/v1'; scope: string; committed: Identity | null; pending: Pending | null; digest: string }
 interface Loaded { head: Head; etag: string }
 function identity(v: unknown): v is Identity { return object(v) && Object.keys(v).length === 2 && integer(v.revision) && v.revision > 0 && typeof v.digest === 'string' && HASH.test(v.digest); }
-export function publicationPreconditions(meta: WriteMeta, initialization = false): { operationId: string; expectedRevision: number; expectedPublication?: Identity } {
+/**
+ * `creation` (P38): the write may create an optional member, so its authored
+ * document precondition may be revision 0 — "there is no such document yet" —
+ * beside the set precondition every write carries.
+ */
+export function publicationPreconditions(meta: WriteMeta, initialization = false, creation = false): { operationId: string; expectedRevision: number; expectedPublication?: Identity } {
   if (meta.expectedRevision === undefined || meta.operationId === undefined || (!initialization && meta.expectedPublication === undefined)) {
     throw new PublicationError('Authored document and publication-set preconditions plus Idempotency-Key are required', 428, 'precondition_required');
   }
-  if (!integer(meta.expectedRevision) || (!initialization && meta.expectedRevision === 0) || typeof meta.operationId !== 'string' || !OPERATION.test(meta.operationId)
+  if (!integer(meta.expectedRevision) || (!initialization && !creation && meta.expectedRevision === 0) || typeof meta.operationId !== 'string' || !OPERATION.test(meta.operationId)
     || (!initialization && !identity(meta.expectedPublication))) throw new PublicationError('Invalid publication preconditions', 400, 'invalid_precondition');
   if (Number(meta.operationId.split(':')[0]) !== meta.expectedRevision) throw conflict();
   if (!text(meta.actor, 256) || (meta.note !== undefined && (typeof meta.note !== 'string' || meta.note.length > 500))) throw new PublicationError('Invalid publication attribution', 422, 'invalid_attribution');
   return { operationId: meta.operationId, expectedRevision: meta.expectedRevision, ...(meta.expectedPublication ? { expectedPublication: meta.expectedPublication } : {}) };
 }
-/** One existing CORS-approved header carries both authored identities. */
-export function publicationMeta(headers: Headers, actor: string, note?: string): WriteMeta {
+/**
+ * One existing CORS-approved header carries both authored identities. With
+ * `creation` (P38, a write that may create an optional member), the authored
+ * document revision may be 0: the member the operator read was absent.
+ */
+export function publicationMeta(headers: Headers, actor: string, note?: string, creation = false): WriteMeta {
   const match = headers.get('If-Match'), operationId = headers.get('Idempotency-Key');
   if (!match || !operationId) throw new PublicationError('Authored document/set If-Match and Idempotency-Key required', 428, 'precondition_required');
   if (/^"[1-9][0-9]*"$/.test(match)) {
     const meta = { actor, note, operationId, expectedRevision: Number(match.slice(1, -1)) };
     publicationPreconditions(meta, true); return meta; // Committed v1 receipt readback only; never a new write base.
   }
-  const parsed = /^"([1-9][0-9]*)\/([1-9][0-9]*)\/([0-9a-f]{64})"$/.exec(match);
+  const parsed = (creation ? /^"(0|[1-9][0-9]*)\/([1-9][0-9]*)\/([0-9a-f]{64})"$/ : /^"([1-9][0-9]*)\/([1-9][0-9]*)\/([0-9a-f]{64})"$/).exec(match);
   if (!parsed) throw new PublicationError('Invalid authored document/set If-Match', 400, 'invalid_precondition');
   const meta = { actor, note, operationId, expectedRevision: Number(parsed[1]), expectedPublication: { revision: Number(parsed[2]), digest: parsed[3] } };
-  publicationPreconditions(meta); return meta;
+  publicationPreconditions(meta, false, creation); return meta;
 }
 async function readObject(storage: R2Bucket, key: string): Promise<{ value: unknown; etag: string; bytes: number } | null> {
   try {
@@ -292,6 +310,8 @@ async function kindFor(name: string): Promise<DocumentKind<unknown>> {
     case 'reflex': return (await import('@/reflex/configStore')).REFLEX_KIND;
     case 'prior': return (await import('@/learn/priors')).PRIORS_KIND;
     case 'proposals': return (await import('@/learn/cycle')).PROPOSALS_KIND;
+    case 'vocabulary': return (await import('@/content/kinds')).VOCABULARY_KIND as unknown as DocumentKind<unknown>;
+    case 'vocabulary-approval': return (await import('@/content/kinds')).VOCABULARY_APPROVAL_KIND as unknown as DocumentKind<unknown>;
     default: throw unavailable();
   }
 }
@@ -299,17 +319,24 @@ async function validatePending(storage: R2Bucket, loaded: Loaded): Promise<void>
   const pending = loaded.head.pending; required(pending);
   const set = pending.set, base = loaded.head.committed ? await retainedSet(storage, set.scope, loaded.head.committed) : null;
   const changed = new Set<string>();
-  if (base) required(canonical(Object.keys(base.refs).sort()) === canonical(Object.keys(set.refs).sort()));
+  // Every member of the committed set stays in the pending one; a member the
+  // pending set adds is an optional member it creates (P38), checked below.
+  if (base) required(Object.keys(base.refs).every(key => Object.hasOwn(set.refs, key))
+    && Object.keys(set.refs).every(key => Object.hasOwn(base.refs, key) || OPTIONAL_MEMBERS.has((set.refs[key] as Ref).kind)));
   for (const raw of pending.documents) {
     const kind = await kindFor(raw.kind), document = await envelope(raw, kind, raw.scope), key = member(kind, raw.scope), ref = set.refs[key];
     required(ref && !changed.has(key)); changed.add(key);
     required(canonical(rowOf(kind, document)) === canonical(ref.index[0]));
     if (base) {
-      const previous = base.refs[key]; required(previous && ref.revision === previous.revision + 1 && ref.minRevision === previous.minRevision
-        && canonical(ref.index) === canonical([rowOf(kind, document), ...previous.index].slice(0, LIMIT))
+      const previous: Ref | undefined = Object.hasOwn(base.refs, key) ? base.refs[key] : undefined;
+      // P38: a created member starts at revision 1 over no previous one.
+      required(previous || (OPTIONAL_MEMBERS.has(kind.name) && ref.revision === 1 && ref.minRevision === 1));
+      const before = previous?.revision ?? 0;
+      required(ref.revision === before + 1 && ref.minRevision === (previous?.minRevision ?? 1)
+        && canonical(ref.index) === canonical([rowOf(kind, document), ...(previous?.index ?? [])].slice(0, LIMIT))
         && document.actor === set.operation.actor && document.note === set.operation.note && document.at === set.operation.at
         && !document.operation.initialize && document.operation.requestDigest === set.operation.requestDigest
-        && document.operation.operationId === previous.revision + ':' + set.operation.operationId.split(':')[1]);
+        && document.operation.operationId === before + ':' + set.operation.operationId.split(':')[1]);
       const valid = kind.validate(document.value); required(valid.ok && canonical(valid.value) === canonical(document.value));
     }
   }
@@ -555,10 +582,18 @@ export async function assertPublicationBase<T>(env: Env, kind: DocumentKind<T>, 
   if (loaded.head.pending || canonical(loaded.head.committed) !== canonical(meta.expectedPublication)) throw conflict();
   const base = await readPinnedPublication(env, kind, scope, await currentSet(storage, loaded)); if (base.revision !== meta.expectedRevision) throw conflict();
 }
-export interface PublicationChange<T = unknown> { kind: DocumentKind<T>; scope: string; request: unknown; candidate: (base: T) => unknown | Promise<unknown> }
+/**
+ * `candidate` receives the member's document in the base set — absent (P38) for
+ * an optional member this publication creates — and the base set itself, so a
+ * door can read another member of exactly the set it publishes over.
+ */
+export interface PublicationChange<T = unknown> { kind: DocumentKind<T>; scope: string; request: unknown; candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown> }
 /** Several related documents are one intent and become visible in one CAS. */
 export async function publishSet(env: Env, changes: PublicationChange[], meta: WriteMeta): Promise<WriteResult<unknown>> {
-  const preconditions = publicationPreconditions(meta); if (!changes.length || changes.length > MEMBERS) throw new PublicationError('Invalid publication members', 422, 'invalid_document');
+  // P38: only a write whose first member is optional may name revision 0, and
+  // it then creates that member; every other write is checked exactly as before.
+  const preconditions = publicationPreconditions(meta, false, changes.length > 0 && OPTIONAL_MEMBERS.has(changes[0]!.kind.name));
+  if (!changes.length || changes.length > MEMBERS) throw new PublicationError('Invalid publication members', 422, 'invalid_document');
   const first = changes[0], scope = publicationScope(first.kind, first.scope), storage = storageOf(env), seen = new Set<string>();
   for (const change of changes) {
     const key = member(change.kind, change.scope); if (publicationScope(change.kind, change.scope) !== scope || seen.has(key)) throw conflict(); seen.add(key);
@@ -576,21 +611,26 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
     const base = await currentSet(storage, loaded), refs = structuredClone(base.refs), documents: Envelope<unknown>[] = [], at = meta.nowMs ?? Date.now();
     if (!integer(at)) throw new PublicationError('Invalid publication time', 422, 'invalid_attribution');
     for (const [i, change] of changes.entries()) {
-      const current = await readPinnedPublication(env, change.kind, change.scope, base);
-      if (current.revision === Number.MAX_SAFE_INTEGER || i === 0 && current.revision !== meta.expectedRevision) throw conflict();
-      const validated = change.kind.validate(await change.candidate(current.value)); if (!validated.ok) return validated;
-      const revision = current.revision + 1, value = change.kind.stamp ? change.kind.stamp(validated.value, revision) : validated.value;
+      // P38: an optional member the base set does not carry is created at
+      // revision 1; any other absent member is the authority failing, as before.
+      const present = Object.hasOwn(base.refs, member(change.kind, change.scope));
+      if (!present && !OPTIONAL_MEMBERS.has(change.kind.name)) throw unavailable();
+      const current = present ? await readPinnedPublication(env, change.kind, change.scope, base) : null, previous = current?.revision ?? 0;
+      if (previous === Number.MAX_SAFE_INTEGER || i === 0 && previous !== meta.expectedRevision) throw conflict();
+      const validated = change.kind.validate(await change.candidate(current?.value as unknown, base)); if (!validated.ok) return validated;
+      const revision = previous + 1, value = change.kind.stamp ? change.kind.stamp(validated.value, revision) : validated.value;
       // Secondary members retain their numeric IDs; the set operation is their
       // joint receipt, and no independently writable pointer can expose them.
-      const op = { operationId: i === 0 ? meta.operationId! : current.revision + ':' + meta.operationId!.split(':')[1], expectedRevision: current.revision, requestDigest, initialize: false };
+      const op = { operationId: i === 0 ? meta.operationId! : previous + ':' + meta.operationId!.split(':')[1], expectedRevision: previous, requestDigest, initialize: false };
       const document = await envelope(await sealed({ schema: 'catalog-revision/v1' as const, kind: change.kind.name, scope: change.scope,
         revision, value, actor: meta.actor, note: meta.note ?? '', at, operation: op,
         // W21 E1.07 (R130): computed on the operator's publish, where the history
         // is already being read, and never on the shopper's decision.
         ...(await derivedFor(env, change.kind, change.scope, revision, value, carriedSaltVersion(current))) }), change.kind, change.scope);
       serialized(document); documents.push(document);
-      const key = member(change.kind, change.scope), old = refs[key];
-      refs[key] = { ...old, revision, digest: document.digest, index: [rowOf(change.kind, document), ...old.index].slice(0, LIMIT) };
+      const key = member(change.kind, change.scope), old = present ? refs[key] : undefined;
+      refs[key] = old ? { ...old, revision, digest: document.digest, index: [rowOf(change.kind, document), ...old.index].slice(0, LIMIT) }
+        : { kind: change.kind.name, scope: change.scope, revision, digest: document.digest, minRevision: 1, index: [rowOf(change.kind, document)] };
     }
     const set = await sealed({ schema: 'configuration-set/v1' as const, scope, revision: base.revision + 1, refs,
       operation: { operationId: meta.operationId!, expectedRevision: meta.expectedRevision!, requestDigest, initialize: false,
@@ -607,7 +647,7 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
   });
 }
 export async function publish<T>(env: Env, kind: DocumentKind<T>, scope: string, request: unknown, meta: WriteMeta,
-  candidate: (base: T) => unknown | Promise<unknown>): Promise<WriteResult<T>> {
+  candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown>): Promise<WriteResult<T>> {
   if (!meta.expectedPublication) {
     const { document, set } = await legacyCommitted(env, kind, scope, meta);
     const requestDigest = await digest({ operationId: meta.operationId, expectedRevision: meta.expectedRevision, actor: meta.actor, note: meta.note ?? '', request });
@@ -615,6 +655,40 @@ export async function publish<T>(env: Env, kind: DocumentKind<T>, scope: string,
     return { ok: true, revision: publicRevision(document, set, kind) };
   }
   return publishSet(env, [{ kind, scope, request, candidate } as PublicationChange], meta) as Promise<WriteResult<T>>;
+}
+/**
+ * P38 (decision D1): publish one member under the authored precondition of
+ * ANOTHER member, the anchor. An approval is its own member, so approving a
+ * vocabulary revision writes no vocabulary revision, yet the operator approves
+ * the vocabulary as read: `meta` carries the anchor's revision and the set it
+ * was read in (If-Match), exactly as a write of the anchor would. The set named
+ * there must be a committed set whose anchor is that revision; the change is
+ * then published over it as an ordinary set publication, its own document
+ * precondition the target member's revision in that same set (0, and the member
+ * created, when it has none). An exact retry therefore maps to the same
+ * operation and is answered from the committed result; a stale read is refused
+ * (409), as every other write's is.
+ */
+export async function publishAnchored<T>(env: Env, anchor: { kind: { name: string }; scope: string }, change: PublicationChange<T>, meta: WriteMeta): Promise<WriteResult<T>> {
+  const preconditions = publicationPreconditions(meta), read = preconditions.expectedPublication!;
+  const scope = publicationScope(change.kind, change.scope), storage = storageOf(env);
+  if (publicationScope(anchor.kind, anchor.scope) !== scope) throw conflict();
+  const loaded = await requiredHead(storage, scope);
+  if (!loaded.head.committed || loaded.head.committed.revision < read.revision) throw conflict();
+  const found = await readObject(storage, setKey(scope, read.revision)); required(found);
+  const set = await validateSet(found.value, scope);
+  if (set.digest !== read.digest || set.refs[member(anchor.kind, anchor.scope)]?.revision !== preconditions.expectedRevision) throw conflict();
+  const target = Object.hasOwn(set.refs, member(change.kind, change.scope)) ? set.refs[member(change.kind, change.scope)].revision : 0;
+  return publishSet(env, [change as PublicationChange], { ...meta, expectedRevision: target, operationId: target + ':' + preconditions.operationId.split(':')[1] }) as Promise<WriteResult<T>>;
+}
+/**
+ * P38: a member that may be absent, read from one pin of the current set
+ * (administrative: never the serving cache), with that set's identity — the
+ * identity an authored write of the member names, whether or not it exists.
+ */
+export async function readOptionalPublication<T>(env: Env, kind: DocumentKind<T>, scope: string): Promise<{ publication: Identity; revision: Revision<T> | null; set: PublicationPin }> {
+  const set = await pinPublication(env, publicationScope(kind, scope));
+  return { publication: identityOf(set), revision: await readOptionalPinnedPublication(env, kind, scope, set), set };
 }
 async function legacyCommitted<T>(env: Env, kind: DocumentKind<T>, scope: string, meta: WriteMeta) {
   publicationPreconditions(meta, true);
@@ -632,7 +706,7 @@ export async function publicationStatus<T>(env: Env, kind: DocumentKind<T>, scop
       minRevision: set.refs[member(kind, scope)].minRevision, operationId: document.operation.operationId, expectedRevision: document.operation.expectedRevision,
       revision: document.revision, actor: document.actor, note: document.note, at: document.at, requestDigest: document.operation.requestDigest };
   }
-  if (meta) publicationPreconditions(meta);
+  if (meta) publicationPreconditions(meta, false, OPTIONAL_MEMBERS.has(kind.name));
   const storage = storageOf(env), loaded = await requiredHead(storage, publicationScope(kind, scope));
   const committed = loaded.head.committed ? await currentSet(storage, loaded) : null;
   const operation = meta ? await operationAt(storage, loaded, kind, scope, meta, false) : loaded.head.pending?.set;
@@ -648,7 +722,7 @@ export async function recoverPublication<T>(env: Env, kind: DocumentKind<T>, sco
     const { document, set } = await legacyCommitted(env, kind, scope, meta);
     return { ok: true, revision: publicRevision(document, set, kind) };
   }
-  publicationPreconditions(meta); const storage = storageOf(env), owner = publicationScope(kind, scope);
+  publicationPreconditions(meta, false, OPTIONAL_MEMBERS.has(kind.name)); const storage = storageOf(env), owner = publicationScope(kind, scope);
   return invalidating(storage, owner, async () => {
     const loaded = await requiredHead(storage, owner); if (!loaded.head.committed) throw conflict();
     const operation = await operationAt(storage, loaded, kind, scope, meta, false); if (!operation || operation.operation.initialize) throw conflict();
@@ -832,7 +906,9 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
     const ledger = { hourPrefix, fromTs36 };
     const candidates: Array<{ ref: Ref; n: number; next: number }> = [];
     for (const ref of Object.values(set.refs)) {
-      if (ref.revision - 2 < ref.minRevision) continue;
+      // P38: vocabulary revisions and approvals are the audit of what governed
+      // the tenant's data, and an approval names a revision by number: kept.
+      if (ref.revision - 2 < ref.minRevision || OPTIONAL_MEMBERS.has(ref.kind)) continue;
       if (!await saltCountCarried(env, work, set, ref)) continue;
       const stored = await storedRevisions(storage, work, ref);
       for (const [i, n] of stored.entries()) {
