@@ -160,6 +160,22 @@
 //   · (3) a 256-character utm_campaign is kept on the arrival and a 257-character
 //     one is refused 400 (CH2's lock; the review's probes B and L, mutant M13).
 //
+// R-P55 (the lead's ruling of 2026-10-12 on the P36 verification at 7c6e0e22,
+// fix round 2; the legs marked R-P55):
+//   · the P07 population fan-in reads an arrival exactly as the pipeline stores
+//     the visit, under the tenant's vocabulary: on a vocabulary tenant an
+//     arrival on a channel outside the six words (sms) or one the vocabulary
+//     leaves unknown counts in no context population, and a direct population
+//     holds direct arrivals alone, so a direct shopper is never decided on
+//     them (CH2, both hosts; a LOCK keeps the tenant without the settings on
+//     today's six words term for term). Its populations are read through
+//     src/units/_parity2.ts (bindTrend, publishTrends), the P07 harness,
+//     unchanged;
+//   · kit 02's context-prior section states that only today's six channel words
+//     and today's three visit buckets have a context population (CH6).
+//   The P07 extension to vocabulary channels and cut buckets
+//   (src/reflex/regionTrend.ts:65-81) stays a residual and is not asked here.
+//
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // `contextVocabulary` on the learn document; `utmCampaign` on the arrival; the seed
 // signals `source_platform` and `landing_page_type`; `data.pageType` read as the
@@ -181,11 +197,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { invalidatePublicationCache } from '@/config/publication';
+import { trendKey } from '@/reflex/regionTrend';
 
 import {
   asOperator, declaredSlots, errorsOf, HOSTS, layoutSlot, LAYOUT, learnDocument, learned, loadDocument, M, MODULES, mount, openConsole, pageInstanceOf, putDocument, putSlots, readTree, receiptsOf,
   recentSlot, replayOf, rounded, servedIn, storedDecisions, TENANT, type Answer, type Host, type Mounted,
 } from '../_parity';
+import { bindTrend, publishTrends } from '../_parity2';
 import { learnedLift } from '../_parity4';
 import {
   HERO, heroOf, heroSlot, HOME, HOME_ORDER, HOME_PIECES, homeLearn, homeSlots, lineSeed, putKind, readKind, visitorOn, whyOf, type Visitor,
@@ -457,6 +475,191 @@ describe('unit:P36.CH2', () => {
         `${host}: P36.CH2 — the 256-character campaign is accepted and read whole (paid_search_brand), the 257-character one refused 400`)
         .toEqual([200, 'paid_search_brand', 400]);
     }, 120_000);
+  }
+
+  // R-P55 (the lead's ruling of 2026-10-12, P36 fix round 2, after the verification
+  // at 7c6e0e22, P36/fix1/reviewer/REPORT.md section 6): the P07 fan-in classifies
+  // an arrival exactly as the pipeline stores it. A context population is fed by
+  // every scored event at the entry channel and visit bucket of the visit it
+  // belongs to (kit 02:341-346 at 7c6e0e22, "Scored events ... fan into
+  // population shares per tenant, entry channel and visit bucket"); the visit's
+  // entry channel is the one the tenant's published mapping records (CH1 and the
+  // first CH2 leg above), so on this tenant an SMS arrival is sms and an arrival
+  // whose medium no rule names is unknown. Only today's six channel words and
+  // today's three buckets have a context population (src/reflex/regionTrend.ts:
+  // 65-81; R-P55's kit statement), so the sms and unknown arrivals count in no
+  // population at all: no six-word scope holds them and no `ctx:sms` or
+  // `ctx:unknown` scope exists; the direct populations hold the direct arrivals'
+  // events alone, and the hourly roll-up sums a channel's buckets into the
+  // channel alone (kit 02:344-346). The population's bucket is today's under any
+  // published cut (R-P55, "today's three buckets"), so a third visit counts at
+  // '2-3'. A first-time direct shopper (λ 1: a page view is weighed 0, so the
+  // shopper holds no personal evidence) reads the direct pair when it has at
+  // least `minEvents` events, else the channel alone, and nothing when neither
+  // exists (kit 02:346-349; unit:P07.C2): before any direct arrival, nothing;
+  // after three direct first visits on the Harbor line, the pair (3 events, the
+  // minimum) with the shares of the Harbor line and its category alone, so the
+  // prior contributes λ × (1 × 1 for the line + 1 × 0.5 for the category) = 1.5
+  // to the Harbor piece (the slot's weights, HERO_WEIGHTS; P07's Σ λ·share·w,
+  // src/content/decide.ts:866-880) and to no other piece, and only the Harbor
+  // piece's receipt names "population prior, direct, first visit". The tenant:
+  // the vocabulary of the legs above with the cut [1, 2, 3, 6] (the reviewer's
+  // fixture) and P07's block as the P07 unit sets it (enabled, kBlend 1,
+  // minEvents 3), rolled up through the operator's route (publishTrends,
+  // src/units/_parity2.ts). The populations are read where the decision reads
+  // them, the published key `trend:v2:<tenant>:ctx:<channel>[:<bucket>]` (trendKey,
+  // as src/units/P07/LEDGER.unit.test.ts:296 and :402-406 read it): its level,
+  // its events (one per scored view) and the lines its shares hold (shares decay
+  // with time, so only which lines they hold is compared, as unit:P07.C2 does).
+  // The expected populations are derived from the fixture, never from the engine:
+  // each view counts at `ctx:<channel>:<today's bucket>` and `ctx:<channel>` when
+  // its channel is one of the six, the channel read from ARRIVALS (`vocabulary`
+  // on this tenant, `today` on the tenant without the settings).
+  // CONTROL (a LOCK, green at 7c6e0e22 and after): the tenant without the
+  // settings counts the same arrivals by today's six words term for term (the
+  // CH2 LOCK above: SMS and the unnamed medium are today's direct), as the P07
+  // unit measures its populations, and its direct shopper is decided on them.
+  /** Today's six channel words (src/services/visit.ts:37-39): the only channels with a context population. */
+  const SIX_WORDS: readonly string[] = ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'];
+  /** Today's bucket of a visit number (today's cut [1, 2, 4], src/content/cell.ts), the population's bucket under any published cut. */
+  const todayBucket = (visit: number) => (visit === 1 ? '1' : visit <= 3 ? '2-3' : '4+');
+  /** P07's block as the P07 unit sets it (CONTEXT_PRIOR, src/units/P07/LEDGER.unit.test.ts:137). */
+  const FAN_IN_PRIOR = { enabled: true, kBlend: 1, minEvents: 3 };
+  /** One scored view of the population: how its shopper arrived (an ARRIVALS name), on which visit, and the line and category viewed (the home page's own). */
+  interface PopulationView { arrival: string; visit: number; line: string; category: string }
+  const times = (n: number, view: PopulationView): PopulationView[] => Array.from({ length: n }, () => ({ ...view }));
+  /** Three SMS first visits on Meadow, two first visits on a medium no rule names on Summit, and an SMS third visit on Coast. */
+  const NOT_DIRECT: PopulationView[] = [...times(3, { arrival: 'SMS', visit: 1, line: 'Meadow', category: 'Shoes' }),
+    ...times(2, { arrival: 'a medium no rule names', visit: 1, line: 'Summit', category: 'Jewelry' }),
+    { arrival: 'SMS', visit: 3, line: 'Coast', category: 'Accessories' }];
+  /** Three direct first visits and a direct third visit, all on Harbor. */
+  const DIRECT_VIEWS: PopulationView[] = [...times(3, { arrival: 'direct', visit: 1, line: 'Harbor', category: 'Bags' }),
+    { arrival: 'direct', visit: 3, line: 'Harbor', category: 'Bags' }];
+  const DIRECT_ARRIVAL = ARRIVALS.find(a => a.name === 'direct')!.entry;
+  /** A scored view (weight 1) of a product the catalogue does not hold, carrying the line and category the tenant's pieces name. */
+  const viewOf = (view: PopulationView) => ({ type: 'product_view', data: { productId: `sku-${view.line.toLowerCase()}`, line: view.line, category: view.category } });
+  type Population = Record<string, { level: string; events: number; lines: string[] }>;
+  /** The context populations the views make when each arrival's channel is read as `read` names it (ARRIVALS): only the six words count. */
+  function populationOf(views: PopulationView[], read: 'vocabulary' | 'today'): Population {
+    const out: Population = {};
+    const count = (scope: string, level: string, line: string) => {
+      const entry = (out[scope] ??= { level, events: 0, lines: [] });
+      entry.events += 1;
+      entry.lines = [...new Set([...entry.lines, line])].sort();
+    };
+    for (const view of views) {
+      const channel = ARRIVALS.find(a => a.name === view.arrival)![read];
+      if (channel === null || !SIX_WORDS.includes(channel)) continue;
+      count(`ctx:${channel}:${todayBucket(view.visit)}`, 'channel_visit', view.line);
+      count(`ctx:${channel}`, 'channel', view.line);
+    }
+    return out;
+  }
+  /** Every context population published for the tenant, read where the decision reads it (trendKey, P07's read). */
+  function publishedPopulation(m: Mounted): Population {
+    const prefix = trendKey(TENANT, '');
+    return Object.fromEntries([...m.cache.data].filter(([key]) => key.startsWith(`${prefix}ctx:`)).map(([key, value]) => {
+      const snapshot = JSON.parse(value) as { level?: unknown; events?: unknown; share?: { line?: Record<string, number> } };
+      return [key.slice(prefix.length), { level: String(snapshot.level), events: Number(snapshot.events), lines: Object.keys(snapshot.share?.line ?? {}).sort() }];
+    }));
+  }
+  /** Each view by its own shopper: the visits before it open with a page view (weighed 0, so it counts nothing), 31 minutes apart, and the view opens its own visit. */
+  async function populate(m: Mounted, clock: { now: number }, views: PopulationView[]): Promise<void> {
+    for (const view of views) {
+      const v = await visitorOn(m);
+      const entry = ARRIVALS.find(a => a.name === view.arrival)!.entry;
+      for (let visit = 1; visit <= view.visit; visit++) {
+        if (visit > 1) clock.now += 31 * 60_000;
+        expect((await v.action(visit === view.visit ? viewOf(view) : PAGE_VIEW, { entry })).status,
+          `${m.host}: PRECONDITION — ${view.arrival}, visit ${visit}: the population shopper's event is accepted`).toBe(200);
+      }
+    }
+  }
+  /** A first-time direct shopper's home page: the context prior each hero record itemises, the shares each carries, and the receipts' population-prior sentences. */
+  async function directFirstVisit(m: Mounted, clock: { now: number }) {
+    clock.now += 60_000;
+    const v = await visitorOn(m);
+    expect((await v.action(PAGE_VIEW, { entry: DIRECT_ARRIVAL })).status, `${m.host}: PRECONDITION — the direct shopper's arrival is accepted`).toBe(200);
+    const snap = await v.snapshot(HOME, { entry: DIRECT_ARRIVAL });
+    expect(snap.status, `${m.host}: PRECONDITION — the direct shopper's page is served`).toBe(200);
+    await m.drainLedger();
+    const ids = new Set(snap.decisions.map(d => d.decisionId));
+    const records = storedDecisions(m, v.subject).filter(r => ids.has(r.decision_id) && r.slot === HERO).sort((a, b) => a.item_id.localeCompare(b.item_id));
+    expect(records.map(r => [r.cell.channel, r.cell.visit_bucket]), `${m.host}: PRECONDITION — the shopper's four hero decisions are made as a direct first visit`)
+      .toEqual(HOME_ORDER.map(() => ['direct', '1']));
+    const priors = records.flatMap(r => {
+      const c = (r.explain as unknown as { contextPrior?: Record<string, unknown> | null }).contextPrior;
+      return c ? [[r.item_id, { channel: c.channel, visitBucket: c.visitBucket, level: c.level, events: c.events, lambda: c.lambda, contribution: c.contribution }] as const] : [];
+    });
+    const shares = records.map(r => (r.inputs as unknown as { context_share?: unknown } | undefined)?.context_share ?? 'no context shares');
+    const sentences = (await receiptsOf(m, v.subject)).filter(r => r.slot === HERO && ids.has(String(r.decision_id)))
+      .flatMap(r => ((r.why ?? []) as string[]).filter(w => /population prior/i.test(w)).map(w => [String(r.item), /population prior, direct, first visit/i.test(w)] as const));
+    return { priors, shares, sentences };
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P55 — on the tenant whose vocabulary names sms (cut [1, 2, 3, 6]) with the context prior's block on, the population fan-in reads each arrival as the visit records it: SMS arrivals and arrivals the vocabulary leaves unknown count in no context population, the direct populations hold the direct arrivals' events alone, and a first-time direct shopper is decided on those alone (on nothing before any direct arrival), its receipts itemising no other arrival as direct`, async () => {
+      const m = await mount(host, { ...NO_SETTINGS, learn: homeLearn({ contextVocabulary: { ...VOCABULARY, visitBuckets: [1, 2, 3, 6] }, contextPrior: FAN_IN_PRIOR }) });
+      expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+      const trend = bindTrend(m);
+      const clock = { now: Date.now() + 60_000 };
+      const mocked = vi.spyOn(Date, 'now').mockImplementation(() => clock.now);
+      try {
+        // Before any direct arrival: the SMS arrivals and the arrivals no rule names.
+        await populate(m, clock, NOT_DIRECT);
+        clock.now += 60_000;
+        await publishTrends(m, trend);
+        const before = populationOf(NOT_DIRECT, 'vocabulary');
+        expect([before['ctx:direct:1'] ?? 'none', before['ctx:direct'] ?? 'none'], 'the fixture: before any direct arrival there is no direct population to read').toEqual(['none', 'none']);
+        expect.soft(publishedPopulation(m),
+          `${host}: P36.CH2 — R-P55: SMS arrivals (sms) and arrivals the vocabulary leaves unknown count in no context population: no six-word scope holds them, no ctx:sms or ctx:unknown scope exists`)
+          .toEqual(before);
+        expect.soft(await directFirstVisit(m, clock),
+          `${host}: P36.CH2 — R-P55: before any direct arrival a first-time direct shopper is decided on no context prior: no record itemises one or carries its shares, no receipt names the population prior`)
+          .toEqual({ priors: [], shares: HOME_ORDER.map(() => 'no context shares'), sentences: [] });
+
+        // Then the direct arrivals.
+        await populate(m, clock, DIRECT_VIEWS);
+        clock.now += 60_000;
+        await publishTrends(m, trend);
+        const after = populationOf([...NOT_DIRECT, ...DIRECT_VIEWS], 'vocabulary');
+        expect(after, 'the fixture: the direct pair of the first visit holds the three Harbor views, at the minimum').toMatchObject({ 'ctx:direct:1': { events: FAN_IN_PRIOR.minEvents, lines: ['Harbor'] } });
+        expect.soft(publishedPopulation(m),
+          `${host}: P36.CH2 — R-P55: ctx:direct:1 and ctx:direct:2-3 hold exactly the direct arrivals' events (3 and 1, the Harbor line alone), the channel alone their sum, and still no scope holds an SMS or unknown arrival`)
+          .toEqual(after);
+        expect.soft(await directFirstVisit(m, clock),
+          `${host}: P36.CH2 — R-P55: a first-time direct shopper reads the direct pair of the first visit, the direct arrivals' shares alone (Harbor, Bags): the prior contributes 1.5 to the Harbor piece and nothing to the SMS or unknown arrivals' lines, and only the Harbor piece's receipt names "population prior, direct, first visit"`)
+          .toEqual({
+            priors: [['story.harbor', { channel: 'direct', visitBucket: '1', level: 'channel_visit', events: 3, lambda: 1, contribution: 1.5 }]],
+            shares: HOME_ORDER.map(() => ({ category: { Bags: 1 }, line: { Harbor: 1 } })),
+            sentences: [['story.harbor', true]],
+          });
+      } finally { mocked.mockRestore(); }
+    }, 180_000);
+
+    it(`host (${host}): LOCK — R-P55 CONTROL: on a tenant without the settings, with the context prior's block on, the same arrivals count by today's six words term for term (SMS and the unnamed medium as direct), and a first-time direct shopper is decided on that direct population`, async () => {
+      const m = await mount(host, { ...NO_SETTINGS, learn: homeLearn({ contextPrior: FAN_IN_PRIOR }) });
+      expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+      const trend = bindTrend(m);
+      const clock = { now: Date.now() + 60_000 };
+      const mocked = vi.spyOn(Date, 'now').mockImplementation(() => clock.now);
+      try {
+        const views = [...NOT_DIRECT, ...DIRECT_VIEWS];
+        await populate(m, clock, views);
+        clock.now += 60_000;
+        await publishTrends(m, trend);
+        const today = populationOf(views, 'today');
+        // LOCKED (src/services/visit.ts:239-250, :426-474: today's words; src/reflex/regionTrend.ts:65-81; unit:P07.C3): today's populations.
+        expect(publishedPopulation(m), `${host}: P36.CH2 — a tenant without the settings counts every arrival by today's six words, term for term`).toEqual(today);
+        const pair = today['ctx:direct:1']!;
+        const read = await directFirstVisit(m, clock);
+        expect([read.priors.map(([item, c]) => [item, { ...c, contribution: 'a share of the pair' }]), read.sentences],
+          `${host}: P36.CH2 — and a first-time direct shopper there is decided on that direct pair (${pair.events} events), the prior itemised on each piece of a line it holds`)
+          .toEqual([HOME_PIECES.filter(p => pair.lines.includes(p.tags.line[0])).map(p => p.id).sort()
+            .map(item => [item, { channel: 'direct', visitBucket: '1', level: 'channel_visit', events: pair.events, lambda: 1, contribution: 'a share of the pair' }]),
+          HOME_PIECES.filter(p => pair.lines.includes(p.tags.line[0])).map(p => p.id).sort().map(item => [item, true])]);
+      } finally { mocked.mockRestore(); }
+    }, 180_000);
   }
 });
 
@@ -1194,5 +1397,36 @@ describe('unit:P36.CH6', () => {
       if (!has('cellGrammar', 'contextVocabulary')) missing.push(`${file}: the grammar bump a vocabulary change carries (cellGrammar with contextVocabulary)`);
     }
     expect(missing, 'P36.CH6 — the kit states the vocabulary, the mapping, the seed keys and the bump').toEqual([]);
+  });
+
+  // R-P55 (the lead's ruling of 2026-10-12, P36 fix round 2): kit 02's
+  // context-prior section (the paragraph "The context prior." and any that
+  // follow it before the next bold or titled paragraph) states that only today's
+  // six channel words and today's three visit buckets (1, 2-3, 4+) have a
+  // context population (src/reflex/regionTrend.ts:65-81), so a channel of the
+  // tenant's vocabulary outside the six gets no context prior, and a bucket of a
+  // published cut outside the three has no population of its own. Today's
+  // sentence (02:343-344 at 7c6e0e22: "an event whose entry channel is unknown
+  // ... counts nothing there") names neither. Each statement is matched on
+  // stable words within one sentence of the section, never on a whole sentence,
+  // so the wording is the implementer's.
+  it('logic: R-P55 — docs/kit/02-api-reference.md\'s context-prior section states that only today\'s six channel words and today\'s three visit buckets (1, 2-3, 4+) have a context population: a channel of the tenant\'s vocabulary outside the six gets no context prior, and a bucket of a published cut outside the three has no population of its own', () => {
+    const paragraphs = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/);
+    const start = paragraphs.findIndex(p => p.trimStart().startsWith('**The context prior.**'));
+    expect(start, 'PRECONDITION — docs/kit/02-api-reference.md carries the context-prior section (unit:P07.C6)').toBeGreaterThanOrEqual(0);
+    const next = paragraphs.findIndex((p, i) => i > start && /^\s*(\*\*|#)/.test(p));
+    const sentences = paragraphs.slice(start, next < 0 ? undefined : next).join('\n\n').replace(/[‘’]/g, "'").replace(/`/g, '')
+      .split(/(?<=[.!?])\s+|\n\s*\n/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const six = ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'];
+    const statements: Array<{ name: string; test: (s: string) => boolean }> = [
+      { name: 'only the six channel words and the three visit buckets (1, 2-3, 4+) have a context population',
+        test: s => /\bonly\b/i.test(s) && (/\bsix\b/i.test(s) || six.every(w => s.includes(w))) && ((s.includes('2-3') && s.includes('4+')) || /\bthree\b/i.test(s)) && /\bpopulation/i.test(s) },
+      { name: 'a channel of the tenant\'s vocabulary outside the six gets no context prior',
+        test: s => /vocabular/i.test(s) && /\b(no|never|none)\b/i.test(s) && /\bprior\b/i.test(s) },
+      { name: 'a bucket of a published cut (visitBuckets) outside the three has no population of its own',
+        test: s => /visitBuckets|\bcut\b/i.test(s) && /\bbucket/i.test(s) && /\bpopulation/i.test(s) },
+    ];
+    expect(statements.filter(st => !sentences.some(st.test)).map(st => `docs/kit/02-api-reference.md: ${st.name}`),
+      'P36.CH6 — R-P55: kit 02\'s context-prior section states which arrival contexts have a population and what the others get').toEqual([]);
   });
 });
