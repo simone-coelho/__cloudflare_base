@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="600" viewBox="0 0 1100 600" role="img" aria-labelledby="sesc-t sesc-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="sesc-t">One click, from the event to the slot's answer</title>
+  <desc id="sesc-d">Five boxes, left to right. An event: the visitor views a tailored wool coat, and the event carries three attributes, coats, tailored and premium. Dimension values: the registry places them on category, style and price band, and each touch adds the view's weight, 1, to that value's raw score R. The visitor's vector: each value reads 0.357, because interest a is R over R plus K, and K is 1.8, so one view reads 1 over 2.8. A score for each piece: the tailored coats, tagged coats and tailored, score the slot's weight omega times the visitor's interest a-tilde, blended with the region, added up over their tags, the same sum for every piece that may show. The slot's answer: place 1 is the pinned winter campaign; then the tailored coats at 0.374, up a place, the casual coats at 0.357 and the tailored boots at 0.201. Pins come first; then the slot sorts, applies its cap and takes four.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5: the five-box chain of the Vantage explainer,
+       redrawn for the engine's defaults on the package's example brand. Facts: the Vantage facts sheet (FACTS.md) sections 1 to 3;
+       research/S2-engine-facts.md 3.3, 3.4, 3.6, 3.10 to 3.12. K is 1.8, a view weighs 1, the blend constant is 1. The slot
+       weights (category 0.3, style 0.2), the region's shares and the seed are the example's own, as the page says. -->
+  <defs>
+    <marker id="sesc-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="600" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">One click, from the event to the slot's answer</text>
+  <text x="20" y="82" font-size="20" fill="#197050">One view of a tailored wool coat, worked at the engine's defaults.</text>
+
+  <!-- arrows between the boxes -->
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#sesc-head)">
+    <line x1="216" y1="344" x2="224" y2="344"/>
+    <line x1="432" y1="344" x2="440" y2="344"/>
+    <line x1="648" y1="344" x2="656" y2="344"/>
+    <line x1="864" y1="344" x2="872" y2="344"/>
+  </g>
+
+  <!-- An event (S2 3.3: the event's attributes; FACTS 1: one view, several dimensions) -->
+  <g data-box="event">
+    <rect x="20" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="20" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="34" y="152" font-size="21" font-weight="700">An event</text>
+    <text x="34" y="214" font-size="20">The visitor views</text>
+    <text x="34" y="239" font-size="20">a tailored wool</text>
+    <text x="34" y="264" font-size="20">coat; the event</text>
+    <text x="34" y="289" font-size="20">carries three</text>
+    <text x="34" y="314" font-size="20">attributes:</text>
+    <g data-box="event-coats">
+      <rect x="34" y="330" width="168" height="34" rx="8" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="48" y="353" font-size="19" font-weight="500">coats</text>
+    </g>
+    <g data-box="event-tailored">
+      <rect x="34" y="372" width="168" height="34" rx="8" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="48" y="395" font-size="19" font-weight="500">tailored</text>
+    </g>
+    <g data-box="event-premium">
+      <rect x="34" y="414" width="168" height="34" rx="8" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="48" y="437" font-size="19" font-weight="500">premium</text>
+    </g>
+    <text x="34" y="510" font-size="18" fill="#197050">One event touches</text>
+    <text x="34" y="532" font-size="18" fill="#197050">every attribute</text>
+    <text x="34" y="554" font-size="18" fill="#197050">the registry reads.</text>
+  </g>
+
+  <!-- Dimension values (S2 3.3 item 6; 3.4: an event adds the action's weight) -->
+  <g data-box="values">
+    <rect x="236" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M236,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="236" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="250" y="139" font-size="21" font-weight="700">Dimension</text>
+    <text x="250" y="165" font-size="21" font-weight="700">values</text>
+    <text x="250" y="214" font-size="18" fill="#197050">category</text>
+    <text x="250" y="240" font-size="20" font-weight="700">coats</text>
+    <text x="418" y="240" font-size="19" text-anchor="end">R + 1</text>
+    <text x="250" y="284" font-size="18" fill="#197050">style</text>
+    <text x="250" y="310" font-size="20" font-weight="700">tailored</text>
+    <text x="418" y="310" font-size="19" text-anchor="end">R + 1</text>
+    <text x="250" y="354" font-size="18" fill="#197050">price band</text>
+    <text x="250" y="380" font-size="20" font-weight="700">premium</text>
+    <text x="418" y="380" font-size="19" text-anchor="end">R + 1</text>
+    <text x="250" y="488" font-size="18" fill="#197050">Each touch adds</text>
+    <text x="250" y="510" font-size="18" fill="#197050">the view's weight,</text>
+    <text x="250" y="532" font-size="18" fill="#197050">1, to the value's</text>
+    <text x="250" y="554" font-size="18" fill="#197050">raw score R.</text>
+  </g>
+
+  <!-- The visitor's vector (S2 3.4: a = R / (R + K), K 1.8; one view, a = 0.357) -->
+  <g data-box="vector">
+    <rect x="452" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M452,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="452" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="466" y="139" font-size="21" font-weight="700">The visitor's</text>
+    <text x="466" y="165" font-size="21" font-weight="700">vector</text>
+    <text x="466" y="214" font-size="19">coats</text>
+    <text x="634" y="214" font-size="19" font-weight="700" text-anchor="end">0.357</text>
+    <rect x="466" y="224" width="168" height="14" rx="3" fill="#E4F0DA"/>
+    <rect x="466" y="224" width="60" height="14" rx="3" fill="#197050"/>
+    <text x="466" y="268" font-size="19">tailored</text>
+    <text x="634" y="268" font-size="19" font-weight="700" text-anchor="end">0.357</text>
+    <rect x="466" y="278" width="168" height="14" rx="3" fill="#E4F0DA"/>
+    <rect x="466" y="278" width="60" height="14" rx="3" fill="#197050"/>
+    <text x="466" y="322" font-size="19">premium</text>
+    <text x="634" y="322" font-size="19" font-weight="700" text-anchor="end">0.357</text>
+    <rect x="466" y="332" width="168" height="14" rx="3" fill="#E4F0DA"/>
+    <rect x="466" y="332" width="60" height="14" rx="3" fill="#197050"/>
+    <text x="466" y="392" font-size="20" font-weight="700" fill="#197050">a = R / (R + K)</text>
+    <text x="466" y="422" font-size="18">K is 1.8, so one</text>
+    <text x="466" y="444" font-size="18">view reads 1 / 2.8.</text>
+    <text x="466" y="510" font-size="18" fill="#197050">One graded interest</text>
+    <text x="466" y="532" font-size="18" fill="#197050">per value, draining</text>
+    <text x="466" y="554" font-size="18" fill="#197050">on its own memory.</text>
+  </g>
+
+  <!-- A score for each piece (S2 3.11: the sum of the slot's weight times the blended interest over the piece's tags) -->
+  <g data-box="score">
+    <rect x="668" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M668,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="668" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="682" y="139" font-size="21" font-weight="700">A score for</text>
+    <text x="682" y="165" font-size="21" font-weight="700">each piece</text>
+    <g data-box="score-piece">
+      <rect x="682" y="194" width="168" height="94" rx="10" fill="#FFFFFF" stroke="#197050" stroke-width="2"/>
+      <text x="696" y="222" font-size="18" font-weight="700">Tailored coats</text>
+      <text x="696" y="248" font-size="18">tags: coats,</text>
+      <text x="696" y="272" font-size="18">tailored</text>
+    </g>
+    <text x="682" y="330" font-size="20" font-weight="700" fill="#197050">score = Σ ω × ã</text>
+    <text x="682" y="368" font-size="18"><tspan font-weight="700" fill="#197050">ω</tspan> the slot's</text>
+    <text x="682" y="390" font-size="18">weight for the</text>
+    <text x="682" y="412" font-size="18">dimension</text>
+    <text x="682" y="444" font-size="18"><tspan font-weight="700" fill="#197050">ã</tspan> the visitor's</text>
+    <text x="682" y="466" font-size="18">interest, blended</text>
+    <text x="682" y="488" font-size="18">with the region</text>
+    <text x="682" y="532" font-size="18" fill="#197050">The same sum for</text>
+    <text x="682" y="554" font-size="18" fill="#197050">every piece.</text>
+  </g>
+
+  <!-- The slot's answer (S2 3.10 pins; 3.12 sort, cap, take). Scores after the first click, computed at the defaults. -->
+  <g data-box="answer">
+    <rect x="884" y="108" width="196" height="472" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M884,120 a12,12 0 0 1 12,-12 h172 a12,12 0 0 1 12,12 v60 h-196 z" fill="#E4F0DA"/>
+    <rect x="884" y="108" width="196" height="472" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="898" y="139" font-size="21" font-weight="700">The slot's</text>
+    <text x="898" y="165" font-size="21" font-weight="700">answer</text>
+    <circle cx="908" cy="208" r="12" fill="#ABFF44" stroke="#08251A" stroke-width="1.5"/>
+    <text x="908" y="214" font-size="17" font-weight="700" text-anchor="middle">1</text>
+    <text x="928" y="214" font-size="18" font-weight="700">Winter</text>
+    <text x="928" y="236" font-size="18" font-weight="700">campaign</text>
+    <text x="928" y="258" font-size="17" fill="#197050">pinned</text>
+    <circle cx="908" cy="296" r="12" fill="#08251A"/>
+    <text x="908" y="302" font-size="17" font-weight="700" fill="#FFFFFF" text-anchor="middle">2</text>
+    <text x="928" y="302" font-size="18" font-weight="700">Tailored coats</text>
+    <text x="928" y="324" font-size="17" fill="#197050">0.374, up a place</text>
+    <circle cx="908" cy="362" r="12" fill="#08251A"/>
+    <text x="908" y="368" font-size="17" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
+    <text x="928" y="368" font-size="18" font-weight="700">Casual coats</text>
+    <text x="928" y="390" font-size="17" fill="#197050">0.357</text>
+    <circle cx="908" cy="428" r="12" fill="#08251A"/>
+    <text x="908" y="434" font-size="17" font-weight="700" fill="#FFFFFF" text-anchor="middle">4</text>
+    <text x="928" y="434" font-size="18" font-weight="700">Tailored boots</text>
+    <text x="928" y="456" font-size="17" fill="#197050">0.201</text>
+    <text x="898" y="510" font-size="18" fill="#197050">Pins first; then</text>
+    <text x="898" y="532" font-size="18" fill="#197050">the slot sorts, caps</text>
+    <text x="898" y="554" font-size="18" fill="#197050">and takes four.</text>
+  </g>
+</svg>

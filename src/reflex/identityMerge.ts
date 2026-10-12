@@ -32,7 +32,7 @@
 // ---------------------------------------------------------------------------
 
 import {
-  effectiveScore, emptyState, tick,
+  effectiveScore, emptyState, isSignal, signalsOf, tick, withSignals,
   type ReflexConfig, type ReflexEntry, type ReflexInput, type ReflexResult, type ReflexState,
 } from '@/reflex/core';
 
@@ -86,7 +86,11 @@ export function mergeReflexStates(
   }
 
   const audiences = [...new Set([...A.audiences, ...B.audiences])].sort();
-  return tick({ v: 1, dims, audiences, configVersion: config.version }, now, config);
+  // P10: the person's count of signals is the SUM of the two profiles' counts.
+  // Each counted an action the other never saw (two devices' actions are one
+  // person's actions, as their visits and counters add), and a browser already
+  // folded into the person arrives here as nothing, so no action is counted twice.
+  return tick(withSignals<ReflexState>({ v: 1, dims, audiences, configVersion: config.version }, signalsOf(A) + signalsOf(B)), now, config);
 }
 
 /**
@@ -97,6 +101,11 @@ export function mergeReflexStates(
  * A row at a time later than the entry's last touch is an ordinary apply at
  * that time. A row earlier than the last touch adds what would be left of it
  * by then, and leaves t where it is.
+ *
+ * P10 (decision D1): an applied action whose own behaviour weight is above zero
+ * is a signal whenever it happened, so it is counted here exactly as `apply`
+ * counts a live one; the count is never decayed, so the order rows arrive in
+ * does not matter to it either.
  */
 export function applyHistorical(
   prev: ReflexState | null | undefined,
@@ -109,6 +118,7 @@ export function applyHistorical(
   const dims: ReflexState['dims'] = {};
   for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
   if (weight <= 0 || !Number.isFinite(at)) return { ...base, dims };
+  const counted = withSignals(base, signalsOf(base) + (isSignal(config, input.action) ? 1 : 0));
 
   for (const touch of input.touches) {
     if (!touch.value) continue;
@@ -124,5 +134,5 @@ export function applyHistorical(
       dimMap[touch.value] = { s: e.s + weight * Math.exp(-(e.t - at) / tau), t: e.t };
     }
   }
-  return { ...base, dims };
+  return { ...counted, dims };
 }

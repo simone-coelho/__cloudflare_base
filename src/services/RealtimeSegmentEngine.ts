@@ -23,7 +23,8 @@ import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { ReflexConfig } from '@/reflex/core';
-import { liveVisit, projectVisit, validEntry, visitBucket, type ChannelSignals } from '@/services/visit';
+import { liveVisit, projectVisit, validEntry, visitBucket, type ChannelSignals, type VisitInputs } from '@/services/visit';
+import type { DeviceClass } from '@/services/platform';
 import type { Env } from '@/types/env';
 import { assertOwnerScope, ownerRelay, retainOwnerWork, sessionAuthorityKV, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { externalRetentionBirths, retentionBirth } from '@/retention';
@@ -57,7 +58,7 @@ import {
   type RecognitionSignals,
   type ReflexResult,
 } from '@/reflex/core';
-import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
+import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import {
   DEFAULT_GENERATOR_CONFIG,
   generateAffinityAudiences,
@@ -115,6 +116,12 @@ export interface ActionEvent {
   entry?: ChannelSignals;
   /** Coarse request geolocation, set by the route from request.cf. Population aggregates only (CW6). */
   geo?: { country?: string | null; regionCode?: string | null };
+  /**
+   * P37: the device class the event's own request reported (client hint, else
+   * user agent), set by the route and never by the client. Read only when the
+   * event opens a visit, which records it; the user agent itself is never kept.
+   */
+  device?: DeviceClass;
 }
 
 export interface UserProfile {
@@ -463,6 +470,17 @@ export class RealtimeSegmentEngine {
         }
         sessionData = { ...sessionData, preferences: { ...sessionData.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } };
       }
+      // P36: the tenant's published context vocabulary classifies the arrival
+      // and names the visit's source platform and landing-page type. Read once,
+      // only for an event that carries an arrival or a page type; it cannot fail
+      // the event (unreadable or absent: today's six-word tables).
+      let contextInputs: Promise<VisitInputs> | undefined;
+      const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
+        const pageType = (event.data as Record<string, unknown> | undefined)?.pageType;
+        const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof pageType === 'string';
+        // P37: the device the event's own request reported, for the visit it opens; no read.
+        return { vocabulary: arrives ? await tenantContextVocabulary(this.env, this.tenant) : null, pageType, device: event.device ?? null };
+      })());
       // W16 C8.03: what the engine could and could not place in THIS event. Set
       // where the touches are built below, so the answer and the taste can never
       // tell two different stories about the same input.
@@ -507,7 +525,24 @@ export class RealtimeSegmentEngine {
       // its own attributes into the registry exactly as a product event does, so
       // it answers to the same vocabulary; the read is skipped only when there is
       // nothing for the vocabulary to answer about.
-      const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(eventData, heldProduct, reflexConfig))
+      // P38 (VA3, decision D2, DI-9): with an approved vocabulary in effect, the
+      // event's governed values are mapped before any door below places them — a
+      // synonym to its id, an id to itself — and a value that maps to nothing is
+      // removed, builds no interest and is counted in the tenant's rejection
+      // report, by the rule and the table the shopper's own object uses
+      // (ShopperReflex.ingest); the event is otherwise processed as before. No
+      // approval in effect (or one the authority cannot answer): nothing here
+      // changes. Read only for an event with something to place, as the catalogue
+      // vocabulary below is (or a held product).
+      const governed = reflexOn && (contentEvent || heldProduct !== undefined || needsCatalogVocabulary(eventData, heldProduct, reflexConfig))
+        ? await tenantVocabularyInEffect(this.env, this.tenant) : null;
+      const governing = governed ? governedEventData(eventData, reflexConfig, governed) : null;
+      const placing = governing ? governing.data : eventData;
+      if (governed && governing?.rejected.length && (contentEvent || (!heldProduct && reflexConfig.eventAttributes === 'event-when-unknown'))) {
+        (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(
+          recordVocabularyRejections(this.env, this.tenant, governed.revision, governing.rejected, now));
+      }
+      const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, heldProduct, reflexConfig))
         ? await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null)
         : EMPTY_VOCABULARY;
       // W35 A1 (doc 16 §12 trust & abuse; kit 02): an event naming a product this
@@ -516,14 +551,19 @@ export class RealtimeSegmentEngine {
       // own object drops it (ShopperReflex.ingest): after placement, before any
       // counter, visit, taste, region count, provider forward or stored write.
       // The answer names the product in the same `signals` the object host sends.
-      const placed = reflexOn ? placeEvent(eventData, heldProduct, reflexConfig, vocabulary) : null;
-      const unknownTouches = placed && !heldProduct && reflexConfig.eventAttributes === 'event-when-unknown' ? placed.touches : [];
-      if (placed && eventProductId != null && !heldProduct && unknownTouches.length === 0) {
-        signals = placed.signals;
+      const placed = reflexOn ? placeEvent(placing, heldProduct, reflexConfig, vocabulary) : null;
+      // P38: on a governed attribute the vocabulary decides (DI-9), so an event whose value maps is never dropped here.
+      const governedPlacement = placed && governed ? governedTouches(placed.touches, governed, reflexConfig) : null;
+      const placedTouches = placed && governedPlacement ? { touches: governedPlacement, signals: { ...placed.signals, recognized: governedPlacement.length > 0 } } : placed;
+      const unknownTouches = placedTouches && !heldProduct && reflexConfig.eventAttributes === 'event-when-unknown' ? placedTouches.touches : [];
+      if (placedTouches && eventProductId != null && !heldProduct && unknownTouches.length === 0) {
+        signals = placedTouches.signals;
         return { ...answer(null), dropped: 'unknown_product' };
       }
-      const contentEventTouches = reflexOn && contentEvent
-        ? await resolvedContentTouches(this.env, this.tenant, eventData, reflexConfig, vocabulary) : null;
+      const resolvedTouches = reflexOn && contentEvent
+        ? await resolvedContentTouches(this.env, this.tenant, placing, reflexConfig, vocabulary) : null;
+      // P38 (DI-9): a content piece's own tags on a governed attribute answer to the same table.
+      const contentEventTouches = resolvedTouches && governed ? governedTouches(resolvedTouches, governed, reflexConfig) : resolvedTouches;
       await this.ensureSeeded(surface);
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
@@ -559,9 +599,10 @@ export class RealtimeSegmentEngine {
         // vocabulary, so its diagnostic comes from those touches.
         signals = contentEventTouches
           ? { recognized: contentEventTouches.length > 0, unrecognized: [] }
-          : placed!.signals;
+          : placedTouches!.signals;
         // Reuse precisely the personal scorer's touches for population counts.
-        const touches = contentEventTouches ?? placed!.touches;
+        // P38 (DI-9): a held product's attributes on a governed attribute answer to the same table.
+        const touches = contentEventTouches ?? placedTouches!.touches;
         // W41: once per sign-in, a recognized shopper's interests are restored
         // from her tenant's ODP profile at her first event after it, merged
         // into what she holds and BEFORE the event is applied, exactly as her
@@ -589,9 +630,17 @@ export class RealtimeSegmentEngine {
         // Unsigned legacy traffic and the default tenant's BrightHour demo have
         // no tenant population reader. A real BrightHour tenant owns its counts.
         if (this.principal && !(this.principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
+          // P07: and into the population of the visit's arrival context — the
+          // entry channel and visit bucket of the visit this event belongs to,
+          // derived exactly as the stored visit is (SessionManager), under the
+          // tenant's published vocabulary from the one read the stored visit
+          // uses (visitInputs, R-P55). An unknown channel counts nothing there
+          // (R-P9), and neither does a channel outside the six words.
+          const arrival = liveVisit(stored?.metadata, stored?.metadata.lastSeen, now, event.entry, await visitInputs());
           (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
             tenant: this.principal.tenant, geo: event.geo, now: nowMs, touches,
             w: reflexConfig.weights[action] ?? 0,
+            context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
           }));
         }
       }
@@ -601,7 +650,7 @@ export class RealtimeSegmentEngine {
           ...sessionData, attributes: newAttributes, surface, journey: newJourney,
           reflex: reflex ? reflex.state : sessionData.reflex,
           metadata: { ...sessionData.metadata, engagementScore: newEngagementScore },
-        }, event.entry, undefined, ownedSnapshot);
+        }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
         return answer(null);
       }
 
@@ -699,7 +748,7 @@ export class RealtimeSegmentEngine {
             engagementScore: newEngagementScore,
             journeyStage
           }
-        }, event.entry, undefined, ownedSnapshot);
+        }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
         return answer(null);
       }
 
@@ -722,7 +771,7 @@ export class RealtimeSegmentEngine {
           lastSegmentUpdate: Date.now(),
           journeyStage
         }
-      }, event.entry, undefined, ownedSnapshot);
+      }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
 
       // 6. Decide the storefront modules through the Optimizely FX seam.
       const personalizationConfig = await this.getPersonalizationConfig(sessionData, currentSessionId, reflexConfig);
@@ -1048,7 +1097,25 @@ export class RealtimeSegmentEngine {
     if (!await bufferedEventAllowed(this.env, this.tenant, event.userId, event.timestamp)) return answer(current, false, 'erased');
     if (!consent.personalization) return answer(current);
     requireConsentPurpose(consent, 'personalization');
-    const interest = await bufferedInterest(this.env, this.tenant, event,
+    // P38 (VA3, decision D2): a buffered delivery is placed by its own door
+    // (bufferedInterest), so its governed values are mapped before it is handed
+    // over, by the rule and the table the live door uses, and what maps to nothing
+    // is counted in the tenant's rejection report, exactly as the shopper's own
+    // object does (ShopperReflex.ingestBuffered). No approval in effect: the
+    // delivery is handed over exactly as sent.
+    const governed = (this.env.REFLEX_ENABLED ?? 'true') !== 'false' ? await tenantVocabularyInEffect(this.env, this.tenant) : null;
+    let delivered = event;
+    if (governed) {
+      const surface = resolveSurface({ surface: current.surface }), data = (event.data ?? {}) as Record<string, unknown>;
+      const cfg = await resolveTenantReflexConfig(this.env, this.tenant, surface), governing = governedEventData(data, cfg, governed);
+      const pid = data.productId ?? data.product_id ?? data.sku;
+      const held = pid ? (await resolveTenantCatalog(this.tenant, surface))?.getProduct(String(pid)) : undefined;
+      if (governing.rejected.length && (isContentAction(actionOf(event)) || (!held && cfg.eventAttributes === 'event-when-unknown'))) {
+        (this.keepAlive ?? retainOwnerWork)(recordVocabularyRejections(this.env, this.tenant, governed.revision, governing.rejected, now));
+      }
+      delivered = { ...event, data: governing.data };
+    }
+    const interest = await bufferedInterest(this.env, this.tenant, delivered,
       { ...current, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...current.attributes },
         // W16 C5.09 (R85(b)): a buffered delivery is never an interaction of the
         // visit it arrives in, so it qualifies against the stage already stored.

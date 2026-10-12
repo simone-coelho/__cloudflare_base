@@ -15,6 +15,7 @@ import { syntheticOperation } from '@/ops/synthetic';
 import { serveContentDecisions } from '@/content/service';
 import { requireRetention, type RetentionStamp } from '@/retention';
 import { ENTRY_QUERY_LIMIT, validEntry, type ChannelSignals } from '@/services/visit';
+import { deviceOf, platformOf } from '@/services/platform';
 import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
 import { tenantConfig } from '@/tenancy/middleware';
 import { enqueueDecisions } from '@/ledger/enqueue';
@@ -846,6 +847,23 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     if (values.length !== 1 || (values[0] !== 'true' && values[0] !== 'false')) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     consent[key] = values[0] === 'true';
   }
+  /**
+   * Named conditions the caller asserts for this request, as `ctx.<name>=value`.
+   * Garrett's weather arrives here: `?ctx.weather=snow`. They gate pieces that
+   * carry a matching `eligibleWhen` rule and do nothing else — a signal here can
+   * never boost a piece, re-rank the slot, or become behavioural evidence about
+   * the shopper. Bounded hard, because the query string is caller-controlled.
+   */
+  const eligibilityContext: Record<string, string> = {};
+  for (const [key, value] of Object.entries(context)) {
+    if (!key.startsWith('ctx.')) continue;
+    const name = key.slice(4);
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) return c.json({ ok: false, error: 'Invalid context signal name' }, 400);
+    if (typeof value !== 'string' || !value.trim() || value.length > 64) return c.json({ ok: false, error: 'Invalid context signal value' }, 400);
+    if (Object.keys(eligibilityContext).length >= 8) return c.json({ ok: false, error: 'Too many context signals' }, 400);
+    eligibilityContext[name] = value.trim();
+  }
+
   const sessionId = principal.sessionId;
   const cf = ((c.req.raw as unknown as { cf?: unknown }).cf ?? null) as { country?: string; regionCode?: string } | null;
 
@@ -854,15 +872,33 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   // shopper state and session this request belongs to.
   const out = await serveContentDecisions(c.env, {
     tenant, brand, page, visitorId, sessionId, channel, entry, cf, cookieHeader: c.req.header('Cookie') ?? null, consent,
+    // The OS family this request reports, for `platform` seed rules: the OS family is read from the request;
+    // the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept.
+    platform: platformOf(c.req.raw.headers),
+    // P37: the device class this request reports (client hint, else user agent), for `device` seed rules and
+    // configured orders naming a device: the class is read from the request; the user agent itself is never kept.
+    device: deviceOf(c.req.raw.headers),
     stateTenant: c.get('tenant'), principal, capability: capabilityToken(c.req.raw)!,
-    offer: { pageInstance: context.pageInstance },
+    // The offer envelope is the RENDERED-measurement path, and it only does
+    // anything when the caller supplies a page instance (see service.ts:568 —
+    // without one, no render offer is minted). Passing it unconditionally had
+    // one effect and one only: it suppressed served-v1 ledger capture
+    // (service.ts:527) for every caller that never opted into rendered
+    // measurement, so their decisions were never written and a day report
+    // counted zero exposures against real outcomes. The documented default is
+    // that a missing basis stays served-v1, so send the envelope only when the
+    // caller actually asked for the other path.
+    ...(context.pageInstance ? { offer: { pageInstance: context.pageInstance } } : {}),
     browsingSessionId: (context.browsingSessionId ?? '').trim().slice(0, 128) || undefined,
+    ...(Object.keys(eligibilityContext).length ? { context: eligibilityContext } : {}),
   });
   // Where the time went, for whoever is measuring: one Server-Timing entry per stage.
   c.header('Server-Timing', Object.entries(out.sources.timings).map(([k, v]) => `${k};dur=${v}`).join(', '));
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
   // CW31: nothing at all when the shopper withheld tracking consent.
-  const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.records) : Promise.resolve();
+  // Ruling L-R10 (P02 decision D1): exactly the records the serve-time capture
+  // took, so a declared layout slot measured on served-v1 is never written here.
+  const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.ledgerRecords) : Promise.resolve();
   try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
   const refusedPins = out.pinDiagnostics ?? [];

@@ -117,6 +117,25 @@ export function validDecisionMeasurement(value: Pick<DecisionRecord, 'measuremen
     && Object.keys(r).sort().join(',') === 'at,eventId,pageInstance,version';
 }
 
+/**
+ * P29 (decision D2): the item an off-limits declared layout slot's record names.
+ * The slot served nothing, so the record names no module; it exists so the
+ * ledger and the export say the slot was decided and why (its
+ * `explain.layoutReason`, cause `off_limits`). It is never written to the
+ * shopper's decision ring, so no exposure, receipt or credit can read it; it is
+ * written `served-v1` only for a layout slot measured on `rendered-v1`, so every
+ * offline fold sets it aside as a row recorded under another basis than its
+ * slot's.
+ */
+export const OFF_LIMITS_ITEM = '(off-limits)';
+
+/** P29 (decision D2): is this the record of an off-limits declared layout slot, which serves and credits nothing? */
+export function isOffLimitsLayoutRecord(record: Pick<DecisionRecord, 'item_id' | 'candidates' | 'explain'>): boolean {
+  const reason = record.explain?.layoutReason;
+  return record.item_id === OFF_LIMITS_ITEM && Array.isArray(record.candidates) && record.candidates.length === 0
+    && reason?.status === 'unchanged' && reason.cause === 'off_limits';
+}
+
 /** Doc 22 §3.2. One per reward-bearing event. */
 export interface OutcomeRecord {
   retention?: import('@/retention').CaptureRetention;
@@ -135,6 +154,14 @@ export interface OutcomeRecord {
   event: string;
   item_id: string | null;
   slot: string | null;
+  /**
+   * P03 (decision D3): the position within `slot` of the placement the event
+   * engaged — what the decision record calls `position` — when the event named
+   * it (`data.slotPosition`, a whole number from 0) and named a slot. Absent on
+   * every other outcome, and on every outcome recorded before P03: a reader
+   * takes an absent position as not stated, never as position 0.
+   */
+  position?: number;
   value: number | null;
   currency: string | null;
   /** CW27: the outcome's margin when the feed gives one (`data.margin`, or the items' margins summed); null otherwise. */
@@ -194,6 +221,19 @@ export function isDecisionReference(value: unknown): value is string {
 
 // ── Outcomes from actions ────────────────────────────────────────────────────
 
+/**
+ * The NAMED outcomes: reward-bearing events that are neither a click nor a
+ * sale, carried as the `custom` reward under their own event name (the record
+ * keeps it in `event`). A partner pickup is the shopper choosing to collect at
+ * a partner store; a retailer referral is her leaving for a partner retailer.
+ * Each is credited to the decision that earned it exactly as a click is, under
+ * the learning policy's `custom` window, and counted in the day report under
+ * its own name beside the orders and the attach (`namedOutcomes`). Neither is
+ * ever a purchase: what the partner sells is the partner's ledger, not ours.
+ */
+export const NAMED_OUTCOMES = ['partner_pickup', 'retailer_referral'] as const;
+export type NamedOutcome = (typeof NAMED_OUTCOMES)[number];
+
 /** The action names that are rewards, and what reward type they are. */
 const REWARD_OF: Record<string, RewardType> = {
   add_to_cart: 'add_to_bag', cart_add: 'add_to_bag',
@@ -202,6 +242,7 @@ const REWARD_OF: Record<string, RewardType> = {
   content_click: 'click', click: 'click',
   content_dwell: 'dwell', dwell: 'dwell',
   video_complete: 'video_complete',
+  ...Object.fromEntries(NAMED_OUTCOMES.map((name) => [name, 'custom' as const])),
 };
 
 export interface ActionLike {
@@ -229,7 +270,8 @@ export type RewardActionLike = Pick<ActionLike, 'type' | 'data'> & Partial<Omit<
 
 export function rewardOf(action: RewardActionLike): { type: RewardType; event: string } | null {
   const name = action.type === 'custom' && typeof action.data?.event === 'string' ? action.data.event : action.type;
-  const type = REWARD_OF[name];
+  // Own rows only: an event named after an Object.prototype member is not a reward.
+  const type = Object.hasOwn(REWARD_OF, name) ? REWARD_OF[name] : undefined;
   return type ? { type, event: name } : null;
 }
 
@@ -314,6 +356,7 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
   const reward = rewardOf(action);
   if (!reward) return null;
   const ts = typeof action.timestamp === 'number' && Number.isFinite(action.timestamp) ? action.timestamp : Date.now();
+  const slot = str(d.slot);
   return {
     outcome_id: `${tenant}:${ts36(ts)}:${action.userId}:${reward.event}${hasNonce ? `:n1:${action.eventId}` : ''}`,
     ...(hasDecision ? { decision_id: d.decisionId as string } : {}),
@@ -325,7 +368,12 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
     type: reward.type,
     event: reward.event,
     item_id: str(d.contentId) ?? str(d.productId) ?? str(d.product_id) ?? str(d.sku) ?? str(d.orderId),
-    slot: str(d.slot),
+    slot,
+    // P03 (decision D3): an engagement names the module's position within its
+    // slot as `slotPosition`, beside the page-wide `position`; the outcome keeps
+    // the one within the slot, the record's own coordinate, and only a whole
+    // number from 0 on an event that named its slot.
+    ...(slot !== null && Number.isSafeInteger(d.slotPosition) && (d.slotPosition as number) >= 0 ? { position: d.slotPosition as number } : {}),
     value: num(d.value) ?? num(d.price) ?? null,
     currency: str(d.currency),
     margin: marginOf(d),

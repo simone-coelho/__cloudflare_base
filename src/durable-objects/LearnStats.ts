@@ -10,7 +10,7 @@ import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth,
 import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
-import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
+import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
 import { isCatalogueName, LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
@@ -18,7 +18,8 @@ import { attributionContractOf, policyOf } from '@/learn/route';
 import { loadTombstone } from '@/ledger/erasure';
 import { requireRetention } from '@/retention';
 import { learningEffectId, recoveryDigest, RECOVERY_LIMITS, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
-import { entryChannelOf } from '@/services/visit';
+import { channelIn } from '@/services/visit';
+import { contextTermsOf, TODAY_TERMS, type ContextTerms } from '@/content/cell';
 
 const PUBLISH_DELAY_MS = 30_000;
 /** Conservative application budgets, not a measurement of a provider limit. */
@@ -518,6 +519,12 @@ export class LearnStats {
       // exactly; a row stamped after it is still counted, at the present.
       const engineNow = Date.now();
       const journal = !managed && kind === 'exposures' ? await this.seenExposures() : null;
+      // P36 (R-P52): a bounded object counts each row under the tenant's own
+      // terms — its channel ids and its published cut's buckets — so a tenant
+      // with a context vocabulary learns in its own cells; anything else, and
+      // every value of a tenant without the settings outside today's six words
+      // and three buckets, is counted under unknown exactly as before.
+      const terms = candidate.stats.bounded ? await this.contextTerms(tenant) : TODAY_TERMS;
       const applied = journal ? new Set(journal.map(row => `${row.id}:${row.digest}`)) : null;
       const added: SeenExposure[] = [];
       let newlyApplied = 0, alreadyApplied = 0, suppressed = 0;
@@ -560,8 +567,8 @@ export class LearnStats {
           if (applied.has(key)) continue;
           applied.add(key); added.push({ id: row.decision, digest: row.digest, ts: row.ts });
         }
-        const cell = candidate.stats.bounded ? { ...row.cell, channel: entryChannelOf(row.cell.channel) ?? 'unknown',
-          visit_bucket: ['1', '2-3', '4+'].includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
+        const cell = candidate.stats.bounded ? { ...row.cell, channel: channelIn(row.cell.channel, terms.published ? terms.channels : null) ?? 'unknown',
+          visit_bucket: terms.buckets.includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
         if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
         else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
@@ -899,6 +906,20 @@ export class LearnStats {
     }
   }
 
+  /**
+   * P36 (R-P52): the tenant's context terms, from its current learn publication,
+   * read as this object already reads that document (`attributionContract`,
+   * `priorsFor`). It cannot refuse a write: a publication that cannot be read
+   * answers today's terms, so a row is then counted exactly as before.
+   */
+  private async contextTerms(tenant: string): Promise<ContextTerms> {
+    try {
+      const pin = await pinPublication(this.env, tenant, true);
+      const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
+      return contextTermsOf(learn.value.contextVocabulary);
+    } catch { return TODAY_TERMS; }
+  }
+
   /** The tenant's published attribution policy, as this object's own snapshot
    * declares it. Absent when the publication cannot be read: the snapshot then
    * carries no contract rather than a guessed one. */
@@ -913,8 +934,14 @@ export class LearnStats {
   private async priorsFor(d: Stored): Promise<{ version: number; index: ReturnType<typeof indexPriors> } | null> {
     // Unavailable authority is not an explicit empty prior document. Never
     // publish a prior-free replacement merely because the authority failed.
+    // Lane E2: a committed set that carries NO prior member is not a failure of
+    // the authority. The sealed set is the authority's whole answer, and it says
+    // this tenant has imported no priors (the demo bootstrap creates reflex,
+    // catalog, slots and learn, and no prior). That reads as no priors, the
+    // snapshot's `priorVersion` 0, and learns exactly what an empty document
+    // does. A prior member the set lists and that cannot be read still refuses.
     const pin = await pinPublication(this.env, d.tenant, true);
-    const [rev, learn] = await Promise.all([readPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
+    const [rev, learn] = await Promise.all([readOptionalPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
     const configured = { reward: learn.value.slots?.[d.slot]?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
       objective: learn.value.slots?.[d.slot]?.objective ?? 'unit', measurementBasis: learn.value.slots?.[d.slot]?.measurementBasis ?? 'served-v1' };
     const stored = await recoveryDigest({ ...d.config, objective: d.config.objective ?? 'unit', measurementBasis: d.config.measurementBasis ?? 'served-v1' });
@@ -930,6 +957,8 @@ export class LearnStats {
       if (!authorized || await recoveryDigest({ ...configured, reward: authorized.reward,
         objective: authorized.objective, measurementBasis: authorized.measurementBasis }) !== stored) throw recovery();
     }
+    // The configuration check above still ran: absence of priors excuses nothing else.
+    if (!rev) return null;
     if (!Array.isArray(rev.value.rows) || rev.value.rows.length > LEARN_LIMITS.priorRows || bytes(rev.value) > LEARN_LIMITS.priorBytes) throw capacity();
     // W25 Z1.01 (F20 §1.5): a prior is a probability, and a slot whose objective
     // is money does not learn one. The import door refuses such a row, so this

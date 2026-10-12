@@ -18,8 +18,8 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `page_view` | `path` |
 | `product_view`, `add_to_cart`, `wishlist_add` | `productId`, plus the registry's attributes when the brand scores them from the event: `line`, `category`, `subcategory`, `silhouette`, `occasion` (a list), `price_usd` |
 | `purchase` | `orderId`, `value`, `currency`, `items[]` of `{ productId, quantity, price }` |
-| `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position`; original event nonce/time are mandatory. A `content_impression` is **not a learning input today**: it carries no reward, so it produces no outcome record and credits nothing. What the learning loop counts is the slot's declared exposure unit — the served decision under `served-v1`, or the durably admitted render under `rendered-v1` — never a viewable impression |
-| `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType` |
+| `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position` (the page-wide order) and `slotPosition` (the position within the slot, from 0, which the SDK sends and admission then holds to the record's position; without it `position` is held to it); original event nonce/time are mandatory. On a marked module container it is the module's impression, once per page instance. A `content_impression` is **not a learning input today**: it carries no reward, so it produces no outcome record and credits nothing. What the learning loop counts is the slot's declared exposure unit — the served decision under `served-v1`, or the durably admitted render under `rendered-v1` — never a viewable impression |
+| `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType`; from the SDK, `slotPosition`, the acknowledged placement's position within the slot, when its decision named one. A `content_click` is also a module engagement: a click inside a marked module container, or an interaction it declares in `data-op-engage`, named as `interaction` |
 | `content_dwell` | the same, plus `ms`, milliseconds on screen |
 | `custom` | `event`, the real name, plus anything |
 
@@ -97,8 +97,9 @@ One per admitted position, available through authenticated operator/ledger readb
 | `featured_product_ids` | The products the served piece features, when it names any: an outcome naming one of them credits this decision under the default policy, and a warehouse joins it to the product decision |
 | `explain.score_base` | The score before learning: interests times weights, plus the population prior and your model's term when they applied |
 | `explain.regional` | When the population prior applied: `region`, `level`, `lambda` (its share of the score), `version`, `events`, `contribution` |
+| `explain.contextPrior` | When the context prior contributed to this position: `{ channel, contribution, events, lambda, level, version, visitBucket }`, keys sorted — the shopper's entry channel and visit bucket, the level read (`channel_visit` for the pair, `channel` for the channel alone), `lambda` (its share of the score; 1 below the signal floor), the snapshot's `version` and `events`, and what it contributed. Compared by value in replay; the receipt says it in words ([the context prior](#the-context-prior)) |
 | `explain.lift` | The learned term, defined below, or null when nothing has been learned for this item in this cell |
-| `explain.score_final` | `score_base × lift^γ`. Equal to `score_base` while γ is 0 |
+| `explain.score_final` | `score_base × lift^γ`. Equal to `score_base` while γ is 0. On a layout slot that opts into the layout blend, `R + (1 − p) × B + p × Q` instead (`explain.blend`) |
 | `explain.exploration` | When `explored`: `mode`, `reason`, `bucket`; retained historical Thompson receipts can include `sample` (Thompson is no longer writable or live) |
 | `explain.control` | `reject` or `freeze` when a merchandiser's control applied to the item |
 | `explain.external` | Your model's term: `kind`, `ref`, `version`, `weight`, `score`, `contribution`; or `status: "unavailable"` with `reason` |
@@ -108,7 +109,12 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.fatigue` | The fatigue penalty: `served` times inside `windowHours`, `applied`, and a sentence |
 | `explain.diversity` | The slot's diversity rule touched this position: the pieces that yielded to it (`skipped`), or `relaxed` when it was served over the limit because nothing else was eligible |
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
-| `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
+| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }` (with `device` in the context when the order names one, `{ channel, device, visitBuckets }`), the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` An off-limits module held at its place in the order (P04) carries it too, beside `explain.moduleRule` |
+| `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
+| `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
+| `explain.moduleRule` | A position pin or an off-limits mark of the layout slot placed this module: `{ position, rule }`, keys sorted, `rule` `pinned` (the module pinned at a position, served there) or `off_limits` (the off-limits module held at its baseline position), and `position` the position the rule set, counted from 1. Present only on such a record, whose authority is `pin`, and compared by value in replay; the shopper's receipt carries the same block as `moduleRule` and says the rule and the position in words ([position pins and off-limits modules](#position-pins-and-off-limits-modules)) |
+| `explain.layoutReason` | The layout reason of the page's declared layout slot: `{ cause, slot, status }` (with `n` and `nMin` for the cause `no_level_reached_nmin`) when the served order is unchanged against the slot's baseline, or `{ moves, slot, status }` when it changed, each move `{ from, module, term, to }`; keys sorted. The same value on every record of the slot and on the decision set, present only on a declared layout slot's records, and compared by value in replay; the shopper's receipt carries it as `layoutReason` and says it in words ([the layout reason](#the-layout-reason)) |
+| `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. Where a population prior applied and the page's declared layout slot ranked above the signal floor, `prior_lambda: { context?, regional? }` (keys sorted) states each prior's weight λ, so the layout reason replays exactly from any record of the page. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
 
@@ -126,6 +132,22 @@ One per admitted position, available through authenticated operator/ledger readb
 | `γ` (`gamma`) | The trust dial per slot, 0 to 1: how much the lift moves the score |
 | `prior` | `{ p, n }` when an imported prior was in force for the item |
 
+On a layout slot that opts into the layout blend the lift block is kept beside `explain.blend`: its
+`gamma` is the slot's dial, which the blend does not apply, and `applied` is `p × Q`, what the learned
+term added to the score.
+
+### The blend block
+
+The layout blend scores a module of an opted-in layout slot
+`R + (1 − p) × B + p × Q`.
+
+| Symbol | Meaning |
+|---|---|
+| `R` | The rank base `(M − i) / M`: `M` modules in the slot's baseline and `i` this module's place among them, counted from 0, so the first module's `R` is 1. The baseline is the configured order for the shopper's context where one is served — its listed modules still eligible after eligibility, the slot's exclusions and what the page already served or reserved, in the order's sequence — else the modules the slot could serve after the same removals, in catalogue order. Three decimals |
+| `B` | The behaviour score before the learned term: the interests matched times the slot's weights, with the arrival's seeds, the region's trend, the bonus for completing the request's anchor product and the journey-stage, freshness, fatigue and merchandising terms where the slot sets them. 0 for a shopper with no signal, and on a layout that weights no shopper dimension and sets none of those terms. Three decimals |
+| `Q` | The learned lift at the finest level with enough evidence, or the lift a merchandiser froze, clamped to `liftMin` and `liftMax` of the learn document, minus one. 0 where no level answers, where a merchandiser rejected the lift, and on the holdout's `no_learning` arm. Three decimals |
+| `p` | The slot's published `blend.p`, 0 to 1, exactly as published (0 when the dial names none). At 0 the learned term adds nothing; at 1 the behaviour term adds nothing |
+
 ## The outcome record
 
 One per reward-bearing event, written after the response.
@@ -136,6 +158,8 @@ One per reward-bearing event, written after the response.
 | `type` | The reward type the event maps to |
 | `event` | The wire event name, so a custom reward keeps its own |
 | `item_id`, `slot` | The content id and slot the event named, when it did |
+| `position` | The position within `slot` the event named as `slotPosition` (a module engagement names its module's), a whole number from 0; absent when the event named none, and on every outcome recorded before it was carried, which reads as not stated, never as position 0 |
+| `decision_id` | The acknowledged decision the event named (`decisionId`), when it did |
 | `value`, `currency` | For a purchase |
 | `margin` | The margin the event carried (`margin`, or the items' margins times quantity summed), for a slot that learns margin; null when none |
 | `products` | The products the event named (`productId`, `sku`, or each of `items[].id`); a purchase credits the content that featured one of them |
@@ -157,12 +181,18 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `slotTypes` | yes | The slots the piece may fill |
 | `lifecycle.status` | no | `live` (default), `draft`, `expired` |
 | `window.from`, `window.to` | no | ISO date-times; outside them the piece does not exist for a decision |
+| `eligibleWhen` | no | The piece's targeting rule, `{ regions?, context? }`, naming at least one of them. `regions` lists 1 to 64 region keys such as `US` or `US-WA` (stored upper case): a key matches the shopper's region exactly, and a country key also admits every region inside it (`US` admits `US-WA`, never the reverse). The shopper's region is the one the request asserts as `ctx.region`, else the edge's, and only under tracking consent. `context` maps 1 to 8 signal names (a letter, then letters, digits or `_`, 32 characters at most) to 1 to 32 accepted values of at most 64 characters; the request supplies a signal as `ctx.<name>=<value>` on the snapshot's query string. Fails closed: a piece whose rule the request cannot satisfy (no region known, a signal absent or with another value) does not exist for that decision, exactly as outside its window, and a piece without the field is unaffected. An unknown member, or a bound exceeded, refuses the publication. In CSV: a quoted JSON object, as `merchandising`, for example `"{""regions"":[""US-NY""]}"` |
 | `art`, `renderUrl` | no | Image, and a URL your page may render by |
 | `merchandising` | no | `{ season, promotion, margin }`, each 0 to 1 including zero: the item's own signals for the multipliers. CSV uses a quoted JSON object, for example `"{""promotion"":1,""margin"":0}"` |
 | `journeyStageFit` | no | The stages the piece is made for: `exploring`, `considering`, `deciding` (your `journey_stage_fit`; `explore`, `consider`, `decide` and `early`, `mid`, `late` also accepted). Absent fits every stage. A slot's `stage` rule demotes a piece outside the shopper's stage |
 | `freshnessDate` | no | When the piece became current, ISO 8601 (your `freshness_date`). A slot's `freshness` rule ages from it; absent, from `window.from` |
 | `featuredProductIds` | no | The products the piece features, in your product ids (your `featured_product_ids`). Carried and validated, never rewritten. They link, attribute and recognize, and nothing more: the decision receipt names them, an outcome naming one credits the decision that served the piece, and a product event naming one is recognized. The piece inherits no attribute of a product it features — no tag, merchandising value, stock flag or affinity — and no ranking reads those products' attributes |
+| `complements` | no | The products the piece completes, in your product ids, validated as `featuredProductIds` is (trimmed, de-duplicated, empty entries dropped; an empty list is none). A slot whose `complements: { weight }` rule (0 to 1) is in force adds that weight to the base score of a piece that completes the anchor product the request names as `ctx.anchor=<product id>` on the snapshot's query string, and the receipt names it as a `completes` driver. A request that names no anchor prefers nothing, and the holdout's default arm never does. In CSV: a `|` list, as `featuredProductIds` |
 | `inStock` | no | Your catalog's stock flag. `false` removes the piece from every decision; absent means in stock. In a feed, `in_stock` or `ats` (Y/N, 0/1, true/false) is read the same way |
+
+With an approved [attribute vocabulary](#the-attribute-vocabulary) in effect, a tag on an attribute it governs is
+stored as the vocabulary's ids, mapped from the words the feed sends; a value it does not list refuses the
+publication, naming the item's `id` and the field `tags.<attribute>`.
 
 Import/pull `merge` is a partial upsert by `id`: omitted supported fields preserve the existing item,
 including its customer ID, tags, lifecycle, stock and merchandising. Existing order is retained; new
@@ -277,10 +307,12 @@ and `removed` `null` — when that revision could not be read.
 }
 ```
 
-Current slot writes accept an absent marker or `governanceVersion: 1 | 2 | 3` and emit version 3; any other
-explicit version refuses. `offLimits` is an optional boolean; true hands the slot to the site's own
-default on every arm, without candidates, decisions or records. A dormant pin and all other settings
-are retained. Re-enabling must pass active pin take/uniqueness/exclusion validation.
+Current slot writes accept an absent marker or `governanceVersion: 1 | 2 | 3 | 4` and emit version 3, or
+version 4 for a document marked 4 and for an unmarked one that declares a layout slot or carries
+per-context orders ([the slot document](#the-slot-document)); any other explicit version refuses. `offLimits` is an optional boolean; true hands the slot to the site's own
+default on every arm, without candidates, decisions or records; a declared layout slot marked off-limits
+also writes one record naming why to the ledger, never to the shopper's ring ([the layout reason](#the-layout-reason)).
+A dormant pin and all other settings are retained. Re-enabling must pass active pin take/uniqueness/exclusion validation.
 `excludedPieceIds` is an optional JSON array of up to 1000 distinct exact internal catalog IDs,
 each 1–1024 UTF-16 units: no trimming, case conversion, customer-ID alias or tag expression.
 Absent/false/[] are neutral. Unknown IDs are harmless; explicit nulls and duplicates refuse.
@@ -302,7 +334,14 @@ Stored documents without the marker retain legacy parsing and ignore all formerl
 stored version 1 validates ID/off-limits and ignores tag/type fields, even malformed ones. Stored version 2
 validates tag/type controls and ignores formerly unknown `pinnedPieceIds`; version 3 validates prefixes too.
 Receipts independently distinguish absent governance (all legacy), `slot-gates-v1`
-(ID/off-limits only), and `slot-gates-v2` (all controls). Other replay policy markers remain independent.
+(ID/off-limits only), and `slot-gates-v2` (all controls); a page that declares a layout slot adds
+`layout: "declared-slot-v1"` beside them, a decision on which the layout slot served its configured
+per-context order adds `orders: "configured-order-v1"`, and a decision on which a slot ranked its modules
+by the layout blend adds `blend: "layout-blend-v1"`, and a decision on which a slot was decided below its
+signal floor adds `signalFloor: "signal-floor-v1"` with the count it was decided with as `inputs.signals`.
+A decision on which a position pin or an off-limits mark of the layout slot decided something adds
+`moduleRules: "module-rules-v1"` ([position pins and off-limits modules](#position-pins-and-off-limits-modules)).
+Other replay policy markers remain independent.
 Rules offers exact JSON-array editors and an off-limits switch. Its allowed-types editor accepts JSON null
 to remove the field. Its unified pin editor accepts a JSON string (scalar), ordered array (prefix), or null
 to remove both fields; changing form removes the other field. Take is never changed automatically.
@@ -357,6 +396,19 @@ measured where it lands — in the final pre-lift base, after merchandising — 
 `slots` revision already on `versions`. The learned lift applies after, on the seeded base, and records the
 delta it actually caused in `explain.lift.applied`. Seeds are context, never learned evidence: they change
 no statistic, and the default arm has none. Publication, revisions and rollback are the slots document's own.
+
+On a tenant that publishes a context vocabulary ([the learn document's `contextVocabulary`](#the-context-vocabulary)),
+an `entry_channel` rule names one of the tenant's channel ids exactly (for example `sms` or
+`paid_search_brand`), and any other word, one of today's six included, is refused naming `entry_channel`; a
+tenant without the settings keeps the six words exactly. Two more signals read the shopper's visit: `source_platform` names one of the tenant's source platform ids and `landing_page_type` one of its landing-page type ids, and a rule fires for a shopper whose visit records that value, at `weight × the slot's weight`, itemised on `explain.contextual` and the receipt's "Arrival context" sentence as every seed rule is. A tenant without the settings publishes neither and a rule naming either is refused.
+
+Two signals need no setting at all ([device and recency](#device-and-recency)): `device` and `recency` are seed-signal keys
+on every tenant. A `device` rule names `mobile` or `desktop` and fires for a snapshot request that reports that
+device class (the client hint `Sec-CH-UA-Mobile`, else the user agent; a tablet counts as desktop); a request
+reporting no device fires none. A `recency` rule names one of `same_day`, `within_7_days`, `8_to_30_days` or `30_and_more`
+and fires for a shopper whose visit is in that bucket; a first visit has no recency and fires no recency rule.
+Either fires at `weight × the slot's weight`, itemised on `explain.contextual` and on the receipt's "Arrival
+context" sentence, the recency in words ("recency within 7 days"); any other value refuses the write naming the rule.
 
 ### Content format affinity
 
@@ -471,6 +523,223 @@ cap }`, a penalty of `weight × min(served, cap) / cap` for a piece this shopper
 window; `diversity` is `{ dimension, max }`, at most `max` pieces sharing one value of the dimension in
 the slot, the piece over the limit yielding to the next and served only when nothing else is eligible.
 
+### The layout slot
+
+```json
+{
+  "governanceVersion": 4,
+  "pages": { "pdp": [
+    { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1, "category": 0.5 },
+      "excludedPieceIds": ["module.PDP.reviews.1"] },
+    { "slot": "pdp-recent", "take": 1, "weights": {}, "pinnedPieceIds": ["module.PDP.recent.1"] }
+  ] }
+}
+```
+
+`layout` (governance version 4) declares the page's layout slot: `true` on at most one slot per page, a
+second declaration refused naming `pages.{page}.{slot}`, and refused naming `pages.{page}[i].layout` in a
+document marked 1, 2 or 3. Its `take` is the layout's K positions (1 to 50) over the modules that name the
+slot in their `slotTypes`: content pieces registered with their `id`, their kind as `type` and their
+journey stages as `journeyStageFit`, the catalogue refusing a module without an `id` or a `type` by name.
+Each decision returns up to K of them in rank order, after eligibility, the slot's exclusions and
+page-wide de-duplication (a module another slot of the page already serves is not repeated); with no
+signal they are the first K eligible in catalogue order, and fewer eligible modules than K return only
+those, never a filler. The list the layout slot returns is the layout's sequence, position by position
+in `order`. A module that is not returned is not drawn, and its container stays hidden. Every drawn
+module is acknowledged by its own `content_impression` render acknowledgement, carrying the module's
+`decisionId` and `renderOffer`, and a module that was not drawn is never acknowledged.
+
+Each module container on the page is marked with `data-op-content` (the module id) and `data-op-slot` (the
+layout slot), and may declare its interactions in `data-op-engage` (DOM event types, space separated). Every
+decision carries `slotPosition`, the module's position within the slot, beside `order`. The module's impression
+is its render acknowledgement, sent once per page instance with `position` and `slotPosition`; each engagement
+(a click inside the container or a declared interaction) is a `content_click` with `contentId`, `slot`, the
+acknowledged `decisionId` and `slotPosition`, credited as the slot's click reward, and its outcome
+record keeps `item_id`, `slot`, `position` (within the slot) and `decision_id`.
+
+Measure the layout slot on `rendered-v1` in the learn document (`slots.{slot}.measurementBasis`): the
+acknowledgement of a drawn module is its one exposure, however often it is retried, and a module returned
+and not drawn, or not returned, is none. On `served-v1` the slot is served without a render offer and
+never captured as an exposure, and the decision set names the mismatch as
+`layoutDiagnostics: [{ measurementBasis: "served-v1", reason: "measurement_basis", slot }]`, a
+host-internal member that no public answer carries. A slot without `layout`, and every document marked
+1, 2 or 3, decides and replays exactly as before; the receipts of a page that declares a layout slot
+carry the page-manifest marker `inputs.replay.layout: "declared-slot-v1"`.
+
+#### Per-context orders
+
+```json
+{ "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 },
+  "excludedPieceIds": ["module.PDP.reviews.1"],
+  "orders": [
+    { "context": { "channel": "paid_social", "visitBuckets": ["1"] },
+      "modules": ["module.PDP.editorial.1", "module.PDP.grid.1", "module.PDP.ugc.1", "module.PDP.reco.1"] },
+    { "context": { "channel": "any", "visitBuckets": ["1"] },
+      "modules": ["module.PDP.ugc.1", "module.PDP.grid.1"] }
+  ] }
+```
+
+`orders` (governance version 4) sets a module order per context on the page's declared layout slot, and
+on no other slot. Each order is exactly `{ context, modules }`. `context` is exactly `{ channel,
+visitBuckets }`: `channel` is one of the six channel words `direct`, `paid_social`, `paid_search`,
+`email`, `organic`, `referral`, or `any`; `visitBuckets` is a non-empty list of distinct visit buckets
+`1`, `2-3`, `4+`, or `any`. A context's specificity is the number of its two parts that are not `any`
+(0 to 2). A context may also name a device class, `{ channel, device, visitBuckets }` with `device` `mobile` or
+`desktop` (a tablet counts as desktop), beside or, with `any`, instead of the channel and the visit buckets: a named
+device is one more part of its specificity (so 0 to 3), a context naming a device matches only a shopper whose
+snapshot request reports that device, and a context naming none matches every device, so an order published
+without one keeps its meaning and its replay marker ([device and recency](#device-and-recency)). A shopper matches a context when the shopper's channel is its channel or it names `any`, and
+the shopper's visit bucket is in its list or it names `any`; a shopper whose channel or visit bucket is unknown matches no
+context, not even one that names `any`. Of the contexts a shopper matches, the most specific decides, and
+publication refuses two contexts that match one shopper with equal specificity, so there is never a tie
+to break (in the example, a paid-social shopper on a first visit is served the first order, any other
+shopper on a first visit the second, and every later visit the slot's own decision). `modules` lists 1 to
+`take` distinct module ids, each a piece of the published catalogue that names the slot in its
+`slotTypes`, none excluded from the slot or pinned by another slot of the page, and the slot's pinned
+modules first, each at its pinned position.
+
+The hiding rule: a shopper in an order's context is served exactly its modules, in its order; a module
+the order does not list is not returned in that context, is offered for no render acknowledgement and is
+never counted as an exposure, so an order shorter than `take` fills only the positions it lists. A
+listed module that is not eligible when the decision is made is passed over and never replaced. On a
+slot that opts into the layout blend (`slots.{slot}.blend` in the learn document) the order supplies the
+blend's rank base instead of being served exactly: its listed modules are ranked by
+`R + (1 − p) × B + p × Q`, which at `p` 0 on a layout that weights no shopper dimension serves the order
+itself, and a module it does not list stays hidden. The
+order is never served on the holdout's `default` arm, to a shopper without personalization consent, or
+on a decision on which the slot's exploration picks; those shoppers, and every shopper no context
+matches, receive the slot's own decision. A slot without `orders`, and every stored document marked
+1, 2 or 3, decides and replays exactly as before.
+
+#### Position pins and off-limits modules
+
+```json
+{ "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 },
+  "excludedPieceIds": ["module.PDP.reviews.1"],
+  "positionPins": [{ "pieceId": "module.PDP.ugc.1", "position": 3 }],
+  "offLimitsPieceIds": ["module.PDP.reco.1"] }
+```
+
+`positionPins` (governance version 4) pins modules at positions of the page's declared layout slot, and
+of no other slot: each pin is exactly `{ pieceId, position }`, `position` a whole number from 1 to the
+slot's `take`, after any prefix pins (`pinnedPieceIds`), one module per position and each module pinned
+once. A module pinned at a position is reserved page-wide before any slot ranks and is served at exactly
+that position on every arm, never scored and never explored, while the other positions are ranked around
+it; prefix pins serve exactly as before, and an order keeps every pinned module at its position.
+`offLimitsPieceIds` (governance version 4) marks modules off-limits on the same slot: an off-limits module
+keeps its baseline position — its place, counted from 1, in the configured order for the shopper's
+context where one matches, else among the modules the slot can serve (after eligibility, its exclusions and
+what the page already served or reserved, its own pins included) in catalogue order — on every arm, and no
+term and no exploration moves it while the others are ranked around it. An off-limits module whose
+baseline position lies beyond the take, or on a pinned position, is not served, and one the slot cannot
+serve holds nothing; a module is never both pinned and off-limits. A module pinned at a position that is
+missing, ineligible or excluded refuses the whole slot (decision D1), exactly as a refused prefix pin
+does: nothing is served from it, no record is written, and the decision's `pinDiagnostics` names the
+module, its position (`position`, counted from 1) and the reason. In the example a shopper whose own
+ranking would put the recommendations module last sees it second, its baseline position, and the
+user-generated module third, its pinned position, with the shopper's ranking on the first and fourth.
+
+The record of a module either rule placed carries `explain.moduleRule: { position, rule }` with authority
+`pin`, and its receipt says the rule and the position in words. A decision on which a position pin or an
+off-limits mark decided something writes `inputs.replay.moduleRules: "module-rules-v1"`, and its replay
+re-applies both rules and compares the record exactly; every other decision, every slot without either
+member, and every stored document marked 1, 2 or 3 decides and replays exactly as before.
+
+#### The layout reason
+
+```json
+{ "cause": "no_level_reached_nmin", "n": 10, "nMin": 30, "slot": "pdp-modules", "status": "unchanged" }
+{ "moves": [{ "from": 3, "module": "module.PDP.reco.2", "term": "affinity", "to": 1 },
+  { "from": 4, "module": "module.PDP.editorial.1", "term": "affinity", "to": 2 }], "slot": "pdp-modules", "status": "changed" }
+```
+
+Every decision on the page's declared layout slot carries one reason, `layoutReason`, comparing the served
+order with the slot's baseline: the merchandiser's fixed positions (prefix pins, modules pinned at a
+position, off-limits modules at their baseline position) where their rules put them, and on every other
+position the configured order for the shopper's context where one matches, else the modules the slot can
+serve (after eligibility, its exclusions and what the page already served or reserved) in catalogue order.
+A `layoutReason` is either `status` `unchanged` with exactly one `cause`, or `status` `changed` with its
+`moves`, keys sorted in both, and it is the same value on the decision set, on every record of the slot
+(`explain.layoutReason`) and on every receipt of the slot (`layoutReason`). The cause of an unchanged
+layout is the first of these that holds, in this order: `pinned` (pins, with any off-limits modules, hold
+every position), `off_limits` (the slot is off-limits, or off-limits modules hold every position),
+`holdout_or_consent` (the holdout's `default` arm, the arm of a shopper without personalization consent
+too), `below_signal_floor` (decided on context alone), `blend_or_trust_zero` (the blend's `p` at 0 on an
+opted-in slot, a configured order served exactly on a slot that does not opt in, or γ at 0),
+`no_level_reached_nmin` (no ladder level reached nMin for any module the slot ranked, with `n`, the most
+evidence any of them holds at any level of the shopper's cell, and `nMin`), `zero_base` (no ranked module
+had a base score above 0), `catalogue_order_ties` (a served module's score tied another's) and
+`nothing_else_eligible` (the slot could rank at most one module, or its ranking placed every module where
+the baseline does); a later release may add causes. Each of the moves of a changed layout is
+`{ from, module, term, to }`, positions counted from 1 within the slot (a module the baseline places
+past the take keeps its place in that order, so `from` can exceed the take; `from` is null for a module
+the baseline does not hold), for every module served away from its baseline position, and its `term`
+is the term that moved it: `affinity`, `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`,
+`freshness`, `fatigue`, `merchandising`, `lift`, `blend`, `exploration` or `diversity`: `exploration` for a
+module exploration itself placed, `diversity` for one the diversity rule itself made yield or placed by
+relaxing it, and for any other the term that changed its place, the term by which it differs most from the modules it passed
+(moved up) or that passed it (moved down) taken together, each term's difference averaged over those
+modules and the largest in the direction it moved named, an exact tie going to the earlier term in the
+engine's order `affinity`, `regional_prior`, `context_prior`, `completes`, `seed`, `external`, `stage`,
+`freshness`, `fatigue`, `merchandising`, `lift`, `blend`. The modules compared are the slot's ranked
+modules other than a fixed position, a module that exploration or the diversity rule placed or displaced
+being compared like any other, including for a module moved up every module the baseline placed ahead of
+it that is not served; only where no term separates it from them by more than 0.0005, or there is none to
+compare, does a rule name it: `exploration` or `diversity` when one of them was placed or displaced by that
+rule, else its own largest term in the direction it moved, else the term of the first module that passed
+it or that it passed.
+
+An off-limits declared layout slot writes one record, never into the shopper's decision ring, so it
+carries no exposure, no receipt reads it and no outcome is credited to it: position 0, `item_id`
+`"(off-limits)"`, `customer_item_id` empty, no candidates, authority `default`, `measurementBasis`
+`served-v1`, the decision's own arm, cell and versions (lift and prior 0), and `explain.layoutReason` with
+the cause `off_limits`. It goes to the ledger, and so rides the export, under the shopper's tracking
+consent and only for a layout slot measured on `rendered-v1`, so every report and learning fold sets it
+aside as a row recorded under another basis than its slot's; its replay decides the page again and
+compares it. The reason rides every exported decision record unchanged, and a record written before it
+replays without it.
+
+### The signal floor
+
+```json
+{
+  "governanceVersion": 4,
+  "signalFloor": 3,
+  "pages": { "pdp": [
+    { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 }, "signalFloor": "never" },
+    { "slot": "pdp-story", "take": 2, "weights": { "line": 1 }, "signalFloor": 0 }
+  ] }
+}
+```
+
+`signalFloor` on the slot document is the tenant's signal floor N, a whole number of 0 or more; absent
+means 0. A slot's own `signalFloor` overrides it: a whole number of 0 or more, or `never` on the page's
+declared layout slot only. A signal is one action whose behaviour weight is above zero: the action's own
+weight in the tenant's registry (`weights`), so a product view, a wishlist or cart add, a purchase or a
+content click is a signal, and a page view, a render acknowledgement (`content_impression`), a time-only
+re-evaluation and any other action weighted 0 is not; a weight applied elsewhere to what an action touched
+never makes it a signal or stops it being one. The count lives on the shopper's persisted state, written
+only once a signal is recorded, so a shopper with no signals carries exactly the state they carried before
+and a returning shopper's earlier visits count; a browser linked to a person adds its count to the
+person's.
+
+While the shopper's count of signals is at most a slot's floor, the slot is decided on context alone: the
+arrival's seed rules at their published weight, the configured order for the shopper's context, the
+population prior at full weight, the learned lift from ladder levels 0 to 2 only, and the slot's pins,
+exclusions, eligibility, freshness and merchandising; none of the shopper's interests, the journey-stage
+rule, fatigue, ladder levels 3 to 5 or visitor-hashed exploration applies. The response to the (N + 1)th
+signal is the first personalized one. A floor of 0 is off and is the default, so a tenant that publishes
+none decides exactly as before. A `signalFloor` of `never` on the page's declared layout slot keeps the
+layout context-only for every shopper while the page's content slots personalize (in the example, the
+story slot's own floor of 0 personalizes it from the first signal, while any other slot of the page would
+wait for the tenant's 3).
+
+Publication refuses, naming the floor, `never` on any other slot (`pages.{page}[i].signalFloor`), `never`
+as the tenant floor (`signalFloor`), and any floor that is not a whole number of 0 or more. The floor is
+read under every governance version and does not by itself change the version a write is stamped with.
+Every record of a context-only slot carries `explain.signalFloor: { floor, signals }`, keys sorted, and the
+shopper's receipt says that the shopper is below the signal floor, with both numbers.
+
 ## The learn document
 
 What the learning may do, per brand and per slot. Every field has a default; a document names only
@@ -480,6 +749,7 @@ what it changes.
 |---|---|---|
 | `holdout.share`, `holdout.arms` | The share of visitors held out, by a stable hash, and which arms exist (`default`, `no_learning`) | 0.05, `default` |
 | `regional.enabled`, `kBlend`, `minEvents` | The population prior on the base score | on, 1, 30 |
+| `contextPrior.enabled`, `kBlend`, `minEvents` | The context prior: the population of the shopper's entry channel and visit bucket, on the base score beside the regional prior, with its own K (`kBlend`), in the regional block's grammar, an optional `dimensions` list included ([the context prior](#the-context-prior)) | absent (off) |
 | `policy.scope`, `match`, `credit`, `windowsMs` | The attribution policy: `session` or `visitor`; `direct` or `any`; `last` or `first`; per reward, how long after a decision an outcome may still count | session, direct, last; click 30 min, add to bag 6 h, purchase 7 d |
 | `stats.n0`, `tauLearnMs`, `liftMin`, `liftMax`, `nMin` | The estimator: prior strength, the decay horizon, the lift clamp, the evidence threshold per cell | 30, 21 days, 0.5, 2, 30 |
 | `external.kind`, `ref`, `timeoutMs`, `fallback` | Retained historical configuration only: all service/table/workers_ai live scoring, including table lookup, is withdrawn and contributes no score. The deployment setting `EXTERNAL_MODEL_POLICY` decides this, and `off` is its only deployed state (absent or any other value is also `off`); a weighted receipt names the withdrawn term with `status: "unavailable"` and `reason: "external scoring disabled by deployment policy"`. Every publication of a learn document that names `external` is refused, naming `external`: a new document, an edit (even one that keeps the stored term unchanged), a related-set write that carries one and `POST learn/items/reset`, which republishes the current document, answer 422, and a rollback to a revision that names one answers 404 with the same error. The refusal changes nothing: no revision is recorded, the stored document is served as before and a reset discards no evidence. The operator removes `external` in the console first (in the Dials view, under "Their own model, for every slot", set "Where it lives" to none and save); a document stored before this rule still reads and is served. No offline external table is published or offered. W14 enrichment/NL search are separately enabled workflows, not models in ordinary ranking | inactive |
@@ -490,7 +760,91 @@ what it changes.
 | `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| off, share, floor }`; new writes reject Thompson, retained settings are inactive | off |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
+| `slots.{slot}.blend` | `{ p }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. Publication refuses a `p` outside 0 to 1, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the member exactly as published | absent (no blend); `p` 0 when the dial names none |
 | `slots.{slot}.external.weight` | Historical-only scoring weight; does not re-enable withdrawn runtime scoring | inactive |
+| `contextVocabulary` | The tenant's context vocabulary: `channels`, `rules`, `sourcePlatforms`, `landingPageTypes`, optionally `visitBuckets` and `ladder` ([below](#the-context-vocabulary)) | absent: the six channel words, today's classification, buckets `1`, `2-3`, `4+`, depth 5 |
+
+### The context vocabulary
+
+```json
+{
+  "contextVocabulary": {
+    "channels": [
+      { "id": "paid_social", "name": "Paid social" }, { "id": "paid_search_brand", "name": "Paid search (brand)" },
+      { "id": "paid_search_nonbrand", "name": "Paid search (non-brand)" }, { "id": "organic", "name": "Organic search" },
+      { "id": "email", "name": "Email" }, { "id": "sms", "name": "SMS" }, { "id": "affiliate", "name": "Affiliate" },
+      { "id": "referral", "name": "Referral" }, { "id": "direct", "name": "Direct" }
+    ],
+    "rules": [
+      { "channel": "sms", "utmMedium": ["sms"] },
+      { "channel": "email", "utmMedium": ["email", "newsletter"] },
+      { "channel": "affiliate", "utmMedium": ["affiliate"] },
+      { "channel": "paid_social", "utmMedium": ["paid_social", "cpc"], "utmSource": ["facebook", "instagram", "tiktok"] },
+      { "channel": "paid_search_brand", "utmMedium": ["cpc", "ppc"], "utmCampaign": ["brand"] },
+      { "channel": "paid_search_nonbrand", "utmMedium": ["cpc", "ppc"] },
+      { "channel": "organic", "untagged": true, "referrer": ["google.com", "bing.com"] },
+      { "channel": "referral", "untagged": true, "referrer": "external" },
+      { "channel": "direct", "untagged": true, "referrer": "none" }
+    ],
+    "sourcePlatforms": [{ "id": "meta", "name": "Meta", "networks": ["facebook.com", "instagram.com"] }],
+    "landingPageTypes": [{ "id": "homepage", "name": "Homepage" }, { "id": "product", "name": "Product page" }],
+    "visitBuckets": [1, 2, 4],
+    "ladder": { "order": ["c", "v", "s", "r", "a"], "depth": 5 }
+  }
+}
+```
+
+`contextVocabulary` is an optional member of the learn document whose `channels` are the tenant's channel values,
+published, stamped and versioned with the learn document's own revision (`PUT /content/learn`), so a change
+takes effect with no deployment. The example names nine channel values: `paid_social`, `paid_search_brand`, `paid_search_nonbrand`, `organic`, `email`, `sms`, `affiliate`, `referral` and `direct`.
+
+| Member | Meaning |
+|---|---|
+| `channels` | `{ id, name }` values. An id is lower case letters, digits and underscores, starting with a letter, at most 64 characters, never `unknown` or `any`, and listed once |
+| `rules` | The published mapping, read in order: a rule names a `channel` of the vocabulary and at least one condition, every one of which must hold: `utmMedium` (mediums), `utmSource` (sources, matched whole or as a token of a token-form source split on `_`, `-` and white space), `utmCampaign` (tokens of the campaign, split the same way: the brand split), `referrer` (`none`: a page view whose referrer is empty or the site's own host; `external`: a referrer host that is not the site's own; or a list of registrable domains, dot-boundary), `untagged: true` (no utm_medium, utm_source or utm_campaign declared). The first rule that holds classifies the arrival; when none holds it records as unknown (`null` on the visit, `unknown` on the cell), never a guess |
+| `sourcePlatforms` | `{ id, name, networks }`: the platform whose `networks` hold the referrer's host, or the network a token-form `utm_source` names (`facebook_ads` names facebook.com), is the visit's source platform |
+| `landingPageTypes` | `{ id, name }`: the `data.pageType` of the visit's first event naming one of these ids is the visit's landing-page type, kept for the visit |
+| `visitBuckets` | Optional. Lower bounds, whole numbers strictly ascending from 1: `[1, 2, 3, 6]` names the buckets `1`, `2`, `3-5`, `6+`. Omitted: `[1, 2, 4]`, today's `1`, `2-3`, `4+` |
+| `ladder` | Optional. `{ order, depth }`: the order is exactly `c`, `v`, `s`, `r`, `a`; the depth, 1 to 5, is how many levels below everyone a learned lift is read from. Omitted: depth 5 |
+
+Every member is validated as the document is published, and any error refuses it whole with 422 naming
+`contextVocabulary`, the member and the offending value; a refused document writes no revision. The source
+platform and the landing-page type are recorded on the visit and are the seed-signal keys `source_platform` and
+`landing_page_type` ([contextual seed rules](#contextual-seed-rules)); they are context attributes, not
+learning-cell levels. The cell carries the tenant's channel id and the bucket of its cut, the learning counts
+it there, and a per-context order names the tenant's channel ids and the buckets of its cut. The arrival
+contract carries `utmCampaign` (256 characters, like `utmSource`), sent only when the landing URL has
+`utm_campaign` and never stored. A change of the channel values (as a set), the cut or the depth in `contextVocabulary` changes `cellGrammar`: see [the priors document](#the-priors-document).
+
+### The context prior
+
+```json
+{ "contextPrior": { "enabled": true, "kBlend": 4, "minEvents": 30 } }
+```
+
+The context prior lets the arrival's context shape a first decision: the learn document's `contextPrior` block,
+with `enabled`, its own `kBlend` and `minEvents`, publishes a population prior per entry channel and visit
+bucket beside the regional prior. Scored events fan into population shares per tenant, entry channel
+(`direct`, `paid_social`, `paid_search`, `email`, `organic`, `referral`) and visit bucket (`1`, `2-3`, `4+`),
+kept by the same population-trend objects the regional prior uses and holding no visitor or session
+identifier; an event whose entry channel is unknown, or from a shopper who refused tracking, counts nothing
+there, and the hourly roll-up sums each channel's visit buckets into the channel alone. A decision reads the
+shares of the shopper's entry channel and visit bucket when that pair has at least `minEvents` events, else the
+shares of the channel alone over every visit bucket, and never everyone's, so the regional prior's population is
+not counted twice. Its weight is λ = kBlend / (kBlend + Σ personal affinity), so a first-time visitor's λ is 1.
+With the regional prior also on, the shopper's own interests keep (1 − λ of the region) × (1 − λ of the
+context) of their weight and each prior adds its own λ × share, so neither erases the other.
+
+The prior is off when the block is absent or `enabled` is false, so a learn document without it decides exactly
+as before. It never applies on the holdout's `default` arm, without personalization consent, or for a shopper
+whose entry channel is unknown, and a population snapshot that cannot be read is no prior. Below the signal floor
+it is a context term at full weight beside the regional prior; a configured order is served exactly; on a layout
+slot that opts into the layout blend it is part of the behaviour term `B`. Every record of a decision under it
+carries `inputs.context_share`, the shares it used (keys sorted), and every position it contributed to carries
+`explain.contextPrior`; a record without the shares replays as before. The shopper's receipt itemises it in
+words, such as "Population prior, paid social, first visit: what visitors arriving this way engage with
+contributed 1.5 (the prior's share of the score: 1)." for the channel and visit bucket, while a receipt read
+from the channel alone names the channel and every visit and claims no visit of its own.
 
 ## The priors document
 
@@ -501,11 +855,59 @@ everyone or `k=v` pairs joined by `|` in the ladder's own order and as a PREFIX 
 does not have, with a level skipped, or with a level past the end is refused by row, naming the expected
 order, because it would name a cell no snapshot ever builds. The ladder order is versioned: `cellGrammar`
 declares the grammar a file was exported under, anything but the current one is refused with the migration
-named, and a document that declares nothing is read under the current grammar. `p_prior` is the rate your team estimated
+named, and a document that declares nothing is read under the current grammar. A tenant whose published `contextVocabulary` changes the channel values, the visit-bucket cut or the ladder depth reads another `cellGrammar`: `ladder-cell` at a version derived from those three members (3 plus a 32-bit FNV-1a of the sorted channel ids, the cut and the depth) and the order cut at the depth, so a file exported under the previous vocabulary is refused naming `cellGrammar`, the grammar in force and the re-export, and a row on a cell finer than the depth is refused by row; a vocabulary that changes none of the three keeps `ladder-cell` version 2. `p_prior` is the rate your team estimated
 elsewhere in the selected objective unit, and because it is a probability it is refused for a slot whose
 objective is `revenue` or `margin`, naming the slot, its objective and the unit; `n_equiv` is how many exposures it should be worth. The imported value supplies the smoothing target and strength, not a replacement for the slot's own `p0` lift denominator. Every receipt names the prior document's
 revision. A slot whose only evidence is an imported prior publishes a snapshot with `events: 0` and its
 prior-derived rows; a slot with neither events nor priors publishes nothing.
+
+## The attribute vocabulary
+
+```json
+{
+  "version": "attributes-spring",
+  "attributes": {
+    "category": { "values": [
+      { "id": "bags", "name": "Bags", "synonyms": ["handbags"] },
+      { "id": "small_leather_goods", "name": "Small leather goods", "synonyms": ["slg"] }
+    ] },
+    "productType": { "values": [
+      { "id": "crossbody", "name": "Crossbody", "synonyms": ["cross-body"], "parent": "bags" },
+      { "id": "wallet", "name": "Wallet", "parent": "small_leather_goods" }
+    ] },
+    "color": { "values": [{ "id": "brown_tan", "name": "Brown / tan", "synonyms": ["cognac", "tan", "brown"] }] },
+    "occasion": { "values": [{ "id": "evening", "name": "Evening", "synonyms": ["night out"] }] }
+  }
+}
+```
+
+The document of kind `vocabulary`, published with `PUT /content/vocabulary` as a versioned revision and stored
+exactly as written (its `version` is not stamped). Each value is `{ id, name, synonyms?, parent? }`: synonyms are optional on any value, and a parent is required on every `productType` value.
+
+| Member | Meaning |
+|---|---|
+| `version` | Optional label, 1 to 256 characters |
+| `attributes` | 1 to 64 attributes, each keyed by the registry dimension and catalogue tag key it governs (1 to 64 characters, trimmed, none of `:`, `;`, `|`) |
+| `attributes.<attribute>.values` | 1 to 1000 values |
+| `id` | Lower-case letters and digits, words joined by single underscores, at most 64 characters, listed once per attribute: what the catalogue stores and what interest is built under |
+| `name` | The display name, 1 to 256 characters, kept exactly as written |
+| `synonyms` | Optional. Up to 50 words the source systems send for the value, each 1 to 64 characters with no leading or trailing space; each belongs to one value of its attribute and is never another value's id |
+| `parent` | The parent category of a `productType` value: exactly one id, one of the `category` ids when the document lists `category`. Optional on any other attribute, an id when present |
+
+**The mapping table.** An attribute's ids and synonyms are its one mapping table: an id maps to itself and a synonym to its value's id, matched exactly (letter case included); nothing else maps, a display name included. The catalogue publications and the event ingest on both hosts read the same table, so data arriving already mapped passes unchanged.
+
+**The approval.** A stored revision governs nothing until the tenant's operator approves it: `POST /content/vocabulary/approve/{n}` (authored like every write) puts revision `n` in effect, and `GET /content/vocabulary` then answers `revision` (the latest stored) and `effectiveRevision` (the revision in effect; 0 while none is). The approval is published as its own member of the configuration set, `{ revision, document }`, carrying the approved revision whole, so a later revision blocks nothing until it is approved in turn.
+
+**In effect.** An attribute the vocabulary lists is governed: a catalogue tag on it is stored as ids or refused naming the piece's `id` and `tags.<attribute>`, and an event value on it builds interest under its id, or none when it maps to nothing. A tenant with no approval in effect is governed by nothing here.
+
+**The rejection report.** `GET /content/vocabulary/rejections` answers the values the ingest refused under the revision in effect:
+
+```json
+{ "scope": "<tenant>", "kind": "vocabulary", "effectiveRevision": 1, "since": 1760280000000,
+  "rejections": { "color": { "chartreuse": 3 } }, "omitted": 0 }
+```
+
+`rejections` holds, per governed attribute, each refused value and the number of events that carried it, counted from `since`, the first refusal under that revision, over at most 30 days; `since` is null and `rejections` empty when nothing was refused or no revision is in effect. `omitted` counts refusals past 64 attributes or 256 values of one attribute. It is a per-tenant count, with no shopper, session or event identifier.
 
 ## The lift snapshot
 
@@ -740,6 +1142,26 @@ no other part of the difference is explained by it. A row without `conflicts` na
 
 Aggregates only; no visitor id
 in it. Current `computation.version` is4 with per-slot measurement basis; retained1–3 stay historical. Incompatible policy/basis/version counters cannot pool. Money objectives use configured value units (margin uses the supplied margin only), not currency conversion or probability.
+
+## Device and recency
+
+Two parts of a shopper's arrival are first-paint context on both shopper hosts, read with no setting:
+
+| Member | Values | Read from |
+|---|---|---|
+| `device` | `mobile`, `desktop` | The request's client hint `Sec-CH-UA-Mobile` when present (`?1` mobile, `?0` desktop), else its user agent: a phone (an iPhone, an Android user agent carrying `Mobile`) is mobile, a tablet (an iPad, an Android user agent without `Mobile`) counts as desktop, and so does every other browser. A request carrying neither the hint nor a browser's user agent has no device, never a guess; the user agent itself is never kept |
+| `recency` | `same_day`, `within_7_days`, `8_to_30_days`, `30_and_more` | The whole days from the start of the shopper's stored last visit to the moment the visit opens: under 1, 1 to 7, 8 to fewer than 30, 30 or more. A first visit has no recency. A shopper record on the session host expires 30 days after its last write, so a return after 30 days or more there is a first visit |
+
+The event that opens a visit records both on the visit, each only when there is one, inside the shopper's
+existing record (`metadata.device` and `metadata.recency` on the session host, `device` and `recency` on the
+shopper object's pipeline record), and keeps them for the visit; no other event and no read changes them.
+`GET /realtime/reflex` answers them as `arrival: { device?, recency? }` beside `visit`: the device and the
+recency the visit records, a member only when there is one, `{}` when there is neither, and for a visit that would
+open now the recency its stored last visit gives it. `arrival` is null exactly where `visit` is, and `visit` keeps
+its shape. As seed-signal keys `device` and `recency` are read by a decision from the snapshot request's own device
+and the visit's recency ([contextual seed rules](#contextual-seed-rules)); as a term of a per-context order's
+context, `device` sits beside `channel` and `visitBuckets` ([per-context orders](#per-context-orders)). The decision
+cell, its grammar and the learning ladder do not change: neither is a learning-cell level.
 
 ## The interest hydrate's restoration provenance
 

@@ -3,7 +3,8 @@
 // src/services/visit.ts
 var VISIT_GAP_MS = 30 * 60 * 1e3;
 var ENTRY_QUERY_LIMIT = 4096;
-var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, utmCampaign: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_CAMPAIGN_LIMIT = ENTRY_LIMITS.utmCampaign;
 var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
 function parsed(value) {
   try {
@@ -90,19 +91,22 @@ function rotateBrowsingSession(host, key = DEFAULT_SESSION_KEY) {
   }
 }
 function entrySignals(host) {
-  let utmMedium = "", utmSource = "", utmTerm = "";
+  let utmMedium = "", utmSource = "", utmTerm = "", utmCampaign = "";
   try {
     const usp = new URLSearchParams(host.location?.search ?? "");
     utmMedium = usp.get("utm_medium") ?? "";
     utmSource = usp.get("utm_source") ?? "";
     utmTerm = usp.get("utm_term") ?? "";
     if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = "";
+    utmCampaign = usp.get("utm_campaign") ?? "";
+    if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = "";
   } catch {
   }
   return {
     utmMedium,
     utmSource,
     ...utmTerm ? { utmTerm } : {},
+    ...utmCampaign ? { utmCampaign } : {},
     referrer: host.referrer ?? "",
     siteHost: host.location?.hostname ?? ""
   };
@@ -1412,6 +1416,17 @@ function createCore(config, host) {
 }
 
 // src/sdk/emit.ts
+var ENGAGE_TOKEN = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
+var MAX_DECLARED_INTERACTIONS = 16;
+function declaredInteractions(el) {
+  const out = [];
+  for (const token of (el.getAttribute("data-op-engage") ?? "").split(/\s+/)) {
+    if (!ENGAGE_TOKEN.test(token) || token === "click" || out.includes(token)) continue;
+    out.push(token);
+    if (out.length === MAX_DECLARED_INTERACTIONS) break;
+  }
+  return out;
+}
 var first = (v) => Array.isArray(v) && v[0] && typeof v[0] === "object" ? v[0] : {};
 var eco = (e) => e.ecommerce && typeof e.ecommerce === "object" ? e.ecommerce : e;
 function ga4Item(e) {
@@ -1564,6 +1579,12 @@ function createEmit(core, listen) {
           const attrs = permitted() ? shown() : null;
           if (attrs) void track("content_click", attrs);
         }));
+        for (const interaction of declaredInteractions(el)) {
+          holds.push(core.bindings.addListener(el, interaction, () => {
+            const attrs = permitted() && declaredInteractions(el).includes(interaction) ? shown() : null;
+            if (attrs) void track("content_click", { ...attrs, interaction });
+          }));
+        }
       }
       for (const el of dom.querySelectorAll("[data-op-track]")) {
         if (!permitted()) return;
@@ -1712,6 +1733,7 @@ function createListen(core, opts = {}) {
   let adopted = false;
   const content = core.bindContent((type, data) => type === "content_impression" ? rendered(String(data.slot ?? ""), String(data.contentId ?? ""), void 0, typeof data.decisionId === "string" ? data.decisionId : void 0).then(() => null) : outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data));
   const placement = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
+  const slotPositionOf = (piece) => Number.isSafeInteger(piece.slotPosition) && piece.slotPosition >= 0 ? piece.slotPosition : void 0;
   const sameAsset = (a, b) => a.customerContentId === b.customerContentId && a.type === b.type;
   const permitted = (set) => {
     if (!set || !decisionRequiresConsent(set)) return true;
@@ -1920,18 +1942,28 @@ function createListen(core, opts = {}) {
     const key = placement(piece), generation = core.generation;
     let paint = painted.get(key);
     if (!paint) {
+      const slotPosition = slotPositionOf(piece);
       const data = {
         contentId,
         slot,
         decisionId: piece.decisionId,
         page: set.page,
         position: piece.order,
+        ...slotPosition !== void 0 ? { slotPosition } : {},
         pageInstance: set.pageInstance,
         renderOffer: piece.renderOffer,
         customerContentId: piece.customerContentId,
         contentType: piece.type
       };
-      paint = { piece, page: set.page, pageInstance: set.pageInstance, generation, envelope: core.envelope("content_impression", data), attempts: 0 };
+      paint = {
+        piece,
+        page: set.page,
+        pageInstance: set.pageInstance,
+        generation,
+        envelope: core.envelope("content_impression", data),
+        attempts: 0,
+        ...slotPosition !== void 0 ? { slotPosition } : {}
+      };
       painted.set(key, paint);
     }
     const selectedPaint = paint;
@@ -1990,12 +2022,19 @@ function createListen(core, opts = {}) {
     if (candidates.length !== 1) return null;
     const paint = candidates[0], ack = paint.ack ?? await paint.pending;
     if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance || painted.get(placement(paint.piece)) !== paint) return null;
-    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, ...safe } = attrs;
+    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
     void _offer;
     void _action;
     void _event;
     void _eventName;
-    return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId });
+    void _slotPosition;
+    return content.send(type, {
+      ...safe,
+      contentId,
+      slot,
+      decisionId: ack.decisionId,
+      ...paint.slotPosition !== void 0 ? { slotPosition: paint.slotPosition } : {}
+    });
   }
   async function adopt(value, o) {
     const owner = ++intent, generation = core.generation;

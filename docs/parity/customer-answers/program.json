@@ -1,0 +1,932 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-customer-answers",
+    "title": "Tapestry parity, the customer's answers (amendment 1), 5 tickets",
+    "ticketIds": [
+      "P36",
+      "P37",
+      "P38",
+      "P40",
+      "P39"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P36",
+      "title": "Vocabularies as tenant settings: channel words, visit buckets, ladder order and depth (**in scope since amendment 1, 2026-10-09**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
+        "locator": "P36 · Vocabularies as tenant settings, section E (amendment 1); the customer's T7 entry channel, source platform, landing-page type and visit number; the investigation §2.5, DI-1, DI-2, DI-6",
+        "requirement": "the entry-channel vocabulary (paid_social, paid_search_brand, paid_search_nonbrand, organic, email, sms, affiliate, referral, direct, the brand split from a published `utm_campaign` rule), the source platform (from the network list and a token-form `utm_source`), the landing-page type kept for the visit, the visit buckets and the ladder order and depth are per-tenant, versioned settings published without a deployment; the classification of UTM parameters and referrers into those values is a published mapping; an arrival whose evidence maps to no value records as unknown, never a guess; the page may pass its own channel only as a value of the tenant's vocabulary; a tenant without the settings keeps today's six words and classification exactly; a vocabulary change carries W25's grammar bump and prior re-export; the console shows and edits the settings; the kit states the vocabulary and the mapping."
+      },
+      "outcome": "The entry-channel vocabulary, its UTM and referrer classification, the source platform, the landing-page type, the visit buckets and the ladder order and depth are per-tenant versioned settings published without a deployment, so the customer's nine channels classify on both hosts, while a tenant without the settings keeps today's six words and classification exactly.",
+      "criteria": [
+        {
+          "id": "CH1",
+          "kind": "LOCAL",
+          "observable": "On both hosts a tenant publishes a vocabulary document (channel values with their ids and the UTM and referrer rules that classify into them, source platforms, landing-page types, visit buckets, the ladder order and depth) without a deployment, the next arrival is classified by the published rules, and a document with a value outside the id grammar, a duplicate id or a rule naming an unknown value is refused with a named error.",
+          "proof": "The P36 acceptance command runs the tests named unit:P36.CH1 in src/units/P36 and they pass."
+        },
+        {
+          "id": "CH2",
+          "kind": "LOCAL",
+          "observable": "On both hosts an arrival tagged as each of the customer's nine channels (paid social, paid search brand, paid search non-brand, organic search, email, SMS, affiliate, referral, direct) classifies to that value, the brand split read from the published utm_campaign rule, and an arrival whose evidence maps to no value records as unknown, never a guess, so the existing W16.C2 classification locks hold for a tenant without the settings.",
+          "proof": "The P36 acceptance command runs the tests named unit:P36.CH2 in src/units/P36 and they pass."
+        },
+        {
+          "id": "CH3",
+          "kind": "LOCAL",
+          "observable": "The source platform (from the recognised network of the referrer or a token-form utm_source) and the landing-page type (the first page type of the visit) are recorded on the visit on both hosts and are seed-signal keys: a seed rule naming one lifts a matching arrival at the rule's weight and the receipt itemises it, and a non-matching arrival is not lifted.",
+          "proof": "The P36 acceptance command runs the tests named unit:P36.CH3 in src/units/P36 and they pass."
+        },
+        {
+          "id": "CH4",
+          "kind": "LOCAL",
+          "observable": "The page may pass its own channel only as a value of the tenant's published vocabulary (today one of the six words); any other word is ignored as today, on both hosts.",
+          "proof": "The P36 acceptance command runs the tests named unit:P36.CH4 in src/units/P36 and they pass."
+        },
+        {
+          "id": "CH5",
+          "kind": "LOCAL",
+          "observable": "A tenant without the settings keeps today's six words, classification, visit buckets and ladder exactly, term for term on both hosts with replay unchanged, and a tenant whose published vocabulary changes the channel values gets the W25 grammar bump: a priors file exported under the previous vocabulary is refused by name and the migration sentence names the re-export.",
+          "proof": "The P36 acceptance command runs the tests named unit:P36.CH5 in src/units/P36 and they pass."
+        },
+        {
+          "id": "CH6",
+          "kind": "LOCAL",
+          "observable": "The console shows and edits the settings, and the kit documents the vocabulary document, the mapping rules, the seed-signal keys and the bump in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md.",
+          "proof": "The P36 acceptance command runs the tests named unit:P36.CH6 in src/units/P36 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "The channel vocabulary is a tenant setting with the customer's nine values; source platform and landing-page type are context attributes recorded on the visit and usable as seed-signal keys, not learning-cell levels.",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        },
+        {
+          "id": "LV2",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The customer's channel vocabulary and UTM mapping are published on its tenant and an arrival of each channel is observed classified on the deployed host.",
+          "proof": "The LIVE2 walkthrough record.",
+          "deferredAcceptanceId": "LIVE2"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/services/visit.ts:37 and :124 at af671ce7",
+          "description": "The six channel words fixed in code and the gate that admits only them."
+        },
+        {
+          "ref": "src/services/visit.ts:239–250 at af671ce7",
+          "description": "The medium and source tables that classify UTM parameters; utm_medium=sms matches none and falls through to direct; affiliate falls into referral."
+        },
+        {
+          "ref": "src/content/cell.ts:64 and src/sdk/listen.ts:13–14 at af671ce7",
+          "description": "The page-passed channel admitted only as one of the six words."
+        },
+        {
+          "ref": "src/learn/priors.ts:70–77 and src/learn/stats.ts:36–50 at af671ce7",
+          "description": "The cell grammar (name, version 2, order) and the ladder levels; a document declaring another order or version is refused."
+        },
+        {
+          "ref": "src/units/W16/C2.unit.test.ts and src/units/W16/C5.unit.test.ts:737, :901 at af671ce7",
+          "description": "The classification and fan-in locks that must hold for a tenant without the settings."
+        }
+      ],
+      "remainingWork": [
+        "Type and validator: the vocabulary document (channel values, classification rules, source platforms, landing-page types, visit buckets, ladder order and depth) as a versioned tenant setting, with the id grammar and the named refusals.",
+        "Classification: read the published rules on both hosts for UTM parameters and referrers, including the utm_campaign brand rule, and record unknown where no rule matches.",
+        "Visit attributes: record source platform and landing-page type on the visit and expose both as seed-signal keys on both hosts.",
+        "Page-passed channel: admit a value of the tenant's vocabulary and ignore the rest.",
+        "Grammar bump: version the cell grammar with the vocabulary revision and refuse a priors file exported under the previous one, with the migration sentence.",
+        "Console and kit: the settings view, and the vocabulary, mapping and bump in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 55), pre-filled from the lead's recommendation",
+          "effect": "The channel vocabulary is a tenant setting with the customer's nine values (paid_social, paid_search_brand, paid_search_nonbrand, organic, email, sms, affiliate, referral, direct), the brand split read from a published utm_campaign rule; source platform and landing-page type are context attributes recorded on the visit and usable as seed-signal keys, not learning-cell levels; a tenant without the settings keeps today's six words exactly."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        },
+        {
+          "id": "LIVE2",
+          "description": "The customer's channel vocabulary and UTM mapping (Phase 1 T7) published on its tenant, with an arrival of each channel observed classified on the deployed host.",
+          "owner": "the customer's marketing-operations lead with the delivery owner",
+          "proof": "A walkthrough record naming the vocabulary revision and the observed classification of each channel."
+        }
+      ],
+      "allowedPaths": [
+        "src/services/visit.ts",
+        "src/content/cell.ts",
+        "src/learn/stats.ts",
+        "src/learn/priors.ts",
+        "src/content/types.ts",
+        "src/content/kinds.ts",
+        "src/content/service.ts",
+        "src/content/decide.ts",
+        "src/routes/content.ts",
+        "src/durable-objects/LearnStats.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "src/services/SessionManager.ts",
+        "src/sdk/listen.ts",
+        "src/sdk/types.ts",
+        "src/sdk/identity.ts",
+        "public/sdk/",
+        "packages/sdk/",
+        "public/console/views.js",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P36 --minWorkers=1 --maxWorkers=1",
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": [],
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "a943eab8ad9577740319f7a9c86a58759f41dfbd on rem/spec-p36-fix2 (fix round 2, R-P55: the CH2 fan-in leg RED on both hosts with its no-settings lock and the CH6 kit lock, over the build head 7c6e0e22; specification review PASS; the fix-1 gate at 437908e0 and the S5 gate at d8073bdd kept below)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-sdkContract.baseline.txt",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-sdkContract.json",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fx-sdkContract.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/fxkit-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix2/reviewer-spec/logs/head-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/standin-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/control-L1.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/control-M13.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-nocoerce.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-cutall.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-standin-aware3.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/logs/ctl-F1-defect.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/logs/ctl-LOCK-words-everywhere.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/P36-findings.log"
+        ]
+      }
+    },
+    {
+      "id": "P37",
+      "title": "Device and recency as first-paint context",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
+        "locator": "P37 · Device and recency as first-paint context, section E (amendment 1); the customer's T6 rows 3 and 5; the investigation §2.6, DI-3, DI-4",
+        "requirement": "the engine reads a device class at the edge from the request's client hints, else its user agent (mobile, desktop), and a recency bucket from the stored last visit (same day, within 7 days, 8 to 30 days, 30 and more; a first visit has none); both are seed-signal keys a seed rule can name; device is a P01 context term (an order may be published for a context that names a device beside, or instead of, a channel and a visit bucket; the most specific match wins; a context naming no device matches every device, so every receipted P01 order keeps its meaning) and a part of P30's context key; the receipt itemises device and recency when they decided anything; P07's aggregation is unchanged; a tenant publishing no device context and no recency rule behaves exactly as today; the kit documents both."
+      },
+      "outcome": "A device class read at the edge and a recency bucket derived from the stored last visit are first-paint context on both hosts: seed-signal keys a rule can name, and device a term of a P01 context, while the learning cell, its grammar and P07's aggregation stay unchanged and a tenant publishing neither behaves exactly as today.",
+      "criteria": [
+        {
+          "id": "DV1",
+          "kind": "LOCAL",
+          "observable": "On both hosts the engine reads a device class from the request's client hints, else its user agent (mobile or desktop; a tablet reads as desktop), records it on the visit, and records no device for a request carrying neither, never a guess.",
+          "proof": "The P37 acceptance command runs the tests named unit:P37.DV1 in src/units/P37 and they pass."
+        },
+        {
+          "id": "DV2",
+          "kind": "LOCAL",
+          "observable": "On both hosts a recency bucket is derived from the stored last visit (same day, within 7 days, 8 to 30 days, 30 and more) and recorded on the visit, and a first visit has none.",
+          "proof": "The P37 acceptance command runs the tests named unit:P37.DV2 in src/units/P37 and they pass."
+        },
+        {
+          "id": "DV3",
+          "kind": "LOCAL",
+          "observable": "A seed rule may name a device or a recency bucket: a matching arrival is lifted at the rule's weight on both hosts and the receipt itemises the rule with the device or the recency in words, and a non-matching arrival is not lifted.",
+          "proof": "The P37 acceptance command runs the tests named unit:P37.DV3 in src/units/P37 and they pass."
+        },
+        {
+          "id": "DV4",
+          "kind": "LOCAL",
+          "observable": "A P01 order may be published for a context that names a device beside, or instead of, a channel and a visit bucket; the most specific match wins and a tie is refused at publication; a shopper in that context is served that order on both hosts; a context naming no device matches every device, so every unit of src/units/P01 still passes.",
+          "proof": "The P37 acceptance command runs the tests named unit:P37.DV4 in src/units/P37 and they pass."
+        },
+        {
+          "id": "DV5",
+          "kind": "LOCAL",
+          "observable": "The learning cell, its grammar version and order, and P07's aggregation keys are unchanged (the W16.C5 fan-in locks and a priors file exported today still import), and a tenant publishing no device context and no device or recency rule decides term for term as today on both hosts, replay included.",
+          "proof": "The P37 acceptance command runs the tests named unit:P37.DV5 in src/units/P37 and they pass."
+        },
+        {
+          "id": "DV6",
+          "kind": "LOCAL",
+          "observable": "The kit documents the device class, the recency bucket, their seed-signal keys and the device term of a P01 context in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md.",
+          "proof": "The P37 acceptance command runs the tests named unit:P37.DV6 in src/units/P37 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "A tablet counts as desktop until the customer says otherwise.",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "DC2",
+          "kind": "DECISION",
+          "observable": "Recency is measured from the stored last visit, bucketed same day, within 7 days, 8 to 30 days, 30 and more; a first visit has none.",
+          "proof": "Decision D2.",
+          "decisionId": "D2"
+        },
+        {
+          "id": "DC3",
+          "kind": "DECISION",
+          "observable": "Device and recency are first-paint context (seed-signal keys; device a P01 context term and a part of P30's key), not learning-cell levels; no W25 grammar bump; time of day deferred.",
+          "proof": "Decision D3.",
+          "decisionId": "D3"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/services/platform.ts:44 at af671ce7",
+          "description": "The platform read from Sec-CH-UA-Platform, else the user agent; no device class is derived today."
+        },
+        {
+          "ref": "src/services/visit.ts:160–173, src/services/RealtimeSegmentEngine.ts:572 and src/durable-objects/ShopperReflex.ts:1325 at af671ce7",
+          "description": "lastVisitAt kept on the visit context on both hosts; no recency bucket is derived from it."
+        },
+        {
+          "ref": "src/content/kinds.ts, src/content/types.ts and src/content/decide.ts (seed signals and the P01 context match) at af671ce7",
+          "description": "Seed-signal keys and the context grammar (entry channel and visit bucket) as P01 left them."
+        },
+        {
+          "ref": "src/learn/priors.ts:70–77 at af671ce7",
+          "description": "The cell grammar at version 2, which this ticket leaves unchanged."
+        },
+        {
+          "ref": "src/types/events.ts at af671ce7",
+          "description": "No event carries a device field today."
+        }
+      ],
+      "remainingWork": [
+        "Device: derive a device class at the edge from the client hints, else the user agent, on both hosts, and record it on the visit.",
+        "Recency: derive the bucket from the stored last visit on both hosts and record it on the visit.",
+        "Seed signals: admit device and recency as seed-signal keys, itemised on the receipt.",
+        "P01 context: admit a device term in a published context with the most-specific-match rule, additively to the receipted P01 grammar.",
+        "Kit: document both in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 58), pre-filled from the lead's recommendation",
+          "effect": "A tablet counts as desktop until the customer says otherwise; the device values are mobile and desktop."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 59), pre-filled from the lead's recommendation",
+          "effect": "Recency is days since the shopper's last stored visit, bucketed same day, within 7 days, 8 to 30 days, 30 and more; a first visit has no recency."
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 55 and 60, with the investigation §2.6), pre-filled from the lead's recommendation",
+          "effect": "Device and recency are first-paint context, seed-signal keys and (device) a P01 context term and a part of P30's key, not learning-cell levels; no W25 grammar bump; time of day deferred; device as a learning level waits for the customer's data."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/services/platform.ts",
+        "src/services/visit.ts",
+        "src/services/SessionManager.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "src/content/types.ts",
+        "src/content/kinds.ts",
+        "src/content/service.ts",
+        "src/content/decide.ts",
+        "src/routes/decisions.ts",
+        "src/routes/realtime.ts",
+        "src/learn/receipts.ts",
+        "src/utils/context.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P37 --minWorkers=1 --maxWorkers=1",
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": [],
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "da5aaea4dfa6be74a018e1c89d968ac926e6d26f on rem/spec-parity-e (batch S5; P37 reviewed PASS at this revision; the per-ticket branch is cut from the batch head after the S5 fix round so the shared harness src/units/_parity5.ts is final, with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/P37-findings.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/probe-DV2-session40.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/logs/nc-P37-DV5-lock-cell.log"
+        ]
+      }
+    },
+    {
+      "id": "P38",
+      "title": "The published vocabulary as the authority for product and content attributes",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
+        "locator": "P38 · The published vocabulary as the authority for product and content attributes, section E (amendment 1); the customer's T7 rules; the investigation §3.4, DI-9",
+        "requirement": "a vocabulary document lists every attribute (category, product type with its parent category, collection, style, colour, material, price band, price status, inventory status, bestseller status, occasion, gender, size, content format and imagery, content theme, journey-stage fit) with its values, each an id (lower case, words joined by underscores, at most 64 characters, none of the CSV tag separators), a display name that keeps the customer's wording and synonyms; the catalogue import and the event ingest map source values through one mapping table, resolving synonyms there, so data arriving already mapped passes through unchanged; a value outside the list is refused at publication and reported with the piece and the field; revisions are versioned and take effect only when approved; a tenant without a vocabulary keeps today's free-text behaviour exactly; the kit documents the schema and the mapping table."
+      },
+      "outcome": "A versioned, approved vocabulary document is the authority for product and content attribute values: imports and event ingest map source values through its mapping table, a value outside the list is refused at publication and reported with the piece and the field, and a tenant without a vocabulary keeps today's free-text behaviour exactly.",
+      "criteria": [
+        {
+          "id": "VA1",
+          "kind": "LOCAL",
+          "observable": "A tenant publishes a vocabulary document (per attribute, values with an id in the registry grammar, a display name, synonyms and, for product type, the parent category) as a versioned revision; a document with an id outside the grammar, a duplicate id, a product type naming no parent or two, or a synonym mapping to two values is refused with a named error; a revision is stored but not in effect until approved in the console by the tenant's operator, and the effective revision is reported.",
+          "proof": "The P38 acceptance command runs the tests named unit:P38.VA1 in src/units/P38 and they pass."
+        },
+        {
+          "id": "VA2",
+          "kind": "LOCAL",
+          "observable": "A catalogue import maps source values on a governed attribute through the mapping table (synonyms and source names to ids) and stores the ids; a piece carrying a value outside the list on a governed attribute is refused and the refusal names the piece and the field; a piece whose values are already ids passes unchanged.",
+          "proof": "The P38 acceptance command runs the tests named unit:P38.VA2 in src/units/P38 and they pass."
+        },
+        {
+          "id": "VA3",
+          "kind": "LOCAL",
+          "observable": "On both hosts an event carrying a governed attribute value is mapped the same way at ingest; a value outside the list on a governed dimension builds no interest and is counted in the tenant's rejection report, while the action itself is still recorded.",
+          "proof": "The P38 acceptance command runs the tests named unit:P38.VA3 in src/units/P38 and they pass."
+        },
+        {
+          "id": "VA4",
+          "kind": "LOCAL",
+          "observable": "A tenant without a vocabulary keeps today's free-text behaviour exactly: the catalogue validator, the import and the ingest decide as today term for term on both hosts, and every unit of src/units/P02 still passes.",
+          "proof": "The P38 acceptance command runs the tests named unit:P38.VA4 in src/units/P38 and they pass."
+        },
+        {
+          "id": "VA5",
+          "kind": "LOCAL",
+          "observable": "The kit documents the vocabulary schema, the mapping table, the approval step and the rejection report in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md.",
+          "proof": "The P38 acceptance command runs the tests named unit:P38.VA5 in src/units/P38 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "A vocabulary revision takes effect only when approved in the console; the customer's pending values arrive as later revisions and block nothing.",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "DC2",
+          "kind": "DECISION",
+          "observable": "Synonyms are resolved by the mapping table at ingest, so data arriving already mapped passes through unchanged.",
+          "proof": "Decision D2.",
+          "decisionId": "D2"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        },
+        {
+          "id": "LV2",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The customer's vocabulary revision 1 with its mapping table from SFCC and the CMS is published and approved on its tenant and the catalogue loads with the rejection report observed.",
+          "proof": "The LIVE2 walkthrough record.",
+          "deferredAcceptanceId": "LIVE2"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/content/kinds.ts:173 at af671ce7",
+          "description": "validateContentCatalog: a piece's tags are free text; no vocabulary is known."
+        },
+        {
+          "ref": "src/reflex/core.ts:339–354 at af671ce7",
+          "description": "The value id grammar (lower case, underscores, at most 64 characters, no separators) that vocabulary ids follow."
+        },
+        {
+          "ref": "src/content/import.ts and src/routes/content.ts at af671ce7",
+          "description": "The import and publication routes that carry catalogue values today."
+        },
+        {
+          "ref": "src/config/publication.ts at af671ce7",
+          "description": "Versioned publication with the stamp, the form a vocabulary revision takes."
+        },
+        {
+          "ref": "docs/architecture/tapestry-handover-requirements-2026-10-09.md §3.4 (in the owner tree)",
+          "description": "The registry draft: 16 dimensions keyed on the customer's vocabulary."
+        }
+      ],
+      "remainingWork": [
+        "Type and validator: the vocabulary document and its revisions, with the named refusals and the approval state.",
+        "Import: map source values through the mapping table, refuse and report a value outside the list with the piece and the field.",
+        "Ingest: map governed event values the same way on both hosts; count rejections in a tenant report.",
+        "Console: the approve action and the effective revision shown.",
+        "Kit: the schema, the mapping table, the approval and the report in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 61), pre-filled from the lead's recommendation",
+          "effect": "A vocabulary revision takes effect only when approved in the console by the tenant's operator; the customer's pending values (price-band ranges, the low-stock threshold, bestseller N and window, inventory refresh, watches and fragrance product types) arrive as later revisions and block nothing."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 55, with the investigation gap 22), pre-filled from the lead's recommendation",
+          "effect": "Synonyms are resolved by the mapping table at ingest; data arriving already mapped passes through unchanged."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        },
+        {
+          "id": "LIVE2",
+          "description": "The customer's vocabulary revision 1 (Phase 1 T7) with its mapping table from SFCC and the CMS, published and approved on its tenant, the catalogue loading with the rejection report observed.",
+          "owner": "the customer's merchandising data owner with the delivery owner",
+          "proof": "A walkthrough record naming the revision, the mapping table and the observed report."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/kinds.ts",
+        "src/content/types.ts",
+        "src/content/import.ts",
+        "src/content/service.ts",
+        "src/routes/content.ts",
+        "src/config/publication.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "src/services/EventDispatcher.ts",
+        "public/console/views.js",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P38 --minWorkers=1 --maxWorkers=1",
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": [],
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "51f050e36f253fca2643198786ab317fb853684d on rem/spec-parity-e (batch S5 fix round 2; P38 reviewed PASS at this revision after the S5 review at da5aaea4 and fix round 1 at e06c860c; the per-ticket branch is cut from the final batch head so the shared harness src/units/_parity5.ts is final)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/P38-findings.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/logs/nc-P38-VA4-lock-import.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/logs/P38-probe-behind.log"
+        ]
+      }
+    },
+    {
+      "id": "P40",
+      "title": "Module events as the customer defines them",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
+        "locator": "P40 · Module events as the customer defines them, section E (amendment 1); the customer's T8 rows 1 to 14; the investigation §2.4, DI-13, DI-14, DI-15, DI-17",
+        "requirement": "the SDK records a viewable impression (at least 50 percent of the container in view for at least 1 second) beside the render acknowledgement, as a distinct event that weighs 0 and never builds interest, changing no denominator; `video_view` at 3 seconds is a content action that reads the piece's format from the catalogue, as `video_complete` does; a dwell minimum per slot (30 seconds on editorial) in the SDK, and `product_dwell` (20 seconds on a product page, once per view) accepted with `dwellMs`; purchase outcomes are unique per order id on the engine side; `search` (the resolved values, never the query text), `filter_applied` (the facet's dimension and value; the sale filter and the sale page raising `priceStatus: sale`), `product_dwell` and `remove_from_cart` (captured at weight 0 until P39) are documented in the kit as event conventions with their registry values; size guide and reviews opened are documented as declared interactions of the module that owns them (P03)."
+      },
+      "outcome": "The SDK and both hosts record the customer's event definitions beside P03's receipted events: a viewable impression that changes no denominator, a video view at 3 seconds as a content action, a dwell minimum per slot and a product dwell, purchases unique per order id, and the kit's event conventions for search, filters, product dwell, remove from cart and declared interactions.",
+      "criteria": [
+        {
+          "id": "EV1",
+          "kind": "LOCAL",
+          "observable": "The SDK sends one viewable impression per module per page instance, after the render acknowledgement, once at least half of the container has been in view for at least one second continuously, carrying the module identifier, the slot, the position within the slot and the decision identifier; a container shown less than half or less than one second sends none; on both hosts it weighs 0, builds no interest and changes no exposure count, so P03's units and the W26 exposure locks still pass.",
+          "proof": "The P40 acceptance command runs the tests named unit:P40.EV1 in src/units/P40 and they pass."
+        },
+        {
+          "id": "EV2",
+          "kind": "LOCAL",
+          "observable": "On both hosts video_view at 3 seconds is a content action that reads the piece's format from the catalogue as video_complete does, at the tenant's weight (default 1), and the SDK offers it beside videoComplete.",
+          "proof": "The P40 acceptance command runs the tests named unit:P40.EV2 in src/units/P40 and they pass."
+        },
+        {
+          "id": "EV3",
+          "kind": "LOCAL",
+          "observable": "The dwell minimum is configurable per slot in the SDK (the default of one second unchanged where none is configured), and product_dwell (once per product view, carrying dwellMs of at least 20 seconds) is accepted on both hosts and feeds the visit's dwell counter.",
+          "proof": "The P40 acceptance command runs the tests named unit:P40.EV3 in src/units/P40 and they pass."
+        },
+        {
+          "id": "EV4",
+          "kind": "LOCAL",
+          "observable": "On both hosts a purchase is unique per order id for the shopper: a second purchase event carrying the same order id is recorded once, crediting once and building interest once, with the duplicate reported.",
+          "proof": "The P40 acceptance command runs the tests named unit:P40.EV4 in src/units/P40 and they pass."
+        },
+        {
+          "id": "EV5",
+          "kind": "LOCAL",
+          "observable": "The kit documents the viewable impression, video_view, the dwell minimum, product_dwell, purchase uniqueness, and the event conventions search (the resolved values only, never the query text), filter_applied (the facet's dimension and value, the sale filter and the sale page raising priceStatus sale) and remove_from_cart (captured at weight 0 until P39), and the declared interactions sizeguide:open and reviews:open, in docs/kit/01-integration-guide.md, docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md.",
+          "proof": "The P40 acceptance command runs the tests named unit:P40.EV5 in src/units/P40 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "The viewable impression is recorded beside the render acknowledgement and changes no learning denominator; whether the layout learns on a viewable basis is a live measurement-design decision.",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "DC2",
+          "kind": "DECISION",
+          "observable": "The one-second rule is continuous unless the customer answers otherwise.",
+          "proof": "Decision D2.",
+          "decisionId": "D2"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        },
+        {
+          "id": "LV2",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The customer's player and tag manager fire video_view, product_dwell, search, filter_applied and remove_from_cart as the kit states, observed arriving on the deployed host.",
+          "proof": "The LIVE2 walkthrough record.",
+          "deferredAcceptanceId": "LIVE2"
+        },
+        {
+          "id": "LV3",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The measurement-design decision whether layout slots learn on a viewable basis is recorded before launch.",
+          "proof": "The LIVE3 decision record.",
+          "deferredAcceptanceId": "LIVE3"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/sdk/listen.ts:252–305 and src/sdk/emit.ts:243–249, src/sdk/host.ts:16–19 at af671ce7",
+          "description": "The impression is the render acknowledgement after paint; the declarative scan fires at the first moment the element is half in view with no time rule; dwell sends when an element leaves view after dwellMinMs, one second by default (listen.ts:58)."
+        },
+        {
+          "ref": "src/events/actionTypes.ts:17–25 at af671ce7",
+          "description": "The closed list of thirteen event types; video_complete is in it, video_view is not."
+        },
+        {
+          "ref": "src/reflex/contentTelemetry.ts:44, 111–126 at af671ce7",
+          "description": "The content actions that read the piece's catalogue tags; video_complete is one."
+        },
+        {
+          "ref": "src/reflex/core.ts:221–244 at af671ce7",
+          "description": "The default behaviour weights; video_complete weighs 2."
+        },
+        {
+          "ref": "src/services/JourneyStage.ts:337 and src/ledger/records.ts:351 at af671ce7",
+          "description": "dwellMs on any event feeds the visit's dwell counter; an order id is read as an item id on outcome records, with no uniqueness."
+        },
+        {
+          "ref": "src/units/P03/LEDGER.unit.test.ts at af671ce7 (receipted at 536951ac)",
+          "description": "P03's impression, engagement and admission contract, untouched by this ticket."
+        }
+      ],
+      "remainingWork": [
+        "SDK: the viewable impression (half in view for one second, continuous) after the render acknowledgement; a dwell minimum per slot; videoView beside videoComplete; regenerate public/sdk and packages/sdk with the project script.",
+        "Hosts: video_view as a content action reading the catalogue format; product_dwell accepted and fed to the dwell counter; the viewable impression weighted 0 and outside the exposure count.",
+        "Purchase uniqueness per order id on both hosts, with the duplicate reported.",
+        "Kit: every threshold, the event conventions and the declared interactions in docs/kit/01-integration-guide.md, docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 55, with the investigation DI-15), pre-filled from the lead's recommendation",
+          "effect": "The viewable impression (at least half of the container in view for at least one second) is recorded beside the render acknowledgement as a distinct event that weighs 0 and never builds interest; it changes no learning denominator; whether the layout learns on a viewable basis is a live measurement-design decision (LIVE3)."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 55, with the investigation gap 20), pre-filled from the lead's recommendation",
+          "effect": "The one-second rule is continuous unless the customer answers otherwise."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        },
+        {
+          "id": "LIVE2",
+          "description": "The customer's player and tag manager firing video_view, product_dwell, search, filter_applied and remove_from_cart as the kit states (Phase 1 T8), observed arriving on the deployed host.",
+          "owner": "the customer's front-end lead with the delivery owner",
+          "proof": "A walkthrough record naming each event and its observed arrival."
+        },
+        {
+          "id": "LIVE3",
+          "description": "The measurement-design decision whether layout slots learn on a viewable basis, which changes every rate's denominator and the position correction.",
+          "owner": "the customer's data-science lead with the owner",
+          "proof": "A recorded decision naming the basis and the learn revision that applies it."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/emit.ts",
+        "src/sdk/listen.ts",
+        "src/sdk/core.ts",
+        "src/sdk/types.ts",
+        "src/sdk/host.ts",
+        "src/sdk/wire.ts",
+        "public/sdk/",
+        "packages/sdk/",
+        "src/events/actionTypes.ts",
+        "src/reflex/contentTelemetry.ts",
+        "src/reflex/core.ts",
+        "public/meridian/engine.bundle.js",
+        "src/content/kinds.ts",
+        "src/content/service.ts",
+        "src/routes/realtime.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "src/services/JourneyStage.ts",
+        "src/ledger/records.ts",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P40 --minWorkers=1 --maxWorkers=1",
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": [],
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "e06c860c079aa3078ad568f66b2d3ea8c9978513 on rem/spec-parity-e (batch S5 fix round 1; P40 reviewed PASS at this revision after the S5 review at da5aaea4; the per-ticket branch is cut from the batch head after S5 fix round 2 so the shared harness src/units/_parity5.ts is final; it carries src/routes/realtime.sdkContract.test.ts with the R10 correction of R-P48)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/standin-P40-accept-types.json",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/standin-ev4-P40.json",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/sdkContract-ev4-corrected-tests.log"
+        ]
+      }
+    },
+    {
+      "id": "P39",
+      "title": "Negative preference with an expiry: remove from cart and the purchase rule",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
+        "locator": "P39 · Negative preference with an expiry, section E (amendment 1); the customer's T8 row 15 and the purchase rule; the investigation DI-12, DI-16",
+        "requirement": "a named action (`remove_from_cart`) suppresses, for the shopper, the values it names for a configurable window; a server-confirmed purchase strengthens the product's style, collection, colour and price band at the purchase weight and suppresses the bought product type for a configurable window (default 30 days), after which the suppression lapses; a suppressed value does not lead a decision on the shopper's own interest while suppressed and context terms are unaffected; the receipt itemises each suppression with its expiry; the floor is unaffected (R-P33); a tenant without the settings behaves exactly as today; the kit documents the rule. Dismissal and other negative signals stay phase two."
+      },
+      "outcome": "A named action suppresses, for the shopper and for a configurable window, the values it names, and a server-confirmed purchase strengthens style, collection, colour and price band while suppressing the bought product type for a configurable window, itemised on the receipt and replayed exactly, with the floor unaffected and a tenant without the settings behaving exactly as today.",
+      "criteria": [
+        {
+          "id": "NP1",
+          "kind": "LOCAL",
+          "observable": "A tenant publishes the suppression settings (the suppressing actions with each action's window in days; the purchase window in days) without a deployment, a window that is not a positive whole number of days is refused by name, and the action weights stay bounded 0 to 1000 as today.",
+          "proof": "The P39 acceptance command runs the tests named unit:P39.NP1 in src/units/P39 and they pass."
+        },
+        {
+          "id": "NP2",
+          "kind": "LOCAL",
+          "observable": "On both hosts remove_from_cart carrying product values suppresses, for that shopper, the values it names for the action's window: the next decision does not lead with a piece on the shopper's own interest in a suppressed value while other values and every context term are unaffected; after the window the suppression lapses; and the shopper's count of signals is unchanged, because the action weighs 0.",
+          "proof": "The P39 acceptance command runs the tests named unit:P39.NP2 in src/units/P39 and they pass."
+        },
+        {
+          "id": "NP3",
+          "kind": "LOCAL",
+          "observable": "On both hosts a server-confirmed purchase strengthens the product's style, collection, colour and price band at the purchase weight and suppresses the bought product type for the purchase window, and the complements preference still serves the matching piece on the page of the product it completes, as today.",
+          "proof": "The P39 acceptance command runs the tests named unit:P39.NP3 in src/units/P39 and they pass."
+        },
+        {
+          "id": "NP4",
+          "kind": "LOCAL",
+          "observable": "The record and the receipt itemise each suppression in force with the value, the action and its expiry; a decision with a suppression replays exactly; a retained record without one replays as before.",
+          "proof": "The P39 acceptance command runs the tests named unit:P39.NP4 in src/units/P39 and they pass."
+        },
+        {
+          "id": "NP5",
+          "kind": "LOCAL",
+          "observable": "A tenant without the settings decides term for term as today on both hosts, replay included, and every unit of src/units/P10 still passes.",
+          "proof": "The P39 acceptance command runs the tests named unit:P39.NP5 in src/units/P39 and they pass."
+        },
+        {
+          "id": "NP6",
+          "kind": "LOCAL",
+          "observable": "The kit documents the suppression settings, the purchase rule and the receipt line in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md.",
+          "proof": "The P39 acceptance command runs the tests named unit:P39.NP6 in src/units/P39 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "Negative preference is per-shopper suppression with an expiry, never a negative weight.",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "DC2",
+          "kind": "DECISION",
+          "observable": "The windows and the action list are tenant settings with the lead's defaults: 30 days for the purchase rule and for remove from cart, full suppression.",
+          "proof": "Decision D2.",
+          "decisionId": "D2"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        },
+        {
+          "id": "LV2",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The customer's data science agrees the suppression windows and the action list, published as the tenant's settings before the rule is enabled.",
+          "proof": "The LIVE2 agreement record.",
+          "deferredAcceptanceId": "LIVE2"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/reflex/configStore.ts:349–356 at af671ce7",
+          "description": "Every action weight is bounded 0 to 1000 at validation; a negative weight is refused."
+        },
+        {
+          "ref": "src/reflex/core.ts:567–592 at af671ce7",
+          "description": "The accumulation applies a weight above 0 only and floors interest at zero; nothing damps one dimension after a purchase."
+        },
+        {
+          "ref": "src/content/decide.ts:330–341 at af671ce7",
+          "description": "The complements preference that serves the matching piece on the page of the product it completes."
+        },
+        {
+          "ref": "src/units/P10/LEDGER.unit.test.ts (R-P33) at the P10 artifact",
+          "description": "The floor counts actions whose own weight is above zero; remove_from_cart at weight 0 is no signal."
+        },
+        {
+          "ref": "docs/architecture/tapestry-requirements-extraction-2026-10-07.md G-B (in the owner tree)",
+          "description": "The negative-preference options; the first, per-shopper suppression with an expiry, is the mechanism."
+        }
+      ],
+      "remainingWork": [
+        "Type and validator: the suppression settings with their windows and the named refusals, the weight bound kept.",
+        "Shopper state: record a suppression per value with its expiry on both hosts in the shared reflex step, merge it on a link, lapse it after the window.",
+        "Decision path: exclude a suppressed value from leading on the shopper's own interest, context terms unaffected; regenerate public/meridian/engine.bundle.js.",
+        "Purchase rule: strengthen style, collection, colour and price band at the purchase weight and suppress the bought product type for the purchase window.",
+        "Receipt and replay: itemise each suppression with its expiry and replay it exactly.",
+        "Kit: document the settings, the rule and the receipt line in docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 62, with the investigation DI-16 and the validator), pre-filled from the lead's recommendation",
+          "effect": "Negative preference is per-shopper suppression with an expiry, never a negative weight: weights stay bounded 0 to 1000 and interest floored at zero; dismissal and other negative signals stay phase two."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Owner decision of 2026-10-09 on amendment 1 (docs/BTI-Parity-Amendment-2026-10-09.md, item 62), pre-filled from the lead's recommendation",
+          "effect": "The windows and the action list are tenant settings with the lead's defaults (30 days for the purchase rule and for remove from cart; full suppression), a live row for the customer's data science."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        },
+        {
+          "id": "LIVE2",
+          "description": "The customer's data science agreeing the suppression windows and the action list (the purchase rule's 30 days proposed), published as the tenant's settings before the rule is enabled.",
+          "owner": "the customer's data-science lead with the delivery owner",
+          "proof": "A recorded agreement naming the windows, the action list and the settings revision."
+        }
+      ],
+      "allowedPaths": [
+        "src/reflex/core.ts",
+        "src/reflex/configStore.ts",
+        "src/reflex/identityMerge.ts",
+        "src/reflex/contentCompose.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "src/content/service.ts",
+        "src/content/decide.ts",
+        "src/content/types.ts",
+        "src/content/kinds.ts",
+        "src/learn/receipts.ts",
+        "src/learn/replay.ts",
+        "public/meridian/engine.bundle.js",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P39 --minWorkers=1 --maxWorkers=1",
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": [],
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "e06c860c079aa3078ad568f66b2d3ea8c9978513 on rem/spec-parity-e (batch S5 fix round 1; P39 reviewed PASS at this revision after the S5 review at da5aaea4; the per-ticket branch is cut from the batch head after S5 fix round 2 so the shared harness src/units/_parity5.ts is final; the NP2 signal-count legs and the NP5 P10 clause are measured at build)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/probe-merge-drops-member.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/p10-P39-count-control.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/ctl-lapse.log"
+        ]
+      }
+    }
+  ]
+}

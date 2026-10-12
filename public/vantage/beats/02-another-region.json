@@ -1,0 +1,29 @@
+{
+ "name": "02-another-region",
+ "beat": 2,
+ "act": 1,
+ "actName": "The arrival",
+ "press": "Same visitor, another region",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "snapshot": {
+  "page": "home",
+  "slots": [
+   "hero",
+   "deals"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-TX"
+  },
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  }
+ },
+ "engine": "Only the asserted region changes: Texas, or New York when her own region is Texas. On the demo profile ctx.region also selects the regional prior (lane L4’s override), labelled asserted, not observed; eligibility reads it everywhere.",
+ "sees": "The same four in a different order (measured: Texas puts the Galaxy S26 offer second); the grain and the census figure shown for the asserted region, labelled asserted, not observed."
+}
