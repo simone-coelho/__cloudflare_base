@@ -287,6 +287,24 @@ export function learningInputOf(action: RewardActionLike): LearningInput {
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() && Number.isFinite(Number(v)) ? Number(v) : null);
 
+/**
+ * P40 (R-P48): the key a purchase's order is remembered by on the shopper's own
+ * state, or null. A purchase — any event whose reward is a purchase, by the rule
+ * `outcomeFromAction` itself consults — names its order in `data.orderId`, a
+ * non-empty string once trimmed or a finite number; the key is the SHA-256 hex
+ * digest of that order id, so what a shopper's state keeps is bounded and is not
+ * the order id. Any other event, and a purchase that names no order, has none: a
+ * purchase without an order id is never deduplicated.
+ */
+export async function orderKeyOf(action: Pick<ActionLike, 'type' | 'data'>): Promise<string | null> {
+  if (rewardOf(action)?.type !== 'purchase') return null;
+  const raw = action.data?.orderId;
+  const order = typeof raw === 'number' && Number.isFinite(raw) ? String(raw) : str(raw);
+  if (order === null) return null;
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(order)));
+  return [...digest].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 /** The margin the feed gave, if any: `data.margin`, else the items' margins (× quantity) summed. */
 function marginOf(d: Record<string, unknown>): number | null {
   const direct = num(d.margin);
