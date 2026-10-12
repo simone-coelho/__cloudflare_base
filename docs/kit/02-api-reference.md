@@ -405,7 +405,8 @@ every receipt of the slot (`layoutReason`), whose last sentence says it in words
 the first of these causes that holds, in this order: `pinned` (pins, with any off-limits modules, hold
 every position of the take), `off_limits` (the slot is off-limits, or off-limits modules hold every
 position), `holdout_or_consent` (the holdout's `default` arm, which is also the arm of a shopper without
-personalization consent), `below_signal_floor` (the slot was decided on context alone), `blend_or_trust_zero`
+personalization consent and of a shopper whose stored record is unreadable), `below_signal_floor`
+(the slot was decided on context alone), `blend_or_trust_zero`
 (the learned term is held at zero: the layout blend's `p` at 0 on a slot that opts in, a configured order
 served exactly on a slot that does not, or the trust dial γ at 0), `no_level_reached_nmin` (no level of
 the learned ladder reached nMin for any module the slot ranked; the reason then carries `n`, the most
@@ -419,8 +420,18 @@ as `{ from, module, term, to }` (keys sorted, positions counted from 1 within th
 module the baseline does not hold), and its `term` names what moved it: `affinity` (the shopper's own
 interests), `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`, `freshness`,
 `fatigue`, `merchandising`, `lift`, `blend` (the layout blend's learned term `p × Q`), `exploration` or
-`diversity`. A module moved up names the term that contributed most to its score; a module moved down
-names its own largest negative term, else the term of the first module that passed it. On a declared
+`diversity`. A module that exploration placed names `exploration`, and one the diversity rule made yield,
+or placed by relaxing it, names `diversity`. Any other moved module names the term that changed its place:
+the term by which it differs most from the modules it passed, if it moved up, or from the modules that
+passed it, if it moved down, those modules taken together, so each term's difference is averaged over all
+of them and the term with the largest difference in the direction the module moved is named, an exact tie
+going to the earlier term in the engine's fixed order (`affinity`, `regional_prior`, `context_prior`,
+`completes`, `seed`, `external`, `stage`, `freshness`, `fatigue`, `merchandising`, `lift`, `blend`). The
+modules compared are the slot's ranked modules, never a fixed position nor a module exploration or the
+diversity rule placed, and for a module moved up they include every module the baseline placed ahead of
+it that is not served; where no term separates it from them by more than 0.0005, or there is none to
+compare, it names the term that contributed most to its own score in the direction it moved, else the term
+of the first module that passed it or that it passed. On a declared
 layout slot a receipt says "No interest signal yet for this shopper" only when the interest vector the page
 was scored on holds no interest at all; a shopper whose interests reached none of a module's weighted tags
 reads "No interest on the dimensions this layout weights matched this module" instead, and a receipt of

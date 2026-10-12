@@ -658,9 +658,17 @@ the baseline does); a later release may add causes. Each of the moves of a chang
 `{ from, module, term, to }`, positions counted from 1 within the slot (`from` null for a module the
 baseline does not hold), for every module served away from its baseline position, and its `term` is the
 term that moved it: `affinity`, `seed`, `regional_prior`, `context_prior`, `completes`, `external`, `stage`,
-`freshness`, `fatigue`, `merchandising`, `lift`, `blend`, `exploration` or `diversity` — for a module
-moved up the term that contributed most to its score, for one moved down its own largest negative term,
-else the term of the first module that passed it.
+`freshness`, `fatigue`, `merchandising`, `lift`, `blend`, `exploration` or `diversity`: `exploration` for a
+module exploration placed, `diversity` for one the diversity rule made yield or placed by relaxing it, and
+for any other the term that changed its place, the term by which it differs most from the modules it passed
+(moved up) or that passed it (moved down) taken together, each term's difference averaged over those
+modules and the largest in the direction it moved named, an exact tie going to the earlier term in the
+engine's order `affinity`, `regional_prior`, `context_prior`, `completes`, `seed`, `external`, `stage`,
+`freshness`, `fatigue`, `merchandising`, `lift`, `blend`. The modules compared are the slot's ranked
+modules, never a fixed position nor a module exploration or the diversity rule placed, including for a
+module moved up every module the baseline placed ahead of it that is not served; where no term separates
+it from them by more than 0.0005, or there is none to compare, it names its own largest term in the
+direction it moved, else the term of the first module that passed it or that it passed.
 
 An off-limits declared layout slot writes one record, never into the shopper's decision ring, so it
 carries no exposure, no receipt reads it and no outcome is credited to it: position 0, `item_id`

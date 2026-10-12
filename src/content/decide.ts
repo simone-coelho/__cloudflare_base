@@ -1174,12 +1174,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // with the modules it passed (moved up) or that passed it (moved down): the
     // slot's ranked modules — never a fixed position, nor a module exploration or
     // the diversity rule placed, whose place no score term set — served, or, for a
-    // module moved up, pushed out of the take by it. Each score is itemised term
-    // by term (`scoreTerms`), each term's difference is taken together over those
-    // modules (averaged), and the term by which the module differs most in the
-    // direction it moved is named, an exact tie going to the earlier term of the
-    // fixed order (`differingTerm`). Where no term separates it from them by the
-    // grain, or there are none, it names its own largest term in that direction.
+    // module moved up, placed ahead of it by the baseline and not served. Each
+    // score is itemised term by term (`scoreTerms`), each term's difference is
+    // taken together over those modules (averaged), and the term by which the
+    // module differs most in the direction it moved is named, an exact tie going
+    // to the earlier term of the fixed order (`differingTerm`). Where no term
+    // separates it from them by the grain, or there are none, it names its own
+    // largest term in that direction.
     const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
       (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
     const servedIds = new Set(served.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
