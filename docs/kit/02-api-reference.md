@@ -368,8 +368,16 @@ document turns it on with its own `kBlend` (its K) and `minEvents`, in the regio
 into population shares per tenant, entry channel and visit bucket (`1`, `2-3`, `4+`) through the same
 population-trend objects the regional prior uses, which hold no visitor or session identifier; an event whose
 entry channel is unknown, or from a shopper who refused tracking, counts nothing there, and the hourly roll-up
-(on demand, `POST /v1/{tenant}/trend/rollup`) sums each channel's visit buckets into the channel alone. A
-decision reads the shares of the shopper's entry channel and visit bucket when that pair has at least
+(on demand, `POST /v1/{tenant}/trend/rollup`) sums each channel's visit buckets into the channel alone. Only
+the six channel words (`direct`, `paid_social`, `paid_search`, `email`, `organic`, `referral`) and today's
+three visit buckets (`1`, `2-3`, `4+`) have a context population. On a tenant that publishes a context
+vocabulary, an event counts under the channel its visit records, read by that vocabulary's rules, so an
+arrival the vocabulary leaves unknown counts nowhere, the `direct` population holds direct arrivals alone,
+and a channel of the vocabulary outside the six words (such as `sms`, `affiliate`, `paid_search_brand` or
+`paid_search_nonbrand`) has no population and gets no context prior. A bucket of a published cut
+(`visitBuckets`) outside the three, such as `3-5`, has no population of its own: the visit's events count in
+today's bucket for its visit number, and a decision in that bucket reads the shares of the channel alone.
+A decision reads the shares of the shopper's entry channel and visit bucket when that pair has at least
 `minEvents` events, else the shares of the channel alone over every visit bucket, never everyone's, so the
 regional prior's population is not counted twice. Its weight is λ = kBlend / (kBlend + Σ personal affinity),
 so a first-time visitor's λ is 1 and it fades as the shopper's own interests grow; with the regional prior also
