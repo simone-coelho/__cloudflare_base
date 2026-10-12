@@ -855,7 +855,8 @@ Published local audience rules can target `external.crm.tier`; precomputed membe
 ## 4. Content and configuration documents
 
 Four documents per brand, each with the same seven routes. `kind` is `catalog`, `slots`, `learn` or
-`priors`; `scope` is the brand.
+`priors`; `scope` is the brand. A fifth, optional document, the attribute vocabulary (`kind` `vocabulary`),
+has the same routes and an approval of its own ([below](#the-attribute-vocabulary-contentvocabulary)).
 
 | Route | Auth | Does |
 |---|---|---|
@@ -1144,6 +1145,26 @@ to publish and nothing to deploy:
   storage key of their own, and a visit with neither stores exactly what it stored before. A replay
   passes no device and no recency to the decision, so a decision that a device or recency rule, or a device
   context, moved does not replay equal: the replay gap request-context seeds already have.
+
+### The attribute vocabulary (`/content/vocabulary`)
+
+A tenant's product and content attribute values (category, product type with its parent category, colour,
+occasion, and any other attribute its registry scores or its catalogue tags) can be governed by one published,
+versioned vocabulary: the document `vocabulary`, written with `PUT /content/vocabulary` and read with the routes
+every content document has (history, revisions, validate, rollback), with no deployment
+([schema](./03-payload-schemas.md#the-attribute-vocabulary)). A tenant that publishes none, or approves none,
+keeps today's free text exactly: the catalogue validator, the import and the ingest on both shopper hosts decide
+as before, term for term.
+
+- The document: `{ version?, attributes: { <attribute>: { values: [{ id, name, synonyms?, parent? }] } } }`, each attribute keyed by the registry dimension and catalogue tag key it governs; every `productType` value names exactly one `parent` (one of the `category` ids when the document lists `category`), and `synonyms` are the words the source systems send for the value.
+- Refusals: `PUT /content/vocabulary` and `POST /content/vocabulary/validate` refuse with 422, writing no revision, each error naming the attribute, the value and the offending id or word: an id outside the grammar (lower-case letters and digits, words joined by single underscores, at most 64 characters, so none of `:`, `;`, `|`), a duplicate id, a `productType` value naming no parent or more than one, a synonym that maps to two values (a synonym of two values, or a synonym that is another value's id), and a member outside the schema. A revision is stored as authored: the display names keep the tenant's wording.
+- The mapping table: an attribute's ids and synonyms are its one mapping table, an id mapping to itself and a synonym to its value's id. Matching is exact, letter case included, so every spelling a source sends is listed as a synonym; a display name is not a source word.
+- The approval: a stored revision governs nothing until the tenant's operator approves it. `POST /content/vocabulary/approve/{n}?scope=` (operator; `If-Match` naming the vocabulary revision and the set read, and an `Idempotency-Key`, as every authored write) puts revision `n` in effect; an unknown revision answers 404 and a stale `If-Match` 409. Any stored revision may be approved, an earlier one included; a later revision blocks nothing and changes nothing until it is approved in turn. The console's Vocabulary screen approves the latest stored revision and says which revision is in effect.
+- The read: `GET /content/vocabulary?scope=` answers `revision` (the latest stored, 0 when none is), `effectiveRevision` (the approved revision in effect, 0 when none is), `approval: { revision, actor, note, at }` or null, `source` (`stored` or `absent`), `publication`, and `document` (the latest stored, or null). The first `PUT` names `If-Match: "0/{set revision}/{set digest}"`: no revision is stored yet.
+- The catalogue, in effect: `PUT /content/catalog`, `POST /content/catalog/import`, `POST /content/catalog/pull`, `POST /content/catalog/validate`, a catalogue rollback and a catalogue member of `publicationChanges` store a governed tag's values as their ids, each once, mapped through the table; a piece already carrying ids is stored unchanged. A value that maps to nothing refuses the whole publication with 422, each error naming the piece's id, the field `tags.<attribute>` and the value, and nothing is written. A tag on an attribute the vocabulary does not list stays free text. An approval rewrites and refuses nothing already stored: the catalogue's next publication is held to it.
+- The ingest, in effect: on both shopper hosts an event's values on a governed attribute are mapped through the same table before the live and the buffered doors place them, so a synonym builds interest under its value's id and an id under itself. A value that maps to nothing builds no interest and is counted in the tenant's rejection report; the action is still recorded and answered as before, and an event naming a product the tenant does not hold, whose every value maps to nothing, is still dropped as `unknown_product`. On a governed attribute the vocabulary's ids, not the catalogue's own tags, are what an event value may build, so a value no published piece carries yet builds when the vocabulary lists it. A held product's attributes and a content piece's own tags on a governed attribute are mapped the same way; a band label the registry derives must itself be one of the ids.
+- The rejection report: `GET /content/vocabulary/rejections?scope=` (operator) answers `{ effectiveRevision, since, rejections: { <attribute>: { <value>: count } }, omitted }`, per governed attribute each value the ingest refused under the revision in effect and how many events carried it, counted from the first refusal under that revision for at most 30 days (a new approval starts a new report; `omitted` counts refusals past 64 attributes or 256 values of one attribute). It names no shopper, session or event; it is a per-tenant diagnostic count kept in the operator cache, best effort under concurrent writes, written beside the event's other work so it can never fail an event. A report that cannot be read answers 503, never an empty report.
+- What does not change: nothing is written into a shopper's own record; decisions, their records, receipts and replays read interest and catalogue tags exactly as before, which under a vocabulary in effect carry the ids.
 
 ## 5. Learning and transparency
 

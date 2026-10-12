@@ -189,6 +189,10 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `complements` | no | The products the piece completes, in your product ids, validated as `featuredProductIds` is (trimmed, de-duplicated, empty entries dropped; an empty list is none). A slot whose `complements: { weight }` rule (0 to 1) is in force adds that weight to the base score of a piece that completes the anchor product the request names as `ctx.anchor=<product id>` on the snapshot's query string, and the receipt names it as a `completes` driver. A request that names no anchor prefers nothing, and the holdout's default arm never does. In CSV: a `|` list, as `featuredProductIds` |
 | `inStock` | no | Your catalog's stock flag. `false` removes the piece from every decision; absent means in stock. In a feed, `in_stock` or `ats` (Y/N, 0/1, true/false) is read the same way |
 
+With an approved [attribute vocabulary](#the-attribute-vocabulary) in effect, a tag on an attribute it governs is
+stored as the vocabulary's ids, mapped from the words the feed sends; a value it does not list refuses the
+publication, naming the item's `id` and the field `tags.<attribute>`.
+
 Import/pull `merge` is a partial upsert by `id`: omitted supported fields preserve the existing item,
 including its customer ID, tags, lifecycle, stock and merchandising. Existing order is retained; new
 IDs append. New items and `replace` imports require valid complete items; only there do omitted
@@ -800,6 +804,54 @@ elsewhere in the selected objective unit, and because it is a probability it is 
 objective is `revenue` or `margin`, naming the slot, its objective and the unit; `n_equiv` is how many exposures it should be worth. The imported value supplies the smoothing target and strength, not a replacement for the slot's own `p0` lift denominator. Every receipt names the prior document's
 revision. A slot whose only evidence is an imported prior publishes a snapshot with `events: 0` and its
 prior-derived rows; a slot with neither events nor priors publishes nothing.
+
+## The attribute vocabulary
+
+```json
+{
+  "version": "attributes-spring",
+  "attributes": {
+    "category": { "values": [
+      { "id": "bags", "name": "Bags", "synonyms": ["handbags"] },
+      { "id": "small_leather_goods", "name": "Small leather goods", "synonyms": ["slg"] }
+    ] },
+    "productType": { "values": [
+      { "id": "crossbody", "name": "Crossbody", "synonyms": ["cross-body"], "parent": "bags" },
+      { "id": "wallet", "name": "Wallet", "parent": "small_leather_goods" }
+    ] },
+    "color": { "values": [{ "id": "brown_tan", "name": "Brown / tan", "synonyms": ["cognac", "tan", "brown"] }] },
+    "occasion": { "values": [{ "id": "evening", "name": "Evening", "synonyms": ["night out"] }] }
+  }
+}
+```
+
+The document of kind `vocabulary`, published with `PUT /content/vocabulary` as a versioned revision and stored
+exactly as written (its `version` is not stamped). Each value is `{ id, name, synonyms?, parent? }`: synonyms are optional on any value, and a parent is required on every `productType` value.
+
+| Member | Meaning |
+|---|---|
+| `version` | Optional label, 1 to 256 characters |
+| `attributes` | 1 to 64 attributes, each keyed by the registry dimension and catalogue tag key it governs (1 to 64 characters, trimmed, none of `:`, `;`, `|`) |
+| `attributes.<attribute>.values` | 1 to 1000 values |
+| `id` | Lower-case letters and digits, words joined by single underscores, at most 64 characters, listed once per attribute: what the catalogue stores and what interest is built under |
+| `name` | The display name, 1 to 256 characters, kept exactly as written |
+| `synonyms` | Optional. Up to 50 words the source systems send for the value, each 1 to 64 characters with no leading or trailing space; each belongs to one value of its attribute and is never another value's id |
+| `parent` | The parent category of a `productType` value: exactly one id, one of the `category` ids when the document lists `category`. Optional on any other attribute, an id when present |
+
+**The mapping table.** An attribute's ids and synonyms are its one mapping table: an id maps to itself and a synonym to its value's id, matched exactly (letter case included); nothing else maps, a display name included. The catalogue publications and the event ingest on both hosts read the same table, so data arriving already mapped passes unchanged.
+
+**The approval.** A stored revision governs nothing until the tenant's operator approves it: `POST /content/vocabulary/approve/{n}` (authored like every write) puts revision `n` in effect, and `GET /content/vocabulary` then answers `revision` (the latest stored) and `effectiveRevision` (the revision in effect; 0 while none is). The approval is published as its own member of the configuration set, `{ revision, document }`, carrying the approved revision whole, so a later revision blocks nothing until it is approved in turn.
+
+**In effect.** An attribute the vocabulary lists is governed: a catalogue tag on it is stored as ids or refused naming the piece's `id` and `tags.<attribute>`, and an event value on it builds interest under its id, or none when it maps to nothing. A tenant with no approval in effect is governed by nothing here.
+
+**The rejection report.** `GET /content/vocabulary/rejections` answers the values the ingest refused under the revision in effect:
+
+```json
+{ "scope": "<tenant>", "kind": "vocabulary", "effectiveRevision": 1, "since": 1760280000000,
+  "rejections": { "color": { "chartreuse": 3 } }, "omitted": 0 }
+```
+
+`rejections` holds, per governed attribute, each refused value and the number of events that carried it, counted from `since`, the first refusal under that revision, over at most 30 days; `since` is null and `rejections` empty when nothing was refused or no revision is in effect. `omitted` counts refusals past 64 attributes or 256 values of one attribute. It is a per-tenant count, with no shopper, session or event identifier.
 
 ## The lift snapshot
 

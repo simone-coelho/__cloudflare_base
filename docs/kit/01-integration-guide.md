@@ -296,6 +296,16 @@ and season, promotion and margin signals. Your merchandiser's slot document name
 and the weight of each dimension in each slot, and can pin an item to a slot. Both documents are
 versioned: every change has an author and a note, and a rollback is a new revision.
 
+Tag values are free text until your brand approves an attribute vocabulary: a versioned list of the values
+each attribute may take, each an id with your display name and the words your source systems send for it
+(`PUT /content/vocabulary`, then approved on the console's Vocabulary screen or with
+`POST /content/vocabulary/approve/{n}`; [API reference](./02-api-reference.md#the-attribute-vocabulary-contentvocabulary),
+[schema](./03-payload-schemas.md#the-attribute-vocabulary)). From the approval on, a feed or an event may keep
+sending its own words: each is mapped through the vocabulary's mapping table to the value's id, an id passes
+unchanged, and a value the vocabulary does not list refuses the catalogue publication (naming the item and the
+tag) or, on an event, builds no interest and is counted in your rejection report
+(`GET /content/vocabulary/rejections`). Send ids where you can; list every other spelling as a synonym.
+
 ### A page's layout: modules in one declared slot
 
 A page's modules (a category grid, recommendations, a styling story, reviews and the like) are content
