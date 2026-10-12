@@ -241,14 +241,17 @@ each event travels exactly as written here.
   interruption sends one `content_viewable` per piece per page instance, carrying `contentId`, `slot`,
   `slotPosition`, `decisionId`, `page`, `pageInstance` and `position` (the page-wide order). The second is
   continuous: leaving view, a detach, `destroy()`, a consent refusal or a new identity generation cancels it, and
-  the next time in view starts a new second; a container in view for less than a second at a time, or never half
-  in view, sends none. It weighs 0 whatever your registry says, builds no interest and counts no exposure, so
+  with the declarative capture the next time in view starts a new second; a container in view for less than a second
+  at a time, or never half in view, sends none. A piece acknowledged through `rendered(slot, contentId, element)` is
+  measured only while the SDK observes that element, until it first leaves view: a second time in view sends none
+  there, so mark module containers for the declarative capture. It weighs 0 whatever your registry says, builds no interest and counts no exposure, so
   what a slot learns from is unchanged. A renderer that measures visibility itself reports it with
   `client.listen.visible(slot, contentId, inView, decisionId)`; `client.emit.track('content_viewable')` sends nothing.
 - **The video view, `video_view`.** Call `client.emit.videoView(contentId, slot)` when your player has played
   three seconds of the painted piece, beside `client.emit.videoComplete(contentId, slot)` at its end. It waits for
   the piece's render acknowledgement, as a click does, and builds interest in the piece's format as your catalogue
-  names it (`tags.contentType`), at weight 1 unless your registry publishes another (`weights.video_view`).
+  names it (`tags.contentType`), at the weight your registry publishes for it (`weights.video_view`, 1 in the shipped
+  registry); a registry that names no `video_view` weight weighs it 0, as it weighs every action it does not name.
 - **A dwell minimum per slot, `dwellMinMsBySlot`.** A dwell is sent when a piece leaves view after its minimum on
   screen, one second by default (`dwellMinMs`). `client.emit.declarative({ dwellMinMsBySlot: { 'pdp-editorial': 30000 } })`
   holds a named slot to its own minimum (here 30 seconds on editorial) while every other slot keeps one second;

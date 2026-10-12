@@ -167,15 +167,19 @@ limit, so a refused `429` is still a `429`, inside the shopper's own owner. The 
 The order is `data.orderId`, a non-empty string once trimmed or a number; a purchase without an `orderId` is never
 deduplicated. The shopper's state remembers the last 64 orders as SHA-256 digests, never the order ids themselves,
 for as long as the shopper's profile is kept; an order is remembered when its purchase is recorded on the live door,
-and on the buffered door when the delivery applies interest. A sign-in that merges two profiles merges their
-interest, not their remembered orders.
+and on the buffered door whenever the delivery writes the shopper's state, whether or not it applies interest (the
+kit's own purchase payload places no value and still uses its order). Two stated limits: a buffered purchase from a
+shopper who refused personalization writes no state, so its order is not remembered and the same order delivered
+again is recorded again; and a sign-in that merges two profiles merges their interest, not their remembered orders.
 
 ### Content and product events: the viewable impression, the video view, the dwell
 
 - **`content_viewable`, the viewable impression.** The SDK sends it, never your page: one per piece per page
   instance, once the piece's render acknowledgement is held and the container has been reported at least half in
   view for one second without interruption (a one-second timer, cancelled when the piece leaves view, on a detach,
-  `destroy()`, a consent refusal or a new identity generation). `data` carries `contentId`, `slot`,
+  `destroy()`, a consent refusal or a new identity generation). The declarative capture measures every time in view;
+  a piece acknowledged through `rendered(slot, contentId, element)` is measured only while the SDK observes that
+  element, until it first leaves view, so a second time in view sends none there. `data` carries `contentId`, `slot`,
   `slotPosition`, `decisionId`, `page`, `pageInstance` and `position`, with `customerContentId` and `contentType`.
   Both hosts accept it and weigh it 0 whatever the registry says: it builds no interest, counts as no signal,
   reaches no regional or context population, is not an interaction of the visit, writes no outcome record and is
@@ -184,7 +188,8 @@ interest, not their remembered orders.
 - **`video_view`, the video view.** A content action: `client.emit.videoView(contentId, slot, attrs?)`, sent when
   the player has played three seconds, beside `videoComplete`. It waits for the piece's render acknowledgement and
   builds interest in the piece's format as the catalogue names it (`tags.contentType`), exactly as `video_complete`
-  does, at weight 1 unless the tenant's registry publishes `weights.video_view`. It is not a learning reward: it
+  does, at the weight the tenant's registry publishes for it (`weights.video_view`, 1 in the shipped registry); a
+  registry that names no `video_view` weight weighs it 0, as it weighs every action it does not name. It is not a learning reward: it
   writes no outcome record.
 - **`dwellMinMsBySlot`, the dwell minimum per slot.** `client.emit.declarative({ dwellMinMs, dwellMinMsBySlot })`
   and `createClient(config, host, { dwellMinMs, dwellMinMsBySlot })`: a slot named in `dwellMinMsBySlot` sends a
