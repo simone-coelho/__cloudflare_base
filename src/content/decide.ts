@@ -297,6 +297,38 @@ const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; retur
 /** P29: half that grain — a score term smaller than this moved nothing a receipt could show. */
 const LAYOUT_TERM_GRAIN = 0.0005;
 
+/** P29: a ranked module's score itemised term by term, in the engine's fixed order (`scoreTerms` in `decideContent`). */
+type ScoreTerms = ReadonlyArray<readonly [LayoutMoveTerm, number]>;
+
+/** P29: the term that contributed most to a score — its largest positive term (`sign` 1) or its largest negative one (−1) — or null when no term reaches the grain. */
+function largestTerm(terms: ScoreTerms, sign: 1 | -1): LayoutMoveTerm | null {
+  let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
+  for (const [term, value] of terms) if (sign * value > size) { best = term; size = sign * value; }
+  return best;
+}
+
+/**
+ * R-P56: the term by which a moved module differs most from the modules it passed
+ * (`sign` 1) or that passed it (`sign` −1), those modules taken together: each
+ * term's difference averaged over them, read at a billionth so that the same
+ * value reached along two floating-point paths is one value, the largest in the
+ * direction it moved named, an exact tie going to the earlier term of the fixed
+ * order. Null when there is no module to compare or no term separates it from
+ * them by more than the grain.
+ */
+function differingTerm(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): LayoutMoveTerm | null {
+  if (!others.length) return null;
+  let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
+  for (let j = 0; j < own.length; j++) {
+    const [term, value] = own[j]!;
+    let total = 0;
+    for (const other of others) total += sign * (value - (other[j]?.[1] ?? 0));
+    const mean = Math.round((total / others.length) * 1e9) / 1e9;
+    if (mean > size) { best = term; size = mean; }
+  }
+  return best;
+}
+
 const authorityOf = (strategy: string): Authority =>
   strategy === 'tenant-pinned' ? 'pin' : strategy === 'default' ? 'default' : 'engine';
 
@@ -1136,18 +1168,56 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const from = fromOf.get(d.contentId) ?? null;
       return from === k + 1 ? [] : [{ module: d.contentId, from, to: k + 1 }];
     });
+    // R-P56: a moved module names the term that changed its place. A module that
+    // exploration placed names `exploration`, one the diversity rule made yield
+    // or placed by relaxing it `diversity`. Any other moved module is compared
+    // with the modules it passed (moved up) or that passed it (moved down): the
+    // slot's ranked modules — never a fixed position, nor a module exploration or
+    // the diversity rule placed, whose place no score term set — served, or, for a
+    // module moved up, pushed out of the take by it. Each score is itemised term
+    // by term (`scoreTerms`), each term's difference is taken together over those
+    // modules (averaged), and the term by which the module differs most in the
+    // direction it moved is named, an exact tie going to the earlier term of the
+    // fixed order (`differingTerm`). Where no term separates it from them by the
+    // grain, or there are none, it names its own largest term in that direction.
+    const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
+      (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
+    const servedIds = new Set(served.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
+    const placedByRule = (id: string) => exploredIds.has(id) || yielded.has(id);
+    const termsMemo = new Map<string, ScoreTerms | null>();
+    const termsFor = (id: string, score: number | undefined): ScoreTerms | null => {
+      if (!termsMemo.has(id)) termsMemo.set(id, scoreTerms(id, s.slot, score));
+      return termsMemo.get(id) ?? null;
+    };
     const termOf = new Map<string, LayoutMoveTerm>();
     for (const move of moves) {
       const d = served[move.to - 1]!;
       const up = move.from === null || move.to < move.from;
-      const term = exploredIds.has(d.contentId) ? 'exploration' : yielded.has(d.contentId) ? 'diversity' : dominantTerm(d, s.slot, up ? 1 : -1);
+      let term: LayoutMoveTerm | null = exploredIds.has(d.contentId) ? 'exploration' : yielded.has(d.contentId) ? 'diversity' : null;
+      if (!term) {
+        const others: ScoreTerms[] = [];
+        served.forEach((o, k) => {
+          if (o === d || fixed(o) || placedByRule(o.contentId)) return;
+          const at = { from: fromOf.get(o.contentId) ?? null, to: k + 1 };
+          if (!(up ? passed(move, at) : passed(at, move))) return;
+          const terms = termsFor(o.contentId, o.score);
+          if (terms) others.push(terms);
+        });
+        // A module moved up also passed every module the baseline placed ahead of it that is no longer served.
+        if (up) for (const id of sequence) {
+          if (servedIds.has(id) || placedByRule(id) || !((fromOf.get(id) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
+          if (scoredHere ? !scoredHere.has(id) : !support.has(id)) continue;
+          const terms = termsFor(id, support.get(id));
+          if (terms) others.push(terms);
+        }
+        const own = termsFor(d.contentId, d.score), sign = up ? 1 : -1;
+        term = own ? differingTerm(own, others, sign) ?? largestTerm(own, sign) : null;
+      }
       if (term) termOf.set(d.contentId, term);
     }
     // A module with no term of its own moved because another did: a module moved
     // down names the term of the first module that passed it, one moved up the
     // term of the first module it passed.
-    const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
-      (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
     const fallback = moves.map((m) => termOf.get(m.module)).find((t) => t !== undefined) ?? 'affinity';
     return { moves: moves.map((m): LayoutMove => {
       const own = termOf.get(m.module), up = m.from === null || m.to < m.from;
@@ -1156,16 +1226,17 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     }), slot: s.slot, status: 'changed' };
   }
   /**
-   * P29: the term that contributed most to a ranked module's score — its largest
-   * positive contribution (`sign` 1) or its largest negative one (`sign` −1) —
-   * among the itemised terms: the shopper's own interests, each population
-   * prior, the anchor bonus, the seed rules, their model, the stage, freshness,
-   * fatigue, merchandising, and the learned lift (or, under the layout blend,
-   * the behaviour terms at 1 − p and the blend's learned term p × Q). Null when
-   * no term moved its score.
+   * P29: a ranked module's score itemised term by term, in the engine's fixed
+   * order (R-P56 resolves an exact tie to the earlier term): the shopper's own
+   * interests, each population prior, the anchor bonus, the seed rules, their
+   * model, the stage, freshness, fatigue, merchandising, and the learned lift
+   * (or, under the layout blend, the behaviour terms at 1 − p and the blend's
+   * learned term p × Q). Null when the module's score is unknown.
    */
-  function dominantTerm(d: (typeof decisions)[number], slot: string, sign: 1 | -1): LayoutMoveTerm | null {
-    const key = `${slot}:${d.contentId}`, piece = byId.get(d.contentId), spec = specOf.get(slot);
+  function scoreTerms(id: string, slot: string, score: number | undefined): ScoreTerms | null {
+    const key = `${slot}:${id}`, piece = byId.get(id), spec = specOf.get(slot);
+    const tag = tagOf.get(key) ?? score;
+    if (tag === undefined) return null;
     const blendOf = blendTerms.get(key), scale = blendOf ? 1 - blendOf.p : 1;
     const full = below.has(slot);
     const share = (prior: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } | null, own: Readonly<Record<string, Readonly<Record<string, number>>>> | null) => {
@@ -1182,18 +1253,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const regional = share(regionalPrior, full ? i.contextPrior ?? i.regional?.share ?? null : null);
     const context = share(contextPriorTerm, full ? i.contextBlendShare ?? i.contextBlend?.share ?? null : null);
     const completes = complementsOf.has(slot) && piece && completesAnchor(piece) ? complementsOf.get(slot)! : 0;
-    const tag = tagOf.get(key) ?? d.score;
     const base = baseOf.get(key), merch = merchOf.get(key);
-    const terms: Array<[LayoutMoveTerm, number]> = [
+    return [
       ['affinity', scale * (tag - completes - regional - context)], ['regional_prior', scale * regional], ['context_prior', scale * context],
       ['completes', scale * completes], ['seed', scale * (seedOf.get(key)?.applied ?? 0)], ['external', scale * (extOf.get(key)?.contribution ?? 0)],
       ['stage', scale * (stageOf.get(key)?.applied ?? 0)], ['freshness', scale * (freshOf.get(key)?.applied ?? 0)], ['fatigue', scale * (fatigueOf.get(key)?.applied ?? 0)],
       ['merchandising', scale * (merch && base !== undefined ? merch.scoreFinal - base : 0)],
       ['lift', blendOf ? 0 : liftOf.get(key)?.applied ?? 0], ['blend', blendOf ? blendOf.p * blendOf.Q : 0],
     ];
-    let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
-    for (const [term, value] of terms) if (sign * value > size) { best = term; size = sign * value; }
-    return best;
   }
 
   const positionIn = new Map<string, number>();
