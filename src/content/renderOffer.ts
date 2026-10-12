@@ -69,6 +69,16 @@ export async function createRenderOffer(env: Env, principal: SessionCapability, 
   lifetime(env, value, Date.now());
   return `ro1.${encode(iv)}.${encode(new Uint8Array(sealed))}`;
 }
+/**
+ * P03 decision D3: the record's `position` is the module's position within its
+ * slot. An acknowledgement that names it as `slotPosition` is held to it, and its
+ * `position` is then the page-wide `order` the page drew it at, accepted beside
+ * it (a page whose slot is not its first numbers the two differently). An
+ * acknowledgement without `slotPosition` — an earlier client, the platform's own
+ * synthetic monitor — is held to its `position`, exactly as before.
+ */
+const placedAt = (position: number, data: Record<string, unknown>): boolean =>
+  Object.hasOwn(data, 'slotPosition') ? data.slotPosition === position : data.position === position;
 /** Fresh owner admission plus the original sealed grant/config/lifetime. Retries never recapture a birth. */
 export async function redeemRenderOffer(env: Env, principal: SessionCapability, consent: Consent,
   event: { eventId?: string; timestamp?: number; data: Record<string, unknown> }): Promise<RenderAcknowledgment> {
@@ -87,7 +97,7 @@ export async function redeemRenderOffer(env: Env, principal: SessionCapability, 
   if (recoveryJSON(value.principal) !== recoveryJSON(principal) || value.pageInstance !== event.data.pageInstance
     || value.record.decision_id !== event.data.decisionId || value.record.item_id !== event.data.contentId
     || value.record.slot !== event.data.slot || value.record.page !== event.data.page
-    || value.record.position !== event.data.position || event.timestamp! < value.record.ts || event.timestamp! > Date.now()) throw new SessionAccessError();
+    || !placedAt(value.record.position, event.data) || event.timestamp! < value.record.ts || event.timestamp! > Date.now()) throw new SessionAccessError();
   const pin = await pinPublication(env, principal.tenant);
   const current = await currentOwnerConsent();
   if (pin.digest !== value.publication || !current?.tracking || !consent.tracking || current.instruction?.revision !== value.consentRevision

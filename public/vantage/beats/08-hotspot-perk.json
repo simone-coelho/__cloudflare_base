@@ -1,0 +1,80 @@
+{
+ "name": "08-hotspot-perk",
+ "beat": 8,
+ "act": 3,
+ "actName": "The phone page follows intent",
+ "press": "Open the hotspot perk",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "events": [
+  {
+   "type": "page_view",
+   "data": {
+    "page": "perk",
+    "category": "plans",
+    "perk": "hotspot-travel"
+   },
+   "note": "perk details: hotspot & travel"
+  }
+ ],
+ "snapshot": {
+  "page": "phone",
+  "phone": "galaxy-s26",
+  "slots": [
+   "pdp-modules",
+   "plan-pairing"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  }
+ },
+ "compareVisitor": {
+  "id": "streaming-shopper",
+  "fresh": true,
+  "consent": {
+   "tracking": true,
+   "personalization": true
+  },
+  "events": [
+   {
+    "type": "product_view",
+    "data": {
+     "productId": "iphone-18-pro-max",
+     "category": "phones",
+     "brand": "apple",
+     "os": "ios",
+     "ecosystem": "ios",
+     "price_usd": 1299.99,
+     "view": "page"
+    },
+    "note": "a premium phone page"
+   },
+   {
+    "type": "page_view",
+    "data": {
+     "page": "perk",
+     "category": "plans",
+     "perk": "streaming"
+    },
+    "note": "perk details: the streaming bundle"
+   }
+  ],
+  "snapshot": {
+   "page": "phone",
+   "phone": "iphone-18-pro-max",
+   "slots": [
+    "pdp-modules",
+    "plan-pairing"
+   ],
+   "ctx": {
+    "intent": "new",
+    "region": "US-NY"
+   }
+  }
+ },
+ "engine": "perk hotspot-travel moves; plan-pairing weighs perk, intent and lines.",
+ "sees": "Pair with a plan rises; Unlimited More leads on the hotspot & travel starter. The Compare tool shows the streaming shopper beside her: Unlimited Max leads with the streaming bundle."
+}

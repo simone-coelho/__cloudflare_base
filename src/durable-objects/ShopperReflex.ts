@@ -86,6 +86,7 @@ import {
   placeEvent,
   nextCrossing,
   snapshot as reflexSnapshot,
+  signalsOf,
   tick as tickReflex,
   EMPTY_VOCABULARY,
   type RecognitionSignals,
@@ -774,6 +775,10 @@ export class ShopperReflex {
             journeyStage: journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, at), journeyThresholdsInForce(cfg)),
             visit: this.pipeline ? { visitCount: this.pipeline.visitCount, lastVisitAt: this.pipeline.lastVisitAt,
               entryChannel: this.pipeline.entryChannel, lastSeen: this.affinity?.lastSeen } : null,
+            // P10: the shopper's count of signals, read off the state this object already
+            // holds (no read of its own), for the slots that publish a signal
+            // floor. Present only when there is one; absent reads as 0.
+            ...(signalsOf(this.affinity?.reflex) > 0 ? { signals: signalsOf(this.affinity?.reflex) } : {}),
           });
         }
         if (url.searchParams.get('projection') === 'sort') {
@@ -1340,8 +1345,14 @@ export class ShopperReflex {
       // Registered with the object's own waitUntil so the call survives the reply.
       const keepAlive = retainOwnerWork;
       if (principal && !(principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
+        // P07: and into the population of the visit's arrival context — the
+        // entry channel and visit bucket of the visit this event belongs to,
+        // derived exactly as the pipeline stores it below. An unknown channel
+        // counts nothing there (R-P9).
+        const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry);
         keepAlive(fanInRegionTrend(this.env, {
           tenant: principal.tenant, geo: event.geo, now, touches, w: cfg.weights[action] ?? 0,
+          context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
         }));
       }
     }

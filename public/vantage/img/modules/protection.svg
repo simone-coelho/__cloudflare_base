@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <rect width="1200" height="800" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="1200" height="800" fill="none" stroke="#D9D9D9" stroke-width="4"/>
+  <rect x="0" y="0" width="24" height="800" fill="#EE0000"/>
+  <g transform="translate(96 96) scale(0.9)"><g fill="none" stroke="#EE0000" stroke-width="14" stroke-linejoin="round"><path d="M120 20 L205 52 V120 C205 172 168 206 120 224 C72 206 35 172 35 120 V52 Z"/><path d="M120 62 L170 82 V122 C170 152 150 172 120 184 Z" fill="#EE0000" stroke="none"/></g></g>
+  <text x="92" y="480" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="96" font-weight="800" letter-spacing="-3" fill="#111111">Protect your phone</text>
+  <rect x="98" y="520" width="140" height="12" fill="#F5FF1E"/>
+  <text x="96" y="620" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="44" font-weight="500" fill="#444444">Cover for drops, loss and theft.</text>
+</svg>
