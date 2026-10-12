@@ -109,9 +109,10 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.fatigue` | The fatigue penalty: `served` times inside `windowHours`, `applied`, and a sentence |
 | `explain.diversity` | The slot's diversity rule touched this position: the pieces that yielded to it (`skipped`), or `relaxed` when it was served over the limit because nothing else was eligible |
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
-| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` |
+| `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` An off-limits module held at its place in the order (P04) carries it too, beside `explain.moduleRule` |
 | `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
 | `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
+| `explain.moduleRule` | A position pin or an off-limits mark of the layout slot placed this module: `{ position, rule }`, keys sorted, `rule` `pinned` (the module pinned at a position, served there) or `off_limits` (the off-limits module held at its baseline position), and `position` the position the rule set, counted from 1. Present only on such a record, whose authority is `pin`, and compared by value in replay; the shopper's receipt carries the same block as `moduleRule` and says the rule and the position in words ([position pins and off-limits modules](#position-pins-and-off-limits-modules)) |
 | `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
@@ -332,6 +333,8 @@ Receipts independently distinguish absent governance (all legacy), `slot-gates-v
 per-context order adds `orders: "configured-order-v1"`, and a decision on which a slot ranked its modules
 by the layout blend adds `blend: "layout-blend-v1"`, and a decision on which a slot was decided below its
 signal floor adds `signalFloor: "signal-floor-v1"` with the count it was decided with as `inputs.signals`.
+A decision on which a position pin or an off-limits mark of the layout slot decided something adds
+`moduleRules: "module-rules-v1"` ([position pins and off-limits modules](#position-pins-and-off-limits-modules)).
 Other replay policy markers remain independent.
 Rules offers exact JSON-array editors and an off-limits switch. Its allowed-types editor accepts JSON null
 to remove the field. Its unified pin editor accepts a JSON string (scalar), ordered array (prefix), or null
@@ -589,6 +592,40 @@ order is never served on the holdout's `default` arm, to a shopper without perso
 on a decision on which the slot's exploration picks; those shoppers, and every shopper no context
 matches, receive the slot's own decision. A slot without `orders`, and every stored document marked
 1, 2 or 3, decides and replays exactly as before.
+
+#### Position pins and off-limits modules
+
+```json
+{ "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 },
+  "excludedPieceIds": ["module.PDP.reviews.1"],
+  "positionPins": [{ "pieceId": "module.PDP.ugc.1", "position": 3 }],
+  "offLimitsPieceIds": ["module.PDP.reco.1"] }
+```
+
+`positionPins` (governance version 4) pins modules at positions of the page's declared layout slot, and
+of no other slot: each pin is exactly `{ pieceId, position }`, `position` a whole number from 1 to the
+slot's `take`, after any prefix pins (`pinnedPieceIds`), one module per position and each module pinned
+once. A module pinned at a position is reserved page-wide before any slot ranks and is served at exactly
+that position on every arm, never scored and never explored, while the other positions are ranked around
+it; prefix pins serve exactly as before, and an order keeps every pinned module at its position.
+`offLimitsPieceIds` (governance version 4) marks modules off-limits on the same slot: an off-limits module
+keeps its baseline position — its place, counted from 1, in the configured order for the shopper's
+context where one matches, else among the modules the slot can serve (after eligibility, its exclusions and
+what the page already served or reserved, its own pins included) in catalogue order — on every arm, and no
+term and no exploration moves it while the others are ranked around it. An off-limits module whose
+baseline position lies beyond the take, or on a pinned position, is not served, and one the slot cannot
+serve holds nothing; a module is never both pinned and off-limits. A module pinned at a position that is
+missing, ineligible or excluded refuses the whole slot (decision D1), exactly as a refused prefix pin
+does: nothing is served from it, no record is written, and the decision's `pinDiagnostics` names the
+module, its position (`position`, counted from 1) and the reason. In the example a shopper whose own
+ranking would put the recommendations module last sees it second, its baseline position, and the
+user-generated module third, its pinned position, with the shopper's ranking on the first and fourth.
+
+The record of a module either rule placed carries `explain.moduleRule: { position, rule }` with authority
+`pin`, and its receipt says the rule and the position in words. A decision on which a position pin or an
+off-limits mark decided something writes `inputs.replay.moduleRules: "module-rules-v1"`, and its replay
+re-applies both rules and compares the record exactly; every other decision, every slot without either
+member, and every stored document marked 1, 2 or 3 decides and replays exactly as before.
 
 ### The signal floor
 

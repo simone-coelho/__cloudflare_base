@@ -279,6 +279,32 @@ the slot never falls back to its own ranking for that shopper. A position the or
 `score`, `strategy` and drivers its own ranking arithmetic computed, and its `explain.note` says that the
 configured order placed it.
 
+**Pins at a position and off-limits modules.** On the page's declared layout slot a merchandiser can pin
+a module at any position, `positionPins: [{ pieceId, position }]` with `position` counted from 1 to the
+slot's `take`, after any prefix pins, and mark modules off-limits, `offLimitsPieceIds: [pieceId]`
+(governance version 4; [the layout slot](./03-payload-schemas.md#position-pins-and-off-limits-modules)),
+in the console's Slot rules screen or with `PUT /content/slots`, with no deployment. A module pinned at a
+position is reserved page-wide before any slot of the page ranks, as a prefix pin is, and is returned at
+exactly that position on every arm — the holdout's `default` arm, a decision under a configured order and
+a slot decided on context alone below the signal floor included — with authority `pin`; it is never scored
+and never explored, the other positions are ranked around it, and prefix pins serve exactly as before.
+An off-limits module (`offLimitsPieceIds`) holds its baseline position on every arm, and the other modules
+are ranked around it: the baseline order is the configured order for the shopper's context where one
+matches (its modules the slot can still serve, in the order's sequence), else the modules the slot can
+serve — after eligibility, its exclusions and what the page already served or reserved, its own pins
+included — in catalogue order, and a module's baseline position is its place in that order, counted from 1.
+An off-limits module is never scored, and no term (the interests matched, the population and context
+priors, the layout blend, freshness, fatigue, merchandising) and no exploration moves it; one whose
+baseline position lies beyond the take, or on a pinned position, is not served, and one the slot cannot
+serve holds nothing. Under decision D1 a module pinned at a position that is missing, ineligible (expired,
+outside its window, out of stock) or excluded (by id, tag or type) refuses the whole slot, exactly as a
+refused prefix pin does: nothing is served from it, no record is written, and `pinDiagnostics` names the
+module, its position and the reason, while the rest of the page is served. When fewer modules can be
+ranked than the positions before a pinned or held module, the layout has no holes: that module follows
+the last one served, and its record still names the position its rule set. The record of a module either
+rule placed carries `explain.moduleRule: { position, rule }`, `rule` `pinned` or `off_limits` and
+`position` counted from 1, and its receipt says the rule and the position in words.
+
 **The layout blend.** A page's declared layout slot can opt into the behaviour-and-performance blend on
 its learn dials, `slots.{slot}.blend: { p }` in the learn document
 ([the learn document](./03-payload-schemas.md#the-learn-document)), with `p` from 0 to 1 and 0 when the
@@ -371,7 +397,7 @@ no decision at all. Her experimental assignment is unchanged, because it depends
 anchor and the published salt. The experience served is `default`. Nothing of the record is read,
 projected or renewed, and the poll stays read-only, as it is for every shopper.
 
-`pinDiagnostics` names the pins the slot governance refused for this page, so a dead pin is visible to the caller instead of silently falling back to the site's own default. Each entry is `{slot, pinnedPieceId, pinIndex?, reason, ownerSlot?}`: `pinIndex` is the refused position inside the slot's `pinnedPieceIds` prefix and is absent for a legacy scalar `pinnedPieceId`; `reason` is one of `invalid_take`, `missing_or_ineligible`, `slot_type`, `duplicate_pin`, `off_limits`, `excluded`, `excluded_tag`, `type_not_allowed`; `ownerSlot` names the slot that already holds the piece, on any refusal reason and not only `duplicate_pin` — the engine attaches it whenever another slot already owns the piece, whichever gate then decided the refusal. A refused required pin refuses its whole slot — no shifted position, no ranked replacement — so the slot carries no decision and no ledger row, and this member is the only place the answer names the refusal. The member is absent when nothing was refused; it reports configuration, never shopper state, and it changes no ranking, eligibility or stored record.
+`pinDiagnostics` names the pins the slot governance refused for this page, so a dead pin is visible to the caller instead of silently falling back to the site's own default. Each entry is `{slot, pinnedPieceId, pinIndex?, reason, ownerSlot?}`: `pinIndex` is the refused position inside the slot's `pinnedPieceIds` prefix and is absent for a legacy scalar `pinnedPieceId`; `reason` is one of `invalid_take`, `missing_or_ineligible`, `slot_type`, `duplicate_pin`, `off_limits`, `excluded`, `excluded_tag`, `type_not_allowed`; `ownerSlot` names the slot that already holds the piece, on any refusal reason and not only `duplicate_pin` — the engine attaches it whenever another slot already owns the piece, whichever gate then decided the refusal. A refused required pin refuses its whole slot — no shifted position, no ranked replacement — so the slot carries no decision and no ledger row, and this member is the only place the answer names the refusal. The member is absent when nothing was refused; it reports configuration, never shopper state, and it changes no ranking, eligibility or stored record. A refused pin at a position (`positionPins`, on a declared layout slot) carries `position`, the position it was pinned at, counted from 1, in place of `pinIndex`, which stays on prefix pins alone.
 
 The member is BOUNDED, because the number of pins on a page is operator-authored: the array carries at most the first 50 entries in page and slot order, and `refusedCount` and `omittedCount` sit beside it — the same count/omitted-count pattern the advisory pin channel (`slot-pin-diagnostics/v1`) already publishes for its own 50-entry sample. All three appear together, and only when something was refused. `refusedCount` counts every refusal on the page, so a document whose slots refuse thousands of pins is still served with the whole total named: the bound is applied before the answer's own size guard, and a published slot document can never turn a served snapshot into a 503.
 
@@ -845,7 +871,7 @@ or diversity, and an active excluded pin is rejected at publication. No arbitrar
 chosen. A decision set whose published hard controls refused a piece the slot could otherwise have served carries advisory `constraintDiagnostics: {warningCount, omittedWarningCount, warnings: [{slot, contentId, reason: off_limits | excluded | type_not_allowed | excluded_tag, dimension?, value?}]}`, in the same bounded-sample idiom the catalog and pin channels use: every refused eligible piece is counted, at most50 are named in slot order then catalogue order, `omittedWarningCount` is the difference, and an excluded-tag refusal names the published pair that matched rather than leaving a merchandiser to guess which of up to 1000 pairs applied. A slot that refuses nobody, a slot the composer never ranks and a retained receipt replayed before these controls existed carry no such member at all, so a slot that comes back short says which control emptied it instead of reading as a thin catalog. It is advice, never serving authority, and is never carried on a stored record; the operator reads the same refusals for the whole stored document on the slots current GET (above). Exact rendering types match `piece.type`, not affinity tags. Tag matching is literal for explicit own tags;
 only absent own `contentType` uses the existing safe rendering-type fallback, equally on every arm.
 Rules edits these controls and exact JSON-string/ordered-array/null pins through existing validate/save/readback and History rollback, and on a declared layout slot the per-context orders (`layout.orders`, a JSON array; `[]` or null clears) the same way;
-it never changes take automatically. Catalog-dependent tag/type pin conflicts warn at publication and refuse at runtime.
+it never changes take automatically. On a declared layout slot it also edits the modules pinned at a position (`governance.positionPins`) and the off-limits modules (`governance.offLimitsPieceIds`), each a JSON array that `[]` or null clears, and writes either member only when the operator authors it. Catalog-dependent tag/type pin conflicts warn at publication and refuse at runtime.
 Missing or unreadable service slot configuration now yields no selections (`sources.slots` is
 `{version:null,revision:0,count:0}`), not compiled slots; the authoring API still offers defaults for
 explicit publication. Related documents can use one coherent revision-set activation; serving retains the bounded cache described below, so this is not immediate
@@ -890,6 +916,32 @@ of a record without it decides the page without its orders, and a present marker
 over a page revision whose layout slot carries no orders, refuses as `invalid page replay manifest`. The
 record of every position the order set carries `explain.configuredOrder: { context, modules }`, the
 context it was published for and the whole order, compared by value in replay.
+
+Version 4 also carries the layout slot's `positionPins: [{ pieceId, position }]` and `offLimitsPieceIds`
+(the snapshot's "Pins at a position and off-limits modules" above says what a shopper is served).
+Publication — `PUT /content/slots` and `POST /content/slots/validate` alike — refuses with `422`, naming
+`positionPins` or `offLimitsPieceIds` and the module in `errors[]` and writing no revision: a position
+outside 1 to `take`, or within the slot's prefix pins; two modules pinned at one position; one module pinned
+twice, by two position pins or by a position pin and a prefix pin; a module both pinned and off-limits; a
+position pin the slot excludes by id or another slot of the page pins; a pin or mark that is not exactly
+`{ pieceId, position }` or a module id; either member on a slot that is not the page's declared layout slot,
+or position pins on a slot pinned whole by `pinnedPieceId`; and a configured order that does not list every
+module pinned at a position at that position. A write marked 1, 2 or 3 that carries either member is
+refused naming it; an unmarked write that carries them is read under version 4. A module pinned at a
+position that the catalogue does not register, or that its tags or type refuse, is not refused at
+publication: the decision refuses the slot for it (decision D1). A decision on which a position pin or an
+off-limits mark decided something — a module pinned at a position placed, a slot refused for one, or an
+off-limits module the slot could have ranked held or withheld — writes
+`inputs.replay.moduleRules: "module-rules-v1"` beside the other markers, and every other decision writes
+exactly the markers it wrote before; a decision on which the configured order supplied an off-limits
+module's baseline position while the slot's exploration picked writes the orders marker as well. A replay
+of a record without the marker decides the page without its position pins and off-limits marks, and a
+present marker with another value, without the layout marker, outside the current pin policy, or over a
+page revision whose layout slot carries neither, refuses as `invalid page replay manifest`. A pinned or
+held module's record has authority `pin`, no `ranking_position`, zero lift and prior versions and a
+single candidate; a ranked position's `ranking_position` counts only the ranked positions before it. The
+record's `explain.moduleRule` is compared by value in replay, so a decision under position pins and
+off-limits marks replays exactly; a retained document with prefix pins decides and replays as before.
 
 The learn document's layout-blend opt-in, `slots.{slot}.blend` (the snapshot's "The layout blend" above
 says what it serves), is `{ p }` and nothing else, `p` a number from 0 to 1. Publication —

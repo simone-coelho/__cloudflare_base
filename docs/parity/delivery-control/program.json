@@ -1059,7 +1059,7 @@
     {
       "id": "P04",
       "title": "Pins and off-limits for single modules",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
@@ -1204,7 +1204,7 @@
     {
       "id": "P29",
       "title": "A layout reason: why the order did or did not change",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",

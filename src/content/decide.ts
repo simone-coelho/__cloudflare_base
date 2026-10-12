@@ -218,12 +218,23 @@ const constraintWarning = (slot: string, piece: ContentPiece, refusal: SlotConst
   ...(refusal.dimension === undefined ? {} : { dimension: refusal.dimension }),
   ...(refusal.value === undefined ? {} : { value: refusal.value }) });
 
+/**
+ * The slots a pin refused whole: a prefix pin names its `pinIndex` and (P04) a
+ * position pin its `position`; a refused scalar pin names neither, its slot
+ * ranking nothing in any case.
+ */
+const refusedSlotsOf = (diagnostics: readonly { slot: string; pinIndex?: number; position?: number }[] | undefined): Set<string> =>
+  new Set((diagnostics ?? []).filter((d) => d.pinIndex !== undefined || d.position !== undefined).map((d) => d.slot));
+
 /** The composer's view of the page's slot strategies, as the decision builds it. */
 function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins): ContentSlotSpec[] {
   return slots.map((s) => ({
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
     ...(!historicalPins && s.pinnedPieceIds ? { pinnedPieceIds: [...s.pinnedPieceIds] } : {}),
+    // P04: position pins and off-limits marks, under the current pin policy only (the composer reads them there alone).
+    ...(!historicalPins && s.positionPins?.length ? { positionPins: s.positionPins.map((pin) => ({ pieceId: pin.pieceId, position: pin.position })) } : {}),
+    ...(!historicalPins && s.offLimitsPieceIds?.length ? { offLimitsPieceIds: [...s.offLimitsPieceIds] } : {}),
     ...(s.offLimits !== undefined ? { offLimits: s.offLimits } : {}),
     ...(s.excludedPieceIds ? { excludedPieceIds: s.excludedPieceIds } : {}),
     ...(s.excludedTags ? { excludedTags: s.excludedTags } : {}),
@@ -258,7 +269,7 @@ export function slotDocumentConstraintDiagnostics(pieces: readonly ContentPiece[
   for (const [page, slots] of Object.entries(pages)) {
     const specs = slotSpecs(slots);
     const { pinDiagnostics } = composeContentDetailed(eligible, NO_SIGNAL, specs, 0, undefined, undefined, undefined, undefined, new Set());
-    const refusedPrefixes = new Set(pinDiagnostics?.filter(d => d.pinIndex !== undefined).map(d => d.slot));
+    const refusedPrefixes = refusedSlotsOf(pinDiagnostics);
     forEachConstraintRefusal(eligible, specs, (spec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot), undefined,
       (slot, piece, refusal) => {
         warningCount++;
@@ -329,6 +340,18 @@ export function layoutBlendOf(learn: Pick<LearnConfig, 'slots' | 'stats'>, slot:
  * decision did.
  */
 export const SIGNAL_FLOOR_RULES = 'signal-floor-v1' as const;
+
+/**
+ * P04: the page-manifest marker of a decision on which a position pin or an
+ * off-limits mark of the page's layout slot decided something
+ * (`inputs.replay.moduleRules`): a module pinned at a position placed, a slot
+ * refused for one, or an off-limits module the slot could have ranked held or
+ * withheld. Written only on such a decision (C11), so every other decision
+ * carries exactly the markers it carried before; a replay of a record that
+ * states none decides the page without its position pins and off-limits marks,
+ * which is what that decision did.
+ */
+export const MODULE_RULES = 'module-rules-v1' as const;
 
 const wholeCount = (v: unknown): number => (typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : 0);
 
@@ -783,9 +806,15 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
-  const { decisions, candidates, pinDiagnostics, ordered } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
+  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
   // P01: the slots whose configured order this decision served.
   const orderedSlots = new Set(ordered ?? []);
+  // P04: the rule and the position that placed each module a position pin or an
+  // off-limits mark placed, and whether the decision used them at all (C11). A
+  // configured order that supplied an off-limits module's baseline was used too,
+  // on a decision on which exploration picked and the order was not served.
+  const ruleOf = new Map<string, NonNullable<typeof moduleRules>[number]>((moduleRules ?? []).map((placed) => [`${placed.slot}:${placed.contentId}`, placed]));
+  const ordersUsed = orderedSlots.size > 0 || (orderBaseline?.length ?? 0) > 0;
   // P28: a position the layout blend ranked says what placed it. Where neither
   // the shopper's behaviour nor learned performance moved its score (B 0 and
   // p × Q 0), the rank base alone placed it — the catalogue's order or the
@@ -796,7 +825,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const terms = blendTerms.get(`${d.slot}:${d.contentId}`);
     if (terms) d.strategy = terms.B === 0 && terms.p * terms.Q === 0 ? 'default' : 'affinity';
   }
-  const refusedPrefixes = new Set(pinDiagnostics?.filter(d => d.pinIndex !== undefined).map(d => d.slot));
+  const refusedPrefixes = refusedSlotsOf(pinDiagnostics);
   // The slots the composer ran a ranking for, by its own conditions: capacity
   // left after off-limits and pins (`rankedCapacity`, the composer's `:227` and
   // `:237-250`), a pinned prefix it did not refuse, and — on a replay — the
@@ -833,7 +862,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const servedIn = new Map<string, number>();
     for (const d of decisions) servedIn.set(d.slot, (servedIn.get(d.slot) ?? 0) + 1);
     for (const spec of specs) {
-      const pins = (spec.pinnedPieceIds?.length ?? 0) + (spec.pinnedPieceId ? 1 : 0);
+      const pins = (spec.pinnedPieceIds?.length ?? 0) + (spec.pinnedPieceId ? 1 : 0) + (spec.positionPins?.length ?? 0);
       // P01: a slot that served its configured order filled the positions the
       // order sets, by the merchandiser's choice; the order, not the take, says how many.
       if (!pins || spec.offLimits || refusedSlots.has(spec.slot) || orderedSlots.has(spec.slot)) continue;
@@ -944,9 +973,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(historicalContentTypes === HISTORICAL_CONTENT_TYPES ? {} : { contentTypes: 'catalog-tags-v1' as const }),
       ...(historicalGovernance === HISTORICAL_GOVERNANCE ? {} : { governance: historicalGovernance === HISTORICAL_GOVERNANCE_V1 ? 'slot-gates-v1' as const : 'slot-gates-v2' as const }),
       ...(i.slots.some((slot) => slot.layout === true) ? { layout: LAYOUT_RULES } : {}),
-      ...(orderedSlots.size ? { orders: ORDER_RULES } : {}),
+      ...(ordersUsed ? { orders: ORDER_RULES } : {}),
       ...(blendedSlots.size ? { blend: BLEND_RULES } : {}),
       ...(below.size ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
+      ...(ruled?.length ? { moduleRules: MODULE_RULES } : {}),
       slots: i.slots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];
@@ -963,6 +993,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   };
 
   const positionIn = new Map<string, number>();
+  // The ordinal of a ranked position among its slot's ranked positions: after the
+  // prefix pins, and (P04) not counting a module pinned at a position or held
+  // off-limits, which were never ranked.
+  const rankedIn = new Map<string, number>();
   const records: DecisionRecord[] = decisions.map((d) => {
     const position = positionIn.get(d.slot) ?? 0;
     positionIn.set(d.slot, position + 1);
@@ -973,7 +1007,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const scoreBase = baseOf.get(key) ?? d.score;
     const pick = explored.get(d.slot);
     const pinned = d.strategy === 'tenant-pinned';
-    const rankingPosition = position - (specOf.get(d.slot)?.pinnedPieceIds?.length ?? 0);
+    const rankingPosition = rankedIn.get(d.slot) ?? 0;
+    if (!pinned) rankedIn.set(d.slot, rankingPosition + 1);
+    const moduleRule = ruleOf.get(key);
     const wasExplored = Boolean(pick && (!historicalPins ? !pinned && rankingPosition === 0 : position === 0) && (pick.ranking ? pick.ranking[0] === d.contentId : pick.pieceId === d.contentId));
     const control = controlOf.get(key);
     return {
@@ -1009,6 +1045,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(!pinned && blendTerms.has(key) ? { blend: blendRecord(blendTerms.get(key)!) } : {}),
         // P10: the slot was decided on context alone: the floor in force and the shopper's count of signals, keys sorted.
         ...(below.has(d.slot) ? { signalFloor: { floor: below.get(d.slot)!, signals: signalCount } } : {}),
+        // P04: the rule that placed this module and the position it set, keys sorted. An off-limits
+        // module held at its place in the configured order for the shopper's context carries that order.
+        ...(moduleRule ? { moduleRule: { position: moduleRule.position, rule: moduleRule.rule } } : {}),
+        ...(moduleRule?.baseline === 'order' && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
       },
       inputs,
     };
