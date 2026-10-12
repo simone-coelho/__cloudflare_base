@@ -7,7 +7,8 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+  VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { TODAY_TERMS, type ContextTerms } from './cell';
 
@@ -1389,3 +1390,195 @@ export const LEARN_KIND: DocumentKind<LearnConfig> = {
   stamp: (v, r) => ({ ...v, version: stampLabel(v.version, 'learn', r) }),
   versionOf: (v) => v.version ?? '',
 };
+
+// ── P38: the published vocabulary (the `vocabulary` kind and its approval) ───
+//
+// A tenant publishes its attribute vocabulary as a document of its own kind,
+// versioned like every content document. A stored revision governs nothing: it
+// takes effect only when the tenant's operator approves it (decision D1), and
+// the approval is a member of its own (`vocabulary-approval`) carrying the
+// approved revision's number and document, so a later revision blocks nothing
+// and the ingest hosts read one member and never an older revision body. While
+// an approval is in effect, an attribute the vocabulary lists is GOVERNED: a
+// value on it is stored, and builds interest, only as one of the attribute's
+// ids, mapped through the one mapping table (an id maps to itself, a synonym to
+// its value's id; decision D2). A tenant with no approval in effect is governed
+// by nothing here.
+
+/** An id: lower-case letters and digits, words joined by single underscores, at most 64 characters. */
+const VALUE_ID = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
+const VALUE_ID_WORDS = 'lower-case letters and digits, words joined by single underscores, at most 64 characters, so none of the tag separators : ; |';
+export const isVocabularyId = (v: unknown): v is string => typeof v === 'string' && v.length <= 64 && VALUE_ID.test(v);
+const ATTRIBUTES_MAX = 64, ATTRIBUTE_VALUES_MAX = 1000, VALUE_SYNONYMS_MAX = 50, VALUE_NAME_MAX = 256, SYNONYM_MAX = 64, ATTRIBUTE_KEY_MAX = 64, VERSION_MAX = 256;
+/**
+ * The ruled schema's two named attributes (the investigation §3.4 registry
+ * draft): every `productType` value names exactly one parent, and where the
+ * document lists `category` that parent is one of its ids.
+ */
+const PRODUCT_TYPE = 'productType', PARENT_ATTRIBUTE = 'category';
+const DOCUMENT_MEMBERS = ['version', 'attributes'], VALUE_MEMBERS = ['id', 'name', 'synonyms', 'parent'];
+const RESERVED_ATTRIBUTE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+// eslint-disable-next-line no-control-regex -- A key or a word with a control character could never be matched or shown.
+const CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
+/** An attribute key is the registry dimension and catalogue tag key it governs: 1..64 characters, trimmed, none of the tag separators. */
+const attributeKeyOf = (key: string): boolean => key.length >= 1 && key.length <= ATTRIBUTE_KEY_MAX && key.trim() === key
+  && !/[:;|]/.test(key) && !CONTROL.test(key) && !RESERVED_ATTRIBUTE_KEYS.has(key);
+/** A synonym is a word a source system sends: 1..64 characters (an event value is cut at 64), trimmed, no control character. */
+const synonymOf = (word: unknown): word is string => typeof word === 'string' && word.length >= 1 && word.length <= SYNONYM_MAX
+  && word.trim() === word && !CONTROL.test(word);
+
+/**
+ * P38 (VA1): the vocabulary document, refused whole on any error, each error
+ * naming the attribute, the value and the offending id or word: an id outside
+ * the grammar, a duplicate id, a `productType` value naming no parent or more
+ * than one, and a synonym that maps to two values (a synonym of two values, or
+ * a synonym that is another value's id). The value is kept exactly as authored:
+ * the display names keep the tenant's wording, nothing is trimmed or stamped.
+ */
+export function validateVocabulary(candidate: unknown): ValidationResult<VocabularyDocument> {
+  if (!isRecord(candidate)) return { ok: false, errors: ['vocabulary: must be an object { version?, attributes }'] };
+  const errors: string[] = [];
+  for (const key of Object.keys(candidate)) if (!DOCUMENT_MEMBERS.includes(key)) errors.push(`${shown(key)}: not a member of the vocabulary document (version, attributes)`);
+  if (candidate.version !== undefined && (!isStr(candidate.version) || candidate.version.length > VERSION_MAX)) errors.push(`version: a string of 1..${VERSION_MAX} characters when present`);
+  if (!isRecord(candidate.attributes)) return { ok: false, errors: [...errors, 'attributes: required object of attribute key → { values }'] };
+  const entries = Object.entries(candidate.attributes);
+  if (entries.length < 1 || entries.length > ATTRIBUTES_MAX) errors.push(`attributes: 1..${ATTRIBUTES_MAX} attributes`);
+  // The category ids a product type's parent is read against, when the document lists the category attribute.
+  const category = candidate.attributes[PARENT_ATTRIBUTE];
+  const categoryIds = Object.hasOwn(candidate.attributes, PARENT_ATTRIBUTE) && isRecord(category) && Array.isArray(category.values)
+    ? new Set((category.values as unknown[]).map(v => (isRecord(v) && isVocabularyId(v.id) ? v.id : null)).filter((id): id is string => id !== null)) : null;
+  const kept: Array<[string, VocabularyAttribute]> = [];
+  for (const [key, raw] of entries) {
+    if (!attributeKeyOf(key)) { errors.push(`attributes[${shown(key)}]: an attribute key is the registry dimension it governs: 1..${ATTRIBUTE_KEY_MAX} characters, trimmed, none of : ; | and no control character`); continue; }
+    const at = `attributes.${key}`;
+    if (!isRecord(raw)) { errors.push(`${at}: an object { values }`); continue; }
+    for (const member of Object.keys(raw)) if (member !== 'values') errors.push(`${at}.${member}: not a member of an attribute (values)`);
+    if (!Array.isArray(raw.values) || raw.values.length < 1 || raw.values.length > ATTRIBUTE_VALUES_MAX) {
+      errors.push(`${at}.values: a list of 1..${ATTRIBUTE_VALUES_MAX} values { id, name, synonyms?, parent? }`); continue;
+    }
+    const ids = new Map<string, number>(), values: VocabularyValue[] = [];
+    const list = raw.values as unknown[];
+    list.forEach((v, i) => {
+      const here = `${at}.values[${i}]`;
+      if (!isRecord(v)) { errors.push(`${here}: an object { id, name, synonyms?, parent? }`); return; }
+      for (const member of Object.keys(v)) if (!VALUE_MEMBERS.includes(member)) errors.push(`${here}.${member}: not a member of a vocabulary value (id, name, synonyms, parent)`);
+      const id = v.id, label = shown(id);
+      if (!isVocabularyId(id)) errors.push(`${here}.id: ${label} is not an id: ${VALUE_ID_WORDS}`);
+      else if (ids.has(id)) errors.push(`${here}.id: ${label} is a duplicate id of ${at} (values[${ids.get(id)}] has it)`);
+      else ids.set(id, i);
+      if (typeof v.name !== 'string' || v.name.trim() === '' || v.name.length > VALUE_NAME_MAX) errors.push(`${here}.name: the display name of ${label}, 1..${VALUE_NAME_MAX} characters`);
+      if (v.synonyms !== undefined) {
+        if (!Array.isArray(v.synonyms) || v.synonyms.length > VALUE_SYNONYMS_MAX) errors.push(`${here}.synonyms: a list of at most ${VALUE_SYNONYMS_MAX} words for ${label}`);
+        else (v.synonyms as unknown[]).forEach((word, j) => {
+          if (!synonymOf(word)) errors.push(`${here}.synonyms[${j}]: ${shown(word)} for ${label} is not a word: 1..${SYNONYM_MAX} characters, no leading or trailing space, no control character`);
+        });
+      }
+      if (key === PRODUCT_TYPE && v.parent === undefined) errors.push(`${here}.parent: ${label} names no parent; every ${PRODUCT_TYPE} value names exactly one parent ${PARENT_ATTRIBUTE}, an id`);
+      else if (Array.isArray(v.parent)) errors.push(`${here}.parent: ${label} names ${v.parent.length === 0 ? 'no parent' : v.parent.length === 1 ? 'its parent as a list' : `${v.parent.length} parents (${shown((v.parent as unknown[]).join(', '))})`}; a value names exactly one parent, an id`);
+      else if (v.parent !== undefined && !isVocabularyId(v.parent)) errors.push(`${here}.parent: ${shown(v.parent)}, the parent of ${label}, is not an id: ${VALUE_ID_WORDS}`);
+      else if (v.parent !== undefined && key === PRODUCT_TYPE && categoryIds && !categoryIds.has(v.parent)) {
+        errors.push(`${here}.parent: ${label} names the parent ${shown(v.parent)}, which ${PARENT_ATTRIBUTE} does not list`);
+      }
+      if (isVocabularyId(id)) values.push({ id, name: v.name as string, ...(v.synonyms !== undefined ? { synonyms: [...(v.synonyms as string[])] } : {}),
+        ...(v.parent !== undefined ? { parent: v.parent as string } : {}) });
+    });
+    // One mapping table: a word maps to one value. A synonym of two values, or a
+    // synonym that is another value's id, would map one word to two values.
+    const owners = new Map<string, string>();
+    for (const v of list) {
+      if (!isRecord(v) || !isVocabularyId(v.id) || !Array.isArray(v.synonyms)) continue;
+      const own = v.id;
+      for (const word of v.synonyms as unknown[]) {
+        if (!synonymOf(word) || word === own) continue;
+        if (ids.has(word)) errors.push(`${at}: the synonym ${shown(word)} of ${shown(own)} maps to two values (${own} and the value whose id it is)`);
+        else if (owners.has(word) && owners.get(word) !== own) errors.push(`${at}: the synonym ${shown(word)} maps to two values (${owners.get(word)} and ${own})`);
+        else owners.set(word, own);
+      }
+    }
+    kept.push([key, { values }]);
+  }
+  if (errors.length) return { ok: false, errors };
+  return { ok: true, value: { ...(candidate.version !== undefined ? { version: candidate.version as string } : {}), attributes: Object.fromEntries(kept) } };
+}
+
+export const VOCABULARY_KIND: DocumentKind<VocabularyDocument> = {
+  name: 'vocabulary',
+  publication: 'r2',
+  validate: validateVocabulary,
+  // No stamp: a revision is stored and answered exactly as the tenant authored it.
+  versionOf: (v) => v.version ?? '',
+};
+
+/** P38 (decision D1): the approval in effect — the approved revision and its document, nothing else. */
+export function validateVocabularyApproval(candidate: unknown): ValidationResult<VocabularyApproval> {
+  if (!isRecord(candidate) || Object.keys(candidate).some(key => key !== 'revision' && key !== 'document')) return { ok: false, errors: ['approval: an object { revision, document }'] };
+  const errors: string[] = [];
+  if (typeof candidate.revision !== 'number' || !Number.isSafeInteger(candidate.revision) || candidate.revision < 1) errors.push('approval.revision: the approved vocabulary revision, a whole number of 1 or more');
+  const document = validateVocabulary(candidate.document);
+  if (!document.ok) errors.push(...document.errors.map(error => `approval.document: ${error}`));
+  return errors.length || !document.ok ? { ok: false, errors } : { ok: true, value: { revision: candidate.revision as number, document: document.value } };
+}
+
+export const VOCABULARY_APPROVAL_KIND: DocumentKind<VocabularyApproval> = {
+  name: 'vocabulary-approval',
+  publication: 'r2',
+  validate: validateVocabularyApproval,
+  versionOf: (v) => `vocabulary revision ${v.revision}`,
+};
+
+/** One governed attribute: its ids, and the mapping table (an id to itself, a synonym to its value's id). */
+export interface AttributeTable { ids: ReadonlySet<string>; words: ReadonlyMap<string, string> }
+/** P38: the vocabulary in effect, compiled once per approval: the approved revision and every governed attribute's table. */
+export interface VocabularyTable { revision: number; attributes: ReadonlyMap<string, AttributeTable> }
+
+/** The mapping table of an approval. Ids are entered first, so no synonym can ever stand for another value's id. */
+export function vocabularyTableOf(approval: VocabularyApproval): VocabularyTable {
+  const attributes = new Map<string, AttributeTable>();
+  for (const [key, attribute] of Object.entries(approval.document.attributes)) {
+    const ids = new Set<string>(), words = new Map<string, string>();
+    for (const value of attribute.values) { ids.add(value.id); words.set(value.id, value.id); }
+    for (const value of attribute.values) for (const word of value.synonyms ?? []) if (!words.has(word)) words.set(word, value.id);
+    attributes.set(key, { ids, words });
+  }
+  return { revision: approval.revision, attributes };
+}
+
+/** The ids a refusal offers, bounded. */
+const idsOffered = (table: AttributeTable): string => {
+  const ids = [...table.ids];
+  return `${ids.slice(0, 8).join(' | ')}${ids.length > 8 ? ` | … (${ids.length} ids)` : ''}`;
+};
+
+/**
+ * P38 (VA2): a catalogue publication under the vocabulary in effect. Every
+ * value of a governed tag is mapped through the table and stored as its id
+ * (each id once, in the order first named); a value that maps to nothing refuses
+ * the whole publication, each error naming the piece's id, the field
+ * `tags.<attribute>` and the value. An ungoverned tag, and anything that is not
+ * a piece's list of strings, is left exactly as it came for the catalogue
+ * validator to decide. Pure; the caller holds the table the publication's own
+ * base set carries.
+ */
+export function governedCatalogue(candidate: unknown, table: VocabularyTable): ValidationResult<unknown> {
+  if (!isRecord(candidate) || !Array.isArray(candidate.pieces)) return { ok: true, value: candidate };
+  const errors: string[] = [];
+  const pieces = (candidate.pieces as unknown[]).map((piece, i) => {
+    if (!isRecord(piece) || !isRecord(piece.tags)) return piece;
+    let mapped = false;
+    // Rebuilt from entries, so an authored key is never read as anything but a key.
+    const tags = Object.fromEntries(Object.entries(piece.tags).map(([dim, values]) => {
+      const attribute = table.attributes.get(dim);
+      if (!attribute || !Array.isArray(values) || !values.every(isStr)) return [dim, values];
+      const ids: string[] = [];
+      for (const value of values as string[]) {
+        const id = attribute.words.get(value);
+        if (id === undefined) errors.push(`pieces[${i}] ${isStr(piece.id) ? shown(piece.id) : '(no id)'} tags.${dim}: ${shown(value)} is outside the vocabulary in effect (revision ${table.revision}); name one of its ids (${idsOffered(attribute)}) or a synonym it lists`);
+        else if (!ids.includes(id)) ids.push(id);
+      }
+      mapped = true;
+      return [dim, ids];
+    }));
+    return mapped ? { ...piece, tags } : piece;
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: { ...candidate, pieces } };
+}

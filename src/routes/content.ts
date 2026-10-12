@@ -13,8 +13,10 @@
 //   POST /content/:kind/rollback/:n      roll forward to an old body (JWT)
 //   POST /content/catalog/import         a JSON or CSV export, replace or merge (JWT)
 //   POST /content/catalog/pull           a JSON URL, the CMS/DAM seam (JWT)
+//   POST /content/vocabulary/approve/:n  P38: put vocabulary revision n in effect (JWT)
+//   GET  /content/vocabulary/rejections  P38: the values the vocabulary in effect refused at ingest
 //
-// :kind is catalog | slots | learn. ?scope= selects the tenant scope, as /config does.
+// :kind is catalog | slots | learn | priors | vocabulary. ?scope= selects the tenant scope, as /config does.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Hono, type Context } from 'hono';
@@ -24,13 +26,16 @@ import type { AuthContext } from '@/middleware/auth';
 import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
-import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publish, publishSet, readPublication, recoverPublication } from '@/config/publication';
-import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog } from '@/content/kinds';
+import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
+  readOptionalPublication, readPublication, recoverPublication, type PublicationPin } from '@/config/publication';
+import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
+  VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
+import { readVocabularyRejections } from '@/content/service';
 import { contextTermsOf } from '@/content/cell';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
-import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog } from '@/content/types';
+import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
@@ -45,6 +50,8 @@ const inputRefusal = (c: Context<Ctx>, error: InputError) => c.json({ ok: false,
   ...(error.status === 413 ? { budget: error.budget, limit: error.limit, observed: error.observed } : {}) }, error.status);
 contentRoutes.onError((error, c) => {
   if (error instanceof InputError) return inputRefusal(c, error);
+  // P38 (VA2): a catalogue publication the vocabulary in effect refuses, raised inside the publication before anything is written.
+  if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: error.errors }, 422);
   if (error instanceof LegacyDocumentError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
   if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
   throw error;
@@ -74,9 +81,46 @@ const KINDS: Record<string, { kind: DocumentKind<any>; fallback: any; fromCsv?: 
   learn: { kind: LEARN_KIND, fallback: DEFAULT_LEARN },
   // Phase 3 (doc 22 §8): imported priors, as JSON rows or as the CSV a warehouse exports.
   priors: { kind: PRIORS_KIND, fallback: EMPTY_PRIORS, fromCsv: parsePriorsCsv },
+  // P38: the tenant's attribute vocabulary. An optional member: a tenant that
+  // never published one has none, and reads it as absent (revision 0).
+  vocabulary: { kind: VOCABULARY_KIND, fallback: null },
 };
+const UNKNOWN_KIND = 'kind must be catalog, slots, learn, priors or vocabulary';
 
 function kindOf(name: string | undefined) { return KINDS[(name ?? '').toLowerCase()] ?? null; }
+const isVocabulary = (kind: { name: string }) => kind.name === VOCABULARY_KIND.name;
+
+/**
+ * P38: the vocabulary's two members, read from ONE pin of the current set: the
+ * latest stored revision (`revision`, 0 when none is stored) and the approval in
+ * effect (`effectiveRevision`, 0 when none is), with the set identity an
+ * authored write of the vocabulary names.
+ */
+async function vocabularyState(env: Env, scope: string) {
+  const { publication, revision, set } = await readOptionalPublication(env, VOCABULARY_KIND, scope);
+  const approval = await readOptionalPinnedPublication(env, VOCABULARY_APPROVAL_KIND, scope, set);
+  return { publication, revision, approval };
+}
+
+/** P38: a catalogue publication refused by the vocabulary in effect, raised inside the publication and answered 422. */
+class VocabularyRefusal extends Error {
+  constructor(readonly errors: string[]) { super('vocabulary refusal'); }
+}
+/**
+ * P38 (VA2): a catalogue document published over `set`, under the vocabulary
+ * that set has in effect: its governed tags mapped to ids, or the publication
+ * refused naming each piece, field and value. A set with no approval in effect
+ * publishes the document exactly as it came. The approval is read from the very
+ * set the publication is made over, so the check and the write can never see
+ * two different vocabularies.
+ */
+async function governedOver(env: Env, scope: string, set: PublicationPin, candidate: unknown): Promise<unknown> {
+  const approval = await readOptionalPinnedPublication(env, VOCABULARY_APPROVAL_KIND, scope, set);
+  if (!approval) return candidate;
+  const governed = governedCatalogue(candidate, vocabularyTableOf(approval.value));
+  if (!governed.ok) throw new VocabularyRefusal(governed.errors);
+  return governed.value;
+}
 /**
  * W32 E1.01 (F32 §2.4-§2.6, §4 item 8, §6.2): the size of the document this
  * answer carries, against the ceiling it is stored under.
@@ -404,8 +448,8 @@ function actorOf(c: { get: (k: 'auth') => AuthContext | undefined }): string {
   return c.get('auth')?.user?.sub ?? c.get('auth')?.user?.email ?? 'unknown';
 }
 const noteOf = (v: unknown) => (typeof v === 'string' ? v.slice(0, 500) : '');
-function catalogMeta(c: Context<Ctx>, note?: string): WriteMeta {
-  const meta = publicationMeta(c.req.raw.headers, actorOf(c), note);
+function catalogMeta(c: Context<Ctx>, note?: string, creation = false): WriteMeta {
+  const meta = publicationMeta(c.req.raw.headers, actorOf(c), note, creation);
   meta.authorize = async () => {
     let allowed = false;
     await operatorJwt()(c, async () => {
@@ -514,8 +558,17 @@ contentRoutes.route('/catalog/enrichment/proposals', enrichmentRoutes);
 
 // ── Reads ────────────────────────────────────────────────────────────────────
 contentRoutes.get('/:kind', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
   const scope = scopeOf(c, k.kind);
+  if (isVocabulary(k.kind)) {
+    // P38 (VA1): the latest stored revision and the revision in effect, never one for the other.
+    const { publication, revision: stored, approval } = await vocabularyState(c.env, scope);
+    return c.json({ scope, kind: k.kind.name, source: stored ? 'stored' : 'absent', revision: stored?.revision ?? 0,
+      effectiveRevision: approval?.value.revision ?? 0, publication, actor: stored?.actor ?? null, note: stored?.note ?? null, at: stored?.at ?? null,
+      document: stored?.value ?? null,
+      approval: approval ? { revision: approval.value.revision, actor: approval.actor, note: approval.note, at: approval.at } : null,
+      ...(stored ? documentEnvelopeOf(k.kind, stored.value) : {}) });
+  }
   const rev = await readPublication(c.env, k.kind, scope);
   const value = rev ? rev.value : k.fallback;
   return c.json({ scope, kind: k.kind.name, source: rev ? 'stored' : 'compiled-default', revision: rev?.revision ?? 0,
@@ -529,23 +582,26 @@ contentRoutes.get('/:kind', async (c) => {
 });
 
 contentRoutes.get('/:kind/history', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
   const scope = scopeOf(c, k.kind);
+  // P38: a tenant that never published a vocabulary has no history of one.
+  if (isVocabulary(k.kind) && !(await readOptionalPublication(c.env, k.kind, scope)).revision) return c.json({ scope, kind: k.kind.name, revisions: [] });
   return c.json({ scope, kind: k.kind.name, revisions: await readIndex(c.env, k.kind, scope) });
 });
 
 contentRoutes.get('/:kind/revisions/:n', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
   const scope = scopeOf(c, k.kind);
   const n = Number(c.req.param('n'));
   if (!Number.isInteger(n) || n < 1) return c.json({ error: 'revision must be a positive integer' }, 400);
+  if (isVocabulary(k.kind) && !(await readOptionalPublication(c.env, k.kind, scope)).revision) return c.json({ error: `revision ${n} not found for scope "${scope}"` }, 404);
   const rev = await readVersion(c.env, k.kind, scope, n);
   return rev ? c.json({ scope, kind: k.kind.name, ...rev }) : c.json({ error: `revision ${n} not found for scope "${scope}"` }, 404);
 });
 
 /** Authenticated dry run: the same validator the write path runs. */
 contentRoutes.post('/:kind/validate', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
   const scope = scopeOf(c, k.kind);
   const body = await readInputJson(c.req.raw.body);
   if (body === null) return c.json({ error: 'body must be JSON' }, 400);
@@ -567,7 +623,20 @@ contentRoutes.post('/:kind/validate', async (c) => {
     const refused = await blendRefusals(c, scope, candidate);
     if (refused) return c.json({ valid: false, errors: refused.errors }, refused.status);
   }
-  const result = k.kind.validate(candidate);
+  // P38 (VA2): the dry run says what the write would: the catalogue under the
+  // vocabulary in effect now. It stays advisory: where the publication cannot be
+  // read the document is checked as before (the write itself reads the vocabulary
+  // from the set it publishes over, and refuses when that set cannot be read).
+  let checked: unknown = candidate;
+  if (k.kind.name === CONTENT_KIND.name) {
+    let approval: { value: VocabularyApproval } | null = null;
+    try { approval = (await readOptionalPublication(c.env, VOCABULARY_APPROVAL_KIND, scope)).revision; }
+    catch (error) { if (!(error instanceof PublicationError)) throw error; }
+    const governed = approval ? governedCatalogue(candidate, vocabularyTableOf(approval.value)) : null;
+    if (governed && !governed.ok) return c.json({ valid: false, errors: governed.errors }, 422);
+    if (governed?.ok) checked = governed.value;
+  }
+  const result = k.kind.validate(checked);
   return result.ok ? c.json({ valid: true, document: result.value,
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null,
       publishedRequest(candidate, candidate === body ? REQUEST_ENVELOPE_FIELDS : [])) } : {}),
@@ -576,8 +645,9 @@ contentRoutes.post('/:kind/validate', async (c) => {
 
 // ── Writes ───────────────────────────────────────────────────────────────────
 contentRoutes.put('/:kind', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
-  const scope = scopeOf(c, k.kind), meta = catalogMeta(c);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
+  // P38: the first vocabulary revision is written over revision 0 (none stored).
+  const scope = scopeOf(c, k.kind), meta = catalogMeta(c, undefined, isVocabulary(k.kind));
   let candidate: unknown;
   let related: unknown;
   let note = '';
@@ -620,10 +690,14 @@ contentRoutes.put('/:kind', async (c) => {
     const valid = k.kind.validate(candidate);
     if (!valid.ok) return c.json({ ok: false, errors: valid.errors }, 422);
   }
+  // P38 (VA2): a catalogue document, primary or related, is published under the
+  // vocabulary in effect in the set it is published over; any other document as it came.
+  const governedMember = (kind: DocumentKind<unknown>, document: unknown) => kind.name === CONTENT_KIND.name
+    ? (_base: unknown, set: PublicationPin) => governedOver(c.env, scope, set, document) : () => document;
   let result;
   if (related !== undefined) {
     if (!Array.isArray(related) || related.length > 5) throw new PublicationError('Invalid related publication members', 422, 'invalid_document');
-    const changes = [{ kind: k.kind, scope, request: { type: 'replace', candidate }, candidate: () => candidate }];
+    const changes = [{ kind: k.kind, scope, request: { type: 'replace', candidate }, candidate: governedMember(k.kind, candidate) }];
     const members: PublishedMember[] = [{ kind: k.kind, document: candidate, at: null }];
     for (const [index, entry] of related.entries()) {
       if (!entry || typeof entry !== 'object' || Object.keys(entry).some(key => !['kind', 'document'].includes(key))) throw new PublicationError('Invalid related document', 422, 'invalid_document');
@@ -640,7 +714,7 @@ contentRoutes.put('/:kind', async (c) => {
       const valid = target.kind.validate(entry.document);
       if (!valid.ok) return c.json({ ok: false, errors: valid.errors }, 422);
       changes.push({ kind: target.kind, scope: entry.kind === 'reflex' && scope === 'brighthour' ? 'tenant:brighthour' : scope,
-        request: { type: 'replace', candidate: entry.document }, candidate: () => entry.document });
+        request: { type: 'replace', candidate: entry.document }, candidate: governedMember(target.kind, entry.document) });
       members.push({ kind: target.kind, document: entry.document, at: `publicationChanges[${index}]` });
     }
     // P36 (R-P46): every slots member against the tenant's context vocabulary,
@@ -663,7 +737,10 @@ contentRoutes.put('/:kind', async (c) => {
     // P28 (R-P31): a learn document published alone is checked against the slots document in force.
     const blends = await requestBlendRefusals(c, scope, [{ kind: k.kind, document: candidate, at: null }]);
     if (blends) return c.json({ ok: false, errors: blends.errors }, blends.status);
-    result = await write(c.env, k.kind, scope, candidate, { ...meta, note });
+    // P38: the catalogue through the same replace a write makes, under the vocabulary in effect.
+    result = k.kind.name === CONTENT_KIND.name
+      ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate))
+      : await write(c.env, k.kind, scope, candidate, { ...meta, note });
   }
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value,
@@ -673,12 +750,19 @@ contentRoutes.put('/:kind', async (c) => {
 });
 
 contentRoutes.post('/:kind/rollback/:n', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
   const scope = scopeOf(c, k.kind), meta = catalogMeta(c);
   const n = Number(c.req.param('n'));
   if (!Number.isInteger(n) || n < 1) return c.json({ error: 'revision must be a positive integer' }, 400);
   const body = await readInputJson(c.req.raw.body, {});
-  const result = await rollback(c.env, k.kind, scope, n, { ...meta, note: noteOf((body as { note?: unknown })?.note) || undefined });
+  const rollbackMeta = { ...meta, note: noteOf((body as { note?: unknown })?.note) || undefined };
+  // P38 (VA2): rolling the catalogue forward to an old body publishes that body
+  // under the vocabulary in effect, as every catalogue publication is; the
+  // request, the note and the body read are versionedStore.rollback's own.
+  const result = k.kind.name === CONTENT_KIND.name
+    ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
+      async (_base: unknown, set: PublicationPin) => governedOver(c.env, scope, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null))
+    : await rollback(c.env, k.kind, scope, n, rollbackMeta);
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '',
         ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision) } : {}),
@@ -698,8 +782,15 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
   // exact-request retry serves a retained answer without running it, and the
   // revision it declared is the base that answer was measured against.
   let base: ContentCatalog | undefined;
-  const result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode }, { ...meta, note },
-    current => { base = current; return { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), ...assemble(current, incoming, mode) }; });
+  let result;
+  try {
+    // P38 (VA2): the assembled catalogue under the vocabulary in effect in the set it is published over.
+    result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode }, { ...meta, note },
+      (current, set) => { base = current; return governedOver(c.env, scope, set, { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), ...assemble(current, incoming, mode) }); });
+  } catch (error) {
+    if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: error.errors, received: records.length }, 422);
+    throw error;
+  }
   if (!result.ok) return c.json({ ok: false, errors: result.errors, received: records.length }, 422);
   const before = base !== undefined ? { catalog: base, basis: 'stored' as const } : await publishedOver(c.env, scope, meta.expectedRevision);
   const measured = before.basis === 'stored';
@@ -801,14 +892,60 @@ function publicationTarget(c: Context<Ctx>) {
 }
 contentRoutes.get('/catalog/publication', c => {
   const { kind, scope } = publicationTarget(c);
-  const meta = c.req.header('If-Match') || c.req.header('Idempotency-Key') ? catalogMeta(c) : undefined;
+  const meta = c.req.header('If-Match') || c.req.header('Idempotency-Key') ? catalogMeta(c, undefined, isVocabulary(kind)) : undefined;
   return publicationStatus(c.env, kind, scope, meta).then(status => c.json(status));
 });
 contentRoutes.post('/catalog/publication/recover', async c => {
-  const { kind, scope } = publicationTarget(c), meta = catalogMeta(c);
+  const { kind, scope } = publicationTarget(c), meta = catalogMeta(c, undefined, isVocabulary(kind));
   const result = await recoverPublication(c.env, kind, scope, meta);
   return result.ok ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, document: result.revision.value,
     ...(kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision) } : {}) }) : c.json(result, 422);
+});
+
+// ── P38: the vocabulary's approval and its rejection report ─────────────────
+
+/**
+ * POST /content/vocabulary/approve/:n — the tenant's operator puts stored
+ * vocabulary revision n in effect (decision D1). Authored like every write:
+ * If-Match names the vocabulary revision and the set the operator read, with an
+ * Idempotency-Key; the approval is its own member, so no vocabulary revision is
+ * written and a later revision blocks nothing. Any stored revision may be put
+ * in effect, an earlier one included; an unknown revision answers 404.
+ */
+contentRoutes.post('/vocabulary/approve/:n', async (c) => {
+  const scope = catalogScope(c), meta = catalogMeta(c);
+  const n = Number(c.req.param('n'));
+  if (!Number.isSafeInteger(n) || n < 1) return c.json({ ok: false, error: 'revision must be a positive integer' }, 400);
+  const body = await readInputJson(c.req.raw.body, {});
+  const { revision: latest } = await readOptionalPublication(c.env, VOCABULARY_KIND, scope);
+  if (!latest || n > latest.revision) return c.json({ ok: false, error: `vocabulary revision ${n} not found for scope "${scope}"` }, 404);
+  const approved = n === latest.revision ? latest : await readVersion(c.env, VOCABULARY_KIND, scope, n);
+  if (!approved) return c.json({ ok: false, error: `vocabulary revision ${n} not found for scope "${scope}"` }, 404);
+  const note = noteOf((body as { note?: unknown } | null)?.note) || `approve vocabulary revision ${n}`;
+  const result = await publishAnchored(c.env, { kind: VOCABULARY_KIND, scope },
+    { kind: VOCABULARY_APPROVAL_KIND, scope, request: { type: 'approve', revision: n, vocabularyRevision: meta.expectedRevision }, candidate: () => ({ revision: n, document: approved.value }) },
+    { ...meta, note });
+  return result.ok
+    ? c.json({ ok: true, scope, kind: VOCABULARY_KIND.name, revision: meta.expectedRevision, effectiveRevision: result.revision.value.revision, publication: result.revision.publication,
+        approval: { revision: result.revision.revision, actor: result.revision.actor, note: result.revision.note, at: result.revision.at } })
+    : c.json({ ok: false, errors: result.errors }, 422);
+});
+
+/**
+ * GET /content/vocabulary/rejections — the tenant's rejection report: per
+ * governed attribute, each value the ingest hosts refused under the revision in
+ * effect and how many events carried it (src/content/service.ts
+ * `recordVocabularyRejections`). Empty when no revision is in effect or nothing
+ * was refused; a report that cannot be read answers 503, never an empty one.
+ */
+contentRoutes.get('/vocabulary/rejections', async (c) => {
+  const scope = catalogScope(c);
+  const { revision: approval } = await readOptionalPublication(c.env, VOCABULARY_APPROVAL_KIND, scope);
+  const effectiveRevision = approval?.value.revision ?? 0;
+  let report;
+  try { report = await readVocabularyRejections(c.env, scope, effectiveRevision, Date.now()); }
+  catch { return c.json({ ok: false, error: 'The rejection report is unavailable' }, 503); }
+  return c.json({ scope, kind: VOCABULARY_KIND.name, effectiveRevision, since: report.since, rejections: report.rejections, omitted: report.omitted });
 });
 
 export default contentRoutes;

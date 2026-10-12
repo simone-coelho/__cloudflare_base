@@ -7,10 +7,10 @@
 import type { Env } from '@/types/env';
 import { assertOwnerScope, currentOwnerConsent, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { carriedSaltVersion, PublicationError, pinPublication, readPinnedPublication, readPublication } from '@/config/publication';
+import { carriedSaltVersion, PublicationError, pinPublication, publicationScope, readOptionalPinnedPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { signalsOf, snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig } from '@/reflex/core';
+import { extractTouches, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
@@ -20,7 +20,7 @@ import { channelIn, projectVisit, validEntry, validVisitContext, visitArrival, t
 import { deviceClassOf, platformWordOf, type DeviceClass, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
-import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from './kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND, VOCABULARY_APPROVAL_KIND, vocabularyTableOf, type VocabularyTable } from './kinds';
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, contextTermsOf, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
@@ -355,7 +355,7 @@ export interface CatalogVocabularySource {
  * the tenant on the entry two scopes could otherwise be served each other's
  * vocabulary. A mismatch simply recomputes.
  */
-interface VocabularyEntry { tenant: string; version: string; value: CatalogVocabulary }
+interface VocabularyEntry { tenant: string; version: string; governed: VocabularyTable | null; value: CatalogVocabulary }
 const NO_CONTENT_CATALOG = {};
 const NO_PRODUCT_CATALOG = {};
 // Held weakly on both axes, so a republished document simply misses and the
@@ -388,15 +388,22 @@ export async function tenantCatalogVocabulary(
   let document: object = NO_CONTENT_CATALOG;
   const productKey: object = products ?? NO_PRODUCT_CATALOG;
   let cacheable = true;
+  // P38 (DI-9): on an attribute the approved vocabulary governs, the authority
+  // is the vocabulary's ids, never the catalogue's own tags, so sparse content
+  // refuses no value the vocabulary lists and admits none it does not. Read from
+  // the set the catalogue read just pinned (no storage call when the set carries
+  // no approval); null for a tenant with no approval in effect, read exactly as before.
+  let governed: VocabularyTable | null = null;
   try {
     const revision = await readPublication(env, CONTENT_KIND, tenant, true);
+    governed = await tenantVocabularyInEffect(env, tenant);
     const catalog = revision?.value;
     if (catalog) {
       document = catalog;
       const cached = vocabularyCache.get(document)?.get(productKey);
-      if (cached && cached.tenant === tenant && cached.version === config.version) return cached.value;
+      if (cached && cached.tenant === tenant && cached.version === config.version && cached.governed === governed) return cached.value;
       for (const piece of catalog.pieces as ReadonlyArray<Pick<ContentPiece, 'tags' | 'featuredProductIds'>>) {
-        for (const [dim, tagged] of Object.entries(piece.tags ?? {})) for (const value of tagged) name(dim, value);
+        for (const [dim, tagged] of Object.entries(piece.tags ?? {})) if (!governed?.attributes.has(dim)) for (const value of tagged) name(dim, value);
         for (const id of piece.featuredProductIds ?? []) ids.add(id);
       }
     }
@@ -412,13 +419,177 @@ export async function tenantCatalogVocabulary(
     const id = product.id;
     if (typeof id === 'string' && id) ids.add(id);
   }
+  for (const [key, attribute] of governed?.attributes ?? []) values.set(key, new Set(attribute.ids));
   const value: CatalogVocabulary = { ids, values };
   if (cacheable) {
     let byProducts = vocabularyCache.get(document);
     if (!byProducts) { byProducts = new WeakMap<object, VocabularyEntry>(); vocabularyCache.set(document, byProducts); }
-    byProducts.set(productKey, { tenant, version: config.version, value });
+    byProducts.set(productKey, { tenant, version: config.version, governed, value });
   }
   return value;
+}
+
+// ── P38: the vocabulary in effect, at every ingest door (VA3, D2, DI-9) ──────
+
+/** The mapping table of one approval, compiled once per revision object the serving cache holds. */
+const governedTables = new WeakMap<object, VocabularyTable>();
+
+/**
+ * P38: the vocabulary the tenant's operator approved, as its mapping table, read
+ * through the publication's serving cache from the set this event's other reads
+ * pin — so a set that carries no approval costs no storage call: the sealed set
+ * itself says the member is absent. Null for a tenant with no approval in
+ * effect, and, as the catalogue vocabulary absorbs it, when the publication
+ * authority cannot answer: the event is then placed exactly as it is today. A
+ * typed owner or consent refusal raised inside the read is that request's own
+ * answer and propagates unchanged.
+ */
+export async function tenantVocabularyInEffect(env: Env, tenant: string): Promise<VocabularyTable | null> {
+  try {
+    const scope = publicationScope(VOCABULARY_APPROVAL_KIND, tenant);
+    const approval = await readOptionalPinnedPublication(env, VOCABULARY_APPROVAL_KIND, scope, await pinPublication(env, scope, true));
+    if (!approval) return null;
+    let table = governedTables.get(approval);
+    if (!table) { table = vocabularyTableOf(approval.value); governedTables.set(approval, table); }
+    return table;
+  } catch (error) {
+    if (!(error instanceof PublicationError)) throw error;
+    return null;
+  }
+}
+
+/** One value a governed attribute refused at ingest, for the tenant's rejection report. */
+export interface VocabularyRejection { attribute: string; value: string }
+
+/** An event value as the registry's sanitizer reads it (src/reflex/core.ts `sanitizeEventAttributes`). */
+const EVENT_VALUES_MAX = 8;
+const eventValue = (v: unknown): string | null => {
+  if (typeof v !== 'string') return null;
+  const t = v.trim().slice(0, 64);
+  // eslint-disable-next-line no-control-regex -- The sanitizer's own rule: no control character, no angle bracket.
+  return t && !/[\u0000-\u001f<>]/.test(t) ? t : null;
+};
+
+/**
+ * P38 (VA3, decision D2): an event's values on the attributes the vocabulary in
+ * effect governs, mapped BEFORE any ingest door places them, so a door never
+ * sees a source spelling: a synonym becomes its value's id, an id stays itself,
+ * and a value that maps to nothing is removed from what the door reads (it
+ * builds no interest) and is returned as a rejection. A value the registry
+ * derives (a band label) is the registry's own word, not a source value: it is
+ * not mapped, and on a governed attribute it must be one of the ids. A source
+ * field that more than one registry dimension reads is left as sent (the
+ * placement then admits its ids alone). Everything else on the event, and the
+ * event object itself, is untouched; the copy is what the doors place.
+ */
+export function governedEventData(data: Record<string, unknown>, config: ReflexConfig, table: VocabularyTable): { data: Record<string, unknown>; rejected: VocabularyRejection[] } {
+  const rejected: VocabularyRejection[] = [];
+  const band = new Set(config.dimensions.filter(spec => spec.derive === 'band').map(spec => spec.key));
+  for (const touch of extractTouches(sanitizeEventAttributes(data, config), config)) {
+    const attribute = table.attributes.get(touch.dim);
+    if (!attribute) continue;
+    const maps = band.has(touch.dim) ? attribute.ids.has(touch.value) : attribute.words.has(touch.value);
+    if (!maps && !rejected.some(r => r.attribute === touch.dim && r.value === touch.value)) rejected.push({ attribute: touch.dim, value: touch.value });
+  }
+  const readers = new Map<string, number>();
+  for (const spec of config.dimensions) readers.set(spec.source, (readers.get(spec.source) ?? 0) + 1);
+  const out: Record<string, unknown> = { ...data };
+  for (const spec of config.dimensions) {
+    const attribute = table.attributes.get(spec.key), raw = data[spec.source];
+    if (!attribute || spec.derive === 'band' || readers.get(spec.source) !== 1 || raw === undefined || raw === null || !Object.hasOwn(data, spec.source)) continue;
+    if (spec.multi && Array.isArray(raw)) {
+      const ids: string[] = [];
+      for (const word of raw.map(eventValue).filter((x): x is string => x !== null).slice(0, EVENT_VALUES_MAX)) {
+        const id = attribute.words.get(word);
+        if (id !== undefined && !ids.includes(id)) ids.push(id);
+      }
+      if (ids.length) out[spec.source] = ids; else delete out[spec.source];
+      continue;
+    }
+    const word = eventValue(Array.isArray(raw) ? raw[0] : raw);
+    if (word === null) continue;
+    const id = attribute.words.get(word);
+    if (id !== undefined) out[spec.source] = id; else delete out[spec.source];
+  }
+  return { data: out, rejected };
+}
+
+/**
+ * P38 (DI-9): the touches a door built from a value the catalogue or a held
+ * product supplies (a content piece's own tags, a held product's attributes),
+ * on a governed attribute, mapped through the same table: an id or a synonym
+ * builds interest under the id, each id once; anything else builds none. A band
+ * label must be an id. Touches on ungoverned dimensions pass exactly as built.
+ */
+export function governedTouches(touches: readonly Touch[], table: VocabularyTable, config: ReflexConfig): Touch[] {
+  const band = new Set(config.dimensions.filter(spec => spec.derive === 'band').map(spec => spec.key));
+  const out: Touch[] = [];
+  for (const touch of touches) {
+    const attribute = table.attributes.get(touch.dim);
+    if (!attribute) { out.push(touch); continue; }
+    const id = band.has(touch.dim) ? (attribute.ids.has(touch.value) ? touch.value : undefined) : attribute.words.get(touch.value);
+    if (id === undefined || out.some(o => o.dim === touch.dim && o.value === id)) continue;
+    out.push(id === touch.value ? touch : { ...touch, value: id });
+  }
+  return out;
+}
+
+/**
+ * P38 (VA3): the tenant's rejection report — per attribute, per refused value,
+ * how many events carried it — for the vocabulary revision in effect. A
+ * per-tenant COUNT and nothing else (no shopper, session or event identifier),
+ * kept in the operator cache beside the other per-tenant diagnostics
+ * (`enrollmentHealthKey`, src/content/holdout.ts), so no binding and no store is
+ * added and nothing is written into any shopper's own state. It counts from the
+ * first rejection under the revision in effect, over at most 30 days; a new
+ * approval starts a new report. Read-modify-write: a diagnostic, best effort
+ * under concurrent writes, written beside the event's other retained work and
+ * never able to fail it.
+ */
+export const VOCABULARY_REJECTIONS_HORIZON_MS = 30 * 86_400_000;
+const REJECTION_ATTRIBUTES_MAX = 64, REJECTION_VALUES_MAX = 256;
+export const vocabularyRejectionsKey = (tenant: string): string => `vocabulary-rejections:v1:${tenant}`;
+export interface VocabularyRejectionReport { revision: number; since: number; rejections: Record<string, Record<string, number>>; omitted: number }
+const count = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+function rejectionReport(raw: unknown, now: number): VocabularyRejectionReport | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  if (value.version !== 1 || !count(value.revision) || value.revision < 1 || !count(value.since) || value.since > now
+    || now - value.since >= VOCABULARY_REJECTIONS_HORIZON_MS || !count(value.omitted)) return null;
+  const rejections = value.rejections;
+  if (!rejections || typeof rejections !== 'object' || Array.isArray(rejections)) return null;
+  const attributes = Object.entries(rejections as Record<string, unknown>);
+  if (!attributes.every(([, values]) => values && typeof values === 'object' && !Array.isArray(values)
+    && Object.values(values as Record<string, unknown>).every(n => count(n) && n > 0))) return null;
+  return { revision: value.revision, since: value.since, omitted: value.omitted,
+    rejections: Object.fromEntries(attributes.map(([attribute, values]) => [attribute, Object.fromEntries(Object.entries(values as Record<string, number>))])) };
+}
+/** Counts one event's rejections under the revision in effect. Never throws. */
+export async function recordVocabularyRejections(env: Pick<Env, 'CACHE'>, tenant: string, revision: number, rejected: readonly VocabularyRejection[], now: number): Promise<void> {
+  if (!rejected.length) return;
+  try {
+    const previous = rejectionReport(await env.CACHE.get(vocabularyRejectionsKey(tenant), 'json'), now);
+    const held = previous && previous.revision === revision ? previous : null;
+    const counts = new Map(Object.entries(held?.rejections ?? {}).map(([attribute, values]) => [attribute, new Map(Object.entries(values))]));
+    let omitted = held?.omitted ?? 0;
+    for (const { attribute, value } of rejected) {
+      let values = counts.get(attribute);
+      if (!values) {
+        if (counts.size >= REJECTION_ATTRIBUTES_MAX) { omitted++; continue; }
+        values = new Map(); counts.set(attribute, values);
+      }
+      if (!values.has(value) && values.size >= REJECTION_VALUES_MAX) { omitted++; continue; }
+      values.set(value, (values.get(value) ?? 0) + 1);
+    }
+    const next = { version: 1, revision, since: held?.since ?? now, omitted,
+      rejections: Object.fromEntries([...counts].map(([attribute, values]) => [attribute, Object.fromEntries(values)])) };
+    await env.CACHE.put(vocabularyRejectionsKey(tenant), JSON.stringify(next), { expirationTtl: Math.floor(VOCABULARY_REJECTIONS_HORIZON_MS / 1000) });
+  } catch { /* a diagnostic count never fails the event, and never retries on the shopper's time */ }
+}
+/** The report for the revision in effect; an absent, expired or other-revision report is an empty one. The read itself may throw. */
+export async function readVocabularyRejections(env: Pick<Env, 'CACHE'>, tenant: string, revision: number, now: number): Promise<{ since: number | null; rejections: Record<string, Record<string, number>>; omitted: number }> {
+  const stored = rejectionReport(await env.CACHE.get(vocabularyRejectionsKey(tenant), 'json'), now);
+  return stored && revision > 0 && stored.revision === revision ? { since: stored.since, rejections: stored.rejections, omitted: stored.omitted } : { since: null, rejections: {}, omitted: 0 };
 }
 
 /**
