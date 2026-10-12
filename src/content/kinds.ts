@@ -5,8 +5,8 @@
 // authority: missing initialization or corrupt publication fails closed.
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
-import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, type ContextVocabulary } from '@/services/visit';
-import { platformWordOf } from '@/services/platform';
+import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
+import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
 import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { TODAY_TERMS, type ContextTerms } from './cell';
@@ -254,9 +254,11 @@ export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
 /**
  * W16 C3: the arrival signals a seed rule may read; `platform` is the request's
  * own OS family. P36: `source_platform` and `landing_page_type` are the visit's
- * context attributes, named by the tenant's published vocabulary.
+ * context attributes, named by the tenant's published vocabulary. P37: `device`
+ * is the request's own device class and `recency` the visit's recency bucket,
+ * each named from a fixed vocabulary that no tenant setting changes.
  */
-const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network', 'platform', 'source_platform', 'landing_page_type']);
+const SEED_SIGNALS = new Set(['entry_channel', 'campaign_term', 'referrer_network', 'platform', 'source_platform', 'landing_page_type', 'device', 'recency']);
 
 /**
  * P36 (R-P46): the vocabulary a slots document is checked against. A tenant's
@@ -302,7 +304,7 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
     if (!isRecord(raw)) { errors.push(`${at}: must be an object`); return; }
     const before = errors.length;
     const signal = raw.signal, value = raw.value, weight = raw.weight;
-    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network | platform | source_platform | landing_page_type`);
+    if (!isStr(signal) || !SEED_SIGNALS.has(signal)) errors.push(`${at}.signal: entry_channel | campaign_term | referrer_network | platform | source_platform | landing_page_type | device | recency`);
     if (!isStr(value) || value.length > ENTRY_TERM_LIMIT) errors.push(`${at}.value: required string of 1..${ENTRY_TERM_LIMIT} characters`);
     // A signal value outside its own vocabulary names a context that cannot
     // occur, so it could only ever be dead configuration or a typo for a live one.
@@ -317,6 +319,8 @@ export function validateSeedRules(candidate: unknown, weights: Readonly<Record<s
     }
     else if (signal === 'referrer_network' && entryNetworkOf(value) !== value) errors.push(`${at}.value: referrer_network names a known network's registrable domain, exactly`);
     else if (signal === 'platform' && platformWordOf(value) !== value) errors.push(`${at}.value: platform names an OS family, ios | android, exactly`);
+    else if (signal === 'device' && deviceClassOf(value) !== value) errors.push(`${at}.value: device names a device class, ${DEVICE_CLASSES.join(' | ')}, exactly (a tablet counts as desktop)`);
+    else if (signal === 'recency' && recencyBucketOf(value) !== value) errors.push(`${at}.value: recency names a recency bucket, ${RECENCY_BUCKETS.join(' | ')}, exactly`);
     if (!isNum(weight) || weight < 0 || weight > 1) errors.push(`${at}.weight: number 0..1`);
     // The dampen reads the SHOPPER's own memberships, not the piece, so its
     // dimensions need not be ones this slot weights.
@@ -393,9 +397,17 @@ export function validateOrders(candidate: unknown, take: number, terms: SlotTerm
     if (!isRecord(raw) || !hasExactly(raw, ['context', 'modules'])) { errors.push(`${at}: an order is { context, modules } and nothing else`); return; }
     const before = errors.length;
     let channel: OrderContext['channel'] | null = null, visitBuckets: OrderContext['visitBuckets'] | null = null;
+    let device: OrderContext['device'];
     const context = raw.context;
-    if (!isRecord(context) || !hasExactly(context, ['channel', 'visitBuckets'])) errors.push(`${at}.context: { channel, visitBuckets } and nothing else`);
-    else {
+    // P37: a context may also name a device, beside or instead of (with `any`) a channel and a visit bucket.
+    if (!isRecord(context) || !(hasExactly(context, ['channel', 'visitBuckets']) || hasExactly(context, ['channel', 'device', 'visitBuckets']))) {
+      errors.push(`${at}.context: { channel, visitBuckets } and optionally device, and nothing else`);
+    } else {
+      if (Object.hasOwn(context, 'device')) {
+        const d = deviceClassOf(context.device);
+        if (d) device = d;
+        else errors.push(`${at}.context.device: ${quoted(context.device)} is not a device class (${DEVICE_CLASSES.join(' | ')}; a tablet counts as desktop); omit it to match every device`);
+      }
       const c = context.channel;
       // P36 (R-P46): the tenant's channel ids and the names of its published cut.
       if (c === 'any' || channelInTerms(c, terms)) channel = c as OrderContext['channel'];
@@ -425,27 +437,31 @@ export function validateOrders(candidate: unknown, take: number, terms: SlotTerm
       });
     }
     if (errors.length === before && channel && visitBuckets) {
-      // Keys in sorted order, as every member a replay compares is built.
-      orders.push({ context: { channel, visitBuckets }, modules: [...(modules as string[])] });
+      // Keys in sorted order, as every member a replay compares is built; a device only when named.
+      orders.push({ context: { channel, ...(device ? { device } : {}), visitBuckets }, modules: [...(modules as string[])] });
     }
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: orders };
 }
 
-/** Decision D1's specificity: the number of the context's parts that are not `any`. */
-export const contextSpecificity = (context: OrderContext): number => (context.channel === 'any' ? 0 : 1) + (context.visitBuckets === 'any' ? 0 : 1);
+/** Decision D1's specificity: the number of the context's parts that are not `any`; P37: a named device is one more. */
+export const contextSpecificity = (context: OrderContext): number =>
+  (context.channel === 'any' ? 0 : 1) + (context.visitBuckets === 'any' ? 0 : 1) + (context.device === undefined ? 0 : 1);
 /** The buckets a context matches: `any` is every bucket of the tenant's cut (today's buckets where no tenant is in hand). */
 const bucketsOf = (context: OrderContext, terms: SlotTerms = TODAY_TERMS): string[] =>
   context.visitBuckets === 'any' ? [...(terms === 'grammar' ? VISIT_BUCKET_WORDS : terms.buckets)] : [...context.visitBuckets];
 const contextWords = (context: OrderContext): string =>
-  `channel ${quoted(context.channel)}, visit buckets ${context.visitBuckets === 'any' ? quoted('any') : context.visitBuckets.join(' | ')}`;
+  `channel ${quoted(context.channel)}, visit buckets ${context.visitBuckets === 'any' ? quoted('any') : context.visitBuckets.join(' | ')}${context.device === undefined ? '' : `, device ${quoted(context.device)}`}`;
 /** A shopper both contexts match, in words, or null when no shopper can match both. */
 function sharedShopper(a: OrderContext, b: OrderContext, terms: SlotTerms = TODAY_TERMS): string | null {
   if (a.channel !== 'any' && b.channel !== 'any' && a.channel !== b.channel) return null;
+  // P37: two contexts naming different devices never match one shopper.
+  if (a.device !== undefined && b.device !== undefined && a.device !== b.device) return null;
   const inB = new Set(bucketsOf(b, terms)), bucket = bucketsOf(a, terms).find(v => inB.has(v));
   if (bucket === undefined) return null;
   const channel = a.channel !== 'any' ? a.channel : b.channel !== 'any' ? b.channel : 'any channel';
-  return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}`;
+  const device = a.device ?? b.device;
+  return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}${device === undefined ? '' : `, on a ${device} device`}`;
 }
 
 // ── P04: position pins and off-limits marks on the declared layout slot ─────
@@ -566,7 +582,7 @@ function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, p
     for (let j = 0; j < k; j++) {
       const a = orders[j]!.context, b = order.context;
       const same = a.channel === b.channel && bucketsOf(a, terms).length === bucketsOf(b, terms).length && bucketsOf(a, terms).every(v => bucketsOf(b, terms).includes(v))
-        && (a.visitBuckets === 'any') === (b.visitBuckets === 'any');
+        && (a.visitBuckets === 'any') === (b.visitBuckets === 'any') && a.device === b.device;
       if (same) { errors.push(`${at}[${k}].context: two orders for one context (${contextWords(b)}); orders[${j}] already sets it`); continue; }
       const shared = sharedShopper(a, b, terms);
       if (shared !== null && contextSpecificity(a) === contextSpecificity(b)) {

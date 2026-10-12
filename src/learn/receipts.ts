@@ -127,11 +127,16 @@ export function contextOf(cell: DecisionRecord['cell']): string {
   return `${cell.channel === 'unknown' ? 'channel unknown' : `from ${cell.channel}`}, ${visit}, ${stage}, ${cell.region ? `in ${cell.region}` : 'region unknown'}, ${cell.affinity ? `leaning ${cell.affinity.replace(':', ' ')}` : 'no leading interest yet'}`;
 }
 
-/** P01: a published context in words: its channel, or any channel; its visit buckets, or any visit. */
+/** P01: a published context in words: its channel, or any channel; its visit buckets, or any visit; P37: and its device, when it names one. */
 function orderContextOf(context: NonNullable<DecisionRecord['explain']['configuredOrder']>['context']): string {
   const visit = (bucket: string) => (bucket === '1' ? 'first visit' : `visit ${bucket}`);
-  return `${context.channel === 'any' ? 'any channel' : `from ${context.channel}`}, ${context.visitBuckets === 'any' ? 'any visit' : context.visitBuckets.map(visit).join(' or ')}`;
+  return `${context.channel === 'any' ? 'any channel' : `from ${context.channel}`}, ${context.visitBuckets === 'any' ? 'any visit' : context.visitBuckets.map(visit).join(' or ')}${context.device === undefined ? '' : `, on ${context.device}`}`;
 }
+
+/** P37: a recency bucket in words, as the kit names it. */
+const RECENCY_WORDS: Readonly<Record<string, string>> = { same_day: 'same day', within_7_days: 'within 7 days', '8_to_30_days': '8 to 30 days', '30_and_more': '30 and more' };
+/** W16 C3: a fired seed's signal and value in words; P37: a recency bucket named in words, never by its id. */
+const seedValueOf = (signal: string, value: string): string => (signal === 'recency' ? RECENCY_WORDS[value] ?? value : value);
 
 /**
  * P07: the context prior in words — "population prior", the shopper's entry
@@ -196,7 +201,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     // caused. A candidate the rules never named says nothing here rather than
     // claiming a context it did not have.
     if (e.contextual && e.contextual.drivers.length) {
-      why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${d.value} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
+      why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${seedValueOf(d.signal, d.value)} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
     }
     if (e.regional) why.push(`What is trending ${e.regional.region === '*' ? 'everywhere' : `in ${e.regional.region}`} contributed ${r3(e.regional.contribution)} (the trend's share of the score: ${r3(e.regional.lambda)}).`);
     if (e.contextPrior) why.push(contextPriorSentence(e.contextPrior));

@@ -15,7 +15,7 @@ import { syntheticOperation } from '@/ops/synthetic';
 import { serveContentDecisions } from '@/content/service';
 import { requireRetention, type RetentionStamp } from '@/retention';
 import { ENTRY_QUERY_LIMIT, validEntry, type ChannelSignals } from '@/services/visit';
-import { platformOf } from '@/services/platform';
+import { deviceOf, platformOf } from '@/services/platform';
 import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
 import { tenantConfig } from '@/tenancy/middleware';
 import { enqueueDecisions } from '@/ledger/enqueue';
@@ -875,6 +875,9 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     // The OS family this request reports, for `platform` seed rules: the OS family is read from the request;
     // the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept.
     platform: platformOf(c.req.raw.headers),
+    // P37: the device class this request reports (client hint, else user agent), for `device` seed rules and
+    // configured orders naming a device: the class is read from the request; the user agent itself is never kept.
+    device: deviceOf(c.req.raw.headers),
     stateTenant: c.get('tenant'), principal, capability: capabilityToken(c.req.raw)!,
     // The offer envelope is the RENDERED-measurement path, and it only does
     // anything when the caller supplies a page instance (see service.ts:568 —

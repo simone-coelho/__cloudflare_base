@@ -50,7 +50,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
-import { liveVisit, mergeVisits, projectVisit, validEntry, validVisitContext, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
+import { liveVisit, mergeVisits, projectVisit, recencyBucketOf, validEntry, validVisitContext, visitArrival, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
+import { deviceClassOf } from '@/services/platform';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
@@ -779,7 +780,10 @@ export class ShopperReflex {
               // that classified them, only when the visit records them.
               ...(this.pipeline.sourcePlatform !== undefined ? { sourcePlatform: this.pipeline.sourcePlatform } : {}),
               ...(this.pipeline.landingPageType !== undefined ? { landingPageType: this.pipeline.landingPageType } : {}),
-              ...(this.pipeline.vocabularyRevision !== undefined ? { vocabularyRevision: this.pipeline.vocabularyRevision } : {}) } : null,
+              ...(this.pipeline.vocabularyRevision !== undefined ? { vocabularyRevision: this.pipeline.vocabularyRevision } : {}),
+              // P37: the visit's device and recency, only when the visit records them.
+              ...(deviceClassOf(this.pipeline.device) ? { device: this.pipeline.device } : {}),
+              ...(recencyBucketOf(this.pipeline.recency) ? { recency: this.pipeline.recency } : {}) } : null,
             // P10: the shopper's count of signals, read off the state this object already
             // holds (no read of its own), for the slots that publish a signal
             // floor. Present only when there is one; absent reads as 0.
@@ -1060,6 +1064,11 @@ export class ShopperReflex {
       country: typeof body.geo.country === 'string' ? body.geo.country : null,
       regionCode: typeof body.geo.regionCode === 'string' ? body.geo.regionCode : null,
     };
+    // P37: and the device class the route read from the request's own headers,
+    // transient like geo: the visit the event opens records it. Socket frames
+    // carry none, so a socket event reports no device.
+    const device = principal ? deviceClassOf(body.device) : null;
+    if (device) event.device = device;
     const outcome = await this.serialize(async () => {
       try {
         if (principal) { assertSessionTarget(principal, event.userId, body.sessionId); await this.assertOwned(principal, request); }
@@ -1496,6 +1505,10 @@ export class ShopperReflex {
       firstSeen: pipe.firstSeen,
       sessionCount: pipe.sessionCount + 1,
       ...nextVisit,
+      // P37: the visit's device and recency, written by the event that opens it
+      // (the device its own request reported, the recency from the stored last
+      // visit) and carried for the visit; each only when there is one.
+      ...visitArrival(pipe, this.affinity?.lastSeen, now, event.device),
       ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
 
@@ -1950,6 +1963,9 @@ export class ShopperReflex {
         ? journeyStageFrom(journeyCountersNow(this.pipeline?.journey, this.affinity?.lastSeen, now), journeyThresholdsInForce(cfg))
         : null,
       visit: usable ? projectVisit(this.pipeline, this.affinity?.lastSeen, now) : null,
+      // P37: the visit's arrival context beside it, null exactly where `visit`
+      // is — the answer the session host gives (src/routes/realtime.ts).
+      arrival: usable ? visitArrival(this.pipeline, this.affinity?.lastSeen, now) : null,
       // CW31: the switches the content decision and the outcome path honour.
       // W35 A1: nothing else — the identical shape the session host answers
       // (docs/api/01-rest-endpoints.md, GET /realtime/reflex). The session is
@@ -3944,6 +3960,8 @@ export class ShopperReflex {
         // P36: the visit's context attributes as the pipeline holds them now, so
         // a projection never keeps an earlier visit's (absent ones are not written).
         sourcePlatform: pipe.sourcePlatform, landingPageType: pipe.landingPageType, vocabularyRevision: pipe.vocabularyRevision,
+        // P37: and the visit's device and recency, the same way.
+        device: pipe.device, recency: pipe.recency,
         engagementScore: calculateEngagementScore(pipe.attributes), journeyStage: pipe.journeyStage,
         lastSegmentUpdate: original?.metadata.lastSegmentUpdate ?? affinity.lastSeen },
       preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization,

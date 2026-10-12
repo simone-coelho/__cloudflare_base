@@ -13,9 +13,10 @@ import { retentionBirth, externalRetentionBirths, requireRetention, mergeRetenti
 import { pinProfileRetention } from '@/identity/sessionAuthority';
 
 import {
-  entryChannelOf, isContextId, liveVisit, mergeVisits, validEntry, visitContextMembers,
-  type ChannelSignals, type VisitInputs,
+  entryChannelOf, isContextId, liveVisit, mergeVisits, RECENCY_BUCKETS, validEntry, visitArrival, visitContextMembers,
+  type ChannelSignals, type RecencyBucket, type VisitInputs,
 } from '@/services/visit';
+import { DEVICE_CLASSES, type DeviceClass } from '@/services/platform';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 
 export interface SessionData {
@@ -93,6 +94,10 @@ export interface SessionData {
     landingPageType?: string;
     /** P36: the learn revision whose published vocabulary classified this visit; present only then. */
     vocabularyRevision?: number;
+    /** P37: the device class the request that opened this visit reported; present only when it reported one. */
+    device?: DeviceClass;
+    /** P37: this visit's recency from the stored last visit; absent on a first visit. */
+    recency?: RecencyBucket;
     engagementScore: number;
     lastSegmentUpdate: number;
     journeyStage?: 'early' | 'mid' | 'late';
@@ -135,14 +140,15 @@ export interface SessionCookies {
  * undefined, as an unrecognised channel always has. Nothing is added: a record
  * without the new members parses to exactly what it parsed to before.
  */
-function visitMetadata<M extends { entryChannel?: string; sourcePlatform?: string; landingPageType?: string; vocabularyRevision?: number }>(m: M): M {
+function visitMetadata<M extends { entryChannel?: string; sourcePlatform?: string; landingPageType?: string; vocabularyRevision?: number; device?: string; recency?: string }>(m: M): M {
   const marked = m.vocabularyRevision !== undefined;
   const out = { ...m };
   if (out.entryChannel !== undefined && entryChannelOf(out.entryChannel) !== out.entryChannel && !(marked && isContextId(out.entryChannel))) out.entryChannel = undefined;
   if (out.sourcePlatform !== undefined && !(marked && isContextId(out.sourcePlatform))) delete out.sourcePlatform;
   if (out.landingPageType !== undefined && !(marked && isContextId(out.landingPageType))) delete out.landingPageType;
   if (marked && !(out.entryChannel !== undefined && entryChannelOf(out.entryChannel) !== out.entryChannel) && out.sourcePlatform === undefined && out.landingPageType === undefined) delete out.vocabularyRevision;
-  for (const key of ['sourcePlatform', 'landingPageType', 'vocabularyRevision'] as const) if (Object.hasOwn(out, key) && out[key] === undefined) delete out[key];
+  // P37: as the other context attributes, a key is kept only with a value.
+  for (const key of ['sourcePlatform', 'landingPageType', 'vocabularyRevision', 'device', 'recency'] as const) if (Object.hasOwn(out, key) && out[key] === undefined) delete out[key];
   return out;
 }
 
@@ -192,6 +198,11 @@ export const sessionDataSchema = z.object({
     sourcePlatform: z.string().optional().catch(undefined),
     landingPageType: z.string().optional().catch(undefined),
     vocabularyRevision: z.number().int().positive().optional().catch(undefined),
+    // P37: the visit's device and recency. Declared or .parse() silently STRIPS
+    // them, and with .catch so an unrecognised stored value degrades to absent
+    // (unknown stays unknown) instead of failing the parse.
+    device: z.enum(DEVICE_CLASSES as [DeviceClass, ...DeviceClass[]]).optional().catch(undefined),
+    recency: z.enum(RECENCY_BUCKETS as [RecencyBucket, ...RecencyBucket[]]).optional().catch(undefined),
     engagementScore: z.number(),
     lastSegmentUpdate: z.number(),
     journeyStage: z.enum(['early', 'mid', 'late']).optional()
@@ -317,7 +328,10 @@ export class SessionManager {
       // otherwise close the gap it is being measured against, and every event
       // would look like a new visit.
       const priorLastSeen = existingSession?.metadata.lastSeen;
-      const visit = observedLive ? liveVisit(existingSession?.metadata, priorLastSeen, now, entry, inputs) : {
+      // P37: beside it, the visit's device and recency (`visitArrival`): written by
+      // the event that opens the visit and carried for the visit, each only when there is one.
+      const visit = observedLive ? { ...liveVisit(existingSession?.metadata, priorLastSeen, now, entry, inputs),
+        ...visitArrival(existingSession?.metadata, priorLastSeen, now, inputs?.device) } : {
         visitCount: existingSession?.metadata.visitCount, lastVisitAt: existingSession?.metadata.lastVisitAt,
         entryChannel: existingSession?.metadata.entryChannel, ...visitContextMembers(existingSession?.metadata),
       };
