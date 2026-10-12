@@ -11,6 +11,7 @@ import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, Di
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { TODAY_TERMS, type ContextTerms } from './cell';
+import { ELIGIBILITY_SIGNALS } from './lifecycle';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -81,6 +82,70 @@ function storedStageWordOf(v: unknown): StageWord | null {
   return null;
 }
 
+/** P31: the journey stages a rule may name, in the engine's words. */
+const RULE_STAGES: readonly StageWord[] = ['exploring', 'considering', 'deciding'];
+const RULE_SIGNALS = 'entry_channel, visit_bucket or journey_stage';
+
+/**
+ * P31: one module's eligibility rule — `regions`, region keys such as US or
+ * US-WA, and `context`, the engine's own signals each with the values that
+ * admit the module — refused by name when malformed. On publication (`terms`)
+ * a rule names only the engine's own signals (`ELIGIBILITY_SIGNALS`), each
+ * value of its vocabulary: a channel of the terms (today's six words for a
+ * tenant without a context vocabulary), a visit bucket of the terms (1, 2-3,
+ * 4+), or a journey stage (exploring, considering, deciding); a refusal quotes
+ * the offending signal or value. A RETAINED document (`terms` null) is read by
+ * the grammar alone, so a rule a later contract refuses keeps its catalogue
+ * readable and, naming what the engine cannot satisfy, admits nothing.
+ */
+function eligibilityRule(raw: unknown, at: string, terms: ContextTerms | null): ValidationResult<{ regions?: string[]; context?: Record<string, string[]> }> {
+  if (!isRecord(raw)) return { ok: false, errors: [`${at}: object with regions and/or context`] };
+  const errors: string[] = [];
+  const extra = Object.keys(raw).filter((k) => !['regions', 'context'].includes(k));
+  if (extra.length) errors.push(`${at}: unknown member(s) ${extra.join(', ')}; expected regions and/or context`);
+  const rule: { regions?: string[]; context?: Record<string, string[]> } = {};
+  if (raw.regions !== undefined) {
+    const regions = raw.regions;
+    const unusable = Array.isArray(regions) ? regions.filter((v) => !(isStr(v) && /^[A-Za-z]{2}(-[A-Za-z0-9]{1,3})?$/.test(v))) : [];
+    if (!Array.isArray(regions) || !regions.length || regions.length > 64 || unusable.length) {
+      errors.push(`${at}.regions: 1..64 region keys such as US or US-WA`
+        + (unusable.length ? `; not a region key: ${unusable.slice(0, 5).map(quoted).join(', ')}${unusable.length > 5 ? ', …' : ''}` : ''));
+    } else rule.regions = (regions as string[]).map((v) => v.trim().toUpperCase());
+  }
+  if (raw.context !== undefined) {
+    const context = raw.context;
+    if (!isRecord(context) || !Object.keys(context).length || Object.keys(context).length > 8) {
+      errors.push(`${at}.context: object of 1..8 signal names → accepted values`);
+    } else {
+      const ctx: Record<string, string[]> = {};
+      for (const [name, values] of Object.entries(context)) {
+        if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) { errors.push(`${at}.context.${name}: signal name must be 1..32 letters, digits or underscore`); continue; }
+        if (terms && !(ELIGIBILITY_SIGNALS as readonly string[]).includes(name)) {
+          errors.push(`${at}.context.${name}: unknown signal ${quoted(name)}; a rule names regions and the engine's own signals ${RULE_SIGNALS}`); continue;
+        }
+        if (!Array.isArray(values) || !values.length || values.length > 32
+          || !values.every((v) => isStr(v) && v.trim() && v.length <= 64)) {
+          errors.push(`${at}.context.${name}: 1..32 non-empty values of at most 64 characters`); continue;
+        }
+        const words = (values as string[]).map((v) => v.trim());
+        if (terms) {
+          const admits = name === 'entry_channel' ? (w: string) => channelInTerms(w, terms)
+            : name === 'visit_bucket' ? (w: string) => bucketInTerms(w, terms) : (w: string) => (RULE_STAGES as readonly string[]).includes(w);
+          const outside = words.filter((w) => !admits(w));
+          if (outside.length) {
+            const vocabulary = name === 'entry_channel' ? channelWords(terms) : name === 'visit_bucket' ? `a visit bucket (${bucketWords(terms)})` : `a journey stage (${RULE_STAGES.join(' | ')})`;
+            errors.push(`${at}.context.${name}: ${outside.slice(0, 5).map(quoted).join(', ')}${outside.length > 5 ? ', …' : ''} ${outside.length === 1 ? 'is' : 'are'} not ${vocabulary}`); continue;
+          }
+        }
+        ctx[name] = words;
+      }
+      if (Object.keys(ctx).length) rule.context = ctx;
+    }
+  }
+  if (!errors.length && !rule.regions && !rule.context) errors.push(`${at}: name at least one of regions or context`);
+  return errors.length ? { ok: false, errors } : { ok: true, value: rule };
+}
+
 function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[], stored: boolean): ContentPiece | null {
   const at = `pieces[${i}]`;
   if (!isRecord(p)) { errors.push(`${at}: must be an object`); return null; }
@@ -126,42 +191,13 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
       if (window.from && window.to && Date.parse(window.from) >= Date.parse(window.to)) errors.push(`${at}.window: from must precede to`);
     }
   }
-  // Garrett's targeting rule. Bounded on every axis, because it is authored by a
-  // feed and it decides whether a piece may be served at all.
+  // P31: the module's eligibility rule by context. Bounded on every axis,
+  // because it is authored by a feed and it decides whether a piece may be
+  // served at all (`eligibilityRule` below).
   let eligibleWhen: { regions?: string[]; context?: Record<string, string[]> } | undefined;
   if (p.eligibleWhen !== undefined) {
-    if (!isRecord(p.eligibleWhen)) errors.push(`${at}.eligibleWhen: object with regions and/or context`);
-    else {
-      const extra = Object.keys(p.eligibleWhen).filter((k) => !['regions', 'context'].includes(k));
-      if (extra.length) errors.push(`${at}.eligibleWhen: unknown member(s) ${extra.join(', ')}; expected regions and/or context`);
-      const rule: { regions?: string[]; context?: Record<string, string[]> } = {};
-      if (p.eligibleWhen.regions !== undefined) {
-        const raw = p.eligibleWhen.regions;
-        if (!Array.isArray(raw) || !raw.length || raw.length > 64
-          || !raw.every((v) => isStr(v) && /^[A-Za-z]{2}(-[A-Za-z0-9]{1,3})?$/.test(v))) {
-          errors.push(`${at}.eligibleWhen.regions: 1..64 region keys such as US or US-WA`);
-        } else rule.regions = raw.map((v) => v.trim().toUpperCase());
-      }
-      if (p.eligibleWhen.context !== undefined) {
-        const raw = p.eligibleWhen.context;
-        if (!isRecord(raw) || !Object.keys(raw).length || Object.keys(raw).length > 8) {
-          errors.push(`${at}.eligibleWhen.context: object of 1..8 signal names → accepted values`);
-        } else {
-          const ctx: Record<string, string[]> = {};
-          for (const [name, values] of Object.entries(raw)) {
-            if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) { errors.push(`${at}.eligibleWhen.context.${name}: signal name must be 1..32 letters, digits or underscore`); continue; }
-            if (!Array.isArray(values) || !values.length || values.length > 32
-              || !values.every((v) => isStr(v) && v.trim() && v.length <= 64)) {
-              errors.push(`${at}.eligibleWhen.context.${name}: 1..32 non-empty values of at most 64 characters`); continue;
-            }
-            ctx[name] = values.map((v) => v.trim());
-          }
-          if (Object.keys(ctx).length) rule.context = ctx;
-        }
-      }
-      if (!rule.regions && !rule.context) errors.push(`${at}.eligibleWhen: name at least one of regions or context`);
-      else eligibleWhen = rule;
-    }
+    const checked = eligibilityRule(p.eligibleWhen, `${at}.eligibleWhen`, stored ? null : TODAY_TERMS);
+    if (checked.ok) eligibleWhen = checked.value; else errors.push(...checked.errors);
   }
   let merchandising: Record<string, number> | undefined;
   if (p.merchandising !== undefined) {

@@ -7,7 +7,7 @@
 
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
 } from './types';
 import { OFF_LIMITS_ITEM } from '@/ledger/records';
 import { contextSpecificity, validateSeedRules } from './kinds';
@@ -15,7 +15,7 @@ import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, t
 import { TODAY_TERMS, type ContextTerms } from './cell';
 import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey } from '@/reflex/core';
-import { isEligibleAt, type EligibilityContext } from './lifecycle';
+import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, type EligibilityContext } from './lifecycle';
 import { DEFAULT_STATS, levelKeys, liftFor, type LiftSnapshot } from '@/learn/stats';
 import { EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
@@ -48,12 +48,22 @@ export interface DecideInput {
   regional?: (RegionalBlend & { share: Readonly<Record<string, Readonly<Record<string, number>>>> }) | null;
   cell: Cell;
   /**
-   * Where and under what conditions this request is happening, for the pieces
-   * that carry an `eligibleWhen` rule (Garrett's "snowing in the Pacific
-   * Northwest"). Absent means no rule can pass, which leaves every catalog
-   * without rules behaving exactly as before.
+   * The conditions the caller asserts for this request (`ctx.<name>` on the
+   * snapshot), read only by the anchor preference (`ANCHOR_SIGNAL`). P31: no
+   * eligibility rule reads them — a module's `eligibleWhen` rule is evaluated
+   * on the decision's cell as the engine derived it (`cellEligibility`), never
+   * on a value the page sends.
    */
   eligibility?: EligibilityContext;
+  /**
+   * P31: the page's report of the modules that have nothing to show for this
+   * page view, by identifier. Each is withheld before ranking: neither
+   * returned, nor recorded, nor counted as an exposure, and the slot fills its
+   * take from the remaining ranking. The report can only withhold: an
+   * identifier naming no eligible module changes nothing. The replay passes
+   * the report the record carries (`inputs.nothing_to_show`). Absent: no report.
+   */
+  nothingToShow?: readonly string[] | null;
   arm: Arm;
   versions: DecisionVersions;
   configLabel: string;
@@ -617,13 +627,39 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     .map((spec) => below.has(spec.slot) ? { ...spec, affinity: contextView } : spec);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
+  // P31: nor does a module whose own eligibility rule the decision's cell does
+  // not satisfy — read off the cell as the engine derived it (`cellEligibility`),
+  // never off a value the page sends, an unknown value satisfying no rule — nor
+  // one the page reports has nothing to show for this page view. Each is
+  // withheld before ranking on every arm, as the window and the stock flag are:
+  // never returned, recorded or counted, the take filled from the remaining
+  // ranking. The rule is read first, so the report can only withhold a module
+  // that was eligible; it adds nothing and changes nothing else. A pin of a
+  // withheld module is a pin of an ineligible one, and an off-limits mark of it
+  // holds nothing (P04). Each rule's verdict, for every live module of the page
+  // that carries one, and the report ride the records' inputs (page-level, C20).
   // Keep the site's default diversity/order unchanged as well as its zero scores.
   const projectTypes = i.arm !== 'default' && historicalContentTypes !== HISTORICAL_CONTENT_TYPES;
   const eligible: ContentPiece[] = [], byId = new Map<string, ContentPiece>();
+  // P31 (R-P23 C7): the modules eligible before the withholding — live, inside
+  // their window and in stock — from which the layout reason's baseline is drawn.
+  const admitted: ContentPiece[] = [];
+  const ruleContext = cellEligibility(i.cell);
+  const report = [...new Set((i.nothingToShow ?? []).filter((id): id is string => typeof id === 'string' && id.length > 0))].sort();
+  const reported = new Set(report), pageSlots = new Set(i.slots.map((s) => s.slot));
+  const verdicts = new Map<string, boolean>(), withheldBy = new Map<string, LayoutWithheldCause>();
   for (const original of i.pieces) {
     const piece = projectTypes ? withContentTypeAffinity(original) : original;
     byId.set(piece.id, piece);
-    if (isEligibleAt(piece, i.nowMs, i.eligibility)) eligible.push(piece);
+    if (!isLiveAt(piece, i.nowMs) || piece.inStock === false) continue;
+    admitted.push(piece);
+    if (piece.eligibleWhen) {
+      const verdict = matchesEligibility(piece.eligibleWhen, ruleContext);
+      if (piece.slotTypes.some((slot) => pageSlots.has(slot))) verdicts.set(piece.id, verdict);
+      if (!verdict) { withheldBy.set(piece.id, 'eligibility_rule'); continue; }
+    }
+    if (reported.has(piece.id)) { withheldBy.set(piece.id, 'nothing_to_show'); continue; }
+    eligible.push(piece);
   }
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
@@ -1087,6 +1123,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
     ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
     ...(below.size ? { signals: signalCount } : {}),
+    // P31: the page's report as the decision accepted it, and each rule's
+    // verdict on the cell (keys sorted), page-level and only when there is one.
+    ...(report.length ? { nothing_to_show: [...report] } : {}),
+    ...(verdicts.size ? { eligibility_verdicts: Object.fromEntries([...verdicts].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) } : {}),
     ...rules,
   };
 
@@ -1110,6 +1150,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   if (!historicalPins && historicalGovernance === undefined) {
     const slotIndex = new Map(i.slots.map((slot, index) => [slot.slot, index] as const));
     const live = eligible.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
+    // P31 (R-P23 C7): and the same before the withholding; the same list when nothing was withheld.
+    const admittedLive = withheldBy.size ? admitted.filter((p) => (p.lifecycle?.status ?? 'live') === 'live') : live;
     const pinRefused = new Set((pinDiagnostics ?? []).map((d) => d.slot));
     for (const [index, s] of i.slots.entries()) {
       if (s.layout !== true || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))) continue;
@@ -1118,13 +1160,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const served = decisions.filter((d) => d.slot === s.slot);
       // P04's whole-slot refusal: a refused pin left the slot serving nothing and writing no record, so there is no reason to give.
       if (!served.length && pinRefused.has(s.slot)) continue;
-      const reason = layoutReasonOf(s, index, served, slotIndex, live, pinRefused);
+      const reason = layoutReasonOf(s, index, served, slotIndex, live, admittedLive, pinRefused);
       layoutReasons.set(s.slot, reason);
     }
   }
   /** P29: one declared layout slot's reason, as the comment above defines it. */
   function layoutReasonOf(s: SlotStrategy, index: number, served: typeof decisions, slotIndex: ReadonlyMap<string, number>,
-    live: readonly ContentPiece[], pinRefused: ReadonlySet<string>): LayoutReason {
+    live: readonly ContentPiece[], admittedLive: readonly ContentPiece[], pinRefused: ReadonlySet<string>): LayoutReason {
     const spec = specOf.get(s.slot)!, keyOf = (id: string) => `${s.slot}:${id}`;
     const fixed = (d: (typeof decisions)[number]) => d.strategy === 'tenant-pinned';
     // What the slot could fill around its fixed positions, pooled as the composer pools it.
@@ -1138,10 +1180,26 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       if (other.pinnedPieceId) reserved.add(other.pinnedPieceId);
     }
     const own = new Set(served.filter(fixed).map((d) => d.contentId)), marks = new Set(spec.offLimitsPieceIds ?? []);
-    const pool = live.filter((p) => p.slotTypes.includes(s.slot) && !(gate.active && gate.reason(p)) && !before.has(p.id) && !reserved.has(p.id)
-      && !own.has(p.id) && !marks.has(p.id)).map((p) => p.id);
+    const pooled = (p: ContentPiece) => p.slotTypes.includes(s.slot) && !(gate.active && gate.reason(p)) && !before.has(p.id) && !reserved.has(p.id)
+      && !own.has(p.id) && !marks.has(p.id);
+    const pool = live.filter(pooled).map((p) => p.id);
     const order = configured.get(s.slot), inPool = new Set(pool);
     const sequence = order ? [...new Set(order.modules)].filter((id) => inPool.has(id)) : pool;
+    // P31 (R-P23 C7): the baseline is drawn before the withholding, so a module
+    // it would have served on a position ranking fills — one of the first
+    // positions the fixed modules leave free, in the same sequence with the
+    // withheld modules in place — that the page's report or the module's rule
+    // withheld is a change against it, named with its cause in baseline order.
+    // The moves then compare the served order with the baseline less the
+    // withheld modules, so a module that only took a withheld module's place is
+    // not called moved by a term. Nothing withheld: exactly as before.
+    let withheld: LayoutWithheld[] = [];
+    if (withheldBy.size) {
+      const fullPool = admittedLive.filter(pooled).map((p) => p.id), inFull = new Set(fullPool);
+      const fullSequence = order ? [...new Set(order.modules)].filter((id) => inFull.has(id)) : fullPool;
+      const capacity = Math.max(0, s.take - served.filter(fixed).length);
+      withheld = fullSequence.slice(0, capacity).flatMap((id) => { const cause = withheldBy.get(id); return cause ? [{ cause, module: id }] : []; });
+    }
     // The baseline, position by position: a fixed module where the composer placed
     // it (the same positions, ranking and baseline filling the same number of
     // free positions), the baseline sequence on every other position.
@@ -1153,7 +1211,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     for (const id of sequence.slice(next)) if (!fromOf.has(id)) fromOf.set(id, ++beyond);
     const scored = [...(scoredIn.get(s.slot) ?? pool)];
     const support = new Map((candidates[s.slot] ?? []).map((c) => [c.contentId, c.score] as const));
-    if (baseline.every((id, k) => id === served[k]!.contentId)) {
+    if (!withheld.length && baseline.every((id, k) => id === served[k]!.contentId)) {
       // Unchanged: the first cause that holds, in the ticket's own order (decision D1).
       const fixedAll = served.length > 0 && served.length === s.take && served.every(fixed);
       const blend = blends.get(s.slot);
@@ -1254,7 +1312,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const own = termOf.get(m.module), up = m.from === null || m.to < m.from;
       const other = own ? undefined : moves.filter((o) => o.module !== m.module && termOf.has(o.module) && (up ? passed(m, o) : passed(o, m))).sort((a, b) => a.to - b.to)[0];
       return { from: m.from, module: m.module, term: own ?? (other ? termOf.get(other.module)! : fallback), to: m.to };
-    }), slot: s.slot, status: 'changed' };
+    }), slot: s.slot, status: 'changed', ...(withheld.length ? { withheld } : {}) };
   }
   /**
    * P29: a ranked module's score itemised term by term, in the engine's fixed
@@ -1395,9 +1453,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
 /** P29: what the record of an off-limits declared layout slot says in words. */
 export const OFF_LIMITS_LAYOUT_NOTE = 'off-limits layout slot — it served nothing and the site’s own default has it; this record names why, for the ledger and the export only';
 
-/** P29: a layout reason as the set, a record and a receipt carry it: keys sorted, the moves copied. */
+/** P29: a layout reason as the set, a record and a receipt carry it: keys sorted, the moves (and P31's withheld modules) copied. */
 export function layoutReasonRecord(reason: LayoutReason): LayoutReason {
   return reason.status === 'changed'
-    ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed' }
+    ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed',
+      // P31: the withheld modules, each with its cause, keys sorted.
+      ...(reason.withheld?.length ? { withheld: reason.withheld.map((w) => ({ cause: w.cause, module: w.module })) } : {}) }
     : { cause: reason.cause, ...(reason.n !== undefined ? { n: reason.n } : {}), ...(reason.nMin !== undefined ? { nMin: reason.nMin } : {}), slot: reason.slot, status: 'unchanged' };
 }

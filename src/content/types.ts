@@ -40,23 +40,21 @@ export interface ContentPiece extends ContentPieceLike {
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
   window?: { from?: string; to?: string };
   /**
-   * QVC/Garrett (2026-09-11): "Do you have options for location? What about
-   * weather forecast? It's snowing in the Pacific Northwest, we might want to
-   * display relevant content to those customers."
-   *
-   * That is a TARGETING RULE, not an affinity: it decides whether the piece may
-   * be served at all, beside the window and the stock flag, and it is evaluated
-   * BEFORE scoring so a gated piece cannot be chosen however well it would have
-   * scored. It never boosts anything — a piece that passes its rule is then
-   * ranked on exactly the same terms as everything else.
+   * P31: the module's eligibility rule by context. It is a TARGETING RULE, not
+   * an affinity: it decides whether the piece may be served at all, beside the
+   * window and the stock flag, and it is evaluated BEFORE scoring, so a gated
+   * piece cannot be chosen however well it would have scored. It never boosts
+   * anything — a piece that passes its rule is then ranked on exactly the same
+   * terms as everything else.
    *
    * `regions` are the engine's own region keys (country, or country-region, as
-   * `regionKeyOf` builds them: "US", "US-WA"). A piece listing "US-WA" is
-   * eligible for a shopper in Washington; listing "US" covers the country.
-   * `context` names signals the page or a scheduled job supplies on the request,
-   * each with the values that admit the piece. Every named condition must hold,
-   * and a condition the request does not carry FAILS — an unknown weather is not
-   * snow, and silence must never open a gate.
+   * the edge reports them: "US", "US-WA"). A piece listing "US-WA" is eligible
+   * for a shopper in Washington; listing "US" covers the country. `context`
+   * names the engine's own signals — `entry_channel`, `visit_bucket` and
+   * `journey_stage` — each with the values that admit the piece, in the engine's
+   * words. Every named condition must hold, and each is read off the decision's
+   * cell as the engine derived it, never off a value the page sends: an unknown
+   * value satisfies no rule, and silence never opens a gate.
    */
   eligibleWhen?: EligibilityRule;
   excerpt?: string;
@@ -69,7 +67,12 @@ export interface ContentPiece extends ContentPieceLike {
 export interface EligibilityRule {
   /** Region keys that admit the piece. Absent means every region. */
   regions?: string[];
-  /** Named request signals, each with the values that admit the piece. */
+  /**
+   * P31: the engine's own signals (`entry_channel`, `visit_bucket`,
+   * `journey_stage`), each with the values that admit the piece. Publication
+   * admits no other signal and no value outside its vocabulary; a retained
+   * document's other signal is kept as stored and satisfies nothing.
+   */
   context?: Record<string, string[]>;
 }
 
@@ -274,6 +277,18 @@ export type LayoutMoveTerm = 'affinity' | 'seed' | 'regional_prior' | 'context_p
 export interface LayoutMove { from: number | null; module: string; term: LayoutMoveTerm; to: number }
 
 /**
+ * P31 (P29 decision D1 lets it add causes): why a module the baseline would
+ * have served was withheld from a declared layout slot before ranking — the
+ * page reported it has nothing to show for this page view (`nothing_to_show`),
+ * or its own eligibility rule is not satisfied by the decision's cell
+ * (`eligibility_rule`).
+ */
+export type LayoutWithheldCause = 'nothing_to_show' | 'eligibility_rule';
+
+/** P31: one module withheld from a changed layout, and why. Keys sorted. */
+export interface LayoutWithheld { cause: LayoutWithheldCause; module: string }
+
+/**
  * P29 (decision D1): the layout reason of a declared layout slot, on the decision
  * set, on every record of the slot (`explain.layoutReason`) and on every receipt
  * (`layoutReason`): the served order compared with the baseline — the
@@ -286,7 +301,13 @@ export interface LayoutMove { from: number | null; module: string; term: LayoutM
  */
 export type LayoutReason =
   | { cause: LayoutReasonCause; n?: number; nMin?: number; slot: string; status: 'unchanged' }
-  | { moves: LayoutMove[]; slot: string; status: 'changed' };
+  /**
+   * P31: `withheld` names, in baseline order, each module the baseline would
+   * have served that was withheld before ranking, with its cause; `moves` then
+   * compares the served order with the baseline less those modules. Present
+   * only when a module was withheld from a position the baseline fills.
+   */
+  | { moves: LayoutMove[]; slot: string; status: 'changed'; withheld?: LayoutWithheld[] };
 
 /**
  * P10: a signal floor — a whole number of signals, 0 or more, or `never` (the
@@ -780,6 +801,20 @@ export interface DecisionInputs {
    * below their floor.
    */
   signals?: number;
+  /**
+   * P31: the page's report of the modules that have nothing to show for this
+   * page view, as the decision accepted it (each identifier once, sorted).
+   * Written only when the page sent one, so the replay withholds exactly what
+   * the decision withheld; a record without it was decided without a report.
+   */
+  nothing_to_show?: string[];
+  /**
+   * P31: each eligibility rule's verdict on the decision's cell, module →
+   * true or false, for every live module of the page that carries a rule
+   * (keys sorted). Written only when the page held such a module; a record
+   * without it was decided where no rule could act.
+   */
+  eligibility_verdicts?: Record<string, boolean>;
 }
 
 /** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
