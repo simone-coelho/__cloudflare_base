@@ -17,11 +17,22 @@ The `data` object of `POST /realtime/action`, by `type`.
 |---|---|
 | `page_view` | `path` |
 | `product_view`, `add_to_cart`, `wishlist_add` | `productId`, plus the registry's attributes when the brand scores them from the event: `line`, `category`, `subcategory`, `silhouette`, `occasion` (a list), `price_usd` |
-| `purchase` | `orderId`, `value`, `currency`, `items[]` of `{ productId, quantity, price }` |
+| `purchase` | `orderId`, `value`, `currency`, `items[]` of `{ productId, quantity, price }`. Unique per `orderId` for the shopper: a second purchase event naming an `orderId` the shopper's purchase already named is answered `dropped: "duplicate_order"` and writes no outcome, no credit and no interest; the same event delivered again (its `eventId`) is not a second purchase, and a purchase without an `orderId` is never deduplicated ([API reference](./02-api-reference.md#purchase-uniqueness-per-orderid)) |
 | `content_impression` | Authenticated renderer admission: `contentId`, `slot`, `decisionId`, `renderOffer`, `page`, `pageInstance`, `position` (the page-wide order) and `slotPosition` (the position within the slot, from 0, which the SDK sends and admission then holds to the record's position; without it `position` is held to it); original event nonce/time are mandatory. On a marked module container it is the module's impression, once per page instance. A `content_impression` is **not a learning input today**: it carries no reward, so it produces no outcome record and credits nothing. What the learning loop counts is the slot's declared exposure unit — the served decision under `served-v1`, or the durably admitted render under `rendered-v1` — never a viewable impression |
-| `content_click`, `video_complete` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType`; from the SDK, `slotPosition`, the acknowledged placement's position within the slot, when its decision named one. A `content_click` is also a module engagement: a click inside a marked module container, or an interaction it declares in `data-op-engage`, named as `interaction` |
-| `content_dwell` | the same, plus `ms`, milliseconds on screen |
+| `content_viewable` | The viewable impression, sent by the SDK and never by the page: `contentId`, `slot`, `slotPosition`, `decisionId` (of the render acknowledgement), `page`, `pageInstance`, `position` (the page-wide order), `customerContentId`, `contentType`; one per piece per page instance, once the acknowledgement is held and the container has been at least half in view for one second without interruption. It weighs 0 whatever the registry says, builds no interest, is no signal and no interaction of the visit, carries no reward (no outcome record) and is never an exposure: no learning denominator changes |
+| `content_click`, `video_complete`, `video_view` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType`; from the SDK, `slotPosition`, the acknowledged placement's position within the slot, when its decision named one. A `content_click` is also a module engagement: a click inside a marked module container, or an interaction it declares in `data-op-engage`, named as `interaction` (the declared interactions `sizeguide:open` and `reviews:open` of a module that owns a size guide or reviews). A `video_view` is the video played for three seconds: a content action read off the piece's catalogue format (`tags.contentType`) as `video_complete` is, at weight 1 unless the registry publishes `weights.video_view`, and not a reward |
+| `content_dwell` | the same, plus `ms`, milliseconds on screen; the SDK sends it only after the slot's minimum on screen, its own in `dwellMinMsBySlot` (for example 30000 on an editorial slot), else `dwellMinMs`, one second |
+| `product_dwell` | `productId` and `dwellMs`, the milliseconds on the product page, sent once per product view past 20 seconds, plus the registry's attributes when the brand scores them from the event. `product_dwell` with its `dwellMs` feeds the visit's dwell counter (`category_dwell_ms`), counts as an interaction and weighs 0 unless the registry publishes a weight |
 | `custom` | `event`, the real name, plus anything |
+
+The event conventions, each a `custom` event weighing 0 until the tenant's registry publishes a weight for its
+name, and built only from the source fields the registry names:
+
+| `event` | Fields in `data` |
+|---|---|
+| `search` | The values the site's search resolved the query to, in the registry's source fields (`category`, `line`, …): `search` carries the resolved values only, never the query text |
+| `filter_applied` | `dimension` and `value`, the facet's, with the value also in the registry's own source field. The sale filter and the sale page send `filter_applied` with `dimension: "priceStatus"`, `value: "sale"` and `priceStatus: "sale"`, raising `priceStatus` sale |
+| `remove_from_cart` | `productId`; `remove_from_cart` is captured at weight 0 until the negative-signal release (P39) |
 
 `data.brand` is accepted on any of these and is the brand the shopper's page was served under — the
 same value the decision request carried. A reward-bearing event that names it is measured in that
@@ -661,7 +672,7 @@ means 0. A slot's own `signalFloor` overrides it: a whole number of 0 or more, o
 declared layout slot only. A signal is one action whose behaviour weight is above zero: the action's own
 weight in the tenant's registry (`weights`), so a product view, a wishlist or cart add, a purchase or a
 content click is a signal, and a page view, a render acknowledgement (`content_impression`), a time-only
-re-evaluation and any other action weighted 0 is not; a weight applied elsewhere to what an action touched
+re-evaluation and any other action weighted 0 is not, nor ever is the viewable impression (`content_viewable`); a weight applied elsewhere to what an action touched
 never makes it a signal or stops it being one. The count lives on the shopper's persisted state, written
 only once a signal is recorded, so a shopper with no signals carries exactly the state they carried before
 and a returning shopper's earlier visits count; a browser linked to a person adds its count to the

@@ -62,7 +62,7 @@ One event. Site key.
 
 | Field | Required | Meaning |
 |---|---|---|
-| `type` | yes | One of `page_view`, `product_view`, `add_to_cart`, `wishlist_add`, `purchase`, `content_impression`, `content_click`, `content_dwell`, `video_complete`, `button_click`, `form_submit`, `email_open`, `custom` |
+| `type` | yes | One of `page_view`, `product_view`, `add_to_cart`, `wishlist_add`, `purchase`, `content_impression`, `content_click`, `content_dwell`, `video_complete`, `content_viewable`, `video_view`, `product_dwell`, `button_click`, `form_submit`, `email_open`, `custom` |
 | `userId` | yes | The visitor id, or the shopper id after sign-in. The SDK fills it |
 | `anonymousId` | no | A per-page-load id, kept for legacy capture |
 | `sessionId` | no | When supplied, must exactly match the session ID in the signed shopper capability; callers cannot select another session |
@@ -74,7 +74,7 @@ One event. Site key.
 
 The SDK core exposes the arrival it captured as read-only observables. `core.entry` is the cached entry for this page load, and `core.entrySessionId` names the browsing session that produced the cached entry signals — empty while tracking is not allowed, and deliberately not the current browsing session: after an idle rollover it still names the session the cached entry belongs to, until the next entry read recomputes from the current document. Reading either never rolls a session over, recomputes the entry or writes anything. The cached entry is cleared, before any recomputation, on a consent transition, an identity-generation change and a browsing-session rollover.
 
-The SDK mints one `eventId` per tracking-approved envelope from its opaque Host token plus a nonwrapping core-local sequence; existing non-UUID fallbacks remain supported, without a cryptographic/global uniqueness guarantee. Keep the original nonce, timestamp, subject and scope together when retaining an envelope; a new `send` is a new event. Reward records retain `event_id` and `event_id_source` (`provided`, or `request` for a consent-approved legacy request fallback). The latter cannot identify repeated HTTP requests. Content service requests similarly supply `request_id` to the pure decision and exact replay. New IDs append `:n1:<nonce>` after the historical tail, preserving tenant/time/visitor lookup and erasure prefixes; old absent-nonce records retain their IDs. Invalid explicit identity/time and inconsistent replay carriers are refused. Neither identity adds sink deduplication, retries, payload-conflict detection or business-order uniqueness; transport `delivery_id` remains separate. No nonce is minted on tracking-refused SDK envelopes or service/outcome emission.
+The SDK mints one `eventId` per tracking-approved envelope from its opaque Host token plus a nonwrapping core-local sequence; existing non-UUID fallbacks remain supported, without a cryptographic/global uniqueness guarantee. Keep the original nonce, timestamp, subject and scope together when retaining an envelope; a new `send` is a new event. Reward records retain `event_id` and `event_id_source` (`provided`, or `request` for a consent-approved legacy request fallback). The latter cannot identify repeated HTTP requests. Content service requests similarly supply `request_id` to the pure decision and exact replay. New IDs append `:n1:<nonce>` after the historical tail, preserving tenant/time/visitor lookup and erasure prefixes; old absent-nonce records retain their IDs. Invalid explicit identity/time and inconsistent replay carriers are refused. Neither identity adds sink deduplication, retries, payload-conflict detection or business-order uniqueness; transport `delivery_id` remains separate. A purchase's uniqueness per order is its own rule, keyed on `data.orderId` ([below](#purchase-uniqueness-per-orderid)). No nonce is minted on tracking-refused SDK envelopes or service/outcome emission.
 
 Response:
 
@@ -150,6 +150,68 @@ the live one: an explicitly buffered action (`"processing": "buffered"`) is answ
 its own, and a content interaction and a historical import row are measured against the same published
 catalogue. A value your catalogue does not name on a dimension it does name builds no affinity
 whichever door it came in by.
+
+### Purchase uniqueness per `orderId`
+
+A purchase is unique per `orderId` for the shopper, on both hosts and at both doors (live and buffered). A second
+purchase event naming an `orderId` the shopper's purchase already named is answered `200` and changes nothing:
+
+```json
+{ "success": true, "message": "Action ignored: duplicate order", "dropped": "duplicate_order", "sessionId": "9cb1810f-…", "cookiesUpdated": false, "consent": { "tracking": true, "personalization": true } }
+```
+
+A second purchase with the same `orderId` writes no outcome, no credit and no interest, and moves no counter, visit, regional count or provider forward; the answer reports it as `dropped: "duplicate_order"`.
+The rule runs after the event is admitted (its schema and its behaviour record) and after the shopper object's rate
+limit, so a refused `429` is still a `429`, inside the shopper's own owner. The same event delivered again, the same
+`eventId`, is not a second purchase: it is processed as it always was and its outcome record keeps its `outcome_id`.
+The order is `data.orderId`, a non-empty string once trimmed or a number; a purchase without an `orderId` is never
+deduplicated. The shopper's state remembers the last 64 orders as SHA-256 digests, never the order ids themselves,
+for as long as the shopper's profile is kept; an order is remembered when its purchase is recorded on the live door,
+and on the buffered door when the delivery applies interest. A sign-in that merges two profiles merges their
+interest, not their remembered orders.
+
+### Content and product events: the viewable impression, the video view, the dwell
+
+- **`content_viewable`, the viewable impression.** The SDK sends it, never your page: one per piece per page
+  instance, once the piece's render acknowledgement is held and the container has been reported at least half in
+  view for one second without interruption (a one-second timer, cancelled when the piece leaves view, on a detach,
+  `destroy()`, a consent refusal or a new identity generation). `data` carries `contentId`, `slot`,
+  `slotPosition`, `decisionId`, `page`, `pageInstance` and `position`, with `customerContentId` and `contentType`.
+  Both hosts accept it and weigh it 0 whatever the registry says: it builds no interest, counts as no signal,
+  reaches no regional or context population, is not an interaction of the visit, writes no outcome record and is
+  never an exposure, so no learning denominator changes. Whether a layout learns on a viewable basis is a separate,
+  later measurement decision.
+- **`video_view`, the video view.** A content action: `client.emit.videoView(contentId, slot, attrs?)`, sent when
+  the player has played three seconds, beside `videoComplete`. It waits for the piece's render acknowledgement and
+  builds interest in the piece's format as the catalogue names it (`tags.contentType`), exactly as `video_complete`
+  does, at weight 1 unless the tenant's registry publishes `weights.video_view`. It is not a learning reward: it
+  writes no outcome record.
+- **`dwellMinMsBySlot`, the dwell minimum per slot.** `client.emit.declarative({ dwellMinMs, dwellMinMsBySlot })`
+  and `createClient(config, host, { dwellMinMs, dwellMinMsBySlot })`: a slot named in `dwellMinMsBySlot` sends a
+  `content_dwell` only after its own minimum on screen (`{ "pdp-editorial": 30000 }`, 30 seconds on editorial);
+  every other slot keeps `dwellMinMs`, one second unless configured.
+- **`product_dwell`, the product dwell.** Sent by your page once per product view past 20 seconds on the product
+  page, `data` `{ productId, dwellMs }` (plus the registry's attributes when the brand scores them from the event): `product_dwell` is accepted on both hosts and its `dwellMs` feeds the visit's dwell counter.
+  That counter is `category_dwell_ms`, which a published journey threshold reads; the event counts as an
+  interaction of the visit and weighs 0 unless the registry publishes a weight. As for any product event, one naming
+  a product the tenant does not hold, whose every value the catalogue refuses, is dropped as `unknown_product`.
+
+### Event conventions
+
+These travel as `custom` events (`client.emit.custom(name, data)`, `data.event` the name), each built only from what
+the tenant's registry names, and each weighs 0 until the registry publishes a weight for its name.
+
+- **`search`**: the values the site's search resolved the query to, in the registry's source fields (for example
+  `category`, `line`): `search` carries the resolved values only, never the query text.
+- **`filter_applied`**: the facet's `dimension` and `value`, with the value also in the registry's own source field
+  (`{ "dimension": "category", "value": "Handbags", "category": "Handbags" }`). The sale filter and the sale page both send `filter_applied` with `dimension` `priceStatus`, `value` `sale` and `priceStatus: "sale"`, raising `priceStatus` sale.
+- **`remove_from_cart`**: `{ productId }`; `remove_from_cart` is captured at weight 0 until the negative-signal release (P39).
+- **Declared interactions.** A size guide or reviews panel opened inside a module is that module's engagement:
+  `data-op-engage="sizeguide:open reviews:open"` on the container, and each `sizeguide:open` or `reviews:open` event
+  dispatched (bubbling) inside it is one `content_click` naming its `interaction`.
+
+An event's own values build interest only where the registry names the source field as a dimension and scores
+event attributes (`eventAttributes: "event-when-unknown"`).
 
 ### `GET /realtime/ws?tenant=<tenant>`
 
