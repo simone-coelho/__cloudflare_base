@@ -7,7 +7,7 @@
 
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
 } from './types';
 import { contextSpecificity, validateSeedRules } from './kinds';
 import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals } from '@/services/visit';
@@ -133,6 +133,19 @@ export interface DecideInput {
    * own `regional` may not when the replayed position took nothing from them.
    */
   contextPrior?: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  /**
+   * P07: the context prior — the population of the shopper's entry channel and
+   * visit bucket — already blended into `affinity` by the service beside the
+   * regional prior, with the shares it used, so each decision can itemise what
+   * the context contributed (`explain.contextPrior`). Null when it did not apply.
+   */
+  contextBlend?: (ContextPriorBlend & { share: Readonly<Record<string, Readonly<Record<string, number>>>> }) | null;
+  /**
+   * P07 with P10: the context prior's shares a context-only slot adds at full
+   * weight beside the regional prior's. Absent, those of `contextBlend`; the
+   * replay passes the shares the record carries (`inputs.context_share`).
+   */
+  contextBlendShare?: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -360,6 +373,36 @@ function priorAtFullWeight(share: Readonly<Record<string, Readonly<Record<string
   return { dims };
 }
 
+/**
+ * P07: two population priors' shares at full weight, beside each other: the sum
+ * per dimension value, as the blend gives a shopper with no evidence of their own
+ * (`blendPriors` at λ 1 for both). Neither erases the other.
+ */
+function sharesBeside(a: Readonly<Record<string, Readonly<Record<string, number>>>> | null,
+  b: Readonly<Record<string, Readonly<Record<string, number>>>>): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
+  for (const share of a ? [a, b] : [b]) {
+    for (const [dim, values] of Object.entries(share)) {
+      const into = (out[dim] ??= {});
+      for (const [value, x] of Object.entries(values)) into[value] = (into[value] ?? 0) + x;
+    }
+  }
+  return out;
+}
+
+/**
+ * P07: the context prior's itemisation as a record carries it, keys sorted
+ * (R-P7): the shopper's channel and visit bucket, the level read, λ, the
+ * snapshot's version and events, and what it contributed.
+ */
+const contextPriorRecord = (c: ContextPriorBlend, lambda: number, contribution: number): ContextPriorBlend & { contribution: number } => ({
+  channel: c.channel, contribution, events: c.events, lambda, level: c.level, version: c.version, visitBucket: c.visitBucket,
+});
+
+/** P07: shares with their keys sorted, dimension by dimension, as the record carries them (R-P7). */
+const sortedShares = (share: Readonly<Record<string, Readonly<Record<string, number>>>>): Record<string, Record<string, number>> =>
+  Object.fromEntries(Object.keys(share).sort().map((dim) => [dim, Object.fromEntries(Object.keys(share[dim]!).sort().map((value) => [value, share[dim]![value]!]))]));
+
 /** P10 (decision D2): the learned ladder's context levels, 0 to 2 (everyone, channel, channel and visit bucket). */
 const CONTEXT_LADDER_LEVELS = 3;
 
@@ -430,7 +473,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const below = contextOnlySlots(i.slots, i.signalFloor, i.arm);
   const signalCount = wholeCount(i.signalFloor?.signals);
   const contextPrior = i.contextPrior ?? i.regional?.share ?? null;
-  const contextView: AffinityViewLike = below.size && contextPrior ? priorAtFullWeight(contextPrior) : NO_SIGNAL;
+  // P07: below the floor the context prior is a context term too, at full weight
+  // beside the region's (each prior's λ is 1 there); without it, exactly as before.
+  const contextShare = i.arm === 'default' ? null : i.contextBlendShare ?? i.contextBlend?.share ?? null;
+  const fullWeight = contextShare ? sharesBeside(contextPrior, contextShare) : contextPrior;
+  const contextView: AffinityViewLike = below.size && fullWeight ? priorAtFullWeight(fullWeight) : NO_SIGNAL;
   // The slots that prefer what completes the anchor product the request names,
   // through the composer's `prefer` hook. The anchor is context the page asserts,
   // never evidence about the shopper and never kept beyond the receipt's driver.
@@ -816,6 +863,22 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const { share: _share, ...summary } = reg;
     return { ...summary, lambda, contribution: Math.round(contribution * 1000) / 1000 };
   };
+  // P07: what the context prior contributed, in the regional form: Σ over the piece's tags of λ·share·w.
+  const contextPriorOf = (d: { contentId: string; slot: string; strategy?: string }): (ContextPriorBlend & { contribution: number }) | null => {
+    if (!historicalPins && d.strategy === 'tenant-pinned') return null;
+    const ctx = i.contextBlend; if (!ctx || i.arm === 'default') return null;
+    const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
+    if (!piece || !spec) return null;
+    // Below the signal floor the prior is a context term at full weight, as the region's is (P10).
+    const lambda = below.has(d.slot) ? 1 : ctx.lambda;
+    let contribution = 0;
+    for (const [dim, values] of Object.entries(piece.tags)) {
+      const w = spec.weights[dim] ?? 0; if (!w) continue;
+      for (const v of values) contribution += lambda * (ctx.share[dim]?.[v] ?? 0) * w;
+    }
+    if (contribution <= 0) return null;
+    return contextPriorRecord(ctx, lambda, Math.round(contribution * 1000) / 1000);
+  };
   for (const d of decisions) {
     // The composer keeps a served piece's four strongest drivers, so a `completes`
     // bonus smaller than four interest terms would leave the receipt without the
@@ -891,6 +954,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       }),
     },
     ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
+    // P07: the context prior's shares, written only when it applied (keys sorted).
+    ...(i.contextBlend && i.arm !== 'default' ? { context_share: sortedShares(i.contextBlend.share) } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
     ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
     ...(below.size ? { signals: signalCount } : {}),
@@ -902,6 +967,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const position = positionIn.get(d.slot) ?? 0;
     positionIn.set(d.slot, position + 1);
     const regional = regionalOf(d);
+    const contextItem = contextPriorOf(d);
     const key = `${d.slot}:${d.contentId}`;
     const lift = liftOf.get(key) ?? null;
     const scoreBase = baseOf.get(key) ?? d.score;
@@ -923,7 +989,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       versions: { ...i.versions, lift: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.version ?? 0, prior: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.priorVersion ?? 0 }, config_label: i.configLabel,
       ...(byId.get(d.contentId)?.featuredProductIds?.length ? { featured_product_ids: [...byId.get(d.contentId)!.featuredProductIds!] } : {}),
       explain: {
-        drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}), lift, score_final: d.score,
+        drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}),
+        ...(contextItem ? { contextPrior: contextItem } : {}), lift, score_final: d.score,
         ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
         ...(control ? { control } : {}),
         ...(!historicalPins && pinned ? {} : externalOf(d.slot, key)),

@@ -97,6 +97,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `featured_product_ids` | The products the served piece features, when it names any: an outcome naming one of them credits this decision under the default policy, and a warehouse joins it to the product decision |
 | `explain.score_base` | The score before learning: interests times weights, plus the population prior and your model's term when they applied |
 | `explain.regional` | When the population prior applied: `region`, `level`, `lambda` (its share of the score), `version`, `events`, `contribution` |
+| `explain.contextPrior` | When the context prior contributed to this position: `{ channel, contribution, events, lambda, level, version, visitBucket }`, keys sorted — the shopper's entry channel and visit bucket, the level read (`channel_visit` for the pair, `channel` for the channel alone), `lambda` (its share of the score; 1 below the signal floor), the snapshot's `version` and `events`, and what it contributed. Compared by value in replay; the receipt says it in words ([the context prior](#the-context-prior)) |
 | `explain.lift` | The learned term, defined below, or null when nothing has been learned for this item in this cell |
 | `explain.score_final` | `score_base × lift^γ`. Equal to `score_base` while γ is 0. On a layout slot that opts into the layout blend, `R + (1 − p) × B + p × Q` instead (`explain.blend`) |
 | `explain.exploration` | When `explored`: `mode`, `reason`, `bucket`; retained historical Thompson receipts can include `sample` (Thompson is no longer writable or live) |
@@ -111,7 +112,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }`, the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` |
 | `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
 | `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
-| `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
+| `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
 
@@ -639,6 +640,7 @@ what it changes.
 |---|---|---|
 | `holdout.share`, `holdout.arms` | The share of visitors held out, by a stable hash, and which arms exist (`default`, `no_learning`) | 0.05, `default` |
 | `regional.enabled`, `kBlend`, `minEvents` | The population prior on the base score | on, 1, 30 |
+| `contextPrior.enabled`, `kBlend`, `minEvents` | The context prior: the population of the shopper's entry channel and visit bucket, on the base score beside the regional prior, with its own K (`kBlend`), in the regional block's grammar, an optional `dimensions` list included ([the context prior](#the-context-prior)) | absent (off) |
 | `policy.scope`, `match`, `credit`, `windowsMs` | The attribution policy: `session` or `visitor`; `direct` or `any`; `last` or `first`; per reward, how long after a decision an outcome may still count | session, direct, last; click 30 min, add to bag 6 h, purchase 7 d |
 | `stats.n0`, `tauLearnMs`, `liftMin`, `liftMax`, `nMin` | The estimator: prior strength, the decay horizon, the lift clamp, the evidence threshold per cell | 30, 21 days, 0.5, 2, 30 |
 | `external.kind`, `ref`, `timeoutMs`, `fallback` | Retained historical configuration only: all service/table/workers_ai live scoring, including table lookup, is withdrawn and contributes no score. The deployment setting `EXTERNAL_MODEL_POLICY` decides this, and `off` is its only deployed state (absent or any other value is also `off`); a weighted receipt names the withdrawn term with `status: "unavailable"` and `reason: "external scoring disabled by deployment policy"`. Every publication of a learn document that names `external` is refused, naming `external`: a new document, an edit (even one that keeps the stored term unchanged), a related-set write that carries one and `POST learn/items/reset`, which republishes the current document, answer 422, and a rollback to a revision that names one answers 404 with the same error. The refusal changes nothing: no revision is recorded, the stored document is served as before and a reset discards no evidence. The operator removes `external` in the console first (in the Dials view, under "Their own model, for every slot", set "Where it lives" to none and save); a document stored before this rule still reads and is served. No offline external table is published or offered. W14 enrichment/NL search are separately enabled workflows, not models in ordinary ranking | inactive |
@@ -704,6 +706,36 @@ learning-cell levels. The cell carries the tenant's channel id and the bucket of
 it there, and a per-context order names the tenant's channel ids and the buckets of its cut. The arrival
 contract carries `utmCampaign` (256 characters, like `utmSource`), sent only when the landing URL has
 `utm_campaign` and never stored. A change of the channel values (as a set), the cut or the depth in `contextVocabulary` changes `cellGrammar`: see [the priors document](#the-priors-document).
+
+### The context prior
+
+```json
+{ "contextPrior": { "enabled": true, "kBlend": 4, "minEvents": 30 } }
+```
+
+The context prior lets the arrival's context shape a first decision: the learn document's `contextPrior` block,
+with `enabled`, its own `kBlend` and `minEvents`, publishes a population prior per entry channel and visit
+bucket beside the regional prior. Scored events fan into population shares per tenant, entry channel
+(`direct`, `paid_social`, `paid_search`, `email`, `organic`, `referral`) and visit bucket (`1`, `2-3`, `4+`),
+kept by the same population-trend objects the regional prior uses and holding no visitor or session
+identifier; an event whose entry channel is unknown, or from a shopper who refused tracking, counts nothing
+there, and the hourly roll-up sums each channel's visit buckets into the channel alone. A decision reads the
+shares of the shopper's entry channel and visit bucket when that pair has at least `minEvents` events, else the
+shares of the channel alone over every visit bucket, and never everyone's, so the regional prior's population is
+not counted twice. Its weight is λ = kBlend / (kBlend + Σ personal affinity), so a first-time visitor's λ is 1.
+With the regional prior also on, the shopper's own interests keep (1 − λ of the region) × (1 − λ of the
+context) of their weight and each prior adds its own λ × share, so neither erases the other.
+
+The prior is off when the block is absent or `enabled` is false, so a learn document without it decides exactly
+as before. It never applies on the holdout's `default` arm, without personalization consent, or for a shopper
+whose entry channel is unknown, and a population snapshot that cannot be read is no prior. Below the signal floor
+it is a context term at full weight beside the regional prior; a configured order is served exactly; on a layout
+slot that opts into the layout blend it is part of the behaviour term `B`. Every record of a decision under it
+carries `inputs.context_share`, the shares it used (keys sorted), and every position it contributed to carries
+`explain.contextPrior`; a record without the shares replays as before. The shopper's receipt itemises it in
+words, such as "Population prior, paid social, first visit: what visitors arriving this way engage with
+contributed 1.5 (the prior's share of the score: 1)." for the channel and visit bucket, while a receipt read
+from the channel alone names the channel and every visit and claims no visit of its own.
 
 ## The priors document
 

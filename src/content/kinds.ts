@@ -1064,6 +1064,27 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents, ...(dimensions ? { dimensions } : {}) };
     }
   }
+  // P07 (decision D1, freeze item 22): the context prior's own block, in the
+  // regional block's grammar — `enabled`, its own K (`kBlend`), `minEvents` and
+  // optional `dimensions`. Absent is off, so a document without it decides
+  // exactly as before. A new write that gets it wrong is refused, naming the
+  // member; a RETAINED document whose block the current contract refuses keeps
+  // reading with the block dropped, never partially applied.
+  let contextPrior: LearnConfig['contextPrior'];
+  if (candidate.contextPrior !== undefined) {
+    const g = candidate.contextPrior;
+    const refused: string[] = [];
+    if (!isRecord(g)) refused.push('contextPrior: object when present');
+    else {
+      if (typeof g.enabled !== 'boolean') refused.push('contextPrior.enabled: boolean');
+      if (!isNum(g.kBlend) || g.kBlend <= 0 || g.kBlend > 100) refused.push('contextPrior.kBlend: number in (0, 100]');
+      if (!isNum(g.minEvents) || !Number.isInteger(g.minEvents) || g.minEvents < 1) refused.push('contextPrior.minEvents: positive integer');
+      const dimensions = g.dimensions === undefined ? undefined : regionalDimensionsOf(g.dimensions);
+      if (dimensions === null) refused.push(`contextPrior.dimensions: 1..${REGIONAL_DIMENSIONS_MAX} distinct registry dimension names when present`);
+      if (!refused.length) contextPrior = { enabled: g.enabled as boolean, kBlend: g.kBlend as number, minEvents: g.minEvents as number, ...(dimensions ? { dimensions } : {}) };
+    }
+    if (!historical) errors.push(...refused);
+  }
   const REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
   let policy: LearnConfig['policy'];
   if (candidate.policy !== undefined) {
@@ -1190,6 +1211,7 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       ...(isStr(candidate.version) ? { version: candidate.version } : {}),
       holdout: { share: h.share as number, salt: (h.salt as string | undefined) ?? '', arms: [...(arms as LearnConfig['holdout']['arms'])] },
       ...(regional ? { regional } : {}),
+      ...(contextPrior ? { contextPrior } : {}),
       ...(policy ? { policy } : {}),
       ...(stats ? { stats } : {}),
       ...(external ? { external } : {}),

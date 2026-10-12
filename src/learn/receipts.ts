@@ -128,6 +128,20 @@ function orderContextOf(context: NonNullable<DecisionRecord['explain']['configur
 }
 
 /**
+ * P07: the context prior in words — "population prior", the shopper's entry
+ * channel and, where the channel-and-visit population answered, the visit
+ * ("population prior, paid social, first visit"); where the channel alone
+ * answered, no visit is claimed — and what it contributed with its weight.
+ */
+function contextPriorSentence(c: NonNullable<DecisionRecord['explain']['contextPrior']>): string {
+  const channel = c.channel.replace(/_/g, ' ');
+  const context = c.level === 'channel_visit'
+    ? `${channel}, ${c.visitBucket === '1' ? 'first visit' : `visit ${c.visitBucket}`}`
+    : `${channel}, every visit (${c.visitBucket === 'unknown' ? 'the visit number is unknown' : 'the channel and visit together had fewer events than the minimum'})`;
+  return `Population prior, ${context}: what visitors arriving this way engage with contributed ${r3(c.contribution)} (the prior's share of the score: ${r3(c.lambda)}).`;
+}
+
+/**
  * P10: the signal floor in words — the shopper's count of signals beside the
  * floor in force, and what that meant for this decision.
  */
@@ -164,6 +178,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${d.value} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
     }
     if (e.regional) why.push(`What is trending ${e.regional.region === '*' ? 'everywhere' : `in ${e.regional.region}`} contributed ${r3(e.regional.contribution)} (the trend's share of the score: ${r3(e.regional.lambda)}).`);
+    if (e.contextPrior) why.push(contextPriorSentence(e.contextPrior));
     if (e.external) {
       if ('status' in e.external) why.push(`Their model (${e.external.ref}) was unavailable: ${e.external.reason}; the term was omitted.`);
       else why.push(`Their model (${e.external.ref}, ${e.external.version}) scored it ${r3(e.external.score)}; at weight ${r3(e.external.weight)} that added ${r3(e.external.contribution)}.`);

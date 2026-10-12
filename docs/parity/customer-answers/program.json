@@ -176,9 +176,11 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "d8073bdd51eaef08d961c31c2ab169bc769b491b on rem/spec-parity-e (batch S5 fix round 3; P36 reviewed PASS at this revision after the S5 review at da5aaea4 and fix rounds 1 and 2; LearnStats.ts in the boundary under R-P52; the per-ticket branch cut from this head)",
+        "reviewedRevision": "437908e06c381f105c5788328742dfe4585b1c7d on rem/spec-p36-fix1 (fix round 1, R-P54: the related-member grammar leg RED with its controls, the landing-type lock and the campaign-bound lock, over the build head 88e39487; specification review PASS; the S5 gate at d8073bdd kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix2/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
@@ -189,6 +191,9 @@
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/standin-P36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/control-L1.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P36/fix1/reviewer-spec/logs/control-M13.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-nocoerce.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-cutall.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix3/reviewer-spec/logs/ctl-standin-aware3.log",
