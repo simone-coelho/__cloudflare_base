@@ -171,13 +171,16 @@ export function isDuplicateOrder(state: Pick<ReflexState, 'orders'> | null | und
  * P40 (R-P48): the state with this purchase's order recorded once, beside the
  * event that recorded it; the oldest is forgotten past MAX_ORDERS. No order:
  * the state exactly as given (absent stays absent). An order with no state to
- * hold it starts from the empty state, as the first event of a shopper does.
+ * hold it starts from the empty state of `config`, as the first event of a
+ * shopper does; a held state needs no configuration (R-P58: the buffered door
+ * remembers an order in the state it already holds).
  */
-export function withOrder(state: ReflexState, order: string | null, eventId: string | undefined, config: ReflexConfig): ReflexState;
-export function withOrder(state: ReflexState | null | undefined, order: string | null, eventId: string | undefined, config: ReflexConfig): ReflexState | undefined;
-export function withOrder(state: ReflexState | null | undefined, order: string | null, eventId: string | undefined, config: ReflexConfig): ReflexState | undefined {
+export function withOrder(state: ReflexState, order: string | null, eventId: string | undefined, config?: ReflexConfig): ReflexState;
+export function withOrder(state: ReflexState | null | undefined, order: string | null, eventId: string | undefined, config?: ReflexConfig): ReflexState | undefined;
+export function withOrder(state: ReflexState | null | undefined, order: string | null, eventId: string | undefined, config?: ReflexConfig): ReflexState | undefined {
   if (order === null) return state ?? undefined;
-  const base = state && state.v === 1 ? state : emptyState(config);
+  const base = state && state.v === 1 ? state : config ? emptyState(config) : undefined;
+  if (!base) return state ?? undefined;
   const held = Array.isArray(base.orders) ? base.orders : [];
   if (held.some(entry => Array.isArray(entry) && entry[0] === order)) return base;
   return { ...base, orders: [...held, [order, eventId ?? '']].slice(-MAX_ORDERS) as Array<[string, string]> };

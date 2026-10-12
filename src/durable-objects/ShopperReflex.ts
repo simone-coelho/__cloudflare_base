@@ -1201,7 +1201,14 @@ export class ShopperReflex {
         attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...pipeline.attributes }, odpSeed: affinity.odpSeed, odpContext: affinity.odpContext,
         ...{ externalRetention: affinity.externalRetention } }, getConnectors(this.env, tenant).segments, now);
       assertSessionTarget(principal, event.userId);
-      if (!interest.applied) return answer(false, undefined, interest.signals);
+      if (!interest.applied) {
+        // P40 (R-P58): a purchase that applies no interest (it places no value)
+        // still uses its order: the order is remembered in the state this object
+        // already holds, and nothing else changes (no lifetime, no owner, no alarm).
+        const remembered = withOrder(affinity.reflex, order, event.eventId);
+        if (remembered !== affinity.reflex) await this.persistAudienceState({ ...affinity, reflex: remembered }, pipeline, this.audienceOwner, false);
+        return answer(false, undefined, interest.signals);
+      }
       const nextAffinity = { ...affinity, reflex: withOrder(carryOdpRestoration(interest.reflex!, affinity.reflex), order, event.eventId, interest.config!),
         configVersion: interest.reflex!.configVersion };
       const nextPipeline = { ...pipeline, segments: interest.segments };

@@ -1150,7 +1150,18 @@ export class RealtimeSegmentEngine {
         // visit it arrives in, so it qualifies against the stage already stored.
         journeyStage: current.metadata.journeyStage },
       this.connectors.segments, now);
-    if (!interest.applied) return answer(current, false, undefined, interest.signals);
+    if (!interest.applied) {
+      // P40 (R-P58): a purchase that applies no interest (it places no value)
+      // still uses its order: the order is remembered in the session's own
+      // reflex state, as the shopper's object remembers it, and nothing else
+      // changes. Only a session holding no reflex state reads the configuration
+      // its empty state is built under.
+      const remembered = order === null ? current.reflex : withOrder(current.reflex, order, event.eventId,
+        current.reflex?.v === 1 ? undefined : await resolveTenantReflexConfig(this.env, this.tenant, resolveSurface({ surface: current.surface })));
+      if (remembered === current.reflex) return answer(current, false, undefined, interest.signals);
+      await this.sessionManager.writeBufferedSession(current, { preferences, reflex: remembered });
+      return answer({ ...current, reflex: remembered }, false, undefined, interest.signals);
+    }
     const reflex = interest.reflex && withOrder(carryOdpRestoration(interest.reflex, current.reflex), order, event.eventId, interest.config!);
     await this.sessionManager.writeBufferedSession(current, { preferences, reflex, segments: interest.segments });
     return answer({ ...current, reflex, segments: interest.segments }, true, undefined, interest.signals);
