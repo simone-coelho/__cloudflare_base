@@ -35,7 +35,7 @@ import { contextTermsOf } from '@/content/cell';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
-import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog } from '@/content/types';
+import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
@@ -623,10 +623,15 @@ contentRoutes.post('/:kind/validate', async (c) => {
     const refused = await blendRefusals(c, scope, candidate);
     if (refused) return c.json({ valid: false, errors: refused.errors }, refused.status);
   }
-  // P38 (VA2): the dry run says what the write would: the catalogue under the vocabulary in effect now.
+  // P38 (VA2): the dry run says what the write would: the catalogue under the
+  // vocabulary in effect now. It stays advisory: where the publication cannot be
+  // read the document is checked as before (the write itself reads the vocabulary
+  // from the set it publishes over, and refuses when that set cannot be read).
   let checked: unknown = candidate;
   if (k.kind.name === CONTENT_KIND.name) {
-    const { revision: approval } = await readOptionalPublication(c.env, VOCABULARY_APPROVAL_KIND, scope);
+    let approval: { value: VocabularyApproval } | null = null;
+    try { approval = (await readOptionalPublication(c.env, VOCABULARY_APPROVAL_KIND, scope)).revision; }
+    catch (error) { if (!(error instanceof PublicationError)) throw error; }
     const governed = approval ? governedCatalogue(candidate, vocabularyTableOf(approval.value)) : null;
     if (governed && !governed.ok) return c.json({ valid: false, errors: governed.errors }, 422);
     if (governed?.ok) checked = governed.value;
