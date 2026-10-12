@@ -143,6 +143,23 @@
 //     refused naming `contextVocabulary.visitBuckets`. Reordering the ladder (with
 //     its level words) is outside P36 (R-P51, a residual).
 //
+// R-P54 (the lead's ruling of 2026-10-12 on the P36 delivery review at 88e39487,
+// fix round 1; the legs marked R-P54):
+//   · (1) EVERY priors document one PUT publishes, the primary document or a
+//     related member of `publicationChanges` (its kind resolved as the route
+//     resolves every kind, in any case of the word), is checked against the cell
+//     grammar of the learn member the same request publishes, or else the learn
+//     document in force; a document declaring another grammar is refused 422
+//     naming `cellGrammar` with the migration sentence naming the re-export,
+//     writing no revision of any member (CH5's related-member leg; the review's
+//     probe O);
+//   · (2) the landing-page type is the first event of the visit carrying a page
+//     type the tenant's vocabulary names: an event with no type or an unknown
+//     type does not set it, and a later event does not replace it (CH3's lock;
+//     the review's reading 3; kit 03:695);
+//   · (3) a 256-character utm_campaign is kept on the arrival and a 257-character
+//     one is refused 400 (CH2's lock; the review's probes B and L, mutant M13).
+//
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // `contextVocabulary` on the learn document; `utmCampaign` on the arrival; the seed
 // signals `source_platform` and `landing_page_type`; `data.pageType` read as the
@@ -163,13 +180,15 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { invalidatePublicationCache } from '@/config/publication';
+
 import {
-  declaredSlots, errorsOf, HOSTS, layoutSlot, LAYOUT, learnDocument, learned, loadDocument, M, MODULES, mount, openConsole, pageInstanceOf, putDocument, putSlots, readTree, receiptsOf,
-  recentSlot, replayOf, rounded, servedIn, storedDecisions, TENANT, type Host, type Mounted,
+  asOperator, declaredSlots, errorsOf, HOSTS, layoutSlot, LAYOUT, learnDocument, learned, loadDocument, M, MODULES, mount, openConsole, pageInstanceOf, putDocument, putSlots, readTree, receiptsOf,
+  recentSlot, replayOf, rounded, servedIn, storedDecisions, TENANT, type Answer, type Host, type Mounted,
 } from '../_parity';
 import { learnedLift } from '../_parity4';
 import {
-  HERO, heroOf, heroSlot, HOME, HOME_ORDER, HOME_PIECES, homeLearn, homeSlots, lineSeed, putKind, visitorOn, whyOf, type Visitor,
+  HERO, heroOf, heroSlot, HOME, HOME_ORDER, HOME_PIECES, homeLearn, homeSlots, lineSeed, putKind, readKind, visitorOn, whyOf, type Visitor,
 } from '../_parity5';
 
 const SITE = 'www.shop.test';
@@ -415,6 +434,30 @@ describe('unit:P36.CH2', () => {
       await written(m, namedSlots([lineSeed('entry_channel', 'email', 'Meadow', 0.6)], order('email')), 'entry_channel'),
     ], 'P36.CH2 — a tenant without the settings keeps the six words where a channel is named').toEqual([[422, true], [422, true], [200, false]]);
   }, 120_000);
+
+  // R-P54 (3): the bound on utm_campaign is the one utm_source carries, 256
+  // characters (src/services/visit.ts:115 at 88e39487, ENTRY_LIMITS; kit 03:705
+  // "256 characters, like `utmSource`"). A 256-character campaign is kept on the
+  // arrival: its last token is `brand`, so the published brand rule reads it as
+  // paid_search_brand only when the whole value is kept (a campaign cut short or
+  // dropped reads paid_search_nonbrand); a 257-character one is refused 400, as
+  // every over-long arrival field is (the review's probe B on both hosts).
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK — R-P54 (3): a 256-character utm_campaign is kept on the arrival, its last token read by the published brand rule, and a 257-character one is refused (400)`, async () => {
+      const m = await mount(host, SETTINGS);
+      expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+      const campaignOf = (length: number) => `${'c'.repeat(length - '_brand'.length)}_brand`;
+      const tagged = (length: number) => ({ utmMedium: 'cpc', utmSource: 'google', utmCampaign: campaignOf(length), referrer: 'www.google.com', siteHost: SITE });
+      expect([campaignOf(256).length, campaignOf(257).length], 'the fixture: campaigns of 256 and 257 characters').toEqual([256, 257]);
+      const kept = await arriveWith(m, tagged(256));
+      const recorded = kept.status === 200 ? (await visitOf(kept.v)).entryChannel ?? null : 'refused';
+      const over = await arriveWith(m, tagged(257));
+      // LOCKED (src/services/visit.ts:115 and :175-176 at 88e39487; the SDK drops the same bound at the page, src/sdk/identity.ts:97).
+      expect([kept.status, recorded, over.status],
+        `${host}: P36.CH2 — the 256-character campaign is accepted and read whole (paid_search_brand), the 257-character one refused 400`)
+        .toEqual([200, 'paid_search_brand', 400]);
+    }, 120_000);
+  }
 });
 
 // ===========================================================================
@@ -498,6 +541,41 @@ describe('unit:P36.CH3', () => {
       const why = whyOf(await receiptsOf(m, v.subject), 'story.coast');
       expect(why.some(s => /landing page type/i.test(s) && s.includes('product')),
         `${host}: P36.CH3 — the receipt itemises the landing-page-type rule that lifted it (why: ${JSON.stringify(why)})`).toBe(true);
+    }, 180_000);
+  }
+
+  // R-P54 (2): "the first page type of the visit" is the first event of the visit
+  // carrying a page type the tenant's vocabulary names (kit 03:695 at 88e39487).
+  // An event with no page type or with a type the vocabulary does not list does
+  // not set it, so a later product page does; once set, a later page of the visit
+  // never replaces it (the review's reading 3, the build's reading confirmed). A
+  // second rule on the category type, tagging its own line, makes each case name
+  // the type that was kept.
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK — R-P54 (2): the landing-page type is the first event of the visit carrying a type the vocabulary names: a first page view with no page type or an unknown one does not set it, so a later product page does and lifts the matching arrival, and a type once set is kept when a later page names another`, async () => {
+      const m = await mount(host, SETTINGS);
+      expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+      const written = await putSlots(m, homeSlots([...SEEDS, lineSeed('landing_page_type', 'category', 'Harbor', 0.3)]), 'seeds on two landing-page types');
+      expect(written.status, `${host}: PRECONDITION — seed rules naming landing_page_type product and category publish: ${JSON.stringify(errorsOf(written))}`).toBe(200);
+      const direct = { referrer: '', siteHost: SITE };
+      const cases: Array<[string, Array<string | undefined>, Array<[string, number]>]> = [
+        ['a first page view with no page type, then a product page', [undefined, 'product'], [['story.coast', 0.5]]],
+        ['a first page view of a type the vocabulary does not list (wombat), then a product page', ['wombat', 'product'], [['story.coast', 0.5]]],
+        ['a page view with no type, then a product page, then a category page', [undefined, 'product', 'category'], [['story.coast', 0.5]]],
+        ['an unknown type, then a category page, then a product page', ['wombat', 'category', 'product'], [['story.harbor', 0.3]]],
+      ];
+      const seen: Array<[string, Array<[string, number | undefined]>]> = [];
+      for (const [name, pages] of cases) {
+        const v = await visitorOn(m);
+        for (const pageType of pages) expect((await v.action(pageView(pageType), { entry: direct })).status, `${host}: PRECONDITION — ${name}: page view accepted`).toBe(200);
+        // A later page of the same visit: the landing-page type it is decided with is the one recorded on the visit.
+        const snap = await v.snapshot(HOME);
+        expect(snap.status, `${host}: PRECONDITION — ${name}: the shopper's page is served`).toBe(200);
+        seen.push([name, lifted(snap)]);
+      }
+      // LOCKED (src/services/visit.ts:277-281 and :347 at 88e39487): the first event naming a vocabulary type sets it, and it is kept.
+      expect(seen, `${host}: P36.CH3 — the landing-page type is the first type the vocabulary names, kept for the visit: the rule of that type, and only it, lifts its piece at the rule's weight`)
+        .toEqual(cases.map(([name, , expected]) => [name, expected]));
     }, 180_000);
   }
 });
@@ -960,6 +1038,121 @@ describe('unit:P36.CH5', () => {
       expect.soft(cells.map(([, bucket]) => bucket), 'P36.CH5 — today\'s cut: the second visit is decided in 2-3').toEqual(['1', '2-3']);
       expect.soft(cells.map(([channel]) => channel), 'P36.CH5 — and the vocabulary is in force: its rule reads the SMS arrival as email').toEqual(['email', 'email']);
     } finally { clock.mockRestore(); }
+  }, 180_000);
+
+  // R-P54 (1), the lead's ruling on the P36 delivery review's CH5 defect (probe O):
+  // a priors file published as a related member was checked only by the store's
+  // own validator, which reads any grammar this platform derives, so the refusal
+  // the bump leg above pins was bypassed. EVERY priors document one PUT publishes,
+  // the primary document or a related member of `publicationChanges` (its kind
+  // resolved as the route resolves every kind, in any case of the word, as
+  // unit:P01.O5.F1.01 rules it for a related slots member), is checked against the
+  // cell grammar of the learn member the same request publishes, or else the learn
+  // document in force; one declaring another grammar is refused as the bump leg
+  // reads the refusal: 422, an error naming cellGrammar with the migration sentence
+  // naming the re-export (W25's sentence, src/learn/priors.ts:169 at 88e39487),
+  // writing no revision of any member ("nor can it ride a related-set
+  // publication", src/units/W34/LEDGER.unit.test.ts:447-449). Publication does not
+  // depend on the host, so the leg runs on the session host, as the bump leg does.
+  /** `PUT /content/:kind` with the authored preconditions, publishing `related` beside the primary document in one request (as unit:P01.O5.F1.01 publishes). */
+  async function publishBeside(m: Mounted, kind: string, document: unknown, related: Array<{ kind: string; document: unknown }>, note: string): Promise<Answer> {
+    const base = await readKind(m, kind);
+    expect(base.status, `PRECONDITION — the operator reads the ${kind} document: ${JSON.stringify(base.body).slice(0, 200)}`).toBe(200);
+    const publication = base.body.publication as { revision: number; digest: string };
+    const answer = await asOperator(m, 'PUT', `/content/${kind}?scope=${TENANT}`, { document, note, publicationChanges: related }, {
+      'If-Match': `"${base.body.revision as number}/${publication.revision}/${publication.digest}"`,
+      'Idempotency-Key': `${base.body.revision as number}:${crypto.randomUUID()}`,
+    });
+    invalidatePublicationCache();
+    return answer;
+  }
+  /** The revisions of the three documents these publications write: a refused one leaves all three as they were. */
+  async function revisionsOf(m: Mounted): Promise<Record<string, unknown>> {
+    const out: Record<string, unknown> = {};
+    for (const kind of ['learn', 'slots', 'priors']) out[kind] = (await readKind(m, kind)).body.revision;
+    return out;
+  }
+  /** The refusal as the bump leg reads it: the status, and whether one error names cellGrammar and the re-export. */
+  const byGrammar = (answer: Answer): [number, boolean] => [answer.status, errorsOf(answer).some(e => e.includes('cellGrammar') && /re-?export/i.test(e))];
+  /** The grammar the priors document in force declares (W25 retains it as the grammar the document was read under, src/learn/priors.ts:208-211 at 88e39487). */
+  async function declaredInForce(m: Mounted): Promise<unknown> {
+    const declared = ((await readKind(m, 'priors')).body.document as { cellGrammar?: { name?: unknown; version?: unknown; order?: unknown } } | undefined)?.cellGrammar;
+    return declared ? { name: declared.name, version: declared.version, order: declared.order } : 'the priors in force declare no grammar';
+  }
+  /** One prior on the hero, on a channel-level cell every grammar below reads, declaring the given grammar. */
+  const priorsUnder = (cellGrammar: unknown, label: string) => ({ version: `parity5-priors-${label}`, cellGrammar,
+    rows: [{ slot: HERO, item: 'story.harbor', cell: 'c=email', p_prior: 0.05, n_equiv: 20 }] });
+
+  it('host: R-P54 — a priors file riding a publication is read under the grammar of the learn member that publication carries, or else the learn document in force: published as a related member beside a learn or a slots document, or as the primary document beside a related learn member that changes the channel values, a file declaring another grammar is refused (422) naming cellGrammar with the migration sentence naming the re-export and writes no revision, so the grammar in force and the priors in force agree; the file under that grammar publishes', async () => {
+    // (a) A tenant without the settings reads today's grammar: a related priors file declaring a grammar it does not
+    // read is refused, as the publication door refused it before P36 (W25).
+    const a = await mount('session', NO_SETTINGS);
+    expect(a.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+    const controlA = await publishBeside(a, 'learn', homeLearn(), [{ kind: 'priors', document: PRIORS_TODAY }], 'r-p54 (a) control');
+    expect(controlA.status, `CONTROL (a) — a related priors file declaring the grammar in force (today's) publishes beside a learn document: ${JSON.stringify(errorsOf(controlA))}`).toBe(200);
+    const beforeA = await revisionsOf(a);
+    const odd = await publishBeside(a, 'learn', homeLearn(), [{ kind: 'priors', document: priorsUnder({ name: 'ladder-cell', version: 12345, order: ['c', 'v'] }, 'odd') }], 'r-p54 (a)');
+    expect.soft([...byGrammar(odd), await revisionsOf(a)],
+      `P36.CH5 (R-P54 a) — on a tenant without the settings a related priors file declaring ladder-cell version 12345 (c, v) beside a learn document is refused (422) naming cellGrammar and the re-export, and no revision is written (${odd.status}: ${JSON.stringify(errorsOf(odd))})`)
+      .toEqual([422, true, beforeA]);
+
+    // (b) A vocabulary tenant (the depth leg's: the nine channel values, the ladder at depth 2) reads a derived grammar:
+    // today's version-2 file is refused beside a learn document and beside a slots document, the related kind in any case.
+    const b = await mount('session', { ...NO_SETTINGS, learn: homeLearn({ contextVocabulary: DEPTH_2 }) });
+    expect(b.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+    const derived = await grammarInForce(b);
+    expect(derived?.order ?? 'no grammar in force named', 'PRECONDITION — the vocabulary tenant reads the grammar its depth derives, order c, v (the depth leg)').toEqual(['c', 'v']);
+    const learnB = homeLearn({ contextVocabulary: DEPTH_2 });
+    const controlsB = [
+      await publishBeside(b, 'learn', learnB, [{ kind: 'priors', document: priorsUnder(derived, 'b-learn') }], 'r-p54 (b) control beside learn'),
+      await publishBeside(b, 'slots', homeSlots(), [{ kind: 'priors', document: priorsUnder(derived, 'b-slots') }], 'r-p54 (b) control beside slots'),
+    ];
+    expect(controlsB.map(answer => answer.status),
+      `CONTROL (b) — a related priors file declaring the grammar in force publishes beside a learn document and beside a slots document: ${JSON.stringify(controlsB.map(errorsOf))}`).toEqual([200, 200]);
+    const beforeB = await revisionsOf(b);
+    const casesB: Array<[string, string, unknown, string]> = [
+      ['beside a learn document', 'learn', learnB, 'priors'],
+      ['beside a slots document', 'slots', homeSlots(), 'priors'],
+      ["beside a learn document, the related kind written 'Priors'", 'learn', learnB, 'Priors'],
+      ["beside a slots document, the related kind written 'PRIORS'", 'slots', homeSlots(), 'PRIORS'],
+    ];
+    for (const [name, primary, document, kind] of casesB) {
+      const answer = await publishBeside(b, primary, document, [{ kind, document: PRIORS_TODAY }], `r-p54 (b) ${name}`);
+      expect.soft([...byGrammar(answer), await revisionsOf(b)],
+        `P36.CH5 (R-P54 b) — on a vocabulary tenant today's version-2 priors file ${name} is refused (422) naming cellGrammar and the re-export, and no revision is written (${answer.status}: ${JSON.stringify(errorsOf(answer))})`)
+        .toEqual([422, true, beforeB]);
+    }
+
+    // (c) A priors publication carrying a related learn member: the file is read under the grammar that learn member
+    // derives. CONTROL: with a learn member that leaves the channel values as they are, today's file publishes.
+    const c = await mount('session', NO_SETTINGS);
+    expect(c.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+    const imported = await putKind(c, 'priors', PRIORS_TODAY, 'today’s grammar');
+    expect(imported.status, `PRECONDITION — a priors file exported under today's grammar imports: ${JSON.stringify(errorsOf(imported))}`).toBe(200);
+    const controlC = await publishBeside(c, 'priors', { ...PRIORS_TODAY, version: 'parity5-priors-c-control' }, [{ kind: 'learn', document: homeLearn() }], 'r-p54 (c) control');
+    expect(controlC.status,
+      `CONTROL (c) — a priors file declaring today's grammar publishes with a related learn member that leaves the channel values as they are: ${JSON.stringify(errorsOf(controlC))}`).toBe(200);
+    // With a related learn member whose vocabulary changes the channel values (the same vocabulary as (b)), today's
+    // version-2 file is refused, so the tenant keeps today's grammar and its version-2 priors, which agree.
+    const beforeC = await revisionsOf(c);
+    const stale = await publishBeside(c, 'priors', { ...PRIORS_TODAY, version: 'parity5-priors-c' }, [{ kind: 'learn', document: learnB }], 'r-p54 (c)');
+    expect.soft([...byGrammar(stale), await revisionsOf(c)],
+      `P36.CH5 (R-P54 c) — a priors file declaring today's version 2, published with a related learn member whose vocabulary changes the channel values, is refused (422) naming cellGrammar and the re-export, and no revision is written (${stale.status}: ${JSON.stringify(errorsOf(stale))})`)
+      .toEqual([422, true, beforeC]);
+    expect.soft([await declaredInForce(c), await grammarInForce(c)],
+      'P36.CH5 (R-P54 c) — and afterwards the priors in force and the grammar in force agree: both today\'s, ladder-cell version 2 with c, v, s, r, a')
+      .toEqual([PRIORS_TODAY.cellGrammar, PRIORS_TODAY.cellGrammar]);
+    // The learn member of the same request, not the learn document in force: on a tenant whose learn document in force
+    // is still today's, the file re-exported under the grammar that learn member derives publishes with it.
+    const c2 = await mount('session', NO_SETTINGS);
+    expect(c2.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+    const imported2 = await putKind(c2, 'priors', PRIORS_TODAY, 'today’s grammar');
+    expect(imported2.status, `PRECONDITION — a priors file exported under today's grammar imports: ${JSON.stringify(errorsOf(imported2))}`).toBe(200);
+    const migrated = await publishBeside(c2, 'priors', priorsUnder(derived, 'c-migrated'), [{ kind: 'learn', document: learnB }], 'r-p54 (c) re-exported');
+    expect.soft(migrated.status,
+      `P36.CH5 (R-P54 c) — a priors file declaring the grammar its related learn member derives publishes with it, the learn document in force being today's (${JSON.stringify(errorsOf(migrated))})`).toBe(200);
+    expect.soft([await declaredInForce(c2), await grammarInForce(c2)],
+      'P36.CH5 (R-P54 c) — and the priors in force and the grammar in force then agree on that derived grammar').toEqual([derived, derived]);
   }, 180_000);
 });
 
