@@ -823,7 +823,8 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
   const out: Record<string, string> = {};
   for (const [key, item] of Object.entries(value)) {
     if (!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow'].includes(key)
-      || typeof item !== 'string' || item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : key === 'nothingToShow' ? NOTHING_TO_SHOW_LIMIT : 128)) throw new SessionAccessError();
+      // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
+      || typeof item !== 'string' || (key !== 'nothingToShow' && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
   }
   if (out.entry !== undefined) {
