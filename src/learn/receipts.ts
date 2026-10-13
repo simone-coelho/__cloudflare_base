@@ -373,11 +373,11 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
     if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
   }
+  // P39: the suppressions in force, a fact about the shopper this decision read, after the terms it shaped.
+  if (e.suppressions?.length) why.push(suppressionSentence(e.suppressions));
   // W20 G2 (R86(c)): the shortfall is a fact about the SLOT, not about the
   // ranking of this piece, so it is read out for a pinned position exactly as
   // for a ranked one — the way every other block on `explain` is read out.
-  // P39: the suppressions in force, a fact about the shopper this decision read, after the terms it shaped.
-  if (e.suppressions?.length) why.push(suppressionSentence(e.suppressions));
   if (e.shortTake) why.push(`Short take: ${e.shortTake.sentence}.`);
   // P29: the layout reason is a fact about the whole layout, so it is read out last, on every position of the slot.
   if (e.layoutReason) why.push(layoutReasonSentence(e.layoutReason));
