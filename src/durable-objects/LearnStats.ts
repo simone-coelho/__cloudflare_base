@@ -6,8 +6,8 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, positionEffectsOf, recordExposure, recordSuccess, type AttributionContract, type PairCounts, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, type AttributionContract, type PairCounts, type PositionPolicy, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, positionHistoryKey, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
@@ -279,11 +279,17 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
 
 export class LearnStats {
   private data: Stored | null = null;
+  /**
+   * P05: this placement's published position-policy history, as last read from
+   * or written to its one copy in storage (`positionHistoryKey`); null until
+   * first needed. This object is its only writer.
+   */
+  private positionPolicies: { key: string; policies: PositionPolicy[] } | null = null;
   private chain: Promise<unknown> = Promise.resolve();
   private lastAllocated = 0;
   private synthetic: SyntheticObjectBoundary;
   constructor(private state: DurableObjectState, private env: Env) {
-    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => { this.data = null; this.lastAllocated = 0; });
+    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => { this.data = null; this.lastAllocated = 0; this.positionPolicies = null; });
     this.state = this.synthetic.state; this.env = this.synthetic.env;
   }
 
@@ -551,6 +557,15 @@ export class LearnStats {
       // every value of a tenant without the settings outside today's six words
       // and three buckets, is counted under unknown exactly as before.
       const terms = candidate.stats.bounded ? await this.contextTerms(tenant) : TODAY_TERMS;
+      // P05 (decision D2): a credit that names its position is weighed by the
+      // position policy in force when it happened — the newest this object had
+      // published at or before the credit's time — exactly as the hourly fold
+      // weighs it. A history that cannot be read weighs nothing: the credit is
+      // applied exactly as before.
+      let policies: readonly PositionPolicy[] | null = null;
+      if (kind === 'credits' && rows.some(row => row.position !== undefined)) {
+        try { policies = await this.positionHistory(candidate); } catch { policies = null; }
+      }
       const applied = journal ? new Set(journal.map(row => `${row.id}:${row.digest}`)) : null;
       const added: SeenExposure[] = [];
       let newlyApplied = 0, alreadyApplied = 0, suppressed = 0;
@@ -597,7 +612,7 @@ export class LearnStats {
           visit_bucket: terms.buckets.includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
         if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
-        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
+        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight! * positionWeightAt(policies, row.position, row.ts), candidate.config.stats, engineNow);
         // P05 (decision D1): the adjacent swaps' evidence. A swapped decision is
         // counted once, when its module at the pair's lower position is exposed;
         // a click credited to either module it exchanged is counted at the
@@ -903,6 +918,17 @@ export class LearnStats {
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     const frozen = await this.snapshot(d);
+    // P05 (decision D2): the position policy this publication puts in force:
+    // normalised only while the slot's switch is on in the tenant's learn
+    // document AND the swaps have estimated a position's effect. The history is
+    // consulted only for a slot that has swapped or holds a history already —
+    // any other slot publishes exactly as before, reading nothing more — and it
+    // is read before any write, so an unreadable one refuses the publication.
+    const effects: Record<string, number> = {};
+    for (const e of frozen.positionEffects ?? []) if (typeof e.effect === 'number' && e.effect > 0) effects[String(e.position)] = e.effect;
+    const normalize = Object.keys(effects).length > 0 && await this.positionSwitch(d);
+    const history = Object.keys(d.positions ?? {}).length > 0 || (this.positionPolicies?.policies.length ?? 0) > 0
+      ? await this.positionHistory(d) : null;
     // W25 N1.01 (doc 22 §8, F20 §4.5): an item with an imported prior and no
     // live events yet HAS an estimate — that is what importing a prior is for —
     // so a slot whose only evidence is its priors publishes it, and a cold item
@@ -925,6 +951,15 @@ export class LearnStats {
           onlyIf: new Headers({ 'If-None-Match': '*' }), httpMetadata: { contentType: 'application/json' },
         });
         if (archived === null) continue; // A retained key is never overwritten, including after reset/restart.
+        // P05: a changed position policy is published before the snapshot reaches
+        // the serving key, under this version as the moment it takes force.
+        const nextHistory = history ? nextPositionHistory(history, { at: version, normalize, effects: normalize ? effects : {} }, Date.now()) : null;
+        if (nextHistory) {
+          const key = positionHistoryKey(d.tenant, d.brand, d.slot, d.page);
+          await this.env.STORAGE.put(key, JSON.stringify({ version: 1, tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}), policies: nextHistory }),
+            { httpMetadata: { contentType: 'application/json' } });
+          this.positionPolicies = { key, policies: nextHistory };
+        }
         if (!archived || archived.key !== key || typeof archived.etag !== 'string' || !archived.etag.trim()
           || archived.etag.length > 256 || archived.size !== size) throw new Error('Archive acknowledgement unavailable');
         await this.state.storage.put('learnPublished', publication);
@@ -943,6 +978,24 @@ export class LearnStats {
       await this.state.storage.setAlarm(Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(d)));
       throw new Error('Snapshot publication unavailable');
     }
+  }
+
+  /** P05: this placement's position-policy history, read once from its one copy and then held; a malformed copy refuses. */
+  private async positionHistory(d: Pick<Stored, 'tenant' | 'brand' | 'slot' | 'page'>): Promise<PositionPolicy[]> {
+    const key = positionHistoryKey(d.tenant, d.brand, d.slot, d.page);
+    if (this.positionPolicies?.key === key) return this.positionPolicies.policies;
+    const stored = await this.env.STORAGE.get(key);
+    const policies = stored === null ? [] : positionHistoryOf(await stored.json(), { tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}) });
+    if (policies === null) throw recovery();
+    this.positionPolicies = { key, policies };
+    return policies;
+  }
+
+  /** P05 (decision D2): whether the slot's position-normalisation switch is on in the tenant's current learn document. */
+  private async positionSwitch(d: Stored): Promise<boolean> {
+    const pin = await pinPublication(this.env, d.tenant, true);
+    const learn = await readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin);
+    return learn.value.slots?.[d.slot]?.positionNormalization === true;
   }
 
   /**

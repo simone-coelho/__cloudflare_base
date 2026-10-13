@@ -120,6 +120,13 @@ export const statsName = (tenant: string, brand: string, slot: string, page?: st
 export const liftKey = (tenant: string, brand: string, slot: string, page?: string) => `lift:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
 export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/${version}.json`;
+/**
+ * P05 (decision D2): where a placement's statistics object publishes its
+ * position-policy history (`positionHistoryOf`, src/learn/stats.ts), beside the
+ * snapshot archive and named so no archive reading takes it for a version. The
+ * object writes it; the online credit and the hourly fold both read it.
+ */
+export const positionHistoryKey = (tenant: string, brand: string, slot: string, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/positions.json`;
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
   scoped.has(slot) ? page : undefined;

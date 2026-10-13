@@ -359,6 +359,56 @@ export function positionPolicyAt(policies: readonly PositionPolicy[] | null | un
   return found;
 }
 
+/** P05: the bounds of a slot's published position-policy history. */
+export const POSITION_HISTORY = { policies: 512, positions: 64, horizonMs: 8 * 24 * 60 * 60 * 1000 } as const;
+
+const plainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
+  && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+
+/**
+ * P05: a slot's position-policy history as its statistics object publishes it
+ * (`{ version: 1, tenant, brand, slot, page?, policies }`), read for that
+ * placement: the policies oldest first, or null when the document is malformed
+ * or names another placement. Pure.
+ */
+export function positionHistoryOf(value: unknown, ids: { tenant: string; brand: string; slot: string; page?: string }): PositionPolicy[] | null {
+  if (!plainObject(value) || value.version !== 1 || value.tenant !== ids.tenant || value.brand !== ids.brand || value.slot !== ids.slot
+    || (value.page ?? undefined) !== (ids.page ?? undefined) || !Array.isArray(value.policies) || value.policies.length > POSITION_HISTORY.policies) return null;
+  const out: PositionPolicy[] = [];
+  let previous = 0;
+  for (const policy of value.policies as unknown[]) {
+    if (!plainObject(policy) || !Object.keys(policy).every(key => ['at', 'normalize', 'effects'].includes(key)) || !Number.isSafeInteger(policy.at)
+      || (policy.at as number) <= previous || typeof policy.normalize !== 'boolean' || !plainObject(policy.effects)
+      || Object.keys(policy.effects).length > POSITION_HISTORY.positions) return null;
+    const effects: Record<string, number> = {};
+    for (const [position, effect] of Object.entries(policy.effects)) {
+      if (!/^[1-9][0-9]*$/.test(position) || Number(position) > POSITION_HISTORY.positions || typeof effect !== 'number' || !Number.isFinite(effect) || effect <= 0) return null;
+      effects[position] = effect;
+    }
+    previous = policy.at as number;
+    out.push({ at: previous, normalize: policy.normalize, effects });
+  }
+  return out;
+}
+
+/**
+ * P05: the history after a publication puts `policy` in force: appended when it
+ * differs from the newest policy (a slot that never normalised writes none), at
+ * a moment after every earlier one, then kept to the horizon — the newest policy
+ * older than it stays, so a credit just inside the horizon still finds the
+ * policy it was weighed by — and to the bound. Null when nothing changes. Pure.
+ */
+export function nextPositionHistory(policies: readonly PositionPolicy[], policy: PositionPolicy, now: number): PositionPolicy[] | null {
+  const last = policies.at(-1);
+  const sameEffects = (a: Record<string, number>, b: Record<string, number>) =>
+    Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([position, effect]) => b[position] === effect);
+  if (last ? last.normalize === policy.normalize && sameEffects(last.effects, policy.effects) : !policy.normalize) return null;
+  const next = [...policies, { at: Math.max(policy.at, (last?.at ?? 0) + 1), normalize: policy.normalize, effects: { ...policy.effects } }];
+  const inside = next.findIndex(p => p.at > now - POSITION_HISTORY.horizonMs);
+  const kept = next.slice(inside <= 0 ? 0 : inside - 1);
+  return kept.length > POSITION_HISTORY.policies ? kept.slice(-POSITION_HISTORY.policies) : kept;
+}
+
 /**
  * P05 (decision D2): what an engagement at `position` (from 1) at `ts` is
  * credited times: 1 / that position's effect where the policy in force had the
