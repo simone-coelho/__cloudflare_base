@@ -84,6 +84,11 @@
 //     as R-P38 corrected src/sdk/listen.test.ts:603-604: a snapshot request that
 //     carries no session is answered with the issued session (the P13 engine
 //     shape, S4-C19), so T5's fresh browser keeps its first answer under S4-C18.
+//   · T5's fresh-browser leg, LOCKED under R-P69 and green at specification: on a
+//     fresh browser the socket the example asks for opens only after the first
+//     answer has issued the session, and today's SDK paints and acknowledges that
+//     answer, then refreshes once; it pins the kit's claim for a new visitor
+//     across the build. T5's held-session leg is the one P34 turns green.
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -390,8 +395,8 @@ const filesUnder = (root: string, dir: string): string[] => readdirSync(join(roo
 });
 
 describe('unit:P34.T5', () => {
-  it('sdk: the kit\'s ten-line example, run as written over the SDK, paints the first answer and acknowledges it, then refreshes once', async () => {
-    const s = sdk();
+  /** Runs the code block as written over `s`; returns what the page painted, with the decision each paint was handed. */
+  const example = (s: Sdk): Array<{ id: string; decisionId?: string }> => {
     const painted: Array<{ id: string; decisionId?: string }> = [];
     let current: ContentDecision | undefined;
     const client = { listen: s.listen, emit: s.emit, connect: () => s.core.connect() };
@@ -401,6 +406,13 @@ describe('unit:P34.T5', () => {
     const listen = { ...s.listen, subscribe: (slot: string, cb: (ds: ContentDecision[], set: DecisionSet) => void) => s.listen.subscribe(slot, (ds, set) => { current = ds[0]; cb(ds, set); }) };
     const run = new Function('client', 'renderHero', 'renderDefaultHero', 'heroElement', tenLines()) as (...args: unknown[]) => void;
     run({ ...client, listen }, renderHero, renderDefaultHero, EL);
+    return painted;
+  };
+
+  it('sdk: on the page view of a browser that holds a session, the kit\'s ten-line example, run as written over the SDK, paints the first answer and acknowledges it, then refreshes once', async () => {
+    const s = sdk();
+    await s.core.ready();
+    const painted = example(s);
     await settle();
     s.f.sockets.at(-1)?.open();
     await settle();
@@ -411,6 +423,26 @@ describe('unit:P34.T5', () => {
     const acks = s.actions.filter(a => a.type === 'content_impression');
     expect(acks.map(a => [a.data.decisionId, a.status]), 'P34.T5 — and acknowledges that paint').toEqual([['first-hero-0-hero.tabby.first', 200]]);
     expect(s.snapshots.length, 'P34.T5 — then one refresh').toBe(2);
+    s.destroy();
+  });
+
+  it('sdk: LOCKED — on a fresh browser (S4-C18, S4-C19), the kit\'s ten-line example, run as written over the SDK, paints the first answer, which issues the session, and acknowledges it; then the socket the example asked for opens and the page refreshes exactly once', async () => {
+    const s = sdk();
+    const painted = example(s);
+    await settle();
+    expect(s.snapshots.length, 'PRECONDITION: on a fresh browser, the example asked for the page once').toBe(1);
+    s.snapshots[0]!.answer({ page: 'home', arm: 'personalized', decisions: [decision('hero', 0, 'hero.tabby.first', 'on-model')] }, 'first');
+    await settle();
+    expect(painted[0], 'P34.T5 — on a fresh browser, the example paints the first answer, not a re-asked one').toEqual({ id: 'TAP-HERO-TABBY-FIRST', decisionId: 'first-hero-0-hero.tabby.first' });
+    const acks = s.actions.filter(a => a.type === 'content_impression');
+    expect(acks.map(a => [a.data.decisionId, a.status]), 'P34.T5 — on a fresh browser, and acknowledges that paint').toEqual([['first-hero-0-hero.tabby.first', 200]]);
+    // The socket the example asked for exists once the first answer has issued the session; a real browser opens it now.
+    expect(s.f.sockets.length, 'PRECONDITION: on a fresh browser, the example\'s socket exists once the first answer has issued the session').toBe(1);
+    s.f.sockets[0]!.open();
+    await settle();
+    // Whatever the open re-asks is answered, so a refresh coalesced behind it is asked too.
+    await answerPending(s, { page: 'home', arm: 'personalized', decisions: [decision('hero', 0, 'hero.tabby.second', 'on-model')] }, 'refresh');
+    expect(s.snapshots.length, 'P34.T5 — on a fresh browser, then one refresh, once the socket opens').toBe(2);
     s.destroy();
   });
 
