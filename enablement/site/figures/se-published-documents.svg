@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="824" viewBox="0 0 1100 824" role="img" aria-labelledby="sepd-t sepd-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="sepd-t">How the engine is configured</title>
+  <desc id="sepd-d">At the top, two ways in. The console: the brand's team signs in to change weights, memory, lines, slot rules, pins, seeds, learning dials and the holdout, and to read what has been learned, receipts, the day report and the history of every document. The API: the brand's developers make every change the console makes, and also change the catalog, the dimensions and the attribute each reads. A publish is validated whole and kept as a new revision. In the middle, the four published documents. The registry: the dimensions and the attribute each reads, the action weights, the memory tau, 14 days by default and at most 90, K of 1.8, and the entry and exit lines at 0.60 and 0.45. The catalog: the pieces by the brand's own ids, their tags in the registry's vocabulary, their windows, rules and stock, and their merchandising signals. The slots document: each slot's take and weights, its pins, exclusions and cap, its journey-stage rule, freshness and fatigue, its merchandising weights and its arrival seeds. The learn document: the learning dial for each slot, 0 by default, the holdout, the regional prior with its blend constant of 1, the attribution windows, and exploration, off by default. The engine reads one coherent set of them for each decision. At the foot, every revision is kept: each save records who changed it and why, a rollback writes the old value forward as a new revision, every receipt names the revisions in force, and a change is in force without a software release. Beside it, the deployment's own settings: engineers set tenants, site keys, allowed origins, identity secrets and retention periods, and no document change needs an engineer.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5, item 4. Facts: research/S2-engine-facts.md 3.17
+       (the defaults), 4.1 (the publication set, revisions, rollback), 4.2 (what each document holds), 4.5 (the console) and
+       4.6 (what needs no deploy, and what needs an engineer); the Vantage facts sheet (FACTS.md) section 10 (the knobs).
+       Glossary: published documents, registry, catalog, slots document, learn document, revision, console. -->
+  <defs>
+    <marker id="sepd-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="824" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">How the engine is configured</text>
+  <text x="20" y="82" font-size="20" fill="#197050">Four published documents, changed in the console or through the API, with every revision kept.</text>
+
+  <!-- the two ways in (S2 4.4, 4.5; the console's views) -->
+  <g data-box="console">
+    <rect x="20" y="108" width="520" height="160" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="142" font-size="22" font-weight="700">The console</text>
+    <text x="36" y="174" font-size="19">The brand's team signs in to change weights, memory,</text>
+    <text x="36" y="198" font-size="19">lines, slot rules, pins, seeds, learning dials and the</text>
+    <text x="36" y="222" font-size="19">holdout, and to read what has been learned, receipts,</text>
+    <text x="36" y="246" font-size="19">the day report and every document's history.</text>
+  </g>
+  <g data-box="api">
+    <rect x="560" y="108" width="520" height="160" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="576" y="142" font-size="22" font-weight="700">The API</text>
+    <text x="576" y="174" font-size="19">The brand's developers make every change the</text>
+    <text x="576" y="198" font-size="19">console makes, and also change the catalog, the</text>
+    <text x="576" y="222" font-size="19">dimensions and the attribute each reads.</text>
+  </g>
+
+  <!-- a publish -->
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#sepd-head)">
+    <line x1="280" y1="270" x2="280" y2="296"/>
+    <line x1="820" y1="270" x2="820" y2="296"/>
+  </g>
+  <text x="550" y="296" font-size="19" font-weight="500" text-anchor="middle" fill="#197050">a publish: validated whole, kept as a new revision</text>
+
+  <!-- the four published documents (S2 4.2; defaults S2 3.17) -->
+  <g data-box="registry">
+    <rect x="20" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="20" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="349" font-size="22" font-weight="700">Registry</text>
+    <text x="36" y="398" font-size="19">dimensions, and the</text>
+    <text x="36" y="421" font-size="19">attribute each reads</text>
+    <text x="36" y="452" font-size="19">action weights</text>
+    <text x="36" y="483" font-size="19">memory τ: 14 days by</text>
+    <text x="36" y="506" font-size="19">default, at most 90</text>
+    <text x="36" y="537" font-size="19">K 1.8; entry line 0.60,</text>
+    <text x="36" y="560" font-size="19">exit line 0.45</text>
+  </g>
+  <g data-box="catalog">
+    <rect x="290" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M290,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="290" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="306" y="349" font-size="22" font-weight="700">Catalog</text>
+    <text x="306" y="398" font-size="19">pieces, by the brand's</text>
+    <text x="306" y="421" font-size="19">own ids</text>
+    <text x="306" y="452" font-size="19">tags in the registry's</text>
+    <text x="306" y="475" font-size="19">vocabulary</text>
+    <text x="306" y="506" font-size="19">windows, rules, stock</text>
+    <text x="306" y="537" font-size="19">merchandising signals</text>
+  </g>
+  <g data-box="slots">
+    <rect x="560" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M560,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="560" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="576" y="349" font-size="22" font-weight="700">Slots</text>
+    <text x="576" y="398" font-size="19">each slot's take and</text>
+    <text x="576" y="421" font-size="19">weights</text>
+    <text x="576" y="452" font-size="19">pins, exclusions, the cap</text>
+    <text x="576" y="483" font-size="19">journey-stage rule,</text>
+    <text x="576" y="506" font-size="19">freshness, fatigue</text>
+    <text x="576" y="537" font-size="19">merchandising weights,</text>
+    <text x="576" y="560" font-size="19">arrival seeds</text>
+  </g>
+  <g data-box="learn">
+    <rect x="830" y="316" width="250" height="276" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M830,328 a12,12 0 0 1 12,-12 h226 a12,12 0 0 1 12,12 v36 h-250 z" fill="#E4F0DA"/>
+    <rect x="830" y="316" width="250" height="276" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="846" y="349" font-size="22" font-weight="700">Learn</text>
+    <text x="846" y="398" font-size="19">the learning dial for</text>
+    <text x="846" y="421" font-size="19">each slot: 0 by default</text>
+    <text x="846" y="452" font-size="19">the holdout</text>
+    <text x="846" y="483" font-size="19">the regional prior: k = 1</text>
+    <text x="846" y="514" font-size="19">attribution windows</text>
+    <text x="846" y="545" font-size="19">exploration: off by</text>
+    <text x="846" y="568" font-size="19">default</text>
+  </g>
+
+  <!-- the engine reads one coherent set (S2 4.1, "Serving reads") -->
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#sepd-head)">
+    <line x1="550" y1="594" x2="550" y2="620"/>
+  </g>
+  <text x="566" y="620" font-size="19" font-weight="500" fill="#197050">the engine reads one coherent set for each decision</text>
+
+  <!-- every revision kept (S2 4.1); what needs an engineer (S2 4.6) -->
+  <g data-box="revisions">
+    <rect x="20" y="640" width="620" height="164" rx="12" fill="#08251A" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="674" font-size="22" font-weight="700" fill="#ABFF44">Every revision kept</text>
+    <text x="36" y="704" font-size="19" fill="#FFFFFF">Each save records who changed it and why; a rollback</text>
+    <text x="36" y="728" font-size="19" fill="#FFFFFF">writes the old value forward as a new revision; every</text>
+    <text x="36" y="752" font-size="19" fill="#FFFFFF">receipt names the revisions in force.</text>
+    <text x="36" y="776" font-size="19" fill="#FFFFFF">A change is in force without a software release.</text>
+  </g>
+  <g data-box="settings">
+    <rect x="660" y="640" width="420" height="164" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="676" y="674" font-size="22" font-weight="700">The deployment's settings</text>
+    <text x="676" y="704" font-size="19">Engineers set tenants, site keys, allowed</text>
+    <text x="676" y="728" font-size="19">origins, identity secrets and retention;</text>
+    <text x="676" y="752" font-size="19">no document change needs an engineer.</text>
+  </g>
+</svg>

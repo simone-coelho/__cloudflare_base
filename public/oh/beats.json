@@ -1,0 +1,859 @@
+{
+ "about": "OH's director script: the 16 beats as data the demo kit's director runs (public/demo-kit/director.js), scaffolded by scripts/demo-kit/new-demo.mjs from demo.config.json. Not a published beat document: those are beats/*.json, which scripts/demo-kit/seed.mjs re-anchors and the worker applies by name. Strings are templates over the facts oh.js computes (facts()); run lists are the kit's verbs; call is the one escape hatch into oh.js. A beat whose run is notBuilt says so on the status line and stops: its presses are its lane's to write.",
+ "total": 16,
+ "acts": {
+  "1": "Arrival",
+  "2": "Two rooms",
+  "3": "The room completes",
+  "4": "Curation",
+  "5": "Windows",
+  "6": "Three weeks later",
+  "7": "One person",
+  "8": "Best Buy counts"
+ },
+ "places": {
+  "p2-product": [
+   {
+    "click": "#stage > .view:not([hidden]) [data-open=\"{{id}}\"]",
+    "if": "present",
+    "else": [
+     {
+      "open": "product",
+      "land": true,
+      "args": {
+       "id": "{{id}}"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "beats": [
+  {
+   "key": "arrive",
+   "no": "1",
+   "act": 1,
+   "who": "shopper",
+   "arrives": true,
+   "label": "A stranger arrives from search",
+   "declare": [
+    "<b>Searches</b> “{{arrival.term}}” and lands on the homepage ({{arrival.entry}})",
+    "{{#region.override}}<b>Rehearsal override</b>: region = {{region.override}} from the address bar (?region=), asserted and labelled{{/region.override}}{{^region.override}}The region comes <b>from the request</b>: the edge locates the visitor, and nothing is asserted{{/region.override}}"
+   ],
+   "acts": [
+    {
+     "type": "page_view"
+    }
+   ],
+   "will": [
+    "The hero and the deals answer <b>the search and the visitor’s region</b>: the campaign term seeds TV, that state’s sales lean the rest",
+    "<b>Recommended for you</b> and the TV grid lean with the sales of the visitor’s state on POST /sort, and say so: “leans with that state’s sales · synthetic → warehouse”",
+    "The Arrival panel names {{#region.override}}the override’s region, labelled as asserted{{/region.override}}{{^region.override}}the region <b>the edge located, from the request</b>{{/region.override}}, the census (shown, never scored) and the regional lean, labelled synthetic → warehouse",
+    "The visitor’s own meters are empty: nothing about <b>them</b> is known yet"
+   ],
+   "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where they are</b>: {{#region.override}}the region is a rehearsal override, labelled{{/region.override}}{{^region.override}}the region comes from the request{{/region.override}}{{#region.lean}}, and that state’s sales lean {{region.lean}}{{/region.lean}}. The census is shown, never scored; Compare sets the site’s own page beside it.",
+   "run": [
+    {
+     "publish": "reset"
+    },
+    {
+     "call": "arrive"
+    },
+    {
+     "focus": {
+      "panel": "arrival"
+     }
+    },
+    {
+     "open": "home",
+     "land": true,
+     "args": {
+      "quiet": true,
+      "focus": "hero"
+     }
+    }
+   ],
+   "after": {
+    "when": "{{p1.arrival.leans}}",
+    "line": "A stranger searches “{{arrival.term}}” and lands. The first paint answers <b>the search and where they are</b>: <b>{{p1.arrival.sentence}}</b>. Their own meters are empty; Compare sets the site’s own page beside it."
+   }
+  },
+  {
+   "key": "contrast",
+   "no": "2",
+   "act": 1,
+   "who": "shopper",
+   "label": "The same page, another state",
+   "declare": [
+    "<b>Asserts</b> {{p1.contrastName || region.contrastName}} on the request, labelled: not observed. Of the configured contrast regions, the first whose sales lean differently from the visitor’s own, read off the cold-start panel"
+   ],
+   "will": [
+    "A different state’s lean on the same stranger: what leans on the region answers {{p1.contrastName || region.contrastName}}’s sales, and the page says which modules moved and which held",
+    "The Arrival panel and the rail’s label say the region is <b>asserted</b>, not observed; the visitor’s meters do not move"
+   ],
+   "line": "The same stranger and the same page, in <b>{{p1.contrastName || region.contrastName}}</b>: asserted and labelled, never the opening default. Another state’s sales lean the page another way; the price is the same for everyone.",
+   "run": [
+    {
+     "call": "p1Contrast"
+    },
+    {
+     "assert": {
+      "region": "{{p1.contrast || region.contrast}}"
+     },
+     "note": [
+      "asserted",
+      "region = {{p1.contrast || region.contrast}}",
+      "the contrast: asserted on the request, labelled · not observed"
+     ]
+    },
+    {
+     "ask": "home"
+    },
+    {
+     "focus": "#mod-deals"
+    }
+   ],
+   "acts": [],
+   "after": {
+    "when": "{{p1.arrival.leans}}",
+    "line": "The same stranger and the same page, asserted in <b>{{p1.contrastName || region.contrastName}}</b>, never the opening default: <b>{{p1.arrival.sentence}}</b>. On this answer {{#p1.home.moved}}<b>{{p1.home.moved}}</b> moved{{/p1.home.moved}}{{^p1.home.moved}}nothing on the page moved{{/p1.home.moved}}{{#p1.home.held}} and {{p1.home.held}} held{{/p1.home.held}}{{#p1.home.lean}}; the rail {{p1.home.lean}}{{/p1.home.lean}}. The price is the same for everyone."
+   }
+  },
+  {
+   "key": "two-rooms",
+   "no": "3",
+   "act": 2,
+   "who": "shopper",
+   "label": "Two TVs, then a washer",
+   "declare": [
+    {
+     "when": "{{region.away}}",
+     "text": "<b>Back</b> in {{region.ownName}}, the visitor’s own region ({{#region.override}}the rehearsal override, labelled{{/region.override}}{{^region.override}}from the request, nothing asserted{{/region.override}})"
+    },
+    "<b>Opens</b> the TV grid, the first TV it offers, then the next one",
+    "<b>Opens</b> the Laundry menu and the {{p1.washerName || 'front-load washer'}} page",
+    "<b>Returns</b> to the homepage"
+   ],
+   "will": [
+    "<b>room</b> and <b>type</b> rise on the shopper’s own meters: the living room and the laundry room, the TVs’ panel and a front-load",
+    "The room tiles reorder on the shopper’s rooms; the five deals hold both rooms by the slot’s own rule; <b>Recommended for you</b> asks POST /sort for each room’s four, then across the rooms, so it balances them instead of swapping wholesale"
+   ],
+   "line": "The shopper opens two TVs, then a front-load washer, and the homepage changes with them, receipts behind every card: <b>room</b> and <b>type</b> rise, the room tiles reorder, the rail across rooms balances.",
+   "run": [
+    {
+     "assert": {
+      "region": "own"
+     }
+    },
+    {
+     "unless": "{{view.tvs}}",
+     "do": [
+      {
+       "click": "nav-tvs",
+       "in": "mainnav"
+      },
+      {
+       "wait": 500
+      }
+     ]
+    },
+    {
+     "click": "open-{{p1.grid.next}}",
+     "in": "rail-tv-grid",
+     "missing": "the TV grid shows no TV to open"
+    },
+    {
+     "wait": 900
+    },
+    {
+     "open": "back"
+    },
+    {
+     "wait": 400
+    },
+    {
+     "click": "open-{{p1.grid.next}}",
+     "in": "rail-tv-grid",
+     "missing": "the TV grid shows no second TV to open"
+    },
+    {
+     "wait": 900
+    },
+    {
+     "click": "nav-laundry",
+     "in": "mainnav"
+    },
+    {
+     "wait": 400
+    },
+    {
+     "click": "menu-{{p1.washer}}",
+     "in": "menu-laundry",
+     "missing": "the Laundry menu lists no front-load washer"
+    },
+    {
+     "wait": 900
+    },
+    {
+     "click": ".mast a[data-ctl=\"home\"]"
+    },
+    {
+     "focus": "#mod-category-rail"
+    }
+   ],
+   "acts": [
+    {
+     "type": "page_view"
+    },
+    {
+     "when": "{{p1.grid.nextAttrs}}",
+     "type": "product_view",
+     "attrs": "{{p1.grid.nextAttrs}}"
+    },
+    {
+     "when": "{{p1.washerAttrs}}",
+     "type": "product_view",
+     "attrs": "{{p1.washerAttrs}}"
+    },
+    {
+     "type": "page_view"
+    }
+   ],
+   "after": {
+    "when": "{{p1.home.twoRooms}}",
+    "line": "Two TVs and a washer later the homepage follows <b>both rooms</b>: {{#p1.home.tilesMoved}}the room tiles reordered, {{/p1.home.tilesMoved}}Recommended for you holds <b>{{p1.home.rail}}</b>, and every card’s receipt names what carried it. The step from one personalised module to a homepage that answers the shopper, on the platform LG already runs."
+   }
+  },
+  {
+   "key": "fresh-visitor",
+   "no": "4",
+   "act": 2,
+   "who": "shopper",
+   "label": "The fresh visitor beside them",
+   "declare": [
+    "<b>Compare → Fresh visitor</b>: the shopper’s homepage beside a stranger’s, asked in the same region with nothing sent"
+   ],
+   "will": [
+    "The shopper’s page and a fresh visitor’s, side by side: the same region’s prior and the same catalog; only what the visit earned is different",
+    "<b>What changed</b> sets the two answers behind the frames side by side, row by row"
+   ],
+   "line": "Compare: the shopper’s page against a stranger’s in the same region. The same catalog and the same public prices; only what the shopper did is different.",
+   "run": [
+    {
+     "unless": "{{view.home}}",
+     "do": [
+      {
+       "click": ".mast a[data-ctl=\"home\"]"
+      },
+      {
+       "wait": 400
+      }
+     ]
+    },
+    {
+     "call": "freshVisitor"
+    }
+   ],
+   "acts": []
+  },
+  {
+   "key": "washer-page",
+   "no": "5",
+   "act": 3,
+   "who": "shopper",
+   "label": "The washer page",
+   "declare": [
+    "<b>Opens</b> the {{p2.washer.name}} page: through a link on screen when there is one, else from the address bar, as a shopper would"
+   ],
+   "acts": [
+    {
+     "type": "product_view"
+    }
+   ],
+   "will": [
+    "Below the buy box, which nobody decides: <b>the dryer that goes with it</b>, the pedestal and the stacking kit (the set price only when a set costs less than its pieces), each preferred because it completes {{p2.washer.sku}} (ctx.anchor), with the completes line on its receipt",
+    "Each card states its rule as our merchandiser’s and lists its products in <b>POST /sort</b>’s order, labelled with the sales of the shopper’s state, synthetic → warehouse; the dryer card says what led and why from /sort’s own drivers, and names the shopper’s fuel only when their profile holds one"
+   ],
+   "line": "The washer page. Below the buy box, which nobody decides, the room completes: <b>the dryer that goes with it</b>, the pedestal and the stacking kit, each a merchandiser’s rule with its receipt.",
+   "after": {
+    "when": "{{p2.onPage.completes}}",
+    "line": "The {{p2.washer.name}}: <b>{{p2.onPage.completes}} modules complete it</b>, each receipt reading “Completes what was committed to”: {{p2.onPage.completing}}.{{#p2.dryer.lead}} The dryer card leads with the {{p2.dryer.lead}}, by POST /sort’s own drivers: {{p2.dryer.why}}.{{/p2.dryer.lead}} The buy box above them is off limits, and says so."
+   },
+   "run": [
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{p2.washer.sku}}"
+     }
+    },
+    {
+     "focus": "#mod-pdp-modules"
+    }
+   ]
+  },
+  {
+   "key": "top-loader",
+   "no": "6",
+   "act": 3,
+   "who": "shopper",
+   "label": "A switch to a top-loader",
+   "declare": [
+    "<b>Switches</b> to a top-load washer with the page’s own type switch: {{p2.topLoader.name}}, the top-loader that sells best at this price"
+   ],
+   "acts": [
+    {
+     "type": "product_view"
+    }
+   ],
+   "will": [
+    "The pedestal leaves, and its card says why: <b>a top-loader has no pedestal</b>; the rule serves front-load pairs only, and the page now asserts ctx.family = top-load-washer",
+    "The before/now strip names what left and why; the dryer stays, completing the new washer"
+   ],
+   "line": "The shopper switches to a top-loader and the pedestal leaves: <b>a rule withdrawing itself</b>, with its reason on the card.",
+   "after": {
+    "when": "{{p2.withdrawn}}",
+    "line": "The shopper switched to the {{p2.topLoader.name}}. <b>Withdrawn by their own rule: {{p2.withdrawn}}</b>. The card says why: {{p2.withdrawnWhy}}."
+   },
+   "run": [
+    {
+     "click": "type-top-load",
+     "in": "pdpType",
+     "missing": "no top-load switch on this page: the washer page (beat 5) carries it"
+    },
+    {
+     "focus": [
+      "#pdpGone .pmod-gone",
+      "#mod-pdp-modules"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "tv-page",
+   "no": "7",
+   "act": 3,
+   "who": "shopper",
+   "label": "The TV page",
+   "declare": [
+    "<b>Opens</b> the {{p2.tv.name}} page"
+   ],
+   "acts": [
+    {
+     "type": "product_view"
+    }
+   ],
+   "will": [
+    "The soundbar for its series and the mount for its VESA pattern, each completing {{p2.tv.sku}}, with the completes line on its receipt"
+   ],
+   "line": "The TV page: the soundbar matched to its series and the mount for its VESA pattern. <b>The same engine, a different room.</b>",
+   "after": {
+    "when": "{{p2.onPage.completes}}",
+    "line": "The {{p2.tv.name}}: <b>{{p2.onPage.completes}} modules complete it</b>, the soundbar from its series’ tier and the mount for its VESA pattern{{#p2.vesa}} ({{p2.vesa}} mm){{/p2.vesa}}. <b>The same engine, a different room.</b>"
+   },
+   "run": [
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{p2.tv.sku}}"
+     }
+    },
+    {
+     "focus": "#mod-pdp-modules"
+    }
+   ]
+  },
+  {
+   "key": "range-page",
+   "no": "8",
+   "act": 3,
+   "who": "shopper",
+   "label": "The range page",
+   "declare": [
+    "<b>Opens</b> the {{p2.range.name}} page"
+   ],
+   "acts": [
+    {
+     "type": "product_view"
+    }
+   ],
+   "will": [
+    "The over-the-range microwave, the dishwasher, and <b>the package</b> when it costs less than its pieces, each completing {{p2.range.sku}}"
+   ],
+   "line": "The kitchen path: the range, the microwave above it, the dishwasher beside it, and <b>the package</b> when it costs less than the three.",
+   "after": {
+    "when": "{{p2.package.name}}",
+    "line": "The kitchen path on the {{p2.range.name}}: the microwave and the dishwasher that go with it, and <b>{{p2.package.name}}</b> at {{p2.package.price}}, {{p2.package.savings}} less than its pieces apart. The prices are the catalog’s."
+   },
+   "run": [
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{p2.range.sku}}"
+     }
+    },
+    {
+     "focus": "#mod-pdp-modules"
+    }
+   ]
+  },
+  {
+   "key": "qned-oled",
+   "no": "9",
+   "act": 4,
+   "who": "shopper",
+   "label": "QNED beside OLED, a size up",
+   "declare": [
+    "<b>Opens</b> the {{p2.qned.name}} page, with the OLED beside it",
+    "<b>Says</b> the shopper sits {{p2.distanceFt}} ft away, in the size-up tool: their answer, declared, carried as context on the next question (ctx.distance), never as a choice of theirs",
+    "<b>Chooses</b> the one size up with the card’s own button: the shopper’s own choice, sent as select"
+   ],
+   "acts": [
+    {
+     "type": "product_view"
+    },
+    {
+     "type": "select"
+    }
+   ],
+   "will": [
+    "“For a bright room the QNED is the right choice; for a dark room this OLED is”, and <b>the price is the same for everyone</b>; nothing decided sits near the financing line",
+    "From the declared distance the card names one size up by its own rule; <b>size band and price tier</b> move on the shopper’s meters only once they choose it themselves"
+   ],
+   "line": "A QNED page with the OLED beside it, and one size up from the declared viewing distance: when the shopper chooses it, <b>tier and size band</b> move. The price is the same for everyone, and nothing decided sits near the financing line.",
+   "after": {
+    "when": "{{p2.sizeUp.name}}",
+    "line": "The QNED, with {{p2.compare.other || 'the OLED'}} beside it: “for a bright room the QNED is the right choice; for a dark room this OLED is.” From {{p2.distanceFt}} ft, declared, the card names one size up, the <b>{{p2.sizeUp.name}}</b> at {{p2.sizeUp.price}}{{#p2.sizeUp.chosen}}; the shopper chose it themselves{{#p2.sizeUp.moved}}, and their own meters moved: <b>{{p2.sizeUp.moved}}</b>{{/p2.sizeUp.moved}}{{/p2.sizeUp.chosen}}. The price is the same for everyone."
+   },
+   "run": [
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{p2.qned.sku}}"
+     }
+    },
+    {
+     "focus": "#mod-pdp-modules"
+    },
+    {
+     "select": "size-up-{{p2.distanceFt}}",
+     "in": "mod-pdp-modules",
+     "missing": "the engine did not decide the size-up module on this page, so there is nothing to press: the page never adds a module it was not given"
+    },
+    {
+     "click": "size-up-pick",
+     "in": "mod-pdp-modules",
+     "missing": "the size-up card names no larger size here, so there is nothing to choose: the page never chooses for the shopper"
+    }
+   ]
+  },
+  {
+   "key": "closet-width",
+   "no": "10",
+   "act": 4,
+   "who": "shopper",
+   "label": "A closet width",
+   "declare": [
+    "<b>Opens</b> the {{p2.washer.name}} page again",
+    "<b>Enters</b> the width of the laundry closet, {{p2.closet}} in: the shopper’s measurement, declared, never inferred"
+   ],
+   "acts": [
+    {
+     "type": "product_view"
+    },
+    {
+     "type": "filter"
+    }
+   ],
+   "will": [
+    "Models that do not fit drop out, and the page counts them: <b>hidden, wider than your space</b>; the next decision asserts ctx.fit, labelled declared"
+   ],
+   "line": "The shopper enters the closet’s width, and the models that would not fit drop out, counted on the page: <b>hidden, wider than your space</b>.",
+   "after": {
+    "when": "{{p2.fit.width}}",
+    "line": "The space is {{p2.fit.width}} in, declared: of the {{p2.fit.all}} {{p2.fit.kind}}, {{p2.fit.fits}} fit, and <b>hidden: {{p2.fit.hidden}} wider than your space</b>. The measurement is the shopper’s own, never inferred."
+   },
+   "run": [
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{p2.washer.sku}}"
+     }
+    },
+    {
+     "focus": "#stage > .view:not([hidden]) [data-fit]"
+    },
+    {
+     "select": "#stage > .view:not([hidden]) [data-ctl=\"fit-{{p2.closet}}\"]",
+     "missing": "no fit tool on this page: it needs a product of a kind the tool measures, with its width published"
+    }
+   ]
+  },
+  {
+   "key": "window-closes",
+   "no": "11",
+   "act": 5,
+   "who": "merch",
+   "label": "An offer’s window closes",
+   "declare": [
+    "<b>Opens</b> the {{p1.tvName || 'TV'}} page from the TV grid",
+    "<b>Publishes</b> the catalog: the gift-card offer’s window has closed, with the offers that close with it, on the homepage and on every TV page",
+    "<b>Returns</b> to the homepage: the packages with a member out of stock stay as the catalog publishes them, out of stock"
+   ],
+   "will": [
+    "On the TV page the closed offers <b>leave on the next decision</b>: the gift card goes from its offers",
+    "On the homepage the closed pieces can no longer be chosen, and a package with a member out of stock is <b>never shown as complete</b>: the page checks every answer and every recorded candidate of this visit for one"
+   ],
+   "line": "The merchandiser’s day: an offer’s window closes. On the shopper’s TV page and on the homepage it leaves on the next decision, by the catalog’s own rules, and a package with a member out of stock is never shown as complete.",
+   "run": [
+    {
+     "unless": "{{view.tvs}}",
+     "do": [
+      {
+       "click": "nav-tvs",
+       "in": "mainnav"
+      },
+      {
+       "wait": 500
+      }
+     ]
+    },
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{p1.tvPage}}"
+     }
+    },
+    {
+     "wait": 700
+    },
+    {
+     "call": "p1Mark"
+    },
+    {
+     "publish": "catalog",
+     "name": "{{beatNames.windowCloses}}",
+     "reason": "an offer’s window closes; a package member is out of stock",
+     "note": [
+      "published",
+      "An offer’s window closes",
+      "the gift-card offer and the offers that close with it, on the homepage and every TV page"
+     ]
+    },
+    {
+     "ask": "product"
+    },
+    {
+     "call": "p1PageWindows"
+    },
+    {
+     "focus": "#mod-pdp-offers"
+    },
+    {
+     "wait": 1800
+    },
+    {
+     "unless": "{{view.home}}",
+     "do": [
+      {
+       "click": ".mast a[data-ctl=\"home\"]"
+      },
+      {
+       "wait": 400
+      }
+     ]
+    },
+    {
+     "call": "p1Windows"
+    },
+    {
+     "focus": "#mod-deals"
+    }
+   ],
+   "acts": [],
+   "after": {
+    "when": "{{p1.windows.closed}}",
+    "line": "The merchandiser’s day: {{#p1.windows.page}}on the {{p1.windows.pageName}} page <b>{{p1.windows.page}} offers left</b> with their windows on the next decision; {{/p1.windows.page}}<b>{{p1.windows.closed}} offers’ windows closed</b> in one publish{{#p1.windows.left}}, and {{p1.windows.left}} left the shopper’s homepage{{/p1.windows.left}}; {{#p1.windows.held}}<b>{{p1.windows.held}} packages</b> with a member out of stock were never shown as complete. {{/p1.windows.held}}By the catalog’s own rules, on every surface, at the next decision: windows and stock kept by the engine, the next step on the platform LG already runs."
+   }
+  },
+  {
+   "key": "pin-launch",
+   "no": "12",
+   "act": 5,
+   "who": "merch",
+   "label": "The merchandiser pins a launch",
+   "declare": [
+    "<b>Pins</b> {{p1.pin.title || 'a launch-series offer'}} into the deals, for everyone"
+   ],
+   "will": [
+    "The pin takes <b>container 1</b> for everyone (a pin is a required prefix); its receipt reads <b>ranking skipped</b>",
+    "Its receipt names what the engine would have led with, read off a ranked decision’s own receipt; the other four are still ranked for the shopper"
+   ],
+   "line": "The merchandiser pins a launch series. The pin leads, and its receipt says so: <b>the merchandiser outranks the engine, visibly</b>.",
+   "run": [
+    {
+     "unless": "{{view.home}}",
+     "do": [
+      {
+       "click": ".mast a[data-ctl=\"home\"]"
+      },
+      {
+       "wait": 400
+      }
+     ]
+    },
+    {
+     "call": "p1Mark"
+    },
+    {
+     "publish": "slots",
+     "name": "{{beatNames.pinLaunch}}",
+     "reason": "pin a launch series into the deals",
+     "note": [
+      "tuned",
+      "A launch series pinned",
+      "container 1 of the deals for everyone · ranking skipped"
+     ]
+    },
+    {
+     "ask": "home"
+    },
+    {
+     "call": "p1Pin"
+    },
+    {
+     "focus": "#mod-deals"
+    }
+   ],
+   "acts": [],
+   "after": {
+    "when": "{{p1.pin.would}}",
+    "line": "The merchandiser pins <b>{{p1.pin.title}}</b>: container 1 for everyone, ranking skipped. Without the pin the engine would have led with <b>{{p1.pin.would}}</b>, container {{p1.pin.nowAt}} now: <b>the merchandiser outranks the engine, visibly</b>."
+   }
+  },
+  {
+   "key": "three-weeks",
+   "no": "13",
+   "act": 6,
+   "who": "engine",
+   "label": "Three weeks later",
+   "declare": [
+    "<b>Three weeks pass</b>, labelled: every window moves back {{clock.days}} days in one publish. On the demo’s dial the shopper’s room signals are gone within minutes (production’s dial runs days: the published τ on room reads 60 days there)",
+    "The return visit is <b>asserted</b> on the homepage from now on (ctx.visit = return), labelled: the same browser, the engine’s own clock real"
+   ],
+   "will": [
+    "The shopper’s room signals fall below the entry threshold on the demo’s compressed dial: nothing of the rooms they browsed is left to lean the homepage",
+    "The <b>continue hero</b> answers the shopper’s return, resting on their shortlist (what they opened on this device, nothing inferred) and the decisions trail; its receipt says production’s dial is days"
+   ],
+   "line": "Three weeks later, labelled as a clock jump: every window moves back {{clock.days}} days, and on the demo’s compressed dial the shopper’s room signals are gone within minutes, below the entry threshold (production runs days; the published τ would read 60 days there). The homepage <b>picks up where they left off</b> from their shortlist and the decisions trail.",
+   "run": [
+    {
+     "unless": "{{view.home}}",
+     "do": [
+      {
+       "click": ".mast a[data-ctl=\"home\"]"
+      },
+      {
+       "wait": 400
+      }
+     ]
+    },
+    {
+     "call": "p1Mark"
+    },
+    {
+     "publish": "catalog",
+     "name": "{{beatNames.threeWeeks}}",
+     "reason": "three weeks pass: every window moves back 21 days",
+     "note": [
+      "published",
+      "Three weeks pass (a labelled clock jump)",
+      "every window moves back {{clock.days}} days in one publish"
+     ]
+    },
+    {
+     "call": "p1ClockJump",
+     "days": "{{clock.days}}"
+    },
+    {
+     "focus": "#mod-continue"
+    }
+   ],
+   "acts": [],
+   "after": {
+    "when": "{{p1.clock.returned}}",
+    "line": "Three weeks later, labelled as a clock jump: every window moved back {{clock.days}} days in one publish{{#p1.clock.gone}}, and on the demo’s compressed dial the shopper’s room signals faded below the entry threshold{{/p1.clock.gone}}. The homepage <b>picks up where the shopper left off</b>, resting on their shortlist and the decisions trail."
+   }
+  },
+  {
+   "key": "what-changed",
+   "no": "14",
+   "act": 6,
+   "who": "shopper",
+   "label": "What changed in the meantime",
+   "declare": [
+    "<b>Opens</b> “What changed while you were away” on the continue hero"
+   ],
+   "will": [
+    "The shortlist’s deltas, read off the documents in force: the offers on each product that ended, the ones still running, a newer model where the feed lists one",
+    "The prices are the catalog’s, the same for everyone: they show as held unless the catalog’s own price moved"
+   ],
+   "line": "What changed in the meantime: the offers on the shopper’s shortlist that ended and the ones still running, by the catalog’s own windows, and the prices, which are the catalog’s. The page says what changed; it never decides a price.",
+   "run": [
+    {
+     "unless": "{{view.home}}",
+     "do": [
+      {
+       "click": ".mast a[data-ctl=\"home\"]"
+      },
+      {
+       "wait": 400
+      }
+     ]
+    },
+    {
+     "click": "continue-changes",
+     "in": "slot-continue",
+     "missing": "the continue hero is not on the page: it answers a return visit, from beat 13 on"
+    },
+    {
+     "call": "p1AfterChanges"
+    }
+   ],
+   "acts": [],
+   "after": {
+    "when": "{{p1.shortlist.line}}",
+    "line": "What changed in the meantime, read off the documents in force: <b>{{p1.shortlist.line}}</b>. The page says what changed; the price itself is the catalog’s."
+   }
+  },
+  {
+   "key": "phone-sign-in",
+   "no": "15",
+   "act": 7,
+   "who": "shopper",
+   "label": "The phone, then sign-in",
+   "declare": [
+    "<b>Signs in</b> on the laptop as {{signIn.account}}, a fictional account: the worker mints the signed link{{#signIn.laptopLinked}} (signed in already: nothing to do){{/signIn.laptopLinked}}",
+    "<b>Opens</b> the site on the shopper’s phone: a second device, a stranger to the engine, with their own region’s opening",
+    "<b>Signs in</b> on the phone as {{signIn.account}}: the worker mints its link, and the page asks again"
+   ],
+   "will": [
+    "The phone’s first page is a stranger’s: the region and the catalog, nothing of the shopper’s",
+    "One request after its sign-in the same page answers with <b>the laptop’s taste</b>: the meters, the hero, the room tiles and the deals move",
+    "The receipt under the header reads “{{signIn.receipt}}”: linked at sign-in, with the shopper’s consent, never by matching devices"
+   ],
+   "line": "On the phone the shopper is a stranger until they sign in as <b>{{signIn.account}}</b>: then the phone becomes the laptop’s taste in one request. Linked at sign-in and consented; no device matching.",
+   "after": {
+    "when": "{{phone.signedIn}}",
+    "line": "The phone, signed in as <b>{{signIn.account}}</b>, one request later: {{#phone.same}}the laptop’s three strongest signals lead here too, {{phone.top}}{{/phone.same}}{{^phone.same}}the person’s signals lead, {{phone.top}}{{/phone.same}}{{#phone.moved}}, and {{phone.moved}} of the page’s decided slots changed{{/phone.moved}}. {{signIn.receipt}}."
+   },
+   "run": [
+    {
+     "call": "laptopFirst"
+    },
+    {
+     "unless": "{{signIn.laptopLinked}}",
+     "do": [
+      {
+       "click": "#signIn",
+       "missing": "the header carries no Sign in"
+      },
+      {
+       "click": "#sheetBody [data-ctl=\"sign-in-as\"]",
+       "missing": "the sign-in sheet names no demo account"
+      }
+     ]
+    },
+    {
+     "call": "pickUpPhone"
+    },
+    {
+     "wait": 900
+    },
+    {
+     "click": "#signIn",
+     "missing": "the phone’s header carries no Sign in"
+    },
+    {
+     "click": "#sheetBody [data-ctl=\"sign-in-as\"]",
+     "missing": "the sign-in sheet names no demo account"
+    },
+    {
+     "focus": "#p3Signed"
+    }
+   ]
+  },
+  {
+   "key": "best-buy-counts",
+   "no": "16",
+   "act": 8,
+   "who": "shopper",
+   "label": "Best Buy counts",
+   "declare": [
+    "<b>Opens</b> the {{whereToBuy.tvName}} page, then the soundbar it goes with, the {{whereToBuy.pickupName}}, and <b>chooses Best Buy pickup</b>: an OH order, handed over by a partner",
+    "<b>Opens</b> the wall mount the TV goes with, the {{whereToBuy.referralName}}, sold through retailers: <b>Find a Retailer</b>, then {{whereToBuy.retailerName}}",
+    "<b>Builds</b> today’s report"
+   ],
+   "will": [
+    "Each press goes on the wire as a named outcome, <code>partner_pickup</code> and <code>retailer_referral</code>, with the decision on screen that earned it",
+    "The day report counts both beside the orders and the attach, labelled attribution, and says <b>not yet significant</b>"
+   ],
+   "line": "Best Buy pickup on one page, Find a Retailer on another, and the day report counts both as <b>named outcomes</b>, with attach and attribution. Not yet significant, and it says so: attribution, not incrementality.",
+   "after": {
+    "when": "{{report.read}}",
+    "line": "Today’s report: <b>{{report.pickups}} Best Buy pickup(s)</b> and <b>{{report.referrals}} retailer referral(s)</b>, each credited to the decision that earned it, beside {{report.orders || 'no'}} order(s) shipped and the attach. <b>Not yet significant</b>: attribution, not incrementality; lift is LG’s to compute against a holdout."
+   },
+   "run": [
+    {
+     "call": "backToLaptop"
+    },
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{whereToBuy.tv}}"
+     }
+    },
+    {
+     "focus": "#stage > .view:not([hidden]) [data-module=\"mod-tv-soundbar\"]"
+    },
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{whereToBuy.pickupSku}}"
+     }
+    },
+    {
+     "focus": "#stage > .view:not([hidden]) [data-module=\"mod-where-to-buy-pickup\"]"
+    },
+    {
+     "click": "#stage > .view:not([hidden]) [data-module=\"mod-where-to-buy-pickup\"] [data-ctl=\"partner-pickup\"]",
+     "missing": "the engine did not decide Best Buy pickup on this page, so there is nothing to press: the page never adds a module it was not given"
+    },
+    {
+     "open": "back"
+    },
+    {
+     "open": "p2-product",
+     "args": {
+      "id": "{{whereToBuy.referralSku}}"
+     }
+    },
+    {
+     "click": "#stage > .view:not([hidden]) [data-module=\"mod-where-to-buy-retailer\"] [data-ctl=\"find-a-retailer\"]",
+     "missing": "the engine did not decide Find a Retailer on this page, so there is nothing to press: the page never adds a module it was not given"
+    },
+    {
+     "click": "#sheetBody [data-ctl=\"retailer-{{whereToBuy.retailer}}\"]",
+     "missing": "the retailer list names no {{whereToBuy.retailerName}}"
+    },
+    {
+     "call": "dayReport"
+    },
+    {
+     "focus": {
+      "panel": "report"
+     }
+    }
+   ]
+  }
+ ]
+}

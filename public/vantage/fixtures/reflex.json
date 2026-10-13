@@ -1,0 +1,19 @@
+{
+ "about": "L2 build fixture: the shape of the registry (reflex document) the page reads for predict-then-prove, so the arithmetic on stage uses the published constants rather than numbers typed into the page. Lane L1 should write the document it actually publishes to public/vantage/beats/reflex.json; this copy follows design section 4 and the shipped tuning constants.",
+ "version": "reflex-vantage-fixture",
+ "dimensions": [
+  { "key": "category", "source": "category" },
+  { "key": "brand", "source": "brand" },
+  { "key": "ecosystem", "source": "os" },
+  { "key": "priceBand", "source": "price_usd", "derive": "band", "cuts": [500, 900], "labels": ["entry", "core", "premium"] },
+  { "key": "intent", "source": "intent", "multi": true },
+  { "key": "perk", "source": "perk", "multi": true },
+  { "key": "lines", "source": "lines" },
+  { "key": "contentType", "source": "contentType", "multi": true }
+ ],
+ "weights": { "page_view": 1, "product_view": 1, "search": 1.5, "select": 2, "compare": 2, "add_to_cart": 3, "purchase": 5, "content_click": 1, "content_impression": 0, "content_dwell": 0.5, "tick": 0 },
+ "K": 1.8,
+ "thetaIn": 0.6,
+ "thetaOut": 0.45,
+ "eventAttributes": "event-when-unknown"
+}

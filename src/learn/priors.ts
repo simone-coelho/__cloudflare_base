@@ -12,6 +12,7 @@ import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { parseCsv } from '@/content/import';
 import type { Cell } from '@/content/types';
 import { levelKeys } from '@/learn/stats';
+import { ENTRY_CHANNELS, type ContextVocabulary } from '@/services/visit';
 
 export interface PriorRow { slot: string; item: string; cell: string; p_prior: number; n_equiv: number; measurementBasis?: import('@/content/types').MeasurementBasis }
 /** What a document says about the grammar its cells were written in. */
@@ -80,13 +81,66 @@ export const CELL_GRAMMAR: CellGrammar = {
 /** `c=, v=, s=, r=, a=` — the order as a refusal can print it. */
 const orderWords = (order: readonly string[]): string => order.map((k) => `${k}=`).join(', ');
 
+/** FNV-1a, 32 bits: a stable number derived from a string, the same on every host and every run. */
+function fnv1a(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 0x01000193) >>> 0; }
+  return hash >>> 0;
+}
+
+/**
+ * P36 (R-P46, R-P51, R-P52): the cell grammar of a tenant's published context
+ * vocabulary. W25: the grammar is versioned because a file exported under
+ * another one names cells that mean something else; a vocabulary changes what a
+ * cell means exactly when it changes the channel values (compared as a set,
+ * without regard to order), the visit-bucket cut or the ladder depth. So:
+ *   · a tenant without the settings, or one whose settings change none of the
+ *     three (today's six words, the cut [1, 2, 4], depth 5), reads CELL_GRAMMAR
+ *     unchanged (`ladder-cell` version 2, c, v, s, r, a);
+ *   · any other setting reads `ladder-cell` at a version DERIVED from those
+ *     three members (3 plus a 32-bit FNV-1a of their canonical form, so it is
+ *     never 1 or 2 and is the same wherever it is computed), its order today's
+ *     order cut at the depth (R-P51: the order itself is not a setting).
+ * The refusal of a file declaring any other grammar keeps W25's sentence, which
+ * names the grammar in force and the re-export.
+ */
+export function cellGrammarFor(vocabulary: ContextVocabulary | null | undefined): CellGrammar {
+  if (!vocabulary) return CELL_GRAMMAR;
+  const channels = [...new Set(vocabulary.channels.map((c) => c.id))].sort();
+  const cut = Array.isArray(vocabulary.visitBuckets) && vocabulary.visitBuckets.length ? [...vocabulary.visitBuckets] : [1, 2, 4];
+  const depth = vocabulary.ladder?.depth ?? CELL_GRAMMAR.order.length;
+  const today = [...ENTRY_CHANNELS].sort();
+  if (channels.length === today.length && channels.every((c, i) => c === today[i]) && cut.join(',') === '1,2,4' && depth === CELL_GRAMMAR.order.length) return CELL_GRAMMAR;
+  return {
+    name: CELL_GRAMMAR.name,
+    version: 3 + fnv1a(JSON.stringify({ channels, cut, depth })),
+    order: Object.freeze(CELL_GRAMMAR.order.slice(0, Math.max(1, Math.min(CELL_GRAMMAR.order.length, depth)))),
+    migration: 're-export the prior file under the tenant\'s current context vocabulary (contextVocabulary), with every cell written as `*` or a prefix of the current ladder order, then import it again',
+  };
+}
+
+/**
+ * The grammar a document DECLARES, when it is one this platform derives (P36):
+ * `ladder-cell` at today's version with today's order, or at a derived version
+ * (3 or above) with a prefix of today's order. The store holds no tenant, so it
+ * reads such a document by this alone; the import door checks the declaration
+ * against the tenant's grammar in force first.
+ */
+function derivedGrammar(declared: unknown): CellGrammar | null {
+  const g = declared && typeof declared === 'object' && !Array.isArray(declared) ? declared as Record<string, unknown> : null;
+  if (!g || g.name !== CELL_GRAMMAR.name || typeof g.version !== 'number' || !Number.isSafeInteger(g.version) || g.version < 3 || !Array.isArray(g.order)) return null;
+  const order = (g.order as unknown[]).map((k) => String(k));
+  if (order.length < 1 || order.length > CELL_GRAMMAR.order.length || !order.every((k, i) => k === CELL_GRAMMAR.order[i])) return null;
+  return { name: CELL_GRAMMAR.name, version: g.version, order: Object.freeze(order), migration: CELL_GRAMMAR.migration };
+}
+
 /**
  * Why this cell is not a ladder cell, or null when it is. Pure and exported so
  * the import door, the CSV reader and any future writer share one grammar.
+ * P36: `order` is the grammar in force (today's order when omitted).
  */
-export function cellGrammarError(cell: string): string | null {
+export function cellGrammarError(cell: string, order: readonly string[] = CELL_GRAMMAR.order): string | null {
   if (cell === '*') return null;
-  const order = CELL_GRAMMAR.order;
   const pairs = cell.split('|');
   const expected = `'*' or the ladder's own keys in order — ${orderWords(order)} — as a prefix`;
   if (pairs.length > order.length) return `${expected}; '${cell}' names ${pairs.length} levels and the ladder has ${order.length}`;
@@ -105,24 +159,29 @@ const SLUG = /^[a-z0-9][a-z0-9:_.-]{0,63}$/i;
  * The grammar this document declares, checked against the one this engine reads.
  * Absent is the current grammar; anything else is refused by name.
  */
-function grammarError(declared: unknown): string | null {
+function grammarError(declared: unknown, grammar: CellGrammar = CELL_GRAMMAR): string | null {
   if (declared === undefined) return null;
   const g = declared && typeof declared === 'object' && !Array.isArray(declared) ? declared as Record<string, unknown> : null;
   const order = g && Array.isArray(g.order) ? (g.order as unknown[]).map((k) => String(k)) : null;
-  const same = !!g && g.name === CELL_GRAMMAR.name && g.version === CELL_GRAMMAR.version
-    && order !== null && order.length === CELL_GRAMMAR.order.length && order.every((k, i) => k === CELL_GRAMMAR.order[i]);
+  const same = !!g && g.name === grammar.name && g.version === grammar.version
+    && order !== null && order.length === grammar.order.length && order.every((k, i) => k === grammar.order[i]);
   if (same) return null;
-  return `cellGrammar: this engine reads ${CELL_GRAMMAR.name} version ${CELL_GRAMMAR.version}, whose cells are ${orderWords(CELL_GRAMMAR.order)} in that order; this document declares ${JSON.stringify(declared)} — ${CELL_GRAMMAR.migration}`;
+  return `cellGrammar: this engine reads ${grammar.name} version ${grammar.version}, whose cells are ${orderWords(grammar.order)} in that order; this document declares ${JSON.stringify(declared)} — ${grammar.migration}`;
 }
 
-export function validatePriors(candidate: unknown): ValidationResult<PriorsDoc> {
+/**
+ * One argument: the grammar this engine reads for a tenant without the settings
+ * (CELL_GRAMMAR), exactly as W25 rules it. P36: the import door passes the
+ * tenant's grammar in force (`cellGrammarFor`).
+ */
+export function validatePriors(candidate: unknown, grammar: CellGrammar = CELL_GRAMMAR): ValidationResult<PriorsDoc> {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return { ok: false, errors: ['priors: must be an object with rows'] };
   const c = candidate as Record<string, unknown>;
   if (!Array.isArray(c.rows)) return { ok: false, errors: ['rows: array required'] };
   // A document exported under another grammar is refused whole: its rows mean
   // something else, so reading them under this ladder would be a guess.
-  const grammar = grammarError(c.cellGrammar);
-  if (grammar) return { ok: false, errors: [grammar] };
+  const refusal = grammarError(c.cellGrammar, grammar);
+  if (refusal) return { ok: false, errors: [refusal] };
   const errors: string[] = [];
   const rows: PriorRow[] = [];
   const seen = new Set<string>();
@@ -135,7 +194,7 @@ export function validatePriors(candidate: unknown): ValidationResult<PriorsDoc> 
     if (x.measurementBasis !== undefined && x.measurementBasis !== 'served-v1' && x.measurementBasis !== 'rendered-v1') errors.push(`rows[${i}].measurementBasis: served-v1 | rendered-v1`);
     if (!SLUG.test(slot)) errors.push(`rows[${i}].slot: slug`);
     if (!item) errors.push(`rows[${i}].item: required`);
-    const cellWhy = cellGrammarError(cell);
+    const cellWhy = cellGrammarError(cell, grammar.order);
     if (cellWhy) errors.push(`rows[${i}].cell: ${cellWhy}`);
     if (!Number.isFinite(p) || p < 0 || p > 1) errors.push(`rows[${i}].p_prior: number 0..1`);
     if (!Number.isFinite(n) || n <= 0) errors.push(`rows[${i}].n_equiv: positive number`);
@@ -149,7 +208,7 @@ export function validatePriors(candidate: unknown): ValidationResult<PriorsDoc> 
     ...(typeof c.version === 'string' ? { version: c.version } : {}),
     // Retained exactly as the current grammar, so a reader of the stored
     // document can see which ladder produced its cells.
-    ...(c.cellGrammar !== undefined ? { cellGrammar: { name: CELL_GRAMMAR.name, version: CELL_GRAMMAR.version, order: [...CELL_GRAMMAR.order] } } : {}),
+    ...(c.cellGrammar !== undefined ? { cellGrammar: { name: grammar.name, version: grammar.version, order: [...grammar.order] } } : {}),
     rows,
   } };
 }
@@ -221,7 +280,12 @@ export function parsePriorsCsv(text: string): PriorsDoc {
 export const PRIORS_KIND: DocumentKind<PriorsDoc> = {
   name: 'prior',
   publication: 'r2',
-  validate: validatePriors,
+  // P36: the store holds no tenant, so a document declaring a grammar this
+  // platform derives is read under the grammar it declares; the import door
+  // (src/routes/content.ts) refuses any declaration that is not the tenant's
+  // grammar in force first. Anything else reads exactly as W25 rules it.
+  validate: (candidate) => validatePriors(candidate, (candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+    ? derivedGrammar((candidate as Record<string, unknown>).cellGrammar) : null) ?? CELL_GRAMMAR),
   stamp: (v, r) => ({ ...v, version: `${(v.version ?? 'prior').replace(/\+r\d+$/, '')}+r${r}` }),
   versionOf: (v) => v.version ?? '',
 };

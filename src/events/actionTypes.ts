@@ -13,7 +13,13 @@
 // A comment asking two lists to agree is not a mechanism. This is the list, and
 // both sides are built from it, so the next event type is added once.
 
-/** Every type POST /realtime/action accepts, and every type the shopper object ingests. */
+/**
+ * Every type POST /realtime/action accepts, and every type the shopper object
+ * ingests. The last three are P40's: the viewable impression
+ * (`content_viewable`, weighing 0 beside the render acknowledgement), the video
+ * view (`video_view`, a content action) and the product dwell (`product_dwell`,
+ * carrying `dwellMs`).
+ */
 export const ACTION_EVENT_TYPES = [
   // The original five.
   'email_open', 'form_submit', 'page_view', 'button_click', 'custom',
@@ -22,6 +28,7 @@ export const ACTION_EVENT_TYPES = [
   // First-class since CW3. The SDK may still send these as custom + data.event;
   // actionOf() reads both, so its wire table can flip whenever it likes.
   'purchase', 'content_impression', 'content_click', 'content_dwell', 'video_complete',
+  'content_viewable', 'video_view', 'product_dwell',
 ] as const;
 
 export type ActionEventType = (typeof ACTION_EVENT_TYPES)[number];

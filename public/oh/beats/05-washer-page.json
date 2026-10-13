@@ -1,0 +1,13 @@
+{
+ "name": "05-washer-page",
+ "beat": 5,
+ "act": 3,
+ "actName": "The room completes",
+ "press": "the washer page",
+ "kind": "context",
+ "label": "The washer page",
+ "who": "shopper",
+ "lane": "P2",
+ "engine": "companions: the dryer in her fuel, the pedestal, the stacking kit, the pair price",
+ "sees": "“goes with” shown as a merchandiser’s rule"
+}

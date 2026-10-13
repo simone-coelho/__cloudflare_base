@@ -29,7 +29,7 @@ import { attributeWindowed, creditWeight, uncorrelatedBrandMismatches, type Attr
  */
 import { RING_MAX_AGE_MS } from '@/learn/stats';
 export { RING_MAX_AGE_MS };
-import { deliverStats, emptyStatsDelivery, identityPage, learningGenerations, moneyRefusal, pageScopedOf, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import { deliverStats, emptyStatsDelivery, identityPage, learningGenerations, moneyRefusal, pageScopedOf, positionRowOf, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
 import { isCatalogueName } from '@/content/kinds';
 import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
 import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
@@ -515,6 +515,7 @@ export class DecisionRing {
     // Explicit references check ambiguity before arm filtering. Doc 22 §10
     // still forbids forwarding any holdout credit to online statistics.
     const all: RingEntry[] = d.ring.map(ringEntryOf), correlated = Object.hasOwn(outcome, 'decision_id');
+    const recordOf = new Map(d.ring.map(row => [row.decision_id, row] as const));
     const pageOfDecision = new Map(all.map(e => [e.id, e.page]));
     const ring = correlated ? all : all.filter((e) => e.arm === 'personalized' && e.brand === outcome.brand);
     const compatible = ring.filter(e => (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1'));
@@ -606,8 +607,13 @@ export class DecisionRing {
         const group = placements.get(name) ?? { ...(page ? { page } : {}), credits: [] };
         group.credits.push(credit); placements.set(name, group);
       }
+      // P05: each credit names the position its decision was served at on a
+      // declared layout slot, and the pair an adjacent swap exchanged there, read
+      // off the record this ring holds, so the statistics object can count the
+      // swap's clicks and weigh the credit by the position policy in force.
       for (const [name, group] of placements) plan.batches.push({ name, received: group.credits.length,
-        body: { tenant, brand, slot, ...(group.page ? { page: group.page } : {}), config, credits: group.credits } });
+        body: { tenant, brand, slot, ...(group.page ? { page: group.page } : {}), config,
+          credits: group.credits.map(credit => ({ ...credit, ...positionRowOf(recordOf.get(credit.decision_id)) })) } });
     }
     if (refusedBySlot.size) {
       plan.receipt.refusedBySlot = Object.fromEntries(refusedBySlot);

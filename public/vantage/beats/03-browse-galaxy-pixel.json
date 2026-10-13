@@ -1,0 +1,69 @@
+{
+ "name": "03-browse-galaxy-pixel",
+ "beat": 3,
+ "act": 2,
+ "actName": "The visitor earns it",
+ "press": "Browse Samsung: the Galaxy S26 card, its page, then the S26 Ultra card",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "events": [
+  {
+   "type": "page_view",
+   "data": {
+    "page": "phones"
+   },
+   "note": "the phones grid"
+  },
+  {
+   "type": "product_view",
+   "data": {
+    "productId": "galaxy-s26",
+    "category": "phones",
+    "brand": "samsung",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 899.99,
+    "view": "card"
+   },
+   "note": "quick look: Galaxy S26"
+  },
+  {
+   "type": "product_view",
+   "data": {
+    "productId": "galaxy-s26",
+    "category": "phones",
+    "brand": "samsung",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 899.99,
+    "view": "page"
+   },
+   "note": "the Galaxy S26 page"
+  },
+  {
+   "type": "page_view",
+   "data": {
+    "page": "phones"
+   },
+   "note": "back to the grid"
+  },
+  {
+   "type": "product_view",
+   "data": {
+    "productId": "galaxy-s26-ultra",
+    "category": "phones",
+    "brand": "samsung",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 1299.99,
+    "view": "card"
+   },
+   "note": "quick look: Galaxy S26 Ultra"
+  }
+ ],
+ "meters": "GET /realtime/reflex after each touch; the homepage is not asked while she browses",
+ "engine": "Three Samsung touches at product_view weight 1: brand samsung crosses θin 0.60 on the third (R ≈ 3, a = R / (R + K) ≈ 0.62 on K 1.8) and she joins the audience. Ecosystem and price band accumulate over the regional prior (λ = K / (K + Σa) falls as her own affinity grows).",
+ "sees": "The meters move; brand samsung crosses the entry threshold on the third touch (measured 0.61 to 0.62 with the touches 1 to 2.5 s apart; the three must land within about 12 s to cross). The four do not move until she goes home."
+}

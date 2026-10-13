@@ -1,0 +1,20 @@
+# Response headers for every address on the internal enablement site.
+# The assets binding applies this file to every page the gate (enablement/worker.mjs) serves; the file
+# itself is never served. Check it before every deploy:  node enablement/check-site.mjs
+#
+# The Content-Security-Policy lets a page load its stylesheet and its script from this site only
+# (/site.css and /site.js, as 'self'), images only as inline data: URIs (the tab icon), and nothing else:
+# no inline script, no inline style and no other address. Every style is in /site.css, so the policy
+# lists no hash. Should a page ever need an inline style, add its SHA-256 beside 'self' (never
+# unsafe-inline):
+#   node enablement/check-site.mjs --hashes
+# prints the style-src value the pages need, and the preflight fails until the policy matches it.
+/*
+  Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
