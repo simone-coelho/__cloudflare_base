@@ -106,6 +106,11 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.layoutReason', served.explain.layoutReason, replayed.explain.layoutReason);
   // P39: the suppressions in force the decision itemised, by value (keys sorted); absent on both for a record decided with none.
   eq('explain.suppressions', served.explain.suppressions, replayed.explain.suppressions);
+  // P06: the baseline of the record's declared layout slot, its shadow order and the terms that would have
+  // moved each module, by value (keys sorted); a record written without them replays without them.
+  eq('explain.baselineOrder', served.explain.baselineOrder, replayed.explain.baselineOrder);
+  eq('explain.shadowOrder', served.explain.shadowOrder, replayed.explain.shadowOrder);
+  eq('explain.shadowTerms', served.explain.shadowTerms, replayed.explain.shadowTerms);
   return diff;
 }
 
@@ -482,6 +487,13 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   if (replayed) {
     // P29: a record written without the layout reason replays without it, as before.
     if (served.explain.layoutReason === undefined) delete replayed.explain.layoutReason;
+    // P06: and a record written without the baseline and the shadow (before them, or on a decision that recorded
+    // none) replays without them, as before; a record that carries any of them is compared on all three.
+    if (served.explain.baselineOrder === undefined && served.explain.shadowOrder === undefined && served.explain.shadowTerms === undefined) {
+      delete replayed.explain.baselineOrder;
+      delete replayed.explain.shadowOrder;
+      delete replayed.explain.shadowTerms;
+    }
     if (served.measurementBasis) replayed.measurementBasis = served.measurementBasis;
     if (served.rendered) replayed.rendered = { ...served.rendered };
     if (replayed.explain.lift && served.explain.lift) {
