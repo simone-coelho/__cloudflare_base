@@ -16,7 +16,7 @@ import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorati
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { HISTORICAL_CONTENT_TYPES } from '@/content/typeAffinity';
-import { isEligibleAt } from '@/content/lifecycle';
+import { cellEligibility, isEligibleAt } from '@/content/lifecycle';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { isOffLimitsLayoutRecord, validDecisionMeasurement } from '@/ledger/records';
 import type { ContentCatalog, DecisionInputs, DecisionRecord, LearnConfig, SlotCatalog, SlotStrategy } from '@/content/types';
@@ -358,10 +358,17 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   // is read — never a guess, and never whichever rules happen to reproduce it.
   const rules = recordedExplorationRules(inputs);
   if (rules === 'invalid') return fail(served, 'invalid exploration rules marker');
+  // P31: the page's report of the modules with nothing to show, as the record
+  // carries it, withheld again exactly as the decision withheld them; a record
+  // without it was decided without a report. Each module's eligibility rule is
+  // evaluated again on the recorded cell, as the decision evaluated it, so no
+  // marker is needed: a catalogue without rules replays as before.
+  const report = inputs.nothing_to_show;
+  if (report !== undefined && !(Array.isArray(report) && report.every(id => typeof id === 'string' && id.length > 0))) return fail(served, 'invalid nothing-to-show report');
   const prefixPolicy = manifest?.pins === 'prefix-reserved-v2';
   const pinned = !offLimitsRecord && (prefixPolicy ? served.position < slotPins(target).length : Boolean(target.pinnedPieceId));
   const pinId = prefixPolicy ? slotPins(target)[served.position] : target.pinnedPieceId;
-  if (pinned && !catalog.pieces.some(piece => piece.id === pinId && piece.id === served.item_id && isEligibleAt(piece, served.ts))) return fail(served, 'the recorded item is not the eligible catalog pin');
+  if (pinned && !catalog.pieces.some(piece => piece.id === pinId && piece.id === served.item_id && isEligibleAt(piece, served.ts, cellEligibility(served.cell)))) return fail(served, 'the recorded item is not the eligible catalog pin');
   // P29: a pinned position that carries its layout slot's reason is replayed with
   // the page executed again up to its slot, because the reason is a fact about
   // the whole slot, not about the pin; any other pinned position as before.
@@ -429,6 +436,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
       .map(slot => manifest?.moduleRules === MODULE_RULES ? slot : unruled(slot)),
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
     affinity: { dims: inputs.affinity }, regional, ...(contextBlend ? { contextBlend } : {}), ...(layoutPriors ? { layoutPriors } : {}), cell: served.cell, arm: served.arm,
+    ...(report?.length ? { nothingToShow: report } : {}),
     versions: { ...served.versions }, configLabel: served.config_label,
     candidateLimit: manifest?.candidateLimit ?? Math.max(10, served.candidates.length),
     learning: learning ? {

@@ -55,12 +55,20 @@ export interface ServeRequest {
   cf?: CfLike | null;
   channel?: string | null;
   /**
-   * Named conditions the caller asserts are true for this request — Garrett's
-   * weather, and the same door for device, campaign or customer type. They gate
-   * pieces that carry a matching `eligibleWhen` rule and nothing else: a signal
-   * here can never boost, re-rank or become behavioural evidence.
+   * Named conditions the caller asserts for this request (`ctx.<name>`): the
+   * anchor product a slot's `complements` rule prefers what completes, and on
+   * the demo profile alone a region that selects the regional prior
+   * (`demoAssertedRegion`). P31: they gate no piece — a module's `eligibleWhen`
+   * rule reads the decision's cell, never a value the page sends — and a
+   * signal here can never boost, re-rank or become behavioural evidence.
    */
   context?: Readonly<Record<string, string>>;
+  /**
+   * P31: the page's report of the modules that have nothing to show for this
+   * page view, by identifier. Each is withheld before ranking: neither
+   * returned, nor recorded, nor counted as an exposure. It can only withhold.
+   */
+  nothingToShow?: readonly string[];
   /** Observed arrival context, not an override of an established visit entry. */
   entry?: ChannelSignals;
   /** The OS family the request reports (src/services/platform.ts), for `platform` seed rules: the OS family is read from the request; the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept. */
@@ -882,26 +890,15 @@ export async function serveContentDecisions(
     ...(consent.tracking ? { requestId: crypto.randomUUID() } : {}),
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: r.browsingSessionId || r.sessionId || shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity, regional, ...(contextBlend ? { contextBlend } : {}), cell, arm,
-    // Garrett's targeting rule needs two things: where she is, and whatever
-    // condition the caller says holds right now.
-    //
-    // An ASSERTED region wins over the edge's own, and deliberately. The edge
-    // resolves location from the connection, which is coarse and sometimes only
-    // a country; the integrator often knows better — a server-side caller has
-    // the customer's account region, and a page may carry a chosen store or a
-    // delivery postcode. The edge value is the fallback when nothing is
-    // asserted, so an integration that says nothing behaves exactly as before.
-    //
-    // The trust boundary, stated: this input is caller-controlled, and it can
-    // only ever admit content the merchandiser already published with a rule
-    // naming that region. It grants no access, moves no affinity and is never
-    // stored as evidence about the shopper. Region rides consent exactly as the
-    // learning cell does — a shopper who withholds tracking is located by
-    // nobody, asserted or not.
-    eligibility: {
-      region: consent.tracking ? (r.context?.region ?? regionKeyOf(r.cf) ?? null) : null,
-      ...(r.context ? { signals: r.context } : {}),
-    },
+    // The conditions the caller asserts, for the anchor preference alone. P31:
+    // a module's eligibility rule reads the cell above — its region, entry
+    // channel, visit bucket and journey stage as the engine derived them, under
+    // the same consent gates — never a value the page sends, so an asserted
+    // region or condition admits no module.
+    ...(r.context ? { eligibility: { signals: r.context } } : {}),
+    // P31: the page's report of the modules with nothing to show, withheld
+    // before ranking on every arm; it can only withhold.
+    ...(r.nothingToShow?.length ? { nothingToShow: r.nothingToShow } : {}),
     versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
     learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf, blendOf },

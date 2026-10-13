@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P31",
+  "workOrderHash": "sha256:be5fd49c4d7300e670f5e11bec090a76235067b25994e931f2ee34c974390855",
+  "artifact": {
+    "revision": "04299c84cd8ee486d95bb69beac7da38a4ba1ef5",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p31-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P31 built on rem/p31-build: f6569f9c merges rem/integration 143d781b (P02, P01, P28, P03, P10, P07, P04 and P29 of this programme, P36, P37 and P38 of the second, the landing of the product branch and the governance files) into the per-ticket branch rem/tkt/P31 (4c62cdab, specification reviewed PASS at 21bb132e on rem/spec-parity-b, batch S2, pinned); RED baseline 13 failed / 0 passed on P31's own reasons (the request field unknown, the page-sent signals still read, nothing refused, no SDK report, the kit statements), no PRECONDITION; d54207cf the mechanism (src/content/decide.ts, kinds.ts, lifecycle.ts, service.ts, types.ts, src/learn/receipts.ts, replay.ts, src/routes/decisions.ts, src/sdk/listen.ts: the page's nothingToShow report on the decision request, sent by the SDK beside page as one JSON string of unique ids, bounded; a reported module withheld before ranking on every arm, neither returned nor recorded nor counted as an exposure, the take filled from the remaining ranking; a module's eligibleWhen rule by region, entry channel, visit bucket and journey stage evaluated on the decision's cell as the engine derives it, an unknown value satisfying no rule, a module without a rule unaffected, the page able to withhold but never add; publication refusing by name a rule naming an unknown signal or a value outside its vocabulary; inputs.nothing_to_show and inputs.eligibility_verdicts page-level and written only when used, R-P23 C20, so a replay is exact and a retained catalogue without rules decides and replays as before, no new marker, C11; P29's layout reason naming each withheld module with its cause); 09d05fe4 the kit (docs/kit/01, 02 and 03) and the SDK bundles regenerated (public/sdk/, packages/sdk/); f6c3a396 the kit 02 wording; e7df0ce6 an overlong report answering 400; the Meridian bundle unchanged (--check exact); acceptance 13/13 on both hosts at e7df0ce6; gate GATE_OK once at e7df0ce6 (2951 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact); then fix round 1 (R-P59 and its amendment, the delivery review at e7df0ce6 having passed V1, V2, V3 and V5 and failed V4 and V6 on a withheld off-limits module dropped from the reason's baseline and its marker, a pin reservation lost to the withholding and the untested receipt, with the publication door checking rule words against the six channel words while a P36 tenant's cell reads its own vocabulary; P31's boundary widened with src/routes/content.ts at integration 50c389a5): the specification d5983d79 fast-forwarded in (the off-limits legs, the unchanged lock, the receipt clause paired, the vocabulary-door leg over the primary PUT, the dry run, the related member and the JSON import, locks M4, M11, M1b), rem/integration 4e10d8fb (P40 landed) merged cleanly as da087392 with no hunk resolved by hand and no earlier leg turning red, d640593c the reason's baseline drawn before the withholding with every off-limits-marked module at its place and the marker written for a withheld marked module, a pin refused only by the withholding keeping its reservation, and the door checking a rule's channel and bucket words against the tenant's vocabulary and cut in force on every catalogue write path including the import and the pull (src/content/decide.ts, kinds.ts, src/routes/content.ts), e65d8bd6 the kit (01, 02 and 03) and 04299c84 a lint fix; acceptance 37/37 on both hosts at 04299c84 with P04 13/13, P29 20/20, P36 48/48 and P40 landed on the merged tree; the gate GATE_OK once at 04299c84 (fix1/implementer/logs/gate.log: 2991 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S2/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P31/implementer/REPORT.md",
+      "git commits on rem/p31-build up to 04299c84"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P31 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/implementer/logs/acceptance-summary.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P31/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-13T02:36:06.503Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { DecisionRecord, LayoutBlendTerms, LayoutReason, LayoutReasonCause } from '@/content/types';
+import type { DecisionRecord, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause } from '@/content/types';
 import type { Suppression } from '@/reflex/core';
 import type { Names } from './rows';
 
@@ -208,22 +208,32 @@ const CAUSE_WORDS: Readonly<Record<LayoutReasonCause, string>> = {
   nothing_else_eligible: 'nothing else eligible took a position from it',
 };
 
+/** P31: each cause of a module withheld from a changed layout, in words. A cause a later build adds is quoted as written. */
+const WITHHELD_WORDS: Readonly<Record<LayoutWithheldCause, string>> = {
+  nothing_to_show: 'the page reported it has nothing to show for this page view',
+  eligibility_rule: "its eligibility rule is not satisfied by this shopper's context",
+};
+
 /**
  * P29: the layout reason in words — unchanged against the baseline with its
  * cause (and the n the ladder has beside the nMin it needs), or changed with
  * each moved module, the positions it moved between and the term that moved it.
+ * P31: a changed layout first names each module withheld from it and why.
  */
 function layoutReasonSentence(reason: LayoutReason): string {
   if (reason.status === 'changed') {
-    return `Layout changed against its baseline: ${reason.moves.map((m) => `${m.module} from ${m.from === null ? 'outside the baseline' : `position ${m.from}`} to ${m.to}, moved by ${m.term.replace(/_/g, ' ')}`).join('; ')}.`;
+    const withheld = (reason.withheld ?? []).map((w) => `${w.module} withheld, ${WITHHELD_WORDS[w.cause] ?? w.cause}`);
+    const moves = reason.moves.map((m) => `${m.module} from ${m.from === null ? 'outside the baseline' : `position ${m.from}`} to ${m.to}, moved by ${m.term.replace(/_/g, ' ')}`);
+    return `Layout changed against its baseline: ${[...withheld, ...moves].join('; ')}.`;
   }
   const ladder = reason.cause === 'no_level_reached_nmin' && reason.n !== undefined && reason.nMin !== undefined ? ` (n ${r3(reason.n)} of the ${reason.nMin} it needs)` : '';
   return `Layout unchanged against its baseline: ${CAUSE_WORDS[reason.cause] ?? reason.cause}${ladder}.`;
 }
 
-/** P29: the layout reason as the record carries it, keys sorted, the moves copied. */
+/** P29: the layout reason as the record carries it, keys sorted, the moves (and P31's withheld modules) copied. */
 const layoutReasonOf = (reason: LayoutReason): LayoutReason => (reason.status === 'changed'
-  ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed' }
+  ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed',
+    ...(reason.withheld?.length ? { withheld: reason.withheld.map((w) => ({ cause: w.cause, module: w.module })) } : {}) }
   : { cause: reason.cause, ...(reason.n !== undefined ? { n: reason.n } : {}), ...(reason.nMin !== undefined ? { nMin: reason.nMin } : {}), slot: reason.slot, status: 'unchanged' });
 
 /**

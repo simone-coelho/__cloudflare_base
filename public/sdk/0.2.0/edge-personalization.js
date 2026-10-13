@@ -1743,6 +1743,11 @@
   }
 
   // src/sdk/listen.ts
+  function nothingToShowField(ids) {
+    if (!Array.isArray(ids)) return void 0;
+    const named = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
+    return named.length ? JSON.stringify(named) : void 0;
+  }
   function createListen(core, opts = {}) {
     const host = core.host;
     const dwellMinMs = opts.dwellMinMs ?? 1e3;
@@ -1920,7 +1925,8 @@
         channel: consent.tracking ? o.channel : void 0,
         entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
         trackingConsent: consent.tracking ? void 0 : "false",
-        personalizationEnabled: consent.personalization ? void 0 : "false"
+        personalizationEnabled: consent.personalization ? void 0 : "false",
+        nothingToShow: nothingToShowField(o.nothingToShow)
       });
       settled = true;
       host.clearTimeout(timer2);

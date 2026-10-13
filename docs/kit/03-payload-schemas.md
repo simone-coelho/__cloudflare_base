@@ -124,9 +124,9 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
 | `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
 | `explain.moduleRule` | A position pin or an off-limits mark of the layout slot placed this module: `{ position, rule }`, keys sorted, `rule` `pinned` (the module pinned at a position, served there) or `off_limits` (the off-limits module held at its baseline position), and `position` the position the rule set, counted from 1. Present only on such a record, whose authority is `pin`, and compared by value in replay; the shopper's receipt carries the same block as `moduleRule` and says the rule and the position in words ([position pins and off-limits modules](#position-pins-and-off-limits-modules)) |
-| `explain.layoutReason` | The layout reason of the page's declared layout slot: `{ cause, slot, status }` (with `n` and `nMin` for the cause `no_level_reached_nmin`) when the served order is unchanged against the slot's baseline, or `{ moves, slot, status }` when it changed, each move `{ from, module, term, to }`; keys sorted. The same value on every record of the slot and on the decision set, present only on a declared layout slot's records, and compared by value in replay; the shopper's receipt carries it as `layoutReason` and says it in words ([the layout reason](#the-layout-reason)) |
+| `explain.layoutReason` | The layout reason of the page's declared layout slot: `{ cause, slot, status }` (with `n` and `nMin` for the cause `no_level_reached_nmin`) when the served order is unchanged against the slot's baseline, or `{ moves, slot, status }` when it changed, each move `{ from, module, term, to }`, with `withheld: [{ cause, module }]` when a module the baseline would have served was withheld before ranking (`cause` `nothing_to_show` or `eligibility_rule`); keys sorted. The same value on every record of the slot and on the decision set, present only on a declared layout slot's records, and compared by value in replay; the shopper's receipt carries it as `layoutReason` and says it in words ([the layout reason](#the-layout-reason)) |
 | `explain.suppressions` | The suppressions in force on the shopper when this decision was made: `[{ action, dimension, expiresAt, value }]`, keys sorted, `expiresAt` in epoch milliseconds, sorted by dimension then value ([negative preference](#negative-preference-suppression-with-an-expiry)). A suppressed value contributed no interest term (`inputs` holds the interest vector as scored). Present on every record of a slot that read the shopper's interests while one was in force, never on the holdout's `default` arm or a slot decided below the signal floor; compared by value in replay, a record without it replaying as before; the receipt carries it as `suppressions` and names each value, its action and its expiry date in words |
-| `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. Where a population prior applied and the page's declared layout slot ranked above the signal floor, `prior_lambda: { context?, regional? }` (keys sorted) states each prior's weight λ, so the layout reason replays exactly from any record of the page. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
+| `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. Where a population prior applied and the page's declared layout slot ranked above the signal floor, `prior_lambda: { context?, regional? }` (keys sorted) states each prior's weight λ, so the layout reason replays exactly from any record of the page. `nothing_to_show` is the page's report of the modules with nothing to show for this page view as the decision accepted it (each id once, sorted), written when the page sent one, and `eligibility_verdicts` each eligibility rule's verdict on the decision's cell, module to `true` or `false` (keys sorted), for every live module of the page that carries a rule; the replay withholds the recorded report again and evaluates each rule again on the recorded cell, with no new replay marker. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
 
@@ -193,7 +193,7 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `slotTypes` | yes | The slots the piece may fill |
 | `lifecycle.status` | no | `live` (default), `draft`, `expired` |
 | `window.from`, `window.to` | no | ISO date-times; outside them the piece does not exist for a decision |
-| `eligibleWhen` | no | The piece's targeting rule, `{ regions?, context? }`, naming at least one of them. `regions` lists 1 to 64 region keys such as `US` or `US-WA` (stored upper case): a key matches the shopper's region exactly, and a country key also admits every region inside it (`US` admits `US-WA`, never the reverse). The shopper's region is the one the request asserts as `ctx.region`, else the edge's, and only under tracking consent. `context` maps 1 to 8 signal names (a letter, then letters, digits or `_`, 32 characters at most) to 1 to 32 accepted values of at most 64 characters; the request supplies a signal as `ctx.<name>=<value>` on the snapshot's query string. Fails closed: a piece whose rule the request cannot satisfy (no region known, a signal absent or with another value) does not exist for that decision, exactly as outside its window, and a piece without the field is unaffected. An unknown member, or a bound exceeded, refuses the publication. In CSV: a quoted JSON object, as `merchandising`, for example `"{""regions"":[""US-NY""]}"` |
+| `eligibleWhen` | no | The module's eligibility rule by context, `{ regions?, context? }`, naming at least one of them. `regions` lists 1 to 64 region keys such as `US` or `US-WA` (stored upper case): a key matches the region of the decision's cell exactly, and a country key also admits every region inside it (`US` admits `US-WA`, never the reverse); that region is the one the edge reports, and only under tracking consent. `context` maps the engine's own signals to the values that admit the module: `entry_channel` (among the six channel words, or the tenant's own channel ids when it publishes a context vocabulary), `visit_bucket` (`1`, `2-3`, `4+`, or the names of the tenant's own visit-bucket cut) and `journey_stage` (`exploring`, `considering`, `deciding`), each a list of 1 to 32 values, every condition read off the decision's cell as the engine derived it and never off a value the page sends. Fails closed: an unknown value satisfies no rule, so a piece whose rule the cell cannot satisfy (no region known, an unknown channel, bucket or stage, or another value) does not exist for that decision, exactly as outside its window, and a piece without the field is unaffected. Publication refuses an unknown member, any other signal, a value outside its signal's words (the channel and bucket checked against the tenant's context vocabulary and cut in force on every catalogue write path) or a bound exceeded, naming the rule's path and the offending word; a retained catalogue whose rule names another signal stays readable, and that rule admits nothing. In CSV: a quoted JSON object, as `merchandising`, for example `"{""regions"":[""US-NY""]}"` |
 | `art`, `renderUrl` | no | Image, and a URL your page may render by |
 | `merchandising` | no | `{ season, promotion, margin }`, each 0 to 1 including zero: the item's own signals for the multipliers. CSV uses a quoted JSON object, for example `"{""promotion"":1,""margin"":0}"` |
 | `journeyStageFit` | no | The stages the piece is made for: `exploring`, `considering`, `deciding` (your `journey_stage_fit`; `explore`, `consider`, `decide` and `early`, `mid`, `late` also accepted). Absent fits every stage. A slot's `stage` rule demotes a piece outside the shopper's stage |
@@ -657,19 +657,47 @@ off-limits mark decided something writes `inputs.replay.moduleRules: "module-rul
 re-applies both rules and compares the record exactly; every other decision, every slot without either
 member, and every stored document marked 1, 2 or 3 decides and replays exactly as before.
 
+#### Nothing to show and eligibility rules
+
+```json
+{ "page": "pdp", "pageInstance": "original-page-nonce", "nothingToShow": "[\"module.PDP.reviews.1\"]" }
+{ "id": "module.PDP.reco.2", "eligibleWhen": { "regions": ["US"], "context": { "entry_channel": ["paid_social"], "journey_stage": ["considering", "deciding"] } } }
+```
+
+The decision request may carry the page's report of the modules that have nothing to show for this page
+view, `nothingToShow`: a JSON array of module ids sent as one string field, like `entry` (the SDK takes it
+as `nothingToShow: string[]` beside `page` and sends nothing when the list is empty). A module named in
+`nothingToShow` is withheld before ranking, so it is not returned, not recorded and never counted as an
+exposure, and the slot fills its take from the remaining ranked modules; the report can only withhold,
+never add. When a module's rule and the page's report would both withhold it, the rule is read first, so
+its cause is `eligibility_rule` and the report withholds only a module its rule admits. A module's
+eligibility rule, `eligibleWhen` on its catalogue piece, admits it by region, entry
+channel (`entry_channel`), visit bucket (`visit_bucket`) and journey stage (`journey_stage`), as
+[the content piece](#the-content-piece) describes, evaluated on the decision's cell and never on a value
+the page sends. An unknown value satisfies no rule, so the rule fails closed, and a module without a rule
+is unaffected. A module withheld either way is ineligible for that decision: a pin of it is refused and an
+off-limits mark of it holds nothing in what is served. On a tenant that publishes a context vocabulary, a
+rule names that tenant's own channel ids and the names of its visit-bucket cut, which its cell carries, and
+every catalogue write path checks them against the vocabulary and cut in force. Every record of the page carries the report and each rule's verdict
+on its inputs (`inputs.nothing_to_show`, `inputs.eligibility_verdicts`), and a module withheld from a
+position the baseline would have served it on is named in the layout reason's `withheld` list.
+
 #### The layout reason
 
 ```json
 { "cause": "no_level_reached_nmin", "n": 10, "nMin": 30, "slot": "pdp-modules", "status": "unchanged" }
 { "moves": [{ "from": 3, "module": "module.PDP.reco.2", "term": "affinity", "to": 1 },
   { "from": 4, "module": "module.PDP.editorial.1", "term": "affinity", "to": 2 }], "slot": "pdp-modules", "status": "changed" }
+{ "moves": [], "slot": "pdp-modules", "status": "changed",
+  "withheld": [{ "cause": "eligibility_rule", "module": "module.PDP.reco.1" }, { "cause": "nothing_to_show", "module": "module.PDP.reco.2" }] }
 ```
 
 Every decision on the page's declared layout slot carries one reason, `layoutReason`, comparing the served
 order with the slot's baseline: the merchandiser's fixed positions (prefix pins, modules pinned at a
 position, off-limits modules at their baseline position) where their rules put them, and on every other
 position the configured order for the shopper's context where one matches, else the modules the slot can
-serve (after eligibility, its exclusions and what the page already served or reserved) in catalogue order.
+serve (after eligibility, its exclusions and what the page already served or reserved, and before a module
+is withheld for nothing to show or by its eligibility rule) in catalogue order.
 A `layoutReason` is either `status` `unchanged` with exactly one `cause`, or `status` `changed` with its
 `moves`, keys sorted in both, and it is the same value on the decision set, on every record of the slot
 (`explain.layoutReason`) and on every receipt of the slot (`layoutReason`). The cause of an unchanged
@@ -699,7 +727,17 @@ being compared like any other, including for a module moved up every module the 
 it that is not served; only where no term separates it from them by more than 0.0005, or there is none to
 compare, does a rule name it: `exploration` or `diversity` when one of them was placed or displaced by that
 rule, else its own largest term in the direction it moved, else the term of the first module that passed
-it or that it passed.
+it or that it passed. A changed layout from which a module the baseline would have served on one of its
+positions was withheld before ranking names each such module, in baseline order, in
+`withheld: [{ cause, module }]` (keys sorted): `nothing_to_show` when the page reported it has nothing to
+show for this page view, `eligibility_rule` when its eligibility rule is not satisfied by the decision's
+cell ([nothing to show and eligibility rules](#nothing-to-show-and-eligibility-rules)). Its `moves` then
+compare the served order with the baseline less the withheld modules, so a module that only took a
+withheld module's place is not called moved; the receipt names each withheld module with its own cause
+before the moves. A layout whose withheld modules lay beyond the positions the baseline fills is unchanged by
+them. That baseline is drawn before the withholding: an off-limits module is held at its place whether or
+not it was withheld (the decision then states `inputs.replay.moduleRules`, which the replay reads), and a pin
+of another slot refused only because its module was withheld still reserves that module.
 
 An off-limits declared layout slot writes one record, never into the shopper's decision ring, so it
 carries no exposure, no receipt reads it and no outcome is credited to it: position 0, `item_id`

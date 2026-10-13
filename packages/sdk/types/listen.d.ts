@@ -8,6 +8,14 @@ export interface HydrateOptions {
      * a tenant without a context vocabulary). Any other word is ignored.
      */
     channel?: string;
+    /**
+     * P31: the identifiers of the modules that have nothing to show for this
+     * page view. Each is withheld before ranking: it is neither returned nor
+     * counted as an exposure, and the slot fills from the remaining ranking. The
+     * report can only withhold, never add. Sent on the decision request as a JSON
+     * string of the identifiers, each once; nothing is sent when it names none.
+     */
+    nothingToShow?: string[];
 }
 export type SlotCallback = (decisions: ContentDecision[], set: DecisionSet) => void;
 export type SetCallback = (set: DecisionSet | null) => void;
