@@ -190,6 +190,8 @@ The SDK core's `onLoaded(callback)` runs the callback once, when the client has 
 
 The page's `setCustomerId(id)` passes your identifier for the shopper before recognition, a hashed identifier of 1 to 128 letters, digits and `_ + / = . -`. While tracking is allowed it travels as `customerId` on the action envelope (`POST /realtime/action`) and on the decision request body (`POST /v1/{tenant}/decisions/snapshot`), and the records written from them carry it as `customer_id` beside `visitor_id` (the decision record and the outcome record above). The customerId is carried, never treated as proof: no state is keyed, linked, merged or selected by it, no session is issued from it, and under refused tracking nothing carrying it is written.
 
+The browser's own object keeps the last value an anonymous browser carried under tracking consent, as one optional member of its existing grant record, written only when it is new or changed, and only to name it on that browser's link answer as `customerId`; a browser that carried none keeps its record as it was, and an erasure writes the browser a fresh record without it. The link answer's customerId is never proof: the link and the merge are the signed `accountId`'s, and the person's record gains nothing.
+
 A decision request with no session is a new visitor's first request: its answer is the decision set with the session the engine issued as `session`, the member `POST /v1/{tenant}/identity/session` answers, and no other answer of the decision request carries a session.
 
 | Member | Where | Meaning |
@@ -197,6 +199,7 @@ A decision request with no session is a new visitor's first request: its answer 
 | `customerId` | action envelope, decision request body | Your identifier for the shopper, 1 to 128 letters, digits and `_ + / = . -`; carried beside the visitor's own and nothing more |
 | `customer_id` | decision record, outcome record | The same value, written under tracking consent only |
 | `session` | decision request answer | Only on a request that carried no session: `{ capability, tenant, subject, sessionId, kind, grantId, authorityEpoch, iat, exp, consent }`, the grant the session route issues |
+| `customerId` | link answer (`POST /v1/{tenant}/identity/link`) | The identifier the browser carried before recognition, the last one its own object kept; absent when the browser carried none. Never the linked `accountId`, which alone decides the link and the merge |
 
 ## The content piece
 
