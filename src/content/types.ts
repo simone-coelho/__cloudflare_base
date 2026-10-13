@@ -550,8 +550,12 @@ export interface LearnPolicyConfig {
 /** Doc 22 §5.1: the estimator's constants. */
 export interface LearnStatsConfig { n0: number; tauLearnMs: number; liftMin: number; liftMax: number; nMin: number }
 
-/** Doc 22 §7: how a slot explores. */
-export interface ExploreDials { mode: 'rotation' | 'thompson' | 'epsilon' | 'off'; share: number; floor: number }
+/**
+ * Doc 22 §7: how a slot explores. P05: `adjacent-swap`, on a page's declared
+ * layout slot only, swaps the modules of two adjacent positions on `share` of
+ * its decisions, so each position's effect can be estimated from the swaps.
+ */
+export interface ExploreDials { mode: 'rotation' | 'thompson' | 'epsilon' | 'off' | 'adjacent-swap'; share: number; floor: number }
 /** Doc 22 §11: whether and how a slot adjusts its own weights. */
 export interface AutonomyDials { mode: 'configured' | 'assisted' | 'autonomous'; step: number; min: number; max: number; pinned: string[]; minN: number }
 /** Doc 22 §12.2: a merchandiser's control over one item's learned lift. */
@@ -588,6 +592,14 @@ export interface SlotDials {
    * exactly as before.
    */
   blend?: LayoutBlendDial;
+  /**
+   * P05 (decision D2): the position-normalisation switch of the page's declared
+   * layout slot. `true` divides the credit of an engagement at a position by
+   * that position's estimated effect (`positionEffects`, estimated from the
+   * slot's adjacent swaps); absent or `false`, its default, credits exactly as
+   * before. Published only on a page's declared layout slot.
+   */
+  positionNormalization?: boolean;
 }
 
 /** P28: the layout blend's opt-in on a slot's learn dials, `{ p }` with p in 0..1 (absent: 0). */
@@ -892,8 +904,12 @@ export interface DecisionRecord {
     lift: LiftApplied | null;
     /** score_base × lift^γ. Equal to score_base while γ is 0. On a slot that opted into the layout blend, R + (1 − p) × B + p × Q (`blend`). */
     score_final: number;
-    /** Why this placement was an exploration pick, when it was. */
-    exploration?: { mode: string; reason: string; bucket: number; sample?: number };
+    /**
+     * Why this placement was an exploration pick, when it was. P05: on each of
+     * the two modules an adjacent swap exchanged, `positions` names the two
+     * positions, counted from 1 within the slot (keys sorted).
+     */
+    exploration?: { mode: string; reason: string; bucket: number; sample?: number; positions?: [number, number] };
     /** A merchandiser's control on this item's lift, when one applied. */
     control?: 'reject' | 'freeze';
     /** Their model's term on this decision, when the slot weights one. */

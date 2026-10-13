@@ -408,6 +408,48 @@ not opt in, keep `base × lift^γ` exactly as before. A position the blend ranke
 neither `B` nor `p × Q` moved it and `affinity` otherwise, its `explain.note` says that the blend ranked
 it, and under a configured order it keeps `explain.configuredOrder` beside the blend.
 
+**Adjacent swaps and position effects.** A page's declared layout slot can explore by swapping
+neighbouring modules: its exploration dial in the learn document is
+`slots.{slot}.exploration: { mode: 'adjacent-swap', share, floor }`, with the adjacent-swap `share` from 0 to 1
+([adjacent swaps and position effects](./03-payload-schemas.md#adjacent-swaps-and-position-effects)), set in the console's Dials screen or
+with `PUT /content/learn`, with no deployment. A decision whose exploration bucket (a hash of the shopper,
+the slot and the hour, the bucket every exploration mode reads) falls under the share is served the slot's
+ranked order with exactly one pair of adjacent positions swapped; outside the share, at a share of 0, and
+where no pair is free, it is served exactly as without the mode. The pair is chosen from that same bucket among the adjacent pairs
+neither of whose positions a pin (a prefix pin or a module pinned at a position) or an off-limits module
+holds, a pair touching a module under a merchandiser's reject or freeze left out as well, so the same
+shopper in the same hour is swapped the same pair and a pinned or off-limits module never moves. A
+decision served the configured order for the shopper's context is served that order exactly and never
+swapped: it carries no exploration member, and its layout reason is the order's (unchanged,
+`blend_or_trust_zero`).
+Like every exploration mode it belongs to the learning layer: it never applies on the holdout's `default`
+or `no_learning` arm, nor below the signal floor. Each of the two swapped records carries
+`explain.exploration: { bucket, mode, positions, reason }` (keys sorted, `mode` `adjacent-swap`,
+`positions` the two positions counted from 1 within the slot) with `explored` true, its receipt says it was
+swapped and between which positions, the layout reason names `exploration` for a swapped module that
+moved, and a replay swaps the same pair, with no new replay marker. From the swaps the slot's statistics
+estimate each position's effect as a click ratio, published as `positionEffects: [{ position, effect, pairs }]`
+on the slot's snapshot (`GET /v1/{tenant}/lift?slot=`): position 1's effect is 1, and position k + 1's is
+position k's times the clicks at k + 1 over the clicks at k, both counted on the decisions that swapped
+(k, k + 1); `pairs` is the number of swapped decisions behind it, and an effect the swaps cannot reach yet
+is null. The estimate counts the clicks credited to the slot, so a slot that learns another reward has no
+estimate beyond position 1. The switch `slots.{slot}.positionNormalization` on the same slot's dials is off
+by default (absent or `false`), and with it off every credit is exactly as before. With it `true`, the
+credit of an engagement with the module served at a position is divided by that position's effect, in the
+slot's live statistics and in the hourly recomputation alike (the folded hours, the open hour and the day
+summed from them), under the position policy the slot's statistics published at or before the engagement,
+whatever the learn document's dials say when the recomputation runs. Only an engagement with a module of a
+page's declared layout slot (a record carrying the layout reason) is weighed, on both paths alike: a
+decision made while the slot was not declared, or recorded before layout reasons existed, is credited as
+counted, and so is any engagement in a day the report has to build from the raw ledger because no hour of
+it was folded. The switch and the estimate take effect from the slot's
+next statistics publication (within 30 seconds of new evidence, or at once on
+`POST /v1/{tenant}/learn/publish`), and a position without a positive effect is credited as counted. Only
+the amount of a credit changes, never whether it is counted. Turn the switch on only once the data science
+has confirmed the position-effect estimate. Publication refuses the mode, and the switch, on a slot that is
+not a page's declared layout slot, and a share outside 0 to 1, each naming the mode; a learn document
+without the mode decides and replays exactly as before.
+
 **The signal floor.** A tenant can keep a shopper on context-only decisions until the shopper has shown
 enough behaviour of their own: `signalFloor` on the slots document is the tenant's floor N, a whole number
 of 0 or more, and a slot's own `signalFloor` overrides it ([the signal floor](./03-payload-schemas.md#the-signal-floor)).
@@ -1401,7 +1443,7 @@ counts per brand and slot name, summing a page-scoped name's page objects.
 | Route | Does |
 |---|---|
 | `GET audit[?limit=1..100&before=id]` | Minimized tenant subject-read/operation audit entries in descending ID order, default 50; returned `before` is the next keyset cursor or null. Requires both an explicit tenant grant and the existing admin role in every mode; no-store. Its own read has one admission/result pair. Legacy global rows retain null tenant and are excluded, not assigned an inferred tenant; the legacy global audit view excludes these subject-read/operation rows |
-| `GET lift?slot=&brand=[&page=][&version=]` | The slot's lift snapshot in force, or an archived version: every item's estimate in every cell. `page=` as below. Operator token |
+| `GET lift?slot=&brand=[&page=][&version=]` | The slot's lift snapshot in force, or an archived version: every item's estimate in every cell, and on a layout slot that swaps adjacent pairs `positionEffects`, each position's effect estimated from the swaps as a click ratio with the swapped decisions behind it ([adjacent swaps](./03-payload-schemas.md#adjacent-swaps-and-position-effects)). `page=` as below. Operator token |
 | `GET lift/history?slot=&brand=[&page=]` | Every archived snapshot version for the slot; `page=` as below |
 | `GET lift/rows?slot=&brand=[&page=][&level=pooled\|cells][&item=][&q=][&sort=][&dir=][&limit=][&cursor=]` | The grid one page at a time, cut by the server: one pooled row per item, or one item's cells (`level=cells&item=`), filtered by `q` over the item id, your id, the title and the cell, sorted by any column, fifty a page up to five hundred. `total` counts what matched; `cursor` fetches the next page and is bound to the snapshot version, so a listing that outlives a publish answers 409 and starts again. Names and a merchandiser's freeze or reject ride each row. Operator token |
 | `GET brands` | In enforced mode, only the operator's explicitly granted brands in manifest order, preserving each brand's original default flag: the application's brand picker |

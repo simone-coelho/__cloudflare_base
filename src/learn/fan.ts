@@ -120,6 +120,13 @@ export const statsName = (tenant: string, brand: string, slot: string, page?: st
 export const liftKey = (tenant: string, brand: string, slot: string, page?: string) => `lift:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
 export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/${version}.json`;
+/**
+ * P05 (decision D2): where a placement's statistics object publishes its
+ * position-policy history (`positionHistoryOf`, src/learn/stats.ts), beside the
+ * snapshot archive and named so no archive reading takes it for a version. The
+ * object writes it; the online credit and the hourly fold both read it.
+ */
+export const positionHistoryKey = (tenant: string, brand: string, slot: string, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/positions.json`;
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
   scoped.has(slot) ? page : undefined;
@@ -566,6 +573,24 @@ export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ 
   return out;
 }
 
+/**
+ * P05: what a decision tells the statistics object about its position — the
+ * position counted from 1 within its slot, for a module of a page's declared
+ * layout slot (a record carrying the layout reason, P29), the only slot a
+ * position estimate and its normalisation exist for; and, on each of the two
+ * modules an adjacent swap exchanged, the pair it exchanged. `swapOnly` keeps
+ * only the latter. Empty for any other record, so its row is exactly as before.
+ */
+export function positionRowOf(r: DecisionRecord | undefined, swapOnly = false): { position?: number; swap?: [number, number] } {
+  if (!r || !Number.isSafeInteger(r.position) || r.position < 0 || r.position >= 64) return {};
+  const x = r.explain?.exploration;
+  if (x?.mode === 'adjacent-swap' && Array.isArray(x.positions) && x.positions.length === 2 && Number.isSafeInteger(x.positions[0])
+    && x.positions[1] === x.positions[0] + 1 && (r.position + 1 === x.positions[0] || r.position + 1 === x.positions[1])) {
+    return { position: r.position + 1, swap: [x.positions[0], x.positions[1]] };
+  }
+  return !swapOnly && r.explain?.layoutReason !== undefined ? { position: r.position + 1 } : {};
+}
+
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, tenant: r.tenant, visitor_id: r.visitor_id, brand: r.brand, ts: r.ts, page: r.page, slot: r.slot, position: r.position,
     measurementBasis: r.measurementBasis ?? 'served-v1', ...(r.rendered ? { renderedAt: r.rendered.at } : {}),
@@ -707,6 +732,8 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     const exposures = await Promise.all([...bySlot].map(async ([name, { slot, page, rows }]) => ({ name, body: {
       tenant, brand, slot, ...(page ? { page } : {}), config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
       exposures: await Promise.all(rows.map(async r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts,
+        // P05: a module an adjacent swap exchanged carries its position and the pair, so the object counts the swap.
+        ...positionRowOf(r, true),
         ...(managed ? { effect: managed.effects[r.decision_id] } : { decision: r.decision_id, digest: await recoveryDigest(r) }) }))),
     } })));
     // All validation/barrier/config reads precede starting either destination.

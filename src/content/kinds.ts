@@ -1167,6 +1167,44 @@ export function learnBlendLayoutErrors(learn: Pick<LearnConfig, 'slots'>, slots:
   return errors;
 }
 
+/**
+ * P05: does this learn document name the adjacent-swap mode or the
+ * position-normalisation switch on any slot? Only such a document needs the
+ * cross-document rule below, so a caller holding the slots document reads it
+ * for nothing else.
+ */
+export function namesPositionDials(learn: Pick<LearnConfig, 'slots'>): boolean {
+  return Object.values(learn.slots ?? {}).some(dials => dials.exploration?.mode === 'adjacent-swap' || dials.positionNormalization !== undefined);
+}
+
+/**
+ * P05: the cross-document half of the adjacent swap's refusals, on the pattern
+ * of `learnBlendLayoutErrors`: a slot whose learn dials name the adjacent-swap
+ * mode or the position-normalisation switch must be a page's DECLARED layout
+ * slot (P02's `layout: true`) in the slots document, and on no page an
+ * ordinary slot of the same name — positions are counted within the layout
+ * slot, and only there do swaps and their estimate exist. Pure; the caller
+ * supplies the slots document it read. A later slots change is not refused
+ * here: the decision swaps only on a slot that declares the layout.
+ */
+export function learnPositionLayoutErrors(learn: Pick<LearnConfig, 'slots'>, slots: Pick<SlotCatalog, 'pages'>): string[] {
+  const errors: string[] = [];
+  for (const [slot, dials] of Object.entries(learn.slots ?? {})) {
+    const named: Array<[string, string]> = [
+      ...(dials.exploration?.mode === 'adjacent-swap' ? [['exploration', 'the adjacent-swap mode'] as [string, string]] : []),
+      ...(dials.positionNormalization !== undefined ? [['positionNormalization', 'the position-normalisation switch of the adjacent-swap estimate'] as [string, string]] : []),
+    ];
+    if (!named.length) continue;
+    const occurrences = Object.entries(slots.pages).flatMap(([page, list]) => list.filter(s => s.slot === slot).map(s => ({ page, declared: s.layout === true })));
+    const undeclared = occurrences.find(o => !o.declared);
+    for (const [member, what] of named) {
+      if (!occurrences.length) errors.push(`slots.${slot}.${member}: slot '${slot}' is on no page of the slots document; ${what} is set only on a page's declared layout slot (layout: true, governanceVersion ${LAYOUT_GOVERNANCE_VERSION})`);
+      else if (undeclared) errors.push(`slots.${slot}.${member}: slot '${slot}' is not the declared layout slot of page '${undeclared.page}'; ${what} is set only on a page's declared layout slot (layout: true, governanceVersion ${LAYOUT_GOVERNANCE_VERSION})`);
+    }
+  }
+  return errors;
+}
+
 // ── P36: the context vocabulary (the learn document's `contextVocabulary`) ──
 
 /** The value a refusal names, printed in full up to a bound, so a long id is still named. */
@@ -1389,9 +1427,18 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
         }
         if (d.exploration !== undefined) {
           const e = d.exploration;
-          if (!isRecord(e) || typeof e.mode !== 'string' || !['rotation', 'thompson', 'epsilon', 'off'].includes(e.mode) || !isNum(e.share) || e.share < 0 || e.share > 1 || !isNum(e.floor) || !Number.isInteger(e.floor) || e.floor < 0) errors.push(`slots.${slot}.exploration: mode ${historical ? 'rotation|thompson|epsilon|off' : 'rotation|epsilon|off'}, share 0..1, floor integer ≥ 0`);
+          // P05: the adjacent swap's share is named with the mode, so a share outside 0..1 is refused saying which dial it is.
+          if (isRecord(e) && e.mode === 'adjacent-swap' && (!isNum(e.share) || e.share < 0 || e.share > 1)) errors.push(`slots.${slot}.exploration: the adjacent-swap mode's share is the fraction of the slot's decisions that swap one adjacent pair, a number from 0 to 1; got ${shown(e.share)}`);
+          else if (!isRecord(e) || typeof e.mode !== 'string' || !['rotation', 'thompson', 'epsilon', 'off', 'adjacent-swap'].includes(e.mode) || !isNum(e.share) || e.share < 0 || e.share > 1 || !isNum(e.floor) || !Number.isInteger(e.floor) || e.floor < 0) errors.push(`slots.${slot}.exploration: mode ${historical ? 'rotation|thompson|epsilon|off|adjacent-swap' : 'rotation|epsilon|off|adjacent-swap'}, share 0..1, floor integer ≥ 0`);
           else if (e.mode === 'thompson' && !historical) errors.push(`slots.${slot}.exploration: Thompson is unsupported; choose off, rotation or epsilon`);
-          else dials.exploration = { mode: e.mode as 'rotation' | 'thompson' | 'epsilon' | 'off', share: e.share, floor: e.floor };
+          else dials.exploration = { mode: e.mode as 'rotation' | 'thompson' | 'epsilon' | 'off' | 'adjacent-swap', share: e.share, floor: e.floor };
+        }
+        // P05 (decision D2): the position-normalisation switch, kept exactly as
+        // authored; off when absent. Whether the slot is a page's declared layout
+        // slot is the cross-document rule `learnPositionLayoutErrors` states.
+        if (d.positionNormalization !== undefined) {
+          if (typeof d.positionNormalization === 'boolean') dials.positionNormalization = d.positionNormalization;
+          else if (!historical) errors.push(`slots.${slot}.positionNormalization: true or false (absent means off)`);
         }
         if (d.autonomy !== undefined) {
           const a = d.autonomy;

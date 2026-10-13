@@ -468,8 +468,8 @@
       dial('Measurement basis', 'Absent means legacy served-v1. Rendered-v1 counts authenticated client render acknowledgments, not polls or proof of human visibility. Changing a populated basis requires the existing reviewed reset/publication flow; counters and priors never merge.',
         sel(d.measurementBasis || 'served-v1', [['served-v1', 'legacy served'], ['rendered-v1', 'client-reported rendered']], (v) => { d.measurementBasis = v; scheduleCheck(); }, `${base}.measurementBasis`)),
       h('div', { class: 'subhead' }, 'Trying things it has not tried'),
-      dial('How it explores', 'Exploration is off by default. Rotation shows the least-observed piece on a hashed share; epsilon picks uniformly. Thompson is unsupported and stored settings are dormant.',
-        sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon']], (v) => {
+      dial('How it explores', 'Exploration is off by default. Rotation shows the least-observed piece on a hashed share; epsilon picks uniformly. Adjacent swap, on the page\u2019s declared layout slot only, swaps two neighbouring modules on that share \u2014 never a pinned or off-limits one \u2014 so the engine can estimate what each position is worth. Thompson is unsupported and stored settings are dormant.',
+        sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon'], ['adjacent-swap', 'adjacent swap (layout slot)']], (v) => {
           if (v === 'off') delete d.exploration;
           else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 };
           scheduleCheck();
@@ -478,8 +478,14 @@
       d.exploration && d.exploration.mode !== 'thompson' ? dial('How often', 'The configured share used by the existing rule; not a measured exposure guarantee.',
         num(d.exploration.share, (v) => { d.exploration.share = v ?? 0; scheduleCheck(); }, `${base}.exploration.share`, { min: 0, max: 1, step: 0.01 }),
         `${pct(d.exploration.share)} configured share`) : null,
-      d.exploration && d.exploration.mode !== 'thompson' ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
+      d.exploration && d.exploration.mode !== 'thompson' && d.exploration.mode !== 'adjacent-swap' ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
         num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,
+      // P05 (decision D2): the position-normalisation switch, beside the swaps it reads; written only when an operator sets it.
+      d.exploration?.mode === 'adjacent-swap' || d.positionNormalization !== undefined ? dial('Credit by position', 'Off by default. On, a click at a position is credited divided by that position\u2019s effect as the swaps estimate it (a click ratio, read as positionEffects on the slot\u2019s learning read), live and in the hourly recomputation alike. Turn it on only once the data science has confirmed the estimate.',
+        sel(d.positionNormalization === true ? 'true' : 'false', [['false', 'off: credit as counted'], ['true', 'on: divided by the position\u2019s effect']], (v) => {
+          if (v === 'true') d.positionNormalization = true; else delete d.positionNormalization;
+          scheduleCheck();
+        }, `${base}.positionNormalization`)) : null,
       h('div', { class: 'subhead' }, 'Autonomy unavailable'),
       h('div', { class: 'msg note' }, 'Stored settings are dormant. Cycles and proposal changes are disabled.'),
       h('pre', { class: 'dormant-autonomy' }, JSON.stringify(d.autonomy || { mode: 'configured' }, null, 2)),

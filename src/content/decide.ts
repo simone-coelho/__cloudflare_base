@@ -17,7 +17,7 @@ import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
 import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, type EligibilityContext } from './lifecycle';
 import { DEFAULT_STATS, levelKeys, liftFor, type LiftSnapshot } from '@/learn/stats';
-import { EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
+import { ADJACENT_SWAP, EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
 import { STAGE_WORDS } from '@/services/JourneyStage';
@@ -928,7 +928,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // P10 (decision D2): exploration is hashed on the visitor, so never below the signal floor.
     if (below.has(slot)) return null;
     const cfg = learning.exploreOf!(slot);
-    if (!cfg) return null;
+    // P05: the adjacent swap picks no module to serve first: it exchanges two
+    // adjacent positions of what the slot serves, after the composer placed it (below).
+    if (!cfg || cfg.mode === ADJACENT_SWAP) return null;
     // W28.M1.01 (F23 §4.3): the merchandiser's item controls belong to the
     // caller, which already holds them, and they govern exploration as well as
     // scoring — an item whose learned treatment a person took control of is out
@@ -942,6 +944,41 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
   const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
+  // P05 (decision D1): the adjacent swap. On a page's declared layout slot whose
+  // exploration dial is `adjacent-swap`, a decision whose bucket (visitor, slot
+  // and hour) falls under the share exchanges the modules of ONE pair of
+  // adjacent positions of the slot's RANKED order, the pair chosen from that same
+  // bucket among the pairs neither of whose positions a rule fixed (a prefix pin,
+  // a position pin or an off-limits module, P04, all served as `tenant-pinned`),
+  // a pair touching a module under a merchandiser's control left out as well.
+  // R-P62 (3): a decision on which the slot served the configured order for the
+  // shopper's context (P01, blended or not) is served that order exactly and is
+  // never swapped, so it carries no exploration member and its reason is the
+  // order's. Outside the share, at share 0, and where no such pair exists, the
+  // slot is served exactly as composed. Part of the learning layer, so never on
+  // the holdout's `default` or `no_learning` arm, and hashed on the visitor, so
+  // never below the signal floor (P10). Pure: it reads what this decision
+  // already computed, so a replay swaps the same pair.
+  const swapped = new Map<string, ExplorePick & { positions: [number, number] }>();
+  if (learning?.exploreOf) for (const s of i.slots) {
+    if (s.layout !== true || s.offLimits || below.has(s.slot) || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))
+      || (ordered ?? []).includes(s.slot)) continue;
+    const cfg = learning.exploreOf(s.slot);
+    if (cfg?.mode !== ADJACENT_SWAP) continue;
+    const at = decisions.flatMap((d, index) => (d.slot === s.slot ? [index] : []));
+    const served = at.map((index) => decisions[index]!);
+    const pairs = served.slice(1).flatMap((d, k) => (d.strategy !== 'tenant-pinned' && served[k]!.strategy !== 'tenant-pinned' ? [k + 1] : []));
+    const controlled = new Set<string>();
+    if (learning.controlOf) for (const d of served) if (learning.controlOf(s.slot, d.contentId)) controlled.add(d.contentId);
+    const pick = explorationPick({ visitorId: i.visitorId, slot: s.slot, nowMs: i.nowMs, ranked: served.map((d) => ({ id: d.contentId, score: d.score })),
+      snapshot: learning.snapshots[s.slot], cfg, controlled, pairs }, historical, historicalRules);
+    if (!pick?.positions) continue;
+    const upperAt = at[pick.positions[0] - 1]!, lowerAt = at[pick.positions[1] - 1]!;
+    const upper = decisions[upperAt]!, lower = decisions[lowerAt]!;
+    [upper.order, lower.order] = [lower.order, upper.order];
+    decisions[upperAt] = lower; decisions[lowerAt] = upper;
+    swapped.set(s.slot, { ...pick, positions: pick.positions });
+  }
   // P01: the slots whose configured order this decision served.
   const orderedSlots = new Set(ordered ?? []);
   // P04: the rule and the position that placed each module a position pin or an
@@ -1300,6 +1337,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const pick = explored.get(s.slot), firstRanked = served.find((d) => !fixed(d));
     const exploredIds = new Set<string>(pick?.ranking ? served.filter((d) => !fixed(d)).map((d) => d.contentId)
       : pick && firstRanked?.contentId === pick.pieceId ? [pick.pieceId] : []);
+    // P05: the two modules an adjacent swap exchanged were placed by exploration, each named `exploration` where it moved.
+    const swap = swapped.get(s.slot);
+    if (swap) for (const position of swap.positions) { const d = served[position - 1]; if (d) exploredIds.add(d.contentId); }
     const yielded = new Set(served.flatMap((d) => (d.explain.diversity ? [...d.explain.diversity.skipped, ...(d.explain.diversity.relaxed ? [d.contentId] : [])] : [])));
     const moves = served.flatMap((d, k) => {
       const from = fromOf.get(d.contentId) ?? null;
@@ -1426,7 +1466,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const rankingPosition = rankedIn.get(d.slot) ?? 0;
     if (!pinned) rankedIn.set(d.slot, rankingPosition + 1);
     const moduleRule = ruleOf.get(key);
-    const wasExplored = Boolean(pick && (!historicalPins ? !pinned && rankingPosition === 0 : position === 0) && (pick.ranking ? pick.ranking[0] === d.contentId : pick.pieceId === d.contentId));
+    // P05: each of the two modules an adjacent swap exchanged is an exploration placement, named with both positions and the bucket.
+    const swap = swapped.get(d.slot);
+    const inSwap = swap !== undefined && (position + 1 === swap.positions[0] || position + 1 === swap.positions[1]);
+    const wasExplored = inSwap || Boolean(pick && (!historicalPins ? !pinned && rankingPosition === 0 : position === 0) && (pick.ranking ? pick.ranking[0] === d.contentId : pick.pieceId === d.contentId));
     const control = controlOf.get(key);
     return {
       // Tenant first, then time: the R2 partition (brand and hour) is derivable from the id alone,
@@ -1443,7 +1486,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       explain: {
         drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}),
         ...(contextItem ? { contextPrior: contextItem } : {}), lift, score_final: d.score,
-        ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
+        ...(inSwap && swap ? { exploration: { bucket: swap.bucket, mode: swap.mode, positions: [swap.positions[0], swap.positions[1]] as [number, number], reason: swap.reason } }
+          : wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
         ...(control ? { control } : {}),
         ...(!historicalPins && pinned ? {} : externalOf(d.slot, key)),
         ...(seedOf.has(key) ? { contextual: seedOf.get(key)! } : {}),

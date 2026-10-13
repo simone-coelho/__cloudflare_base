@@ -25,14 +25,14 @@ import type { R2Like } from '@/ledger/writer';
 import { readRetention, requireRetention, mergeRetention, RetentionUnavailable, type RetentionEnv, type RetentionStamp } from '@/retention';
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
 import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
-import { ringEntryOf } from './fan';
+import { positionHistoryKey, positionRowOf, ringEntryOf } from './fan';
 import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportKey, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type OpenHourEntry, type OpenHourRefusal, type ReportPolicy, type ReportPriors,
   addNamedOutcomes, creditNamedOutcome, emptyNamedOutcomes, namedOutcomeRow, validNamedOutcomes, type NamedOutcomes } from './report';
 import { attributionContractOf, policyOf, slotConfigsOf } from './route';
 import { effectiveExploration } from './explore';
 import { computationBasis, conflictKey, effectiveReportPolicy, recordedComputation, ReportInputError, explorationOpportunity, ReportRowConflict, ReportRowIdentity, rawText, validDuplicateCounts, loadDay,
   type ArmVisitors, type ComputationBasis, type DuplicateCounts, type DuplicateWitness, type ResolvedConflicts, type VisitorOutcomes } from './report';
-import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, recordExposure, recordSuccess, type Counter, type StatsConfig, type StatsState } from './stats';
+import { buildSnapshot, DEFAULT_STATS, emptyStats, parentKey, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, type Counter, type PositionPolicy, type StatsConfig, type StatsState } from './stats';
 
 export const HOUR_MS = 3600_000;
 /** Visitors are spread over this many ring shards; chosen once, because changing it re-partitions every visitor. */
@@ -140,12 +140,23 @@ export interface BatchRingEntry extends RingEntry {
    * fold of records without provenance writes exactly the bytes it always did.
    */
   assignment?: string;
+  /**
+   * P05 (R-P62 (2)): the position, counted from 1 within its slot, that a credit
+   * of this decision names on the online path (`positionRowOf`, src/learn/fan.ts:
+   * a module of a declared layout slot, whose record carries the layout reason),
+   * so the fold weighs by position exactly the credits the statistics object
+   * weighs. Absent on every other decision, whose entry is exactly as before.
+   */
+  creditPosition?: number;
 }
 /** What the fold keeps of a decision: the ring entry plus the two facts the exploration count needs. */
 export interface CompactDecision { entry: BatchRingEntry; visitor_id: string; ts: number; position: number; explored: boolean; explorationOpportunity?: boolean }
-export const compactOf = (d: DecisionRecord): CompactDecision =>
-  ({ entry: { ...ringEntryOf(d), brand: d.brand, ...(d.experiment?.arm === undefined ? {} : { assignment: d.experiment.arm }) },
-    visitor_id: d.visitor_id, ts: d.ts, position: d.position, explored: d.explored, explorationOpportunity: explorationOpportunity(d) });
+export const compactOf = (d: DecisionRecord): CompactDecision => {
+  const creditPosition = positionRowOf(d).position;
+  return { entry: { ...ringEntryOf(d), brand: d.brand, ...(d.experiment?.arm === undefined ? {} : { assignment: d.experiment.arm }),
+    ...(creditPosition === undefined ? {} : { creditPosition }) },
+    visitor_id: d.visitor_id, ts: d.ts, position: d.position, explored: d.explored, explorationOpportunity: explorationOpportunity(d) };
+};
 /**
  * The row an arm of a REPORT is: the assignment where the record carries one,
  * the arm served where it does not (`src/learn/report.ts:877`, the raw-day
@@ -730,6 +741,60 @@ export interface FoldContext {
   brands: Record<string, HourBrand>;
   /** Ephemeral capture includes credited slots with no current-hour exposure/stat row. */
   creditedSlots?: Map<string, Set<string>>;
+  /**
+   * P05 (decision D2, R-P20, R-P62): what a credit to the decision served at
+   * `position` (from 1) of the brand's slot on the page is weighed by at `ts`,
+   * read from the position-policy history the slot's statistics object
+   * published (`positionHistories`). Asked only for a credited decision that
+   * names its position (`creditPosition`). Absent: every credit as before.
+   */
+  positionWeight?: (brand: string, slot: string, page: string, position: number, ts: number) => number;
+}
+
+/**
+ * P05 (decision D2, R-P20, R-P62): the position weights a fold credits by — the
+ * same weight the online credit applies, from the same source and by the same
+ * rule: the position-policy history each placement's statistics object
+ * publishes, and in it the policy in force at the credit's time
+ * (`positionWeightAt`), never the learn dials in force when the fold runs. A
+ * history is read, once per fold, for the placement of every decision that names
+ * its position (`creditPosition`) among the rows `load` is given — the
+ * page-qualified history where that placement publishes one, else the slot's
+ * own — so a fold whose decisions name no position reads nothing and weighs
+ * nothing. A history that cannot be read, or is malformed, refuses the fold —
+ * the catch-up builds the hour again — rather than weighing a credit by a policy
+ * the fold could not establish. Changes a credit's amount only, never whether it
+ * is counted (R-P29).
+ */
+function positionHistories(r2: R2Like, tenant: string): {
+  load: (entries: Iterable<{ brand?: string; slot: string; page: string; creditPosition?: number }>) => Promise<void>;
+  weight: NonNullable<FoldContext['positionWeight']>;
+} {
+  const histories = new Map<string, PositionPolicy[] | null>();
+  const keyOf = (brand: string, slot: string, page?: string): string | null => { try { return positionHistoryKey(tenant, brand, slot, page); } catch { return null; } };
+  const read = async (brand: string, slot: string, page?: string): Promise<void> => {
+    const key = keyOf(brand, slot, page);
+    if (key === null || histories.has(key)) return;
+    const stored = await r2.get(key);
+    if (stored === null) { histories.set(key, null); return; }
+    let policies: PositionPolicy[] | null = null;
+    try { policies = positionHistoryOf(JSON.parse(await stored.text()), { tenant, brand, slot, ...(page ? { page } : {}) }); } catch { policies = null; }
+    if (policies === null) unavailable();
+    histories.set(key, policies);
+  };
+  return {
+    load: async (entries) => {
+      for (const entry of entries) {
+        if (entry.creditPosition === undefined || typeof entry.brand !== 'string') continue;
+        if (entry.page) await read(entry.brand, entry.slot, entry.page);
+        await read(entry.brand, entry.slot);
+      }
+    },
+    weight: (brand, slot, page, position, ts) => {
+      const scoped = page ? keyOf(brand, slot, page) : null, plain = keyOf(brand, slot);
+      return positionWeightAt((scoped === null ? null : histories.get(scoped)) ?? (plain === null ? null : histories.get(plain)) ?? null, position, ts);
+    },
+  };
 }
 
 const objectMap = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -1298,7 +1363,11 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
         const byAssignment = ((hb.assignments ??= emptyAssignments()).credits[p.name] ??= {});
         byAssignment[`${c.slot}|${label}`] = (byAssignment[`${c.slot}|${label}`] ?? 0) + 1;
         if (arm === 'personalized') {
-          const w = creditWeight(ctx.slotCfg[c.slot]?.objective, o);
+          // P05 (decision D2, R-P62): a credit to a decision that names its position, exactly as the online credit
+          // names it, is weighed by the position policy in force when it happened; the count above is unchanged.
+          const weighed = credited?.creditPosition;
+          const w = creditWeight(ctx.slotCfg[c.slot]?.objective, o)
+            * (ctx.positionWeight && credited && weighed !== undefined ? ctx.positionWeight(credited.brand, c.slot, credited.page, weighed, c.ts) : 1);
           if (w > 0) recordSuccess((ph.stats[c.slot] ??= emptyStats()), c.item, c.cell, c.reward as RewardType, c.ts, w, ctx.statsCfg);
         }
       }
@@ -2595,6 +2664,9 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
   // context no longer carries a `now` no fold ever read.
   const ctx: FoldContext = { tenant, date: at.date, from, to, refold, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
     retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(decisions.map(d => d.entry.id)) };
+  // P05 (R-P20, R-P62): the position weights, read shard by shard below for the placements of the decisions that name a position.
+  const positions = positionHistories(r2, tenant);
+  ctx.positionWeight = positions.weight;
   let ringsFolded = true;
   /** W30 F1.01 (W22 R143): the earliest hour any of these shards could still admit. */
   let recoveryFrom = 0;
@@ -2619,6 +2691,8 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
       }
       if (s === 0 || beforeHash !== pair.before) recoveryConflict();
     }
+    // P05 (R-P62): the histories of the placements this shard's decisions and rings name a position on.
+    await positions.load([...(byShardD.get(s) ?? []).map(d => d.entry), ...Object.values(state.rings).flat()]);
     const r = foldShard(state, byShardD.get(s) ?? [], byShardO.get(s) ?? [], ctx);
     if (!r.folded) ringsFolded = false;
     // W30 F1.01 (W22 R143): a shard's floor is the hour below which it will
@@ -3194,7 +3268,9 @@ async function committedShards(r2: R2Like, tenant: string, shards: number, tombs
  * after it, sees this one in its rings. Nothing is written here.
  */
 function foldWorkingHour(tenant: string, at: { date: string; hour: number }, learn: LearnConfig, now: number, options: Required<BuildOptions>,
-  loaded: Awaited<ReturnType<typeof loadHourRecords>>, tombs: ReadonlyMap<string, Tombstone>, states: ShardState[], retentionEnv?: RetentionEnv): HourAggregate {
+  loaded: Awaited<ReturnType<typeof loadHourRecords>>, tombs: ReadonlyMap<string, Tombstone>, states: ShardState[], retentionEnv?: RetentionEnv,
+  /** P05 (R-P20): the position weights, read by the caller as the final fold reads them. */
+  positionWeight?: FoldContext['positionWeight']): HourAggregate {
   const from = hourStart(at.date, at.hour), to = from + HOUR_MS;
   const { shards, horizonMs, ringCap } = options;
   const statsCfg: StatsConfig = learn.stats ?? DEFAULT_STATS, slotCfg = slotConfigsOf(learn), policies = policiesOf(learn);
@@ -3224,7 +3300,7 @@ function foldWorkingHour(tenant: string, at: { date: string; hour: number }, lea
   const creditedSlots = new Map<string, Set<string>>();
   // An open hour has no aggregate of its own, so this is a first fold, never a re-fold.
   const ctx: FoldContext = { tenant, date: at.date, from, to, refold: false, policies, slotCfg, statsCfg, horizonMs, ringCap, tombs, brands, creditedSlots,
-    retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(decisions.map(d => d.entry.id)) };
+    retainedIds: new Set(), retainedBudget: { work: 0, bytes: 0 }, incomingIds: new Set(decisions.map(d => d.entry.id)), ...(positionWeight ? { positionWeight } : {}) };
   let ringsFolded = true;
   /** W30 F1.01 (W22 R143): the earliest hour any of these shards could still admit, as the final fold records it. */
   let recoveryFrom = 0;
@@ -3524,7 +3600,10 @@ export async function foldOpenHours(r2: R2Agg & { delete?(key: string): Promise<
           read = [];
           return loadHourRecords(io, tenant, at.date, at.hour, options.maxObjects, resolved, { held, read, listed: t.listed });
         });
-        const agg = foldWorkingHour(tenant, at, learn, now, options, loaded, run.tombs, run.states, retentionEnv);
+        // P05 (R-P20, R-P62): the open hour's credits weighed by the same rule its final fold weighs them by.
+        const positions = positionHistories(io, tenant);
+        await positions.load([...loaded.decisions.map(d => d.entry), ...run.states.flatMap(state => Object.values(state.rings).flat())]);
+        const agg = foldWorkingHour(tenant, at, learn, now, options, loaded, run.tombs, run.states, retentionEnv, positions.weight);
         let changed = true;
         if (job) {
           const content = await fingerprint(workingContent(agg));

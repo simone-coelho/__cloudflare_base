@@ -28,7 +28,7 @@ import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
   readOptionalPublication, readPublication, recoverPublication, type PublicationPin } from '@/config/publication';
-import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
+import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnPositionLayoutErrors, namesPositionDials, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
 import { contextTermsOf } from '@/content/cell';
@@ -367,8 +367,10 @@ async function requestOrderRefusals(c: Context<Ctx>, scope: string, members: rea
  * related member, its kind resolved as `kindOf` resolves every kind — whose
  * dials carry a blend is checked against the slots document the same request
  * publishes (the primary, or a related member of the slots kind in any case of
- * the word), or else the one in force. A learn document without a blend is never
- * touched: no read is made for it. A refusal of a related member names it
+ * the word), or else the one in force. P05 (R-P61): a learn document whose dials
+ * name the adjacent-swap mode or the position-normalisation switch is checked
+ * the same way (`learnPositionLayoutErrors`). A learn document with none of the
+ * three is never touched: no read is made for it. A refusal of a related member names it
  * (`publicationChanges[i]`) and refuses the whole request, so no member of it is
  * written. Fail closed: a slots document that cannot be read refuses the
  * publication rather than publishing an unchecked opt-in; an absent one
@@ -376,7 +378,9 @@ async function requestOrderRefusals(c: Context<Ctx>, scope: string, members: rea
  */
 async function blendRefusals(c: Context<Ctx>, scope: string, learnCandidate: unknown, slotsCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
   const valid = LEARN_KIND.validate(learnCandidate);
-  if (!valid.ok || !Object.values(valid.value.slots ?? {}).some(dials => dials.blend !== undefined)) return null;
+  // P05 (R-P61): the adjacent-swap mode and the position-normalisation switch
+  // are checked against the page's declared layout slot exactly as the blend is.
+  if (!valid.ok || !(Object.values(valid.value.slots ?? {}).some(dials => dials.blend !== undefined) || namesPositionDials(valid.value))) return null;
   let slots: SlotCatalog;
   if (slotsCandidate !== undefined) {
     const checked = SLOTS_KIND.validate(slotsCandidate);
@@ -384,9 +388,9 @@ async function blendRefusals(c: Context<Ctx>, scope: string, learnCandidate: unk
     slots = checked.value;
   } else {
     try { slots = (await readPublication(c.env, SLOTS_KIND, scope))?.value ?? { pages: {} }; }
-    catch { return { status: 503, errors: ['slots: the slots document is unavailable, so a layout blend cannot be checked against the page\'s declared layout slot'] }; }
+    catch { return { status: 503, errors: ['slots: the slots document is unavailable, so a layout blend or an adjacent swap cannot be checked against the page\'s declared layout slot'] }; }
   }
-  const errors = learnBlendLayoutErrors(valid.value, slots);
+  const errors = [...learnBlendLayoutErrors(valid.value, slots), ...learnPositionLayoutErrors(valid.value, slots)];
   return errors.length ? { status: 422, errors } : null;
 }
 async function requestBlendRefusals(c: Context<Ctx>, scope: string, members: readonly PublishedMember[]): Promise<{ errors: string[]; status: 422 | 503 } | null> {

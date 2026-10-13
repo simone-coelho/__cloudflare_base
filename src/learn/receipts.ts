@@ -195,6 +195,18 @@ function moduleRuleSentence(r: DecisionRecord, rule: NonNullable<DecisionRecord[
   return `Off-limits: the merchandiser marked this module never to move, so it holds its baseline position ${rule.position}, ${baseline}; the engine never ranked it, and no term and no exploration moved it.${served}`;
 }
 
+/**
+ * The exploration placement in words. P05: a module an adjacent swap exchanged
+ * names the swap and the two positions, counted from 1 within the slot; every
+ * other mode keeps the sentence it has always had.
+ */
+function explorationSentence(x: NonNullable<DecisionRecord['explain']['exploration']>): string {
+  if (x.mode === 'adjacent-swap' && Array.isArray(x.positions) && x.positions.length === 2) {
+    return `Swapped on purpose with the module beside it to measure the effect of position (adjacent-swap): positions ${x.positions[0]} and ${x.positions[1]} of this slot exchanged, ${x.reason}.`;
+  }
+  return `Served on purpose to explore (${x.mode}): ${x.reason}.`;
+}
+
 /** P29: each cause of an unchanged layout in words (decision D1). A cause a later build adds is quoted as written. */
 const CAUSE_WORDS: Readonly<Record<LayoutReasonCause, string>> = {
   pinned: 'the merchandiser pinned every position',
@@ -340,7 +352,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: the performance term Q is 0.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned term held at zero.');
     why.push(`Layout blend at p ${b.p}: score ${r3(e.score_final)} = R ${r3(b.R)} + (1 − ${b.p}) × B ${r3(b.B)} + ${b.p} × Q ${r3(b.Q)}.`);
-    if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
+    if (r.explored && e.exploration) why.push(explorationSentence(e.exploration));
   } else if (e.configuredOrder) {
     // P01: the configured order placed it, so no ranking sentence is claimed for
     // its position; the numbers the ranking computed stay on the record. Only on
@@ -381,7 +393,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: no lift.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
-    if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
+    if (r.explored && e.exploration) why.push(explorationSentence(e.exploration));
   }
   // P39: the suppressions in force, a fact about the shopper this decision read, after the terms it shaped.
   if (e.suppressions?.length) why.push(suppressionSentence(e.suppressions));
