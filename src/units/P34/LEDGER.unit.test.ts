@@ -80,6 +80,10 @@
 //   · src/sdk/listen.test.ts:549 "W15 … preserves unchanged paint": keyed today
 //     on [slot, order, contentId]; under T4 an unchanged (slot, slotPosition,
 //     item) placement keeps its receipt, which that test's fixture also satisfies.
+//   · this file's fake engine (`sdk()`, its snapshot branch), corrected under R-P68
+//     as R-P38 corrected src/sdk/listen.test.ts:603-604: a snapshot request that
+//     carries no session is answered with the issued session (the P13 engine
+//     shape, S4-C19), so T5's fresh browser keeps its first answer under S4-C18.
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -92,7 +96,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCore } from '@/sdk/core';
 import { createEmit } from '@/sdk/emit';
 import { createListen } from '@/sdk/listen';
-import { offeredSet, renderAck, testHost } from '@/sdk/testHost';
+import { offeredSet, renderAck, syntheticSession, testHost } from '@/sdk/testHost';
 import type { ContentDecision, DecisionSet, RequestInitLike } from '@/sdk/types';
 
 import { readTree } from '../_parity';
@@ -128,7 +132,8 @@ function sdk(config: { hydrateTimeoutMs?: number } = {}) {
         const offered = offeredSet({ ...set, page: body.page }, body.pageInstance, revision);
         for (const d of offered.decisions) issued.set(d.decisionId!, d.renderOffer!);
         this.answered = true;
-        resolve(respond({ ok: true, ...offered }));
+        // R-P68 (S4-C19): a snapshot request carrying no session is answered with the issued session beside the offered set, the P13 engine shape.
+        resolve(respond(init?.headers?.['X-Shopper-Session'] ? { ok: true, ...offered } : { ok: true, ...offered, session: syntheticSession(f.host.now()) }));
         return offered;
       } }));
     }
