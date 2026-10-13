@@ -1384,7 +1384,7 @@
     {
       "id": "P31",
       "title": "\"Nothing to show\": module eligibility by page signal and by context",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
