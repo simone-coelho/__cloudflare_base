@@ -760,7 +760,7 @@
     {
       "id": "P39",
       "title": "Negative preference with an expiry: remove from cart and the purchase rule",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
@@ -921,15 +921,23 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "e06c860c079aa3078ad568f66b2d3ea8c9978513 on rem/spec-parity-e (batch S5 fix round 1; P39 reviewed PASS at this revision after the S5 review at da5aaea4; the per-ticket branch is cut from the batch head after S5 fix round 2 so the shared harness src/units/_parity5.ts is final; the NP2 signal-count legs and the NP5 P10 clause are measured at build)",
+        "reviewedRevision": "2b8532ee6984c77ed4305336c30e7e3a96798067 on rem/spec-p39-fix1 (fix round 1, R-P60: the buffered purchase, history-import and buffered removal legs per host with their locks and controls, over the build head d6aac08b; specification review PASS; the S5 fix-1 gate at e06c860c kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/reviewer-spec/logs/graft-run.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/reviewer-spec/logs/head-p39.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/reviewer-spec/logs/standin-allweight0.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/reviewer-spec/logs/standin-arrival.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/specifier/logs/green-scratch.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/specifier/logs/standin-removal-counted.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/fix1/reviewer-spec/logs/probe-merge-drops-member.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/p10-P39-count-control.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/logs/ctl-lapse.log"
