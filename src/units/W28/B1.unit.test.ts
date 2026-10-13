@@ -568,7 +568,7 @@ describe('unit:W28.W1.01', () => {
 // ===========================================================================
 
 describe('unit:W28.S1.01', () => {
-  const REMAINING: readonly ExploreMode[] = ['rotation', 'epsilon', 'off'];
+  const REMAINING: readonly ExploreMode[] = ['rotation', 'epsilon', 'off', 'adjacent-swap' as string as ExploreMode];
 
   it('logic: no visitor outside the configured share is ever explored in any supported mode, share zero reorders nothing, and the compiled default states what a document with no exploration block actually does', () => {
     // F23 §7's regression test, the one the suite lacks — parameterised over every supported

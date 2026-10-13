@@ -233,6 +233,47 @@ carry only the new identity.
 
 **Listen-only.** `listenOnly:true` disables rendered admission and declarative capture. Explicit commerce/page/data-layer events remain available; the current SDK does not bypass the missing render ACK for content outcomes.
 
+**Thresholds and event conventions.** Each threshold below is either the platform's or one your page sets, and
+each event travels exactly as written here.
+
+- **The viewable impression, `content_viewable`.** The SDK measures it and your page never sends it. Once a
+  piece's render acknowledgement is held, a container reported at least half in view for one second without
+  interruption sends one `content_viewable` per piece per page instance, carrying `contentId`, `slot`,
+  `slotPosition`, `decisionId`, `page`, `pageInstance` and `position` (the page-wide order). The second is
+  continuous: leaving view, a detach, `destroy()`, a consent refusal or a new identity generation cancels it, and
+  with the declarative capture the next time in view starts a new second; a container in view for less than a second
+  at a time, or never half in view, sends none. A piece acknowledged through `rendered(slot, contentId, element)` is
+  measured only while the SDK observes that element, until it first leaves view: a second time in view sends none
+  there, so mark module containers for the declarative capture. It weighs 0 whatever your registry says, builds no interest and counts no exposure, so
+  what a slot learns from is unchanged. A renderer that measures visibility itself reports it with
+  `client.listen.visible(slot, contentId, inView, decisionId)`; `client.emit.track('content_viewable')` sends nothing.
+- **The video view, `video_view`.** Call `client.emit.videoView(contentId, slot)` when your player has played
+  three seconds of the painted piece, beside `client.emit.videoComplete(contentId, slot)` at its end. It waits for
+  the piece's render acknowledgement, as a click does, and builds interest in the piece's format as your catalogue
+  names it (`tags.contentType`), at the weight your registry publishes for it (`weights.video_view`, 1 in the shipped
+  registry); a registry that names no `video_view` weight weighs it 0, as it weighs every action it does not name.
+- **A dwell minimum per slot, `dwellMinMsBySlot`.** A dwell is sent when a piece leaves view after its minimum on
+  screen, one second by default (`dwellMinMs`). `client.emit.declarative({ dwellMinMsBySlot: { 'pdp-editorial': 30000 } })`
+  holds a named slot to its own minimum (here 30 seconds on editorial) while every other slot keeps one second;
+  `createClient(config, host, { dwellMinMsBySlot })` does the same for `rendered()` with an element.
+- **The product dwell, `product_dwell`.** Once per product view, when the shopper has stayed on the product page
+  past 20 seconds, send `client.emit.track('product_dwell', { productId: 'SKU-123', dwellMs: 21000 })`. Its `dwellMs`
+  feeds the visit's dwell counter your journey thresholds read (`category_dwell_ms`); it is captured at weight 0.
+- **A purchase is unique per `orderId`.** A second purchase naming an `orderId` this shopper's purchase already named is answered `200` with `dropped: "duplicate_order"` and writes no outcome, no credit and no interest.
+  The same event sent again (the same `eventId`) is not a second purchase, and a purchase without an `orderId` is
+  never deduplicated.
+- **Search, `search`.** Send `client.emit.custom('search', { category: 'Handbags', line: 'Tabby' })` with what your
+  search resolved the query to, in your registry's source fields: the resolved values only, never the query text.
+- **Filters, `filter_applied`.** Send `client.emit.custom('filter_applied', { dimension: 'category', value: 'Handbags', category: 'Handbags' })`:
+  the facet's dimension and value, with the value also in the registry's own source field. The sale filter and the sale page both send `filter_applied` with `dimension: 'priceStatus'`, `value: 'sale'` and `priceStatus: 'sale'`, raising `priceStatus` sale.
+- **Removing from the bag, `remove_from_cart`.** Send `client.emit.custom('remove_from_cart', { productId: 'SKU-123' })`;
+  it is captured at weight 0 until the negative-signal release (P39) gives it a meaning.
+- **Their registry values.** The shipped registry weighs `video_view` 1 and `content_viewable` 0, and names no
+  weight for `search`, `filter_applied`, `remove_from_cart` or `product_dwell`, so each of those is captured at
+  weight 0 until your registry publishes one (`weights.search`, `weights.filter_applied`). An event's own values,
+  such as a search's resolved `category` or the sale filter's `priceStatus`, build interest only where your
+  registry names that source field as a dimension and scores event attributes (`eventAttributes: "event-when-unknown"`).
+
 ## 5. Sign-in and sign-out
 
 The visitor id is anonymous until your page says who the person is.
@@ -295,6 +336,114 @@ item names the slots it may fill, the tags it carries, its lifecycle and, option
 and season, promotion and margin signals. Your merchandiser's slot document names the slots on each page
 and the weight of each dimension in each slot, and can pin an item to a slot. Both documents are
 versioned: every change has an author and a note, and a rollback is a new revision.
+
+Tag values are free text until your brand approves an attribute vocabulary: a versioned list of the values
+each attribute may take, each an id with your display name and the words your source systems send for it
+(`PUT /content/vocabulary`, then approved on the console's Vocabulary screen or with
+`POST /content/vocabulary/approve/{n}`; [API reference](./02-api-reference.md#the-attribute-vocabulary-contentvocabulary),
+[schema](./03-payload-schemas.md#the-attribute-vocabulary)). From the approval on, a feed or an event may keep
+sending its own words: each is mapped through the vocabulary's mapping table to the value's id, an id passes
+unchanged, and a value the vocabulary does not list refuses the catalogue publication (naming the item and the
+tag) or, on an event, builds no interest and is counted in your rejection report
+(`GET /content/vocabulary/rejections`). Send ids where you can; list every other spelling as a synonym.
+
+### A page's layout: modules in one declared slot
+
+A page's modules (a category grid, recommendations, a styling story, reviews and the like) are content
+items too: each is registered in the content catalog with its own `id`, its kind as `type` and the
+journey stages it is made for as `journeyStageFit`, and names the layout slot in its `slotTypes`. Your
+merchandiser declares the page's layout as one slot of the slot document, marked `layout: true` in a
+document marked `governanceVersion: 4`, at most one per page. Its `take` is the number of positions K
+(1 to 50), and the registered modules that name the slot are its M candidates, M at least K. Each
+decision returns up to K module ids for that slot, in rank order, with eligibility (lifecycle, publish
+window, stock), the slot's exclusions and page-wide de-duplication applied; with nothing known about the
+shopper yet, they are the first K eligible modules in catalogue order. When fewer than K modules are
+eligible, the slot returns only those, never a filler.
+
+The list the layout slot returns is the layout's sequence: draw the modules in that order, one container
+per position. A module that is not returned is not drawn, and its container stays hidden. Every drawn
+module is acknowledged with `client.emit.rendered(slot, contentId, element, decisionId)` once it has
+actually painted, exactly as section 3 describes for any slot, and a module that failed to paint is not
+acknowledged. This contract is about a decision that answered: when the snapshot fails or misses its
+deadline, the subscriber receives `[]` and your page's own default layout stands, as for every slot.
+
+Measure the layout slot on `rendered-v1`: publish `slots.{slot}.measurementBasis: 'rendered-v1'` for it in
+the learn document, so a module that was drawn and acknowledged is one exposure, however often its
+acknowledgement is retried, and a module that was returned but never drawn, or not returned, is none. A
+layout slot left on `served-v1` is still served, but carries no render offer and is never counted as an
+exposure; the engine's decision set names that mismatch internally (`layoutDiagnostics`), and the
+snapshot answer does not carry it.
+
+### Modules with nothing to show, and eligibility rules
+
+Only your page knows when a module has nothing to show for this page view (a recently-viewed rail on a
+first visit, a reviews block for a product without reviews), so the page says so when it asks for the
+page's decisions:
+
+```js
+void client.listen.refresh({ page: 'pdp', nothingToShow: ['module.PDP.reviews.1'] });
+```
+
+The SDK sends the ids on the decision request as one JSON-encoded string field, `nothingToShow`, and sends
+nothing when the list is empty. A module named in `nothingToShow` is withheld before ranking, so it is not
+returned, not recorded and never counted as an exposure, and the slot fills its positions from the
+remaining ranked modules. The report can only withhold, never add: an id naming a module that is not
+eligible, excluded by the slot or not registered changes nothing.
+
+A module may also carry its own eligibility rule in the catalogue, `eligibleWhen`, by region (a region key
+such as `US-NY`, or a country such as `US`, which admits every region inside it), entry channel
+(`entry_channel`, among the six channel words, or your own channel ids when your tenant publishes a context
+vocabulary), visit bucket (`visit_bucket`: `1`, `2-3` or `4+`, or the names of your own visit-bucket cut) and
+journey stage (`journey_stage`: `exploring`, `considering` or `deciding`), and every condition it names
+must hold ([schema](./03-payload-schemas.md#the-content-piece)). The engine evaluates the rule on its own
+reading of the decision (the region the edge reports, the visit's entry channel, its visit bucket and the
+shopper's journey stage), never on a value your page sends. The rule fails closed: an unknown value
+satisfies no rule, so a module whose rule names a region is withheld while the shopper's region is
+unknown, and a module without a rule is unaffected. Publication refuses a rule that names any other
+signal, or a value outside its signal's words, naming the rule and the word. On the layout slot, a module
+withheld from a position the layout would otherwise have filled is named in the layout reason with its
+cause, `nothing_to_show` or `eligibility_rule`; a pinned module that is withheld refuses its pin, as an
+expired one does.
+
+### Module impressions and engagements
+
+Mark each module container the way the declarative capture marks any piece, `data-op-content` with the module id
+and `data-op-slot` with the layout slot, on the element that holds the module, and bind the page once with
+`client.emit.declarative()`. A container may also declare the interactions that count as using the module, as
+DOM event types, space separated, in `data-op-engage`:
+
+```html
+<section data-op-slot="pdp-modules" data-op-content="module.PDP.reviews.1" data-op-engage="swipe reviews-open">…</section>
+```
+
+- **The impression.** A marked module container sends one impression per module per page instance, when it is
+  first on screen. That impression is the module's render acknowledgement, the `content_impression` this guide
+  describes in section 3, never a second event: a repeated visibility, a re-subscribe, a redelivered decision
+  set, or your own `rendered()` call over the same container sends no other.
+- **The engagement.** A click anywhere inside the container is one engagement, and so is each interaction the
+  container declares in `data-op-engage`, each time it happens: your own code dispatches the event (bubbling) on
+  the container or inside it, as a carousel dispatches `swipe`. `click` needs no declaration, and an interaction
+  the container does not declare sends nothing. An engagement is a `content_click`, the slot's click reward: it
+  carries the module id as `contentId`, the `slot`, the `decisionId` of the module's render acknowledgement and
+  the position within the slot as `slotPosition`, and for a declared interaction its name as `interaction`. It waits for that acknowledgement, so a module that was never drawn and acknowledged is
+  never engaged and never credited.
+- **The position within the slot.** Every decision the snapshot returns carries `slotPosition`, the module's
+  position within its slot (what its decision record calls `position`), beside its page-wide `order`; the
+  acknowledgement carries both (`position` is the page-wide order), every engagement carries `slotPosition`, and
+  the outcome record of an engagement keeps the module id, the slot, the position within the slot and the
+  decision. The SDK carries `slotPosition` exactly as the decision names it and never computes one: a decision
+  adopted from the server-rendered bootstrap names none, and its acknowledgement is admitted on `position` as
+  before.
+- **The viewable impression.** Once its impression is acknowledged, a module container at least half in view for
+  one second without interruption sends one `content_viewable` per page instance (section 4, thresholds), carrying
+  the module id, the slot, `slotPosition` and the decision of its acknowledgement; less than a second at a time
+  sends none. It weighs 0, builds no interest and is never an exposure: the slot's exposures are its
+  acknowledgements, as above.
+- **Declared interactions of the module that owns them.** A size guide or a reviews panel opened inside a module is
+  that module's engagement: declare `data-op-engage="sizeguide:open reviews:open"` on its container and dispatch the
+  event, bubbling, from inside it when the shopper opens one (`new Event('sizeguide:open', { bubbles: true })`, or
+  `reviews:open`). Each is one `content_click` naming `interaction: "sizeguide:open"` or `"reviews:open"`.
+- **Consent.** Without the shopper's tracking consent, and in `listenOnly` mode, a marked container sends none of them.
 
 ## 8. What to test before the freeze
 

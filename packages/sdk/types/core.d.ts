@@ -26,6 +26,13 @@ export interface SendOptions {
 }
 export declare function contentInteraction(type: SdkEventType, data: Record<string, unknown>): SdkEventType | undefined;
 /**
+ * P40: the dwell minimum of a slot — the one a page configured for that slot
+ * (`dwellMinMsBySlot`, a number of milliseconds from 0), else the minimum every
+ * other slot keeps (`dwellMinMs`, one second unless configured). Only a number
+ * is a minimum, so nothing an object inherits can stand for one.
+ */
+export declare function dwellMinFor(slot: string, fallback: number, bySlot?: Record<string, number>): number;
+/**
  * What one client owns on the page it was given, so it can hand all of it
  * back. Every DOM listener the SDK adds is recorded with its element, type and
  * handler and removed with a real `removeEventListener` on release; an element

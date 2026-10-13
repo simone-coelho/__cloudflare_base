@@ -1,0 +1,13 @@
+{
+ "name": "02-contrast",
+ "beat": 2,
+ "act": 1,
+ "actName": "Arrival",
+ "press": "the region contrast (asserted, labelled)",
+ "kind": "context",
+ "label": "The same page, another state",
+ "who": "shopper",
+ "lane": "K4 (built in the scaffold)",
+ "engine": "a different lean",
+ "sees": "the same page, a different state’s sales"
+}

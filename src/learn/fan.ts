@@ -44,7 +44,7 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
 import type { DecisionRecord } from '@/content/types';
-import type { OutcomeRecord } from '@/ledger/records';
+import { isOffLimitsLayoutRecord, type OutcomeRecord } from '@/ledger/records';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
 // `@/durable-objects/DecisionRing` re-exports under the same name. It is read
@@ -120,6 +120,13 @@ export const statsName = (tenant: string, brand: string, slot: string, page?: st
 export const liftKey = (tenant: string, brand: string, slot: string, page?: string) => `lift:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
 export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/${version}.json`;
+/**
+ * P05 (decision D2): where a placement's statistics object publishes its
+ * position-policy history (`positionHistoryOf`, src/learn/stats.ts), beside the
+ * snapshot archive and named so no archive reading takes it for a version. The
+ * object writes it; the online credit and the hourly fold both read it.
+ */
+export const positionHistoryKey = (tenant: string, brand: string, slot: string, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/positions.json`;
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
   scoped.has(slot) ? page : undefined;
@@ -566,6 +573,24 @@ export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ 
   return out;
 }
 
+/**
+ * P05: what a decision tells the statistics object about its position — the
+ * position counted from 1 within its slot, for a module of a page's declared
+ * layout slot (a record carrying the layout reason, P29), the only slot a
+ * position estimate and its normalisation exist for; and, on each of the two
+ * modules an adjacent swap exchanged, the pair it exchanged. `swapOnly` keeps
+ * only the latter. Empty for any other record, so its row is exactly as before.
+ */
+export function positionRowOf(r: DecisionRecord | undefined, swapOnly = false): { position?: number; swap?: [number, number] } {
+  if (!r || !Number.isSafeInteger(r.position) || r.position < 0 || r.position >= 64) return {};
+  const x = r.explain?.exploration;
+  if (x?.mode === 'adjacent-swap' && Array.isArray(x.positions) && x.positions.length === 2 && Number.isSafeInteger(x.positions[0])
+    && x.positions[1] === x.positions[0] + 1 && (r.position + 1 === x.positions[0] || r.position + 1 === x.positions[1])) {
+    return { position: r.position + 1, swap: [x.positions[0], x.positions[1]] };
+  }
+  return !swapOnly && r.explain?.layoutReason !== undefined ? { position: r.position + 1 } : {};
+}
+
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, tenant: r.tenant, visitor_id: r.visitor_id, brand: r.brand, ts: r.ts, page: r.page, slot: r.slot, position: r.position,
     measurementBasis: r.measurementBasis ?? 'served-v1', ...(r.rendered ? { renderedAt: r.rendered.at } : {}),
@@ -591,7 +616,8 @@ export async function learningGenerations(ns: NS, name: string, items: string[])
  */
 export function exposureDestinations(records: readonly DecisionRecord[], scoped: ReadonlySet<string>): string[] {
   const names = new Set<string>();
-  for (const row of records) if (row.arm === 'personalized') {
+  // P29 (decision D2): an off-limits layout slot's record is no exposure, so it lands in no statistics object.
+  for (const row of records) if (row.arm === 'personalized' && !isOffLimitsLayoutRecord(row)) {
     if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
     names.add(statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)));
   }
@@ -600,7 +626,7 @@ export function exposureDestinations(records: readonly DecisionRecord[], scoped:
 
 export async function prepareExposureEffects(env: Env, records: DecisionRecord[], consentUntil: number, scoped: ReadonlySet<string> = new Set()): Promise<Record<string, LearningEffect>> {
   const result: Record<string, LearningEffect> = {}, groups = new Map<string, DecisionRecord[]>();
-  for (const row of records) if (row.arm === 'personalized') {
+  for (const row of records) if (row.arm === 'personalized' && !isOffLimitsLayoutRecord(row)) {
     if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
     const name = statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)); groups.set(name, [...(groups.get(name) ?? []), row]);
   }
@@ -644,6 +670,10 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     const detached: DecisionRecord[] = [];
     for (const row of members) {
       if (!object(row) || !owned(row)) return finish(out);
+      // P29 (decision D2): an off-limits layout slot's record goes to the ledger
+      // only: never to the shopper's ring, which receipts and attribution read,
+      // and never to the statistics as an exposure.
+      if (isOffLimitsLayoutRecord(row)) continue;
       const copy = budget.detach(row, 'decision');
       if (!owned(copy)) return finish(out);
       detached.push(copy);
@@ -702,6 +732,8 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     const exposures = await Promise.all([...bySlot].map(async ([name, { slot, page, rows }]) => ({ name, body: {
       tenant, brand, slot, ...(page ? { page } : {}), config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
       exposures: await Promise.all(rows.map(async r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts,
+        // P05: a module an adjacent swap exchanged carries its position and the pair, so the object counts the swap.
+        ...positionRowOf(r, true),
         ...(managed ? { effect: managed.effects[r.decision_id] } : { decision: r.decision_id, digest: await recoveryDigest(r) }) }))),
     } })));
     // All validation/barrier/config reads precede starting either destination.
@@ -813,6 +845,10 @@ export function foldRetainedDay(input: {
   let decisions = 0, outcomes = 0;
   for (const d of input.decisions) {
     if (!object(d) || d.tenant !== input.tenant || d.brand !== input.brand || seen.has(d.decision_id)) continue;
+    // P29 (decision D2): an off-limits layout slot's record never entered the
+    // shopper's ring, so a rebuilt ring holds it no more than the live one did:
+    // it is neither an exposure nor a decision any outcome can be credited to.
+    if (isOffLimitsLayoutRecord(d)) continue;
     seen.add(d.decision_id); pageOf.set(d.decision_id, d.page);
     rings.set(d.visitor_id, [...(rings.get(d.visitor_id) ?? []), ringEntryOf(d)]);
     if (d.slot !== input.slot || !placed(d.page) || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;

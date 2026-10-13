@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- A static page: no credential, no inline script or style. Its one optional
+     network call is the demo's credential-free cold-start read (same origin). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+<meta name="referrer" content="no-referrer" />
+<link rel="icon" href="data:," />
+<title>Vantage | How it works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" />
+<link rel="stylesheet" href="/vantage/how-it-works.css" />
+<script src="/vantage/how-it-works.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the page</a>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="wordmark" href="/vantage/"><span class="wm">Vantage</span><span class="wm-sub">How it works</span></a>
+    <p class="topbar-label">Recomputed in your browser. The demo&rsquo;s decisions come from the service.</p>
+    <a class="topbar-back" href="/vantage/">Back to the demo</a>
+  </div>
+</header>
+
+<div class="wrap">
+<nav class="toc" id="toc" aria-label="Sections">
+  <p class="toc-k">Sections</p>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span>The one idea</a></li>
+    <li><a href="#s2"><span class="n">2</span>Interest is a quantity</a></li>
+    <li><a href="#s3"><span class="n">3</span>One click, four coordinates</a></li>
+    <li><a href="#s4"><span class="n">4</span>Scoring 10,000 candidates</a></li>
+    <li><a href="#s5"><span class="n">5</span>Cold start as a prior</a></li>
+    <li><a href="#s6"><span class="n">6</span>Two memories, two speeds</a></li>
+    <li class="toc-ex"><a href="#ex"><span class="n">ex</span>The chain, end to end</a></li>
+    <li><a href="#s7"><span class="n">7</span>Learning what works</a></li>
+    <li><a href="#s8"><span class="n">8</span>The knobs are the model</a></li>
+    <li><a href="#s9"><span class="n">9</span>The receipt</a></li>
+    <li><a href="#s10"><span class="n">10</span>What we need from the customer</a></li>
+    <li><a href="#ledger"><span class="n">&middot;</span>The honesty ledger</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+  <header class="intro">
+    <p class="eyebrow">For engineers &middot; the arithmetic behind the Vantage demo</p>
+    <h1>The arithmetic, with the constants on sliders</h1>
+    <div class="about">
+      <p class="about-k">What this page is</p>
+      <p>This page shows the arithmetic behind what the Vantage demo puts on screen: how a shopper&rsquo;s interest is kept, how every candidate in a slot is scored against it, how a stranger starts from her region&rsquo;s lean, and how learning is counted behind a dial that starts at zero. Every number it computes is recomputed in your browser from the documents the demo publishes and its labelled synthetic regional sales, each formula cited to the code it mirrors; the demo&rsquo;s own decisions come from the service, and the figures the service returned are quoted beside them, marked as measured. Read it from the top down: each section explains its idea in words and formulas first, then shows its instruments, with a short paragraph above them saying what you are looking at, what to try and what to watch for. Every group of controls and every instrument carries a circled question mark; hover over it, focus it or tap it to see what it is, the constant it sets, where that constant is published, and what moves when it changes.</p>
+    </div>
+    <div class="facts">
+      <div><p class="k">State per shopper</p><p class="v">(<var>R</var>, <var>t</var>) per dimension value</p></div>
+      <div><p class="k">A candidate&rsquo;s score</p><p class="v">&Sigma; <var>a</var> &times; <var>w</var>, per slot</p></div>
+      <div><p class="k">A stranger</p><p class="v">a prior, &lambda; = <var>k</var>/(<var>k</var> + &Sigma;<var>a</var>)</p></div>
+      <div><p class="k">What it learns</p><p class="v">lift<sup>&gamma;</sup>, &gamma; = 0 on stage</p></div>
+    </div>
+    <ul class="ledger-chips" aria-label="What this page is and is not">
+      <li class="chip chip--real">Recomputed in this browser &middot; the demo&rsquo;s decisions come from the service</li>
+      <li class="chip chip--rep">Regional sales: Vantage&rsquo;s, synthetic, labelled &middot; in production, the customer&rsquo;s own</li>
+      <li class="chip chip--rep">Memory compressed for the room &middot; production runs days</li>
+      <li class="chip chip--real">Learning records from day one and moves nothing until &gamma; moves</li>
+      <li class="chip chip--real">No model is called at decision time</li>
+    </ul>
+  </header>
+
+  <!-- 1 ==================================================================== -->
+  <section class="sec" id="s1" aria-labelledby="s1h">
+    <p class="sec-k"><span class="sec-n">1</span>The one idea</p>
+    <h2 id="s1h">The unit of state is the dimension value, not the click</h2>
+    <p class="big-p">The engine does not remember products: per shopper it keeps a small vector of graded interests, one coordinate per dimension value she has touched (brand samsung, ecosystem android, price band core), each a number between 0 and 1. Products, promotions and page modules carry attributes in the same dimensions, so a candidate&rsquo;s score is its tags dotted with her vector, weighted by the slot it competes in. Nothing is configured per product: an offer published a minute ago is scored the moment it carries tags, and one view of one phone moves every candidate that shares any of its values.</p>
+    <p class="lead"><b>What you are looking at:</b> one candidate&rsquo;s score, taken apart. Each row is one tag of the Galaxy S26 offer, with her interest in that tag&rsquo;s value (read from her vector), the deals slot&rsquo;s weight for the tag&rsquo;s dimension, and their product, <var>a</var> &times; <var>w</var>; the bottom line adds the rows into the candidate&rsquo;s score. <b>Try:</b> find a row that scores and one that does not, and see which of its two numbers is zero. <b>Watch for:</b> a tag scores only when she has some interest in its value and the slot weighs its dimension; the values in her vector that this offer does not carry are listed under it, because they score other candidates.</p>
+    <figure class="figure">
+      <div class="diagram" id="s1-diagram" role="img" aria-label="Her vector of graded interests, one candidate&rsquo;s tags in the same dimensions, the slot&rsquo;s weights, and the dot product that scores the candidate."></div>
+      <figcaption id="s1-caption">Her own vector after the worked example&rsquo;s fourth press (three Samsung touches and a Pixel), before the regional prior of section 5. The candidate is the Galaxy S26 offer as published; the weights are the deals slot&rsquo;s. Every number is computed on this page by the functions the sections below cite.</figcaption>
+    </figure>
+    <aside class="why">
+      <p class="why-k">Why this unit</p>
+      <p>Systems that keep state per event or per item usually need something learned per item before a view of one item says anything about another: a co-occurrence table, a similarity model, a rule per product. Keyed on the dimension value, one Galaxy view raises every Android candidate, including one nobody has been shown yet, and the receipt can name the coordinate that did it.</p>
+      <p>Read quickly, the mechanism sounds like &ldquo;she clicked Samsung, so show Samsung&rdquo;. The sections below show where the arithmetic goes further than that sentence: interest is graded and decays (2); one click moves several coordinates (3); the slot weighs them (4); a stranger starts from a prior that gives way (5); and each dimension forgets at its own speed (6).</p>
+    </aside>
+  </section>
+
+  <!-- 2 ==================================================================== -->
+  <section class="sec" id="s2" aria-labelledby="s2h">
+    <p class="sec-k"><span class="sec-n">2</span>Interest is a quantity, not a flag</p>
+    <h2 id="s2h">How much evidence, and how fresh</h2>
+    <p>A flag records that something happened. A quantity records how much evidence there is and how old it is, which is what lets interest rise with repetition, fade with time, and leave an audience at a moment that can be computed in advance. Each coordinate stores two numbers, the raw evidence <var>R</var> and the time of the last touch <var>t</var>. Nothing is decayed in storage: every read computes the decay from the clock, so a replay of the same events gives the same answer (src/reflex/core.ts:11-19).</p>
+    <div class="eqs">
+      <div class="eq">
+        <p class="eq-f"><var>R</var><sub>eff</sub> = <var>R</var> &middot; e<sup>&minus;&Delta;<var>t</var>/<var>&tau;</var></sup></p>
+        <p class="eq-w">The evidence left now: what was stored, faded by a factor of e for every <var>&tau;</var> since the last touch.</p>
+        <p class="eq-ref">src/reflex/core.ts:290-293</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f"><var>R</var> &larr; <var>R</var><sub>eff</sub> + <var>w</var></p>
+        <p class="eq-w">A touch adds its action&rsquo;s weight to whatever is left. The registry Vantage publishes weighs a view or a page view 1, a search 1.5, a selector, filter or compare 2, a cart add or a started order 3, a purchase 5. The engine&rsquo;s shipped table names only views, wishlists, cart adds, purchases and the content events, so an untuned tenant weighs the other six 0; an action no table names weighs 0. A <code>custom</code> event is named by its <code>data.action</code>, <code>data.eventName</code> or <code>data.event</code>, so a selector sent as <code>custom</code> weighs 2.</p>
+        <p class="eq-ref">src/reflex/core.ts:574, :589-590 &middot; the shipped table: core.ts:221-244 &middot; the published table: scripts/seed-vantage.mjs:113-125 at c720907 &middot; the name: src/reflex/contentTelemetry.ts:77-83</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f"><var>a</var> = <var>R</var><sub>eff</sub> / (<var>R</var><sub>eff</sub> + <var>K</var>)</p>
+        <p class="eq-w">Interest is the evidence over the evidence plus a constant. It is &frac12; when <var>R</var> = <var>K</var> and never reaches 1, so more evidence always counts, by less each time.</p>
+        <p class="eq-ref">src/reflex/core.ts:296-298 &middot; <var>K</var> = 1.8: core.ts:260, scripts/seed-vantage.mjs:127 at c720907</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f">enter when <var>a</var> &ge; <var>&theta;</var><sub>in</sub>; leave when <var>a</var> &lt; <var>&theta;</var><sub>out</sub></p>
+        <p class="eq-w">Two lines, not one, so a shopper sitting near a line does not flap in and out of an audience on every read: she joins at 0.60 (evidence R &ge; 2.7) and stays until she falls under 0.45 (R &lt; 1.4727). Time alone can make her leave, never join. The validator refuses a document whose <var>&theta;</var><sub>out</sub> is not below its <var>&theta;</var><sub>in</sub>.</p>
+        <p class="eq-ref">src/reflex/core.ts:618-628 &middot; 0.60 / 0.45: core.ts:261-262, scripts/seed-vantage.mjs:128-129 at c720907 &middot; the validator: src/reflex/configStore.ts:157-161</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f"><var>t</var>* = <var>t</var> + <var>&tau;</var> &middot; ln( <var>R</var> (1 &minus; <var>&theta;</var><sub>out</sub>) / (<var>K</var> <var>&theta;</var><sub>out</sub>) )</p>
+        <p class="eq-w">The instant she leaves if nothing else happens, solved in closed form, so an alarm can be set for it instead of polling.</p>
+        <p class="eq-ref">src/reflex/core.ts:703-731 (the floor at :717, <var>t</var>* at :726)</p>
+      </div>
+    </div>
+    <p class="lead"><b>What you are looking at:</b> one coordinate of one shopper, for example brand samsung, on the published constants. The sliders set <var>K</var>, the memory <var>&tau;</var>, the two audience lines and the weight of the next touch. The first chart shows her interest against the number of touches, with no time between them; the second shows it against time as you press; under them are the readout and the three worked numbers. <b>Try:</b> press the red button three times quickly, then stop. <b>Watch for:</b> the third press carrying her over the entry line, the dashed projection fading once you stop, and <var>t</var>*, the instant she leaves the audience, worked out in advance rather than found by polling.</p>
+    <div class="inst" id="s2-inst"></div>
+  </section>
+
+  <!-- 3 ==================================================================== -->
+  <section class="sec" id="s3" aria-labelledby="s3h">
+    <p class="sec-k"><span class="sec-n">3</span>One click, four coordinates</p>
+    <h2 id="s3h">A product view is a touch on every dimension the item carries</h2>
+    <p>The Galaxy S26 as the catalog lists it: brand samsung, ecosystem android, $899.99, category phones. The engine derives the price band from <code>price_usd</code> with the registry&rsquo;s own cuts, $400 and $900, so $899.99 is <b>core</b> and the same phone at 512 GB ($1,099.99) is <b>premium</b>. One view is therefore four touches, and each lands on a coordinate with its own memory.</p>
+    <p class="lead"><b>What you are looking at:</b> one product view, three ways. First, the event the page sends when she views a phone, then the touches the engine takes from it; under them, a live shopper: a row of phone buttons, a meter for every coordinate she has, and her whole stored state as a table. <b>Try:</b> press the Galaxy S26, then the Pixel 11. <b>Watch for:</b> four meters moving on each press; ecosystem android, price band core and category phones taking a second touch from the Pixel while brand splits across two makers; and the table holding only two numbers per value, the evidence and the time of its last touch. This shopper carries on into sections 4 and 5.</p>
+    <div class="two">
+      <div>
+        <p class="mini-k" id="s3-event-k">What the page sends (the demo&rsquo;s event contract)</p>
+        <pre class="code" id="s3-event"></pre>
+      </div>
+      <div>
+        <p class="mini-k" id="s3-touches-k">What the engine extracts</p>
+        <pre class="code" id="s3-touches"></pre>
+        <p class="note">One touch per registry dimension whose source field is on the event: a string is one value, a list is several, a number is banded (src/reflex/core.ts:309-337, the band at :315-323). <code>os</code> rides beside <code>ecosystem</code> and is ignored, because no dimension names it as its source. The engine holds the offers, not the phone catalog, so it scores the attributes the event carries, bounded to the registry&rsquo;s dimensions (at most 8 values per list, 64 characters each) and to the values this tenant&rsquo;s catalog names (<code>eventAttributes: event-when-unknown</code>, core.ts:340-373, :491-506 and :466-471). Storage is not a dimension: the configured price rides the event, so the 512 GB step touches premium.</p>
+      </div>
+    </div>
+    <div class="inst" id="s3-inst"></div>
+  </section>
+
+  <!-- 4 ==================================================================== -->
+  <section class="sec" id="s4" aria-labelledby="s4h">
+    <p class="sec-k"><span class="sec-n">4</span>Scoring 10,000 candidates</p>
+    <h2 id="s4h">Nothing per product; everything per dimension and per slot</h2>
+    <p>Every candidate in a slot is scored the same way: for each of its tags, her interest in that value times the slot&rsquo;s weight for that dimension, summed. The weights belong to the slot, so the same interest in samsung counts 0.2 in the homepage deals module and 1 in the phones rail. Then the slot&rsquo;s rules take the top <var>N</var>: pinned pieces first and never ranked, then the ranking, with a diversity cap under which a third piece of one brand yields its place to the next ranked piece. A pin is a required prefix: if the pinned piece is not eligible for the request, the whole slot serves nothing, which is the engine&rsquo;s current behaviour. Only slots are decided: the buy box is not a slot, and the engine is never asked about it.</p>
+    <div class="eqs eqs--one">
+      <div class="eq">
+        <p class="eq-f">score = &Sigma;<sub>tags (<var>d</var>, <var>v</var>)</sub> <var>a</var>[<var>d</var>][<var>v</var>] &times; <var>w</var><sub>slot</sub>[<var>d</var>]</p>
+        <p class="eq-w">For each tag on the candidate: her interest in that value, times what this slot says that dimension is worth (0 to 1). Two values on one dimension both count; there is no per-tag weight, mean or normalisation. A dimension the slot does not weigh contributes nothing; a value she has no interest in contributes nothing.</p>
+        <p class="eq-ref">src/reflex/contentCompose.ts:253-264 &middot; the weights 0..1: src/content/kinds.ts:323-326 &middot; the take: contentCompose.ts:299-339 &middot; pinned prefix: :182-206, :230-235 &middot; eligibility first: src/content/lifecycle.ts:29-73, src/content/decide.ts:180-189 &middot; the phones rail: src/reflex/sortCandidates.ts:109-150</p>
+      </div>
+    </div>
+    <p class="lead"><b>What you are looking at:</b> one slot scored in full, for the shopper from section 3. Choose the homepage deals module or the phones rail. For deals, the controls set how it scores (as served, or the tag sum alone), the intent the page asserts, the diversity cap, a pin and the slot&rsquo;s weights; the four containers show what it would serve, and the table writes out every candidate&rsquo;s sum, term by term. <b>Try:</b> press a phone, lower the brand weight, set the cap to one per brand, or pin an upgrade offer under intent new. <b>Watch for:</b> a piece over the cap yielding its place to the next ranked piece, and an ineligible pin emptying the whole slot, which is the engine&rsquo;s current behaviour. The red button scores 10,000 synthetic candidates in your browser and counts the work; it times nothing.</p>
+    <div class="inst" id="s4-inst"></div>
+  </section>
+
+  <!-- 5 ==================================================================== -->
+  <section class="sec" id="s5" aria-labelledby="s5h">
+    <p class="sec-k"><span class="sec-n">5</span>Cold start as a prior</p>
+    <h2 id="s5h">A stranger is scored on her region&rsquo;s lean until her own evidence outweighs it</h2>
+    <p>A stranger&rsquo;s vector is empty, so every tag sum is zero and the slot would answer its catalogue order. Instead of a second model for strangers, the engine blends a population prior into a copy of her vector before scoring, at a weight that falls as her own evidence grows. The population here is the tenant&rsquo;s own regional sales. In this demo they are Vantage&rsquo;s, synthetic, labelled <b>synthetic &rarr; warehouse</b> wherever they appear; in production they are the customer&rsquo;s own sales from its warehouse.</p>
+    <div class="eqs">
+      <div class="eq">
+        <p class="eq-f"><var>&lambda;</var> = <var>k</var> / (<var>k</var> + &Sigma;<var>a</var>)</p>
+        <p class="eq-w">How much the population speaks: 1 for a stranger, falling as the sum of all her own interests, on every dimension, grows. <var>k</var> is <code>kBlend</code>, 0.5 in this demo: &Sigma;<var>a</var> = 0.5 gives <var>&lambda;</var> = 0.5 and &Sigma;<var>a</var> = 3 gives 0.14. With no learn document at all, the compiled default blends at 1; a published learn document without a <code>regional</code> block turns the prior off.</p>
+        <p class="eq-ref">src/reflex/regionTrend.ts:217-222 &middot; read at src/content/service.ts:454 &middot; off without the block: service.ts:444 &middot; the compiled default: service.ts:375, src/content/kinds.ts:684-693 &middot; kBlend: scripts/seed-vantage.mjs:633 at c720907</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f"><var>&atilde;</var> = (1 &minus; <var>&lambda;</var>) &middot; <var>a</var> + <var>&lambda;</var> &middot; share</p>
+        <p class="eq-w">Her blended interest in a value: her own, plus the region&rsquo;s share of that value, mixed by <var>&lambda;</var>. Her stored vector is never written to; the blend is a copy made for this decision.</p>
+        <p class="eq-ref">src/reflex/regionTrend.ts:238-252 &middot; src/content/service.ts:458-460</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f">share = <var>R</var><sub>value</sub> / <var>R</var><sub>leader</sub></p>
+        <p class="eq-w">Within each dimension the region&rsquo;s leading value is 1 and the others are fractions of it: shares, not probabilities. Only the dimensions the tenant names blend (here brand, ecosystem, price band, category); a dimension left out takes nothing from the region and keeps (1 &minus; <var>&lambda;</var>) of her own. The region&rsquo;s counts come from the edge&rsquo;s region on every scored event, on a 24-hour memory; an asserted region never feeds them.</p>
+        <p class="eq-ref">src/reflex/regionTrend.ts:123-131, :224-234 &middot; the counts: regionTrend.ts:28-30, :41-46, :153-165 &middot; the list: scripts/seed-vantage.mjs:633 at c720907</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f">region &rarr; country &rarr; everyone, at &ge; 30 events</p>
+        <p class="eq-w">The finest level with enough evidence answers, so a region the tenant has barely seen still opens on a real prior rather than a blank.</p>
+        <p class="eq-ref">src/reflex/regionTrend.ts:189-210 &middot; minEvents: scripts/seed-vantage.mjs:633 at c720907</p>
+      </div>
+    </div>
+    <p>Two seeds act on the arrival itself, before she has shown any interest. The <b>campaign seed</b> reads <code>utm_term</code> from the landing entry the page resends on every snapshot, and adds 0.2 on the <code>campaign</code> tag, which only the launch offer and the launch hero carry: through the deals slot&rsquo;s campaign weight of 0.3 that is +0.06, and through the launch offer&rsquo;s promotion multiplier of 1.1 it lands on the receipt as +0.066. The <b>OS-family seed</b> reads only iOS or Android from the request and adds 1 on that ecosystem tag (&times; 0.15 = +0.15), halved while she holds an interest in switching and withdrawn once she holds the other ecosystem. A laptop sends neither, so on the presenter&rsquo;s laptop no platform seed fires. The census figure on the demo&rsquo;s arrival panel explains the lean and never enters a score.</p>
+    <p class="refline">Seeds: src/content/decide.ts:250-279 (fire :252-256, dampen :269-270, contribution :274), measured where it lands :337-348 &middot; the rules: the slots documents public/vantage/beats/open-slots.json and, for beat 13, public/vantage/beats/13-pin-duo-preorder.json, each at publish.document.pages.home[0].seeds (the hero) and publish.document.pages.home[1].seeds (deals) &middot; the multiplier: src/reflex/merchandising.ts:116-134 &middot; census never scored: src/demos/kit/coldStartRoutes.ts:279</p>
+    <p class="lead"><b>What you are looking at:</b> the prior at work on the same shopper. The controls set her region (its synthetic sales), whether she arrived from the ad, her device, the prior&rsquo;s strength, and her evidence, live from section 3 or set by hand. The chart shows how much the region speaks, <var>&lambda;</var>, against her evidence, and a panel shows the region&rsquo;s shares; under them come her blended vector value by value, the seeds this arrival fires, a stranger&rsquo;s receipt for the launch offer, and the hinge: the launch offer and the Galaxy S26 offer across her presses. <b>Try:</b> switch New York to Texas, turn the ad off, or set her evidence by hand. <b>Watch for:</b> <var>&lambda;</var> falling from 1 as her evidence grows, the region&rsquo;s part of each blended value shrinking with it, and the line where the best Android offer overtakes the launch offer. The button that reads this request&rsquo;s region is optional; nothing is sent until you press it.</p>
+    <div class="inst" id="s5-inst"></div>
+  </section>
+
+  <!-- 6 ==================================================================== -->
+  <section class="sec" id="s6" aria-labelledby="s6h">
+    <p class="sec-k"><span class="sec-n">6</span>Two memories, two speeds</p>
+    <h2 id="s6h">A claim that fades in a minute beside a lean that holds for weeks</h2>
+    <p><var>&tau;</var> is set per dimension, so one shopper carries both. In this room brand and content type forget on <var>&tau;</var> = 60 s; price band, intent and perk on 10 minutes; ecosystem, lines and category keep the 14-day default. Stop pressing and the brand claim withdraws while the ecosystem lean holds. That is why the exit beat withdraws the Samsung claim without reordering the four: the Samsung offers lose their brand term and keep their ecosystem term, and ecosystem still carries them. Measured on the demo worker, the four held their order at the exit; the demo never promises a reorder there.</p>
+    <p class="label-rep">Compressed for the room; production runs days. The engine&rsquo;s defaults are 14 days, and 35 on price band. The design proposes 14 days on intent, 60 on price band and 90 on ecosystem and lines, phones being financed over 36 months; the validator caps <var>&tau;</var> at 90 days. Nothing has been measured at production <var>&tau;</var>.</p>
+    <p class="refline">Per-dimension <var>&tau;</var>: src/reflex/core.ts:39-43, :276-283 &middot; the room&rsquo;s values: scripts/seed-vantage.mjs:92-112 at c720907 &middot; the defaults: core.ts:259 (14 days), :214 (price band, 35 days) &middot; the cap: src/reflex/configStore.ts:134 &middot; the proposal: the demo&rsquo;s design document, &sect;4</p>
+    <p class="lead"><b>What you are looking at:</b> one shopper with two memories on one clock: brand forgets on 60 s in this room, and ecosystem keeps the 14-day default. The two buttons view a Galaxy or a Pixel, each touching its brand and ecosystem android together; the chart shows the three interests over time with the two audience lines, and the meters show each claim and when it leaves. <b>Try:</b> press the Galaxy three times close together, then stop and let a minute pass (the clock speed helps). <b>Watch for:</b> brand samsung falling under 0.45 and leaving while ecosystem android holds. That is the exit beat, and why the four usually keep their order there.</p>
+    <div class="inst" id="s6-inst"></div>
+  </section>
+
+  <!-- ex =================================================================== -->
+  <section class="sec sec--ex" id="ex" aria-labelledby="exh">
+    <p class="sec-k"><span class="sec-n sec-n--ex">ex</span>The chain, end to end</p>
+    <h2 id="exh">Her Samsung scenario, every term at every press</h2>
+    <p>The scenario as the demo runs it: a stranger lands from the paid-social ad for the iPhone 18 Pro, looks at a Galaxy S26 card, opens its page, looks at the S26 Ultra, opens a Pixel 11 and goes home, then touches nothing for a minute. Each step recomputes the whole chain on the published documents: touches, decay, her vector, <var>&lambda;</var>, the blended vector, the seeds, the multiplier, the sum and the take. Beside each step is what the service returned when the demo was measured.</p>
+    <p class="lead"><b>What you are looking at:</b> the demo&rsquo;s opening scenario, recomputed step by step: she lands from the ad, views a Galaxy S26 card and its page, an S26 Ultra card and the Pixel 11 page, goes home, and is asked again later. The step buttons choose the moment; the controls set the region, the arrival, her device and three timings, whose defaults are fitted so that the page reproduces the hosted readings. The first panel shows what this page recomputes at that step; the second, what the service returned when the demo was measured. <b>Try:</b> step from 0 to 5, then slide the seconds to the hinge out to a presenter&rsquo;s pace. <b>Watch for:</b> the launch offer leading at the landing and the Galaxy S26 offer leading at the hinge, and the measured panel quoting a row only under the conditions it was measured in.</p>
+    <div class="inst" id="ex-inst"></div>
+  </section>
+
+  <!-- 7 ==================================================================== -->
+  <section class="sec" id="s7" aria-labelledby="s7h">
+    <p class="sec-k"><span class="sec-n">7</span>Learning what works</p>
+    <h2 id="s7h">A counted multiplier behind a dial that starts at zero</h2>
+    <p>The second term is a count, not a model. For each item in each cell of context the engine keeps decayed exposures <var>n</var> and successes <var>s</var> on the same lazy decay as the vector, with a 21-day horizon. It pulls the item&rsquo;s rate toward the slot&rsquo;s rate in that cell, turns the ratio into a clamped multiplier, and raises it to a trust dial <var>&gamma;</var>, from 0 to 1 per slot. In this demo <var>&gamma;</var> is 0 on every slot: once a cell has a learned lift it is computed and recorded on the receipt and changes nothing until someone turns the dial. On stage no cell has a lift in force yet, so the receipts read <code>lift: null</code>. Exploration is off.</p>
+    <div class="eqs">
+      <div class="eq">
+        <p class="eq-f"><var>p&#770;</var> = (<var>s</var> + <var>n</var><sub>0</sub> &middot; <var>p</var><sub>0</sub>) / (<var>n</var> + <var>n</var><sub>0</sub>)</p>
+        <p class="eq-w">The item&rsquo;s rate in this cell, pulled toward the slot&rsquo;s rate <var>p</var><sub>0</sub> with the strength of <var>n</var><sub>0</sub> = 30 observations, so a handful of lucky clicks cannot move it far.</p>
+        <p class="eq-ref">src/learn/stats.ts:449 &middot; <var>n</var><sub>0</sub>: stats.ts:20, scripts/seed-vantage.mjs:636 at c720907</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f"><var>p</var><sub>0</sub> = (<var>s</var><sub>slot</sub> + <var>n</var><sub>0</sub> &middot; <var>p</var><sub>0,parent</sub>) / (<var>n</var><sub>slot</sub> + <var>n</var><sub>0</sub>)</p>
+        <p class="eq-w">The slot&rsquo;s own rate in the cell, pulled toward the next coarser cell&rsquo;s rate the same way.</p>
+        <p class="eq-ref">src/learn/stats.ts:411-420</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f">lift = clamp(<var>p&#770;</var> / <var>p</var><sub>0</sub>, 0.5, 2)</p>
+        <p class="eq-w">How this item does against the slot in the same cell, never more than double and never less than half.</p>
+        <p class="eq-ref">src/learn/stats.ts:450</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f">score = base &times; lift<sup><var>&gamma;</var></sup></p>
+        <p class="eq-w">At <var>&gamma;</var> = 0 any lift to the power 0 is 1, so the learned term is computed, recorded and ignored. At <var>&gamma;</var> = 1 it applies in full.</p>
+        <p class="eq-ref">src/content/decide.ts:365 &middot; the dial: decide.ts:61-62, src/content/kinds.ts:628 &middot; default 0: src/content/service.ts:490 &middot; no lift in force: decide.ts:353, :361 &middot; &gamma; = 0: scripts/seed-vantage.mjs:621 at c720907</p>
+      </div>
+      <div class="eq">
+        <p class="eq-f">everyone &rarr; channel &rarr; + visit &rarr; + stage &rarr; + region &rarr; + her leading interest</p>
+        <p class="eq-w">Six cells from coarse to fine: the channel (direct, paid_social, paid_search, email, organic, referral), the visit bucket (1, 2&ndash;3, 4+), the stage (early, mid, late), the edge&rsquo;s region, and her leading interest above <var>&theta;</var><sub>in</sub>. The finest cell where the item has at least 30 exposures answers, so thin contexts borrow from wider ones instead of waiting.</p>
+        <p class="eq-ref">src/learn/stats.ts:37-50, :483-496 (the test at :491) &middot; the cell: src/content/cell.ts:51-72</p>
+      </div>
+    </div>
+    <p class="lead"><b>What you are looking at:</b> one item in one cell of context, with every input yours to set: its exposures and clicks, the slot&rsquo;s rate, the shrinkage strength, the trust dial <var>&gamma;</var> and the score it multiplies. The readout gives the pooled rate, the lift, and the score before and after the dial; the chart shows the pooled rate moving toward the item&rsquo;s own rate as exposures grow; the ladder shows which of six cells has enough exposures to answer. <b>Try:</b> give the item many clicks on few exposures, then on many; then turn <var>&gamma;</var> up from 0. <b>Watch for:</b> the lift staying between 0.5 and 2, and the score not moving at all while <var>&gamma;</var> is 0, which is how every slot in the demo is published.</p>
+    <div class="inst" id="s7-inst"></div>
+  </section>
+
+  <!-- 8 ==================================================================== -->
+  <section class="sec" id="s8" aria-labelledby="s8h">
+    <p class="sec-k"><span class="sec-n">8</span>The knobs are the model</p>
+    <h2 id="s8h">Three published documents decide everything above</h2>
+    <p>No model is called at decision time; every term on the receipt is arithmetic over the published documents. What decides is three documents: the dimension registry, the slots, and what the slots learn. Every write is validated whole, stamped with a revision, attributed and kept. A rollback writes an old body forward as a new revision, so the history is never rewritten. &ldquo;Effective immediately&rdquo; means without a deployment: the writing isolate at once, every other isolate within its 30-second read cache.</p>
+    <p class="refline">The routes: src/routes/content.ts:3-14, src/routes/config.ts:206-212 &middot; write and rollback: src/config/versionedStore.ts:108-118 &middot; the stamped version and the cache: src/reflex/configStore.ts:30-38, src/config/publication.ts:8, :296 &middot; rollback as a new revision: configStore.ts:591-598 &middot; the documents below: as served on the demo worker, reflex r3, slots r51, learn r3 (the demo&rsquo;s facts sheet, &sect;10), identical to scripts/seed-vantage.mjs at c720907</p>
+    <p class="lead"><b>What you are looking at:</b> the three documents as served on the demo worker, each line of JSON beside a note in words: the dimension registry, the slots, and what the slots learn. The first is open; the other two open with a click. <b>Try:</b> find <code>K</code> and the two audience lines in the registry, the deals slot&rsquo;s weights in the slots, and <code>kBlend</code> and <code>gamma</code> in what the slots learn. <b>Watch for:</b> every constant the instruments above take from these documents appearing here as one line, which its hint names by document and field; the rail&rsquo;s dials, sent on each request, and the catalog&rsquo;s tags and rules, shown in section 4, are the exceptions. Nothing here is configured per product.</p>
+    <div id="s8-docs"></div>
+  </section>
+
+  <!-- 9 ==================================================================== -->
+  <section class="sec" id="s9" aria-labelledby="s9h">
+    <p class="sec-k"><span class="sec-n">9</span>The receipt</p>
+    <h2 id="s9h">Every decision writes its own arithmetic down</h2>
+    <p>Every served position writes one record, and every term it lists carries its contribution: the four strongest tag terms, the region&rsquo;s part and every adjustment, so a receipt like the one below can be recomputed by hand. The demo&rsquo;s <b>Why these</b> panel reads the record back through a named action that needs no operator credential, checks that the decision is the caller&rsquo;s own before any read, and leaves out the visitor, the session and the replay inputs. Below is a real one: the launch offer for a stranger from the ad, read from the demo worker on 1 October 2026, visitor id and nonce redacted.</p>
+    <p class="refline">The record: src/content/decide.ts:491-531 &middot; the action and the fields it returns: src/demos/kit/actionRoutes.ts:233-289, src/demos/kit/helpers.ts:55-63 (at 5ddc64d: src/routes/vantage.ts:96-125) &middot; the receipt: the demo&rsquo;s facts sheet, &sect;9</p>
+    <p class="lead"><b>What you are looking at:</b> one real receipt, as the service wrote it for the launch offer in container 1, with a note in words beside every field. Under it, the same decision is recomputed twice, from the receipt&rsquo;s own terms and from the documents on this page, and the receipt&rsquo;s ten candidates are set beside the page&rsquo;s. <b>Try:</b> follow the drivers, <code>score_base</code> and <code>score_final</code> down the receipt, then check them against the two recomputations. <b>Watch for:</b> how many candidates agree to the third decimal, in the same order; the count is computed, not typed.</p>
+    <div id="s9-receipt"></div>
+    <p class="cta-line"><a class="btn btn--dark" href="/vantage/">Open the demo</a> <span>then press <b>Explain</b> (or the E key) and open the <b>Why these</b> tab: the same record, for every card on screen.</span></p>
+  </section>
+
+  <!-- 10 =================================================================== -->
+  <section class="sec" id="s10" aria-labelledby="s10h">
+    <p class="sec-k"><span class="sec-n">10</span>What we need from the customer, in this use case</p>
+    <h2 id="s10h">Attributes, a mapping, and events that carry the product id</h2>
+    <p class="big-line"><b>Per product: attributes.</b> <b>Per slot: weights and rules.</b> Nothing else is configured.</p>
+    <p>Per slot: the weights, the take, the stage rule, the seeds, the merchandising dial, the diversity cap, pins, exclusions and the learning dials. Per piece of content: its tags, window, eligibility rule, merchandising signals and stage fit.</p>
+    <p class="lead"><b>What you are looking at:</b> the three things we need from the customer in this use case, each with what we use it for. The second carries two tables: one line per dimension, naming the feed field it reads and how, and a promotion feed&rsquo;s fields with what the engine does with each. <b>Try:</b> hold each line against your team&rsquo;s product feed: which field would fill it, spelled the registry&rsquo;s way. <b>Watch for:</b> the last column of the second table; several fields decide eligibility or are only displayed, and are never scored.</p>
+    <ol class="needs">
+      <li><p><b>What we need: attributes in the registry&rsquo;s vocabulary.</b> Each phone, offer and module carries values on the registered dimensions, exactly as the registry spells them: <code>brand: samsung</code>, not <code>Samsung Electronics</code>. On a dimension the tenant&rsquo;s catalog names values on, a value outside them is simply not scored. The event&rsquo;s answer names the product ids the engine does not know; it does not flag an unknown attribute value. A content piece needs <code>id</code>, <code>customerContentId</code>, <code>type</code>, <code>title</code>, <code>tags</code> (dimension to a list of values) and <code>slotTypes</code>; a window, an eligibility rule (1 to 64 regions, 1 to 8 context signals), merchandising signals from 0 to 1, a stage fit, featured products and a stock flag are optional. The offer book (terms, badges, calls to action) goes to the page, never to the engine.</p>
+        <p><b>What we use them for:</b> every attribute is a tag. A candidate&rsquo;s score is her interest in each of its tag values times the slot&rsquo;s weight for that dimension (section 4), so a piece is scored the moment it carries tags, with nothing configured per product.</p>
+        <p class="refline">The vocabulary: scripts/seed-vantage.mjs:81-90 at c720907 &middot; the rule: src/reflex/core.ts:451-471, :481-506 &middot; the ids it names: src/content/service.ts:296-312 &middot; piece fields: src/content/kinds.ts:34-36, validated at :79-210 &middot; the offer book: scripts/seed-vantage.mjs:201-203 at c720907</p></li>
+      <li><p><b>What we need: the feed-to-dimension mapping.</b> One line per dimension: which field of the feed it reads and how; then a promotion feed&rsquo;s fields and what the engine does with each. Most are a field read as it stands; the price band is derived from the price with the registry&rsquo;s cuts; several fields are display only or eligibility, never scored.</p>
+        <p><b>What we use it for:</b> to turn each product&rsquo;s fields into the registry&rsquo;s values, so that an event and a candidate&rsquo;s tags name the same value the same way, and to keep the fields that decide (scored, or eligibility) apart from those the page only displays.</p>
+        <div id="s10-map"></div></li>
+      <li><p><b>What we need: events that carry the product id and its attributes.</b> A view, a compare, a selector, a cart add: each names the product (<code>productId</code>, <code>product_id</code> or <code>sku</code>) and carries the attributes the registry reads, so the engine never needs a copy of the catalog.</p>
+        <p><b>What we use them for:</b> each event becomes touches on the shopper&rsquo;s vector, weighted by its action (sections 2 and 3); the product id lets the engine use the attributes it holds for that product, and its answer names any id it does not know.</p>
+        <p class="refline">The three spellings: src/reflex/core.ts:413-428 &middot; events scored from their own attributes: core.ts:491-506</p></li>
+    </ol>
+  </section>
+
+  <!-- the ledger ============================================================ -->
+  <section class="sec sec--ledger" id="ledger" aria-labelledby="ledgerh">
+    <p class="sec-k"><span class="sec-n">&middot;</span>The honesty ledger</p>
+    <h2 id="ledgerh">What is real, what is labelled, and what this page is</h2>
+    <div class="ledger">
+      <div>
+        <p class="ledger-k ledger-k--real">Real</p>
+        <ul>
+          <li>The arithmetic on this page, line for line with the cited code, on the constants the demo publishes.</li>
+          <li>The rules: windows, eligibility that fails closed, the diversity cap, pins, the seeds and their dampening.</li>
+          <li>The receipts, and versioned publishes with history and rollback.</li>
+          <li>No model is called at decision time; every term on the receipt is arithmetic over the published documents.</li>
+          <li>The census figure on the demo&rsquo;s panel: shown, never scored.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="ledger-k ledger-k--rep">Labelled</p>
+        <ul>
+          <li>Regional device sales: Vantage&rsquo;s, synthetic, labelled synthetic &rarr; warehouse; in production, the customer&rsquo;s own.</li>
+          <li>Memory compressed for the room: brand on 60 s; price band, intent and perk on 10 minutes. Production runs days.</li>
+          <li>Learning records from day one and moves nothing until the dial moves: &gamma; is 0 on every slot in the demo. Exploration is off; the holdout is shown, not run.</li>
+          <li>The asserted region the rehearsals use (<code>?region=US-NY</code>), labelled asserted, not observed.</li>
+          <li>Inputs you set on this page (exposures, clicks, timings, weights) are yours, not measurements.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="ledger-k">This page</p>
+        <ul>
+          <li>Recomputes the engine&rsquo;s published arithmetic in your browser. The demo&rsquo;s decisions come from the service.</li>
+          <li>Holds no credential and stores nothing. Its one optional call is the demo&rsquo;s credential-free cold-start read.</li>
+          <li>Numbers the service returned are quoted from the demo&rsquo;s facts sheet and marked as measured.</li>
+          <li>Times nothing. The engine&rsquo;s stages have not been timed at 10,000 candidates, and no latency is claimed here.</li>
+        </ul>
+      </div>
+    </div>
+    <p>Two notes cover the same ground in prose: the one-page note <cite>Why the unit of state is the dimension value, not the click</cite>, and the technical note <cite>How the Vantage signal system works</cite>.</p>
+    <p class="foot-back"><a class="btn btn--red" href="/vantage/">Back to the demo</a></p>
+  </section>
+</main>
+</div>
+
+<a class="to-sections" href="#toc">Sections</a>
+</body>
+</html>
