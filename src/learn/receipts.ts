@@ -358,11 +358,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     // its position; the numbers the ranking computed stay on the record. Only on
     // a slot that does not opt into the layout blend (P28; the branch above).
     const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
-    // P05: a position an adjacent swap exchanged says so below, never that a listed module could not be served.
-    const swappedHere = r.explored && e.exploration?.mode === 'adjacent-swap';
     why.push(`Placed by the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered`
-      + `${listed !== r.position + 1 && !swappedHere ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
-    if (swappedHere && e.exploration) why.push(explorationSentence(e.exploration));
+      + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
   } else {
     if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
     behaviour(e.signalFloor ? 'No context term moved it: the slot served its catalogue order.'

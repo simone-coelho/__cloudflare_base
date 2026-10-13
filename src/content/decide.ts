@@ -947,19 +947,22 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // P05 (decision D1): the adjacent swap. On a page's declared layout slot whose
   // exploration dial is `adjacent-swap`, a decision whose bucket (visitor, slot
   // and hour) falls under the share exchanges the modules of ONE pair of
-  // adjacent positions of what the slot serves — its ranking, or the configured
-  // order it serves for the shopper's context — the pair chosen from that same
+  // adjacent positions of the slot's RANKED order, the pair chosen from that same
   // bucket among the pairs neither of whose positions a rule fixed (a prefix pin,
   // a position pin or an off-limits module, P04, all served as `tenant-pinned`),
   // a pair touching a module under a merchandiser's control left out as well.
-  // Outside the share, at share 0, and where no such pair exists, the slot is
-  // served exactly as composed. Part of the learning layer, so never on the
-  // holdout's `default` or `no_learning` arm, and hashed on the visitor, so never
-  // below the signal floor (P10). Pure: it reads what this decision already
-  // computed, so a replay swaps the same pair.
+  // R-P62 (3): a decision on which the slot served the configured order for the
+  // shopper's context (P01, blended or not) is served that order exactly and is
+  // never swapped, so it carries no exploration member and its reason is the
+  // order's. Outside the share, at share 0, and where no such pair exists, the
+  // slot is served exactly as composed. Part of the learning layer, so never on
+  // the holdout's `default` or `no_learning` arm, and hashed on the visitor, so
+  // never below the signal floor (P10). Pure: it reads what this decision
+  // already computed, so a replay swaps the same pair.
   const swapped = new Map<string, ExplorePick & { positions: [number, number] }>();
   if (learning?.exploreOf) for (const s of i.slots) {
-    if (s.layout !== true || s.offLimits || below.has(s.slot) || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))) continue;
+    if (s.layout !== true || s.offLimits || below.has(s.slot) || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))
+      || (ordered ?? []).includes(s.slot)) continue;
     const cfg = learning.exploreOf(s.slot);
     if (cfg?.mode !== ADJACENT_SWAP) continue;
     const at = decisions.flatMap((d, index) => (d.slot === s.slot ? [index] : []));
