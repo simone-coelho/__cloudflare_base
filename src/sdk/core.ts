@@ -115,6 +115,17 @@ const CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 /** P13: the carried customer identifier's shape, as the engine admits it (`CUSTOMER_ID_PATTERN`, src/ledger/records.ts). */
 const CUSTOMER_ID = /^[A-Za-z0-9_+/=.-]{1,128}$/;
 
+/**
+ * P13 (H4): the decision request `listen.hydrate` hands `ready()`. When the
+ * browser holds no capability of its own and no recognition proof (direct mode
+ * only: a first-party broker owns the session), the bootstrap sends this request
+ * with no session and adopts the session its answer issues: one call, then
+ * `answered` is set and `answer` is the decision set (null when its consent
+ * forbids it). Otherwise `answered` stays unset and the session is taken from
+ * the session route as before, also when the answer carries no session.
+ */
+export interface FirstRequest { body: Record<string, string>; answered?: boolean; answer?: unknown }
+
 function createPageBindings(): PageBindings {
   const listeners = new Set<() => void>();
   const observed = new Map<ElementLike, () => void>();
@@ -164,7 +175,8 @@ export interface Core {
   onConsentChange(fn: () => void): () => void;
   /** Collect only after owned readiness, dropping work crossed by withdrawal or identity change. */
   capture(fn: () => void): void;
-  ready(transition?: boolean): Promise<boolean>;
+  /** `first`: P13, the decision request a new visitor's session is issued with (listen.hydrate only). */
+  ready(transition?: boolean, first?: FirstRequest): Promise<boolean>;
   /**
    * P13 (decision D1): `callback` runs once when this client has loaded (its
    * first readiness), or once at the next turn when registered after that. A
@@ -663,6 +675,10 @@ export function createCore(config: ClientConfig, host: Host): Core {
       return !host.storage.get(capabilityKey) || !interruptedTransition;
     } catch { return false; }
   }
+  /** P13 (S4-C18): this browser holds no capability, no recognition proof and no consume in flight. */
+  function freshBrowser(): boolean {
+    try { return !host.storage.get(capabilityKey) && !host.storage.get(continuityKey) && !host.storage.get(continuityOperationKey); } catch { return false; }
+  }
   /** Broker mode: the engine issued a descriptor the broker now keeps for this browser. */
   function brokerHoldsProof(): boolean {
     try { return host.storage.get(continuityBrokerKey) === '1'; } catch { return false; }
@@ -701,7 +717,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
       }
     } catch { /* storage unavailable; the engine still decided */ }
   }
-  function ready(transition = false): Promise<boolean> {
+  function ready(transition = false, first?: FirstRequest): Promise<boolean> {
     consent();
     if (transitioning && !transition) return Promise.resolve(false);
     if (isCurrent(generation) && (!transition || lease?.generation === generation)) { markLoaded(); return Promise.resolve(true); }
@@ -777,6 +793,35 @@ export function createCore(config: ClientConfig, host: Host): Core {
             headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}), ...brokered },
             body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning && !cfg.sessionBroker ? { continuity: returning } : {}) }) }, 16384);
         };
+        // P13 (H4, S4-C18): a new visitor's first decision request issues its
+        // session, so the first decision set arrives on the first call. Only a
+        // browser holding neither a capability nor a recognition proof (nor a
+        // consume in flight), in direct mode, outside a transition; it claims
+        // only the refusals this browser holds, as the session route's body
+        // would. An answer without a session, a refusal or a failure falls back
+        // to the session route below, exactly as before.
+        if (first && !transition && !cfg.sessionBroker && !capability && freshBrowser()) {
+          try {
+            const res = await boundedJSON(url(cfg.paths.snapshot), { method: 'POST', credentials: 'include', headers: headers({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ ...first.body, ...(active.tracking === false ? { trackingConsent: 'false' } : {}),
+                ...(active.personalization === false ? { personalizationEnabled: 'false' } : {}) }) });
+            const answer = res.json as { ok?: unknown; session?: unknown; arm?: string; decisions?: DecisionSet['decisions']; sources?: { consent?: unknown } } | null;
+            if (g !== generation) return false;
+            if (res.ok && answer?.ok === true && answer.session !== undefined && adoptSession(answer.session, g, 'logout')) {
+              // The decision set is admitted as a decision request's answer is (getJson).
+              let admitted: unknown = answer;
+              if (Array.isArray(answer.decisions)) {
+                acknowledge(answer.sources?.consent);
+                const acknowledgedEpoch = consentEpoch;
+                await saveRefusal();
+                if (decisionRequiresConsent({ arm: answer.arm, decisions: answer.decisions }) && (!personalizationAllowed() || acknowledgedEpoch !== consentEpoch)) admitted = null;
+              } else restrict(answer.sources?.consent);
+              first.answered = true; first.answer = admitted;
+              return true;
+            }
+          } catch { /* the session route below */ }
+          if (g !== generation) return false;
+        }
         let res = await request();
         if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
           rememberUnknownConsent();

@@ -769,6 +769,13 @@
         return false;
       }
     }
+    function freshBrowser() {
+      try {
+        return !host.storage.get(capabilityKey) && !host.storage.get(continuityKey) && !host.storage.get(continuityOperationKey);
+      } catch {
+        return false;
+      }
+    }
     function brokerHoldsProof() {
       try {
         return host.storage.get(continuityBrokerKey) === "1";
@@ -794,7 +801,7 @@
       } catch {
       }
     }
-    function ready(transition = false) {
+    function ready(transition = false, first2) {
       consent();
       if (transitioning && !transition) return Promise.resolve(false);
       if (isCurrent(generation) && (!transition || lease?.generation === generation)) {
@@ -888,6 +895,36 @@
               body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning && !cfg.sessionBroker ? { continuity: returning } : {} })
             }, 16384);
           };
+          if (first2 && !transition && !cfg.sessionBroker && !capability && freshBrowser()) {
+            try {
+              const res2 = await boundedJSON(url(cfg.paths.snapshot), {
+                method: "POST",
+                credentials: "include",
+                headers: headers({ "Content-Type": "application/json" }),
+                body: JSON.stringify({
+                  ...first2.body,
+                  ...active.tracking === false ? { trackingConsent: "false" } : {},
+                  ...active.personalization === false ? { personalizationEnabled: "false" } : {}
+                })
+              });
+              const answer = res2.json;
+              if (g !== generation) return false;
+              if (res2.ok && answer?.ok === true && answer.session !== void 0 && adoptSession(answer.session, g, "logout")) {
+                let admitted = answer;
+                if (Array.isArray(answer.decisions)) {
+                  acknowledge(answer.sources?.consent);
+                  const acknowledgedEpoch = consentEpoch;
+                  await saveRefusal();
+                  if (decisionRequiresConsent({ arm: answer.arm, decisions: answer.decisions }) && (!personalizationAllowed() || acknowledgedEpoch !== consentEpoch)) admitted = null;
+                } else restrict(answer.sources?.consent);
+                first2.answered = true;
+                first2.answer = admitted;
+                return true;
+              }
+            } catch {
+            }
+            if (g !== generation) return false;
+          }
           let res = await request();
           if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
             rememberUnknownConsent();
@@ -1940,7 +1977,9 @@
       }
       selected = { ...o };
       const owner = ++intent;
-      const pending = core.ready();
+      const nothingToShow = nothingToShowField(o.nothingToShow);
+      const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {} } };
+      const pending = core.ready(false, first2);
       const generation = core.generation;
       const active = () => owner === intent && generation === core.generation;
       if (!active()) return null;
@@ -1959,7 +1998,7 @@
         return null;
       }
       const consent = core.consent;
-      const json = await core.getJson(core.config.paths.snapshot, {
+      const json = first2.answered ? first2.answer : await core.getJson(core.config.paths.snapshot, {
         page: o.page,
         pageInstance,
         browsingSessionId: consent.tracking ? core.sessionId : void 0,
@@ -1968,7 +2007,7 @@
         entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
         trackingConsent: consent.tracking ? void 0 : "false",
         personalizationEnabled: consent.personalization ? void 0 : "false",
-        nothingToShow: nothingToShowField(o.nothingToShow)
+        nothingToShow
       });
       settled = true;
       host.clearTimeout(timer2);

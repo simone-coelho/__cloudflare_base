@@ -52,6 +52,20 @@ export interface PageBindings {
     /** Hand back every listener and observation this client still holds. */
     release(): void;
 }
+/**
+ * P13 (H4): the decision request `listen.hydrate` hands `ready()`. When the
+ * browser holds no capability of its own and no recognition proof (direct mode
+ * only: a first-party broker owns the session), the bootstrap sends this request
+ * with no session and adopts the session its answer issues: one call, then
+ * `answered` is set and `answer` is the decision set (null when its consent
+ * forbids it). Otherwise `answered` stays unset and the session is taken from
+ * the session route as before, also when the answer carries no session.
+ */
+export interface FirstRequest {
+    body: Record<string, string>;
+    answered?: boolean;
+    answer?: unknown;
+}
 export interface Core {
     readonly generation: number;
     /** Only a current explicit server choice permits collection or personalization. */
@@ -63,7 +77,8 @@ export interface Core {
     onConsentChange(fn: () => void): () => void;
     /** Collect only after owned readiness, dropping work crossed by withdrawal or identity change. */
     capture(fn: () => void): void;
-    ready(transition?: boolean): Promise<boolean>;
+    /** `first`: P13, the decision request a new visitor's session is issued with (listen.hydrate only). */
+    ready(transition?: boolean, first?: FirstRequest): Promise<boolean>;
     /**
      * P13 (decision D1): `callback` runs once when this client has loaded (its
      * first readiness), or once at the next turn when registered after that. A
