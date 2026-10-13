@@ -539,14 +539,21 @@ export function coarseRequestCF(value: unknown): { country?: string; regionCode?
   return { ...(typeof cf?.country === 'string' && /^[A-Za-z]{2}$/.test(cf.country) ? { country: cf.country } : {}),
     ...(typeof cf?.regionCode === 'string' && /^[A-Za-z0-9-]{1,16}$/.test(cf.regionCode) ? { regionCode: cf.regionCode } : {}) };
 }
-export async function forwardShopperRequest(env: Env, request: Request, principal: SessionCapability): Promise<Response> {
+/**
+ * `cf` is the platform's request metadata of the request as it arrived; it is
+ * read off `request` unless the caller re-built the request it forwards (P13: a
+ * new visitor's first decision request, re-entered under the session it was
+ * just issued) and hands over the original's.
+ */
+export async function forwardShopperRequest(env: Env, request: Request, principal: SessionCapability,
+  cf: unknown = (request as Request & { cf?: unknown }).cf): Promise<Response> {
   if (!ownedRequestPath(request)) throw new SessionAccessError();
   const headers = new Headers(request.headers);
   headers.set('X-Owner-Request-URL', request.url);
   headers.set('X-Tenant', principal.tenant);
   // Always replace public input; only the platform's coarse request metadata
   // enters this binding-only hop. Never forward city/IP/coordinates/body geo.
-  headers.set('X-Owner-Coarse-CF', JSON.stringify(coarseRequestCF((request as Request & { cf?: unknown }).cf)));
+  headers.set('X-Owner-Coarse-CF', JSON.stringify(coarseRequestCF(cf)));
   return shopperObject(env.SHOPPER_REFLEX, principal.subject, principal.tenant).fetch(new Request('https://shopper-reflex/authority/request', {
     method: request.method, headers, ...(request.body ? { body: request.body, duplex: 'half' } : {}),
   } as RequestInit));

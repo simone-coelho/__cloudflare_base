@@ -136,6 +136,22 @@ export function isOffLimitsLayoutRecord(record: Pick<DecisionRecord, 'item_id' |
     && reason?.status === 'unchanged' && reason.cause === 'off_limits';
 }
 
+/**
+ * P13 (decision D1): the shape of the customer's own identifier a page passes
+ * before recognition (`setCustomerId`, a hashed identifier such as a digest of
+ * an e-mail address): 1 to 128 characters, letters, digits and `_ + / = . -`, so
+ * a hex or base64 digest fits and a raw e-mail address does not. It is CARRIED,
+ * never proof: it travels beside the engine's own visitor identifier on that
+ * shopper's events and decision requests and is written as `customer_id` on the
+ * records written from them under tracking consent; it links nothing, merges
+ * nothing, issues no session and selects no state. The SDK keeps the same shape
+ * (src/sdk/core.ts).
+ */
+export const CUSTOMER_ID_PATTERN = /^[A-Za-z0-9_+/=.-]{1,128}$/;
+export function isCarriedCustomerId(value: unknown): value is string {
+  return typeof value === 'string' && CUSTOMER_ID_PATTERN.test(value);
+}
+
 /** Doc 22 §3.2. One per reward-bearing event. */
 export interface OutcomeRecord {
   retention?: import('@/retention').CaptureRetention;
@@ -147,6 +163,12 @@ export interface OutcomeRecord {
   tenant: string;
   brand: string;
   visitor_id: string;
+  /**
+   * P13 (decision D1): the customer's identifier the page carried on the event
+   * this outcome was recorded from, beside `visitor_id`; absent when the event
+   * carried none. Carried, never proof: nothing is keyed, linked or selected by it.
+   */
+  customer_id?: string;
   session_id: string | null;
   ts: number;
   type: RewardType;
@@ -253,6 +275,8 @@ export interface ActionLike {
   sessionId?: string | null;
   timestamp?: number;
   data?: Record<string, unknown>;
+  /** P13: the customer's identifier the event carried (`isCarriedCustomerId`), written beside `visitor_id`. */
+  customerId?: string;
 }
 
 /**
@@ -381,6 +405,8 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
     ...(hasNonce ? { event_id: action.eventId, event_id_source: action.eventIdSource ?? 'provided' } : {}),
     tenant, brand: str(d.brand) ?? brand,
     visitor_id: action.userId,
+    // P13: the customer's identifier the event carried, beside the visitor's own; only when it carried one.
+    ...(isCarriedCustomerId(action.customerId) ? { customer_id: action.customerId } : {}),
     session_id: str(action.sessionId) ,
     ts,
     type: reward.type,
