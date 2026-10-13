@@ -2324,14 +2324,21 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "eb456472fc031a79dd2c6a83bcf32ee23f7e3f5f on rem/spec-parity-c (batch S3 fix round; P12 242d64ba, P34 a3d2bc4d, P11 f1b3f5a4, P08 f01d286f, P15 164a1c7a, P26 eb456472, each ticket files byte-identical at eb456472; harness src/units/_parity.ts byte-identical to S1 and src/units/_parity3.ts byte-identical to 4b82e0de; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "e9f503da7538d39955620183e3fcf164416dfbf2 on rem/spec-p34-fix1 (P34 specification round 1 before the build, cut from rem/p34-build ac105640: 35907f14 the fake engine answers a snapshot request carrying no session with the issued session, R-P68; e9f503da T5's sdk leg split into the held-session leg, RED on P34's own reason, and the fresh-browser LOCK, R-P69; T1 to T4, the build-check lock and the harness byte-identical to ac105640; reviewed PASS)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/specifier/REPORT-round2.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/reviewer-spec/logs/scratch.out",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/reviewer-spec/logs/scratch2.out",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/specifier/logs/scratch-T5-lock.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/specifier/logs/scratch-T5.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-merge-P12.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-retained-U5.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-fan-page-Q3-soft.log",
