@@ -96,6 +96,8 @@ describe('listen', () => {
   });
 
   it('hydrates from the snapshot and delivers each slot its decisions in order', async () => {
+    // P13 (R-P66 item 3, S4-C18): this engine answers no session, so a new visitor's client asks for decisions, falls back
+    // to the session call, then asks again; the context below rides on that decision request, made once consent is known.
     const { host, calls } = testHost({ responses: () => snapshot });
     const core = createCore({ tenant: 'coach', brand: 'coach' }, host);
     const listen = createListen(core);
@@ -105,8 +107,10 @@ describe('listen', () => {
     listen.subscribe('rail', (d) => rail.push(d));
     listen.onDecisions((s) => sets.push(s?.arm ?? null));
     const set = await listen.hydrate({ page: 'home', channel: 'paid social' });
-    const url = new URL(calls[1]!.url);
-    const context = JSON.parse(calls[1]!.init!.body!);
+    expect(calls.slice(0, 3).map(c => new URL(c.url).pathname), 'S4-C18: the decision request, the session call, then the decision request')
+      .toEqual(['/v1/coach/decisions/snapshot', '/v1/coach/identity/session', '/v1/coach/decisions/snapshot']);
+    const url = new URL(calls[2]!.url);
+    const context = JSON.parse(calls[2]!.init!.body!);
     expect(JSON.parse(context.entry)).toEqual({ utmMedium: 'paid_social', utmSource: 'tiktok', referrer: 'www.tiktok.com', siteHost: 'shop.example' });
     delete context.entry;
     expect(url.toString()).toBe('https://shop.example/v1/coach/decisions/snapshot');
@@ -124,7 +128,9 @@ describe('listen', () => {
 
   it('declares graceful absence on the deadline, then applies a late snapshot', async () => {
     let resolveFetch!: (v: unknown) => void;
-    const { host } = testHost({ responses: () => new Promise((r) => { resolveFetch = r; }) });
+    // P13 engine shape (S4-C19, R-P66 item 3): a decision request carrying no session is answered with the issued session.
+    const { host } = testHost({ responses: (_url, init) => new Promise((r) => {
+      resolveFetch = (v) => r(init?.headers?.['X-Shopper-Session'] ? v : { ...(v as object), session: syntheticSession(host.now()) }); }) });
     const core = createCore({ tenant: 'coach', hydrateTimeoutMs: 1500 }, host);
     const listen = createListen(core);
     const sets: unknown[] = []; listen.onDecisions((s) => sets.push(s ? 'set' : null));
@@ -450,7 +456,8 @@ describe('W15 supported refresh, render admission and server adoption', () => {
           const set = offeredSet({ ...snapshot, versions: { config: 41 + revision }, decisions: [
             { ...snapshot.decisions[1]!, customerContentId: cmsId },
           ] } as DecisionSet, JSON.parse(init!.body!).pageInstance, `offer-${++revision}`);
-          offers.push(set); return { ok: true, ...set };
+          // P13 engine shape (S4-C19, R-P66 item 3): a decision request carrying no session is answered with the issued session.
+          offers.push(set); return { ok: true, ...set, ...(init!.headers?.['X-Shopper-Session'] ? {} : { session: syntheticSession(f.host.now()) }) };
         } finally { active--; }
       } });
       f.host.dom = { querySelectorAll: selector => document.querySelectorAll(selector), observe: () => () => undefined };

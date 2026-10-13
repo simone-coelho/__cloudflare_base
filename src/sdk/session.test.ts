@@ -36,10 +36,14 @@ describe('the browsing session', () => {
     const core = createCore({ tenant: 'coach', sdkKey: 'k' }, host);
     const listen = createListen(core);
     await listen.hydrate({ page: 'home' });
-    const url = new URL(calls[1]!.url);
+    // P13 (R-P66 item 3, S4-C18): this engine answers no session, so a new visitor's client asks for decisions, falls back
+    // to the session call, then asks again; that decision request, made once consent is known, carries the browsing session.
+    expect(calls.slice(0, 3).map(call => new URL(call.url).pathname), 'S4-C18: the decision request, the session call, then the decision request')
+      .toEqual(['/v1/coach/decisions/snapshot', '/v1/coach/identity/session', '/v1/coach/decisions/snapshot']);
+    const url = new URL(calls[2]!.url);
     expect(url.search).toBe('');
-    expect(calls[1]!.init!.method).toBe('POST');
-    const context = JSON.parse(calls[1]!.init!.body!);
+    expect(calls[2]!.init!.method).toBe('POST');
+    const context = JSON.parse(calls[2]!.init!.body!);
     expect(context.browsingSessionId).toBe(core.sessionId);
     expect(context).not.toHaveProperty('sessionId'); expect(context).not.toHaveProperty('visitorId');
     await listen.rendered('hero', 'c1'); await core.send('content_click', { contentId: 'c1', slot: 'hero' });

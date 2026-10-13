@@ -175,6 +175,12 @@ describe('unit:P13.H2 (freeze item 15)', () => {
       // Another browser, recognised: an account linked under the same value, with Willow history.
       const account = await shopperOn(m);
       expect((await account.action({ type: 'product_view', data: { productId: 'COA-C2621', line: 'Willow', category: 'Handbags' } })).status).toBe(200);
+      // The account's history delivery is consumed here, while its browser still owns itself (R-P66 item 1): once linked,
+      // the browser forwards to the person, and the recovery consumer refuses that browser's earlier queued delivery
+      // (ShopperReflex assertOwned through recoveryGuard, src/ledger/recovery.ts), although its rows are already stored.
+      // That refusal predates P13, is recorded owner-visible and belongs to the identity and ledger tickets; this leg
+      // measures the carried identifier on the shopper's own records, not that consumer.
+      await m.drainLedger();
       const linked = await link(m, door, account, HASHED);
       expect(linked.status, `${host}: PRECONDITION — the account is linked: ${JSON.stringify(linked.body).slice(0, 200)}`).toBe(200);
       const person = ((linked.body.session ?? {}) as { capability?: string }).capability ?? '';
