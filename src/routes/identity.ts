@@ -481,6 +481,10 @@ identityRoutes.post('/:tenant/identity/link', requireShopper({ forward: false })
     // What the client does next, spelled out so no SDK has to guess.
     carry: result.shopperId,
     session,
+    // P13 (R-P66 item 2): the customer's identifier this browser carried before
+    // recognition (setCustomerId), as its own object kept it; absent when it
+    // carried none. Carried, never proof: the link is the signed accountId's.
+    ...(typeof (result as { customerId?: unknown }).customerId === 'string' ? { customerId: (result as { customerId?: string }).customerId } : {}),
   });
 });
 

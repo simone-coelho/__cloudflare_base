@@ -35,6 +35,7 @@ import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutCon
 import { captureRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { enqueueDecisions } from '@/ledger/enqueue';
+import { isCarriedCustomerId } from '@/ledger/records';
 import { createRenderOffer } from './renderOffer';
 import { syntheticOperation } from '@/ops/synthetic';
 
@@ -90,6 +91,13 @@ export interface ServeRequest {
    * and changes nothing else about the decision. Ordinary callers never set it.
    */
   selfCheck?: boolean;
+  /**
+   * P13 (decision D1): the customer's identifier the decision request carried
+   * (`setCustomerId`). Written as `customer_id` beside `visitor_id` on this
+   * request's records under tracking consent, and nothing else: it reads,
+   * selects, links and decides nothing.
+   */
+  customerId?: string;
 }
 
 /** Where each input came from, so a reader can tell a tuned scope from a compiled default. */
@@ -956,6 +964,11 @@ export async function serveContentDecisions(
   // decided under, as the decision path answered it. The producer writes it so
   // that nothing downstream has to reconstruct it from a later configuration.
   if (enrollment) for (const record of [...set.records, ...offLimitsRecords]) record.experiment = enrollment;
+  // P13 (decision D1): the customer's identifier the request carried travels
+  // beside the visitor's own on every record of it, under tracking consent only
+  // (without it nothing about this request is written at all). Stamped after the
+  // decision, so it can change nothing the decision read.
+  if (consent.tracking && isCarriedCustomerId(r.customerId)) for (const record of [...set.records, ...offLimitsRecords]) record.customer_id = r.customerId;
   // W16 C4: every record — and so every receipt read off it — names the stage it
   // was decided in and the threshold version that derived it. Omitted where the
   // engine did not personalize, because there is no derived stage to claim.

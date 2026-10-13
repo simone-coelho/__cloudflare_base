@@ -29,6 +29,6 @@
   ],
   "sizeBudget": {
     "./edge-personalization.esm.js": 102400,
-    "./edge-personalization.js": 102400
+    "./edge-personalization.js": 107520
   }
 }

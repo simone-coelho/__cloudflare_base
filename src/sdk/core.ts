@@ -112,6 +112,19 @@ export interface PageBindings {
 /** The operation id a recognition consume is keyed by: one v4 UUID, as the
  * engine's own route requires (`OPERATION_ID`, src/routes/identity.ts). */
 const CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** P13: the carried customer identifier's shape, as the engine admits it (`CUSTOMER_ID_PATTERN`, src/ledger/records.ts). */
+const CUSTOMER_ID = /^[A-Za-z0-9_+/=.-]{1,128}$/;
+
+/**
+ * P13 (H4): the decision request `listen.hydrate` hands `ready()`. When the
+ * browser holds no capability of its own and no recognition proof (direct mode
+ * only: a first-party broker owns the session), the bootstrap sends this request
+ * with no session and adopts the session its answer issues: one call, then
+ * `answered` is set and `answer` is the decision set (null when its consent
+ * forbids it). Otherwise `answered` stays unset and the session is taken from
+ * the session route as before, also when the answer carries no session.
+ */
+export interface FirstRequest { body: Record<string, string>; answered?: boolean; answer?: unknown }
 
 function createPageBindings(): PageBindings {
   const listeners = new Set<() => void>();
@@ -162,7 +175,24 @@ export interface Core {
   onConsentChange(fn: () => void): () => void;
   /** Collect only after owned readiness, dropping work crossed by withdrawal or identity change. */
   capture(fn: () => void): void;
-  ready(transition?: boolean): Promise<boolean>;
+  /** `first`: P13, the decision request a new visitor's session is issued with (listen.hydrate only). */
+  ready(transition?: boolean, first?: FirstRequest): Promise<boolean>;
+  /**
+   * P13 (decision D1): `callback` runs once when this client has loaded (its
+   * first readiness), or once at the next turn when registered after that. A
+   * callback that throws changes nothing of the client.
+   */
+  onLoaded(callback: () => void): void;
+  /**
+   * P13 (decision D1): the customer's own identifier for this shopper (a hashed
+   * identifier, 1 to 128 of letters, digits and `_ + / = . -`), passed before
+   * recognition. While tracking is allowed every action envelope and decision
+   * request carries it as `customerId`, beside the engine's own visitor
+   * identifier; it is never proof of identity: it links, merges and selects
+   * nothing, and a sign-in still needs identify() with the backend's signature.
+   * Any other value clears it, as does a logout. True when it is carried.
+   */
+  setCustomerId(id: string | null | undefined): boolean;
   beginTransition(): number;
   finishTransition(generation: number): void;
   forgetSession(generation: number): void;
@@ -212,6 +242,17 @@ export function createCore(config: ClientConfig, host: Host): Core {
   const cfg = resolveConfig(config, host);
   const bindings = createPageBindings();
   let visitorId = '', sessionId = '', anonId = '';
+  // P13: the carried customer identifier (memory only, never stored) and the loaded hooks.
+  let customerId: string | undefined;
+  let loaded = false;
+  const loadedHooks: Array<() => void> = [];
+  const runHook = (fn: () => void) => { void Promise.resolve().then(() => { try { fn(); } catch { /* the page's own hook never changes the client */ } }); };
+  const markLoaded = () => { if (!loaded) { loaded = true; for (const fn of loadedHooks.splice(0)) runHook(fn); } };
+  function onLoaded(fn: () => void): void { if (typeof fn === 'function') { if (loaded) runHook(fn); else loadedHooks.push(fn); } }
+  function setCustomerId(id: string | null | undefined): boolean {
+    customerId = typeof id === 'string' && CUSTOMER_ID.test(id) ? id : undefined;
+    return customerId !== undefined;
+  }
   let generation = 0;
   let eventSequence = 0;
   let transitioning = false;
@@ -532,7 +573,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
   function forgetSession(g: number): void {
     if (g !== generation) return;
     rememberUnknownConsent();
-    capability = ''; expiresAt = 0; visitorId = ''; sessionId = ''; anonId = '';
+    capability = ''; expiresAt = 0; visitorId = ''; sessionId = ''; anonId = ''; customerId = undefined;
     if (lease?.generation === g && sharedCurrent()) {
       try { host.storage.set(capabilityKey, ''); } catch { /* storage unavailable */ }
       writeVisitorId(host, cfg.visitorIdKey, '');
@@ -557,6 +598,8 @@ export function createCore(config: ClientConfig, host: Host): Core {
     if (g !== generation) return false;
     const previous = visitorId;
     if (previous && previous !== v.subject && consent().tracking) rotateBrowsingSession(host);
+    // P13: a logout leaves the identifier the page carried for the previous visitor behind.
+    if (reason === 'logout' && previous && previous !== v.subject) customerId = undefined;
     visitorId = v.subject; sessionId = v.sessionId; capability = v.capability; expiresAt = v.exp;
     anonId = v.kind === 'anonymous' ? v.subject : '';
     const retained = { ...active, ...recovery, ...pendingRefusal };
@@ -632,6 +675,10 @@ export function createCore(config: ClientConfig, host: Host): Core {
       return !host.storage.get(capabilityKey) || !interruptedTransition;
     } catch { return false; }
   }
+  /** P13 (S4-C18): this browser holds no capability, no recognition proof and no consume in flight. */
+  function freshBrowser(): boolean {
+    try { return !host.storage.get(capabilityKey) && !host.storage.get(continuityKey) && !host.storage.get(continuityOperationKey); } catch { return false; }
+  }
   /** Broker mode: the engine issued a descriptor the broker now keeps for this browser. */
   function brokerHoldsProof(): boolean {
     try { return host.storage.get(continuityBrokerKey) === '1'; } catch { return false; }
@@ -670,10 +717,10 @@ export function createCore(config: ClientConfig, host: Host): Core {
       }
     } catch { /* storage unavailable; the engine still decided */ }
   }
-  function ready(transition = false): Promise<boolean> {
+  function ready(transition = false, first?: FirstRequest): Promise<boolean> {
     consent();
     if (transitioning && !transition) return Promise.resolve(false);
-    if (isCurrent(generation) && (!transition || lease?.generation === generation)) return Promise.resolve(true);
+    if (isCurrent(generation) && (!transition || lease?.generation === generation)) { markLoaded(); return Promise.resolve(true); }
     if (bootstrapping) return bootstrapping;
     if (capability && !transition) {
       const g = beginTransition();
@@ -746,6 +793,35 @@ export function createCore(config: ClientConfig, host: Host): Core {
             headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}), ...brokered },
             body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning && !cfg.sessionBroker ? { continuity: returning } : {}) }) }, 16384);
         };
+        // P13 (H4, S4-C18): a new visitor's first decision request issues its
+        // session, so the first decision set arrives on the first call. Only a
+        // browser holding neither a capability nor a recognition proof (nor a
+        // consume in flight), in direct mode, outside a transition; it claims
+        // only the refusals this browser holds, as the session route's body
+        // would. An answer without a session, a refusal or a failure falls back
+        // to the session route below, exactly as before.
+        if (first && !transition && !cfg.sessionBroker && !capability && freshBrowser()) {
+          try {
+            const res = await boundedJSON(url(cfg.paths.snapshot), { method: 'POST', credentials: 'include', headers: headers({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ ...first.body, ...(active.tracking === false ? { trackingConsent: 'false' } : {}),
+                ...(active.personalization === false ? { personalizationEnabled: 'false' } : {}) }) });
+            const answer = res.json as { ok?: unknown; session?: unknown; arm?: string; decisions?: DecisionSet['decisions']; sources?: { consent?: unknown } } | null;
+            if (g !== generation) return false;
+            if (res.ok && answer?.ok === true && answer.session !== undefined && adoptSession(answer.session, g, 'logout')) {
+              // The decision set is admitted as a decision request's answer is (getJson).
+              let admitted: unknown = answer;
+              if (Array.isArray(answer.decisions)) {
+                acknowledge(answer.sources?.consent);
+                const acknowledgedEpoch = consentEpoch;
+                await saveRefusal();
+                if (decisionRequiresConsent({ arm: answer.arm, decisions: answer.decisions }) && (!personalizationAllowed() || acknowledgedEpoch !== consentEpoch)) admitted = null;
+              } else restrict(answer.sources?.consent);
+              first.answered = true; first.answer = admitted;
+              return true;
+            }
+          } catch { /* the session route below */ }
+          if (g !== generation) return false;
+        }
         let res = await request();
         if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
           rememberUnknownConsent();
@@ -776,6 +852,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
     })();
     bootstrapping = operation;
     void operation.finally(() => { if (bootstrapping === operation) bootstrapping = null; });
+    void operation.then(ok => { if (ok) markLoaded(); });
     return operation;
   }
 
@@ -796,6 +873,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
     void _supplied;
     const timestamp = host.now();
     let eventId: string | undefined;
+    // P13: the envelope carries the customer's identifier the page passed (`customerId`) beside the visitor's own, while tracking is allowed.
     if (tracking && isCurrent(generation)) {
       if (!isEventTimestamp(timestamp) || eventSequence >= Number.MAX_SAFE_INTEGER) throw new Error('Event identity unavailable');
       const token = host.uuid();
@@ -814,6 +892,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
       ...(cfg.surface ? { surface: cfg.surface } : {}),
       entry: entryOf(),
       timestamp,
+      ...(tracking && customerId ? { customerId } : {}),
     };
   }
 
@@ -929,7 +1008,9 @@ export function createCore(config: ClientConfig, host: Host): Core {
       // Keep the snapshot acknowledgment/epoch protocol below, but keep context
       // and identity out of request URLs. The verified bearer owns both IDs.
       const context = snapshotRequest ? { ...query } : undefined;
-      if (context) { delete context.visitorId; delete context.userId; delete context.sessionId; }
+      if (context) { delete context.visitorId; delete context.userId; delete context.sessionId; delete context.customerId; }
+      // P13: every decision request carries the identifier the page passed, while tracking is allowed.
+      if (context && customerId && consent().tracking) context.customerId = customerId;
       const res = await boundedJSON(url(path, snapshotRequest ? undefined : query), snapshotRequest
         ? { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), credentials: 'include', body: JSON.stringify(context ?? {}) }
         : { method: 'GET', headers: headers(), credentials: 'include' });
@@ -1051,6 +1132,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
     if (g !== generation) return;
     rememberUnknownConsent();
     capability = ''; expiresAt = 0; sessionId = ''; anonId = '';
+    if (reason === 'logout') customerId = undefined;
     if (trackingAllowed()) rotateBrowsingSession(host);
     visitorId = id;
     // This compatibility setter has no asynchronous exclusive lease. It may
@@ -1170,7 +1252,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
     get consent() { return consent(); }, get trackingAllowed() { return trackingAllowed(); }, onConsentChange, capture,
     get anonId() { return anonId; },
     get generation() { return generation; },
-    ready, beginTransition, finishTransition, forgetSession, isCurrent, adoptSession,
+    ready, onLoaded, setCustomerId, beginTransition, finishTransition, forgetSession, isCurrent, adoptSession,
     get visitorId() { return visitorId; },
     get sessionId() { return session(); },
     /** Read only: naming the session never rolls one over or recomputes the entry. */

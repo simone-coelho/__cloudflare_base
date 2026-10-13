@@ -846,6 +846,13 @@ export interface DecisionRecord {
   tenant: string;
   brand: string;
   visitor_id: string;
+  /**
+   * P13 (decision D1): the customer's identifier the decision request carried
+   * (`setCustomerId` in the SDK), written beside `visitor_id` under tracking
+   * consent only; absent when the request carried none. Carried, never proof:
+   * no state is keyed, linked or selected by it, and replay does not compare it.
+   */
+  customer_id?: string;
   session_id: string | null;
   identity_anchor: IdentityAnchor;
   ts: number;

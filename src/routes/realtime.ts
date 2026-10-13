@@ -11,7 +11,7 @@ import { getConnectors } from '@/connectors';
 import { snapshot as reflexSnapshot, type ReflexConfig } from '@/reflex/core';
 import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
 import { forwardEventToOdp, odpRestorationOf, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
-import { isDecisionReference, outcomeFromAction } from '@/ledger/records';
+import { isCarriedCustomerId, isDecisionReference, outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { outcomeEnrollment } from '@/content/holdout';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
@@ -29,7 +29,7 @@ import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHe
 import { anonymousWithConsent, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
 import { capabilityToken } from '@/identity/sessionCapability';
 import { SessionManager } from '@/services/SessionManager';
-import { assertShopperSelectors, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
+import { assertShopperSelectors, carryOwnerCustomerId, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
 import { captureRetention, RetentionUnavailable } from '@/retention';
 import { captureBehavior } from '@/ledger/behavior';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
@@ -123,7 +123,13 @@ export const actionEventSchema = z.object({
   // will be the one that opens a new visit. Optional, so every existing client
   // is unaffected; omitted/unobserved entry stays unknown.
   entry: z.custom<ChannelSignals>(value => value !== undefined && validEntry(value)).optional(),
-  timestamp: z.number().refine(isEventTimestamp).optional()
+  timestamp: z.number().refine(isEventTimestamp).optional(),
+  // P13 (decision D1): the customer's identifier the page passed before
+  // recognition (`setCustomerId`). Carried beside the visitor's own identifier
+  // onto the outcome this event records under tracking consent, and never
+  // proof: it is taken off the event before the shopper's state, the ODP loop
+  // or any other consumer sees it, so it links, merges and selects nothing.
+  customerId: z.string().refine(isCarriedCustomerId).optional(),
 }).superRefine((event, ctx) => {
   if (Object.prototype.hasOwnProperty.call(event.data, 'decisionId') && !isDecisionReference(event.data.decisionId)) {
     ctx.addIssue({ code: 'custom', path: ['data', 'decisionId'], message: 'Invalid decision reference' });
@@ -140,7 +146,8 @@ realtimeRoutes.post('/action', async (c) => {
   try {
     const body = await c.req.json();
     assertSessionTarget(shopperPrincipal(c.req.raw), body?.userId, body?.sessionId);
-    const validatedEvent = actionEventSchema.parse(body);
+    // P13: the carried identifier is held apart from the event itself; only the outcome record names it.
+    const { customerId: carriedCustomerId, ...validatedEvent } = actionEventSchema.parse(body);
     // Render retries carry their first wire identity/time. Generic legacy
     // synthesis would turn a lost acknowledgement into a different render.
     if (Object.hasOwn(validatedEvent.data, 'renderOffer') && (validatedEvent.type !== 'content_impression'
@@ -228,6 +235,8 @@ realtimeRoutes.post('/action', async (c) => {
       const outcome = outcomeFromAction({ ...actionEvent, sessionId: actionEvent.processing === 'buffered' ? sessionId : sessionId ?? server,
         eventId: actionEvent.eventId ?? crypto.randomUUID(),
         eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
+        // P13: under tracking consent only (above), beside the visitor's own identifier.
+        ...(carriedCustomerId !== undefined ? { customerId: carriedCustomerId } : {}),
       }, c.get('tenant'));
       if (outcome) {
         outcome.retention = captureRetention(c.env, c.get('tenant'), outcome.ts);
@@ -258,6 +267,14 @@ realtimeRoutes.post('/action', async (c) => {
       }
     };
 
+    // P13 (R-P66 item 2): an accepted event's carried identifier is handed to the
+    // shopper's own object under the tracking consent the host answered, kept
+    // there for the browser's link answer; its failure never fails the event.
+    const carry = async (consent: () => Consent) => {
+      if (carriedCustomerId === undefined) return;
+      try { if (consent().tracking) await carryOwnerCustomerId(c.env, shopperPrincipal(c.req.raw), carriedCustomerId); } catch { /* carried again on the next event */ }
+    };
+
     // ── Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' forwards to the
     // shopper's ShopperReflex DO, which runs the same pipeline IN-OBJECT (reflex →
     // qualify → decide → push over its own socket) and returns the same envelope
@@ -278,6 +295,7 @@ realtimeRoutes.post('/action', async (c) => {
         if (!out.consent) throw new Error('Consent state unavailable');
         emitOutcome(out.sessionId, storedConsent(out.consent));
       }
+      if (doRes.ok && out.success === true && out.consent) await carry(() => storedConsent(out.consent));
       return c.json({ ...out, behavior, ...(render ? { render } : {}) }, doRes.status as 200);
     }
 
@@ -293,6 +311,7 @@ realtimeRoutes.post('/action', async (c) => {
     // Where the time went: the engine's own work on the session host, for whoever is measuring.
     c.header('Server-Timing', `engine;dur=${Math.round(performance.now() - tEngine)}`);
     if (!result.dropped) emitOutcome(result.sessionId, consent);
+    await carry(() => consent);
     if (actionEvent.processing === 'buffered') return c.json({ success: true, processing: 'buffered',
       interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
       ...(result.signals ? { signals: result.signals } : {}),
