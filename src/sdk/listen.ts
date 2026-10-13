@@ -3,7 +3,7 @@
 // snapshot at first paint, subscribes per slot, and is told plainly when there
 // is nothing — because the page never waits on us and never shows a hole.
 
-import { decisionRequiresConsent, dwellMinFor, type Core, type FirstRequest } from './core';
+import { decisionRequiresConsent, dwellMinFor, type Core } from './core';
 import { snapshotEntry } from '../services/visit';
 import type { ActionEnvelope, ContentDecision, DecisionSet, ElementLike, EngineUpdate, RenderAcknowledgment, SdkEventType } from './types';
 import type { ServerBootstrap } from './server';
@@ -251,11 +251,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     selected = { ...o };
     // ready() can synchronously change identity and reenter through a listener.
     const owner = ++intent;
-    // P13 (H4): a new visitor's session is issued with this decision request, one
-    // call; consent-dependent context (session, channel, entry) is never sent then.
-    const nothingToShow = nothingToShowField(o.nothingToShow);
-    const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}) } };
-    const pending = core.ready(false, first);
+    const pending = core.ready();
     const generation = core.generation;
     const active = () => owner === intent && generation === core.generation;
     if (!active()) return null;
@@ -268,13 +264,13 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
       return null;
     }
     const consent = core.consent;
-    const json = (first.answered ? first.answer : await core.getJson(core.config.paths.snapshot, {
+    const json = (await core.getJson(core.config.paths.snapshot, {
       page: o.page,
       pageInstance,
       browsingSessionId: consent.tracking ? core.sessionId : undefined, brand: core.config.brand, channel: consent.tracking ? o.channel : undefined,
       entry: consent.tracking ? snapshotEntry(core.entry) : undefined,
       trackingConsent: consent.tracking ? undefined : 'false', personalizationEnabled: consent.personalization ? undefined : 'false',
-      nothingToShow,
+      nothingToShow: nothingToShowField(o.nothingToShow),
     })) as { ok?: boolean; page?: string; pageInstance?: string; arm?: string; versions?: Record<string, number>; config_label?: string; decisions?: unknown; ts?: number } | null;
     settled = true;
     host.clearTimeout(timer);
