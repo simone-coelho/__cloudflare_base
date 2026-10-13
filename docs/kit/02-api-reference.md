@@ -210,7 +210,7 @@ the tenant's registry names, and each weighs 0 until the registry publishes a we
   `category`, `line`): `search` carries the resolved values only, never the query text.
 - **`filter_applied`**: the facet's `dimension` and `value`, with the value also in the registry's own source field
   (`{ "dimension": "category", "value": "Handbags", "category": "Handbags" }`). The sale filter and the sale page both send `filter_applied` with `dimension` `priceStatus`, `value` `sale` and `priceStatus: "sale"`, raising `priceStatus` sale.
-- **`remove_from_cart`**: `{ productId }`; `remove_from_cart` is captured at weight 0 until the negative-signal release (P39).
+- **`remove_from_cart`**: `{ productId }`, plus the registry's attributes when the brand scores them from the event; it weighs 0 and is no signal for the signal floor. Under the tenant's `suppression` settings it suppresses, for the shopper, every registry value it carries for the action's window in `days` ([negative preference](#negative-preference-suppression-with-an-expiry)); without them it changes nothing.
 - **Declared interactions.** A size guide or reviews panel opened inside a module is that module's engagement:
   `data-op-engage="sizeguide:open reviews:open"` on the container, and each `sizeguide:open` or `reviews:open` event
   dispatched (bubbling) inside it is one `content_click` naming its `interaction`.
@@ -635,6 +635,8 @@ A position a configured per-context order set carries `configuredOrder: { contex
 A position the context prior contributed to says so on its receipt in words, with the shopper's entry channel and visit: the receipt line reads "Population prior, paid social, first visit: what visitors arriving this way engage with contributed 1.5 (the prior's share of the score: 1)." where the channel and visit bucket answered, and names the channel and every visit, claiming no visit of its own, where the channel alone answered.
 
 A position of a slot decided below the signal floor carries `signalFloor: { floor, signals }` on its receipt, exactly as the record carries it, and its `why` says, before any term, that the shopper is below the signal floor, with the shopper's count of signals and the floor in force, and that no term that reads the individual shopper applied.
+
+A position decided while a suppression was in force on the shopper carries `suppressions: [{ action, dimension, expiresAt, value }]` on its receipt, exactly as the record's `explain.suppressions` carries it (keys sorted, `expiresAt` in epoch milliseconds, sorted by dimension then value), and one `why` sentence names each value, the action that recorded it and the date it lapses (UTC): "Suppressed for this shopper, so the shopper's own interest in it was not scored: productType tote by remove_from_cart until 2026-11-11." The decision replays equal; a record without a suppression replays as before ([negative preference](#negative-preference-suppression-with-an-expiry)).
 
 A position the layout blend ranked carries `blend: { B, Q, R, p }` on its receipt, exactly as the record carries it, and its `why` reads out each term — where the rank base `R` came from (under a configured order, the module's place among the modules the merchandiser ordered, counted over the whole order, which the receipt's `configuredOrder` still carries), what the shopper's behaviour contributed to `B`, the learned lift behind `Q` — and the sum at `p`; it never says that the ranking did not place the position.
 
@@ -1177,6 +1179,24 @@ from one of your revisions. The version a decision and a receipt name is otherwi
 revision identity, because the thresholds are part of it. A block that was stored but can no longer be read
 is never silently replaced by the default: the engine falls closed to the first stage, claims no version and
 says so on `reason`.
+
+### Negative preference: suppression with an expiry
+
+That document also carries the optional `suppression` settings, published with `PUT /config/reflex` like the rest
+of it, with no deployment ([schema](./03-payload-schemas.md#negative-preference-suppression-with-an-expiry)).
+Negative preference is a suppression of a value for one shopper, with an expiry; it is never a negative weight.
+
+```json
+"suppression": { "actions": { "remove_from_cart": { "days": 30 } }, "purchase": { "days": 30 } }
+```
+
+- **The named actions.** Each action named under `actions` (`remove_from_cart`, the SDK's custom event: `client.emit.custom('remove_from_cart', data)`, `data.event` the name) suppresses, for that shopper, every registry value it carries for the action's window in `days`, counted from the action; the values are the ones the registry places, so a value your approved vocabulary governs is suppressed as its mapped id. The action weighs what the registry weighs it, 0 when the registry names no weight for it, so `remove_from_cart` builds no interest and is no signal for the signal floor.
+- **The purchase rule.** `purchase`, when present, makes the rule active: a purchase (`purchase`, `checkout` or `order_complete`) strengthens every value it carries at the purchase weight as before, its `style`, `collection`, `color` and `priceBand` among them, and suppresses the value it carries on the registry dimension keyed `productType` for the purchase window. A second purchase of one `orderId` is dropped before the rule runs, so it neither strengthens nor suppresses twice. A registry with no `productType` dimension suppresses nothing on a purchase.
+- **The windows.** Each window is a positive whole number of days; a window that names no `days` takes the default of 30 days for the suppression, so `{ "actions": { "remove_from_cart": {} }, "purchase": {} }` suppresses for 30 days each. A window of 0, a negative one, a fraction, one written as text or one over 36500 days refuses the write with `422`, naming `suppression` and `days` (`suppression.actions.remove_from_cart.days must be a positive whole number of days, at most 36500 (got 0)`); so does a member other than `actions` and `purchase`, a window that is not `{ days? }`, and an action name that is empty, a reserved key, padded with spaces, longer than 120 characters or `tick`, the engine's own re-evaluation. The action weights stay bounded 0 to 1000 as before.
+- **What a suppression does.** While it is in force the suppressed value contributes no interest term to the content decision: the shopper's own interest in it is left out of the interest the page is scored on and of the learning cell's leading interest, before the population priors are blended in. The stored interest is not changed (`GET /realtime/reflex` still answers it), the piece stays eligible, and every context term applies as before: the arrival's seed rules, the population priors, the bonus for completing the request's anchor product (the matching piece is still served first on the page of the product it completes) and configured orders. At its expiry it lapses and the shopper's own interest decides again.
+- **One value, two suppressions.** The later expiry stands, with the action that recorded it. An identity link carries every suppression in force on the anonymous shopper to the signed-in shopper unchanged, by the same rule; on an equal expiry the signed-in shopper's own is kept, so a link never shortens a suppression.
+- **Where it lives.** Inside the shopper's existing reflex state on both hosts, written only when one is recorded and dropped once every one has lapsed; at most 64 per shopper, the earliest to lapse dropped first. A tenant without the settings records none and decides term for term as before, replay included. Every record of a decision made while one is in force carries `explain.suppressions`, and its receipt says so (receipts, below).
+- **Stated limits.** The buffered door (`"processing": "buffered"`) and the historical import record no suppression: a buffered `remove_from_cart` weighs 0 and changes nothing, a buffered purchase strengthens as before. The product sort, search, the interest hydrate and audience memberships read the stored interest.
 
 ### The context vocabulary (`contextVocabulary`)
 
