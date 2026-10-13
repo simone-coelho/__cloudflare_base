@@ -32,7 +32,7 @@
 // ---------------------------------------------------------------------------
 
 import {
-  effectiveScore, emptyState, isSignal, signalsOf, tick, withSignals,
+  effectiveScore, emptyState, isSignal, mergeSuppressions, signalsOf, suppressionsInForce, tick, withSignals,
   type ReflexConfig, type ReflexEntry, type ReflexInput, type ReflexResult, type ReflexState,
 } from '@/reflex/core';
 
@@ -86,11 +86,20 @@ export function mergeReflexStates(
   }
 
   const audiences = [...new Set([...A.audiences, ...B.audiences])].sort();
+  // P39 (remaining-work item 2): every suppression in force on either profile
+  // is in force on the person, with its value, its action and its expiry
+  // unchanged. Where both hold one value, the later expiry stands with its
+  // action, whichever side holds it, and on an equal expiry the person's own
+  // (`a`, the side both hosts pass as the linked shopper's) is kept: a link
+  // never shortens a suppression and never lengthens one beyond what an action
+  // recorded. Written only when there is one, as every apply writes it.
+  const suppressions = mergeSuppressions(suppressionsInForce(A.suppressions, now), suppressionsInForce(B.suppressions, now));
   // P10: the person's count of signals is the SUM of the two profiles' counts.
   // Each counted an action the other never saw (two devices' actions are one
   // person's actions, as their visits and counters add), and a browser already
   // folded into the person arrives here as nothing, so no action is counted twice.
-  return tick(withSignals<ReflexState>({ v: 1, dims, audiences, configVersion: config.version }, signalsOf(A) + signalsOf(B)), now, config);
+  return tick(withSignals<ReflexState>({ v: 1, dims, audiences, configVersion: config.version,
+    ...(suppressions.length ? { suppressions } : {}) }, signalsOf(A) + signalsOf(B)), now, config);
 }
 
 /**
