@@ -760,7 +760,7 @@
     {
       "id": "P39",
       "title": "Negative preference with an expiry: remove from cart and the purchase rule",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-1/BTI-Parity-Build-Tickets.md (amended copy committed beside the program)",
