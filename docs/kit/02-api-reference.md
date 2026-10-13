@@ -331,6 +331,17 @@ container, and each interaction it declares, is one engagement: a `content_click
 the acknowledged `decisionId`, `slotPosition` and, for a declared interaction, `interaction`,
 credited as the slot's click reward only to a decision whose render was admitted.
 
+**Receipts by position within the slot, and a held layout (browser SDK).** The SDK keys each painted
+receipt by `slot`, `slotPosition` and module. A newer answer that changes one slot's selection shifts the
+page-wide `order` of the slots after it but leaves their receipts and their subscribers untouched; the same
+module at another `slotPosition` within its slot is a new placement, repainted and acknowledged with the
+receipt of the answer that moved it. A page may hold a slot for the page view with
+`client.listen.hold(slot)`: until the function it returns is called, or a new page view begins, a later
+answer of that page view leaves the held slot as it was painted, and the render acknowledgements and
+engagements of its modules keep the `decisionId` each was painted and acknowledged with, although the newer
+answer moved or dropped the module. A release does not repaint by itself; the next answer repaints the
+slot. A hold never holds back known absence (a consent refusal, an identity change, a failed answer).
+
 **A configured order per context.** A merchandiser can publish, on the page's declared layout slot, a
 module order per context (`orders`, governance version 4; [the layout slot](./03-payload-schemas.md#the-layout-slot)),
 in the console's Slot rules screen or with `PUT /content/slots`, with no deployment. A context is one
