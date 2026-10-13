@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P38",
+  "workOrderHash": "sha256:fddbcc887c00192b54221c1f54f1b159abee6c718bed62a1af08fe5554fde536",
+  "artifact": {
+    "revision": "fdf43873ceeb2078028be4332e0960ff4ba3ed46",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p38-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P38 built on rem/p38-build: d663db07 merges rem/integration 0228ba55 (the first programme's closed tickets P02, P01, P28, P03, P10, P07 and P04, P36 and P37 of this programme, the landing of the product branch and the governance files) into the per-ticket branch rem/tkt/P38 (49fb5cab, specification reviewed PASS at 51f050e3 on rem/spec-parity-e, batch S5 after two fix rounds); RED baseline 8 failed / 5 passed on P38's own reasons (the kind unknown at 404, the kit statements), the VA4 locks green, no PRECONDITION; de8724b1 the mechanism (src/content/kinds.ts, types.ts, service.ts, src/routes/content.ts, src/config/publication.ts, src/durable-objects/ShopperReflex.ts, src/services/RealtimeSegmentEngine.ts: the publication kind vocabulary stored as a versioned revision and refused by name when malformed, an id outside the grammar, a duplicate id, a product type naming no parent or two, a synonym of two values; the approval as a second optional member carrying the approved document, POST /content/vocabulary/approve/N by the tenant's operator putting revision N in effect, D1, GET answering the stored and the effective revision; the catalogue publications PUT, import, pull, validate, rollback and related members mapping a governed tag's values through the one mapping table, D2, storing the ids, passing already-mapped values through and refusing a value outside the list 422 naming the piece and the field with nothing written; ingest on both hosts and both doors mapping a governed event value to its id, a value outside the list building no interest and counted in the tenant's rejection report in KV while the action is recorded, the vocabulary the authority over the catalogue's own tags, DI-9; a tenant without a vocabulary term for term as before, no new shopper key, R-P7); e536da93 the console view with the approve control and the effective revision in words; ff3911fd the vocabulary read gated to events with something to place; 74e6f36a the kit (docs/kit/01, 02 and 03); fdf43873 the catalogue dry run staying advisory when the vocabulary cannot be read; the SDK and Meridian bundles unchanged (both --check exact); acceptance 13/13 at fdf43873; gate GATE_OK once at fdf43873 (2918 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P38/implementer/REPORT.md",
+      "git commits on rem/p38-build up to fdf43873"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P38 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P38/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P38/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P38/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-12T19:30:40.600Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

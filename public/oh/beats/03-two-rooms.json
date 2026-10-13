@@ -1,0 +1,13 @@
+{
+ "name": "03-two-rooms",
+ "beat": 3,
+ "act": 2,
+ "actName": "Two rooms",
+ "press": "she opens two TVs, then a front-load washer",
+ "kind": "context",
+ "label": "Two TVs, then a washer",
+ "who": "shopper",
+ "lane": "P1",
+ "engine": "room and type rise; the category rail reorders; for-you balances rooms",
+ "sees": "the homepage that lg.com never changes, changing, with receipts"
+}

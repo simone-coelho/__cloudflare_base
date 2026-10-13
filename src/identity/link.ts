@@ -69,9 +69,17 @@ export async function linkVisitor(
     principal?: SessionCapability;
     capability?: string;
     cookieHeader?: string | null;
+    /**
+     * P12 (decision D1): a VERIFIED identifier change (src/identity/assertion.ts,
+     * verifyAccountChange, on the route): the earlier account identifier whose
+     * profile merges into this account's once the browser is linked. Public link
+     * ingress only.
+     */
+    accountChange?: { from: string };
   },
 ): Promise<LinkResult> {
   const now = input.now ?? Date.now();
+  if (input.accountChange && !input.principal) throw new SessionAccessError();
   if (input.principal || (env.REFLEX_HOST ?? 'session') === 'do') {
     if (input.principal) {
       assertSessionTarget(input.principal, input.visitorId);
@@ -90,7 +98,7 @@ export async function linkVisitor(
       || body.result.visitorId !== input.visitorId || typeof body.result.sessionId !== 'string' || !body.result.sessionId
       || !body.result.grant || body.result.grant.subject !== shopperId || body.result.grant.sessionId !== body.result.sessionId
       || body.result.grant.tenant !== tenant || body.result.grant.kind !== 'recognized') throw new SessionAccessError();
-    return body.result;
+    return input.accountChange ? applyAccountChange(env, tenant, shopperId, input.accountChange.from, body.result) : body.result;
   }
   const shopperId = await shopperIdFor(env, tenant, input.accountId);
   const store = new IdentityStore(env.SESSIONS as never, tenant);
@@ -143,6 +151,46 @@ export async function linkVisitor(
   // points at it; the link remembers it so an erasure can reach it.
   if (r.ownSessionId) await store.noteOwnSession(input.visitorId, r.ownSessionId);
   return { ...base, sessionId: r.sessionId, changes: r.changes, audiences: r.audiences, cookieHeaders: r.cookieHeaders, consent: r.consent };
+}
+
+// ── P12: an identifier change (decision D1) ──────────────────────────────────
+//
+// Once the browser is linked to the account, a verified identifier change
+// merges the EARLIER account's profile into this one, in this account's own
+// object and once (ShopperReflex, the account-change door): merge, never
+// override, the decayed evidence of both added so recent behaviour outranks
+// both histories. Nothing of the browser's link is redone. The answer carries
+// the merged memberships and, on the session host, the merged record's cookies;
+// a change that merges nothing (already merged, nothing to share) leaves the
+// link's answer exactly as it was.
+
+const stringList = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+async function applyAccountChange(env: Env, tenant: TenantId, shopperId: string, from: string, linked: LinkResult): Promise<LinkResult> {
+  const earlier = await shopperIdFor(env, tenant, from);
+  if (earlier === shopperId) return linked;
+  const response = await shopperObject(env.SHOPPER_REFLEX, shopperId, tenant).fetch('https://shopper-reflex/identity/account-change', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': shopperId },
+    body: JSON.stringify({ from: earlier }),
+  });
+  const body = await response.json() as { ok?: unknown; merged?: unknown; audiences?: unknown; cookieHeaders?: unknown;
+    changes?: { entered?: unknown; exited?: unknown; explain?: unknown } };
+  if (!response.ok || body.ok !== true || typeof body.merged !== 'boolean') throw new SessionAccessError();
+  if (!body.merged) return linked;
+  const changes = body.changes;
+  if (!stringList(body.audiences) || !stringList(body.cookieHeaders) || !changes || !stringList(changes.entered)
+    || !stringList(changes.exited) || !Array.isArray(changes.explain)) throw new SessionAccessError();
+  const entered = changes.entered, exited = changes.exited;
+  return {
+    ...linked,
+    audiences: body.audiences,
+    changes: {
+      entered: [...new Set([...linked.changes.entered.filter((key) => !exited.includes(key)), ...entered])].sort(),
+      exited: [...new Set([...linked.changes.exited.filter((key) => !entered.includes(key)), ...exited])].sort(),
+      explain: [...linked.changes.explain, ...(changes.explain as ReflexChanges['explain'])],
+    },
+    cookieHeaders: body.cookieHeaders,
+  };
 }
 
 // ── The session host ─────────────────────────────────────────────────────────

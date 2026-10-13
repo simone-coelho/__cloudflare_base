@@ -12,7 +12,7 @@ import { FIRST_JOURNEY_STAGE, PERSISTED_STAGE, type JourneyStage } from '@/servi
 import { resolveSurface, resolveTenantCatalog, resolveTenantReflexConfig, tenantAudienceKeyPrefix } from '@/demos/registry';
 import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
 import { actionOf, isContentAction, resolvedContentTouches } from './contentTelemetry';
-import { EMPTY_VOCABULARY, attributesFrom, needsCatalogVocabulary, placeEvent, tick,
+import { EMPTY_VOCABULARY, attributesFrom, isSuppressingAction, needsCatalogVocabulary, placeEvent, suppressionsInForce, suppressionsRecorded, tick,
   type RecognitionSignals, type ReflexConfig, type ReflexState } from './core';
 import { applyHistorical } from './identityMerge';
 
@@ -54,12 +54,23 @@ export interface BufferedProfile {
 export async function bufferedInterest(env: Env, tenant: string, event: ActionEvent, profile: BufferedProfile,
   provider: SegmentProvider, now: number): Promise<{ applied: boolean; reflex?: ReflexState; segments: string[]; config?: ReflexConfig;
     /** W16 C8.09: what this buffered input named that the tenant's catalogue could not place. */
-    signals?: RecognitionSignals }> {
+    signals?: RecognitionSignals;
+    /**
+     * P39 (R-P60): the delivery recorded suppressions and applied no interest (a
+     * suppressing action at weight 0): its state is written as an applied
+     * delivery's is, and the door answers that no interest was applied.
+     */
+    suppressionOnly?: true }> {
   const unchanged = { applied: false, reflex: profile.reflex, segments: profile.segments };
   if ((env.REFLEX_ENABLED ?? 'true') === 'false') return unchanged;
   const surface = resolveSurface({ surface: profile.surface });
   const cfg = await resolveTenantReflexConfig(env, tenant, surface), action = actionOf(event);
-  if ((cfg.weights[action] ?? 0) <= 0) return unchanged;
+  // P39 (R-P60): a weight-0 action builds nothing and is dropped here, unless the
+  // tenant's suppression settings name it (remove_from_cart): it is let through,
+  // still at weight 0 (no interest, no signal), to record its suppressions as the
+  // live door does. Every other weight-0 action is dropped exactly as before.
+  const suppressionOnly = (cfg.weights[action] ?? 0) <= 0;
+  if (suppressionOnly && !isSuppressingAction(cfg, action)) return unchanged;
   const catalog = await resolveTenantCatalog(tenant, surface), data = event.data ?? {};
   const pid = data.productId ?? data.product_id ?? data.sku;
   const product = pid ? catalog?.getProduct(String(pid)) : undefined;
@@ -78,6 +89,10 @@ export async function bufferedInterest(env: Env, tenant: string, event: ActionEv
   const signals: RecognitionSignals = contentEvent
     ? { recognized: touches.length > 0, unrecognized: [] } : placed.signals;
   if (!touches.length) return { ...unchanged, signals };
+  // P39 (R-P60): a suppressing action whose every suppression has already lapsed
+  // by now (its window counted from the event's own time) records nothing and
+  // changes nothing: answered as a weight-0 delivery is.
+  if (suppressionOnly && !suppressionsInForce(suppressionsRecorded(cfg, { action, touches }, event.timestamp), now).length) return { ...unchanged, signals };
   const reflex = tick(applyHistorical(profile.reflex, { action, touches }, event.timestamp, cfg), now, cfg).state;
   const external = enrichmentInputs(profile.profileEnrichment);
   const context = { userId: event.userId, anonymousId: profile.anonymousId, attributes: { ...profile.attributes }, segments: [] as string[],
@@ -90,5 +105,5 @@ export async function bufferedInterest(env: Env, tenant: string, event: ActionEv
   const local = await provider.fetchQualifiedSegments(event.userId, context);
   const prefix = tenantAudienceKeyPrefix(tenant, surface);
   return { applied: true, reflex, config: cfg, signals, segments: [...new Set([...local, ...reflex.audiences.map(key => prefix + key),
-    ...external.audiences, ...(await projectOdpState(env, tenant, profile)).odpSeed])].sort() };
+    ...external.audiences, ...(await projectOdpState(env, tenant, profile)).odpSeed])].sort(), ...(suppressionOnly ? { suppressionOnly: true as const } : {}) };
 }

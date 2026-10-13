@@ -1,0 +1,13 @@
+{
+ "name": "04-fresh-visitor",
+ "beat": 4,
+ "act": 2,
+ "actName": "Two rooms",
+ "press": "the fresh visitor beside her",
+ "kind": "context",
+ "label": "The fresh visitor beside her",
+ "who": "shopper",
+ "lane": "P1",
+ "engine": "Compare",
+ "sees": "her page against a stranger’s, same region"
+}

@@ -1,0 +1,51 @@
+{
+ "name": "04-the-hinge",
+ "beat": 4,
+ "act": 2,
+ "actName": "The visitor earns it",
+ "press": "Open the Pixel 11 page, then back to the homepage",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "events": [
+  {
+   "type": "product_view",
+   "data": {
+    "productId": "pixel-11",
+    "category": "phones",
+    "brand": "google",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 899.99,
+    "view": "page"
+   },
+   "note": "the Pixel 11 page"
+  },
+  {
+   "type": "page_view",
+   "data": {
+    "page": "home"
+   },
+   "note": "back to the homepage"
+  }
+ ],
+ "snapshot": {
+  "page": "home",
+  "slots": [
+   "hero",
+   "deals"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  },
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  }
+ },
+ "engine": "Her Android affinity now spans two makers and outgrows the campaign seed, which still fires on every page load of the visit at its constant weight. Brand samsung decays on its 60 s room memory from the third touch; she stays in the audience while it is at or above θout 0.45 (hysteresis).",
+ "sees": "Android promotions overtake the lifted launch promotion; the receipt reads “campaign context superseded by observed behaviour”. Brand samsung has already decayed under the entry line by now (measured 0.53 to 0.55, 16 to 19 s after the third touch at 15 s between presses) and she is still in the audience: it holds above θout 0.45."
+}
