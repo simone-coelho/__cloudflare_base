@@ -29,7 +29,7 @@ import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHe
 import { anonymousWithConsent, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
 import { capabilityToken } from '@/identity/sessionCapability';
 import { SessionManager } from '@/services/SessionManager';
-import { assertShopperSelectors, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
+import { assertShopperSelectors, carryOwnerCustomerId, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
 import { captureRetention, RetentionUnavailable } from '@/retention';
 import { captureBehavior } from '@/ledger/behavior';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
@@ -267,6 +267,14 @@ realtimeRoutes.post('/action', async (c) => {
       }
     };
 
+    // P13 (R-P66 item 2): an accepted event's carried identifier is handed to the
+    // shopper's own object under the tracking consent the host answered, kept
+    // there for the browser's link answer; its failure never fails the event.
+    const carry = async (consent: () => Consent) => {
+      if (carriedCustomerId === undefined) return;
+      try { if (consent().tracking) await carryOwnerCustomerId(c.env, shopperPrincipal(c.req.raw), carriedCustomerId); } catch { /* carried again on the next event */ }
+    };
+
     // ── Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' forwards to the
     // shopper's ShopperReflex DO, which runs the same pipeline IN-OBJECT (reflex →
     // qualify → decide → push over its own socket) and returns the same envelope
@@ -287,6 +295,7 @@ realtimeRoutes.post('/action', async (c) => {
         if (!out.consent) throw new Error('Consent state unavailable');
         emitOutcome(out.sessionId, storedConsent(out.consent));
       }
+      if (doRes.ok && out.success === true && out.consent) await carry(() => storedConsent(out.consent));
       return c.json({ ...out, behavior, ...(render ? { render } : {}) }, doRes.status as 200);
     }
 
@@ -302,6 +311,7 @@ realtimeRoutes.post('/action', async (c) => {
     // Where the time went: the engine's own work on the session host, for whoever is measuring.
     c.header('Server-Timing', `engine;dur=${Math.round(performance.now() - tEngine)}`);
     if (!result.dropped) emitOutcome(result.sessionId, consent);
+    await carry(() => consent);
     if (actionEvent.processing === 'buffered') return c.json({ success: true, processing: 'buffered',
       interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
       ...(result.signals ? { signals: result.signals } : {}),

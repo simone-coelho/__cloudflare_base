@@ -10,7 +10,7 @@
 
 import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
-import { assertShopperSelectors, forwardShopperRequest, parseShopperContext } from '@/identity/sessionAuthority';
+import { assertShopperSelectors, carryOwnerCustomerId, forwardShopperRequest, parseShopperContext } from '@/identity/sessionAuthority';
 import { anonymousWithConsent } from '@/identity/consentContinuity';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import type { Env } from '@/types/env';
@@ -993,6 +993,11 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     // visitor_id on the records under tracking consent and read by nothing that decides.
     ...(c.req.method === 'POST' && context.customerId !== undefined ? { customerId: context.customerId } : {}),
   });
+  // P13 (R-P66 item 2): under the tracking consent the decision was made with, the
+  // carried identifier is handed to the shopper's own object for the browser's
+  // link answer, after the decision, which it never reads; a failure changes
+  // nothing of the answer (the value is carried again on the next request).
+  if (c.req.method === 'POST' && context.customerId !== undefined && out.sources.consent.tracking) await carryOwnerCustomerId(c.env, principal, context.customerId);
   // Where the time went, for whoever is measuring: one Server-Timing entry per stage.
   c.header('Server-Timing', Object.entries(out.sources.timings).map(([k, v]) => `${k};dur=${v}`).join(', '));
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.

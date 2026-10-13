@@ -100,7 +100,7 @@ import {
   type ReflexResult,
   type ReflexState,
 } from '@/reflex/core';
-import { orderKeyOf } from '@/ledger/records';
+import { isCarriedCustomerId, orderKeyOf } from '@/ledger/records';
 import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
@@ -208,7 +208,13 @@ const grantSchema = z.object({ tenant: z.string().refine(isValidTenantId), subje
   iat: identityTime, exp: identityTime,
 }).strict().refine(g => g.exp > g.iat && g.exp - g.iat <= SHOPPER_MAX_AGE
   && (g.kind === 'recognized' ? isShopperId(g.subject) : /^vis-[0-9a-f-]{36}$/.test(g.subject)));
-const authoritySchema = z.object({ version: z.literal(1), epoch: z.string().uuid(), grants: z.record(z.string(), grantSchema) }).strict();
+// P13 (R-P66 item 2): `customerId`, the customer's identifier an anonymous
+// browser's requests carried under tracking consent, is one optional member of
+// this record: written only when present and changed, never for a browser that
+// carried none, answered on the browser's link and gone with the fresh record
+// an erasure writes. Carried, never proof: no grant, selection or merge reads it.
+const authoritySchema = z.object({ version: z.literal(1), epoch: z.string().uuid(), grants: z.record(z.string(), grantSchema),
+  customerId: z.string().refine(isCarriedCustomerId).optional() }).strict();
 type GrantAuthority = z.infer<typeof authoritySchema>;
 // ── W16 C6: anonymous return continuity ─────────────────────────────────────
 // ONE storage key, by exact name (R48(b)2). The object keeps the digest of the
@@ -2973,7 +2979,10 @@ export class ShopperReflex {
       const result = completedBefore && !principal ? { ...accepted, outcome: 'already' as const } : accepted;
       // A compact completed operation may recover only its already-issued
       // identity receipt. Never re-publish a profile or renew a copied deadline.
-      if (prepared.scrubbed) { if (principal) assertSessionTarget(principal); return json({ ok: true, result }); }
+      // P13 (R-P66 item 2): the link names the customer's identifier this browser carried before it, when it carried one.
+      const carried = (await this.grantAuthority())?.customerId;
+      const answered = carried === undefined ? result : { ...result, customerId: carried };
+      if (prepared.scrubbed) { if (principal) assertSessionTarget(principal); return json({ ok: true, result: answered }); }
       const forwardTo = shopperObjectName(context.tenant, body.shopperId);
       const sourceKey = tenantKey(context.tenant, 'session:' + transfer.sourceSessionId);
       const projectionKey = 'sessionProjection:' + sourceKey;
@@ -3005,7 +3014,7 @@ export class ShopperReflex {
         await this.state.storage.put({ [projectionKey]: { ...forwarded, pending: false }, [pointerProjectionKey]: { ...forwardedPointer!, pending: false } });
       }
       if (principal) assertSessionTarget(principal);
-      return json({ ok: true, result });
+      return json({ ok: true, result: answered });
     });
   }
 
@@ -3754,7 +3763,8 @@ export class ShopperReflex {
   private serialize<T>(fn: () => Promise<T>): Promise<T> {
     if (ownerHeld(this)) return fn();
     const start = () => runOwnerOperation(this, this.rawEnv, fn, this.sessionProjectionStore(), (...args) => this.relayOperation(...args), () => this.consentNow(), hints => this.setConsent(hints),
-      (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal) => this.admitRecovery(input, principal));
+      (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal) => this.admitRecovery(input, principal),
+      customerId => this.carryCustomerId(customerId));
     const run = this.chain.then(start, start);
     this.chain = run.then(
       () => undefined,
@@ -3775,6 +3785,23 @@ export class ShopperReflex {
     if (!this.isActualObject(input.tenant, input.subject) || !ownerHeld(this)) throw new SessionAccessError();
     const consent = await this.consentNow(), until = Math.min(consentDeadline(consent, 'tracking'), principal.exp * 1000);
     return runOwnerRecovery(this.state.storage, this.env, input, principal, until, (saved, deadline) => this.recoveryGuard(saved, deadline));
+  }
+
+  /**
+   * P13 (R-P66 item 2): keep the customer's identifier this anonymous browser's
+   * request carried, as the grant record's optional member, under tracking
+   * consent, and only when it is new or changed; a browser that carried none
+   * keeps its record exactly as it was. Never creates the record.
+   */
+  private async carryCustomerId(customerId: string): Promise<void> {
+    const owner = currentOwnerIdentity();
+    if (!owner || !this.isActualObject(owner.tenant, owner.subject) || !ownerHeld(this) || isShopperId(owner.subject)
+      || !isCarriedCustomerId(customerId)) throw new SessionAccessError();
+    if (!(await this.consentNow()).tracking) return;
+    const authority = await this.grantAuthority();
+    if (!authority || authority.customerId === customerId) return;
+    recheckOwnerInvocation(this);
+    await this.state.storage.put('grantAuthority', { ...authority, customerId });
   }
 
   private async admitEventRetention(id: string, digest: string, occurredAt: number): Promise<ExternalRetention> {
