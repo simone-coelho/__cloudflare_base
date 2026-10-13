@@ -1694,6 +1694,7 @@
         "src/content/types.ts",
         "src/content/decide.ts",
         "src/routes/decisions.ts",
+        "src/routes/content.ts",
         "public/console/views.js",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md"
