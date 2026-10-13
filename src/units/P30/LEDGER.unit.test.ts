@@ -19,7 +19,19 @@
 //     D2: a non-identifying context-key header and an exposure beacon) and item
 //     41 ("A context-only slot ignores seed rules on campaign term and referrer
 //     network, so two shoppers in one context cannot receive different orders").
-//     Both items are UNANSWERED at the freeze: every unit names them (R-P15);
+//     Both items were answered at the freeze (yes to all, 2026-10-08), and item
+//     41's key was amended by owner item 57 (amendment 1, 2026-10-09, section 4):
+//     "page × channel × visit bucket" becomes "page × channel × visit bucket ×
+//     device (and region when admitted)", re-specified here under R-P15 before
+//     the build; every unit keeps the item numbers in its describe title;
+//   · P37 (the second parity programme, receipted at 5ac68687; the header of
+//     src/units/P37/LEDGER.unit.test.ts): the device class is mobile or desktop,
+//     read at the edge from the request's client hint `Sec-CH-UA-Mobile` (`?1`
+//     mobile, `?0` desktop), else its user agent (a phone mobile; a tablet and
+//     every other browser desktop); a request carrying neither, or a user agent
+//     naming no browser, has no device, never a guess (R-P9); the device is a P01
+//     context term and a seed-signal key, a paint context, not a learning-cell
+//     level (no W25 grammar bump);
 //   · the investigation, sections G-B ("Is the layout per shopper or per
 //     context?", option A) and G-C (caching option (c): "page × channel × visit
 //     bucket, plus a default variant, plus region if the regional prior is on");
@@ -32,7 +44,16 @@
 //   The switch is `contextOnly: { enabled: true }` on the page's DECLARED layout
 //   slot in the slots document, `contextOnly: { enabled: true, region: true }`
 //   to admit the region; absent is off. The context is page × entry channel ×
-//   visit bucket (× region where admitted). The answer to POST
+//   visit bucket × device (× region where admitted), owner item 57. The device
+//   segment is P37's device class (mobile, desktop), read from the decision
+//   request's own client hint, else its user agent; a request from which no
+//   device can be read (R-P9) carries no device segment, so its key names none
+//   and the cached layout for it is the no-device layout. Two shoppers alike in
+//   page, channel and visit bucket on different devices may receive differing
+//   orders where a published P01 order names the device, and receive the
+//   identical order where none does, each a context-only answer, under two
+//   different keys; exploration is hashed on the context, its device included,
+//   and the hour. Nothing else of the representation changes. The answer to POST
 //   /v1/:tenant/decisions/snapshot carries the key in the response header
 //   `X-Context-Key`. The beacon is the action `layout_exposure` through POST
 //   /realtime/action with data `{ contextKey, page, slot, modules, pageInstance }`
@@ -40,7 +61,9 @@
 //   contextKey, page, slot, modules })` under tracking consent. A context-only
 //   record carries no affinity driver, no stage, no fatigue and no seed driver
 //   on campaign term or referrer network, and its learned lift answers from a
-//   level no finer than 2 (channel and visit bucket). With the region admitted
+//   level no finer than 2 (channel and visit bucket), which the device does not
+//   divide: the device is no learning level (P37), so a beacon's exposures land
+//   at level 2 whatever the device. With the region admitted
 //   (`region: true`) the region is part of the context: the regional prior
 //   applies as it does for a shopper with no interest (S4-C21), so one region
 //   gets one order whatever the shoppers' histories, and two regions whose
@@ -53,8 +76,14 @@
 // PRECONDITIONS (R-P6): every host leg needs P02 (a declared layout slot,
 // governance 4) and fails first with a message labelled PRECONDITION P02. The
 // beacon's exposures are counted through the rendered-v1 learning of P02 D1.
+// A leg that reads a device needs P37 (receipted) and checks first, with a
+// message labelled PRECONDITION P37, that the shopper's visit records the
+// device the browser's headers give (P37.DV1) or that an order naming a device
+// publishes (P37.DV4). The device is set the way P37's legs set it: the
+// browser's client hints or user agent on every request the shopper sends.
 //
-// HARNESS: src/units/_parity.ts and src/units/_parity4.ts.
+// HARNESS: src/units/_parity.ts, src/units/_parity4.ts and src/units/_parity5.ts
+// (`visitorOn`, the shopper whose every request carries the browser's headers).
 
 import { describe, expect, it } from 'vitest';
 
@@ -73,6 +102,7 @@ import {
   storedDecisions, TABBY_VIEWS, TENANT, toLedger, type Decision, type Mounted, type Shopper,
 } from '../_parity';
 import { learnedLift } from '../_parity4';
+import { visitorOn, type Visitor } from '../_parity5';
 
 const SEEDS = [
   { signal: 'entry_channel', value: 'paid_social', tags: [{ dimension: 'line', value: 'Tabby' }], weight: 1 },
@@ -86,14 +116,41 @@ const VIEW_WILLOW = productView({ productId: 'COA-C2621', line: 'Willow', catego
 const TERM_ENTRY = { ...PAID_SOCIAL_ENTRY, utmTerm: 'willow' };
 const REFERRED_ENTRY = { ...PAID_SOCIAL_ENTRY, referrer: 'www.instagram.com', siteHost: 'www.coach.com' };
 const NEW_YORK = { country: 'US', regionCode: 'NY' }, CALIFORNIA = { country: 'US', regionCode: 'CA' };
+// The browsers (real user-agent strings, as src/units/P37/LEDGER.unit.test.ts quotes them) and the device class P37 reads from each request.
+const UA = {
+  iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+  androidPhone: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36',
+  ipad: 'Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+  windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  noBrowser: 'curl/8.4.0',
+} as const;
+interface Browser { name: string; headers: Record<string, string>; device: 'mobile' | 'desktop' | null }
+/** Each device class read three ways (P37.DV1): the client hint first, else the user agent; a tablet counts as desktop. */
+const MOBILE_BROWSERS: Browser[] = [
+  { name: 'an Android phone sending the mobile client hint', headers: { 'Sec-CH-UA-Mobile': '?1', 'Sec-CH-UA-Platform': '"Android"', 'User-Agent': UA.androidPhone }, device: 'mobile' },
+  { name: 'an iPhone, no client hints', headers: { 'User-Agent': UA.iphone }, device: 'mobile' },
+  { name: 'the mobile client hint beside a desktop user agent', headers: { 'Sec-CH-UA-Mobile': '?1', 'User-Agent': UA.windows }, device: 'mobile' },
+];
+const DESKTOP_BROWSERS: Browser[] = [
+  { name: 'a desktop browser sending ?0', headers: { 'Sec-CH-UA-Mobile': '?0', 'Sec-CH-UA-Platform': '"Windows"', 'User-Agent': UA.windows }, device: 'desktop' },
+  { name: 'an iPad, no client hints (a tablet)', headers: { 'User-Agent': UA.ipad }, device: 'desktop' },
+  { name: 'a desktop browser, no client hints', headers: { 'User-Agent': UA.windows }, device: 'desktop' },
+];
+/** A client whose user agent names no browser: no device, never a guess (R-P9). */
+const NO_BROWSER: Browser = { name: 'a client whose user agent names no browser', headers: { 'User-Agent': UA.noBrowser }, device: null };
+const INTEREST_DIMS = ['line', 'category', 'occasion', 'silhouette', 'subcategory'];
 const precondition = (m: Mounted, ticket: string) => expectPublished(m, `${ticket} — PRECONDITION P02: the page's declared layout slot (governance 4) publishes`);
 
 interface Answered { status: number; headers: Headers; body: Record<string, unknown>; decisions: Decision[]; page: string; pageInstance: string }
-/** POST /v1/:tenant/decisions/snapshot as the SDK sends it, with the edge's geolocation, keeping the response headers. */
-async function ask(m: Mounted, s: Shopper, entry: Record<string, string>, cf?: Record<string, string>, label = 'p30'): Promise<Answered> {
+/**
+ * POST /v1/:tenant/decisions/snapshot as the SDK sends it, with the edge's geolocation and the shopper's
+ * browser headers (a `visitorOn` shopper's own; none for a `shopperOn` shopper), keeping the response headers.
+ */
+async function ask(m: Mounted, s: Shopper | Visitor, entry: Record<string, string>, cf?: Record<string, string>, label = 'p30'): Promise<Answered> {
   const pageInstance = pageInstanceOf(label);
+  const browser = 'headers' in s ? s.headers : {};
   const request = new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
-    headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability, 'Content-Type': 'application/json' },
+    headers: { ...browser, 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability, 'Content-Type': 'application/json' },
     body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance, entry: JSON.stringify(entry) }) });
   if (cf) Object.defineProperty(request, 'cf', { value: cf });
   const response = await m.fetch(request);
@@ -108,6 +165,20 @@ async function arrive(m: Mounted, entry: Record<string, string>, views: Array<{ 
   for (const view of views) expect((await s.action(view)).status, `${m.host}: the shopper's view is accepted`).toBe(200);
   return s;
 }
+/** A shopper on a device: every request carries the browser's headers, as P37's legs set the device; checks first that the visit records the device P37 reads from them. */
+async function arriveOn(m: Mounted, browser: Browser, entry: Record<string, string>, views: Array<{ type: string; data: Record<string, unknown> }> = []): Promise<Visitor> {
+  const v = await visitorOn(m, { headers: browser.headers });
+  expect((await v.action(PAGE_VIEW, { entry })).status, `${m.host}: the shopper's page view is accepted`).toBe(200);
+  for (const view of views) expect((await v.action(view)).status, `${m.host}: the shopper's view is accepted`).toBe(200);
+  // Read without the browser's headers, so the answer is what the visit recorded (P37.DV1's read).
+  const saved = v.headers;
+  v.headers = {};
+  try {
+    const arrival = (await v.hydrate()).body.arrival as { device?: unknown } | null | undefined;
+    expect(arrival?.device ?? null, `${m.host}: PRECONDITION P37 — ${browser.name}: the shopper's visit records the device ${browser.device ?? 'none'} (P37.DV1)`).toBe(browser.device);
+  } finally { v.headers = saved; }
+  return v;
+}
 /** What every statistics object holds for an item at one level key, summed (`learned` in _parity.ts reads the root). */
 async function exposuresAt(m: Mounted, key: string): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
@@ -118,7 +189,8 @@ async function exposuresAt(m: Mounted, key: string): Promise<Record<string, numb
   }
   return Object.fromEntries(Object.entries(out).filter(([, n]) => n !== 0));
 }
-const beacon = (s: Shopper, data: Record<string, unknown>) => s.action({ type: 'layout_exposure', data: { page: 'pdp', slot: LAYOUT, ...data } });
+const beacon = (s: { action: (event: { type: string; data: Record<string, unknown> }) => Promise<{ status: number }> }, data: Record<string, unknown>) =>
+  s.action({ type: 'layout_exposure', data: { page: 'pdp', slot: LAYOUT, ...data } });
 
 // ===========================================================================
 // unit:P30.X1 — a context-only slot decides from its context alone
@@ -126,27 +198,72 @@ const beacon = (s: Shopper, data: Record<string, unknown>) => s.action({ type: '
 
 describe('unit:P30.X1 (freeze items 10 and 41)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): three shoppers in one context — one with no history, one with Tabby interests, a served history and a campaign term, one with Willow interests arriving from an Instagram referral — decided in the same hour receive the identical order, and no record carries an interest, stage, fatigue or out-of-context seed term`, async () => {
+    it(`host (${host}): three shoppers in one context — page, entry channel, visit bucket and device — one with no history, one with Tabby interests, a served history and a campaign term, one with Willow interests arriving from an Instagram referral, decided in the same hour, receive the identical order, with no device read and again on the mobile device read three ways; and no record carries an interest, stage, fatigue or out-of-context seed term`, async () => {
       const m = await mount(host, { pieces: MODULES, slots: contextOnlySlots(), learn: LEARN });
       precondition(m, 'P30.X1');
-      const fresh = await arrive(m, PAID_SOCIAL_ENTRY);
-      const tabby = await arrive(m, TERM_ENTRY, TABBY_VIEWS);
-      await ask(m, tabby, TERM_ENTRY, undefined, 'p30-x1-history');
-      const willow = await arrive(m, REFERRED_ENTRY, [VIEW_WILLOW, VIEW_WILLOW, VIEW_WILLOW]);
-      const orders: Array<[string, string[]]> = [];
-      for (const [name, s, entry] of [['no history', fresh, PAID_SOCIAL_ENTRY], ['Tabby, served, campaign term', tabby, TERM_ENTRY], ['Willow, Instagram referral', willow, REFERRED_ENTRY]] as const) {
-        const answer = await ask(m, s, entry, undefined, 'p30-x1');
-        expect(answer.status, `${host}: the shopper's page is answered: ${JSON.stringify(answer.body).slice(0, 200)}`).toBe(200);
-        orders.push([name, layoutOf(answer)]);
+      // The context with no device read (R-P9), then the same page, channel and visit bucket on one device: the mobile
+      // class, read from the client hint, from an iPhone's user agent and from the hint beside a desktop user agent (P37.DV1).
+      const byDevice: Array<[string, Array<[string, string[]]>]> = [];
+      let tabby: Shopper | null = null;
+      for (const [device, browsers] of [['no device', null], ['mobile', MOBILE_BROWSERS]] as const) {
+        const on = (i: number, entry: Record<string, string>, views: Array<{ type: string; data: Record<string, unknown> }> = []) =>
+          browsers ? arriveOn(m, browsers[i]!, entry, views) : arrive(m, entry, views);
+        const fresh = await on(0, PAID_SOCIAL_ENTRY);
+        const served = await on(1, TERM_ENTRY, TABBY_VIEWS);
+        await ask(m, served, TERM_ENTRY, undefined, 'p30-x1-history');
+        const willow = await on(2, REFERRED_ENTRY, [VIEW_WILLOW, VIEW_WILLOW, VIEW_WILLOW]);
+        if (!browsers) tabby = served as Shopper;
+        const orders: Array<[string, string[]]> = [];
+        for (const [name, s, entry] of [['no history', fresh, PAID_SOCIAL_ENTRY], ['Tabby, served, campaign term', served, TERM_ENTRY], ['Willow, Instagram referral', willow, REFERRED_ENTRY]] as const) {
+          const answer = await ask(m, s, entry, undefined, 'p30-x1');
+          expect(answer.status, `${host}: the shopper's page (${device}) is answered: ${JSON.stringify(answer.body).slice(0, 200)}`).toBe(200);
+          orders.push([name, layoutOf(answer)]);
+        }
+        byDevice.push([device, orders]);
       }
-      expect(orders, `${host}: P30.X1 — the three shoppers in one context receive the identical order`).toEqual(orders.map(([name]) => [name, orders[0]![1]]));
-      const records = (await servePage(m, tabby, 'pdp', { entry: TERM_ENTRY })).records.filter(r => r.slot === LAYOUT);
+      expect(byDevice, `${host}: P30.X1 — the three shoppers in one context receive the identical order, with no device read and on one device`)
+        .toEqual(byDevice.map(([device, orders]) => [device, orders.map(([name]) => [name, orders[0]![1]])]));
+      const records = (await servePage(m, tabby!, 'pdp', { entry: TERM_ENTRY })).records.filter(r => r.slot === LAYOUT);
       const shopperTerms = (r: DecisionRecord) => [r.item_id,
         r.explain.drivers.filter(d => ['line', 'category', 'occasion', 'silhouette', 'subcategory'].includes(d.dim)).length,
         Boolean(r.explain.stage), Boolean(r.explain.fatigue),
         (r.explain.contextual?.drivers ?? []).filter(d => d.signal !== 'entry_channel').length];
       expect(records.map(shopperTerms), `${host}: P30.X1 — each record of the context-only slot carries no interest driver, no stage, no fatigue and no campaign-term or referrer seed`)
         .toEqual(records.map(r => [r.item_id, 0, false, false, 0]));
+    }, 90_000);
+
+    it(`host (${host}): two shoppers alike in page, entry channel and visit bucket on different devices — one mobile with Tabby interests, one desktop with Willow interests arriving on a campaign term — receive the identical order where no published order names the device and differing orders where a published P01 order names the mobile device, each a context-only answer with no shopper term, under two different context keys`, async () => {
+      // An order the context's own decision never gives: ugc.1 carries no tag the slot weighs, so it leads only where an order places it (P37.DV4's device order).
+      const ORDER_MOBILE = [M.ugc, M.editorial, M.reco2, M.grid];
+      const plain = await mount(host, { pieces: MODULES, slots: contextOnlySlots(), learn: LEARN });
+      precondition(plain, 'P30.X1');
+      const ordered = await mount(host, { pieces: MODULES, learn: LEARN, slots: declaredSlots([layoutSlot({ ...SHOPPER_RULES, contextOnly: { enabled: true },
+        orders: [{ context: { channel: 'paid_social', visitBuckets: ['1'], device: 'mobile' }, modules: ORDER_MOBILE }] }), recentSlot()]) });
+      expectPublished(ordered, 'P30.X1 — PRECONDITION P02 and P37: the declared layout slot publishes with an order whose context names the mobile device (P37.DV4)');
+      const pairOn = async (on: Mounted, label: string): Promise<Answered[]> => {
+        const phone = await arriveOn(on, MOBILE_BROWSERS[0]!, PAID_SOCIAL_ENTRY, TABBY_VIEWS);
+        const laptop = await arriveOn(on, DESKTOP_BROWSERS[0]!, TERM_ENTRY, [VIEW_WILLOW, VIEW_WILLOW, VIEW_WILLOW]);
+        const answers = [await ask(on, phone, PAID_SOCIAL_ENTRY, undefined, label), await ask(on, laptop, TERM_ENTRY, undefined, label)];
+        expect(answers.map(a => [a.status, layoutOf(a).length]), `${host}: PRECONDITION — both pages are answered with the layout's four modules: ${JSON.stringify(answers.map(a => a.body)).slice(0, 200)}`)
+          .toEqual([[200, 4], [200, 4]]);
+        return answers;
+      };
+      const [mobileA, desktopA] = await pairOn(plain, 'p30-x1-devices');
+      const [mobileB, desktopB] = await pairOn(ordered, 'p30-x1-device-order');
+      expect(layoutOf(desktopA!), `${host}: P30.X1 — where no published order names the device, the mobile and the desktop shopper of one page, channel and visit bucket receive the identical order`)
+        .toEqual(layoutOf(mobileA!));
+      expect([layoutOf(mobileB!), layoutOf(desktopB!)], `${host}: P30.X1 — the order published for the mobile device serves the mobile shopper, and the desktop shopper receives the context's own order, as where no order names the device`)
+        .toEqual([ORDER_MOBILE, layoutOf(desktopA!)]);
+      const [phoneOrder, laptopOrder] = [mobileB!, desktopB!].map(a => JSON.stringify(layoutOf(a)));
+      expect(phoneOrder === laptopOrder ? 'the identical order' : 'differing orders',
+        `${host}: P30.X1 — where a published order names the device, the two devices receive differing orders (${phoneOrder} / ${laptopOrder})`).toBe('differing orders');
+      const shopperTerms = (a: Answered) => a.decisions.filter(d => d.slot === LAYOUT)
+        .flatMap(d => (d.explain?.drivers ?? []).filter(x => [...INTEREST_DIMS, 'stage', 'fatigue'].includes(x.dim)).map(x => `${d.contentId} ${x.dim}=${x.value}`));
+      expect([mobileA!, desktopA!, mobileB!, desktopB!].map(shopperTerms), `${host}: P30.X1 — each answer is context-only: no layout decision carries an interest, stage or fatigue driver`)
+        .toEqual([[], [], [], []]);
+      const keys = [mobileA!, desktopA!, mobileB!, desktopB!].map(a => a.headers.get('X-Context-Key'));
+      expect([keys.every(k => typeof k === 'string' && k.length > 0), keys[0] === keys[1], keys[2] === keys[3]],
+        `${host}: P30.X1 — each answer carries a context key, and the mobile and the desktop shopper's keys differ (${JSON.stringify(keys)})`).toEqual([true, false, false]);
     }, 90_000);
 
     it(`host (${host}): the learned ladder of a context-only slot stops at channel and visit bucket, even where the shopper's own stage level has evidence`, async () => {
@@ -220,18 +337,34 @@ describe('unit:P30.X1 (freeze items 10 and 41)', () => {
 
 describe('unit:P30.X2 (freeze item 10)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): on a context-only slot exploring every decision, five shoppers of one context in the same hour receive the identical explored order`, async () => {
+    it(`host (${host}): on a context-only slot exploring every decision, five shoppers of one context with no device read, then three on the mobile device and three on the desktop device, each device read three ways, all in the same hour: every shopper of one context and one device receives the identical explored order (with no device read, the identical bucket too)`, async () => {
       const learn = learnDocument({ [LAYOUT]: { measurementBasis: 'rendered-v1', reward: 'click', exploration: { mode: 'epsilon', share: 1, floor: 0 } } });
       const m = await mount(host, { pieces: MODULES, slots: contextOnlySlots(), learn });
       precondition(m, 'P30.X2');
+      const hour = Math.floor(Date.now() / 3_600_000);
       const picks: unknown[][] = [];
       for (let i = 0; i < 5; i++) {
         const s = await arrive(m, PAID_SOCIAL_ENTRY);
         const records = (await servePage(m, s, 'pdp', { entry: PAID_SOCIAL_ENTRY })).records.filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
         picks.push([records.map(r => r.item_id), records.find(r => r.explored)?.explain.exploration?.bucket ?? null]);
       }
+      // On a device the decision request itself carries the browser's headers, so the explored order is read off the answer.
+      // The device is part of the hashed context: the other device may pick differently in the same hour (not asserted: a hash may coincide).
+      const byDevice: Array<[string, string[][]]> = [];
+      for (const [device, browsers] of [['mobile', MOBILE_BROWSERS], ['desktop', DESKTOP_BROWSERS]] as const) {
+        const orders: string[][] = [];
+        for (const browser of browsers) {
+          const answer = await ask(m, await arriveOn(m, browser, PAID_SOCIAL_ENTRY), PAID_SOCIAL_ENTRY, undefined, 'p30-x2');
+          expect(answer.status, `${host}: ${browser.name}: the shopper's page is answered: ${JSON.stringify(answer.body).slice(0, 200)}`).toBe(200);
+          orders.push(layoutOf(answer));
+        }
+        byDevice.push([device, orders]);
+      }
+      expect(Math.floor(Date.now() / 3_600_000), `${host}: PRECONDITION — every decision of the leg falls in one hour`).toBe(hour);
       expect(picks.every(([, bucket]) => typeof bucket === 'number'), `${host}: PRECONDITION — every decision explored (${JSON.stringify(picks)})`).toBe(true);
       expect(picks, `${host}: P30.X2 — one context, one hour: the identical explored order and bucket for every shopper`).toEqual(picks.map(() => picks[0]));
+      expect(byDevice, `${host}: P30.X2 — one context on one device, one hour: the identical explored order for every shopper on that device, however the device is read`)
+        .toEqual(byDevice.map(([device, orders]) => [device, orders.map(() => orders[0])]));
     }, 90_000);
   }
 });
@@ -242,18 +375,28 @@ describe('unit:P30.X2 (freeze item 10)', () => {
 
 describe('unit:P30.X3 (freeze item 10)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): the answer carries X-Context-Key built from the page, the channel and the visit bucket — equal within a context, different across contexts, holding no visitor, session or decision identifier — and stays Cache-Control no-store`, async () => {
+    it(`host (${host}): the answer carries X-Context-Key built from the page, the channel, the visit bucket and the device — equal within a context however its device is read, different across contexts, naming no device where none is read, holding no visitor, session or decision identifier and no user agent — and stays Cache-Control no-store`, async () => {
       const m = await mount(host, { pieces: MODULES, slots: contextOnlySlots(), learn: LEARN });
       precondition(m, 'P30.X3');
       const a = await arrive(m, PAID_SOCIAL_ENTRY, TABBY_VIEWS), b = await arrive(m, PAID_SOCIAL_ENTRY), c = await arrive(m, DIRECT_ENTRY);
-      const answers = [await ask(m, a, PAID_SOCIAL_ENTRY), await ask(m, b, PAID_SOCIAL_ENTRY), await ask(m, c, DIRECT_ENTRY)];
+      // The same paid-social first visit on a device: mobile read two ways, desktop, and a client whose user agent names no browser (no device, R-P9).
+      const phone = await arriveOn(m, MOBILE_BROWSERS[0]!, PAID_SOCIAL_ENTRY, TABBY_VIEWS), iphone = await arriveOn(m, MOBILE_BROWSERS[1]!, PAID_SOCIAL_ENTRY);
+      const laptop = await arriveOn(m, DESKTOP_BROWSERS[0]!, PAID_SOCIAL_ENTRY), script = await arriveOn(m, NO_BROWSER, PAID_SOCIAL_ENTRY);
+      const answers = [await ask(m, a, PAID_SOCIAL_ENTRY), await ask(m, b, PAID_SOCIAL_ENTRY), await ask(m, c, DIRECT_ENTRY),
+        await ask(m, phone, PAID_SOCIAL_ENTRY), await ask(m, iphone, PAID_SOCIAL_ENTRY), await ask(m, laptop, PAID_SOCIAL_ENTRY), await ask(m, script, PAID_SOCIAL_ENTRY)];
       const keys = answers.map(x => x.headers.get('X-Context-Key'));
-      expect(answers.map(x => x.headers.get('Cache-Control')), `${host}: P30.X3 — every decision response is still Cache-Control no-store`).toEqual(['no-store', 'no-store', 'no-store']);
-      expect(keys.map(k => typeof k === 'string' && k.length > 0), `${host}: P30.X3 — each answer carries the X-Context-Key header (${JSON.stringify(keys)})`).toEqual([true, true, true]);
+      expect(answers.map(x => x.headers.get('Cache-Control')), `${host}: P30.X3 — every decision response is still Cache-Control no-store`).toEqual(answers.map(() => 'no-store'));
+      expect(keys.map(k => typeof k === 'string' && k.length > 0), `${host}: P30.X3 — each answer carries the X-Context-Key header (${JSON.stringify(keys)})`).toEqual(answers.map(() => true));
       expect([keys[0] === keys[1], keys[0] === keys[2]], `${host}: P30.X3 — equal within one context, different for another channel`).toEqual([true, false]);
+      expect([keys[3] === keys[4], keys[3] === keys[0], keys[3] === keys[5], keys[6] === keys[0]],
+        `${host}: P30.X3 — the device enters the key: one key for the mobile device however it is read, another with no device read, another for the desktop device, and a user agent naming no browser gives the no-device key (${JSON.stringify(keys)})`)
+        .toEqual([true, false, false, true]);
       expect([/pdp/.test(keys[0] ?? ''), /paid_social/.test(keys[0] ?? ''), /direct/.test(keys[2] ?? '')], `${host}: P30.X3 — built from the page and the channel`).toEqual([true, true, true]);
-      const identifiers = [a, b, c].flatMap(s => [s.subject, s.grant.sessionId]).concat(answers.flatMap(x => x.decisions.map(d => d.decisionId ?? '')).filter(Boolean));
+      expect([/mobile/.test(keys[3] ?? ''), /desktop/.test(keys[5] ?? ''), [keys[0], keys[2], keys[6]].some(k => /mobile|desktop/.test(k ?? ''))],
+        `${host}: P30.X3 — the device segment names the device class (mobile, desktop), and a key with no device read names none`).toEqual([true, true, false]);
+      const identifiers = [a, b, c, phone, iphone, laptop, script].flatMap(s => [s.subject, s.grant.sessionId]).concat(answers.flatMap(x => x.decisions.map(d => d.decisionId ?? '')).filter(Boolean));
       expect(identifiers.filter(id => keys.some(k => (k ?? '').includes(id))), `${host}: P30.X3 — no key holds a visitor, session or decision identifier`).toEqual([]);
+      expect([...Object.values(UA), 'Mozilla/'].filter(ua => keys.some(k => (k ?? '').includes(ua))), `${host}: P30.X3 — no key holds the browser's user agent`).toEqual([]);
     }, 90_000);
 
     it(`host (${host}): the visit bucket enters the key, and the region enters it exactly where the slot admits the region`, async () => {
@@ -286,7 +429,7 @@ describe('unit:P30.X3 (freeze item 10)', () => {
 describe('unit:P30.X4 (freeze item 10)', () => {
   const learn = learnDocument();
   for (const host of HOSTS) {
-    it(`host (${host}): a beacon with the issued key and the drawn modules adds one exposure per drawn module to that context's learning; without tracking consent, with a key the engine did not issue, or repeated for the same page view it adds none`, async () => {
+    it(`host (${host}): a beacon with the issued key and the drawn modules adds one exposure per drawn module to that context's learning, for a key with no device read and for a key naming the mobile device alike (the device is no learning level); without tracking consent, with a key the engine did not issue, or repeated for the same page view it adds none`, async () => {
       const m = await mount(host, { pieces: MODULES, slots: contextOnlySlots(), learn });
       precondition(m, 'P30.X4');
       const s = await arrive(m, PAID_SOCIAL_ENTRY);
@@ -294,15 +437,25 @@ describe('unit:P30.X4 (freeze item 10)', () => {
       const key = answer.headers.get('X-Context-Key');
       const drawn = layoutOf(answer).slice(0, 3);
       expect.soft(key, `${host}: P30.X4 — the answer issues the context key the beacon names (P30.X3)`).toBeTruthy();
+      // The same page, channel and visit bucket on the mobile device: a key of its own (P30.X3), echoed by its own beacon with two modules drawn.
+      const phone = await arriveOn(m, MOBILE_BROWSERS[0]!, PAID_SOCIAL_ENTRY);
+      const phoneAnswer = await ask(m, phone, PAID_SOCIAL_ENTRY, undefined, 'p30-x4-mobile');
+      const phoneKey = phoneAnswer.headers.get('X-Context-Key');
+      const phoneDrawn = layoutOf(phoneAnswer).slice(0, 2);
+      expect.soft([Boolean(phoneKey), phoneKey !== key], `${host}: P30.X4 — the mobile answer issues a key of its own (P30.X3): ${JSON.stringify([key, phoneKey])}`).toEqual([true, true]);
       const pageInstance = pageInstanceOf('p30-x4-cached');
       expect((await beacon(s, { contextKey: key, modules: drawn, pageInstance })).status, `${host}: P30.X4 — the beacon is accepted`).toBe(200);
       await beacon(s, { contextKey: key, modules: drawn, pageInstance });
+      expect((await beacon(phone, { contextKey: phoneKey, modules: phoneDrawn, pageInstance: pageInstanceOf('p30-x4-mobile') })).status,
+        `${host}: P30.X4 — the beacon echoing the mobile key is accepted`).toBe(200);
       const untracked = await shopperOn(m, { tracking: false, personalization: false });
       await beacon(untracked, { contextKey: key, modules: drawn, pageInstance: pageInstanceOf('p30-x4-untracked') });
       await beacon(s, { contextKey: 'pdp|paid_social|forged', modules: drawn, pageInstance: pageInstanceOf('p30-x4-forged') });
       await m.drainLedger();
-      expect(await exposuresAt(m, 'c=paid_social|v=1'), `${host}: P30.X4 — one exposure for each of the three drawn modules in the paid-social first-visit context, and nothing from the repeat, the untracked shopper or the forged key`)
-        .toEqual(Object.fromEntries(drawn.map(id => [id, 1])));
+      const expected: Record<string, number> = {};
+      for (const id of [...drawn, ...phoneDrawn]) expected[id] = (expected[id] ?? 0) + 1;
+      expect(await exposuresAt(m, 'c=paid_social|v=1'), `${host}: P30.X4 — one exposure for each drawn module in the paid-social first-visit context, the three drawn with no device and the two drawn on the mobile device, and nothing from the repeat, the untracked shopper or the forged key`)
+        .toEqual(expected);
     }, 90_000);
   }
 
