@@ -1889,7 +1889,7 @@
     {
       "id": "P12",
       "title": "Tapestry's hashed identifier as the account identifier",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
