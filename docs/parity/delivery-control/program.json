@@ -2324,7 +2324,7 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "e9f503da7538d39955620183e3fcf164416dfbf2 e9f503da7538d39955620183e3fcf164416dfbf2 on rem/spec-p34-fix1 (P34 specification round 1 before the build, cut from rem/p34-build ac105640: 35907f14 the fake engine answers a snapshot request carrying no session with the issued session, R-P68; e9f503da T5's sdk leg split into the held-session leg, RED on P34's own reason, and the fresh-browser LOCK, R-P69; T1 to T4, the build-check lock and the harness byte-identical to ac105640; reviewed PASS)",
+        "reviewedRevision": "e9f503da7538d39955620183e3fcf164416dfbf2 on rem/spec-p34-fix1 (P34 specification round 1 before the build, cut from rem/p34-build ac105640: 35907f14 the fake engine answers a snapshot request carrying no session with the issued session, R-P68; e9f503da T5's sdk leg split into the held-session leg, RED on P34's own reason, and the fresh-browser LOCK, R-P69; T1 to T4, the build-check lock and the harness byte-identical to ac105640; reviewed PASS)",
         "verdict": "PASS",
         "evidence": [
           "/home/simonecoelho/rem/_evidence/parity-step3/P34/fix1/reviewer-spec/REPORT.md",
