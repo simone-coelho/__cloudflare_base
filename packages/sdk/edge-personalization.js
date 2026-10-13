@@ -206,6 +206,7 @@
     return typeof ms === "number" && ms >= 0 ? ms : fallback;
   }
   var CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  var CUSTOMER_ID = /^[A-Za-z0-9_+/=.-]{1,128}$/;
   function createPageBindings() {
     const listeners = /* @__PURE__ */ new Set();
     const observed = /* @__PURE__ */ new Map();
@@ -252,6 +253,33 @@
     const cfg = resolveConfig(config, host);
     const bindings = createPageBindings();
     let visitorId = "", sessionId = "", anonId = "";
+    let customerId;
+    let loaded = false;
+    const loadedHooks = [];
+    const runHook = (fn) => {
+      void Promise.resolve().then(() => {
+        try {
+          fn();
+        } catch {
+        }
+      });
+    };
+    const markLoaded = () => {
+      if (!loaded) {
+        loaded = true;
+        for (const fn of loadedHooks.splice(0)) runHook(fn);
+      }
+    };
+    function onLoaded(fn) {
+      if (typeof fn === "function") {
+        if (loaded) runHook(fn);
+        else loadedHooks.push(fn);
+      }
+    }
+    function setCustomerId(id) {
+      customerId = typeof id === "string" && CUSTOMER_ID.test(id) ? id : void 0;
+      return customerId !== void 0;
+    }
     let generation = 0;
     let eventSequence = 0;
     let transitioning = false;
@@ -650,6 +678,7 @@
       visitorId = "";
       sessionId = "";
       anonId = "";
+      customerId = void 0;
       if (lease?.generation === g && sharedCurrent()) {
         try {
           host.storage.set(capabilityKey, "");
@@ -672,6 +701,7 @@
       if (g !== generation) return false;
       const previous = visitorId;
       if (previous && previous !== v.subject && consent().tracking) rotateBrowsingSession(host);
+      if (reason === "logout" && previous && previous !== v.subject) customerId = void 0;
       visitorId = v.subject;
       sessionId = v.sessionId;
       capability = v.capability;
@@ -739,6 +769,13 @@
         return false;
       }
     }
+    function freshBrowser() {
+      try {
+        return !host.storage.get(capabilityKey) && !host.storage.get(continuityKey) && !host.storage.get(continuityOperationKey);
+      } catch {
+        return false;
+      }
+    }
     function brokerHoldsProof() {
       try {
         return host.storage.get(continuityBrokerKey) === "1";
@@ -764,10 +801,13 @@
       } catch {
       }
     }
-    function ready(transition = false) {
+    function ready(transition = false, first2) {
       consent();
       if (transitioning && !transition) return Promise.resolve(false);
-      if (isCurrent(generation) && (!transition || lease?.generation === generation)) return Promise.resolve(true);
+      if (isCurrent(generation) && (!transition || lease?.generation === generation)) {
+        markLoaded();
+        return Promise.resolve(true);
+      }
       if (bootstrapping) return bootstrapping;
       if (capability && !transition) {
         const g2 = beginTransition();
@@ -855,6 +895,36 @@
               body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning && !cfg.sessionBroker ? { continuity: returning } : {} })
             }, 16384);
           };
+          if (first2 && !transition && !cfg.sessionBroker && !capability && freshBrowser()) {
+            try {
+              const res2 = await boundedJSON(url(cfg.paths.snapshot), {
+                method: "POST",
+                credentials: "include",
+                headers: headers({ "Content-Type": "application/json" }),
+                body: JSON.stringify({
+                  ...first2.body,
+                  ...active.tracking === false ? { trackingConsent: "false" } : {},
+                  ...active.personalization === false ? { personalizationEnabled: "false" } : {}
+                })
+              });
+              const answer = res2.json;
+              if (g !== generation) return false;
+              if (res2.ok && answer?.ok === true && answer.session !== void 0 && adoptSession(answer.session, g, "logout")) {
+                let admitted = answer;
+                if (Array.isArray(answer.decisions)) {
+                  acknowledge(answer.sources?.consent);
+                  const acknowledgedEpoch = consentEpoch;
+                  await saveRefusal();
+                  if (decisionRequiresConsent({ arm: answer.arm, decisions: answer.decisions }) && (!personalizationAllowed() || acknowledgedEpoch !== consentEpoch)) admitted = null;
+                } else restrict(answer.sources?.consent);
+                first2.answered = true;
+                first2.answer = admitted;
+                return true;
+              }
+            } catch {
+            }
+            if (g !== generation) return false;
+          }
           let res = await request();
           if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
             rememberUnknownConsent();
@@ -900,6 +970,9 @@
       void operation.finally(() => {
         if (bootstrapping === operation) bootstrapping = null;
       });
+      void operation.then((ok) => {
+        if (ok) markLoaded();
+      });
       return operation;
     }
     function envelope(type, data = {}) {
@@ -926,7 +999,8 @@
         source: cfg.source,
         ...cfg.surface ? { surface: cfg.surface } : {},
         entry: entryOf(),
-        timestamp
+        timestamp,
+        ...tracking && customerId ? { customerId } : {}
       };
     }
     let contentHandler;
@@ -1068,7 +1142,9 @@
           delete context.visitorId;
           delete context.userId;
           delete context.sessionId;
+          delete context.customerId;
         }
+        if (context && customerId && consent().tracking) context.customerId = customerId;
         const res = await boundedJSON(url(path, snapshotRequest ? void 0 : query), snapshotRequest ? { method: "POST", headers: headers({ "Content-Type": "application/json" }), credentials: "include", body: JSON.stringify(context ?? {}) } : { method: "GET", headers: headers(), credentials: "include" });
         const json = res.json;
         if (!res.ok || !isCurrent(g)) return null;
@@ -1203,6 +1279,7 @@
       expiresAt = 0;
       sessionId = "";
       anonId = "";
+      if (reason === "logout") customerId = void 0;
       if (trackingAllowed()) rotateBrowsingSession(host);
       visitorId = id;
       emit("identity", { visitorId: id, previous, reason });
@@ -1387,6 +1464,8 @@
         return generation;
       },
       ready,
+      onLoaded,
+      setCustomerId,
       beginTransition,
       finishTransition,
       forgetSession,
@@ -1898,7 +1977,9 @@
       }
       selected = { ...o };
       const owner = ++intent;
-      const pending = core.ready();
+      const nothingToShow = nothingToShowField(o.nothingToShow);
+      const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {} } };
+      const pending = core.ready(false, first2);
       const generation = core.generation;
       const active = () => owner === intent && generation === core.generation;
       if (!active()) return null;
@@ -1917,7 +1998,7 @@
         return null;
       }
       const consent = core.consent;
-      const json = await core.getJson(core.config.paths.snapshot, {
+      const json = first2.answered ? first2.answer : await core.getJson(core.config.paths.snapshot, {
         page: o.page,
         pageInstance,
         browsingSessionId: consent.tracking ? core.sessionId : void 0,
@@ -1926,7 +2007,7 @@
         entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
         trackingConsent: consent.tracking ? void 0 : "false",
         personalizationEnabled: consent.personalization ? void 0 : "false",
-        nothingToShow: nothingToShowField(o.nothingToShow)
+        nothingToShow
       });
       settled = true;
       host.clearTimeout(timer2);

@@ -173,6 +173,8 @@ export interface ActionEnvelope {
     surface?: string;
     entry: EntrySignals;
     timestamp: number;
+    /** P13: the customer's identifier the page passed (`setCustomerId`), while tracking is allowed. Carried, never proof. */
+    customerId?: string;
 }
 /** One decision from GET /v1/:tenant/decisions/snapshot, or a `content_decisions` frame. */
 export interface ContentDecision {
