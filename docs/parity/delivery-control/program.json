@@ -1736,7 +1736,7 @@
     {
       "id": "P06",
       "title": "The order the engine would have shown, at trust dial zero",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
