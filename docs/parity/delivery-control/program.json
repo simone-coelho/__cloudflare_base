@@ -2518,14 +2518,20 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "fa247eb5236aff20eda22800b2c5c611407a87e2 on rem/spec-parity-d (batch S4 fix round; P30 992c12e9, P33 fcc0a51a, P13 4d3d593d with src/sdk/listen.test.ts lines 599 and 603-604 under R-P38 and R-P39, P35 fa247eb5, each ticket files byte-identical at fa247eb5; harness src/units/_parity.ts, _parity2.ts, _parity3.ts byte-identical to S1, S2, S3 and _parity4.ts to b435cc2b; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh; the P13 branch carries the listen.test.ts correction)",
+        "reviewedRevision": "eac23ada1fb9c06ed0fba1db0ac124f73280ba80 on rem/spec-p30-amend (the re-specification under owner item 57, R-P15 and R-P70: the context key gains P37's device, region when admitted; X1 leg 1, a new X1 complement, X2, X3 leg 1 and X4's host leg re-specified, the other legs, the X5 locks and the harness byte-identical to 9fdeae58 = rem/tkt/P30 ea49a5cf with integration 2f01a33a; reviewed PASS)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P30/amend/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P30/amend/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4-fix/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4-fix/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P30/amend/reviewer-spec/logs/probes.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P30/amend/reviewer-spec/logs/control-noP37.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P30/amend/specifier/logs/clauses-soft.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P30/amend/specifier/logs/probe-device.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4-fix/reviewer-spec/logs/probes-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4-fix/reviewer-spec/logs/probes2-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S4-fix/specifier/logs/runs-summary.log",
