@@ -305,6 +305,42 @@ newline:
 
 If the browser still carries the previous person's id, the platform refuses with409. Static `{exp, assertion}` proof is never reused for another visitor and does not trigger retry. To support one safe retry, supply `getAssertion: async ({tenant, visitorId, accountId}) => …` that obtains fresh backend-signed `{exp, assertion}` for those exact values. Only after a successful detach does the SDK call that provider again for the new visitor and retry once; the result then says `retried:true`.
 
+### The account identifier's format, and a change of identifier
+
+Your account identifier may take a fixed form: an identifier your site assigns at a shopper's first
+landing, and later one derived from the shopper's e-mail address (a hash of it) once it is known.
+Declare those forms as `accountIdFormat` on the reflex document with `PUT /config/reflex`, no deployment:
+`{ "firstLanding": "^…$", "hashedEmail": "^…$" }`, at least one of the two, each the source of a regular
+expression anchored with `^` and `$` that a whole identifier must match ([API reference](./02-api-reference.md#account-identifier-format-and-identifier-changes)).
+A link whose account identifier matches none of the declared forms is refused with `400`, naming
+`accountIdFormat`, and nothing is linked or merged; a tenant that declares no format links any
+identifier exactly as before.
+
+When the shopper's identifier changes from one form to the other, your backend signs an `accountChange`
+statement over both identifiers, and the page passes it to identify() with the link's own proof:
+
+```js
+const r = await client.identify(hashedEmailId, { source: 'login', getAssertion,
+  accountChange: { from: firstLandingId, exp, statement } });
+```
+
+`statement` is an HMAC-SHA256, base64url without padding, with the same identity secret, over five lines
+joined by a newline, where `to` is the account identifier you pass to identify():
+
+```
+<tenant>\naccount-change\n<from>\n<to>\n<exp>
+```
+
+`exp` is a unix time in seconds, at most 24 hours ahead. The two accounts' profiles merge only on an
+`accountChange` statement that verifies, and the merge never overrides either profile: both histories
+are kept and added, each decayed by its age, so what the shopper does now still outranks both. A
+statement that is missing, names another pair of identifiers, is signed with a secret the tenant does
+not hold, has expired or expires more than 24 hours ahead is refused with `401`, naming the account
+change, and nothing is linked or merged. The earlier account's profile is merged once: the SDK sends
+`accountChange` unchanged on every link request of the call, the retry after a `409` and a detach
+included, and the same statement presented again merges nothing more while the sign-in itself is
+accepted. The earlier account keeps its own profile.
+
 ## 6. The live channel
 
 `client.connect()` opens a socket under the visitor id. What arrives:

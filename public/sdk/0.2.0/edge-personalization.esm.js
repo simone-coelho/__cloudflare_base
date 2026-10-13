@@ -2201,7 +2201,8 @@ function createIdentity(core) {
       accountId,
       ...o.source ? { source: o.source } : {},
       ...typeof exp === "number" ? { exp } : {},
-      ...assertion ? { assertion } : {}
+      ...assertion ? { assertion } : {},
+      ...o.accountChange !== void 0 ? { accountChange: o.accountChange } : {}
     });
     if (!core.isCurrent(generation) || core.visitorId !== visitorId) return { failure: failure("identity changed during identify", 0, retry) };
     return { visitorId, response };

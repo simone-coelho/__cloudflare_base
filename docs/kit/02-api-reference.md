@@ -919,7 +919,7 @@ All under `/v1/{tenant}/identity/`. The first two take the site key; the rest ta
 
 | Route | Body | Answer |
 |---|---|---|
-| `POST link` | `{ visitorId, accountId, source?, exp?, assertion? }` | `{ ok, shopperId, visitorId, outcome: "linked" \| "already" \| "relinked", assurance, audiences, changes: { entered, exited }, carry }`. `carry` is the id the browser must carry from now on. `409` when `visitorId` is already a shopper id: log out first. `401` when the brand has a secret and the assertion is missing or wrong |
+| `POST link` | `{ visitorId, accountId, source?, exp?, assertion?, accountChange? }` | `{ ok, shopperId, visitorId, outcome: "linked" \| "already" \| "relinked", assurance, audiences, changes: { entered, exited }, carry }`. `carry` is the id the browser must carry from now on. `409` when `visitorId` is already a shopper id: log out first. `401` when the brand has a secret and the assertion is missing or wrong. `400` when `accountId` is outside the tenant's declared `accountIdFormat` or `accountChange` is malformed, and `401` when its statement is missing, expired, more than 24 hours ahead or does not verify ([identifier changes](#account-identifier-format-and-identifier-changes)) |
 | `POST detach` | none | `{ ok, detached: true }`; expires this device's cookies, deletes nothing |
 | `POST resolve` | `{ accountIds: [] }` | Account ids to shopper ids, for a warehouse join |
 | `GET visitor/{visitorId}` | | The link from the browser's end, if any |
@@ -943,6 +943,51 @@ Both hosts answer a sign-in and everything after it the same way:
   the person's record was reset in between, the transfer can never be accepted, and the browser's
   own session gets its profile back on its next request: it browses as before, nothing of it was
   merged into the person, and signing in again starts a fresh link that carries her whole profile.
+
+### Account identifier format and identifier changes
+
+The account identifier's format is a tenant setting: the reflex document (`PUT /config/reflex`) carries
+the optional member `accountIdFormat: { firstLanding?, hashedEmail? }`, published with the rest of it and
+with no deployment ([schema](./03-payload-schemas.md#the-account-identifier-format-and-the-identifier-change)).
+Each form is the source of a regular expression that begins with `^` and ends with `$`, and at least one
+form is declared. Publication refuses with `422`, naming `accountIdFormat`, a value that is not an object,
+an object that declares no form, a member other than `firstLanding` and `hashedEmail`, a pattern that does
+not compile and a pattern not anchored at both ends; the revision in force keeps deciding.
+
+- **The link.** With a format declared, a link whose own `accountId` matches none of the declared forms
+  whole is refused with `400` (`accountId is outside the account identifier format this tenant declares
+  (accountIdFormat)`), after the assertion is verified and before anything is linked or merged, so the
+  browser stays anonymous. The format applies to the link's `accountId` only. A tenant that declares no
+  format links any account identifier exactly as before, term for term.
+- **The change statement.** When a shopper's account identifier changes from one form to the other, the
+  link to the new identifier may carry `accountChange: { from, exp, statement }`: `from` is the earlier
+  account identifier and `statement` the HMAC-SHA256, base64url, that your backend signs with the
+  tenant's identity secret over both identifiers, `<tenant>\naccount-change\n<from>\n<to>\n<exp>`, where
+  `to` is the link's own `accountId` (the `account-change` line keeps it apart from a link assertion).
+  `exp` is unix seconds, in the future and at most 24 hours ahead, as for the assertion.
+- **The refusals.** A change statement that is missing (`account change statement required`), names
+  another pair of identifiers or is signed with a secret the tenant does not hold (`account change
+  statement does not verify`), has expired (`account change statement expired`) or expires more than 24
+  hours ahead (`account change exp too far ahead`) is refused with `401`; an `accountChange` that is not
+  `{ from, exp, statement }`, whose `from` is blank, longer than 200 characters or spans lines, or whose
+  `from` is the link's own `accountId` is refused with `400`. Each refusal merges nothing: no profile
+  changes and the browser stays anonymous.
+- **The merge.** On a statement that verifies, the browser is linked to the new account as any link is,
+  and then, in that account's own object on either host, the earlier account's profile is merged into
+  it as a browser's profile is on a link. An identifier change merges the two accounts' profiles only on
+  that signed statement and never overrides either: the decayed evidence of both is added at its later
+  touch, counters add and memberships are re-evaluated, so recent behaviour outranks both histories. The
+  earlier account keeps its own profile. Nothing merges when either account's consent does not cover
+  personalization or the earlier account holds no profile.
+- **Once.** The earlier account's profile is merged once. The new account's identity record remembers
+  the shopper ids of the accounts merged into it (`mergedAccounts`, salted shopper ids only, never an
+  account identifier; written only when a change merges; at most 50; erased with the person), so the
+  same statement presented again, or any later one naming the pair, merges nothing more; a change back
+  to an account that already holds this one merges nothing either. The SDK sends `accountChange`
+  unchanged on every link request of an identify() call, its retry after a `409` and a detach included,
+  and the retried sign-in is accepted as the link it is. The answer has the same members as any link,
+  with `audiences` and `changes` taken after the merge; a link without `accountChange` answers exactly as
+  before.
 
 ### Interest restoration from ODP
 
