@@ -377,7 +377,7 @@ rule placed carries `explain.moduleRule: { position, rule }`, `rule` `pinned` or
 `position` counted from 1, and its receipt says the rule and the position in words.
 
 **The layout blend.** A page's declared layout slot can opt into the behaviour-and-performance blend on
-its learn dials, `slots.{slot}.blend: { p }` in the learn document
+its learn dials, `slots.{slot}.blend: { p, shadowP }` in the learn document
 ([the learn document](./03-payload-schemas.md#the-learn-document)), with `p` from 0 to 1 and 0 when the
 dial names none. Each module the slot could serve is then scored `R + (1 − p) × B + p × Q` instead of
 `base × lift^γ`. `R = (M − i) / M` is the module's rank base over the slot's baseline of `M` modules,
@@ -406,7 +406,10 @@ not opt in, keep `base × lift^γ` exactly as before. A position the blend ranke
 `explain.blend: { B, Q, R, p }` on its record (keys sorted, `R`, `B` and `Q` at three decimals) and
 `blend` on its receipt, and its `score` is `R + (1 − p) × B + p × Q`; its `strategy` is `default` where
 neither `B` nor `p × Q` moved it and `affinity` otherwise, its `explain.note` says that the blend ranked
-it, and under a configured order it keeps `explain.configuredOrder` beside the blend.
+it, and under a configured order it keeps `explain.configuredOrder` beside the blend. The dial's
+`shadowP`, from 0 to 1 and 0.1 (10 percent) when the dial names none, is the p at which the slot's shadow
+order is ranked (see **The baseline and the shadow** below); it changes nothing served, and publication
+refuses a `shadowP` outside 0 to 1 with an error naming `shadowP`.
 
 **Adjacent swaps and position effects.** A page's declared layout slot can explore by swapping
 neighbouring modules: its exploration dial in the learn document is
@@ -574,6 +577,35 @@ layout slot that a refused pin refuses whole writes no record and has no reason.
 applied and the layout slot ranked above the signal floor, every record of the page carries
 `inputs.prior_lambda: { context?, regional? }`, each prior's weight λ, so the reason's `regional_prior`
 and `context_prior` terms replay exactly; a record written before the reason replays without it.
+
+**The baseline and the shadow.** Every record of a page's declared layout slot decided on an arm that
+personalizes carries, beside what was served, `explain.baselineOrder`, `explain.shadowOrder` and
+`explain.shadowTerms`, the same value on every record of the slot, each order a list of module ids cut at
+the slot's take. `baselineOrder` is the slot's baseline as the layout reason defines it: the
+merchandiser's fixed positions where their rules put them and, on every other position, the configured
+order for the shopper's context where one matches, else the modules the slot can serve in catalogue order,
+drawn before a module is withheld, so a withheld module keeps its place in it. `shadowOrder` is the order
+the engine would have served with every term applied and the learned term at full trust, γ 1, whatever γ
+serves the page, a merchandiser's frozen lift applied through γ like a learned one: the slot ranked as its
+served order is ranked, its pins and off-limits modules where their rules put them, its withheld modules
+absent and a configured order the slot does not blend served as it is, with no exploration pick and no
+adjacent swap. On a slot that opts into the layout blend the shadow order is ranked by
+`R + (1 − p) × B + p × Q` at the dial's `shadowP` (0.1 when the dial names none), with `Q` from the learned
+lift whatever the arm, while the served order is ranked at the served `p`. `shadowTerms` is
+`{ module: [term] }`, keys sorted, for each module whose place in the shadow order differs from its place
+in the baseline less any withheld module (as the layout reason's moves compare), naming every term that
+would have moved it in the layout reason's words: each term by which it differs, by more than 0.0005 in the
+direction it moved, from the modules it passed if it moved up or from the modules that passed it if it
+moved down, those modules taken together so that each term's difference is averaged over them, in the
+engine's fixed order; `diversity` for a module the diversity rule itself made yield or placed by relaxing
+it; and where no term separates it, the rule that placed or displaced one of those modules, else its own
+largest term in that direction, else the terms of the first module that passed it or that it passed. The
+terms are `{}` when the shadow keeps every module at its baseline place. Recording the shadow changes
+nothing served, counted or credited: the route's per-decision answer carries none of the three members,
+and every exposure and credit is the served order's. The holdout's `default` arm, which reads no interest
+and no learned lift of the shopper's, records none, and neither does the record of an off-limits layout
+slot. The three members are compared by value in replay, and a record written without them replays
+without them, with no new replay marker.
 
 **Nothing to show and the eligibility rule.** Only
 the page knows when a module has nothing to show for this page view, so it says so on the decision
