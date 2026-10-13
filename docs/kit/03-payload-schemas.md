@@ -111,7 +111,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.contextPrior` | When the context prior contributed to this position: `{ channel, contribution, events, lambda, level, version, visitBucket }`, keys sorted — the shopper's entry channel and visit bucket, the level read (`channel_visit` for the pair, `channel` for the channel alone), `lambda` (its share of the score; 1 below the signal floor), the snapshot's `version` and `events`, and what it contributed. Compared by value in replay; the receipt says it in words ([the context prior](#the-context-prior)) |
 | `explain.lift` | The learned term, defined below, or null when nothing has been learned for this item in this cell |
 | `explain.score_final` | `score_base × lift^γ`. Equal to `score_base` while γ is 0. On a layout slot that opts into the layout blend, `R + (1 − p) × B + p × Q` instead (`explain.blend`) |
-| `explain.exploration` | When `explored`: `mode`, `reason`, `bucket`; retained historical Thompson receipts can include `sample` (Thompson is no longer writable or live) |
+| `explain.exploration` | When `explored`: `mode`, `reason`, `bucket`; retained historical Thompson receipts can include `sample` (Thompson is no longer writable or live). On each of the two modules an adjacent swap exchanged it is `{ bucket, mode, positions, reason }` (keys sorted), `mode` `adjacent-swap` and `positions` the two adjacent positions swapped, counted from 1 within the slot ([adjacent swaps](#adjacent-swaps-and-position-effects)) |
 | `explain.control` | `reject` or `freeze` when a merchandiser's control applied to the item |
 | `explain.external` | Your model's term: `kind`, `ref`, `version`, `weight`, `score`, `contribution`; or `status: "unavailable"` with `reason` |
 | `explain.merchandising` | Season, promotion and margin: `boost`, `clamped`, `drivers[]` each with the delta it caused, and a sentence |
@@ -656,6 +656,37 @@ off-limits mark decided something writes `inputs.replay.moduleRules: "module-rul
 re-applies both rules and compares the record exactly; every other decision, every slot without either
 member, and every stored document marked 1, 2 or 3 decides and replays exactly as before.
 
+#### Adjacent swaps and position effects
+
+```json
+{ "slots": { "pdp-modules": { "measurementBasis": "rendered-v1", "reward": "click",
+  "exploration": { "mode": "adjacent-swap", "share": 0.05, "floor": 50 }, "positionNormalization": true } } }
+```
+
+The exploration mode `adjacent-swap` in the learn document is set only on a page's declared layout
+slot, with a share from 0 to 1: on that share of the slot's decisions, read from the decision's own
+exploration bucket (the shopper, the slot and the hour), exactly one pair of adjacent positions of what
+the slot serves swaps places, the pair chosen from the same bucket among the pairs neither of whose
+positions a pin or an off-limits module holds (and none touching a module under a merchandiser's reject
+or freeze), so the same shopper in the same hour is swapped the same pair; outside the share, at a share
+of 0, and where no pair is free, the slot is served exactly as without the mode. `floor` is required as
+for every mode and unused by this one. Each of the two swapped records carries
+`explain.exploration: { bucket, mode, positions, reason }` with `explored` true, its receipt says it was
+swapped and between which positions, and a replay swaps the same pair with no new replay marker. The
+slot's statistics count, per adjacent pair (k, k + 1), the swapped decisions (`pairs`) and the clicks
+credited to the module served at k and at k + 1 on them, and publish each position's effect as a click
+ratio on the slot's snapshot, `positionEffects: [{ position, effect, pairs }]`: position 1's effect is 1,
+and position k + 1's is position k's times the clicks at k + 1 over the clicks at k on the decisions
+that swapped (k, k + 1), at three decimals, null where the swaps cannot reach it yet; `pairs` is the
+swapped decisions behind each position. The switch `positionNormalization` is off by default: absent or
+`false`, every credit is exactly as before. With it `true` the credit of an engagement with the module
+served at a position is divided by that position's effect, in the live statistics and in the hourly
+recomputation alike, under the position policy the slot's statistics last published at or before the
+engagement (their history is kept beside the slot's snapshot archive, as `positions.json`); the number
+of credited outcomes never changes, only what each is worth. Publication refuses the mode and the switch
+on a slot that is not a page's declared layout slot, an adjacent-swap share outside 0 to 1 and a switch
+that is not `true` or `false`, each naming the dial.
+
 #### Nothing to show and eligibility rules
 
 ```json
@@ -806,7 +837,8 @@ what it changes.
 | `slots.{slot}.measurementBasis` | `served-v1` or `rendered-v1`; basis changes require compatible state/reset generation, never historical relabel | `served-v1` |
 | `slots.{slot}.reward` | The reward the slot learns against | `click` |
 | `slots.{slot}.objective` | `unit`, `revenue` or `margin`; unit credits are event weights, revenue uses value, margin uses the supplied margin and NEVER falls back to value — an outcome with no margin is worth nothing to margin learning, because a margin series weighed with a revenue number is two units in one counter | `unit` |
-| `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| off, share, floor }`; new writes reject Thompson, retained settings are inactive | off |
+| `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| adjacent-swap \| off, share, floor }`; new writes reject Thompson, retained settings are inactive; `adjacent-swap`, on a page's declared layout slot only, swaps one pair of adjacent positions on `share` of the slot's decisions ([adjacent swaps](#adjacent-swaps-and-position-effects)) | off |
+| `slots.{slot}.positionNormalization` | `true` or `false`, on a page's declared layout slot only, off by default: `true` divides the credit of an engagement at a position by that position's effect from `positionEffects`, live and in the hourly recomputation alike ([adjacent swaps](#adjacent-swaps-and-position-effects)) | absent (off) |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
 | `slots.{slot}.blend` | `{ p }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. Publication refuses a `p` outside 0 to 1, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the member exactly as published | absent (no blend); `p` 0 when the dial names none |
@@ -962,7 +994,7 @@ exactly as written (its `version` is not stamped). Each value is `{ id, name, sy
 
 `GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, tauLearnMs, version, publishedAt, events, n0, nMin, liftMin,
 liftMax, priorVersion, items, slotRates, attributionContract, generation, restartedAt, exposuresSinceRestart, witness, completeness?,
-rebuiltFrom? }` — the stored snapshot exactly as it was published, member for member. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
+rebuiltFrom?, positionEffects? }` — the stored snapshot exactly as it was published, member for member. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
 p_hat, lift, liftReference, prior? }` with the symbols defined above; `liftReference` is `slot-rate` where the
 slot has a rate in that cell and `none` where it has none, so a `lift` of 1 at `p0: 0` is read as "no
 reference" and not as "measured, and equal to the slot"; it is absent on a snapshot archived before it was
@@ -983,7 +1015,9 @@ bounds existed), is `{ depth, omittedItems, selection, reason }`: the finest lad
 kept by name (`omittedItems`), how the kept items were chosen (`first-seen`, or `lexical-repair` after a
 coarsening repair), and `reason` — `complete`, `coarse` when fine levels were dropped, or `item-capacity`
 when items were folded. `rebuiltFrom` names the repair the counters stand on, and only on a slot that was
-repaired (below).
+repaired (below). `positionEffects`, only on a slot whose adjacent swaps have been counted, is
+`[{ position, effect, pairs }]`: each position's effect estimated from the swaps as a click ratio
+([adjacent swaps](#adjacent-swaps-and-position-effects)).
 
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
