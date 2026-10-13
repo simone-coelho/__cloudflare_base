@@ -102,6 +102,7 @@ import { identityRoutes } from '@/routes/identity';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import type { TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
+import { shopperObjectName } from '@/tenancy/objects';
 
 const PDP = 'pdp', RECS = 'pdp-recs';
 const SITE = 'www.shop.test';
@@ -193,6 +194,108 @@ async function suppressionsOn(m: Mounted, subject: string, page: { decisions: Ar
   await m.drainLedger();
   const ids = new Set(page.decisions.map(d => d.decisionId));
   return storedDecisions(m, subject).filter(r => ids.has(r.decision_id)).map(r => (r.explain as unknown as { suppressions?: unknown }).suppressions ?? null);
+}
+
+// ---------------------------------------------------------------------------
+// R-P60 (P39 fix round 1): the buffered door and the history import.
+//
+// A buffered delivery is the SDK's own late delivery of an original event
+// (`processing: 'buffered'`, the event's own `eventId` and time, the browsing
+// session it belongs to: src/routes/realtime.sdkContract.test.ts W22.07,
+// :2629-2630), sent through the mounted app as the shopper. The buffered door
+// never creates a profile, so the shopper's live actions come first. It applies
+// interest age-decayed from the event's own time (LOCKED, W22.07 "applies
+// age-decayed interest"; src/reflex/identityMerge.ts applyHistorical: a weight w
+// at time a is worth w·exp(-(now - a)/τ) at now), τ being the horizon of the
+// registry this file publishes (its dimensions name none, so the document's own
+// `tauMs`). The history import (`POST /v1/:tenant/identity/events`, the
+// warehouse route, R19) applies a row through the same applyHistorical.
+//
+// R-P60, the ruled outcome these legs read:
+//   (1) a buffered server-confirmed purchase under the purchase rule suppresses
+//       the bought productType for the purchase window counted from the event's
+//       own time; an event older than the window suppresses nothing; the lapse
+//       is pruned as any suppression's; the history import suppresses the same
+//       way (an imported purchase inside its window suppresses, an older one
+//       does not);
+//   (2) a buffered remove_from_cart, a suppressing action at weight 0, records
+//       its suppressions as the live door does (one per registry value it
+//       carries, expiring the action's window after the event's own time),
+//       adding no interest and no signal, while any other weight-0 buffered
+//       action is dropped as today.
+// The representation is this file's own (header): `explain.suppressions` on every
+// record of a decision made while a suppression is in force.
+// ---------------------------------------------------------------------------
+
+/** The horizon of the registry this file publishes (its dimensions name none of their own). */
+const TAU = REFLEX_DOCUMENT.tauMs;
+const HOUR = 3_600_000;
+/** a = R / (R + K) of a weight applied `age` milliseconds before now, decayed over the registry's horizon. */
+const aged = (weight: number, age: number) => { const s = weight * Math.exp(-age / TAU); return s / (s + K); };
+/** The values of the crossbody bought, as a purchase carries them (PURCHASE's own). */
+const BOUGHT_VALUES = { productId: BOUGHT, productType: 'crossbody', style: 'classic', collection: 'harbor', color: 'black', priceBand: 'core' };
+/** The purchase of the crossbody delivered late: PURCHASE's payload under its own order id, with its own event id and event time. */
+const bufferedPurchase = (orderId: string, at: number) => ({ type: 'purchase', eventId: crypto.randomUUID(), timestamp: at, data: { ...PURCHASE.data, orderId } });
+/** A custom event delivered late, naming `event`, carrying two registry values (productType, style) and a value no registry dimension reads (productId). */
+const bufferedCustom = (event: string, at: number) => ({ type: 'custom', eventId: crypto.randomUUID(), timestamp: at,
+  data: { event, productId: BOUGHT, productType: 'crossbody', style: 'classic' } });
+
+/** A buffered delivery of an original event through `POST /realtime/action`, as the shopper's SDK sends it. */
+async function deliverBuffered(m: Mounted, v: Visitor, event: { type: string; eventId: string; timestamp: number; data: Record<string, unknown> }): Promise<Answer> {
+  const response = await m.fetch(new Request('https://shop.invalid/realtime/action', { method: 'POST',
+    headers: { ...v.headers, 'X-Tenant': TENANT, [SHOPPER_HEADER]: v.grant.capability, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source: 'sdk', userId: v.grant.subject, sessionId: v.grant.sessionId, processing: 'buffered', browsingSessionId: 'p39-earlier-tab', ...event }) }));
+  const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+  await m.drain();
+  return answer;
+}
+/** `POST /v1/:tenant/identity/events`, the warehouse history import, as the operator, through the identity routes mounted as `src/index.ts` mounts them. */
+async function importHistory(m: Mounted, rows: unknown[]): Promise<Answer> {
+  const pending: Promise<unknown>[] = [];
+  const response = await identityApp.fetch(new Request(`https://shop.invalid/v1/${TENANT}/identity/events`, {
+    method: 'POST', body: JSON.stringify({ rows }),
+    headers: { 'X-Tenant': TENANT, 'Content-Type': 'application/json', Authorization: `Bearer ${m.operatorToken}` },
+  }), m.env, { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
+  const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+  while (pending.length) await Promise.all(pending.splice(0));
+  await m.drain();
+  return { status: response.status, body };
+}
+/** The shopper's interest as the SDK reads it (`GET /realtime/reflex`), per dimension and value. */
+async function interestOf(m: Mounted, v: Visitor): Promise<Record<string, Record<string, number>>> {
+  const read = await v.hydrate();
+  expect(read.status, `${m.host}: PRECONDITION — the shopper's hydrate is served`).toBe(200);
+  return (read.body.affinity as { dims?: Record<string, Record<string, number>> } | null)?.dims ?? {};
+}
+const twoPlaces = (x: number | undefined) => (x === undefined ? 'no interest' : Math.round(x * 100) / 100);
+/** Every reflex state kept for the shopper, as stored, by where it is kept (the shopper's object; on the session host the session store too). */
+function storedReflex(m: Mounted, v: Visitor): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of m.shoppers.get(shopperObjectName(TENANT as TenantId, v.subject))?.data ?? []) {
+    const reflex = (value as { reflex?: unknown } | null)?.reflex;
+    if (reflex && typeof reflex === 'object') out[`object:${key}`] = JSON.stringify(reflex);
+  }
+  for (const [key, raw] of (m.env.SESSIONS as unknown as { data: Map<string, string> }).data) {
+    let reflex: unknown;
+    try { reflex = (JSON.parse(raw) as { reflex?: unknown } | null)?.reflex; } catch { continue; }
+    if (reflex && typeof reflex === 'object') out[`sessions:${key}`] = JSON.stringify(reflex);
+  }
+  return out;
+}
+/** P10's own count of the shopper's signals, off the record of a decision below the tenant's floor (`explain.signalFloor`, as the NP2 count leg reads it). */
+async function signalsCounted(m: Mounted, v: Visitor): Promise<number | undefined> {
+  const snap = await v.snapshot(PDP, { entry: PAID_SOCIAL });
+  await m.drainLedger();
+  const ids = new Set(snap.decisions.map(d => d.decisionId));
+  const record = storedDecisions(m, v.subject).find(r => ids.has(r.decision_id));
+  return (record?.explain as { signalFloor?: { signals?: number } } | undefined)?.signalFloor?.signals;
+}
+/** NP3's shopper (the live leg's): a direct arrival and two tote views, live, so the profile exists before anything arrives late. */
+async function toteShopper(m: Mounted): Promise<Visitor> {
+  const v = await visitorOn(m);
+  expect((await v.action({ type: 'page_view', data: { path: '/' } }, { entry: { referrer: '', siteHost: SITE } })).status, `${m.host}: PRECONDITION — the shopper's arrival is accepted`).toBe(200);
+  for (const id of ['SKU-TOTE-1', 'SKU-TOTE-2']) expect((await v.action(view(id, 'tote'))).status, `${m.host}: PRECONDITION — the shopper's view of ${id}`).toBe(200);
+  return v;
 }
 
 // ===========================================================================
@@ -323,6 +426,66 @@ describe('unit:P39.NP2', () => {
       } finally { clock.mockRestore(); }
     }, 180_000);
   }
+
+  // R-P60 (2): the buffered door. The leg (RED at d6aac08b), the weight-0 lock and the control (green before and after).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P60 (2) — remove_from_cart delivered through the buffered door (its event time six hours before it arrives) records for the shopper a suppression of each registry value it carries, expiring the action's 1-day window after the event's own time, and adds no interest: the next decision does not lead with the tile on the shopper's interest in the suppressed value, other values and the arrival's seed unaffected, and the suppression lapses a window after the event, not after its arrival`, async () => {
+      const T0 = Date.now() - 10 * DAY_MS;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+      try {
+        const m = await mount(host, docs(SETTINGS_1_DAY));
+        expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+        const v = await browsed(m);
+        expect(near(recsOf(await v.snapshot(PDP, { entry: PAID_SOCIAL }))), `${host}: PRECONDITION — before the removal the shopper's crossbody interest leads`)
+          .toEqual(near([['rec.crossbody', 3 / (3 + K) + 0.2], ['rec.tote', 1 / (1 + K)], ['rec.wallet', 0]]));
+        const interest = await interestOf(m, v);
+        const at = T0 - 6 * HOUR;
+        const removed = await deliverBuffered(m, v, bufferedCustom('remove_from_cart', at));
+        expect([removed.status, removed.body.success], `${host}: PRECONDITION — the buffered removal is accepted: ${JSON.stringify(removed.body).slice(0, 200)}`).toEqual([200, true]);
+        const after = await v.snapshot(PDP, { entry: PAID_SOCIAL });
+        expect(near(recsOf(after)), `${host}: P39.NP2 (R-P60 2) — after the buffered removal crossbody no longer leads on the shopper's interest; tote is untouched; the seed still adds its 0.2 to crossbody`)
+          .toEqual(near([['rec.tote', 1 / (1 + K)], ['rec.crossbody', 0.2], ['rec.wallet', 0]]));
+        expect(await suppressionsOn(m, v.subject, after), `${host}: P39.NP2 (R-P60 2, NP4) — every record itemises a suppression per registry value the removal carried (productType crossbody, style classic; productId is no registry value), by remove_from_cart, expiring the 1-day window after the event's own time`)
+          .toEqual([0, 1, 2].map(() => [
+            { action: 'remove_from_cart', dimension: 'productType', expiresAt: at + DAY_MS, value: 'crossbody' },
+            { action: 'remove_from_cart', dimension: 'style', expiresAt: at + DAY_MS, value: 'classic' },
+          ]));
+        expect(await interestOf(m, v), `${host}: P39.NP2 (R-P60 2) — the removal weighs 0: the shopper's interest is what it was`).toEqual(interest);
+        clock.mockReturnValue(at + DAY_MS + 1_000);
+        expect(recsOf(await v.snapshot(PDP, { entry: PAID_SOCIAL })).map(([id]) => id), `${host}: P39.NP2 (R-P60 2) — a second after the window counted from the event's own time (hours before one counted from its arrival) the suppression has lapsed and the shopper's crossbody interest leads again`)
+          .toEqual(['rec.crossbody', 'rec.tote', 'rec.wallet']);
+      } finally { clock.mockRestore(); }
+    }, 180_000);
+
+    it(`host (${host}): R-P60 (2) LOCK — the buffered removal weighs 0, so the shopper's count of signals is unchanged (R-P33, read on P10's own count)`, async () => {
+      const m = await mount(host, docs(SETTINGS_1_DAY, { signalFloor: 9 }));
+      expect(m.refused, `${host}: PRECONDITION — the slots document carrying P10's tenant signalFloor publishes`).toBeNull();
+      const v = await browsed(m);
+      const counted = await signalsCounted(m, v);
+      expect(typeof counted, `${host}: PRECONDITION — the record below the floor carries P10's explain.signalFloor with the shopper's count`).toBe('number');
+      const removed = await deliverBuffered(m, v, bufferedCustom('remove_from_cart', Date.now() - 6 * HOUR));
+      expect([removed.status, removed.body.success], `${host}: PRECONDITION — the buffered removal is accepted: ${JSON.stringify(removed.body).slice(0, 200)}`).toEqual([200, true]);
+      expect(await signalsCounted(m, v), `${host}: P39.NP2 (R-P60 2) — the buffered removal is no signal: the shopper's count is unchanged`).toBe(counted);
+    }, 120_000);
+
+    it(`host (${host}): CONTROL (R-P60 2) — another weight-0 action the settings do not name (remove_from_wishlist, carrying the same values), delivered through the buffered door, is dropped as today: answered with no interest applied, the shopper's stored reflex state unchanged and the next decision unchanged`, async () => {
+      const T0 = Date.now() - 10 * DAY_MS;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+      try {
+        const m = await mount(host, docs(SETTINGS_1_DAY));
+        expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+        const v = await browsed(m);
+        const page = near(recsOf(await v.snapshot(PDP, { entry: PAID_SOCIAL })));
+        expect(page, `${host}: PRECONDITION — the shopper's crossbody interest leads`).toEqual(near([['rec.crossbody', 3 / (3 + K) + 0.2], ['rec.tote', 1 / (1 + K)], ['rec.wallet', 0]]));
+        const stored = storedReflex(m, v);
+        expect(Object.keys(stored).length > 0, `${host}: PRECONDITION — the shopper holds reflex state`).toBe(true);
+        const delivered = await deliverBuffered(m, v, bufferedCustom('remove_from_wishlist', T0 - 6 * HOUR));
+        expect([delivered.status, delivered.body.success, delivered.body.interestApplied], `${host}: CONTROL (R-P60 2) — the delivery is answered with no interest applied: ${JSON.stringify(delivered.body).slice(0, 200)}`).toEqual([200, true, false]);
+        expect(storedReflex(m, v), `${host}: CONTROL (R-P60 2) — the shopper's stored reflex state is unchanged`).toEqual(stored);
+        expect(near(recsOf(await v.snapshot(PDP, { entry: PAID_SOCIAL }))), `${host}: CONTROL (R-P60 2) — the next decision is unchanged: the shopper's crossbody interest leads`).toEqual(page);
+      } finally { clock.mockRestore(); }
+    }, 120_000);
+  }
 });
 
 // ===========================================================================
@@ -360,6 +523,92 @@ describe('unit:P39.NP3', () => {
         expect(recsOf(await v.snapshot(PDP)).map(([id]) => id), `${host}: P39.NP3 — after the 1-day purchase window the shopper's crossbody interest leads again`).toEqual(['rec.crossbody', 'rec.tote', 'rec.wallet']);
       } finally { clock.mockRestore(); }
     }, 180_000);
+  }
+
+  // R-P60 (1): the buffered door and the history import. Each leg (RED at d6aac08b) with its control (green before and after).
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P60 (1) — a server-confirmed purchase of the crossbody delivered through the buffered door (its own eventId and orderId, its event time six hours before it arrives, inside the 1-day purchase window) strengthens style, collection, colour and price band at the purchase weight from the event's own time and suppresses the bought product type until the window after that time: the next decision does not lead with the crossbody, every record itemises the suppression, the complements preference still serves the matching wallet on the crossbody's page, and the suppression lapses a window after the event, not after its arrival`, async () => {
+      const T0 = Date.now() - 10 * DAY_MS;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+      try {
+        const m = await mount(host, docs(SETTINGS_1_DAY));
+        expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+        const v = await toteShopper(m);
+        const at = T0 - 6 * HOUR;
+        const delivered = await deliverBuffered(m, v, bufferedPurchase('ORD-P39-B1', at));
+        expect([delivered.status, delivered.body.success, delivered.body.dropped ?? 'not dropped'],
+          `${host}: PRECONDITION — the buffered purchase is accepted and is no duplicate: ${JSON.stringify(delivered.body).slice(0, 200)}`).toEqual([200, true, 'not dropped']);
+        const dims = await interestOf(m, v);
+        expect([dims.style?.classic, dims.collection?.harbor, dims.color?.black, dims.priceBand?.core].map(twoPlaces),
+          `${host}: P39.NP3 (R-P60 1) — style, collection, colour and price band strengthened at the purchase weight 5 from the event's own time`).toEqual([0, 0, 0, 0].map(() => twoPlaces(aged(5, T0 - at))));
+        const page = await v.snapshot(PDP);
+        expect(near(recsOf(page)), `${host}: P39.NP3 (R-P60 1) — the crossbody bought does not lead on the shopper's interest (suppressed); the tote does (2 / (2 + K))`)
+          .toEqual(near([['rec.tote', 2 / (2 + K)], ['rec.crossbody', 0], ['rec.wallet', 0]]));
+        expect(await suppressionsOn(m, v.subject, page), `${host}: P39.NP3 (R-P60 1, NP4) — every record itemises the suppression of the bought product type by the purchase, expiring the 1-day window after the event's own time`)
+          .toEqual([0, 1, 2].map(() => [{ action: 'purchase', dimension: 'productType', expiresAt: at + DAY_MS, value: 'crossbody' }]));
+        const anchored = await anchoredSnapshot(m, v, BOUGHT);
+        expect(anchored.status, `${host}: PRECONDITION — the page of the crossbody bought is served`).toBe(200);
+        expect(recsOf(anchored)[0], `${host}: P39.NP3 (R-P60 1) — on the page of the crossbody bought the complements preference serves the matching wallet first`).toEqual(['rec.wallet', 1]);
+        clock.mockReturnValue(at + DAY_MS + 1_000);
+        expect(recsOf(await v.snapshot(PDP)).map(([id]) => id), `${host}: P39.NP3 (R-P60 1) — a second after the window counted from the event's own time (hours before one counted from its arrival) the suppression has lapsed and the shopper's crossbody interest leads again`)
+          .toEqual(['rec.crossbody', 'rec.tote', 'rec.wallet']);
+      } finally { clock.mockRestore(); }
+    }, 180_000);
+
+    it(`host (${host}): CONTROL (R-P60 1) — a buffered purchase of the crossbody whose event time is older than the 1-day purchase window (a distinct order, two days before it arrives) strengthens every value it carries from its own time, as today, and suppresses nothing: the crossbody leads the next decision on the shopper's interest`, async () => {
+      const T0 = Date.now() - 10 * DAY_MS;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+      try {
+        const m = await mount(host, docs(SETTINGS_1_DAY));
+        expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+        const v = await toteShopper(m);
+        const at = T0 - 2 * DAY_MS;
+        const delivered = await deliverBuffered(m, v, bufferedPurchase('ORD-P39-B2', at));
+        expect([delivered.status, delivered.body.success, delivered.body.dropped ?? 'not dropped'],
+          `${host}: PRECONDITION — the buffered purchase is accepted and is no duplicate: ${JSON.stringify(delivered.body).slice(0, 200)}`).toEqual([200, true, 'not dropped']);
+        const dims = await interestOf(m, v);
+        expect([dims.productType?.crossbody, dims.style?.classic, dims.collection?.harbor, dims.color?.black, dims.priceBand?.core].map(twoPlaces),
+          `${host}: CONTROL (R-P60 1) — every value the purchase carries strengthened at the purchase weight 5 from the event's own time, as today`).toEqual([0, 0, 0, 0, 0].map(() => twoPlaces(aged(5, T0 - at))));
+        expect(near(recsOf(await v.snapshot(PDP))), `${host}: CONTROL (R-P60 1) — nothing is suppressed: the crossbody leads on the shopper's interest, then the tote`)
+          .toEqual(near([['rec.crossbody', aged(5, T0 - at)], ['rec.tote', 2 / (2 + K)], ['rec.wallet', 0]]));
+      } finally { clock.mockRestore(); }
+    }, 120_000);
+
+    it(`host (${host}): R-P60 (1) — the history import (POST /v1/:tenant/identity/events, the same late-action path) of the shopper's purchase of the crossbody, six hours old and inside the 1-day purchase window, suppresses the bought product type until the window after the row's own time: the next decision does not lead with the crossbody and every record itemises the suppression`, async () => {
+      const T0 = Date.now() - 10 * DAY_MS;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+      try {
+        const m = await mount(host, docs(SETTINGS_1_DAY));
+        expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+        const v = await toteShopper(m);
+        const at = T0 - 6 * HOUR;
+        const imported = await importHistory(m, [{ visitorId: v.subject, action: 'purchase', at, product: { ...BOUGHT_VALUES } }]);
+        expect([imported.status, imported.body.applied], `${host}: PRECONDITION — the import applies the row: ${JSON.stringify(imported.body).slice(0, 240)}`).toEqual([200, 1]);
+        const dims = await interestOf(m, v);
+        expect([dims.style?.classic, dims.collection?.harbor, dims.color?.black, dims.priceBand?.core].map(twoPlaces),
+          `${host}: PRECONDITION — the imported purchase strengthens the values it carries at the purchase weight from the row's own time, as today`).toEqual([0, 0, 0, 0].map(() => twoPlaces(aged(5, T0 - at))));
+        const page = await v.snapshot(PDP);
+        expect(near(recsOf(page)), `${host}: P39.NP3 (R-P60 1) — after the imported purchase the crossbody does not lead on the shopper's interest (suppressed); the tote does (2 / (2 + K))`)
+          .toEqual(near([['rec.tote', 2 / (2 + K)], ['rec.crossbody', 0], ['rec.wallet', 0]]));
+        expect(await suppressionsOn(m, v.subject, page), `${host}: P39.NP3 (R-P60 1, NP4) — every record itemises the suppression of the bought product type by the purchase, expiring the 1-day window after the row's own time`)
+          .toEqual([0, 1, 2].map(() => [{ action: 'purchase', dimension: 'productType', expiresAt: at + DAY_MS, value: 'crossbody' }]));
+      } finally { clock.mockRestore(); }
+    }, 120_000);
+
+    it(`host (${host}): CONTROL (R-P60 1) — the history import of the shopper's purchase of the crossbody two days old, older than the 1-day purchase window, strengthens as today and suppresses nothing: the crossbody leads the next decision on the shopper's interest`, async () => {
+      const T0 = Date.now() - 10 * DAY_MS;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(T0);
+      try {
+        const m = await mount(host, docs(SETTINGS_1_DAY));
+        expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
+        const v = await toteShopper(m);
+        const at = T0 - 2 * DAY_MS;
+        const imported = await importHistory(m, [{ visitorId: v.subject, action: 'purchase', at, product: { ...BOUGHT_VALUES } }]);
+        expect([imported.status, imported.body.applied], `${host}: PRECONDITION — the import applies the row: ${JSON.stringify(imported.body).slice(0, 240)}`).toEqual([200, 1]);
+        expect(near(recsOf(await v.snapshot(PDP))), `${host}: CONTROL (R-P60 1) — nothing is suppressed: the crossbody leads on the shopper's interest, then the tote`)
+          .toEqual(near([['rec.crossbody', aged(5, T0 - at)], ['rec.tote', 2 / (2 + K)], ['rec.wallet', 0]]));
+      } finally { clock.mockRestore(); }
+    }, 120_000);
   }
 });
 
