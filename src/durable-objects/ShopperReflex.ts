@@ -66,7 +66,7 @@ import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCl
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
-import { IdentityStore, type ShopperRecord } from '@/identity/store';
+import { IdentityStore, MAX_MERGED_ACCOUNTS, type ShopperRecord } from '@/identity/store';
 import { isShopperId, isSalted } from '@/identity/shopperId';
 import { loadTombstone, writeTombstone, resetVisitorRing } from '@/ledger/erasure';
 import { canonicalErasureDiscoverySchema, canonicalErasureSchema, captureCanonicalErasure, erasureEffectOwners, executeOwnerErasure, ownerErasureEffectSchema, historicalErasureCapsuleSchema, erasureRawDigest } from '@/identity/erase';
@@ -298,6 +298,8 @@ const memberSchema = z.object({ visitorId: identityId, linkedAt: identityTime, a
 const membersSchema = z.object({ shopperId: z.string().refine(isShopperId), createdAt: identityTime, salted: z.boolean(),
   visitors: z.array(memberSchema).max(50), retention: z.custom<RetentionStamp>().optional(),
   history: z.object({ rows: identityTime, latestAt: identityTime, appliedAt: identityTime }).optional(),
+  // P12: the accounts an identifier change has merged into this person (salted shopper ids).
+  mergedAccounts: z.array(z.string().refine(isShopperId)).max(MAX_MERGED_ACCOUNTS).optional(),
 }).strict();
 async function identityDigest(value: unknown): Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value))))]
@@ -522,6 +524,17 @@ export class ShopperReflex {
     if (request.method === 'POST' && url.pathname === '/identity/transfer/status') {
       if (principal) return json({ ok: false, error: 'Internal transfer required' }, 401);
       return this.handleTransferStatus(request, internal!);
+    }
+    // P12 (decision D1): a verified identifier change, applied by the later
+    // account's own object after its link, and the earlier account's read-only
+    // side of it. Internal callers only; a shopper's capability never reaches either.
+    if (request.method === 'POST' && url.pathname === '/identity/account-change') {
+      if (principal || !internal) return json({ ok: false, error: 'Internal account change required' }, 401);
+      return this.handleAccountChange(request, internal);
+    }
+    if (request.method === 'POST' && url.pathname === '/identity/account-change/source') {
+      if (principal || !internal) return json({ ok: false, error: 'Internal account change required' }, 401);
+      return this.handleAccountChangeSource(internal);
     }
     if (request.method === 'POST' && url.pathname === '/identity/recovery/proof') {
       if (principal || !internal || !this.isActualObject(internal.tenant, internal.subject)) return json({ ok: false }, 401);
@@ -3129,6 +3142,99 @@ export class ShopperReflex {
       const accepted = await this.state.storage.get('identityReceipt:' + transfer.id) !== undefined;
       return json({ ok: true, superseded: !accepted && authority?.epoch !== transfer.targetEpoch });
     });
+  }
+
+  /**
+   * P12 (decision D1). A verified identifier change, applied by the LATER
+   * account's own object once its link has completed (src/identity/link.ts):
+   * the earlier account's profile is merged into this person's exactly as a
+   * browser's is on a link — merge, never override: decayed evidence added at
+   * the later touch, counters added, memberships re-evaluated — so recent
+   * behaviour outranks both histories. The earlier account keeps its own
+   * profile; nothing of it is moved or removed.
+   *
+   * ONCE. The merged account's shopper id is remembered on this person's
+   * identity record (`mergedAccounts`), with every account already merged into
+   * it, in the same storage commit as the merged profile. An account listed
+   * there merges nothing more, so the same statement presented again — or any
+   * later one naming the pair — adds its evidence a second time never, and the
+   * retried sign-in that carries it is accepted as the link it is. Nothing is
+   * merged and nothing remembered when this person's consent does not cover
+   * personalization, when the earlier account holds no profile it may share,
+   * or when the earlier account already holds this one (a change back).
+   */
+  private async handleAccountChange(request: Request, context: InternalContext): Promise<Response> {
+    const body = z.object({ from: z.string().refine(isShopperId) }).strict().parse(await request.json());
+    if (!isShopperId(context.subject) || body.from === context.subject) throw new SessionAccessError();
+    return this.serialize(async () => {
+      await this.load(); this.assertInternalState(context); await this.assertNotTransferred();
+      if (await this.forwardTarget()) throw new SessionAccessError();
+      const raw = await this.state.storage.get('identityMembers');
+      if (raw === undefined) throw new SessionAccessError();
+      const members = membersSchema.parse(raw);
+      if (members.shopperId !== context.subject) throw new SessionAccessError();
+      const held = members.mergedAccounts ?? [];
+      const unchanged = json({ ok: true, merged: false });
+      if (held.includes(body.from)) return unchanged;
+      const consent = await this.consentNow();
+      if (!personalizes(consent)) return unchanged;
+      requireConsentPurpose(consent, 'personalization');
+      const answer = await this.env.SHOPPER_REFLEX.get(this.env.SHOPPER_REFLEX.idFromName(shopperObjectName(context.tenant, body.from)))
+        .fetch('https://shopper-reflex/identity/account-change/source', {
+          method: 'POST', headers: { 'X-Reflex-Tenant': context.tenant, 'X-Reflex-Subject': body.from },
+        });
+      if (!answer.ok) throw new SessionAccessError();
+      const source = z.object({ ok: z.literal(true), affinity: z.custom<AffinityRecord | null>(), pipeline: z.custom<PipelineRecord | null>(),
+        mergedAccounts: z.array(z.string().refine(isShopperId)).max(MAX_MERGED_ACCOUNTS) }).strict().parse(await answer.json());
+      if (source.mergedAccounts.includes(context.subject) || !source.affinity) return unchanged;
+      z.object({ shopperId: z.literal(body.from), reflex: historicalReflexSchema }).passthrough().parse(source.affinity);
+      if (source.pipeline != null && !validVisitContext(source.pipeline)) throw new SessionAccessError();
+      const retention = pinRetention(this.env, members.retention, context.tenant, 'identity');
+      const now = Date.now();
+      const cfg = await resolveTenantReflexConfig(this.env, context.tenant, this.surface());
+      const { affinity, pipeline, merged } = await this.mergedIdentity(context.tenant, context.subject, source.affinity, source.pipeline, now, cfg);
+      const next: ShopperRecord = { ...members,
+        mergedAccounts: [...new Set([...held, ...source.mergedAccounts, body.from])].filter(id => id !== context.subject).slice(-MAX_MERGED_ACCOUNTS) };
+      await this.persistAudienceState(affinity, pipeline, null, true, { identityMembers: next });
+      await this.scheduleNextCrossing(now, cfg);
+      // The compatibility projections follow the one commit, as after a link.
+      await this.publishCurrentSession(context);
+      await (this.env.SESSIONS as unknown as KVLike).put(tenantKey(context.tenant, 'identity:shopper:' + context.subject),
+        JSON.stringify(next), { expiration: Math.floor(retention.expiresAt / 1000) });
+      const allowed = await this.consentNow(), manager = new SessionManager(this.env, { tenant: context.tenant });
+      const session = personalizes(allowed) ? await this.importSessionData(context) : undefined;
+      const cookieHeaders = session && personalizes(allowed) ? manager.createCookieHeaders(manager.generateSessionCookies(session, this.pipeline!.sessionId))
+        : manager.generateConsentCookieHeaders({ trackingConsent: allowed.tracking, personalizationEnabled: allowed.personalization }, allowed);
+      return json({ ok: true, merged: true, audiences: merged.state.audiences, changes: merged.changes, cookieHeaders });
+    });
+  }
+
+  /**
+   * P12 (decision D1). The EARLIER account's side of a verified identifier
+   * change, asked only by the later account's own object: this person's profile
+   * as it stands — only while the consent stored here covers personalization and
+   * the profile's retention is in force — with the accounts already merged into
+   * it. One read of storage, outside this object's serialization so two changes
+   * naming each other cannot wait on one another; it writes nothing, so an
+   * account that was never linked stays absent.
+   */
+  private async handleAccountChangeSource(context: InternalContext): Promise<Response> {
+    if (!isShopperId(context.subject) || !this.isActualObject(context.tenant, context.subject)) throw new SessionAccessError();
+    const stored = await this.state.storage.get(['affinity', 'pipeline', 'consent', 'identityMembers', 'identityIntent', 'identityTransfer', 'forwardTo']);
+    const members = stored.get('identityMembers');
+    const mergedAccounts = members === undefined ? [] : membersSchema.parse(members).mergedAccounts ?? [];
+    const none = json({ ok: true, affinity: null, pipeline: null, mergedAccounts });
+    const affinity = stored.get('affinity') as AffinityRecord | null | undefined, pipeline = stored.get('pipeline') as PipelineRecord | null | undefined;
+    if (!affinity || stored.get('identityIntent') !== undefined || stored.get('identityTransfer') !== undefined || stored.get('forwardTo') !== undefined) return none;
+    if (affinity.shopperId !== context.subject || (pipeline?.visitorId && pipeline.visitorId !== context.subject)) throw new SessionAccessError();
+    const consent = storedConsent(stored.get('consent') as Parameters<typeof storedConsent>[0]);
+    if (consent.instruction && !this.isActualObject(consent.instruction.tenant, consent.instruction.subject)) throw new SessionAccessError();
+    if (!personalizes(consent) || consentDeadline(consent, 'personalization') <= Date.now()) return none;
+    // A profile past its retention is never read out; the later account's own
+    // object pins the merged record's retention when it commits the merge.
+    try { requireRetention(this.env, affinity.retention, context.tenant, 'profile'); }
+    catch (error) { if (error instanceof RetentionUnavailable) return none; throw error; }
+    return json({ ok: true, affinity, pipeline: pipeline ?? null, mergedAccounts });
   }
 
   /**

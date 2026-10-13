@@ -23,7 +23,7 @@ import type { Env } from '@/types/env';
 import type { TenantVariables } from '@/tenancy/tenant';
 import { operatorJwt } from '@/middleware/operatorAuth';
 import { SessionManager } from '@/services/SessionManager';
-import { verifyAssertion } from '@/identity/assertion';
+import { verifyAccountChange, verifyAssertion } from '@/identity/assertion';
 import { linkVisitor, validVisitorId } from '@/identity/link';
 import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { applyHistory, HistoryCsvError, historyRowSchema, parseHistoryCsv, MAX_ROWS } from '@/identity/history';
@@ -72,7 +72,29 @@ const linkSchema = z.object({
   source: z.enum(['login', 'signup', 'checkout', 'import', 'other']).default('login'),
   exp: z.number().int().optional(),
   assertion: z.string().min(1).max(200).optional(),
+  /** P12 (decision D1): `{ from, exp, statement }`, read by `accountChangeOf` so every refusal names the account change. */
+  accountChange: z.unknown().optional(),
 });
+
+const ONE_LINE = /^[^\r\n]+$/;
+
+/**
+ * P12 (decision D1): the shape of an identifier change on a link. `from` is the
+ * earlier account identifier, `to` the link's own. The signature and expiry are
+ * judged by `verifyAccountChange`; this reads only what a statement could name.
+ */
+function accountChangeOf(value: unknown, to: string): { from: string; exp: unknown; statement: unknown } | { error: string } {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return { error: 'accountChange must be a JSON object { from, exp, statement }: the earlier account identifier and the account change statement the backend signs' };
+  }
+  const { from, exp, statement } = value as Record<string, unknown>;
+  const earlier = typeof from === 'string' ? from.trim() : '';
+  if (!earlier || earlier.length > 200 || !ONE_LINE.test(earlier)) return { error: 'accountChange.from must be the earlier account identifier, 1 to 200 characters on one line' };
+  if (!ONE_LINE.test(to)) return { error: 'an account change needs an accountId on one line' };
+  if (earlier === to) return { error: 'an account change names two different accounts; this one names the same account as from and to' };
+  if (typeof statement === 'string' && statement.length > 200) return { error: 'accountChange.statement must be at most 200 characters' };
+  return { from: earlier, exp, statement };
+}
 
 function tenantOf(c: { req: { param(name: string): string | undefined } }): string | null {
   const t = (c.req.param('tenant') ?? '').trim();
@@ -426,9 +448,22 @@ identityRoutes.post('/:tenant/identity/link', requireShopper({ forward: false })
   // comes before anything is linked or merged, so the browser stays as it was.
   const outsideFormat = accountIdFormatRefusal(await resolveTenantReflexConfig(c.env, tenant), accountId);
   if (outsideFormat) return c.json({ ok: false, error: outsideFormat }, 400);
+  // P12 (decision D1): an identifier change merges the earlier account's
+  // profile into this one only on a statement the site's backend signs over
+  // both identifiers. Every refusal names the account change and comes before
+  // anything is linked or merged: no profile changes, the browser stays as it was.
+  let accountChange: { from: string } | undefined;
+  if (parsed.data.accountChange !== undefined) {
+    const read = accountChangeOf(parsed.data.accountChange, accountId);
+    if ('error' in read) return c.json({ ok: false, error: read.error }, 400);
+    const checked = await verifyAccountChange(c.env, tenant, { from: read.from, to: accountId, exp: read.exp, statement: read.statement });
+    if (!checked.ok) return c.json({ ok: false, error: checked.reason }, 401);
+    accountChange = { from: read.from };
+  }
   if (!shopperRequestHeld(c.req.raw, principal)) return forwardShopperRequest(c.env, c.req.raw, principal);
 
-  const result = await linkVisitor(c.env, tenant, { visitorId, accountId, source, assurance: verdict.assurance, principal, capability: capabilityToken(c.req.raw)!, cookieHeader: c.req.header('Cookie') });
+  const result = await linkVisitor(c.env, tenant, { visitorId, accountId, source, assurance: verdict.assurance, principal, capability: capabilityToken(c.req.raw)!, cookieHeader: c.req.header('Cookie'),
+    ...(accountChange ? { accountChange } : {}) });
   if (!result.sessionId) throw new SessionAccessError();
   const session = { ...await signSessionCapability(c.env, result.grant!), consent: result.consent };
   for (const h of result.cookieHeaders) c.header('Set-Cookie', h, { append: true });
