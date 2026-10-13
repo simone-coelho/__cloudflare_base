@@ -20,10 +20,27 @@ export interface HydrateOptions {
 export type SlotCallback = (decisions: ContentDecision[], set: DecisionSet) => void;
 export type SetCallback = (set: DecisionSet | null) => void;
 export interface Listen {
-    /** Fetch the first-paint snapshot and apply it. Resolves null on absence or failure, never rejects. */
+    /**
+     * Fetch the first-paint snapshot and apply it. Resolves null on absence or failure, never rejects.
+     * P34: the page view's first snapshot request starts its one deadline (`hydrateTimeoutMs`); no
+     * re-ask restarts it, so by then every slot subscriber has the decisions or the empty list.
+     */
     hydrate(opts: HydrateOptions): Promise<DecisionSet | null>;
-    /** One active refresh and one coalesced pending intent; no overlapping fetches. */
+    /**
+     * One active refresh and one coalesced pending intent; no overlapping fetches. P34: an
+     * acknowledged event or a socket open during the page view's first snapshot does not cancel it:
+     * its answer is delivered, then exactly one refresh follows.
+     */
     refresh(opts?: HydrateOptions): Promise<DecisionSet | null>;
+    /**
+     * P34: hold the slot's decisions for this page view. Until released, a later answer of the same
+     * page view leaves the slot as it was last delivered: its subscribers are not called with another
+     * list and its painted receipts stay valid, so `rendered` and the correlated outcomes of a held
+     * module carry the decision identifier it was painted with. The returned function releases it,
+     * and so does a new page view; the next answer then repaints the slot (a release does not repaint
+     * by itself). Known absence (a consent refusal, an identity change, a failed answer) is never held.
+     */
+    hold(slot: string): () => void;
     /** Verify the same broker grant and existing DOM before adopting without repaint. */
     adopt(bootstrap: unknown, opts: HydrateOptions): Promise<boolean>;
     /**

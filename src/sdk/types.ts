@@ -24,7 +24,11 @@ export interface ClientConfig {
   listenOnly?: boolean;
   heartbeatMs?: number;
   reconnectMs?: number;
-  /** How long hydrate() waits for the snapshot before declaring graceful absence. */
+  /**
+   * The first-decision deadline of a page view: measured from its first snapshot
+   * request, never restarted by a re-ask (P34). By then every slot subscriber has
+   * the decisions or the empty list (graceful absence); a later answer still paints.
+   */
   hydrateTimeoutMs?: number;
   /** Storage key for the first-party visitor id. Shared with the demo storefront by default. */
   visitorIdKey?: string;
@@ -178,9 +182,12 @@ export interface ContentDecision {
   order: number;
   /**
    * The decision's position within its slot (P03 decision D3): what its record
-   * calls `position`. The engine names it on every decision it answers; the SDK
-   * carries it on the render acknowledgement and on every engagement of the
-   * placement, beside the page-wide `order` as `position`.
+   * calls `position`, from 0. The engine names it on every decision it answers.
+   * The SDK carries it on the render acknowledgement beside the page-wide `order`
+   * as `position`, and on every engagement of the placement beside the
+   * acknowledged `decisionId`, without the page-wide order. The SDK keys a
+   * painted receipt by slot, this position and the item (P34), the position
+   * derived from the delivered list, which is this value whenever it is named.
    */
   slotPosition?: number;
   score: number;
