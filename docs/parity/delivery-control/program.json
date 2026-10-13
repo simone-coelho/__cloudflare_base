@@ -2234,7 +2234,7 @@
     {
       "id": "P34",
       "title": "First paint and hold: the in-flight answer applied, a layout held per page view, receipts keyed per slot position",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
