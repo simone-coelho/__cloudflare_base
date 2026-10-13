@@ -88,6 +88,7 @@ import {
   nextCrossing,
   snapshot as reflexSnapshot,
   signalsOf,
+  suppressionsInForce,
   tick as tickReflex,
   isDuplicateOrder,
   neverWeighed,
@@ -773,6 +774,9 @@ export class ShopperReflex {
             }
           }
           const at = Date.now();
+          // P39: the suppressions in force on the shopper, read off the state this
+          // object already holds (no read of its own); present only when there is one.
+          const suppressions = suppressionsInForce(this.affinity?.reflex?.suppressions, at);
           return json({ ok: true, consent,
             affinity: this.affinity ? reflexSnapshot(this.affinity.reflex, at, cfg) : null,
             // W16 C4 / R29: the content decision reads the shared word here and
@@ -793,6 +797,7 @@ export class ShopperReflex {
             // holds (no read of its own), for the slots that publish a signal
             // floor. Present only when there is one; absent reads as 0.
             ...(signalsOf(this.affinity?.reflex) > 0 ? { signals: signalsOf(this.affinity?.reflex) } : {}),
+            ...(suppressions.length ? { suppressions } : {}),
           });
         }
         if (url.searchParams.get('projection') === 'sort') {

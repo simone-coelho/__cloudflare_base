@@ -14,7 +14,7 @@ import { contextSpecificity, validateSeedRules } from './kinds';
 import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, type RecencyBucket } from '@/services/visit';
 import { TODAY_TERMS, type ContextTerms } from './cell';
 import type { DeviceClass, PlatformWord } from '@/services/platform';
-import { audienceKey } from '@/reflex/core';
+import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
 import { isEligibleAt, type EligibilityContext } from './lifecycle';
 import { DEFAULT_STATS, levelKeys, liftFor, type LiftSnapshot } from '@/learn/stats';
 import { EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
@@ -174,6 +174,16 @@ export interface DecideInput {
    */
   layoutPriors?: { regional?: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> };
     context?: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } } | null;
+  /**
+   * P39 (decisions D1, D2): the suppressions in force on the shopper. The
+   * caller has already left each suppressed value's interest out of `affinity`
+   * (the shopper's own term only, before any population prior is blended in),
+   * so here they are only itemised: on every record of a slot that read the
+   * shopper's interests (`explain.suppressions`), never on the holdout's
+   * default arm and never on a slot decided below the signal floor. The replay
+   * passes the ones the record carries. Absent: none, exactly as before.
+   */
+  suppressions?: readonly Suppression[] | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -562,6 +572,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // visitor-hashed exploration. Every other slot decides exactly as before.
   const below = contextOnlySlots(i.slots, i.signalFloor, i.arm);
   const signalCount = wholeCount(i.signalFloor?.signals);
+  // P39: the suppressions in force at this decision's time, well formed and sorted
+  // (keys sorted, by dimension then value); none on the default arm, which reads
+  // no interest of the shopper's.
+  const suppressions = i.arm === 'default' ? [] : suppressionsInForce(i.suppressions, i.nowMs);
   const contextPrior = i.contextPrior ?? i.regional?.share ?? null;
   // P07: below the floor the context prior is a context term too, at full weight
   // beside the region's (each prior's λ is 1 there); without it, exactly as before.
@@ -1353,6 +1367,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(moduleRule?.baseline === 'order' && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
         // P29: the layout reason of the declared layout slot, the same on every record of the slot, keys sorted.
         ...(layoutReasons.has(d.slot) ? { layoutReason: layoutReasonRecord(layoutReasons.get(d.slot)!) } : {}),
+        // P39: the suppressions in force, on every record of a slot that read the shopper's interests (keys sorted).
+        ...(suppressions.length && !below.has(d.slot) ? { suppressions: suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
       },
       inputs,
     };
