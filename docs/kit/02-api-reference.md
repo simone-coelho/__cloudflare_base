@@ -512,7 +512,12 @@ withheld before ranking names each such module, in baseline order, as
 nothing to show for this page view and `eligibility_rule` when its eligibility rule is not satisfied by the
 decision's cell; its `moves` then compare the served order with the baseline less the withheld modules,
 so a module that only took a withheld module's place is not called moved, and the receipt names each
-withheld module and its cause before the moves. On a declared
+withheld module with its own cause before the moves. That baseline is drawn before the withholding: an
+off-limits module is held at its place whether or not it was withheld, so a withheld off-limits module the
+mark would have held on one of the positions is named (and the decision states the module-rules marker
+`inputs.replay.moduleRules`, which the replay reads), and a pin of another slot refused only because its
+module was withheld still reserves that module, so a layout that served what it would have served without
+the report is unchanged. On a declared
 layout slot a receipt says "No interest signal yet for this shopper" only when the interest vector the page
 was scored on holds no interest at all; a shopper whose interests reached none of a module's weighted tags
 reads "No interest on the dimensions this layout weights matched this module" instead, and a receipt of
@@ -536,11 +541,14 @@ request: `nothingToShow`, a JSON array of module ids sent as one string field li
 counted as an exposure on either measurement basis, and the slot fills its take from the remaining
 ranked modules (under a configured order, the order's remaining listed modules, an unlisted module never
 filling in). The report can only withhold, never add: an id naming a module that is already withheld,
-excluded by the slot or not registered changes nothing. A module's own eligibility rule, `eligibleWhen`
+excluded by the slot or not registered changes nothing. When a module's rule and the page's report would both withhold it, the rule is read
+first, so the module is withheld by its rule (cause `eligibility_rule`) and the report withholds only a
+module its rule admits. A module's own eligibility rule, `eligibleWhen`
 on the catalogue piece, admits it by region (`regions`: region keys such as `US-NY`, or a country such as
 `US`, which admits every region inside it), entry channel (`context.entry_channel`, among the six channel
-words), visit bucket (`context.visit_bucket`: `1`, `2-3` or `4+`) and journey stage
-(`context.journey_stage`: `exploring`, `considering` or `deciding`), every condition it names having to
+words, or the tenant's own channel ids when it publishes a context vocabulary), visit bucket
+(`context.visit_bucket`: `1`, `2-3` or `4+`, or the names of the tenant's own visit-bucket cut) and journey
+stage (`context.journey_stage`: `exploring`, `considering` or `deciding`), every condition it names having to
 hold. The engine evaluates the rule on the decision's cell as it derived it (the region the edge reports and
 the visit's established entry channel, under the shopper's tracking consent, and the visit bucket and the
 shopper's journey stage, for a shopper the engine personalizes), never on a value the page sends, so an arrival a later request asserts cannot
@@ -549,16 +557,23 @@ unknown value satisfies no rule, so a module whose rule names a channel, a regio
 the cell holds as unknown is withheld, and a module without a rule is unaffected. A module withheld by its
 rule or the report is ineligible for that decision exactly as an expired one is: a pin of it is refused
 (`missing_or_ineligible`, and a refused pin refuses its whole slot), and an off-limits mark of it holds
-nothing. Publication refuses with `422`, naming the rule's path and the offending word, a rule that names
-any other signal or a value outside its signal's words (on a tenant that publishes a context vocabulary
-the rule is evaluated on that tenant's channel ids and buckets, which its cell carries, while publication
-still checks a rule's words against the six channel words and `1`, `2-3`, `4+`); a retained catalogue
+nothing in what is served (the layout reason still names it, above). Publication refuses with `422`, naming
+the rule's path and the offending word, a rule that names any other signal or a value outside its signal's
+words. A rule's entry channel and visit bucket are checked against the tenant's context vocabulary and
+visit-bucket cut in force (the learn document published in the same request, else the one in force; one
+that cannot be read refuses with `503`) on every catalogue write path: the `PUT`, the dry run
+`POST /content/catalog/validate`, a catalogue sent in `publicationChanges`, and
+`POST /content/catalog/import` with its CSV form and the pull. So a tenant that publishes a context
+vocabulary names its own channel ids (`sms`) and the names of its cut (`3-5`, `6+`) and is refused a bucket
+its cut does not hold (`2-3` under the cut 1, 2, 3, 6), while a tenant without the settings names the six
+channel words and `1`, `2-3`, `4+`, refused and admitted exactly as before. A retained catalogue
 whose rule names another signal stays readable, and that rule admits nothing. Every record of the page
 carries the report as the decision accepted it, `inputs.nothing_to_show` (each id once, sorted), when the
 page sent one, and each rule's verdict on the cell, `inputs.eligibility_verdicts` (module to `true` or
 `false`, keys sorted), for every live module of the page that carries a rule; the replay withholds the
 recorded report again and evaluates each rule again on the recorded cell, so it is exact, and no new
-replay marker is written. A catalogue without rules, and a request without the report, decide and
+replay marker is written (an off-limits mark naming a withheld module states the existing module-rules
+marker, above). A catalogue without rules, and a request without the report, decide and
 replay exactly as before.
 
 **An unreadable record.** Her stored record can exist and still not be readable: the retained-data

@@ -192,7 +192,7 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `slotTypes` | yes | The slots the piece may fill |
 | `lifecycle.status` | no | `live` (default), `draft`, `expired` |
 | `window.from`, `window.to` | no | ISO date-times; outside them the piece does not exist for a decision |
-| `eligibleWhen` | no | The module's eligibility rule by context, `{ regions?, context? }`, naming at least one of them. `regions` lists 1 to 64 region keys such as `US` or `US-WA` (stored upper case): a key matches the region of the decision's cell exactly, and a country key also admits every region inside it (`US` admits `US-WA`, never the reverse); that region is the one the edge reports, and only under tracking consent. `context` maps the engine's own signals to the values that admit the module: `entry_channel` (among the six channel words), `visit_bucket` (`1`, `2-3`, `4+`) and `journey_stage` (`exploring`, `considering`, `deciding`), each a list of 1 to 32 values, every condition read off the decision's cell as the engine derived it and never off a value the page sends. Fails closed: an unknown value satisfies no rule, so a piece whose rule the cell cannot satisfy (no region known, an unknown channel, bucket or stage, or another value) does not exist for that decision, exactly as outside its window, and a piece without the field is unaffected. Publication refuses an unknown member, any other signal, a value outside its signal's words or a bound exceeded, naming the rule's path and the offending word; a retained catalogue whose rule names another signal stays readable, and that rule admits nothing. In CSV: a quoted JSON object, as `merchandising`, for example `"{""regions"":[""US-NY""]}"` |
+| `eligibleWhen` | no | The module's eligibility rule by context, `{ regions?, context? }`, naming at least one of them. `regions` lists 1 to 64 region keys such as `US` or `US-WA` (stored upper case): a key matches the region of the decision's cell exactly, and a country key also admits every region inside it (`US` admits `US-WA`, never the reverse); that region is the one the edge reports, and only under tracking consent. `context` maps the engine's own signals to the values that admit the module: `entry_channel` (among the six channel words, or the tenant's own channel ids when it publishes a context vocabulary), `visit_bucket` (`1`, `2-3`, `4+`, or the names of the tenant's own visit-bucket cut) and `journey_stage` (`exploring`, `considering`, `deciding`), each a list of 1 to 32 values, every condition read off the decision's cell as the engine derived it and never off a value the page sends. Fails closed: an unknown value satisfies no rule, so a piece whose rule the cell cannot satisfy (no region known, an unknown channel, bucket or stage, or another value) does not exist for that decision, exactly as outside its window, and a piece without the field is unaffected. Publication refuses an unknown member, any other signal, a value outside its signal's words (the channel and bucket checked against the tenant's context vocabulary and cut in force on every catalogue write path) or a bound exceeded, naming the rule's path and the offending word; a retained catalogue whose rule names another signal stays readable, and that rule admits nothing. In CSV: a quoted JSON object, as `merchandising`, for example `"{""regions"":[""US-NY""]}"` |
 | `art`, `renderUrl` | no | Image, and a URL your page may render by |
 | `merchandising` | no | `{ season, promotion, margin }`, each 0 to 1 including zero: the item's own signals for the multipliers. CSV uses a quoted JSON object, for example `"{""promotion"":1,""margin"":0}"` |
 | `journeyStageFit` | no | The stages the piece is made for: `exploring`, `considering`, `deciding` (your `journey_stage_fit`; `explore`, `consider`, `decide` and `early`, `mid`, `late` also accepted). Absent fits every stage. A slot's `stage` rule demotes a piece outside the shopper's stage |
@@ -668,12 +668,16 @@ view, `nothingToShow`: a JSON array of module ids sent as one string field, like
 as `nothingToShow: string[]` beside `page` and sends nothing when the list is empty). A module named in
 `nothingToShow` is withheld before ranking, so it is not returned, not recorded and never counted as an
 exposure, and the slot fills its take from the remaining ranked modules; the report can only withhold,
-never add. A module's eligibility rule, `eligibleWhen` on its catalogue piece, admits it by region, entry
+never add. When a module's rule and the page's report would both withhold it, the rule is read first, so
+its cause is `eligibility_rule` and the report withholds only a module its rule admits. A module's
+eligibility rule, `eligibleWhen` on its catalogue piece, admits it by region, entry
 channel (`entry_channel`), visit bucket (`visit_bucket`) and journey stage (`journey_stage`), as
 [the content piece](#the-content-piece) describes, evaluated on the decision's cell and never on a value
 the page sends. An unknown value satisfies no rule, so the rule fails closed, and a module without a rule
 is unaffected. A module withheld either way is ineligible for that decision: a pin of it is refused and an
-off-limits mark of it holds nothing. Every record of the page carries the report and each rule's verdict
+off-limits mark of it holds nothing in what is served. On a tenant that publishes a context vocabulary, a
+rule names that tenant's own channel ids and the names of its visit-bucket cut, which its cell carries, and
+every catalogue write path checks them against the vocabulary and cut in force. Every record of the page carries the report and each rule's verdict
 on its inputs (`inputs.nothing_to_show`, `inputs.eligibility_verdicts`), and a module withheld from a
 position the baseline would have served it on is named in the layout reason's `withheld` list.
 
@@ -728,8 +732,11 @@ positions was withheld before ranking names each such module, in baseline order,
 show for this page view, `eligibility_rule` when its eligibility rule is not satisfied by the decision's
 cell ([nothing to show and eligibility rules](#nothing-to-show-and-eligibility-rules)). Its `moves` then
 compare the served order with the baseline less the withheld modules, so a module that only took a
-withheld module's place is not called moved; the receipt names each withheld module and its cause before
-the moves. A layout whose withheld modules lay beyond the positions the baseline fills is unchanged by them.
+withheld module's place is not called moved; the receipt names each withheld module with its own cause
+before the moves. A layout whose withheld modules lay beyond the positions the baseline fills is unchanged by
+them. That baseline is drawn before the withholding: an off-limits module is held at its place whether or
+not it was withheld (the decision then states `inputs.replay.moduleRules`, which the replay reads), and a pin
+of another slot refused only because its module was withheld still reserves that module.
 
 An off-limits declared layout slot writes one record, never into the shopper's decision ring, so it
 carries no exposure, no receipt reads it and no outcome is credited to it: position 0, `item_id`

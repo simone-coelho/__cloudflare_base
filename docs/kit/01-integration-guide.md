@@ -392,7 +392,8 @@ eligible, excluded by the slot or not registered changes nothing.
 
 A module may also carry its own eligibility rule in the catalogue, `eligibleWhen`, by region (a region key
 such as `US-NY`, or a country such as `US`, which admits every region inside it), entry channel
-(`entry_channel`, among the six channel words), visit bucket (`visit_bucket`: `1`, `2-3` or `4+`) and
+(`entry_channel`, among the six channel words, or your own channel ids when your tenant publishes a context
+vocabulary), visit bucket (`visit_bucket`: `1`, `2-3` or `4+`, or the names of your own visit-bucket cut) and
 journey stage (`journey_stage`: `exploring`, `considering` or `deciding`), and every condition it names
 must hold ([schema](./03-payload-schemas.md#the-content-piece)). The engine evaluates the rule on its own
 reading of the decision (the region the edge reports, the visit's entry channel, its visit bucket and the
