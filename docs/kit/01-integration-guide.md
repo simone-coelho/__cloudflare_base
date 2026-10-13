@@ -144,6 +144,8 @@ A current tracked choice carries `decisionId` and opaque `renderOffer`. After ac
 
 `listen.refresh({page})` permits one active snapshot and one coalesced pending latest intent; stale page/owner/consent responses cannot repaint. Acknowledged non-impression/non-dwell interactions and socket connection/reconnection refresh automatically. Route changes call `refresh({page})`. Optional publication polling is the third `createClient` argument, for example `createClient(config, undefined, {refreshMs:5000})` (off by default; clamp1s–5min). `hydrate` is a direct one-shot. No production `content_decisions` push is promised.
 
+**The first decision on the first request.** A new visitor's first decision set arrives on one call: when the browser holds no session of its own and no return-recognition proof, the first `hydrate` (or `refresh`) sends the decision request without a session, and the engine issues the session with that answer, so no separate round trip to `/identity/session` comes first. The session it issues is the one `POST /v1/{tenant}/identity/session` would have issued that browser, with the same consent default, and the SDK keeps and uses it exactly as it keeps that route's. A browser that already holds a session or a recognition proof, and a client configured with a `sessionBroker`, take the session route first as before, and the SDK also falls back to the session route when an answer carries no session. On the server, `bridge.snapshot(request, page)` serves a new visitor (no session cookie and no recognition-proof cookie) from one call to the engine, and sets the shopper's session cookie from that answer; the session never enters the bootstrap.
+
 On snapshot failure or the 1.5-second deadline (`hydrateTimeoutMs`), every slot subscriber receives
 `[]` with the requested page, `onDecisions` receives `null`, and `current()` becomes `null`. Existing
 dwell capture is cancelled; restoring defaults does not create an impression. Late slot subscribers
@@ -273,6 +275,19 @@ each event travels exactly as written here.
   weight 0 until your registry publishes one (`weights.search`, `weights.filter_applied`). An event's own values,
   such as a search's resolved `category` or the sale filter's `priceStatus`, build interest only where your
   registry names that source field as a dimension and scores event attributes (`eventAttributes: "event-when-unknown"`).
+
+### Before sign-in: the loaded hook and your identifier for the shopper
+
+```js
+client.core.onLoaded(() => {
+  // runs once, when the client has loaded
+});
+client.core.setCustomerId(hashedId);   // your hashed identifier for this shopper, before sign-in
+```
+
+`client.core.onLoaded(callback)` runs `callback` once, when the client has loaded (its first session is in hand), or once at the next turn when the client had already loaded; a callback that throws changes nothing of the client, and registering one never starts a call.
+
+`client.core.setCustomerId(id)` passes your own identifier for the shopper before recognition: a hashed identifier, such as a SHA-256 digest of the e-mail address, of 1 to 128 letters, digits and `_ + / = . -`, so a raw e-mail address is refused. While tracking is allowed, every event the SDK sends and every decision request it makes then carries it as `customerId`, beside the engine's own visitor identifier, and the decision and outcome records written from them carry it as `customer_id` beside `visitor_id`. The `customerId` is carried, never treated as proof of identity: it links nothing, merges nothing, issues no recognised session and selects no other shopper's state, even when an account is linked under the same value. Signing in still takes `identify()` with your backend's signed assertion, below. Any other value clears the identifier, as does a logout; the SDK holds it in memory for the page and never stores it.
 
 ## 5. Sign-in and sign-out
 
