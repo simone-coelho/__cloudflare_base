@@ -1854,13 +1854,23 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "21bb132e27256c511409b2f5e6afa4eb3e6cdf2c on rem/spec-parity-b (batch S2; P07 committed at 64f71082, P31 at cb871893, P06 at 21bb132e, each ticket files byte-identical at 21bb132e; harness src/units/_parity.ts byte-identical to S1 and src/units/_parity2.ts; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "c9a3f015e5c61c95fa886d23178d50807f86dfd9 on rem/spec-p06-fix1 (P06 fix round 1 under R-P64 as amended, two commits over the build head 9dccd05c, src/units/P06/LEDGER.unit.test.ts only, +213: two take-2 S3 legs per host naming the baseline-take modules the shadow pushes out with their R-P56/R-P57 terms, the second world with grid.1 also frozen at 2 telling the ruled attribution from a skip or a stamp; a take-4 control; locks M5, M6a, M6b, M12, M9a, M9b, M10; harness src/units/_parity.ts and _parity2.ts byte-identical to 9dccd05c; reviewed PASS in two rounds)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/reviewer-spec/REPORT-round2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/specifier/REPORT-round2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/reviewer/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/reviewer-spec/logs/round2/04-summary.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/reviewer-spec/logs/05-mutant-summary.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/specifier/logs/round2/MSKIP-p06.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/specifier/logs/round2/MSTAMP-p06.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P06/fix1/specifier/logs/after.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-g4-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-ctx-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-r4-summary.log",
