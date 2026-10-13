@@ -2182,6 +2182,7 @@
         "src/routes/decisions.ts",
         "src/routes/identity.ts",
         "src/routes/realtime.ts",
+        "src/durable-objects/ShopperReflex.ts",
         "src/identity/sessionAuthority.ts",
         "src/identity/sessionCapability.ts",
         "src/content/service.ts",
