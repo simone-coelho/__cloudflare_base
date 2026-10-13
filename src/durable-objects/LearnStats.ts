@@ -6,7 +6,7 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, positionEffectsOf, recordExposure, recordSuccess, type AttributionContract, type PairCounts, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
 import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
@@ -26,7 +26,9 @@ const PUBLISH_DELAY_MS = 30_000;
 export const LEARN_LIMITS = { requestBytes: 256 * 1024, rows: 1000, stateBytes: 512 * 1024,
   items: 256, counters: 4096, component: 256, keyBytes: 2048,
   priorRows: 4096, priorBytes: 256 * 1024, snapshotBytes: 2 * 1024 * 1024,
-  repairBytes: 8 * 1024 * 1024, repairCounters: 65536, totalBytes: 640 * 1024 } as const;
+  repairBytes: 8 * 1024 * 1024, repairCounters: 65536, totalBytes: 640 * 1024,
+  /** P05: the highest position, counted from 1 within a slot, an adjacent swap or a credit may name. */
+  positions: 64 } as const;
 const rewards = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
 const utf8 = new TextEncoder();
 interface EffectMarker { digest: string; subject: string; ts: number; expiresAt: number; item: string }
@@ -36,12 +38,25 @@ interface EffectMarker { digest: string; subject: string; ts: number; expiresAt:
  * part of this object's identity exactly as the tenant, brand and slot are.
  */
 interface Stored { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; stats: StatsState;
-  effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }> }
+  effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }>;
+  /**
+   * P05 (decision D1): per adjacent pair (k, k + 1), keyed by k, what the slot's
+   * swaps have shown (`PairCounts`). Absent on a slot that has swapped nothing,
+   * so no other object's state gains a member.
+   */
+  positions?: Record<string, PairCounts> }
 /** Every instant the alarm must remove a live or retired learning-effect marker at. */
 const effectExpiries = (stored: Stored | null | undefined): number[] =>
   [...Object.values(stored?.effects ?? {}), ...Object.values(stored?.retiredEffects ?? {})].map(marker => marker.expiresAt);
 interface GenerationFence { whole: number; items: Record<string, number> }
-type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string };
+/**
+ * P05: `position` is the decision's position counted from 1 within its slot,
+ * carried for a module of a page's declared layout slot; `swap` names the two
+ * adjacent positions an adjacent swap exchanged on that decision, carried only
+ * for the two modules it exchanged.
+ */
+type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string;
+  position?: number; swap?: [number, number] };
 /**
  * W22 D1.02 (F16 §7, §2.3): the bounded, durable journal of exposures this
  * object has already applied, so a REDELIVERED exposure — the at-least-once
@@ -154,7 +169,7 @@ function configValid(v: unknown): v is SlotLearnConfig {
     && finite(s.liftMax) && s.liftMax >= 1 && s.liftMax > s.liftMin;
 }
 function stateValid(value: unknown, repairing = false): asserts value is Stored {
-  if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects']) || !component(value.tenant) || !component(value.brand)
+  if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects', 'positions']) || !component(value.tenant) || !component(value.brand)
     || !slotName(value.slot) || (value.page !== undefined && !isCatalogueName(value.page)) || !configValid(value.config)) throw invalid();
   if (value.effects !== undefined && (!object(value.effects) || Object.keys(value.effects).length > RECOVERY_LIMITS.effects
     || Object.entries(value.effects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id)
@@ -164,6 +179,10 @@ function stateValid(value: unknown, repairing = false): asserts value is Stored 
     || Object.entries(value.retiredEffects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id) || !fields(m, ['digest', 'expiresAt'])
       || typeof m.digest !== 'string' || !/^[a-f0-9]{64}$/.test(m.digest) || !time(m.expiresAt)))) throw invalid();
   if (Object.keys(value.effects ?? {}).length + Object.keys(value.retiredEffects ?? {}).length > RECOVERY_LIMITS.effects) throw capacity();
+  // P05: the adjacent swaps' counts, one entry per pair's lower position, whole numbers.
+  const whole = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 0;
+  if (value.positions !== undefined && (!object(value.positions) || Object.entries(value.positions).some(([k, c]) => !/^[1-9][0-9]*$/.test(k)
+    || Number(k) >= LEARN_LIMITS.positions || !fields(c, ['pairs', 'first', 'second']) || !whole(c.pairs) || !whole(c.first) || !whole(c.second)))) throw invalid();
   const st = value.stats;
   if (!fields(st, ['items', 'slot', 'events', 'updatedAt', 'bounded']) || !object(st.items) || !object(st.slot)
     || !Number.isSafeInteger(st.events) || (st.events as number) < 0 || !time(st.updatedAt)) throw invalid();
@@ -243,9 +262,16 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
       || !time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
     if (row.decision !== undefined && (typeof row.decision !== 'string' || !row.decision || utf8.encode(row.decision).length > LEARN_LIMITS.keyBytes)) throw invalid();
     if (row.digest !== undefined && (typeof row.digest !== 'string' || !/^[a-f0-9]{64}$/.test(row.digest))) throw invalid();
+    // P05: a position counted from 1 within the slot, and the adjacent pair a swap exchanged, naming that position.
+    const place = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 1 && (v as number) <= LEARN_LIMITS.positions;
+    if (row.position !== undefined && !place(row.position)) throw invalid();
+    if (row.swap !== undefined && (!Array.isArray(row.swap) || row.swap.length !== 2 || !place(row.swap[0]) || row.swap[1] !== (row.swap[0] as number) + 1
+      || (row.position !== row.swap[0] && row.position !== row.swap[1]))) throw invalid();
     accepted.push({ item: row.item, cell, ts, ...(kind === 'credits' ? { reward: row.reward as RewardType, weight } : {}),
       ...(typeof row.decision === 'string' ? { decision: row.decision } : {}),
       ...(typeof row.digest === 'string' ? { digest: row.digest } : {}),
+      ...(row.position !== undefined ? { position: row.position as number } : {}),
+      ...(row.swap !== undefined ? { swap: [row.swap[0] as number, row.swap[1] as number] as [number, number] } : {}),
       ...(Object.hasOwn(row, 'effect') ? { effect: row.effect as LearningEffect } : {}) });
   }
   return accepted;
@@ -572,6 +598,16 @@ export class LearnStats {
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
         if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
         else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
+        // P05 (decision D1): the adjacent swaps' evidence. A swapped decision is
+        // counted once, when its module at the pair's lower position is exposed;
+        // a click credited to either module it exchanged is counted at the
+        // position that module was served at. Counted exactly when the row is
+        // applied, so a redelivery recognized above counts nothing again.
+        if (row.swap) {
+          const pair = ((candidate.positions ??= {})[String(row.swap[0])] ??= { pairs: 0, first: 0, second: 0 });
+          if (kind === 'exposures') { if (row.position === row.swap[0]) pair.pairs += 1; }
+          else if (row.reward === 'click') { if (row.position === row.swap[0]) pair.first += 1; else pair.second += 1; }
+        }
         this.fit(candidate);
         newlyApplied++;
       }
@@ -775,6 +811,9 @@ export class LearnStats {
     // itself from that restart, and not from evidence it may not have yet.
     const restarted = await this.accumulationTransition();
     const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract, restarted?.at);
+    // P05 (decision D1): each position's effect from the slot's adjacent swaps, only where it has swapped.
+    const effects = positionEffectsOf(d.positions);
+    if (effects) snap.positionEffects = effects;
     snap.witness = await this.witness(d, await this.fence());
     // W23 H1.01: only an object that was actually repaired names a basis.
     const basis = await this.rebuiltFrom();

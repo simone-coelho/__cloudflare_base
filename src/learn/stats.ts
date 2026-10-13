@@ -299,6 +299,78 @@ export interface LiftSnapshot {
    * snapshot, and no snapshot of an unaffected slot, gains a member.
    */
   rebuiltFrom?: RebuildBasis;
+  /**
+   * P05 (decision D1): each position's effect, estimated from the slot's
+   * adjacent swaps as a click ratio (`positionEffectsOf`), with the swapped
+   * decisions behind it. Absent on a slot that has swapped nothing.
+   */
+  positionEffects?: PositionEffect[];
+}
+
+/**
+ * P05: what the statistics object counts of the swaps of ONE adjacent pair
+ * (k, k + 1), positions counted from 1 within the slot: the swapped decisions
+ * whose module at position k was exposed (`pairs`), and the clicks credited to
+ * the module served at position k (`first`) and at position k + 1 (`second`)
+ * on decisions that swapped that pair. Whole counts, never decayed.
+ */
+export interface PairCounts { pairs: number; first: number; second: number }
+/** P05: one position's effect, as the slot's learning read publishes it; `effect` null where the swaps cannot estimate it yet. */
+export interface PositionEffect { position: number; effect: number | null; pairs: number }
+
+/**
+ * P05 (decision D1, R-P21): each position's effect from the adjacent-swap
+ * pairs, as a click ratio. Position 1's effect is 1; position k + 1's is
+ * position k's times (the clicks at k + 1 / the clicks at k), both counted over
+ * the decisions on which (k, k + 1) was swapped, at three decimals. An effect
+ * the chain cannot reach — no click at k on those swaps, or no effect at k — is
+ * null. `pairs` is the swapped decisions behind it: for position 1 those of
+ * (1, 2), for position k + 1 those of (k, k + 1). Positions run to the highest
+ * one a swap has reached. Null when no pair has been swapped. Pure.
+ */
+export function positionEffectsOf(counts: Readonly<Record<string, PairCounts>> | undefined): PositionEffect[] | null {
+  const pairs = (k: number) => counts?.[String(k)]?.pairs ?? 0;
+  let top = 0;
+  for (const key of Object.keys(counts ?? {})) { const k = Number(key); if (Number.isSafeInteger(k) && k >= 1 && pairs(k) > 0) top = Math.max(top, k); }
+  if (top === 0) return null;
+  const out: PositionEffect[] = [{ position: 1, effect: 1, pairs: pairs(1) }];
+  let effect: number | null = 1;
+  for (let k = 1; k <= top; k++) {
+    const c = counts?.[String(k)];
+    effect = effect !== null && c && c.first > 0 ? effect * (c.second / c.first) : null;
+    out.push({ position: k + 1, effect: effect === null ? null : Math.round(effect * 1000) / 1000, pairs: pairs(k) });
+  }
+  return out;
+}
+
+/**
+ * P05 (decision D2): the position policy one publication of a slot's statistics
+ * put in force at `at` (its snapshot version): whether the slot's
+ * normalisation switch was on, and then the effect of each position (from 1)
+ * the estimate holds above zero. The history of these is the one source the
+ * online credit and the offline recomputation both read.
+ */
+export interface PositionPolicy { at: number; normalize: boolean; effects: Record<string, number> }
+
+/** P05: the policy in force at `ts`: the newest one published at or before it; null before the first. Pure. */
+export function positionPolicyAt(policies: readonly PositionPolicy[] | null | undefined, ts: number): PositionPolicy | null {
+  let found: PositionPolicy | null = null;
+  for (const policy of policies ?? []) if (policy.at <= ts && (found === null || policy.at >= found.at)) found = policy;
+  return found;
+}
+
+/**
+ * P05 (decision D2): what an engagement at `position` (from 1) at `ts` is
+ * credited times: 1 / that position's effect where the policy in force had the
+ * switch on and holds a positive effect for the position, else 1 — the credit
+ * exactly as before. Changes the credit's amount only, never whether it is
+ * counted. Pure.
+ */
+export function positionWeightAt(policies: readonly PositionPolicy[] | null | undefined, position: number | undefined, ts: number): number {
+  if (position === undefined || !Number.isSafeInteger(position) || position < 1) return 1;
+  const policy = positionPolicyAt(policies, ts);
+  const effect = policy?.normalize ? policy.effects[String(position)] : undefined;
+  return typeof effect === 'number' && Number.isFinite(effect) && effect > 0 ? 1 / effect : 1;
 }
 
 /** How a repaired object's counters were started again, and under whose operation. */
