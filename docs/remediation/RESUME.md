@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-13, early afternoon: P12 closed (12/25); P13 active; P34 staged
+
+- **Parity `tapestry-parity-build`:** Local done 12/25 · Final 0/25 · `check` PASS. P12 closed at the first delivery review (PASS on I1 to I5): receipt 59ef8c65 at 1e53f877 (merge 5027d21d; INACTIVE 3f8c8870). R-P65: the declared format governs the link's own accountId only, a signed legacy `from` merges; the export strips mergedAccounts (nothing new exposed). SDK growth under R-P63: the ESM budget re-recorded to 102400 at 97323 bytes; the IIFE 102232 of 102400. **P13 ACTIVE** (the identifier handshake) building in `build-p13`; P34 (first paint and hold) staged in `build-p34` with its brief (R-P63, C13, C14, S3F-C6 and the P03-owed types.ts comment bound).
+- **Programme 2 `tapestry-parity-customer-answers`:** locally complete, 5/5 · Final 0/5; its ten live rows wait for the batched live acceptance under the owner's authority.
+- **Owner-visible residuals, unassigned:** per ticket in `_evidence/parity-step3/AMENDMENTS.md` (the P12 additions: erasing the earlier account does not reach evidence merged into the later one; the once memory's 50-account horizon; no complexity bound on a tenant-authored identifier pattern, a hardening item; whether the right of access should list the merged accounts; no console editor for the format); the P06, P31 and publication-store residuals unchanged.
+- **Lead tools and lanes:** `/home/simonecoelho/rem/_evidence/_lead-tools/`; every WSL lane under `/home/simonecoelho/rem/` locked, never pruned. Bootstrap: `docs/remediation/BOOTSTRAP-LEAD.md`.
+
 ## 2026-10-13, late morning: P06 closed (11/25); P12 active; P13 staged
 
 - **Parity `tapestry-parity-build`:** Local done 11/25 · Final 0/25 · `check` PASS. P06 closed after one fix round (R-P64 and its amendment: a module of the baseline take the shadow pushes out is named in shadowTerms with the terms that moved it down by the P29 attribution, never copied or stamped; the default arm carries no members): receipt ce0aeb1a at 9b0389e7 (merge 1e1b1c68; the specification gate re-recorded at c9a3f015, e694d0be). **P12 ACTIVE** (the hashed identifier as the account identifier) building in `build-p12`; P13 (the identifier handshake) staged in `build-p13` with its brief. R-P63: the SDK size budgets follow W40's rule (measured size rounded up to the next 5 KB), re-recorded by the builder when a bundle grows; the growth named at the close.
