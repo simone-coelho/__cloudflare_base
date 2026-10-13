@@ -86,7 +86,9 @@ import {
 import { missingStatements } from '../_parity2';
 import { vi } from 'vitest';
 
-import { errorsOf, putDocument, receiptsOf, RECENT_SLOT, type Documents, type Host } from '../_parity';
+import { invalidatePublicationCache } from '@/config/publication';
+
+import { asOperator, errorsOf, loadDocument, putDocument, receiptsOf, RECENT_SLOT, type Answer, type Documents, type Host } from '../_parity';
 
 const BASE = { pieces: MODULES, slots: declaredSlots([layoutSlot(), recentSlot()]), learn: learnDocument() };
 const NEW_YORK = { country: 'US', regionCode: 'NY' };
@@ -268,6 +270,36 @@ const publishRules = (m: Mounted, rules: Record<string, unknown>, note: string) 
 /** A publication's status, and whether one of its errors names the rule and every given word. */
 const refusal = (answer: { status: number; body: Record<string, unknown> }, words: string[]) =>
   [answer.status, errorsOf(answer).some(e => e.includes('eligibleWhen') && words.every(w => e.includes(w)))];
+/**
+ * R-P59 (4) as amended: every catalogue write path that validates a rule's words: the primary PUT, the dry run
+ * (POST /content/catalog/validate), a catalogue sent as a related member of a slots PUT (publicationChanges) and the
+ * JSON import (POST /content/catalog/import), each write with the authored preconditions (kit 02: If-Match plus
+ * Idempotency-Key), as the review's door probe drove them.
+ */
+const WRITE_PATHS = ['the primary PUT', 'the dry run', 'a related member of a slots PUT', 'the JSON import'] as const;
+type WritePath = (typeof WRITE_PATHS)[number];
+const preconditionsOf = (base: { revision: number; publication: { revision: number; digest: string } }) =>
+  ({ 'If-Match': `"${base.revision}/${base.publication.revision}/${base.publication.digest}"`, 'Idempotency-Key': `${base.revision}:${crypto.randomUUID()}` });
+async function writeRules(m: Mounted, path: WritePath, rules: Record<string, unknown>, note: string): Promise<Answer> {
+  if (path === 'the primary PUT') return publishRules(m, rules, note);
+  const document = { version: 'parity-p31-r59', pieces: withRules(rules) };
+  if (path === 'the dry run') return asOperator(m, 'POST', `/content/catalog/validate?scope=${TENANT}`, { document });
+  const answer = path === 'a related member of a slots PUT'
+    ? await asOperator(m, 'PUT', `/content/slots?scope=${TENANT}`, { document: BASE.slots, note, publicationChanges: [{ kind: 'catalog', document }] }, preconditionsOf(await loadDocument(m, 'slots')))
+    : await asOperator(m, 'POST', `/content/catalog/import?scope=${TENANT}&format=json&mode=replace`, document, preconditionsOf(await loadDocument(m, 'catalog')));
+  invalidatePublicationCache();
+  return answer;
+}
+/** The refusals a tenant without the settings answers today on every path (the V4 logic leg's words), and the rule it admits. */
+const REFUSED_TODAY: Array<[string, unknown, string]> = [
+  ['a channel outside the six words', { context: { entry_channel: ['tiktok'] } }, 'tiktok'],
+  ['sms, not one of the six words', { context: { entry_channel: ['sms'] } }, 'sms'],
+  ['a visit bucket outside the buckets', { context: { visit_bucket: ['5'] } }, '5'],
+  ['3-5, not one of today\'s buckets', { context: { visit_bucket: ['3-5'] } }, '3-5'],
+];
+const TODAY_WORDS = { context: { entry_channel: ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'], visit_bucket: ['1', '2-3', '4+'] } };
+/** R-P59 (3) as amended: each withheld module's own cause in words. */
+const CAUSE_SAID: Record<string, RegExp> = { eligibility_rule: /eligibility[ _]rule/i, nothing_to_show: /nothing[ _]to[ _]show/i };
 
 // ===========================================================================
 // unit:P31.V1 — nothing to show: not returned, not recorded, not counted
@@ -454,7 +486,7 @@ describe('unit:P31.V4', () => {
 
   // R-P59 (4): the publication door reads the tenant's own vocabulary and cut (the review's reading 2).
   for (const host of HOSTS) {
-    it(`host (${host}): R-P59 (4) — on a tenant whose published context vocabulary names nine channels with sms and the visit-bucket cut [1, 2, 3, 6], a rule naming entry_channel sms publishes (200) and an sms arrival is served the module while a direct arrival is not; a rule naming today's '2-3' is refused (422) naming the cut's buckets; a rule naming the cut's '3-5' publishes and matches the shopper's third visit; a channel the vocabulary does not name stays refused`, async () => {
+    it(`host (${host}): R-P59 (4) — on a tenant whose published context vocabulary names nine channels with sms and the visit-bucket cut [1, 2, 3, 6], a rule naming entry_channel sms publishes (200) and an sms arrival is served the module while a direct arrival is not; a rule naming today's '2-3' is refused (422) naming the cut's buckets; a rule naming the cut's '3-5' publishes and matches the shopper's third visit; a channel the vocabulary does not name stays refused; and on every catalogue write path (the primary PUT, the dry run, a related member of a slots PUT, the JSON import) its own words are admitted while '2-3' and tiktok are refused naming them`, async () => {
       const m = await mount(host, { ...BASE, learn: learnDocument({}, { contextVocabulary: CUT_VOCABULARY }) });
       expectPublished(m, 'P31.V4 (R-P59 (4)) — the tenant with the context vocabulary and the cut publishes');
       const T0 = Date.now() - 2 * 86_400_000;
@@ -488,24 +520,36 @@ describe('unit:P31.V4', () => {
         }
         expect.soft(visits, `${host}: P31.V4 (R-P59 (4)) — the '3-5' rule's module is withheld on visits 1 and 2 (buckets 1 and 2) and served on visit 3 (bucket 3-5)`)
           .toEqual(['not served', 'not served', 'served']);
+        // R-P59 (4) as amended: the same words on every catalogue write path.
+        const paths: unknown[][] = [], said: unknown[][] = [];
+        for (const path of WRITE_PATHS) {
+          const own = await writeRules(m, path, { [M.ugc]: { context: { entry_channel: ['sms'], visit_bucket: ['3-5'] } } }, 'the tenant\'s own sms and 3-5');
+          const outside = await writeRules(m, path, { [M.ugc]: { context: { visit_bucket: ['2-3'] } } }, 'today\'s 2-3');
+          const unnamed = await writeRules(m, path, { [M.ugc]: { context: { entry_channel: ['tiktok'] } } }, 'tiktok');
+          paths.push([path, 'the tenant\'s own sms and 3-5', own.status], [path, 'today\'s 2-3', ...refusal(outside, ['2-3', ...CUT_ONLY])], [path, 'tiktok', ...refusal(unnamed, ['tiktok'])]);
+          said.push([path, errorsOf(own), errorsOf(outside), errorsOf(unnamed)]);
+        }
+        expect.soft(paths, `${host}: P31.V4 (R-P59 (4)) — on every catalogue write path the tenant's own sms and '3-5' are admitted, today's '2-3' is refused naming it and the cut's buckets, and tiktok is refused naming it (${JSON.stringify(said).slice(0, 600)})`)
+          .toEqual(WRITE_PATHS.flatMap(path => [[path, 'the tenant\'s own sms and 3-5', 200], [path, 'today\'s 2-3', 422, true], [path, 'tiktok', 422, true]]));
       } finally { clock.mockRestore(); }
     }, 120_000);
 
-    it(`host (${host}): CONTROL (R-P59 (4)) — a tenant without the settings is refused and admitted at publication exactly as the V4 logic leg states: tiktok, sms, '5' and '3-5' refused naming the value; the six channel words and the buckets 1, 2-3 and 4+ admitted`, async () => {
+    it(`host (${host}): CONTROL (R-P59 (4)) — a tenant without the settings is refused and admitted at publication exactly as the V4 logic leg states: tiktok, sms, '5' and '3-5' refused naming the value; the six channel words and the buckets 1, 2-3 and 4+ admitted; on every catalogue write path (the primary PUT, the dry run, a related member of a slots PUT, the JSON import)`, async () => {
       const m = await mount(host, BASE);
       expectPublished(m, 'P31.V4 (R-P59 (4)) — the tenant without the settings publishes');
-      const outcomes: unknown[][] = [];
-      for (const [name, rule, word] of [
-        ['a channel outside the six words', { context: { entry_channel: ['tiktok'] } }, 'tiktok'],
-        ['sms, not one of the six words', { context: { entry_channel: ['sms'] } }, 'sms'],
-        ['a visit bucket outside the buckets', { context: { visit_bucket: ['5'] } }, '5'],
-        ['3-5, not one of today\'s buckets', { context: { visit_bucket: ['3-5'] } }, '3-5'],
-      ] as Array<[string, unknown, string]>) outcomes.push([name, ...refusal(await publishRules(m, { [M.grid]: rule }, name), ['context', word])]);
-      const admitted = await publishRules(m, { [M.grid]: { context: { entry_channel: ['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'], visit_bucket: ['1', '2-3', '4+'] } } }, 'the six words and today\'s buckets');
-      outcomes.push(['the six words and the buckets 1, 2-3, 4+', admitted.status, errorsOf(admitted).length === 0]);
-      expect(outcomes, `${host}: CONTROL — refused and admitted as today`).toEqual([
-        ['a channel outside the six words', 422, true], ['sms, not one of the six words', 422, true], ['a visit bucket outside the buckets', 422, true],
-        ['3-5, not one of today\'s buckets', 422, true], ['the six words and the buckets 1, 2-3, 4+', 200, true]]);
+      const outcomes: unknown[][] = [], said: unknown[][] = [];
+      for (const path of WRITE_PATHS) {
+        for (const [name, rule, word] of REFUSED_TODAY) {
+          const answer = await writeRules(m, path, { [M.grid]: rule }, name);
+          outcomes.push([path, name, ...refusal(answer, ['context', word])]);
+          said.push([path, name, errorsOf(answer)]);
+        }
+        const admitted = await writeRules(m, path, { [M.grid]: TODAY_WORDS }, 'the six words and today\'s buckets');
+        outcomes.push([path, 'the six words and the buckets 1, 2-3, 4+', admitted.status]);
+        said.push([path, 'the six words and the buckets 1, 2-3, 4+', errorsOf(admitted)]);
+      }
+      expect(outcomes, `${host}: CONTROL — refused and admitted as today on every catalogue write path (${JSON.stringify(said).slice(0, 600)})`).toEqual(WRITE_PATHS.flatMap(path => [
+        ...REFUSED_TODAY.map(([name]) => [path, name, 422, true]), [path, 'the six words and the buckets 1, 2-3, 4+', 200]]));
     }, 60_000);
   }
 });
@@ -601,7 +645,7 @@ describe('unit:P31.V6', () => {
 
   // R-P59 (3): the receipt side of remaining-work item 4 (the review's mutants M15 and M16).
   for (const host of HOSTS) {
-    it(`host (${host}): R-P59 (3) — the receipt of a layout with withheld modules, read through the route on rendered-v1 with render acknowledgements (R-P18), carries layoutReason.withheld with each module and its cause in baseline order, and its last sentence names each withheld module and its cause before the moves`, async () => {
+    it(`host (${host}): R-P59 (3) — the receipt of a layout with withheld modules, read through the route on rendered-v1 with render acknowledgements (R-P18), carries layoutReason.withheld with each module and its cause in baseline order, and its last sentence names each withheld module with its own cause before the moves`, async () => {
       const { m, s, records } = await decidedPage(host, BOTH);
       const reason = reasonOn(records[0]!);
       const moved = typeof reason === 'string' ? [] : (reason.moves ?? []).map(x => x.module);
@@ -611,12 +655,18 @@ describe('unit:P31.V6', () => {
       expect.soft(receipts.map(r => [r.item, r.layoutReason ?? 'no layoutReason']), `${host}: P31.V6 (R-P59 (3)) — every receipt carries the withheld modules, reco.1 (its rule) then reco.2 (the report)`)
         .toEqual(receipts.map(r => [r.item, expect.objectContaining({ status: 'changed', withheld: BOTH_WITHHELD })]));
       const sentences = receipts.map(r => String(((r.why as unknown[] | undefined) ?? []).at(-1) ?? ''));
+      // R-P59 (3) as amended: each withheld module is paired with its own cause, in the words from its name up to the next module the sentence names.
       const named = sentences.map((sentence, k) => {
         const firstMove = Math.min(sentence.length, ...moved.map(id => sentence.indexOf(id)).filter(at => at >= 0));
-        const before = (at: number) => at >= 0 && at < firstMove;
-        return [receipts[k]!.item, before(sentence.indexOf(M.reco1)) && before(sentence.search(/eligibility[ _]rule/i)), before(sentence.indexOf(M.reco2)) && before(sentence.search(/nothing[ _]to[ _]show/i))];
+        const marks = [...BOTH_WITHHELD.map(w => w.module), ...moved].map(id => sentence.indexOf(id)).filter(at => at >= 0).sort((a, b) => a - b);
+        const paired = BOTH_WITHHELD.map(w => {
+          const start = sentence.indexOf(w.module);
+          if (start < 0 || start >= firstMove) return false;
+          return CAUSE_SAID[w.cause]!.test(sentence.slice(start, marks.find(at => at > start) ?? sentence.length));
+        });
+        return [receipts[k]!.item, ...paired];
       });
-      expect.soft(named, `${host}: P31.V6 (R-P59 (3)) — the last sentence names reco.1 with its rule and reco.2 with nothing to show, before the moves (${JSON.stringify(sentences[0])})`)
+      expect.soft(named, `${host}: P31.V6 (R-P59 (3)) — the last sentence names reco.1 with its own cause (its eligibility rule) and reco.2 with its own (nothing to show), each before the moves (${JSON.stringify(sentences[0])})`)
         .toEqual(receipts.map(r => [r.item, true, true]));
     }, 60_000);
 
