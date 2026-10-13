@@ -75,7 +75,18 @@ export interface SendOptions {
 
 export function contentInteraction(type: SdkEventType, data: Record<string, unknown>): SdkEventType | undefined {
   return [data.action, data.eventName, data.event, type].map(name => typeof name === 'string' ? name.trim() : '')
-    .find(name => ['content_impression', 'content_click', 'content_dwell', 'video_complete'].includes(name)) as SdkEventType | undefined;
+    .find(name => ['content_impression', 'content_click', 'content_dwell', 'video_complete', 'content_viewable', 'video_view'].includes(name)) as SdkEventType | undefined;
+}
+
+/**
+ * P40: the dwell minimum of a slot — the one a page configured for that slot
+ * (`dwellMinMsBySlot`, a number of milliseconds from 0), else the minimum every
+ * other slot keeps (`dwellMinMs`, one second unless configured). Only a number
+ * is a minimum, so nothing an object inherits can stand for one.
+ */
+export function dwellMinFor(slot: string, fallback: number, bySlot?: Record<string, number>): number {
+  const ms: unknown = bySlot?.[slot];
+  return typeof ms === 'number' && ms >= 0 ? ms : fallback;
 }
 /**
  * What one client owns on the page it was given, so it can hand all of it

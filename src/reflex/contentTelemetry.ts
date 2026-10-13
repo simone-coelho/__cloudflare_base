@@ -40,8 +40,13 @@ import { readRevision } from '@/config/versionedStore';
 import { CONTENT_KIND } from '@/content/kinds';
 import { contentTypeValues } from '@/content/typeAffinity';
 
-/** The content actions the SDK emits and the registry can learn from. */
-export const CONTENT_ACTIONS = ['content_impression', 'content_click', 'content_dwell', 'video_complete'] as const;
+/**
+ * The content actions the SDK emits and the registry can learn from. P40 adds
+ * the viewable impression (`content_viewable`, the render acknowledgement's
+ * sibling: placed like it, weighing 0 like it) and the video view (`video_view`,
+ * read off the catalogue's format exactly as `video_complete` is).
+ */
+export const CONTENT_ACTIONS = ['content_impression', 'content_click', 'content_dwell', 'video_complete', 'content_viewable', 'video_view'] as const;
 export type ContentAction = (typeof CONTENT_ACTIONS)[number];
 
 const CONTENT_SET: ReadonlySet<string> = new Set(CONTENT_ACTIONS);
@@ -58,12 +63,19 @@ export function isContentAction(action: string): action is ContentAction {
  *   dwell        0.5 sustained attention, but passive
  *   click        1   a deliberate act, like opening a product page
  *   video_complete 2 the strongest content signal there is: she stayed to the end
+ *   content_viewable 0 P40 decision D1: at least half in view for one second is
+ *                    still exposure, never interest; it weighs 0 whatever a
+ *                    registry says (reflex/core.ts, weightOf)
+ *   video_view   1   P40: the video watched for three seconds, a deliberate act
+ *                    like a click; the tenant's registry weight applies when published
  */
 export const CONTENT_WEIGHTS: Record<ContentAction, number> = {
   content_impression: 0,
   content_dwell: 0.5,
   content_click: 1,
   video_complete: 2,
+  content_viewable: 0,
+  video_view: 1,
 };
 
 /**

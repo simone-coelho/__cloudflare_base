@@ -477,10 +477,18 @@
       // the same call that draws it and its label is written once.
       const n = (label, help, value, onChange, key, opts, derived) => trow({ name: named((opts || {}).path, label), help, value, changed: false, key, unit: (opts || {}).unit, min: (opts || {}).min, max: (opts || {}).max, step: (opts || {}).step, derived, onChange });
 
+      // P04: the page's layout slot also pins a module at any position, so its
+      // sentence states that rule as it is served; every other slot keeps its own.
+      const layoutPins = st.layout === true;
+      const atPositions = layoutPins && Array.isArray(st.positionPins) && st.positionPins.length ? st.positionPins : null;
       host.append(card('What this slot shows',
-        st.offLimits ? 'Off-limits: no piece is selected; pin and ranking settings are dormant.' : 'Pins occupy the first positions in exact order. If any required prefix pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.',
+        st.offLimits ? 'Off-limits: no piece is selected; pin and ranking settings are dormant.'
+          : layoutPins ? 'A module pinned at a position is served at exactly that position, any position from 1 to the take, on every arm, and is never ranked or explored; the other positions are ranked around it. Prefix pins occupy the first positions in exact order. If any pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.'
+            : 'Pins occupy the first positions in exact order. If any required prefix pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.',
         n('Pieces shown at once', 'Total capacity, including pinned first positions and the ranked remainder.', st.take, (v) => { st.take = v ?? 1; ruleCheck(); }, 'take', { min: 1, step: 1, unit: 'pieces', path: 'take' }),
-        h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned'), h('span', { class: 'v' }, st.offLimits ? `${JSON.stringify(st.pinnedPieceIds ?? st.pinnedPieceId ?? [])}; dormant while off-limits` : st.pinnedPieceIds ? `${JSON.stringify(st.pinnedPieceIds)} first; ${Math.max(0, st.take - st.pinnedPieceIds.length)} ranked positions` : st.pinnedPieceId ? `${st.pinnedPieceId}: the engine does not rank this slot at all` : 'nothing pinned; the engine ranks the slot'))));
+        h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned'), h('span', { class: 'v' }, st.offLimits ? `${JSON.stringify(st.pinnedPieceIds ?? st.pinnedPieceId ?? [])}; dormant while off-limits` : st.pinnedPieceIds ? `${JSON.stringify(st.pinnedPieceIds)} first; ${Math.max(0, st.take - st.pinnedPieceIds.length)} ranked positions` : st.pinnedPieceId ? `${st.pinnedPieceId}: the engine does not rank this slot at all` : atPositions ? 'no prefix pins; the modules below are pinned at their positions and the engine ranks the rest' : 'nothing pinned; the engine ranks the slot')),
+        // P04: the layout slot's modules pinned at a position, as authored.
+        atPositions ? h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned at a position'), h('span', { class: 'v' }, JSON.stringify(atPositions))) : null));
 
       const scope = rules.scope, draft = rules.draft;
       const currentEditor = () => scope === S.scope && draft === rules.draft && S.slot === st.slot && strategyOf(draft)?.strategy === st;
@@ -500,7 +508,7 @@
               delete st.pinnedPieceId; delete st.pinnedPieceIds;
               if (Array.isArray(value)) st.pinnedPieceIds = value;
               else if (value !== null) st.pinnedPieceId = value;
-            } else if (nullDeletes && value === null) delete st[field]; else st[field] = value;
+            } else if (nullDeletes && (value === null || (['orders', 'positionPins', 'offLimitsPieceIds'].includes(field) && Array.isArray(value) && value.length === 0))) delete st[field]; else st[field] = value;
           } catch { editor.error = syntax; }
           let fields = rules.exclusionEditors.get(st);
           if (!fields) { fields = new Map(); rules.exclusionEditors.set(st, fields); }
@@ -525,6 +533,30 @@
         h('div', { class: 'help' }, 'Any exact {"dimension":"…","value":"…"} match excludes a piece. Up to 1000 distinct pairs; both strings 1–1024 UTF-16 units. [] clears. No vocabulary, trimming or case conversion. Explicit own tags match literally; only absent contentType uses the safe rendering-type fallback on every arm.'),
         h('div', { class: 'name' }, named('allowedTypes', 'Allowed rendering types (JSON array or null)')), typeEditor,
         h('div', { class: 'help' }, 'Matches piece.type exactly, not tags.contentType. Use 1–1000 distinct strings of 1–1024 UTF-16 units; [] is invalid, null removes the limit. Saved controls apply when the serving worker reads that revision; caches may still hold an earlier revision.')));
+
+      // P01: the per-context order editor, on the page's declared layout slot
+      // only. It edits the slot's `orders` in the same JSON idiom as the hard
+      // controls above; the platform validates the draft and the save is the
+      // same slots publication as every other change on this screen.
+      if (st.layout === true) {
+        const orderEditor = jsonEditor('orders', 'layout.orders', [], 'Orders must be a valid JSON array of {"context":{"channel":…,"visitBuckets":…},"modules":[…]} objects. Use [] to clear; malformed text cannot be saved.', true);
+        host.append(card('Module order per context',
+          'This is the page’s layout slot. For a shopper in a context named here the slot serves exactly the listed modules, in this order; a module the order does not list is hidden in that context and is not counted as an exposure. Every other shopper keeps the slot’s own decision.',
+          h('div', { class: 'name' }, named('orders', 'Per-context orders (JSON array)')), orderEditor,
+          h('div', { class: 'help' }, 'Each order is {"context": {"channel": one of direct, paid_social, paid_search, email, organic, referral or "any", "visitBuckets": a list of "1", "2-3", "4+" or "any"}, "modules": [module ids, 1 up to the slot’s take]}. The most specific matching context wins; two contexts that match one shopper with equal specificity cannot be saved. A shopper whose channel or visit is unknown matches no context. An order keeps every pinned module at its position and lists no excluded module. The order is never served on the holdout’s default arm, without personalization consent, or when the slot’s exploration picks; those shoppers keep the slot’s own decision. [] clears.')));
+
+        // P04: a module pinned at any position, and per-module off-limits marks,
+        // on the page's layout slot only, in the same JSON idiom; each is written
+        // to the slot only when the operator authors it, and [] removes it.
+        const positionPinEditor = jsonEditor('positionPins', 'governance.positionPins', [], 'Pins at a position must be a valid JSON array of {"pieceId":"…","position":n} objects. Use [] to clear; malformed text cannot be saved.', true);
+        const offLimitsEditor = jsonEditor('offLimitsPieceIds', 'governance.offLimitsPieceIds', [], 'Off-limits modules must be a valid JSON array of module ids. Use [] to clear; malformed text cannot be saved.', true);
+        host.append(card('Pins at a position and off-limits modules',
+          'A module pinned at a position is served at exactly that position on every arm, reserved before any slot of the page ranks and never explored, while the other positions are ranked around it. An off-limits module keeps its baseline position — its place in the configured order for the shopper’s context, else in catalogue order among the modules this slot can serve — and no term and no exploration moves it; one whose baseline position lies beyond the take is not served.',
+          h('div', { class: 'name' }, named('positionPins', 'Modules pinned at a position (JSON array)')), positionPinEditor,
+          h('div', { class: 'help' }, 'Each pin is {"pieceId": a module id, "position": a whole number from 1 to the slot’s take}, after any prefix pins. One position holds one module and a module is pinned once, never also off-limits or excluded. An order keeps every pinned module at its position. A pinned module that is missing, ineligible or excluded when a shopper arrives refuses the whole slot: nothing is served from it and nothing is recorded, and the refusal names the module, its position and the reason. [] clears.'),
+          h('div', { class: 'name' }, named('offLimitsPieceIds', 'Off-limits modules (JSON array)')), offLimitsEditor,
+          h('div', { class: 'help' }, 'Module ids, each listed once. An off-limits module is never ranked: it holds its baseline position on every arm, the holdout’s default arm included, and is not served when that position lies beyond the take or on a pinned position. A module the slot cannot serve when a shopper arrives holds nothing. [] clears.')));
+      }
 
       const unregistered = Object.keys(st.weights).filter(key => !rules.dimensions.includes(key));
       host.append(card('How much each interest counts in this slot',

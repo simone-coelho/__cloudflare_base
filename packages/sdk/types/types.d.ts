@@ -135,18 +135,26 @@ export interface ResponseLike {
     json(): Promise<unknown>;
     body?: ReadableStream<Uint8Array> | null;
 }
-/** What the SDK lets an integrator say happened. */
-export type SdkEventType = 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase' | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete' | 'email_open' | 'form_submit' | 'button_click' | 'custom';
+/**
+ * What the SDK lets an integrator say happened. P40: `content_viewable` is the
+ * viewable impression the SDK itself measures (never the page's to send),
+ * `video_view` the video watched for three seconds, `product_dwell` a product
+ * page held past its dwell threshold (`productId`, `dwellMs`).
+ */
+export type SdkEventType = 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase' | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete' | 'content_viewable' | 'video_view' | 'product_dwell' | 'email_open' | 'form_submit' | 'button_click' | 'custom';
 /**
  * `utmTerm` is the campaign's search keyword, present only when the page load
  * carries one within its bound: a keyword is a seeding signal, never evidence of
  * a channel, and an absent one is absent rather than empty so the arrival every
- * other page load sends is unchanged.
+ * other page load sends is unchanged. `utmCampaign` is the campaign name, under
+ * the same rule: present only when the landing URL carries `utm_campaign`, read
+ * only by a tenant's published classification rule, never stored (P36).
  */
 export interface EntrySignals {
     utmMedium: string;
     utmSource: string;
     utmTerm?: string;
+    utmCampaign?: string;
     referrer: string;
     siteHost: string;
 }
@@ -176,7 +184,15 @@ export interface ContentDecision {
     customerContentId: string;
     type: string;
     slot: string;
+    /** The page-wide order the decision is drawn at. */
     order: number;
+    /**
+     * The decision's position within its slot (P03 decision D3): what its record
+     * calls `position`. The engine names it on every decision it answers; the SDK
+     * carries it on the render acknowledgement and on every engagement of the
+     * placement, beside the page-wide `order` as `position`.
+     */
+    slotPosition?: number;
     score: number;
     strategy: 'affinity' | 'default' | 'tenant-pinned';
     explain: {

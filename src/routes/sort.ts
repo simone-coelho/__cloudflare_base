@@ -29,6 +29,7 @@ import { shopperObject } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantVariables } from '@/tenancy/tenant';
 import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHeaders, SessionAccessError } from '@/identity/sessionCapability';
 import { productSortIdentity, scheduleProductSort, type ProductSortPersistence } from '@/ledger/productSort';
+import { regionalPriorForSort } from '@/content/sortPrior';
 /** Both capture paths count; only an unscheduled record refuses the answer. */
 const captured = (p: ProductSortPersistence): boolean => p.status === 'durable' || p.status === 'queued';
 
@@ -47,6 +48,13 @@ const bodySchema = z.object({
     affinity: z.number().optional(),
     dims: z.record(z.string(), z.number()).optional(),
   }).optional(),
+  /**
+   * The region the caller asserts; it selects the regional prior on the demo
+   * profile only, as `ctx.region` does on a snapshot, and only when it is a
+   * region key (`demoAssertedRegion`). A malformed member is ignored, exactly as
+   * this body ignored any `context` before it was read.
+   */
+  context: z.object({ region: z.string().optional() }).passthrough().optional().catch(undefined),
 });
 
 /**
@@ -113,7 +121,11 @@ sortRoutes.post('/', requireShopper({ bodyLimit: 2 * 1024 * 1024 }), async (c) =
     const identity = productSortIdentity(shopperPrincipal(c.req.raw), c.env);
     const hints = intersectConsent(consentFromCookies(c.req.header('Cookie')), refusalHints(parsed.data.consent));
     const { dims, cfg, consent } = await affinityFor(c, userId, surface, hints);
-    const result = sortCandidates(candidates as Candidate[], dims, cfg, weights);
+    // The regional prior, as the homepage slots apply it, where the tenant publishes its allowlist (src/content/sortPrior.ts).
+    const prior = await regionalPriorForSort(c.env, c.get('tenant') ?? DEFAULT_TENANT, { personal: dims, consent,
+      cf: ((c.req.raw as unknown as { cf?: unknown }).cf ?? null) as { country?: string; regionCode?: string } | null, asserted: parsed.data.context?.region });
+    const result = sortCandidates(candidates as Candidate[], prior?.dims ?? dims, cfg, weights,
+      prior ? { region: prior.label.region, lambda: prior.label.lambda, share: prior.share } : null);
     const persistence = await scheduleProductSort(c.env.STORAGE, () => c.executionCtx, identity, consent, cfg, result, candidates.length, weights, null, c.env);
     // A sorted answer still requires its record to have been captured. Durable
     // owner recovery and the ledger's own delivery are both captures: where the
@@ -126,6 +138,7 @@ sortRoutes.post('/', requireShopper({ bodyLimit: 2 * 1024 * 1024 }), async (c) =
       tenant: c.get('tenant') ?? DEFAULT_TENANT,
       configVersion: cfg.version,
       ...result,
+      ...(prior ? { regional: prior.label } : {}),
       persistence,
     });
   } catch (error) {

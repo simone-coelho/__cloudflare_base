@@ -1,0 +1,111 @@
+{
+ "name": "10-intent-toggle",
+ "beat": 10,
+ "act": 3,
+ "actName": "The phone page follows intent",
+ "press": "Flip the toggle to “bring your own”, then to “upgrade”",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "steps": [
+  {
+   "label": "bring your own",
+   "ctx": {
+    "intent": "byod",
+    "region": "US-NY"
+   },
+   "events": [
+    {
+     "type": "custom",
+     "data": {
+      "event": "select",
+      "control": "intent",
+      "intent": "byod"
+     },
+     "note": "the buy-box toggle: bring your own phone"
+    }
+   ],
+   "snapshot": [
+    {
+     "page": "phone",
+     "phone": "galaxy-s26",
+     "slots": [
+      "pdp-modules",
+      "plan-pairing"
+     ],
+     "ctx": {
+      "intent": "byod",
+      "region": "US-NY"
+     }
+    },
+    {
+     "page": "home",
+     "slots": [
+      "hero",
+      "deals"
+     ],
+     "ctx": {
+      "intent": "byod",
+      "region": "US-NY"
+     },
+     "entry": {
+      "utmSource": "tiktok",
+      "utmMedium": "paid-social",
+      "utmTerm": "iphone-18-pro"
+     }
+    }
+   ]
+  },
+  {
+   "label": "upgrade",
+   "ctx": {
+    "intent": "upgrade",
+    "region": "US-NY"
+   },
+   "events": [
+    {
+     "type": "custom",
+     "data": {
+      "event": "select",
+      "control": "intent",
+      "intent": "upgrade"
+     },
+     "note": "the buy-box toggle: upgrade a line"
+    }
+   ],
+   "snapshot": [
+    {
+     "page": "phone",
+     "phone": "galaxy-s26",
+     "slots": [
+      "pdp-modules",
+      "plan-pairing"
+     ],
+     "ctx": {
+      "intent": "upgrade",
+      "region": "US-NY"
+     }
+    },
+    {
+     "page": "home",
+     "slots": [
+      "hero",
+      "deals"
+     ],
+     "ctx": {
+      "intent": "upgrade",
+      "region": "US-NY"
+     },
+     "entry": {
+      "utmSource": "tiktok",
+      "utmMedium": "paid-social",
+      "utmTerm": "iphone-18-pro"
+     }
+    }
+   ]
+  }
+ ],
+ "engine": "ctx.intent is asserted (labelled): intent-gated offers fail closed. The toggle press is also behaviour (a selector), so intent moves.",
+ "sees": "Two propositions routed by behaviour, same public prices. For the switcher: Simple leads plan pairing, the switch hero leads, and the toggle’s select touch puts intent byod at 0.53. The deals module puts the watch-and-tablet line first, on the added line she showed at the kids’ watch and her four lines, and bring-your-phone second (measured in New York: 0.592 against 0.522; the receipt names intent add-line, lines family and intent byod). The Duo pre-order is not offered to someone bringing her own phone, and the Unlimited-only trade-in offer fails closed. On upgrade: the new-line offers leave, the Galaxy S26 Ultra upgrade offer leads (measured 0.844) with its receipt (what it requires, what ends the credit), Unlimited More leads plan pairing and protection rises above plan pairing."
+}

@@ -129,6 +129,77 @@ export interface ReflexState {
   audiences: string[];
   /** ReflexConfig.version this state was last evaluated under. */
   configVersion: string;
+  /**
+   * P10 (decision D1): the shopper's count of SIGNALS — every action applied to
+   * this state whose own behaviour weight (`ReflexConfig.weights`) is above
+   * zero. An impression, a tick, a page view and any other action weighted 0
+   * count for nothing. Written only once a signal has been recorded, so the
+   * state of a shopper with no signals carries exactly the members it carried
+   * before; absent reads as 0 (`signalsOf`). Never decayed: a returning
+   * shopper's earlier visits count.
+   */
+  signals?: number;
+  /**
+   * P40 (R-P48): the orders this shopper's purchases have named, oldest first,
+   * each as `[order key, event id]`: the key is the digest the ledger derives
+   * from the order id (`orderKeyOf`, src/ledger/records.ts), never the order id
+   * itself, and the event id is the one the recording purchase carried ('' when
+   * it carried none). At most MAX_ORDERS are kept, the oldest forgotten first.
+   * Written only once a purchase names an order, so the state of a shopper who
+   * has never named one carries exactly the members it carried before; carried
+   * unchanged through every apply.
+   */
+  orders?: Array<[string, string]>;
+}
+
+/** P40: the most orders one shopper's state remembers. */
+export const MAX_ORDERS = 64;
+
+/**
+ * P40 (R-P48): whether a purchase naming this order key is a SECOND purchase of
+ * an order the state has recorded: recorded under another event, or under none.
+ * The recording event delivered again is not one (it re-answers with its own
+ * record), and a purchase that names no order (`order` null) never is.
+ */
+export function isDuplicateOrder(state: Pick<ReflexState, 'orders'> | null | undefined, order: string | null, eventId: string | undefined): boolean {
+  const held = state?.orders;
+  return order !== null && Array.isArray(held)
+    && held.some(entry => Array.isArray(entry) && entry[0] === order && (entry[1] === '' || entry[1] !== eventId));
+}
+
+/**
+ * P40 (R-P48): the state with this purchase's order recorded once, beside the
+ * event that recorded it; the oldest is forgotten past MAX_ORDERS. No order:
+ * the state exactly as given (absent stays absent). An order with no state to
+ * hold it starts from the empty state of `config`, as the first event of a
+ * shopper does; a held state needs no configuration (R-P58: the buffered door
+ * remembers an order in the state it already holds).
+ */
+export function withOrder(state: ReflexState, order: string | null, eventId: string | undefined, config?: ReflexConfig): ReflexState;
+export function withOrder(state: ReflexState | null | undefined, order: string | null, eventId: string | undefined, config?: ReflexConfig): ReflexState | undefined;
+export function withOrder(state: ReflexState | null | undefined, order: string | null, eventId: string | undefined, config?: ReflexConfig): ReflexState | undefined {
+  if (order === null) return state ?? undefined;
+  const base = state && state.v === 1 ? state : config ? emptyState(config) : undefined;
+  if (!base) return state ?? undefined;
+  const held = Array.isArray(base.orders) ? base.orders : [];
+  if (held.some(entry => Array.isArray(entry) && entry[0] === order)) return base;
+  return { ...base, orders: [...held, [order, eventId ?? '']].slice(-MAX_ORDERS) as Array<[string, string]> };
+}
+
+/**
+ * P10: the count of signals a state holds, as a whole number. Absent, or a value
+ * that is not a nonnegative safe integer, is 0: a count the engine cannot trust
+ * is no evidence of signals.
+ */
+export function signalsOf(state: Pick<ReflexState, 'signals'> | null | undefined): number {
+  const n = state?.signals;
+  return typeof n === 'number' && Number.isSafeInteger(n) && n > 0 ? n : 0;
+}
+
+/** P10: the state with its count member, written only when there is a signal to count. */
+export function withSignals<T extends ReflexState>(state: T, signals: number): T {
+  const { signals: _held, ...rest } = state; void _held;
+  return (signals > 0 ? { ...rest, signals: Math.min(signals, Number.MAX_SAFE_INTEGER) } : rest) as T;
 }
 
 /** A single (dimension, value) hit extracted from a product interaction. */
@@ -239,6 +310,11 @@ export const DEFAULT_REFLEX_CONFIG: ReflexConfig = {
     content_dwell: 0.5,
     content_click: 1,
     video_complete: 2,
+    // P40: the viewable impression weighs 0 (decision D1, enforced by weightOf
+    // below whatever a registry says); the video view at three seconds is a
+    // content action of weight 1, under the tenant's own weight once published.
+    content_viewable: 0,
+    video_view: 1,
     // Time-only re-evaluation (alarms / no-product events): no accumulation.
     tick: 0,
   },
@@ -561,6 +637,11 @@ export function touchesForEvent(
  *    moves shoppers out (the request path evaluates lazily; the DO adds
  *    exact-time alarms in P2 using nextCrossing()).
  * 4. Emit an ExplainRecord per transition (the glass box).
+ * 5. P10 (decision D1): count the action as a SIGNAL when its own behaviour
+ *    weight is above zero (`isSignal`), whatever touches it carried; a
+ *    weight-0 action (an impression, a tick, a page view) keeps the count
+ *    where it is. Both shopper hosts apply every action through this one step,
+ *    so the count is the same on either.
  *
  * The previous state object is never mutated.
  */
@@ -571,7 +652,7 @@ export function apply(
   config: ReflexConfig
 ): ReflexResult {
   const base = prev && prev.v === 1 ? prev : emptyState(config);
-  const weight = config.weights[input.action] ?? 0;
+  const weight = weightOf(config, input.action);
 
   // Copy-on-write: fresh dim maps; entries are replaced, never mutated.
   const dims: ReflexState['dims'] = {};
@@ -651,9 +732,47 @@ export function apply(
   }
 
   return {
-    state: { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+    // 5. The count rides the state: carried through every apply, one more for a signal.
+    // P40: the orders the state has recorded ride it unchanged.
+    state: withSignals<ReflexState>({ v: 1, dims, audiences: [...next].sort(), configVersion: config.version,
+      ...(base.orders !== undefined ? { orders: base.orders } : {}) },
+      signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)),
     changes: { entered, exited, explain },
   };
+}
+
+/**
+ * P40 (decision D1): the actions that weigh 0 whatever a registry says. The
+ * viewable impression is recorded beside the render acknowledgement and never
+ * builds interest, never counts as a signal and never reaches a population count.
+ */
+const NEVER_WEIGHED: ReadonlySet<string> = new Set(['content_viewable']);
+
+/**
+ * The behaviour weight an action applies under this registry: its own weight,
+ * 0 when the registry names none, and 0 always for an action that never builds
+ * interest (P40). What `apply` accumulates and what both hosts fan into the
+ * populations (CW6, P07).
+ */
+export function weightOf(config: Pick<ReflexConfig, 'weights'>, action: string): number {
+  return NEVER_WEIGHED.has(action) ? 0 : config.weights[action] ?? 0;
+}
+
+/** P40: whether an action never builds interest, whatever a registry says (the viewable impression). */
+export function neverWeighed(action: string): boolean {
+  return NEVER_WEIGHED.has(action);
+}
+
+/**
+ * P10 (decision D1, R-P33): whether one action is a SIGNAL — its OWN behaviour
+ * weight in the registry in force is above zero. Only the action's own weight
+ * is read, never a weight applied elsewhere to what it touched, so nothing can
+ * make a weight-0 action a signal or a weighted one none. P40: an action that
+ * never builds interest is never a signal.
+ */
+export function isSignal(config: Pick<ReflexConfig, 'weights'>, action: string): boolean {
+  const weight = Object.hasOwn(config.weights, action) && !NEVER_WEIGHED.has(action) ? config.weights[action] : undefined;
+  return typeof weight === 'number' && Number.isFinite(weight) && weight > 0;
 }
 
 /** Time-only re-evaluation (no accumulation) — what a DO alarm runs in P2. */

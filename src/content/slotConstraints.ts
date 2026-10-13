@@ -4,8 +4,14 @@ import { contentTypeValues } from './typeAffinity';
 export function slotPins(slot: { pinnedPieceId?: string; pinnedPieceIds?: readonly string[] }): readonly string[] {
   return slot.pinnedPieceIds ?? (slot.pinnedPieceId ? [slot.pinnedPieceId] : []);
 }
-export function rankedCapacity(slot: { take: number; pinnedPieceId?: string; pinnedPieceIds?: readonly string[]; offLimits?: boolean }): number {
-  return slot.offLimits || slot.pinnedPieceId ? 0 : Math.max(0, slot.take - slotPins(slot).length);
+/**
+ * The positions ranking fills: the take less the prefix pins and (P04) the
+ * modules pinned at a position. An off-limits module's held position depends on
+ * the decision's baseline, so it is not subtracted here.
+ */
+export function rankedCapacity(slot: { take: number; pinnedPieceId?: string; pinnedPieceIds?: readonly string[]; offLimits?: boolean;
+  positionPins?: ReadonlyArray<{ pieceId: string; position: number }> }): number {
+  return slot.offLimits || slot.pinnedPieceId ? 0 : Math.max(0, slot.take - slotPins(slot).length - (slot.positionPins?.length ?? 0));
 }
 
 export interface SlotConstraints {

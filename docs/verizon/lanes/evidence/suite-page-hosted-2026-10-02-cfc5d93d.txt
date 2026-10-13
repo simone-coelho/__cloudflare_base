@@ -1,0 +1,206 @@
+
+Vantage page rehearsal against https://edge-platform-vantage.expedge.workers.dev
+
+── The page loads
+   ✓ /vantage/(index) → 200, as a browser navigates
+   ✓ /vantage/phone?id=galaxy-s26 → 200, as a browser navigates
+   · /vantage/phone/galaxy-s26, as a browser navigates → 200, not the phone page (the root fallback); links use /vantage/phone?id= (L1.md §3, R1 N7)
+   ✓ /vantage/vantage.js → 200
+   ✓ /vantage/vantage.css → 200
+   ✓ the home shell is the Vantage page
+   ✓ the phone shell boots into the phone view
+   ✓ the 18 beat documents are served  (18/18)
+   ✓ /vantage/phones.json → 200
+   ✓ /vantage/plans.json → 200
+   ✓ /vantage/catalog.json → 200
+   ✓ /vantage/seeds.json → 200
+   ✓ /vantage/img/MANIFEST.json → 200
+
+── No credential is served, embedded or committed
+   ✓ /vantage/beats/operator.local.json → 403 (must not be served)
+   ✓ /vantage/operator.local.json → 403 (must not be served)
+   ✓ /vantage/beats/token.json → 403 (must not be served)
+   ✓ no served page or document carries a token (27 checked)
+   ✓ no file this demo ships carries a token (81 read from the checkout)
+   ✓ the page source makes no /content, /config or /ops call of its own  (the merchandiser half must go through /vantage/api/beat)
+   ✓ the page applies beats by name
+   ✓ the page source holds no Authorization header
+   ✓ every fetch in the page goes through api(), demoRoute() or tryJson() (3 call sites)  (3 found)
+   ✓ api() and demoRoute() send X-Tenant on every API call
+   ✓ and the tenant they name is 'vantage'
+   ✓ tryJson() only ever reads /vantage/ documents
+
+── The unsigned-read trap, and the doors that stay shut
+   ✓ an unsigned GET /content/catalog is refused (401)  (if this ever passes, the route stopped protecting configuration reads)
+   ✓ an unsigned GET /content/slots is refused (401)  (if this ever passes, the route stopped protecting configuration reads)
+   ✓ /vantage/api/beat refuses a name outside its closed list (400)
+   ✓ and refuses a kind that is not the beat's own (400)
+   ✓ the regional-prior seed door refuses a caller with no operator token (401)
+   ✓ a receipt without a shopper session is refused (401)
+
+── 1 · Without the override: her region comes from the request
+   ✓ the tenant is reset to its opening state  (open-slots@53 open-catalog@63)
+   ✓ without the override the panel says: from the request: the edge located her  (US-NC · state · North Carolina $73958 · lean region US-NC, synthetic → warehouse)
+      a stranger from the ad, region from the request: iphone-18-pro-launch 0.638 · iphone-duo-preorder 0.520 · galaxy-z-fold8-trade-in 0.513 · galaxy-s26-new-line 0.502 | hero launch 0.240
+   ✓ and her first snapshot is decided on that region’s prior, nothing asserted  (regional driver US-NC λ 1)
+
+── 1 · A stranger lands from the paid-social ad: the rehearsal override, ?region=US-NY
+   ✓ a visitor is minted with consent, carrying the landing entry  (paid-social · tiktok · term iphone-18-pro)
+   ✓ the cold-start panel answers for New York at state grain  (New York · state · ACS 2024 1-year · $85820)
+   ✓ the census is shown and never scored
+   ✓ the regional lean is in force, labelled synthetic → warehouse  (425 synthetic sales · leaders {"category":"phones","brand":"apple","ecosystem":"ios","priceBand":"premium"})
+   ✓ the panel says the sentence
+      hero launch 0.260 | deals iphone-18-pro-launch 0.671 · iphone-duo-preorder 0.550 · galaxy-z-fold8-trade-in 0.388 · galaxy-s26-new-line 0.338 | 883 ms
+   ✓ the hero answers the ad: the launch hero
+   ✓ the four answer the ad: the iPhone 18 Pro launch offer first
+   ✓ and the region: the iPhone Duo pre-order second on the New York lean
+   ✓ her own meters are empty: nothing about her is known yet
+   ✓ the launch receipt itemises the campaign seed  (campaign_term “iphone-18-pro” +0.066)
+   ✓ the receipt returns the asserted context, each with its provenance  ({"ctx.region":{"value":"US-NY","from":"record"},"ctx.intent":{"value":"new","from":"request"}})
+   ✓ the hero answers the ad too: its receipt itemises the campaign seed  (hero-launch campaign +0.06)
+   ✓ the record names the regional prior as asserted  (λ 1 · 425 events)
+   ✓ and the record carries no visitor or session id
+
+── 2 · The same visitor, asserted in Texas
+   ✓ the cold-start panel answers for Texas  (Texas · state · $79721 · 490 synthetic sales, leaders {"category":"phones","brand":"samsung","ecosystem":"android","priceBand":"core"})
+      hero launch 0.214 | deals iphone-18-pro-launch 0.563 · galaxy-s26-new-line 0.550 · galaxy-z-fold8-trade-in 0.524 · iphone-duo-preorder 0.452
+   ✓ the same four, reordered: only the region changed
+   ✓ the Galaxy S26 offer second on the Texas lean
+   ✓ her meters did not move: a region is context, never evidence
+   ✓ the receipt names the region as asserted  ({"value":"US-TX","from":"record"})
+      control, no ad, Texas: galaxy-s26-new-line 0.550 · galaxy-z-fold8-trade-in 0.524 · iphone-18-pro-launch 0.497 · iphone-duo-preorder 0.452
+   ✓ control: without the ad, Texas opens on the Galaxy S26 offer, so the ad is what put the launch first
+
+── 3 · She browses Samsung: the S26 card, its page, the S26 Ultra card (back in New York)
+      Galaxy S26 card: samsung 0.353
+      Galaxy S26 page: samsung 0.520
+      Galaxy S26 Ultra card: samsung 0.616
+   ✓ brand samsung crosses the 0.6 entry threshold on the third touch (measured 0.61 to 0.62)  (0.616)
+   ✓ she joins the audience  (brand_samsung_affinity, category_phones_affinity, ecosystem_android_affinity)
+   ✓ ecosystem android and price band accumulate with it  (android 0.625 · premium 0.357 · core 0.525)
+
+── 4 · The hinge: the Pixel 11 page, then home
+      hero launch 0.086 | deals galaxy-s26-new-line 0.354 · galaxy-z-fold8-trade-in 0.338 · pixel-11-launch 0.302 · iphone-18-pro-launch 0.245 | samsung 0.607 android 0.690
+   ✓ the Galaxy S26 offer leads the four
+   ✓ the lifted launch offer falls to fourth  (at 4)
+   ✓ Android offers now hold the containers above it
+   ✓ brand samsung is still a member, above the 0.45 exit threshold  (0.607)
+   ✓ campaign context superseded by observed behaviour: the seed is still applied, and outscored  (promo-iphone-18-pro-launch carries campaign +0.066, now at 4)
+
+── 5 · She stops touching it: the page asks again 50 s after her last Samsung touch
+      before the minute: samsung 0.584 · android 0.690
+      re-asked 51 s after the touch: samsung 0.407 · android 0.690 | deals galaxy-s26-new-line 0.318 · galaxy-z-fold8-trade-in 0.303 · pixel-11-launch 0.274 · iphone-18-pro-launch 0.251
+   ✓ the Samsung claim withdraws: brand samsung under the 0.45 exit threshold on her meter (measured 0.35)  (0.407)
+      audience flag at the re-ask: brand_samsung_affinity still listed until her next event (session host; recorded in L5.md)
+   ✓ the Android lean holds (measured 0.69)  (0.690)
+   ✓ the Galaxy receipts lose their Samsung driver under the exit threshold  (0.414, 0.414)
+   ✓ the Galaxy S26 offer still leads on her Android lean
+      the four kept their order (as L1 measured): ranking is continuous and Android still carries them
+
+── 6 · She opens the Galaxy S26
+      opened from the "Phones for you" rail
+      modules storage-memory 0.085 · protection 0.085 · home-bundle 0.001 · trade-in 0.000 · pairing 0.000 · connected-devices 0.000 | plans simple 0.000 · go 0.000 · more 0.000
+   ✓ six modules below the buy box
+   ✓ storage & memory and protection lead, on the premium band she earned (measured 0.085)
+   ✓ pair with a plan opens on its default order
+      control, a fresh New York visitor: storage-memory 0.200 · protection 0.200 · home-bundle 0.009 · trade-in 0.000 · pairing 0.000 · connected-devices 0.000
+   ✓ control: a fresh visitor opens on the region’s premium lean, not the template (measured 0.2)
+
+── 7 · She steps to 512 GB, compares storage, then the camera
+      modules storage-memory 0.294 · protection 0.163 · home-bundle 0.001 · trade-in 0.000 · pairing 0.000 · connected-devices 0.000 | premium 0.791 compare 0.710
+   ✓ storage & memory rises to first (measured 0.286)
+   ✓ protection follows the premium band, second (measured 0.163)
+   ✓ the 512 GB step is +$5.56/mo, the catalog's own delta  (512 GB 1099.99)
+
+── 8 · She opens the hotspot & travel starter on Unlimited More
+   ✓ the Unlimited More card is on her phone page to press  (plan-simple, plan-go, plan-more)
+      modules storage-memory 0.291 · pairing 0.229 · protection 0.161 · connected-devices 0.065 · home-bundle 0.001 · trade-in 0.000 | plans more 0.115 · simple 0.000 · go 0.000
+   ✓ pair with a plan rises, 5 → 2 (measured fifth to second)
+   ✓ Unlimited More leads the plans (measured 0.114)
+      the streaming shopper: plans max 0.106 · simple 0.000 · go 0.000
+   ✓ the streaming shopper beside her: Unlimited Max leads (measured 0.101)
+
+── 9a · Four lines, then the kids’ watch, then back
+      modules connected-devices 0.405 · storage-memory 0.282 · pairing 0.277 · protection 0.160 · home-bundle 0.001 · trade-in 0.000 | plans go 0.146 · more 0.115 · simple 0.000
+   ✓ watch, tablet and more lines rises to first (measured 0.29)
+   ✓ the family starter, Unlimited Go, leads the plans (measured 0.145)
+   ✓ lines family moved on her own behaviour  (0.625)
+
+── 9b · Home: the family hero, and the four-line offer
+      hero family 0.205 | deals four-lines 0.601 · watch-tablet-line 0.601 · galaxy-z-fold8-trade-in 0.391 · galaxy-s26-new-line 0.377
+   ✓ the family hero leads the page
+   ✓ the four-line offer enters the four (measured first, level with the watch line)  (at 1)
+
+── 10a · She will bring her own phone
+      plans simple 0.248 · go 0.147 · more 0.115 | intent {"add-line":0.3558,"byod":0.526}
+   ✓ Simple leads pair with a plan for the switcher (measured 0.245)
+   ✓ her answer is also behaviour: intent byod moved  (0.526)
+
+── 10b · Home: the switcher’s homepage
+      hero switch 0.247 | deals watch-tablet-line 0.602 · bring-your-phone 0.527 · 5g-home 0.235 · streaming-perk 0.034
+   ✓ the switch hero leads (measured 0.245)
+   ✓ bring your phone is in the four on her declared answer (measured second, 0.522)  (at 2)
+   ✓ the watch-and-tablet line leads, on her added line and four lines (measured 0.592)
+   ✓ the iPhone Duo pre-order fails closed: it is for device purchases
+   ✓ every offer that needs a new line fails closed
+   ✓ the receipt names her answer as asserted, from the request  ({"ctx.region":{"value":"US-NY","from":"request"},"ctx.intent":{"value":"byod","from":"request"}})
+
+── 10c · Then she is upgrading
+      modules connected-devices 0.400 · storage-memory 0.276 · pairing 0.272 · protection 0.259 · trade-in 0.099 · home-bundle 0.001 | plans more 0.363 · max 0.248 · simple 0.247
+   ✓ Unlimited More leads for the trade-in shopper (measured 0.356)
+      protection, watched: 0.160 → 0.259, at 4 with Pair with a plan at 3
+
+── 10d · Home: the upgrade offer leads
+      hero family 0.207 | deals galaxy-s26-ultra-upgrade 0.877 · pixel-11-launch 0.775 · iphone-duo-preorder 0.669 · iphone-18-pro-upgrade 0.669
+   ✓ the Galaxy S26 Ultra upgrade offer leads (measured 0.844)
+   ✓ the new-line offers leave: their rule needs a new line
+
+── 11 · Two weeks pass (her answer back to a new line, labelled)
+   ✓ the catalog beat publishes by name  (revision 64)
+      hero switch 0.246 | deals pixel-11-season 0.773 · iphone-duo-preorder 0.668 · four-lines 0.602 · watch-tablet-line 0.602
+   ✓ the Pixel 11 launch offer leaves: its window closed
+   ✓ its successor takes container one (measured 0.821)
+   ✓ the flash offer closed with it
+
+── 12 · Black Friday arrives
+      deals black-friday-switch 0.836 · pixel-11-season 0.772 · iphone-duo-preorder 0.667 · four-lines 0.599
+   ✓ the switcher offer, no history at all, takes container one on its metadata (measured 0.845)
+
+── 13 · Pin the iPhone Duo pre-order for everyone
+      deals iphone-duo-preorder(pin) 0.000 · black-friday-switch 0.835 · pixel-11-season 0.770 · four-lines 0.598
+   ✓ the pre-order holds container one, pinned: ranking skipped
+   ✓ the other three are still ranked for her, Black Friday second
+
+── 14a · 5G Home where it is available: New York
+      modules connected-devices 0.409 · home-bundle 0.349 · pairing 0.278 · storage-memory 0.265 · protection 0.257 · trade-in 0.218
+   ✓ add home internet is eligible in New York and rises to the top two on her address check (measured first, 0.349)  (at 2)
+
+── 14b · The same shopper in Montana
+      cold start: US-MT · state
+      modules connected-devices 0.409 · pairing 0.278 · storage-memory 0.264 · protection 0.257 · trade-in 0.217 · accessories 0.000
+   ✓ add home internet leaves the six: still published, not eligible here
+      homepage, Montana: iphone-duo-preorder(pin) 0.000 · black-friday-switch 0.841 · pixel-11-season 0.776 · four-lines 0.603 | New York: iphone-duo-preorder(pin) 0.000 · 5g-home 0.960 · black-friday-switch 0.837 · pixel-11-season 0.771
+   ✓ on the homepage the 5G Home offer is in the four in New York (measured second, behind the pin)
+   ✓ and absent in Montana: the rule fails closed
+
+── 15a · She adds the phone to her cart and comes back (New York)
+      hero continue 0.500 | deals iphone-duo-preorder(pin) 0.000 · 5g-home 0.962 · black-friday-switch 0.858 · pixel-11-season 0.786 | stage deciding
+   ✓ her first cart add makes her deciding  (deciding)
+   ✓ so the continue hero takes the hero (measured 0.5)
+
+── 15b · Tomorrow’s template puts the deals module first
+   ✓ the same four in the same order: the slot is asked by name, wherever the template paints it  (iphone-duo-preorder(pin) 0.000 · 5g-home 0.962 · black-friday-switch 0.857 · pixel-11-season 0.786)
+
+── 15c · Two clicks, and the day report
+   ✓ a click on iphone-duo-preorder (pinned) is accepted for the decision that held it (200)
+   ✓ a click on 5g-home is accepted for the decision that held it (200)
+      iphone-duo-preorder: clicks 0.00 → 1.00 · 5g-home: clicks 0.00 → 1.00
+   ✓ the day report grows by the clicks, credited per promotion (read from the ledger)  (+1.00, +1.00)
+   ✓ and labels itself attribution, not incrementality  (attribution_diagnostic · inference unavailable)
+   ✓ per module too: the phone page’s modules have rows (7)
+
+── The tenant is left at its opening state
+   ✓ POST /vantage/api/reset republishes the opening slots, then the opening catalog
+   ✓ a new arrival from the ad opens on the launch offer again: no pin, no Black Friday  (iphone-18-pro-launch 0.671 · iphone-duo-preorder 0.550 · galaxy-z-fold8-trade-in 0.388 · galaxy-s26-new-line 0.338)
+
+✓ 113 checks: the page works through its own path, with no manual step

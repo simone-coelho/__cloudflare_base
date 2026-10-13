@@ -15,6 +15,7 @@ import { syntheticOperation } from '@/ops/synthetic';
 import { serveContentDecisions } from '@/content/service';
 import { requireRetention, type RetentionStamp } from '@/retention';
 import { ENTRY_QUERY_LIMIT, validEntry, type ChannelSignals } from '@/services/visit';
+import { deviceOf, platformOf } from '@/services/platform';
 import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
 import { tenantConfig } from '@/tenancy/middleware';
 import { enqueueDecisions } from '@/ledger/enqueue';
@@ -781,6 +782,27 @@ decisionRoutes.post('/:tenant/trend/rollup', operatorJwt(), async (c) => {
  * the access error first (ruling R46).
  */
 class InvalidEntryContext extends Error {}
+/**
+ * P31: the page's report of the modules that have nothing to show for this page
+ * view — a JSON array of module identifiers, sent as one string field like
+ * `entry` — malformed. A REQUEST error, raised as the entry context's is.
+ */
+class InvalidNothingToShow extends Error {}
+/** P31: the report's bounds: the field's length, the identifiers it names, and one identifier's length. */
+const NOTHING_TO_SHOW_LIMIT = 4096, NOTHING_TO_SHOW_MODULES = 64, MODULE_ID_LIMIT = 256;
+/**
+ * P31: the identifiers the page reports have nothing to show, each once, in the
+ * order sent; null when the field is not a JSON array of at most
+ * `NOTHING_TO_SHOW_MODULES` non-empty identifiers. An empty array is no report.
+ */
+function nothingToShowOf(raw: string): string[] | null {
+  if (raw.length > NOTHING_TO_SHOW_LIMIT) return null;
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { return null; }
+  if (!Array.isArray(value) || value.length > NOTHING_TO_SHOW_MODULES
+    || !value.every((id) => typeof id === 'string' && id.length > 0 && id.length <= MODULE_ID_LIMIT)) return null;
+  return [...new Set(value as string[])];
+}
 async function snapshotContext(request: Request): Promise<Record<string, string>> {
   assertShopperSelectors(request);
   if (request.method === 'GET') {
@@ -789,6 +811,7 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     if (context.entry !== undefined) {
       try { if (context.entry.length > ENTRY_QUERY_LIMIT || !validEntry(JSON.parse(context.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
     }
+    if (context.nothingToShow !== undefined && nothingToShowOf(context.nothingToShow) === null) throw new InvalidNothingToShow();
     for (const key of ['trackingConsent', 'personalizationEnabled']) if (context[key] !== undefined && context[key] !== 'true' && context[key] !== 'false') throw new SessionAccessError();
     return context;
   }
@@ -799,24 +822,34 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new SessionAccessError();
   const out: Record<string, string> = {};
   for (const [key, item] of Object.entries(value)) {
-    if (!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance'].includes(key)
-      || typeof item !== 'string' || item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128)) throw new SessionAccessError();
+    if (!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow'].includes(key)
+      // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
+      || typeof item !== 'string' || (key !== 'nothingToShow' && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
   }
   if (out.entry !== undefined) {
     try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
+  if (out.nothingToShow !== undefined && nothingToShowOf(out.nothingToShow) === null) throw new InvalidNothingToShow();
   for (const key of ['trackingConsent', 'personalizationEnabled']) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new SessionAccessError();
   return out;
 }
 decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper({ forward: false, bodyLimit: 8192, bodyTimeoutMs: 5000 }), async (c, next) => {
   try { await snapshotContext(c.req.raw); }
-  catch (error) { if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400); throw error; }
+  catch (error) {
+    if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
+    if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    throw error;
+  }
   await next();
 }, requireShopper(), async (c) => {
   let context: Record<string, string>;
   try { context = await snapshotContext(c.req.raw); }
-  catch (error) { if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400); throw error; }
+  catch (error) {
+    if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
+    if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    throw error;
+  }
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const principal = shopperPrincipal(c.req.raw);
@@ -846,6 +879,28 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     if (values.length !== 1 || (values[0] !== 'true' && values[0] !== 'false')) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     consent[key] = values[0] === 'true';
   }
+  /**
+   * Named conditions the caller asserts for this request, as `ctx.<name>=value`:
+   * the anchor product (`ctx.anchor`) a slot's `complements` rule reads, and on
+   * the demo profile alone a region that selects the regional prior. P31: they
+   * gate no piece — a module's `eligibleWhen` rule reads the decision's cell —
+   * and a signal here can never boost a piece, re-rank the slot, or become
+   * behavioural evidence about the shopper. Bounded hard, because the query
+   * string is caller-controlled.
+   */
+  const eligibilityContext: Record<string, string> = {};
+  for (const [key, value] of Object.entries(context)) {
+    if (!key.startsWith('ctx.')) continue;
+    const name = key.slice(4);
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) return c.json({ ok: false, error: 'Invalid context signal name' }, 400);
+    if (typeof value !== 'string' || !value.trim() || value.length > 64) return c.json({ ok: false, error: 'Invalid context signal value' }, 400);
+    if (Object.keys(eligibilityContext).length >= 8) return c.json({ ok: false, error: 'Too many context signals' }, 400);
+    eligibilityContext[name] = value.trim();
+  }
+
+  // P31: the page's report of the modules with nothing to show for this page view (validated above).
+  const nothingToShow = context.nothingToShow === undefined ? null : nothingToShowOf(context.nothingToShow);
+
   const sessionId = principal.sessionId;
   const cf = ((c.req.raw as unknown as { cf?: unknown }).cf ?? null) as { country?: string; regionCode?: string } | null;
 
@@ -854,15 +909,35 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   // shopper state and session this request belongs to.
   const out = await serveContentDecisions(c.env, {
     tenant, brand, page, visitorId, sessionId, channel, entry, cf, cookieHeader: c.req.header('Cookie') ?? null, consent,
+    // The OS family this request reports, for `platform` seed rules: the OS family is read from the request;
+    // the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept.
+    platform: platformOf(c.req.raw.headers),
+    // P37: the device class this request reports (client hint, else user agent), for `device` seed rules and
+    // configured orders naming a device: the class is read from the request; the user agent itself is never kept.
+    device: deviceOf(c.req.raw.headers),
     stateTenant: c.get('tenant'), principal, capability: capabilityToken(c.req.raw)!,
-    offer: { pageInstance: context.pageInstance },
+    // The offer envelope is the RENDERED-measurement path, and it only does
+    // anything when the caller supplies a page instance (see service.ts:568 —
+    // without one, no render offer is minted). Passing it unconditionally had
+    // one effect and one only: it suppressed served-v1 ledger capture
+    // (service.ts:527) for every caller that never opted into rendered
+    // measurement, so their decisions were never written and a day report
+    // counted zero exposures against real outcomes. The documented default is
+    // that a missing basis stays served-v1, so send the envelope only when the
+    // caller actually asked for the other path.
+    ...(context.pageInstance ? { offer: { pageInstance: context.pageInstance } } : {}),
     browsingSessionId: (context.browsingSessionId ?? '').trim().slice(0, 128) || undefined,
+    ...(Object.keys(eligibilityContext).length ? { context: eligibilityContext } : {}),
+    // P31: withheld before ranking: neither returned, nor recorded, nor counted as an exposure.
+    ...(nothingToShow?.length ? { nothingToShow } : {}),
   });
   // Where the time went, for whoever is measuring: one Server-Timing entry per stage.
   c.header('Server-Timing', Object.entries(out.sources.timings).map(([k, v]) => `${k};dur=${v}`).join(', '));
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
   // CW31: nothing at all when the shopper withheld tracking consent.
-  const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.records) : Promise.resolve();
+  // Ruling L-R10 (P02 decision D1): exactly the records the serve-time capture
+  // took, so a declared layout slot measured on served-v1 is never written here.
+  const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.ledgerRecords) : Promise.resolve();
   try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
   const refusedPins = out.pinDiagnostics ?? [];
