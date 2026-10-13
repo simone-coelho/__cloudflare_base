@@ -1320,6 +1320,43 @@ records one suppression per registry value it carries the same way (weight 0, no
 older than its window suppresses nothing. Every other weight-0 buffered action is dropped as before, and the import
 skips weight-0 rows, so an imported `remove_from_cart` records nothing.
 
+## The account identifier format and the identifier change
+
+The reflex registry document (`PUT /config/reflex`) carries the optional member `accountIdFormat`, the forms the
+tenant's account identifier takes ([identifier changes](./02-api-reference.md#account-identifier-format-and-identifier-changes)):
+
+```json
+{ "accountIdFormat": { "firstLanding": "^fl1\\.[0-9a-f]{32}$", "hashedEmail": "^[0-9a-f]{64}$" } }
+```
+
+| Member | Meaning |
+|---|---|
+| `accountIdFormat.firstLanding` | The source of a regular expression, anchored with `^` and `$`, for the identifier the site assigns at a shopper's first landing |
+| `accountIdFormat.hashedEmail` | The same for the identifier the site derives from the shopper's e-mail address (a hash of it) |
+
+At least one form is declared and no other member is admitted. Publication refuses with `422`, naming
+`accountIdFormat`, a value that is not an object, one that declares no form, an unknown form, a pattern that does
+not compile and a pattern not anchored at both ends. With a format declared, a link whose own `accountId` matches
+none of the declared forms whole is refused with `400`, naming `accountIdFormat`; a tenant without the member links
+any identifier exactly as before.
+
+The link body (`POST /v1/{tenant}/identity/link`) may carry the identifier-change statement:
+
+| Member | Meaning |
+|---|---|
+| `accountChange.from` | The earlier account identifier, 1 to 200 characters on one line, never the link's own `accountId` |
+| `accountChange.exp` | Unix seconds the statement expires: in the future and at most 24 hours ahead |
+| `accountChange.statement` | HMAC-SHA256, base64url, keyed by the tenant's identity secret, over `<tenant>\naccount-change\n<from>\n<to>\n<exp>`, `to` being the link's own `accountId` |
+
+The site's backend signs the accountChange statement over both identifiers, from and to, and the two accounts'
+profiles merge only when it verifies: the earlier account's profile is added to the later account's, never
+overriding either, each history decayed by its age so recent behaviour outranks both. A statement that is missing,
+names another pair, is signed with a secret the tenant does not hold, has expired or expires more than 24 hours
+ahead is refused with `401`, naming the account change, and merges nothing. The later account's identity record
+keeps `mergedAccounts`, the shopper ids of the accounts merged into it (salted ids only, written only when a change
+merges, at most 50, erased with the person), so a statement presented again merges nothing more; no account
+identifier is stored, and the hydrate and the decision records carry nothing new.
+
 ## The interest hydrate's restoration provenance
 
 `GET /realtime/reflex` answers `affinity: { dims, audiences, odpConfirmed[], restoration? }` on both
