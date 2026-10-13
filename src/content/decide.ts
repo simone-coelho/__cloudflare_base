@@ -1212,7 +1212,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // the served order with the baseline less the withheld modules, so a module
     // that only took a withheld module's place is not called moved by a term.
     // Nothing withheld: exactly as before.
-    let withheld: LayoutWithheld[] = [];
+    const withheld: LayoutWithheld[] = [];
     if (withheldBy.size) {
       const reservedBefore = new Set(reserved);
       for (const other of i.slots) {
