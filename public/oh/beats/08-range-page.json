@@ -1,0 +1,13 @@
+{
+ "name": "08-range-page",
+ "beat": 8,
+ "act": 3,
+ "actName": "The room completes",
+ "press": "the range page",
+ "kind": "context",
+ "label": "The range page",
+ "who": "shopper",
+ "lane": "P2",
+ "engine": "microwave, dishwasher, the package price when lower",
+ "sees": "the kitchen path"
+}

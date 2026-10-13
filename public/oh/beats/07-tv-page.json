@@ -1,0 +1,13 @@
+{
+ "name": "07-tv-page",
+ "beat": 7,
+ "act": 3,
+ "actName": "The room completes",
+ "press": "the TV page",
+ "kind": "context",
+ "label": "The TV page",
+ "who": "shopper",
+ "lane": "P2",
+ "engine": "the soundbar for the series, the mount for the VESA pattern",
+ "sees": "the same engine, a different room"
+}

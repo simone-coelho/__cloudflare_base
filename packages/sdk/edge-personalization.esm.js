@@ -3,7 +3,8 @@
 // src/services/visit.ts
 var VISIT_GAP_MS = 30 * 60 * 1e3;
 var ENTRY_QUERY_LIMIT = 4096;
-var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, utmCampaign: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_CAMPAIGN_LIMIT = ENTRY_LIMITS.utmCampaign;
 var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
 function parsed(value) {
   try {
@@ -90,19 +91,22 @@ function rotateBrowsingSession(host, key = DEFAULT_SESSION_KEY) {
   }
 }
 function entrySignals(host) {
-  let utmMedium = "", utmSource = "", utmTerm = "";
+  let utmMedium = "", utmSource = "", utmTerm = "", utmCampaign = "";
   try {
     const usp = new URLSearchParams(host.location?.search ?? "");
     utmMedium = usp.get("utm_medium") ?? "";
     utmSource = usp.get("utm_source") ?? "";
     utmTerm = usp.get("utm_term") ?? "";
     if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = "";
+    utmCampaign = usp.get("utm_campaign") ?? "";
+    if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = "";
   } catch {
   }
   return {
     utmMedium,
     utmSource,
     ...utmTerm ? { utmTerm } : {},
+    ...utmCampaign ? { utmCampaign } : {},
     referrer: host.referrer ?? "",
     siteHost: host.location?.hostname ?? ""
   };
@@ -123,7 +127,10 @@ var WIRE = {
   content_impression: { type: "content_impression" },
   content_click: { type: "content_click" },
   content_dwell: { type: "content_dwell" },
-  video_complete: { type: "video_complete" }
+  video_complete: { type: "video_complete" },
+  content_viewable: { type: "content_viewable" },
+  video_view: { type: "video_view" },
+  product_dwell: { type: "product_dwell" }
 };
 function toWire(type, data) {
   const m = WIRE[type] ?? WIRE.custom;
@@ -148,7 +155,10 @@ var ACTION_EVENT_TYPES = [
   "content_impression",
   "content_click",
   "content_dwell",
-  "video_complete"
+  "video_complete",
+  "content_viewable",
+  "video_view",
+  "product_dwell"
 ];
 var ACTION_EVENT_TYPE_SET = new Set(ACTION_EVENT_TYPES);
 var isEventNonce = (value) => typeof value === "string" && value.length >= 1 && value.length <= 128 && !/[^A-Za-z0-9_-]/.test(value);
@@ -188,9 +198,14 @@ function resolveConfig(c, host) {
   };
 }
 function contentInteraction(type, data) {
-  return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete"].includes(name));
+  return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete", "content_viewable", "video_view"].includes(name));
+}
+function dwellMinFor(slot, fallback, bySlot) {
+  const ms = bySlot?.[slot];
+  return typeof ms === "number" && ms >= 0 ? ms : fallback;
 }
 var CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+var CUSTOMER_ID = /^[A-Za-z0-9_+/=.-]{1,128}$/;
 function createPageBindings() {
   const listeners = /* @__PURE__ */ new Set();
   const observed = /* @__PURE__ */ new Map();
@@ -237,6 +252,33 @@ function createCore(config, host) {
   const cfg = resolveConfig(config, host);
   const bindings = createPageBindings();
   let visitorId = "", sessionId = "", anonId = "";
+  let customerId;
+  let loaded = false;
+  const loadedHooks = [];
+  const runHook = (fn) => {
+    void Promise.resolve().then(() => {
+      try {
+        fn();
+      } catch {
+      }
+    });
+  };
+  const markLoaded = () => {
+    if (!loaded) {
+      loaded = true;
+      for (const fn of loadedHooks.splice(0)) runHook(fn);
+    }
+  };
+  function onLoaded(fn) {
+    if (typeof fn === "function") {
+      if (loaded) runHook(fn);
+      else loadedHooks.push(fn);
+    }
+  }
+  function setCustomerId(id) {
+    customerId = typeof id === "string" && CUSTOMER_ID.test(id) ? id : void 0;
+    return customerId !== void 0;
+  }
   let generation = 0;
   let eventSequence = 0;
   let transitioning = false;
@@ -635,6 +677,7 @@ function createCore(config, host) {
     visitorId = "";
     sessionId = "";
     anonId = "";
+    customerId = void 0;
     if (lease?.generation === g && sharedCurrent()) {
       try {
         host.storage.set(capabilityKey, "");
@@ -657,6 +700,7 @@ function createCore(config, host) {
     if (g !== generation) return false;
     const previous = visitorId;
     if (previous && previous !== v.subject && consent().tracking) rotateBrowsingSession(host);
+    if (reason === "logout" && previous && previous !== v.subject) customerId = void 0;
     visitorId = v.subject;
     sessionId = v.sessionId;
     capability = v.capability;
@@ -724,6 +768,13 @@ function createCore(config, host) {
       return false;
     }
   }
+  function freshBrowser() {
+    try {
+      return !host.storage.get(capabilityKey) && !host.storage.get(continuityKey) && !host.storage.get(continuityOperationKey);
+    } catch {
+      return false;
+    }
+  }
   function brokerHoldsProof() {
     try {
       return host.storage.get(continuityBrokerKey) === "1";
@@ -749,10 +800,13 @@ function createCore(config, host) {
     } catch {
     }
   }
-  function ready(transition = false) {
+  function ready(transition = false, first2) {
     consent();
     if (transitioning && !transition) return Promise.resolve(false);
-    if (isCurrent(generation) && (!transition || lease?.generation === generation)) return Promise.resolve(true);
+    if (isCurrent(generation) && (!transition || lease?.generation === generation)) {
+      markLoaded();
+      return Promise.resolve(true);
+    }
     if (bootstrapping) return bootstrapping;
     if (capability && !transition) {
       const g2 = beginTransition();
@@ -840,6 +894,36 @@ function createCore(config, host) {
             body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning && !cfg.sessionBroker ? { continuity: returning } : {} })
           }, 16384);
         };
+        if (first2 && !transition && !cfg.sessionBroker && !capability && freshBrowser()) {
+          try {
+            const res2 = await boundedJSON(url(cfg.paths.snapshot), {
+              method: "POST",
+              credentials: "include",
+              headers: headers({ "Content-Type": "application/json" }),
+              body: JSON.stringify({
+                ...first2.body,
+                ...active.tracking === false ? { trackingConsent: "false" } : {},
+                ...active.personalization === false ? { personalizationEnabled: "false" } : {}
+              })
+            });
+            const answer = res2.json;
+            if (g !== generation) return false;
+            if (res2.ok && answer?.ok === true && answer.session !== void 0 && adoptSession(answer.session, g, "logout")) {
+              let admitted = answer;
+              if (Array.isArray(answer.decisions)) {
+                acknowledge(answer.sources?.consent);
+                const acknowledgedEpoch = consentEpoch;
+                await saveRefusal();
+                if (decisionRequiresConsent({ arm: answer.arm, decisions: answer.decisions }) && (!personalizationAllowed() || acknowledgedEpoch !== consentEpoch)) admitted = null;
+              } else restrict(answer.sources?.consent);
+              first2.answered = true;
+              first2.answer = admitted;
+              return true;
+            }
+          } catch {
+          }
+          if (g !== generation) return false;
+        }
         let res = await request();
         if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
           rememberUnknownConsent();
@@ -885,6 +969,9 @@ function createCore(config, host) {
     void operation.finally(() => {
       if (bootstrapping === operation) bootstrapping = null;
     });
+    void operation.then((ok) => {
+      if (ok) markLoaded();
+    });
     return operation;
   }
   function envelope(type, data = {}) {
@@ -911,7 +998,8 @@ function createCore(config, host) {
       source: cfg.source,
       ...cfg.surface ? { surface: cfg.surface } : {},
       entry: entryOf(),
-      timestamp
+      timestamp,
+      ...tracking && customerId ? { customerId } : {}
     };
   }
   let contentHandler;
@@ -1053,7 +1141,9 @@ function createCore(config, host) {
         delete context.visitorId;
         delete context.userId;
         delete context.sessionId;
+        delete context.customerId;
       }
+      if (context && customerId && consent().tracking) context.customerId = customerId;
       const res = await boundedJSON(url(path, snapshotRequest ? void 0 : query), snapshotRequest ? { method: "POST", headers: headers({ "Content-Type": "application/json" }), credentials: "include", body: JSON.stringify(context ?? {}) } : { method: "GET", headers: headers(), credentials: "include" });
       const json = res.json;
       if (!res.ok || !isCurrent(g)) return null;
@@ -1188,6 +1278,7 @@ function createCore(config, host) {
     expiresAt = 0;
     sessionId = "";
     anonId = "";
+    if (reason === "logout") customerId = void 0;
     if (trackingAllowed()) rotateBrowsingSession(host);
     visitorId = id;
     emit("identity", { visitorId: id, previous, reason });
@@ -1372,6 +1463,8 @@ function createCore(config, host) {
       return generation;
     },
     ready,
+    onLoaded,
+    setCustomerId,
     beginTransition,
     finishTransition,
     forgetSession,
@@ -1412,6 +1505,17 @@ function createCore(config, host) {
 }
 
 // src/sdk/emit.ts
+var ENGAGE_TOKEN = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
+var MAX_DECLARED_INTERACTIONS = 16;
+function declaredInteractions(el) {
+  const out = [];
+  for (const token of (el.getAttribute("data-op-engage") ?? "").split(/\s+/)) {
+    if (!ENGAGE_TOKEN.test(token) || token === "click" || out.includes(token)) continue;
+    out.push(token);
+    if (out.length === MAX_DECLARED_INTERACTIONS) break;
+  }
+  return out;
+}
 var first = (v) => Array.isArray(v) && v[0] && typeof v[0] === "object" ? v[0] : {};
 var eco = (e) => e.ecommerce && typeof e.ecommerce === "object" ? e.ecommerce : e;
 function ga4Item(e) {
@@ -1498,13 +1602,13 @@ function createEmit(core, listen) {
       void 0,
       typeof data.decisionId === "string" ? data.decisionId : void 0
     ).then(() => null);
-    if (["content_click", "content_dwell", "video_complete"].includes(type)) return listen.outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data);
+    if (content) return listen.outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data);
     return core.send(type, data);
   };
   const withItem = (type) => (productId, attrs = {}) => core.send(type, () => ({ productId, ...attrs }));
   const withContent = (type) => (contentId, slot, attrs = {}) => track(type, () => ({ contentId, slot, ...attrs }));
   const scans = /* @__PURE__ */ new Map();
-  function scan(dom, dwellMinMs) {
+  function scan(dom, dwellMinMs, bySlot) {
     const holds = [];
     const seen = /* @__PURE__ */ new Set();
     let detached = false, installed = false, binding = 0;
@@ -1535,10 +1639,17 @@ function createEmit(core, listen) {
           };
         };
         let shownAt = null;
+        let viewing = null;
+        const report = (inView) => listen.visible(String(viewing.slot), String(viewing.contentId), inView, viewing.decisionId);
+        const unview = () => {
+          if (viewing) report(false);
+          viewing = null;
+        };
         const off = core.bindings.addObserver(dom, el, (visible) => {
           const attrs = shown();
           if (!permitted() || !attrs) {
             shownAt = null;
+            unview();
             return;
           }
           if (visible) {
@@ -1548,22 +1659,33 @@ function createEmit(core, listen) {
               seen.add(key);
               void track("content_impression", attrs);
             }
+            if (!viewing) {
+              viewing = attrs;
+              report(true);
+            }
             return;
           }
+          unview();
           if (shownAt === null) return;
           const ms = host.now() - shownAt;
           shownAt = null;
-          if (ms >= dwellMinMs) void track("content_dwell", { ...attrs, ms });
+          if (ms >= dwellMinFor(String(attrs.slot), dwellMinMs, bySlot)) void track("content_dwell", { ...attrs, ms });
         });
         if (!permitted()) {
           off?.();
           return;
         }
-        if (off) holds.push(off);
+        if (off) holds.push(off, unview);
         holds.push(core.bindings.addListener(el, "click", () => {
           const attrs = permitted() ? shown() : null;
           if (attrs) void track("content_click", attrs);
         }));
+        for (const interaction of declaredInteractions(el)) {
+          holds.push(core.bindings.addListener(el, interaction, () => {
+            const attrs = permitted() && declaredInteractions(el).includes(interaction) ? shown() : null;
+            if (attrs) void track("content_click", { ...attrs, interaction });
+          }));
+        }
       }
       for (const el of dom.querySelectorAll("[data-op-track]")) {
         if (!permitted()) return;
@@ -1602,7 +1724,7 @@ function createEmit(core, listen) {
     const dom = opts.dom ?? host.dom;
     if (!dom) return () => {
     };
-    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1e3);
+    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1e3, opts.dwellMinMsBySlot);
     scans.set(dom, attachment);
     attachment.refs++;
     let released = false;
@@ -1689,6 +1811,7 @@ function createEmit(core, listen) {
     contentClick: withContent("content_click"),
     contentDwell: (contentId, slot, ms, attrs = {}) => track("content_dwell", () => ({ contentId, slot, ms, ...attrs })),
     videoComplete: withContent("video_complete"),
+    videoView: withContent("video_view"),
     custom: (name, data = {}) => track("custom", () => ({ event: name, ...data })),
     declarative,
     dataLayer,
@@ -1698,12 +1821,18 @@ function createEmit(core, listen) {
 }
 
 // src/sdk/listen.ts
+function nothingToShowField(ids) {
+  if (!Array.isArray(ids)) return void 0;
+  const named = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
+  return named.length ? JSON.stringify(named) : void 0;
+}
 function createListen(core, opts = {}) {
   const host = core.host;
   const dwellMinMs = opts.dwellMinMs ?? 1e3;
   const slotSubs = /* @__PURE__ */ new Map();
   const setSubs = /* @__PURE__ */ new Set();
   const painted = /* @__PURE__ */ new Map();
+  const views = /* @__PURE__ */ new Set();
   const observers = /* @__PURE__ */ new Set();
   let current = null;
   let absence = null;
@@ -1712,6 +1841,8 @@ function createListen(core, opts = {}) {
   let adopted = false;
   const content = core.bindContent((type, data) => type === "content_impression" ? rendered(String(data.slot ?? ""), String(data.contentId ?? ""), void 0, typeof data.decisionId === "string" ? data.decisionId : void 0).then(() => null) : outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data));
   const placement = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
+  const pick = (set, slot, contentId, decisionId) => set?.decisions.filter((d) => d.slot === slot && d.contentId === contentId && (decisionId === void 0 || decisionId === d.decisionId)) ?? [];
+  const slotPositionOf = (piece) => Number.isSafeInteger(piece.slotPosition) && piece.slotPosition >= 0 ? piece.slotPosition : void 0;
   const sameAsset = (a, b) => a.customerContentId === b.customerContentId && a.type === b.type;
   const permitted = (set) => {
     if (!set || !decisionRequiresConsent(set)) return true;
@@ -1720,8 +1851,44 @@ function createListen(core, opts = {}) {
   };
   let intent = 0, delivery = 0;
   function resetCapture() {
+    for (const paint of painted.values()) host.clearTimeout(paint.viewTimer);
     painted.clear();
+    views.clear();
     for (const stop of [...observers]) stop();
+  }
+  function view(key, shown) {
+    const paint = painted.get(key);
+    if (!shown) {
+      views.delete(key);
+      if (paint) {
+        host.clearTimeout(paint.viewTimer);
+        paint.viewTimer = void 0;
+      }
+      return;
+    }
+    views.add(key);
+    if (!paint?.ack || paint.viewed || paint.viewTimer !== void 0) return;
+    const since = host.now();
+    const wait = (ms) => {
+      paint.viewTimer = host.setTimeout(() => {
+        paint.viewTimer = void 0;
+        const left = since + 1e3 - host.now();
+        if (!views.has(key) || painted.get(key) !== paint || paint.viewed) return;
+        if (left > 0) {
+          if (left < 1e3) wait(left);
+          return;
+        }
+        paint.viewed = true;
+        const { renderOffer: _offer, ...data } = paint.envelope.data;
+        void _offer;
+        void content.send("content_viewable", data);
+      }, ms);
+    };
+    wait(1e3);
+  }
+  function visible(slot, contentId, shown, decisionId) {
+    const matches = pick(admittedCurrent(), slot, contentId, decisionId);
+    if (matches.length === 1) view(placement(matches[0]), shown);
   }
   const offConsent = core.onConsentChange(() => {
     if (!core.trackingAllowed) resetCapture();
@@ -1809,7 +1976,9 @@ function createListen(core, opts = {}) {
     }
     selected = { ...o };
     const owner = ++intent;
-    const pending = core.ready();
+    const nothingToShow = nothingToShowField(o.nothingToShow);
+    const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {} } };
+    const pending = core.ready(false, first2);
     const generation = core.generation;
     const active = () => owner === intent && generation === core.generation;
     if (!active()) return null;
@@ -1828,7 +1997,7 @@ function createListen(core, opts = {}) {
       return null;
     }
     const consent = core.consent;
-    const json = await core.getJson(core.config.paths.snapshot, {
+    const json = first2.answered ? first2.answer : await core.getJson(core.config.paths.snapshot, {
       page: o.page,
       pageInstance,
       browsingSessionId: consent.tracking ? core.sessionId : void 0,
@@ -1836,7 +2005,8 @@ function createListen(core, opts = {}) {
       channel: consent.tracking ? o.channel : void 0,
       entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
       trackingConsent: consent.tracking ? void 0 : "false",
-      personalizationEnabled: consent.personalization ? void 0 : "false"
+      personalizationEnabled: consent.personalization ? void 0 : "false",
+      nothingToShow
     });
     settled = true;
     host.clearTimeout(timer2);
@@ -1913,25 +2083,35 @@ function createListen(core, opts = {}) {
   }
   async function rendered(slot, contentId, el, decisionId) {
     if (destroyed || core.config.listenOnly || !core.trackingAllowed) return null;
-    const set = admittedCurrent(), matches = set?.decisions.filter((d) => d.slot === slot && d.contentId === contentId && (decisionId === void 0 || decisionId === d.decisionId)) ?? [];
+    const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
     if (!set?.pageInstance || matches.length !== 1) return null;
     const piece = matches[0];
     if (!piece.renderOffer || !piece.decisionId) return null;
     const key = placement(piece), generation = core.generation;
     let paint = painted.get(key);
     if (!paint) {
+      const slotPosition = slotPositionOf(piece);
       const data = {
         contentId,
         slot,
         decisionId: piece.decisionId,
         page: set.page,
         position: piece.order,
+        ...slotPosition !== void 0 ? { slotPosition } : {},
         pageInstance: set.pageInstance,
         renderOffer: piece.renderOffer,
         customerContentId: piece.customerContentId,
         contentType: piece.type
       };
-      paint = { piece, page: set.page, pageInstance: set.pageInstance, generation, envelope: core.envelope("content_impression", data), attempts: 0 };
+      paint = {
+        piece,
+        page: set.page,
+        pageInstance: set.pageInstance,
+        generation,
+        envelope: core.envelope("content_impression", data),
+        attempts: 0,
+        ...slotPosition !== void 0 ? { slotPosition } : {}
+      };
       painted.set(key, paint);
     }
     const selectedPaint = paint;
@@ -1941,7 +2121,10 @@ function createListen(core, opts = {}) {
       paint.attempts++;
       paint.pending = core.sendRender(paint.envelope).then((ack2) => {
         if (!active()) return null;
-        if (ack2) selectedPaint.ack = ack2;
+        if (ack2) {
+          selectedPaint.ack = ack2;
+          if (views.has(key)) view(key, true);
+        }
         return ack2;
       }).finally(() => {
         selectedPaint.pending = void 0;
@@ -1960,23 +2143,25 @@ function createListen(core, opts = {}) {
         if (stopped) return;
         stopped = true;
         shownAt = null;
+        view(key, false);
         off();
         observers.delete(stop);
       };
       observers.add(stop);
-      const release = core.bindings.addObserver(host.dom, el, (visible) => {
+      const release = core.bindings.addObserver(host.dom, el, (visible2) => {
         if (stopped || !active()) {
           stop();
           return;
         }
-        if (visible) {
+        view(key, visible2);
+        if (visible2) {
           if (shownAt === null) shownAt = host.now();
           return;
         }
         if (shownAt === null) return;
         const ms = host.now() - shownAt;
         shownAt = null;
-        if (ms >= dwellMinMs) void outcome("content_dwell", contentId, slot, { ...data, ms });
+        if (ms >= dwellMinFor(slot, dwellMinMs, opts.dwellMinMsBySlot)) void outcome("content_dwell", contentId, slot, { ...data, ms });
         stop();
       });
       if (release) off = release;
@@ -1985,17 +2170,24 @@ function createListen(core, opts = {}) {
     return ack;
   }
   async function outcome(type, contentId, slot, attrs = {}) {
-    if (type === "content_impression") return null;
+    if (type === "content_impression" || type === "content_viewable") return null;
     const candidates = [...painted.values()].filter((p) => p.piece.slot === slot && p.piece.contentId === contentId && (attrs.decisionId === void 0 || attrs.decisionId === p.piece.decisionId));
     if (candidates.length !== 1) return null;
     const paint = candidates[0], ack = paint.ack ?? await paint.pending;
     if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance || painted.get(placement(paint.piece)) !== paint) return null;
-    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, ...safe } = attrs;
+    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
     void _offer;
     void _action;
     void _event;
     void _eventName;
-    return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId });
+    void _slotPosition;
+    return content.send(type, {
+      ...safe,
+      contentId,
+      slot,
+      decisionId: ack.decisionId,
+      ...paint.slotPosition !== void 0 ? { slotPosition: paint.slotPosition } : {}
+    });
   }
   async function adopt(value, o) {
     const owner = ++intent, generation = core.generation;
@@ -2037,7 +2229,7 @@ function createListen(core, opts = {}) {
     return true;
   }
   const offSent = core.on("sent", (event) => {
-    if (!["content_impression", "content_dwell"].includes(event.type) && selected) void refresh();
+    if (!["content_impression", "content_dwell", "content_viewable"].includes(event.type) && selected) void refresh();
   });
   const offSocket = core.on("socket", (status) => {
     if (status === "connected" && selected) void refresh();
@@ -2061,7 +2253,7 @@ function createListen(core, opts = {}) {
     current = null;
     absence = null;
   }
-  return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, destroy };
+  return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
 }
 
 // src/sdk/identify.ts
@@ -2090,7 +2282,8 @@ function createIdentity(core) {
       accountId,
       ...o.source ? { source: o.source } : {},
       ...typeof exp === "number" ? { exp } : {},
-      ...assertion ? { assertion } : {}
+      ...assertion ? { assertion } : {},
+      ...o.accountChange !== void 0 ? { accountChange: o.accountChange } : {}
     });
     if (!core.isCurrent(generation) || core.visitorId !== visitorId) return { failure: failure("identity changed during identify", 0, retry) };
     return { visitorId, response };

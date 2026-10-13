@@ -1,0 +1,13 @@
+{
+ "name": "09-qned-oled",
+ "beat": 9,
+ "act": 4,
+ "actName": "Curation",
+ "press": "a QNED page, with the OLED beside it; a size up from her viewing distance",
+ "kind": "context",
+ "label": "QNED beside OLED, a size up",
+ "who": "shopper",
+ "lane": "P2",
+ "engine": "tier and size-band",
+ "sees": "“price is the same for everyone”; nothing near financing"
+}

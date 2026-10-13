@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P13",
+  "workOrderHash": "sha256:d8db8aa7f7890b6b19f10c1b2df3a54f5263c8923bd7e4549599d0d6b5f6fa65",
+  "artifact": {
+    "revision": "a88d3f05d6ac0ffabfa4a6333e01f2b12a9068ae",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p13-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P13 built on rem/p13-build in two steps. Step 1: d7926857 merges rem/integration adaea2a4 (P02 to P12 of this programme, P36 to P40 of the second, the landing of the product branch and the governance files) into the per-ticket branch rem/tkt/P13 (adf23741, specification reviewed PASS at fa247eb5 on rem/spec-parity-d, batch S4 after its fix round); RED baseline 0 of 11 green on P13's own reasons, no PRECONDITION; 955bd173 the server side (src/content/service.ts, src/content/types.ts, src/identity/sessionAuthority.ts, src/identity/sessionCapability.ts, src/ledger/records.ts, src/routes/decisions.ts, src/routes/realtime.ts): the carried identifier read from the POST body only, in a shape that excludes an e-mail address and whitespace, written as customer_id beside visitor_id on the shopper's decision and outcome records under tracking consent and nowhere under refused tracking, never proof (it links nothing, merges nothing, issues no recognised session, selects no other shopper's state, adds nothing to the hydrate projection or the per-decision answer, C8, D1); the new-visitor one-call route admitting only a POST with no session and no selector behind the site-key gate, everything else 401 writing nothing, the grant minted from the cookies intersected with the body's hints and read as tracking and personalization refused for a browser with no recorded choice, the answer the route's answer plus the issued session (S4-C17 to S4-C20, R-P67 amended); d9ce85b2 the SDK (src/sdk/core.ts, listen.ts, server.ts, types.ts, both bundle pairs with the 0.2.0 copies and the declarations, the IIFE sizeBudget re-recorded from 102400 to 107520 under R-P63): onLoaded running each hook exactly once, setCustomerId carried on every action envelope and decision request while tracking is allowed and cleared by logout, the server bridge's one call putting the session into the first-party cookie and never into the bootstrap JSON; fe854dfa the kit; 0aefbad6 withdrew the client path on an R10 collision, ruled R-P66. Step 2 (fix round 1, specification rem/spec-p13-fix1 at 3ea14d13 reviewed PASS, the gate re-recorded at 2adeaf61): 9f11b73c merges rem/integration 2adeaf61; RED baseline 10 of 13 (H3 on both hosts, the H4 SDK leg, with listen.test.ts:110 and session.test.ts:42 red on the one-call order until the client path returned); e2cd39d1 re-lands the one-call client path (src/sdk/core.ts, src/sdk/listen.ts, both bundle pairs, packages/sdk/types/core.d.ts, kit 01): a browser with neither a session nor a continuity proof makes a single bare decision request carrying page, pageInstance, brand and the refusals it already holds, takes the session from the answer, and falls back to the session call then the decision request when the answer carries none (S4-C18), later requests carrying browsingSessionId, channel, entry and customerId only while tracking is allowed; 06d355ae H3 (src/durable-objects/ShopperReflex.ts, src/identity/sessionAuthority.ts, src/routes/realtime.ts, src/routes/decisions.ts, src/routes/identity.ts): the carried value kept as an optional member of the browser object's existing grantAuthority record, written through the owner operation only for a valid value under tracking consent on the route and in the object's own stored consent, for an anonymous subject, into an existing record, when new or changed (R-P7, S4-C20), absent for a shopper who carried none, removed by erasure's fresh record, never copied into the person's record, the merge still keyed by P12's accountId; the link answer naming it as customerId only for a browser that carried one, never the linked accountId (R-P38); a88d3f05 the kit (docs/kit/01, 02 and 03: the one-call first request, onLoaded, setCustomerId never proof, the link answer's customerId, the records' customer_id); the Meridian bundle unchanged (--check exact); the ESM bundle 100410 of 102400 and the IIFE 105481 of 107520, neither re-recorded in the fix round; acceptance 13/13 on both hosts at a88d3f05 with src/sdk 82/82 (the four locks corrected for the one-call order under R-P66 item 3), W40 9/9, P12 12/12, P03 8/8, W21 37/37, W35 9/9 and the second programme's units on the merged tree; twelve probes on both hosts (no new storage key for a shopper who carried none, nothing stored under refused tracking, erasure leaving a fresh record, no person object holding the value, the bare bootstrap request carrying exactly page, pageInstance and brand with setCustomerId and a tracking entry present); the gate at a88d3f05: the first run GATE_FAIL on the first-consent flake alone (sdkContract :360 at its :306 precondition, the file green alone), the one rerun GATE_OK (fix1/implementer/logs/gate-rerun.log: 3092 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P13/implementer/REPORT.md",
+      "git commits on rem/p13-build up to a88d3f05"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P13 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P13/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P13/fix1/implementer/logs/gate-rerun.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P13/fix1/implementer/logs/gate-rerun.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P13/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-13T21:28:44.378Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
