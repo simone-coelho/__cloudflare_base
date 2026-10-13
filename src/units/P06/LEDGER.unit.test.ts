@@ -116,8 +116,10 @@ describe('unit:P06.S1', () => {
     it(`host (${host}): lock M6a — on a slot that explores every decision by epsilon, the served order shows the exploration pick and the shadow order is the ranking without it`, async () => {
       const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: EXPLORING('epsilon') });
       expectPublished(m, 'P06.S1 lock M6a — the declared layout slot at γ 1, exploring by epsilon at share 1, publishes');
-      // The pick is uniform over the slot's eligible modules (grid.1, reco.1, reco.2, editorial.1, ugc.1): the lock reads
-      // a shopper whose pick is not the ranking's first module, so the pick shows in the served order.
+      // The pick is drawn from the slot's eligible modules a merchandiser does not control (reco.2, grid.1, reco.1, ugc.1;
+      // editorial.1, whose lift is frozen, is never the pick, and it is the ranking's first), and a draw whose bucket rounds
+      // to 1.000 does not explore at share 1: the lock reads the first shopper (of at most 12) whose first position differs
+      // from the ranking's, so the pick shows in the served order.
       let records: DecisionRecord[] = [];
       for (let k = 0; k < 12 && (!records.length || records[0]!.item_id === SHADOW_AT_ONE[0]); k++) records = await layoutRecords(m, await tabby(m));
       expect([[M.reco2, M.grid, M.reco1, M.ugc].some(id => id === records[0]?.item_id), records[0] ? explorationOf(records[0])?.mode ?? null : null],
@@ -130,7 +132,9 @@ describe('unit:P06.S1', () => {
     it(`host (${host}): lock M6b — on a slot that swaps two adjacent positions on every decision, the served order shows the swap and the shadow order is the ranking without it`, async () => {
       const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: EXPLORING('adjacent-swap') });
       expectPublished(m, 'P06.S1 lock M6b — the declared layout slot at γ 1, exploring by adjacent swap at share 1, publishes');
-      const records = await layoutRecords(m, await tabby(m));
+      // A draw whose bucket rounds to 1.000 does not swap at share 1: the lock reads the first shopper (of at most 12) whose decision swapped.
+      let records: DecisionRecord[] = [];
+      for (let k = 0; k < 12 && !records.some(r => explorationOf(r)?.mode === 'adjacent-swap'); k++) records = await layoutRecords(m, await tabby(m));
       const [a, b] = records.map(explorationOf).find(e => e?.mode === 'adjacent-swap')?.positions ?? [0, 0];
       const swapped = SHADOW_AT_ONE.map((id, k) => (k === a - 1 ? SHADOW_AT_ONE[b - 1]! : k === b - 1 ? SHADOW_AT_ONE[a - 1]! : id));
       expect([b - a, records.map(r => r.item_id)], `${host}: PRECONDITION — the served order is the ranking with two adjacent positions swapped`).toEqual([1, swapped]);
@@ -215,6 +219,33 @@ describe('unit:P06.S3', () => {
   };
   const S3_NAMED = Object.keys(S3_TERMS).sort();
   const termsOf = (r: DecisionRecord) => (ex(r).shadowTerms ?? {}) as Record<string, unknown>;
+  // R-P64 as amended (round 2; the specification review's F1, its world t2-ed2+grid2): the same take of 2 with grid.1's
+  // lift also frozen at 2, `items` written as frozen() writes one. In this world a pushed-out module's ruled terms differ
+  // both from [affinity, lift] and from the terms of the first module that passed it (editorial.1's [affinity, lift]),
+  // so a build that copies those terms to a pushed-out module, or stamps it [affinity, lift], is caught. γ 0 serves, so
+  // the served order, the baseline take [grid.1, reco.1] and the shadow take [editorial.1, reco.2] are as above.
+  // Derivation. The three viewed products all carry the viewed line, the Handbags category and the evening occasion, so
+  // each of those values carries one interest level a (0.625 on the records' drivers). With the slot's weights (line 1,
+  // category 0.5, occasion 0.5) the scores before the lift are editorial.1 a, reco.2 1.5a, grid.1 0.5a (its second
+  // category was never viewed) and reco.1 0 (a line never viewed). At γ 1 a frozen lift of 2 adds a lift term equal to
+  // the base, rounded to 0.001: editorial.1 a, grid.1 0.5a. Every other term is 0 for every module. Per term, averaged
+  // over the modules compared, in the direction moved, and named only above 0.0005 (R-P56 as amended, R-P57), at a = 0.625:
+  //   grid.1 (1 → out of the take; passed by editorial.1 and reco.2): affinity ((a − 0.5a) + (1.5a − 0.5a)) / 2 = 0.75a
+  //     = 0.469, named; lift ((a − 0.5a) + (0 − 0.5a)) / 2 = 0, and −0.0005 after the rounding of the two lift terms
+  //     (0.625 and 0.313), never above the grain whatever a is → [affinity];
+  //   reco.1 (2 → out; passed by editorial.1 and reco.2): affinity (a + 1.5a) / 2 = 1.25a = 0.781, lift (a + 0) / 2 =
+  //     0.5a = 0.313 → [affinity, lift];
+  //   editorial.1 (4 → 1; passing reco.2, grid.1 and reco.1): affinity ((a − 1.5a) + (a − 0.5a) + a) / 3 = a / 3 = 0.208,
+  //     lift (a + (a − 0.5a) + a) / 3 = 0.833a = 0.521 → [affinity, lift];
+  //   reco.2 (3 → 2; passing grid.1 and reco.1): affinity ((1.5a − 0.5a) + 1.5a) / 2 = 1.25a = 0.781, lift
+  //     ((0 − 0.5a) + 0) / 2 = −0.25a = −0.156 → [affinity].
+  // Margins over the 0.0005 grain: the smallest named difference, editorial.1's affinity at 0.208, is over 400 times the
+  // grain. The one unnamed difference that is not negative, grid.1's lift, is 0 by an identity of the fixture (editorial.1's
+  // base is exactly twice grid.1's), so it stays at or below the grain for any interest level, and the same on both hosts.
+  const GRID_TOO = dials({ gamma: 0, items: { [M.editorial]: { mode: 'freeze', lift: 2 }, [M.grid]: { mode: 'freeze', lift: 2 } } });
+  const GRID_TOO_TERMS: Record<string, string[]> = {
+    [M.editorial]: ['affinity', 'lift'], [M.grid]: ['affinity'], [M.reco1]: ['affinity', 'lift'], [M.reco2]: ['affinity'],
+  };
   for (const host of HOSTS) {
     it(`host (${host}): R-P64 — at a take of 2 the record names each module of the baseline take that the shadow pushes out of its take, with each term that moved it down, beside the modules the shadow brings in`, async () => {
       const m = await mount(host, { pieces: MODULES, slots: TAKE_TWO, learn: dials({ gamma: 0, ...frozen(M.editorial) }) });
@@ -231,6 +262,23 @@ describe('unit:P06.S3', () => {
       expect.soft(records.map(r => [r.item_id, termsOf(r)]),
         `${host}: P06.S3 (R-P64) — editorial.1 and reco.2, which passed grid.1 and reco.1, lead them taken together on affinity and on editorial.1's lift: grid.1 and reco.1 named affinity and lift; editorial.1 affinity and lift, reco.2 affinity, as S3 names them`)
         .toEqual(records.map(r => [r.item_id, S3_TERMS]));
+    }, 60_000);
+
+    it(`host (${host}): R-P64 as amended — at a take of 2 with grid.1's lift also frozen at 2, each module pushed out of the take is named with the terms by which the modules that passed it lead it, taken together: grid.1 affinity alone, reco.1 affinity and lift`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: TAKE_TWO, learn: GRID_TOO });
+      expectPublished(m, 'P06.S3 (R-P64 as amended) — the declared layout slot at a take of 2, at γ 0 with editorial.1’s and grid.1’s lifts frozen at 2, publishes');
+      const records = await layoutRecords(m, await tabby(m));
+      expect(records.map(r => r.item_id), `${host}: PRECONDITION — at γ 0 the take of 2 serves the shopper's interests and the lifts move nothing`)
+        .toEqual(SERVED_AT_ZERO.slice(0, 2));
+      expect(records.map(r => [r.item_id, ex(r).baselineOrder ?? null, ex(r).shadowOrder ?? null]),
+        `${host}: PRECONDITION — each record carries the baseline take [grid.1, reco.1] and the shadow take [editorial.1, reco.2]`)
+        .toEqual(records.map(r => [r.item_id, BASELINE.slice(0, 2), SHADOW_AT_ONE.slice(0, 2)]));
+      expect.soft(records.map(r => [r.item_id, Object.keys(termsOf(r)).sort()]),
+        `${host}: P06.S3 (R-P64 as amended) — grid.1 and reco.1, pushed out of the shadow's take, are named beside editorial.1 and reco.2`)
+        .toEqual(records.map(r => [r.item_id, S3_NAMED]));
+      expect.soft(records.map(r => [r.item_id, termsOf(r)]),
+        `${host}: P06.S3 (R-P64 as amended) — taken together, editorial.1 and reco.2 lead grid.1 on affinity (0.469) but not on the lift (0, their lifts averaging its own) and lead reco.1 on affinity (0.781) and the lift (0.313); editorial.1 affinity and lift, reco.2 affinity`)
+        .toEqual(records.map(r => [r.item_id, GRID_TOO_TERMS]));
     }, 60_000);
 
     it(`host (${host}): control (R-P64) — at the slot's own take, every module in both takes, the record names exactly the modules whose shadow position differs from their baseline position, with the same terms`, async () => {
