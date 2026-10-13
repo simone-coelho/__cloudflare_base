@@ -4,6 +4,7 @@
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
 import type { DecisionRecord, LayoutBlendTerms, LayoutReason, LayoutReasonCause } from '@/content/types';
+import type { Suppression } from '@/reflex/core';
 import type { Names } from './rows';
 
 export interface Receipt {
@@ -90,6 +91,14 @@ export interface Receipt {
    * every position of any other slot and on a record written before it.
    */
   layoutReason?: LayoutReason;
+  /**
+   * P39 (decisions D1, D2): the suppressions in force on the shopper when this
+   * decision was made, exactly as the record carries them — each value, the
+   * action that recorded it and its expiry in epoch milliseconds, keys sorted —
+   * and one `why` sentence names each value, its action and its expiry date.
+   * Absent on every record decided with none in force.
+   */
+  suppressions?: Suppression[];
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -216,6 +225,17 @@ function layoutReasonSentence(reason: LayoutReason): string {
 const layoutReasonOf = (reason: LayoutReason): LayoutReason => (reason.status === 'changed'
   ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed' }
   : { cause: reason.cause, ...(reason.n !== undefined ? { n: reason.n } : {}), ...(reason.nMin !== undefined ? { nMin: reason.nMin } : {}), slot: reason.slot, status: 'unchanged' });
+
+/**
+ * P39: the suppressions in force in words — each value with its dimension, the
+ * action that recorded it and the date it lapses (UTC) — and what that meant:
+ * the shopper's own interest in it was not scored.
+ */
+function suppressionSentence(suppressions: readonly Suppression[]): string {
+  const one = suppressions.length === 1;
+  const each = suppressions.map((s) => `${s.dimension} ${s.value} by ${s.action} until ${new Date(s.expiresAt).toISOString().slice(0, 10)}`);
+  return `Suppressed for this shopper, so the shopper's own interest in ${one ? 'it was' : 'them was'} not scored: ${each.join('; ')}.`;
+}
 
 /** P29: does the interest vector the page was scored on hold any interest at all? */
 const holdsInterest = (affinity: Record<string, Record<string, number>> | undefined): boolean =>
@@ -356,6 +376,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   // W20 G2 (R86(c)): the shortfall is a fact about the SLOT, not about the
   // ranking of this piece, so it is read out for a pinned position exactly as
   // for a ranked one — the way every other block on `explain` is read out.
+  // P39: the suppressions in force, a fact about the shopper this decision read, after the terms it shaped.
+  if (e.suppressions?.length) why.push(suppressionSentence(e.suppressions));
   if (e.shortTake) why.push(`Short take: ${e.shortTake.sentence}.`);
   // P29: the layout reason is a fact about the whole layout, so it is read out last, on every position of the slot.
   if (e.layoutReason) why.push(layoutReasonSentence(e.layoutReason));
@@ -374,6 +396,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.signalFloor ? { signalFloor: { floor: e.signalFloor.floor, signals: e.signalFloor.signals } } : {}),
     ...(e.moduleRule ? { moduleRule: { position: e.moduleRule.position, rule: e.moduleRule.rule } } : {}),
     ...(e.layoutReason ? { layoutReason: layoutReasonOf(e.layoutReason) } : {}),
+    ...(e.suppressions?.length ? { suppressions: e.suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
     why,
   };
 }
