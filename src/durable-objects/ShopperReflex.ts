@@ -1222,7 +1222,8 @@ export class ShopperReflex {
       const wake = computeNextAlarm(nextAffinity.reflex, nextAffinity.lastSeen, now, interest.config!, this.retentionMs());
       const pending = await this.state.storage.getAlarm();
       if (pending === null || wake < pending) await this.state.storage.setAlarm(wake);
-      return answer(true, undefined, interest.signals);
+      // P39 (R-P60): a suppressing action at weight 0 wrote its suppressions and applied no interest.
+      return answer(!interest.suppressionOnly, undefined, interest.signals);
     } catch (error) {
       return { status: error instanceof SessionAccessError ? 401 : 503, update: null,
         body: { success: false, error: 'Buffered action unavailable' } };

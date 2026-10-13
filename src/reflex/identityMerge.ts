@@ -32,7 +32,7 @@
 // ---------------------------------------------------------------------------
 
 import {
-  effectiveScore, emptyState, isSignal, mergeSuppressions, signalsOf, suppressionsInForce, tick, withSignals,
+  effectiveScore, emptyState, isSignal, mergeSuppressions, signalsOf, suppressionsInForce, suppressionsRecorded, tick, withSignals,
   type ReflexConfig, type ReflexEntry, type ReflexInput, type ReflexResult, type ReflexState,
 } from '@/reflex/core';
 
@@ -115,6 +115,14 @@ export function mergeReflexStates(
  * is a signal whenever it happened, so it is counted here exactly as `apply`
  * counts a live one; the count is never decayed, so the order rows arrive in
  * does not matter to it either.
+ *
+ * P39 (R-P60): an action the tenant's suppression settings name records its
+ * suppressions here too, each expiring its window after the action's own time
+ * `at` — a buffered remove_from_cart (weight 0: no interest, no signal) and,
+ * under the purchase rule, a buffered or imported purchase — merged into the
+ * ones the state holds by the one rule (the later expiry stands). One that has
+ * already lapsed by the present is pruned by the tick that follows, so an action
+ * older than its window suppresses nothing.
  */
 export function applyHistorical(
   prev: ReflexState | null | undefined,
@@ -126,7 +134,12 @@ export function applyHistorical(
   const weight = config.weights[input.action] ?? 0;
   const dims: ReflexState['dims'] = {};
   for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
-  if (weight <= 0 || !Number.isFinite(at)) return { ...base, dims };
+  // P39 (R-P60): the suppressions this action records at its own time; none
+  // without the settings, so a tenant without them gets exactly the state it got.
+  const recorded = Number.isFinite(at) ? suppressionsRecorded(config, input, at) : [];
+  const suppressed = <T extends ReflexState>(state: T): T => (recorded.length
+    ? { ...state, suppressions: mergeSuppressions(Array.isArray(state.suppressions) ? state.suppressions : [], recorded) } : state);
+  if (weight <= 0 || !Number.isFinite(at)) return suppressed({ ...base, dims });
   const counted = withSignals(base, signalsOf(base) + (isSignal(config, input.action) ? 1 : 0));
 
   for (const touch of input.touches) {
@@ -143,5 +156,5 @@ export function applyHistorical(
       dimMap[touch.value] = { s: e.s + weight * Math.exp(-(e.t - at) / tau), t: e.t };
     }
   }
-  return { ...counted, dims };
+  return suppressed({ ...counted, dims });
 }

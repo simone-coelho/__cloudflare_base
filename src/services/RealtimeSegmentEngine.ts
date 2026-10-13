@@ -1164,7 +1164,8 @@ export class RealtimeSegmentEngine {
     }
     const reflex = interest.reflex && withOrder(carryOdpRestoration(interest.reflex, current.reflex), order, event.eventId, interest.config!);
     await this.sessionManager.writeBufferedSession(current, { preferences, reflex, segments: interest.segments });
-    return answer({ ...current, reflex, segments: interest.segments }, true, undefined, interest.signals);
+    // P39 (R-P60): a suppressing action at weight 0 wrote its suppressions and applied no interest.
+    return answer({ ...current, reflex, segments: interest.segments }, !interest.suppressionOnly, undefined, interest.signals);
   }
 
   /** Read-time qualification avoids stale derived membership after replacement. */

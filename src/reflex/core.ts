@@ -319,6 +319,17 @@ export function suppressionsRecorded(config: Pick<ReflexConfig, 'suppression' | 
 }
 
 /**
+ * P39 (R-P60): whether the tenant's settings name this action as one that
+ * suppresses (an entry under `suppression.actions` with a readable window), so a
+ * door that drops a weight-0 action lets this one through to record its
+ * suppressions, and drops every other weight-0 action as before.
+ */
+export function isSuppressingAction(config: Pick<ReflexConfig, 'suppression'>, action: string): boolean {
+  const actions = config.suppression?.actions;
+  return !!actions && typeof actions === 'object' && Object.hasOwn(actions, action) && suppressionDays(actions[action]) !== null;
+}
+
+/**
  * P39: an interest view with the interest of every suppressed value left out,
  * so a suppressed value contributes no interest term to a score; the stored
  * interest is not changed (the view is a copy). The view itself, untouched,
