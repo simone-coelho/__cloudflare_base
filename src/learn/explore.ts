@@ -11,11 +11,20 @@
 // with the fewest observations; epsilon serves a uniformly chosen one.
 // Thompson explores by ranking on a rate sampled from each item's evidence,
 // seeded from the same inputs, so the sample is recomputable.
+//
+// P05: the adjacent swap, on a page's declared layout slot only, decides
+// whether to explore by the same bucket and, inside the share, exchanges the
+// modules of two adjacent positions of what the slot serves, the pair chosen
+// from the same bucket among the pairs neither of whose positions a rule fixed,
+// so the effect of each position can be estimated from the swaps.
 
 import { hash32 } from '@/content/holdout';
 import type { LiftSnapshot } from './stats';
 
-export type ExploreMode = 'rotation' | 'thompson' | 'epsilon' | 'off';
+export type ExploreMode = 'rotation' | 'thompson' | 'epsilon' | 'off' | 'adjacent-swap';
+
+/** P05: the mode that swaps two adjacent positions, published only on a page's declared layout slot. */
+export const ADJACENT_SWAP = 'adjacent-swap' as const;
 
 export interface ExploreConfig {
   mode: ExploreMode;
@@ -35,7 +44,7 @@ export interface ExploreConfig {
 export const DEFAULT_EXPLORE: ExploreConfig = { mode: 'off', share: 0, floor: 50 };
 
 /** The modes the live decision path will run. A retained document may still name a withdrawn one. */
-export const SUPPORTED_EXPLORE_MODES: readonly ExploreMode[] = ['off', 'rotation', 'epsilon'];
+export const SUPPORTED_EXPLORE_MODES: readonly ExploreMode[] = ['off', 'rotation', 'epsilon', ADJACENT_SWAP];
 
 /** True for a mode the engine offers; `thompson` is withdrawn (doc 22 §7, HANDOFF-2026-09-16 :232). */
 export function isSupportedExploreMode(mode: string | null | undefined): boolean {
@@ -71,13 +80,15 @@ export interface Ranked { id: string; score: number }
 
 export interface ExplorePick {
   mode: ExploreMode;
-  /** The item to serve first. For Thompson, the whole ranking is replaced instead. */
+  /** The item to serve first. For Thompson, the whole ranking is replaced instead. For the adjacent swap, the module moved up. */
   pieceId: string;
   reason: string;
   bucket: number;
   /** Thompson only: the sampled rates that produced the ranking. */
   samples?: Record<string, number>;
   ranking?: string[];
+  /** P05, the adjacent swap only: the two adjacent positions exchanged, counted from 1 within the slot. */
+  positions?: [number, number];
 }
 
 /** A deterministic unit interval from the decision's own coordinates. */
@@ -169,6 +180,13 @@ export function explorationPick(
      * merchandiser's own.
      */
     controlled?: ReadonlySet<string>;
+    /**
+     * P05, the adjacent swap only: the adjacent pairs the swap may exchange,
+     * each named by its lower position counted from 1 in `ranked` — which is
+     * then the slot's served order — the caller having left out every pair a
+     * rule fixed a position of. Absent: every adjacent pair of `ranked`.
+     */
+    pairs?: readonly number[];
   },
   historical?: typeof HISTORICAL_EXPLORATION,
   historicalRules?: typeof HISTORICAL_EXPLORATION_RULES,
@@ -199,6 +217,19 @@ export function explorationPick(
   }
 
   if (bucket >= share) return null;
+  // P05: inside the share the adjacent swap exchanges ONE adjacent pair of the
+  // order it is handed, chosen from the decision's own bucket (visitor, slot and
+  // hour), as epsilon chooses its pick: the same decision always swaps the same
+  // pair. A pair touching a module under a merchandiser's control is not the
+  // rule's to move (W28.M1.01), and with no pair left nothing is swapped.
+  if (cfg.mode === ADJACENT_SWAP) {
+    const legal = [...new Set(input.pairs ?? ranked.slice(1).map((_, i) => i + 1))].sort((a, b) => a - b)
+      .filter((k) => Number.isSafeInteger(k) && k >= 1 && k < ranked.length && !controlled?.has(ranked[k - 1]!.id) && !controlled?.has(ranked[k]!.id));
+    if (legal.length === 0) return null;
+    const idx = Math.floor((bucket / share) * legal.length) % legal.length;
+    const k = legal[idx]!;
+    return { mode: ADJACENT_SWAP, pieceId: ranked[k]!.id, reason: `bucket ${bucket} < share ${share}: positions ${k} and ${k + 1} swapped, pair ${idx + 1} of ${legal.length}`, bucket, positions: [k, k + 1] };
+  }
   // W28.M1.01: what exploration may serve. Empty of controls this is the ranking itself.
   const eligible = controlled?.size ? ranked.filter((r) => !controlled.has(r.id)) : ranked;
   if (eligible.length === 0) return null;

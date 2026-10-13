@@ -186,6 +186,18 @@ function moduleRuleSentence(r: DecisionRecord, rule: NonNullable<DecisionRecord[
   return `Off-limits: the merchandiser marked this module never to move, so it holds its baseline position ${rule.position}, ${baseline}; the engine never ranked it, and no term and no exploration moved it.${served}`;
 }
 
+/**
+ * The exploration placement in words. P05: a module an adjacent swap exchanged
+ * names the swap and the two positions, counted from 1 within the slot; every
+ * other mode keeps the sentence it has always had.
+ */
+function explorationSentence(x: NonNullable<DecisionRecord['explain']['exploration']>): string {
+  if (x.mode === 'adjacent-swap' && Array.isArray(x.positions) && x.positions.length === 2) {
+    return `Swapped on purpose with the module beside it to measure the effect of position (adjacent-swap): positions ${x.positions[0]} and ${x.positions[1]} of this slot exchanged, ${x.reason}.`;
+  }
+  return `Served on purpose to explore (${x.mode}): ${x.reason}.`;
+}
+
 /** P29: each cause of an unchanged layout in words (decision D1). A cause a later build adds is quoted as written. */
 const CAUSE_WORDS: Readonly<Record<LayoutReasonCause, string>> = {
   pinned: 'the merchandiser pinned every position',
@@ -320,14 +332,17 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: the performance term Q is 0.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned term held at zero.');
     why.push(`Layout blend at p ${b.p}: score ${r3(e.score_final)} = R ${r3(b.R)} + (1 − ${b.p}) × B ${r3(b.B)} + ${b.p} × Q ${r3(b.Q)}.`);
-    if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
+    if (r.explored && e.exploration) why.push(explorationSentence(e.exploration));
   } else if (e.configuredOrder) {
     // P01: the configured order placed it, so no ranking sentence is claimed for
     // its position; the numbers the ranking computed stay on the record. Only on
     // a slot that does not opt into the layout blend (P28; the branch above).
     const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
+    // P05: a position an adjacent swap exchanged says so below, never that a listed module could not be served.
+    const swappedHere = r.explored && e.exploration?.mode === 'adjacent-swap';
     why.push(`Placed by the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered`
-      + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
+      + `${listed !== r.position + 1 && !swappedHere ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
+    if (swappedHere && e.exploration) why.push(explorationSentence(e.exploration));
   } else {
     if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
     behaviour(e.signalFloor ? 'No context term moved it: the slot served its catalogue order.'
@@ -361,7 +376,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: no lift.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
-    if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
+    if (r.explored && e.exploration) why.push(explorationSentence(e.exploration));
   }
   // W20 G2 (R86(c)): the shortfall is a fact about the SLOT, not about the
   // ranking of this piece, so it is read out for a pinned position exactly as
