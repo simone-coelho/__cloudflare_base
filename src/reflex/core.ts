@@ -102,6 +102,27 @@ export interface ReflexConfig {
    * and every decision is exactly what it was before the member existed.
    */
   suppression?: SuppressionSettings;
+  /**
+   * P12 (decision D2): the forms the tenant's account identifier takes, each the
+   * source of a regular expression anchored at both ends. Validated with the rest
+   * of the document (`validateReflexConfig`). ABSENT IS THE SHIPPED STATE: a link
+   * accepts any account identifier exactly as it did before the member existed.
+   * Present, a link whose own account identifier matches none of the declared
+   * forms is refused, naming the format, and merges nothing.
+   */
+  accountIdFormat?: AccountIdFormat;
+}
+
+/**
+ * P12. The declared forms of a tenant's account identifier; at least one. Each
+ * value is the source of a regular expression that begins with `^` and ends with
+ * `$`, and the identifier must match one form whole.
+ */
+export interface AccountIdFormat {
+  /** The identifier the site assigns at a shopper's first landing, before an e-mail address is known. */
+  firstLanding?: string;
+  /** The identifier the site derives from the shopper's e-mail address (a hash of it). */
+  hashedEmail?: string;
 }
 
 /**

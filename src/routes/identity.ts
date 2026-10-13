@@ -32,8 +32,8 @@ import type { AuthContext } from '@/middleware/auth';
 import { requireShopper, shopperPrincipal, capabilityToken, verifySessionCapability, issueSessionCapability, signSessionCapability, assertSessionTarget, readContinuityProof, CONTINUITY_COOKIE, CONTINUITY_RETIRED_HEADER, SHOPPER_HEADER, SessionAccessError, type ContinuityDescriptor } from '@/identity/sessionCapability';
 import { anonymousWithConsent, establishRefusal, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
 import { consentFromCookies, intersectConsent, personalizes, refusalHints, storedConsent, type Consent } from '@/content/consent';
-import { publishedContinuity } from '@/reflex/configStore';
-import { resolveTenantReflexConfigRevision } from '@/demos/registry';
+import { accountIdFormatRefusal, publishedContinuity } from '@/reflex/configStore';
+import { resolveTenantReflexConfig, resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { shopperObject } from '@/tenancy/objects';
 import type { ContinuitySettings } from '@/reflex/core';
 import { tenantForRequest } from '@/tenancy/middleware';
@@ -420,6 +420,12 @@ identityRoutes.post('/:tenant/identity/link', requireShopper({ forward: false })
 
   const verdict = await verifyAssertion(c.env, tenant, { visitorId, accountId, exp, assertion });
   if (!verdict.ok) return c.json({ ok: false, error: verdict.reason }, 401);
+  // P12 (decision D2): a tenant that declares its account identifier format
+  // links only an identifier in it; one that declares none links as before. The
+  // document is the one the link itself reads (linkVisitor), and the refusal
+  // comes before anything is linked or merged, so the browser stays as it was.
+  const outsideFormat = accountIdFormatRefusal(await resolveTenantReflexConfig(c.env, tenant), accountId);
+  if (outsideFormat) return c.json({ ok: false, error: outsideFormat }, 400);
   if (!shopperRequestHeld(c.req.raw, principal)) return forwardShopperRequest(c.env, c.req.raw, principal);
 
   const result = await linkVisitor(c.env, tenant, { visitorId, accountId, source, assurance: verdict.assurance, principal, capability: capabilityToken(c.req.raw)!, cookieHeader: c.req.header('Cookie') });
