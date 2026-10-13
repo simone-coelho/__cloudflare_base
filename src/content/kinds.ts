@@ -92,13 +92,18 @@ const RULE_SIGNALS = 'entry_channel, visit_bucket or journey_stage';
  * admit the module — refused by name when malformed. On publication (`terms`)
  * a rule names only the engine's own signals (`ELIGIBILITY_SIGNALS`), each
  * value of its vocabulary: a channel of the terms (today's six words for a
- * tenant without a context vocabulary), a visit bucket of the terms (1, 2-3,
- * 4+), or a journey stage (exploring, considering, deciding); a refusal quotes
- * the offending signal or value. A RETAINED document (`terms` null) is read by
- * the grammar alone, so a rule a later contract refuses keeps its catalogue
- * readable and, naming what the engine cannot satisfy, admits nothing.
+ * tenant without a context vocabulary; P31 R-P59 (4): a tenant's own channel
+ * ids), a visit bucket of the terms (1, 2-3, 4+; a tenant's own cut), or a
+ * journey stage (exploring, considering, deciding); a refusal quotes the
+ * offending signal or value. The publication store, which holds no tenant,
+ * reads a channel and a bucket by their grammar alone (`'grammar'`), as it
+ * reads a slots document (P36); the authoring door (src/routes/content.ts)
+ * checks them against the tenant's terms first (`catalogRuleErrors`). A
+ * RETAINED document (`terms` null) is read by the grammar of the rule alone,
+ * so a rule a later contract refuses keeps its catalogue readable and, naming
+ * what the engine cannot satisfy, admits nothing.
  */
-function eligibilityRule(raw: unknown, at: string, terms: ContextTerms | null): ValidationResult<{ regions?: string[]; context?: Record<string, string[]> }> {
+function eligibilityRule(raw: unknown, at: string, terms: SlotTerms | null): ValidationResult<{ regions?: string[]; context?: Record<string, string[]> }> {
   if (!isRecord(raw)) return { ok: false, errors: [`${at}: object with regions and/or context`] };
   const errors: string[] = [];
   const extra = Object.keys(raw).filter((k) => !['regions', 'context'].includes(k));
@@ -146,7 +151,7 @@ function eligibilityRule(raw: unknown, at: string, terms: ContextTerms | null): 
   return errors.length ? { ok: false, errors } : { ok: true, value: rule };
 }
 
-function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[], stored: boolean): ContentPiece | null {
+function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[], stored: boolean, terms: SlotTerms = TODAY_TERMS): ContentPiece | null {
   const at = `pieces[${i}]`;
   if (!isRecord(p)) { errors.push(`${at}: must be an object`); return null; }
   const id = p.id, cid = p.customerContentId, type = p.type, title = p.title;
@@ -196,7 +201,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   // served at all (`eligibilityRule` below).
   let eligibleWhen: { regions?: string[]; context?: Record<string, string[]> } | undefined;
   if (p.eligibleWhen !== undefined) {
-    const checked = eligibilityRule(p.eligibleWhen, `${at}.eligibleWhen`, stored ? null : TODAY_TERMS);
+    const checked = eligibilityRule(p.eligibleWhen, `${at}.eligibleWhen`, stored ? null : terms);
     if (checked.ok) eligibleWhen = checked.value; else errors.push(...checked.errors);
   }
   let merchandising: Record<string, number> | undefined;
@@ -257,20 +262,53 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   };
 }
 
-export function validateContentCatalog(candidate: unknown): ValidationResult<ContentCatalog> {
-  return contentCatalog(candidate, false);
+/**
+ * Publication rejects a malformed catalogue. One argument: a rule's words are
+ * checked against today's terms, the six channel words and 1, 2-3, 4+ (a
+ * tenant without the settings). P31 (R-P59 (4)): the authoring door passes the
+ * tenant's terms (`catalogRuleErrors`), and the publication store, which holds
+ * no tenant, the grammar alone (`CONTENT_KIND.validate`).
+ */
+export function validateContentCatalog(candidate: unknown, terms: SlotTerms = TODAY_TERMS): ValidationResult<ContentCatalog> {
+  return contentCatalog(candidate, false, terms);
 }
 function validateStoredContentCatalog(candidate: unknown): ValidationResult<ContentCatalog> {
   return contentCatalog(candidate, true);
 }
-function contentCatalog(candidate: unknown, stored: boolean): ValidationResult<ContentCatalog> {
+
+/** P31 (R-P59 (4)): whether a catalogue names a rule's entry channel or visit bucket, the words a tenant's vocabulary decides. */
+export function catalogNamesRuleWords(candidate: unknown): boolean {
+  const pieces = isRecord(candidate) && Array.isArray(candidate.pieces) ? candidate.pieces : [];
+  return pieces.some((p) => isRecord(p) && isRecord(p.eligibleWhen) && isRecord(p.eligibleWhen.context)
+    && (Object.hasOwn(p.eligibleWhen.context, 'entry_channel') || Object.hasOwn(p.eligibleWhen.context, 'visit_bucket')));
+}
+
+/**
+ * P31 (R-P59 (4)): the refusals of a catalogue's eligibility rules against a
+ * tenant's terms — its channel ids and the names of its visit-bucket cut, or
+ * today's six words and 1, 2-3, 4+ for a tenant without the settings — each
+ * worded as the validator words it, addressed `pieces[i].eligibleWhen…`. Every
+ * other member is left to the catalogue's own validator. Pure.
+ */
+export function catalogRuleErrors(candidate: unknown, terms: ContextTerms): string[] {
+  const pieces = isRecord(candidate) && Array.isArray(candidate.pieces) ? candidate.pieces : [];
+  const errors: string[] = [];
+  pieces.forEach((p, i) => {
+    if (!isRecord(p) || p.eligibleWhen === undefined) return;
+    const checked = eligibilityRule(p.eligibleWhen, `pieces[${i}].eligibleWhen`, terms);
+    if (!checked.ok) errors.push(...checked.errors);
+  });
+  return errors;
+}
+
+function contentCatalog(candidate: unknown, stored: boolean, terms: SlotTerms = TODAY_TERMS): ValidationResult<ContentCatalog> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['catalog: must be an object'] };
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
   if (!Array.isArray(candidate.pieces)) return { ok: false, errors: [...errors, 'pieces: required array'] };
   const seen = new Set<string>();
   const pieces: ContentPiece[] = [];
-  candidate.pieces.forEach((p, i) => { const v = validatePiece(p, i, seen, errors, stored); if (v) pieces.push(v); });
+  candidate.pieces.forEach((p, i) => { const v = validatePiece(p, i, seen, errors, stored, terms); if (v) pieces.push(v); });
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), pieces } };
 }
@@ -280,7 +318,11 @@ export const EMPTY_CATALOG: ContentCatalog = { version: 'content-empty', pieces:
 export const CONTENT_KIND: DocumentKind<ContentCatalog> = {
   name: 'content',
   publication: 'r2',
-  validate: validateContentCatalog,
+  // P31 (R-P59 (4)): the store holds no tenant, so it reads a rule's channel and
+  // bucket by their grammar alone; the authoring door (src/routes/content.ts)
+  // checks each against the tenant's own vocabulary and cut first, and the
+  // decision reads every rule against the cell the tenant's terms derive.
+  validate: (candidate) => validateContentCatalog(candidate, 'grammar'),
   validateStored: validateStoredContentCatalog,
   stamp: (v, r) => ({ ...v, version: stampLabel(v.version, 'content', r) }),
   versionOf: (v) => v.version ?? '',

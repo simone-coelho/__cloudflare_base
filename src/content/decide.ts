@@ -1095,6 +1095,19 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const regionalPrior = i.arm === 'default' ? null : i.layoutPriors?.regional ?? (i.regional ? { lambda: i.regional.lambda, share: i.regional.share } : null);
   const contextPriorTerm = i.arm === 'default' ? null : i.layoutPriors?.context ?? (i.contextBlend ? { lambda: i.contextBlend.lambda, share: i.contextBlend.share } : null);
   const layoutRanksAbove = i.slots.some((slot) => slot.layout === true && !slot.offLimits && !below.has(slot.slot));
+  // P31 (R-P59 (1)): an off-limits mark applies on the page whenever it names a
+  // module the declared layout slot could have ranked but for the withholding —
+  // the composer counts a mark only for an eligible module — so the page states
+  // the module-rules marker then too, and the replay keeps the marks that the
+  // reason's pre-withholding baseline holds the module by. Nothing withheld,
+  // or no mark naming a withheld module: exactly the marker as before (C11).
+  const marksWithheld = !historicalPins && withheldBy.size > 0 && i.slots.some((s) => s.layout === true && !s.offLimits
+    && (s.offLimitsPieceIds ?? []).some((id) => {
+      const piece = byId.get(id), spec = specOf.get(s.slot);
+      if (!piece || !spec || !withheldBy.has(id) || !piece.slotTypes.includes(s.slot)) return false;
+      const gate = compileSlotConstraints(spec, historicalGovernance !== HISTORICAL_GOVERNANCE_V1);
+      return !(gate.active && gate.reason(piece));
+    }));
   const priorLambda = layoutRanksAbove && (regionalPrior || contextPriorTerm)
     ? { ...(contextPriorTerm ? { context: contextPriorTerm.lambda } : {}), ...(regionalPrior ? { regional: regionalPrior.lambda } : {}) } : null;
   const inputs: DecisionInputs & { explorationRules?: ExplorationRules } = {
@@ -1109,7 +1122,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(ordersUsed ? { orders: ORDER_RULES } : {}),
       ...(blendedSlots.size ? { blend: BLEND_RULES } : {}),
       ...(below.size ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
-      ...(ruled?.length ? { moduleRules: MODULE_RULES } : {}),
+      ...(ruled?.length || marksWithheld ? { moduleRules: MODULE_RULES } : {}),
       slots: i.slots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];
@@ -1147,6 +1160,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // declared layout slot is decided under, and never for a slot a bounded
   // replay did not re-execute.
   const layoutReasons = new Map<string, LayoutReason>();
+  // P31 (R-P59 (2)): a slot whose every refused pin names a module the withholding removed, refused as missing or ineligible.
+  const refusedByWithholding = (slot: string) => (pinDiagnostics ?? []).filter((d) => d.slot === slot)
+    .every((d) => d.reason === 'missing_or_ineligible' && withheldBy.has(d.pinnedPieceId));
   if (!historicalPins && historicalGovernance === undefined) {
     const slotIndex = new Map(i.slots.map((slot, index) => [slot.slot, index] as const));
     const live = eligible.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
@@ -1185,20 +1201,46 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const pool = live.filter(pooled).map((p) => p.id);
     const order = configured.get(s.slot), inPool = new Set(pool);
     const sequence = order ? [...new Set(order.modules)].filter((id) => inPool.has(id)) : pool;
-    // P31 (R-P23 C7): the baseline is drawn before the withholding, so a module
-    // it would have served on a position ranking fills — one of the first
-    // positions the fixed modules leave free, in the same sequence with the
-    // withheld modules in place — that the page's report or the module's rule
-    // withheld is a change against it, named with its cause in baseline order.
-    // The moves then compare the served order with the baseline less the
-    // withheld modules, so a module that only took a withheld module's place is
-    // not called moved by a term. Nothing withheld: exactly as before.
+    // P31 (R-P23 C7, R-P59): the baseline is drawn before the withholding — the
+    // same construction on the modules eligible before it — so a module it would
+    // have served on one of its positions that the page's report or the module's
+    // rule withheld is a change against it, named with its cause in baseline
+    // order. Before the withholding an off-limits mark holds its module at its
+    // place among the modules the slot could serve (P04), whether or not the
+    // module is withheld, and a pin of another slot refused only because the
+    // withholding removed its module still reserves it. The moves then compare
+    // the served order with the baseline less the withheld modules, so a module
+    // that only took a withheld module's place is not called moved by a term.
+    // Nothing withheld: exactly as before.
     let withheld: LayoutWithheld[] = [];
     if (withheldBy.size) {
-      const fullPool = admittedLive.filter(pooled).map((p) => p.id), inFull = new Set(fullPool);
-      const fullSequence = order ? [...new Set(order.modules)].filter((id) => inFull.has(id)) : fullPool;
-      const capacity = Math.max(0, s.take - served.filter(fixed).length);
-      withheld = fullSequence.slice(0, capacity).flatMap((id) => { const cause = withheldBy.get(id); return cause ? [{ cause, module: id }] : []; });
+      const reservedBefore = new Set(reserved);
+      for (const other of i.slots) {
+        if (other.slot === s.slot || other.offLimits || !pinRefused.has(other.slot) || !refusedByWithholding(other.slot)) continue;
+        for (const id of other.pinnedPieceIds ?? []) reservedBefore.add(id);
+        for (const pin of other.positionPins ?? []) reservedBefore.add(pin.pieceId);
+        if (other.pinnedPieceId) reservedBefore.add(other.pinnedPieceId);
+      }
+      const prefixIds = s.pinnedPieceIds ?? (s.pinnedPieceId ? [s.pinnedPieceId] : []), positionPins = s.positionPins ?? [];
+      const ownPins = new Set([...prefixIds, ...positionPins.map((pin) => pin.pieceId)]);
+      const admits = (p: ContentPiece) => p.slotTypes.includes(s.slot) && !(gate.active && gate.reason(p));
+      const inOrder = (ids: string[]) => { const held = new Set(ids); return order ? [...new Set(order.modules)].filter((id) => held.has(id)) : ids; };
+      // Where each off-limits mark holds its module before the withholding (P04): its place among the modules the slot could serve, its own pins included.
+      const markBase = inOrder(admittedLive.filter((p) => admits(p) && (ownPins.has(p.id) || (!before.has(p.id) && !reservedBefore.has(p.id)))).map((p) => p.id));
+      const heldAt = new Map<number, string>();
+      for (const id of marks) {
+        const position = markBase.indexOf(id) + 1;
+        if (ownPins.has(id) || position < 1 || position > s.take || position <= prefixIds.length || positionPins.some((pin) => pin.position === position)) continue;
+        heldAt.set(position, id);
+      }
+      const fullSequence = inOrder(admittedLive.filter((p) => admits(p) && !before.has(p.id) && !reservedBefore.has(p.id) && !ownPins.has(p.id) && !marks.has(p.id)).map((p) => p.id));
+      let filled = 0;
+      for (let position = 1; position <= s.take; position++) {
+        const id = position <= prefixIds.length ? prefixIds[position - 1]
+          : positionPins.find((pin) => pin.position === position)?.pieceId ?? heldAt.get(position) ?? fullSequence[filled++];
+        const cause = id === undefined ? undefined : withheldBy.get(id);
+        if (cause) withheld.push({ cause, module: id! });
+      }
     }
     // The baseline, position by position: a fixed module where the composer placed
     // it (the same positions, ranking and baseline filling the same number of

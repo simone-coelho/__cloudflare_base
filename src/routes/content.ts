@@ -28,7 +28,7 @@ import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
   readOptionalPublication, readPublication, recoverPublication, type PublicationPin } from '@/config/publication';
-import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
+import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
 import { contextTermsOf } from '@/content/cell';
@@ -250,6 +250,48 @@ async function vocabularyRefusals(c: Context<Ctx>, scope: string, slotsCandidate
   }
   const checked = validateSlotCatalog(slotsCandidate, contextTermsOf(learn.contextVocabulary));
   return checked.ok ? null : { status: 422, errors: checked.errors };
+}
+
+/**
+ * P31 (R-P59 (4)): a catalogue whose eligibility rules name an entry channel or
+ * a visit bucket — the words a tenant's context vocabulary decides — is checked
+ * at the door against the tenant's channel ids and the names of its
+ * visit-bucket cut in force (P36), or today's six channel words and 1, 2-3, 4+
+ * for a tenant without the settings, every refusal worded as the validator
+ * words it, as P36's slots door checks seeds and orders. The learn document is
+ * the one published with it in the same request when there is one, otherwise
+ * the one in force. A catalogue naming neither word is never touched: no read
+ * is made for it. Fail closed: a learn document that cannot be read refuses the
+ * publication. The publication store, which holds no tenant, reads the words by
+ * their grammar alone, and a retained catalogue by the grammar of the rule.
+ */
+async function catalogueVocabularyRefusals(c: Context<Ctx>, scope: string, catalogCandidate: unknown, learnCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  if (!catalogNamesRuleWords(catalogCandidate)) return null;
+  let learn: LearnConfig;
+  if (learnCandidate !== undefined) {
+    const checked = LEARN_KIND.validate(learnCandidate);
+    if (!checked.ok) return null;
+    learn = checked.value;
+  } else {
+    try { learn = (await readPublication(c.env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
+    catch { return { status: 503, errors: ['learn: the learning document is unavailable, so the entry channels and visit buckets this catalogue\'s eligibility rules name cannot be checked against the tenant\'s context vocabulary'] }; }
+  }
+  const errors = catalogRuleErrors(catalogCandidate, contextTermsOf(learn.contextVocabulary));
+  return errors.length ? { status: 422, errors } : null;
+}
+/** P31 (R-P59 (4)): every catalogue member one request publishes, against the learn member it publishes or else the learn document in force. */
+async function requestCatalogueVocabularyRefusals(c: Context<Ctx>, scope: string, members: readonly PublishedMember[]): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const learn = members.find(member => member.kind.name === LEARN_KIND.name)?.document;
+  const errors: string[] = [];
+  for (const member of members) {
+    if (member.kind.name !== CONTENT_KIND.name) continue;
+    const refused = await catalogueVocabularyRefusals(c, scope, member.document, learn);
+    if (!refused) continue;
+    const named = member.at === null ? refused.errors : refused.errors.map(error => `${member.at}: ${error}`);
+    if (refused.status === 503) return { status: 503, errors: named };
+    errors.push(...named);
+  }
+  return errors.length ? { status: 422, errors } : null;
 }
 
 /**
@@ -629,6 +671,9 @@ contentRoutes.post('/:kind/validate', async (c) => {
   // from the set it publishes over, and refuses when that set cannot be read).
   let checked: unknown = candidate;
   if (k.kind.name === CONTENT_KIND.name) {
+    // P31 (R-P59 (4)): a rule's channel and bucket against the tenant's own vocabulary and cut, as the write checks them.
+    const vocabulary = await catalogueVocabularyRefusals(c, scope, candidate);
+    if (vocabulary) return c.json({ valid: false, errors: vocabulary.errors }, vocabulary.status);
     let approval: { value: VocabularyApproval } | null = null;
     try { approval = (await readOptionalPublication(c.env, VOCABULARY_APPROVAL_KIND, scope)).revision; }
     catch (error) { if (!(error instanceof PublicationError)) throw error; }
@@ -683,6 +728,13 @@ contentRoutes.put('/:kind', async (c) => {
     const vocabulary = await vocabularyRefusals(c, scope, candidate);
     if (vocabulary) return c.json({ ok: false, errors: vocabulary.errors }, vocabulary.status);
   }
+  // P31 (R-P59 (4)): a catalogue published alone names only the tenant's own
+  // channels and buckets in its eligibility rules; one published with related
+  // members is checked below, against the learn member among them.
+  if (k.kind.name === CONTENT_KIND.name && related === undefined) {
+    const vocabulary = await catalogueVocabularyRefusals(c, scope, candidate);
+    if (vocabulary) return c.json({ ok: false, errors: vocabulary.errors }, vocabulary.status);
+  }
   // A replacement is self-contained: reject invalid new drafts before any
   // authority read. Original v1 receipt resolution is deliberately read-only
   // and may retain a value that the current write validator no longer admits.
@@ -721,6 +773,11 @@ contentRoutes.put('/:kind', async (c) => {
     // the learn member this request publishes or else the one in force.
     const vocabulary = await requestVocabularyRefusals(c, scope, members);
     if (vocabulary) return c.json({ ok: false, errors: vocabulary.errors }, vocabulary.status);
+    // P31 (R-P59 (4)): every catalogue member's eligibility rules, against the
+    // tenant's context vocabulary in the learn member this request publishes or
+    // else the one in force.
+    const ruleWords = await requestCatalogueVocabularyRefusals(c, scope, members);
+    if (ruleWords) return c.json({ ok: false, errors: ruleWords.errors }, ruleWords.status);
     // P01 (R-P24): the per-context orders of every slots member, against the
     // catalogue this request publishes or else the one in force.
     const orders = await requestOrderRefusals(c, scope, members);
@@ -777,6 +834,11 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
   const scope = catalogScope(c);
   const incoming = candidatesFrom(records);
   if (incoming.length === 0) return c.json({ ok: false, errors: ['no records found in the import'] }, 422);
+  // P31 (R-P59 (4)): the eligibility rules the import writes, against the
+  // tenant's context vocabulary and cut in force, at the one door the JSON and
+  // CSV imports and the pull all pass through.
+  const vocabulary = await catalogueVocabularyRefusals(c, scope, { pieces: incoming });
+  if (vocabulary) return c.json({ ok: false, errors: vocabulary.errors, received: records.length }, vocabulary.status);
   // The catalogue this operation was published over, so `changed` is measured
   // against the stored values. The mutator runs for every publication; an
   // exact-request retry serves a retained answer without running it, and the
