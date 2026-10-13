@@ -1344,15 +1344,20 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const order = composed.decisions.filter((d) => d.slot === s.slot);
     const fixed = (d: (typeof order)[number]) => d.strategy === 'tenant-pinned';
     // Compared, as P29's moves are, with the baseline less any withheld module, along the shadow order's fixed positions.
-    const { fromOf } = baselineAlong(order, drawn.sequence);
+    const { baseline: along, fromOf } = baselineAlong(order, drawn.sequence);
     const moves = order.flatMap((d, k) => {
       const from = fromOf.get(d.contentId) ?? null;
       return fixed(d) || from === k + 1 ? [] : [{ module: d.contentId, from, to: k + 1 }];
     });
+    // R-P64: a module of the baseline take that the shadow pushes out of its take
+    // moved too — down, past the take's last position — so it is a move beside the
+    // modules the shadow brings in, compared with the modules of the shadow take
+    // that passed it. A module outside both takes is no move (R-P57's limit).
+    const inShadow = new Set(order.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
+    for (const id of along) if (id !== undefined && !inShadow.has(id)) moves.push({ module: id, from: fromOf.get(id) ?? null, to: order.length + 1 });
     const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
       (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
     const yielded = new Set(order.flatMap((d) => (d.explain.diversity ? [...d.explain.diversity.skipped, ...(d.explain.diversity.relaxed ? [d.contentId] : [])] : [])));
-    const inShadow = new Set(order.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
     const support = new Map((composed.candidates[s.slot] ?? []).map((c) => [c.contentId, c.score] as const));
     const learned = { lift: liftAtOne, blend: blendAt };
     const termsMemo = new Map<string, ScoreTerms | null>();
@@ -1365,36 +1370,38 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // every term by which it differs from the modules it passed (moved up) or
     // that passed it (moved down), taken together, in the direction it moved —
     // for a module moved up, the modules the baseline placed ahead of it that the
-    // shadow does not serve included. Where no term separates it, the rule that
-    // placed or displaced one of them, else its own largest term in that
-    // direction, else the terms of the first module that passed it or it passed.
+    // shadow does not serve included. A module the shadow pushed out of its take
+    // (R-P64) is attributed the same way, its own terms read from the shadow's
+    // ranking of it. Where no term separates it, the rule that placed or
+    // displaced one of them, else its own largest term in that direction, else
+    // the terms of the first module that passed it or it passed.
     const termsOf = new Map<string, LayoutMoveTerm[]>();
     for (const move of moves) {
-      const d = order[move.to - 1]!;
-      if (yielded.has(d.contentId)) { termsOf.set(d.contentId, ['diversity']); continue; }
+      const id = move.module, inTake = move.to <= order.length ? order[move.to - 1] : undefined;
+      if (yielded.has(id)) { termsOf.set(id, ['diversity']); continue; }
       const up = move.from === null || move.to < move.from;
       const others: ScoreTerms[] = [];
       let ruled = false;
-      const compare = (id: string, score: number | undefined) => {
-        if (yielded.has(id)) ruled = true;
-        const terms = termsFor(id, score);
+      const compare = (other: string, score: number | undefined) => {
+        if (yielded.has(other)) ruled = true;
+        const terms = termsFor(other, score);
         if (terms) others.push(terms);
       };
       for (const [k, o] of order.entries()) {
-        if (o === d || fixed(o)) continue;
+        if (o.contentId === id || fixed(o)) continue;
         const at = { from: fromOf.get(o.contentId) ?? null, to: k + 1 };
         if (up ? passed(move, at) : passed(at, move)) compare(o.contentId, o.score);
       }
-      if (up) for (const id of drawn.sequence) {
-        if (inShadow.has(id) || !((fromOf.get(id) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
-        if (scoredHere ? scoredHere.has(id) : support.has(id)) compare(id, support.get(id));
-        else if (yielded.has(id)) ruled = true;
+      if (up) for (const other of drawn.sequence) {
+        if (inShadow.has(other) || !((fromOf.get(other) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
+        if (scoredHere ? scoredHere.has(other) : support.has(other)) compare(other, support.get(other));
+        else if (yielded.has(other)) ruled = true;
       }
-      const own = termsFor(d.contentId, d.score), sign = up ? 1 : -1;
+      const own = termsFor(id, inTake ? inTake.score : support.get(id)), sign = up ? 1 : -1;
       const named = own ? differingTerms(own, others, sign) : [];
       const single: LayoutMoveTerm | null = named.length ? null : ruled ? 'diversity' : own ? largestTerm(own, sign) : null;
-      if (named.length) termsOf.set(d.contentId, named);
-      else if (single) termsOf.set(d.contentId, [single]);
+      if (named.length) termsOf.set(id, named);
+      else if (single) termsOf.set(id, [single]);
     }
     const fallback: LayoutMoveTerm[] = moves.map((m) => termsOf.get(m.module)).find((t) => t !== undefined) ?? ['affinity'];
     const shadowTerms: Record<string, LayoutMoveTerm[]> = {};
