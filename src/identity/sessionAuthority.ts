@@ -35,6 +35,8 @@ interface Invocation {
   eventRetention?: (id: string, digest: string, occurredAt: number) => Promise<ExternalRetention>;
   recovery?: (input: RecoveryInput, principal: SessionCapability) => Promise<RecoveryReceipt>;
   recoveryDeadlines?: number[];
+  /** P13 (R-P66 item 2): the owner keeps the customer's identifier the shopper's request carried. */
+  carry?: (customerId: string) => Promise<void>;
 }
 // Async descendants share a lifetime, not an ambient reusable authorization bit.
 const invocation = new AsyncLocalStorage<Invocation>();
@@ -417,6 +419,26 @@ export async function restrictOwnerConsent(hints: Consent): Promise<Consent | un
   recheckOwnerInvocation(held.owner);
   return held.restrictConsent ? trackedIO(() => held.restrictConsent!(hints)) : undefined;
 }
+/**
+ * P13 (R-P66 item 2): hand the customer's identifier an anonymous shopper's
+ * accepted request carried, under tracking consent, to the shopper's own object,
+ * which keeps it as one member of its existing grant record when it is new or
+ * changed. Carried, never proof: nothing is selected, linked or merged by it.
+ * The caller decides the consent; a recognised principal hands over nothing.
+ * The write is awaited inside the owner operation but never retained as owner
+ * work, so its failure cannot fail the request that carried it; it is answered
+ * as false and the value is carried again on the next request.
+ */
+export async function carryOwnerCustomerId(env: Env, principal: SessionCapability, customerId: string): Promise<boolean> {
+  try {
+    assertOwnerScope(env, principal);
+    const held = invocation.getStore();
+    if (!held?.carry || principal.kind !== 'anonymous') return false;
+    recheckOwnerInvocation(held.owner);
+    await held.carry(customerId);
+    return true;
+  } catch { return false; }
+}
 export function assertOwnerScope(env: Env, principal: SessionCapability): void {
   assertSessionTarget(principal);
   const held = invocation.getStore();
@@ -470,8 +492,8 @@ export function ownerRelay(env: Env, operation: 'broadcast' | 'connections', ten
   if (!held?.active || held.env.SESSIONS !== env.SESSIONS || !held.relay) throw new SessionAccessError();
   return trackedIO(() => held.relay!(operation, subject, tenant, body));
 }
-export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery']): Promise<T> {
-  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [] };
+export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery'], carry?: Invocation['carry']): Promise<T> {
+  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [], carry };
   return invocation.run(held, async () => {
     let failure: unknown, value: T | undefined;
     try { value = await work(); } catch (error) { failure = error; }
@@ -539,14 +561,21 @@ export function coarseRequestCF(value: unknown): { country?: string; regionCode?
   return { ...(typeof cf?.country === 'string' && /^[A-Za-z]{2}$/.test(cf.country) ? { country: cf.country } : {}),
     ...(typeof cf?.regionCode === 'string' && /^[A-Za-z0-9-]{1,16}$/.test(cf.regionCode) ? { regionCode: cf.regionCode } : {}) };
 }
-export async function forwardShopperRequest(env: Env, request: Request, principal: SessionCapability): Promise<Response> {
+/**
+ * `cf` is the platform's request metadata of the request as it arrived; it is
+ * read off `request` unless the caller re-built the request it forwards (P13: a
+ * new visitor's first decision request, re-entered under the session it was
+ * just issued) and hands over the original's.
+ */
+export async function forwardShopperRequest(env: Env, request: Request, principal: SessionCapability,
+  cf: unknown = (request as Request & { cf?: unknown }).cf): Promise<Response> {
   if (!ownedRequestPath(request)) throw new SessionAccessError();
   const headers = new Headers(request.headers);
   headers.set('X-Owner-Request-URL', request.url);
   headers.set('X-Tenant', principal.tenant);
   // Always replace public input; only the platform's coarse request metadata
   // enters this binding-only hop. Never forward city/IP/coordinates/body geo.
-  headers.set('X-Owner-Coarse-CF', JSON.stringify(coarseRequestCF((request as Request & { cf?: unknown }).cf)));
+  headers.set('X-Owner-Coarse-CF', JSON.stringify(coarseRequestCF(cf)));
   return shopperObject(env.SHOPPER_REFLEX, principal.subject, principal.tenant).fetch(new Request('https://shopper-reflex/authority/request', {
     method: request.method, headers, ...(request.body ? { body: request.body, duplex: 'half' } : {}),
   } as RequestInit));

@@ -1,0 +1,76 @@
+{
+ "name": "15-continue-and-report",
+ "beat": 15,
+ "act": 5,
+ "actName": "Order and metric",
+ "press": "Back to the homepage, then the template changes; clicks; the day report",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "events": [
+  {
+   "type": "add_to_cart",
+   "data": {
+    "productId": "galaxy-s26",
+    "category": "phones",
+    "brand": "samsung",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 1099.99,
+    "storage": "512gb"
+   },
+   "note": "add to cart: Galaxy S26, 512 GB"
+  }
+ ],
+ "snapshot": {
+  "page": "home",
+  "slots": [
+   "hero",
+   "deals"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  },
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  }
+ },
+ "template": {
+  "home": [
+   "deals",
+   "hero",
+   "phones-rail"
+  ],
+  "note": "Their CMS, not our decision: the page moves the deals module to position one; every slot is addressed by NAME, so the four and their learning are unchanged."
+ },
+ "clicks": [
+  {
+   "slot": "deals",
+   "position": 0,
+   "type": "content_click"
+  },
+  {
+   "slot": "deals",
+   "position": 1,
+   "type": "content_click"
+  },
+  {
+   "slot": "pdp-modules",
+   "position": 0,
+   "type": "content_click"
+  }
+ ],
+ "report": {
+  "route": "POST /vantage/api/report",
+  "slots": [
+   "deals",
+   "pdp-modules"
+  ]
+ },
+ "engine": "The first add to cart makes her deciding, so the continue hero is in stage; slots answer by name; clicks are rewards, attributed per promotion and per module.",
+ "sees": "The hero is now her priced configuration with one next step; the deals module moves, its four unchanged; the report per promotion and per module (attribution, labelled; lift is computed in their warehouse against a holdout)."
+}

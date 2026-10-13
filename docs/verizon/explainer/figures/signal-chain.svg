@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="400" viewBox="0 0 1100 400" role="img" aria-labelledby="t d">
+  <title id="t">The signal chain</title>
+  <desc id="d">An event raises the dimension values it carries; the values form the shopper's vector of graded, fading interests; every eligible candidate is scored against that vector under the slot's weights; the slot returns its ranked answer.</desc>
+  <!-- Palette of scripts/md2docx.mjs: navy 11142A, blue 0B5CAD, grey 5A6472, rule C9D1DC, head E8EDF4, zebra F6F8FB, code F3F5F8 -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0B5CAD"/>
+    </marker>
+    <style>
+      text { font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif; fill: #1A1A1A; }
+      .title { font-size: 21px; font-weight: 700; fill: #11142A; }
+      .body { font-size: 18px; }
+      .note { font-size: 17px; fill: #5A6472; }
+      .key { font-size: 17px; fill: #5A6472; }
+      .val { font-size: 18px; font-weight: 700; fill: #11142A; }
+      .chip { font-size: 17px; fill: #11142A; }
+      .mono { font-family: Consolas, "Courier New", monospace; font-size: 18px; fill: #11142A; }
+      .formula { font-family: Consolas, "Courier New", monospace; font-size: 19px; font-weight: 700; fill: #0B5CAD; }
+      .rank { font-size: 15px; font-weight: 700; fill: #FFFFFF; }
+      .sym { font-family: Consolas, "Courier New", monospace; font-size: 18px; font-weight: 700; fill: #0B5CAD; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1100" height="400" fill="#FFFFFF"/>
+
+  <!-- arrows between the panels -->
+  <g stroke="#0B5CAD" stroke-width="3" marker-end="url(#arrow)">
+    <line x1="208" y1="210" x2="228" y2="210"/>
+    <line x1="429" y1="210" x2="449" y2="210"/>
+    <line x1="650" y1="210" x2="670" y2="210"/>
+    <line x1="871" y1="210" x2="891" y2="210"/>
+  </g>
+
+  <!-- 1 · An event -->
+  <g>
+    <rect x="10" y="20" width="196" height="360" rx="8" fill="#FFFFFF" stroke="#C9D1DC" stroke-width="1.5"/>
+    <path d="M10,28 a8,8 0 0 1 8,-8 h180 a8,8 0 0 1 8,8 v36 h-196 z" fill="#E8EDF4"/>
+    <text class="title" x="24" y="49">1  An event</text>
+    <text class="body" x="24" y="92">She views a</text>
+    <text class="body" x="24" y="114">Galaxy S26 card;</text>
+    <text class="body" x="24" y="136">the event carries:</text>
+    <rect x="24" y="152" width="168" height="28" rx="5" fill="#F3F5F8" stroke="#C9D1DC"/>
+    <text class="chip" x="34" y="172">category: phones</text>
+    <rect x="24" y="188" width="168" height="28" rx="5" fill="#F3F5F8" stroke="#C9D1DC"/>
+    <text class="chip" x="34" y="208">brand: samsung</text>
+    <rect x="24" y="224" width="168" height="28" rx="5" fill="#F3F5F8" stroke="#C9D1DC"/>
+    <text class="chip" x="34" y="244">ecosystem: android</text>
+    <rect x="24" y="260" width="168" height="28" rx="5" fill="#F3F5F8" stroke="#C9D1DC"/>
+    <text class="chip" x="34" y="280">price: $899.99</text>
+    <text class="note" x="24" y="326">One event touches</text>
+    <text class="note" x="24" y="346">every attribute the</text>
+    <text class="note" x="24" y="366">registry reads.</text>
+  </g>
+
+  <!-- 2 · Dimension values -->
+  <g>
+    <rect x="231" y="20" width="196" height="360" rx="8" fill="#FFFFFF" stroke="#C9D1DC" stroke-width="1.5"/>
+    <path d="M231,28 a8,8 0 0 1 8,-8 h180 a8,8 0 0 1 8,8 v36 h-196 z" fill="#E8EDF4"/>
+    <text class="title" x="245" y="49">2  Dimension values</text>
+    <text class="key" x="245" y="96">category</text>
+    <text class="val" x="245" y="117">→ phones</text>
+    <text class="key" x="245" y="146">brand</text>
+    <text class="val" x="245" y="167">→ samsung</text>
+    <text class="key" x="245" y="196">ecosystem</text>
+    <text class="val" x="245" y="217">→ android</text>
+    <text class="key" x="245" y="246">price band</text>
+    <text class="val" x="245" y="267">→ core</text>
+    <text class="note" x="245" y="306">Each value's raw score</text>
+    <text class="note" x="245" y="326">R rises by the action's</text>
+    <text class="note" x="245" y="346">weight; the price falls</text>
+    <text class="note" x="245" y="366">into a band.</text>
+  </g>
+
+  <!-- 3 · Her vector -->
+  <g>
+    <rect x="452" y="20" width="196" height="360" rx="8" fill="#FFFFFF" stroke="#C9D1DC" stroke-width="1.5"/>
+    <path d="M452,28 a8,8 0 0 1 8,-8 h180 a8,8 0 0 1 8,8 v36 h-196 z" fill="#E8EDF4"/>
+    <text class="title" x="466" y="49">3  Her vector</text>
+    <text class="chip" x="466" y="101">samsung</text>
+    <rect x="546" y="88" width="90" height="16" fill="#E8EDF4"/>
+    <rect x="546" y="88" width="54" height="16" fill="#0B5CAD"/>
+    <text class="chip" x="466" y="133">android</text>
+    <rect x="546" y="120" width="90" height="16" fill="#E8EDF4"/>
+    <rect x="546" y="120" width="62" height="16" fill="#0B5CAD"/>
+    <text class="chip" x="466" y="165">phones</text>
+    <rect x="546" y="152" width="90" height="16" fill="#E8EDF4"/>
+    <rect x="546" y="152" width="62" height="16" fill="#0B5CAD"/>
+    <text class="chip" x="466" y="197">core</text>
+    <rect x="546" y="184" width="90" height="16" fill="#E8EDF4"/>
+    <rect x="546" y="184" width="56" height="16" fill="#0B5CAD"/>
+    <text class="mono" x="466" y="244">a = R / (R + K)</text>
+    <text class="note" x="466" y="286">One graded interest</text>
+    <text class="note" x="466" y="306">per value she has</text>
+    <text class="note" x="466" y="326">touched, from 0 toward</text>
+    <text class="note" x="466" y="346">1; each fades on its</text>
+    <text class="note" x="466" y="366">dimension's horizon.</text>
+  </g>
+
+  <!-- 4 · Score each candidate -->
+  <g>
+    <rect x="673" y="20" width="196" height="360" rx="8" fill="#FFFFFF" stroke="#C9D1DC" stroke-width="1.5"/>
+    <path d="M673,28 a8,8 0 0 1 8,-8 h180 a8,8 0 0 1 8,8 v36 h-196 z" fill="#E8EDF4"/>
+    <text class="title" x="687" y="49">4  Score each piece</text>
+    <rect x="687" y="80" width="168" height="94" rx="6" fill="#FFFFFF" stroke="#0B5CAD" stroke-width="1.5"/>
+    <text class="val" x="699" y="104">Galaxy S26 offer</text>
+    <text class="chip" x="699" y="127">tags: samsung,</text>
+    <text class="chip" x="699" y="147">android, phones,</text>
+    <text class="chip" x="699" y="167">core</text>
+    <text class="formula" x="687" y="212">score = Σ ω × a</text>
+    <text class="sym" x="687" y="244">ω</text><text class="key" x="709" y="244">the slot's weight</text>
+    <text class="key" x="709" y="264">for the dimension</text>
+    <text class="sym" x="687" y="290">a</text><text class="key" x="709" y="290">her interest in</text>
+    <text class="key" x="709" y="310">each of its tags</text>
+    <text class="note" x="687" y="346">The same sum for every</text>
+    <text class="note" x="687" y="366">eligible piece.</text>
+  </g>
+
+  <!-- 5 · The slot's answer -->
+  <g>
+    <rect x="894" y="20" width="196" height="360" rx="8" fill="#FFFFFF" stroke="#C9D1DC" stroke-width="1.5"/>
+    <path d="M894,28 a8,8 0 0 1 8,-8 h180 a8,8 0 0 1 8,8 v36 h-196 z" fill="#E8EDF4"/>
+    <text class="title" x="908" y="49">5  The slot's answer</text>
+    <circle cx="919" cy="96" r="11" fill="#0B5CAD"/><text class="rank" x="914" y="101">1</text>
+    <text class="chip" x="938" y="102">Galaxy S26 offer</text>
+    <circle cx="919" cy="130" r="11" fill="#0B5CAD"/><text class="rank" x="914" y="135">2</text>
+    <text class="chip" x="938" y="136">Fold8 trade-in</text>
+    <circle cx="919" cy="164" r="11" fill="#0B5CAD"/><text class="rank" x="914" y="169">3</text>
+    <text class="chip" x="938" y="170">Pixel 11 offer</text>
+    <circle cx="919" cy="198" r="11" fill="#0B5CAD"/><text class="rank" x="914" y="203">4</text>
+    <text class="chip" x="938" y="204">iPhone launch</text>
+    <text class="note" x="908" y="246">Rules act first; then</text>
+    <text class="note" x="908" y="266">the slot sorts, keeps</text>
+    <text class="note" x="908" y="286">at most two per brand</text>
+    <text class="note" x="908" y="306">and takes four; the</text>
+    <text class="note" x="908" y="326">receipt shows why.</text>
+  </g>
+</svg>

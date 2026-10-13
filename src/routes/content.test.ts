@@ -283,7 +283,7 @@ describe('/content routes', () => {
     ] } };
     expect(SLOTS_KIND.validate(document)).toMatchObject({ ok: true, value: { governanceVersion: 3, pages: document.pages } });
     const invalid = [
-      ...[null, false, 0, 4, '1'].map(governanceVersion => ({ ...document, governanceVersion })),
+      ...[null, false, 0, 5, '1'].map(governanceVersion => ({ ...document, governanceVersion })),
       ...[null, 0, 'true', []].map(offLimits => ({ pages: { home: [{ ...baseSlot, offLimits }] } })),
       ...[null, {}, '', [null], [1], [''], ['x'.repeat(1025)], ['a', 'a'], Array.from({ length: 1001 }, (_, i) => String(i))]
         .map(excludedPieceIds => ({ pages: { home: [{ ...baseSlot, excludedPieceIds }] } })),
@@ -302,7 +302,7 @@ describe('/content routes', () => {
       expect(SLOTS_KIND.validateStored!({ governanceVersion: 1, pages: { home: [{ ...baseSlot, ...controls }] } }).ok).toBe(false);
       expect(SLOTS_KIND.validateStored!({ pages: { home: [{ ...baseSlot, ...controls }] } })).toMatchObject({ ok: true, value: { pages: { home: [baseSlot] } } });
     }
-    expect(SLOTS_KIND.validateStored!({ ...document, governanceVersion: 4 }).ok).toBe(false);
+    expect(SLOTS_KIND.validateStored!({ ...document, governanceVersion: 5 }).ok).toBe(false);
     const preview = await (await request('/validate', 'POST', { document })).json() as { pinDiagnostics: SlotDiagnostics };
     expect(preview).toMatchObject({ valid: true, pinDiagnostics: { status: 'available', warnings: [
       { pageIndex: 0, slotIndex: 1, reason: 'off_limits' }, { pageIndex: 0, slotIndex: 2, reason: 'missing_piece' },
