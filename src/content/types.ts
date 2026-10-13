@@ -10,6 +10,7 @@ import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
 import type { ContextVocabulary } from '@/services/visit';
 import type { DeviceClass } from '@/services/platform';
+import type { Suppression } from '@/reflex/core';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
@@ -956,6 +957,18 @@ export interface DecisionRecord {
      * replay; a retained record without it replays as before.
      */
     layoutReason?: LayoutReason;
+    /**
+     * P39 (decisions D1, D2): the suppressions in force on the shopper when this
+     * decision was made, each `{ action, dimension, expiresAt, value }` (keys
+     * sorted, `expiresAt` in epoch milliseconds), sorted by dimension then value.
+     * A suppressed value contributed no interest term to this decision (the
+     * interest vector recorded in `inputs` is the one scored). Present on every
+     * record of a slot that read the shopper's interests while one was in force
+     * — never on the holdout's default arm, never on a slot decided below the
+     * signal floor — and compared by value in replay; a retained record without
+     * it replays as before.
+     */
+    suppressions?: Suppression[];
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

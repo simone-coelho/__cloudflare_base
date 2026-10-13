@@ -10,7 +10,7 @@ import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCa
 import { carriedSaltVersion, PublicationError, pinPublication, publicationScope, readOptionalPinnedPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { extractTouches, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
+import { extractTouches, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
@@ -247,6 +247,14 @@ interface ShopperRead {
    * or a value that is not a whole number, is 0. No read of its own.
    */
   signals?: number;
+  /**
+   * P39 (decision D1): the suppressions in force on the shopper at the decision's
+   * time, read off the same state the affinity is read from, by whichever host
+   * holds it. Read only for a consenting shopper; a member that is absent or that
+   * cannot be read is none, so it can neither fail the read nor change a
+   * decision of a shopper who has none. No read of its own.
+   */
+  suppressions?: Suppression[];
 }
 
 /** Her record could not be read out: the answer carries nothing of it (W16 R5). */
@@ -273,7 +281,7 @@ async function readShopper(
       ].join('; ') };
       const res = await stub.fetch('https://shopper-reflex/snapshot?projection=content', { headers });
       if (!res.ok) throw new SessionAccessError();
-      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown; signals?: unknown };
+      const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown; signals?: unknown; suppressions?: unknown };
       if (!body || body.ok !== true || body.consent === undefined) throw new SessionAccessError();
       // W16 R5: the object answered that her record cannot be read out. Only a
       // consenting shopper's record is ever read, so only she can be told so; a
@@ -289,7 +297,8 @@ async function readShopper(
       return { affinity: personalizes(consent) ? body.affinity ?? null : null, sessionId: principal.sessionId, isNewSession: null, state: 'do',
         stage: personalizes(consent) ? journeyWordOf(body.journeyStage) : null, consent,
         visit: personalizes(consent) ? body.visit : null, lastSeen: personalizes(consent) ? body.visit?.lastSeen : null,
-        signals: personalizes(consent) ? signalsOf({ signals: body.signals as number | undefined }) : 0 };
+        signals: personalizes(consent) ? signalsOf({ signals: body.signals as number | undefined }) : 0,
+        suppressions: personalizes(consent) ? suppressionsInForce(body.suppressions, now) : [] };
     } catch {
       throw new SessionAccessError();
     }
@@ -322,6 +331,8 @@ async function readShopper(
       visit: personalizes(consent) ? sessionData?.metadata : null,
       lastSeen: personalizes(consent) ? sessionData?.metadata.lastSeen : null,
       signals: personalizes(consent) ? signalsOf(sessionData?.reflex) : 0,
+      // P39: the suppressions in force, off the same stored state.
+      suppressions: personalizes(consent) ? suppressionsInForce((sessionData?.reflex as { suppressions?: unknown } | undefined)?.suppressions, now) : [],
       consent,
     };
   } catch {
@@ -704,6 +715,17 @@ export async function serveContentDecisions(
   // experiment keeps her where she is and the served experience says `default`.
   const unreadable = shopper.unreadable === true;
   const personalized = personalizes(consent) && !unreadable;
+  // P39 (decisions D1, D2): the suppressions in force on the shopper, read with
+  // the affinity above (no read of their own, so they can neither fail nor wait).
+  // A suppressed value's interest is left out of the shopper's OWN view — a copy;
+  // the stored interest is not changed — before anything reads it: the learning
+  // cell's leading interest and the interest the page is scored on. The
+  // population priors are blended in afterwards and stay context terms, each
+  // weighted by the shopper's whole stored evidence as before (`lambdaFor` reads
+  // the stored view), so every other value is scored exactly as it was. No
+  // suppression: the view is the very object read, and nothing changes.
+  const suppressions = personalized ? shopper.suppressions ?? [] : [];
+  const ownView = personalized ? withoutSuppressed(shopper.affinity, suppressions) ?? null : null;
   // P36: the tenant's published context vocabulary, read off the learn
   // document already held above — no read of its own, so it can neither fail
   // nor wait. Absent: today's six words, classification, buckets and ladder.
@@ -718,7 +740,7 @@ export async function serveContentDecisions(
   const device = consent.tracking ? deviceClassOf(r.device) : null;
   const recency = consent.tracking ? visitArrival(shopper.visit, shopper.lastSeen, now).recency ?? null : null;
   const cell = cellFor({
-    cf: consent.tracking ? r.cf : null, snap: personalized ? shopper.affinity : null, cfg,
+    cf: consent.tracking ? r.cf : null, snap: ownView, cfg,
     // A caller cannot relabel an already-established visit. The explicit
     // channel is only a bounded fallback when owned state has no entry yet,
     // and only a value of the tenant's vocabulary (today's six words) (P36).
@@ -776,7 +798,7 @@ export async function serveContentDecisions(
   // from the object; blended into a COPY of the affinity view. Off for the
   // holdout's default arm, since defaults are the point of that arm.
   const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
-  let affinity: { dims: Record<string, Record<string, number>> } | null = personalized ? shopper.affinity : null;
+  let affinity: { dims: Record<string, Record<string, number>> } | null = ownView;
   let regional: (NonNullable<Parameters<typeof decideContent>[0]['regional']> & { asserted?: true }) | null = null;
   if (regionalCfg.enabled && arm !== 'default') {
     // DEMO PROFILE ONLY: an asserted region also selects the prior, so one
@@ -790,7 +812,7 @@ export async function serveContentDecisions(
       // same shares travel to the decision, so its receipt and the record's
       // replay inputs itemise exactly what the region contributed.
       const share = sharesWithin(trend.snapshot.share, regionalCfg.dimensions);
-      const blended = blendAffinity(shopper.affinity?.dims, share, lambda);
+      const blended = blendAffinity(ownView?.dims, share, lambda);
       affinity = { dims: blended.dims };
       regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share,
         ...(assertedPrior ? { asserted: true as const } : {}) };
@@ -814,7 +836,7 @@ export async function serveContentDecisions(
     if (read) {
       const lambda = lambdaFor(shopper.affinity?.dims, contextCfg.kBlend);
       const share = sharesWithin(read.snapshot.share, contextCfg.dimensions);
-      affinity = { dims: blendPriors(shopper.affinity?.dims, [...(regional ? [{ share: regional.share, lambda: regional.lambda }] : []), { share, lambda }]) };
+      affinity = { dims: blendPriors(ownView?.dims, [...(regional ? [{ share: regional.share, lambda: regional.lambda }] : []), { share, lambda }]) };
       contextBlend = { channel: read.channel, visitBucket: cell.visit_bucket, level: read.level, lambda, version: read.snapshot.version, events: read.snapshot.events, share };
     }
   }
@@ -897,6 +919,8 @@ export async function serveContentDecisions(
     ...(recency ? { recency } : {}),
     ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
     ...(signalFloor ? { signalFloor } : {}),
+    // P39: the suppressions in force, itemised on the records (their interest already left out above).
+    ...(suppressions.length ? { suppressions } : {}),
     // P36: a tenant's published terms, and the context its shopper's visit
     // records, under the same tracking gate as the arrival; a tenant without
     // the settings passes neither, so it decides exactly as before.

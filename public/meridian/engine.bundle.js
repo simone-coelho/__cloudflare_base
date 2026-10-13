@@ -1,4 +1,63 @@
 // src/reflex/core.ts
+var DAY_MS = 24 * 60 * 60 * 1e3;
+var DEFAULT_SUPPRESSION_DAYS = 30;
+var MAX_SUPPRESSION_DAYS = 36500;
+var MAX_SUPPRESSIONS = 64;
+var PURCHASE_SUPPRESSED_DIMENSION = "productType";
+var PURCHASE_ACTIONS = /* @__PURE__ */ new Set(["purchase", "checkout", "order_complete"]);
+function suppressionDays(window) {
+  if (window === null || typeof window !== "object" || Array.isArray(window)) return null;
+  const days = window.days;
+  if (days === void 0) return DEFAULT_SUPPRESSION_DAYS;
+  return typeof days === "number" && Number.isSafeInteger(days) && days >= 1 && days <= MAX_SUPPRESSION_DAYS ? days : null;
+}
+function isSuppression(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const s = value;
+  return typeof s.action === "string" && s.action !== "" && typeof s.dimension === "string" && s.dimension !== "" && typeof s.value === "string" && s.value !== "" && typeof s.expiresAt === "number" && Number.isFinite(s.expiresAt) && s.expiresAt >= 0;
+}
+var byDimensionThenValue = (a, b) => a.dimension < b.dimension ? -1 : a.dimension > b.dimension ? 1 : a.value < b.value ? -1 : a.value > b.value ? 1 : 0;
+function mergeSuppressions(own, carried) {
+  const held = /* @__PURE__ */ new Map();
+  for (const entry of [...own, ...carried]) {
+    if (!isSuppression(entry)) continue;
+    const key = JSON.stringify([entry.dimension, entry.value]);
+    const kept = held.get(key);
+    if (!kept || entry.expiresAt > kept.expiresAt) {
+      held.set(key, { action: entry.action, dimension: entry.dimension, expiresAt: entry.expiresAt, value: entry.value });
+    }
+  }
+  let merged = [...held.values()];
+  if (merged.length > MAX_SUPPRESSIONS) {
+    merged = merged.sort((a, b) => b.expiresAt - a.expiresAt || byDimensionThenValue(a, b)).slice(0, MAX_SUPPRESSIONS);
+  }
+  return merged.sort(byDimensionThenValue);
+}
+function suppressionsInForce(raw, now) {
+  if (!Array.isArray(raw)) return [];
+  return mergeSuppressions([], raw.filter((entry) => isSuppression(entry) && entry.expiresAt > now));
+}
+function suppressionsRecorded(config, input, now) {
+  const settings = config.suppression;
+  if (!settings || typeof settings !== "object") return [];
+  const recorded = [];
+  const record = (touch, days) => {
+    if (!touch.value || !config.dimensions.some((spec) => spec.key === touch.dim)) return;
+    recorded.push({ action: input.action, dimension: touch.dim, expiresAt: now + days * DAY_MS, value: touch.value });
+  };
+  const actions = settings.actions;
+  if (actions && typeof actions === "object" && Object.hasOwn(actions, input.action)) {
+    const days = suppressionDays(actions[input.action]);
+    if (days !== null) for (const touch of input.touches) record(touch, days);
+  }
+  if (settings.purchase !== void 0 && PURCHASE_ACTIONS.has(input.action)) {
+    const days = suppressionDays(settings.purchase);
+    if (days !== null) {
+      for (const touch of input.touches) if (touch.dim === PURCHASE_SUPPRESSED_DIMENSION) record(touch, days);
+    }
+  }
+  return mergeSuppressions([], recorded);
+}
 function signalsOf(state) {
   const n = state?.signals;
   return typeof n === "number" && Number.isSafeInteger(n) && n > 0 ? n : 0;
@@ -207,6 +266,7 @@ function apply(prev, input, now, config) {
       configVersion: config.version
     });
   }
+  const suppressions = mergeSuppressions(suppressionsInForce(base.suppressions, now), suppressionsRecorded(config, input, now));
   return {
     // 5. The count rides the state: carried through every apply, one more for a signal.
     // P40: the orders the state has recorded ride it unchanged.
@@ -216,7 +276,8 @@ function apply(prev, input, now, config) {
         dims,
         audiences: [...next].sort(),
         configVersion: config.version,
-        ...base.orders !== void 0 ? { orders: base.orders } : {}
+        ...base.orders !== void 0 ? { orders: base.orders } : {},
+        ...suppressions.length ? { suppressions } : {}
       },
       signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)
     ),

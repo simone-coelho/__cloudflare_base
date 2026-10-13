@@ -32,7 +32,7 @@ name, and built only from the source fields the registry names:
 |---|---|
 | `search` | The values the site's search resolved the query to, in the registry's source fields (`category`, `line`, …): `search` carries the resolved values only, never the query text |
 | `filter_applied` | `dimension` and `value`, the facet's, with the value also in the registry's own source field. The sale filter and the sale page send `filter_applied` with `dimension: "priceStatus"`, `value: "sale"` and `priceStatus: "sale"`, raising `priceStatus` sale |
-| `remove_from_cart` | `productId`; `remove_from_cart` is captured at weight 0 until the negative-signal release (P39) |
+| `remove_from_cart` | `productId`, plus the registry's attributes when the brand scores them from the event; weighs 0, no signal for the signal floor. Under the tenant's `suppression` settings it suppresses, for the shopper, every registry value it carries for the action's window in `days` ([negative preference](#negative-preference-suppression-with-an-expiry)) |
 
 `data.brand` is accepted on any of these and is the brand the shopper's page was served under — the
 same value the decision request carried. A reward-bearing event that names it is measured in that
@@ -125,6 +125,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
 | `explain.moduleRule` | A position pin or an off-limits mark of the layout slot placed this module: `{ position, rule }`, keys sorted, `rule` `pinned` (the module pinned at a position, served there) or `off_limits` (the off-limits module held at its baseline position), and `position` the position the rule set, counted from 1. Present only on such a record, whose authority is `pin`, and compared by value in replay; the shopper's receipt carries the same block as `moduleRule` and says the rule and the position in words ([position pins and off-limits modules](#position-pins-and-off-limits-modules)) |
 | `explain.layoutReason` | The layout reason of the page's declared layout slot: `{ cause, slot, status }` (with `n` and `nMin` for the cause `no_level_reached_nmin`) when the served order is unchanged against the slot's baseline, or `{ moves, slot, status }` when it changed, each move `{ from, module, term, to }`, with `withheld: [{ cause, module }]` when a module the baseline would have served was withheld before ranking (`cause` `nothing_to_show` or `eligibility_rule`); keys sorted. The same value on every record of the slot and on the decision set, present only on a declared layout slot's records, and compared by value in replay; the shopper's receipt carries it as `layoutReason` and says it in words ([the layout reason](#the-layout-reason)) |
+| `explain.suppressions` | The suppressions in force on the shopper when this decision was made: `[{ action, dimension, expiresAt, value }]`, keys sorted, `expiresAt` in epoch milliseconds, sorted by dimension then value ([negative preference](#negative-preference-suppression-with-an-expiry)). A suppressed value contributed no interest term (`inputs` holds the interest vector as scored). Present on every record of a personalized decision made while one was in force, on each slot that read the shopper's interests (its pinned positions and a slot that weights none of the suppressed dimensions included), and only where a suppression was applied: absent on the holdout's `default` arm, for a shopper not personalized (personalization refused, or a record that cannot be read), on a slot decided below the signal floor and on the record of an off-limits layout slot; compared by value in replay, a record without it replaying as before; the receipt carries it as `suppressions` and names each value, its action and its expiry date in words |
 | `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. Where a population prior applied and the page's declared layout slot ranked above the signal floor, `prior_lambda: { context?, regional? }` (keys sorted) states each prior's weight λ, so the layout reason replays exactly from any record of the page. `nothing_to_show` is the page's report of the modules with nothing to show for this page view as the decision accepted it (each id once, sorted), written when the page sent one, and `eligibility_verdicts` each eligibility rule's verdict on the decision's cell, module to `true` or `false` (keys sorted), for every live module of the page that carries a rule; the replay withholds the recorded report again and evaluates each rule again on the recorded cell, with no new replay marker. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
@@ -1211,6 +1212,38 @@ its shape. As seed-signal keys `device` and `recency` are read by a decision fro
 and the visit's recency ([contextual seed rules](#contextual-seed-rules)); as a term of a per-context order's
 context, `device` sits beside `channel` and `visitBuckets` ([per-context orders](#per-context-orders)). The decision
 cell, its grammar and the learning ladder do not change: neither is a learning-cell level.
+
+## Negative preference: suppression with an expiry
+
+The reflex registry document (`PUT /config/reflex`) carries the optional member `suppression`
+([negative preference](./02-api-reference.md#negative-preference-suppression-with-an-expiry)):
+
+```json
+{ "suppression": { "actions": { "remove_from_cart": { "days": 30 } }, "purchase": { "days": 30 } } }
+```
+
+| Member | Meaning |
+|---|---|
+| `suppression.actions` | `{ <action>: { days? } }`: each named action (`remove_from_cart`, sent as `custom` with `data.event`) suppresses, for the shopper, every registry value it carries for its window in `days`, counted from the action. It weighs what the registry weighs it (0 for `remove_from_cart` unless a weight is published), so it builds no interest and is no signal for the signal floor |
+| `suppression.purchase` | `{ days? }`: present, the purchase rule is active. A purchase (`purchase`, `checkout`, `order_complete`) strengthens every value it carries at the purchase weight as before, its `style`, `collection`, `color` and `priceBand` among them, and suppresses the value it carries on the dimension keyed `productType` for its window; a second purchase of one `orderId` is dropped before the rule |
+| `days` | A positive whole number of days, at most 36500; absent, the default of 30 days for the suppression. Anything else (0, a negative, a fraction, text) refuses the write with `422`, naming `suppression` and `days` |
+
+While a suppression is in force the suppressed value contributes no interest term to the content decision
+(the stored interest is not changed, the piece stays eligible, the seed rules, the population priors, the
+anchor's `complements` bonus and configured orders apply as before), and at its `expiresAt` it lapses. The
+shopper's reflex state holds them as `suppressions: [{ action, dimension, expiresAt, value }]`, written only when
+one is recorded; per dimension and value the later `expiresAt` stands with its action, on a second action and
+across an identity link alike (on an equal expiry the signed-in shopper's own is kept). Every record of a slot
+that read the shopper's interests while one was in force carries `explain.suppressions: [{ action, dimension, expiresAt, value }]`
+and its receipt `suppressions` with a `why` sentence naming each value, its action and its expiry date; both are
+compared in replay. A tenant without the member decides exactly as before.
+
+The buffered door (`"processing": "buffered"`) and the history import (`POST /v1/{tenant}/identity/events`) count a
+window from the event's own time, not its arrival: a buffered or imported purchase under the purchase rule suppresses
+the bought `productType` until `expiresAt` = its own time plus the purchase window, a buffered `remove_from_cart`
+records one suppression per registry value it carries the same way (weight 0, no interest, no signal), and an event
+older than its window suppresses nothing. Every other weight-0 buffered action is dropped as before, and the import
+skips weight-0 rows, so an imported `remove_from_cart` records nothing.
 
 ## The interest hydrate's restoration provenance
 

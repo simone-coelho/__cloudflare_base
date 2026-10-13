@@ -104,6 +104,8 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.moduleRule', served.explain.moduleRule, replayed.explain.moduleRule);
   // P29: the layout reason of the record's declared layout slot, by value (keys sorted); a record written without it replays without it.
   eq('explain.layoutReason', served.explain.layoutReason, replayed.explain.layoutReason);
+  // P39: the suppressions in force the decision itemised, by value (keys sorted); absent on both for a record decided with none.
+  eq('explain.suppressions', served.explain.suppressions, replayed.explain.suppressions);
   return diff;
 }
 
@@ -464,6 +466,10 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
       ? { signalFloor: { floor: slots.signalFloor ?? 0, signals: inputs.signals as number }, contextPrior: inputs.regional_share ?? null,
         // P07: and the context prior's recorded shares beside the region's, when it applied.
         contextBlendShare: inputs.context_share ?? null } : {}),
+    // P39: the suppressions the record itemises. Their interest is already out of
+    // the recorded interest vector, which the page was scored on; a record that
+    // carries none was decided with none and replays as before.
+    ...(served.explain.suppressions !== undefined ? { suppressions: served.explain.suppressions } : {}),
   }, manifest?.exploration === 'supported-only' ? undefined : HISTORICAL_EXPLORATION,
   prefixPolicy ? undefined : manifest?.pins === 'reserved-eligible-v1' ? HISTORICAL_PINS_V1 : HISTORICAL_PINS,
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,

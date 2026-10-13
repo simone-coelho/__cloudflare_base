@@ -94,6 +94,52 @@ export interface ReflexConfig {
    * is not exactly true — also recognizes nobody. Both are fail-closed.
    */
   continuity?: ContinuitySettings;
+  /**
+   * P39 (decisions D1, D2): the tenant's suppression settings — negative
+   * preference as a per-shopper suppression with an expiry, never a negative
+   * weight. Validated with the rest of the document (`validateReflexConfig`).
+   * ABSENT IS THE SHIPPED STATE: nothing is ever suppressed, and every action
+   * and every decision is exactly what it was before the member existed.
+   */
+  suppression?: SuppressionSettings;
+}
+
+/**
+ * P39. The suppression settings a tenant publishes on its registry document.
+ *
+ * `actions` names the actions that suppress: each suppresses, for the shopper,
+ * every registry value it carries, for its window in `days`. `purchase`, when
+ * present, makes the purchase rule active: a purchase strengthens every value it
+ * carries at the purchase weight as before, and suppresses the value it carries
+ * on the dimension keyed `productType` for its window. A window is a positive
+ * whole number of days; absent, the default of 30 (decision D2).
+ */
+export interface SuppressionSettings {
+  actions?: Record<string, SuppressionWindow>;
+  purchase?: SuppressionWindow;
+}
+
+/** P39: one window of the suppression settings, in whole days; absent is the default. */
+export interface SuppressionWindow {
+  days?: number;
+}
+
+/**
+ * P39. One suppression of one value for one shopper, as the shopper's reflex
+ * state holds it and as a decision record and a receipt carry it: keys sorted.
+ * While it is in force the value contributes no interest term to any score of
+ * the content decision; the stored interest is not changed, and at `expiresAt`
+ * (epoch milliseconds) it lapses.
+ */
+export interface Suppression {
+  /** The action that recorded it (`remove_from_cart`, or the purchase's own action). */
+  action: string;
+  /** The registry dimension the value is on. */
+  dimension: string;
+  /** When it lapses, in epoch milliseconds. */
+  expiresAt: number;
+  /** The suppressed value, as the registry placed it (a governed value is its mapped id). */
+  value: string;
 }
 
 /**
@@ -150,10 +196,161 @@ export interface ReflexState {
    * unchanged through every apply.
    */
   orders?: Array<[string, string]>;
+  /**
+   * P39 (decision D1): the suppressions in force on this shopper, each with its
+   * expiry, sorted by dimension then value, one per dimension and value. Written
+   * only once an action the tenant's settings name has recorded one, and dropped
+   * again once every one has lapsed, so the state of a shopper with none carries
+   * exactly the members it carried before; carried through every apply, a lapsed
+   * one pruned there.
+   */
+  suppressions?: Suppression[];
 }
 
 /** P40: the most orders one shopper's state remembers. */
 export const MAX_ORDERS = 64;
+
+// ── P39: suppression with an expiry (decisions D1, D2) ──────────────────────
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** P39 (decision D2): the window of a setting that names no `days`. */
+export const DEFAULT_SUPPRESSION_DAYS = 30;
+/** P39: the longest window a setting may publish, so every expiry stays a safe whole number of milliseconds. */
+export const MAX_SUPPRESSION_DAYS = 36_500;
+/** P39: the most suppressions one shopper's state holds; past it the earliest to lapse is dropped first. */
+export const MAX_SUPPRESSIONS = 64;
+/** P39: the registry dimension whose value the purchase rule suppresses (the bought product type). */
+export const PURCHASE_SUPPRESSED_DIMENSION = 'productType';
+/**
+ * P39: the actions that are a purchase — the actions whose reward is a purchase
+ * (`src/ledger/records.ts`, the rows P40's order uniqueness reads), so the
+ * purchase rule runs for exactly the events P40 deduplicates, after them.
+ */
+export const PURCHASE_ACTIONS: ReadonlySet<string> = new Set(['purchase', 'checkout', 'order_complete']);
+
+/**
+ * P39: the window a setting publishes, in whole days: its `days`, or the
+ * default when it names none. Null for a setting that is not a window, or a
+ * `days` that is not a positive whole number up to MAX_SUPPRESSION_DAYS — the
+ * same rule the validator refuses by name, so a window the engine cannot read
+ * suppresses nothing.
+ */
+export function suppressionDays(window: unknown): number | null {
+  if (window === null || typeof window !== 'object' || Array.isArray(window)) return null;
+  const days = (window as SuppressionWindow).days;
+  if (days === undefined) return DEFAULT_SUPPRESSION_DAYS;
+  return typeof days === 'number' && Number.isSafeInteger(days) && days >= 1 && days <= MAX_SUPPRESSION_DAYS ? days : null;
+}
+
+function isSuppression(value: unknown): value is Suppression {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const s = value as Record<string, unknown>;
+  return typeof s.action === 'string' && s.action !== '' && typeof s.dimension === 'string' && s.dimension !== ''
+    && typeof s.value === 'string' && s.value !== '' && typeof s.expiresAt === 'number' && Number.isFinite(s.expiresAt) && s.expiresAt >= 0;
+}
+
+const byDimensionThenValue = (a: Suppression, b: Suppression): number =>
+  a.dimension < b.dimension ? -1 : a.dimension > b.dimension ? 1 : a.value < b.value ? -1 : a.value > b.value ? 1 : 0;
+
+/**
+ * P39: two lists of suppressions as one. Per dimension and value the later
+ * `expiresAt` stands, with the action that recorded it, whichever list holds
+ * it; on an equal expiry the entry of `own` is kept. So a second action never
+ * shortens a suppression, and a link never shortens one or lengthens one beyond
+ * what an action recorded. Each entry is copied with its keys sorted; the
+ * result is sorted by dimension then value, and holds at most MAX_SUPPRESSIONS,
+ * the earliest to lapse dropped first.
+ */
+export function mergeSuppressions(own: readonly Suppression[], carried: readonly Suppression[]): Suppression[] {
+  const held = new Map<string, Suppression>();
+  for (const entry of [...own, ...carried]) {
+    if (!isSuppression(entry)) continue;
+    const key = JSON.stringify([entry.dimension, entry.value]);
+    const kept = held.get(key);
+    if (!kept || entry.expiresAt > kept.expiresAt) {
+      held.set(key, { action: entry.action, dimension: entry.dimension, expiresAt: entry.expiresAt, value: entry.value });
+    }
+  }
+  let merged = [...held.values()];
+  if (merged.length > MAX_SUPPRESSIONS) {
+    merged = merged.sort((a, b) => b.expiresAt - a.expiresAt || byDimensionThenValue(a, b)).slice(0, MAX_SUPPRESSIONS);
+  }
+  return merged.sort(byDimensionThenValue);
+}
+
+/**
+ * P39: the suppressions a value says it holds that are in force at `now` — well
+ * formed, lapsing after `now` — merged by the rule above. Anything that is not
+ * a list of suppressions is none: a member the engine cannot read suppresses
+ * nothing and never fails a read.
+ */
+export function suppressionsInForce(raw: unknown, now: number): Suppression[] {
+  if (!Array.isArray(raw)) return [];
+  return mergeSuppressions([], (raw as unknown[]).filter((entry): entry is Suppression => isSuppression(entry) && entry.expiresAt > now));
+}
+
+/**
+ * P39: the suppressions one action records under the tenant's settings at
+ * `now`, each expiring its window after the action. An action the settings
+ * name suppresses every registry value it carries; a purchase, under an active
+ * purchase rule, suppresses the value it carries on the dimension keyed
+ * `productType`. The touches are the ones the host placed — a governed value is
+ * already its mapped id (P38) — and only registry dimensions are read. No
+ * settings, or an action they do not name: none.
+ */
+export function suppressionsRecorded(config: Pick<ReflexConfig, 'suppression' | 'dimensions'>, input: ReflexInput, now: number): Suppression[] {
+  const settings = config.suppression;
+  if (!settings || typeof settings !== 'object') return [];
+  const recorded: Suppression[] = [];
+  const record = (touch: Touch, days: number) => {
+    if (!touch.value || !config.dimensions.some((spec) => spec.key === touch.dim)) return;
+    recorded.push({ action: input.action, dimension: touch.dim, expiresAt: now + days * DAY_MS, value: touch.value });
+  };
+  const actions = settings.actions;
+  if (actions && typeof actions === 'object' && Object.hasOwn(actions, input.action)) {
+    const days = suppressionDays(actions[input.action]);
+    if (days !== null) for (const touch of input.touches) record(touch, days);
+  }
+  if (settings.purchase !== undefined && PURCHASE_ACTIONS.has(input.action)) {
+    const days = suppressionDays(settings.purchase);
+    if (days !== null) for (const touch of input.touches) if (touch.dim === PURCHASE_SUPPRESSED_DIMENSION) record(touch, days);
+  }
+  return mergeSuppressions([], recorded);
+}
+
+/**
+ * P39 (R-P60): whether the tenant's settings name this action as one that
+ * suppresses (an entry under `suppression.actions` with a readable window), so a
+ * door that drops a weight-0 action lets this one through to record its
+ * suppressions, and drops every other weight-0 action as before.
+ */
+export function isSuppressingAction(config: Pick<ReflexConfig, 'suppression'>, action: string): boolean {
+  const actions = config.suppression?.actions;
+  return !!actions && typeof actions === 'object' && Object.hasOwn(actions, action) && suppressionDays(actions[action]) !== null;
+}
+
+/**
+ * P39: an interest view with the interest of every suppressed value left out,
+ * so a suppressed value contributes no interest term to a score; the stored
+ * interest is not changed (the view is a copy). The view itself, untouched,
+ * when nothing it holds is suppressed.
+ */
+export function withoutSuppressed<T extends { dims: Record<string, Record<string, number>> }>(view: T, suppressions: readonly Suppression[]): T;
+export function withoutSuppressed<T extends { dims: Record<string, Record<string, number>> }>(view: T | null | undefined, suppressions: readonly Suppression[]): T | null | undefined;
+export function withoutSuppressed<T extends { dims: Record<string, Record<string, number>> }>(view: T | null | undefined, suppressions: readonly Suppression[]): T | null | undefined {
+  if (!view || !suppressions.length) return view;
+  let dims: Record<string, Record<string, number>> | null = null;
+  for (const s of suppressions) {
+    const values = (dims ?? view.dims)[s.dimension];
+    if (!values || !Object.hasOwn(values, s.value)) continue;
+    dims ??= { ...view.dims };
+    const rest = { ...values };
+    delete rest[s.value];
+    if (Object.keys(rest).length) dims[s.dimension] = rest;
+    else delete dims[s.dimension];
+  }
+  return dims ? { ...view, dims } : view;
+}
 
 /**
  * P40 (R-P48): whether a purchase naming this order key is a SECOND purchase of
@@ -642,6 +839,11 @@ export function touchesForEvent(
  *    weight-0 action (an impression, a tick, a page view) keeps the count
  *    where it is. Both shopper hosts apply every action through this one step,
  *    so the count is the same on either.
+ * 6. P39 (decisions D1, D2): record, under the tenant's suppression settings,
+ *    a suppression with its expiry for each value the action carries, and
+ *    carry the ones in force (`suppressionsRecorded`, `mergeSuppressions`).
+ *    The same one step on both hosts, so a shopper's suppressions are the same
+ *    on either; the accumulation above is untouched by them.
  *
  * The previous state object is never mutated.
  */
@@ -731,11 +933,19 @@ export function apply(
     });
   }
 
+  // 6. P39 (decision D1): the suppressions in force ride the state, a lapsed one
+  // pruned at `now`; an action the tenant's settings name records one per value
+  // it carries, whatever its weight (remove_from_cart weighs 0 and stays no
+  // signal). The later expiry of one value stands. None held and none recorded:
+  // no member, so the state is exactly what it was before P39.
+  const suppressions = mergeSuppressions(suppressionsInForce(base.suppressions, now), suppressionsRecorded(config, input, now));
+
   return {
     // 5. The count rides the state: carried through every apply, one more for a signal.
     // P40: the orders the state has recorded ride it unchanged.
     state: withSignals<ReflexState>({ v: 1, dims, audiences: [...next].sort(), configVersion: config.version,
-      ...(base.orders !== undefined ? { orders: base.orders } : {}) },
+      ...(base.orders !== undefined ? { orders: base.orders } : {}),
+      ...(suppressions.length ? { suppressions } : {}) },
       signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)),
     changes: { entered, exited, explain },
   };
