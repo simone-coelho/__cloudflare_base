@@ -106,6 +106,49 @@ describe('unit:P06.S1', () => {
         .toEqual(records.map(r => [r.item_id, BASELINE, SHADOW_AT_ONE]));
     }, 60_000);
   }
+
+  // Locks for the review's uncovered mutants M6a, M6b and M12 (R-P64), green at 9dccd05c. The shadow is the order
+  // with every term applied, ranked with no exploration pick and no adjacent swap (decision D1, R-P34; kit 02, "The
+  // baseline and the shadow"), and the three members belong to the records of the declared layout slot only.
+  const EXPLORING = (mode: 'epsilon' | 'adjacent-swap') => dials({ gamma: 1, ...frozen(M.editorial), exploration: { mode, share: 1, floor: 50 } });
+  const explorationOf = (r: DecisionRecord) => (ex(r).exploration ?? null) as { mode?: string; positions?: [number, number] } | null;
+  for (const host of HOSTS) {
+    it(`host (${host}): lock M6a — on a slot that explores every decision by epsilon, the served order shows the exploration pick and the shadow order is the ranking without it`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: EXPLORING('epsilon') });
+      expectPublished(m, 'P06.S1 lock M6a — the declared layout slot at γ 1, exploring by epsilon at share 1, publishes');
+      // The pick is uniform over the slot's eligible modules (grid.1, reco.1, reco.2, editorial.1, ugc.1): the lock reads
+      // a shopper whose pick is not the ranking's first module, so the pick shows in the served order.
+      let records: DecisionRecord[] = [];
+      for (let k = 0; k < 12 && (!records.length || records[0]!.item_id === SHADOW_AT_ONE[0]); k++) records = await layoutRecords(m, await tabby(m));
+      expect([[M.reco2, M.grid, M.reco1, M.ugc].some(id => id === records[0]?.item_id), records[0] ? explorationOf(records[0])?.mode ?? null : null],
+        `${host}: PRECONDITION — the first position is the epsilon pick, an eligible module other than the ranking's first (${JSON.stringify(records.map(r => r.item_id))})`)
+        .toEqual([true, 'epsilon']);
+      expect(records.map(r => [r.item_id, ex(r).shadowOrder ?? null]), `${host}: P06.S1 lock M6a — the shadow order carries no exploration pick`)
+        .toEqual(records.map(r => [r.item_id, SHADOW_AT_ONE]));
+    }, 60_000);
+
+    it(`host (${host}): lock M6b — on a slot that swaps two adjacent positions on every decision, the served order shows the swap and the shadow order is the ranking without it`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: EXPLORING('adjacent-swap') });
+      expectPublished(m, 'P06.S1 lock M6b — the declared layout slot at γ 1, exploring by adjacent swap at share 1, publishes');
+      const records = await layoutRecords(m, await tabby(m));
+      const [a, b] = records.map(explorationOf).find(e => e?.mode === 'adjacent-swap')?.positions ?? [0, 0];
+      const swapped = SHADOW_AT_ONE.map((id, k) => (k === a - 1 ? SHADOW_AT_ONE[b - 1]! : k === b - 1 ? SHADOW_AT_ONE[a - 1]! : id));
+      expect([b - a, records.map(r => r.item_id)], `${host}: PRECONDITION — the served order is the ranking with two adjacent positions swapped`).toEqual([1, swapped]);
+      expect(records.map(r => [r.item_id, ex(r).shadowOrder ?? null]), `${host}: P06.S1 lock M6b — the shadow order carries no adjacent swap`)
+        .toEqual(records.map(r => [r.item_id, SHADOW_AT_ONE]));
+    }, 60_000);
+
+    it(`host (${host}): lock M12 — on the declared page the layout slot's records carry the baseline, the shadow and the terms, and the other slot's record carries none of them`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: dials({ gamma: 0, ...frozen(M.editorial) }) });
+      expectPublished(m, 'P06.S1 lock M12 — the declared layout slot and the recently-viewed slot publish');
+      const records = (await servePage(m, await tabby(m), 'pdp')).records;
+      const other = recentSlot().slot, members = ['baselineOrder', 'shadowOrder', 'shadowTerms'];
+      expect(records.map(r => r.slot).sort(), `${host}: PRECONDITION — the page serves the layout slot's four records and the other slot's one`)
+        .toEqual([LAYOUT, LAYOUT, LAYOUT, LAYOUT, other].sort());
+      expect(records.map(r => [r.slot, r.item_id, members.filter(k => k in ex(r))]), `${host}: P06.S1 lock M12 — the three members on the layout slot's records only`)
+        .toEqual(records.map(r => [r.slot, r.item_id, r.slot === LAYOUT ? members : []]));
+    }, 60_000);
+  }
 });
 
 // ===========================================================================
@@ -149,6 +192,67 @@ describe('unit:P06.S3', () => {
         expect.soft(ex(r).shadowTerms ?? `no explain.shadowTerms on the record of ${r.item_id}`, `${host}: P06.S3 — editorial.1 (4 → 1) moved by her affinity and the lift; reco.2 (3 → 2) by her affinity`)
           .toMatchObject({ [M.editorial]: expect.arrayContaining(['affinity', 'lift']), [M.reco2]: expect.arrayContaining(['affinity']) });
       }
+    }, 60_000);
+  }
+
+  // R-P64 (the P06 delivery review's D-1, probe B.take2). The S1 world with the layout slot's take at 2: the slot
+  // declared as layoutSlot() declares it with only `take` overridden to 2, everything else of the world as S1 has
+  // it. The baseline take is [grid.1, reco.1], the shadow take [editorial.1, reco.2]: grid.1 and reco.1 leave the
+  // take in the shadow, a shadow position that differs from their baseline position, so S3 names them, each with
+  // every term that moved it down (R-P56 as amended and R-P57: the same threshold, the fixed order).
+  // Derivation of their terms. The modules that passed grid.1 (baseline 1) and reco.1 (baseline 2) are the shadow
+  // take's editorial.1 (baseline 4) and reco.2 (baseline 3), the same two that pass them at the slot's own take, and
+  // no module's score depends on the take. Taken together, editorial.1 and reco.2 lead each of them on affinity
+  // (both carry the line the shopper viewed; grid.1 carries only the two categories at weight 0.5, reco.1 a line
+  // the shopper never viewed) and on the lift (editorial.1's frozen 2 at γ 1 against no lift on either, half of
+  // editorial.1's base on average, far above the 0.0005 grain). The slot weighs tags only and declares no stage,
+  // freshness, fatigue or merchandising rule, so no other term separates them: each is named affinity and lift, in
+  // the fixed order, exactly as S3's world names them at take 4 (the control below). editorial.1 and reco.2 keep
+  // the terms S3 names for them: the modules they pass are the same at both takes.
+  const TAKE_TWO = declaredSlots([layoutSlot({ take: 2 }), recentSlot()]);
+  const S3_TERMS: Record<string, string[]> = {
+    [M.editorial]: ['affinity', 'lift'], [M.grid]: ['affinity', 'lift'], [M.reco1]: ['affinity', 'lift'], [M.reco2]: ['affinity'],
+  };
+  const S3_NAMED = Object.keys(S3_TERMS).sort();
+  const termsOf = (r: DecisionRecord) => (ex(r).shadowTerms ?? {}) as Record<string, unknown>;
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P64 — at a take of 2 the record names each module of the baseline take that the shadow pushes out of its take, with each term that moved it down, beside the modules the shadow brings in`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: TAKE_TWO, learn: dials({ gamma: 0, ...frozen(M.editorial) }) });
+      expectPublished(m, 'P06.S3 (R-P64) — the declared layout slot at a take of 2, at γ 0 with editorial.1’s lift frozen at 2, publishes');
+      const records = await layoutRecords(m, await tabby(m));
+      expect(records.map(r => r.item_id), `${host}: PRECONDITION — at γ 0 the take of 2 serves the shopper's interests and the lift moves nothing`)
+        .toEqual(SERVED_AT_ZERO.slice(0, 2));
+      expect(records.map(r => [r.item_id, ex(r).baselineOrder ?? null, ex(r).shadowOrder ?? null]),
+        `${host}: PRECONDITION — each record carries the baseline take [grid.1, reco.1] and the shadow take [editorial.1, reco.2] (P06.S1 cut at the take)`)
+        .toEqual(records.map(r => [r.item_id, BASELINE.slice(0, 2), SHADOW_AT_ONE.slice(0, 2)]));
+      expect.soft(records.map(r => [r.item_id, Object.keys(termsOf(r)).sort()]),
+        `${host}: P06.S3 (R-P64) — grid.1 (baseline 1) and reco.1 (baseline 2), pushed out of the shadow's take, are named beside editorial.1 and reco.2, which the shadow brings in`)
+        .toEqual(records.map(r => [r.item_id, S3_NAMED]));
+      expect.soft(records.map(r => [r.item_id, termsOf(r)]),
+        `${host}: P06.S3 (R-P64) — editorial.1 and reco.2, which passed grid.1 and reco.1, lead them taken together on affinity and on editorial.1's lift: grid.1 and reco.1 named affinity and lift; editorial.1 affinity and lift, reco.2 affinity, as S3 names them`)
+        .toEqual(records.map(r => [r.item_id, S3_TERMS]));
+    }, 60_000);
+
+    it(`host (${host}): control (R-P64) — at the slot's own take, every module in both takes, the record names exactly the modules whose shadow position differs from their baseline position, with the same terms`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: dials({ gamma: 0, ...frozen(M.editorial) }) });
+      expectPublished(m, 'P06.S3 control — the declared layout slot at γ 0 with editorial.1’s lift frozen at 2 publishes');
+      const records = await layoutRecords(m, await tabby(m));
+      expect(records.map(r => [r.item_id, ex(r).baselineOrder ?? null, ex(r).shadowOrder ?? null]), `${host}: PRECONDITION — the baseline and the shadow of S1 on each record`)
+        .toEqual(records.map(r => [r.item_id, BASELINE, SHADOW_AT_ONE]));
+      const differing = BASELINE.filter(id => SHADOW_AT_ONE.indexOf(id) !== BASELINE.indexOf(id)).sort();
+      expect(records.map(r => [r.item_id, Object.keys(termsOf(r)).sort()]), `${host}: P06.S3 control — exactly the modules whose shadow position differs from their baseline position are named`)
+        .toEqual(records.map(r => [r.item_id, differing]));
+      expect(records.map(r => [r.item_id, termsOf(r)]), `${host}: P06.S3 control — the same terms the take of 2 names`)
+        .toEqual(records.map(r => [r.item_id, S3_TERMS]));
+    }, 60_000);
+
+    it(`host (${host}): lock M5 — the keys of shadowTerms are sorted, in a world whose moved modules in shadow order (editorial.1, reco.2, grid.1, reco.1) are not in sorted order`, async () => {
+      const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: dials({ gamma: 0, ...frozen(M.editorial) }) });
+      expectPublished(m, 'P06.S3 lock M5 — the declared layout slot at γ 0 with editorial.1’s lift frozen at 2 publishes');
+      const records = await layoutRecords(m, await tabby(m));
+      expect(records.map(r => ex(r).shadowOrder ?? null), `${host}: PRECONDITION — the shadow of S1 on each record`).toEqual(records.map(() => SHADOW_AT_ONE));
+      expect(records.map(r => [r.item_id, Object.keys(termsOf(r))]), `${host}: P06.S3 lock M5 — shadowTerms carries its keys sorted (R-P7; kit 03, "keys sorted")`)
+        .toEqual(records.map(r => [r.item_id, S3_NAMED]));
     }, 60_000);
   }
 });
@@ -240,4 +344,65 @@ describe('unit:P06.S5', () => {
     ]);
     expect(missing, 'P06.S5 — the kit documents the baseline and shadow members').toEqual([]);
   });
+
+  // Locks for the review's uncovered mutants M9a, M9b and M10 (R-P64), green at 9dccd05c: replay compares each of
+  // the three members by value, and a record written without them (as before P06) replays without them, adding no
+  // replay marker (R-P23 C11). The stored record is rewritten in the ledger the replay route reads.
+  const stored = async (m: Mounted) => {
+    const s = await tabby(m);
+    await toLedger(m, (await servePage(m, s, 'pdp', { offer: false })).records);
+    return storedDecisions(m, s.subject).filter(x => x.slot === LAYOUT).sort((a, b) => a.position - b.position);
+  };
+  const rewrite = (m: Mounted, decisionId: string, edit: (explain: Record<string, unknown>) => void) => {
+    for (const [key, raw] of m.storage.objects) {
+      if (!key.includes('/decision/') || !key.endsWith('.ndjson')) continue;
+      m.storage.objects.set(key, raw.split('\n').filter(Boolean).map(line => {
+        const r = JSON.parse(line) as DecisionRecord;
+        if (r.decision_id === decisionId) edit(r.explain as unknown as Record<string, unknown>);
+        return JSON.stringify(r);
+      }).join('\n') + '\n');
+    }
+  };
+  const replayWorld = async (host: (typeof HOSTS)[number]) => {
+    const m = await mount(host, { pieces: MODULES, slots: SLOTS, learn: dials({ gamma: 0, ...frozen(M.editorial) }, 'served-v1') }, { recovery: false });
+    expectPublished(m, 'P06.S5 replay locks — the declared layout slot publishes');
+    return m;
+  };
+  for (const host of HOSTS) {
+    it(`host (${host}): locks M9a and M9b — a stored record whose baselineOrder, shadowOrder or shadowTerms differs from what replay reproduces replays as a difference naming that member`, async () => {
+      const m = await replayWorld(host);
+      const records = await stored(m);
+      expect(records.map(r => [r.item_id, ex(r).shadowOrder ?? null, Object.keys((ex(r).shadowTerms ?? {}) as object).includes(M.editorial)]),
+        `${host}: PRECONDITION — the four stored layout records carry the shadow, and terms naming editorial.1`)
+        .toEqual(SERVED_AT_ZERO.map(id => [id, SHADOW_AT_ONE, true]));
+      const edits: Array<[string, (e: Record<string, unknown>) => void]> = [
+        ['explain.baselineOrder', e => { e.baselineOrder = [...(e.baselineOrder as string[])].reverse(); }],
+        ['explain.shadowOrder', e => { e.shadowOrder = [...(e.shadowOrder as string[])].reverse(); }],
+        ['explain.shadowTerms', e => { const terms = { ...(e.shadowTerms as Record<string, string[]>) }; delete terms[M.editorial]; e.shadowTerms = terms; }],
+      ];
+      const out: unknown[][] = [];
+      for (const [k, [field, edit]] of edits.entries()) {
+        rewrite(m, records[k]!.decision_id, edit);
+        const replay = await replayOf(m, records[k]!.decision_id);
+        out.push([field, replay.status, replay.body.classification ?? replay.body.reason ?? null, ((replay.body.diff ?? []) as Array<{ field?: string }>).map(d => d.field ?? null)]);
+      }
+      expect(out, `${host}: P06.S5 locks M9a and M9b — each member compared by value, a difference named by its field`)
+        .toEqual(edits.map(([field]) => [field, 200, 'explanation', [field]]));
+    }, 60_000);
+
+    it(`host (${host}): lock M10 — a stored record of a declared layout slot without the three members, as written before P06, replays equal, without them and with no new replay marker`, async () => {
+      const m = await replayWorld(host);
+      const records = await stored(m);
+      const target = records[0]!;
+      expect(['baselineOrder', 'shadowOrder', 'shadowTerms'].filter(k => k in ex(target)), `${host}: PRECONDITION — the stored record carries the three members before they are removed`)
+        .toEqual(['baselineOrder', 'shadowOrder', 'shadowTerms']);
+      rewrite(m, target.decision_id, e => { delete e.baselineOrder; delete e.shadowOrder; delete e.shadowTerms; });
+      const replay = await replayOf(m, target.decision_id);
+      const again = replay.body.replayed as DecisionRecord | undefined;
+      const markers = (r: DecisionRecord | undefined) => Object.keys(((r?.inputs ?? {}) as unknown as { replay?: Record<string, unknown> }).replay ?? {}).sort();
+      expect([replay.status, replay.body.classification ?? replay.body.reason ?? null, ['baselineOrder', 'shadowOrder', 'shadowTerms'].filter(k => k in ex(again)), markers(again)],
+        `${host}: P06.S5 lock M10 — replays equal without the members, the replay markers those it was written with`)
+        .toEqual([200, 'equal', [], markers(target)]);
+    }, 60_000);
+  }
 });
