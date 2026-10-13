@@ -1,4 +1,5 @@
 import type { Core } from './core.js';
+import type { AccountChangeStatement } from './types.js';
 export interface IdentifyOptions {
     /** HMAC from the site's backend over tenant, visitorId, accountId and exp (see signAssertion). */
     assertion?: string;
@@ -18,6 +19,8 @@ export interface IdentifyOptions {
     }>;
     /** Where the sign-in happened, for the audit trail: 'login', 'checkout', … */
     source?: string;
+    /** P12: the backend-signed statement that this account was earlier known by `from`; sent as given. */
+    accountChange?: AccountChangeStatement;
 }
 export type IdentifyResult = {
     ok: true;

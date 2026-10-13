@@ -258,3 +258,20 @@ export interface CoreEvents {
         reason: 'identified' | 'logout';
     }) => void;
 }
+/**
+ * P12 (decision D1): the identifier-change statement a site's backend signs when
+ * a shopper's account identifier changes from one form to another (the one
+ * assigned at first landing, then the one derived from the e-mail address). The
+ * signature is an HMAC-SHA256, base64url, keyed by the tenant's identity secret,
+ * over `tenant \n account-change \n from \n to \n exp`, where `to` is the account
+ * identifier passed to identify(). The SDK carries it unchanged; the two
+ * accounts' profiles merge only on a statement that verifies, and only once.
+ */
+export interface AccountChangeStatement {
+    /** The earlier account identifier, whose profile merges into the one being signed in to. */
+    from: string;
+    /** Unix seconds the statement expires, at most 24 h ahead. */
+    exp: number;
+    /** The backend's signature over both identifiers and `exp`. */
+    statement: string;
+}
