@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-13, morning: P05 closed (10/25) with the W28 receipt superseded; P06 active
+
+- **Parity `tapestry-parity-build`:** Local done 10/25 · Final 0/25 · `check` PASS. P05 closed after one fix round (R-P61: src/routes/content.ts added for the non-layout refusal at the door; R-P62: the fold weighs a click by the position policy in force at the credit's time and only where the online path weighs, a configured order is never swapped; artifact 2ec3b08f; merge 7f6c9217; receipt 1b42498d). **The W28 DELIVERY receipt is superseded at 2ec3b08f** (R-P11, R-P22: P05 extends the exploration-mode list and the W28/B1 lock was corrected on the P05 specification; commit 8676543b; the remediation `check` PASS, 26/26). **P06 ACTIVE** at 4d2e4f28, building in `/home/simonecoelho/rem/build-p06` (brief `_evidence/parity-step3/P06/implementer/BRIEF.md`). Order after P06: P12 P13 P34 P30 P33 P32 P09 P11 P14 P35 P08 P15 P16 P26.
+- **Programme 2 `tapestry-parity-customer-answers`:** locally complete, 5/5 · Final 0/5; its ten live rows wait for the batched live acceptance under the owner's authority.
+- **Owner-visible residuals, unassigned:** per ticket in `_evidence/parity-step3/AMENDMENTS.md` (the P05 additions: the raw-day report fallback and the custom-policy answer built unweighted outside the boundary; the open-hour fold pinned by probe only).
+- **Lead tools and lanes:** `/home/simonecoelho/rem/_evidence/_lead-tools/`; every WSL lane under `/home/simonecoelho/rem/` locked, never pruned. Bootstrap: `docs/remediation/BOOTSTRAP-LEAD.md`.
+
 ## 2026-10-13, early: programme 2 locally complete (5/5); P05 built and in review
 
 - **Programme 2 `tapestry-parity-customer-answers`: Local done 5/5 · Final 0/5 · `check` PASS · no ticket active.** P36 (d8434259), P37 (5ac68687), P38 (fdf43873), P40 (8db71290), P39 (40a8c93a after one fix round, R-P60: the purchase rule on the buffered door and the import from the event's own time, a buffered remove_from_cart recording its suppressions; merge 3db06d11; receipt 5135d1eb). Its ten deferred live rows wait for the batched live acceptance under the owner's authority (deploy, cloud and customer data are not the lead's).
