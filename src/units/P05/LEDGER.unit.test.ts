@@ -78,6 +78,39 @@
 //   W6  The shipped dials screen edits the mode, the share and the switch; the
 //       kit documents the mode, the estimate and the switch.
 //
+// FIX ROUND 1 (R-P62, the lead's ruling on the delivery review at 1d598625):
+//   W4  (1) The hourly fold weighs a click credit by the position policy in force
+//       at the credit's time, read from the placement's published history, never
+//       by the learn dials in force when the fold runs: W4's measured click,
+//       credited 2 online (switch on, estimate 0.5), folds 2 after the learn
+//       document is republished without the mode and the switch (what the dials
+//       screen writes for "off": both members deleted) before the hour folds, and
+//       the day's count of credited outcomes is unchanged (R-P29): seven, one per
+//       click of the day. The controls, green at 1d598625 (the review's probe 3,
+//       case P3, and this leg's own run): republished with the switch false, the
+//       mode kept or dropped, the click folds 2.
+//       (2) The fold weighs a credit exactly when the online path does, on a
+//       credited decision that carries a position (a declared-layout record with
+//       its layout reason): after a slots PUT alone undeclares the layout, a later
+//       click at position 2 credits 1 online and 1 folded, while the click at
+//       position 2 made before it on the declared layout credits 2 on both
+//       (probe 3, case P5).
+//   W1  (3) Reading 1, ruled as option C: a decision served under a configured
+//       order is served exactly and never swapped (freeze items 17 and 35, P01's
+//       receipted O2, R-P34). The review's probe D1 order for the paid-social first
+//       visit, at share 1: served exactly, no record carries explain.exploration
+//       or explored true, the reason on every record and receipt is the order's
+//       as P29 receipted it (kit 02 and 03: a configured order served exactly on a
+//       slot that does not opt in is `unchanged` with the cause
+//       `blend_or_trust_zero`), and the decision replays equal. The controls: the
+//       same shopper, before the order is published, and a shopper with the same
+//       views whose context no order names (a direct arrival, P01.O2), after it,
+//       are each served the ranked order with one adjacent pair swapped.
+//   (4) Every share-1 leg draws its shoppers through `swappable`, which keeps a
+//       shopper only when the decision's bucket lies below 1.000 in this hour and
+//       the next (a bucket rounding to 1.000, about 1 in 2000, lies outside even
+//       a share of 1); the asserted contract is unchanged.
+//
 // RULED MEMBERS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // the exploration mode `adjacent-swap`, `positionNormalization` on the slot's
 // dials, `positions` on `explain.exploration`, `positionEffects` on the slot's
@@ -103,6 +136,8 @@ import {
   storedDecisions, TABBY_VIEWS, TENANT, toLedger, type Mounted, type Shopper,
 } from '../_parity';
 import { missingStatements } from '../_parity2';
+// R-P62 (3): the arrival whose context no configured order names.
+import { DIRECT_ENTRY } from '../_parity';
 
 const slots = (over: Record<string, unknown> = {}) => declaredSlots([layoutSlot(over), recentSlot()]);
 const swap = (share: number) => ({ mode: 'adjacent-swap', share, floor: 50 });
@@ -111,8 +146,24 @@ const swapLearn = (share: number, dials: Record<string, unknown> = {}, basis: 'r
 /** The shopper's ranking after three Tabby views (P02.A2): reco.2, editorial.1, grid.1, reco.1. */
 const RANKED = [M.reco2, M.editorial, M.grid, M.reco1];
 
+/**
+ * R-P62 (4): a shopper whose decisions a share of 1 swaps. Inside the share means the decision's bucket — the hash of
+ * visitor, slot and hour, rounded to 3 decimals (src/learn/explore.ts:84-87, :202) — lies below the share, so a visitor
+ * whose bucket rounds to 1.000 (about 1 in 2000) lies outside even a share of 1. Shoppers are drawn until one's bucket
+ * lies below 1.000 in this hour and in the next (no leg lasts an hour), so every share-1 leg's shopper is inside the
+ * share by construction. Nothing else about the shopper changes.
+ */
+async function swappable(m: Mounted): Promise<Shopper> {
+  const inside = (s: Shopper, at: number) => Math.round(bucketOf(s.subject, LAYOUT, hourKeyOf(at)) * 1000) / 1000 < 1;
+  for (let draw = 0; draw < 20; draw++) {
+    const s = await shopperOn(m), now = Date.now();
+    if (inside(s, now) && inside(s, now + HOUR_MS)) return s;
+  }
+  return expect.unreachable(`${m.host}: PRECONDITION — none of twenty shoppers drawn has a bucket below 1.000`);
+}
+
 async function tabby(m: Mounted): Promise<Shopper> {
-  const s = await shopperOn(m);
+  const s = await swappable(m);
   expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${m.host}: the shopper's page view is accepted`).toBe(200);
   for (const view of TABBY_VIEWS.slice(0, 3)) expect((await s.action(view)).status, `${m.host}: the shopper's view is accepted`).toBe(200);
   return s;
@@ -190,6 +241,64 @@ describe('unit:P05.W1', () => {
           .toEqual([M.reco2, M.reco1, M.grid, M.editorial]);
       } finally { clock.restore(); }
     }, 90_000);
+
+    it(`host (${host}): R-P62 (3), reading 1 ruled as option C — under the adjacent-swap mode at share 1 a configured order published for the shopper's context is served exactly and never swapped: no record carries explain.exploration or explored true, the reason on every record and receipt is the order's as P29 receipted it, and the decision replays equal; CONTROL: the same shopper before the order is published, and a shopper whose context no order names after it, are served the ranked order with one adjacent pair swapped`, async () => {
+      /** The review's probe D1 order (P01's representation) for the paid-social first visit: it differs from the ranking and from catalogue order, and lists the module tagged on an unmapped dimension. */
+      const ORDER = [M.editorial, M.ugc, M.grid, M.reco1];
+      const ORDERS = [{ context: { channel: 'paid_social', visitBuckets: ['1'] }, modules: ORDER }];
+      /** P29 as receipted (kit 02 and 03): a configured order served exactly on a slot that does not opt in to the blend. */
+      const REASON = { cause: 'blend_or_trust_zero', slot: LAYOUT, status: 'unchanged' };
+      const clock = fixedHour();
+      try {
+        const m = await mount(host, { pieces: MODULES, slots: slots(), learn: swapLearn(1) });
+        expectPublished(m, 'P05.W1 (R-P62 3) — the adjacent-swap mode at share 1 on the declared layout slot publishes');
+        const s = await tabby(m);
+        const without = await layoutOf(s, 'p05-w1-order-without');
+        expect(oneAdjacentSwap(without, RANKED),
+          `${host}: CONTROL — without an order the shopper is served the ranked order with one adjacent pair swapped (served ${JSON.stringify(without)} against ${JSON.stringify(RANKED)})`).toEqual([true, true]);
+        const written = await putDocument(m, 'slots', slots({ orders: ORDERS }), 'p05 configured order');
+        expect(written.status, `${host}: PRECONDITION — the order for the shopper's context publishes through PUT /content/slots: ${JSON.stringify(written.body).slice(0, 300)}`).toBe(200);
+        // CONTROL: the swap still applies to the ranked order. A shopper with the same views whose context no order names (a
+        // direct arrival) receives the slot's own decision (P01.O2): the ranked order with one adjacent pair swapped (W1).
+        const direct = await swappable(m);
+        expect((await direct.action(PAGE_VIEW, DIRECT_ENTRY)).status, `${host}: the direct arrival's page view is accepted`).toBe(200);
+        for (const view of TABBY_VIEWS.slice(0, 3)) expect((await direct.action(view)).status, `${host}: the shopper's view is accepted`).toBe(200);
+        const directLayout = await layoutOf(direct, 'p05-w1-order-direct');
+        expect(oneAdjacentSwap(directLayout, RANKED),
+          `${host}: CONTROL — with the order published, a shopper whose context no order names is served the ranked order with one adjacent pair swapped (served ${JSON.stringify(directLayout)} against ${JSON.stringify(RANKED)})`).toEqual([true, true]);
+
+        // The decision under the order, through the route on rendered-v1, every drawn module acknowledged (R-P18).
+        const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf('p05-w1-order') });
+        const drawn = page.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
+        expect.soft(drawn.map(d => d.contentId), `${host}: P05.W1 (R-P62 3) — under the adjacent-swap mode at share 1 the configured order is served exactly, never swapped`).toEqual(ORDER);
+        for (const d of drawn) expect((await s.ack(page, d)).status, `${host}: ${d.contentId} acknowledged`).toBe(200);
+        await m.drainLedger();
+        const records = storedDecisions(m, s.subject).filter(r => r.slot === LAYOUT && drawn.some(d => d.decisionId === r.decision_id)).sort((a, b) => a.position - b.position);
+        expect(records.length, `${host}: PRECONDITION — the ledger holds the four acknowledged layout decisions under the order`).toBe(4);
+        expect.soft(records.map(r => [r.item_id, r.explored, explorationOf(r) ?? null, (r.explain as Record<string, unknown>).layoutReason ?? null]),
+          `${host}: P05.W1 (R-P62 3) — no record carries an exploration member or explored true, and each carries the order's reason`).toEqual(ORDER.map(id => [id, false, null, REASON]));
+        const receipts = (await receiptsOf(m, s.subject)).filter(r => r.slot === LAYOUT && drawn.some(d => d.decisionId === r.decision_id));
+        expect(receipts.length, `${host}: PRECONDITION — a receipt for every acknowledged layout position under the order`).toBe(4);
+        expect.soft(Object.fromEntries(receipts.map(r => [String(r.item), r.layoutReason ?? null])), `${host}: P05.W1 (R-P62 3) — every receipt carries the order's reason`)
+          .toEqual(Object.fromEntries(ORDER.map(id => [id, REASON])));
+
+        // The replay (R-P14): served-v1 without the durable recovery path, the order published for the same context.
+        const served = await mount(host, { pieces: MODULES, slots: slots({ orders: ORDERS }), learn: swapLearn(1, {}, 'served-v1') }, { recovery: false });
+        expectPublished(served, 'P05.W1 (R-P62 3) — the order beside the adjacent-swap mode at share 1 on a served-v1 mount without the recovery path publishes');
+        const other = await tabby(served);
+        const set = await servePage(served, other, 'pdp', { offer: false });
+        await toLedger(served, set.records);
+        const stored = storedDecisions(served, other.subject).filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+        expect(stored.length, `${host}: PRECONDITION — the ledger holds the four layout decisions to replay`).toBe(4);
+        const replays: unknown[][] = [];
+        for (const r of stored) {
+          const replay = await replayOf(served, r.decision_id);
+          replays.push([r.item_id, r.explored, explorationOf(r) ?? null, replay.status, replay.body.classification ?? replay.body.reason ?? null]);
+        }
+        expect(replays, `${host}: P05.W1 (R-P62 3) — the decision under the order is served exactly, unswapped, and replays equal`)
+          .toEqual(ORDER.map(id => [id, false, null, 200, 'equal']));
+      } finally { clock.restore(); }
+    }, 90_000);
   }
 });
 
@@ -257,7 +366,7 @@ describe('unit:P05.W2', () => {
 /** A take-2 layout (one adjacent pair) at share 1: four paid-social shoppers with no signal, all clicking position 1, two of them position 2. */
 async function swappedClicks(m: Mounted): Promise<void> {
   for (let i = 0; i < 4; i++) {
-    const s = await shopperOn(m);
+    const s = await swappable(m);
     expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status).toBe(200);
     const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf(`p05-w3-${i}`) });
     const layout = page.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
@@ -320,6 +429,28 @@ async function foldedCredit(m: Mounted, hourStart: number, item: string): Promis
   return typeof credit === 'number' ? Math.round(credit * 100) / 100 : `no folded credit for ${item} in the day's learning grid (it holds ${Object.keys(grid?.items ?? {}).join(', ') || 'nothing'})`;
 }
 
+/**
+ * R-P62: the day `foldedCredit` folded and published, read back through the same operator route without folding again:
+ * any module's folded credit in the slot's learning grid, to the cent, and the day's number of credited outcomes under
+ * the learning policy (`policies[].credits`, the count R-P29 keeps unchanged by the position weight).
+ */
+async function publishedDay(m: Mounted, hourStart: number): Promise<{ credit: (item: string) => unknown; credits: unknown }> {
+  const date = new Date(hourStart).toISOString().slice(0, 10);
+  const day = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}&slot=${LAYOUT}`);
+  expect(day.status, `${m.host}: PRECONDITION — the published day reads back through the operator route: ${JSON.stringify(day.body).slice(0, 200)}`).toBe(200);
+  type Report = { grids?: Record<string, Record<string, { items?: Record<string, Record<string, { s?: number }>> }>>; policies?: Array<{ name?: string; role?: string; credits?: number }> };
+  const report = day.body.report as Report | undefined;
+  const items = report?.grids?.[LAYOUT]?.learning?.items ?? {};
+  const learningPolicy = report?.policies?.find(p => p.role === 'learning');
+  return {
+    credit: (item: string) => {
+      const s = items[item]?.['*']?.s;
+      return typeof s === 'number' ? Math.round(s * 100) / 100 : `no folded credit for ${item} in the day's learning grid (it holds ${Object.keys(items).join(', ') || 'nothing'})`;
+    },
+    credits: learningPolicy?.credits ?? `no learning policy on the day's report (policies: ${JSON.stringify(report?.policies ?? null).slice(0, 200)})`,
+  };
+}
+
 describe('unit:P05.W4', () => {
   for (const host of HOSTS) {
     it(`host (${host}): decision D2 — with the slot's normalisation switch on, a click at a position is credited divided by that position's estimated effect, online and in the offline recomputation (the hourly fold over the ledger the real consumer wrote) alike; with the switch off, its default, credit is exactly as today`, async () => {
@@ -348,6 +479,78 @@ describe('unit:P05.W4', () => {
         }
         expect.soft(online, `${host}: P05.W4 — online, a click at position 2 (effect 0.5) credits 1 / 0.5 = 2 with the switch on and 1 with it off`).toEqual({ on: 2, off: 1 });
         expect(offline, `${host}: P05.W4 — and the offline recomputation, the hourly fold of the same day, credits the same click by the same weight`).toEqual({ on: 2, off: 1 });
+      } finally { clock.restore(); }
+    }, 180_000);
+
+    it(`host (${host}): R-P62 (1) — the hourly fold weighs a click credit by the position policy in force at the credit's time, never by the learn dials in force when the fold runs: a click at position 2 credited 2 online (switch on, estimate 0.5) folds 2 after the learn document is republished without the mode and the switch before the hour folds, the day's count of credited outcomes unchanged; CONTROL: republished with the switch false, the mode kept or dropped, it folds 2 as at 1d598625`, async () => {
+      const clock = fixedHour();
+      try {
+        // The controls first, so that the first failure of this leg is the world under test.
+        const worlds: Array<[string, Record<string, unknown>]> = [
+          ['CONTROL, republished with the mode kept and the switch false', { exploration: swap(1), positionNormalization: false }],
+          ['CONTROL, republished with the mode dropped and the switch false (probe 3, case P3)', { positionNormalization: false }],
+          ['republished without the mode and without the switch, both members deleted as the dials screen writes "off"', {}],
+        ];
+        for (const [name, republished] of worlds) {
+          const m = await mount(host, { pieces: MODULES, slots: slots({ take: 2 }), learn: swapLearn(1, { positionNormalization: true }) });
+          expectPublished(m, 'P05.W4 (R-P62 1) — a take-2 layout with the swap at share 1 and the switch on publishes');
+          await swappedClicks(m);
+          await positionEffects(m);
+          // W4's measured click: the Tabby shopper's take-2 layout (reco.2, editorial.1) served swapped, and the click on reco.2 at position 2.
+          const s = await tabby(m);
+          const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf('p05-w4-r62-1') });
+          const layout = page.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
+          expect(layout.map(d => d.contentId), `${host}: PRECONDITION — the shopper's take-2 layout is served swapped, reco.2 at position 2`).toEqual([M.editorial, M.reco2]);
+          for (const d of layout) expect((await s.ack(page, d)).status, `${host}: ${d.contentId} acknowledged`).toBe(200);
+          await m.drainLedger();
+          const before = (await learned(m))[M.reco2]?.s ?? 0;
+          expect((await s.click(page, layout[1]!)).status, `${host}: the click at position 2 is accepted`).toBe(200);
+          await m.drainLedger();
+          expect(Math.round((((await learned(m))[M.reco2]?.s ?? 0) - before) * 100) / 100,
+            `${host}: PRECONDITION (${name}) — online, the click at position 2 credits 1 / 0.5 = 2 under the policy in force`).toBe(2);
+          // The learn document republished before the hour folds; the fold then reads the document in force, as the five-minute job does.
+          const put = await putDocument(m, 'learn', learnDocument({ [LAYOUT]: { measurementBasis: 'rendered-v1', reward: 'click', ...republished } }), 'p05 r-p62 1');
+          expect(put.status, `${host}: PRECONDITION (${name}) — the learn document is republished: ${JSON.stringify(put.body).slice(0, 300)}`).toBe(200);
+          const folded = await foldedCredit(m, clock.hourStart, M.reco2);
+          const day = await publishedDay(m, clock.hourStart);
+          expect([folded, day.credits],
+            `${host}: P05.W4 (R-P62 1) — ${name}: the fold credits the click 2, the policy in force at the credit's time, and counts seven credited outcomes, one per click of the day (R-P29)`).toEqual([2, 7]);
+        }
+      } finally { clock.restore(); }
+    }, 240_000);
+
+    it(`host (${host}): R-P62 (2) — the fold weighs a credit exactly when the online path does: with the switch on and the estimate 0.5, after a slots PUT alone undeclares the layout, a later click at position 2 credits 1 online and 1 folded (unweighted on both paths alike), while the click at position 2 made before it on the declared layout credits 2 on both`, async () => {
+      const clock = fixedHour();
+      try {
+        const m = await mount(host, { pieces: MODULES, slots: slots({ take: 2 }), learn: swapLearn(1, { positionNormalization: true }) });
+        expectPublished(m, 'P05.W4 (R-P62 2) — a take-2 layout with the swap at share 1 and the switch on publishes');
+        await swappedClicks(m);
+        await positionEffects(m);
+        const online: Record<string, unknown> = {};
+        /** A Tabby shopper's take-2 layout served as `expected`, every drawn module acknowledged, and the click at position 2: its online credit. */
+        const clickAt2 = async (label: string, expected: string[], what: string) => {
+          const s = await tabby(m);
+          const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf(label) });
+          const layout = page.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
+          expect(layout.map(d => d.contentId), `${host}: PRECONDITION — ${what}`).toEqual(expected);
+          for (const d of layout) expect((await s.ack(page, d)).status, `${host}: ${d.contentId} acknowledged`).toBe(200);
+          await m.drainLedger();
+          const item = layout[1]!.contentId, before = (await learned(m))[item]?.s ?? 0;
+          expect((await s.click(page, layout[1]!)).status, `${host}: the click at position 2 is accepted`).toBe(200);
+          await m.drainLedger();
+          online[item] = Math.round((((await learned(m))[item]?.s ?? 0) - before) * 100) / 100;
+        };
+        await clickAt2('p05-w4-r62-2-declared', [M.editorial, M.reco2], 'on the declared layout the take-2 layout is served swapped, reco.2 at position 2');
+        // A slots PUT alone that undeclares the layout slot (admitted: the slot keeps its take, weights and exclusion, without `layout: true`).
+        const undeclared = Object.fromEntries(Object.entries(layoutSlot({ take: 2 })).filter(([key]) => key !== 'layout'));
+        const put = await putDocument(m, 'slots', declaredSlots([undeclared, recentSlot()]), 'p05 r-p62 2');
+        expect(put.status, `${host}: PRECONDITION — a slots PUT alone that undeclares the layout slot is admitted: ${JSON.stringify(put.body).slice(0, 300)}`).toBe(200);
+        await clickAt2('p05-w4-r62-2-undeclared', [M.reco2, M.editorial], 'once the layout is undeclared the slot is served its ranking unswapped, editorial.1 at position 2');
+        expect.soft(online, `${host}: P05.W4 (R-P62 2) — online, the click on the declared layout credits 2 and the later click, on a decision with no layout reason, 1`)
+          .toEqual({ [M.reco2]: 2, [M.editorial]: 1 });
+        const folded = { [M.editorial]: await foldedCredit(m, clock.hourStart, M.editorial), [M.reco2]: (await publishedDay(m, clock.hourStart)).credit(M.reco2) };
+        expect(folded, `${host}: P05.W4 (R-P62 2) — the fold weighs exactly the credits the online path weighs: 2 for the click on the declared layout, 1 for the later click`)
+          .toEqual({ [M.reco2]: 2, [M.editorial]: 1 });
       } finally { clock.restore(); }
     }, 180_000);
   }
