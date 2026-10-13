@@ -82,6 +82,10 @@ import {
   storedDecisions, storedOutcomes, TENANT, VIEW_TABBY_26, VIEW_TABBY_WALLET, type Mounted, type Shopper,
 } from '../_parity';
 import { hmacOf, identityDoor, identitySecretOf, sha256Hex, type IdentityDoor } from '../_parity3';
+// R-P67 (fix round 1, round 2): the H4 legs on the single request's members also read P07's block and population
+// through src/units/_parity2.ts (the REGION_TREND namespace on the real RegionTrend class), byte-identical.
+import { receiptsOf, slotPositionOf, VIEW_TABBY_QUILTED } from '../_parity';
+import { bindTrend, publishTrends, trendStorageText } from '../_parity2';
 
 const K = 1.8;
 const aff = (r: number) => r / (r + K);
@@ -289,6 +293,126 @@ describe('unit:P13.H4 (freeze item 15)', () => {
     expect([calls, bootstrap?.decisions.map(d => d.contentId) ?? null, (headers.get('Set-Cookie') ?? '').includes(session.capability)],
       'P13.H4 — one call to the engine, the first decision set, and the shopper’s session cookie').toEqual([['/v1/coach/decisions/snapshot'], ['story.tabby'], true]);
   });
+
+  // -------------------------------------------------------------------------
+  // R-P67 (P13 fix round 1, round 2): the single request carries the members the first decision request carries
+  // under tracking consent (the entry, the channel, the browsing session and the carried identifier) with the
+  // page's consent hints, and the fence stays at the engine: under a grant that refuses tracking those members
+  // change nothing and leave nothing. Expected values: R-P67, listen.test.ts:108-113 (the first decision request's
+  // members), R12-1 (the request names the browsing session the events carry, session.test.ts), S4-C17 to C19,
+  // CW31 (nothing is written for a shopper who withheld tracking) and P07's receipted representation of the entry
+  // prior (src/units/P07/LEDGER.unit.test.ts, C1: explain.contextPrior { channel 'paid_social', visitBucket '1',
+  // level 'channel_visit', lambda 1 } on the record, "population prior, paid social, first visit" on the receipt).
+  // Not specified here: R-P67's host leg with tracking allowed. A browser that takes the single call holds no
+  // session and no proof, and the grant the engine issues it carries no consent instruction, which this engine
+  // reads as both switches refused (src/content/consent.ts:86, :139-152); measured at 74355103 on both hosts with
+  // no hint at all: the session states tracking refused, the default arm, no record. Reported to the lead.
+  // -------------------------------------------------------------------------
+  it('sdk: a new visitor’s single decision request carries what the first decision request carries under tracking consent, the entry, the channel, the browsing session and the carried identifier, beside page, page instance and brand, and no call follows the answer that issues the session (R-P67)', async () => {
+    await hashed();
+    const decisions = [{ contentId: 'story.tabby', slot: STORY, order: 0, explain: { drivers: [] } }];
+    // The P13 engine (S4-C19): the session is answered only to a decision request that carried none.
+    const f = testHost({ responses: (url, init) => url.includes('/decisions/snapshot')
+      ? { ok: true, tenant: 'coach', page: 'pdp', pageInstance: (JSON.parse(init?.body ?? '{}') as { pageInstance?: string }).pageInstance, decisions,
+        ...(init?.headers?.['X-Shopper-Session'] ? {} : { session: syntheticSession() }) }
+      : { success: true } });
+    // The test host's page is a paid-social arrival (utm_medium=paid_social from tiktok.com), the entry listen.test.ts:110 names.
+    const core = createCore({ tenant: 'coach', source: 'coach-pdp', brand: BRAND }, f.host);
+    const listen = createListen(core);
+    const setCustomerId = (core as unknown as Record<string, unknown>).setCustomerId as ((id: string) => unknown) | undefined;
+    expect(typeof setCustomerId, 'PRECONDITION: the SDK offers setCustomerId(id) (P13.H2)').toBe('function');
+    setCustomerId!.call(core, HASHED);
+    await listen.hydrate({ page: 'pdp', channel: 'paid social' });
+    expect(f.calls.map(c => new URL(c.url, 'https://edge.invalid').pathname.replace(/^\/v1\/coach/, '')),
+      'P13.H4 (R-P67) — one call before the first decision set, and none after the answer that issued the session').toEqual(['/decisions/snapshot']);
+    expect(core.sessionId, 'PRECONDITION: the client adopted the issued session, and with it the browsing session its events carry').toMatch(/^s-/);
+    const sent = JSON.parse(f.calls[0]!.init?.body ?? '{}') as Record<string, unknown>;
+    expect({ ...sent, entry: typeof sent.entry === 'string' ? JSON.parse(sent.entry) as unknown : sent.entry ?? null },
+      'P13.H4 (R-P67) — the single request carries page, page instance and brand with the entry, the channel, the browsing session its events carry and the carried identifier (this page holds no refusal, so it sends no hint)')
+      .toEqual({ page: 'pdp', pageInstance: expect.any(String), brand: BRAND, channel: 'paid social', browsingSessionId: core.sessionId, customerId: HASHED,
+        entry: { utmMedium: 'paid_social', utmSource: 'tiktok', referrer: 'www.tiktok.com', siteHost: 'shop.example' } });
+  });
+
+  /** P07.C1's block, and its paid-social population: four first-time paid-social visitors who each view the quilted Tabby. */
+  const CONTEXT_PRIOR = { enabled: true, kBlend: 1, minEvents: 3 };
+  const priorDocuments = { pieces: PIECES, slots: SLOTS, learn: learnDocument({ [STORY]: { measurementBasis: 'rendered-v1', reward: 'click' } }, { contextPrior: CONTEXT_PRIOR }) };
+  /** A browsing session in the shape the SDK mints (src/sdk/identity.ts mintSessionId). */
+  const browsingSession = () => `s-${Date.now().toString(36).toUpperCase()}${crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+  /** The single call: a decision request with no session at all, as the H4 host leg sends it. */
+  const singleCall = async (m: Mounted, body: Record<string, string>) => {
+    const response = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
+      headers: { 'X-Tenant': TENANT, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+    const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+    await m.drain();
+    return answer;
+  };
+  const decidedOf = (answer: { body: Record<string, unknown> }) => ((answer.body.decisions ?? []) as Array<Record<string, unknown>>)
+    .map(({ slot, contentId, order, strategy, explain }) => ({ slot, contentId, order, strategy, explain }));
+  /** Every value the mounted engine holds: the ledger objects, both KV namespaces, every object's storage, the queue and the trend objects. */
+  const traceOf = (m: Mounted, trend: ReturnType<typeof bindTrend>) => JSON.stringify([[...m.storage.objects.entries()], [...m.cache.data.entries()],
+    [...(m.env.SESSIONS as unknown as { data: Map<string, unknown> }).data.entries()],
+    ...[m.shoppers, m.rings, m.stats].map(registry => [...registry.entries()].map(([name, item]) => [name, [...item.data.entries()]])), m.queued]) + trendStorageText(trend);
+
+  for (const host of HOSTS) {
+    it(`host (${host}): the single request carrying the entry, the channel, the browsing session and the carried identifier under hints that refuse tracking is answered with the issued session stating tracking refused and the decision a bare request gets, and leaves no record and no trace of those members (R-P67)`, async () => {
+      await hashed();
+      const m = await mount(host, priorDocuments);
+      expectPublished(m, 'P13.H4 (R-P67) — the page with the context prior’s block (P07.C1’s) publishes');
+      const trend = bindTrend(m);
+      for (let i = 0; i < 4; i++) {
+        const visitor = await shopperOn(m);
+        expect((await visitor.action(VIEW_TABBY_QUILTED, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — a paid-social first visitor's view is accepted`).toBe(200);
+      }
+      await publishTrends(m, trend);
+      // CONTROL: in this mount the entry prior is live and the members reach the records, for a shopper whose explicit choice allows tracking.
+      const chosen = await shopperOn(m);
+      expect((await chosen.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the control shopper's page view is accepted`).toBe(200);
+      const controlBrowsing = browsingSession(), controlInstance = pageInstanceOf('p13-h4-control');
+      const controlResponse = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
+        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: chosen.grant.capability, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance: controlInstance, entry: JSON.stringify(PAID_SOCIAL_ENTRY), channel: 'paid social', browsingSessionId: controlBrowsing }) }));
+      const controlBody = await controlResponse.json().catch(() => ({})) as Record<string, unknown>;
+      await m.drain();
+      const controlDecisions = (controlBody.decisions ?? []) as Array<Record<string, unknown>>;
+      const controlAck = await chosen.ack({ status: controlResponse.status, body: controlBody, page: 'pdp', pageInstance: controlInstance, decisions: controlDecisions as never },
+        controlDecisions.find(d => d.slot === STORY) as never);
+      expect([controlResponse.status, controlAck.status], `${host}: PRECONDITION — the control shopper's page is answered and its story acknowledged`).toEqual([200, 200]);
+      await m.drainLedger();
+      const controlRecord = storedDecisions(m, chosen.subject).find(r => r.slot === STORY);
+      const controlSentence = (((await receiptsOf(m, chosen.subject)).find(r => r.slot === STORY)?.why ?? []) as string[]).find(w => /population prior/i.test(w)) ?? '';
+      expect({ session: controlRecord?.session_id ?? null, prior: (controlRecord?.explain as Record<string, unknown> | undefined)?.contextPrior ?? null,
+        words: [/paid social/i.test(controlSentence), /first visit/i.test(controlSentence)] },
+      `${host}: CONTROL — tracking allowed by an explicit choice: the record names the request's browsing session and P07's entry prior, and the receipt says it in words`)
+        .toMatchObject({ session: controlBrowsing, prior: { channel: 'paid_social', visitBucket: '1', level: 'channel_visit', lambda: 1 }, words: [true, true] });
+
+      // The single call of a new visitor whose page refuses tracking, carrying the four members, and a bare one under the same hint.
+      const browsing = browsingSession(), pageInstance = pageInstanceOf('p13-h4-refused');
+      const first = await singleCall(m, { page: 'pdp', brand: BRAND, pageInstance, entry: JSON.stringify(PAID_SOCIAL_ENTRY), channel: 'paid social',
+        browsingSessionId: browsing, customerId: HASHED, trackingConsent: 'false' });
+      const bare = await singleCall(m, { page: 'pdp', brand: BRAND, pageInstance: pageInstanceOf('p13-h4-bare'), trackingConsent: 'false' });
+      const session = (first.body.session ?? {}) as { capability?: string; tenant?: string; subject?: string; sessionId?: string; consent?: { tracking?: unknown } };
+      expect([first.status, typeof session.capability, session.tenant, session.consent?.tracking ?? 'no consent on the session', decidedOf(first).some(d => d.slot === STORY)],
+        `${host}: P13.H4 (R-P67) — answered with the issued session stating tracking refused and the first decision set (${JSON.stringify(first.body).slice(0, 200)})`)
+        .toEqual([200, 'string', TENANT, false, true]);
+      expect(decidedOf(first), `${host}: P13.H4 (R-P67) — decided exactly as the bare request under the same hint: no entry prior, nothing of the four members read`).toEqual(decidedOf(bare));
+      const story = ((first.body.decisions ?? []) as Array<Record<string, unknown>>).find(d => d.slot === STORY)!;
+      const acknowledged = await m.fetch(new Request('https://shop.invalid/realtime/action', { method: 'POST',
+        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: session.capability ?? '', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'content_impression', source: 'sdk', userId: session.subject, sessionId: session.sessionId, eventId: crypto.randomUUID(), timestamp: Date.now(),
+          data: { contentId: story.contentId, decisionId: story.decisionId, renderOffer: story.renderOffer, page: 'pdp', pageInstance, slot: story.slot, position: story.order,
+            slotPosition: slotPositionOf({ decisions: (first.body.decisions ?? []) as never }, story as never) } }) }));
+      await m.drain();
+      expect(acknowledged.status, `${host}: PRECONDITION — the story's acknowledgement under the issued session is answered`).toBe(200);
+      await m.drainLedger();
+      expect([storedDecisions(m, session.subject ?? ''), storedOutcomes(m, session.subject ?? '')],
+        `${host}: P13.H4 (R-P67, CW31) — under refused tracking nothing of this visitor is recorded, no decision record and no outcome record, so none carries customer_id or a browsing session`)
+        .toEqual([[], []]);
+      const trace = traceOf(m, trend);
+      expect([trace.includes(HASHED), trace.includes(browsing), trace.includes(controlBrowsing)],
+        `${host}: P13.H4 (R-P67) — no store holds the carried identifier or the browsing session the refused request named (CONTROL: the control shopper's browsing session is found)`)
+        .toEqual([false, false, true]);
+    }, 90_000);
+  }
 });
 
 // ===========================================================================
