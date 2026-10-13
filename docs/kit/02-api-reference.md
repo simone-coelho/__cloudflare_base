@@ -602,8 +602,8 @@ it; and where no term separates it, the rule that placed or displaced one of tho
 largest term in that direction, else the terms of the first module that passed it or that it passed. The
 terms are `{}` when the shadow keeps every module at its baseline place. Recording the shadow changes
 nothing served, counted or credited: the route's per-decision answer carries none of the three members,
-and every exposure and credit is the served order's. The holdout's `default` arm, which reads no interest
-and no learned lift of the shopper's, records none, and neither does the record of an off-limits layout
+and every exposure and credit is the served order's. The holdout's `default` arm, which reads neither the
+shopper's interests nor the learned lift, records none, and neither does the record of an off-limits layout
 slot. The three members are compared by value in replay, and a record written without them replays
 without them, with no new replay marker.
 
