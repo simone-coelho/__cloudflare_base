@@ -38,7 +38,7 @@
 // CACHE_TTL_MS below, and a write invalidates the writing isolate at once.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DEFAULT_REFLEX_CONFIG, type ContinuitySettings, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
+import { DEFAULT_REFLEX_CONFIG, MAX_SUPPRESSION_DAYS, suppressionDays, type AccountIdFormat, type ContinuitySettings, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
 import { validateJourneyThresholds } from '@/services/JourneyStage';
 import type { Env } from '@/types/env';
 import { readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
@@ -267,6 +267,134 @@ function validateContinuity(errors: string[], value: unknown): void {
   }
 }
 
+// ── P39: the suppression settings (decisions D1, D2) ────────────────────────
+//
+// Negative preference is a per-shopper suppression with an expiry, never a
+// negative weight: the weights below stay bounded 0 to 1000. The settings ride
+// this document, so they are validated here and an invalid set is refused at
+// publication, naming the member, while the last published revision keeps
+// deciding. Unlike an incomplete continuity block, nothing here is half a
+// configuration: a window that is not a positive whole number of days, or an
+// action name no shopper action can carry, is a refusal.
+
+const SUPPRESSION_MEMBERS = new Set(['actions', 'purchase']);
+const SUPPRESSION_WINDOW_MEMBERS = new Set(['days']);
+/** The engine's own time-only re-evaluation: never an action a shopper takes, so never one that suppresses. */
+const ENGINE_ACTIONS = new Set(['tick']);
+const MAX_ACTION_NAME = 120;
+
+function validateSuppressionWindow(errors: string[], path: string, window: unknown): void {
+  if (typeof window !== 'object' || window === null || Array.isArray(window)) {
+    errors.push(`${path} must be a JSON object ({ days? }, the window in whole days)`); return;
+  }
+  for (const key of Object.keys(window as Record<string, unknown>)) {
+    if (!SUPPRESSION_WINDOW_MEMBERS.has(key)) errors.push(`${path}.${key} is not a member of a suppression window (days)`);
+  }
+  const days = (window as { days?: unknown }).days;
+  if (days !== undefined && suppressionDays(window) === null) {
+    errors.push(`${path}.days must be a positive whole number of days, at most ${MAX_SUPPRESSION_DAYS} (got ${JSON.stringify(days) ?? String(days)})`);
+  }
+}
+
+function validateSuppression(errors: string[], value: unknown): void {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    errors.push('suppression must be a JSON object ({ actions?, purchase? })'); return;
+  }
+  const settings = value as Record<string, unknown>;
+  for (const key of Object.keys(settings)) {
+    if (!SUPPRESSION_MEMBERS.has(key)) errors.push(`suppression.${key} is not one of the suppression settings' members (${[...SUPPRESSION_MEMBERS].join(', ')})`);
+  }
+  if (settings.actions !== undefined) {
+    const actions = settings.actions;
+    if (typeof actions !== 'object' || actions === null || Array.isArray(actions)) {
+      errors.push('suppression.actions must be a JSON object mapping action name to its window ({ days? })');
+    } else {
+      const entries = Object.entries(actions as Record<string, unknown>);
+      if (entries.length > MAX_WEIGHTS) errors.push(`suppression.actions must have at most ${MAX_WEIGHTS} entries (got ${entries.length})`);
+      for (const [action, window] of entries) {
+        if (RESERVED_KEYS.has(action)) { errors.push(`suppression.actions."${action}" is a reserved key`); continue; }
+        if (action.trim() === '') { errors.push('suppression.actions has an empty action name'); continue; }
+        if (action !== action.trim() || action.length > MAX_ACTION_NAME) {
+          errors.push(`suppression.actions."${action.slice(0, MAX_ACTION_NAME)}" is not an action name (no surrounding spaces, at most ${MAX_ACTION_NAME} characters)`); continue;
+        }
+        if (ENGINE_ACTIONS.has(action)) { errors.push(`suppression.actions.${action} is the engine's own re-evaluation, not an action a shopper takes`); continue; }
+        validateSuppressionWindow(errors, `suppression.actions.${action}`, window);
+      }
+    }
+  }
+  if (settings.purchase !== undefined) validateSuppressionWindow(errors, 'suppression.purchase', settings.purchase);
+}
+
+// ── P12: the account identifier format (decision D2) ────────────────────────
+//
+// The forms a tenant's account identifier takes are a tenant setting on this
+// document: `accountIdFormat: { firstLanding?, hashedEmail? }`, each the source
+// of a regular expression anchored at both ends. At least one form is declared
+// and no other member is admitted; an invalid format is refused at publication,
+// naming `accountIdFormat`, while the last published revision keeps deciding.
+// Absent, a link accepts any account identifier exactly as before.
+
+const ACCOUNT_ID_FORMS: ReadonlyArray<keyof AccountIdFormat> = ['firstLanding', 'hashedEmail'];
+/** The longest pattern a form may declare. */
+const MAX_ACCOUNT_ID_PATTERN = 500;
+
+/** A pattern that begins with `^` and ends with an `$` no backslash escapes. */
+function anchoredAtBothEnds(source: string): boolean {
+  if (!source.startsWith('^') || !source.endsWith('$')) return false;
+  let escapes = 0;
+  for (let i = source.length - 2; i >= 0 && source[i] === '\\'; i--) escapes++;
+  return escapes % 2 === 0;
+}
+
+function validateAccountIdFormat(errors: string[], value: unknown): void {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    errors.push('accountIdFormat must be a JSON object ({ firstLanding?, hashedEmail? }, each a regular expression anchored with ^ and $)'); return;
+  }
+  const format = value as Record<string, unknown>;
+  const forms = Object.keys(format);
+  for (const form of forms) {
+    if (!(ACCOUNT_ID_FORMS as readonly string[]).includes(form)) errors.push(`accountIdFormat.${form} is not one of the account identifier forms (${ACCOUNT_ID_FORMS.join(', ')})`);
+  }
+  if (!forms.some((form) => (ACCOUNT_ID_FORMS as readonly string[]).includes(form))) {
+    errors.push(`accountIdFormat must declare at least one form (${ACCOUNT_ID_FORMS.join(', ')})`);
+  }
+  for (const form of ACCOUNT_ID_FORMS) {
+    const pattern = format[form];
+    if (pattern === undefined) continue;
+    if (typeof pattern !== 'string' || pattern === '' || pattern.length > MAX_ACCOUNT_ID_PATTERN) {
+      errors.push(`accountIdFormat.${form} must be the source of a regular expression, 1 to ${MAX_ACCOUNT_ID_PATTERN} characters`); continue;
+    }
+    try { new RegExp(pattern); } catch {
+      errors.push(`accountIdFormat.${form} is not a regular expression that compiles`); continue;
+    }
+    if (!anchoredAtBothEnds(pattern)) errors.push(`accountIdFormat.${form} must be anchored at both ends (begin with ^ and end with $)`);
+  }
+}
+
+/**
+ * P12 (decision D2): why a link's own account identifier is refused under the
+ * document in force, or null when it is admitted. A document that declares no
+ * format admits every identifier, exactly as before the member existed. A
+ * declared format admits an identifier that matches one form whole. A declared
+ * member this build cannot read (only a revision stored before the member was
+ * validated could carry one) refuses every link, naming it: fail closed, never
+ * a format silently dropped. The format applies to the link's own `accountId`
+ * only, never to any other identifier a request carries.
+ */
+export function accountIdFormatRefusal(config: { accountIdFormat?: unknown } | null | undefined, accountId: string): string | null {
+  const declared = config?.accountIdFormat;
+  if (declared === undefined) return null;
+  const errors: string[] = [];
+  validateAccountIdFormat(errors, declared);
+  if (errors.length > 0) return "accountId cannot be checked: this tenant's declared accountIdFormat is not readable";
+  const format = declared as AccountIdFormat;
+  for (const form of ACCOUNT_ID_FORMS) {
+    const pattern = format[form];
+    if (pattern !== undefined && new RegExp(`^(?:${pattern})$`).test(accountId)) return null;
+  }
+  return 'accountId is outside the account identifier format this tenant declares (accountIdFormat)';
+}
+
 /** What a published document says about continuity. The only reader; nobody
  * else interprets the block, so "disabled" has exactly one definition. */
 export type PublishedContinuity =
@@ -327,6 +455,12 @@ export function validateReflexConfig(candidate: unknown): ValidationResult {
   if (c.journey !== undefined) errors.push(...validateJourneyThresholds(c.journey));
   // W16 C6 (R32(1), R48(b)1): the continuity block rides this document too.
   if (c.continuity !== undefined) validateContinuity(errors, c.continuity);
+  // P39 (decisions D1, D2): the suppression settings ride this document too;
+  // absent is valid and suppresses nothing.
+  if (c.suppression !== undefined) validateSuppression(errors, c.suppression);
+  // P12 (decision D2): the account identifier format rides this document too;
+  // absent is valid and links any identifier as before.
+  if (c.accountIdFormat !== undefined) validateAccountIdFormat(errors, c.accountIdFormat);
 
   if (!Array.isArray(c.dimensions)) {
     errors.push('dimensions must be an array');
@@ -545,6 +679,10 @@ export interface ReflexConfigPatch {
   /** W16 C6: the whole continuity block, replaced as a unit — a half-merged
    * transport/window/purpose/approval set is not a configuration. */
   continuity?: ReflexConfig['continuity'];
+  /** P39: the whole suppression settings, replaced as a unit — an action list is not merged by name. */
+  suppression?: ReflexConfig['suppression'];
+  /** P12: the whole account identifier format, replaced as a unit — the forms are not merged by name. */
+  accountIdFormat?: ReflexConfig['accountIdFormat'];
   weights?: Record<string, number>;
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
@@ -561,7 +699,7 @@ export interface ReflexConfigPatch {
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
-  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity'] as const) {
+  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity', 'suppression', 'accountIdFormat'] as const) {
     if (patch[field] !== undefined) (next as unknown as Record<string, unknown>)[field] = patch[field];
   }
   if (patch.weights) next.weights = { ...next.weights, ...patch.weights };

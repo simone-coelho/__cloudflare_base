@@ -121,19 +121,27 @@ export interface ResponseLike { ok: boolean; status: number; json(): Promise<unk
 
 // ── Events ──────────────────────────────────────────────────────────────────
 
-/** What the SDK lets an integrator say happened. */
+/**
+ * What the SDK lets an integrator say happened. P40: `content_viewable` is the
+ * viewable impression the SDK itself measures (never the page's to send),
+ * `video_view` the video watched for three seconds, `product_dwell` a product
+ * page held past its dwell threshold (`productId`, `dwellMs`).
+ */
 export type SdkEventType =
   | 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase'
   | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete'
+  | 'content_viewable' | 'video_view' | 'product_dwell'
   | 'email_open' | 'form_submit' | 'button_click' | 'custom';
 
 /**
  * `utmTerm` is the campaign's search keyword, present only when the page load
  * carries one within its bound: a keyword is a seeding signal, never evidence of
  * a channel, and an absent one is absent rather than empty so the arrival every
- * other page load sends is unchanged.
+ * other page load sends is unchanged. `utmCampaign` is the campaign name, under
+ * the same rule: present only when the landing URL carries `utm_campaign`, read
+ * only by a tenant's published classification rule, never stored (P36).
  */
-export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; referrer: string; siteHost: string }
+export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; utmCampaign?: string; referrer: string; siteHost: string }
 
 /** The envelope POST /realtime/action validates. Field for field what the demo storefront sends. */
 export interface ActionEnvelope {
@@ -164,7 +172,15 @@ export interface ContentDecision {
   customerContentId: string;
   type: string;
   slot: string;
+  /** The page-wide order the decision is drawn at. */
   order: number;
+  /**
+   * The decision's position within its slot (P03 decision D3): what its record
+   * calls `position`. The engine names it on every decision it answers; the SDK
+   * carries it on the render acknowledgement and on every engagement of the
+   * placement, beside the page-wide `order` as `position`.
+   */
+  slotPosition?: number;
   score: number;
   strategy: 'affinity' | 'default' | 'tenant-pinned';
   explain: { drivers: Array<{ dim: string; value: string; a: number; weight: number }>; note?: string };
@@ -211,4 +227,22 @@ export interface CoreEvents {
   sent: (envelope: ActionEnvelope, meta: { via: 'fetch' | 'beacon' | 'socket' }) => void;
   /** CW25: the visitor id changed, because a person signed in (identified) or out (logout). */
   identity: (change: { visitorId: string; previous: string; reason: 'identified' | 'logout' }) => void;
+}
+
+/**
+ * P12 (decision D1): the identifier-change statement a site's backend signs when
+ * a shopper's account identifier changes from one form to another (the one
+ * assigned at first landing, then the one derived from the e-mail address). The
+ * signature is an HMAC-SHA256, base64url, keyed by the tenant's identity secret,
+ * over `tenant \n account-change \n from \n to \n exp`, where `to` is the account
+ * identifier passed to identify(). The SDK carries it unchanged; the two
+ * accounts' profiles merge only on a statement that verifies, and only once.
+ */
+export interface AccountChangeStatement {
+  /** The earlier account identifier, whose profile merges into the one being signed in to. */
+  from: string;
+  /** Unix seconds the statement expires, at most 24 h ahead. */
+  exp: number;
+  /** The backend's signature over both identifiers and `exp`. */
+  statement: string;
 }

@@ -1,0 +1,322 @@
+/* enablement/site/what-it-is.css
+   The marketing page's own styles (lane M2, LANE-BRIEF-V3 section 4.1), beside /site.css and /spine.css. It loads
+   nothing and defines no color of its own: every color and typeface is a site.css token, so light and dark follow
+   the same switch. The pictures are drawn with HTML and CSS, or inline SVG themed by these classes. Their motion is
+   CSS keyframes, and it runs only when /what-it-is.js marks a picture as in view and the reader has not asked for
+   reduced motion. Without the script, under reduced motion and in print, every picture shows its end state. */
+
+/* ---------- shared: the figure of each section, its caption, its icons ---------- */
+.mk-fig { margin: 20px 0 0; padding: 0; container: mk / inline-size; }
+.piece .mk-cap {
+  display: flex; align-items: baseline; gap: 10px; max-width: var(--measure); margin: 0 0 18px;
+  color: var(--ink); font: 600 1.0625rem/1.45 var(--body);
+}
+.mk-cap::before {
+  content: ""; flex: none; width: 18px; height: 4px; border-radius: 2px; background: var(--link);
+  transform: translateY(-.28em); -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.mk-ic {
+  flex: none; width: 1.5em; height: 1.5em; fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; overflow: visible;
+}
+/* The full stop that ends a card's name is read aloud and compared with the text of record, but not drawn. */
+.mk-stop {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.mk-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ---------- 1. the four pillars, and the capabilities under each ---------- */
+.mk-pillar-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px 14px; }
+@container mk (min-width: 540px) { .mk-pillar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container mk (min-width: 880px) { .mk-pillar-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.mk-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+@supports (grid-template-rows: subgrid) {
+  /* The four pillar cards share one height, so the capabilities under them start on one line. */
+  .mk-col { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 10px; }
+}
+.mk-pillar {
+  display: flex; flex-direction: column; padding: 18px 18px 16px; border-radius: var(--radius-m);
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.piece .mk-pillar-h { margin: 0 0 6px; font: 800 1.1875rem/1.2 var(--head); letter-spacing: -.01em; text-wrap: balance; }
+.mk-col-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.mk-caps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.piece .mk-capcard {
+  display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; max-width: none; margin: 0;
+  padding: 14px 14px 14px 12px; border-radius: var(--radius-s); background: var(--surface-2); border: 1px solid var(--line-soft);
+}
+.mk-capcard .mk-ic { width: 24px; height: 24px; margin-top: 1px; color: var(--link); }
+.piece .mk-capcard p { margin: 0; font-size: .875rem; line-height: 1.45; }
+.mk-capcard strong { display: block; margin: 0 0 3px; font: 800 1rem/1.25 var(--head); letter-spacing: -.005em; }
+.piece .mk-perf {
+  display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; max-width: none; margin: 0;
+  padding: 14px 16px 14px 12px; border-radius: var(--radius-s); background: var(--rule-bg); color: var(--rule-ink);
+  border: 2px solid var(--rule-bg); font: 500 .875rem/1.45 var(--body);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.mk-perf .mk-ic { width: 24px; height: 24px; color: var(--lf-green); }
+@media (prefers-color-scheme: dark) { .piece .mk-perf { border-color: var(--lf-green); } }
+
+/* the pillars' pictures */
+.mk-pic { position: relative; height: 72px; margin: 0 0 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+/* buckets that fill and drain, with the entry line (dashed) and the lower release line (dotted) */
+.mk-pic-buckets { display: flex; align-items: flex-end; gap: 10px; padding: 0 0 0 4px; }
+.mk-bk {
+  position: relative; flex: none; width: 24px; height: 62px; overflow: hidden;
+  border: 2px solid var(--ink); border-top: 0; border-radius: 2px 2px 8px 8px; background: var(--surface-2);
+}
+.mk-bk-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: var(--link); }
+.mk-bk-a .mk-bk-fill { height: 84%; }
+.mk-bk-b .mk-bk-fill { height: 26%; }
+.mk-bk-c .mk-bk-fill { height: 52%; }
+.mk-bk-entry, .mk-bk-release { position: absolute; left: 0; right: 0; height: 0; }
+.mk-bk-entry { bottom: 36px; border-top: 2px dashed var(--ink); }
+.mk-bk-release { bottom: 26px; border-top: 2px dotted var(--muted); }
+
+/* a pinned section above the ranked ones */
+.mk-pic-pin { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.mk-row { position: relative; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); }
+/* the pin takes the spine's pin colors (spine.css), so a pin looks the same everywhere on the page */
+.mk-row-pin { background: var(--spine-pin-bg, var(--light-blue)); border-color: var(--spine-pin-line, var(--fir)); }
+.mk-row-pin .mk-ic { position: absolute; top: 50%; right: 8px; width: 16px; height: 16px; margin-top: -8px; color: var(--spine-pin-ink, var(--fir)); stroke-width: 2.2; }
+.mk-row-score { position: absolute; top: 50%; left: 8px; height: 6px; margin-top: -3px; border-radius: 3px; background: var(--link); }
+.mk-score-1 { width: 58%; }
+.mk-score-2 { width: 34%; }
+
+/* a page recomposing: two sections trade places beside the hero */
+.mk-pic-page { border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.mk-pg-hero { position: absolute; top: 8px; bottom: 8px; left: 8px; width: 36%; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); }
+.mk-pg-blk { position: absolute; left: calc(36% + 16px); right: 36px; height: 15px; border-radius: 5px; background: var(--surface); border: 1px solid var(--line); }
+.mk-pg-1 { top: 8px; background: var(--lf-green); border-color: var(--fir); }
+.mk-pg-2 { top: 28px; }
+.mk-pg-3 { top: 48px; }
+.mk-pg-swap { position: absolute; top: 50%; right: 8px; margin-top: -10px; line-height: 0; color: var(--ink); }
+.mk-pg-swap .mk-ic { width: 20px; height: 20px; }
+
+/* the visitor, the edge, the brand's systems */
+.mk-pic-edge { display: flex; align-items: center; gap: 6px; }
+.mk-edge-who { line-height: 0; color: var(--ink); }
+.mk-edge-who .mk-ic { width: 28px; height: 28px; }
+.mk-edge-wire { flex: 1; min-width: 8px; height: 0; border-top: 2px solid var(--ink); }
+.mk-edge-wire-far { border-top-style: dashed; }
+.mk-edge-node { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 10px; background: var(--lf-green); border: 1px solid var(--fir); }
+.mk-edge-node .mk-ic { width: 22px; height: 22px; color: var(--fir); }
+.mk-edge-sys { display: grid; gap: 3px; flex: none; padding: 5px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); }
+.mk-edge-sys .mk-ic { width: 16px; height: 16px; color: var(--ink); }
+
+/* ---------- 2. three steps, as a strip ---------- */
+.mk-strip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 34px; margin: 0; padding: 14px 0 0; list-style: none; counter-reset: mk-step; }
+@container mk (min-width: 640px) { .mk-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 34px; } }
+.piece .mk-step {
+  position: relative; display: flex; flex-direction: column; max-width: none; margin: 0; padding: 22px 18px 18px;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft); counter-increment: mk-step;
+}
+.mk-step::before {
+  content: counter(mk-step); position: absolute; top: -14px; left: 16px; display: grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 50%; background: var(--lf-green); color: var(--fir); font: 700 .875rem/1 var(--mono);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+/* the arrow to the next step: down when the strip stacks, right when it runs across */
+.mk-step:not(:last-child)::after {
+  content: ""; position: absolute; left: 50%; bottom: -24px; width: 13px; height: 13px; margin-left: -7px;
+  border-top: 3px solid var(--ink); border-right: 3px solid var(--ink); transform: rotate(135deg);
+}
+@container mk (min-width: 640px) {
+  .mk-step:not(:last-child)::after { left: auto; right: -25px; top: 50%; bottom: auto; margin: -7px 0 0; transform: rotate(45deg); }
+}
+.piece .mk-step p { margin: 0; font-size: .9375rem; line-height: 1.5; }
+.mk-step strong { display: block; margin: 0 0 4px; font: 800 1.125rem/1.25 var(--head); }
+.piece .mk-step .mk-learn {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: var(--radius-s); background: var(--tint);
+  border-left: 4px solid var(--link); font: 700 .9375rem/1.4 var(--body);
+}
+.mk-sp { position: relative; height: 64px; margin: 0 0 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+/* watching: an action on a card pours into one bar */
+.mk-sp-watch { display: flex; align-items: center; gap: 18px; }
+.mk-sp-card { position: relative; display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); }
+.mk-sp-card .mk-ic { width: 26px; height: 26px; }
+.mk-sp-ring { position: absolute; right: -9px; bottom: -9px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--link); background: var(--surface); }
+.mk-sp-bars { display: flex; align-items: flex-end; gap: 6px; height: 52px; }
+.mk-sp-bar { width: 14px; border-radius: 3px 3px 0 0; background: var(--line); }
+.mk-sp-bar-1 { height: 30%; }
+.mk-sp-bar-2 { height: 86%; background: var(--link); }
+.mk-sp-bar-3 { height: 46%; }
+/* rearranging: the section the visitor wants rises to the top */
+.mk-sp-row { position: absolute; left: 0; right: 36px; height: 14px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); }
+.mk-sp-row-1 { top: 6px; background: var(--lf-green); border-color: var(--fir); }
+.mk-sp-row-2 { top: 26px; }
+.mk-sp-row-3 { top: 46px; }
+.mk-sp-up { position: absolute; top: 50%; right: 4px; margin-top: -12px; line-height: 0; color: var(--link); }
+.mk-sp-up .mk-ic { width: 24px; height: 24px; stroke-width: 2.2; }
+/* the receipt, and the dial at its start */
+.mk-sp-receipt { display: flex; align-items: center; gap: 16px; }
+.mk-sp-slip { display: grid; gap: 8px; flex: none; width: 116px; padding: 11px 26px 11px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); }
+.mk-sp-l { position: relative; height: 6px; border-radius: 3px; background: var(--line); }
+.mk-sp-plus { width: 92%; background: var(--link); }
+.mk-sp-minus { width: 62%; }
+.mk-sp-even { width: 78%; }
+.mk-sp-plus::after, .mk-sp-minus::after { position: absolute; top: 50%; left: calc(100% + 6px); margin-top: -.5em; color: var(--ink); font: 700 .8125rem/1 var(--mono); }
+.mk-sp-plus::after { content: "+"; }
+.mk-sp-minus::after { content: "\2212"; }
+.mk-sp-dial { line-height: 0; color: var(--ink); }
+.mk-sp-dial .mk-ic { width: 40px; height: 40px; }
+
+/* ---------- 3. ten reasons, as equal tiles ---------- */
+.mk-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.piece .mk-tile {
+  display: flex; flex-direction: column; gap: 10px; max-width: none; margin: 0; padding: 16px;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.mk-tile-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--lf-green); color: var(--fir); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.mk-tile-ic .mk-ic { width: 22px; height: 22px; }
+.piece .mk-tile p { margin: 0; font: 700 .9375rem/1.4 var(--body); }
+
+/* ---------- 4. proof, as quote cards by industry ---------- */
+.mk-quotes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@container mk (min-width: 600px) {
+  .mk-quotes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mk-quote-lead, .mk-quote-asked { grid-column: 1 / -1; }
+}
+.mk-quote {
+  display: flex; flex-direction: column; gap: 10px; padding: 20px 22px 18px; border-radius: var(--radius-m);
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.mk-qmark { width: 30px; height: 30px; color: var(--link); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mk-quote-text { margin: 0; padding: 0; border: 0; }
+.piece .mk-quote-text p, .piece p.mk-quote-text { max-width: none; margin: 0; font: 800 1.3125rem/1.3 var(--head); letter-spacing: -.01em; text-wrap: pretty; }
+.piece .mk-who { display: flex; align-items: flex-start; gap: 8px; max-width: none; margin: 0; color: var(--muted); font-size: .9375rem; line-height: 1.45; }
+.mk-who .mk-ic { width: 20px; height: 20px; margin-top: 1px; }
+.piece .mk-then { max-width: none; margin: 0; font: 700 .9375rem/1.45 var(--body); }
+.mk-quote-lead { padding: 26px 26px 22px; background: var(--rule-bg); color: var(--rule-ink); border: 2px solid var(--rule-bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.mk-quote-lead .mk-qmark { width: 38px; height: 38px; color: var(--lf-green); }
+.piece .mk-quote-lead .mk-quote-text p { font-size: clamp(1.45rem, 3.4vw, 2rem); line-height: 1.2; }
+.piece .mk-quote-lead .mk-who { color: var(--foot-muted); }
+@media (prefers-color-scheme: dark) { .mk-quote-lead { border-color: var(--lf-green); } }
+.mk-quote-asked { background: var(--tint); border: 1px dashed var(--line); }
+.piece .mk-quote-asked .mk-quote-text { font-size: 1.125rem; line-height: 1.35; }
+.piece .mk-answer { display: flex; align-items: flex-start; gap: 8px; max-width: none; margin: 0; font: 600 .9375rem/1.45 var(--body); }
+.mk-answer .mk-ic { width: 20px; height: 20px; margin-top: 1px; color: var(--link); stroke-width: 2.4; }
+
+/* ---------- 5. say, and never say: card pairs ---------- */
+.mk-pairs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
+@container mk (min-width: 640px) { .mk-pairs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.piece .mk-pair {
+  display: flex; flex-direction: column; max-width: none; margin: 0; overflow: hidden;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.mk-pair-never { padding: 12px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line-soft); }
+.mk-pair-say { flex: 1; padding: 12px 16px 14px; }
+.piece .mk-pair-k {
+  display: flex; align-items: center; gap: 6px; max-width: none; margin: 0 0 4px; color: var(--muted);
+  font: 700 .6875rem/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.mk-pair-k .mk-ic { width: 16px; height: 16px; stroke-width: 2.6; }
+.mk-pair-never .mk-pair-k .mk-ic { color: var(--ink); }
+.mk-pair-say .mk-pair-k .mk-ic { color: var(--link); }
+.piece .mk-pair-t { max-width: none; margin: 0; font-size: .9375rem; line-height: 1.45; }
+.piece .mk-pair-say .mk-pair-t { font-weight: 700; }
+
+/* ---------- 6. questions that open on click or by keyboard ---------- */
+.mk-faq { display: grid; gap: 10px; }
+.mk-q { border-radius: var(--radius-s); background: var(--surface); border: 1px solid var(--line-soft); }
+.mk-q[open] { border-color: var(--ink); }
+.mk-q summary {
+  display: flex; align-items: center; gap: 12px; padding: 12px 18px 12px 12px; cursor: pointer; list-style: none;
+  border-radius: var(--radius-s); font: 700 1.0625rem/1.35 var(--head);
+}
+.mk-q summary::-webkit-details-marker { display: none; }
+.mk-q summary::after { content: "+"; flex: none; margin-left: auto; font: 500 1.375rem/1 var(--mono); }
+.mk-q[open] summary::after { content: "\2212"; }
+.mk-q summary:hover { background: var(--surface-2); }
+.mk-q summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.mk-q-ic { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--lf-green); color: var(--fir); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.mk-q-ic .mk-ic { width: 20px; height: 20px; }
+.mk-q-t { min-width: 0; }
+.mk-a { padding: 2px 18px 16px 56px; }
+.piece .mk-a p { margin: 0 0 10px; font-size: .9375rem; line-height: 1.55; }
+.piece .mk-a p:last-child { margin-bottom: 0; }
+@container mk (max-width: 480px) { .mk-a { padding-left: 16px; } }
+
+/* ---------- 7. into the tour: cards that link onward ---------- */
+.mk-doors { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; }
+@container mk (min-width: 720px) { .mk-doors { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr); } }
+.piece .mk-door {
+  position: relative; display: flex; flex-direction: column; gap: 10px; max-width: none; margin: 0; padding: 14px 14px 18px;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.piece .mk-door-tour { border: 2px solid var(--ink); }
+.mk-door:hover { border-color: var(--ink); }
+.mk-door-pic { line-height: 0; }
+.mk-door-svg { display: block; width: 100%; height: auto; }
+.piece .mk-door-h { margin: 4px 2px 0; font: 800 1.1875rem/1.25 var(--head); letter-spacing: -.01em; }
+.mk-door-h a { color: var(--ink); text-decoration: none; }
+.mk-door-h a::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius-m); }
+.mk-door-h a:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+.mk-door-h a:focus-visible { outline: none; }
+.mk-door-h a:focus-visible::after { outline: 3px solid var(--focus); outline-offset: 3px; }
+.mk-go { display: inline-block; width: 20px; height: 20px; margin-left: 6px; vertical-align: -4px; color: var(--link); stroke-width: 2.2; }
+.piece .mk-door p { margin: 0 2px; font-size: .9375rem; line-height: 1.45; }
+/* the cards' small drawings */
+.mk-s-frame { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+.mk-s-bar, .mk-s-row, .mk-s-card, .mk-s-sheet { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.mk-s-tick { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+.mk-s-on { fill: var(--lf-green); stroke: var(--fir); stroke-width: 1.5; }
+.mk-s-ring { fill: none; stroke: var(--fir); stroke-width: 2.5; }
+.mk-s-callout { fill: var(--surface); stroke: var(--ink); stroke-width: 1.2; }
+.mk-s-pill { fill: var(--lf-green); }
+.mk-s-pilltext { fill: var(--fir); font: 700 8.5px/1 var(--body); }
+.mk-s-line { fill: var(--line); }
+.mk-s-axis { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.mk-s-dash { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.mk-s-curve { fill: none; stroke: var(--link); stroke-width: 3; stroke-linecap: round; }
+.mk-s-dot, .mk-s-trackon { fill: var(--link); }
+.mk-s-track { fill: var(--line); }
+.mk-s-knob { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+
+/* ---------- motion: start states and keyframes, only when the reader allows motion ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* armed: the start state, while a picture waits out of view; play: the keyframes, once, to the end state */
+  [data-motion="armed"] .mk-bk-a .mk-bk-fill { height: 12%; }
+  [data-motion="armed"] .mk-bk-b .mk-bk-fill { height: 80%; }
+  [data-motion="play"] .mk-bk-a .mk-bk-fill { animation: mk-fill 2.6s cubic-bezier(.3, .7, .3, 1) .2s both; }
+  [data-motion="play"] .mk-bk-b .mk-bk-fill { animation: mk-drain 3.2s ease-in .2s both; }
+
+  [data-motion="armed"] .mk-pg-1 { transform: translateY(20px); }
+  [data-motion="armed"] .mk-pg-2 { transform: translateY(-20px); }
+  [data-motion="play"] .mk-pg-1 { animation: mk-rise 2.2s ease-in-out .2s both; }
+  [data-motion="play"] .mk-pg-2 { animation: mk-sink 2.2s ease-in-out .2s both; }
+
+  [data-motion="armed"] .mk-sp-ring { opacity: 0; transform: scale(.5); }
+  [data-motion="armed"] .mk-sp-bar-2 { height: 24%; }
+  [data-motion="play"] .mk-sp-ring { animation: mk-ring 1s ease-out .2s both; }
+  [data-motion="play"] .mk-sp-bar-2 { animation: mk-bar 1.6s cubic-bezier(.3, .7, .3, 1) .9s both; }
+
+  [data-motion="armed"] .mk-sp-row-1 { transform: translateY(20px); }
+  [data-motion="armed"] .mk-sp-row-2 { transform: translateY(-20px); }
+  [data-motion="play"] .mk-sp-row-1 { animation: mk-rise 2s ease-in-out .3s both; }
+  [data-motion="play"] .mk-sp-row-2 { animation: mk-sink 2s ease-in-out .3s both; }
+}
+@keyframes mk-fill { 0% { height: 12%; } 30% { height: 44%; } 55% { height: 66%; } 100% { height: 84%; } }
+@keyframes mk-drain { 0% { height: 80%; } 100% { height: 26%; } }
+@keyframes mk-rise { 0%, 30% { transform: translateY(20px); } 80%, 100% { transform: none; } }
+@keyframes mk-sink { 0%, 30% { transform: translateY(-20px); } 80%, 100% { transform: none; } }
+@keyframes mk-ring { 0% { opacity: 0; transform: scale(.5); } 60% { opacity: 1; transform: scale(1.15); } 100% { opacity: 1; transform: none; } }
+@keyframes mk-bar { 0% { height: 24%; } 100% { height: 86%; } }
+
+/* ---------- small screens and print ---------- */
+@media (max-width: 520px) {
+  .piece .mk-cap { font-size: 1rem; }
+  .mk-quote, .mk-quote-lead { padding: 18px 18px 16px; }
+}
+@media print {
+  [data-motion] *, [data-motion] *::after { animation: none !important; }
+  [data-motion] .mk-pg-1, [data-motion] .mk-pg-2, [data-motion] .mk-sp-row-1, [data-motion] .mk-sp-row-2, [data-motion] .mk-sp-ring { transform: none !important; opacity: 1 !important; }
+  [data-motion] .mk-bk-a .mk-bk-fill { height: 84% !important; }
+  [data-motion] .mk-bk-b .mk-bk-fill { height: 26% !important; }
+  [data-motion] .mk-sp-bar-2 { height: 86% !important; }
+  .mk-pillar, .mk-capcard, .mk-step, .mk-tile, .mk-quote, .mk-pair, .mk-q, .mk-door { break-inside: avoid; page-break-inside: avoid; }
+  .mk-door-h a::after { content: none; }
+  .mk-q summary::after { content: none; }
+}

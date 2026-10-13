@@ -1,0 +1,48 @@
+# -----------------------------------------------------------------------------
+# The internal enablement site for Optimizely marketing, account executives and solutions
+# engineers: static pages behind a passphrase gate. No engine code, no store, no variable.
+#
+# Its own worker and address: https://edge-platform-bti.expedge.workers.dev
+# The earlier worker, edge-platform-enablement, stays behind Cloudflare Access and is no longer
+# deployed to. Do not point this file back at it.
+#
+# The gate: enablement/worker.mjs runs first on every request (run_worker_first) and serves the pages
+# in enablement/site/ through the ASSETS binding only to a visitor holding its signed session cookie;
+# every other request is sent to its sign-in page, /auth. A temporary measure approved by the owner on
+# 2026-10-02, until the Microsoft sign-in. What it is and is not: docs/enablement/lanes/E2.md.
+#
+# Two secrets, set by the lead from WSL and never written in this file or anywhere in the repository:
+#   npx wrangler secret put ACCESS_PASSPHRASE --config wrangler.enablement.toml   (15 characters or more)
+#   npx wrangler secret put COOKIE_SECRET --config wrangler.enablement.toml       (32+ random bytes, hex or base64)
+# Their values live only in the owner's local .dev.vars (as ENABLEMENT_PASSPHRASE and
+# ENABLEMENT_COOKIE_SECRET) and in the worker. Until both are set, every request answers 503.
+# Setting ACCESS_PASSPHRASE again rotates the passphrase; setting COOKIE_SECRET again signs everyone out.
+#
+# Deploy with this command and nothing else, from WSL (check first: node enablement/check-site.mjs):
+#   npx wrangler deploy --config wrangler.enablement.toml
+# Never deploy it from wrangler.toml, and never run a plain `npx wrangler deploy` from the repo
+# root: wrangler.toml names the shared demo worker and would ship today's engine onto it.
+#
+# It shares nothing with the demo workers: no KV, R2, D1, queues or Durable Objects, and none of
+# their variables or secrets. Do not change a demo worker's settings or secrets from here.
+#
+# No page may carry a credential. Everything under enablement/site/ is served, to anyone past the
+# gate, exactly like public/ on the demo workers. The passphrase lives only in the worker's secrets.
+#
+# After a deploy, verify the responses (status and headers), not only that a page opens.
+# -----------------------------------------------------------------------------
+
+name = "edge-platform-bti"
+main = "enablement/worker.mjs"      # the passphrase gate; it uses Web APIs only, so no compatibility flag
+compatibility_date = "2025-06-01"   # the same date as wrangler.toml
+
+# One address only. Preview URLs would add a second public address for every version
+# (<version>-edge-platform-bti.expedge.workers.dev), so they are off.
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "./enablement/site"
+binding = "ASSETS"                # the gate serves the pages through this binding, once the cookie checks out
+run_worker_first = true           # every request reaches the gate first; without it the assets router would serve files before the gate
+not_found_handling = "404-page"   # an unknown address, once signed in, answers 404 and shows enablement/site/404.html
