@@ -1502,13 +1502,25 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "21bb132e27256c511409b2f5e6afa4eb3e6cdf2c on rem/spec-parity-b (batch S2; P07 committed at 64f71082, P31 at cb871893, P06 at 21bb132e, each ticket files byte-identical at 21bb132e; harness src/units/_parity.ts byte-identical to S1 and src/units/_parity2.ts; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "d5983d79ba7b2135bded00d086ac7a44fc2ead68 on rem/spec-p31-fix1 (fix round 1, R-P59 and its amendment: the off-limits withheld legs, the unchanged lock, the receipt clause paired, the vocabulary-door leg over every catalogue write path, locks M4, M11, M1b, over the build head e7df0ce6; specification review FAIL at 1787dc1d on finding A then PASS at d5983d79; the S2 gate at 21bb132e kept below)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/round2/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/specifier/round2/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/logs/coll-compare.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/logs/p31-STANDIN1+STANDIN2+VOCAB.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/round2/logs/p31-M15.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/round2/logs/p31-M16.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/round2/logs/p31-M16b.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/round2/logs/p31-VOCAB.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/round2/logs/p31-VOCAB_ALL.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P31/fix1/reviewer-spec/round2/logs/p31-none.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-g4-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-ctx-summary.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/logs/probes-r4-summary.log",
