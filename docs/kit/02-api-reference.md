@@ -593,11 +593,13 @@ adjacent swap. On a slot that opts into the layout blend the shadow order is ran
 `R + (1 − p) × B + p × Q` at the dial's `shadowP` (0.1 when the dial names none), with `Q` from the learned
 lift whatever the arm, while the served order is ranked at the served `p`. `shadowTerms` is
 `{ module: [term] }`, keys sorted, for each module whose place in the shadow order differs from its place
-in the baseline less any withheld module (as the layout reason's moves compare), naming every term that
-would have moved it in the layout reason's words: each term by which it differs, by more than 0.0005 in the
-direction it moved, from the modules it passed if it moved up or from the modules that passed it if it
-moved down, those modules taken together so that each term's difference is averaged over them, in the
-engine's fixed order; `diversity` for a module the diversity rule itself made yield or placed by relaxing
+in the baseline less any withheld module (as the layout reason's moves compare), a module of the baseline's
+take that the shadow pushes out of its take included as one moved down past the take and a module outside
+both takes left out, naming every term that would have moved it in the layout reason's words: each term by
+which it differs, by more than 0.0005 in the direction it moved, from the modules it passed if it moved up
+or from the modules that passed it if it moved down (for a module pushed out, the modules of the shadow's
+take that passed it), those modules taken together so that each term's difference is averaged over them,
+in the engine's fixed order; `diversity` for a module the diversity rule itself made yield or placed by relaxing
 it; and where no term separates it, the rule that placed or displaced one of those modules, else its own
 largest term in that direction, else the terms of the first module that passed it or that it passed. The
 terms are `{}` when the shadow keeps every module at its baseline place. Recording the shadow changes
