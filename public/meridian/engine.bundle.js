@@ -55,6 +55,11 @@ var DEFAULT_REFLEX_CONFIG = {
     content_dwell: 0.5,
     content_click: 1,
     video_complete: 2,
+    // P40: the viewable impression weighs 0 (decision D1, enforced by weightOf
+    // below whatever a registry says); the video view at three seconds is a
+    // content action of weight 1, under the tenant's own weight once published.
+    content_viewable: 0,
+    video_view: 1,
     // Time-only re-evaluation (alarms / no-product events): no accumulation.
     tick: 0
   },
@@ -128,7 +133,7 @@ function extractTouches(product, config) {
 }
 function apply(prev, input, now, config) {
   const base = prev && prev.v === 1 ? prev : emptyState(config);
-  const weight = config.weights[input.action] ?? 0;
+  const weight = weightOf(config, input.action);
   const dims = {};
   for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
   if (weight > 0) {
@@ -204,15 +209,26 @@ function apply(prev, input, now, config) {
   }
   return {
     // 5. The count rides the state: carried through every apply, one more for a signal.
+    // P40: the orders the state has recorded ride it unchanged.
     state: withSignals(
-      { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+      {
+        v: 1,
+        dims,
+        audiences: [...next].sort(),
+        configVersion: config.version,
+        ...base.orders !== void 0 ? { orders: base.orders } : {}
+      },
       signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)
     ),
     changes: { entered, exited, explain }
   };
 }
+var NEVER_WEIGHED = /* @__PURE__ */ new Set(["content_viewable"]);
+function weightOf(config, action) {
+  return NEVER_WEIGHED.has(action) ? 0 : config.weights[action] ?? 0;
+}
 function isSignal(config, action) {
-  const weight = Object.hasOwn(config.weights, action) ? config.weights[action] : void 0;
+  const weight = Object.hasOwn(config.weights, action) && !NEVER_WEIGHED.has(action) ? config.weights[action] : void 0;
   return typeof weight === "number" && Number.isFinite(weight) && weight > 0;
 }
 function tick(state, now, config) {

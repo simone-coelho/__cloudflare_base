@@ -3,7 +3,7 @@
 // snapshot at first paint, subscribes per slot, and is told plainly when there
 // is nothing — because the page never waits on us and never shows a hole.
 
-import { decisionRequiresConsent, type Core } from './core';
+import { decisionRequiresConsent, dwellMinFor, type Core } from './core';
 import { snapshotEntry } from '../services/visit';
 import type { ActionEnvelope, ContentDecision, DecisionSet, ElementLike, EngineUpdate, RenderAcknowledgment, SdkEventType } from './types';
 import type { ServerBootstrap } from './server';
@@ -60,14 +60,28 @@ export interface Listen {
    * element is on screen when one is given. Off in listen-only mode.
    */
   rendered(slot: string, contentId: string, el?: ElementLike, decisionId?: string): Promise<RenderAcknowledgment | null>;
-  /** Correlated content outcomes wait for the exact painted render ACK. */
+  /**
+   * Correlated content outcomes wait for the exact painted render ACK. The
+   * viewable impression is never one of them: the SDK measures it (`visible`).
+   */
   outcome(type: SdkEventType, contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
+  /**
+   * P40 (decisions D1, D2): what the page's visibility port reports for a
+   * painted piece, `true` while at least half of it is on screen. Once its render
+   * acknowledgement is held, one second in view without interruption sends its
+   * one viewable impression (`content_viewable`) for the page instance; leaving
+   * view, a detach, `destroy`, a consent refusal or a new generation cancels the
+   * second. The declarative capture and `rendered` with an element report it.
+   */
+  visible(slot: string, contentId: string, shown: boolean, decisionId?: string): void;
   destroy(): void;
 }
 
 export interface ListenOptions {
   /** Minimum on-screen time before a dwell event is worth sending. */
   dwellMinMs?: number;
+  /** P40: a slot's own dwell minimum, by slot; every other slot keeps `dwellMinMs`. */
+  dwellMinMsBySlot?: Record<string, number>;
   /** Optional periodic publication refresh; minimum 1s, maximum 5min. */
   refreshMs?: number;
 }
@@ -80,8 +94,12 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   type Paint = { piece: ContentDecision; page: string; pageInstance: string; generation: number; envelope: ActionEnvelope;
     ack?: RenderAcknowledgment; pending?: Promise<RenderAcknowledgment | null>; attempts: number; observed?: boolean;
     /** P03 decision D3: the placement's position within its slot, carried by its acknowledgement and every engagement of it. */
-    slotPosition?: number };
+    slotPosition?: number;
+    /** P40: the running one-second viewable timer, and whether the viewable impression was sent on this page instance. */
+    viewTimer?: unknown; viewed?: boolean };
   const painted = new Map<string, Paint>();
+  /** P40: the placements the page's visibility port reports at least half in view now. */
+  const views = new Set<string>();
   const observers = new Set<() => void>();
   let current: DecisionSet | null = null;
   let absence: DecisionSet | null = null;
@@ -92,6 +110,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     ? rendered(String(data.slot ?? ''), String(data.contentId ?? ''), undefined, typeof data.decisionId === 'string' ? data.decisionId : undefined).then(() => null)
     : outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data));
   const placement = (d: Pick<ContentDecision, 'slot' | 'order' | 'contentId'>) => JSON.stringify([d.slot, d.order, d.contentId]);
+  /** The decisions of a set a page's report names: by slot and piece, and by receipt when it gives one. */
+  const pick = (set: DecisionSet | null, slot: string, contentId: string, decisionId?: string) => set?.decisions.filter(d => d.slot === slot
+    && d.contentId === contentId && (decisionId === undefined || decisionId === d.decisionId)) ?? [];
   /**
    * P03 decision D3: a placement's position within its slot, what its decision
    * record calls `position`, exactly as the engine named it on the decision
@@ -108,7 +129,47 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     return consent.tracking && consent.personalization;
   };
   let intent = 0, delivery = 0;
-  function resetCapture(): void { painted.clear(); for (const stop of [...observers]) stop(); }
+  function resetCapture(): void { for (const paint of painted.values()) host.clearTimeout(paint.viewTimer); painted.clear(); views.clear(); for (const stop of [...observers]) stop(); }
+
+  /**
+   * P40 (decisions D1, D2): a painted placement in view or out of it, by its key.
+   * In view, once its render acknowledgement is held, a one-second timer starts;
+   * leaving view, a detach of the capture that reported it, and `resetCapture`
+   * (a consent refusal, a new generation or page instance, `destroy`) stop it.
+   * When it fires the placement must still be in view and still the painted one,
+   * and the page's own clock must say the second has passed (a timer that fires
+   * early waits out the rest); then its one viewable impression on this page
+   * instance is sent, with the fields of its acknowledgement and never the
+   * admission capability.
+   */
+  function view(key: string, shown: boolean): void {
+    const paint = painted.get(key);
+    if (!shown) {
+      views.delete(key);
+      if (paint) { host.clearTimeout(paint.viewTimer); paint.viewTimer = undefined; }
+      return;
+    }
+    views.add(key);
+    if (!paint?.ack || paint.viewed || paint.viewTimer !== undefined) return;
+    const since = host.now();
+    const wait = (ms: number): void => {
+      paint.viewTimer = host.setTimeout(() => {
+        paint.viewTimer = undefined;
+        const left = since + 1_000 - host.now();
+        if (!views.has(key) || painted.get(key) !== paint || paint.viewed) return;
+        if (left > 0) { if (left < 1_000) wait(left); return; }
+        paint.viewed = true;
+        const { renderOffer: _offer, ...data } = paint.envelope.data;
+        void _offer;
+        void content.send('content_viewable', data);
+      }, ms);
+    };
+    wait(1_000);
+  }
+  function visible(slot: string, contentId: string, shown: boolean, decisionId?: string): void {
+    const matches = pick(admittedCurrent(), slot, contentId, decisionId);
+    if (matches.length === 1) view(placement(matches[0]!), shown);
+  }
   const offConsent = core.onConsentChange(() => { if (!core.trackingAllowed) resetCapture(); if (!permitted(current)) deliver(null, current?.page ?? ''); });
 
   function admittedCurrent(): DecisionSet | null {
@@ -271,8 +332,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
 
   async function rendered(slot: string, contentId: string, el?: ElementLike, decisionId?: string): Promise<RenderAcknowledgment | null> {
     if (destroyed || core.config.listenOnly || !core.trackingAllowed) return null;
-    const set = admittedCurrent(), matches = set?.decisions.filter(d => d.slot === slot && d.contentId === contentId
-      && (decisionId === undefined || decisionId === d.decisionId)) ?? [];
+    const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
     if (!set?.pageInstance || matches.length !== 1) return null;
     const piece = matches[0]!;
     if (!piece.renderOffer || !piece.decisionId) return null;
@@ -298,7 +358,8 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
       paint.attempts++;
       paint.pending = core.sendRender(paint.envelope).then(ack => {
         if (!active()) return null;
-        if (ack) selectedPaint.ack = ack;
+        // P40: a placement already in view starts its viewable second now.
+        if (ack) { selectedPaint.ack = ack; if (views.has(key)) view(key, true); }
         return ack;
       }).finally(() => { selectedPaint.pending = undefined; });
     }
@@ -313,15 +374,16 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         void _offer; // Intentionally exclude the admission capability from dwell.
         let shownAt: number | null = null;
         let off: () => void = () => undefined; let stopped = false;
-        const stop = () => { if (stopped) return; stopped = true; shownAt = null; off(); observers.delete(stop); };
+        const stop = () => { if (stopped) return; stopped = true; shownAt = null; view(key, false); off(); observers.delete(stop); };
         observers.add(stop);
         const release = core.bindings.addObserver(host.dom, el, (visible) => {
           if (stopped || !active()) { stop(); return; }
+          view(key, visible);
           if (visible) { if (shownAt === null) shownAt = host.now(); return; }
           if (shownAt === null) return;
           const ms = host.now() - shownAt;
           shownAt = null;
-          if (ms >= dwellMinMs) void outcome('content_dwell', contentId, slot, { ...data, ms });
+          if (ms >= dwellMinFor(slot, dwellMinMs, opts.dwellMinMsBySlot)) void outcome('content_dwell', contentId, slot, { ...data, ms });
           stop();
         });
         if (release) off = release;
@@ -331,7 +393,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   }
 
   async function outcome(type: SdkEventType, contentId: string, slot: string, attrs: Record<string, unknown> = {}): Promise<EngineUpdate | null> {
-    if (type === 'content_impression') return null;
+    if (type === 'content_impression' || type === 'content_viewable') return null;
     const candidates = [...painted.values()].filter(p => p.piece.slot === slot && p.piece.contentId === contentId
       && (attrs.decisionId === undefined || attrs.decisionId === p.piece.decisionId));
     if (candidates.length !== 1) return null;
@@ -379,9 +441,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     return true;
   }
 
-  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell'].includes(event.type) && selected) void refresh(); });
+  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable'].includes(event.type) && selected) void refresh(); });
   const offSocket = core.on('socket', status => { if (status === 'connected' && selected) void refresh(); });
   const timer = opts.refreshMs === undefined ? undefined : host.setInterval(() => { if (selected) void refresh(); }, Math.max(1_000, Math.min(300_000, opts.refreshMs)));
   function destroy(): void { destroyed = true; ++intent; resetCapture(); content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
-  return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, destroy };
+  return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
 }

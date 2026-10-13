@@ -71,7 +71,7 @@ import { isShopperId, isSalted } from '@/identity/shopperId';
 import { loadTombstone, writeTombstone, resetVisitorRing } from '@/ledger/erasure';
 import { canonicalErasureDiscoverySchema, canonicalErasureSchema, captureCanonicalErasure, erasureEffectOwners, executeOwnerErasure, ownerErasureEffectSchema, historicalErasureCapsuleSchema, erasureRawDigest } from '@/identity/erase';
 import { DEFAULT_TENANT, isValidTenantId, tenantKey, type TenantId, type KVLike } from '@/tenancy/tenant';
-import { ACTION_EVENT_TYPE_SET } from '@/events/actionTypes';
+import { ACTION_EVENT_TYPE_SET, isEventNonce } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
@@ -89,12 +89,17 @@ import {
   snapshot as reflexSnapshot,
   signalsOf,
   tick as tickReflex,
+  isDuplicateOrder,
+  neverWeighed,
+  weightOf,
+  withOrder,
   EMPTY_VOCABULARY,
   type RecognitionSignals,
   type ReflexConfig,
   type ReflexResult,
   type ReflexState,
 } from '@/reflex/core';
+import { orderKeyOf } from '@/ledger/records';
 import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
@@ -1081,7 +1086,9 @@ export class ShopperReflex {
             || (this.pipeline?.visitorId && this.pipeline.visitorId !== event.userId)) throw new SessionAccessError();
         }
       } catch { return { body: { success: false, error: 'Shopper session unavailable' }, status: 401, update: null }; }
-      return this.ingest(event, principal).catch(ingestFailure);
+      // P40 (R-P48): the event identity the route admitted, so the reducer can
+      // tell the same purchase delivered again from a second purchase.
+      return this.ingest(event, principal, principal && isEventNonce(body.eventId) ? body.eventId : undefined).catch(ingestFailure);
     });
     return json(outcome.body, outcome.status);
   }
@@ -1164,6 +1171,10 @@ export class ShopperReflex {
       requireConsentPurpose(consent, 'tracking');
       pinProfileRetention(this.env, affinity, tenant);
       if (!await bufferedEventAllowed(this.env, tenant, principal.subject, event.timestamp)) return answer(false, 'erased');
+      // P40 (R-P48): a buffered purchase of an order this state recorded under
+      // another event is the same order again, dropped as the live door drops it.
+      const order = await orderKeyOf(event);
+      if (isDuplicateOrder(affinity.reflex, order, event.eventId)) return answer(false, 'duplicate_order');
       if (!consent.personalization) return answer(false);
       requireConsentPurpose(consent, 'personalization');
       // P38 (VA3, decision D2): a buffered delivery is placed by its own door
@@ -1183,12 +1194,23 @@ export class ShopperReflex {
         }
         delivered = { ...event, data: governing.data };
       }
+      // P40 (decision D1): a buffered viewable impression builds nothing either,
+      // whatever the registry weighs it (answered as a weight-0 delivery is).
+      if (neverWeighed(actionOf(event))) return answer(false);
       const interest = await bufferedInterest(this.env, tenant, delivered, { ...pipeline, reflex: affinity.reflex,
         attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...pipeline.attributes }, odpSeed: affinity.odpSeed, odpContext: affinity.odpContext,
         ...{ externalRetention: affinity.externalRetention } }, getConnectors(this.env, tenant).segments, now);
       assertSessionTarget(principal, event.userId);
-      if (!interest.applied) return answer(false, undefined, interest.signals);
-      const nextAffinity = { ...affinity, reflex: carryOdpRestoration(interest.reflex!, affinity.reflex), configVersion: interest.reflex!.configVersion };
+      if (!interest.applied) {
+        // P40 (R-P58): a purchase that applies no interest (it places no value)
+        // still uses its order: the order is remembered in the state this object
+        // already holds, and nothing else changes (no lifetime, no owner, no alarm).
+        const remembered = withOrder(affinity.reflex, order, event.eventId);
+        if (remembered !== affinity.reflex) await this.persistAudienceState({ ...affinity, reflex: remembered }, pipeline, this.audienceOwner, false);
+        return answer(false, undefined, interest.signals);
+      }
+      const nextAffinity = { ...affinity, reflex: withOrder(carryOdpRestoration(interest.reflex!, affinity.reflex), order, event.eventId, interest.config!),
+        configVersion: interest.reflex!.configVersion };
       const nextPipeline = { ...pipeline, segments: interest.segments };
       // Do not write/bless audienceOwner or extend the retained lifetime.
       await this.persistAudienceState(nextAffinity, nextPipeline, this.audienceOwner, false);
@@ -1204,7 +1226,7 @@ export class ShopperReflex {
 
   // ── THE reducer: one handler behind both doors ──────────────────────────────
 
-  private async ingest(event: ActionEvent, principal?: SessionCapability): Promise<IngestOutcome> {
+  private async ingest(event: ActionEvent, principal?: SessionCapability, eventId?: string): Promise<IngestOutcome> {
     // The ENGINE clock is authoritative — a forged/skewed client clock cannot
     // inflate affinity (doc 16 §4). Everything downstream uses this stamp.
     const now = Date.now();
@@ -1235,6 +1257,20 @@ export class ShopperReflex {
     let tenant: TenantId;
     try { tenant = principal ? this.audienceTenant(principal) : DEFAULT_TENANT; }
     catch { return { status: 401, body: { success: false, error: 'Shopper session unavailable' }, update: null }; }
+    // P40 (R-P48): a purchase is unique per order for the shopper. A second
+    // purchase naming an order this object's state recorded under another event
+    // is answered here as a duplicate — after the rate limit and the consent
+    // gate, before any counter, visit, taste, region count, provider forward,
+    // outcome or stored write — and changes nothing, as the session host answers
+    // it (RealtimeSegmentEngine.processAction). The recording event delivered
+    // again is not a second purchase, and a purchase naming no order is never one.
+    const order = await orderKeyOf(event);
+    if (isDuplicateOrder(this.affinity?.reflex, order, eventId)) return {
+      status: 200,
+      body: { success: true, message: 'Action ignored: duplicate order', dropped: 'duplicate_order',
+        sessionId: principal?.sessionId ?? this.pipeline?.sessionId ?? null, cookiesUpdated: false, consent },
+      update: null,
+    };
     const owner = principal ? { tenant, subject: principal.subject, sessionId: principal.sessionId } : undefined;
     const retention = this.affinity ? pinProfileRetention(this.env, this.affinity, tenant)
       : pinRetention(this.env, retentionBirth(this.env, tenant, 'profile', now, now), tenant, 'profile');
@@ -1417,7 +1453,7 @@ export class ShopperReflex {
         // (R-P9), and neither does a channel outside the six words.
         const arrival = liveVisit(pipe, this.affinity?.lastSeen, now, event.entry, await visitInputs());
         keepAlive(fanInRegionTrend(this.env, {
-          tenant: principal.tenant, geo: event.geo, now, touches, w: cfg.weights[action] ?? 0,
+          tenant: principal.tenant, geo: event.geo, now, touches, w: weightOf(cfg, action),
           context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
         }));
       }
@@ -1522,7 +1558,8 @@ export class ShopperReflex {
     const nextAffinity: AffinityRecord = {
       retention, externalRetention,
       shopperId: aff.shopperId,
-      reflex: reflex ? reflex.state : aff.reflex,
+      // P40 (R-P48): with the order a purchase names recorded beside its event.
+      reflex: withOrder(reflex ? reflex.state : aff.reflex, order, eventId, cfg),
       odpContext: odp.odpContext,
       odpSeed,
       odpSeedAt,

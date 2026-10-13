@@ -299,8 +299,10 @@ realtimeRoutes.post('/action', async (c) => {
       sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(render ? { render } : {}) });
     // W35 A1: the drop is answered as the shopper's own object answers it
     // (ShopperReflex.ingest): named, with the signals that name the product, no
-    // outcome, no provider forward and no cookie refresh.
-    if (result.dropped) return c.json({ success: true, message: 'Action ignored: unknown productId', dropped: result.dropped,
+    // outcome, no provider forward and no cookie refresh. P40 (R-P48): a second
+    // purchase of the same order is dropped the same way, named as a duplicate.
+    if (result.dropped) return c.json({ success: true,
+      message: result.dropped === 'duplicate_order' ? 'Action ignored: duplicate order' : 'Action ignored: unknown productId', dropped: result.dropped,
       ...(result.signals ? { signals: result.signals } : {}), sessionId: result.sessionId, cookiesUpdated: false,
       consent, behavior, ...(render ? { render } : {}) });
 

@@ -43,13 +43,27 @@ export interface Listen {
      * element is on screen when one is given. Off in listen-only mode.
      */
     rendered(slot: string, contentId: string, el?: ElementLike, decisionId?: string): Promise<RenderAcknowledgment | null>;
-    /** Correlated content outcomes wait for the exact painted render ACK. */
+    /**
+     * Correlated content outcomes wait for the exact painted render ACK. The
+     * viewable impression is never one of them: the SDK measures it (`visible`).
+     */
     outcome(type: SdkEventType, contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
+    /**
+     * P40 (decisions D1, D2): what the page's visibility port reports for a
+     * painted piece, `true` while at least half of it is on screen. Once its render
+     * acknowledgement is held, one second in view without interruption sends its
+     * one viewable impression (`content_viewable`) for the page instance; leaving
+     * view, a detach, `destroy`, a consent refusal or a new generation cancels the
+     * second. The declarative capture and `rendered` with an element report it.
+     */
+    visible(slot: string, contentId: string, shown: boolean, decisionId?: string): void;
     destroy(): void;
 }
 export interface ListenOptions {
     /** Minimum on-screen time before a dwell event is worth sending. */
     dwellMinMs?: number;
+    /** P40: a slot's own dwell minimum, by slot; every other slot keeps `dwellMinMs`. */
+    dwellMinMsBySlot?: Record<string, number>;
     /** Optional periodic publication refresh; minimum 1s, maximum 5min. */
     refreshMs?: number;
 }

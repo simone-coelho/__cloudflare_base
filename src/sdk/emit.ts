@@ -5,7 +5,7 @@
 // sites that already have a tag layer, and the automatic path, which lives on
 // the listen module because the SDK knows what it delivered.
 
-import { contentInteraction, type Core } from './core';
+import { contentInteraction, dwellMinFor, type Core } from './core';
 import type { Listen } from './listen';
 import type { DomLike, ElementLike, EngineUpdate, SdkEventType } from './types';
 import { WIRE } from './wire';
@@ -21,7 +21,13 @@ export interface PurchaseInput {
 export type DataLayerMapper = (entry: Record<string, unknown>) => { type: SdkEventType; data: Record<string, unknown> } | null;
 export type DataLayerMapping = Record<string, DataLayerMapper>;
 
-export interface DeclarativeOptions { dom?: DomLike; dwellMinMs?: number }
+export interface DeclarativeOptions {
+  dom?: DomLike;
+  /** The shortest on-screen time a dwell is sent for; one second unless configured. */
+  dwellMinMs?: number;
+  /** P40: a slot's own dwell minimum, by slot (`{ editorial: 30000 }`); every other slot keeps `dwellMinMs`. */
+  dwellMinMsBySlot?: Record<string, number>;
+}
 export interface DataLayerOptions { layer?: unknown[]; mapping?: DataLayerMapping; replay?: boolean }
 
 export interface Emit {
@@ -36,13 +42,17 @@ export interface Emit {
   contentClick(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   contentDwell(contentId: string, slot: string, ms: number, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   videoComplete(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
+  /** P40: the painted video watched for three seconds (`video_view`), through the same receipt gate as `videoComplete`. */
+  videoView(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   custom(name: string, data?: Record<string, unknown>): Promise<EngineUpdate | null>;
   /**
    * Scan `[data-op-content]` and `[data-op-track]` elements. Returns a detach
    * function. A `[data-op-content]` container (a module's, or any piece's) sends
    * its render acknowledgement once when first shown, a click inside it as an
    * engagement, and each interaction it declares in `data-op-engage` (DOM event
-   * types, space separated) as an engagement too (P03 decisions D1, D2).
+   * types, space separated) as an engagement too (P03 decisions D1, D2). P40:
+   * held at least half in view for one second without interruption after its
+   * acknowledgement, it sends its one viewable impression for the page instance.
    */
   declarative(opts?: DeclarativeOptions): () => void;
   /** Wrap a dataLayer's push. Returns a detach function that restores it. */
@@ -196,7 +206,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
     if (content) type = content;
     if (type === 'content_impression') return listen.rendered(String(data.slot ?? ''), String(data.contentId ?? ''), undefined,
       typeof data.decisionId === 'string' ? data.decisionId : undefined).then(() => null);
-    if (['content_click', 'content_dwell', 'video_complete'].includes(type)) return listen.outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data);
+    if (content) return listen.outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data);
     return core.send(type, data);
   };
   const withItem = (type: SdkEventType) => (productId: string, attrs: Record<string, unknown> = {}) => core.send(type, () => ({ productId, ...attrs }));
@@ -212,7 +222,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
    */
   const scans = new Map<DomLike, { refs: number; detach(): void }>();
 
-  function scan(dom: DomLike, dwellMinMs: number): { refs: number; detach(): void } {
+  function scan(dom: DomLike, dwellMinMs: number, bySlot?: Record<string, number>): { refs: number; detach(): void } {
     const holds: Array<() => void> = [];
     const seen = new Set<string>();
     let detached = false, installed = false, binding = 0;
@@ -240,22 +250,29 @@ export function createEmit(core: Core, listen: Listen): Emit {
             ...(decisionId !== null ? { decisionId } : {}), ...(contentType ? { contentType } : {}) };
         };
         let shownAt: number | null = null;
+        // P40: the piece this container told the SDK is in view, until it leaves
+        // view or the capture stops (a detach, a consent refusal, a new generation).
+        let viewing: Record<string, unknown> | null = null;
+        const report = (inView: boolean) => listen.visible(String(viewing!.slot), String(viewing!.contentId), inView, viewing!.decisionId as string | undefined);
+        const unview = () => { if (viewing) report(false); viewing = null; };
         const off = core.bindings.addObserver(dom, el, (visible) => {
           const attrs = shown();
-          if (!permitted() || !attrs) { shownAt = null; return; }
+          if (!permitted() || !attrs) { shownAt = null; unview(); return; }
           if (visible) {
             if (shownAt === null) shownAt = host.now();
             const key = `${String(attrs.slot)}:${String(attrs.contentId)}`;
             if (!seen.has(key)) { seen.add(key); void track('content_impression', attrs); }
+            if (!viewing) { viewing = attrs; report(true); }
             return;
           }
+          unview();
           if (shownAt === null) return;
           const ms = host.now() - shownAt;
           shownAt = null;
-          if (ms >= dwellMinMs) void track('content_dwell', { ...attrs, ms });
+          if (ms >= dwellMinFor(String(attrs.slot), dwellMinMs, bySlot)) void track('content_dwell', { ...attrs, ms });
         });
         if (!permitted()) { off?.(); return; }
-        if (off) holds.push(off);
+        if (off) holds.push(off, unview);
         holds.push(core.bindings.addListener(el, 'click', () => {
           const attrs = permitted() ? shown() : null;
           if (attrs) void track('content_click', attrs);
@@ -300,7 +317,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
     if (core.config.listenOnly) return () => {};
     const dom = opts.dom ?? host.dom;
     if (!dom) return () => {};
-    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1_000);
+    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1_000, opts.dwellMinMsBySlot);
     scans.set(dom, attachment);
     attachment.refs++;
     let released = false;
@@ -404,6 +421,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
     contentClick: withContent('content_click'),
     contentDwell: (contentId, slot, ms, attrs = {}) => track('content_dwell', () => ({ contentId, slot, ms, ...attrs })),
     videoComplete: withContent('video_complete'),
+    videoView: withContent('video_view'),
     custom: (name, data = {}) => track('custom', () => ({ event: name, ...data })),
     declarative,
     dataLayer,
