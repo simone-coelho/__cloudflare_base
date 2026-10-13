@@ -413,14 +413,15 @@ neighbouring modules: its exploration dial in the learn document is
 `slots.{slot}.exploration: { mode: 'adjacent-swap', share, floor }`, with the adjacent-swap `share` from 0 to 1
 ([adjacent swaps and position effects](./03-payload-schemas.md#adjacent-swaps-and-position-effects)), set in the console's Dials screen or
 with `PUT /content/learn`, with no deployment. A decision whose exploration bucket (a hash of the shopper,
-the slot and the hour, the bucket every exploration mode reads) falls under the share is served what the
-slot would otherwise serve (its ranking, or the configured order for the shopper's context) with exactly
-one pair of adjacent positions swapped; outside the share, at a share of 0, and where no pair is free, it is
-served exactly as without the mode. The pair is chosen from that same bucket among the adjacent pairs
+the slot and the hour, the bucket every exploration mode reads) falls under the share is served the slot's
+ranked order with exactly one pair of adjacent positions swapped; outside the share, at a share of 0, and
+where no pair is free, it is served exactly as without the mode. The pair is chosen from that same bucket among the adjacent pairs
 neither of whose positions a pin (a prefix pin or a module pinned at a position) or an off-limits module
 holds, a pair touching a module under a merchandiser's reject or freeze left out as well, so the same
-shopper in the same hour is swapped the same pair and a pinned or off-limits module never moves. The swap
-picks no module to serve first, so a configured order is still served, two of its positions exchanged.
+shopper in the same hour is swapped the same pair and a pinned or off-limits module never moves. A
+decision served the configured order for the shopper's context is served that order exactly and never
+swapped: it carries no exploration member, and its layout reason is the order's (unchanged,
+`blend_or_trust_zero`).
 Like every exploration mode it belongs to the learning layer: it never applies on the holdout's `default`
 or `no_learning` arm, nor below the signal floor. Each of the two swapped records carries
 `explain.exploration: { bucket, mode, positions, reason }` (keys sorted, `mode` `adjacent-swap`,
@@ -435,8 +436,13 @@ is null. The estimate counts the clicks credited to the slot, so a slot that lea
 estimate beyond position 1. The switch `slots.{slot}.positionNormalization` on the same slot's dials is off
 by default (absent or `false`), and with it off every credit is exactly as before. With it `true`, the
 credit of an engagement with the module served at a position is divided by that position's effect, in the
-slot's live statistics and in the hourly recomputation alike, under the position policy the slot's
-statistics published at or before the engagement: the switch and the estimate take effect from the slot's
+slot's live statistics and in the hourly recomputation alike (the folded hours, the open hour and the day
+summed from them), under the position policy the slot's statistics published at or before the engagement,
+whatever the learn document's dials say when the recomputation runs. Only an engagement with a module of a
+page's declared layout slot (a record carrying the layout reason) is weighed, on both paths alike: a
+decision made while the slot was not declared, or recorded before layout reasons existed, is credited as
+counted, and so is any engagement in a day the report has to build from the raw ledger because no hour of
+it was folded. The switch and the estimate take effect from the slot's
 next statistics publication (within 30 seconds of new evidence, or at once on
 `POST /v1/{tenant}/learn/publish`), and a position without a positive effect is credited as counted. Only
 the amount of a credit changes, never whether it is counted. Turn the switch on only once the data science

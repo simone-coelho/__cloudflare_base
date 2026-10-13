@@ -666,12 +666,14 @@ member, and every stored document marked 1, 2 or 3 decides and replays exactly a
 
 The exploration mode `adjacent-swap` in the learn document is set only on a page's declared layout
 slot, with a share from 0 to 1: on that share of the slot's decisions, read from the decision's own
-exploration bucket (the shopper, the slot and the hour), exactly one pair of adjacent positions of what
-the slot serves swaps places, the pair chosen from the same bucket among the pairs neither of whose
+exploration bucket (the shopper, the slot and the hour), exactly one pair of adjacent positions of the
+slot's ranked order swaps places, the pair chosen from the same bucket among the pairs neither of whose
 positions a pin or an off-limits module holds (and none touching a module under a merchandiser's reject
 or freeze), so the same shopper in the same hour is swapped the same pair; outside the share, at a share
-of 0, and where no pair is free, the slot is served exactly as without the mode. `floor` is required as
-for every mode and unused by this one. Each of the two swapped records carries
+of 0, and where no pair is free, the slot is served exactly as without the mode. A decision served the
+configured order for the shopper's context is served that order exactly and never swapped, with no
+exploration member and the order's layout reason. `floor` is required as for every mode and unused by
+this one. Each of the two swapped records carries
 `explain.exploration: { bucket, mode, positions, reason }` with `explored` true, its receipt says it was
 swapped and between which positions, and a replay swaps the same pair with no new replay marker. The
 slot's statistics count, per adjacent pair (k, k + 1), the swapped decisions (`pairs`) and the clicks
@@ -682,9 +684,12 @@ that swapped (k, k + 1), at three decimals, null where the swaps cannot reach it
 swapped decisions behind each position. The switch `positionNormalization` is off by default: absent or
 `false`, every credit is exactly as before. With it `true` the credit of an engagement with the module
 served at a position is divided by that position's effect, in the live statistics and in the hourly
-recomputation alike, under the position policy the slot's statistics last published at or before the
-engagement (their history is kept beside the slot's snapshot archive, as `positions.json`); the number
-of credited outcomes never changes, only what each is worth. Publication refuses the mode and the switch
+recomputation alike (the folded hours, the open hour and the day summed from them), under the position
+policy the slot's statistics last published at or before the engagement (their history is kept beside the
+slot's snapshot archive, as `positions.json`), whatever the learn document's dials say when the
+recomputation runs; only an engagement with a module of a declared layout slot, whose record carries the
+layout reason, is weighed, on both paths alike, and a day built from the raw ledger because no hour of it
+was folded credits as counted. The number of credited outcomes never changes, only what each is worth. Publication refuses the mode and the switch
 on a slot that is not a page's declared layout slot, an adjacent-swap share outside 0 to 1 and a switch
 that is not `true` or `false`, each naming the dial.
 
