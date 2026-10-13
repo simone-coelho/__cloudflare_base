@@ -111,3 +111,64 @@ export async function verifyAssertion(
   }
   return { ok: false, reason: 'assertion does not verify' };
 }
+
+// ── P12: the identifier-change statement (decision D1) ──────────────────────
+//
+// A shopper's account identifier can change from one form to another: the
+// identifier a site assigns at first landing, then the one it derives from the
+// e-mail address once that is known. The two accounts' profiles merge only on
+// a statement the site's backend signs over BOTH identifiers:
+//
+//     tenant \n account-change \n from \n to \n exp
+//
+// keyed by the same identity secret as the assertion and encoded base64url.
+// The literal `account-change` line separates it from a link assertion, whose
+// material is tenant \n visitorId \n accountId \n exp. `to` is the link's own
+// account identifier and `from` the earlier one; neither may span lines, so the
+// material is read one way only. `exp` is unix seconds, in the future and no
+// more than a day ahead, as for the assertion. The statement names no visitor,
+// so it may travel again on a retried sign-in; what it merges is merged once
+// (src/durable-objects/ShopperReflex.ts, the account-change door).
+
+export const ACCOUNT_CHANGE_LINE = 'account-change';
+
+export function accountChangeMaterial(tenant: TenantId, from: string, to: string, exp: number): string {
+  return `${tenant}\n${ACCOUNT_CHANGE_LINE}\n${from}\n${to}\n${exp}`;
+}
+
+/** What the site's backend computes for an identifier change. Exported so a test, and a reference integration, can mint one. */
+export async function signAccountChange(secret: string, tenant: TenantId, from: string, to: string, exp: number): Promise<string> {
+  return hmac(secret, accountChangeMaterial(tenant, from, to, exp));
+}
+
+export type AccountChangeVerdict = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Decide whether an identifier-change statement may merge `from` into `to`:
+ * a signature by one of the tenant's identity secrets over exactly that pair
+ * and expiry, unexpired and no more than a day ahead. Every refusal names the
+ * account change. A statement over another pair, or signed with a secret the
+ * tenant does not hold, does not verify.
+ */
+export async function verifyAccountChange(
+  env: AssertionEnvironment,
+  tenant: TenantId,
+  claim: { from: string; to: string; exp?: unknown; statement?: unknown },
+  nowMs = Date.now(),
+): Promise<AccountChangeVerdict> {
+  const secrets = secretsFor(env, tenant);
+  if (secrets.length === 0) return { ok: false, reason: 'account change cannot be verified: identity verification not configured' };
+  if (typeof claim.statement !== 'string' || claim.statement === '') {
+    return { ok: false, reason: 'account change statement required: an identifier change merges only on a statement signed over both identifiers' };
+  }
+  const exp = claim.exp;
+  if (typeof exp !== 'number' || !Number.isSafeInteger(exp)) return { ok: false, reason: 'account change exp missing' };
+  const nowS = Math.floor(nowMs / 1000);
+  if (exp <= nowS) return { ok: false, reason: 'account change statement expired' };
+  if (exp > nowS + ASSERTION_MAX_TTL_S) return { ok: false, reason: 'account change exp too far ahead' };
+  const material = accountChangeMaterial(tenant, claim.from, claim.to, exp);
+  for (const secret of secrets) {
+    if (equalStrings(await hmac(secret, material), claim.statement)) return { ok: true };
+  }
+  return { ok: false, reason: 'account change statement does not verify' };
+}
