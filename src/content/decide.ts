@@ -355,14 +355,49 @@ function largestTerm(terms: ScoreTerms, sign: 1 | -1): LayoutMoveTerm | null {
 function differingTerm(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): LayoutMoveTerm | null {
   if (!others.length) return null;
   let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
-  for (let j = 0; j < own.length; j++) {
-    const [term, value] = own[j]!;
+  for (const [term, mean] of termDifferences(own, others, sign)) if (mean > size) { best = term; size = mean; }
+  return best;
+}
+
+/**
+ * R-P56's aggregate reading, term by term: each term's difference between a
+ * moved module and the modules it passed (`sign` 1) or that passed it (−1),
+ * averaged over them and read at a billionth, in the engine's fixed order.
+ */
+function termDifferences(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): Array<readonly [LayoutMoveTerm, number]> {
+  return own.map(([term, value], j) => {
     let total = 0;
     for (const other of others) total += sign * (value - (other[j]?.[1] ?? 0));
-    const mean = Math.round((total / others.length) * 1e9) / 1e9;
-    if (mean > size) { best = term; size = mean; }
-  }
-  return best;
+    return [term, Math.round((total / others.length) * 1e9) / 1e9] as const;
+  });
+}
+
+/**
+ * P06: every term by which a moved module differs from the modules it passed
+ * (`sign` 1) or that passed it (−1), in the direction it moved, by more than the
+ * grain — R-P56's aggregate reading (`differingTerm` names the largest of them)
+ * — in the engine's fixed order. Empty when there is no module to compare or
+ * no term separates it from them.
+ */
+function differingTerms(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): LayoutMoveTerm[] {
+  return others.length ? termDifferences(own, others, sign).filter(([, mean]) => mean > LAYOUT_TERM_GRAIN).map(([term]) => term) : [];
+}
+
+/**
+ * P29 (and P06): a declared layout slot's baseline along an order of the slot —
+ * its fixed modules (prefix pins, position pins, off-limits modules) where that
+ * order placed them, the baseline sequence on every other position — and each
+ * module's place in it counted from 1, a module of the sequence the order did
+ * not reach keeping its place after it.
+ */
+function baselineAlong(order: ReadonlyArray<{ contentId: string; strategy: string }>, sequence: readonly string[]): { baseline: Array<string | undefined>; fromOf: Map<string, number> } {
+  let next = 0;
+  const baseline = order.map((d) => (d.strategy === 'tenant-pinned' ? d.contentId : sequence[next++]));
+  const fromOf = new Map<string, number>();
+  baseline.forEach((id, k) => { if (id !== undefined && !fromOf.has(id)) fromOf.set(id, k + 1); });
+  let beyond = order.length;
+  for (const id of sequence.slice(next)) if (!fromOf.has(id)) fromOf.set(id, ++beyond);
+  return { baseline, fromOf };
 }
 
 const authorityOf = (strategy: string): Authority =>
@@ -401,7 +436,16 @@ export const BLEND_RULES = 'layout-blend-v1' as const;
  * one this build cannot read, so the slot decides exactly as before. Pure and
  * total: it reads only the learn document the caller already holds.
  */
-export interface LayoutBlend { p: number; liftMin: number; liftMax: number }
+export interface LayoutBlend { p: number; liftMin: number; liftMax: number;
+  /**
+   * P06 (decision D2): the p the slot's shadow order is ranked at — the dial's
+   * `shadowP`, `DEFAULT_SHADOW_P` when it names none — or null when the dial's
+   * shadow p cannot be read (publication refuses one), which leaves the served
+   * blend exactly as it is and the slot without a shadow.
+   */
+  shadowP: number | null }
+/** P06 (decision D2): the shadow order's p on a slot opted into the layout blend whose dial publishes none. */
+export const DEFAULT_SHADOW_P = 0.1;
 export function layoutBlendOf(learn: Pick<LearnConfig, 'slots' | 'stats'>, slot: string): LayoutBlend | null {
   const dials = learn.slots && Object.hasOwn(learn.slots, slot) ? learn.slots[slot] : undefined;
   const dial = dials?.blend;
@@ -410,7 +454,8 @@ export function layoutBlendOf(learn: Pick<LearnConfig, 'slots' | 'stats'>, slot:
   const { liftMin, liftMax } = learn.stats ?? DEFAULT_STATS;
   if (typeof p !== 'number' || !Number.isFinite(p) || p < 0 || p > 1) return null;
   if (!Number.isFinite(liftMin) || !Number.isFinite(liftMax) || liftMin <= 0 || liftMin > 1 || liftMax < 1) return null;
-  return { p, liftMin, liftMax };
+  const shadowP = dial.shadowP ?? DEFAULT_SHADOW_P;
+  return { p, liftMin, liftMax, shadowP: typeof shadowP === 'number' && Number.isFinite(shadowP) && shadowP >= 0 && shadowP <= 1 ? shadowP : null };
 }
 
 /**
@@ -1211,6 +1256,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // declared layout slot is decided under, and never for a slot a bounded
   // replay did not re-execute.
   const layoutReasons = new Map<string, LayoutReason>();
+  // P06: per declared layout slot, the baseline its records carry (`explain.baselineOrder`) and the sequence it is drawn from, as the reason computes them.
+  const layoutBaselines = new Map<string, { order: string[]; sequence: readonly string[] }>();
   // P31 (R-P59 (2)): a slot whose every refused pin names a module the withholding removed, refused as missing or ineligible.
   const refusedByWithholding = (slot: string) => (pinDiagnostics ?? []).filter((d) => d.slot === slot)
     .every((d) => d.reason === 'missing_or_ineligible' && withheldBy.has(d.pinnedPieceId));
@@ -1230,6 +1277,140 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const reason = layoutReasonOf(s, index, served, slotIndex, live, admittedLive, pinRefused);
       layoutReasons.set(s.slot, reason);
     }
+  }
+  // ── P06 (decisions D1, D2): the baseline and the shadow of each declared layout slot ──
+  //
+  // Every record of a declared layout slot decided on an arm that personalizes
+  // carries, beside what was served, the slot's BASELINE (`baselineOrder`: P29's,
+  // the one `layoutReason` compares with) and its SHADOW (`shadowOrder`): the
+  // order the slot would have served with every term applied and the learned
+  // term at full trust (γ 1), or on a slot opted into the layout blend at the
+  // blend's shadow p (`shadowP`, 0.1 when the dial names none). It is ranked as
+  // the served order is: the same composer over the same slot specs and the
+  // same modules, what the page served before the slot removed as the served
+  // ranking had it removed, so prefix pins, position pins and off-limits modules
+  // stay where their rules put them, a withheld module stays absent and a
+  // configured order the slot does not blend is served as it is, with no
+  // exploration pick and no swap (R-P34). `shadowTerms` names, for each module
+  // whose shadow place differs from its baseline place, every term that would
+  // have moved it, in P29's words and by R-P56's aggregate reading. Recording
+  // only: the second ranking reads what this decision already holds and writes
+  // into nothing the served ranking, its records or its receipts read, and a
+  // failure of it leaves the records without the members, so what is served,
+  // counted and credited is exactly as without it. Never on the holdout's
+  // default arm, which reads no interest and no learned lift (it is also the
+  // arm of a shopper without personalization consent).
+  const shadows = new Map<string, { baselineOrder: string[]; shadowOrder: string[]; shadowTerms: Record<string, LayoutMoveTerm[]> }>();
+  if (i.arm !== 'default' && layoutBaselines.size) for (const [index, s] of i.slots.entries()) {
+    const drawn = layoutBaselines.get(s.slot);
+    if (!drawn || !decisions.some((d) => d.slot === s.slot)) continue;
+    try {
+      const shadow = shadowOf(s, index, drawn);
+      if (shadow) shadows.set(s.slot, shadow);
+    } catch { /* recording only: the slot's records carry no shadow */ }
+  }
+  /** P06: one declared layout slot's shadow, as the comment above defines it; null on a blended slot whose shadow p cannot be read. */
+  function shadowOf(s: SlotStrategy, index: number, drawn: { order: string[]; sequence: readonly string[] }) {
+    const blend = blends.get(s.slot), shadowP = blend ? blend.shadowP : null;
+    if (blend && shadowP === null) return null;
+    // The learned term at full trust — the lift at γ 1, a merchandiser's frozen
+    // lift applied like a learned one, a rejected lift not at all — or on a
+    // blended slot R + (1 − shadowP) × B + shadowP × Q with Q the clamped lift
+    // minus one; each module's own learned term kept for its itemisation.
+    const liftAtOne = new Map<string, number>(), blendAt = new Map<string, { p: number; Q: number }>();
+    const shadowAdjust: ScoreAdjust = (p, slot, base0, rank) => {
+      const key = `${slot}:${p.id}`;
+      let seeded = 0;
+      for (const d of seedDriversFor(p, slot)) seeded += d.contribution;
+      const base = preLift(p, slot, base0 + seeded, false);
+      if (!learning) return base;
+      const control = learning.controlOf?.(slot, p.id) ?? null;
+      const look = control?.mode === 'reject' ? null : liftAt(slot, p.id);
+      const lift = control?.mode === 'freeze' ? control.lift ?? 1 : look?.lift ?? null;
+      if (blend && rank && shadowP !== null) {
+        const Q = lift === null ? 0 : Math.min(blend.liftMax, Math.max(blend.liftMin, lift)) - 1;
+        blendAt.set(key, { p: shadowP, Q });
+        return rank.R + (1 - shadowP) * base + shadowP * Q;
+      }
+      if (lift === null) return base;
+      const lifted = base * lift;
+      liftAtOne.set(key, r3(lifted - base));
+      return lifted;
+    };
+    const slotIndex = new Map(i.slots.map((slot, k) => [slot.slot, k] as const));
+    const before = new Set(decisions.filter((d) => (slotIndex.get(d.slot) ?? Number.POSITIVE_INFINITY) < index).map((d) => d.contentId));
+    const composed = composeContentDetailed(eligible.filter((p) => !before.has(p.id)), affinity, specs, i.candidateLimit ?? 10, shadowAdjust, undefined,
+      historicalPins, historicalGovernance, new Set([s.slot]));
+    const order = composed.decisions.filter((d) => d.slot === s.slot);
+    const fixed = (d: (typeof order)[number]) => d.strategy === 'tenant-pinned';
+    // Compared, as P29's moves are, with the baseline less any withheld module, along the shadow order's fixed positions.
+    const { baseline: along, fromOf } = baselineAlong(order, drawn.sequence);
+    const moves = order.flatMap((d, k) => {
+      const from = fromOf.get(d.contentId) ?? null;
+      return fixed(d) || from === k + 1 ? [] : [{ module: d.contentId, from, to: k + 1 }];
+    });
+    // R-P64: a module of the baseline take that the shadow pushes out of its take
+    // moved too — down, past the take's last position — so it is a move beside the
+    // modules the shadow brings in, compared with the modules of the shadow take
+    // that passed it. A module outside both takes is no move (R-P57's limit).
+    const inShadow = new Set(order.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
+    for (const id of along) if (id !== undefined && !inShadow.has(id)) moves.push({ module: id, from: fromOf.get(id) ?? null, to: order.length + 1 });
+    const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
+      (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
+    const yielded = new Set(order.flatMap((d) => (d.explain.diversity ? [...d.explain.diversity.skipped, ...(d.explain.diversity.relaxed ? [d.contentId] : [])] : [])));
+    const support = new Map((composed.candidates[s.slot] ?? []).map((c) => [c.contentId, c.score] as const));
+    const learned = { lift: liftAtOne, blend: blendAt };
+    const termsMemo = new Map<string, ScoreTerms | null>();
+    const termsFor = (id: string, score: number | undefined): ScoreTerms | null => {
+      if (!termsMemo.has(id)) termsMemo.set(id, scoreTerms(id, s.slot, score, learned));
+      return termsMemo.get(id) ?? null;
+    };
+    // R-P56 and R-P57, every term: a module the diversity rule itself made yield
+    // or placed by relaxing it names `diversity`; any other moved module names
+    // every term by which it differs from the modules it passed (moved up) or
+    // that passed it (moved down), taken together, in the direction it moved —
+    // for a module moved up, the modules the baseline placed ahead of it that the
+    // shadow does not serve included. A module the shadow pushed out of its take
+    // (R-P64) is attributed the same way, its own terms read from the shadow's
+    // ranking of it. Where no term separates it, the rule that placed or
+    // displaced one of them, else its own largest term in that direction, else
+    // the terms of the first module that passed it or it passed.
+    const termsOf = new Map<string, LayoutMoveTerm[]>();
+    for (const move of moves) {
+      const id = move.module, inTake = move.to <= order.length ? order[move.to - 1] : undefined;
+      if (yielded.has(id)) { termsOf.set(id, ['diversity']); continue; }
+      const up = move.from === null || move.to < move.from;
+      const others: ScoreTerms[] = [];
+      let ruled = false;
+      const compare = (other: string, score: number | undefined) => {
+        if (yielded.has(other)) ruled = true;
+        const terms = termsFor(other, score);
+        if (terms) others.push(terms);
+      };
+      for (const [k, o] of order.entries()) {
+        if (o.contentId === id || fixed(o)) continue;
+        const at = { from: fromOf.get(o.contentId) ?? null, to: k + 1 };
+        if (up ? passed(move, at) : passed(at, move)) compare(o.contentId, o.score);
+      }
+      if (up) for (const other of drawn.sequence) {
+        if (inShadow.has(other) || !((fromOf.get(other) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
+        if (scoredHere ? scoredHere.has(other) : support.has(other)) compare(other, support.get(other));
+        else if (yielded.has(other)) ruled = true;
+      }
+      const own = termsFor(id, inTake ? inTake.score : support.get(id)), sign = up ? 1 : -1;
+      const named = own ? differingTerms(own, others, sign) : [];
+      const single: LayoutMoveTerm | null = named.length ? null : ruled ? 'diversity' : own ? largestTerm(own, sign) : null;
+      if (named.length) termsOf.set(id, named);
+      else if (single) termsOf.set(id, [single]);
+    }
+    const fallback: LayoutMoveTerm[] = moves.map((m) => termsOf.get(m.module)).find((t) => t !== undefined) ?? ['affinity'];
+    const shadowTerms: Record<string, LayoutMoveTerm[]> = {};
+    for (const m of [...moves].sort((a, b) => (a.module < b.module ? -1 : a.module > b.module ? 1 : 0))) {
+      const own = termsOf.get(m.module), up = m.from === null || m.to < m.from;
+      const other = own ? undefined : moves.filter((o) => o.module !== m.module && termsOf.has(o.module) && (up ? passed(m, o) : passed(o, m))).sort((a, b) => a.to - b.to)[0];
+      shadowTerms[m.module] = [...(own ?? (other ? termsOf.get(other.module)! : fallback))];
+    }
+    return { baselineOrder: [...drawn.order], shadowOrder: order.map((d) => d.contentId), shadowTerms };
   }
   /** P29: one declared layout slot's reason, as the comment above defines it. */
   function layoutReasonOf(s: SlotStrategy, index: number, served: typeof decisions, slotIndex: ReadonlyMap<string, number>,
@@ -1264,6 +1445,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // that only took a withheld module's place is not called moved by a term.
     // Nothing withheld: exactly as before.
     const withheld: LayoutWithheld[] = [];
+    // P06: that baseline position by position, as drawn before the withholding.
+    const drawn: Array<string | undefined> = [];
     if (withheldBy.size) {
       const reservedBefore = new Set(reserved);
       for (const other of i.slots) {
@@ -1290,18 +1473,18 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         const id = position <= prefixIds.length ? prefixIds[position - 1]
           : positionPins.find((pin) => pin.position === position)?.pieceId ?? heldAt.get(position) ?? fullSequence[filled++];
         const cause = id === undefined ? undefined : withheldBy.get(id);
+        drawn.push(id);
         if (cause) withheld.push({ cause, module: id! });
       }
     }
     // The baseline, position by position: a fixed module where the composer placed
     // it (the same positions, ranking and baseline filling the same number of
     // free positions), the baseline sequence on every other position.
-    let next = 0;
-    const baseline = served.map((d) => (fixed(d) ? d.contentId : sequence[next++]));
-    const fromOf = new Map<string, number>();
-    baseline.forEach((id, k) => { if (id !== undefined && !fromOf.has(id)) fromOf.set(id, k + 1); });
-    let beyond = served.length;
-    for (const id of sequence.slice(next)) if (!fromOf.has(id)) fromOf.set(id, ++beyond);
+    const { baseline, fromOf } = baselineAlong(served, sequence);
+    // P06: the baseline the slot's records carry, cut at the take: the one the
+    // moves compare with or, where a module of it was withheld, the same baseline
+    // as drawn before the withholding (R-P23 C7), the withheld module at its place.
+    layoutBaselines.set(s.slot, { order: (withheld.length ? drawn : baseline).filter((id): id is string => id !== undefined).slice(0, s.take), sequence });
     const scored = [...(scoredIn.get(s.slot) ?? pool)];
     const support = new Map((candidates[s.slot] ?? []).map((c) => [c.contentId, c.score] as const));
     if (!withheld.length && baseline.every((id, k) => id === served[k]!.contentId)) {
@@ -1418,11 +1601,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
    * (or, under the layout blend, the behaviour terms at 1 − p and the blend's
    * learned term p × Q). Null when the module's score is unknown.
    */
-  function scoreTerms(id: string, slot: string, score: number | undefined): ScoreTerms | null {
+  function scoreTerms(id: string, slot: string, score: number | undefined,
+    learned?: { lift: ReadonlyMap<string, number>; blend: ReadonlyMap<string, { p: number; Q: number }> }): ScoreTerms | null {
     const key = `${slot}:${id}`, piece = byId.get(id), spec = specOf.get(slot);
     const tag = tagOf.get(key) ?? score;
     if (tag === undefined) return null;
-    const blendOf = blendTerms.get(key), scale = blendOf ? 1 - blendOf.p : 1;
+    // P06: the shadow's learned term (`learned`) in place of the served one; every other term is the served ranking's own.
+    const blendOf = learned ? learned.blend.get(key) : blendTerms.get(key), scale = blendOf ? 1 - blendOf.p : 1;
     const full = below.has(slot);
     const share = (prior: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } | null, own: Readonly<Record<string, Readonly<Record<string, number>>>> | null) => {
       const shares = full ? own : prior?.share ?? null, lambda = full ? 1 : prior?.lambda ?? 0;
@@ -1444,7 +1629,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ['completes', scale * completes], ['seed', scale * (seedOf.get(key)?.applied ?? 0)], ['external', scale * (extOf.get(key)?.contribution ?? 0)],
       ['stage', scale * (stageOf.get(key)?.applied ?? 0)], ['freshness', scale * (freshOf.get(key)?.applied ?? 0)], ['fatigue', scale * (fatigueOf.get(key)?.applied ?? 0)],
       ['merchandising', scale * (merch && base !== undefined ? merch.scoreFinal - base : 0)],
-      ['lift', blendOf ? 0 : liftOf.get(key)?.applied ?? 0], ['blend', blendOf ? blendOf.p * blendOf.Q : 0],
+      ['lift', blendOf ? 0 : learned ? learned.lift.get(key) ?? 0 : liftOf.get(key)?.applied ?? 0], ['blend', blendOf ? blendOf.p * blendOf.Q : 0],
     ];
   }
 
@@ -1511,6 +1696,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(moduleRule?.baseline === 'order' && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
         // P29: the layout reason of the declared layout slot, the same on every record of the slot, keys sorted.
         ...(layoutReasons.has(d.slot) ? { layoutReason: layoutReasonRecord(layoutReasons.get(d.slot)!) } : {}),
+        // P06: the slot's baseline and shadow orders, cut at the take, and the terms that would have moved each module, the same on every record of the slot (keys sorted).
+        ...(shadows.has(d.slot) ? shadowRecord(shadows.get(d.slot)!) : {}),
         // P39: the suppressions in force, on every record of a slot that read the shopper's interests (keys sorted).
         ...(suppressions.length && !below.has(d.slot) ? { suppressions: suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
       },
@@ -1550,6 +1737,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(pageReason ? { layoutReason: layoutReasonRecord(pageReason) } : {}),
     ...(offLimitsRecords.length ? { offLimitsRecords } : {}),
   };
+}
+
+/** P06: the baseline, the shadow and the shadow terms as a record carries them: copies, the terms keyed by module with the keys sorted (R-P7). */
+function shadowRecord(shadow: { baselineOrder: readonly string[]; shadowOrder: readonly string[]; shadowTerms: Readonly<Record<string, readonly LayoutMoveTerm[]>> }):
+  { baselineOrder: string[]; shadowOrder: string[]; shadowTerms: Record<string, LayoutMoveTerm[]> } {
+  return { baselineOrder: [...shadow.baselineOrder], shadowOrder: [...shadow.shadowOrder],
+    shadowTerms: Object.fromEntries(Object.keys(shadow.shadowTerms).sort().map((id) => [id, [...shadow.shadowTerms[id]!]])) };
 }
 
 /** P29: what the record of an off-limits declared layout slot says in words. */

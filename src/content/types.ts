@@ -602,8 +602,13 @@ export interface SlotDials {
   positionNormalization?: boolean;
 }
 
-/** P28: the layout blend's opt-in on a slot's learn dials, `{ p }` with p in 0..1 (absent: 0). */
-export interface LayoutBlendDial { p?: number }
+/**
+ * P28: the layout blend's opt-in on a slot's learn dials, `{ p }` with p in 0..1
+ * (absent: 0). P06 (decision D2): `shadowP`, 0 to 1, is the p the slot's shadow
+ * order is ranked at (`explain.shadowOrder`), 0.1 when absent; it changes
+ * nothing served.
+ */
+export interface LayoutBlendDial { p?: number; shadowP?: number }
 
 /**
  * P28 (decision D1): what the layout blend computed for one module, on the
@@ -985,6 +990,36 @@ export interface DecisionRecord {
      * it replays as before.
      */
     suppressions?: Suppression[];
+    /**
+     * P06: the baseline of the page's declared layout slot, the same value on
+     * every record of the slot: the merchandiser's fixed positions where their
+     * rules put them and, on every other position, the configured order for the
+     * shopper's context, else the modules the slot can serve in catalogue order
+     * — P29's baseline (`layoutReason`), drawn before a module is withheld —
+     * cut at the slot's take. Present, with `shadowOrder` and `shadowTerms`, on
+     * every record of a declared layout slot decided on an arm that
+     * personalizes; compared by value in replay, and a retained record without
+     * it replays as before.
+     */
+    baselineOrder?: string[];
+    /**
+     * P06 (decision D1): the order the slot would have served with every term
+     * applied and the learned term at full trust (γ 1) — or, on a slot opted
+     * into the layout blend, at the blend's `shadowP` (decision D2) — ranked as
+     * the served order is, pins and off-limits modules fixed and withheld
+     * modules absent, with no exploration pick and no swap, cut at the take.
+     * Recording only: nothing served, counted or credited reads it.
+     */
+    shadowOrder?: string[];
+    /**
+     * P06: for each module whose place in `shadowOrder` differs from its place
+     * in the baseline (less any withheld module, as P29's moves compare), every
+     * term that would have moved it, in P29's words and the engine's fixed term
+     * order: the terms by which it differs, averaged over the modules it passed
+     * or that passed it, in the direction it moved. Keys (module ids) sorted;
+     * `{}` when the shadow keeps every module at its baseline place.
+     */
+    shadowTerms?: Record<string, LayoutMoveTerm[]>;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

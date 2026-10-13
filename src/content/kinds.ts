@@ -1137,13 +1137,17 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
 
 /**
  * P28 (decision D1): the layout blend's dial, structurally — `{ p }` and nothing
- * else, `p` a number from 0 to 1, 0 when absent. Errors are suffixes of the
- * dial's address (`slots.{slot}.blend`), so a refusal names the blend.
+ * else, `p` a number from 0 to 1, 0 when absent. P06 (decision D2) adds
+ * `shadowP`, the p the slot's shadow order is ranked at, a number from 0 to 1,
+ * 0.1 when absent. Errors are suffixes of the dial's address
+ * (`slots.{slot}.blend`), so a refusal names the blend and the member.
  */
 function blendDialErrors(candidate: unknown): string[] {
-  if (!isRecord(candidate) || Object.keys(candidate).some(key => key !== 'p')) return [': an object { p } and nothing else, p a number from 0 to 1 (0 when absent)'];
-  if (candidate.p !== undefined && (!isNum(candidate.p) || candidate.p < 0 || candidate.p > 1)) return [`.p: must be a number from 0 to 1, got ${quoted(candidate.p)}`];
-  return [];
+  if (!isRecord(candidate) || Object.keys(candidate).some(key => key !== 'p' && key !== 'shadowP')) return [': an object { p, shadowP } and nothing else, p a number from 0 to 1 (0 when absent), shadowP a number from 0 to 1 (0.1 when absent)'];
+  const errors: string[] = [];
+  if (candidate.p !== undefined && (!isNum(candidate.p) || candidate.p < 0 || candidate.p > 1)) errors.push(`.p: must be a number from 0 to 1, got ${quoted(candidate.p)}`);
+  if (candidate.shadowP !== undefined && (!isNum(candidate.shadowP) || candidate.shadowP < 0 || candidate.shadowP > 1)) errors.push(`.shadowP: must be a number from 0 to 1 (the p of the slot's shadow order, 0.1 when absent), got ${quoted(candidate.shadowP)}`);
+  return errors;
 }
 
 /**
@@ -1471,7 +1475,9 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
         // partially applied, so its slot decides exactly as it did before.
         if (d.blend !== undefined) {
           const refused = blendDialErrors(d.blend);
-          if (!refused.length) dials.blend = { ...(isRecord(d.blend) && d.blend.p !== undefined ? { p: d.blend.p as number } : {}) };
+          if (!refused.length) dials.blend = { ...(isRecord(d.blend) && d.blend.p !== undefined ? { p: d.blend.p as number } : {}),
+            // P06 (decision D2): the shadow order's p, kept exactly as authored; absent reads as 0.1.
+            ...(isRecord(d.blend) && d.blend.shadowP !== undefined ? { shadowP: d.blend.shadowP as number } : {}) };
           else if (!historical) for (const error of refused) errors.push(`slots.${slot}.blend${error}`);
         }
         slots[slot] = dials;
