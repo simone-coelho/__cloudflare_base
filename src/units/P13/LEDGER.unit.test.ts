@@ -82,7 +82,7 @@ import {
   storedDecisions, storedOutcomes, TENANT, VIEW_TABBY_26, VIEW_TABBY_WALLET, type Mounted, type Shopper,
 } from '../_parity';
 import { hmacOf, identityDoor, identitySecretOf, sha256Hex, type IdentityDoor } from '../_parity3';
-// R-P67 (fix round 1, round 2): the H4 legs on the single request's members also read P07's block and population
+// R-P67 as amended (fix round 1, round 3): the H4 refused-tracking locks also read P07's block and population
 // through src/units/_parity2.ts (the REGION_TREND namespace on the real RegionTrend class), byte-identical.
 import { receiptsOf, slotPositionOf, VIEW_TABBY_QUILTED } from '../_parity';
 import { bindTrend, publishTrends, trendStorageText } from '../_parity2';
@@ -295,44 +295,21 @@ describe('unit:P13.H4 (freeze item 15)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // R-P67 (P13 fix round 1, round 2): the single request carries the members the first decision request carries
-  // under tracking consent (the entry, the channel, the browsing session and the carried identifier) with the
-  // page's consent hints, and the fence stays at the engine: under a grant that refuses tracking those members
-  // change nothing and leave nothing. Expected values: R-P67, listen.test.ts:108-113 (the first decision request's
-  // members), R12-1 (the request names the browsing session the events carry, session.test.ts), S4-C17 to C19,
-  // CW31 (nothing is written for a shopper who withheld tracking) and P07's receipted representation of the entry
-  // prior (src/units/P07/LEDGER.unit.test.ts, C1: explain.contextPrior { channel 'paid_social', visitBucket '1',
-  // level 'channel_visit', lambda 1 } on the record, "population prior, paid social, first visit" on the receipt).
-  // Not specified here: R-P67's host leg with tracking allowed. A browser that takes the single call holds no
-  // session and no proof, and the grant the engine issues it carries no consent instruction, which this engine
-  // reads as both switches refused (src/content/consent.ts:86, :139-152); measured at 74355103 on both hosts with
-  // no hint at all: the session states tracking refused, the default arm, no record. Reported to the lead.
+  // R-P67 as amended (P13 fix round 1, round 3): the bootstrap request stays bare (page, page instance, brand and
+  // the page's refusal hints, as d9ce85b2 built it); the SDK sends no tracking member before consent is stated, and
+  // nothing here expects the single request to carry one. What these legs lock is today's engine: a single request
+  // that does carry the entry, the channel, the browsing session and the carried identifier under a hint refusing
+  // tracking is answered with the issued session stating tracking refused and the decision a bare request gets, the
+  // four members ignored; nothing of that visitor is written (CW31); and no store holds the carried value or the
+  // browsing session it named. In-leg controls show, in the same mount, P07's entry prior live and those members
+  // reaching the records of a shopper whose explicit choice allows tracking (P07.C1's representation:
+  // explain.contextPrior { channel 'paid_social', visitBucket '1', level 'channel_visit', lambda 1 } on the record,
+  // "population prior, paid social, first visit" on the receipt). A browser that takes the single call holds no
+  // session and no proof, and the grant the engine issues it carries no consent instruction, read as both switches
+  // refused (src/content/consent.ts:86, :139-152; src/routes/identity.ts:381): a new visitor's first decision is
+  // the default arm on either path until a consent choice is recorded. Expected values: R-P67 as amended, CW31,
+  // S4-C17 to C19 and P07's receipted representation.
   // -------------------------------------------------------------------------
-  it('sdk: a new visitor’s single decision request carries what the first decision request carries under tracking consent, the entry, the channel, the browsing session and the carried identifier, beside page, page instance and brand, and no call follows the answer that issues the session (R-P67)', async () => {
-    await hashed();
-    const decisions = [{ contentId: 'story.tabby', slot: STORY, order: 0, explain: { drivers: [] } }];
-    // The P13 engine (S4-C19): the session is answered only to a decision request that carried none.
-    const f = testHost({ responses: (url, init) => url.includes('/decisions/snapshot')
-      ? { ok: true, tenant: 'coach', page: 'pdp', pageInstance: (JSON.parse(init?.body ?? '{}') as { pageInstance?: string }).pageInstance, decisions,
-        ...(init?.headers?.['X-Shopper-Session'] ? {} : { session: syntheticSession() }) }
-      : { success: true } });
-    // The test host's page is a paid-social arrival (utm_medium=paid_social from tiktok.com), the entry listen.test.ts:110 names.
-    const core = createCore({ tenant: 'coach', source: 'coach-pdp', brand: BRAND }, f.host);
-    const listen = createListen(core);
-    const setCustomerId = (core as unknown as Record<string, unknown>).setCustomerId as ((id: string) => unknown) | undefined;
-    expect(typeof setCustomerId, 'PRECONDITION: the SDK offers setCustomerId(id) (P13.H2)').toBe('function');
-    setCustomerId!.call(core, HASHED);
-    await listen.hydrate({ page: 'pdp', channel: 'paid social' });
-    expect(f.calls.map(c => new URL(c.url, 'https://edge.invalid').pathname.replace(/^\/v1\/coach/, '')),
-      'P13.H4 (R-P67) — one call before the first decision set, and none after the answer that issued the session').toEqual(['/decisions/snapshot']);
-    expect(core.sessionId, 'PRECONDITION: the client adopted the issued session, and with it the browsing session its events carry').toMatch(/^s-/);
-    const sent = JSON.parse(f.calls[0]!.init?.body ?? '{}') as Record<string, unknown>;
-    expect({ ...sent, entry: typeof sent.entry === 'string' ? JSON.parse(sent.entry) as unknown : sent.entry ?? null },
-      'P13.H4 (R-P67) — the single request carries page, page instance and brand with the entry, the channel, the browsing session its events carry and the carried identifier (this page holds no refusal, so it sends no hint)')
-      .toEqual({ page: 'pdp', pageInstance: expect.any(String), brand: BRAND, channel: 'paid social', browsingSessionId: core.sessionId, customerId: HASHED,
-        entry: { utmMedium: 'paid_social', utmSource: 'tiktok', referrer: 'www.tiktok.com', siteHost: 'shop.example' } });
-  });
-
   /** P07.C1's block, and its paid-social population: four first-time paid-social visitors who each view the quilted Tabby. */
   const CONTEXT_PRIOR = { enabled: true, kBlend: 1, minEvents: 3 };
   const priorDocuments = { pieces: PIECES, slots: SLOTS, learn: learnDocument({ [STORY]: { measurementBasis: 'rendered-v1', reward: 'click' } }, { contextPrior: CONTEXT_PRIOR }) };
