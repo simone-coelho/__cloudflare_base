@@ -958,9 +958,9 @@ the ring's answer to the learning fan-out; no public route answers it. Publicati
 /content/learn`, a learn document published as a `publicationChanges` member, and `POST
 /content/learn/validate` alike — refuses any other value with `422`, naming `attribution` in `errors[]`
 and writing no revision; a stored document naming another value still reads, with the member dropped.
-`POST learn/generation` with `rebuildFrom` folds the retained day under the same per-slot rule, so a
-module-tied slot rebuilt from the ledger holds the counters online credit gave it ([where a page
-conversion lands](03-payload-schemas.md#where-a-page-conversion-lands)).
+The offline recomputation, `rebuildFrom` on `POST /v1/{tenant}/learn/generation`, folds the retained day
+under the same per-slot rule, so a module-tied slot rebuilt from the ledger holds the counters online
+credit gave it ([where a page conversion lands](03-payload-schemas.md#where-a-page-conversion-lands)).
 
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
