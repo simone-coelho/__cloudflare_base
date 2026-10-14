@@ -10,6 +10,7 @@ import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platfo
 import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
+import { TYPE_FALLBACK_RETIRED, typeFallbackRetired } from './typeAffinity';
 import { TODAY_TERMS, type ContextTerms } from './cell';
 import { ELIGIBILITY_SIGNALS } from './lifecycle';
 
@@ -43,14 +44,15 @@ export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContent
 
 /**
  * Every key `contentCatalog` below reads on the catalogue DOCUMENT itself: its
- * `pieces` and its optional authored `version` label. The same rule as
+ * `pieces`, its optional authored `version` label and (P32) its optional
+ * `typeFallback` marker. The same rule as
  * `PIECE_FIELDS`, one level up — a key beside these reaches no stored document,
  * so a write answer names it rather than dropping it without a word (F27 §5.4).
  * How a request CARRIES its catalogue (a body's `document`, a feed export's
  * records key) is the envelope, not a field of the catalogue, and is listed by
  * the path that reads it, never here.
  */
-export const CATALOG_DOCUMENT_FIELDS: ReadonlySet<string> = new Set(['pieces', 'version']);
+export const CATALOG_DOCUMENT_FIELDS: ReadonlySet<string> = new Set(['pieces', 'version', 'typeFallback']);
 
 /**
  * One offending value a refusal names, so a content team can find the row it
@@ -305,12 +307,19 @@ function contentCatalog(candidate: unknown, stored: boolean, terms: SlotTerms = 
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['catalog: must be an object'] };
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
+  // P32 (decision D3): the marker that retires the free-text type fallback is
+  // the one exact word; any other value is refused by name rather than read as
+  // the fallback held, which would leave the author believing it retired.
+  if (candidate.typeFallback !== undefined && candidate.typeFallback !== TYPE_FALLBACK_RETIRED) {
+    errors.push(`typeFallback: ${quoted(candidate.typeFallback)} is not a catalogue marker; '${TYPE_FALLBACK_RETIRED}' retires the free-text type fallback, and absent keeps it`);
+  }
   if (!Array.isArray(candidate.pieces)) return { ok: false, errors: [...errors, 'pieces: required array'] };
   const seen = new Set<string>();
   const pieces: ContentPiece[] = [];
   candidate.pieces.forEach((p, i) => { const v = validatePiece(p, i, seen, errors, stored, terms); if (v) pieces.push(v); });
   if (errors.length) return { ok: false, errors };
-  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}), pieces } };
+  return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}),
+    ...(candidate.typeFallback === TYPE_FALLBACK_RETIRED ? { typeFallback: TYPE_FALLBACK_RETIRED } : {}), pieces } };
 }
 
 export const EMPTY_CATALOG: ContentCatalog = { version: 'content-empty', pieces: [] };
@@ -680,16 +689,18 @@ function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, p
  * a piece of the published catalogue that names the slot in its `slotTypes`,
  * and one the slot's own tag and type gates admit. Pure; the caller supplies the
  * catalogue it read. A later catalogue change is not refused here: the decision
- * serves the order without a module that is no longer eligible.
+ * serves the order without a module that is no longer eligible. P32: the gates
+ * read the catalogue's marker as the decision does, so under `typeFallback:
+ * 'retired'` a `contentType` exclusion refuses a module by its own tag alone.
  */
-export function slotOrderCatalogueErrors(document: Pick<SlotCatalog, 'pages'>, catalog: Pick<ContentCatalog, 'pieces'>): string[] {
+export function slotOrderCatalogueErrors(document: Pick<SlotCatalog, 'pages'>, catalog: Pick<ContentCatalog, 'pieces' | 'typeFallback'>): string[] {
   const byId = new Map<string, ContentPiece>();
   for (const piece of catalog.pieces) if (!byId.has(piece.id)) byId.set(piece.id, piece);
   const errors: string[] = [];
   for (const [page, slots] of Object.entries(document.pages)) {
     slots.forEach((slot, index) => {
       if (!slot.orders?.length) return;
-      const gate = compileSlotConstraints(slot);
+      const gate = compileSlotConstraints(typeFallbackRetired(catalog) ? { ...slot, typeFallback: TYPE_FALLBACK_RETIRED } : slot);
       slot.orders.forEach((order, k) => order.modules.forEach((id, p) => {
         const at = `pages.${page}[${index}].orders[${k}].modules[${p}]`, piece = byId.get(id);
         if (!piece) { errors.push(`${at}: ${quoted(id)} is not a registered module: no piece of the published catalogue has that id`); return; }

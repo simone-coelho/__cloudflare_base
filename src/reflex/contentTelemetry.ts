@@ -34,11 +34,11 @@
 // let "we showed her a video" read as "she likes video".
 // ---------------------------------------------------------------------------
 
-import { admittedTouches, extractTouches, sanitizeEventAttributes, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
+import { admittedTouches, extractTouches, moduleEngagementWeightOf, sanitizeEventAttributes, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
 import type { Env } from '@/types/env';
 import { readRevision } from '@/config/versionedStore';
-import { CONTENT_KIND } from '@/content/kinds';
-import { contentTypeValues } from '@/content/typeAffinity';
+import { CONTENT_KIND, DEFAULT_SLOTS, SLOTS_KIND } from '@/content/kinds';
+import { contentTypeValues, isLearnableValue, typeFallbackRetired } from '@/content/typeAffinity';
 
 /**
  * The content actions the SDK emits and the registry can learn from. P40 adds
@@ -119,7 +119,10 @@ export function contentTouches(data: Record<string, unknown>, config: ReflexConf
 /** Held catalog tags are dimension-keyed, not raw source attributes. Read errors
  * must propagate before callers apply affinity or fan the same touches out.
  * The piece's OWN format tags are the catalogue speaking about itself, so they
- * are appended after the event's values have answered to the vocabulary. */
+ * are appended after the event's values have answered to the vocabulary.
+ * P32 (decision D3): under the catalogue's `typeFallback: 'retired'` marker a
+ * piece without its own `contentType` tag has no format to teach; without the
+ * marker its safe `type` still supplies one, exactly as before. */
 export async function resolvedContentTouches(env: Env, tenant: string, data: Record<string, unknown>, config: ReflexConfig,
   vocabulary?: CatalogVocabulary): Promise<Touch[]> {
   const dimension = config.dimensions.find(spec => spec.key === 'contentType');
@@ -133,6 +136,53 @@ export async function resolvedContentTouches(env: Env, tenant: string, data: Rec
   const piece = catalog.value.pieces.find(candidate => candidate.id === id);
   if (!piece) return contentTouches(data, config, vocabulary);
   const touches = contentTouches(data, config, vocabulary).filter(touch => touch.dim !== 'contentType');
-  for (const value of contentTypeValues(piece) ?? []) touches.push({ dim: 'contentType', value });
+  for (const value of contentTypeValues(piece, typeFallbackRetired(catalog.value)) ?? []) touches.push({ dim: 'contentType', value });
   return touches;
+}
+
+/**
+ * P32 (decision D2): what a module engagement teaches beside what the click
+ * teaches above — the module's own registered tags, each at the registry's
+ * `moduleEngagementWeight`.
+ *
+ * A module engagement is P03's: a `content_click` whose `contentId` names a piece
+ * of the tenant's catalogue and whose `slot` is a slot the event's `page`
+ * declares `layout: true` in the tenant's slots document, a slot the piece names
+ * in its `slotTypes`. A click anywhere else is a content engagement and teaches
+ * exactly what it taught before. The touches are each value of the piece's own
+ * tags on every registered, non-derived dimension — the module's `moduleType`
+ * value and its other tags, its `contentType` tag among them — once each, learning-
+ * safe values only; never the free-text `type`, so no module-type value can
+ * reach the content format through this door.
+ *
+ * At weight 0 or absent (the shipped state) nothing is read and nothing is
+ * returned, so the event is applied exactly as before. Above 0, a click naming
+ * a module, a slot and a page reads the slots document, and the catalogue only
+ * when the slot is the page's declared layout slot, each as the format lookup
+ * reads the catalogue (the current publication through its cache); a read
+ * failure propagates before any affinity is applied, so a retry teaches the
+ * engagement whole, and an absent document names no module.
+ */
+export async function moduleEngagementTouches(env: Env, tenant: string, action: string, data: Record<string, unknown>,
+  config: ReflexConfig): Promise<{ weight: number; touches: Touch[] } | null> {
+  const weight = moduleEngagementWeightOf(config);
+  if (weight <= 0 || action !== 'content_click') return null;
+  const { contentId: id, slot, page } = data;
+  if (typeof id !== 'string' || typeof slot !== 'string' || typeof page !== 'string') return null;
+  const slots = await readRevision(env, SLOTS_KIND, tenant).catch(() => { throw new Error('Content slots unavailable'); });
+  const pages = (slots?.value ?? DEFAULT_SLOTS).pages;
+  if (!Object.hasOwn(pages, page) || !pages[page]!.some(spec => spec.slot === slot && spec.layout === true)) return null;
+  const catalog = await readRevision(env, CONTENT_KIND, tenant).catch(() => { throw new Error('Content catalog unavailable'); });
+  const piece = catalog?.value.pieces.find(candidate => candidate.id === id);
+  if (!piece || !piece.slotTypes.includes(slot)) return null;
+  const touches: Touch[] = [];
+  for (const spec of config.dimensions) {
+    if (spec.derive || !Object.hasOwn(piece.tags, spec.key)) continue;
+    const values: unknown = piece.tags[spec.key];
+    if (!Array.isArray(values)) continue;
+    for (const value of values) {
+      if (isLearnableValue(value) && !touches.some(touch => touch.dim === spec.key && touch.value === value)) touches.push({ dim: spec.key, value });
+    }
+  }
+  return touches.length ? { weight, touches } : null;
 }

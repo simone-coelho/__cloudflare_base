@@ -1,4 +1,4 @@
-import { contentTypeValues } from './typeAffinity';
+import { contentTypeValues, TYPE_FALLBACK_RETIRED, type TypeFallbackMarker } from './typeAffinity';
 
 /** Exact configured pin order; callers snapshot when crossing caller-hook boundaries. */
 export function slotPins(slot: { pinnedPieceId?: string; pinnedPieceIds?: readonly string[] }): readonly string[] {
@@ -19,6 +19,13 @@ export interface SlotConstraints {
   excludedPieceIds?: readonly string[];
   excludedTags?: ReadonlyArray<{ dimension: string; value: string }>;
   allowedTypes?: readonly string[];
+  /**
+   * P32 (decision D3): never published on a slot. The decision sets it on the
+   * slot specs it compiles when the catalogue retires the free-text type
+   * fallback (`typeFallback: 'retired'`), so a `contentType` exclusion matches a
+   * piece's own `contentType` tag alone. Absent: the fallback below as before.
+   */
+  typeFallback?: TypeFallbackMarker;
 }
 interface ConstraintPiece { id: string; type: string; tags: Readonly<Record<string, readonly string[]>> }
 export type SlotConstraintReason = 'off_limits' | 'excluded' | 'type_not_allowed' | 'excluded_tag';
@@ -34,6 +41,7 @@ export interface SlotConstraintRefusal { reason: SlotConstraintReason; dimension
  * Compile once per slot. Callers snapshot results before running mutable hooks. */
 export function compileSlotConstraints(slot: SlotConstraints, extended = true) {
   const offLimits = slot.offLimits === true;
+  const retired = slot.typeFallback === TYPE_FALLBACK_RETIRED;
   const ids = new Set(slot.excludedPieceIds);
   const types = extended && slot.allowedTypes !== undefined ? new Set(slot.allowedTypes) : null;
   const tags = new Map<string, Set<string>>();
@@ -57,9 +65,10 @@ export function compileSlotConstraints(slot: SlotConstraints, extended = true) {
       const matched = held.find(value => values.has(value));
       if (matched !== undefined) return { reason: 'excluded_tag', dimension, value: matched };
     }
-    // Only an absent contentType key gets the same safe fallback on all arms.
+    // Only an absent contentType key gets the same safe fallback on all arms,
+    // unless the catalogue retired it (P32): then nothing but the own tag matches.
     const formats = tags.get('contentType');
-    if (formats && !Object.hasOwn(piece.tags, 'contentType')) {
+    if (formats && !retired && !Object.hasOwn(piece.tags, 'contentType')) {
       const matched = contentTypeValues(piece)?.find(value => formats.has(value));
       if (matched !== undefined) return { reason: 'excluded_tag', dimension: 'contentType', value: matched };
     }

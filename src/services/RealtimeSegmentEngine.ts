@@ -17,7 +17,7 @@
 // (`new RealtimeSegmentEngine(env)`) keep working while the spec's two-arg form
 // (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
 
-import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
+import { actionOf, moduleEngagementTouches, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
@@ -582,6 +582,11 @@ export class RealtimeSegmentEngine {
         ? await resolvedContentTouches(this.env, this.tenant, placing, reflexConfig, vocabulary) : null;
       // P38 (DI-9): a content piece's own tags on a governed attribute answer to the same table.
       const contentEventTouches = resolvedTouches && governed ? governedTouches(resolvedTouches, governed, reflexConfig) : resolvedTouches;
+      // P32 (decision D2): a module engagement's own tags, at the registry's
+      // module-engagement weight, governed by the same table; none at weight 0
+      // (the shipped state), which reads nothing, so the event applies as before.
+      const moduleTaught = reflexOn && contentEvent ? await moduleEngagementTouches(this.env, this.tenant, actionOf(event), placing, reflexConfig) : null;
+      const moduleTouches = moduleTaught && governed ? { weight: moduleTaught.weight, touches: governedTouches(moduleTaught.touches, governed, reflexConfig) } : moduleTaught;
       await this.ensureSeeded(surface);
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
@@ -616,7 +621,7 @@ export class RealtimeSegmentEngine {
         // event is placed by the content catalogue above, against the same
         // vocabulary, so its diagnostic comes from those touches.
         signals = contentEventTouches
-          ? { recognized: contentEventTouches.length > 0, unrecognized: [] }
+          ? { recognized: contentEventTouches.length > 0 || Boolean(moduleTouches?.touches.length), unrecognized: [] }
           : placedTouches!.signals;
         // Reuse precisely the personal scorer's touches for population counts.
         // P38 (DI-9): a held product's attributes on a governed attribute answer to the same table.
@@ -638,6 +643,8 @@ export class RealtimeSegmentEngine {
             // A held product's attributes, or, where the scope allows it, the
             // event's own (CW24): a customer's site scores against their catalog.
             touches,
+            // P32: the module's own tags, for the shopper's interest alone (never the population counts below).
+            ...(moduleTouches?.touches.length ? { module: moduleTouches } : {}),
           },
           nowMs,
           reflexConfig

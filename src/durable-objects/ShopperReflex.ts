@@ -49,7 +49,7 @@
 // visitor id → a fresh object → a fresh sessionId → a fresh vuid.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
+import { actionOf, moduleEngagementTouches, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import { liveVisit, mergeVisits, projectVisit, recencyBucketOf, validEntry, validVisitContext, visitArrival, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
 import { deviceClassOf } from '@/services/platform';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
@@ -1386,10 +1386,15 @@ export class ShopperReflex {
       ? await resolvedContentTouches(this.env, tenant, placing, cfg, vocabulary) : null;
     // P38 (DI-9): a content piece's own tags on a governed attribute answer to the same table.
     const contentEventTouches = resolvedTouches && governed ? governedTouches(resolvedTouches, governed, cfg) : resolvedTouches;
+    // P32 (decision D2): a module engagement's own tags, at the registry's
+    // module-engagement weight, governed by the same table; none at weight 0
+    // (the shipped state), which reads nothing, so the event applies as before.
+    const moduleTaught = reflexOn && contentEvent ? await moduleEngagementTouches(this.env, tenant, actionOf(event), placing, cfg) : null;
+    const moduleTouches = moduleTaught && governed ? { weight: moduleTaught.weight, touches: governedTouches(moduleTaught.touches, governed, cfg) } : moduleTaught;
     // A content event is placed by the tenant's content catalogue against the
     // same vocabulary, so its diagnostic answers from the touches that read
     // produced — the same "at least one value built taste" rule (R64).
-    if (contentEventTouches) signals = { recognized: contentEventTouches.length > 0, unrecognized: [] };
+    if (contentEventTouches) signals = { recognized: contentEventTouches.length > 0 || Boolean(moduleTouches?.touches.length), unrecognized: [] };
     await this.ensureSeeded(surface, tenant);
     const connectors = getConnectors(this.env, tenant); // fresh per run — mirrors the per-request triad
 
@@ -1461,6 +1466,8 @@ export class ShopperReflex {
         {
           action,
           touches,
+          // P32: the module's own tags, for the shopper's interest alone (never the population counts below).
+          ...(moduleTouches?.touches.length ? { module: moduleTouches } : {}),
         },
         now,
         cfg

@@ -942,6 +942,10 @@ export async function serveContentDecisions(
     ...(contextRegion ? { contextRegion } : {}),
     ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
     ...(signalFloor ? { signalFloor } : {}),
+    // P32 (decision D3): the catalogue document's marker retiring the free-text
+    // type fallback, read off the document already held (no read is added);
+    // a catalogue without it decides exactly as before.
+    ...(catalog.typeFallback === 'retired' ? { typeFallback: 'retired' as const } : {}),
     // P39: the suppressions in force, itemised on the records (their interest already left out above).
     ...(suppressions.length ? { suppressions } : {}),
     // P36: a tenant's published terms, and the context its shopper's visit

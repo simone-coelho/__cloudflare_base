@@ -80,6 +80,13 @@ export interface EligibilityRule {
 /** The `content` document kind: the catalog for a scope. */
 export interface ContentCatalog {
   version?: string;
+  /**
+   * P32 (decision D3): `'retired'` retires the free-text type fallback for this
+   * catalogue — a piece's content format is its own `contentType` tag alone, in
+   * ranking, in slot exclusions and in what an engagement teaches. Absent: the
+   * fallback holds exactly as before. Publication refuses any other value.
+   */
+  typeFallback?: 'retired';
   pieces: ContentPiece[];
 }
 
@@ -828,6 +835,15 @@ export interface DecisionInputs {
      * independently of the other policies.
      */
     moduleRules?: 'module-rules-v1';
+    /**
+     * P32: present only on a decision made under a catalogue that retires the
+     * free-text type fallback (`typeFallback: 'retired'`) on which the fallback
+     * could have changed something — a piece whose format only the fallback
+     * supplies names a slot of the page that reads the content format (C11).
+     * Absence replays the page with the fallback, independently of the other
+     * policies, whatever the catalogue revision declares.
+     */
+    typeFallback?: 'type-fallback-retired-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;

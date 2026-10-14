@@ -11,11 +11,11 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { BLEND_RULES, contextOnlyLayoutSlot, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES } from '@/content/decide';
+import { BLEND_RULES, contextOnlyLayoutSlot, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES, TYPE_FALLBACK_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
-import { HISTORICAL_CONTENT_TYPES } from '@/content/typeAffinity';
+import { HISTORICAL_CONTENT_TYPES, TYPE_FALLBACK_RETIRED, typeFallbackRetired } from '@/content/typeAffinity';
 import { cellEligibility, isEligibleAt } from '@/content/lifecycle';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { isOffLimitsLayoutRecord, validDecisionMeasurement } from '@/ledger/records';
@@ -188,7 +188,7 @@ function manifestVersionRefusal(value: unknown): string | null {
 }
 
 function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig, floor: { tenant: number; signals: unknown }, offLimits = false): Manifest | null {
-  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend' && key !== 'signalFloor' && key !== 'moduleRules').sort().join(',') !== 'candidateLimit,learning,slots,version'
+  if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend' && key !== 'signalFloor' && key !== 'moduleRules' && key !== 'typeFallback').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
     || (own(value, 'pins') && value.pins !== 'reserved-eligible-v1' && value.pins !== 'prefix-reserved-v2')
     || (own(value, 'contentTypes') && value.contentTypes !== 'catalog-tags-v1')
@@ -216,6 +216,9 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     // page's declared layout slot decided something.
     || (own(value, 'moduleRules') && (value.moduleRules !== MODULE_RULES || !own(value, 'layout') || value.pins !== 'prefix-reserved-v2'
       || !page.some(slot => slot.layout === true && Boolean(slot.positionPins?.length || slot.offLimitsPieceIds?.length))))
+    // P32: the type-fallback marker names one rule; whether the recorded catalogue
+    // declares the retirement is checked beside the catalogue read (replayAdmitted).
+    || (own(value, 'typeFallback') && value.typeFallback !== TYPE_FALLBACK_RULES)
     || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
     || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
@@ -270,7 +273,8 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     ...(own(value, 'orders') ? { orders: ORDER_RULES } : {}),
     ...(own(value, 'blend') ? { blend: BLEND_RULES } : {}),
     ...(own(value, 'signalFloor') ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
-    ...(ruled ? { moduleRules: MODULE_RULES } : {}) };
+    ...(ruled ? { moduleRules: MODULE_RULES } : {}),
+    ...(own(value, 'typeFallback') ? { typeFallback: TYPE_FALLBACK_RULES } : {}) };
 }
 
 /** A slot as a page decided before the layout declaration existed reads it: without the declaration. */
@@ -362,6 +366,11 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   const manifest = hasManifest ? manifestOf(inputs.replay, page, served, learn, { tenant: slots.signalFloor ?? 0, signals: inputs.signals }, offLimitsRecord) : null;
   if (offLimitsRecord && !manifest) return fail(served, 'invalid page replay manifest');
   if (hasManifest && !manifest) return fail(served, manifestVersionRefusal(inputs.replay) ?? 'invalid page replay manifest');
+  // P32: the type-fallback marker is written only under a catalogue that retires
+  // the fallback, so a marker over a catalogue revision that declares no
+  // retirement is inconsistent. A record without it replays with the fallback,
+  // whatever the revision declares: the record decides, not the catalogue.
+  if (manifest?.typeFallback === TYPE_FALLBACK_RULES && !typeFallbackRetired(catalog)) return fail(served, 'invalid page replay manifest');
   // W28.R2 (amendment A20): the exploration rules the record was decided under
   // are the ones it STATES, beside the manifest (`inputs.explorationRules`). A
   // record that states none was written before them and replays under the rules
@@ -496,6 +505,9 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     // the recorded interest vector, which the page was scored on; a record that
     // carries none was decided with none and replays as before.
     ...(served.explain.suppressions !== undefined ? { suppressions: served.explain.suppressions } : {}),
+    // P32: a record that states the type-fallback marker is replayed with the
+    // fallback retired, as it was decided; one that states none, with it.
+    ...(manifest?.typeFallback === TYPE_FALLBACK_RULES ? { typeFallback: TYPE_FALLBACK_RETIRED } : {}),
   }, manifest?.exploration === 'supported-only' ? undefined : HISTORICAL_EXPLORATION,
   prefixPolicy ? undefined : manifest?.pins === 'reserved-eligible-v1' ? HISTORICAL_PINS_V1 : HISTORICAL_PINS,
   manifest?.contentTypes === 'catalog-tags-v1' ? undefined : HISTORICAL_CONTENT_TYPES,

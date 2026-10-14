@@ -381,6 +381,8 @@ by the layout blend adds `blend: "layout-blend-v1"`, and a decision on which a s
 signal floor adds `signalFloor: "signal-floor-v1"` with the count it was decided with as `inputs.signals`.
 A decision on which a position pin or an off-limits mark of the layout slot decided something adds
 `moduleRules: "module-rules-v1"` ([position pins and off-limits modules](#position-pins-and-off-limits-modules)).
+A decision made under a catalogue that retires the type fallback, where the fallback could have changed it, adds
+`typeFallback: "type-fallback-retired-v1"` ([the module-type dimension](#the-module-type-dimension-registry-draft)).
 Other replay policy markers remain independent.
 Rules offers exact JSON-array editors and an off-limits switch. Its allowed-types editor accepts JSON null
 to remove the field. Its unified pin editor accepts a JSON string (scalar), ordered array (prefix), or null
@@ -474,6 +476,57 @@ Reflex do not read the catalog. Default-arm diversity/order and pin eligibility 
 New receipts carry `inputs.replay.contentTypes: "catalog-tags-v1"`; absence retains historical
 tags-only scoring independently of the exploration and pin markers. Old profiles and events are not
 backfilled. Full registry vocabulary, locale, inheritance and customer feed acceptance remain separate.
+
+### The module-type dimension (registry draft)
+
+The module-type dimension, `moduleType`, is a registry draft: a tenant registers it on its registry document
+as `{ "key": "moduleType", "source": "moduleType" }`, and a module carries its value as a tag,
+`"tags": { "moduleType": ["complete-the-look"] }`.
+
+The `moduleType` dimension is kept apart from content format: `contentType` stays the content format (video,
+editorial, on-model imagery and the like), a `moduleType` value is never read as a `contentType` value, and a
+module engagement never teaches a `moduleType` value as a content format.
+
+The draft values of `moduleType` are `reviews`, `user-generated`, `material-story`, `craftsmanship-story`,
+`recommendations`, `complete-the-look`, `category-grid`, `recently-viewed` and `editorial`.
+They are a draft for the tenant's own data-science lead to settle, not a vocabulary the engine enforces: a
+`moduleType` value outside them is stored, scored and taught like any other tag value, and nothing refuses it.
+A module's required free-text `type` stays its kind; the engine neither derives `tags.moduleType` from it nor
+requires the two to agree, and the catalogue diagnostics do not compare them.
+
+When the registry in force registers `moduleType`, the catalogue diagnostics name what each of the two
+dimensions is as `dimensionRoles: { "moduleType": "module_type", "contentType": "content_format" }` (the
+`contentType` role only when that dimension is registered too), read from the registry in its own order; the
+role follows the dimension key, whatever event attribute the dimension is sourced from, because catalogue
+tags are keyed by the dimension. A registry without `moduleType` answers with no `dimensionRoles` at all.
+
+The teaching weight is the registry document's `moduleEngagementWeight`, 0 by default: absent or 0, a module
+engagement teaches exactly what a content click teaches (the event's own values and the piece's format, above).
+Above 0 it is a number on the action weights' scale, at most 1000. A module engagement is a `content_click`
+whose `contentId` names a module and whose `slot` is the page's declared layout slot (`page` names the page, the
+module names the slot in its `slotTypes`), and at a weight w above 0 it also adds w to the shopper's interest on
+the module's `moduleType` value and on each value of its other registered tags, its `contentType` tag included,
+so one engagement with a module the shopper had no interest in reads w / (w + K) on each of them (with w = K,
+0.5). The weight never makes the click a signal for the signal floor or keeps it from being one, and it never
+reaches the population counts. A click on any other slot teaches as a content click.
+
+The free-text type fallback (above) holds for a catalogue that does not retire it, and the catalogue
+diagnostics name each piece it scores as `typeFallback: { "retired": false, "pieceIndexes": [...] }`: the
+stored index of every piece with no own `contentType` tag and a usable `type` that names a slot of the tenant's
+slots document that weighs `contentType`, excludes a `contentType` value or spreads over `contentType` (absent
+when there is none, or when the slots document cannot be read). A catalogue document that declares
+`"typeFallback": "retired"` beside its `pieces` retires it: a piece without its own `contentType` tag then has
+no content format, so a layout weighting `contentType` scores nothing from its `type`, a `contentType`
+exclusion no longer matches its `type`, and an engagement with it teaches no format; the diagnostics then
+carry `typeFallback: { "retired": true, "pieceIndexes": [...] }`, the stored index of every piece without its
+own `contentType` tag. Any other value of the marker refuses the publication with `422`, naming `typeFallback`.
+`typeFallback` never enters `warnings`, `counts` or `warningCount`, which stay exactly as they were.
+A decision made under the marker on which the fallback could have changed something (a piece whose format only
+the fallback supplies names a slot of the page that reads the format) writes
+`inputs.replay.typeFallback: "type-fallback-retired-v1"`; a replay of a record with it decides the page with
+the fallback retired, a replay of a record without it decides with the fallback whatever its catalogue
+revision declares, and the marker over a catalogue revision that does not retire the fallback refuses as
+`invalid page replay manifest`.
 
 ## Supplied enrichment proposals and human review
 

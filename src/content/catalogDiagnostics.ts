@@ -2,7 +2,7 @@ import type { Env } from '@/types/env';
 import { readRevisionForMutation } from '@/config/versionedStore';
 import { compiledDefaultFor, isDemoConfigScope, REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import type { ContentCatalog } from './types';
-import { contentTypeValues } from './typeAffinity';
+import { contentTypeValues, formatFromTypeFallback, slotReadsContentFormat, typeFallbackRetired } from './typeAffinity';
 import { ignoredFieldsOf } from './import';
 import { DEFAULT_SLOTS, SLOTS_KIND } from './kinds';
 
@@ -52,6 +52,29 @@ export interface CatalogDiagnostics {
    */
   counts: Record<string, number> | null;
   warnings: Warning[] | null;
+  /**
+   * P32 (decision D1): what each role-bearing dimension of the registry in force
+   * IS, so a module-type tag and a content-format tag are told apart: the
+   * registry's `moduleType` dimension is the module type and its `contentType`
+   * dimension the content format, whatever event attribute either is sourced
+   * from (catalogue tags are keyed by the dimension). Derived from the registry,
+   * in its order, and present only when the registry registers `moduleType`, so a
+   * registry without that dimension answers exactly as before.
+   */
+  dimensionRoles?: Record<string, 'module_type' | 'content_format'>;
+  /**
+   * P32 (decision D3): the free-text type fallback, named in a member of its own
+   * and never among `warnings`, `counts` or `warningCount`. Under the catalogue's
+   * `typeFallback: 'retired'` marker, `retired: true` and the stored index of
+   * every piece without an own `contentType` tag (each now has no content
+   * format). Without the marker, `retired: false` and the stored index of every
+   * piece the fallback scores — no own `contentType` tag, a usable `type`, and a
+   * slot type naming a slot of the tenant's slots document that reads the
+   * content format (weighs it, excludes one of its values or spreads over it);
+   * absent when the fallback scores no piece, or when the slots document cannot
+   * be read, so nothing is invented.
+   */
+  typeFallback?: { retired: boolean; pieceIndexes: number[] };
 }
 
 /**
@@ -119,17 +142,25 @@ function sampledWarnings(prefix: readonly Occurrence[], first: ReadonlyMap<strin
  * channel only its slot-type advice: `defined` is null then, and no
  * `unknown_slot_type` warning is raised about a document nobody could read.
  */
-async function definedSlotTypes(env: Env, tenant: string): Promise<{ slots: CatalogDiagnostics['slots']; defined: ReadonlySet<string> | null }> {
+async function definedSlotTypes(env: Env, tenant: string): Promise<{ slots: CatalogDiagnostics['slots']; defined: ReadonlySet<string> | null;
+  /** P32: the slots, by identifier, that read the content format; null with `defined`. */
+  formatSlots: ReadonlySet<string> | null }> {
   try {
     const stored = await readRevisionForMutation(env, SLOTS_KIND, tenant);
     // The same fallback the read and decision paths use when a tenant has
     // published no slots document of its own (routes/content.ts, `k.fallback`).
     const document = stored ? stored.value : DEFAULT_SLOTS;
-    const defined = new Set<string>();
-    for (const page of Object.values(document.pages)) for (const slot of page) defined.add(slot.slot);
-    return { slots: { source: stored ? 'stored' : 'compiled-default', revision: stored?.revision ?? 0, version: document.version ?? null }, defined };
-  } catch { return { slots: { source: 'unavailable', revision: null, version: null }, defined: null }; }
+    const defined = new Set<string>(), formatSlots = new Set<string>();
+    for (const page of Object.values(document.pages)) for (const slot of page) {
+      defined.add(slot.slot);
+      if (slotReadsContentFormat(slot)) formatSlots.add(slot.slot);
+    }
+    return { slots: { source: stored ? 'stored' : 'compiled-default', revision: stored?.revision ?? 0, version: document.version ?? null }, defined, formatSlots };
+  } catch { return { slots: { source: 'unavailable', revision: null, version: null }, defined: null, formatSlots: null }; }
 }
+
+/** P32: the role each role-bearing dimension carries; any other dimension has none. */
+const DIMENSION_ROLES: Readonly<Record<string, 'module_type' | 'content_format'>> = { moduleType: 'module_type', contentType: 'content_format' };
 
 /** Current, optional administration feedback; never publication or serving authority. */
 export async function catalogDiagnostics(env: Env, tenant: string, catalog: ContentCatalog, catalogRevision: number | null,
@@ -208,7 +239,19 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
       }
     });
     const warnings = sampledWarnings(prefix, first);
+    // P32 (decision D1): the roles, from the registry in force, only once it registers the module type.
+    const dimensionRoles = registered.has('moduleType')
+      ? Object.fromEntries(config.dimensions.flatMap(dimension => Object.hasOwn(DIMENSION_ROLES, dimension.key) ? [[dimension.key, DIMENSION_ROLES[dimension.key]!] as const] : []))
+      : null;
+    // P32 (decision D3): the fallback, named beside the warnings and never among them.
+    const retired = typeFallbackRetired(catalog);
+    const fallbackIndexes = retired
+      ? catalog.pieces.flatMap((piece, pieceIndex) => Object.prototype.hasOwnProperty.call(piece.tags, 'contentType') ? [] : [pieceIndex])
+      : vocabulary.formatSlots ? catalog.pieces.flatMap((piece, pieceIndex) => formatFromTypeFallback(piece)
+        && piece.slotTypes.some(slotType => vocabulary.formatSlots!.has(slotType)) ? [pieceIndex] : []) : [];
     return { ...unavailable, status: 'available', registry: { scope, source: stored ? 'stored' : 'compiled-default', revision: stored?.revision ?? 0, version: config.version },
-      warningCount, omittedWarningCount: warningCount - warnings.length, counts, warnings };
+      warningCount, omittedWarningCount: warningCount - warnings.length, counts, warnings,
+      ...(dimensionRoles ? { dimensionRoles } : {}),
+      ...(retired || fallbackIndexes.length ? { typeFallback: { retired, pieceIndexes: fallbackIndexes } } : {}) };
   } catch { return unavailable; }
 }
