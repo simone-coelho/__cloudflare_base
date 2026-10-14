@@ -24,7 +24,7 @@ import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, isCatalogueName, LEARN_KIND
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, layoutBlendOf } from './decide';
+import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, layoutBlendOf } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, fanLayoutExposure, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
@@ -906,6 +906,10 @@ export async function serveContentDecisions(
   // learn document already held above — no read of its own, so it can neither
   // fail nor wait — and applied by the decision on the declared layout slot only.
   const blendOf = (slot: string) => layoutBlendOf(learn, slot);
+  // P11 (decisions D1, D2): this page's evidence floor, read off the learn
+  // document already held above — no read of its own, so it can neither fail
+  // nor wait. A page without one passes none and decides exactly as before.
+  const evidenceFloor = evidenceFloorOf(learn, r.page);
 
   const set = decideContent({
     ...(consent.tracking ? { requestId: crypto.randomUUID() } : {}),
@@ -922,7 +926,7 @@ export async function serveContentDecisions(
     ...(r.nothingToShow?.length ? { nothingToShow: r.nothingToShow } : {}),
     versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
-    learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf, blendOf },
+    learning: { snapshots, gammaOf, exploreOf, controlOf, metadataOf: configOf, blendOf, ...(evidenceFloor !== null ? { evidenceFloor } : {}) },
     external,
     served,
     // W16 C3: the arrival's context for this page load, for the slots that

@@ -16,7 +16,7 @@ import { contextCellOf, contextKeyOf, defaultContextKeyOf, TODAY_TERMS, type Con
 import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
 import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, type EligibilityContext } from './lifecycle';
-import { DEFAULT_STATS, levelKeys, liftFor, type LiftSnapshot } from '@/learn/stats';
+import { DEFAULT_STATS, levelKeys, liftFor, underEvidenceFloor, type LiftSnapshot } from '@/learn/stats';
 import { ADJACENT_SWAP, EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
@@ -90,6 +90,14 @@ export interface DecideInput {
      * slot; absent means no slot blends.
      */
     blendOf?: (slot: string) => LayoutBlend | null;
+    /**
+     * P11 (decisions D1, D2): the evidence floor of the decision's page, the
+     * learn document's `evidenceFloors[page]` (`evidenceFloorOf`), a whole
+     * number of 1 or more. Below it an answering estimate is shrunk toward the
+     * slot's rate by the exposures it lacks and applied (`underEvidenceFloor`).
+     * Absent: no floor, and every slot decides exactly as before.
+     */
+    evidenceFloor?: number;
   } | null;
   /** Doc 22 §9: their model's answer for this page, or why there is none. Null when no model is configured. */
   external?: ExternalTerm | null;
@@ -474,6 +482,19 @@ export interface LayoutBlend { p: number; liftMin: number; liftMax: number;
   shadowP: number | null }
 /** P06 (decision D2): the shadow order's p on a slot opted into the layout blend whose dial publishes none. */
 export const DEFAULT_SHADOW_P = 0.1;
+/**
+ * P11 (decision D1): the evidence floor a learn document publishes for one page
+ * key of the slots document, or null where it publishes none for that page (or
+ * none at all). Total: it reads only the learn document the caller already
+ * holds, and a value that is not a whole number of 1 or more is no floor.
+ */
+export function evidenceFloorOf(learn: Pick<LearnConfig, 'evidenceFloors'>, page: string): number | null {
+  const floors = learn.evidenceFloors;
+  if (!floors || typeof floors !== 'object' || !Object.hasOwn(floors, page)) return null;
+  const floor = floors[page];
+  return typeof floor === 'number' && Number.isSafeInteger(floor) && floor >= 1 ? floor : null;
+}
+
 export function layoutBlendOf(learn: Pick<LearnConfig, 'slots' | 'stats'>, slot: string): LayoutBlend | null {
   const dials = learn.slots && Object.hasOwn(learn.slots, slot) ? learn.slots[slot] : undefined;
   const dial = dials?.blend;
@@ -1009,11 +1030,25 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const keys = contextLadder(i.cell), byKey = snap.items[item];
     return byKey ? liftFor({ ...snap, items: { [item]: Object.fromEntries(Object.entries(byKey).filter(([key]) => keys.has(key))) } }, item, i.cell) : null;
   };
+  // P11 (decisions D1, D2; freeze items 25 and 40): the page's evidence floor,
+  // read off the learn document the caller already holds. The level that
+  // answers is the ladder's own (above, untouched); where it holds fewer
+  // exposures than the floor its estimate is shrunk toward the slot's rate by
+  // the exposures it lacks and the lift that follows is applied, clamped by the
+  // snapshot as today. A piece with no level reaching nMin still has no lift. A
+  // lift a merchandiser froze is an instruction, not an estimate, so it is read
+  // without the floor (`liftAt`); no floor: exactly `liftAt`.
+  const evidenceFloor = learning?.evidenceFloor !== undefined && Number.isSafeInteger(learning.evidenceFloor) && learning.evidenceFloor >= 1
+    ? { page: i.page, floor: learning.evidenceFloor } : null;
+  const flooredAt = (slot: string, item: string) => {
+    const look = liftAt(slot, item), snap = learning?.snapshots[slot];
+    return look && evidenceFloor && snap ? underEvidenceFloor(look, evidenceFloor, snap) : look;
+  };
   const blendTerms = new Map<string, LayoutBlendTerms>();
   const blendedSlots = new Set<string>();
   const blended = (p: ContentPieceLike, slot: string, key: string, B: number, R: number, blend: LayoutBlend, control: ItemControl | null): number => {
     const learn = learning!;
-    const look = control?.mode === 'reject' ? null : liftAt(slot, p.id);
+    const look = control?.mode === 'reject' ? null : control?.mode === 'freeze' ? liftAt(slot, p.id) : flooredAt(slot, p.id);
     const lift = control?.mode === 'freeze' ? control.lift ?? 1 : look?.lift ?? null;
     const Q = lift === null || i.arm === 'no_learning' ? 0 : Math.min(blend.liftMax, Math.max(blend.liftMin, lift)) - 1;
     const gamma = learn.gammaOf(slot), applied = r3(blend.p * Q);
@@ -1021,7 +1056,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const metadata = learn.metadataOf?.(slot) ?? learn.snapshots[slot];
       liftOf.set(key, { reward: metadata?.reward ?? 'click', objective: metadata?.objective ?? 'unit', measurementBasis: metadata?.measurementBasis ?? 'served-v1', level: look?.level ?? 0, level_words: 'frozen by a merchandiser', n: look?.n ?? 0, s: look?.s ?? 0, p0: look?.p0 ?? 0, n0: look?.n0 ?? 0, p_hat: look?.p_hat ?? 0, lift: control.lift ?? 1, gamma, applied });
     } else if (look) {
-      liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied, ...(look.prior ? { prior: look.prior } : {}) });
+      liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied, ...(look.prior ? { prior: look.prior } : {}),
+        ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}) });
     }
     blendTerms.set(key, { B, Q, R, p: blend.p });
     blendedSlots.add(slot);
@@ -1050,7 +1086,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const blend = rank ? blends.get(slot) : undefined;
     if (blend && rank) return blended(p, slot, key, base, rank.R, blend, control);
     if (control?.mode === 'reject') return base;                       // learned lift ignored for this item
-    const look = liftAt(slot, p.id);
+    const look = control?.mode === 'freeze' ? liftAt(slot, p.id) : flooredAt(slot, p.id);
     const gamma = learning.gammaOf(slot);
     if (control?.mode === 'freeze') {                                   // held at the value a person chose
       const metadata = learning.metadataOf?.(slot) ?? learning.snapshots[slot];
@@ -1063,7 +1099,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // exactly zero base a multiplicative term causes nothing, and the receipt
     // must be able to say so instead of claiming an influence there was not.
     const lifted = base * Math.pow(look.lift, gamma);
-    liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied: r3(lifted - base), ...(look.prior ? { prior: look.prior } : {}) });
+    liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied: r3(lifted - base), ...(look.prior ? { prior: look.prior } : {}),
+      ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}) });
     return lifted;
   } : undefined;
   // P29: per candidate, the score the composer handed over (the tag sum and any
@@ -1457,7 +1494,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const base = preLift(p, slot, base0 + seeded, false);
       if (!learning) return base;
       const control = learning.controlOf?.(slot, p.id) ?? null;
-      const look = control?.mode === 'reject' ? null : liftAt(slot, p.id);
+      // P11: the learned term is the one the served ranking applies, under the page's evidence floor.
+      const look = control?.mode === 'reject' ? null : flooredAt(slot, p.id);
       const lift = control?.mode === 'freeze' ? control.lift ?? 1 : look?.lift ?? null;
       if (blend && rank && shadowP !== null) {
         const Q = lift === null ? 0 : Math.min(blend.liftMax, Math.max(blend.liftMin, lift)) - 1;

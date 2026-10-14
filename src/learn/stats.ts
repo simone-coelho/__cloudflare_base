@@ -6,7 +6,7 @@
 // finest level with enough exposures answers.
 
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
-import type { Cell } from '@/content/types';
+import type { Cell, EvidenceFloorApplied } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import type { PriorIndex } from './priors';
 
@@ -596,7 +596,9 @@ export function parentKey(key: string): string | null {
 
 export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number };
   /** W25 Z1.01: what this lift was measured against. Derived for an archive built before the member existed, never guessed: p₀ is on the row. */
-  liftReference: LiftReference }
+  liftReference: LiftReference;
+  /** P11: the page's evidence floor shrank this estimate (`underEvidenceFloor`); absent where no floor applied. */
+  evidenceFloor?: EvidenceFloorApplied }
 
 /** What a row's lift was measured against, from the row itself. */
 export const liftReferenceOf = (st: Pick<LevelStat, 'p0' | 'liftReference'>): LiftReference => st.liftReference ?? (st.p0 > 0 ? 'slot-rate' : 'none');
@@ -620,4 +622,31 @@ export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cel
     }
   }
   return null;
+}
+
+/**
+ * P11 (decisions D1, D2; freeze items 25 and 40): the estimate the ladder
+ * answered with, under the evidence floor F of the decision's page.
+ *
+ * The answering level is today's — the finest level reaching nMin, chosen by
+ * `liftFor` and never moved here — and it holds n exposures and the estimate
+ * p̂; p₀ is the slot's rate in that cell, the lift's own reference. Where
+ * n < F the estimate is shrunk toward that baseline by the F − n exposures it
+ * lacks, `p_F = (n·p̂ + (F − n)·p₀) / F`, and the lift becomes p_F / p₀,
+ * clamped by the snapshot's own `liftMin` and `liftMax` exactly as today's
+ * lift is (1 where p₀ is 0, as today): applied, never skipped. The answer
+ * carries `evidenceFloor: { floor, lacking, n, page }`, keys sorted. n is the
+ * observed exposures of the answering level, the `n` its record states; an
+ * imported prior's strength is not an exposure and does not count toward F.
+ *
+ * At or above the floor, or with no floor, the lookup is returned exactly as
+ * given: nothing changes and nothing is added. A piece with no level reaching
+ * nMin has no lookup to shrink, so it still gets no lift (W25). Pure.
+ */
+export function underEvidenceFloor(look: LiftLookup, floor: { page: string; floor: number } | null | undefined, clamp: { liftMin: number; liftMax: number }): LiftLookup {
+  if (!floor || !Number.isSafeInteger(floor.floor) || floor.floor < 1 || !(look.n < floor.floor)) return look;
+  const n = look.n, lacking = floor.floor - n;
+  const p_hat = (n * look.p_hat + lacking * look.p0) / floor.floor;
+  const lift = look.p0 > 0 ? Math.min(clamp.liftMax, Math.max(clamp.liftMin, p_hat / look.p0)) : 1;
+  return { ...look, p_hat, lift, evidenceFloor: { floor: floor.floor, lacking, n, page: floor.page } };
 }
