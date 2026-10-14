@@ -332,15 +332,18 @@ function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPi
  * to choose. Every refused eligible piece is counted; at most
  * `CONSTRAINT_WARNING_SAMPLE` are named across the whole document, in page
  * order, then slot order, then catalogue order, each with its page. Pure and
- * advisory: nothing here serves, ranks or stores anything.
+ * advisory: nothing here serves, ranks or stores anything. P32: `typeFallback`
+ * is the catalogue's marker; under it the gates match a piece's own
+ * `contentType` tag alone, as the decision's gates do.
  */
 export function slotDocumentConstraintDiagnostics(pieces: readonly ContentPiece[],
-  pages: Readonly<Record<string, readonly SlotStrategy[]>>, nowMs: number): DocumentConstraintDiagnostics {
+  pages: Readonly<Record<string, readonly SlotStrategy[]>>, nowMs: number, typeFallback?: TypeFallbackMarker | null): DocumentConstraintDiagnostics {
   const eligible = pieces.filter((piece) => isEligibleAt(piece, nowMs));
   const warnings: PageConstraintDiagnostic[] = [];
   let warningCount = 0;
+  const retired = typeFallback === TYPE_FALLBACK_RETIRED ? TYPE_FALLBACK_RETIRED : undefined;
   for (const [page, slots] of Object.entries(pages)) {
-    const specs = slotSpecs(slots);
+    const specs = slotSpecs(slots, undefined, retired);
     const { pinDiagnostics } = composeContentDetailed(eligible, NO_SIGNAL, specs, 0, undefined, undefined, undefined, undefined, new Set());
     const refusedPrefixes = refusedSlotsOf(pinDiagnostics);
     forEachConstraintRefusal(eligible, specs, (spec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot), undefined,
