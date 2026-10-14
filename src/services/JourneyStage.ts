@@ -309,9 +309,12 @@ const PURCHASE_ACTIONS = new Set(['purchase', 'checkout', 'order_complete']);
  * Not interactions of a visit. A `tick` is time passing, and a content
  * impression is dense and involuntary — the engine already weighs it zero
  * (src/reflex/core.ts, DEFAULT_REFLEX_CONFIG.weights.content_impression), so it
- * must not read as a shopper doing something either.
+ * must not read as a shopper doing something either. P40: nor does the viewable
+ * impression, the same exposure held in view for a second (decision D1). A
+ * product dwell (`product_dwell`) is an interaction, and its `dwellMs` feeds the
+ * dwell counter below as any event's does.
  */
-const UNCOUNTED_ACTIONS = new Set(['tick', 'content_impression']);
+const UNCOUNTED_ACTIONS = new Set(['tick', 'content_impression', 'content_viewable']);
 
 /**
  * The visit's counters after one delivered event. Pure, and the only place an

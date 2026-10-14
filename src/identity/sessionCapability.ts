@@ -229,7 +229,8 @@ export function shopperPrincipal(req: Request): SessionCapability {
   assertSessionTarget(p);
   return p;
 }
-async function boundedShopperBody(request: Request, limit: number, timeoutMs: number, tooLarge = 'Shopper request too large'): Promise<string> {
+/** The shopper request's body, read within its byte bound and time limit (P13: also the new visitor's first decision request). */
+export async function boundedShopperBody(request: Request, limit: number, timeoutMs: number, tooLarge = 'Shopper request too large'): Promise<string> {
   const reader = request.clone().body?.getReader(); if (!reader) return '';
   let timer: ReturnType<typeof setTimeout> | undefined, active = true, complete = false;
   try {

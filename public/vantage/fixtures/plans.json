@@ -1,0 +1,64 @@
+{
+ "about": "L2 build fixture for public/vantage/plans.json (lane L1 owns the real file). Real shapes, our names, mirroring the carrier as seen 2026-09-30 (buying-journey brief (a) 6-9, (b)). CONTENT: the engine decides which plan leads inside 'Pair with a plan' (slot plan-pairing, 3 of 4); it never decides a price, the autopay rule or the multi-line arithmetic.",
+ "asOf": "2026-09-30",
+ "autopay": "Per-line prices with autopay and paper-free billing ($10 a line off without). Taxes and fees extra.",
+ "plans": [
+  { "id": "simple", "family": "Simple", "name": "Simple", "planTier": "simple",
+    "customerContentId": "plan-simple",
+    "perLine": { "1": 45, "2": 45, "3": 45, "4": 45 }, "switcher": 30,
+    "starter": { "perk": "switch", "label": "Starter for switchers", "line": "$30 a line when you bring your number. One price at any line count." },
+    "features": ["Unlimited 5G data", "15 GB mobile hotspot", "Keep your phone and your number"],
+    "perks": [] },
+  { "id": "go", "family": "Unlimited", "name": "Unlimited Go", "planTier": "go",
+    "customerContentId": "plan-go",
+    "perLine": { "1": 65, "2": 55, "3": 40, "4": 30 },
+    "starter": { "perk": "family", "label": "Starter for families", "line": "Four lines from $30 each, with location sharing and screen-time controls." },
+    "features": ["Unlimited 5G data", "5 GB mobile hotspot", "Add perks from $10"],
+    "perks": ["family", "streaming"] },
+  { "id": "more", "family": "Unlimited", "name": "Unlimited More", "planTier": "more",
+    "customerContentId": "plan-more",
+    "perLine": { "1": 80, "2": 70, "3": 55, "4": 45 },
+    "starter": { "perk": "hotspot-travel", "label": "Starter for hotspot & travel", "line": "60 GB premium hotspot and five travel days a year, included." },
+    "features": ["Premium 5G data", "60 GB mobile hotspot", "Half off one connected-device plan"],
+    "perks": ["hotspot-travel", "music-games", "streaming"] },
+  { "id": "max", "family": "Unlimited", "name": "Unlimited Max", "planTier": "max",
+    "customerContentId": "plan-max",
+    "perLine": { "1": 95, "2": 85, "3": 70, "4": 60 },
+    "starter": { "perk": "streaming", "label": "Starter for streaming", "line": "The streaming bundle included: three services on one bill." },
+    "features": ["Premium 5G data, 4K video", "Unlimited premium hotspot", "International in 210+ destinations", "Half off two connected-device plans"],
+    "perks": ["streaming", "international", "hotspot-travel", "music-games"] }
+ ],
+ "perks": {
+  "streaming":      { "title": "Streaming bundle", "price": 13, "body": "Three streaming services on one bill: shows, films and live sport, with ads.", "fine": "$13/mo per line on Go and More; included on Max." },
+  "music-games":    { "title": "Music & games", "price": 15, "body": "A music service and a cloud-gaming library, on every device in the house.", "fine": "$15/mo per line." },
+  "hotspot-travel": { "title": "Hotspot & travel", "price": 10, "body": "60 GB of premium mobile hotspot at 5G speeds, and five TravelPass days a year in 210+ destinations.", "fine": "Included on More and Max; $10/mo on Go." },
+  "international":  { "title": "International", "price": 10, "body": "Unlimited talk and text to 200+ countries and data while you travel.", "fine": "Included on Max; $10/mo on Go and More." },
+  "family":         { "title": "Family controls", "price": 10, "body": "Location sharing, screen-time schedules and safe browsing for every line on the account.", "fine": "$10/mo per account." }
+ },
+ "tradeInByPlan": { "note": "Share of the phone's maximum trade-in value each plan unlocks, the site-wide rule. Credited monthly over 36 months after the device is received and assessed.", "max": 1.0, "more": 0.8, "go": 0.5, "simple": 0 },
+ "protection": {
+  "note": "Per phone per month. Multi-device: $38 for 2, $57 for 3, $68 for 4 or more.",
+  "tiers": [
+   { "id": "protect", "name": "Mobile Protect", "price": 19, "premium": true, "body": "Loss, theft and damage, same-day replacement in most areas, 24/7 tech coaching." },
+   { "id": "protect-basic", "name": "Mobile Protect Basic", "price": 16, "premium": false, "body": "Damage and malfunction, repairs in store or at your door." }
+  ],
+  "multi": { "2": 38, "3": 57, "4": 68 }
+ },
+ "accessories": {
+  "note": "Buy more, save more: 20% off 2 accessories, 25% off 3, 30% off 4 or more.",
+  "tiers": { "2": 20, "3": 25, "4": 30 },
+  "items": [
+   { "id": "case", "name": "Clear magnetic case", "price": 49.99 },
+   { "id": "charger", "name": "45W USB-C fast charger", "price": 39.99 },
+   { "id": "glass", "name": "Tempered glass screen protector", "price": 29.99 },
+   { "id": "buds", "name": "Wireless earbuds", "price": 129.99 }
+  ]
+ },
+ "connected": {
+  "watch":  { "name": "Smartwatch line", "line": 10, "offUpTo": 500, "note": "Up to $500 off a watch on a new line." },
+  "tablet": { "name": "Tablet line", "line": 20, "offUpTo": 600, "note": "Up to $600 off a tablet on a new line." },
+  "kids":   { "name": "Kids' smartwatch", "line": 10, "note": "Calls, texts and location for the youngest on the plan." }
+ },
+ "homeInternet": { "withPlan": 35, "standalone": 60, "bundle": { "name": "Mobile + Home", "price": 70, "note": "One line and home internet, taxes and equipment included." } },
+ "fees": { "activation": 40, "waivedWith": "Vantage Rewards", "note": "The $40 activation or upgrade fee is waived when you join Vantage Rewards." }
+}

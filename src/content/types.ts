@@ -8,6 +8,9 @@ import type { ContentPieceLike, ContentDecision, SlotCandidate, PinDiagnostic } 
 import type { SlotConstraintReason } from './slotConstraints';
 import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
+import type { ContextVocabulary } from '@/services/visit';
+import type { DeviceClass } from '@/services/platform';
+import type { Suppression } from '@/reflex/core';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
@@ -23,19 +26,100 @@ export interface ContentPiece extends ContentPieceLike {
   freshnessDate?: string;
   /** CW32 (BTIE A.3.6 `featured_product_ids`): the products the piece features, in the customer's product ids, so a shoppable module can be painted and a product decision joined. Carried, validated, never rewritten. */
   featuredProductIds?: string[];
+  /**
+   * The products this piece COMPLETES, in the customer's product ids: a dryer
+   * module completes the washer it pairs with, a mount the TV it fits. Carried
+   * and validated like `featuredProductIds`, never rewritten. It moves nothing
+   * by itself; a slot's `complements` rule reads it against the anchor product
+   * the request names (`ctx.anchor`) and prefers the pieces that complete it.
+   */
+  complements?: string[];
   /** CW33 (BTIE D11): the catalog's own stock flag. `false` removes the piece from every decision; absent or `true` means in stock. */
   inStock?: boolean;
   /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
   renderUrl?: string;
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
   window?: { from?: string; to?: string };
+  /**
+   * P31: the module's eligibility rule by context. It is a TARGETING RULE, not
+   * an affinity: it decides whether the piece may be served at all, beside the
+   * window and the stock flag, and it is evaluated BEFORE scoring, so a gated
+   * piece cannot be chosen however well it would have scored. It never boosts
+   * anything — a piece that passes its rule is then ranked on exactly the same
+   * terms as everything else.
+   *
+   * `regions` are the engine's own region keys (country, or country-region, as
+   * the edge reports them: "US", "US-WA"). A piece listing "US-WA" is eligible
+   * for a shopper in Washington; listing "US" covers the country. `context`
+   * names the engine's own signals — `entry_channel`, `visit_bucket` and
+   * `journey_stage` — each with the values that admit the piece, in the engine's
+   * words. Every named condition must hold, and each is read off the decision's
+   * cell as the engine derived it, never off a value the page sends: an unknown
+   * value satisfies no rule, and silence never opens a gate.
+   */
+  eligibleWhen?: EligibilityRule;
   excerpt?: string;
+}
+
+/**
+ * A piece's own eligibility rule. Absent means "eligible wherever and whenever
+ * its window says", which is every piece that has never heard of this feature.
+ */
+export interface EligibilityRule {
+  /** Region keys that admit the piece. Absent means every region. */
+  regions?: string[];
+  /**
+   * P31: the engine's own signals (`entry_channel`, `visit_bucket`,
+   * `journey_stage`), each with the values that admit the piece. Publication
+   * admits no other signal and no value outside its vocabulary; a retained
+   * document's other signal is kept as stored and satisfies nothing.
+   */
+  context?: Record<string, string[]>;
 }
 
 /** The `content` document kind: the catalog for a scope. */
 export interface ContentCatalog {
   version?: string;
+  /**
+   * P32 (decision D3): `'retired'` retires the free-text type fallback for this
+   * catalogue — a piece's content format is its own `contentType` tag alone, in
+   * ranking, in slot exclusions and in what an engagement teaches. Absent: the
+   * fallback holds exactly as before. Publication refuses any other value.
+   */
+  typeFallback?: 'retired';
   pieces: ContentPiece[];
+}
+
+/**
+ * P38: one value of an attribute in the tenant's published vocabulary. `id` is
+ * the value every store and every interest carries (lower-case letters and
+ * digits, words joined by single underscores, at most 64 characters); `name` is
+ * the display name, kept exactly as the tenant authored it; `synonyms` are the
+ * source systems' own words for the value; `parent` names the category a
+ * product type belongs to (exactly one on every `productType` value).
+ */
+export interface VocabularyValue {
+  id: string;
+  name: string;
+  synonyms?: string[];
+  parent?: string;
+}
+/** P38: one attribute of the vocabulary, keyed by the registry dimension and catalogue tag key it governs. */
+export interface VocabularyAttribute { values: VocabularyValue[] }
+/** P38: the `vocabulary` document kind, as authored. A stored revision governs nothing until it is approved. */
+export interface VocabularyDocument {
+  version?: string;
+  attributes: Record<string, VocabularyAttribute>;
+}
+/**
+ * P38 (decision D1): the approval in effect — the vocabulary revision the
+ * tenant's operator approved and the document of that revision, carried whole so
+ * the ingest hosts read one member of the publication set and never an older
+ * revision body.
+ */
+export interface VocabularyApproval {
+  revision: number;
+  document: VocabularyDocument;
 }
 
 /**
@@ -100,12 +184,218 @@ export interface SlotStrategy {
    * the slot has no contextual seeding at all.
    */
   seeds?: SeedRule[];
+  /**
+   * P02: this slot is the page's declared LAYOUT — one slot of `take` (K)
+   * positions over the modules (catalogue pieces) that name it in their
+   * `slotTypes`. The decision returns up to K module ids in rank order with
+   * eligibility, exclusions and page-wide de-duplication applied; the returned
+   * list is the layout's sequence, and a module not returned is not drawn. A
+   * declared layout is captured as exposures only when its learn document
+   * measures it on `rendered-v1`; on any other basis it is served without
+   * exposure and the decision set names the mismatch (`layoutDiagnostics`).
+   * Read only under `governanceVersion: 4`, at most one per page; absent means
+   * an ordinary slot, decided and replayed exactly as before.
+   */
+  layout?: true;
+  /**
+   * P01: per-context module orders on the page's declared layout slot (version
+   * 4 only). A shopper whose context an order names is served that order's
+   * modules exactly, position by position; a module the order does not list is
+   * hidden in that context and is no exposure. The most specific matching
+   * context wins (decision D1); the order is never served on the holdout's
+   * default arm, without personalization consent, or on a decision the slot's
+   * exploration picks (decision D2) — each of those receives the slot's own
+   * decision. Absent means the slot decides exactly as before.
+   */
+  orders?: ConfiguredOrder[];
+  /**
+   * This slot prefers the pieces that complete the anchor product the request
+   * names (`ctx.anchor`, a product id), through the composer's `prefer` hook:
+   * a piece whose `complements` lists that id gains `weight` in its base score,
+   * itemised as a `completes` driver. Fails closed: a request that names no
+   * anchor prefers nothing. Personalization, so never on the holdout's default arm.
+   */
+  complements?: ComplementsRule;
+  /**
+   * P10 (decisions D1, D2): this slot's own signal floor, overriding the
+   * tenant's (`SlotCatalog.signalFloor`). While the shopper's count of signals
+   * is at most the floor the slot is decided on context alone, so the response
+   * to the (N + 1)th signal is its first personalized one; 0 is off. `never`
+   * keeps the slot context-only for every shopper and is published only on the
+   * page's declared layout slot. Absent means the tenant's floor applies.
+   */
+  signalFloor?: SignalFloor;
+  /**
+   * P04: modules pinned at a position of the page's declared layout slot
+   * (version 4 only), each at a position counted from 1 to the slot's `take`,
+   * after any prefix pins. A pinned module is reserved page-wide before any slot
+   * ranks and is served at exactly its position on every arm, never scored or
+   * explored, while the other positions are ranked around it. A pinned module
+   * that is missing, ineligible or excluded refuses the whole slot (decision
+   * D1), as a refused prefix pin does. Absent means the slot decides exactly as
+   * before.
+   */
+  positionPins?: PositionPin[];
+  /**
+   * P04: modules marked off-limits on the page's declared layout slot (version
+   * 4 only). An off-limits module holds its BASELINE position — its place in
+   * the configured order for the shopper's context where one matches (P01), else
+   * among the modules the slot could serve in catalogue order — on every arm,
+   * and no term and no exploration moves it, while the others are ranked around
+   * it; one whose baseline position lies beyond the take is not served. Absent
+   * means the slot decides exactly as before.
+   */
+  offLimitsPieceIds?: string[];
+  /**
+   * P30 (decision D1): the context-only layout switch of the page's declared
+   * layout slot (version 4 only), off by default: absent, or `enabled: false`,
+   * decides the slot exactly as before. Switched on, the slot is decided for its
+   * CONTEXT — the page, the shopper's entry channel and visit bucket, the device
+   * class the request reports (P37) and, with `region: true`, the region — and
+   * never for the shopper: no interest, journey stage, fatigue or out-of-context
+   * seed rule, the learned ladder no finer than channel and visit bucket, and
+   * exploration hashed on the context and the hour, so every shopper of one
+   * context is served the identical order, named by a non-identifying context
+   * key (decision D2). The holdout's default arm, and a shopper without
+   * consent, are served the slot's default variant under a key of its own.
+   * Publication refuses the switch on any slot but the page's declared layout
+   * slot. Distinct from P10's signal floor (`signalFloor`), which keeps its own
+   * meaning: a switched slot is never held below a floor, its switch decides it.
+   */
+  contextOnly?: ContextOnlySwitch;
 }
 
-export interface DiversityRule { dimension: string; max: number }
+/**
+ * P30: the context-only layout switch as published on the declared layout slot:
+ * `enabled` turns it on, `region` admits the shopper's region into the context
+ * (and so into its key and its population prior). Kept exactly as authored.
+ */
+export interface ContextOnlySwitch { enabled: boolean; region?: boolean }
 
-/** The arrival signals a seed rule may read. Each is context, never learned evidence. */
-export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network';
+/** P04: one module pinned at a position of a slot, counted from 1. */
+export interface PositionPin { pieceId: string; position: number }
+
+/**
+ * P04: the rule that placed a module and the position it set, counted from 1:
+ * `pinned` at its pinned position, `off_limits` at its baseline position. Keys
+ * sorted, as every explain member a replay compares.
+ */
+export interface ModuleRule { position: number; rule: 'pinned' | 'off_limits' }
+
+/**
+ * P29 (decision D1): why the served order of a declared layout slot is
+ * unchanged against its baseline, as the ticket writes the vocabulary, in the
+ * ticket's own order; where several hold, the first is the cause. Later
+ * tickets may add causes, so a reader treats an unknown word as a cause it
+ * cannot name, never as an error.
+ */
+export type LayoutReasonCause = 'pinned' | 'off_limits' | 'holdout_or_consent' | 'below_signal_floor' | 'blend_or_trust_zero'
+  | 'no_level_reached_nmin' | 'zero_base' | 'catalogue_order_ties' | 'nothing_else_eligible';
+
+/**
+ * P29: the engine term that moved a module of a changed layout — the shopper's
+ * own interests (`affinity`), the arrival's seed rules, the regional or the
+ * context prior, the learned lift, the layout blend's learned term, exploration,
+ * and the other itemised terms of the score — named on each move.
+ */
+export type LayoutMoveTerm = 'affinity' | 'seed' | 'regional_prior' | 'context_prior' | 'completes' | 'external' | 'stage' | 'freshness'
+  | 'fatigue' | 'merchandising' | 'lift' | 'blend' | 'exploration' | 'diversity';
+
+/**
+ * P29: one module of a changed layout served at a position other than its
+ * baseline position, positions counted from 1 within the slot (`from` null for a
+ * module the baseline does not hold), and the term that moved it. Keys sorted.
+ */
+export interface LayoutMove { from: number | null; module: string; term: LayoutMoveTerm; to: number }
+
+/**
+ * P31 (P29 decision D1 lets it add causes): why a module the baseline would
+ * have served was withheld from a declared layout slot before ranking — the
+ * page reported it has nothing to show for this page view (`nothing_to_show`),
+ * or its own eligibility rule is not satisfied by the decision's cell
+ * (`eligibility_rule`).
+ */
+export type LayoutWithheldCause = 'nothing_to_show' | 'eligibility_rule';
+
+/** P31: one module withheld from a changed layout, and why. Keys sorted. */
+export interface LayoutWithheld { cause: LayoutWithheldCause; module: string }
+
+/**
+ * P29 (decision D1): the layout reason of a declared layout slot, on the decision
+ * set, on every record of the slot (`explain.layoutReason`) and on every receipt
+ * (`layoutReason`): the served order compared with the baseline — the
+ * merchandiser's fixed positions (pins, off-limits modules) where their rules
+ * put them, and on every other position the configured order for the
+ * shopper's context, else the slot's eligible modules in catalogue order —
+ * either unchanged with exactly one cause (`no_level_reached_nmin` with the n
+ * the ladder has and the nMin it needs), or changed with the term that moved
+ * each moved module. Keys sorted, as every explain member a replay compares.
+ */
+export type LayoutReason =
+  | { cause: LayoutReasonCause; n?: number; nMin?: number; slot: string; status: 'unchanged' }
+  /**
+   * P31: `withheld` names, in baseline order, each module the baseline would
+   * have served that was withheld before ranking, with its cause; `moves` then
+   * compares the served order with the baseline less those modules. Present
+   * only when a module was withheld from a position the baseline fills.
+   */
+  | { moves: LayoutMove[]; slot: string; status: 'changed'; withheld?: LayoutWithheld[] };
+
+/**
+ * P10: a signal floor — a whole number of signals, 0 or more, or `never` (the
+ * declared layout slot only). A signal is one action whose own behaviour weight
+ * is above zero (decision D1).
+ */
+export type SignalFloor = number | 'never';
+
+/**
+ * P01 decision D1: a context is one entry channel (one of the six channel
+ * words) or `any`, with one or more visit buckets or `any`. A shopper whose
+ * channel or visit bucket is unknown matches no context, not even one that
+ * names `any`. Specificity is the number of parts that are not `any`.
+ * P36 (R-P46): on a tenant that publishes a context vocabulary the channel is
+ * one of its channel ids and the buckets are the names of its published cut;
+ * a tenant without the settings keeps the six words and 1, 2-3, 4+.
+ * P37: a context may also name a device class (`mobile` or `desktop`, a tablet
+ * counting as desktop), one more part of its specificity; a context that names
+ * none matches every device, and a shopper whose request reports no device
+ * matches no context that names one.
+ */
+export interface OrderContext {
+  channel: string;
+  device?: DeviceClass;
+  visitBuckets: string[] | 'any';
+}
+
+/**
+ * P01: one per-context order — the context it is published for and the module
+ * ids it serves, in order (1 to the slot's `take`). The same shape is carried
+ * on the decision record (`explain.configuredOrder`) and on the receipt, with
+ * its keys in sorted order, so a replay compares it by value.
+ */
+export interface ConfiguredOrder { context: OrderContext; modules: string[] }
+
+export interface DiversityRule { dimension: string; max: number }
+/** A slot's preference for the pieces that complete the request's anchor product; `weight` in the engine's 0..1 rule range. */
+export interface ComplementsRule { weight: number }
+
+/**
+ * The arrival signals a seed rule may read. Each is context, never learned
+ * evidence. `platform` is the OS family the request itself reports (`ios` or
+ * `android`, nothing finer; src/services/platform.ts). P37: `device` is the
+ * device class the request itself reports (`mobile` or `desktop`), and
+ * `recency` the recency bucket of the shopper's visit from the stored last visit
+ * (`same_day`, `within_7_days`, `8_to_30_days` or `30_and_more`; a first visit
+ * has none and fires no recency rule).
+ */
+export type SeedSignal = 'entry_channel' | 'campaign_term' | 'referrer_network' | 'platform' | 'source_platform' | 'landing_page_type' | 'device' | 'recency';
+
+/**
+ * A rule's weight is multiplied by `factor` while the shopper's OWN evidence
+ * holds this interest, that is, while she is a member of the `dimension:value`
+ * audience. Never read from the regional prior or from asserted context.
+ */
+export interface SeedDampen { dimension: string; value: string; factor: number }
 
 /**
  * W16 C3 (document 35 §2 F13): the interest an ARRIVAL is evidence for, before
@@ -119,14 +409,25 @@ export interface SeedRule {
   signal: SeedSignal;
   /**
    * The value of that signal this rule fires on: one of the six channel words
-   * for `entry_channel`, the campaign term verbatim for `campaign_term`, a known
-   * network's registrable domain for `referrer_network`.
+   * for `entry_channel` (P36: one of the tenant's channel ids when it publishes
+   * a context vocabulary), the campaign term verbatim for `campaign_term`, a
+   * known network's registrable domain for `referrer_network`, `ios` or
+   * `android` for `platform`, and one of the tenant's source platform ids or
+   * landing-page type ids for `source_platform` and `landing_page_type` (P36,
+   * read off the shopper's visit); P37: `mobile` or `desktop` for `device`, and
+   * one of the four bucket ids for `recency`.
    */
   value: string;
   /** The canonical tags this arrival is evidence for; each dimension must be one the slot weights. */
   tags: Array<{ dimension: string; value: string }>;
   /** 0..1, the codebase's rule-weight range. */
   weight: number;
+  /**
+   * Optional: each interest the shopper's own evidence holds multiplies the
+   * weight by its factor (for example, halve an OS-family seed while intent is
+   * switch, and let it yield once she holds the other ecosystem).
+   */
+  dampen?: SeedDampen[];
 }
 
 /** What one fired rule contributed to one candidate, itemised as a delta like every other term. */
@@ -138,10 +439,18 @@ export interface SeedDriver {
   weight: number;
   /** The delta this rule caused in the final pre-lift base, after merchandising. */
   contribution: number;
+  /** Present when the rule's `dampen` applied: each interest she holds and the factor it cost the rule. */
+  dampened?: SeedDampen[];
 }
 
 /** Refused seed configuration, never a fabricated influence, in the pattern of `pinDiagnostics`. */
 export interface SeedDiagnostic { slot: string; reason: 'invalid_rule_set' }
+
+/**
+ * P02 decision D1: a declared layout slot measured on a basis other than
+ * `rendered-v1`, so it is served without exposure. Keys in sorted order.
+ */
+export interface LayoutDiagnostic { measurementBasis: MeasurementBasis; reason: 'measurement_basis'; slot: string }
 
 export interface FreshnessRule { weight: number; halfLifeDays: number }
 export interface FatigueRule { weight: number; windowHours: number; cap: number }
@@ -153,8 +462,21 @@ export interface StageRule { outOfStage?: number; inStage?: number }
 /** The `slots` document kind: per page, the slots in page order. */
 export interface SlotCatalog {
   version?: string;
-  /** Absent retained documents use legacy parsing, ignoring formerly unknown controls. */
-  governanceVersion?: 1 | 2 | 3;
+  /**
+   * Absent retained documents use legacy parsing, ignoring formerly unknown
+   * controls. Version 4 (P02) introduces the layout declaration (`layout` on a
+   * slot) and the layout slot's per-context `orders` (P01), and otherwise reads
+   * exactly as version 3.
+   */
+  governanceVersion?: 1 | 2 | 3 | 4;
+  /**
+   * P10 (decisions D1, D2): the tenant's signal floor N, a whole number of 0 or
+   * more; absent is 0, which is off and decides exactly as before. A slot's own
+   * `signalFloor` overrides it. Read under every governance version, like the
+   * slot's seed rules: it does not by itself change the version a write is
+   * stamped with.
+   */
+  signalFloor?: number;
   pages: Record<string, SlotStrategy[]>;
 }
 
@@ -229,7 +551,24 @@ export interface RegionalConfig {
   kBlend: number;
   /** The finest level with at least this many events is used; the same gate as the geo cold start. */
   minEvents: number;
+  /**
+   * The registry dimensions the prior may blend. Absent means every dimension
+   * the region carries (the shipped behaviour). A dimension not listed takes no
+   * share from the region, exactly like a dimension the region has never seen.
+   */
+  dimensions?: string[];
 }
+
+/**
+ * P07 (decision D1, freeze items 22 and 37): the context prior, in the regional
+ * prior's grammar — its own block and K. The population's interests per entry
+ * channel and visit bucket (`1`, `2-3`, `4+`), blended into the shopper's view
+ * with λ = kBlend / (kBlend + Σ personal affinity). A decision reads the shares
+ * of the shopper's channel and visit bucket when that pair has at least
+ * `minEvents` events, else the shares of the channel alone over every visit
+ * bucket, never everyone's. Off when the block is absent.
+ */
+export type ContextPriorConfig = RegionalConfig;
 
 /** Doc 22 §4: the learning policy's four axes and the per-reward windows. */
 export interface LearnPolicyConfig {
@@ -242,8 +581,12 @@ export interface LearnPolicyConfig {
 /** Doc 22 §5.1: the estimator's constants. */
 export interface LearnStatsConfig { n0: number; tauLearnMs: number; liftMin: number; liftMax: number; nMin: number }
 
-/** Doc 22 §7: how a slot explores. */
-export interface ExploreDials { mode: 'rotation' | 'thompson' | 'epsilon' | 'off'; share: number; floor: number }
+/**
+ * Doc 22 §7: how a slot explores. P05: `adjacent-swap`, on a page's declared
+ * layout slot only, swaps the modules of two adjacent positions on `share` of
+ * its decisions, so each position's effect can be estimated from the swaps.
+ */
+export interface ExploreDials { mode: 'rotation' | 'thompson' | 'epsilon' | 'off' | 'adjacent-swap'; share: number; floor: number }
 /** Doc 22 §11: whether and how a slot adjusts its own weights. */
 export interface AutonomyDials { mode: 'configured' | 'assisted' | 'autonomous'; step: number; min: number; max: number; pinned: string[]; minN: number }
 /** Doc 22 §12.2: a merchandiser's control over one item's learned lift. */
@@ -254,6 +597,8 @@ export interface ItemControl { mode: 'reject' | 'freeze'; lift?: number }
 export type Objective = 'unit' | 'revenue' | 'margin';
 /** Absent retained metadata means served-v1, never rendered evidence. */
 export type MeasurementBasis = 'served-v1' | 'rendered-v1';
+/** P33 (decision D1, freeze item 11): the one attribution policy a slot may carry of its own. */
+export type SlotAttribution = 'module-tied';
 
 export interface SlotDials {
   measurementBasis?: MeasurementBasis;
@@ -266,18 +611,76 @@ export interface SlotDials {
   items?: Record<string, ItemControl>;
   /** Doc 22 §9: how much this slot trusts their model, w_ext. Absent or 0 means the term is off for the slot. */
   external?: { weight: number };
+  /**
+   * P28 (decision D1): the page's declared layout slot opts into the
+   * behaviour-and-performance blend. Each module of the slot is then scored
+   * R + (1 − p) × B + p × Q instead of base × lift^γ, where R = (M − i) / M is
+   * the module's rank base over the slot's baseline (the configured order for
+   * the shopper's context, else the eligible modules in catalogue order; i
+   * counted from 0, so the first module's R is 1), B its pre-lift behaviour
+   * score and Q its clamped learned lift minus one (0 where no level answers).
+   * `p` is 0 to 1 and 0 when absent; the document keeps the member exactly as
+   * authored. Published only on a slot that is a page's declared layout slot;
+   * on any other slot, and on a slot whose dials carry none, the slot decides
+   * exactly as before.
+   */
+  blend?: LayoutBlendDial;
+  /**
+   * P05 (decision D2): the position-normalisation switch of the page's declared
+   * layout slot. `true` divides the credit of an engagement at a position by
+   * that position's estimated effect (`positionEffects`, estimated from the
+   * slot's adjacent swaps); absent or `false`, its default, credits exactly as
+   * before. Published only on a page's declared layout slot.
+   */
+  positionNormalization?: boolean;
+  /**
+   * P33 (decision D1, freeze item 11): the slot's own attribution policy,
+   * absent by default. Absent, the slot is credited under the brand-wide
+   * `policy` exactly as before. `module-tied`, the only per-slot policy, credits
+   * a decision of the slot only for an outcome that carries that decision's
+   * identifier, or the identifier of the module it served as the content the
+   * outcome names: a conversion that names no module (a buy-box add to bag)
+   * credits no decision of the slot. The scope, the credit rule and the
+   * reward's window stay the brand-wide policy's.
+   */
+  attribution?: SlotAttribution;
 }
+
+/**
+ * P28: the layout blend's opt-in on a slot's learn dials, `{ p }` with p in 0..1
+ * (absent: 0). P06 (decision D2): `shadowP`, 0 to 1, is the p the slot's shadow
+ * order is ranked at (`explain.shadowOrder`), 0.1 when absent; it changes
+ * nothing served.
+ */
+export interface LayoutBlendDial { p?: number; shadowP?: number }
+
+/**
+ * P28 (decision D1): what the layout blend computed for one module, on the
+ * decision record (`explain.blend`) and the receipt (`blend`), keys sorted.
+ * R + (1 − p) × B + p × Q is the served score (each term at three decimals,
+ * `p` as published).
+ */
+export interface LayoutBlendTerms { B: number; Q: number; R: number; p: number }
 
 export interface LearnConfig {
   version?: string;
   holdout: HoldoutConfig;
   regional?: RegionalConfig;
+  /** P07: the context prior per entry channel and visit bucket, beside the regional prior; absent is off. */
+  contextPrior?: ContextPriorConfig;
   policy?: LearnPolicyConfig;
   stats?: LearnStatsConfig;
   /** slot → dials. A slot absent here runs at γ = 0 on the click reward. */
   slots?: Record<string, SlotDials>;
   /** Doc 22 §9: their model, one per tenant; each slot dials its weight. */
   external?: ExternalModelConfig;
+  /**
+   * P36: the tenant's context vocabulary — channel values with the rules that
+   * classify an arrival into them, source platforms, landing-page types, and
+   * optionally the visit-bucket cut and the ladder depth. Absent: today's six
+   * words, classification, buckets and ladder, exactly.
+   */
+  contextVocabulary?: ContextVocabulary;
 }
 
 /** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
@@ -316,6 +719,22 @@ export interface RegionalBlend {
   events: number;
 }
 
+/**
+ * P07: what the context prior contributed, in the regional blend's form: the
+ * shopper's entry channel and visit bucket, the level whose shares were read
+ * (`channel_visit` for the pair, `channel` for the channel alone when the pair
+ * had fewer events than the block's minimum), the weight λ, and the published
+ * snapshot's version and event count.
+ */
+export interface ContextPriorBlend {
+  channel: string;
+  visitBucket: Cell['visit_bucket'];
+  level: 'channel_visit' | 'channel';
+  lambda: number;
+  version: number;
+  events: number;
+}
+
 export type Authority = 'engine' | 'pin' | 'default';
 
 /**
@@ -328,7 +747,8 @@ export type IdentityAnchor = 'visitor' | 'session' | 'none';
 /** Doc 22 §5.4. Components not yet available are recorded as unknown, not guessed. */
 export interface Cell {
   channel: string;
-  visit_bucket: '1' | '2-3' | '4+' | 'unknown';
+  /** `1`, `2-3`, `4+` or `unknown`; P36: the bucket names of a tenant's published cut. */
+  visit_bucket: string;
   region: string | null;
   /** The leading interest above its entry threshold, as `dim:value`, or null. */
   affinity: string | null;
@@ -383,14 +803,99 @@ export interface DecisionInputs {
     contentTypes?: 'catalog-tags-v1';
     /** Absence retains pre-governance selection independently of the other policies. */
     governance?: 'slot-gates-v1' | 'slot-gates-v2';
+    /**
+     * P02: present only when the page declares a layout slot (`layout: true`
+     * under governance version 4); absence retains the page as decided before
+     * the declaration existed, independently of the other policies.
+     */
+    layout?: 'declared-slot-v1';
+    /**
+     * P01: present only on a decision on which a slot of the page served its
+     * configured per-context order; absence replays the page without its
+     * orders, independently of the other policies.
+     */
+    orders?: 'configured-order-v1';
+    /**
+     * P28: present only on a decision on which a slot of the page ranked its
+     * modules by the layout blend; absence replays the page without the blend,
+     * independently of the other policies.
+     */
+    blend?: 'layout-blend-v1';
+    /**
+     * P10: present only on a decision on which a slot of the page was decided
+     * on context alone because the shopper was below its signal floor (C11);
+     * the count it was decided with is `signals` beside the manifest. Absence
+     * replays the page with no floor, independently of the other policies.
+     */
+    signalFloor?: 'signal-floor-v1';
+    /**
+     * P04: present only on a decision on which a position pin or an
+     * off-limits mark of the page's layout slot decided something (C11);
+     * absence replays the page without its position pins and off-limits marks,
+     * independently of the other policies.
+     */
+    moduleRules?: 'module-rules-v1';
+    /**
+     * P32: present only on a decision made under a catalogue that retires the
+     * free-text type fallback (`typeFallback: 'retired'`) on which the fallback
+     * could have changed something — a piece whose format only the fallback
+     * supplies names a slot of the page that reads the content format (C11).
+     * Absence replays the page with the fallback, independently of the other
+     * policies, whatever the catalogue revision declares.
+     */
+    typeFallback?: 'type-fallback-retired-v1';
     learning: boolean;
     candidateLimit: number;
     slots: Array<{ slot: string; lift: number; prior: number }>;
   };
   regional_share?: Record<string, Record<string, number>>;
+  /**
+   * P07: the context prior's shares the decision used (the form of
+   * `regional_share`, keys sorted), written only when the prior applied, so a
+   * replay itemises it exactly; a record without it was decided without it.
+   */
+  context_share?: Record<string, Record<string, number>>;
+  /**
+   * P29: the weight λ each population prior blended into the page carried
+   * (`context`, `regional`, keys sorted), written only on a page whose declared
+   * layout slot ranked above the signal floor while a prior applied, so the
+   * layout reason's itemisation of what a prior moved replays exactly from any
+   * record of the page. A record without it was decided without a prior there.
+   */
+  prior_lambda?: { context?: number; regional?: number };
   external?: { version: string; scores: Record<string, number> };
   /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, as read from the ring at decision time. */
   served?: Record<string, Record<string, number>>;
+  /**
+   * P10: the shopper's count of signals this page was decided with, written
+   * only with the `signalFloor` marker, so the replay knows which slots were
+   * below their floor.
+   */
+  signals?: number;
+  /**
+   * P31: the page's report of the modules that have nothing to show for this
+   * page view, as the decision accepted it (each identifier once, sorted).
+   * Written only when the page sent one, so the replay withholds exactly what
+   * the decision withheld; a record without it was decided without a report.
+   */
+  nothing_to_show?: string[];
+  /**
+   * P31: each eligibility rule's verdict on the decision's cell, module →
+   * true or false, for every live module of the page that carries a rule
+   * (keys sorted). Written only when the page held such a module; a record
+   * without it was decided where no rule could act.
+   */
+  eligibility_verdicts?: Record<string, boolean>;
+  /**
+   * P30: the context a context-only layout slot of the page was decided in,
+   * beyond what the record already carries (its page, and its cell's channel and
+   * visit bucket): the device class the request reported, and the region where
+   * the slot admits it (keys sorted, each only when there is one). Written only
+   * on a decision on which a switched slot was decided for its context (C11), so
+   * a replay hashes exploration on the same context and serves the same device
+   * order; every other record carries exactly what it carried before.
+   */
+  context_only?: { device?: DeviceClass; region?: string };
 }
 
 /** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
@@ -404,6 +909,13 @@ export interface DecisionRecord {
   tenant: string;
   brand: string;
   visitor_id: string;
+  /**
+   * P13 (decision D1): the customer's identifier the decision request carried
+   * (`setCustomerId` in the SDK), written beside `visitor_id` under tracking
+   * consent only; absent when the request carried none. Carried, never proof:
+   * no state is keyed, linked or selected by it, and replay does not compare it.
+   */
+  customer_id?: string;
   session_id: string | null;
   identity_anchor: IdentityAnchor;
   ts: number;
@@ -449,6 +961,12 @@ export interface DecisionRecord {
     /** The population prior's share of the base score, when one applied. */
     regional?: RegionalBlend & { contribution: number };
     /**
+     * P07: the context prior's share of the base score, when it contributed:
+     * `{ channel, contribution, events, lambda, level, version, visitBucket }`,
+     * keys sorted, compared by value in replay.
+     */
+    contextPrior?: ContextPriorBlend & { contribution: number };
+    /**
      * W16 C3/C7: what the arrival's context contributed to this candidate, when
      * the slot has a seed rule set. `applied` is measured where it lands — in the
      * final pre-lift base, after merchandising — so a candidate merchandised to
@@ -459,10 +977,14 @@ export interface DecisionRecord {
     contextual?: { applied: number; drivers: SeedDriver[] };
     /** The learned lift and the dial it was applied through; null when nothing has been learned for this item in this cell. */
     lift: LiftApplied | null;
-    /** score_base × lift^γ. Equal to score_base while γ is 0. */
+    /** score_base × lift^γ. Equal to score_base while γ is 0. On a slot that opted into the layout blend, R + (1 − p) × B + p × Q (`blend`). */
     score_final: number;
-    /** Why this placement was an exploration pick, when it was. */
-    exploration?: { mode: string; reason: string; bucket: number; sample?: number };
+    /**
+     * Why this placement was an exploration pick, when it was. P05: on each of
+     * the two modules an adjacent swap exchanged, `positions` names the two
+     * positions, counted from 1 within the slot (keys sorted).
+     */
+    exploration?: { mode: string; reason: string; bucket: number; sample?: number; positions?: [number, number] };
     /** A merchandiser's control on this item's lift, when one applied. */
     control?: 'reject' | 'freeze';
     /** Their model's term on this decision, when the slot weights one. */
@@ -488,6 +1010,86 @@ export interface DecisionRecord {
      * operator's slot-governance counter is that occurrence's only home.
      */
     shortTake?: { take: number; served: number; empty: number; sentence: string };
+    /**
+     * P01: this position was set by the slot's configured per-context order:
+     * the context the order was published for and the whole order as
+     * published, keys sorted. Present only on the positions the order set (a
+     * pinned position keeps authority `pin` and carries none); the record's own
+     * `position` is the position it was served at.
+     */
+    configuredOrder?: ConfiguredOrder;
+    /**
+     * P28 (decision D1): this position's slot opted into the layout blend and the
+     * blend ranked it: the rank base R, the pre-lift behaviour score B, the
+     * clamped learned lift minus one Q and the published p, keys sorted, so that
+     * R + (1 − p) × B + p × Q is `score_final`. Absent on every other record.
+     */
+    blend?: LayoutBlendTerms;
+    /**
+     * P10 (decision D2): this position's slot was decided on context alone
+     * because the shopper was below its signal floor: the floor in force (the
+     * slot's own, else the tenant's) and the shopper's count of signals, keys
+     * sorted. Present on every record of such a slot and on no other.
+     */
+    signalFloor?: { floor: SignalFloor; signals: number };
+    /**
+     * P04: a position pin or an off-limits mark placed this module: the rule and
+     * the position it set, counted from 1 (`pinned` at its pinned position,
+     * `off_limits` at its baseline position), keys sorted. Present only on such
+     * a record; compared by value in replay.
+     */
+    moduleRule?: ModuleRule;
+    /**
+     * P29 (decision D1): the layout reason of the page's declared layout slot,
+     * the same value on every record of that slot and on the decision set:
+     * unchanged against the baseline with one cause, or changed with the term
+     * that moved each moved module. Present only on the records of a declared
+     * layout slot decided under it, keys sorted, and compared by value in
+     * replay; a retained record without it replays as before.
+     */
+    layoutReason?: LayoutReason;
+    /**
+     * P39 (decisions D1, D2): the suppressions in force on the shopper when this
+     * decision was made, each `{ action, dimension, expiresAt, value }` (keys
+     * sorted, `expiresAt` in epoch milliseconds), sorted by dimension then value.
+     * A suppressed value contributed no interest term to this decision (the
+     * interest vector recorded in `inputs` is the one scored). Present on every
+     * record of a slot that read the shopper's interests while one was in force
+     * — never on the holdout's default arm, never on a slot decided below the
+     * signal floor — and compared by value in replay; a retained record without
+     * it replays as before.
+     */
+    suppressions?: Suppression[];
+    /**
+     * P06: the baseline of the page's declared layout slot, the same value on
+     * every record of the slot: the merchandiser's fixed positions where their
+     * rules put them and, on every other position, the configured order for the
+     * shopper's context, else the modules the slot can serve in catalogue order
+     * — P29's baseline (`layoutReason`), drawn before a module is withheld —
+     * cut at the slot's take. Present, with `shadowOrder` and `shadowTerms`, on
+     * every record of a declared layout slot decided on an arm that
+     * personalizes; compared by value in replay, and a retained record without
+     * it replays as before.
+     */
+    baselineOrder?: string[];
+    /**
+     * P06 (decision D1): the order the slot would have served with every term
+     * applied and the learned term at full trust (γ 1) — or, on a slot opted
+     * into the layout blend, at the blend's `shadowP` (decision D2) — ranked as
+     * the served order is, pins and off-limits modules fixed and withheld
+     * modules absent, with no exploration pick and no swap, cut at the take.
+     * Recording only: nothing served, counted or credited reads it.
+     */
+    shadowOrder?: string[];
+    /**
+     * P06: for each module whose place in `shadowOrder` differs from its place
+     * in the baseline (less any withheld module, as P29's moves compare), every
+     * term that would have moved it, in P29's words and the engine's fixed term
+     * order: the terms by which it differs, averaged over the modules it passed
+     * or that passed it, in the direction it moved. Keys (module ids) sorted;
+     * `{}` when the shadow keeps every module at its baseline place.
+     */
+    shadowTerms?: Record<string, LayoutMoveTerm[]>;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;
@@ -510,7 +1112,14 @@ export interface ContentDecisionSet {
   config_label: string;
   /** Null when no trend was published for the tenant, the shopper is in the holdout, or the blend is off. */
   regional: RegionalBlend | null;
-  decisions: Array<ContentDecision & { /** Exact receipt; an offer is not a durable render acknowledgment. */ decisionId?: string; renderOffer?: string }>;
+  decisions: Array<ContentDecision & { /** Exact receipt; an offer is not a durable render acknowledgment. */ decisionId?: string; renderOffer?: string;
+    /**
+     * P03 decision D3: the decision's position within its slot — what its record
+     * calls `position` — beside the page-wide `order`. The serving path
+     * (`serveContentDecisions`) names it on every decision it answers; a set
+     * composed without it (the decision engine's own) carries none.
+     */
+    slotPosition?: number }>;
   records: DecisionRecord[];
   /** Refused pins have no delivery decision or ledger row. */
   pinDiagnostics?: PinDiagnostic[];
@@ -524,12 +1133,49 @@ export interface ContentDecisionSet {
   /** A slot whose retained seed rule set the current contract refuses: ignored whole, never partially applied. */
   seedDiagnostics?: SeedDiagnostic[];
   /**
+   * P02 decision D1: the page's declared layout slot whose learn document does
+   * not measure it on `rendered-v1`. It is served, offered for no render
+   * acknowledgement and never captured as an exposure at serve time, and this
+   * member names why. Present only when there is something to name; it reports
+   * configuration, never shopper state, and is host-internal (the snapshot
+   * answer's member list does not carry it).
+   */
+  layoutDiagnostics?: LayoutDiagnostic[];
+  /**
    * Advisory: the pieces a slot's published hard controls refused although the
    * slot could otherwise have served them, and the published pair that refused
    * each. Bounded and present only when there is something to name; never
    * serving authority and never carried on a stored record.
    */
   constraintDiagnostics?: ConstraintDiagnostics;
+  /**
+   * P29 (decision D1): the layout reason of the page's declared layout slot —
+   * the same value every record of the slot carries as `explain.layoutReason`.
+   * Absent on a page without a declared layout slot, and on one whose layout
+   * slot a refused pin left serving nothing (P04's whole-slot refusal writes no
+   * record, so it has no reason). Host-internal: the snapshot answer's member
+   * list does not carry it; the shopper's receipts do.
+   */
+  layoutReason?: LayoutReason;
+  /**
+   * P29 (decision D2): the record of each off-limits declared layout slot of the
+   * page, naming the off-limits cause. Never among `records`, so it never
+   * reaches the shopper's decision ring: it carries no exposure, no receipt
+   * reads it and no outcome is credited to it. The decision path writes it to
+   * the ledger, and so to the export, under the shopper's tracking consent.
+   */
+  offLimitsRecords?: DecisionRecord[];
+  /**
+   * P30 (decision D2): the context key of a page whose declared layout slot is
+   * switched to context-only, in its readable form (`contextKeyOf`,
+   * src/content/cell.ts): the page, the channel, the visit bucket, the device
+   * and, where admitted, the region of the context the slot was decided in, or
+   * the page's default variant on the holdout's default arm. Built from those
+   * alone, never from a visitor, session or decision identifier. Host-internal:
+   * the route answers it, sealed, as the `X-Context-Key` header, never as a
+   * member of the answer. Absent on every other page.
+   */
+  contextKey?: string;
 }
 
 /**
