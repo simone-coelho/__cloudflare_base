@@ -38,10 +38,19 @@ const actionSchema = z.object({ type: name, action: name.optional(), fields: z.r
   name.refine(v => !['type', 'action', 'ts', 'idempotence_id', 'identifiers'].includes(v)), name).refine(v => Object.keys(v).length <= 32) }).strict();
 const profileField = z.union([z.object({ dimension: name, value: key }).strict(),
   z.object({ dimension: name }).strict(), z.object({ journey: z.literal(true) }).strict()]);
+// P35 (decision D1): `secondIdentifier` names one more ODP identifier field the
+// tenant's ODP resolves (Experimentation's, typically). Where it is configured and
+// the shopper's verified link holds the customer's hashed account identifier, every
+// event and profile the engine writes carries that identifier in this field beside
+// the vuid (src/services/odpLoop.ts); otherwise the writes are exactly as before.
+// It is a field the tenant's ODP already defines: the engine creates nothing there.
+// Never `vuid` and never one of the profile fields, so it cannot replace either.
 const odpSchema = z.object({ apiHost: url.refine(v => new URL(v).pathname === '/'), publicKeyRef: reference,
   identityNamespace: namespace, actions: z.record(name, actionSchema).refine(v => Object.keys(v).length <= 64),
   audiences: z.record(key, key).refine(v => Object.keys(v).length <= 100),
-  profile: z.record(name.refine(v => v !== 'vuid'), profileField).refine(v => Object.keys(v).length <= 100) }).strict();
+  profile: z.record(name.refine(v => v !== 'vuid'), profileField).refine(v => Object.keys(v).length <= 100),
+  secondIdentifier: name.refine(v => v !== 'vuid').optional() }).strict()
+  .refine(v => v.secondIdentifier === undefined || !Object.hasOwn(v.profile, v.secondIdentifier));
 // These are opt-in capabilities, never ambient provider credentials or tenant
 // defaults. Approval identifiers describe configured authority, not live proof.
 const approval = z.object({ egress: key, metering: key, providerRetention: key }).strict();
@@ -104,6 +113,16 @@ export class ConnectorConfigurationError extends Error {
 
 /** Explicit demo is the only owner of the legacy stamp-global connector settings. */
 export const legacyConnectors = (env: Env, tenant: string): boolean => tenant === DEFAULT_TENANT && env.DEPLOYMENT_PROFILE === 'demo';
+
+/**
+ * P35 (decision D1): the ODP identifier field the tenant's connector names as its
+ * second ODP identifier, or null: no such setting, the demo's legacy settings
+ * govern ODP, or the registry is refused (whose ODP is then unavailable anyway).
+ */
+export function odpSecondIdentifier(env: Env, tenant: string): string | null {
+  if (legacyConnectors(env, tenant)) return null;
+  try { return connectorConfiguration(env, tenant).odp?.secondIdentifier ?? null; } catch { return null; }
+}
 
 export function connectorConfiguration(env: Env, tenant: string): TenantConnectors {
   try {

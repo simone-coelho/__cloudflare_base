@@ -67,7 +67,7 @@ import { consentFromCookies, intersectConsent, refusalHints, storedConsent, pers
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
 import { IdentityStore, MAX_MERGED_ACCOUNTS, type ShopperRecord } from '@/identity/store';
-import { isShopperId, isSalted } from '@/identity/shopperId';
+import { isShopperId, isSalted, shopperIdFor } from '@/identity/shopperId';
 import { loadTombstone, writeTombstone, resetVisitorRing } from '@/ledger/erasure';
 import { canonicalErasureDiscoverySchema, canonicalErasureSchema, captureCanonicalErasure, erasureEffectOwners, executeOwnerErasure, ownerErasureEffectSchema, historicalErasureCapsuleSchema, erasureRawDigest } from '@/identity/erase';
 import { DEFAULT_TENANT, isValidTenantId, tenantKey, type TenantId, type KVLike } from '@/tenancy/tenant';
@@ -129,6 +129,7 @@ import {
   updateOdpRing,
   upsertOdpProfile,
   warnStageProjectionSkipped,
+  withKeptOdpIdentifier,
 } from '@/services/odpLoop';
 import {
   DEFAULT_SURFACE,
@@ -307,6 +308,8 @@ const membersSchema = z.object({ shopperId: z.string().refine(isShopperId), crea
   history: z.object({ rows: identityTime, latestAt: identityTime, appliedAt: identityTime }).optional(),
   // P12: the accounts an identifier change has merged into this person (salted shopper ids).
   mergedAccounts: z.array(z.string().refine(isShopperId)).max(MAX_MERGED_ACCOUNTS).optional(),
+  // P35: the account identifier of this person's verified link, kept for the tenant's second ODP identifier.
+  odpIdentifier: z.string().min(1).max(200).optional(),
 }).strict();
 async function identityDigest(value: unknown): Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value))))]
@@ -542,6 +545,14 @@ export class ShopperReflex {
     if (request.method === 'POST' && url.pathname === '/identity/account-change/source') {
       if (principal || !internal) return json({ ok: false, error: 'Internal account change required' }, 401);
       return this.handleAccountChangeSource(internal);
+    }
+    // P35 (decision D1): the account identifier of a verified link, kept on this
+    // person's link record for the tenant's second ODP identifier. Asked only by
+    // the link (src/identity/link.ts) once it has completed, and only while the
+    // tenant configures the identifier; a shopper's capability never reaches it.
+    if (request.method === 'POST' && url.pathname === '/identity/odp-identifier') {
+      if (principal || !internal) return json({ ok: false, error: 'Internal identity required' }, 401);
+      return this.handleOdpIdentifier(request, internal);
     }
     if (request.method === 'POST' && url.pathname === '/identity/recovery/proof') {
       if (principal || !internal || !this.isActualObject(internal.tenant, internal.subject)) return json({ ok: false }, 401);
@@ -3169,6 +3180,64 @@ export class ShopperReflex {
   }
 
   /**
+   * P35 (decision D1). Keep, on this person's link record (`identityMembers`,
+   * with its compatibility projection `identity:shopper:` written from the same
+   * value, as every other change of the record is), the account identifier of
+   * the verified link that has just completed, for the tenant's second ODP
+   * identifier. The identifier must be the one this person is named by (its
+   * shopper id is derived from it), so only the link's own account identifier is
+   * ever kept, never an earlier account an identifier change merged. Kept only
+   * under the person's tracking consent: without it a value kept before is
+   * removed and nothing is kept. Written only when the record would change; the
+   * record is never created here. Every refusal answers 401 and writes nothing:
+   * the link it follows stands, and its person's ODP writes then carry the vuid
+   * alone, as before. Erased with the record (eraseWithBarrier, and the
+   * erasure's `identity:shopper:` step).
+   */
+  private async handleOdpIdentifier(request: Request, context: InternalContext): Promise<Response> {
+    const refused = json({ ok: false, error: 'Shopper context unavailable' }, 401);
+    try {
+      const body = z.object({ accountId: z.string().min(1).max(200) }).strict().parse(await request.json());
+      if (!isShopperId(context.subject) || body.accountId !== body.accountId.trim()
+        || await shopperIdFor(this.env, context.tenant, body.accountId) !== context.subject) return refused;
+      return await this.serialize(async () => {
+        await this.load(); this.assertInternalState(context); await this.assertNotTransferred();
+        if (await this.forwardTarget()) throw new SessionAccessError();
+        const raw = await this.state.storage.get('identityMembers');
+        if (raw === undefined) return json({ ok: true, kept: false });
+        const members = membersSchema.parse(raw);
+        if (members.shopperId !== context.subject) throw new SessionAccessError();
+        const keep = (await this.consentNow()).tracking;
+        if (keep ? members.odpIdentifier === body.accountId : members.odpIdentifier === undefined) return json({ ok: true, kept: keep });
+        const { odpIdentifier: _previous, ...rest } = members;
+        void _previous;
+        const next: ShopperRecord = keep ? { ...rest, odpIdentifier: body.accountId } : rest;
+        const retention = pinRetention(this.env, members.retention, context.tenant, 'identity');
+        recheckOwnerInvocation(this);
+        await this.state.storage.put('identityMembers', next);
+        await (this.env.SESSIONS as unknown as KVLike).put(tenantKey(context.tenant, 'identity:shopper:' + context.subject),
+          JSON.stringify(next), { expiration: Math.floor(retention.expiresAt / 1000) });
+        return json({ ok: true, kept: keep });
+      });
+    } catch { return refused; }
+  }
+
+  /**
+   * P35 (decision D1). The account identifier this person's link record keeps
+   * for the tenant's second ODP identifier: the reader every operation of this
+   * object hands the ODP writes it runs (withKeptOdpIdentifier, in serialize).
+   * Null for any subject but this object's own person, and when the record keeps
+   * none; the writes then carry the vuid alone.
+   */
+  private async keptOdpIdentifier(tenant: string, subject: string): Promise<string | null> {
+    if (!isValidTenantId(tenant) || !isShopperId(subject) || !this.isActualObject(tenant, subject)) return null;
+    const raw = await this.state.storage.get('identityMembers');
+    if (raw === undefined) return null;
+    const members = membersSchema.parse(raw);
+    return members.shopperId === subject ? members.odpIdentifier ?? null : null;
+  }
+
+  /**
    * P12 (decision D1). A verified identifier change, applied by the LATER
    * account's own object once its link has completed (src/identity/link.ts):
    * the earlier account's profile is merged into this person's exactly as a
@@ -3777,9 +3846,11 @@ export class ShopperReflex {
 
   private serialize<T>(fn: () => Promise<T>): Promise<T> {
     if (ownerHeld(this)) return fn();
-    const start = () => runOwnerOperation(this, this.rawEnv, fn, this.sessionProjectionStore(), (...args) => this.relayOperation(...args), () => this.consentNow(), hints => this.setConsent(hints),
-      (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal) => this.admitRecovery(input, principal),
-      customerId => this.carryCustomerId(customerId));
+    // P35: the ODP writes this operation runs read the second identifier from this object's own link record.
+    const start = () => withKeptOdpIdentifier((tenant, subject) => this.keptOdpIdentifier(tenant, subject),
+      () => runOwnerOperation(this, this.rawEnv, fn, this.sessionProjectionStore(), (...args) => this.relayOperation(...args), () => this.consentNow(), hints => this.setConsent(hints),
+        (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal) => this.admitRecovery(input, principal),
+        customerId => this.carryCustomerId(customerId)));
     const run = this.chain.then(start, start);
     this.chain = run.then(
       () => undefined,
