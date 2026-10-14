@@ -3,7 +3,7 @@
 // mutually exclusive choices. This is the LEARNING policy, applied online in the
 // visitor's own object; reporting policies run over the ledger in batch.
 
-import type { Cell } from '@/content/types';
+import type { Cell, SlotAttribution } from '@/content/types';
 import { isDecisionReference, parseId, type OutcomeRecord, type RewardType } from '@/ledger/records';
 
 export type Scope = 'session' | 'visitor';
@@ -16,6 +16,26 @@ export interface AttributionPolicy {
   credit: CreditRule;
   /** Per reward type, how long after a decision an outcome may still count. */
   windowsMs: Partial<Record<RewardType, number>>;
+  /**
+   * P33 (decision D1, freeze item 11): slot → the slot's own attribution
+   * policy, for the slots whose learn dials name one, and ABSENT when none
+   * does, so a policy without it is exactly the brand-wide policy it always
+   * was. It replaces the `match` axis for that slot's decisions alone; the
+   * scope, the credit rule and the windows stay the brand-wide policy's.
+   */
+  slotAttribution?: Record<string, SlotAttribution>;
+}
+
+/**
+ * P33: the match rule a decision served in `slot` is held to: the slot's own
+ * attribution policy where the learning policy names one, else the brand-wide
+ * `match`. A per-slot value other than `module-tied` matches nothing, so a
+ * policy nobody published can never widen a slot's credit.
+ */
+export function slotMatchOf(policy: Pick<AttributionPolicy, 'match' | 'slotAttribution'>, slot: string): Match | SlotAttribution | null {
+  const own = policy.slotAttribution;
+  if (own === undefined || own === null || typeof own !== 'object' || !Object.hasOwn(own, slot)) return policy.match;
+  return own[slot] === 'module-tied' ? 'module-tied' : null;
 }
 
 const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR;
@@ -159,7 +179,8 @@ export function attribute(outcome: OutcomeRecord, ring: readonly RingEntry[], po
 export function attributeWindowed(outcome: OutcomeRecord, ring: readonly RingEntry[], policy: AttributionPolicy): Attribution {
   const none: Attribution = { credits: [], outsideWindow: 0, brandMismatched: 0 };
   let candidates = ring;
-  if (Object.prototype.hasOwnProperty.call(outcome, 'decision_id')) {
+  const correlated = Object.prototype.hasOwnProperty.call(outcome, 'decision_id');
+  if (correlated) {
     const id = outcome.decision_id;
     if (!isDecisionReference(id)) return none;
     const carrier = parseId(id)!;
@@ -180,6 +201,14 @@ export function attributeWindowed(outcome: OutcomeRecord, ring: readonly RingEnt
   // preserve the supplied name exactly; a named miss must not broaden attribution.
   const namedSlot = namedSlotOf(outcome.slot);
   /**
+   * P33: the outcome names this module as its content: its `item_id` is the
+   * module's identifier and is not one of the products it names, the form a
+   * product-only event takes (`outcomeFromAction` falls back to the product
+   * identifier and lists it among `products`).
+   */
+  const namesModule = (e: RingEntry): boolean => typeof outcome.item_id === 'string' && e.item === outcome.item_id
+    && !(outcome.products ?? []).includes(outcome.item_id);
+  /**
    * Everything the policy asks of a candidate EXCEPT the reward's window: its
    * exposure time when it matches this outcome's identity, null when it does
    * not. Splitting the window out of the predicate is what lets the receipt say
@@ -189,13 +218,24 @@ export function attributeWindowed(outcome: OutcomeRecord, ring: readonly RingEnt
     const exposureAt = e.measurementBasis === 'rendered-v1' ? e.renderedAt : e.ts;
     if (exposureAt === undefined || !Number.isSafeInteger(exposureAt) || exposureAt > outcome.ts) return null;
     if (policy.scope === 'session' && (e.session_id === null || outcome.session_id === null || e.session_id !== outcome.session_id)) return null;
+    const match = slotMatchOf(policy, e.slot);
+    if (match === null) return null;
     // `direct`: the outcome names the served item, or (CW32) one of the products the served piece features,
     // so a purchase of a bag credits the story that featured the bag under the default policy.
-    if (policy.match === 'direct') {
+    if (match === 'direct') {
       if (namedSlot !== null && e.slot !== namedSlot) return null;
       const named = e.item === outcome.item_id;
       const featured = Boolean(e.products?.length) && (outcome.products ?? (outcome.item_id ? [outcome.item_id] : [])).some((p) => e.products!.includes(p));
       if (!named && !featured) return null;
+    }
+    // P33 `module-tied`: the outcome originated inside the module. A correlated
+    // outcome names the decision itself (`candidates` holds that decision
+    // alone); any other names the module's identifier as the content it
+    // carries, never a product the module features and never a product
+    // identifier alone, so a buy-box conversion credits no decision here.
+    if (match === 'module-tied') {
+      if (namedSlot !== null && e.slot !== namedSlot) return null;
+      if (!correlated && !namesModule(e)) return null;
     }
     return exposureAt;
   };

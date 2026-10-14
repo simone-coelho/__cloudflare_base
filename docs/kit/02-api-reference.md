@@ -940,6 +940,28 @@ from it until the policy is published: nothing is silently converted, added, dro
 outcome with neither a currency nor a nonpositive amount is still weighed by its value or margin as
 before. A `unit` slot is never asked: it counts the event whatever currency or value came with it.
 
+A slot's learn dials may name the slot's own attribution policy, `slots.{slot}.attribution:
+"module-tied"`, absent by default; absent, the slot is credited under the brand-wide `policy` exactly as
+before, online and in the offline recomputation. Under `module-tied`, the only per-slot policy, an add to
+bag or purchase credits a decision of the slot once, and only when it originated inside the module: it
+carries the module's `decisionId`, or the module's identifier as `contentId`; a buy-box conversion, which
+names no module, credits no decision of a module-tied slot, while every other slot on the page is
+credited under its own policy. The scope, the credit rule and the reward's window stay the brand-wide
+policy's, and the slot's own `reward` still decides which outcomes it learns from. The outcome receipt the
+visitor's ring derives when it credits the outcome is the attribution record that itemises how it was
+credited: `attribution: [{ slot, policy, credited }]`, one entry per slot whose dials name their own
+policy, sorted by slot, with `credited` the decision identifiers it credited, or `[]` when it credited
+none, the same decisions as its credit effects. It is written for every outcome, one that credits nothing
+included, and is absent when no slot names a policy of its own; the stored outcome record is the admitted
+source and is never changed to carry it. The receipt is kept with the ring's credit plan and returned on
+the ring's answer to the learning fan-out; no public route answers it. Publication — `PUT
+/content/learn`, a learn document published as a `publicationChanges` member, and `POST
+/content/learn/validate` alike — refuses any other value with `422`, naming `attribution` in `errors[]`
+and writing no revision; a stored document naming another value still reads, with the member dropped.
+The offline recomputation, `rebuildFrom` on `POST /v1/{tenant}/learn/generation`, folds the retained day
+under the same per-slot rule, so a module-tied slot rebuilt from the ledger holds the counters online
+credit gave it ([where a page conversion lands](03-payload-schemas.md#where-a-page-conversion-lands)).
+
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
 New statistics monotonically drop complete fine levels from both item and slot maps when cardinality/bytes saturate. Retained ancestor counts are used directly, never sums of overlapping levels. After256 item identities, additional items contribute to a root-only anonymous overflow aggregate; their own estimates are unavailable/neutral, not zero. The admitted population is first-seen (explicit repair uses lexical selection), so selection bias remains; coarser pooling loses within-cell distinctions. Snapshot `completeness` exposes depth, item omission and reason. No finer partial estimates are recreated. W23 original-time weighting and W24 configuration compatibility remain unchanged.

@@ -1473,6 +1473,15 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
           if (typeof d.positionNormalization === 'boolean') dials.positionNormalization = d.positionNormalization;
           else if (!historical) errors.push(`slots.${slot}.positionNormalization: true or false (absent means off)`);
         }
+        // P33 (decision D1, freeze item 11): the slot's own attribution policy,
+        // kept exactly as authored; `module-tied` is the only one, and absent
+        // the brand-wide policy credits the slot as before. A RETAINED document
+        // naming another keeps reading with the member dropped, so its slot is
+        // credited exactly as it was.
+        if (d.attribution !== undefined) {
+          if (d.attribution === 'module-tied') dials.attribution = 'module-tied';
+          else if (!historical) errors.push(`slots.${slot}.attribution: module-tied is the only attribution policy a slot may carry of its own (absent: the brand-wide policy credits the slot); got ${shown(d.attribution)}`);
+        }
         if (d.autonomy !== undefined) {
           const a = d.autonomy;
           const okMode = isRecord(a) && ['configured', 'assisted', 'autonomous'].includes(String(a.mode));

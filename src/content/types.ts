@@ -590,6 +590,8 @@ export interface ItemControl { mode: 'reject' | 'freeze'; lift?: number }
 export type Objective = 'unit' | 'revenue' | 'margin';
 /** Absent retained metadata means served-v1, never rendered evidence. */
 export type MeasurementBasis = 'served-v1' | 'rendered-v1';
+/** P33 (decision D1, freeze item 11): the one attribution policy a slot may carry of its own. */
+export type SlotAttribution = 'module-tied';
 
 export interface SlotDials {
   measurementBasis?: MeasurementBasis;
@@ -624,6 +626,17 @@ export interface SlotDials {
    * before. Published only on a page's declared layout slot.
    */
   positionNormalization?: boolean;
+  /**
+   * P33 (decision D1, freeze item 11): the slot's own attribution policy,
+   * absent by default. Absent, the slot is credited under the brand-wide
+   * `policy` exactly as before. `module-tied`, the only per-slot policy, credits
+   * a decision of the slot only for an outcome that carries that decision's
+   * identifier, or the identifier of the module it served as the content the
+   * outcome names: a conversion that names no module (a buy-box add to bag)
+   * credits no decision of the slot. The scope, the credit rule and the
+   * reward's window stay the brand-wide policy's.
+   */
+  attribution?: SlotAttribution;
 }
 
 /**
