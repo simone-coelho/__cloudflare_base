@@ -180,10 +180,14 @@ One per reward-bearing event, written after the response.
 | `decision_id` | The acknowledged decision the event named (`decisionId`), when it did |
 | `value`, `currency` | For a purchase |
 | `margin` | The margin the event carried (`margin`, or the items' margins times quantity summed), for a slot that learns margin; null when none |
-| `products` | The products the event named (`productId`, `sku`, or each of `items[].id`); a purchase credits the content that featured one of them |
+| `products` | The products the event named (`productId`, `sku`, or each of `items[].id`); a purchase credits the content that featured one of them, except in a slot whose own attribution policy is `module-tied` ([where a page conversion lands](#where-a-page-conversion-lands)) |
 | `session_id`, `visitor_id`, `brand`, `arm`, `ts` | As on the decision |
 | `customer_id` | Your identifier for the shopper that the event carried (`customerId`), beside `visitor_id`, under tracking consent; absent when the event carried none |
 | `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`: the experiment this outcome's VISITOR is enrolled in, resolved from her persistent enrollment anchor when the outcome was recorded, so an outcome is attributable to her assignment whether or not a served piece matched it. The producer stamps the outcome with the visitor’s enrollment and her consent at the moment it is recorded, so an outcome recorded while personalization is off says `ineligible`; an outcome recorded on a path that does not stamp carries no block at all. `reason` says why: `personalization_consent`, or `anchor_unavailable` when her enrollment anchor could not be read at that moment. `saltVersion` is `null` where the published history the platform can read does not reach the first salt. Absent on records written before enrollment was persistent, and on a visitor whose enrollment could not be resolved |
+
+The outcome record is the admitted source and never changes after it is captured: how the outcome was
+credited is itemised on the attribution record the visitor's ring derives when it credits it, never on
+this record ([where a page conversion lands](#where-a-page-conversion-lands)).
 
 ## Before sign-in: the loaded hook, the carried identifier and the first request
 
@@ -941,11 +945,50 @@ what it changes.
 | `slots.{slot}.objective` | `unit`, `revenue` or `margin`; unit credits are event weights, revenue uses value, margin uses the supplied margin and NEVER falls back to value — an outcome with no margin is worth nothing to margin learning, because a margin series weighed with a revenue number is two units in one counter | `unit` |
 | `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| adjacent-swap \| off, share, floor }`; new writes reject Thompson, retained settings are inactive; `adjacent-swap`, on a page's declared layout slot only, swaps one pair of adjacent positions on `share` of the slot's decisions ([adjacent swaps](#adjacent-swaps-and-position-effects)) | off |
 | `slots.{slot}.positionNormalization` | `true` or `false`, on a page's declared layout slot only, off by default: `true` divides the credit of an engagement at a position by that position's effect from `positionEffects`, live and in the hourly recomputation alike ([adjacent swaps](#adjacent-swaps-and-position-effects)) | absent (off) |
+| `slots.{slot}.attribution` | The slot's own attribution policy, absent by default: absent, the slot is credited under the brand-wide `policy` exactly as before; `module-tied`, the only per-slot policy, credits a decision of the slot only for an outcome that carries that decision's `decisionId` or the module's identifier as `contentId`, so a buy-box conversion, which names no module, credits no decision of the slot ([where a page conversion lands](#where-a-page-conversion-lands)). Publication refuses any other value with an error naming `attribution` and writes no revision; a stored document naming another value still reads, with the member dropped. When a slot names it, the attribution record the visitor's ring derives when it credits an outcome (its credit receipt) itemises the policy and the decisions it credited | absent (the brand-wide policy) |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
 | `slots.{slot}.blend` | `{ p, shadowP }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. `shadowP`, from 0 to 1 and 0.1 when the dial names none, is the p the slot's shadow order is ranked at ([the baseline and the shadow](#the-baseline-and-the-shadow)); it changes nothing served. Publication refuses a `p` outside 0 to 1, a `shadowP` outside 0 to 1 with an error naming `shadowP`, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the members exactly as published | absent (no blend); `p` 0 and `shadowP` 0.1 when the dial names none |
 | `slots.{slot}.external.weight` | Historical-only scoring weight; does not re-enable withdrawn runtime scoring | inactive |
 | `contextVocabulary` | The tenant's context vocabulary: `channels`, `rules`, `sourcePlatforms`, `landingPageTypes`, optionally `visitBuckets` and `ladder` ([below](#the-context-vocabulary)) | absent: the six channel words, today's classification, buckets `1`, `2-3`, `4+`, depth 5 |
+
+### Where a page conversion lands
+
+```json
+{ "policy": { "scope": "session", "match": "any", "credit": "last" },
+  "slots": { "pdp-modules": { "measurementBasis": "rendered-v1", "reward": "add_to_bag", "attribution": "module-tied" } } }
+```
+
+A slot's learn dials may carry `attribution: "module-tied"`, the slot's own attribution policy, absent by
+default; absent, the slot is credited under the brand-wide `policy` exactly as before, online and in the
+offline recomputation. `module-tied` is the only per-slot policy. It replaces the brand-wide `match` for
+that slot's decisions alone: the scope, the credit rule and the reward's window stay the brand-wide
+policy's, the slot's own `reward` still decides which outcomes it learns from, and every other slot on
+the page is credited under its own policy, so one outcome on a page with a module-tied layout slot and a
+content slot under the brand-wide policy credits each slot by its own rule.
+
+Under `module-tied` an add to bag or purchase originates inside a module when it carries the module's
+`decisionId`, or the module's identifier as `contentId` (and, when it names a `slot`, that slot's own
+name); it then credits that module's decision once. A buy-box add to bag or purchase that names only the
+product credits no decision of a module-tied slot, not even the decision of a module that features the
+product: an identifier carried as a product (`productId`, `product_id`, `sku` or `items[]`) names no
+module. An event may also carry the page view's `pageInstance`, but the outcome record keeps no page view,
+so the page view is not compared: of several decisions of the named module inside the shopper's scope and
+the reward's window, the credit rule picks one (the most recent under `last`).
+
+The itemisation lives on the attribution record the visitor's ring derives when it credits the outcome:
+its credit receipt carries `attribution: [{ slot, policy, credited }]`, one entry per slot whose learn
+dials name their own policy, sorted by slot, `policy` the slot's policy and `credited` the decision
+identifiers it credited, `[]` when it credited none, the same decisions its credit effects carry. It is
+written for every outcome, one that credits nothing included, and is absent when no slot names a policy
+of its own, so such a tenant's receipts, credit effects, outcome records and ledger messages stay exactly
+as they were. The stored outcome record never carries it, and the statistics object never sees the
+setting: the slot configuration it is sent stays exactly `reward`, `stats`, `objective` and
+`measurementBasis`. The receipt is kept with the ring's credit plan and returned on the ring's answer to
+the learning fan-out; no public route answers it. The offline recomputation (`POST
+/v1/{tenant}/learn/generation` with `rebuildFrom`) folds the retained day under the same per-slot rule,
+so a module-tied slot rebuilt from the ledger holds the counters online credit gave it; so do the hourly
+fold and the day report under their `learning` policy, while the reporting presets stay brand-wide.
 
 ### The context vocabulary
 
