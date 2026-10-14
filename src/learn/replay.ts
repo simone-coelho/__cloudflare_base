@@ -11,7 +11,7 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { BLEND_RULES, contextOnlyLayoutSlot, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES, TYPE_FALLBACK_RULES } from '@/content/decide';
+import { BLEND_RULES, contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES, TYPE_FALLBACK_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
@@ -442,6 +442,13 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     ...(typeof lambdas.context === 'number' && inputs.context_share ? { context: { lambda: lambdas.context, share: inputs.context_share } } : {}),
   } : null;
   const extCfg = learn.external ?? null;
+  // P11: the evidence floor the recorded learn revision publishes for the
+  // record's page — the document the decision was made on, which the record
+  // names (`versions.learn`) — so a floored estimate is shrunk again exactly and
+  // its `explain.lift.evidenceFloor` compared by value; a revision without a
+  // floor for the page replays without one, as it was decided. No marker: the
+  // floor is a member of the revision the record already names.
+  const evidenceFloor = evidenceFloorOf(learn, served.page);
   // P02: a record that states no layout marker is replayed as its page was
   // decided — without the declaration — whatever the revision carries.
   // P01: and a record that states no orders marker without the page's orders.
@@ -482,6 +489,7 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
       // learn revision opts into; one that states none, without it, which is
       // what that decision did.
       ...(manifest?.blend === BLEND_RULES ? { blendOf: (slot: string) => layoutBlendOf(learn, slot) } : {}),
+      ...(evidenceFloor !== null ? { evidenceFloor } : {}),
     } : null,
     external: inputs.external
       ? { kind: extCfg?.kind ?? 'table', ref: extCfg?.ref ?? '', weightOf: (slot) => learn.slots?.[slot]?.external?.weight ?? 0, status: 'ok', version: inputs.external.version, scores: inputs.external.scores }

@@ -148,6 +148,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `level`, `level_words` | Which cell answered, from `everyone` to `channel, visit bucket, region and affinity cell`: the finest level with enough evidence |
 | `γ` (`gamma`) | The trust dial per slot, 0 to 1: how much the lift moves the score |
 | `prior` | `{ p, n }` when an imported prior was in force for the item |
+| `evidenceFloor` | `{ floor, lacking, n, page }`, keys sorted, when the page's evidence floor shrank the estimate: `p_hat` is then the estimate shrunk toward `p0` by `lacking`, F − n, exposures at the baseline rate, and `lift` follows from it ([evidence floors](#evidence-floors-evidencefloors)) |
 
 On a layout slot that opts into the layout blend the lift block is kept beside `explain.blend`: its
 `gamma` is the slot's dial, which the blend does not apply, and `applied` is `p × Q`, what the learned
@@ -1003,6 +1004,7 @@ what it changes.
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
 | `slots.{slot}.blend` | `{ p, shadowP }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. `shadowP`, from 0 to 1 and 0.1 when the dial names none, is the p the slot's shadow order is ranked at ([the baseline and the shadow](#the-baseline-and-the-shadow)); it changes nothing served. Publication refuses a `p` outside 0 to 1, a `shadowP` outside 0 to 1 with an error naming `shadowP`, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the members exactly as published | absent (no blend); `p` 0 and `shadowP` 0.1 when the dial names none |
 | `slots.{slot}.external.weight` | Historical-only scoring weight; does not re-enable withdrawn runtime scoring | inactive |
+| `evidenceFloors` | The evidence floor per page type: page key of the slots document → F, a whole number of 1 or more. Below its page's floor an estimate on n exposures is shrunk toward the baseline by the F − n it lacks and applied ([evidence floors](#evidence-floors-evidencefloors)) | absent: no page has a floor |
 | `contextVocabulary` | The tenant's context vocabulary: `channels`, `rules`, `sourcePlatforms`, `landingPageTypes`, optionally `visitBuckets` and `ladder` ([below](#the-context-vocabulary)) | absent: the six channel words, today's classification, buckets `1`, `2-3`, `4+`, depth 5 |
 
 ### The performance percentage
@@ -1144,6 +1146,38 @@ carries `inputs.context_share`, the shares it used (keys sorted), and every posi
 words, such as "Population prior, paid social, first visit: what visitors arriving this way engage with
 contributed 1.5 (the prior's share of the score: 1)." for the channel and visit bucket, while a receipt read
 from the channel alone names the channel and every visit and claims no visit of its own.
+
+### Evidence floors (`evidenceFloors`)
+
+```json
+{ "evidenceFloors": { "pdp": 300, "home": 50 } }
+```
+
+The learn document's `evidenceFloors` publishes an evidence floor per page type: each key is a page key of the
+slots document and each value that page's floor F, a whole number of 1 or more. Publication refuses with `422`
+anything else naming `evidenceFloors.<page>` (zero, a fraction, a negative number, a number written as text,
+`null`), and an `evidenceFloors` that is not an object or names a page that is not a slug. A document without
+`evidenceFloors` keeps none, and reads back exactly as it was written; a page it names no floor for decides
+exactly as before.
+
+The ladder answers as before, the finest level reaching `nMin`, and a piece with no such level gets no lift.
+Where the decision's page has a floor F and that level holds n exposures with n below F, the estimate is shrunk
+toward the baseline p₀ (the slot's rate in that cell, the lift's own reference) by the F − n exposures it lacks,
+at the baseline rate: `p_hat` becomes `(n × p̂ + (F − n) × p₀) / F` and `lift` that over p₀, clamped as
+before, and the lift is applied, never skipped for being below the floor. With n at or above F the estimate is
+applied as before. n is the observed exposures `n` of the lift block; an imported prior's strength does not
+count toward F.
+
+| Member | Where | Meaning |
+|---|---|---|
+| `explain.lift.evidenceFloor` | The decision record, on a lift the page's floor shrank | `{ floor, lacking, n, page }`, keys sorted: the page's floor F, the exposures n the answering level held and `lacking`, F − n; absent wherever no floor applied, and compared by value in replay, which reads the floor of the learn revision the record names |
+| `evidenceFloor` | The shopper's receipt | The same block as the record's, exactly; `lift_terms` carries the shrunk estimate, and `why` adds no sentence |
+| `evidenceFloor` | `GET learn/exploring` and `GET lift` | `{ floor, page }`, keys sorted: the configured evidence floor of the page the slot is on |
+| `to_evidence_floor` | Each `GET learn/exploring` row | Its exposures to the configured evidence floor: F − n at level everyone, never below 0, beside `to_floor`, which counts against the exploration floor |
+| `toEvidenceFloor` | `GET lift` | `{ item: F − n }` for every item of the snapshot at level everyone, never below 0: each item's exposures-to-floor against the configured evidence floor |
+
+None of these members appears for a page without a floor, so a learn document without `evidenceFloors` produces
+exactly the records, receipts, replays, route answers and rows it produced before.
 
 ## The priors document
 

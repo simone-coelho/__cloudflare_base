@@ -3,7 +3,7 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { DecisionRecord, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause } from '@/content/types';
+import type { DecisionRecord, EvidenceFloorApplied, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause } from '@/content/types';
 import type { Suppression } from '@/reflex/core';
 import type { Names } from './rows';
 
@@ -99,6 +99,15 @@ export interface Receipt {
    * Absent on every record decided with none in force.
    */
   suppressions?: Suppression[];
+  /**
+   * P11 (decisions D1, D2): the page's evidence floor shrank the learned
+   * estimate of this decision toward the slot's rate — the page, the floor, the
+   * exposures n the answering level held and the F − n it lacked — exactly as
+   * the record carries it (`explain.lift.evidenceFloor`), keys sorted. A MEMBER,
+   * never a new or altered `why` sentence (`src/learn/receipts.test.ts:41-51`);
+   * `lift_terms` carries the shrunk estimate. Absent where no floor applied.
+   */
+  evidenceFloor?: EvidenceFloorApplied;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -419,6 +428,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.moduleRule ? { moduleRule: { position: e.moduleRule.position, rule: e.moduleRule.rule } } : {}),
     ...(e.layoutReason ? { layoutReason: layoutReasonOf(e.layoutReason) } : {}),
     ...(e.suppressions?.length ? { suppressions: e.suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
+    ...(e.lift?.evidenceFloor ? { evidenceFloor: { floor: e.lift.evidenceFloor.floor, lacking: e.lift.evidenceFloor.lacking, n: e.lift.evidenceFloor.n, page: e.lift.evidenceFloor.page } } : {}),
     why,
   };
 }

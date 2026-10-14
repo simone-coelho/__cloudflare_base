@@ -1519,6 +1519,43 @@ writes the catalogue it assembles without it. The catalogue diagnostics (above) 
 `typeFallback` and the module-type role in `dimensionRoles`, and a decision the retirement could have changed records `inputs.replay.typeFallback: "type-fallback-retired-v1"`,
 which its replay reads.
 
+### Evidence floors per page type (`evidenceFloors`)
+
+A page type is a page key of the slots document, and each page key can carry an evidence floor: the learn
+document's `evidenceFloors` maps a page key to its floor F, a whole number of 1 or more, published with
+`PUT /content/learn` like every other dial (`"evidenceFloors": { "pdp": 300, "home": 50 }`). Publication refuses
+with `422`, naming `evidenceFloors.<page>` in `errors[]` and writing no revision, a floor that is not a whole
+number of 1 or more (zero, a fraction, a negative number, a number written as text, `null`), and refuses an
+`evidenceFloors` that is not an object or names a page that is not a slug. A page without a floor, and a
+document without `evidenceFloors`, decide exactly as before; a retained learn document whose floors the
+current contract refuses keeps reading with the member dropped.
+
+The learned ladder answers as it always has: the finest level reaching `nMin` answers, and a piece with no
+such level gets no lift. Where the decision's page has a floor F and the answering level holds n exposures
+with n below F, its estimate p̂ is shrunk toward the baseline — p₀, the slot's rate in that cell and the
+lift's own reference — by the F − n exposures it lacks, at the baseline rate, `p_F = (n × p̂ + (F − n) × p₀) / F`,
+and the lift `p_F / p₀`, clamped by `liftMin` and `liftMax` as before, is applied, never skipped for being below
+the floor. An estimate with n at or above its page's floor is applied as before. n is the observed exposures
+of the answering level, the `n` its record states: an imported prior's strength is not an exposure and does
+not count toward the floor. A lift a merchandiser froze is applied as frozen, and the holdout's `default` arm
+reads no lift at all.
+
+The record of a decision under a floor carries `explain.lift.evidenceFloor: { floor, lacking, n, page }`, keys
+sorted, where `lacking` is F − n, beside `explain.lift.p_hat`, the shrunk estimate, and `lift`, the lift that
+follows from it; the shopper's receipt carries the same block as `evidenceFloor` and its `lift_terms` the
+shrunk estimate, with no new sentence in `why`. The block is absent wherever no floor applied. A decision
+under a floor replays exactly: the replay reads the learn revision the record names (`versions.learn`) and
+applies that revision's floor for the record's page, `explain.lift` is compared by value, and no replay
+marker is written.
+
+Exposures-to-floor are reported against the configured floor: `GET learn/exploring` answers
+`evidenceFloor: { floor, page }` for the page the slot is on and gives each row `to_evidence_floor`, the
+exposures it still lacks of the configured evidence floor (F − n at level everyone, never below 0), beside
+`to_floor`, which still counts against the exploration floor; `GET lift` answers `evidenceFloor: { floor, page }`
+and `toEvidenceFloor: { item: F − n }` for every item of the snapshot at level everyone. The console's What is
+exploring screen shows the page's evidence floor and each piece's exposures to it. A page without a floor
+carries none of these members, and every answer for it is exactly as before.
+
 ### The context vocabulary (`contextVocabulary`)
 
 A tenant's entry channels, the published mapping that classifies an arrival into them, its source platforms,
@@ -1665,12 +1702,12 @@ counts per brand and slot name, summing a page-scoped name's page objects.
 | Route | Does |
 |---|---|
 | `GET audit[?limit=1..100&before=id]` | Minimized tenant subject-read/operation audit entries in descending ID order, default 50; returned `before` is the next keyset cursor or null. Requires both an explicit tenant grant and the existing admin role in every mode; no-store. Its own read has one admission/result pair. Legacy global rows retain null tenant and are excluded, not assigned an inferred tenant; the legacy global audit view excludes these subject-read/operation rows |
-| `GET lift?slot=&brand=[&page=][&version=]` | The slot's lift snapshot in force, or an archived version: every item's estimate in every cell, and on a layout slot that swaps adjacent pairs `positionEffects`, each position's effect estimated from the swaps as a click ratio with the swapped decisions behind it ([adjacent swaps](./03-payload-schemas.md#adjacent-swaps-and-position-effects)). `page=` as below. Operator token |
+| `GET lift?slot=&brand=[&page=][&version=]` | The slot's lift snapshot in force, or an archived version: every item's estimate in every cell, and on a layout slot that swaps adjacent pairs `positionEffects`, each position's effect estimated from the swaps as a click ratio with the swapped decisions behind it ([adjacent swaps](./03-payload-schemas.md#adjacent-swaps-and-position-effects)). Where the slot's page has a configured evidence floor, beside the snapshot `evidenceFloor: { floor, page }` and `toEvidenceFloor`, each item's exposures to that floor at level everyone ([evidence floors](#evidence-floors-per-page-type-evidencefloors)). `page=` as below. Operator token |
 | `GET lift/history?slot=&brand=[&page=]` | Every archived snapshot version for the slot; `page=` as below |
 | `GET lift/rows?slot=&brand=[&page=][&level=pooled\|cells][&item=][&q=][&sort=][&dir=][&limit=][&cursor=]` | The grid one page at a time, cut by the server: one pooled row per item, or one item's cells (`level=cells&item=`), filtered by `q` over the item id, your id, the title and the cell, sorted by any column, fifty a page up to five hundred. `total` counts what matched; `cursor` fetches the next page and is bound to the snapshot version, so a listing that outlives a publish answers 409 and starts again. Names and a merchandiser's freeze or reject ride each row. Operator token |
 | `GET brands` | In enforced mode, only the operator's explicitly granted brands in manifest order, preserving each brand's original default flag: the application's brand picker |
 | `GET learn/slots?brand=[&q=][&evidence=1]` | Every slot on every page, grouped by page, with what is set on it (dimensions weighted, rules, reward, objective, trust, exploration — the mode the engine runs, and where the learn document keeps a mode it will not run, `configuredMode` with `unsupported: true` naming that retained setting, as `learn/exploring` and the day report's row do, with `configuredExploration` repeating it under its earlier name — autonomy, controls) and how many pieces are eligible now; `q` narrows by slot or page name; `evidence=1` adds what each slot has learned so far, for the first 200 slots, and on every slot its `governance` counters (refused pins and short takes since their horizon, zero reported as zero, `status: "unavailable"` with null counts when the counter store cannot be read, `scope: "tenant"` — one counter document per tenant, covering every brand of it). The picker and the overview of an operator application |
-| `GET learn/exploring?slot=&brand=[&page=][&limit=][&cursor=]` | The pieces under the slot's observation floor, least observed first, one page at a time, with the slot's exploration mode, share and floor: what exploration serves on purpose. `share` is the share a runnable policy reserves; a dial that cannot explore — `off`, whatever share it stores, a retained withdrawn mode (named by `configuredMode` and `unsupported`) or a slot with no exploration block — answers `0`, as the day report's row answers `configured: null` |
+| `GET learn/exploring?slot=&brand=[&page=][&limit=][&cursor=]` | The pieces under the slot's observation floor, least observed first, one page at a time, with the slot's exploration mode, share and floor: what exploration serves on purpose. `share` is the share a runnable policy reserves; a dial that cannot explore — `off`, whatever share it stores, a retained withdrawn mode (named by `configuredMode` and `unsupported`) or a slot with no exploration block — answers `0`, as the day report's row answers `configured: null`. Where the slot's page has a configured evidence floor, the answer names it, `evidenceFloor: { floor, page }`, and each row carries `to_evidence_floor`, its exposures to that floor ([evidence floors](#evidence-floors-per-page-type-evidencefloors)) |
 | `GET learn/queue?brand=` | What needs a person, as counts: proposals pending, slots that have learned nothing yet, slots whose trust dial is above zero, pieces frozen or rejected, erasures still to be rewritten. The landing page of an operator application. The answer also carries `autonomy: { mutationAvailable: false, proposalStatusesVerified: false }`: autonomy mutation is withdrawn, so `proposals_pending` is a historical count of stored `proposed` statuses and not work an operator can act on today, and the statuses it excludes are stored records, not verified applications. Operator token |
 | `GET visitors/{visitorId}/receipts[?limit=&cursor=]` | What this shopper was served, newest first, each with the sentences that say why: the interest matched, the region's trend, your model's term, the journey-stage, freshness, fatigue, merchandising and diversity rules, a pinned slot that could not fill its take, the learned lift and whether it was applied, the layout blend's rank base, behaviour and performance terms and their sum, a pin, the holdout arm, an explored pick. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history/projection returns 503, never empty success. Operator token; no-store |
 | `GET visitors/{visitorId}/recent` | The visitor's ring of recent decisions, what attribution reads. Suppresses records at or before the retained erasure cutoff; later records remain visible. Valid empty history returns 200; unavailable or invalid history returns 503. Operator token; no-store |

@@ -1450,6 +1450,18 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
     if (checked.ok) contextVocabulary = checked.value;
     else if (!historical) errors.push(...checked.errors);
   }
+  // P11 (decision D1): the evidence floor per page type. A new document naming
+  // anything but a page key and a whole number of 1 or more is refused, each
+  // error naming `evidenceFloors.<page>`; a RETAINED document whose floors the
+  // current contract refuses keeps reading with the member dropped, never
+  // partially applied. Kept only where the document gives it, so a document
+  // without floors reads back exactly as it was written.
+  let evidenceFloors: LearnConfig['evidenceFloors'];
+  if (candidate.evidenceFloors !== undefined) {
+    const refused = evidenceFloorErrors(candidate.evidenceFloors);
+    if (!refused.length) evidenceFloors = Object.fromEntries(Object.entries(candidate.evidenceFloors as Record<string, number>));
+    else if (!historical) errors.push(...refused);
+  }
   let slots: LearnConfig['slots'];
   if (candidate.slots !== undefined) {
     if (!isRecord(candidate.slots)) errors.push('slots: object of slot → dials');
@@ -1546,8 +1558,25 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       ...(external ? { external } : {}),
       ...(slots ? { slots } : {}),
       ...(contextVocabulary ? { contextVocabulary } : {}),
+      ...(evidenceFloors ? { evidenceFloors } : {}),
     },
   };
+}
+
+/**
+ * P11 (decision D1): the refusals of a learn document's `evidenceFloors`: an
+ * object of page key (a page name of the slots document) → floor, each floor a
+ * whole number of 1 or more. Each error names `evidenceFloors` or
+ * `evidenceFloors.<page>` and the offending value.
+ */
+function evidenceFloorErrors(candidate: unknown): string[] {
+  if (!isRecord(candidate)) return [`evidenceFloors: ${shown(candidate)} is not a set of evidence floors; an object of page key → floor, each floor a whole number of 1 or more`];
+  const errors: string[] = [];
+  for (const [page, floor] of Object.entries(candidate)) {
+    if (!SLUG.test(page)) errors.push(`evidenceFloors: the page name ${shown(page)} is not a page key; a page name of the slots document is a slug`);
+    else if (typeof floor !== 'number' || !Number.isSafeInteger(floor) || floor < 1) errors.push(`evidenceFloors.${page}: ${shown(floor)} is not an evidence floor; a page's floor is a whole number of 1 or more, the exposures an estimate needs before it is applied as measured`);
+  }
+  return errors;
 }
 
 /** Five percent, one default arm, salted by the brand at decision time; the regional prior on, gated at 30 events. */

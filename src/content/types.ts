@@ -681,7 +681,24 @@ export interface LearnConfig {
    * words, classification, buckets and ladder, exactly.
    */
   contextVocabulary?: ContextVocabulary;
+  /**
+   * P11 (decision D1): the evidence floor per page type — page key of the slots
+   * document → F, a whole number of 1 or more. Below its page's floor, an
+   * estimate the learned ladder answers with on n exposures is shrunk toward the
+   * slot's rate by the F − n exposures it lacks and applied, never skipped
+   * (decision D2). A page without a floor decides exactly as before; absent: no
+   * page has one.
+   */
+  evidenceFloors?: Record<string, number>;
 }
+
+/**
+ * P11 (decisions D1, D2): what a page's evidence floor did to the estimate the
+ * ladder answered with — the page whose floor it was, the floor F, the
+ * exposures n the answering level holds and the F − n it lacks — keys sorted.
+ * On a record's `explain.lift` and on its receipt; absent where no floor applied.
+ */
+export interface EvidenceFloorApplied { floor: number; lacking: number; n: number; page: string }
 
 /** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
 export interface LiftApplied {
@@ -708,6 +725,13 @@ export interface LiftApplied {
   applied?: number;
   /** Doc 22 §8: the imported prior this estimate was shrunk toward, when one was in force for the key. */
   prior?: { p: number; n: number };
+  /**
+   * P11 (decision D2): the answering level held fewer exposures than the
+   * page's evidence floor, so `p_hat` is the estimate shrunk toward `p0` by the
+   * exposures it lacked and `lift` is clamp(p_hat / p0). Absent where no floor
+   * applied: a page without one, or n at or above it.
+   */
+  evidenceFloor?: EvidenceFloorApplied;
 }
 
 /** What the population contributed to a decision set, so a reader can see the prior. */
