@@ -42,7 +42,8 @@ const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
-import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
+import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, toEvidenceFloorOf, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
+import { evidenceFloorOf } from '@/content/decide';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -145,6 +146,35 @@ function placementOf(pages: ReadonlyMap<string, string[]>, slot: string, asked: 
   return { ok: true };
 }
 const placementRefusal = (placement: Extract<Placement, { ok: false }>) => ({ ok: false, error: placement.error, ...(placement.pages ? { pages: placement.pages } : {}) });
+
+/**
+ * P11 (decision D1): the configured evidence floor of the page a placement is
+ * on, `{ floor, page }` (keys sorted): the page `page=` names for a slot the
+ * catalogue carries on more than one page, else the one page it carries the
+ * slot on. Null where that page publishes no floor, or the slot is on no page,
+ * and then an answer carries no floor member at all.
+ */
+function placementEvidenceFloor(learn: Pick<LearnConfig, 'evidenceFloors'>, pages: ReadonlyMap<string, string[]>, slot: string, page: string | undefined): { floor: number; page: string } | null {
+  const on = pages.get(slot) ?? [];
+  const at = page ?? (on.length === 1 ? on[0] : undefined);
+  if (at === undefined) return null;
+  const floor = evidenceFloorOf(learn, at);
+  return floor === null ? null : { floor, page: at };
+}
+/**
+ * P11: the tenant's learn document from the request's own pin, for a route that
+ * reads no other member of it, or null where the sealed set itself says the
+ * tenant publishes none (absence and unreadability kept apart, as
+ * `publishedProposals` keeps them: a listed document that cannot be read
+ * refuses exactly as every other read of it does).
+ */
+async function publishedLearn(c: { env: Env }, tenant: string): Promise<LearnConfig | null> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  if (!Object.values(set.refs).some(ref => ref.kind === LEARN_KIND.name && ref.scope === tenant)) return null;
+  return readConfig<LearnConfig>(c, LEARN_KIND, tenant);
+}
 
 /**
  * The decisions an outcome credits, with the provenance each of them was
@@ -560,7 +590,8 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   const cur = decodeCursor(c.req.query('cursor'));
   if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
-  const placement = pagedPlacement(await publishedSlotPages(c, tenant), slot, c.req.query('page'), cur);
+  const slotPages = await publishedSlotPages(c, tenant);
+  const placement = pagedPlacement(slotPages, slot, c.req.query('page'), cur);
   if (!placement.ok) { c.header('Cache-Control', 'no-store'); return c.json(placementRefusal(placement), 400); }
   const { page } = placement, at = page ? { page } : {};
   const limit = cur ? cur.limit ?? DEFAULT_LIMIT : Math.max(1, Math.min(MAX_LIMIT, Number(c.req.query('limit')) || DEFAULT_LIMIT));
@@ -579,8 +610,13 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   const effective = { mode: eff.mode ?? 'off', share: eff.configured ?? 0,
     ...(eff.unsupported ? { configuredMode: eff.configuredMode, unsupported: true } : {}) };
   const floor = ex?.floor ?? DEFAULT_EXPLORE.floor;
+  // P11 (decision D1): the page's configured evidence floor, from the learn
+  // document this answer already read, and each row's exposures to it. A
+  // different floor from the exploration floor above, which keeps its name and
+  // its meaning; absent where the page has none, so the answer is as before.
+  const evidenceFloor = placementEvidenceFloor(learn, slotPages, slot, page), floored = evidenceFloor ? { evidenceFloor } : {};
   c.header('Cache-Control', 'no-store');
-  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
+  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, ...effective, floor, ...floored, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   // W25 V1.01 (F20 §4.4): what exploration should serve next can only be an item
   // the catalogue carries; a prior row for an id it does not carry is never
@@ -593,10 +629,10 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   // page first, and only the page's ids are looked up, because the order this
   // list is in (least observed first, then id) does not depend on a name.
   const catalogue = new Set(catalog.pieces.map((p) => p.id));
-  const cut = pageOf(exploringRows(snapshot, NO_NAMES, floor, catalogue), cur ? cur.o : 0, limit);
+  const cut = pageOf(exploringRows(snapshot, NO_NAMES, floor, catalogue, evidenceFloor?.floor), cur ? cur.o : 0, limit);
   cut.rows = namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item)));
   const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level: 'exploring', limit, ...(page ? { p: page } : {}) });
-  return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, ...effective, floor, total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor });
+  return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, ...effective, floor, ...floored, total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor });
 });
 
 /**
@@ -704,7 +740,8 @@ decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   const slot = (c.req.query('slot') ?? '').trim();
   if (!isCatalogueName(slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
-  const placement = placementOf(await publishedSlotPages(c, tenant), slot, c.req.query('page'));
+  const slotPages = await publishedSlotPages(c, tenant);
+  const placement = placementOf(slotPages, slot, c.req.query('page'));
   c.header('Cache-Control', 'no-store');
   if (!placement.ok) return c.json(placementRefusal(placement), 400);
   const { page } = placement;
@@ -716,7 +753,13 @@ decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   } else {
     try { snapshot = await c.env.CACHE.get(liftKey(tenant, brand, slot, page), 'json'); } catch { snapshot = null; }
   }
-  return c.json({ ok: true, tenant, brand, slot, ...(page ? { page } : {}), snapshot });
+  // P11 (decision D1): the page's configured evidence floor and every item's
+  // exposures to it at level everyone, beside the snapshot, which is unchanged;
+  // absent where the page has none (or the tenant publishes no learn document).
+  const learn = await publishedLearn(c, tenant);
+  const evidenceFloor = learn ? placementEvidenceFloor(learn, slotPages, slot, page) : null;
+  return c.json({ ok: true, tenant, brand, slot, ...(page ? { page } : {}), snapshot,
+    ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}) });
 });
 
 /** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from her own object. Authenticated. */
