@@ -30,6 +30,27 @@
   const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
   /** The retained mode a slots row names (`configuredMode` with `unsupported`; `configuredExploration` from an older server), or null. */
   const retainedModeOf = (s) => (s.unsupported && s.configuredMode) || s.configuredExploration || null;
+  // P09 (decision D1; freeze items 23 and 39): the performance percentage P, from 0
+  // to 100, is the tuning screen's form of a dial the learn document already
+  // stores, never a second stored value. On a slot whose learn dials opt into the
+  // layout blend (P28's `blend`) it is the blend weight p × 100; on every other
+  // slot, content slots and layout slots that do not opt in alike, it is γ × 100.
+  // A dial the document does not name reads 0, as the decision reads it.
+  /** The slot's blend opt-in as the decision reads one: an object whose `p` is absent or a number from 0 to 1; otherwise none. */
+  function blendOptIn(d) {
+    const b = d ? d.blend : undefined;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return null;
+    return b.p === undefined || (typeof b.p === 'number' && Number.isFinite(b.p) && b.p >= 0 && b.p <= 1) ? b : null;
+  }
+  /** The stored dial, 0 to 1, the slot's percentage is the form of: `blend.p` on a slot in the blend, `gamma` on every other. */
+  function percentDial(d) {
+    const v = blendOptIn(d) ? blendOptIn(d).p : d ? d.gamma : undefined;
+    return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+  }
+  /** A dial from 0 to 1 as its percentage, read as decimals: γ 0.35 shows as 35 and 0.333 as 33.3, never 33.300000000000004. */
+  const asPercent = (v) => String(Number((v * 100).toPrecision(15)));
+  /** A percentage from 0 to 100 as the dial it stands for, P / 100 read as decimals: 33.3 saves 0.333, never 0.33299999999999996. */
+  const fromPercent = (P) => Number((P / 100).toPrecision(15));
   function humanMs(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     if (ms % DAY === 0) return plural(ms / DAY, 'day');
@@ -331,10 +352,33 @@
       day(g.since) ? h('div', { class: 'itemid' }, `since ${day(g.since)}`) : null);
   }
 
+  /**
+   * P09: the learn document the Slots screen reads each slot's performance
+   * percentage from. The slots index answers γ but not the blend, so the screen
+   * reads the document in force itself; until it has, or where it cannot, the
+   * column says so with a dash rather than a percentage that might be the wrong dial's.
+   */
+  const slotsLearn = { scope: '', document: null };
+  function percentCell(slot) {
+    const doc = slotsLearn.scope === S.scope ? slotsLearn.document : null;
+    if (!doc) return h('td', { class: 'num', title: 'The learn document has not been read, so no percentage is shown.' }, '—');
+    const all = doc.slots && typeof doc.slots === 'object' ? doc.slots : {};
+    const d = Object.prototype.hasOwnProperty.call(all, slot) ? all[slot] : {};
+    // The leading space separates this cell's text from the trust cell's in the row's text; it is not drawn.
+    return h('td', { class: 'num' }, ' ', `${asPercent(percentDial(d))}%`, h('div', { class: 'itemid' }, blendOptIn(d) ? 'from the blend p' : 'from γ'));
+  }
+
   C.view({
     id: 'slots', group: 'This brand', title: 'Slots', heading: 'Every slot, and what is set on it',
     hint: 'A slot is one place on one page. This is what each is configured to do and what it has learned so far. The box in the rail narrows this list on the server.',
     badge: () => C.slotList().length || null,
+    async enter() {
+      const scope = S.scope;
+      const res = await C.content('/learn');
+      if (scope !== S.scope) return;
+      slotsLearn.scope = scope;
+      slotsLearn.document = res.ok && res.data && res.data.document && typeof res.data.document === 'object' ? res.data.document : null;
+    },
     render(host) {
       if (S.slots.error) { host.append(h('div', { class: 'msg err' }, S.slots.error)); return; }
       if (!S.slots.pages.length) { host.append(h('div', { class: 'empty' }, 'No slots configured for this brand. A slot document names the places on each page the engine decides for.')); return; }
@@ -350,6 +394,7 @@
           h('td', {}, s.rules && s.rules.length ? s.rules.join(', ') : 'none'),
           h('td', {}, words(s.reward), s.objective && s.objective !== 'unit' ? h('div', { class: 'itemid' }, `weighed by ${s.objective}`) : null),
           h('td', { class: 'num' }, dec(s.gamma)),
+          percentCell(s.slot),
           h('td', {}, words(s.exploration),
             retainedModeOf(s) ? h('div', { class: 'itemid' }, `${storedModeWords(retainedModeOf(s))}; explores nothing`) : null),
           h('td', {}, `unavailable · stored ${words(s.autonomy) || 'configured'} (dormant)`),
@@ -367,6 +412,7 @@
             { key: 'rules', label: 'Rules' },
             { key: 'reward', label: 'Learns against' },
             { key: 'gamma', label: 'Trust', sym: 'γ', num: true, title: 'How much of the learned lift is applied: 0 shows it and changes nothing' },
+            { key: 'performance', label: 'Performance', sym: '%', num: true, title: 'The performance percentage the Dials screen edits, 0 to 100: γ × 100 on a slot outside the layout blend, the blend weight p × 100 on a layout slot that opts into it. Nothing else is stored' },
             { key: 'exploration', label: 'Exploring' },
             { key: 'autonomy', label: 'Autonomy (unavailable)' },
             { key: 'controls', label: 'Held', num: true },
@@ -378,7 +424,9 @@
   });
 
   // ══════════════════════════════════════════════════════════ Dials ══════════
-  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '' };
+  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '', percent: null };
+  /** P09: a percentage the screen refused, held as typed for the slot it was typed on, or null. */
+  const heldPercent = () => (dl.percent && dl.percent.slot === S.slot ? dl.percent : null);
   const dialsFor = () => { dl.draft.slots = dl.draft.slots || {}; return (dl.draft.slots[S.slot] = dl.draft.slots[S.slot] || {}); };
   function diffPaths(a, b, path = '') {
     const out = [];
@@ -417,6 +465,7 @@
     dl.source = data.source || 'compiled-default';
     dl.errors = [];
     dl.vocabularyText = null; dl.vocabularyError = '';
+    dl.percent = null;
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
@@ -424,6 +473,7 @@
     dl.authored = C.authored(res.data);
     dl.doc = res.data.document; dl.draft = copy(dl.doc); dl.revision = res.data.revision; dl.source = 'stored';
     dl.vocabularyText = null; dl.vocabularyError = '';
+    dl.percent = null;
     document.getElementById('note').value = '';
     C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Published; serving refreshes within the documented 30-second read bound.`);
     await C.loadSlots();
@@ -453,14 +503,47 @@
     return el;
   }
 
+  /**
+   * P09 (decision D1; freeze items 23 and 39): the slot's performance percentage,
+   * 0 to 100, beside γ. It is read from the stored dial on every paint, so on a
+   * slot outside the blend it and the γ control show each other's change at once.
+   * A percentage typed here writes the one dial it stands for and nothing else: γ,
+   * or on a slot in the layout blend `blend.p`, the blend's other members kept. A
+   * percentage outside 0 to 100, or text that is not a number, writes nothing: it
+   * stays on screen as typed and holds the save until it is corrected.
+   */
+  function percentControl(d, base) {
+    const held = heldPercent();
+    const el = h('input', { class: `num${changed(`${base}.${blendOptIn(d) ? 'blend.p' : 'gamma'}`)}`, 'data-focus-key': `${base}.performancePercent`,
+      type: 'number', step: 'any', min: 0, max: 100, disabled: !C.canEdit() || null });
+    el.value = held ? held.text : asPercent(percentDial(d));
+    el.addEventListener('input', () => {
+      const text = el.value.trim(), P = text === '' ? NaN : Number(text);
+      if (!Number.isFinite(P) || P < 0 || P > 100) { dl.percent = { slot: S.slot, text: el.value }; C.render(); return; }
+      dl.percent = null;
+      const blend = blendOptIn(d);
+      if (blend) d.blend = { ...blend, p: fromPercent(P) }; else d.gamma = fromPercent(P);
+      scheduleCheck();
+    });
+    return el;
+  }
+
   function slotDials(host) {
     const d = dialsFor();
     const base = `slots.${S.slot}`;
     const gamma = Number.isFinite(d.gamma) ? d.gamma : 0;
+    const inBlend = Boolean(blendOptIn(d));
     put(host,
       dial('Trust in what was learned', 'How much the learned lift moves a piece’s score: the final score is the base score times the lift raised to this. At 0 the lift is computed and shown on every receipt and changes nothing that is served; at 1 it applies in full.',
         num(d.gamma, (v) => { if (v === undefined) delete d.gamma; else d.gamma = v; scheduleCheck(); }, `${base}.gamma`, { min: 0, max: 1, step: 0.05 }),
         gamma === 0 ? 'Shadow: learning is visible and inert.' : `A lift of 1.4 becomes ×${dec(Math.pow(1.4, gamma))} on the score.`),
+      dial('Performance percentage', inBlend
+        ? 'This layout slot opts into the layout blend, so its percentage is the blend weight p: the percentage divided by 100 is p, the weight of learned performance against the behaviour score in R + (1 − p) × B + p × Q. Trust above is a separate dial and stays as it is. At 0 the slot decides as it does with p at 0.'
+        : 'The trust dial above as a percentage from 0 to 100: the percentage divided by 100 is γ, so 35 saves γ 0.35. At 0 the slot decides exactly as it does with γ at 0, as every slot does by default.',
+        percentControl(d, base),
+        heldPercent()
+          ? h('span', { class: 'err' }, 'The percentage must be a number from 0 to 100; nothing is saved until it is.')
+          : inBlend ? `That is the blend weight p ${String(percentDial(d))}.` : `That is γ ${String(percentDial(d))}.`),
       dial('What counts as paying off', 'The outcome this slot learns against. One per slot; the others still land in the ledger and can be reported on.',
         sel(d.reward || 'click', REWARDS.map((r) => [r, words(r)]), (v) => { d.reward = v; scheduleCheck(); }, `${base}.reward`)),
       dial('What a success is worth', 'Unit counts each one the same. Revenue weighs it by the order value, margin by the feed margin, falling back to value when absent. Revenue and margin need a reward that carries a value: a purchase, or an add to bag.',
@@ -592,9 +675,9 @@
       C.dirty({
         count: n,
         checking: dl.checking,
-        blocked: dl.errors.length > 0 || dl.vocabularyError !== '',
+        blocked: dl.errors.length > 0 || dl.vocabularyError !== '' || heldPercent() !== null,
         save: saveDials,
-        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; C.render(); },
+        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; dl.percent = null; C.render(); },
       });
       if (dl.errors.length) host.append(h('div', { class: 'msg err' }, 'The dials as drafted were refused:', h('ul', {}, ...dl.errors.map((e) => h('li', {}, String(e))))));
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },

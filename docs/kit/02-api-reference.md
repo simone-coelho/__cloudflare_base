@@ -449,6 +449,24 @@ it, and under a configured order it keeps `explain.configuredOrder` beside the b
 order is ranked (see **The baseline and the shadow** below); it changes nothing served, and publication
 refuses a `shadowP` outside 0 to 1 with an error naming `shadowP`.
 
+**The performance percentage.** The console's Dials screen reads and edits each slot's performance
+percentage `P`, a number from 0 to 100 that is the tuning screen's form of a dial the learn document
+already stores, never a second stored value: the learn document has no percentage member, and a save from
+the screen is an ordinary `PUT /content/learn` ([the performance percentage](./03-payload-schemas.md#the-performance-percentage)).
+On a slot outside the layout blend (every content slot, and a layout slot that does not opt in) the
+percentage is the trust dial: saving `P` writes `slots.{slot}.gamma` = P / 100, so 35 percent saves γ
+0.35, and the screen shows a stored γ as γ × 100. On a page's declared layout slot that opts into the
+blend the percentage is the blend weight instead: saving `P` writes `slots.{slot}.blend.p` = P / 100,
+keeps the blend's `shadowP` and leaves γ exactly as it was, and the screen shows a stored `blend.p` as
+p × 100 (p 0.6 as 60). The quotient is read as decimals, so 33.3 percent saves 0.333. A percentage
+outside 0 to 100, or text that is not a number, is refused on the screen before anything is sent, and the
+save stays disabled until it is corrected. Saving a percentage sends the document exactly as it was read
+with that one dial changed, and the decision reads γ and `p` as it always has: at 0 percent a slot decides
+exactly as it does with its dial at 0, every slot's default, so 0 percent reproduces today's decisions
+term for term, and a saved revision is in force without a deployment, within the documented read bound.
+The console's Slots screen shows each slot's percentage beside its trust dial, read from the learn
+document in force, and a dash where that document cannot be read.
+
 **Adjacent swaps and position effects.** A page's declared layout slot can explore by swapping
 neighbouring modules: its exploration dial in the learn document is
 `slots.{slot}.exploration: { mode: 'adjacent-swap', share, floor }`, with the adjacent-swap `share` from 0 to 1
