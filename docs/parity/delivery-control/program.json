@@ -2836,6 +2836,8 @@
         "src/content/kinds.ts",
         "src/content/types.ts",
         "src/content/decide.ts",
+        "src/content/service.ts",
+        "src/content/slotDiagnostics.ts",
         "src/reflex/contentTelemetry.ts",
         "src/reflex/core.ts",
         "src/reflex/configStore.ts",
