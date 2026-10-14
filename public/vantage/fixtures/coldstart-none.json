@@ -1,0 +1,10 @@
+{
+ "ok": true,
+ "fixture": "L2 build fixture for GET /vantage/api/coldstart with no region asserted and none on the request (lane F2). The national census row is real (migrations/seed/seed_011_geo.sql, geo_census national US); no region is invented, so no regional lean is shown.",
+ "region": { "key": null, "source": "none", "metro": null, "notes": [] },
+ "grain": "national",
+ "census": { "grain": "national", "geoLevel": "national", "geoKey": "US", "label": "United States", "medianHouseholdIncomeUsd": 81604, "medianHomeValueUsd": 360600, "source": "Census ACS 2024", "vintage": "2024", "estimate": "ACS 2024 1-year", "tables": ["B19013", "B25077"], "representative": false, "fellBack": "no region resolved; the national figure is shown" },
+ "lean": null,
+ "scored": { "census": false, "sentence": "No census term enters any score. The census figure explains the lean; the lean is the carrier's own sales, seeded here as synthetic data." },
+ "sentence": "aggregate, never the individual; we curate, never price."
+}

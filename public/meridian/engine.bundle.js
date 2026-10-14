@@ -1,4 +1,72 @@
 // src/reflex/core.ts
+var DAY_MS = 24 * 60 * 60 * 1e3;
+var DEFAULT_SUPPRESSION_DAYS = 30;
+var MAX_SUPPRESSION_DAYS = 36500;
+var MAX_SUPPRESSIONS = 64;
+var PURCHASE_SUPPRESSED_DIMENSION = "productType";
+var PURCHASE_ACTIONS = /* @__PURE__ */ new Set(["purchase", "checkout", "order_complete"]);
+function suppressionDays(window) {
+  if (window === null || typeof window !== "object" || Array.isArray(window)) return null;
+  const days = window.days;
+  if (days === void 0) return DEFAULT_SUPPRESSION_DAYS;
+  return typeof days === "number" && Number.isSafeInteger(days) && days >= 1 && days <= MAX_SUPPRESSION_DAYS ? days : null;
+}
+function isSuppression(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const s = value;
+  return typeof s.action === "string" && s.action !== "" && typeof s.dimension === "string" && s.dimension !== "" && typeof s.value === "string" && s.value !== "" && typeof s.expiresAt === "number" && Number.isFinite(s.expiresAt) && s.expiresAt >= 0;
+}
+var byDimensionThenValue = (a, b) => a.dimension < b.dimension ? -1 : a.dimension > b.dimension ? 1 : a.value < b.value ? -1 : a.value > b.value ? 1 : 0;
+function mergeSuppressions(own, carried) {
+  const held = /* @__PURE__ */ new Map();
+  for (const entry of [...own, ...carried]) {
+    if (!isSuppression(entry)) continue;
+    const key = JSON.stringify([entry.dimension, entry.value]);
+    const kept = held.get(key);
+    if (!kept || entry.expiresAt > kept.expiresAt) {
+      held.set(key, { action: entry.action, dimension: entry.dimension, expiresAt: entry.expiresAt, value: entry.value });
+    }
+  }
+  let merged = [...held.values()];
+  if (merged.length > MAX_SUPPRESSIONS) {
+    merged = merged.sort((a, b) => b.expiresAt - a.expiresAt || byDimensionThenValue(a, b)).slice(0, MAX_SUPPRESSIONS);
+  }
+  return merged.sort(byDimensionThenValue);
+}
+function suppressionsInForce(raw, now) {
+  if (!Array.isArray(raw)) return [];
+  return mergeSuppressions([], raw.filter((entry) => isSuppression(entry) && entry.expiresAt > now));
+}
+function suppressionsRecorded(config, input, now) {
+  const settings = config.suppression;
+  if (!settings || typeof settings !== "object") return [];
+  const recorded = [];
+  const record = (touch, days) => {
+    if (!touch.value || !config.dimensions.some((spec) => spec.key === touch.dim)) return;
+    recorded.push({ action: input.action, dimension: touch.dim, expiresAt: now + days * DAY_MS, value: touch.value });
+  };
+  const actions = settings.actions;
+  if (actions && typeof actions === "object" && Object.hasOwn(actions, input.action)) {
+    const days = suppressionDays(actions[input.action]);
+    if (days !== null) for (const touch of input.touches) record(touch, days);
+  }
+  if (settings.purchase !== void 0 && PURCHASE_ACTIONS.has(input.action)) {
+    const days = suppressionDays(settings.purchase);
+    if (days !== null) {
+      for (const touch of input.touches) if (touch.dim === PURCHASE_SUPPRESSED_DIMENSION) record(touch, days);
+    }
+  }
+  return mergeSuppressions([], recorded);
+}
+function signalsOf(state) {
+  const n = state?.signals;
+  return typeof n === "number" && Number.isSafeInteger(n) && n > 0 ? n : 0;
+}
+function withSignals(state, signals) {
+  const { signals: _held, ...rest } = state;
+  void _held;
+  return signals > 0 ? { ...rest, signals: Math.min(signals, Number.MAX_SAFE_INTEGER) } : rest;
+}
 function slugValue(v) {
   return v.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
@@ -46,6 +114,11 @@ var DEFAULT_REFLEX_CONFIG = {
     content_dwell: 0.5,
     content_click: 1,
     video_complete: 2,
+    // P40: the viewable impression weighs 0 (decision D1, enforced by weightOf
+    // below whatever a registry says); the video view at three seconds is a
+    // content action of weight 1, under the tenant's own weight once published.
+    content_viewable: 0,
+    video_view: 1,
     // Time-only re-evaluation (alarms / no-product events): no accumulation.
     tick: 0
   },
@@ -119,7 +192,7 @@ function extractTouches(product, config) {
 }
 function apply(prev, input, now, config) {
   const base = prev && prev.v === 1 ? prev : emptyState(config);
-  const weight = config.weights[input.action] ?? 0;
+  const weight = weightOf(config, input.action);
   const dims = {};
   for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
   if (weight > 0) {
@@ -193,10 +266,31 @@ function apply(prev, input, now, config) {
       configVersion: config.version
     });
   }
+  const suppressions = mergeSuppressions(suppressionsInForce(base.suppressions, now), suppressionsRecorded(config, input, now));
   return {
-    state: { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+    // 5. The count rides the state: carried through every apply, one more for a signal.
+    // P40: the orders the state has recorded ride it unchanged.
+    state: withSignals(
+      {
+        v: 1,
+        dims,
+        audiences: [...next].sort(),
+        configVersion: config.version,
+        ...base.orders !== void 0 ? { orders: base.orders } : {},
+        ...suppressions.length ? { suppressions } : {}
+      },
+      signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)
+    ),
     changes: { entered, exited, explain }
   };
+}
+var NEVER_WEIGHED = /* @__PURE__ */ new Set(["content_viewable"]);
+function weightOf(config, action) {
+  return NEVER_WEIGHED.has(action) ? 0 : config.weights[action] ?? 0;
+}
+function isSignal(config, action) {
+  const weight = Object.hasOwn(config.weights, action) && !NEVER_WEIGHED.has(action) ? config.weights[action] : void 0;
+  return typeof weight === "number" && Number.isFinite(weight) && weight > 0;
 }
 function tick(state, now, config) {
   return apply(state, { action: "tick", touches: [] }, now, config);
@@ -1153,6 +1247,11 @@ function compileSlotConstraints(slot, extended = true) {
 }
 
 // src/reflex/contentCompose.ts
+var positionPinNote = (position) => `pinned at position ${position} \u2014 the merchandiser\u2019s module at exactly this position; ranking and exploration never ran for this piece`;
+var offLimitsNote = (position) => `off-limits module held at its baseline position ${position} \u2014 no term and no exploration moved it; ranking never ran for this piece`;
+var CONFIGURED_ORDER_NOTE = "configured order position \u2014 the merchandiser\u2019s order for this context placed it; the ranking did not";
+var BLENDED_NOTE = "layout blend position \u2014 ranked by R + (1 \u2212 p) \xD7 B + p \xD7 Q, the rank base R from the slot\u2019s catalogue order";
+var BLENDED_ORDER_NOTE = "layout blend position \u2014 ranked by R + (1 \u2212 p) \xD7 B + p \xD7 Q, the rank base R from the merchandiser\u2019s configured order for this context";
 var HISTORICAL_PINS = /* @__PURE__ */ Symbol("historical-pins");
 var HISTORICAL_GOVERNANCE = /* @__PURE__ */ Symbol("historical-slot-governance");
 var HISTORICAL_GOVERNANCE_V1 = /* @__PURE__ */ Symbol("historical-slot-governance-v1");
@@ -1181,7 +1280,10 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
   const refusedPrefixes = /* @__PURE__ */ new Set();
   const prefixOwnedPieces = /* @__PURE__ */ new Set();
   const prefixCatalog = /* @__PURE__ */ new Map();
-  if (prefixes.size) {
+  const positionPinsOf = (slot) => !historicalPins && slot.positionPins?.length ? slot.positionPins : null;
+  const positioned = /* @__PURE__ */ new Map();
+  const ruled = /* @__PURE__ */ new Set();
+  if (prefixes.size || slots.some(positionPinsOf)) {
     for (const piece of live) if (!prefixCatalog.has(piece.id)) prefixCatalog.set(piece.id, piece);
   }
   const offLimits = /* @__PURE__ */ new Set();
@@ -1205,35 +1307,70 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
   {
     for (const slot of slots) {
       const prefix = prefixes.get(slot);
-      if (prefix) {
-        const malformed = Boolean(slot.pinnedPieceId) || prefix.ids.length > 50 || prefix.ids.length > prefix.take || new Set(prefix.ids).size !== prefix.ids.length || prefix.ids.some((id) => typeof id !== "string" || !id.length);
-        let invalid = malformed;
-        for (const [pinIndex, id] of prefix.ids.entries()) {
-          const piece = prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
-          const blocked2 = piece ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(piece) : gates.get(slot)?.reason(void 0, id);
-          const reason2 = blocked2 ?? (malformed ? "invalid_take" : !piece ? "missing_or_ineligible" : !piece.slotTypes.includes(slot.slot) ? "slot_type" : ownerSlot2 !== void 0 ? "duplicate_pin" : null);
-          if (reason2) {
-            invalid = true;
-            pinDiagnostics.push({
-              slot: slot.slot,
-              pinnedPieceId: id,
-              pinIndex,
-              reason: reason2,
-              ...ownerSlot2 !== void 0 ? { ownerSlot: ownerSlot2 } : {}
-            });
+      const pins = positionPinsOf(slot);
+      if (prefix || pins) {
+        let invalid = false;
+        if (prefix) {
+          const malformed = Boolean(slot.pinnedPieceId) || prefix.ids.length > 50 || prefix.ids.length > prefix.take || new Set(prefix.ids).size !== prefix.ids.length || prefix.ids.some((id) => typeof id !== "string" || !id.length);
+          invalid = malformed;
+          for (const [pinIndex, id] of prefix.ids.entries()) {
+            const piece = slot.withheld?.has(id) ? void 0 : prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
+            const blocked2 = piece ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(piece) : gates.get(slot)?.reason(void 0, id);
+            const reason2 = blocked2 ?? (malformed ? "invalid_take" : !piece ? "missing_or_ineligible" : !piece.slotTypes.includes(slot.slot) ? "slot_type" : ownerSlot2 !== void 0 ? "duplicate_pin" : null);
+            if (reason2) {
+              invalid = true;
+              pinDiagnostics.push({
+                slot: slot.slot,
+                pinnedPieceId: id,
+                pinIndex,
+                reason: reason2,
+                ...ownerSlot2 !== void 0 ? { ownerSlot: ownerSlot2 } : {}
+              });
+            }
+            if (piece) prefix.pieces.push({ ...piece });
           }
-          if (piece) prefix.pieces.push({ ...piece });
+        }
+        const placed = /* @__PURE__ */ new Map();
+        if (pins) {
+          const lowest = (prefix?.ids.length ?? 0) + 1, prefixIds = new Set(prefix?.ids ?? []);
+          const positions = /* @__PURE__ */ new Set(), ids = /* @__PURE__ */ new Set();
+          let malformed = Boolean(slot.pinnedPieceId) || pins.length > 50 || pins.length > slot.take;
+          for (const pin of pins) {
+            const id = pin?.pieceId, position = pin?.position;
+            if (typeof id !== "string" || !id.length || typeof position !== "number" || !Number.isSafeInteger(position) || position < lowest || position > slot.take || positions.has(position) || ids.has(id) || prefixIds.has(id)) malformed = true;
+            positions.add(position);
+            ids.add(id);
+          }
+          let refusedPin = false;
+          for (const pin of pins) {
+            const id = pin.pieceId, piece = slot.withheld?.has(id) ? void 0 : prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
+            const blocked2 = piece ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(piece) : gates.get(slot)?.reason(void 0, id);
+            const reason2 = blocked2 ?? (malformed ? "invalid_take" : !piece ? "missing_or_ineligible" : !piece.slotTypes.includes(slot.slot) ? "slot_type" : ownerSlot2 !== void 0 ? "duplicate_pin" : null);
+            if (reason2) {
+              invalid = true;
+              refusedPin = true;
+              pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: id, position: pin.position, reason: reason2, ...ownerSlot2 !== void 0 ? { ownerSlot: ownerSlot2 } : {} });
+            } else placed.set(pin.position, { ...piece });
+          }
+          if (refusedPin && !offLimits.has(slot)) ruled.add(slot);
         }
         if (invalid) refusedPrefixes.add(slot);
-        else for (const piece of prefix.pieces) {
-          reserved2.set(piece.id, slot.slot);
-          prefixOwnedPieces.add(prefixCatalog.get(piece.id));
-          if (prefix.diversity) prefix.seeds.push(...piece.tags[prefix.diversity.dimension] ?? []);
+        else {
+          if (prefix) for (const piece of prefix.pieces) {
+            reserved2.set(piece.id, slot.slot);
+            prefixOwnedPieces.add(prefixCatalog.get(piece.id));
+            if (prefix.diversity) prefix.seeds.push(...piece.tags[prefix.diversity.dimension] ?? []);
+          }
+          for (const piece of placed.values()) {
+            reserved2.set(piece.id, slot.slot);
+            prefixOwnedPieces.add(prefixCatalog.get(piece.id));
+          }
+          if (placed.size) positioned.set(slot, placed);
         }
         continue;
       }
       if (!slot.pinnedPieceId) continue;
-      const p = live.find((piece) => piece.id === slot.pinnedPieceId);
+      const p = slot.withheld?.has(slot.pinnedPieceId) ? void 0 : live.find((piece) => piece.id === slot.pinnedPieceId);
       const blocked = p ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(p) : gates.get(slot)?.reason(void 0, slot.pinnedPieceId);
       if (blocked) {
         pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: slot.pinnedPieceId, reason: blocked });
@@ -1256,6 +1393,9 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     }
   }
   let order = 0;
+  const ordered = [];
+  const placements = [];
+  const orderBaseline = /* @__PURE__ */ new Set();
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
     const prefix = prefixes.get(slot);
@@ -1294,15 +1434,43 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     const remaining = prefix ? prefix.take - prefix.ids.length : slot.take;
     if (prefix && remaining <= 0 || rankingSlots && !rankingSlots.has(slot.slot)) continue;
     const excluded = forbidden.get(slot);
-    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p));
-    const scored = eligible.map((p) => {
+    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !slot.withheld?.has(p.id) && !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p));
+    const pinsAt = positioned.get(slot) ?? /* @__PURE__ */ new Map();
+    const marks = !historicalPins && slot.offLimitsPieceIds?.length ? new Set(slot.offLimitsPieceIds) : null;
+    const fixedSlot = pinsAt.size > 0 || marks !== null;
+    const prefixLength = prefix ? prefix.ids.length : 0;
+    const held = /* @__PURE__ */ new Map();
+    let marksDecided = false;
+    if (marks) {
+      const own = /* @__PURE__ */ new Set([...prefix?.ids ?? [], ...[...pinsAt.values()].map((p) => p.id)]);
+      const servable = /* @__PURE__ */ new Map();
+      for (const p of live) {
+        if (servable.has(p.id) || !p.slotTypes.includes(slot.slot) || excluded?.has(p) || slot.withheld?.has(p.id)) continue;
+        if (own.has(p.id) || !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p)) servable.set(p.id, p);
+      }
+      const baseline = slot.order ? [...new Set(slot.order)].filter((id) => servable.has(id)) : [...servable.keys()];
+      for (const id of new Set(slot.offLimitsPieceIds)) {
+        if (own.has(id)) continue;
+        const position = baseline.indexOf(id) + 1;
+        if (position < 1 || position > slot.take || position <= prefixLength || pinsAt.has(position)) continue;
+        held.set(position, servable.get(id));
+      }
+      marksDecided = eligible.some((p) => marks.has(p.id));
+    }
+    const rankable = marks ? eligible.filter((p) => !marks.has(p.id)) : eligible;
+    const free = fixedSlot ? Math.max(0, slot.take - prefixLength - pinsAt.size - held.size) : prefix ? remaining : slot.take;
+    const blended = slot.blend === true && adjust !== void 0;
+    const rankBase = (pool) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length]));
+    const catalogueBase = blended ? rankBase(eligible) : null;
+    const view = slot.affinity ?? affinity;
+    const scoreOf = (p, R) => {
       const drivers = [];
       let score = 0;
       for (const [dim2, values] of Object.entries(p.tags)) {
         const w = slot.weights[dim2] ?? 0;
         if (!w) continue;
         for (const v of values) {
-          const a = affinity.dims[dim2]?.[v] ?? 0;
+          const a = view.dims[dim2]?.[v] ?? 0;
           if (a <= 0) continue;
           score += a * w;
           drivers.push(dim2, v, a, w);
@@ -1313,15 +1481,18 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         drivers.push("completes", slot.prefer.label, 1, slot.prefer.bonus);
       }
       if (adjust) {
-        const adjusted = adjust(p, slot.slot, score);
-        if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted;
+        const adjusted = R === void 0 ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R });
+        if (Number.isFinite(adjusted) && (adjusted >= 0 || R !== void 0)) score = adjusted;
       }
       return { p, score, drivers };
-    }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
+    };
+    const scored = rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id))).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
     let byScore = null;
     let promoted = null;
-    if (explore && scored.length > 1) {
+    let picked = false;
+    if (explore && scored.length > 1 && (!fixedSlot || free > 0)) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
+      picked = Boolean(pick);
       if (pick?.ranking) {
         const order2 = new Map(pick.ranking.map((id, i) => [id, i]));
         scored.sort((x, y) => (order2.get(x.p.id) ?? 1e9) - (order2.get(y.p.id) ?? 1e9));
@@ -1341,9 +1512,11 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     const rule = diversity && diversity.max >= 1 && diversity.dimension ? diversity : null;
     const seen = /* @__PURE__ */ new Map();
     if (prefix && rule) for (const value of prefix.seeds) seen.set(value, (seen.get(value) ?? 0) + 1);
+    if (fixedSlot && rule) for (const p of [...pinsAt.values(), ...held.values()]) for (const value of p.tags[rule.dimension] ?? []) seen.set(value, (seen.get(value) ?? 0) + 1);
     const yielded = [];
     let pendingSkips = [];
-    const serve = (s, diversity2) => {
+    const rankedOut = fixedSlot ? [] : null;
+    const serve = (s, diversity2, note) => {
       const drivers = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
         drivers.push({
@@ -1356,41 +1529,112 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       const cold = s.score <= 0;
       used.add(s.p.id);
-      out.push({
+      const decision = {
         contentId: s.p.id,
         customerContentId: s.p.customerContentId,
         type: s.p.type,
         slot: slot.slot,
-        order: order++,
+        order: rankedOut ? -1 : order++,
         score: round3(s.score),
         strategy: cold ? "default" : "affinity",
-        explain: { drivers: drivers.slice(0, 4), ...cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
-      });
+        explain: { drivers: drivers.slice(0, 4), ...note ? { note } : cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
+      };
+      if (rankedOut) rankedOut.push(decision);
+      else out.push(decision);
     };
-    let taken = 0;
-    for (const s of scored) {
-      if (taken >= (prefix ? remaining : slot.take)) break;
-      if (rule) {
-        const values = s.p.tags[rule.dimension] ?? [];
-        if (values.some((v) => (seen.get(v) ?? 0) >= rule.max)) {
-          yielded.push(s);
-          pendingSkips.push(s.p.id);
-          continue;
+    if (slot.order && !picked) {
+      const capacity = free;
+      if (blended) {
+        const pool = new Map(eligible.map((p) => [p.id, p]));
+        const listed = [], seen2 = /* @__PURE__ */ new Set();
+        for (const id of slot.order) {
+          const p = pool.get(id);
+          if (p && !used.has(p.id) && !seen2.has(p.id)) {
+            seen2.add(p.id);
+            listed.push(p);
+          }
         }
-        for (const v of values) seen.set(v, (seen.get(v) ?? 0) + 1);
+        const base = rankBase(listed), at = new Map(listed.map((p, i) => [p.id, i]));
+        const ranked = (marks ? listed.filter((p) => !marks.has(p.id)) : listed).map((p) => scoreOf(p, base.get(p.id))).sort((x, y) => y.score - x.score || at.get(x.p.id) - at.get(y.p.id));
+        candidates[slot.slot] = ranked.slice(0, limit).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
+        for (const s of ranked.slice(0, capacity)) serve(s, void 0, BLENDED_ORDER_NOTE);
+      } else {
+        const byId = new Map(scored.map((s) => [s.p.id, s]));
+        let served = 0;
+        for (const id of slot.order) {
+          if (served >= capacity) break;
+          const s = byId.get(id);
+          if (!s || used.has(s.p.id)) continue;
+          serve(s, void 0, CONFIGURED_ORDER_NOTE);
+          served += 1;
+        }
       }
-      const skipped = pendingSkips;
-      pendingSkips = [];
-      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(", ")} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : void 0);
-      taken += 1;
+      ordered.push(slot.slot);
+    } else {
+      const takeNote = blended ? BLENDED_NOTE : void 0;
+      let taken = 0;
+      for (const s of scored) {
+        if (taken >= free) break;
+        if (rule) {
+          const values = s.p.tags[rule.dimension] ?? [];
+          if (values.some((v) => (seen.get(v) ?? 0) >= rule.max)) {
+            yielded.push(s);
+            pendingSkips.push(s.p.id);
+            continue;
+          }
+          for (const v of values) seen.set(v, (seen.get(v) ?? 0) + 1);
+        }
+        const skipped = pendingSkips;
+        pendingSkips = [];
+        serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(", ")} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : void 0, takeNote);
+        taken += 1;
+      }
+      for (const s of yielded) {
+        if (taken >= free) break;
+        serve(s, { dimension: rule.dimension, max: rule.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule.max} per ${rule.dimension}: nothing else was eligible` }, takeNote);
+        taken += 1;
+      }
     }
-    for (const s of yielded) {
-      if (taken >= (prefix ? remaining : slot.take)) break;
-      serve(s, { dimension: rule.dimension, max: rule.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule.max} per ${rule.dimension}: nothing else was eligible` });
-      taken += 1;
+    if (rankedOut) {
+      let next = 0;
+      const place = (p, rule2, position) => {
+        used.add(p.id);
+        out.push({
+          contentId: p.id,
+          customerContentId: p.customerContentId,
+          type: p.type,
+          slot: slot.slot,
+          order: order++,
+          score: 0,
+          strategy: "tenant-pinned",
+          explain: { drivers: [], note: rule2 === "pinned" ? positionPinNote(position) : offLimitsNote(position) }
+        });
+        placements.push({ slot: slot.slot, contentId: p.id, rule: rule2, position, ...rule2 === "off_limits" ? { baseline: slot.order ? "order" : "catalogue" } : {} });
+      };
+      for (let position = prefixLength + 1; position <= slot.take; position++) {
+        const pinnedHere = pinsAt.get(position), heldHere = held.get(position);
+        if (pinnedHere) place(pinnedHere, "pinned", position);
+        else if (heldHere) place(heldHere, "off_limits", position);
+        else if (next < rankedOut.length) {
+          const d = rankedOut[next++];
+          d.order = order++;
+          out.push(d);
+        }
+      }
+      if (pinsAt.size || marksDecided) ruled.add(slot);
+      if (marksDecided && slot.order) orderBaseline.add(slot);
     }
   }
-  return { decisions: out, candidates, ...pinDiagnostics.length ? { pinDiagnostics } : {} };
+  const pageOrder = (set) => slots.filter((slot) => set.has(slot)).map((slot) => slot.slot);
+  return {
+    decisions: out,
+    candidates,
+    ...pinDiagnostics.length ? { pinDiagnostics } : {},
+    ...ordered.length ? { ordered } : {},
+    ...placements.length ? { moduleRules: placements } : {},
+    ...ruled.size ? { ruled: pageOrder(ruled) } : {},
+    ...orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}
+  };
 }
 function composeContent(pieces, affinity, slots) {
   return composeContentDetailed(pieces, affinity, slots).decisions;

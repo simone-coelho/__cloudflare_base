@@ -7,16 +7,42 @@
 import type { Env } from '@/types/env';
 import { readRevision } from '@/config/versionedStore';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
-import type { LearnConfig } from '@/content/types';
+import type { LearnConfig, SlotAttribution } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import { DEFAULT_POLICY, type AttributionPolicy } from './policy';
 import { DEFAULT_STATS, type AttributionContract } from './stats';
 import { fanOutcome, reportLearningIncomplete, type SlotLearnConfig } from './fan';
 import { admitOwnedRecovery } from '@/identity/sessionAuthority';
 
-export function policyOf(learn: LearnConfig): AttributionPolicy {
+/**
+ * P33 (decision D1, freeze item 11): slot → its own attribution policy, for the
+ * slots whose learn dials name one (`module-tied`, the only one), or null when
+ * no slot does. One reading of the document, so every carrier below names the
+ * same slots.
+ */
+export function slotAttributionsOf(learn: LearnConfig): Record<string, SlotAttribution> | null {
+  const out: Record<string, SlotAttribution> = {};
+  for (const [slot, d] of Object.entries(learn.slots ?? {})) if (d?.attribution === 'module-tied') out[slot] = 'module-tied';
+  return Object.keys(out).length ? Object.fromEntries(Object.entries(out).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : null;
+}
+
+/** The brand-wide learning policy alone: the four axes, never a slot's own policy. */
+function brandPolicyOf(learn: LearnConfig): AttributionPolicy {
   const p = learn.policy;
   return p ? { scope: p.scope, match: p.match, credit: p.credit, windowsMs: { ...DEFAULT_POLICY.windowsMs, ...p.windowsMs } } : DEFAULT_POLICY;
+}
+
+/**
+ * The tenant's learning policy. P33: with `slotAttribution` beside the four
+ * axes when a slot's dials name their own attribution policy, so each fold of
+ * the ledger — the offline recomputation (`foldRetainedDay`, which the
+ * statistics object calls with this policy), the hourly fold and the raw day —
+ * credits that slot as the visitor's ring does; a document whose slots name
+ * none answers exactly the policy it always did.
+ */
+export function policyOf(learn: LearnConfig): AttributionPolicy {
+  const brand = brandPolicyOf(learn), own = slotAttributionsOf(learn);
+  return own ? { ...brand, slotAttribution: own } : brand;
 }
 
 /**
@@ -66,10 +92,19 @@ export function validAttributionContract(value: unknown): AttributionContract | 
     history: history as AttributionContract['history'], windowsMs, appliedWindowsMs };
 }
 
+/**
+ * Each slot's learning configuration. P33 (R-P39, S4F-C6): the slot's own
+ * attribution policy rides here as `attribution`, only on a slot whose dials
+ * name one, because this is the configuration the visitor's ring receives and
+ * admits member by member; the ring keeps it out of the credit batch it sends
+ * the statistics object, whose configuration stays exactly reward, stats,
+ * objective and measurement basis.
+ */
 export function slotConfigsOf(learn: LearnConfig): Record<string, SlotLearnConfig> {
   const stats = learn.stats ?? DEFAULT_STATS;
   const out: Record<string, SlotLearnConfig> = {};
-  for (const [slot, d] of Object.entries(learn.slots ?? {})) out[slot] = { reward: d.reward ?? 'click', stats, objective: d.objective ?? 'unit', measurementBasis: d.measurementBasis ?? 'served-v1' };
+  for (const [slot, d] of Object.entries(learn.slots ?? {})) out[slot] = { reward: d.reward ?? 'click', stats, objective: d.objective ?? 'unit', measurementBasis: d.measurementBasis ?? 'served-v1',
+    ...(d.attribution === 'module-tied' ? { attribution: d.attribution } : {}) };
   return out;
 }
 
@@ -80,11 +115,13 @@ export async function outcomeToLearning(env: Env, scope: string, outcome: Outcom
     const learn = rev?.value ?? DEFAULT_LEARN;
     if (env.LEDGER_RECOVERY_ENABLED === 'true') {
       const result = await admitOwnedRecovery({ kind: 'outcome', tenant: scope, subject: outcome.visitor_id, brand: outcome.brand, outcome,
-        policy: policyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } });
+        policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } });
       if (result.source.state !== 'recovered') reportLearningIncomplete('outcome', result.learning ?? null);
       return;
     }
-    const result = await fanOutcome(env, scope, outcome, policyOf(learn), outcome.brand, slotConfigsOf(learn),
+    // P33 (S4F-C6): the ring receives the brand-wide policy and each slot's own
+    // attribution policy on that slot's configuration, its one carrier there.
+    const result = await fanOutcome(env, scope, outcome, brandPolicyOf(learn), outcome.brand, slotConfigsOf(learn),
       { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS });
     reportLearningIncomplete('outcome', result);
   } catch { reportLearningIncomplete('outcome', null); }

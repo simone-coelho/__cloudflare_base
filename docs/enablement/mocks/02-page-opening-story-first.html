@@ -1,0 +1,155 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Approved mock 2: the page opening, story first, third person</title><link rel="stylesheet" href="_tokens.css">
+<!-- Approved by the owner, 2026-10-03, as the opening of the marketing explainer page and, through mock 3, of every piece.
+     Shown in the chat as "bti_marketing_page_third_person_design_mock" after two corrections: (1) the story comes before
+     anything moves; (2) the reader is an Optimizely marketer, not the customer, so the brand is in the third person and
+     nothing is "what you already have". Part 5 lists the sections that follow (mock 1 shows their kinds of visual). --></head><body>
+<h2 class="sr-only">Revised design mock of the marketing explainer page, written for an internal reader. It opens with the story in one headline and three beats about the engine and the brand, then three contrast cards on how the engine differs from a recommendations engine, from rule-based personalization and from AI that decides, then the animated page that rearranges after one click, then a five-frame walk-through, then the remaining sections in order.</h2>
+<style>
+@keyframes swap1{0%,20%{transform:translateY(0)}40%,100%{transform:translateY(108px)}}
+@keyframes swap2{0%,20%{transform:translateY(0)}40%,100%{transform:translateY(-54px)}}
+@keyframes swap3{0%,20%{transform:translateY(0)}40%,100%{transform:translateY(-54px)}}
+@keyframes click{0%,15%{opacity:0;transform:scale(.6)}20%,30%{opacity:1;transform:scale(1)}40%,100%{opacity:0}}
+@keyframes card{0%,45%{opacity:0;transform:translateY(8px)}60%,100%{opacity:1;transform:translateY(0)}}
+@keyframes fill{0%{height:6px}100%{height:40px}}
+@keyframes drain{0%{height:40px}100%{height:6px}}
+.lbl{font-size:11px;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px}
+.sec{border-top:0.5px solid var(--border);padding:1.25rem 0}
+.card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px}
+.sk{position:absolute;left:0;right:0;border-radius:6px;background:var(--surface-1);border:0.5px solid var(--border)}
+.story{display:flex;gap:12px;align-items:flex-start}
+.story i{font-size:20px;color:var(--text-accent);flex:none;margin-top:2px}
+.story p{font-size:13px;line-height:1.5;margin:0;color:var(--text-secondary)}
+.was{font-size:12px;color:var(--text-muted);margin:0 0 4px}
+.is{font-size:12px;color:var(--text-accent);margin:0 0 4px}
+.cp{font-size:13px;margin:0;line-height:1.5}
+.frame{background:var(--surface-1);border:0.5px solid var(--border);border-radius:10px;height:84px;position:relative;overflow:hidden;margin-bottom:8px}
+.bar{position:absolute;left:10px;right:10px;height:12px;border-radius:3px;background:var(--surface-2);border:0.5px solid var(--border)}
+.cap{font-size:12px;line-height:1.45;margin:0;color:var(--text-secondary)}
+.chip{font-size:12px;padding:6px 10px;border-radius:999px;border:0.5px solid var(--border-strong);color:var(--text-secondary)}
+</style>
+
+<div style="padding:1rem 0 0">
+<p class="lbl">1 · The story, before anything moves</p>
+<div class="card" style="padding:18px 20px">
+  <p style="font-size:11px;color:var(--text-muted);margin:0 0 6px;letter-spacing:.04em;text-transform:uppercase">Behavioral Targeting and Intelligence · for marketing</p>
+  <p style="font-size:22px;font-weight:500;line-height:1.3;margin:0 0 14px">We built an engine that follows each visitor's interest in real time and decides the page at that point in time.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+    <div class="story"><i class="ti ti-user-question" aria-hidden="true"></i><p>Most visitors to a brand's site arrive as strangers, and most buying happens before any profile exists. Tools built for known customers are blind in that window.</p></div>
+    <div class="story"><i class="ti ti-activity" aria-hidden="true"></i><p>The engine watches what a visitor does on this visit and arranges the page around it, click by click, from the first page on.</p></div>
+    <div class="story"><i class="ti ti-steering-wheel" aria-hidden="true"></i><p>The brand's team publishes the rules, keeps the last word, and can read the reason behind every decision.</p></div>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">2 · How it differs from recommendations and from personalization, and why</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
+  <div class="card">
+    <p class="was">A recommendations engine</p>
+    <p class="cp" style="margin-bottom:10px">Ranks the past: what people like this visitor bought before.</p>
+    <div style="border-top:0.5px solid var(--border);padding-top:10px">
+      <p class="is">The engine</p>
+      <p class="cp" style="color:var(--text-secondary)">Decides the page at the point in time from what this visitor is doing now. The two work side by side; the brand's carousel is one of the modules it orders.</p>
+    </div>
+  </div>
+  <div class="card">
+    <p class="was">Rule-based personalization</p>
+    <p class="cp" style="margin-bottom:10px">Sorts visitors into segments written in advance. The rules go stale, multiply and fight.</p>
+    <div style="border-top:0.5px solid var(--border);padding-top:10px">
+      <p class="is">The engine</p>
+      <p class="cp" style="color:var(--text-secondary)">Needs no segment and no expiration rule. Interest fills with each action and drains on its own, like a bucket.</p>
+    </div>
+  </div>
+  <div class="card">
+    <p class="was">AI that decides</p>
+    <p class="cp" style="margin-bottom:10px">Chooses in the moment and cannot show its work.</p>
+    <div style="border-top:0.5px solid var(--border);padding-top:10px">
+      <p class="is">The engine</p>
+      <p class="cp" style="color:var(--text-secondary)">Calls no AI model to decide. Every decision is arithmetic a person can recompute, on a receipt. Opal is where people ask and generative AI creates.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">3 · Now watch it: one visitor, one click</p>
+<div class="card" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:20px;align-items:center;padding:16px">
+  <div>
+    <p style="font-size:15px;font-weight:500;margin:0 0 8px;line-height:1.4">A visitor lands on the brand's page, clicks one boot banner, and the page rearranges around that interest. The card that appears is the receipt: why this page, in words.</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin:0">Same catalog, same rules. Only what the visitor did changed.</p>
+  </div>
+  <div style="position:relative;height:250px">
+    <div style="position:absolute;left:0;right:0;top:0;height:22px;border-radius:6px;background:var(--surface-1);border:0.5px solid var(--border)"></div>
+    <div class="sk" style="top:30px;height:48px;animation:swap1 6s ease-in-out infinite;background:var(--bg-accent);border-color:var(--border-accent)"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-accent)">Hero · outerwear editorial</span></div>
+    <div class="sk" style="top:84px;height:48px;animation:swap2 6s ease-in-out infinite"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-secondary)">Boots</span></div>
+    <div class="sk" style="top:138px;height:48px;animation:swap3 6s ease-in-out infinite"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-secondary)">Leather accessories</span></div>
+    <div class="sk" style="top:192px;height:48px"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-secondary)">Recommended for you · one module among the rest</span></div>
+    <div style="position:absolute;left:150px;top:98px;width:26px;height:26px;border-radius:50%;border:2px solid var(--text-accent);animation:click 6s ease-in-out infinite"></div>
+    <div style="position:absolute;right:-6px;bottom:-6px;width:190px;padding:8px 10px;border-radius:8px;background:var(--surface-2);border:0.5px solid var(--border-strong);font-size:11px;line-height:1.4;animation:card 6s ease-in-out infinite"><span style="color:var(--text-muted)">Why this page</span><br>Clicked a boot banner, +<br>Regional start, fading, −</div>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">4 · Then go through it, one moment at a time</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+  <div>
+    <div class="frame">
+      <div class="bar" style="top:10px;height:10px"></div>
+      <i class="ti ti-map-pin" aria-hidden="true" style="position:absolute;right:12px;top:6px;font-size:16px;color:var(--text-accent)"></i>
+      <div class="bar" style="top:30px;height:22px;background:var(--bg-accent);border-color:var(--border-accent)"></div>
+      <div class="bar" style="top:58px;height:16px"></div>
+    </div>
+    <p class="cap">The first page feels local, before the first click.</p>
+  </div>
+  <div>
+    <div class="frame">
+      <div class="bar" style="top:10px;height:10px"></div>
+      <div class="bar" style="top:30px;height:16px"></div>
+      <div class="bar" style="top:52px;height:22px;background:var(--bg-accent);border-color:var(--border-accent)"></div>
+      <div style="position:absolute;left:50%;top:34px;width:18px;height:18px;border-radius:50%;border:2px solid var(--text-accent)"></div>
+      <i class="ti ti-arrows-sort" aria-hidden="true" style="position:absolute;right:10px;top:36px;font-size:16px;color:var(--text-secondary)"></i>
+    </div>
+    <p class="cap">The first click changes the page.</p>
+  </div>
+  <div>
+    <div class="frame" style="display:flex;align-items:flex-end;gap:8px;padding:0 14px 12px">
+      <div style="width:16px;background:var(--bg-accent);border-radius:3px 3px 0 0;animation:fill 3s ease-in-out infinite alternate"></div>
+      <div style="width:16px;background:var(--bg-accent);border-radius:3px 3px 0 0;animation:drain 3s ease-in-out infinite alternate"></div>
+      <div style="width:16px;height:18px;background:var(--surface-2);border:0.5px solid var(--border);border-radius:3px 3px 0 0"></div>
+      <div style="flex:1;border-top:1px dashed var(--border-strong);margin-bottom:26px"></div>
+    </div>
+    <p class="cap">Interest fills and drains like buckets. Nobody writes expiration rules.</p>
+  </div>
+  <div>
+    <div class="frame">
+      <div class="bar" style="top:10px;height:18px;background:var(--bg-warning);border-color:var(--border-warning)"></div>
+      <i class="ti ti-pin" aria-hidden="true" style="position:absolute;right:14px;top:12px;font-size:14px;color:var(--text-warning)"></i>
+      <div class="bar" style="top:36px;height:16px"></div>
+      <div class="bar" style="top:58px;height:16px"></div>
+    </div>
+    <p class="cap">A pin holds the section a merchandiser sold.</p>
+  </div>
+  <div>
+    <div class="frame" style="padding:12px 14px">
+      <i class="ti ti-receipt" aria-hidden="true" style="font-size:16px;color:var(--text-secondary)"></i>
+      <div style="font-size:10px;line-height:1.6;color:var(--text-secondary);margin-top:4px">boots · clicked, +<br>outerwear · regional, −<br>recommended · module 4</div>
+    </div>
+    <p class="cap">Every decision has a receipt a person can recompute.</p>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">5 · Then the rest of the page, in this order</p>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+  <span class="chip">Capabilities as pillars, one picture each, with the brand's use case</span>
+  <span class="chip">How it works in three steps</span>
+  <span class="chip">Why customers choose it, ten tiles, unranked</span>
+  <span class="chip">Proof by industry</span>
+  <span class="chip">What to say and never say, card pairs, for the reader</span>
+  <span class="chip">Questions marketing will be asked, open on click</span>
+  <span class="chip">Into the tour and the battlecard</span>
+</div>
+</div>
+</body></html>
