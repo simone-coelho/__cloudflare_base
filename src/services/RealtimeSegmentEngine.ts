@@ -52,6 +52,7 @@ import {
   extractTouches,
   needsCatalogVocabulary,
   placeEvent,
+  productTypeOf,
   snapshot as reflexSnapshot,
   tick as tickReflex,
   isDuplicateOrder,
@@ -636,6 +637,9 @@ export class RealtimeSegmentEngine {
           visit: liveVisit(sessionData.metadata, stored?.metadata.lastSeen, now).lastVisitAt ?? now,
           vocabulary: () => tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null),
         }) ?? sessionData.reflex;
+        // P14 (decision D1): the product type the event itself carries, only when
+        // the registry declares product-type weights; no read.
+        const productType = productTypeOf(reflexConfig, eventData);
         reflex = applyReflex(
           prior,
           {
@@ -645,6 +649,8 @@ export class RealtimeSegmentEngine {
             touches,
             // P32: the module's own tags, for the shopper's interest alone (never the population counts below).
             ...(moduleTouches?.touches.length ? { module: moduleTouches } : {}),
+            // P14: its product-type weight, for the shopper's interest alone (the population counts below keep the action's own).
+            ...(productType !== undefined ? { productType } : {}),
           },
           nowMs,
           reflexConfig
@@ -820,7 +826,9 @@ export class RealtimeSegmentEngine {
           // Live affinity payload for the Affinity Instrument (dims use original
           // catalog value names; changed = this event's explain records).
           affinity: reflex
-            ? { ...reflexSnapshot(reflex.state, nowMs, reflexConfig), changed: reflex.changes.explain, odpConfirmed: odpSeed }
+            ? { ...reflexSnapshot(reflex.state, nowMs, reflexConfig), changed: reflex.changes.explain, odpConfirmed: odpSeed,
+              // P14 (decision D2): the action, the product type and the weight this event applied, when the registry declares product-type weights.
+              ...(reflex.applied ? { applied: reflex.applied } : {}) }
             : undefined,
           // W35 A1: the documented personalization_update carries no cookie
           // member (kit 03). Cookies travel only as the action answer's own

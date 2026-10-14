@@ -1530,6 +1530,42 @@ records one suppression per registry value it carries the same way (weight 0, no
 older than its window suppresses nothing. Every other weight-0 buffered action is dropped as before, and the import
 skips weight-0 rows, so an imported `remove_from_cart` records nothing.
 
+## Action weights per product type
+
+The reflex registry document (`PUT /config/reflex`) carries the optional member `productTypeWeights`, an
+action's weight per product type on one dimension the registry declares
+([product-type weights](./02-api-reference.md#action-weights-per-product-type-producttypeweights)):
+
+```json
+{ "productTypeWeights": { "dimension": "category", "weights": { "add_to_cart": { "Handbags": 8, "Accessories": 1 } } } }
+```
+
+| Member | Meaning |
+|---|---|
+| `productTypeWeights.dimension` | The key of one dimension the registry declares, not a derived band. An event's product type is the value it carries on that dimension's source field, as written (not slugged or case-folded), admitted as every event attribute is; a held catalogue product's own value is not read |
+| `productTypeWeights.weights` | `{ <action>: { <product type>: <weight> } }`: each product-type weight is a number from 0 to 1000, the points an event of that action on that product type adds to every interest it touches in place of the action's own weight |
+
+An event on another product type, or with no value on the dimension, adds the action's own weight, exactly as
+before. Publication refuses with `422`, naming `productTypeWeights`, a product-type weight outside 0 to 1000 or
+written as text, a `dimension` the registry does not declare or that is a derived band, any other member, and an
+action or product type no event can carry (the API reference lists them). The population trend the event feeds
+(its regional and arrival-context counts) keeps the action's own weight, and the signal floor reads the action's
+own weight, so a product-type weight scales the shopper's interest update and nothing else.
+
+The interest update an event returns on both hosts, and the socket frame that carries it, itemise the weight it
+applied as `affinity.applied: { action, dimension, productType, weight }`:
+
+| Member | Meaning |
+|---|---|
+| `action` | The event's action |
+| `dimension` | `productTypeWeights.dimension` |
+| `productType` | The value the event carries on that dimension, or null when it carries none |
+| `weight` | The weight the event added to each interest it touched: the product-type weight, or the action's own |
+
+`affinity.applied` is present only while the registry declares `productTypeWeights`; a registry without the
+member answers, pushes and stores exactly what it did before. The shopper's stored reflex state is unchanged in
+shape: it holds the accumulated interest, never the weight that built it.
+
 ## The account identifier format and the identifier change
 
 The reflex registry document (`PUT /config/reflex`) carries the optional member `accountIdFormat`, the forms the
@@ -1590,7 +1626,7 @@ and ODP audiences) never appear in `dims` because of a restoration.
 | Frame | Body |
 |---|---|
 | `connected` | `{ connectionId, userId, timestamp }` |
-| `personalization_update` | `{ userId, timestamp, data: { segments[], decisions{}, featureVariables{}, recommendations[], sortOrder[], journeyStage, affinity: { dims, audiences, changed[], odpConfirmed[] } } }`. `journeyStage` is one of `exploring`, `thinking`, `deciding`: the stage of the shopper's CURRENT VISIT, derived from the visit's own counters against the `journey` thresholds published on your reflex configuration document. It starts again at `exploring` in a new visit and after the purchase that reached `deciding`. With no `journey` block published the engine's compiled default decides (`thinking` at the third interaction of the visit, `deciding` at the first purchase), so the stage still moves and the pooled learning key still spreads across `s=early`, `s=mid` and `s=late` rather than collapsing onto `s=early`; `sources.journey` on a decision names that default and its `revision: 0`. |
+| `personalization_update` | `{ userId, timestamp, data: { segments[], decisions{}, featureVariables{}, recommendations[], sortOrder[], journeyStage, affinity: { dims, audiences, changed[], odpConfirmed[], applied? } } }`. `applied` itemises the action, the product type and the weight the event applied, only while the registry declares `productTypeWeights` (Action weights per product type, above). `journeyStage` is one of `exploring`, `thinking`, `deciding`: the stage of the shopper's CURRENT VISIT, derived from the visit's own counters against the `journey` thresholds published on your reflex configuration document. It starts again at `exploring` in a new visit and after the purchase that reached `deciding`. With no `journey` block published the engine's compiled default decides (`thinking` at the third interaction of the visit, `deciding` at the first purchase), so the stage still moves and the pooled learning key still spreads across `s=early`, `s=mid` and `s=late` rather than collapsing onto `s=early`; `sources.journey` on a decision names that default and its `revision: 0`. |
 | `segment_update` | The same shape, on a membership change alone |
 | `content_decisions` | Client-compatible only, no production sender promised. A decision set: `{ page, arm, versions, config_label, decisions[], ts }` |
 | `audience_published` | `{ userId, data: { timestamp, source, audienceWentLive: { key, name } } }` |

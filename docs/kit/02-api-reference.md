@@ -94,7 +94,9 @@ Response:
 ```
 
 `update` is absent when nothing changed. `400` with `error: "Invalid action event format"` and
-`details` names the offending field.
+`details` names the offending field. When the registry document declares product-type weights
+(`productTypeWeights`, below), `update.data.affinity.applied` itemises the action, the product type and the
+weight the event applied: `{ "action": "add_to_cart", "dimension": "category", "productType": "Handbags", "weight": 8 }`.
 
 `signals` is the input diagnostic, on both hosts, and it is measured against the catalogue your tenant
 publishes: the values your published content catalogue tags carry, dimension by dimension, plus the
@@ -1518,6 +1520,50 @@ publication with `422`, naming `typeFallback`. Publish the marker with the catal
 writes the catalogue it assembles without it. The catalogue diagnostics (above) name the fallback in
 `typeFallback` and the module-type role in `dimensionRoles`, and a decision the retirement could have changed records `inputs.replay.typeFallback: "type-fallback-retired-v1"`,
 which its replay reads.
+
+### Action weights per product type (`productTypeWeights`)
+
+The registry document also carries the optional `productTypeWeights: { dimension, weights }`, published with
+`PUT /config/reflex` like the rest of it (or saved from the console's interests screen), with no deployment
+([schema](./03-payload-schemas.md#action-weights-per-product-type)). Absent, the shipped state, every event
+weighs what its action weighs, exactly as before, and nothing new appears on the update, the socket frame or
+any stored record.
+
+```json
+"productTypeWeights": { "dimension": "category", "weights": { "add_to_cart": { "Handbags": 8, "Accessories": 1 } } }
+```
+
+- **The product type.** `dimension` is the key of one dimension of the same registry, a dimension the event
+  itself carries (not a derived band). An event's product type is the value it carries on that dimension's
+  source field, as written: not slugged or case-folded (`handbags` is not `Handbags`), admitted as every event
+  attribute is (trimmed, cut to 64 characters, none when it carries control characters or angle brackets), an
+  array read as its first entry. It is read from the event even
+  when the engine holds the product in its catalogue, and from the value the event sent even when an approved
+  vocabulary maps it to an id for placement.
+- **The weight.** `weights` maps an action name to the product types it counts differently on, each with the
+  points it adds in place of the action's own. An event of that action whose product type has a weight adds that
+  weight to every interest it touches, the content touches of a content event included. An event of another
+  product type, or with no value on the dimension, counts by the action's own weight. A product-type weight of 0
+  adds nothing to the shopper's interests; an action the registry weighs 0 (or does not weigh) adds its
+  product-type weight where one is set.
+- **Validation.** Each product-type weight is a number from 0 to 1000, on the action weights' scale; a weight
+  outside 0 to 1000 or written as text, a `dimension` this registry does not declare or that is a derived band,
+  a member other than `dimension` and `weights`, an action name that is empty, a reserved key, padded or longer
+  than 120 characters, `tick` or `content_viewable`, and a product type that is empty, padded, longer than 64
+  characters or carries control characters or angle brackets refuse the write with `422`, naming
+  `productTypeWeights` (`productTypeWeights.weights.add_to_cart.Handbags must be at most 1000 (got 1001)`).
+  A `PATCH /config/reflex` replaces the whole block, so send it as it should stand.
+- **What it does not do.** It scales the shopper's interest update only. Whether an event is a signal for the
+  signal floor reads the action's own weight, so a product-type weight neither makes a weight-0 action a signal
+  nor turns a weighted one into none. The population trend an event feeds (the regional and arrival-context
+  counts) keeps the action's own weight. A module engagement's own tags keep the module-engagement weight, taught
+  when the click's own weight is above 0.
+- **Itemised.** The interest update the action answer returns on both hosts (and the socket frame that carries
+  it) itemises the weight in `affinity.applied: { action, dimension, productType, weight }`: the event's action,
+  the dimension, the product type (null when the event carries none) and the weight it applied. It is present
+  only while the registry declares product-type weights.
+- **Stated limits.** A delivery through the buffered door (`"processing": "buffered"`) and a history import
+  (`POST /v1/{tenant}/identity/events`) count by the action's own weight.
 
 ### Evidence floors per page type (`evidenceFloors`)
 
