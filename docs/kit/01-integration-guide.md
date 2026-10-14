@@ -119,9 +119,14 @@ client.listen.subscribe('hero', (decisions) => {
   void client.emit.rendered('hero', d.contentId, heroElement, d.decisionId);
 });
 
-void client.listen.refresh({ page: 'home' });             // coalesced latest intent
-client.connect();                                       // optional updates; reconnect refreshes
+void client.listen.refresh({ page: 'home' });  // paints the first answer; defaults stand at the deadline
+client.connect();                              // optional updates; opened during the first answer, one refresh after it
 ```
+
+The first line asks for the page view's first answer and paints it when it arrives; if nothing has
+arrived by the deadline the defaults stand, and a later answer still paints. The second line opens the
+optional live channel. Opening it while that first answer is in flight does not cancel the answer: the
+answer is painted and acknowledged first, then the page refreshes exactly once.
 
 Here `renderHero` synchronously resolves your CMS ID and returns `true` only after the matching,
 eligible asset has actually painted in `heroElement`. Missing, deleted or cross-category assets
@@ -138,19 +143,34 @@ ours for the events you send back.
 
 Customer snapshots are read-only offers: receiving or polling a choice creates no behavioral, ledger or learning exposure. Explicitly publish `slots.{slot}.measurementBasis: 'rendered-v1'` for new rendered measurement, with durable recovery and approved original ledger/online retention. Missing basis remains historical `served-v1`; switching a used slot requires compatible config/reset-generation handling, not relabeling or mixing old counters/priors.
 
-A current tracked choice carries `decisionId` and opaque `renderOffer`. After actual paint, `await client.emit.rendered(slot, contentId, element, decisionId)` returns `{version:1, decisionId, eventId, pageInstance, status:'durable', source:'pending'|'recovered'}` or null. This ACK proves owner-durable source admission, not completed sinks or human visibility. On null, retry the same paint: the SDK retains its original envelope, ID and timestamp, with at most three attempts. Unchanged placement and asset retain the painted receipt across polls; changed asset/page/owner invalidates it.
+A current tracked choice carries `decisionId` and opaque `renderOffer`. After actual paint, `await client.emit.rendered(slot, contentId, element, decisionId)` returns `{version:1, decisionId, eventId, pageInstance, status:'durable', source:'pending'|'recovered'}` or null. This ACK proves owner-durable source admission, not completed sinks or human visibility. On null, retry the same paint: the SDK retains its original envelope, ID and timestamp, with at most three attempts. A painted receipt is keyed by slot, position within the slot (`slotPosition`, from 0, as the delivered list orders the slot) and item. An unchanged placement and asset keep the painted receipt across polls even when the page-wide `order` shifts, so a change in one slot's selection never repaints or re-receipts another slot; the same item at another position within its slot is a new placement, repainted with the receipt of the answer that moved it; a changed asset, page or owner invalidates the receipt.
 
 `client.emit.contentClick(id, slot, {decisionId})`, dwell and supported custom/data-layer aliases wait for that exact ACK, with no uncorrelated fallback to a newer offer. Three-argument `rendered()` resolves only one matching current choice. Declarative attributes alone cannot mint an offer. Never log/export/store `renderOffer`; the transport strips it before ordinary behavior/debug/egress. Original item/slot/session/time and consent checks remain. Current report computation is version4; legacy1–3 remain historical, never pooled with incompatible bases.
 
-`listen.refresh({page})` permits one active snapshot and one coalesced pending latest intent; stale page/owner/consent responses cannot repaint. Acknowledged non-impression/non-dwell interactions and socket connection/reconnection refresh automatically. Route changes call `refresh({page})`. Optional publication polling is the third `createClient` argument, for example `createClient(config, undefined, {refreshMs:5000})` (off by default; clamp1s–5min). `hydrate` is a direct one-shot. No production `content_decisions` push is promised.
+`listen.refresh({page})` permits one active snapshot and one coalesced pending latest intent; stale page/owner/consent responses cannot repaint. Acknowledged non-impression/non-dwell interactions and socket connection/reconnection refresh automatically. While the first snapshot of a page view is in flight they do not cancel it: its answer is painted, then exactly one refresh follows, however many of them arrived; during any later snapshot they coalesce as the page's own `refresh()` calls do. Route changes call `refresh({page})`. Optional publication polling is the third `createClient` argument, for example `createClient(config, undefined, {refreshMs:5000})` (off by default; clamp1s–5min). `hydrate` is a direct one-shot. No production `content_decisions` push is promised.
 
 **The first decision on the first request.** A new visitor's first decision set arrives on one call: when the browser holds no session of its own, no return-recognition proof and no return in flight, the first `hydrate` (or `refresh`) sends the decision request without a session, and the engine issues the session with that answer, as `session`, so no separate round trip to `/identity/session` comes first. The session it issues is the one `POST /v1/{tenant}/identity/session` would have issued that browser, with the same consent default, and the SDK keeps and uses it exactly as it keeps that route's. That one request carries only the page, its page instance, the brand and the refusals the browser already holds: the browsing session, the channel, the arrival (`entry`) and `customerId` are sent from the next request on, once the shopper's consent choice allows tracking. A browser that already holds a session or a recognition proof, and a client configured with a `sessionBroker`, take the session route first as before, and the SDK falls back to the session route, then the decision request, when an answer carries no session. On the server, `bridge.snapshot(request, page)` serves a new visitor (no session cookie and no recognition-proof cookie) from that one call to the engine and sets the shopper's session cookie from the answer; the session never enters the bootstrap, and an answer without a session falls back to the session call, then the decision request, as before.
 
-On snapshot failure or the 1.5-second deadline (`hydrateTimeoutMs`), every slot subscriber receives
-`[]` with the requested page, `onDecisions` receives `null`, and `current()` becomes `null`. Existing
-dwell capture is cancelled; restoring defaults does not create an impression. Late slot subscribers
+On snapshot failure, or at the 1.5-second deadline (`hydrateTimeoutMs`) when nothing has arrived, every
+slot subscriber receives `[]` with the requested page, `onDecisions` receives `null`, and `current()`
+becomes `null`. The deadline is a hard ceiling measured from the page view's first snapshot request: no
+re-ask restarts it, so by then the page has the decisions or `[]`. A later answer still paints, and a
+re-ask after the first paint leaves the page as it is until its own answer arrives; its failure restores
+the defaults. Existing dwell capture is cancelled; restoring defaults does not create an impression. Late slot subscribers
 receive known absence too; a subscription before any delivery stays silent. A successful empty set
 remains a set, with `[]` for each slot.
+
+**Holding a layout for the page view.** `const release = client.listen.hold('layout')` holds that slot as it
+was last delivered, for the page view in progress. A later answer of the same page view (after an
+acknowledged interaction, a reconnect or a poll) does not repaint it: its subscribers are not called with
+another list, a late subscriber receives the held one, and its painted receipts stay valid, so `rendered`
+and the clicks, dwell and other correlated outcomes of a held module carry the `decisionId` it was painted
+and acknowledged with, although the newer answer moved or dropped the module. Every other slot keeps
+following the answers. Calling `release()` ends the hold, and so does a new page view (another page, or a
+new page instance); a release does not repaint by itself: the next answer the page receives repaints the
+slot (call `refresh()` to ask for one at once). A hold never holds back known absence: a consent refusal,
+an identity change or a failed answer still restores the defaults. Made before the first `refresh` or
+`hydrate`, or after an identity change, a hold holds nothing.
 
 Keep defaults in the initial HTML and restore them on `[]`; asynchronous client refresh can repaint defaults. For server-first paint use the delivered server-side source module `src/sdk/server.ts`, not a browser global or a claimed published npm artifact:
 
@@ -376,7 +396,7 @@ without resetting the high-water. Identity transition resets it; reconnect does 
 eviction and bypass can admit echoes; clock rollback can suppress valid updates, so this is neither a
 causal sequence nor exactly-once delivery. Superseded update listeners stop, and `core.send()` returns
 `null` for rejected/superseded updates without undoing independent sent/receipt acknowledgments.
-The socket is optional. Supported coalesced refresh follows acknowledged interactions and reconnect; snapshots alone create no exposure. `content_decisions` remains a client-compatible shape, not a promised production frame.
+The socket is optional. Supported coalesced refresh follows acknowledged interactions and reconnect (an open during a page view's first snapshot lets its answer paint first, then refreshes once); snapshots alone create no exposure. `content_decisions` remains a client-compatible shape, not a promised production frame.
 
 ## 7. Content: what the engine chooses from
 
@@ -521,5 +541,5 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | `sessionBroker` | absent | Same-origin POST broker for the server-first-paint path |
 | `heartbeatMs` | 25000 | Socket keepalive |
 | `reconnectMs` | 3000 | Socket reconnect delay |
-| `hydrateTimeoutMs` | 1500 | The deadline after which defaults stand |
+| `hydrateTimeoutMs` | 1500 | The page view's first-decision deadline, after which defaults stand: measured from its first snapshot request, never restarted by a re-ask |
 | `visitorIdKey` | `opt_visitor_id` | Storage key for the visitor id |
