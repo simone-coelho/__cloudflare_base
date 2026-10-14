@@ -1494,8 +1494,8 @@ with `422`, naming `moduleEngagementWeight`.
 
 The catalogue document's optional marker `"typeFallback": "retired"`, beside its `pieces`, retires the free-text
 type fallback for that catalogue: a piece without its own `contentType` tag then takes no content format from
-its `type`, in ranking, in a slot's `contentType` exclusion (the published order check included) and in what an
-engagement teaches. Without the marker the fallback holds exactly as before. Any other value refuses the
+its `type`, in ranking, in a slot's `contentType` exclusion (the published order check and the slots document's
+constraint diagnostics included) and in what an engagement teaches. Without the marker the fallback holds exactly as before. Any other value refuses the
 publication with `422`, naming `typeFallback`. Publish the marker with the catalogue `PUT`; an import or pull
 writes the catalogue it assembles without it. The catalogue diagnostics (above) name the fallback in
 `typeFallback` and the module-type role in `dimensionRoles`, and a decision the retirement could have changed records `inputs.replay.typeFallback: "type-fallback-retired-v1"`,
