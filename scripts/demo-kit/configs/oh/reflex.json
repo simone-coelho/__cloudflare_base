@@ -1,0 +1,154 @@
+{
+  "version": "reflex-oh",
+  "dimensions": [
+    {
+      "key": "category",
+      "source": "category",
+      "tauMs": 180000,
+      "K": 1.8
+    },
+    {
+      "key": "subcategory",
+      "source": "subcategory",
+      "tauMs": 180000,
+      "K": 4.5
+    },
+    {
+      "key": "type",
+      "source": "type",
+      "tauMs": 180000,
+      "K": 3
+    },
+    {
+      "key": "series",
+      "source": "series",
+      "tauMs": 180000,
+      "K": 4.5
+    },
+    {
+      "key": "panel",
+      "source": "panel",
+      "tauMs": 180000,
+      "K": 4.5
+    },
+    {
+      "key": "sizeBand",
+      "source": "sizeBand",
+      "tauMs": 180000,
+      "K": 3
+    },
+    {
+      "key": "capacityTier",
+      "source": "capacityTier",
+      "tauMs": 180000,
+      "K": 3
+    },
+    {
+      "key": "fuel",
+      "source": "fuel",
+      "tauMs": 180000,
+      "K": 3
+    },
+    {
+      "key": "finish",
+      "source": "finish",
+      "tauMs": 180000,
+      "K": 4.5
+    },
+    {
+      "key": "priceTier",
+      "source": "priceTier",
+      "tauMs": 600000,
+      "K": 2.5
+    },
+    {
+      "key": "room",
+      "source": "room",
+      "tauMs": 180000,
+      "K": 1.8
+    },
+    {
+      "key": "feature",
+      "source": "feature",
+      "multi": true,
+      "tauMs": 600000,
+      "K": 2.5
+    },
+    {
+      "key": "intent",
+      "source": "intent",
+      "multi": true,
+      "tauMs": 600000,
+      "K": 2.5
+    },
+    {
+      "key": "contentType",
+      "source": "contentType",
+      "tauMs": 180000,
+      "K": 3
+    },
+    {
+      "key": "retailer",
+      "source": "retailer",
+      "multi": true,
+      "tauMs": 180000,
+      "K": 6
+    },
+    {
+      "key": "package",
+      "source": "package",
+      "multi": true,
+      "tauMs": 180000,
+      "K": 3
+    }
+  ],
+  "weights": {
+    "product_view": 1,
+    "pdp_view": 1,
+    "view_product": 1,
+    "wishlist": 2,
+    "wishlist_add": 2,
+    "add_to_wishlist": 2,
+    "save_for_later": 2,
+    "add_to_cart": 5,
+    "cart_add": 5,
+    "purchase": 5,
+    "checkout": 5,
+    "order_complete": 5,
+    "content_impression": 0,
+    "content_dwell": 0.5,
+    "content_click": 1,
+    "video_complete": 2,
+    "tick": 0,
+    "page_view": 1,
+    "search": 1.5,
+    "select": 3,
+    "filter": 2,
+    "compare": 3,
+    "start_order": 5
+  },
+  "tauMs": 1209600000,
+  "K": 1.8,
+  "thetaIn": 0.45,
+  "thetaOut": 0.3,
+  "epsilon": 0.01,
+  "maxValuesPerDim": 64,
+  "eventAttributes": "event-when-unknown",
+  "journey": {
+    "stages": [
+      {
+        "stage": "thinking",
+        "anyOf": {
+          "product_views": 6
+        }
+      },
+      {
+        "stage": "deciding",
+        "anyOf": {
+          "cart_adds": 1,
+          "purchases": 1
+        }
+      }
+    ]
+  }
+}

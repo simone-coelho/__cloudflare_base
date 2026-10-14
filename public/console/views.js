@@ -10,6 +10,7 @@
 //   Dials      the learn document for this slot, and for the brand
 //   Proposals  historical records, read-only and unverified
 //   Erasures   the tombstones the ledger honours, and the rewrite
+//   Vocabulary P38: the attribute vocabulary, its approval and what it refused
 //
 // The two rules that shape every table here: cells are a DRILL-DOWN and never
 // rows (doc 28 §3.4), and nothing renders as "null", "undefined" or "NaN".
@@ -29,6 +30,27 @@
   const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
   /** The retained mode a slots row names (`configuredMode` with `unsupported`; `configuredExploration` from an older server), or null. */
   const retainedModeOf = (s) => (s.unsupported && s.configuredMode) || s.configuredExploration || null;
+  // P09 (decision D1; freeze items 23 and 39): the performance percentage P, from 0
+  // to 100, is the tuning screen's form of a dial the learn document already
+  // stores, never a second stored value. On a slot whose learn dials opt into the
+  // layout blend (P28's `blend`) it is the blend weight p × 100; on every other
+  // slot, content slots and layout slots that do not opt in alike, it is γ × 100.
+  // A dial the document does not name reads 0, as the decision reads it.
+  /** The slot's blend opt-in as the decision reads one: an object whose `p` is absent or a number from 0 to 1; otherwise none. */
+  function blendOptIn(d) {
+    const b = d ? d.blend : undefined;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return null;
+    return b.p === undefined || (typeof b.p === 'number' && Number.isFinite(b.p) && b.p >= 0 && b.p <= 1) ? b : null;
+  }
+  /** The stored dial, 0 to 1, the slot's percentage is the form of: `blend.p` on a slot in the blend, `gamma` on every other. */
+  function percentDial(d) {
+    const v = blendOptIn(d) ? blendOptIn(d).p : d ? d.gamma : undefined;
+    return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+  }
+  /** A dial from 0 to 1 as its percentage, read as decimals: γ 0.35 shows as 35 and 0.333 as 33.3, never 33.300000000000004. */
+  const asPercent = (v) => String(Number((v * 100).toPrecision(15)));
+  /** A percentage from 0 to 100 as the dial it stands for, P / 100 read as decimals: 33.3 saves 0.333, never 0.33299999999999996. */
+  const fromPercent = (P) => Number((P / 100).toPrecision(15));
   function humanMs(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     if (ms % DAY === 0) return plural(ms / DAY, 'day');
@@ -330,10 +352,33 @@
       day(g.since) ? h('div', { class: 'itemid' }, `since ${day(g.since)}`) : null);
   }
 
+  /**
+   * P09: the learn document the Slots screen reads each slot's performance
+   * percentage from. The slots index answers γ but not the blend, so the screen
+   * reads the document in force itself; until it has, or where it cannot, the
+   * column says so with a dash rather than a percentage that might be the wrong dial's.
+   */
+  const slotsLearn = { scope: '', document: null };
+  function percentCell(slot) {
+    const doc = slotsLearn.scope === S.scope ? slotsLearn.document : null;
+    if (!doc) return h('td', { class: 'num', title: 'The learn document has not been read, so no percentage is shown.' }, '—');
+    const all = doc.slots && typeof doc.slots === 'object' ? doc.slots : {};
+    const d = Object.prototype.hasOwnProperty.call(all, slot) ? all[slot] : {};
+    // The leading space separates this cell's text from the trust cell's in the row's text; it is not drawn.
+    return h('td', { class: 'num' }, ' ', `${asPercent(percentDial(d))}%`, h('div', { class: 'itemid' }, blendOptIn(d) ? 'from the blend p' : 'from γ'));
+  }
+
   C.view({
     id: 'slots', group: 'This brand', title: 'Slots', heading: 'Every slot, and what is set on it',
     hint: 'A slot is one place on one page. This is what each is configured to do and what it has learned so far. The box in the rail narrows this list on the server.',
     badge: () => C.slotList().length || null,
+    async enter() {
+      const scope = S.scope;
+      const res = await C.content('/learn');
+      if (scope !== S.scope) return;
+      slotsLearn.scope = scope;
+      slotsLearn.document = res.ok && res.data && res.data.document && typeof res.data.document === 'object' ? res.data.document : null;
+    },
     render(host) {
       if (S.slots.error) { host.append(h('div', { class: 'msg err' }, S.slots.error)); return; }
       if (!S.slots.pages.length) { host.append(h('div', { class: 'empty' }, 'No slots configured for this brand. A slot document names the places on each page the engine decides for.')); return; }
@@ -349,6 +394,7 @@
           h('td', {}, s.rules && s.rules.length ? s.rules.join(', ') : 'none'),
           h('td', {}, words(s.reward), s.objective && s.objective !== 'unit' ? h('div', { class: 'itemid' }, `weighed by ${s.objective}`) : null),
           h('td', { class: 'num' }, dec(s.gamma)),
+          percentCell(s.slot),
           h('td', {}, words(s.exploration),
             retainedModeOf(s) ? h('div', { class: 'itemid' }, `${storedModeWords(retainedModeOf(s))}; explores nothing`) : null),
           h('td', {}, `unavailable · stored ${words(s.autonomy) || 'configured'} (dormant)`),
@@ -366,6 +412,7 @@
             { key: 'rules', label: 'Rules' },
             { key: 'reward', label: 'Learns against' },
             { key: 'gamma', label: 'Trust', sym: 'γ', num: true, title: 'How much of the learned lift is applied: 0 shows it and changes nothing' },
+            { key: 'performance', label: 'Performance', sym: '%', num: true, title: 'The performance percentage the Dials screen edits, 0 to 100: γ × 100 on a slot outside the layout blend, the blend weight p × 100 on a layout slot that opts into it. Nothing else is stored' },
             { key: 'exploration', label: 'Exploring' },
             { key: 'autonomy', label: 'Autonomy (unavailable)' },
             { key: 'controls', label: 'Held', num: true },
@@ -377,7 +424,9 @@
   });
 
   // ══════════════════════════════════════════════════════════ Dials ══════════
-  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null };
+  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '', percent: null };
+  /** P09: a percentage the screen refused, held as typed for the slot it was typed on, or null. */
+  const heldPercent = () => (dl.percent && dl.percent.slot === S.slot ? dl.percent : null);
   const dialsFor = () => { dl.draft.slots = dl.draft.slots || {}; return (dl.draft.slots[S.slot] = dl.draft.slots[S.slot] || {}); };
   function diffPaths(a, b, path = '') {
     const out = [];
@@ -415,12 +464,16 @@
     dl.revision = data.revision || 0;
     dl.source = data.source || 'compiled-default';
     dl.errors = [];
+    dl.vocabularyText = null; dl.vocabularyError = '';
+    dl.percent = null;
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     dl.authored = C.authored(res.data);
     dl.doc = res.data.document; dl.draft = copy(dl.doc); dl.revision = res.data.revision; dl.source = 'stored';
+    dl.vocabularyText = null; dl.vocabularyError = '';
+    dl.percent = null;
     document.getElementById('note').value = '';
     C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Published; serving refreshes within the documented 30-second read bound.`);
     await C.loadSlots();
@@ -450,14 +503,47 @@
     return el;
   }
 
+  /**
+   * P09 (decision D1; freeze items 23 and 39): the slot's performance percentage,
+   * 0 to 100, beside γ. It is read from the stored dial on every paint, so on a
+   * slot outside the blend it and the γ control show each other's change at once.
+   * A percentage typed here writes the one dial it stands for and nothing else: γ,
+   * or on a slot in the layout blend `blend.p`, the blend's other members kept. A
+   * percentage outside 0 to 100, or text that is not a number, writes nothing: it
+   * stays on screen as typed and holds the save until it is corrected.
+   */
+  function percentControl(d, base) {
+    const held = heldPercent();
+    const el = h('input', { class: `num${changed(`${base}.${blendOptIn(d) ? 'blend.p' : 'gamma'}`)}`, 'data-focus-key': `${base}.performancePercent`,
+      type: 'number', step: 'any', min: 0, max: 100, disabled: !C.canEdit() || null });
+    el.value = held ? held.text : asPercent(percentDial(d));
+    el.addEventListener('input', () => {
+      const text = el.value.trim(), P = text === '' ? NaN : Number(text);
+      if (!Number.isFinite(P) || P < 0 || P > 100) { dl.percent = { slot: S.slot, text: el.value }; C.render(); return; }
+      dl.percent = null;
+      const blend = blendOptIn(d);
+      if (blend) d.blend = { ...blend, p: fromPercent(P) }; else d.gamma = fromPercent(P);
+      scheduleCheck();
+    });
+    return el;
+  }
+
   function slotDials(host) {
     const d = dialsFor();
     const base = `slots.${S.slot}`;
     const gamma = Number.isFinite(d.gamma) ? d.gamma : 0;
+    const inBlend = Boolean(blendOptIn(d));
     put(host,
       dial('Trust in what was learned', 'How much the learned lift moves a piece’s score: the final score is the base score times the lift raised to this. At 0 the lift is computed and shown on every receipt and changes nothing that is served; at 1 it applies in full.',
         num(d.gamma, (v) => { if (v === undefined) delete d.gamma; else d.gamma = v; scheduleCheck(); }, `${base}.gamma`, { min: 0, max: 1, step: 0.05 }),
         gamma === 0 ? 'Shadow: learning is visible and inert.' : `A lift of 1.4 becomes ×${dec(Math.pow(1.4, gamma))} on the score.`),
+      dial('Performance percentage', inBlend
+        ? 'This layout slot opts into the layout blend, so its percentage is the blend weight p: the percentage divided by 100 is p, the weight of learned performance against the behaviour score in R + (1 − p) × B + p × Q. Trust above is a separate dial and stays as it is. At 0 the slot decides as it does with p at 0.'
+        : 'The trust dial above as a percentage from 0 to 100: the percentage divided by 100 is γ, so 35 saves γ 0.35. At 0 the slot decides exactly as it does with γ at 0, as every slot does by default.',
+        percentControl(d, base),
+        heldPercent()
+          ? h('span', { class: 'err' }, 'The percentage must be a number from 0 to 100; nothing is saved until it is.')
+          : inBlend ? `That is the blend weight p ${String(percentDial(d))}.` : `That is γ ${String(percentDial(d))}.`),
       dial('What counts as paying off', 'The outcome this slot learns against. One per slot; the others still land in the ledger and can be reported on.',
         sel(d.reward || 'click', REWARDS.map((r) => [r, words(r)]), (v) => { d.reward = v; scheduleCheck(); }, `${base}.reward`)),
       dial('What a success is worth', 'Unit counts each one the same. Revenue weighs it by the order value, margin by the feed margin, falling back to value when absent. Revenue and margin need a reward that carries a value: a purchase, or an add to bag.',
@@ -465,8 +551,8 @@
       dial('Measurement basis', 'Absent means legacy served-v1. Rendered-v1 counts authenticated client render acknowledgments, not polls or proof of human visibility. Changing a populated basis requires the existing reviewed reset/publication flow; counters and priors never merge.',
         sel(d.measurementBasis || 'served-v1', [['served-v1', 'legacy served'], ['rendered-v1', 'client-reported rendered']], (v) => { d.measurementBasis = v; scheduleCheck(); }, `${base}.measurementBasis`)),
       h('div', { class: 'subhead' }, 'Trying things it has not tried'),
-      dial('How it explores', 'Exploration is off by default. Rotation shows the least-observed piece on a hashed share; epsilon picks uniformly. Thompson is unsupported and stored settings are dormant.',
-        sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon']], (v) => {
+      dial('How it explores', 'Exploration is off by default. Rotation shows the least-observed piece on a hashed share; epsilon picks uniformly. Adjacent swap, on the page\u2019s declared layout slot only, swaps two neighbouring modules on that share \u2014 never a pinned or off-limits one \u2014 so the engine can estimate what each position is worth. Thompson is unsupported and stored settings are dormant.',
+        sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon'], ['adjacent-swap', 'adjacent swap (layout slot)']], (v) => {
           if (v === 'off') delete d.exploration;
           else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 };
           scheduleCheck();
@@ -475,8 +561,14 @@
       d.exploration && d.exploration.mode !== 'thompson' ? dial('How often', 'The configured share used by the existing rule; not a measured exposure guarantee.',
         num(d.exploration.share, (v) => { d.exploration.share = v ?? 0; scheduleCheck(); }, `${base}.exploration.share`, { min: 0, max: 1, step: 0.01 }),
         `${pct(d.exploration.share)} configured share`) : null,
-      d.exploration && d.exploration.mode !== 'thompson' ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
+      d.exploration && d.exploration.mode !== 'thompson' && d.exploration.mode !== 'adjacent-swap' ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
         num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,
+      // P05 (decision D2): the position-normalisation switch, beside the swaps it reads; written only when an operator sets it.
+      d.exploration?.mode === 'adjacent-swap' || d.positionNormalization !== undefined ? dial('Credit by position', 'Off by default. On, a click at a position is credited divided by that position\u2019s effect as the swaps estimate it (a click ratio, read as positionEffects on the slot\u2019s learning read), live and in the hourly recomputation alike. Turn it on only once the data science has confirmed the estimate.',
+        sel(d.positionNormalization === true ? 'true' : 'false', [['false', 'off: credit as counted'], ['true', 'on: divided by the position\u2019s effect']], (v) => {
+          if (v === 'true') d.positionNormalization = true; else delete d.positionNormalization;
+          scheduleCheck();
+        }, `${base}.positionNormalization`)) : null,
       h('div', { class: 'subhead' }, 'Autonomy unavailable'),
       h('div', { class: 'msg note' }, 'Stored settings are dormant. Cycles and proposal changes are disabled.'),
       h('pre', { class: 'dormant-autonomy' }, JSON.stringify(d.autonomy || { mode: 'configured' }, null, 2)),
@@ -485,6 +577,32 @@
         num((d.external || {}).weight, (v) => { if (v === undefined || v === 0) delete d.external; else d.external = { weight: v }; scheduleCheck(); }, `${base}.external.weight`, { min: 0, max: 1, step: 0.05 }),
         dl.draft.external ? `${dl.draft.external.kind} · ${dl.draft.external.ref}` : 'No model configured for this brand.'),
     );
+  }
+
+  // P36: the brand's context vocabulary — its channel values with the rules that
+  // classify an arrival into them, its source platforms, its landing-page types,
+  // and optionally its visit-bucket cut and ladder depth — edited as the JSON it
+  // is published as, inside the learn document. Malformed text cannot be saved;
+  // the platform validates the draft as it does every other dial.
+  function vocabularyEditor(D) {
+    const path = 'contextVocabulary';
+    const el = h('textarea', { class: `txt${changed(path)}`, rows: 14, spellcheck: 'false', 'data-focus-key': path, disabled: !C.canEdit() || null });
+    el.value = dl.vocabularyText !== null ? dl.vocabularyText : (D.contextVocabulary ? JSON.stringify(D.contextVocabulary, null, 2) : '');
+    el.addEventListener('input', () => {
+      dl.vocabularyText = el.value;
+      const text = el.value.trim();
+      if (!text) { delete D.contextVocabulary; dl.vocabularyError = ''; scheduleCheck(); return; }
+      try {
+        const value = JSON.parse(text);
+        if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('not an object');
+        D.contextVocabulary = value; dl.vocabularyError = '';
+        scheduleCheck();
+      } catch {
+        dl.vocabularyError = 'contextVocabulary: the vocabulary must be a valid JSON object of channels, rules, sourcePlatforms and landingPageTypes (visitBuckets and ladder optional). Empty removes it; malformed text cannot be saved.';
+        C.render();
+      }
+    });
+    return el;
   }
 
   function brandDials(host) {
@@ -529,6 +647,9 @@
         num(reg.kBlend, (v) => { D.regional = { ...reg, kBlend: v ?? 1 }; scheduleCheck(); }, 'regional.kBlend', { min: 0.01, max: 100, step: 0.1 })) : null,
       reg && reg.enabled ? dial('Before a region counts', 'Events a region needs before its trend is used; below it the country answers, then everyone.',
         num(reg.minEvents, (v) => { D.regional = { ...reg, minEvents: v ?? 30 }; scheduleCheck(); }, 'regional.minEvents', { min: 1, step: 1 })) : null,
+      h('div', { class: 'subhead' }, 'How arrivals are read: the context vocabulary'),
+      dial('Channels, sources and landing pages', 'The brand\u2019s own channel values and the published rules that classify an arrival into them, read in order, the first that holds deciding; an arrival no rule names records as unknown, never a guess. Source platforms name the networks they own; landing-page types are the page types the page reports. Optionally the visit-bucket cut (whole numbers ascending from 1) and the ladder depth (1 to 5, order c, v, s, r, a). A change to the channel values, the cut or the depth changes the cell grammar: a priors file exported before it is refused and must be re-exported. Empty means the six built-in channel words.',
+        vocabularyEditor(D), dl.vocabularyError ? h('span', { class: 'err' }, dl.vocabularyError) : (D.contextVocabulary ? `${(D.contextVocabulary.channels || []).length} channel values, ${(D.contextVocabulary.rules || []).length} rules` : 'Not published: the six built-in channel words.')),
       h('div', { class: 'subhead' }, 'Their own model, for every slot'),
       dial('Where it lives', 'Service: a worker they own behind a binding, or an https address. Table: a scoring table they publish. Workers AI: a hosted model that answers in the agreed shape.',
         sel(ext ? ext.kind : 'none', [['none', 'none'], ['service', 'service'], ['table', 'table'], ['workers_ai', 'workers AI']], (v) => {
@@ -554,9 +675,9 @@
       C.dirty({
         count: n,
         checking: dl.checking,
-        blocked: dl.errors.length > 0,
+        blocked: dl.errors.length > 0 || dl.vocabularyError !== '' || heldPercent() !== null,
         save: saveDials,
-        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; C.render(); },
+        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; dl.percent = null; C.render(); },
       });
       if (dl.errors.length) host.append(h('div', { class: 'msg err' }, 'The dials as drafted were refused:', h('ul', {}, ...dl.errors.map((e) => h('li', {}, String(e))))));
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
@@ -639,4 +760,76 @@
     er.pending = again.ok ? again.data.pending || [] : er.pending;
     C.render();
   }
+
+  // ═════════════════════════════════════════════════════ Vocabulary ══════════
+  // P38: the brand's attribute vocabulary. A stored revision governs nothing
+  // until the brand's operator approves it here; the screen always says which
+  // revision is in effect, read from the platform's effectiveRevision, never
+  // from the latest stored revision.
+  const vc = { data: null, report: null, error: '', busy: false };
+  async function loadVocabulary() {
+    const [res, rejections] = await Promise.all([C.content('/vocabulary'), C.content('/vocabulary/rejections')]);
+    vc.data = res.ok ? res.data : null;
+    vc.report = rejections.ok ? rejections.data : null;
+    vc.error = res.ok ? '' : (res.status === 401 || res.status === 403 ? 'Sign in to read the vocabulary.' : res.data.error || 'Could not read the vocabulary.');
+  }
+  async function approveLatest() {
+    const d = vc.data, latest = d && Number.isSafeInteger(d.revision) ? d.revision : 0;
+    if (!latest || vc.busy) return;
+    if (!confirm(`Approve revision ${fmt(latest)} of the vocabulary? From then on the catalogue and every event are held to it: a value it does not list is refused.`)) return;
+    vc.busy = true; C.render();
+    const res = await C.write(`/content/vocabulary/approve/${latest}?scope=${encodeURIComponent(S.scope)}`, 'POST', {}, C.authored(d));
+    vc.busy = false;
+    if (!res.ok || res.data.ok === false) { C.render(); return; }
+    await loadVocabulary();
+    C.flash(`Approved revision ${fmt(res.data.effectiveRevision)} of the vocabulary.`);
+  }
+  const VALUES_SHOWN = 50;
+  C.view({
+    id: 'vocabulary', group: 'This brand', title: 'Vocabulary', heading: 'The values an attribute may take',
+    hint: 'Each attribute lists its values: the id every store and every interest carries, the display name in your wording, the words your source systems send for it, and for a product type its category. A revision takes effect only when it is approved here.',
+    async enter() { await loadVocabulary(); },
+    render(host) {
+      if (vc.error) { host.append(h('div', { class: 'msg note' }, vc.error)); return; }
+      const d = vc.data;
+      if (!d) { host.append(h('div', { class: 'empty' }, 'Reading the vocabulary.')); return; }
+      const effective = Number.isSafeInteger(d.effectiveRevision) ? d.effectiveRevision : 0;
+      const latest = Number.isSafeInteger(d.revision) ? d.revision : 0;
+      const approval = d.approval && d.approval.revision === effective ? d.approval : null;
+      host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
+        effective > 0
+          ? `Revision ${fmt(effective)} in effect${approval && approval.actor ? `, approved by ${approval.actor}` : ''}${approval && when(approval.at) ? ` on ${when(approval.at)}` : ''}.`
+          : 'No revision is approved yet: the vocabulary governs nothing, and every attribute value is kept as it is sent.'));
+      const pending = latest > 0 && latest !== effective;
+      host.append(card('Approval', 'Approving puts the latest stored revision in effect for this brand. A later revision changes nothing until it is approved in turn.',
+        h('div', { class: 'body' },
+          h('div', { class: 'toolbar' },
+            h('span', { class: 'sub' }, latest === 0 ? 'No vocabulary is stored for this brand.'
+              : pending ? `The latest stored revision, ${fmt(latest)}, is waiting for approval.` : `The latest stored revision, ${fmt(latest)}, is the approved one.`),
+            h('span', { class: 'spacer' }),
+            h('button', { class: 'small', 'data-focus-key': 'vocabulary.approve', disabled: !C.canEdit() || !pending || vc.busy, onclick: approveLatest },
+              latest > 0 ? `Approve revision ${fmt(latest)}` : 'Approve')))));
+      const stored = d.document && typeof d.document === 'object' && d.document.attributes && typeof d.document.attributes === 'object' ? d.document : null;
+      if (stored) {
+        for (const [key, attribute] of Object.entries(stored.attributes)) {
+          const values = Array.isArray(attribute && attribute.values) ? attribute.values : [];
+          const rows = values.slice(0, VALUES_SHOWN).map((v) => h('tr', {},
+            h('td', {}, h('div', { class: 'itemid' }, String(v.id))),
+            h('td', {}, String(v.name)),
+            h('td', {}, Array.isArray(v.synonyms) ? v.synonyms.join(', ') : ''),
+            h('td', {}, typeof v.parent === 'string' ? v.parent : '')));
+          host.append(card(`${key}`, `${plural(values.length, 'value')} in revision ${fmt(latest)}${values.length > VALUES_SHOWN ? `, the first ${fmt(VALUES_SHOWN)} shown` : ''}.`,
+            C.table([{ key: 'id', label: 'Id' }, { key: 'name', label: 'Display name' }, { key: 'synonyms', label: 'Synonyms' }, { key: 'parent', label: 'Parent' }], rows)));
+        }
+      }
+      const refused = vc.report && vc.report.rejections && typeof vc.report.rejections === 'object' ? Object.entries(vc.report.rejections) : [];
+      if (effective > 0) {
+        const rows = refused.flatMap(([attribute, counts]) => Object.entries(counts || {}).map(([value, n]) => h('tr', {},
+          h('td', {}, attribute), h('td', {}, h('div', { class: 'itemid' }, value)), h('td', { class: 'num' }, fmt(n)))));
+        host.append(card('Refused at ingest', 'Values events carried on a governed attribute that the approved vocabulary does not list: they built no interest. Add them as synonyms, or fix the source.',
+          rows.length ? C.table([{ key: 'attribute', label: 'Attribute' }, { key: 'value', label: 'Value' }, { key: 'n', label: 'Events', num: true }], rows)
+            : h('div', { class: 'empty' }, 'Nothing refused since this revision was approved.')));
+      }
+    },
+  });
 })();

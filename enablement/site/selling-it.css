@@ -1,0 +1,202 @@
+/* enablement/site/selling-it.css
+   The sellers' page, /selling-it (lane A1, LANE-BRIEF-V3 4.3). It loads nothing and imports nothing. The chrome, the
+   article, the title and the tables come from /site.css and the spine from /spine.css; this sheet styles the seven
+   sections after the spine with site.css's tokens only, so light and dark follow the same prefers-color-scheme switch.
+   Classes start with ae- (this page), a1- (shared with the battlecard: icons, captions, marks), fr- (the drawn
+   frames) or st- (the scene strips). Nothing moves on this page, so there is nothing to still for reduced motion. */
+
+/* ---------- shared: the icon sprite, icons, captions, marks ---------- */
+.a1-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.a1-ico { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ae figure { margin: 0; }
+.ae .a1-cap { max-width: var(--measure); margin: 0 0 6px; font: 700 1.125rem/1.4 var(--body); text-wrap: pretty; }
+.ae .a1-lead { max-width: var(--measure); margin: 0 0 18px; }
+.a1-mark {
+  display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; margin-top: 1px; border-radius: 50%;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.a1-mark .a1-ico { width: 15px; height: 15px; stroke-width: 2.6; }
+.a1-mark-say { background: var(--lf-green); color: var(--fir); }
+.a1-mark-never { background: var(--ink); color: var(--bg); }
+.a1-k { font-weight: 800; }
+
+/* ---------- 1. the storyboard: seven scenes, one drawn frame each ---------- */
+.ae-scenes {
+  counter-reset: scene; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 22px 16px; margin: 0; padding: 0; list-style: none;
+}
+.ae .ae-scene { counter-increment: scene; display: flex; flex-direction: column; max-width: none; margin: 0; padding: 0; }
+.ae .ae-scene::marker { content: none; }
+.ae-fr { display: block; width: 100%; height: auto; }
+.ae .ae-scene-t { display: flex; align-items: center; gap: 9px; margin: 12px 0 5px; font: 800 1.0625rem/1.25 var(--head); letter-spacing: -.005em; }
+.ae-scene-t::before {
+  content: counter(scene); flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--lf-green); color: var(--fir); font: 700 .8125rem/1 var(--mono);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.ae .ae-scene-c { max-width: none; margin: 0; font-size: .9375rem; line-height: 1.5; }
+@media (max-width: 520px) { .ae-fr { max-width: 360px; } }
+
+/* the frames' parts, shared by every frame and by the strips. A frame is 200 units wide and shows at 220 pixels at
+   1366 and wider, so no text in a frame is under 10.2 units: at least 11.2 pixels (review round four, M4-6). */
+.ae-fr text { font-family: var(--body); }
+.fr-page { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.fr-sep { stroke: var(--line-soft); stroke-width: 1; }
+.fr-dot { fill: var(--line); }
+.fr-card { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+.fr-bar { fill: var(--surface-2); stroke: var(--line-soft); stroke-width: 1; }
+.fr-moved { stroke: var(--light-fir); stroke-width: 1.4; }
+.fr-hot { fill: var(--tint); stroke: var(--light-fir); stroke-width: 1.4; }
+.fr-opal { fill: var(--surface-2); stroke: var(--light-fir); stroke-width: 1; stroke-dasharray: 3 2; }
+.fr-pin { fill: var(--light-blue); }
+.fr-pin-t { fill: var(--fir); font-size: 10.4px; font-weight: 700; }
+.fr-gone { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 2.5; }
+.fr-receipt { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 2; }
+.fr-rule { stroke: var(--line); stroke-width: 1; stroke-dasharray: 1.5 1.5; }
+.fr-skel { fill: var(--line-soft); }
+.fr-img { fill: var(--surface); stroke: var(--line-soft); stroke-width: 1; }
+.fr-sun { fill: var(--grass); }
+.fr-t { fill: var(--ink); font-size: 10.6px; font-weight: 700; }
+.fr-s { fill: var(--muted); font-size: 10.2px; }
+.fr-line { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.fr-glyph { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fr-accent { stroke: var(--light-fir); }
+.fr-on-pin { stroke: var(--fir); }
+.fr-ring { fill: none; stroke: var(--light-fir); stroke-width: 2; }
+.fr-x { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; }
+.fr-vessel { fill: var(--surface-2); }
+.fr-rim { fill: none; stroke: var(--ink); stroke-width: 1.4; stroke-linejoin: round; }
+.fr-liquid { fill: var(--grass); }
+.fr-entry { stroke: var(--ink); stroke-width: 1.2; }
+.fr-release { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 3.5 2.5; }
+.fr-tagpill { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+.fr-okdot { fill: var(--lf-green); }
+.fr-okmark { fill: none; stroke: var(--fir); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.fr-nodot { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1; }
+.fr-nomark { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; }
+.fr-tog { fill: var(--surface-2); stroke: var(--muted); stroke-width: 1; }
+.fr-tog-on { fill: var(--lf-green); stroke: var(--light-fir); }
+.fr-knob-on { fill: var(--fir); }
+.fr-knob-off { fill: var(--muted); }
+.fr-ask { fill: var(--lf-green); }
+.fr-ask-t { fill: var(--fir); font-size: 12px; font-weight: 800; }
+.fr-track { stroke: var(--line); stroke-width: 3; stroke-linecap: round; }
+.fr-track-on { stroke: var(--light-fir); stroke-width: 3; stroke-linecap: round; }
+.fr-knob { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }
+.fr-knob-old { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 2 2; }
+.fr-btn { fill: var(--surface); stroke: var(--ink); stroke-width: 1.2; }
+.fr-arc { fill: none; stroke: var(--line); stroke-width: 5; stroke-linecap: round; }
+.fr-tick { stroke: var(--muted); stroke-width: 1.2; }
+.fr-needle { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.fr-hub { fill: var(--ink); }
+@media (prefers-color-scheme: dark) {
+  .fr-moved, .fr-hot, .fr-opal, .fr-tog-on { stroke: var(--lf-green); }
+  .fr-accent, .fr-ring, .fr-track-on { stroke: var(--lf-green); }
+}
+
+/* ---------- 2. why customers choose it: ten tiles, unranked ---------- */
+.ae-tiles { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 640px) { .ae-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ae .ae-tile {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 4px 14px; align-items: start;
+  max-width: none; margin: 0; padding: 16px 18px; border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.ae .ae-tile::marker { content: none; }
+.ae-tile-ico {
+  grid-row: 1 / span 2; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px;
+  background: var(--lf-green); color: var(--fir); -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.ae .ae-tile-t { max-width: none; margin: 0; font: 800 1.0625rem/1.3 var(--head); }
+.ae .ae-tile-l { max-width: none; margin: 0; font-size: .9375rem; line-height: 1.5; }
+.ae .ae-aside { display: flex; align-items: flex-start; gap: 10px; max-width: var(--measure); margin: 18px 0 0; font-size: .9375rem; }
+.ae-aside .a1-ico { margin-top: 1px; color: var(--muted); }
+
+/* ---------- 3. what a customer can measure, and 5. what a customer provides: tables with an icon per row ---------- */
+.ae .tbl { margin: 0 0 16px; }
+.ae-mcell { display: flex; align-items: flex-start; gap: 12px; }
+.ae-row-ico {
+  display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px;
+  background: var(--tint); color: var(--ink); border: 1px solid var(--line);
+}
+.ae-row-ico .a1-ico { width: 20px; height: 20px; }
+.ae td.ae-m { font-weight: 700; }
+.ae-mtable td.ae-q { font-style: italic; }
+.ae-mtable th:first-child, .ae-atable th:first-child { width: 32%; }
+.ae-otable th { background: var(--surface-2); color: var(--ink); border-bottom: 1px solid var(--line-soft); }
+.ae-otable th:first-child { width: 40%; }
+
+/* ---------- 4. objections: a quote card, then card pairs ---------- */
+.ae-quote {
+  margin: 4px 0 20px; padding: clamp(18px, 3vw, 26px) clamp(20px, 3.4vw, 30px); border-radius: var(--radius-m);
+  background: var(--rule-bg); color: var(--rule-ink); border: 2px solid var(--rule-bg);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.ae .ae-quote p { max-width: none; }
+.ae .ae-quote-q { margin: 0 0 10px; font: 800 clamp(1.3rem, 2.8vw, 1.7rem)/1.25 var(--head); letter-spacing: -.01em; }
+.ae .ae-quote-who { margin: 0 0 8px; font-size: .9375rem; }
+.ae .ae-quote-a { margin: 0; color: var(--rule-accent); font-weight: 700; }
+@media (prefers-color-scheme: dark) { .ae-quote { border-color: var(--lf-green); } }
+/* the quote card and the pairs (in two parts, seven and six) are each their own picture for the Word copy, each
+   opening with its caption */
+.ae-objs-part + .ae-objs-part { margin-top: 26px; }
+.ae .ae-objs-cap { max-width: var(--measure); margin: 0 0 10px; color: var(--muted); font: 700 .9375rem/1.4 var(--body); }
+.ae-objs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 760px) { .ae-objs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ae .ae-obj {
+  display: flex; flex-direction: column; max-width: none; margin: 0; padding: 0; overflow: hidden;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.ae .ae-obj::marker { content: none; }
+.ae .ae-obj-q { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 16px 18px 8px; font: 800 1.125rem/1.3 var(--head); }
+.ae-obj-q .a1-ico { margin-top: 1px; color: var(--muted); }
+.ae .ae-say, .ae .ae-never { display: flex; align-items: flex-start; gap: 10px; max-width: none; margin: 0; font-size: .9375rem; line-height: 1.5; }
+.ae .ae-say { flex: 1; padding: 6px 18px 14px; }
+.ae .ae-never { padding: 12px 18px 14px; background: var(--surface-2); border-top: 1px solid var(--line-soft); }
+
+/* ---------- 6. which demo shows which story: cards, each with the scenes it shows ---------- */
+.ae-dcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 205px), 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.ae .ae-dcard {
+  display: flex; flex-direction: column; gap: 8px; max-width: none; margin: 0; padding: 16px 16px 14px;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.ae .ae-dcard::marker { content: none; }
+.ae .ae-dcard p { max-width: none; margin: 0; }
+.ae .ae-dname { display: flex; align-items: center; gap: 8px; font: 800 1.125rem/1.25 var(--head); }
+.ae-dname .a1-ico { color: var(--muted); }
+.ae .ae-dkind { color: var(--muted); font-size: .875rem; line-height: 1.4; }
+.ae .ae-dshows { flex: 1; font-size: .9375rem; line-height: 1.45; }
+.ae .ae-dmind { display: flex; align-items: flex-start; gap: 8px; padding-top: 9px; border-top: 1px dashed var(--line); font-size: .8125rem; line-height: 1.45; }
+.ae-dmind .a1-ico { width: 16px; height: 16px; margin-top: 1px; color: var(--muted); }
+.ae-dmind a { overflow-wrap: anywhere; }
+.ae .ae-dcard-more { justify-content: center; background: var(--tint); border: 1px dashed var(--line); }
+.ae-strip { display: block; width: 168px; max-width: 100%; height: auto; }
+.ae-strip text { font: 700 9px var(--mono); }
+.st-on { fill: var(--fir); }
+.st-on-t { fill: var(--white); }
+.st-off { fill: none; stroke: var(--line); stroke-width: 1; }
+.st-off-t { fill: var(--muted); }
+@media (prefers-color-scheme: dark) { .st-on { fill: var(--lf-green); } .st-on-t { fill: var(--fir); } }
+
+/* ---------- 7. the battlecard: one card with a thumbnail of the sheet ---------- */
+.ae-battle {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-areas: "thumb cap" "thumb link"; gap: 12px 24px;
+  align-items: start; max-width: 44rem; padding: 22px 26px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.ae-battle .a1-cap { grid-area: cap; align-self: end; margin: 0; }
+.ae-bc-thumb { grid-area: thumb; display: block; width: 96px; height: auto; }
+.ae .ae-battle-link { grid-area: link; margin: 0; }
+.ae-battle-link a {
+  display: inline-block; padding: 11px 22px; border-radius: 999px; background: var(--lf-green); color: var(--fir);
+  font: 800 1.0625rem/1.1 var(--head); text-decoration: none; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.ae-battle-link a::after { content: " \2192"; }
+.ae-battle-link a:hover { background: var(--grass); color: var(--fir); }
+@media (max-width: 420px) {
+  .ae-battle { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cap" "thumb" "link"; }
+}
+
+/* ---------- print ---------- */
+@media print {
+  .ae-scene, .ae-tile, .ae-obj, .ae-dcard, .ae-battle, .ae-quote { break-inside: avoid; page-break-inside: avoid; }
+  .ae-tile-ico, .ae-row-ico { border: 1px solid var(--line); }
+}

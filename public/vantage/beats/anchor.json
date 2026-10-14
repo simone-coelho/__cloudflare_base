@@ -1,0 +1,753 @@
+{
+ "anchor": "2026-10-01T14:34:44.845Z",
+ "tenant": "vantage",
+ "scope": "vantage",
+ "brand": {
+  "name": "Vantage",
+  "tagline": "See further.",
+  "rewards": "Vantage Rewards",
+  "home": "Vantage 5G Home"
+ },
+ "pages": {
+  "home": "home",
+  "phone": "phone"
+ },
+ "slots": {
+  "hero": "hero",
+  "deals": "deals",
+  "rail": "phones-rail",
+  "modules": "pdp-modules",
+  "plans": "plan-pairing"
+ },
+ "pageSlots": {
+  "home": [
+   "hero",
+   "deals",
+   "phones-rail"
+  ],
+  "phone": [
+   "pdp-modules",
+   "plan-pairing"
+  ]
+ },
+ "decidedBy": {
+  "hero": "snapshot",
+  "deals": "snapshot",
+  "pdp-modules": "snapshot",
+  "plan-pairing": "snapshot",
+  "phones-rail": "POST /sort (phones.json rail)"
+ },
+ "defaults": [
+  "promo-iphone-18-pro-launch",
+  "promo-galaxy-s26-new-line",
+  "promo-four-lines",
+  "promo-bring-your-phone"
+ ],
+ "slotDefaults": {
+  "hero": "hero-launch",
+  "deals": [
+   "promo-iphone-18-pro-launch",
+   "promo-galaxy-s26-new-line",
+   "promo-four-lines",
+   "promo-bring-your-phone"
+  ],
+  "pdp-modules": [
+   "trade-in",
+   "plan-pairing",
+   "storage-memory",
+   "connected-devices",
+   "accessories",
+   "protection"
+  ],
+  "plan-pairing": [
+   "plan-simple",
+   "plan-go",
+   "plan-more"
+  ]
+ },
+ "templates": {
+  "home": [
+   "hero",
+   "deals",
+   "phones-rail"
+  ],
+  "modules": [
+   "trade-in",
+   "plan-pairing",
+   "storage-memory",
+   "connected-devices",
+   "accessories",
+   "protection",
+   "home-bundle"
+  ],
+  "plans": [
+   "plan-simple",
+   "plan-go",
+   "plan-more",
+   "plan-max"
+  ]
+ },
+ "ids": {
+  "launch": "promo-iphone-18-pro-launch",
+  "upgrade": "promo-iphone-18-pro-upgrade",
+  "blackFriday": "promo-black-friday-switch",
+  "duo": "promo-iphone-duo-preorder",
+  "homeBundle": "promo-5g-home",
+  "family": "promo-four-lines",
+  "byod": "promo-bring-your-phone",
+  "closesAtBeat11": "promo-pixel-11-launch",
+  "successorAtBeat11": "promo-pixel-11-season",
+  "upgradeAndroid": "promo-galaxy-s26-ultra-upgrade",
+  "continueHero": "hero-continue",
+  "familyHero": "hero-family",
+  "switchHero": "hero-switch"
+ },
+ "focusPhone": "galaxy-s26",
+ "browse": [
+  "galaxy-s26",
+  "galaxy-s26-ultra"
+ ],
+ "browseTouches": [
+  {
+   "id": "galaxy-s26",
+   "view": "card"
+  },
+  {
+   "id": "galaxy-s26",
+   "view": "page"
+  },
+  {
+   "id": "galaxy-s26-ultra",
+   "view": "card"
+  }
+ ],
+ "hingePhone": "pixel-11",
+ "streamingShopper": {
+  "phone": "iphone-18-pro-max",
+  "plan": "plan-max",
+  "perk": "streaming"
+ },
+ "arrival": {
+  "utm_source": "tiktok",
+  "utm_medium": "paid-social",
+  "utm_term": "iphone-18-pro",
+  "utm_campaign": "iphone-18-pro-launch"
+ },
+ "landing": {
+  "url": "/vantage/?utm_source=tiktok&utm_medium=paid-social&utm_campaign=iphone-18-pro-launch&utm_term=iphone-18-pro",
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  },
+  "campaignTerm": "iphone-18-pro"
+ },
+ "regions": {
+  "rehearsed": [
+   {
+    "key": "US-NY",
+    "label": "New York",
+    "lean": "iPhone, premium band (seeded, synthetic)",
+    "homeCovered": true
+   },
+   {
+    "key": "US-TX",
+    "label": "Texas",
+    "lean": "Android, core band (seeded, synthetic)",
+    "homeCovered": true
+   }
+  ],
+  "coverage": [
+   "US-TX",
+   "US-NY",
+   "US-NJ",
+   "US-PA",
+   "US-MA",
+   "US-IL",
+   "US-FL",
+   "US-GA",
+   "US-NC",
+   "US-CA",
+   "US-AZ",
+   "US-CO",
+   "US-WA",
+   "US-MI",
+   "US-OH",
+   "US-VA",
+   "US-MN",
+   "US-TN"
+  ],
+  "uncoveredRegion": {
+   "key": "US-MT",
+   "label": "Montana",
+   "homeCovered": false
+  },
+  "first": "US-NY",
+  "second": "US-TX",
+  "covered": "US-NY",
+  "uncovered": "US-MT"
+ },
+ "exitBeat": false,
+ "exit": {
+  "mode": "re-ask",
+  "host": "session",
+  "beat": "05-stop-touching",
+  "waitSeconds": 60,
+  "withdraws": {
+   "dim": "brand",
+   "value": "samsung",
+   "tauMs": 60000
+  },
+  "holds": {
+   "dim": "ecosystem",
+   "value": "android"
+  },
+  "thetaIn": 0.6,
+  "thetaOut": 0.45,
+  "push": "the object host’s alarm over /realtime/ws, behind ?exit=1; off while the ledger stall stands (docs/verizon/lanes/L1.md, finding 9)"
+ },
+ "measurementBasis": "served-v1",
+ "ctx": {
+  "intent": {
+   "values": [
+    "new",
+    "add-line",
+    "upgrade",
+    "byod"
+   ],
+   "default": "new"
+  },
+  "region": "US-XX, asserted by the page for rehearsal and labelled"
+ },
+ "registry": {
+  "version": "reflex-vantage-v2-room-memory",
+  "dimensions": [
+   {
+    "key": "category",
+    "source": "category"
+   },
+   {
+    "key": "brand",
+    "source": "brand",
+    "tauMs": 60000
+   },
+   {
+    "key": "ecosystem",
+    "source": "ecosystem"
+   },
+   {
+    "key": "priceBand",
+    "source": "price_usd",
+    "derive": "band",
+    "cuts": [
+     400,
+     900
+    ],
+    "labels": [
+     "entry",
+     "core",
+     "premium"
+    ],
+    "tauMs": 600000
+   },
+   {
+    "key": "intent",
+    "source": "intent",
+    "multi": true,
+    "tauMs": 600000
+   },
+   {
+    "key": "perk",
+    "source": "perk",
+    "multi": true,
+    "tauMs": 600000
+   },
+   {
+    "key": "lines",
+    "source": "lines"
+   },
+   {
+    "key": "contentType",
+    "source": "contentType",
+    "tauMs": 60000
+   }
+  ],
+  "vocabulary": {
+   "category": [
+    "phones",
+    "plans",
+    "home-internet",
+    "accessories",
+    "watches-tablets"
+   ],
+   "brand": [
+    "apple",
+    "samsung",
+    "google",
+    "motorola"
+   ],
+   "ecosystem": [
+    "ios",
+    "android"
+   ],
+   "priceBand": [
+    "entry",
+    "core",
+    "premium"
+   ],
+   "intent": [
+    "new",
+    "switch",
+    "upgrade",
+    "add-line",
+    "byod",
+    "home"
+   ],
+   "perk": [
+    "streaming",
+    "music-games",
+    "hotspot-travel",
+    "international",
+    "family"
+   ],
+   "lines": [
+    "solo",
+    "duo",
+    "family"
+   ],
+   "contentType": [
+    "deal",
+    "compare",
+    "explainer",
+    "tool"
+   ]
+  },
+  "weights": {
+   "product_view": 1,
+   "pdp_view": 1,
+   "view_product": 1,
+   "wishlist": 2,
+   "wishlist_add": 2,
+   "add_to_wishlist": 2,
+   "save_for_later": 2,
+   "add_to_cart": 3,
+   "cart_add": 3,
+   "purchase": 5,
+   "checkout": 5,
+   "order_complete": 5,
+   "content_impression": 0,
+   "content_dwell": 0.5,
+   "content_click": 1,
+   "video_complete": 2,
+   "tick": 0,
+   "page_view": 1,
+   "search": 1.5,
+   "select": 2,
+   "filter": 2,
+   "compare": 2,
+   "start_order": 3
+  },
+  "tauMs": 1209600000,
+  "K": 1.8,
+  "thetaIn": 0.6,
+  "thetaOut": 0.45,
+  "journey": {
+   "stages": [
+    {
+     "stage": "thinking",
+     "anyOf": {
+      "product_views": 6
+     }
+    },
+    {
+     "stage": "deciding",
+     "anyOf": {
+      "cart_adds": 1,
+      "purchases": 1
+     }
+    }
+   ]
+  },
+  "memory": {
+   "label": "memory compressed for this room; production runs days",
+   "dimensions": [
+    {
+     "key": "category",
+     "tauMs": 1209600000,
+     "room": "14 days",
+     "compressed": false
+    },
+    {
+     "key": "brand",
+     "tauMs": 60000,
+     "room": "60 s",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days",
+     "production": "14 days (shipped)"
+    },
+    {
+     "key": "ecosystem",
+     "tauMs": 1209600000,
+     "room": "14 days",
+     "compressed": false
+    },
+    {
+     "key": "priceBand",
+     "tauMs": 600000,
+     "room": "10 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days",
+     "production": "35 days (shipped: 2.5× the global horizon)"
+    },
+    {
+     "key": "intent",
+     "tauMs": 600000,
+     "room": "10 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days",
+     "production": "14 days (shipped)"
+    },
+    {
+     "key": "perk",
+     "tauMs": 600000,
+     "room": "10 min",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days",
+     "production": "14 days (shipped)"
+    },
+    {
+     "key": "lines",
+     "tauMs": 1209600000,
+     "room": "14 days",
+     "compressed": false
+    },
+    {
+     "key": "contentType",
+     "tauMs": 60000,
+     "room": "60 s",
+     "compressed": true,
+     "label": "memory compressed for this room; production runs days",
+     "production": "14 days (shipped)"
+    }
+   ]
+  }
+ },
+ "slotWeights": {
+  "hero": {
+   "intent": 0.5,
+   "lines": 0.35,
+   "brand": 0.1,
+   "ecosystem": 0.1,
+   "campaign": 0.3
+  },
+  "deals": {
+   "brand": 0.2,
+   "ecosystem": 0.15,
+   "priceBand": 0.1,
+   "intent": 1,
+   "lines": 0.4,
+   "perk": 0.1,
+   "category": 0.1,
+   "campaign": 0.3
+  },
+  "pdp-modules": {
+   "priceBand": 0.2,
+   "contentType": 0.2,
+   "perk": 0.35,
+   "intent": 0.2,
+   "lines": 0.3,
+   "category": 0.15
+  },
+  "plan-pairing": {
+   "intent": 0.5,
+   "perk": 0.35,
+   "lines": 0.25
+  }
+ },
+ "seeds": {
+  "source": "public/vantage/beats/open-slots.json and 13-pin-duo-preorder.json (seeds.json retired, lane K3c)",
+  "bySlot": {
+   "hero": [
+    {
+     "signal": "campaign_term",
+     "value": "iphone-18-pro",
+     "tags": [
+      {
+       "dimension": "campaign",
+       "value": "iphone-18-pro"
+      }
+     ],
+     "weight": 0.2
+    }
+   ],
+   "deals": [
+    {
+     "signal": "campaign_term",
+     "value": "iphone-18-pro",
+     "tags": [
+      {
+       "dimension": "campaign",
+       "value": "iphone-18-pro"
+      }
+     ],
+     "weight": 0.2
+    },
+    {
+     "signal": "platform",
+     "value": "ios",
+     "tags": [
+      {
+       "dimension": "ecosystem",
+       "value": "ios"
+      }
+     ],
+     "weight": 1,
+     "dampen": [
+      {
+       "dimension": "intent",
+       "value": "switch",
+       "factor": 0.5
+      },
+      {
+       "dimension": "ecosystem",
+       "value": "android",
+       "factor": 0
+      }
+     ]
+    },
+    {
+     "signal": "platform",
+     "value": "android",
+     "tags": [
+      {
+       "dimension": "ecosystem",
+       "value": "android"
+      }
+     ],
+     "weight": 1,
+     "dampen": [
+      {
+       "dimension": "intent",
+       "value": "switch",
+       "factor": 0.5
+      },
+      {
+       "dimension": "ecosystem",
+       "value": "ios",
+       "factor": 0
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "learn": {
+  "holdout": {
+   "share": 0,
+   "salt": "vantage",
+   "arms": [
+    "default"
+   ]
+  },
+  "regional": {
+   "enabled": true,
+   "kBlend": 0.5,
+   "minEvents": 30,
+   "dimensions": [
+    "brand",
+    "ecosystem",
+    "priceBand",
+    "category"
+   ]
+  },
+  "gamma": 0,
+  "exploration": "off"
+ },
+ "events": {
+  "endpoint": "POST /realtime/action",
+  "source": "vantage-demo",
+  "body": "{ userId, sessionId, source, type, data }",
+  "customActions": [
+   "select",
+   "filter",
+   "compare",
+   "search",
+   "start_order"
+  ]
+ },
+ "routes": {
+  "beat": "POST /vantage/api/beat { name, note? } — names: open-catalog, open-slots, 11-two-weeks-pass, 12-black-friday, 13-pin-duo-preorder",
+  "reset": "POST /vantage/api/reset — open-slots then open-catalog",
+  "receipt": "POST /vantage/api/receipt { decisionId } → { ok, record }, or { decisionIds: [...] } → { ok, records, pending }, with the shopper’s own X-Shopper-Session; 202 and pending while the ledger consumer has not written it yet",
+  "report": "POST /vantage/api/report { date, slot, build? }",
+  "headers": "Every call sends X-Tenant: vantage"
+ },
+ "beats": {
+  "open": {
+   "slots": "open-slots",
+   "catalog": "open-catalog"
+  },
+  "twoWeeks": {
+   "catalog": "11-two-weeks-pass"
+  },
+  "blackFriday": {
+   "catalog": "12-black-friday"
+  },
+  "pinDuo": {
+   "slots": "13-pin-duo-preorder"
+  }
+ },
+ "beatIndex": [
+  {
+   "beat": 1,
+   "act": 1,
+   "actName": "The arrival",
+   "name": "01-arrival",
+   "kind": "context",
+   "press": "A stranger lands from the paid-social ad"
+  },
+  {
+   "beat": 2,
+   "act": 1,
+   "actName": "The arrival",
+   "name": "02-another-region",
+   "kind": "context",
+   "press": "Same visitor, another region"
+  },
+  {
+   "beat": 3,
+   "act": 2,
+   "actName": "The visitor earns it",
+   "name": "03-browse-galaxy-pixel",
+   "kind": "context",
+   "press": "Browse Samsung: the Galaxy S26 card, its page, then the S26 Ultra card"
+  },
+  {
+   "beat": 4,
+   "act": 2,
+   "actName": "The visitor earns it",
+   "name": "04-the-hinge",
+   "kind": "context",
+   "press": "Open the Pixel 11 page, then back to the homepage"
+  },
+  {
+   "beat": 5,
+   "act": 2,
+   "actName": "The visitor earns it",
+   "name": "05-stop-touching",
+   "kind": "context",
+   "press": "Stop touching it: a visible minute, then the page asks again"
+  },
+  {
+   "beat": 6,
+   "act": 3,
+   "actName": "The phone page follows intent",
+   "name": "06-open-the-galaxy",
+   "kind": "context",
+   "press": "Open the Galaxy"
+  },
+  {
+   "beat": 7,
+   "act": 3,
+   "actName": "The phone page follows intent",
+   "name": "07-compare-storage",
+   "kind": "context",
+   "press": "Compare storage, camera specs"
+  },
+  {
+   "beat": 8,
+   "act": 3,
+   "actName": "The phone page follows intent",
+   "name": "08-hotspot-perk",
+   "kind": "context",
+   "press": "Open the hotspot perk"
+  },
+  {
+   "beat": 9,
+   "act": 3,
+   "actName": "The phone page follows intent",
+   "name": "09-four-lines",
+   "kind": "context",
+   "press": "Step the line selector from one to four; visit the kids’ watch"
+  },
+  {
+   "beat": 10,
+   "act": 3,
+   "actName": "The phone page follows intent",
+   "name": "10-intent-toggle",
+   "kind": "context",
+   "press": "Flip the toggle to “bring your own”, then to “upgrade”"
+  },
+  {
+   "beat": 11,
+   "act": 4,
+   "actName": "The merchandiser’s day",
+   "name": "11-two-weeks-pass",
+   "kind": "publish",
+   "press": "Two weeks pass"
+  },
+  {
+   "beat": 12,
+   "act": 4,
+   "actName": "The merchandiser’s day",
+   "name": "12-black-friday",
+   "kind": "publish",
+   "press": "Black Friday arrives"
+  },
+  {
+   "beat": 13,
+   "act": 4,
+   "actName": "The merchandiser’s day",
+   "name": "13-pin-duo-preorder",
+   "kind": "publish",
+   "press": "Pin the iPhone Duo pre-order (16 October) for everyone"
+  },
+  {
+   "beat": 14,
+   "act": 4,
+   "actName": "The merchandiser’s day",
+   "name": "14-5g-home",
+   "kind": "context",
+   "press": "5G Home where available"
+  },
+  {
+   "beat": 15,
+   "act": 5,
+   "actName": "Order and metric",
+   "name": "15-continue-and-report",
+   "kind": "context",
+   "press": "Back to the homepage, then the template changes; clicks; the day report"
+  }
+ ],
+ "acts": [
+  {
+   "n": 1,
+   "through": 2,
+   "name": "The arrival"
+  },
+  {
+   "n": 2,
+   "through": 5,
+   "name": "The visitor earns it"
+  },
+  {
+   "n": 3,
+   "through": 10,
+   "name": "The phone page follows intent"
+  },
+  {
+   "n": 4,
+   "through": 14,
+   "name": "The merchandiser’s day"
+  },
+  {
+   "n": 5,
+   "through": 15,
+   "name": "Order and metric"
+  }
+ ],
+ "reset": [
+  "open-slots",
+  "open-catalog"
+ ]
+}
