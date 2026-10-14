@@ -38,7 +38,7 @@
 // CACHE_TTL_MS below, and a write invalidates the writing isolate at once.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DEFAULT_REFLEX_CONFIG, MAX_SUPPRESSION_DAYS, suppressionDays, type AccountIdFormat, type ContinuitySettings, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
+import { DEFAULT_REFLEX_CONFIG, MAX_SUPPRESSION_DAYS, neverWeighed, suppressionDays, type AccountIdFormat, type ContinuitySettings, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
 import { validateJourneyThresholds } from '@/services/JourneyStage';
 import type { Env } from '@/types/env';
 import { readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
@@ -325,6 +325,71 @@ function validateSuppression(errors: string[], value: unknown): void {
   if (settings.purchase !== undefined) validateSuppressionWindow(errors, 'suppression.purchase', settings.purchase);
 }
 
+// ── P14: the product-type weights (decisions D1, D2) ────────────────────────
+//
+// `productTypeWeights: { dimension, weights: { [action]: { [value]: w } } }`.
+// The product type is the value an event carries on the one dimension named
+// here, so the dimension must be one this registry declares and one whose
+// values the event itself carries (not a derived band). Each weight is on the
+// action weights' own scale, 0 to 1000. An invalid block is refused at
+// publication, naming `productTypeWeights`, while the last published revision
+// keeps deciding. Absent, every event weighs what its action weighs.
+
+const PRODUCT_TYPE_WEIGHTS_MEMBERS = new Set(['dimension', 'weights']);
+/** The longest value an event attribute carries into the registry (core.ts sanitizeEventAttributes). */
+const MAX_PRODUCT_TYPE_VALUE = 64;
+
+function validateProductTypeWeights(errors: string[], value: unknown, dimensions: unknown): void {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    errors.push('productTypeWeights must be a JSON object ({ dimension, weights }: one registry dimension, and per action a weight per product type)'); return;
+  }
+  const block = value as Record<string, unknown>;
+  for (const key of Object.keys(block)) {
+    if (!PRODUCT_TYPE_WEIGHTS_MEMBERS.has(key)) errors.push(`productTypeWeights.${key} is not one of the product-type weights' members (${[...PRODUCT_TYPE_WEIGHTS_MEMBERS].join(', ')})`);
+  }
+  const declared = (Array.isArray(dimensions) ? dimensions : [])
+    .filter((d): d is Partial<DimensionSpec> => typeof d === 'object' && d !== null && !Array.isArray(d));
+  const dimension = block.dimension;
+  if (typeof dimension !== 'string' || dimension.trim() === '') {
+    errors.push('productTypeWeights.dimension must be the key of one dimension this registry declares');
+  } else {
+    const spec = declared.find((d) => d.key === dimension);
+    if (!spec) {
+      errors.push(`productTypeWeights.dimension "${dimension.slice(0, MAX_ACTION_NAME)}" is not a dimension this registry declares (${declared.map((d) => String(d.key)).join(', ')})`);
+    } else if (spec.derive !== undefined) {
+      errors.push(`productTypeWeights.dimension "${dimension}" is derived; a product type is a value the event itself carries`);
+    }
+  }
+  const weights = block.weights;
+  if (typeof weights !== 'object' || weights === null || Array.isArray(weights)) {
+    errors.push('productTypeWeights.weights must be a JSON object mapping action name to { product type: weight }'); return;
+  }
+  const actions = Object.entries(weights as Record<string, unknown>);
+  if (actions.length > MAX_WEIGHTS) errors.push(`productTypeWeights.weights must have at most ${MAX_WEIGHTS} actions (got ${actions.length})`);
+  for (const [action, table] of actions) {
+    if (RESERVED_KEYS.has(action)) { errors.push(`productTypeWeights.weights."${action}" is a reserved key`); continue; }
+    if (action.trim() === '') { errors.push('productTypeWeights.weights has an empty action name'); continue; }
+    if (action !== action.trim() || action.length > MAX_ACTION_NAME) {
+      errors.push(`productTypeWeights.weights."${action.slice(0, MAX_ACTION_NAME)}" is not an action name (no surrounding spaces, at most ${MAX_ACTION_NAME} characters)`); continue;
+    }
+    if (ENGINE_ACTIONS.has(action)) { errors.push(`productTypeWeights.weights.${action} is the engine's own re-evaluation, not an action a shopper takes`); continue; }
+    if (neverWeighed(action)) { errors.push(`productTypeWeights.weights.${action} never builds interest, whatever it is weighted`); continue; }
+    if (typeof table !== 'object' || table === null || Array.isArray(table)) {
+      errors.push(`productTypeWeights.weights.${action} must be a JSON object mapping product type to weight`); continue;
+    }
+    const values = Object.entries(table as Record<string, unknown>);
+    if (values.length > MAX_WEIGHTS) errors.push(`productTypeWeights.weights.${action} must have at most ${MAX_WEIGHTS} product types (got ${values.length})`);
+    for (const [productType, w] of values) {
+      if (RESERVED_KEYS.has(productType)) { errors.push(`productTypeWeights.weights.${action}."${productType}" is a reserved key`); continue; }
+      // eslint-disable-next-line no-control-regex -- A value an event can carry has no control characters.
+      if (productType.trim() === '' || productType !== productType.trim() || productType.length > MAX_PRODUCT_TYPE_VALUE || /[\u0000-\u001f<>]/.test(productType)) {
+        errors.push(`productTypeWeights.weights.${action}.${JSON.stringify(productType.slice(0, MAX_PRODUCT_TYPE_VALUE))} is not a value an event carries (1 to ${MAX_PRODUCT_TYPE_VALUE} characters, no surrounding spaces, control characters or angle brackets)`); continue;
+      }
+      checkNumber(errors, `productTypeWeights.weights.${action}.${productType}`, w, { min: 0, max: 1000 });
+    }
+  }
+}
+
 // ── P12: the account identifier format (decision D2) ────────────────────────
 //
 // The forms a tenant's account identifier takes are a tenant setting on this
@@ -464,6 +529,9 @@ export function validateReflexConfig(candidate: unknown): ValidationResult {
   // P32 (decision D2): the module-engagement weight rides this document too, on
   // the action weights' own scale; absent is valid and reads as 0 (teaches nothing new).
   if (c.moduleEngagementWeight !== undefined) checkNumber(errors, 'moduleEngagementWeight', c.moduleEngagementWeight, { min: 0, max: 1000 });
+  // P14 (decisions D1, D2): the product-type weights ride this document too, on
+  // a dimension it declares; absent is valid and every event weighs what its action weighs.
+  if (c.productTypeWeights !== undefined) validateProductTypeWeights(errors, c.productTypeWeights, c.dimensions);
 
   if (!Array.isArray(c.dimensions)) {
     errors.push('dimensions must be an array');
@@ -688,6 +756,8 @@ export interface ReflexConfigPatch {
   accountIdFormat?: ReflexConfig['accountIdFormat'];
   /** P32: the module-engagement weight, a number like the action weights. */
   moduleEngagementWeight?: number;
+  /** P14: the whole product-type weights block, replaced as a unit — an edit sends the block as it should stand. */
+  productTypeWeights?: ReflexConfig['productTypeWeights'];
   weights?: Record<string, number>;
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
@@ -704,7 +774,7 @@ export interface ReflexConfigPatch {
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
-  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity', 'suppression', 'accountIdFormat', 'moduleEngagementWeight'] as const) {
+  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity', 'suppression', 'accountIdFormat', 'moduleEngagementWeight', 'productTypeWeights'] as const) {
     if (patch[field] !== undefined) (next as unknown as Record<string, unknown>)[field] = patch[field];
   }
   if (patch.weights) next.weights = { ...next.weights, ...patch.weights };

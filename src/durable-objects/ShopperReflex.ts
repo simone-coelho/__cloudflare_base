@@ -86,6 +86,7 @@ import {
   needsCatalogVocabulary,
   placeEvent,
   nextCrossing,
+  productTypeOf,
   snapshot as reflexSnapshot,
   signalsOf,
   suppressionsInForce,
@@ -1461,6 +1462,9 @@ export class ShopperReflex {
         visit: liveVisit(pipe, this.affinity?.lastSeen, now, event.entry).lastVisitAt ?? now,
         vocabulary: () => tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null),
       }) ?? aff.reflex;
+      // P14 (decision D1): the product type the event itself carries, only when
+      // the registry declares product-type weights; no read.
+      const productType = productTypeOf(cfg, eventData);
       reflex = applyReflex(
         prior,
         {
@@ -1468,6 +1472,8 @@ export class ShopperReflex {
           touches,
           // P32: the module's own tags, for the shopper's interest alone (never the population counts below).
           ...(moduleTouches?.touches.length ? { module: moduleTouches } : {}),
+          // P14: its product-type weight, for the shopper's interest alone (the population counts below keep the action's own).
+          ...(productType !== undefined ? { productType } : {}),
         },
         now,
         cfg
@@ -1761,6 +1767,8 @@ export class ShopperReflex {
               ...reflexSnapshot(aff.reflex, now, cfg),
               changed: reflex ? reflex.changes.explain : [],
               odpConfirmed: (await projectOdpState(this.env, tenant, aff)).odpSeed,
+              // P14 (decision D2): the action, the product type and the weight this event applied, when the registry declares product-type weights.
+              ...(reflex?.applied ? { applied: reflex.applied } : {}),
             }
           : undefined,
         sessionId: pipe.sessionId,

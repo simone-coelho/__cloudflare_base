@@ -190,9 +190,21 @@ function extractTouches(product, config) {
   }
   return touches;
 }
+var isWeightTable = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+function productTypeWeightApplied(config, action, productType) {
+  const declared = config.productTypeWeights;
+  if (!declared || typeof declared !== "object") return void 0;
+  const own = weightOf(config, action);
+  const table = productType !== null && !NEVER_WEIGHED.has(action) && isWeightTable(declared.weights) && Object.hasOwn(declared.weights, action) ? declared.weights[action] : void 0;
+  const set = productType !== null && isWeightTable(table) && Object.hasOwn(table, productType) ? table[productType] : void 0;
+  const weight = typeof set === "number" && Number.isFinite(set) && set >= 0 ? set : own;
+  return { action, dimension: declared.dimension, productType, weight };
+}
 function apply(prev, input, now, config) {
   const base = prev && prev.v === 1 ? prev : emptyState(config);
-  const weight = weightOf(config, input.action);
+  const own = weightOf(config, input.action);
+  const applied = input.productType === void 0 ? void 0 : productTypeWeightApplied(config, input.action, input.productType);
+  const weight = applied ? applied.weight : own;
   const dims = {};
   for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
   const accumulate = (touch, w) => {
@@ -205,11 +217,9 @@ function apply(prev, input, now, config) {
     const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
     dimMap[touch.value] = { s: carried + w, t: now };
   };
-  if (weight > 0) {
-    for (const touch of input.touches) accumulate(touch, weight);
-    const taught = input.module;
-    if (taught && Number.isFinite(taught.weight) && taught.weight > 0) for (const touch of taught.touches) accumulate(touch, taught.weight);
-  }
+  if (weight > 0) for (const touch of input.touches) accumulate(touch, weight);
+  const taught = input.module;
+  if (own > 0 && taught && Number.isFinite(taught.weight) && taught.weight > 0) for (const touch of taught.touches) accumulate(touch, taught.weight);
   for (const d of Object.keys(dims)) {
     const p = dimParams(config, specOf(config, d));
     const dimMap = dims[d];
@@ -284,7 +294,9 @@ function apply(prev, input, now, config) {
       },
       signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)
     ),
-    changes: { entered, exited, explain }
+    changes: { entered, exited, explain },
+    // P14 (decision D2): the weight applied, itemised only when a product type was given.
+    ...applied ? { applied } : {}
   };
 }
 var NEVER_WEIGHED = /* @__PURE__ */ new Set(["content_viewable"]);

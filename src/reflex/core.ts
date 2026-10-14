@@ -125,6 +125,43 @@ export interface ReflexConfig {
    * population counts.
    */
   moduleEngagementWeight?: number;
+  /**
+   * P14 (decisions D1, D2): an action's weight per product type. The product
+   * type is the value an event carries on the one registry dimension named
+   * here; an event of an action with a weight for its product type adds that
+   * weight in place of the action's own on every interest it touches, and an
+   * event on another value, or with no value on the dimension, adds the
+   * action's own. Validated with the rest of the document
+   * (`validateReflexConfig`): a declared, non-derived dimension and weights
+   * from 0 to 1000. ABSENT IS THE SHIPPED STATE: every event weighs what its
+   * action weighs, and nothing on the update, the wire or a store changes. It
+   * scales the shopper's interest update only: the signal floor reads the
+   * action's own weight (P10, R-P33) and the population trend is fed the
+   * action's own weight (freeze item 49).
+   */
+  productTypeWeights?: ProductTypeWeights;
+}
+
+/** P14: the product-type weights of the reflex document (decision D1). */
+export interface ProductTypeWeights {
+  /** The key of one registry dimension; an event's product type is the value it carries on that dimension's source field. */
+  dimension: string;
+  /** Action → product type → the weight (0 to 1000) an event of that action on that product type adds in place of the action's own. */
+  weights: Record<string, Record<string, number>>;
+}
+
+/**
+ * P14 (decision D2): the weight one event applied to the shopper's interests,
+ * with its action and its product type, itemised on the interest update that
+ * event returns. Keys in sorted order.
+ */
+export interface AppliedWeight {
+  action: string;
+  dimension: string;
+  /** The value the event carries on the product-type dimension; null when it carries none. */
+  productType: string | null;
+  /** The weight the step accumulated on each interest the event touched. */
+  weight: number;
 }
 
 /**
@@ -461,6 +498,13 @@ export interface ReflexInput {
    * Absent or empty: the action applies exactly as before.
    */
   module?: { weight: number; touches: readonly Touch[] };
+  /**
+   * P14 (decision D1): the event's product type (`productTypeOf`), given only
+   * when the registry declares product-type weights; null when the event
+   * carries no value on that dimension. Absent: the action applies its own
+   * weight exactly as before and the result itemises nothing.
+   */
+  productType?: string | null;
 }
 
 /** Why a membership changed — the glass-box record (doc 16 §12). */
@@ -488,6 +532,8 @@ export interface ReflexChanges {
 export interface ReflexResult {
   state: ReflexState;
   changes: ReflexChanges;
+  /** P14 (decision D2): the weight the event applied, present only when its input named a product type. */
+  applied?: AppliedWeight;
 }
 
 /** Live affinity snapshot for the client instrument (original value names). */
@@ -665,6 +711,63 @@ export function extractTouches(product: Record<string, unknown>, config: ReflexC
 const MAX_EVENT_VALUES = 8;
 const MAX_EVENT_VALUE_LENGTH = 64;
 
+/** One string value an event carries, as the registry admits it: trimmed, capped, no control characters or angle brackets. */
+function eventValue(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const t = v.trim().slice(0, MAX_EVENT_VALUE_LENGTH);
+  // eslint-disable-next-line no-control-regex -- Reject control characters in event attributes.
+  return t && !/[\u0000-\u001f<>]/.test(t) ? t : null;
+}
+
+/**
+ * P14 (decision D1): the product type an event carries — the value on the
+ * source field of the dimension the registry's product-type weights name, read
+ * from the event itself (never from a held catalogue product), as written: not
+ * slugged, not case-folded, admitted by the same rule as every event attribute
+ * (`sanitizeEventAttributes`: trimmed, at most 64 characters, no control
+ * characters or angle brackets; an array carries its first entry, as a
+ * single-valued dimension reads it). Pure; no read.
+ *
+ * Undefined when the registry declares no product-type weights, so the step
+ * applies the action's own weight and itemises nothing. Null when the event
+ * carries no such value (or the named dimension is not a plain one here).
+ */
+export function productTypeOf(
+  config: Pick<ReflexConfig, 'dimensions' | 'productTypeWeights'>,
+  data: Record<string, unknown> | null | undefined,
+): string | null | undefined {
+  const declared = config.productTypeWeights;
+  if (!declared || typeof declared !== 'object') return undefined;
+  const spec = config.dimensions.find((d) => d.key === declared.dimension);
+  if (!spec || spec.derive !== undefined || !data) return null;
+  const raw = data[spec.source];
+  return eventValue(Array.isArray(raw) ? raw[0] : raw);
+}
+
+const isWeightTable = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * P14 (decisions D1, D2): the weight an event of `action` on `productType`
+ * applies to the interests it touches, itemised: the product-type weight when
+ * the registry sets one for that action and value, else the action's own
+ * (`weightOf`). An action that never builds interest (P40) takes its own 0
+ * whatever is set. Undefined when the registry declares no product-type weights.
+ */
+export function productTypeWeightApplied(
+  config: Pick<ReflexConfig, 'weights' | 'productTypeWeights'>,
+  action: string,
+  productType: string | null,
+): AppliedWeight | undefined {
+  const declared = config.productTypeWeights;
+  if (!declared || typeof declared !== 'object') return undefined;
+  const own = weightOf(config, action);
+  const table = productType !== null && !NEVER_WEIGHED.has(action) && isWeightTable(declared.weights) && Object.hasOwn(declared.weights, action)
+    ? declared.weights[action] : undefined;
+  const set = productType !== null && isWeightTable(table) && Object.hasOwn(table, productType) ? table[productType] : undefined;
+  const weight = typeof set === 'number' && Number.isFinite(set) && set >= 0 ? set : own;
+  return { action, dimension: declared.dimension, productType, weight };
+}
+
 /**
  * Only what the registry names, only in the shape it names. A string is
  * trimmed and capped; an array is capped; a band source must already be
@@ -672,12 +775,7 @@ const MAX_EVENT_VALUE_LENGTH = 64;
  */
 export function sanitizeEventAttributes(data: Record<string, unknown>, config: ReflexConfig): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  const clean = (v: unknown): string | null => {
-    if (typeof v !== 'string') return null;
-    const t = v.trim().slice(0, MAX_EVENT_VALUE_LENGTH);
-    // eslint-disable-next-line no-control-regex -- Reject control characters in event attributes.
-    return t && !/[\u0000-\u001f<>]/.test(t) ? t : null;
-  };
+  const clean = eventValue;
   for (const spec of config.dimensions) {
     const raw = data[spec.source];
     if (raw === undefined || raw === null) continue;
@@ -880,6 +978,9 @@ export function touchesForEvent(
  *   (state, input, now, config) → (state′, changes)
  *
  * 1. Decay-then-accumulate every touched (dim, value): R ← R·exp(−Δt/τ) + w.
+ *    P14 (decisions D1, D2): w is the product-type weight the registry sets
+ *    for this action on the event's product type when the input names one,
+ *    else the action's own; the result itemises it (`applied`).
  * 2. Prune entries whose effective score fell below ε (state stays tiny).
  * 3. Re-evaluate ALL memberships with hysteresis (enter ≥ θ_in; exit < θ_out).
  *    Exits happen on ANY apply — including weight-0 'tick' — so time alone
@@ -887,7 +988,8 @@ export function touchesForEvent(
  *    exact-time alarms in P2 using nextCrossing()).
  * 4. Emit an ExplainRecord per transition (the glass box).
  * 5. P10 (decision D1): count the action as a SIGNAL when its own behaviour
- *    weight is above zero (`isSignal`), whatever touches it carried; a
+ *    weight is above zero (`isSignal`), whatever touches it carried and
+ *    whatever product-type weight it applied (R-P33); a
  *    weight-0 action (an impression, a tick, a page view) keeps the count
  *    where it is. Both shopper hosts apply every action through this one step,
  *    so the count is the same on either.
@@ -906,7 +1008,13 @@ export function apply(
   config: ReflexConfig
 ): ReflexResult {
   const base = prev && prev.v === 1 ? prev : emptyState(config);
-  const weight = weightOf(config, input.action);
+  const own = weightOf(config, input.action);
+  // P14 (decisions D1, D2): with the event's product type given, the weight its
+  // touches accumulate is the product-type weight the registry sets for this
+  // action and value, else the action's own, and the result itemises it. Without
+  // one, the action's own weight as before and nothing itemised.
+  const applied = input.productType === undefined ? undefined : productTypeWeightApplied(config, input.action, input.productType);
+  const weight = applied ? applied.weight : own;
 
   // Copy-on-write: fresh dim maps; entries are replaced, never mutated.
   const dims: ReflexState['dims'] = {};
@@ -923,12 +1031,12 @@ export function apply(
     const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
     dimMap[touch.value] = { s: carried + w, t: now };
   };
-  if (weight > 0) {
-    for (const touch of input.touches) accumulate(touch, weight);
-    // P32: a module engagement's own tags, each at the module-engagement weight.
-    const taught = input.module;
-    if (taught && Number.isFinite(taught.weight) && taught.weight > 0) for (const touch of taught.touches) accumulate(touch, taught.weight);
-  }
+  if (weight > 0) for (const touch of input.touches) accumulate(touch, weight);
+  // P32: a module engagement's own tags, each at the module-engagement weight,
+  // when the action itself builds interest (its own weight above 0); a
+  // product-type weight scales the event's own touches above, never these.
+  const taught = input.module;
+  if (own > 0 && taught && Number.isFinite(taught.weight) && taught.weight > 0) for (const touch of taught.touches) accumulate(touch, taught.weight);
 
   // 2. Prune dead entries + enforce the per-dimension cap (deterministic).
   for (const d of Object.keys(dims)) {
@@ -1004,6 +1112,8 @@ export function apply(
       ...(suppressions.length ? { suppressions } : {}) },
       signalsOf(base) + (isSignal(config, input.action) ? 1 : 0)),
     changes: { entered, exited, explain },
+    // P14 (decision D2): the weight applied, itemised only when a product type was given.
+    ...(applied ? { applied } : {}),
   };
 }
 
