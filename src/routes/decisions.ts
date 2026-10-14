@@ -148,18 +148,22 @@ function placementOf(pages: ReadonlyMap<string, string[]>, slot: string, asked: 
 const placementRefusal = (placement: Extract<Placement, { ok: false }>) => ({ ok: false, error: placement.error, ...(placement.pages ? { pages: placement.pages } : {}) });
 
 /**
- * P11 (decision D1): the configured evidence floor of the page a placement is
- * on, `{ floor, page }` (keys sorted): the page `page=` names for a slot the
- * catalogue carries on more than one page, else the one page it carries the
- * slot on. Null where that page publishes no floor, or the slot is on no page,
- * and then an answer carries no floor member at all.
+ * P11 (decision D1): the page a placement is on — the page `page=` names for a
+ * slot the catalogue carries on more than one page, else the one page it
+ * carries the slot on — or undefined where the slot is on no page.
  */
-function placementEvidenceFloor(learn: Pick<LearnConfig, 'evidenceFloors'>, pages: ReadonlyMap<string, string[]>, slot: string, page: string | undefined): { floor: number; page: string } | null {
+function placementPageOf(pages: ReadonlyMap<string, string[]>, slot: string, page: string | undefined): string | undefined {
   const on = pages.get(slot) ?? [];
-  const at = page ?? (on.length === 1 ? on[0] : undefined);
-  if (at === undefined) return null;
-  const floor = evidenceFloorOf(learn, at);
-  return floor === null ? null : { floor, page: at };
+  return page ?? (on.length === 1 ? on[0] : undefined);
+}
+/**
+ * P11 (decision D1): the configured evidence floor of that page, `{ floor, page }`
+ * (keys sorted), or null where it publishes none or there is no page; an answer
+ * then carries no floor member at all.
+ */
+function placementEvidenceFloor(learn: Pick<LearnConfig, 'evidenceFloors'> | null, at: string | undefined): { floor: number; page: string } | null {
+  const floor = learn && at !== undefined ? evidenceFloorOf(learn, at) : null;
+  return floor === null || at === undefined ? null : { floor, page: at };
 }
 /**
  * P11: the tenant's learn document from the request's own pin, for a route that
@@ -614,7 +618,7 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   // document this answer already read, and each row's exposures to it. A
   // different floor from the exploration floor above, which keeps its name and
   // its meaning; absent where the page has none, so the answer is as before.
-  const evidenceFloor = placementEvidenceFloor(learn, slotPages, slot, page), floored = evidenceFloor ? { evidenceFloor } : {};
+  const evidenceFloor = placementEvidenceFloor(learn, placementPageOf(slotPages, slot, page)), floored = evidenceFloor ? { evidenceFloor } : {};
   c.header('Cache-Control', 'no-store');
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, ...effective, floor, ...floored, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
@@ -756,8 +760,9 @@ decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   // P11 (decision D1): the page's configured evidence floor and every item's
   // exposures to it at level everyone, beside the snapshot, which is unchanged;
   // absent where the page has none (or the tenant publishes no learn document).
-  const learn = await publishedLearn(c, tenant);
-  const evidenceFloor = learn ? placementEvidenceFloor(learn, slotPages, slot, page) : null;
+  // The learn document is read only for a slot that is on a page at all.
+  const floorPage = placementPageOf(slotPages, slot, page);
+  const evidenceFloor = floorPage === undefined ? null : placementEvidenceFloor(await publishedLearn(c, tenant), floorPage);
   return c.json({ ok: true, tenant, brand, slot, ...(page ? { page } : {}), snapshot,
     ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}) });
 });
