@@ -2507,6 +2507,7 @@
         "src/sdk/listen.ts",
         "src/sdk/core.ts",
         "src/sdk/types.ts",
+        "src/sdk/wire.ts",
         "public/sdk/",
         "packages/sdk/",
         "public/meridian/engine.bundle.js",
