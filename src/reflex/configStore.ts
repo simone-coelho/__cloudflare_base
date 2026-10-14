@@ -461,6 +461,9 @@ export function validateReflexConfig(candidate: unknown): ValidationResult {
   // P12 (decision D2): the account identifier format rides this document too;
   // absent is valid and links any identifier as before.
   if (c.accountIdFormat !== undefined) validateAccountIdFormat(errors, c.accountIdFormat);
+  // P32 (decision D2): the module-engagement weight rides this document too, on
+  // the action weights' own scale; absent is valid and reads as 0 (teaches nothing new).
+  if (c.moduleEngagementWeight !== undefined) checkNumber(errors, 'moduleEngagementWeight', c.moduleEngagementWeight, { min: 0, max: 1000 });
 
   if (!Array.isArray(c.dimensions)) {
     errors.push('dimensions must be an array');
@@ -683,6 +686,8 @@ export interface ReflexConfigPatch {
   suppression?: ReflexConfig['suppression'];
   /** P12: the whole account identifier format, replaced as a unit — the forms are not merged by name. */
   accountIdFormat?: ReflexConfig['accountIdFormat'];
+  /** P32: the module-engagement weight, a number like the action weights. */
+  moduleEngagementWeight?: number;
   weights?: Record<string, number>;
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
@@ -699,7 +704,7 @@ export interface ReflexConfigPatch {
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
-  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity', 'suppression', 'accountIdFormat'] as const) {
+  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity', 'suppression', 'accountIdFormat', 'moduleEngagementWeight'] as const) {
     if (patch[field] !== undefined) (next as unknown as Record<string, unknown>)[field] = patch[field];
   }
   if (patch.weights) next.weights = { ...next.weights, ...patch.weights };
