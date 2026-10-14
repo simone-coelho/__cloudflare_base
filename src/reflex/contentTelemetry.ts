@@ -156,11 +156,12 @@ export async function resolvedContentTouches(env: Env, tenant: string, data: Rec
  * reach the content format through this door.
  *
  * At weight 0 or absent (the shipped state) nothing is read and nothing is
- * returned, so the event is applied exactly as before. Above 0, the catalogue and
- * the slots document are read as the format lookup reads the catalogue (the
- * current publication through its cache), and a read failure propagates before
- * any affinity is applied, so a retry teaches the engagement whole; an absent
- * catalogue or slots document names no module.
+ * returned, so the event is applied exactly as before. Above 0, a click naming
+ * a module, a slot and a page reads the slots document, and the catalogue only
+ * when the slot is the page's declared layout slot, each as the format lookup
+ * reads the catalogue (the current publication through its cache); a read
+ * failure propagates before any affinity is applied, so a retry teaches the
+ * engagement whole, and an absent document names no module.
  */
 export async function moduleEngagementTouches(env: Env, tenant: string, action: string, data: Record<string, unknown>,
   config: ReflexConfig): Promise<{ weight: number; touches: Touch[] } | null> {
@@ -168,13 +169,11 @@ export async function moduleEngagementTouches(env: Env, tenant: string, action: 
   if (weight <= 0 || action !== 'content_click') return null;
   const { contentId: id, slot, page } = data;
   if (typeof id !== 'string' || typeof slot !== 'string' || typeof page !== 'string') return null;
-  const [catalog, slots] = await Promise.all([
-    readRevision(env, CONTENT_KIND, tenant).catch(() => { throw new Error('Content catalog unavailable'); }),
-    readRevision(env, SLOTS_KIND, tenant).catch(() => { throw new Error('Content slots unavailable'); }),
-  ]);
+  const slots = await readRevision(env, SLOTS_KIND, tenant).catch(() => { throw new Error('Content slots unavailable'); });
   const pages = (slots?.value ?? DEFAULT_SLOTS).pages;
-  const declared = Object.hasOwn(pages, page) && pages[page]!.some(spec => spec.slot === slot && spec.layout === true);
-  const piece = declared ? catalog?.value.pieces.find(candidate => candidate.id === id) : undefined;
+  if (!Object.hasOwn(pages, page) || !pages[page]!.some(spec => spec.slot === slot && spec.layout === true)) return null;
+  const catalog = await readRevision(env, CONTENT_KIND, tenant).catch(() => { throw new Error('Content catalog unavailable'); });
+  const piece = catalog?.value.pieces.find(candidate => candidate.id === id);
   if (!piece || !piece.slotTypes.includes(slot)) return null;
   const touches: Touch[] = [];
   for (const spec of config.dimensions) {
