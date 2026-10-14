@@ -22,7 +22,7 @@ import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingR
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
 import { STAGE_WORDS } from '@/services/JourneyStage';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
-import { HISTORICAL_CONTENT_TYPES, withContentTypeAffinity } from './typeAffinity';
+import { HISTORICAL_CONTENT_TYPES, TYPE_FALLBACK_RETIRED, typeFallbackReaches, withContentTypeAffinity, type TypeFallbackMarker } from './typeAffinity';
 import { compileSlotConstraints, rankedCapacity, type SlotConstraintRefusal } from './slotConstraints';
 
 export interface DecideInput {
@@ -128,6 +128,15 @@ export interface DecideInput {
    * Absent: none, so such a key names the region as none.
    */
   contextRegion?: string | null;
+  /**
+   * P32 (decision D3): `'retired'` when the catalogue the pieces come from
+   * retires the free-text type fallback (`typeFallback: 'retired'` on the
+   * catalogue document): no piece then takes a content format from its `type`,
+   * neither in ranking nor in a slot's `contentType` exclusion, and a record
+   * the fallback could have changed states the replay marker. The replay passes
+   * it for a record that states the marker. Absent: the fallback as before.
+   */
+  typeFallback?: TypeFallbackMarker | null;
   /**
    * P37: the recency bucket of the shopper's visit, from the stored last visit
    * (the visit in progress records it; a visit about to open derives it), for
@@ -282,8 +291,14 @@ const constraintWarning = (slot: string, piece: ContentPiece, refusal: SlotConst
 const refusedSlotsOf = (diagnostics: readonly { slot: string; pinIndex?: number; position?: number }[] | undefined): Set<string> =>
   new Set((diagnostics ?? []).filter((d) => d.pinIndex !== undefined || d.position !== undefined).map((d) => d.slot));
 
+/**
+ * P32: a slot spec as the decision compiles it: the composer's view, with the
+ * catalogue's retired type fallback for the slot's gates (`compileSlotConstraints`).
+ */
+type DecisionSlotSpec = ContentSlotSpec & { typeFallback?: TypeFallbackMarker };
+
 /** The composer's view of the page's slot strategies, as the decision builds it. */
-function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins): ContentSlotSpec[] {
+function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins, typeFallback?: TypeFallbackMarker): DecisionSlotSpec[] {
   return slots.map((s) => ({
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
@@ -297,6 +312,8 @@ function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPi
     ...(s.allowedTypes ? { allowedTypes: s.allowedTypes } : {}),
     // CW33: the slot's diversity rule, applied by the composer at the take.
     ...(s.diversity ? { diversity: s.diversity } : {}),
+    // P32: the catalogue retired the type fallback, so the slot's gates match the own contentType tag alone.
+    ...(typeFallback ? { typeFallback } : {}),
   }));
 }
 
@@ -488,6 +505,17 @@ export const SIGNAL_FLOOR_RULES = 'signal-floor-v1' as const;
  * which is what that decision did.
  */
 export const MODULE_RULES = 'module-rules-v1' as const;
+
+/**
+ * P32: the page-manifest marker of a decision made under a catalogue that
+ * retires the free-text type fallback (`inputs.replay.typeFallback`), written
+ * only where the fallback could have changed something — a piece whose format
+ * only the fallback supplies names a slot of the page that reads the content
+ * format (C11) — so every other decision carries exactly the markers it carried
+ * before; a replay of a record that states none decides the page with the
+ * fallback, which is what that decision did or what it made no difference to.
+ */
+export const TYPE_FALLBACK_RULES = 'type-fallback-retired-v1' as const;
 
 const wholeCount = (v: unknown): number => (typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : 0);
 
@@ -739,7 +767,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // configured order (P01), the anchor preference and the layout blend (P28),
   // none of which refuses any piece, so the diagnostics' view of what a slot
   // refuses is unchanged.
-  const specs: ContentSlotSpec[] = slotSpecs(i.slots, historicalPins)
+  // P32 (decision D3): the catalogue's marker, read off the input the caller holds; nothing here can fail.
+  const retiredFallback = i.typeFallback === TYPE_FALLBACK_RETIRED;
+  const specs: DecisionSlotSpec[] = slotSpecs(i.slots, historicalPins, retiredFallback ? TYPE_FALLBACK_RETIRED : undefined)
     .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec)
     .map((spec) => complementsOf.has(spec.slot) ? { ...spec, prefer: { test: completesAnchor, bonus: complementsOf.get(spec.slot)!, label: anchor } } : spec)
     .map((spec) => blends.has(spec.slot) ? { ...spec, blend: true as const } : spec)
@@ -761,7 +791,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // holds nothing (P04). Each rule's verdict, for every live module of the page
   // that carries one, and the report ride the records' inputs (page-level, C20).
   // Keep the site's default diversity/order unchanged as well as its zero scores.
-  const projectTypes = i.arm !== 'default' && historicalContentTypes !== HISTORICAL_CONTENT_TYPES;
+  // P32: never under a catalogue that retires the type fallback: a piece's format is its own tag alone.
+  const projectTypes = i.arm !== 'default' && historicalContentTypes !== HISTORICAL_CONTENT_TYPES && !retiredFallback;
   const eligible: ContentPiece[] = [], byId = new Map<string, ContentPiece>();
   // P31 (R-P23 C7): the modules eligible before the withholding — live, inside
   // their window and in stock — from which the layout reason's baseline is drawn.
@@ -1310,6 +1341,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(blendedSlots.size ? { blend: BLEND_RULES } : {}),
       ...(below.size ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
       ...(ruled?.length || marksWithheld ? { moduleRules: MODULE_RULES } : {}),
+      ...(retiredFallback && typeFallbackReaches(i.pieces, i.slots) ? { typeFallback: TYPE_FALLBACK_RULES } : {}),
       slots: i.slots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];

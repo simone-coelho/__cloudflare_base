@@ -195,17 +195,20 @@ function apply(prev, input, now, config) {
   const weight = weightOf(config, input.action);
   const dims = {};
   for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
+  const accumulate = (touch, w) => {
+    if (!touch.value) return;
+    const spec = specOf(config, touch.dim);
+    if (!spec) return;
+    const p = dimParams(config, spec);
+    const dimMap = dims[touch.dim] = dims[touch.dim] ?? {};
+    const prevEntry = dimMap[touch.value];
+    const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
+    dimMap[touch.value] = { s: carried + w, t: now };
+  };
   if (weight > 0) {
-    for (const touch of input.touches) {
-      if (!touch.value) continue;
-      const spec = specOf(config, touch.dim);
-      if (!spec) continue;
-      const p = dimParams(config, spec);
-      const dimMap = dims[touch.dim] = dims[touch.dim] ?? {};
-      const prevEntry = dimMap[touch.value];
-      const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
-      dimMap[touch.value] = { s: carried + weight, t: now };
-    }
+    for (const touch of input.touches) accumulate(touch, weight);
+    const taught = input.module;
+    if (taught && Number.isFinite(taught.weight) && taught.weight > 0) for (const touch of taught.touches) accumulate(touch, taught.weight);
   }
   for (const d of Object.keys(dims)) {
     const p = dimParams(config, specOf(config, d));
@@ -1188,11 +1191,14 @@ function esc(s) {
 }
 
 // src/content/typeAffinity.ts
+var TYPE_FALLBACK_RETIRED = "retired";
 var reserved = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]);
 var unsafe = /[\x00-\x1f\x7f-\x9f<>]/;
 var safe = (value) => typeof value === "string" && value.length > 0 && value.length <= 64 && value.trim() === value && !unsafe.test(value) && !reserved.has(value);
-function contentTypeValues(piece) {
-  const values = Object.prototype.hasOwnProperty.call(piece.tags, "contentType") ? piece.tags.contentType : [piece.type];
+function contentTypeValues(piece, retired = false) {
+  const own = Object.prototype.hasOwnProperty.call(piece.tags, "contentType");
+  if (!own && retired) return null;
+  const values = own ? piece.tags.contentType : [piece.type];
   if (!Array.isArray(values) || values.length < 1 || values.length > 8) return null;
   const seen = /* @__PURE__ */ new Set();
   for (const value of values) {
@@ -1205,6 +1211,7 @@ function contentTypeValues(piece) {
 // src/content/slotConstraints.ts
 function compileSlotConstraints(slot, extended = true) {
   const offLimits = slot.offLimits === true;
+  const retired = slot.typeFallback === TYPE_FALLBACK_RETIRED;
   const ids = new Set(slot.excludedPieceIds);
   const types = extended && slot.allowedTypes !== void 0 ? new Set(slot.allowedTypes) : null;
   const tags = /* @__PURE__ */ new Map();
@@ -1229,7 +1236,7 @@ function compileSlotConstraints(slot, extended = true) {
       if (matched !== void 0) return { reason: "excluded_tag", dimension, value: matched };
     }
     const formats = tags.get("contentType");
-    if (formats && !Object.hasOwn(piece.tags, "contentType")) {
+    if (formats && !retired && !Object.hasOwn(piece.tags, "contentType")) {
       const matched = contentTypeValues(piece)?.find((value) => formats.has(value));
       if (matched !== void 0) return { reason: "excluded_tag", dimension: "contentType", value: matched };
     }

@@ -111,6 +111,29 @@ export interface ReflexConfig {
    * forms is refused, naming the format, and merges nothing.
    */
   accountIdFormat?: AccountIdFormat;
+  /**
+   * P32 (decision D2): the weight at which a module engagement — a
+   * `content_click` naming a module on the page's declared layout slot (P03) —
+   * teaches the shopper the module's own registered tags: its `moduleType`
+   * value and each value of its other registered dimensions, each accumulated
+   * at this weight beside what the click teaches as before. Validated with the
+   * rest of the document (`validateReflexConfig`): a finite number from 0 to
+   * 1000. ABSENT IS THE SHIPPED STATE, read as 0: a module engagement then
+   * teaches exactly what a content click taught before the member existed. It
+   * scales the shopper's interest update only: it never makes an action a
+   * signal or keeps one from being one (P10, R-P33), and it never reaches the
+   * population counts.
+   */
+  moduleEngagementWeight?: number;
+}
+
+/**
+ * P32: the module-engagement weight in force — the registry's own when it is a
+ * finite positive number, else 0, so a missing or zero weight teaches nothing.
+ */
+export function moduleEngagementWeightOf(config: Pick<ReflexConfig, 'moduleEngagementWeight'>): number {
+  const weight = config.moduleEngagementWeight;
+  return typeof weight === 'number' && Number.isFinite(weight) && weight > 0 ? weight : 0;
 }
 
 /**
@@ -430,6 +453,14 @@ export interface Touch {
 export interface ReflexInput {
   action: string;
   touches: Touch[];
+  /**
+   * P32 (decision D2): the module's own tags a module engagement teaches, each
+   * accumulated at `weight` (the registry's `moduleEngagementWeight`) instead of
+   * the action's weight, and only when the action itself builds interest.
+   * Interest only: no signal, suppression or population count reads them.
+   * Absent or empty: the action applies exactly as before.
+   */
+  module?: { weight: number; touches: readonly Touch[] };
 }
 
 /** Why a membership changed — the glass-box record (doc 16 §12). */
@@ -882,17 +913,21 @@ export function apply(
   for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
 
   // 1. Decay-then-accumulate the touches.
+  const accumulate = (touch: Touch, w: number) => {
+    if (!touch.value) return;
+    const spec = specOf(config, touch.dim);
+    if (!spec) return; // unconfigured dimension — ignore
+    const p = dimParams(config, spec);
+    const dimMap = (dims[touch.dim] = dims[touch.dim] ?? {});
+    const prevEntry = dimMap[touch.value];
+    const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
+    dimMap[touch.value] = { s: carried + w, t: now };
+  };
   if (weight > 0) {
-    for (const touch of input.touches) {
-      if (!touch.value) continue;
-      const spec = specOf(config, touch.dim);
-      if (!spec) continue; // unconfigured dimension — ignore
-      const p = dimParams(config, spec);
-      const dimMap = (dims[touch.dim] = dims[touch.dim] ?? {});
-      const prevEntry = dimMap[touch.value];
-      const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
-      dimMap[touch.value] = { s: carried + weight, t: now };
-    }
+    for (const touch of input.touches) accumulate(touch, weight);
+    // P32: a module engagement's own tags, each at the module-engagement weight.
+    const taught = input.module;
+    if (taught && Number.isFinite(taught.weight) && taught.weight > 0) for (const touch of taught.touches) accumulate(touch, taught.weight);
   }
 
   // 2. Prune dead entries + enforce the per-dimension cap (deterministic).
