@@ -129,13 +129,22 @@ export interface ResponseLike { ok: boolean; status: number; json(): Promise<unk
  * What the SDK lets an integrator say happened. P40: `content_viewable` is the
  * viewable impression the SDK itself measures (never the page's to send),
  * `video_view` the video watched for three seconds, `product_dwell` a product
- * page held past its dwell threshold (`productId`, `dwellMs`).
+ * page held past its dwell threshold (`productId`, `dwellMs`). P30:
+ * `layout_exposure` is the per-view beacon of a cached layout, sent by
+ * `listen.layoutExposure` (`LayoutExposure`).
  */
 export type SdkEventType =
   | 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase'
   | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete'
   | 'content_viewable' | 'video_view' | 'product_dwell'
-  | 'email_open' | 'form_submit' | 'button_click' | 'custom';
+  | 'email_open' | 'form_submit' | 'button_click' | 'custom' | 'layout_exposure';
+
+/**
+ * P30 (decision D2): what a page drawn from a cached layout reports, once per
+ * page view: the `X-Context-Key` the cached layout was answered under, the page,
+ * the layout slot and the module ids drawn, in drawn order.
+ */
+export interface LayoutExposure { contextKey: string; page: string; slot: string; modules: string[] }
 
 /**
  * `utmTerm` is the campaign's search keyword, present only when the page load

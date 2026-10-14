@@ -5,7 +5,7 @@
 
 import { decisionRequiresConsent, dwellMinFor, type Core, type FirstRequest } from './core';
 import { snapshotEntry } from '../services/visit';
-import type { ActionEnvelope, ContentDecision, DecisionSet, ElementLike, EngineUpdate, RenderAcknowledgment, SdkEventType } from './types';
+import type { ActionEnvelope, ContentDecision, DecisionSet, ElementLike, EngineUpdate, LayoutExposure, RenderAcknowledgment, SdkEventType } from './types';
 import type { ServerBootstrap } from './server';
 
 export interface HydrateOptions {
@@ -91,6 +91,18 @@ export interface Listen {
    * second. The declarative capture and `rendered` with an element report it.
    */
   visible(slot: string, contentId: string, shown: boolean, decisionId?: string): void;
+  /**
+   * P30 (decision D2): the per-view beacon of a page drawn from a cached layout:
+   * the `X-Context-Key` the cached layout was answered under, the page, the
+   * layout slot and the module ids drawn, in drawn order. Sent as one
+   * `layout_exposure` action, once per page view and slot (the page view a
+   * `hydrate` or `refresh` of that page opened, else the one this call opens for
+   * the cached page), only under the shopper's tracking consent and never in
+   * listen-only mode; it asks for no decisions. The key is sent as given: the
+   * engine counts the drawn modules only for a key it issued. Resolves when sent
+   * or not sent, never rejects.
+   */
+  layoutExposure(beacon: LayoutExposure): Promise<void>;
   destroy(): void;
 }
 
@@ -133,6 +145,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   let opening: { owner: number; follow?: boolean } | undefined;
   /** P34: the slots the page holds, each for the page view it was held in. */
   const holds = new Map<object, { slot: string; pageInstance: string }>();
+  /** P30: the page view of a page drawn from a cache without a snapshot of its own, and the page views and slots already reported. */
+  let cachedView: { page: string; instance: string } | null = null;
+  const exposed = new Set<string>();
   const content = core.bindContent((type, data) => type === 'content_impression'
     ? rendered(String(data.slot ?? ''), String(data.contentId ?? ''), undefined, typeof data.decisionId === 'string' ? data.decisionId : undefined).then(() => null)
     : outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data));
@@ -298,6 +313,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
 
   const offDecisions = core.on('decisions', (set) => apply(set));
   const offGeneration = core.on('generation', () => {
+    cachedView = null; exposed.clear();
     const page = current?.page ?? absence?.page ?? '';
     // Generation rejects old async work itself. Do not steal an in-progress
     // ready() call's intent merely because its own expired grant was renewed.
@@ -539,15 +555,31 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     else void refresh();
   }
 
+  async function layoutExposure(beacon: LayoutExposure): Promise<void> {
+    if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== 'object') return;
+    const { contextKey, page, slot } = beacon, modules: unknown[] = Array.isArray(beacon.modules) ? beacon.modules : [];
+    if (typeof contextKey !== 'string' || !contextKey || contextKey.length > 512 || typeof page !== 'string' || !page || typeof slot !== 'string' || !slot
+      || !modules.length || modules.length > 50 || !modules.every(id => typeof id === 'string' && id.length > 0) || new Set(modules).size !== modules.length) return;
+    // The page view: the one a snapshot of this page opened, else the cached page's own, opened by its first report.
+    const instance = pageInstance && selected?.page === page ? pageInstance
+      : cachedView?.page === page ? cachedView.instance : (cachedView = { page, instance: host.uuid() }).instance;
+    const once = JSON.stringify([instance, slot]);
+    if (exposed.has(once)) return;
+    if (exposed.size >= 256) exposed.delete(exposed.values().next().value!);
+    exposed.add(once);
+    await core.send('layout_exposure', { contextKey, page, slot, modules: [...modules] as string[], pageInstance: instance });
+  }
+
   function hold(slot: string): () => void {
     const token = {};
     if (!destroyed) holds.set(token, { slot, pageInstance });
     return () => { holds.delete(token); };
   }
 
-  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable'].includes(event.type)) follow(); });
+  // P30: nor does the cached layout's beacon, which reports what a cache drew.
+  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure'].includes(event.type)) follow(); });
   const offSocket = core.on('socket', status => { if (status === 'connected') follow(); });
   const timer = opts.refreshMs === undefined ? undefined : host.setInterval(() => { if (selected) void refresh(); }, Math.max(1_000, Math.min(300_000, opts.refreshMs)));
-  function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
-  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
+  function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); exposed.clear(); cachedView = null; content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
+  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, destroy };
 }

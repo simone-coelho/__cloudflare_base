@@ -1,5 +1,5 @@
 import { type Core } from './core.js';
-import type { ContentDecision, DecisionSet, ElementLike, EngineUpdate, RenderAcknowledgment, SdkEventType } from './types.js';
+import type { ContentDecision, DecisionSet, ElementLike, EngineUpdate, LayoutExposure, RenderAcknowledgment, SdkEventType } from './types.js';
 export interface HydrateOptions {
     page: string;
     /**
@@ -74,6 +74,18 @@ export interface Listen {
      * second. The declarative capture and `rendered` with an element report it.
      */
     visible(slot: string, contentId: string, shown: boolean, decisionId?: string): void;
+    /**
+     * P30 (decision D2): the per-view beacon of a page drawn from a cached layout:
+     * the `X-Context-Key` the cached layout was answered under, the page, the
+     * layout slot and the module ids drawn, in drawn order. Sent as one
+     * `layout_exposure` action, once per page view and slot (the page view a
+     * `hydrate` or `refresh` of that page opened, else the one this call opens for
+     * the cached page), only under the shopper's tracking consent and never in
+     * listen-only mode; it asks for no decisions. The key is sent as given: the
+     * engine counts the drawn modules only for a key it issued. Resolves when sent
+     * or not sent, never rejects.
+     */
+    layoutExposure(beacon: LayoutExposure): Promise<void>;
     destroy(): void;
 }
 export interface ListenOptions {

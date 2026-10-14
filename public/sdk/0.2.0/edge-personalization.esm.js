@@ -130,7 +130,8 @@ var WIRE = {
   video_complete: { type: "video_complete" },
   content_viewable: { type: "content_viewable" },
   video_view: { type: "video_view" },
-  product_dwell: { type: "product_dwell" }
+  product_dwell: { type: "product_dwell" },
+  layout_exposure: { type: "layout_exposure" }
 };
 function toWire(type, data) {
   const m = WIRE[type] ?? WIRE.custom;
@@ -1843,6 +1844,8 @@ function createListen(core, opts = {}) {
   let pageView = { instance: "", met: true };
   let opening;
   const holds = /* @__PURE__ */ new Map();
+  let cachedView = null;
+  const exposed = /* @__PURE__ */ new Set();
   const content = core.bindContent((type, data) => type === "content_impression" ? rendered(String(data.slot ?? ""), String(data.contentId ?? ""), void 0, typeof data.decisionId === "string" ? data.decisionId : void 0).then(() => null) : outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data));
   function bySlot(decisions) {
     const slots = /* @__PURE__ */ new Map();
@@ -1988,6 +1991,8 @@ function createListen(core, opts = {}) {
   }
   const offDecisions = core.on("decisions", (set) => apply(set));
   const offGeneration = core.on("generation", () => {
+    cachedView = null;
+    exposed.clear();
     const page = current?.page ?? absence?.page ?? "";
     pageInstance = "";
     deliver(null, page);
@@ -2274,6 +2279,17 @@ function createListen(core, opts = {}) {
     if (opening && opening.owner === intent) opening.follow = true;
     else void refresh();
   }
+  async function layoutExposure(beacon) {
+    if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== "object") return;
+    const { contextKey, page, slot } = beacon, modules = Array.isArray(beacon.modules) ? beacon.modules : [];
+    if (typeof contextKey !== "string" || !contextKey || contextKey.length > 512 || typeof page !== "string" || !page || typeof slot !== "string" || !slot || !modules.length || modules.length > 50 || !modules.every((id) => typeof id === "string" && id.length > 0) || new Set(modules).size !== modules.length) return;
+    const instance = pageInstance && selected?.page === page ? pageInstance : cachedView?.page === page ? cachedView.instance : (cachedView = { page, instance: host.uuid() }).instance;
+    const once = JSON.stringify([instance, slot]);
+    if (exposed.has(once)) return;
+    if (exposed.size >= 256) exposed.delete(exposed.values().next().value);
+    exposed.add(once);
+    await core.send("layout_exposure", { contextKey, page, slot, modules: [...modules], pageInstance: instance });
+  }
   function hold(slot) {
     const token = {};
     if (!destroyed) holds.set(token, { slot, pageInstance });
@@ -2282,7 +2298,7 @@ function createListen(core, opts = {}) {
     };
   }
   const offSent = core.on("sent", (event) => {
-    if (!["content_impression", "content_dwell", "content_viewable"].includes(event.type)) follow();
+    if (!["content_impression", "content_dwell", "content_viewable", "layout_exposure"].includes(event.type)) follow();
   });
   const offSocket = core.on("socket", (status) => {
     if (status === "connected") follow();
@@ -2296,6 +2312,8 @@ function createListen(core, opts = {}) {
     resetCapture();
     host.clearTimeout(pageView.deadline);
     holds.clear();
+    exposed.clear();
+    cachedView = null;
     content.release();
     offSent();
     offSocket();
@@ -2308,7 +2326,7 @@ function createListen(core, opts = {}) {
     current = null;
     absence = null;
   }
-  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
+  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, destroy };
 }
 
 // src/sdk/identify.ts

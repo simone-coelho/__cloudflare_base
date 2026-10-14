@@ -32,6 +32,7 @@ export const WIRE: Record<SdkEventType, WireMapping> = {
   content_viewable: { type: 'content_viewable' },
   video_view: { type: 'video_view' },
   product_dwell: { type: 'product_dwell' },
+  layout_exposure: { type: 'layout_exposure' },
 };
 
 /** The wire type and the payload, with the real event name kept where it is not the type. */
