@@ -3175,7 +3175,7 @@
     {
       "id": "P14",
       "title": "Action weights per product type",
-      "state": "ACTIVE",
+      "state": "NOT_STARTED",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
