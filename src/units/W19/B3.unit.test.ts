@@ -285,12 +285,14 @@ const KIT_PIECE = {
   slotTypes: ['hero', 'story'],
   lifecycle: { status: 'live' },
   window: { from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z' },
+  eligibleWhen: { regions: ['US-NY'] },
   art: 'https://cdn.example.invalid/w19/tabby-after-dark.jpg',
   renderUrl: 'https://www.example.invalid/stories/tabby-after-dark',
   merchandising: { season: 0.9, promotion: 1, margin: 0.4 },
   journeyStageFit: ['exploring', 'considering'],
   freshnessDate: '2026-09-01T00:00:00.000Z',
   featuredProductIds: ['COA-CW620', 'COA-CH857'],
+  complements: ['prod-card-case-1'],
   inStock: true,
 };
 
@@ -458,7 +460,7 @@ describe('unit:W19.F3.03', () => {
 
 /** Kit 03 :133-149 "The content piece": every field the published contract lists. */
 const KIT_03_FIELDS = ['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime', 'tags', 'slotTypes',
-  'lifecycle', 'window', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'inStock'];
+  'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'complements', 'inStock'];
 
 describe('unit:W19.F3.04', () => {
   it('logic: the exported field set is exactly the published contract\'s field list', () => {

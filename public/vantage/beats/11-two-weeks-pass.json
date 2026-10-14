@@ -1,0 +1,1371 @@
+{
+ "name": "11-two-weeks-pass",
+ "beat": 11,
+ "act": 4,
+ "actName": "The merchandiser’s day",
+ "press": "Two weeks pass",
+ "kind": "publish",
+ "publish": {
+  "kind": "catalog",
+  "document": {
+   "version": "content-vantage-two-weeks-later",
+   "pieces": [
+    {
+     "id": "promo_iphone_18_pro_launch",
+     "customerContentId": "promo-iphone-18-pro-launch",
+     "type": "promotion",
+     "title": "iPhone 18 Pro. Up to $1,200 off.",
+     "subtitle": "With an eligible trade-in on a new line with Unlimited Max.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "apple"
+      ],
+      "ecosystem": [
+       "ios"
+      ],
+      "priceBand": [
+       "premium"
+      ],
+      "intent": [
+       "new"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "campaign": [
+       "iphone-18-pro"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-30T14:34:44.845Z",
+      "to": "2026-10-18T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-iphone-18-pro-launch.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     },
+     "merchandising": {
+      "promotion": 1
+     },
+     "featuredProductIds": [
+      "iphone-18-pro",
+      "iphone-18-pro-max"
+     ]
+    },
+    {
+     "id": "promo_galaxy_s26_new_line",
+     "customerContentId": "promo-galaxy-s26-new-line",
+     "type": "promotion",
+     "title": "Galaxy S26 on us with a new line.",
+     "subtitle": "On Unlimited More or Max. No trade-in needed.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "samsung"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "core"
+      ],
+      "intent": [
+       "new"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-07-19T14:34:44.845Z",
+      "to": "2026-11-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-galaxy-s26-new-line.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "galaxy-s26"
+     ]
+    },
+    {
+     "id": "promo_four_lines",
+     "customerContentId": "promo-four-lines",
+     "type": "promotion",
+     "title": "Four lines, $28 a line.",
+     "subtitle": "Unlimited Go for the whole household, with AutoPay.",
+     "tags": {
+      "category": [
+       "plans"
+      ],
+      "intent": [
+       "add-line",
+       "new"
+      ],
+      "lines": [
+       "family"
+      ],
+      "perk": [
+       "family"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-06-19T14:34:44.845Z",
+      "to": "2027-03-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-four-lines.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     }
+    },
+    {
+     "id": "promo_bring_your_phone",
+     "customerContentId": "promo-bring-your-phone",
+     "type": "promotion",
+     "title": "Bring your phone. Keep your number.",
+     "subtitle": "Switch on Simple for $28 a line, and we pay off your old phone, up to $800.",
+     "tags": {
+      "category": [
+       "plans"
+      ],
+      "intent": [
+       "byod",
+       "switch"
+      ],
+      "lines": [
+       "solo"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-03T14:34:44.845Z",
+      "to": "2027-01-15T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-bring-your-phone.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "byod"
+       ]
+      }
+     }
+    },
+    {
+     "id": "promo_pixel_11_launch",
+     "customerContentId": "promo-pixel-11-launch",
+     "type": "promotion",
+     "title": "Pixel 11 on us, on a new line or upgrade.",
+     "subtitle": "A $900 bill credit on any Unlimited plan, or up to $900 off an upgrade with trade-in. Ends next week.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "google"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "core"
+      ],
+      "intent": [
+       "new",
+       "upgrade"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-07-30T14:34:44.845Z",
+      "to": "2026-09-24T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-pixel-11-launch.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line",
+        "upgrade"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "pixel-11",
+      "pixel-11-pro"
+     ]
+    },
+    {
+     "id": "promo_pixel_11_season",
+     "customerContentId": "promo-pixel-11-season",
+     "type": "promotion",
+     "title": "Pixel 11. Up to $900 off with trade-in.",
+     "subtitle": "On a new line or an upgrade.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "google"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "core"
+      ],
+      "intent": [
+       "new",
+       "upgrade"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-24T14:34:44.845Z",
+      "to": "2026-12-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-pixel-11-season.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line",
+        "upgrade"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "pixel-11"
+     ]
+    },
+    {
+     "id": "promo_iphone_duo_preorder",
+     "customerContentId": "promo-iphone-duo-preorder",
+     "type": "promotion",
+     "title": "iPhone Duo. Pre-order 16 October.",
+     "subtitle": "Apple’s first foldable. Trade in and save up to $1,200.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "apple"
+      ],
+      "ecosystem": [
+       "ios"
+      ],
+      "priceBand": [
+       "premium"
+      ],
+      "intent": [
+       "new",
+       "upgrade"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-27T14:34:44.845Z",
+      "to": "2026-10-10T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-iphone-duo-preorder.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line",
+        "upgrade"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "iphone-duo"
+     ]
+    },
+    {
+     "id": "promo_galaxy_s26_ultra_upgrade",
+     "customerContentId": "promo-galaxy-s26-ultra-upgrade",
+     "type": "promotion",
+     "title": "Galaxy S26 Ultra. Up to $900 off your upgrade.",
+     "subtitle": "Trade in an eligible phone when you upgrade a line.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "samsung"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "premium"
+      ],
+      "intent": [
+       "upgrade"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-18T14:34:44.845Z",
+      "to": "2026-11-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-galaxy-s26-ultra-upgrade.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "upgrade"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "galaxy-s26-ultra"
+     ]
+    },
+    {
+     "id": "promo_iphone_18_pro_upgrade",
+     "customerContentId": "promo-iphone-18-pro-upgrade",
+     "type": "promotion",
+     "title": "iPhone 18 Pro. Up to $1,020 off your upgrade.",
+     "subtitle": "With an eligible trade-in on Unlimited Max.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "apple"
+      ],
+      "ecosystem": [
+       "ios"
+      ],
+      "priceBand": [
+       "premium"
+      ],
+      "intent": [
+       "upgrade"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-30T14:34:44.845Z",
+      "to": "2026-10-18T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-iphone-18-pro-upgrade.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "upgrade"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "iphone-18-pro"
+     ]
+    },
+    {
+     "id": "promo_galaxy_z_fold8_trade_in",
+     "customerContentId": "promo-galaxy-z-fold8-trade-in",
+     "type": "promotion",
+     "title": "Galaxy Z Fold8. Up to $1,100 off.",
+     "subtitle": "With an eligible trade-in on a new line with Unlimited Max.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "samsung"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "premium"
+      ],
+      "intent": [
+       "new"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-07-09T14:34:44.845Z",
+      "to": "2026-11-01T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-galaxy-z-fold8-trade-in.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "galaxy-z-fold8"
+     ]
+    },
+    {
+     "id": "promo_iphone_17_new_line",
+     "customerContentId": "promo-iphone-17-new-line",
+     "type": "promotion",
+     "title": "iPhone 17 on us with a new line.",
+     "subtitle": "A $930 bill credit on Unlimited More or Max.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "apple"
+      ],
+      "ecosystem": [
+       "ios"
+      ],
+      "priceBand": [
+       "premium"
+      ],
+      "intent": [
+       "new"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-07-19T14:34:44.845Z",
+      "to": "2026-12-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-iphone-17-new-line.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "iphone-17"
+     ]
+    },
+    {
+     "id": "promo_razr_new_line",
+     "customerContentId": "promo-razr-new-line",
+     "type": "promotion",
+     "title": "razr 2026 on us with a new line.",
+     "subtitle": "An $800 bill credit on Unlimited Max.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "motorola"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "core"
+      ],
+      "intent": [
+       "new"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-11T14:34:44.845Z",
+      "to": "2026-11-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-razr-new-line.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "razr-2026"
+     ]
+    },
+    {
+     "id": "promo_moto_g_new_line",
+     "customerContentId": "promo-moto-g-new-line",
+     "type": "promotion",
+     "title": "moto g 2026 on us with a new line.",
+     "subtitle": "A $280 bill credit on any plan.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "motorola"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "entry"
+      ],
+      "intent": [
+       "new"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-07-19T14:34:44.845Z",
+      "to": "2026-12-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-moto-g-flash.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "moto-g-2026"
+     ]
+    },
+    {
+     "id": "promo_edge_flash",
+     "customerContentId": "promo-edge-flash",
+     "type": "promotion",
+     "title": "edge 2026: $289.99 off.",
+     "subtitle": "Flash sale on a new line with Simple. Ends tomorrow.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "motorola"
+      ],
+      "ecosystem": [
+       "android"
+      ],
+      "priceBand": [
+       "core"
+      ],
+      "intent": [
+       "new"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-09-15T14:34:44.845Z",
+      "to": "2026-09-18T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-edge-flash.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line"
+       ]
+      }
+     },
+     "featuredProductIds": [
+      "edge-2026"
+     ]
+    },
+    {
+     "id": "promo_watch_tablet_line",
+     "customerContentId": "promo-watch-tablet-line",
+     "type": "promotion",
+     "title": "Add a watch or tablet line.",
+     "subtitle": "Up to $500 off a watch or $600 off a tablet on a new line; watch lines from $10.",
+     "tags": {
+      "category": [
+       "watches-tablets"
+      ],
+      "intent": [
+       "add-line"
+      ],
+      "lines": [
+       "duo",
+       "family"
+      ],
+      "perk": [
+       "family"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-06-19T14:34:44.845Z",
+      "to": "2027-03-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-watch-tablet-line.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "add-line",
+        "byod"
+       ]
+      }
+     }
+    },
+    {
+     "id": "promo_streaming_perk",
+     "customerContentId": "promo-streaming-perk",
+     "type": "promotion",
+     "title": "The streaming bundle, three months on us.",
+     "subtitle": "With Unlimited Max; $12 a line after.",
+     "tags": {
+      "category": [
+       "plans"
+      ],
+      "perk": [
+       "streaming"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-08-18T14:34:44.845Z",
+      "to": "2027-01-15T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-streaming-perk.jpg",
+     "inStock": true
+    },
+    {
+     "id": "promo_5g_home",
+     "customerContentId": "promo-5g-home",
+     "type": "promotion",
+     "title": "Add 5G Home for $35 a month.",
+     "subtitle": "With any mobile plan, where 5G Home is available.",
+     "tags": {
+      "category": [
+       "home-internet"
+      ],
+      "intent": [
+       "home"
+      ],
+      "lines": [
+       "duo",
+       "family"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "deals"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-07-19T14:34:44.845Z",
+      "to": "2027-03-16T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/promos/promo-5g-home.jpg",
+     "inStock": true,
+     "eligibleWhen": {
+      "regions": [
+       "US-TX",
+       "US-NY",
+       "US-NJ",
+       "US-PA",
+       "US-MA",
+       "US-IL",
+       "US-FL",
+       "US-GA",
+       "US-NC",
+       "US-CA",
+       "US-AZ",
+       "US-CO",
+       "US-WA",
+       "US-MI",
+       "US-OH",
+       "US-VA",
+       "US-MN",
+       "US-TN"
+      ]
+     }
+    },
+    {
+     "id": "hero_launch",
+     "customerContentId": "hero-launch",
+     "type": "hero",
+     "title": "iPhone 18 Pro is here.",
+     "subtitle": "Variable aperture, the A20 Pro, and our launch trade-in offer.",
+     "tags": {
+      "category": [
+       "phones"
+      ],
+      "brand": [
+       "apple"
+      ],
+      "ecosystem": [
+       "ios"
+      ],
+      "priceBand": [
+       "premium"
+      ],
+      "contentType": [
+       "deal"
+      ],
+      "campaign": [
+       "iphone-18-pro"
+      ]
+     },
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/heroes/hero-launch.png",
+     "inStock": true,
+     "featuredProductIds": [
+      "iphone-18-pro"
+     ]
+    },
+    {
+     "id": "hero_switch",
+     "customerContentId": "hero-switch",
+     "type": "hero",
+     "title": "Switch in minutes. Keep your number.",
+     "subtitle": "Bring your phone or pick a new one; we move your number for you.",
+     "tags": {
+      "intent": [
+       "switch",
+       "byod"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/heroes/hero-switch.png",
+     "inStock": true,
+     "eligibleWhen": {
+      "context": {
+       "intent": [
+        "new",
+        "byod"
+       ]
+      }
+     }
+    },
+    {
+     "id": "hero_family",
+     "customerContentId": "hero-family",
+     "type": "hero",
+     "title": "Four lines. One simple bill.",
+     "subtitle": "Unlimited Go at $28 a line for four, with AutoPay.",
+     "tags": {
+      "lines": [
+       "family"
+      ],
+      "perk": [
+       "family"
+      ]
+     },
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/heroes/hero-family.png",
+     "inStock": true
+    },
+    {
+     "id": "hero_continue",
+     "customerContentId": "hero-continue",
+     "type": "hero",
+     "title": "Pick up where you left off.",
+     "subtitle": "Your selections, nothing inferred: the page paints them from the configuration you built.",
+     "tags": {},
+     "slotTypes": [
+      "hero"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "inStock": true,
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ]
+    },
+    {
+     "id": "trade_in",
+     "customerContentId": "trade-in",
+     "type": "module",
+     "title": "Trade in and save",
+     "subtitle": "Your trade-in value, shown per plan.",
+     "tags": {
+      "intent": [
+       "upgrade",
+       "switch"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/modules/trade-in.png",
+     "inStock": true,
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ]
+    },
+    {
+     "id": "plan_pairing",
+     "customerContentId": "plan-pairing",
+     "type": "module",
+     "title": "Pair with a plan",
+     "subtitle": "Simple or Unlimited, and the starter it opens on.",
+     "tags": {
+      "category": [
+       "plans"
+      ],
+      "perk": [
+       "streaming",
+       "music-games",
+       "hotspot-travel",
+       "international",
+       "family"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/modules/plan-pairing.png",
+     "inStock": true,
+     "journeyStageFit": [
+      "considering"
+     ]
+    },
+    {
+     "id": "storage_memory",
+     "customerContentId": "storage-memory",
+     "type": "module",
+     "title": "Storage & memory",
+     "subtitle": "256 GB base; each step at its real monthly delta, and what it does to a capped trade-in.",
+     "tags": {
+      "priceBand": [
+       "premium"
+      ],
+      "contentType": [
+       "compare"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/modules/storage-memory.png",
+     "inStock": true,
+     "journeyStageFit": [
+      "considering"
+     ]
+    },
+    {
+     "id": "connected_devices",
+     "customerContentId": "connected-devices",
+     "type": "module",
+     "title": "Watch, tablet and more lines",
+     "subtitle": "Watch and tablet lines on new lines; add a line at the per-line price.",
+     "tags": {
+      "category": [
+       "watches-tablets"
+      ],
+      "intent": [
+       "add-line"
+      ],
+      "lines": [
+       "duo",
+       "family"
+      ],
+      "perk": [
+       "family"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/modules/connected-devices.png",
+     "inStock": true,
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ]
+    },
+    {
+     "id": "accessories",
+     "customerContentId": "accessories",
+     "type": "module",
+     "title": "Accessories",
+     "subtitle": "Buy more, save more: 20, 25 or 30 percent.",
+     "tags": {
+      "category": [
+       "accessories"
+      ],
+      "contentType": [
+       "deal"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/modules/accessories.png",
+     "inStock": true,
+     "journeyStageFit": [
+      "deciding"
+     ]
+    },
+    {
+     "id": "protection",
+     "customerContentId": "protection",
+     "type": "module",
+     "title": "Protect your phone",
+     "subtitle": "Cover for loss, theft and cracks, per phone or per account.",
+     "tags": {
+      "priceBand": [
+       "premium"
+      ],
+      "intent": [
+       "upgrade"
+      ],
+      "contentType": [
+       "explainer"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/modules/protection.png",
+     "inStock": true,
+     "journeyStageFit": [
+      "deciding"
+     ]
+    },
+    {
+     "id": "home_bundle",
+     "customerContentId": "home-bundle",
+     "type": "module",
+     "title": "Add home internet",
+     "subtitle": "Vantage 5G Home for $35 a month with any Unlimited plan.",
+     "tags": {
+      "category": [
+       "home-internet"
+      ],
+      "intent": [
+       "home"
+      ],
+      "contentType": [
+       "tool"
+      ]
+     },
+     "slotTypes": [
+      "pdp-modules"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/modules/home-bundle.png",
+     "inStock": true,
+     "eligibleWhen": {
+      "regions": [
+       "US-TX",
+       "US-NY",
+       "US-NJ",
+       "US-PA",
+       "US-MA",
+       "US-IL",
+       "US-FL",
+       "US-GA",
+       "US-NC",
+       "US-CA",
+       "US-AZ",
+       "US-CO",
+       "US-WA",
+       "US-MI",
+       "US-OH",
+       "US-VA",
+       "US-MN",
+       "US-TN"
+      ]
+     },
+     "journeyStageFit": [
+      "considering",
+      "deciding"
+     ]
+    },
+    {
+     "id": "plan_simple",
+     "customerContentId": "plan-simple",
+     "type": "plan",
+     "title": "Simple",
+     "subtitle": "Bring your phone and your number",
+     "tags": {
+      "intent": [
+       "switch",
+       "byod"
+      ],
+      "lines": [
+       "solo"
+      ]
+     },
+     "slotTypes": [
+      "plan-pairing"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/plans/plan-simple.png",
+     "inStock": true
+    },
+    {
+     "id": "plan_go",
+     "customerContentId": "plan-go",
+     "type": "plan",
+     "title": "Unlimited Go",
+     "subtitle": "Family starter: location sharing and a kids' watch line",
+     "tags": {
+      "perk": [
+       "family"
+      ],
+      "lines": [
+       "duo",
+       "family"
+      ]
+     },
+     "slotTypes": [
+      "plan-pairing"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/plans/plan-go.png",
+     "inStock": true
+    },
+    {
+     "id": "plan_more",
+     "customerContentId": "plan-more",
+     "type": "plan",
+     "title": "Unlimited More",
+     "subtitle": "Hotspot & travel starter: 30 GB hotspot, travel days",
+     "tags": {
+      "perk": [
+       "hotspot-travel",
+       "music-games"
+      ],
+      "intent": [
+       "upgrade"
+      ],
+      "lines": [
+       "duo"
+      ]
+     },
+     "slotTypes": [
+      "plan-pairing"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/plans/plan-more.png",
+     "inStock": true
+    },
+    {
+     "id": "plan_max",
+     "customerContentId": "plan-max",
+     "type": "plan",
+     "title": "Unlimited Max",
+     "subtitle": "Streaming starter: the streaming bundle included",
+     "tags": {
+      "perk": [
+       "streaming",
+       "international"
+      ],
+      "intent": [
+       "upgrade"
+      ]
+     },
+     "slotTypes": [
+      "plan-pairing"
+     ],
+     "lifecycle": {
+      "status": "live"
+     },
+     "window": {
+      "from": "2026-03-21T14:34:44.845Z",
+      "to": "2027-09-17T14:34:44.845Z"
+     },
+     "renderUrl": "/vantage/img/plans/plan-max.png",
+     "inStock": true
+    }
+   ]
+  }
+ },
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "snapshot": {
+  "page": "home",
+  "slots": [
+   "hero",
+   "deals"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  },
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  }
+ },
+ "turnsOn": {
+  "leaves": "promo-pixel-11-launch",
+  "arrives": "promo-pixel-11-season",
+  "alsoCloses": [
+   "promo-edge-flash"
+  ]
+ },
+ "engine": "Every window moves back fourteen days in one versioned publish; the real clock is untouched. The Pixel 11 launch offer’s window closes and its scheduled successor’s opens.",
+ "sees": "The launch offer leaves; the next promotion takes its container."
+}

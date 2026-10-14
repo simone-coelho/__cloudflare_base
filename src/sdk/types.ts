@@ -24,7 +24,11 @@ export interface ClientConfig {
   listenOnly?: boolean;
   heartbeatMs?: number;
   reconnectMs?: number;
-  /** How long hydrate() waits for the snapshot before declaring graceful absence. */
+  /**
+   * The first-decision deadline of a page view: measured from its first snapshot
+   * request, never restarted by a re-ask (P34). By then every slot subscriber has
+   * the decisions or the empty list (graceful absence); a later answer still paints.
+   */
   hydrateTimeoutMs?: number;
   /** Storage key for the first-party visitor id. Shared with the demo storefront by default. */
   visitorIdKey?: string;
@@ -121,19 +125,36 @@ export interface ResponseLike { ok: boolean; status: number; json(): Promise<unk
 
 // ── Events ──────────────────────────────────────────────────────────────────
 
-/** What the SDK lets an integrator say happened. */
+/**
+ * What the SDK lets an integrator say happened. P40: `content_viewable` is the
+ * viewable impression the SDK itself measures (never the page's to send),
+ * `video_view` the video watched for three seconds, `product_dwell` a product
+ * page held past its dwell threshold (`productId`, `dwellMs`). P30:
+ * `layout_exposure` is the per-view beacon of a cached layout, sent by
+ * `listen.layoutExposure` (`LayoutExposure`).
+ */
 export type SdkEventType =
   | 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase'
   | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete'
-  | 'email_open' | 'form_submit' | 'button_click' | 'custom';
+  | 'content_viewable' | 'video_view' | 'product_dwell'
+  | 'email_open' | 'form_submit' | 'button_click' | 'custom' | 'layout_exposure';
+
+/**
+ * P30 (decision D2): what a page drawn from a cached layout reports, once per
+ * page view: the `X-Context-Key` the cached layout was answered under, the page,
+ * the layout slot and the module ids drawn, in drawn order.
+ */
+export interface LayoutExposure { contextKey: string; page: string; slot: string; modules: string[] }
 
 /**
  * `utmTerm` is the campaign's search keyword, present only when the page load
  * carries one within its bound: a keyword is a seeding signal, never evidence of
  * a channel, and an absent one is absent rather than empty so the arrival every
- * other page load sends is unchanged.
+ * other page load sends is unchanged. `utmCampaign` is the campaign name, under
+ * the same rule: present only when the landing URL carries `utm_campaign`, read
+ * only by a tenant's published classification rule, never stored (P36).
  */
-export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; referrer: string; siteHost: string }
+export interface EntrySignals { utmMedium: string; utmSource: string; utmTerm?: string; utmCampaign?: string; referrer: string; siteHost: string }
 
 /** The envelope POST /realtime/action validates. Field for field what the demo storefront sends. */
 export interface ActionEnvelope {
@@ -150,6 +171,8 @@ export interface ActionEnvelope {
   surface?: string;
   entry: EntrySignals;
   timestamp: number;
+  /** P13: the customer's identifier the page passed (`setCustomerId`), while tracking is allowed. Carried, never proof. */
+  customerId?: string;
 }
 
 // ── Decisions ───────────────────────────────────────────────────────────────
@@ -164,7 +187,18 @@ export interface ContentDecision {
   customerContentId: string;
   type: string;
   slot: string;
+  /** The page-wide order the decision is drawn at. */
   order: number;
+  /**
+   * The decision's position within its slot (P03 decision D3): what its record
+   * calls `position`, from 0. The engine names it on every decision it answers.
+   * The SDK carries it on the render acknowledgement beside the page-wide `order`
+   * as `position`, and on every engagement of the placement beside the
+   * acknowledged `decisionId`, without the page-wide order. The SDK keys a
+   * painted receipt by slot, this position and the item (P34), the position
+   * derived from the delivered list, which is this value whenever it is named.
+   */
+  slotPosition?: number;
   score: number;
   strategy: 'affinity' | 'default' | 'tenant-pinned';
   explain: { drivers: Array<{ dim: string; value: string; a: number; weight: number }>; note?: string };
@@ -211,4 +245,22 @@ export interface CoreEvents {
   sent: (envelope: ActionEnvelope, meta: { via: 'fetch' | 'beacon' | 'socket' }) => void;
   /** CW25: the visitor id changed, because a person signed in (identified) or out (logout). */
   identity: (change: { visitorId: string; previous: string; reason: 'identified' | 'logout' }) => void;
+}
+
+/**
+ * P12 (decision D1): the identifier-change statement a site's backend signs when
+ * a shopper's account identifier changes from one form to another (the one
+ * assigned at first landing, then the one derived from the e-mail address). The
+ * signature is an HMAC-SHA256, base64url, keyed by the tenant's identity secret,
+ * over `tenant \n account-change \n from \n to \n exp`, where `to` is the account
+ * identifier passed to identify(). The SDK carries it unchanged; the two
+ * accounts' profiles merge only on a statement that verifies, and only once.
+ */
+export interface AccountChangeStatement {
+  /** The earlier account identifier, whose profile merges into the one being signed in to. */
+  from: string;
+  /** Unix seconds the statement expires, at most 24 h ahead. */
+  exp: number;
+  /** The backend's signature over both identifiers and `exp`. */
+  statement: string;
 }

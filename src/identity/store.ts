@@ -58,7 +58,21 @@ export interface ShopperRecord {
   visitors: Array<{ visitorId: string; linkedAt: number; assurance: Assurance; source: LinkSource }>;
   /** Historical rows applied to this shopper, if any: how many and the latest event time. */
   history?: { rows: number; latestAt: number; appliedAt: number };
+  /**
+   * P12 (decision D1). The shopper ids of the accounts whose profiles a verified
+   * identifier change has merged into this person, oldest first: each earlier
+   * account named by a change statement, and every account already merged into
+   * it. What makes a change merge ONCE: an account listed here merges nothing
+   * more, whatever statement names it again. Salted shopper ids only, never an
+   * account identifier; written only when a change merges, so a person with none
+   * carries exactly the members it carried before; at most MAX_MERGED_ACCOUNTS,
+   * the oldest forgotten first. Erased with the person.
+   */
+  mergedAccounts?: string[];
 }
+
+/** P12: the most merged accounts one person's record remembers. */
+export const MAX_MERGED_ACCOUNTS = 50;
 
 export class IdentityStore {
   private readonly kv: KVLike;

@@ -1,0 +1,129 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Approved mock 1: the marketing page, lower half</title><link rel="stylesheet" href="_tokens.css">
+<!-- Approved by the owner, 2026-10-03, as the design of the marketing explainer page below its opening (mock 2 is the opening).
+     Shown first in the chat as "bti_marketing_explainer_page_design_mock". The hero at the top of this mock is superseded by
+     mock 2's story-first opening; its motion concept (one click, two sections trade places, the receipt card appears) stands.
+     Owner's later corrections applied here: third person for the brand ("the brand's team", "what the merchandisers sold",
+     "everything the brand already runs"); the reader is never addressed as the customer. --></head><body>
+<h2 class="sr-only">Design mock of the marketing explainer page: a hero with an animated page skeleton that reorders after one click, four pillar sections each with one concept visual, a three-step how it works, proof by industry, one step of the guided tour, and a sales battlecard.</h2>
+<style>
+@keyframes swap1{0%,20%{transform:translateY(0)}40%,100%{transform:translateY(108px)}}
+@keyframes swap2{0%,20%{transform:translateY(0)}40%,100%{transform:translateY(-54px)}}
+@keyframes swap3{0%,20%{transform:translateY(0)}40%,100%{transform:translateY(-54px)}}
+@keyframes click{0%,15%{opacity:0;transform:scale(.6)}20%,30%{opacity:1;transform:scale(1)}40%,100%{opacity:0}}
+@keyframes card{0%,45%{opacity:0;transform:translateY(8px)}60%,100%{opacity:1;transform:translateY(0)}}
+@keyframes fill{0%{height:8px}100%{height:56px}}
+@keyframes drain{0%{height:56px}100%{height:10px}}
+.sk{position:absolute;left:0;right:0;border-radius:6px;background:var(--surface-1);border:0.5px solid var(--border)}
+.lbl{font-size:11px;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;margin:0 0 6px}
+.sec{border-top:0.5px solid var(--border);padding:1.25rem 0}
+.pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:999px;background:var(--bg-accent);color:var(--text-accent)}
+.card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px}
+</style>
+
+<div style="padding:1rem 0 0">
+<p class="lbl">1 · Hero, 5-second loop (superseded by mock 2's opening; the motion stands)</p>
+<div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:center;padding:16px;border:0.5px solid var(--border);border-radius:12px;background:var(--surface-2)">
+  <div>
+    <p style="font-size:22px;font-weight:500;line-height:1.25;margin:0 0 10px">A personal stylist for every visitor, from the first click</p>
+    <p style="font-size:14px;color:var(--text-secondary);margin:0 0 14px;line-height:1.5">It rearranges the page around what each visitor is doing right now, under rules the brand's team publishes, and shows the receipt for every decision.</p>
+    <span style="display:inline-block;font-size:13px;padding:7px 12px;border:0.5px solid var(--border-strong);border-radius:var(--radius)">Watch it work</span>
+    <span style="display:inline-block;font-size:13px;padding:7px 12px;color:var(--text-secondary)">Read how it works</span>
+  </div>
+  <div style="position:relative;height:250px">
+    <div style="position:absolute;left:0;right:0;top:0;height:22px;border-radius:6px;background:var(--surface-1);border:0.5px solid var(--border)"></div>
+    <div class="sk" style="top:30px;height:48px;animation:swap1 6s ease-in-out infinite;background:var(--bg-accent);border-color:var(--border-accent)"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-accent)">Hero · outerwear editorial</span></div>
+    <div class="sk" style="top:84px;height:48px;animation:swap2 6s ease-in-out infinite"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-secondary)">Boots</span></div>
+    <div class="sk" style="top:138px;height:48px;animation:swap3 6s ease-in-out infinite"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-secondary)">Leather accessories</span></div>
+    <div class="sk" style="top:192px;height:48px"><span style="position:absolute;left:10px;top:14px;font-size:12px;color:var(--text-secondary)">Recommended for you · stays, moves with the rest</span></div>
+    <div style="position:absolute;left:150px;top:98px;width:26px;height:26px;border-radius:50%;border:2px solid var(--text-accent);animation:click 6s ease-in-out infinite"></div>
+    <div style="position:absolute;right:-6px;bottom:-6px;width:190px;padding:8px 10px;border-radius:8px;background:var(--surface-2);border:0.5px solid var(--border-strong);font-size:11px;line-height:1.4;animation:card 6s ease-in-out infinite"><span style="color:var(--text-muted)">Why this page</span><br>Clicked a boot banner, +<br>Regional start, fading, −</div>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">2 · One pillar per section, one visual each</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+  <div class="card">
+    <div style="display:flex;align-items:flex-end;gap:6px;height:64px;margin-bottom:10px">
+      <div style="width:18px;background:var(--bg-accent);border-radius:3px 3px 0 0;animation:fill 3s ease-in-out infinite alternate"></div>
+      <div style="width:18px;background:var(--bg-accent);border-radius:3px 3px 0 0;animation:drain 3s ease-in-out infinite alternate"></div>
+      <div style="width:18px;height:28px;background:var(--surface-1);border-radius:3px 3px 0 0"></div>
+      <div style="flex:1;border-top:1px dashed var(--border-strong);margin-bottom:34px"></div>
+    </div>
+    <p style="font-size:14px;font-weight:500;margin:0 0 4px">Decides from this minute, not the past</p>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5">Interest fills with each action and drains on its own. Nothing goes stale.</p>
+  </div>
+  <div class="card">
+    <div style="position:relative;height:64px;margin-bottom:10px">
+      <div style="position:absolute;left:0;right:0;top:0;height:16px;border-radius:4px;background:var(--bg-warning);border:0.5px solid var(--border-warning)"><i class="ti ti-pin" aria-hidden="true" style="position:absolute;right:6px;top:1px;font-size:12px;color:var(--text-warning)"></i></div>
+      <div style="position:absolute;left:0;right:0;top:22px;height:16px;border-radius:4px;background:var(--surface-1);border:0.5px solid var(--border)"></div>
+      <div style="position:absolute;left:0;right:0;top:44px;height:16px;border-radius:4px;background:var(--surface-1);border:0.5px solid var(--border)"></div>
+    </div>
+    <p style="font-size:14px;font-weight:500;margin:0 0 4px">The brand's team keeps the wheel</p>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5">Gates, then pins for what the merchandisers sold, then ranking. Every override on the receipt.</p>
+  </div>
+  <div class="card">
+    <div style="position:relative;height:64px;margin-bottom:10px">
+      <div style="position:absolute;left:0;top:0;width:44%;height:64px;border-radius:4px;background:var(--surface-1);border:0.5px solid var(--border)"></div>
+      <div style="position:absolute;right:0;top:0;width:50%;height:18px;border-radius:4px;background:var(--bg-accent);border:0.5px solid var(--border-accent)"></div>
+      <div style="position:absolute;right:0;top:23px;width:50%;height:18px;border-radius:4px;background:var(--surface-1);border:0.5px solid var(--border)"></div>
+      <div style="position:absolute;right:0;top:46px;width:50%;height:18px;border-radius:4px;background:var(--surface-1);border:0.5px solid var(--border)"></div>
+    </div>
+    <p style="font-size:14px;font-weight:500;margin:0 0 4px">Recomposes the page, not a banner</p>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5">Sections and modules reorder by interest. The brand's recommendations carousel is one of them.</p>
+  </div>
+  <div class="card">
+    <div style="position:relative;height:64px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <i class="ti ti-user" aria-hidden="true" style="font-size:22px;color:var(--text-secondary)"></i>
+      <div style="flex:1;border-top:1px solid var(--border-strong)"></div>
+      <div style="width:34px;height:34px;border-radius:8px;background:var(--bg-accent);border:0.5px solid var(--border-accent);display:flex;align-items:center;justify-content:center"><i class="ti ti-bolt" aria-hidden="true" style="font-size:18px;color:var(--text-accent)"></i></div>
+      <div style="flex:1;border-top:1px dashed var(--border)"></div>
+      <i class="ti ti-building" aria-hidden="true" style="font-size:22px;color:var(--text-muted)"></i>
+    </div>
+    <p style="font-size:14px;font-weight:500;margin:0 0 4px">Runs at the edge, with everything the brand already runs</p>
+    <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5">Decided beside the visitor. Opal, ODP and experimentation plugged in.</p>
+  </div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">3 · How it works, three steps · 4 · Proof by industry</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+  <div style="display:flex;gap:10px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+      <div style="display:flex;gap:8px;align-items:center;font-size:13px"><i class="ti ti-eye" aria-hidden="true" style="font-size:18px;color:var(--text-secondary)"></i>Watches what the visitor does</div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:13px"><i class="ti ti-layout-grid" aria-hidden="true" style="font-size:18px;color:var(--text-secondary)"></i>Rearranges the page around it</div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:13px"><i class="ti ti-receipt" aria-hidden="true" style="font-size:18px;color:var(--text-secondary)"></i>Writes the receipt, learns what worked</div>
+    </div>
+  </div>
+  <div class="card" style="font-family:var(--font-voice);font-size:14px;line-height:1.5;color:var(--text-primary)">"This capability did not exist off the shelf."<p style="font-family:var(--font-sans);font-size:12px;color:var(--text-muted);margin:6px 0 0">A luxury retailer, who built it with us</p></div>
+</div>
+</div>
+
+<div class="sec">
+<p class="lbl">5 · One step of the guided tour · 6 · The sales battlecard</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+  <div style="position:relative;background:var(--surface-1);border-radius:12px;padding:14px;height:170px">
+    <div style="height:18px;border-radius:4px;background:var(--surface-2);border:0.5px solid var(--border)"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
+      <div style="height:48px;border-radius:4px;background:var(--surface-2);border:2px solid var(--border-accent)"></div>
+      <div style="height:48px;border-radius:4px;background:var(--surface-2);border:0.5px solid var(--border)"></div>
+      <div style="height:48px;border-radius:4px;background:var(--surface-2);border:0.5px solid var(--border)"></div>
+    </div>
+    <div style="height:30px;border-radius:4px;background:var(--surface-2);border:0.5px solid var(--border);margin-top:8px"></div>
+    <div style="position:absolute;left:24px;top:92px;width:200px;padding:8px 10px;border-radius:8px;background:var(--surface-2);border:0.5px solid var(--border-strong);font-size:12px;line-height:1.4"><span class="pill">Step 2 of 7</span><br>Click the boot card. Watch the two sections below trade places.</div>
+  </div>
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;margin:0 0 8px">Behavioral Targeting and Intelligence · battlecard</p>
+    <div style="font-size:12px;color:var(--text-secondary);line-height:1.6">
+      <div><span style="color:var(--text-primary)">Pitch</span> · one line</div>
+      <div><span style="color:var(--text-primary)">Four pillars</span> · a proof point under each</div>
+      <div><span style="color:var(--text-primary)">Objections</span> · say this, never that</div>
+      <div><span style="color:var(--text-primary)">Discovery</span> · six questions, six KPIs</div>
+      <div><span style="color:var(--text-primary)">Demos</span> · which one shows which pillar</div>
+    </div>
+  </div>
+</div>
+</div>
+</body></html>
