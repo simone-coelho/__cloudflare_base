@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P01",
+  "workOrderHash": "sha256:9a957fb31a4c6063313b185cad51bb00d0e6c9cca2711a0b64db556fa261abaf",
+  "artifact": {
+    "revision": "bad930c492a573aabfe4a6bf43922ffe46b1ee4f",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p01-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P01 built on rem/p01-build: d9dfb887 merges rem/integration 7264bb71 into the per-ticket branch rem/tkt/P01 (6d468a1b, specification reviewed PASS at 6477d82c); cfcb87ac the mechanism (src/content/types.ts, kinds.ts, decide.ts, src/reflex/contentCompose.ts, src/learn/receipts.ts, src/learn/replay.ts, src/routes/content.ts, public/console/views-config.js, public/meridian/engine.bundle.js regenerated: per-context orders on the declared layout slot under governance version 4 with the D1 context grammar, the most specific match served exactly, unlisted modules hidden without exposure, the D2 fallbacks to the slot's own decision, configuredOrder on the record and the receipt with sorted keys, the configured-order-v1 replay marker written only when used, the O5 publication refusals including the R-P24 cross-document check in content.ts, and the layout.orders editor on the slot-rules screen); fe4b62f6 refuses an order naming a module another slot of the page pins; 0cc7d0a7 the kit (docs/kit/02, 03); src/content/service.ts unchanged. The delivery review at 0cc7d0a7 failed O5 (the R-P24 cross-document refusal bypassed by a slots document published as a related member or under a capitalised kind); fix round 1 (ruling in parity-step3/AMENDMENTS.md): FIX1 units specified at d419a009 on rem/spec-p01-fix1 (reviewed PASS, gate re-recorded), the fix 74369330 in src/routes/content.ts (orderRefusals on every slots member a request publishes, primary or related, the kind matched as kindOf does, against the catalogue of the same request in any case or else the one in force) and bad930c4 in docs/kit/02; acceptance 33/33 on both hosts at bad930c4.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S1/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/implementer/REPORT.md",
+      "git commits on rem/p01-build up to bad930c4"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P01 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/implementer/logs/acceptance-P01.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/implementer/logs/acceptance-P01.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P01/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-09T10:05:06.951Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

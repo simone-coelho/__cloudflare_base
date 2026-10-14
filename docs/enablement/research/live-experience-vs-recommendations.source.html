@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Keep Your Recommendations. Make the Experience Respond.</title>
+<meta name="version" content="1.1-navigation-fix" />
+<style>
+  :root{
+    --bg:#071f17;
+    --panel:#0d2f24;
+    --panel2:#123a2d;
+    --ink:#ecf6eb;
+    --muted:#bfd1c2;
+    --muted2:#8da694;
+    --green:#a8ff3f;
+    --green2:#7fdd4b;
+    --blue:#8fdbe1;
+    --orange:#ffbf66;
+    --red:#ff7c7c;
+    --line:rgba(255,255,255,.12);
+    --shadow:0 18px 40px rgba(0,0,0,.28);
+    --radius:22px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#071f17 0%,#0b2b1f 100%);color:var(--ink);overflow:hidden}
+  .deck{height:100%;height:100dvh;display:flex;flex-direction:column;min-height:0}
+  .topbar{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--line);background:rgba(5,18,13,.35);backdrop-filter: blur(6px)}
+  .brand{display:flex;gap:12px;align-items:center;font-weight:700;letter-spacing:.2px}
+  .brand-badge{width:12px;height:12px;border-radius:50%;background:var(--green);box-shadow:0 0 20px rgba(168,255,63,.55)}
+  .controls{display:flex;gap:10px;align-items:center}
+  .btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{background:var(--green);color:#122414;border:none}
+  .meta{font-size:14px;color:var(--muted)}
+  .viewport{position:relative;flex:1 1 auto;min-height:0;min-width:0;overflow:hidden}
+  /* Show one panel in place. No wide strip or percentage translation. */
+  .slides{position:relative;height:100%;width:100%;min-width:0}
+  .slide[hidden]{display:none !important}
+  .slide.is-active{display:flex}
+  .slide > *{flex:0 0 auto;min-width:0}
+  .slide > .footer{margin-top:auto;gap:16px}
+  .footer > :last-child{white-space:nowrap}
+  .hero-grid > *, .compare-grid > *, .lane > *, .logic-grid > *, .three > *{min-width:0}
+  .mini-page .small{color:#435347}
+  button{font:inherit}
+  button:focus-visible{outline:3px solid var(--green);outline-offset:4px}
+  .dot{border:0;padding:0;flex:0 0 10px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .slide{width:100%;height:100%;padding:34px 54px 42px;display:none;flex-direction:column;gap:22px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}
+  .eyebrow{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
+  h1,h2{margin:0;line-height:1.02}
+  h1{font-size: clamp(34px, 4.6vw, 72px);max-width:1000px}
+  h2{font-size: clamp(28px, 3.2vw, 50px)}
+  .sub{font-size:clamp(18px,1.5vw,24px);color:var(--muted);max-width:960px;line-height:1.38}
+  .chips{display:flex;flex-wrap:wrap;gap:12px}
+  .chip{padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-weight:600;color:var(--ink)}
+  .hero-grid{display:grid;grid-template-columns:1.15fr .95fr;gap:26px;align-items:stretch}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
+  .panel h3{margin:0 0 10px;font-size:24px}
+  .panel p{margin:0;color:var(--muted);line-height:1.45}
+  .big-number{font-size:64px;font-weight:900;color:var(--green)}
+  .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  .flow{display:grid;gap:14px}
+  .node{padding:18px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line);position:relative}
+  .node .kicker{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2);font-weight:800;margin-bottom:6px}
+  .node .title{font-size:22px;font-weight:800;margin-bottom:6px}
+  .node .desc{font-size:15px;line-height:1.45;color:var(--muted)}
+  .arrow{height:22px;display:flex;align-items:center;justify-content:center;color:var(--green);font-size:24px;font-weight:900}
+  .callout{margin-top:16px;padding:16px 18px;border-radius:18px;background:rgba(168,255,63,.08);border:1px solid rgba(168,255,63,.18);color:var(--ink);font-weight:600}
+  .lane{display:grid;grid-template-columns:1fr 110px 1fr;gap:18px;align-items:center}
+  .mid-badge{display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;font-weight:800;color:#123; background:var(--green);border-radius:22px;min-height:110px;padding:14px}
+  .mini-page{display:grid;gap:12px;background:#f6f7f4;border-radius:20px;padding:16px;min-height:390px;color:#1b2a20}
+  .page-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+  .visual{border-radius:16px;min-height:120px;padding:14px;display:flex;flex-direction:column;justify-content:flex-end;font-weight:800;box-shadow: inset 0 0 0 1px rgba(0,0,0,.06)}
+  .visual.default{background:linear-gradient(135deg,#f2e8df,#dcccbc)}
+  .visual.occasion{background:linear-gradient(135deg,#2f384a,#6e5c71);color:#fff}
+  .visual.everyday{background:linear-gradient(135deg,#e6eadf,#bcc8b3)}
+  .story{background:#fff;border-radius:16px;padding:14px;border:1px solid #dde6dd}
+  .story h4{margin:0 0 6px;font-size:17px}
+  .story p{margin:0;color:#435347;line-height:1.42;font-size:14px}
+  .rec-strip{background:#fff;border-radius:16px;padding:14px;border:1px solid #dde6dd}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  .card{background:#f4f7f4;border:1px solid #dde6dd;border-radius:14px;padding:10px;min-height:115px;display:flex;flex-direction:column;justify-content:space-between}
+  .thumb{height:58px;border-radius:10px;background:linear-gradient(135deg,#ddd,#f4f4f4)}
+  .card .name{font-weight:700;font-size:13px;color:#1e2e22}
+  .card .price{font-size:13px;color:#516355}
+  .label-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .tag{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;background:#eff5ee;color:#294132;border:1px solid #d9e6d8}
+  .tag.keep{background:#edf5ff;color:#23486b;border-color:#d2e5fa}
+  .tag.change{background:#f4fdef;color:#34581f;border-color:#def1cd}
+  .logic-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:start}
+  .stepper{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .step-btn{padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);font-weight:700;color:var(--ink);cursor:pointer}
+  .step-btn.active{background:rgba(168,255,63,.12);border-color:rgba(168,255,63,.35);color:#f7ffef}
+  .status{display:grid;gap:14px}
+  .status-box{padding:16px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+  .status-box h4{margin:0 0 6px;font-size:16px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2)}
+  .status-box .big{font-size:20px;font-weight:800;line-height:1.25}
+  .signal-bars{display:grid;gap:10px;margin-top:10px}
+  .bar{display:grid;grid-template-columns:130px 1fr 42px;gap:10px;align-items:center}
+  .track{height:12px;background:rgba(255,255,255,.09);border-radius:999px;overflow:hidden}
+  .fill{height:100%;background:linear-gradient(90deg,var(--green2),var(--green))}
+  .small{font-size:14px;color:var(--muted);line-height:1.45}
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .iconcard{padding:22px;border-radius:22px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+  .icon{font-size:32px;margin-bottom:8px}
+  .iconcard h3{margin:0 0 8px;font-size:22px}
+  .iconcard p{margin:0;color:var(--muted);line-height:1.46}
+  .quote{font-size:32px;line-height:1.2;font-weight:900;max-width:1080px}
+  .footer{display:flex;justify-content:space-between;align-items:center;color:var(--muted2);font-size:14px}
+  .dots{display:flex;gap:8px}
+  .dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.16);cursor:pointer}
+  .dot.active{background:var(--green);box-shadow:0 0 14px rgba(168,255,63,.55)}
+  .key{font-weight:800;color:var(--ink)}
+  @media (max-width: 980px){
+    .slide{padding:24px 20px 26px}
+    .hero-grid,.compare-grid,.lane,.logic-grid,.three{grid-template-columns:1fr}
+    .mid-badge{min-height:unset}
+    .page-hero{grid-template-columns:1fr}
+    .footer{padding-bottom:8px}
+    .topbar{gap:12px;flex-wrap:wrap;padding:12px 16px}
+    .controls{margin-left:auto}
+  }
+  @media (max-width: 560px){
+    .controls{width:100%;margin-left:0}
+    .controls .btn{flex:1;padding:10px 8px;font-size:13px}
+    .topbar:last-child .meta{font-size:12px}
+    .topbar:last-child .dots{margin-left:auto}
+    .bar{grid-template-columns:90px minmax(0,1fr) 32px;gap:8px}
+    .panel{padding:16px}
+    .quote{font-size:26px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none !important;transition:none !important}
+  }
+
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-badge"></span>
+      <div>
+        <div>Optimizely visual brief</div>
+        <div class="meta">Keep your recommendations. Make the experience respond.</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prevBtn">← Previous</button>
+      <button class="btn" id="nextBtn">Next →</button>
+      <button class="btn primary" id="autoBtn">Auto-play</button>
+    </div>
+  </div>
+  <div class="viewport">
+    <div class="slides" id="slides">
+
+      <section class="slide is-active" id="slide-1" role="group" aria-roledescription="slide" aria-label="1 of 6" aria-hidden="false">
+        <div>
+          <div class="eyebrow">Slide 1 · the case</div>
+          <h1>Keep your recommendation engine.<br>Make the <span style="color:var(--green)">experience</span> respond live.</h1>
+          <p class="sub">This is the story to show a customer: their current recommender can keep choosing products, while Optimizely adds a live experience layer that reads what the shopper is doing right now and changes what the shopper sees next.</p>
+        </div>
+        <div class="hero-grid">
+          <div class="panel">
+            <div class="big-number">1</div>
+            <h3>Your recommendation engine</h3>
+            <p>Finds and ranks products that are likely to matter for this shopper.</p>
+            <div class="chips" style="margin-top:16px">
+              <span class="chip">product selection</span>
+              <span class="chip">product ranking</span>
+              <span class="chip">cross-sell / upsell</span>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="big-number">2</div>
+            <h3>Optimizely live experience engine</h3>
+            <p>Turns shopper behaviour into live interest signals and uses them to choose the best approved content, image, story or module around those products.</p>
+            <div class="chips" style="margin-top:16px">
+              <span class="chip">current intent</span>
+              <span class="chip">content decisions</span>
+              <span class="chip">marketer control</span>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <div><span class="key">Main message:</span> not either/or — complementary layers.</div>
+          <div>1 / 6</div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-2" role="group" aria-roledescription="slide" aria-label="2 of 6" aria-hidden="true" hidden inert>
+        <div>
+          <div class="eyebrow">Slide 2 · what they already have</div>
+          <h2>What a recommendation engine typically does</h2>
+          <p class="sub">It answers one very important question: <strong>“Which products should we put in front of this shopper?”</strong></p>
+        </div>
+        <div class="compare-grid">
+          <div class="panel">
+            <div class="flow">
+              <div class="node">
+                <div class="kicker">Input signals</div>
+                <div class="title">History + behaviour + product relationships</div>
+                <div class="desc">Past browsing, purchases, item similarity, popularity, collaborative patterns, and sometimes current session activity.</div>
+              </div>
+              <div class="arrow">↓</div>
+              <div class="node">
+                <div class="kicker">Decision engine</div>
+                <div class="title">Recommendation logic</div>
+                <div class="desc">Runs one or more algorithms to pick and rank products.</div>
+              </div>
+              <div class="arrow">↓</div>
+              <div class="node">
+                <div class="kicker">Output</div>
+                <div class="title">A ranked product list</div>
+                <div class="desc">For example: “You may also like”, “Complete the look”, “Recommended for you”.</div>
+              </div>
+            </div>
+            <div class="callout">This is valuable. We do not need to replace it to add value.</div>
+          </div>
+          <div class="panel">
+            <h3>The simplest way to say it</h3>
+            <p style="margin-bottom:16px">A recommendation engine is primarily about <strong>which products to show</strong> and <strong>what order to show them in</strong>.</p>
+            <div class="mini-page" style="min-height:300px">
+              <div class="rec-strip">
+                <strong>Recommended for you</strong>
+                <div class="cards">
+                  <div class="card"><div class="thumb"></div><div class="name">Dress A</div><div class="price">€129</div></div>
+                  <div class="card"><div class="thumb"></div><div class="name">Dress B</div><div class="price">€145</div></div>
+                  <div class="card"><div class="thumb"></div><div class="name">Dress C</div><div class="price">€119</div></div>
+                </div>
+              </div>
+              <div class="small">The row is doing its job if it finds relevant products. But the row alone does not explain how the broader experience should respond.</div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <div><span class="key">Leave-behind line:</span> “Your current engine answers the product question.”</div>
+          <div>2 / 6</div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-3" role="group" aria-roledescription="slide" aria-label="3 of 6" aria-hidden="true" hidden inert>
+        <div>
+          <div class="eyebrow">Slide 3 · what Optimizely adds</div>
+          <h2>What Optimizely does differently</h2>
+          <p class="sub">We track the interests behind the shopper’s actions, then use those changing interests to decide <strong>what the experience should show next</strong>.</p>
+        </div>
+        <div class="compare-grid">
+          <div class="panel">
+            <div class="flow">
+              <div class="node">
+                <div class="kicker">Observe</div>
+                <div class="title">Read what the shopper is doing now</div>
+                <div class="desc">Views, saves, add-to-bag events, page context and other approved signals.</div>
+              </div>
+              <div class="arrow">↓</div>
+              <div class="node">
+                <div class="kicker">Interpret</div>
+                <div class="title">Build live interest signals</div>
+                <div class="desc">“Wedding guest”, “occasionwear”, “everyday knitwear”, “premium”, “sale seeker” — whatever dimensions you decide to track.</div>
+              </div>
+              <div class="arrow">↓</div>
+              <div class="node">
+                <div class="kicker">Act</div>
+                <div class="title">Choose the experience around the products</div>
+                <div class="desc">Lead image, story, gallery order, campaign module, supporting content, and other approved placements.</div>
+              </div>
+            </div>
+            <div class="callout">This is not just “moving blocks around”. It is making live content decisions from current shopper intent.</div>
+          </div>
+          <div class="panel">
+            <h3>The simplest way to say it</h3>
+            <p style="margin-bottom:16px">Optimizely is about <strong>how the products are presented</strong>, <strong>which supporting content is shown</strong>, and <strong>how quickly the experience reacts when the shopper changes direction</strong>.</p>
+            <div class="status-box">
+              <h4>Recommended phrase</h4>
+              <div class="big">“Your recommender finds products. We make the experience around those products respond to the shopper in the moment.”</div>
+            </div>
+            <div class="status-box" style="margin-top:14px">
+              <h4>Important nuance</h4>
+              <div class="small">Optimizely can also rank candidates itself — but the strongest entry point is not replacement. The strongest entry point is complementary value.</div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <div><span class="key">Leave-behind line:</span> “We turn behaviour into live experience decisions.”</div>
+          <div>3 / 6</div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-4" role="group" aria-roledescription="slide" aria-label="4 of 6" aria-hidden="true" hidden inert>
+        <div>
+          <div class="eyebrow">Slide 4 · how they work together</div>
+          <h2>Show both engines in one flow</h2>
+          <p class="sub">This is the visual most customers need to see: one engine keeps choosing products; the other makes the surrounding experience smarter.</p>
+        </div>
+        <div class="lane">
+          <div class="panel">
+            <h3 style="margin-bottom:14px">Your recommendation engine</h3>
+            <div class="flow">
+              <div class="node"><div class="title">1. Rank products</div><div class="desc">Select Dress A, Dress B, Dress C for this shopper.</div></div>
+              <div class="node"><div class="title">2. Feed the page</div><div class="desc">Populate the recommendation row or product set.</div></div>
+            </div>
+          </div>
+          <div class="mid-badge">Both outputs meet on the page</div>
+          <div class="panel">
+            <h3 style="margin-bottom:14px">Optimizely live experience engine</h3>
+            <div class="flow">
+              <div class="node"><div class="title">1. Read live intent</div><div class="desc">The shopper is behaving like a wedding-guest shopper.</div></div>
+              <div class="node"><div class="title">2. Choose approved experience content</div><div class="desc">Pick the best image, story and supporting module for that current interest.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="logic-grid">
+          <div class="panel">
+            <h3>Result on the page</h3>
+            <div class="mini-page">
+              <div class="page-hero">
+                <div class="visual occasion">Wedding Guest Edit<br><span style="font-size:14px;font-weight:600;opacity:.9">Lead image chosen by Optimizely</span></div>
+                <div class="story"><h4>Story chosen by Optimizely</h4><p>How to dress for wedding weekends, garden parties and late-summer celebrations.</p></div>
+              </div>
+              <div class="rec-strip">
+                <strong>Recommended for you</strong>
+                <div class="cards">
+                  <div class="card"><div class="thumb"></div><div class="name">Dress A</div><div class="price">€129</div></div>
+                  <div class="card"><div class="thumb"></div><div class="name">Dress B</div><div class="price">€145</div></div>
+                  <div class="card"><div class="thumb"></div><div class="name">Dress C</div><div class="price">€119</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>What changed vs what stayed</h3>
+            <div class="label-row">
+              <span class="tag keep">Same products</span>
+              <span class="tag keep">Same product order</span>
+              <span class="tag change">Different lead image</span>
+              <span class="tag change">Different story</span>
+              <span class="tag change">Different supporting module</span>
+            </div>
+            <div class="callout" style="margin-top:18px">That is the easiest proof that the systems are complementary rather than competing.</div>
+          </div>
+        </div>
+        <div class="footer">
+          <div><span class="key">Leave-behind line:</span> “Same product recommendations. Better presentation for this shopper.”</div>
+          <div>4 / 6</div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-5" role="group" aria-roledescription="slide" aria-label="5 of 6" aria-hidden="true" hidden inert>
+        <div>
+          <div class="eyebrow">Slide 5 · one shopper journey</div>
+          <h2>Let them see the difference happen</h2>
+          <p class="sub">Use the buttons below to walk a customer through one shopper. The product row stays stable. The experience content changes as live interest changes.</p>
+          <div class="stepper" id="stepper"></div>
+        </div>
+        <div class="logic-grid">
+          <div class="panel">
+            <div class="mini-page" id="journeyPage">
+              <div class="page-hero">
+                <div class="visual default" id="journeyVisual">New Arrivals<br><span style="font-size:14px;font-weight:600;opacity:.75">Default lead image</span></div>
+                <div class="story"><h4 id="journeyStoryTitle">Default editorial story</h4><p id="journeyStoryBody">A broad story for all shoppers before any clear interest appears.</p></div>
+              </div>
+              <div class="rec-strip">
+                <strong>Recommended for you</strong>
+                <div class="cards" id="journeyCards">
+                  <div class="card"><div class="thumb"></div><div class="name" id="p1">Dress A</div><div class="price">€129</div></div>
+                  <div class="card"><div class="thumb"></div><div class="name" id="p2">Dress B</div><div class="price">€145</div></div>
+                  <div class="card"><div class="thumb"></div><div class="name" id="p3">Dress C</div><div class="price">€119</div></div>
+                </div>
+              </div>
+              <div class="label-row" id="journeyLabels">
+                <span class="tag keep">Product recommendations stay in place</span>
+                <span class="tag">No strong live interest yet</span>
+              </div>
+            </div>
+          </div>
+          <div class="status">
+            <div class="status-box">
+              <h4>What the shopper just did</h4>
+              <div class="big" id="eventText">Arrived on the site and started browsing.</div>
+            </div>
+            <div class="status-box">
+              <h4>Live interest signals</h4>
+              <div class="signal-bars" id="bars"></div>
+            </div>
+            <div class="status-box">
+              <h4>What Optimizely changes</h4>
+              <div class="small" id="changeText">Nothing yet beyond the default. We wait for evidence.</div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <div><span class="key">Talk track:</span> “The product row can stay fixed while the experience around it becomes more relevant.”</div>
+          <div>5 / 6</div>
+        </div>
+      </section>
+
+      <section class="slide" id="slide-6" role="group" aria-roledescription="slide" aria-label="6 of 6" aria-hidden="true" hidden inert>
+        <div>
+          <div class="eyebrow">Slide 6 · why it matters</div>
+          <h2>This is the message to leave behind</h2>
+          <p class="sub">Customers do not need to choose between their current recommendation investment and this approach. The case is that Optimizely adds a new decision layer that makes the total experience more responsive, more explainable and more controllable.</p>
+        </div>
+        <div class="three">
+          <div class="iconcard">
+            <div class="icon">↔️</div>
+            <h3>Complementary</h3>
+            <p>We do not have to replace your product recommender. We can sit alongside it and improve how the experience presents those products.</p>
+          </div>
+          <div class="iconcard">
+            <div class="icon">⚡</div>
+            <h3>Live</h3>
+            <p>We read what the shopper is doing now, build current-interest signals, and use them to decide what should be shown next.</p>
+          </div>
+          <div class="iconcard">
+            <div class="icon">🎛️</div>
+            <h3>Controllable</h3>
+            <p>Your team decides the eligible content, the protected placements and how much learning is allowed to influence the decision.</p>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="quote">“Your engine chooses products. Optimizely makes the experience around those products respond to the shopper in the moment.”</div>
+          <div class="chips" style="margin-top:18px">
+            <span class="chip">same products</span>
+            <span class="chip">smarter presentation</span>
+            <span class="chip">current intent</span>
+            <span class="chip">outcome learning</span>
+            <span class="chip">clear control</span>
+          </div>
+        </div>
+        <div class="footer">
+          <div><span class="key">Suggested next step:</span> test one page, one content slot, one shopper journey.</div>
+          <div>6 / 6</div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  <div class="topbar" style="border-top:1px solid var(--line);border-bottom:none;padding:10px 22px">
+    <div class="meta">Use arrow keys or Next. Scroll within longer slides. Auto-play: 8 seconds.</div>
+    <div class="dots" id="dots" role="group" aria-label="Choose a slide"></div>
+    <span class="sr-only" id="slideStatus" aria-live="polite" aria-atomic="true"></span>
+  </div>
+</div>
+
+<script>
+// Navigation intentionally uses visibility, not a transformed strip.
+// Each panel stays within the viewport at every screen width and zoom level.
+const slides = document.getElementById('slides');
+const slideList = Array.from(slides.querySelectorAll('.slide'));
+const total = slideList.length;
+let current = 0;
+let timer = null;
+const dots = document.getElementById('dots');
+const autoBtn = document.getElementById('autoBtn');
+const slideStatus = document.getElementById('slideStatus');
+for(let i=0;i<total;i++){
+  const d=document.createElement('button');
+  d.type='button';
+  d.className='dot';
+  d.setAttribute('aria-label','Go to slide '+(i+1));
+  d.setAttribute('aria-controls',slideList[i].id);
+  d.addEventListener('click',()=>go(i));
+  dots.appendChild(d);
+}
+function sync(){
+  slideList.forEach((slide,i)=>{
+    const active=i===current;
+    slide.hidden=!active;
+    slide.classList.toggle('is-active',active);
+    slide.setAttribute('aria-hidden',String(!active));
+    if(active) slide.removeAttribute('inert');
+    else slide.setAttribute('inert','');
+  });
+  Array.from(dots.children).forEach((d,i)=>{
+    d.classList.toggle('active',i===current);
+    if(i===current) d.setAttribute('aria-current','step');
+    else d.removeAttribute('aria-current');
+  });
+  const heading=slideList[current].querySelector('h1,h2');
+  slideStatus.textContent='Slide '+(current+1)+' of '+total+': '+(heading ? heading.textContent : '');
+}
+function stopAuto(){
+  if(timer!==null){ clearInterval(timer); timer=null; }
+  autoBtn.textContent='Auto-play';
+  autoBtn.setAttribute('aria-pressed','false');
+}
+function go(n,manual=true){
+  if(manual) stopAuto();
+  const target=((n%total)+total)%total;
+  const moving=target!==current;
+  current=target;
+  sync();
+  if(moving) slideList[current].scrollTop=0;
+}
+function next(){ go(current+1); }
+function prev(){ go(current-1); }
+document.getElementById('nextBtn').onclick=next;
+document.getElementById('prevBtn').onclick=prev;
+document.addEventListener('keydown',e=>{
+  if(e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  const target=e.target;
+  if(target.closest('input,textarea,select,[contenteditable="true"]')) return;
+  // Keep native Space/Enter activation on buttons (including journey steps).
+  if(e.key===' ' && target.closest('button,a,summary,[role="button"]')) return;
+  if(e.key==='ArrowRight' || e.key==='PageDown' || e.key===' '){e.preventDefault();next();}
+  else if(e.key==='ArrowLeft' || e.key==='PageUp'){e.preventDefault();prev();}
+  else if(e.key==='Home'){e.preventDefault();go(0);}
+  else if(e.key==='End'){e.preventDefault();go(total-1);}
+});
+autoBtn.setAttribute('aria-pressed','false');
+autoBtn.onclick=()=>{
+  if(timer!==null){stopAuto();return;}
+  timer=setInterval(()=>go(current+1,false),8000);
+  autoBtn.textContent='Pause';
+  autoBtn.setAttribute('aria-pressed','true');
+};
+// Interaction takes priority over the timer. Never skip away during the demo.
+slides.addEventListener('pointerdown',stopAuto);
+slides.addEventListener('keydown',stopAuto);
+slides.addEventListener('wheel',stopAuto,{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopAuto();});
+
+const steps=[
+  {
+    label:'1. Default',
+    event:'Arrived on the site and started browsing.',
+    visualClass:'default',
+    visual:'New Arrivals<br><span style="font-size:14px;font-weight:600;opacity:.75">Default lead image</span>',
+    storyTitle:'Default editorial story',
+    storyBody:'A broad story for all shoppers before any clear interest appears.',
+    changes:'Nothing yet beyond the default. We wait for evidence.',
+    bars:{ Occasion:10, Everyday:8, Premium:6 },
+    labels:['Product recommendations stay in place','No strong live interest yet'],
+    products:['Dress A','Dress B','Dress C']
+  },
+  {
+    label:'2. First signal',
+    event:'Viewed an occasion dress and opened its details.',
+    visualClass:'occasion',
+    visual:'Wedding Guest Edit<br><span style="font-size:14px;font-weight:600;opacity:.92">Lead image changes</span>',
+    storyTitle:'Occasionwear story appears',
+    storyBody:'The lead story now supports the emerging wedding-guest intent.',
+    changes:'Optimizely brings an occasion-relevant image and story forward.',
+    bars:{ Occasion:55, Everyday:8, Premium:18 },
+    labels:['Product recommendations stay in place','Lead image changes','Editorial story changes'],
+    products:['Dress A','Dress B','Dress C']
+  },
+  {
+    label:'3. Stronger signal',
+    event:'Saved the dress and browsed more event-ready looks.',
+    visualClass:'occasion',
+    visual:'Wedding Weekend Looks<br><span style="font-size:14px;font-weight:600;opacity:.92">More confidence</span>',
+    storyTitle:'The experience leans in',
+    storyBody:'The system has stronger evidence that occasionwear is the right context right now.',
+    changes:'The same recommendation row remains, but the supporting experience becomes more focused.',
+    bars:{ Occasion:82, Everyday:5, Premium:28 },
+    labels:['Same products','Same order','Stronger occasion content'],
+    products:['Dress A','Dress B','Dress C']
+  },
+  {
+    label:'4. Intent changes',
+    event:'Shifted into knitwear and casual layers.',
+    visualClass:'everyday',
+    visual:'Soft Layers for Every Day<br><span style="font-size:14px;font-weight:600;opacity:.82">Experience changes direction</span>',
+    storyTitle:'Everyday knitwear story appears',
+    storyBody:'The current session now looks more like everyday shopping than wedding-guest shopping.',
+    changes:'Occasion interest fades. Everyday interest grows. The experience follows the shopper instead of clinging to the first click.',
+    bars:{ Occasion:35, Everyday:76, Premium:18 },
+    labels:['Product recommendations can remain','Live intent changed','Experience changed with it'],
+    products:['Dress A','Dress B','Dress C']
+  }
+];
+const stepper=document.getElementById('stepper');
+const bars=document.getElementById('bars');
+steps.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.className='step-btn'+(i===0?' active':'');
+  b.textContent=s.label;
+  b.onclick=()=>setStep(i);
+  stepper.appendChild(b);
+});
+function setStep(i){
+  [...stepper.children].forEach((b,idx)=>b.classList.toggle('active',idx===i));
+  const s=steps[i];
+  document.getElementById('eventText').textContent=s.event;
+  const visual=document.getElementById('journeyVisual');
+  visual.className='visual '+s.visualClass;
+  visual.innerHTML=s.visual;
+  document.getElementById('journeyStoryTitle').textContent=s.storyTitle;
+  document.getElementById('journeyStoryBody').textContent=s.storyBody;
+  document.getElementById('changeText').textContent=s.changes;
+  ['p1','p2','p3'].forEach((id,idx)=>document.getElementById(id).textContent=s.products[idx]);
+  bars.innerHTML='';
+  Object.entries(s.bars).forEach(([name,val])=>{
+    const row=document.createElement('div');
+    row.className='bar';
+    row.innerHTML=`<div>${name}</div><div class="track"><div class="fill" style="width:${val}%"></div></div><div>${val}</div>`;
+    bars.appendChild(row);
+  });
+  const labels=document.getElementById('journeyLabels');
+  labels.innerHTML='';
+  s.labels.forEach((txt,idx)=>{
+    const sp=document.createElement('span');
+    sp.className='tag'+(txt.toLowerCase().includes('same') || txt.toLowerCase().includes('stay') ? ' keep':'');
+    sp.textContent=txt;
+    labels.appendChild(sp);
+  });
+}
+setStep(0);
+sync();
+</script>
+</body>
+</html>

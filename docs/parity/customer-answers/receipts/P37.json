@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P37",
+  "workOrderHash": "sha256:501a85d1fd69180897916e94e04e66154d1e0760a71c0ce08d3c91ba2a357875",
+  "artifact": {
+    "revision": "5ac686878f3eb6f807be9229af03c106d04a01ca",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p37-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P37 built on rem/p37-build: 1430fe38 merges rem/integration 97c419b5 (the first programme's closed tickets P02, P01, P28, P03, P10, P07 and P04, P36 of this programme, the landing of the product branch and the governance files) into the per-ticket branch rem/tkt/P37 (8a9d06bd, specification reviewed PASS at da5aaea4 on rem/spec-parity-e, batch S5); RED baseline 10 failed / 6 passed on P37's own reasons (no arrival member, the seed and order refusals, the kit statements), DV4's and DV5's locks green, no PRECONDITION; 38255a22 the mechanism (src/services/platform.ts, visit.ts, SessionManager.ts, src/durable-objects/ShopperReflex.ts, src/services/RealtimeSegmentEngine.ts, src/content/types.ts, kinds.ts, service.ts, decide.ts, src/routes/decisions.ts, realtime.ts, src/learn/receipts.ts: the device class mobile or desktop from the Sec-CH-UA-Mobile hint else the user agent, a tablet as desktop, a request with neither recording no device; the recency bucket same_day, within_7_days, 8_to_30_days or 30_and_more from the stored last visit, none on a first visit, R-P47; both on the visit, written by the event that opens a visit and carried by its later events, no new storage key, R-P7; the hydrate projection's arrival member always present and null when the visit is null, the visit unchanged; the seed signals device and recency with the seed arithmetic and the receipt's arrival sentence in words; a P01 context's optional device with one more specificity, the most specific match winning, an equal-specificity pair refused 422 at publication, a context naming no device matching every device and keeping its configured-order-v1 marker; the learning cell, its grammar and P07's aggregation keys unchanged); 7320ba97 the kit (docs/kit/02 and 03); 5ac68687 device and recency moved out of liveVisit into visitArrival composed beside it, so liveVisit's output stays as W16.C2 pins it, and added to the session host's projection; the SDK and Meridian bundles unchanged (both --check exact); acceptance 16/16 on both hosts at 5ac68687; gate GATE_OK once at 5ac68687 (2905 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P37/implementer/REPORT.md",
+      "git commits on rem/p37-build up to 5ac68687"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P37 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P37/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P37/implementer/logs/acceptance-final.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P37/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P37/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-12T17:17:32.039Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

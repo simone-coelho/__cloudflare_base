@@ -1,0 +1,206 @@
+/* public/demo-kit/compare.css: the demo kit's Before / Now compare overlay.
+   Ported from public/meridian/compare.css (Meridian decision D8; the mechanic is
+   the Coach storefront's split-slider). Pair it with public/demo-kit/compare.js.
+
+   SELF-CONTAINED. Every token below has its default here, on the overlay root,
+   at zero specificity (:where), so a host page overrides any of them with one
+   ordinary rule on the overlay, in any order:
+
+     .cmp-back { --cmp-accent: #EE0000; --cmp-sans: "Inter", sans-serif; }
+
+   The tokens are read on the overlay root, not on :root: a value set on :root
+   alone does not reach them (the root's own declaration wins over inheritance).
+
+   The mechanic: one stage; the Now frame underneath (#cmp-after); the Before
+   frame on top (#cmp-before) clipped to the left of the seam (--cmp-seam,
+   0–100%); a divider with a ↔ handle riding the seam. The frames, the divider
+   and the tags sit on one canvas the size of the (scaled) page, so the seam
+   means the same thing at every zoom; the handle and the tags stay in view
+   while the page scrolls. Side by side shows both frames whole, scrolling
+   together. What changed holds HTML the host supplies. compare.js sizes the
+   stage: the frame fitted inside min(86vw, 1180px) × min(72vh, 760px). */
+
+:where(.cmp-back){
+  --cmp-paper:#FFFFFF;                 /* the box, and the ground under a frame */
+  --cmp-ground:#E5E8ED;                /* the bar and the stage's mat */
+  --cmp-ink:#171A20;                   /* text */
+  --cmp-dim:#4E5665;                   /* secondary text */
+  --cmp-line:#B4BCC8;                  /* rules and control edges */
+  --cmp-accent:#0E5FBF;                /* the seam, the handle, the live segment */
+  --cmp-on-accent:#FFFFFF;             /* text and edges on the accent */
+  --cmp-scrim:rgba(11,14,19,.72);      /* behind the box */
+  --cmp-tag-bg:var(--cmp-ink);         /* the Before / Now tags on the stage */
+  --cmp-tag-ink:#FFFFFF;
+  --cmp-pane-tag-bg:rgba(11,14,19,.82);/* the Before pane's tag in Side by side (Now's is the accent) */
+  --cmp-warn-ink:#7A2E0E;              /* a diagnostic: nothing changed, still moving, resized */
+  --cmp-warn-bg:#FFF1E8;
+  --cmp-warn-line:#E8B39B;
+  --cmp-display:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;   /* the title, the message */
+  --cmp-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --cmp-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --cmp-title-weight:600;
+  --cmp-radius:14px;
+  --cmp-z:950;                         /* above a director strip: this moment owns the screen */
+}
+
+.cmp-back{
+  position:fixed;inset:0;z-index:var(--cmp-z);
+  display:none;place-items:center;padding:28px;
+  background:var(--cmp-scrim);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  color:var(--cmp-ink);font:14px/1.45 var(--cmp-sans);text-align:left;
+  outline:none;   /* a focusable scrim (tabindex=-1) so a click inside keeps keys in the dialog; the ring belongs on controls */
+}
+.cmp-back.open{display:grid}
+.cmp-back *,.cmp-back *::before,.cmp-back *::after{box-sizing:border-box}
+
+.cmp-box{
+  background:var(--cmp-paper);border-radius:var(--cmp-radius);overflow:hidden;
+  display:flex;flex-direction:column;
+  max-width:calc(100vw - 56px);max-height:calc(100vh - 56px);
+  box-shadow:0 30px 90px rgba(11,14,19,.5);
+}
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+.cmp-bar{
+  display:flex;align-items:center;gap:10px;padding:13px 18px;flex:none;
+  background:var(--cmp-ground);border-bottom:1px solid var(--cmp-line);
+}
+.cmp-title{
+  flex:1;min-width:0;margin:0;
+  font:var(--cmp-title-weight) 22px/1.15 var(--cmp-display);letter-spacing:-.01em;color:var(--cmp-ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cmp-btn{
+  min-height:38px;padding:8px 13px;border-radius:5px;cursor:pointer;
+  background:var(--cmp-paper);color:var(--cmp-ink);border:1px solid var(--cmp-line);
+  font:500 13px/1.25 var(--cmp-sans);white-space:nowrap;
+}
+.cmp-btn:hover:not(:disabled){border-color:var(--cmp-accent)}
+.cmp-btn:disabled{opacity:.45;cursor:default}
+.cmp-btn[hidden]{display:none}
+.cmp-btn kbd{
+  font:500 10.5px/1 var(--cmp-mono);color:var(--cmp-dim);
+  padding:3px 5px;margin-left:6px;border:1px solid var(--cmp-line);border-radius:3px;background:var(--cmp-ground);
+}
+
+/* ── the tools: how to compare, and how close to look ───────────────────── */
+.cmp-tools{display:flex;align-items:center;gap:10px;flex:none}
+.cmp-seg{display:flex;border:1px solid var(--cmp-line);border-radius:6px;overflow:hidden}
+.cmp-btn.seg{border:0;border-radius:0;padding:7px 12px}
+.cmp-btn.seg + .cmp-btn.seg{border-left:1px solid var(--cmp-line)}
+.cmp-btn.seg.on{background:var(--cmp-accent);color:var(--cmp-on-accent)}
+.cmp-btn.seg.zoomv{min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+
+/* ── stage: one surface, two frames, a seam ─────────────────────────────── */
+.cmp-stage{
+  position:relative;overflow-x:hidden;overflow-y:auto;margin:0 auto;flex:none;
+  background:var(--cmp-ground);
+  touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize;
+}
+.cmp-stage[hidden]{display:none}
+.cmp-stage.still{cursor:default}
+/* The canvas is the page at its displayed scale; fit() sizes it. */
+.cmp-canvas{position:relative}
+.cmp-canvas[hidden]{display:none}
+.cmp-frame{
+  position:absolute;inset:0;
+  background:var(--cmp-paper) left top / 100% auto no-repeat;   /* never stretched */
+}
+/* The Coach mechanic: Now underneath (#cmp-after, plain), Before on top,
+   clipped to the LEFT of the seam: everything right of it reveals Now. */
+.cmp-before{clip-path:inset(0 calc(100% - var(--cmp-seam,50%)) 0 0)}
+
+/* the divider rides the seam; the ↔ handle stays in the middle of the view */
+.cmp-divider{
+  position:absolute;top:0;bottom:0;left:var(--cmp-seam,50%);width:2px;margin-left:-1px;
+  background:var(--cmp-accent);pointer-events:none;
+  box-shadow:0 0 0 1px rgba(255,255,255,.55);
+}
+.cmp-handle{
+  position:sticky;top:calc(50% - 19px);display:grid;place-items:center;
+  width:38px;height:38px;margin-left:-18px;border-radius:50%;
+  background:var(--cmp-accent);color:var(--cmp-on-accent);border:2px solid var(--cmp-on-accent);
+  font:600 17px/1 var(--cmp-sans);
+  box-shadow:0 2px 10px rgba(11,14,19,.35);
+}
+
+/* the frame labels, pinned to their side and to the top of the view:
+   "Before · hh:mm · where · who" left, "Now · hh:mm · where · who" right */
+.cmp-tags{position:absolute;inset:0;z-index:2;pointer-events:none;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 12px 0}
+.cmp-tag{
+  position:sticky;top:12px;min-width:0;max-width:calc(50% - 6px);
+  display:inline-flex;align-items:baseline;gap:6px;
+  padding:7px 10px;border-radius:4px;
+  background:var(--cmp-tag-bg);color:var(--cmp-tag-ink);
+  font:600 11px/1.2 var(--cmp-mono);letter-spacing:.12em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;
+}
+.cmp-tag[hidden]{display:none}
+.cmp-tag span{font-weight:500;letter-spacing:.02em;text-transform:none;opacity:.85;overflow:hidden;text-overflow:ellipsis}
+.cmp-tag-now{margin-left:auto}
+
+/* a message instead of frames: never a blank stage */
+.cmp-msg{
+  position:absolute;inset:0;z-index:3;
+  display:grid;place-items:center;align-content:center;
+  padding:40px;text-align:center;
+  background:var(--cmp-ground);color:var(--cmp-ink);
+  font:400 16px/1.5 var(--cmp-sans);
+}
+.cmp-msg[hidden]{display:none}
+.cmp-msg b{display:block;font:var(--cmp-title-weight) 26px/1.2 var(--cmp-display);margin-bottom:10px}
+.cmp-msg.wait b::after{content:"";display:inline-block;width:.5em;height:.5em;margin-left:.45em;border-radius:50%;
+  background:var(--cmp-accent);vertical-align:middle;animation:cmp-pulse 1s ease-in-out infinite}
+@keyframes cmp-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── side by side: two whole pages, scrolling together ──────────────────── */
+.cmp-split{display:flex;gap:18px;margin:0 auto;flex:none}
+.cmp-split[hidden]{display:none}
+.cmp-pane{position:relative;overflow:auto;background:var(--cmp-ground);flex:none;
+  border:1px solid var(--cmp-line);border-radius:6px}
+.cmp-shot{background:var(--cmp-paper) left top no-repeat;background-size:100% auto}
+.cmp-pane-tag{position:sticky;top:0;left:0;z-index:2;display:inline-block;max-width:100%;
+  font:600 11px/1.2 var(--cmp-sans);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:var(--cmp-pane-tag-bg);color:var(--cmp-tag-ink);padding:6px 10px;border-radius:0 0 6px 0}
+.cmp-pane-tag span{font-weight:500;letter-spacing:.02em;text-transform:none;opacity:.85}
+.cmp-pane-tag.now{background:var(--cmp-accent);color:var(--cmp-on-accent)}
+
+/* ── what changed: the host's own account of the two moments ────────────── */
+.cmp-details{overflow:auto;margin:0 auto;padding:18px 20px;background:var(--cmp-paper);flex:none;outline:none}
+.cmp-details[hidden]{display:none}
+.cmp-details:focus-visible{box-shadow:inset 0 0 0 2px var(--cmp-accent)}
+
+/* ── foot: the host's sentence, then the hint line ──────────────────────── */
+.cmp-caption{
+  margin:0;padding:10px 18px 0;background:var(--cmp-paper);flex:none;
+  font:400 13px/1.45 var(--cmp-sans);color:var(--cmp-dim);text-align:center;
+}
+.cmp-caption[hidden]{display:none}
+.cmp-hint{
+  padding:10px 18px 13px;background:var(--cmp-paper);flex:none;
+  font:400 12px/1.4 var(--cmp-mono);color:var(--cmp-dim);text-align:center;
+}
+/* A diagnostic (nothing changed, still moving, resized) is not a hint: it is the
+   reason the two sides look alike, and it has to be read from the back of the
+   room, not found in 12px dim mono. */
+.cmp-hint.warn{
+  font:600 14px/1.45 var(--cmp-sans);color:var(--cmp-warn-ink);background:var(--cmp-warn-bg);border-top:1px solid var(--cmp-warn-line);
+}
+/* A notice (compare.js notice()): a press that was refused, and why ("Compare does not replace this comparison").
+   Read from the back of the room like a diagnostic, but it is about the press, not the frames. */
+.cmp-hint.notice{
+  font:600 14px/1.45 var(--cmp-sans);color:var(--cmp-ink);background:var(--cmp-ground);border-top:1px solid var(--cmp-line);
+}
+
+/* ── keyboard focus, visible on every control ───────────────────────────── */
+.cmp-btn:focus-visible{outline:2px solid var(--cmp-accent);outline-offset:2px}
+.cmp-stage:focus-visible{outline:2px solid var(--cmp-accent);outline-offset:-2px}
+.cmp-pane:focus-visible{outline:2px solid var(--cmp-accent);outline-offset:-2px}
+
+/* ── a press that is the capture (armPress), while it renders ────────────── */
+/* compare.js puts .cmp-busy on an armed button from the press until the capture
+   lands: the room sees the button working rather than a press that did nothing. */
+.cmp-busy{cursor:progress!important;opacity:.72}
+
+@media (prefers-reduced-motion:reduce){.cmp-msg.wait b::after{animation:none}}

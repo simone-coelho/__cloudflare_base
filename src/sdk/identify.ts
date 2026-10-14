@@ -7,8 +7,12 @@
 // assertion is always computed by the site's backend and handed to the page.
 // A proof provider can obtain a fresh visitor-bound assertion after a 409 and
 // successful detach; static proof is never reused for a different visitor.
+// P12: an identifier-change statement names no visitor, so it travels unchanged
+// on every link request of the call, the retry included; without one the link
+// body is exactly what it was.
 
 import type { Core } from './core';
+import type { AccountChangeStatement } from './types';
 
 export interface IdentifyOptions {
   /** HMAC from the site's backend over tenant, visitorId, accountId and exp (see signAssertion). */
@@ -20,6 +24,8 @@ export interface IdentifyOptions {
     { assertion: string; exp: number } | Promise<{ assertion: string; exp: number }>;
   /** Where the sign-in happened, for the audit trail: 'login', 'checkout', … */
   source?: string;
+  /** P12: the backend-signed statement that this account was earlier known by `from`; sent as given. */
+  accountChange?: AccountChangeStatement;
 }
 
 export type IdentifyResult =
@@ -59,6 +65,7 @@ export function createIdentity(core: Core): Identity {
       ...(o.source ? { source: o.source } : {}),
       ...(typeof exp === 'number' ? { exp } : {}),
       ...(assertion ? { assertion } : {}),
+      ...(o.accountChange !== undefined ? { accountChange: o.accountChange } : {}),
     });
     if (!core.isCurrent(generation) || core.visitorId !== visitorId) return { failure: failure('identity changed during identify', 0, retry) };
     return { visitorId, response };

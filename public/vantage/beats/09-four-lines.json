@@ -1,0 +1,63 @@
+{
+ "name": "09-four-lines",
+ "beat": 9,
+ "act": 3,
+ "actName": "The phone page follows intent",
+ "press": "Step the line selector from one to four; visit the kids’ watch",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "events": [
+  {
+   "type": "custom",
+   "data": {
+    "event": "select",
+    "control": "lines",
+    "lines": "family",
+    "count": 4
+   },
+   "note": "the line selector at four lines"
+  },
+  {
+   "type": "page_view",
+   "data": {
+    "page": "kids-watch",
+    "category": "watches-tablets",
+    "intent": "add-line",
+    "lines": "family"
+   },
+   "note": "the kids’ watch page"
+  }
+ ],
+ "snapshot": {
+  "page": "phone",
+  "phone": "galaxy-s26",
+  "slots": [
+   "pdp-modules",
+   "plan-pairing"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  }
+ },
+ "then": {
+  "page": "home",
+  "slots": [
+   "hero",
+   "deals"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  },
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  }
+ },
+ "engine": "lines family moves on the selector (a declared selector weighs 2) and again on the watch page, with intent add-line and category watches-tablets.",
+ "sees": "Connected devices rises to the top of the six with the four-line per-line price (measured in New York: 0.29 against 0.26 at 15 s between presses, 0.291 against 0.289 at fast presses); the family starter (Unlimited Go) leads in plan pairing; on the homepage the hero becomes the family hero and the four-line promotion enters the four (measured: first, 0.595, level with the watch-and-tablet line; deals weights intent 1 and lines 0.4)."
+}

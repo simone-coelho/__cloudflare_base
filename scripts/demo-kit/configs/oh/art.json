@@ -1,0 +1,2530 @@
+{
+  "about": "OH campaign art (Lane A1, 2026-10-02): the source for scripts/generate-oh-art.mjs. Every hero slide, deal tile (with its tall bento variant), room tile and room banner is a generated scene (no product, no text, no marks) with the piece's lead product placed on it from LG's own cutout in public/oh/img/products/, so nothing on the art is a model's guess at a product. Headline, sub, badge and button are content the page draws over the art. A verdict in gate holds only for the sha256 of the exact WebP reviewed; a changed byte reads pending. Tones (lane A1b, 2026-10-03): the base keys below are A1's night set (tone dark); tones.light is A1b's daylight recipe over them (style, aspect framing, scenes, scrims, shadows, scene filter, encoders, and each job's pick, position, lift, scrim and verdict; never a product's size). defaultTone names the tone the generator composes when --tone is not given.",
+  "model": "gemini-3.1-flash-image",
+  "budgetMegabytes": 40,
+  "style": "Photographic campaign image for a premium home-electronics and home-appliance store's homepage, in the family of a flagship electronics brand's own website banners: rich, dark, cinematic and uncluttered, with one soft colour glow. Straight-on, eye-level camera with a level horizon and one-point perspective; sharp focus; photographic realism; soft, believable light. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO signage, NO posters or artwork with writing, NO watermarks, NO people, NO hands, NO faces, NO pets. NO television, NO screen, NO monitor, NO speaker and NO appliance anywhere in the frame.",
+  "aspects": {
+    "wide": {
+      "ratio": "21:9",
+      "frame": "Wide banner framing: the left three fifths are calm, dark and simple (a plain, softly lit wall with no objects of interest), ready for a white headline; the right two fifths hold {area}, empty and softly lit."
+    },
+    "card": {
+      "ratio": "16:9",
+      "frame": "Card framing: the right half holds {area}, empty and softly lit; the left half is calm, dark and simple, ready for a white headline; the bottom edge falls off to shadow."
+    },
+    "tall": {
+      "ratio": "4:5",
+      "frame": "Portrait card framing: {area} fills the upper middle of the frame, empty and softly lit; below it the same floor continues seamlessly to the bottom edge, fading gradually into deep shadow, with no band, no step and no edge across it, calm and plain, ready for a white headline."
+    }
+  },
+  "formats": {
+    "slide": {
+      "width": 1440,
+      "height": 640,
+      "aspect": "wide",
+      "textZone": [
+        0.04,
+        0.18,
+        0.56,
+        0.82
+      ],
+      "productZone": [
+        0.6,
+        0.08,
+        0.98,
+        0.96
+      ],
+      "badgeZones": [
+        [
+          0.82,
+          0.04,
+          0.98,
+          0.18
+        ],
+        [
+          0.6,
+          0.04,
+          0.76,
+          0.18
+        ],
+        [
+          0.82,
+          0.8,
+          0.98,
+          0.94
+        ]
+      ],
+      "scrim": {
+        "kind": "left",
+        "strength": 0.5,
+        "reach": 0.66
+      }
+    },
+    "slide540": {
+      "width": 1440,
+      "height": 540,
+      "from": "slide",
+      "aspect": "wide",
+      "baseMargin": 0.075,
+      "textZone": [
+        0.04,
+        0.18,
+        0.56,
+        0.82
+      ],
+      "productZone": [
+        0.6,
+        0.06,
+        0.98,
+        0.97
+      ],
+      "badgeZones": [
+        [
+          0.82,
+          0.04,
+          0.98,
+          0.18
+        ],
+        [
+          0.6,
+          0.04,
+          0.76,
+          0.18
+        ],
+        [
+          0.82,
+          0.8,
+          0.98,
+          0.94
+        ]
+      ],
+      "scrim": {
+        "kind": "left",
+        "strength": 0.5,
+        "reach": 0.66
+      }
+    },
+    "tile": {
+      "width": 720,
+      "height": 420,
+      "aspect": "card",
+      "textZone": [
+        0.05,
+        0.58,
+        0.5,
+        0.94
+      ],
+      "productZone": [
+        0.5,
+        0.06,
+        0.98,
+        0.94
+      ],
+      "badgeZones": [
+        [
+          0.04,
+          0.05,
+          0.4,
+          0.2
+        ]
+      ],
+      "scrim": {
+        "kind": "bottom-left",
+        "strength": 0.55,
+        "reach": 0.62
+      }
+    },
+    "tall": {
+      "width": 720,
+      "height": 860,
+      "aspect": "tall",
+      "textZone": [
+        0.06,
+        0.7,
+        0.94,
+        0.95
+      ],
+      "productZone": [
+        0.06,
+        0.06,
+        0.94,
+        0.66
+      ],
+      "badgeZones": [
+        [
+          0.05,
+          0.03,
+          0.45,
+          0.12
+        ],
+        [
+          0.55,
+          0.03,
+          0.95,
+          0.12
+        ]
+      ],
+      "scrim": {
+        "kind": "bottom",
+        "strength": 0.6,
+        "reach": 0.45
+      }
+    },
+    "banner": {
+      "width": 1440,
+      "height": 360,
+      "aspect": "wide",
+      "textZone": [
+        0.04,
+        0.15,
+        0.56,
+        0.85
+      ],
+      "productZone": [
+        0.62,
+        0.04,
+        0.98,
+        0.98
+      ],
+      "badgeZones": [],
+      "scrim": {
+        "kind": "left",
+        "strength": 0.5,
+        "reach": 0.62
+      }
+    },
+    "banner-tall": {
+      "width": 1440,
+      "height": 520,
+      "extends": "banner",
+      "aspect": "wide",
+      "note": "The room banner for a taller banner box (M1e, about 490 px at 1440): the banner's own scene extended upward from the same bottom edge, the product at the very pixel size and scene position it has in the 1440x360 banner (its box is computed on the banner's frame, never this one).",
+      "textZone": [
+        0.04,
+        0.15,
+        0.56,
+        0.85
+      ],
+      "productZone": [
+        0.62,
+        0.04,
+        0.98,
+        0.98
+      ],
+      "badgeZones": [],
+      "scrim": {
+        "kind": "left",
+        "strength": 0.5,
+        "reach": 0.62
+      }
+    }
+  },
+  "layouts": {
+    "slide": {
+      "floor": {
+        "cx": 0.79,
+        "bottom": 0.88,
+        "boxW": 0.36,
+        "boxH": 0.7
+      },
+      "wall": {
+        "cx": 0.79,
+        "bottom": 0.66,
+        "boxW": 0.38,
+        "boxH": 0.52
+      },
+      "console": {
+        "cx": 0.79,
+        "bottom": 0.7,
+        "boxW": 0.36,
+        "boxH": 0.5
+      }
+    },
+    "tile": {
+      "floor": {
+        "cx": 0.74,
+        "bottom": 0.9,
+        "boxW": 0.44,
+        "boxH": 0.72
+      },
+      "wall": {
+        "cx": 0.72,
+        "bottom": 0.66,
+        "boxW": 0.48,
+        "boxH": 0.5
+      },
+      "console": {
+        "cx": 0.72,
+        "bottom": 0.7,
+        "boxW": 0.46,
+        "boxH": 0.5
+      }
+    },
+    "tall": {
+      "floor": {
+        "cx": 0.5,
+        "bottom": 0.64,
+        "boxW": 0.72,
+        "boxH": 0.5
+      },
+      "wall": {
+        "cx": 0.5,
+        "bottom": 0.5,
+        "boxW": 0.82,
+        "boxH": 0.36
+      },
+      "console": {
+        "cx": 0.5,
+        "bottom": 0.52,
+        "boxW": 0.8,
+        "boxH": 0.38
+      }
+    },
+    "banner": {
+      "floor": {
+        "cx": 0.8,
+        "bottom": 0.94,
+        "boxW": 0.3,
+        "boxH": 0.84
+      },
+      "wall": {
+        "cx": 0.8,
+        "bottom": 0.78,
+        "boxW": 0.3,
+        "boxH": 0.62
+      },
+      "console": {
+        "cx": 0.8,
+        "bottom": 0.8,
+        "boxW": 0.3,
+        "boxH": 0.66
+      }
+    }
+  },
+  "encode": {
+    "webp": {
+      "quality": 80,
+      "effort": 6,
+      "smartSubsample": true
+    },
+    "avif": {
+      "quality": 56,
+      "effort": 4,
+      "chromaSubsampling": "4:2:0"
+    },
+    "jpg": {
+      "quality": 70,
+      "mozjpeg": true,
+      "progressive": true
+    }
+  },
+  "maxUpscale": 1.5,
+  "despeckBelow": 60,
+  "largeSource": {
+    "formats": [
+      "slide",
+      "banner"
+    ],
+    "aboveScale": 1,
+    "note": "Where D2 has an accepted 840 cutout (MANIFEST.json large), hero slides, room banners and any tile or tall tile that would scale the 420 cutout above 1.0x draw the 840 file instead, into the same box the 420 fit gives, so every zone holds. Pixel treatments are stated at the 420 scale and scaled with the file."
+  },
+  "scenes": {
+    "living-amber": {
+      "summary": "dark living room at night, charcoal wall, amber stadium-light glow, low walnut console",
+      "room": "A dark, modern living room at night: charcoal plaster walls, a warm amber and ember-orange glow washing across the wall from the left as if from distant stadium floodlights through a window, a low dark walnut media console along the floor at the right.",
+      "area": "a large, empty stretch of charcoal wall above the low walnut media console, nothing hanging on the wall and nothing standing on the console",
+      "gradient": {
+        "base": "#14100d",
+        "glow": "#c2541a",
+        "glowAt": [
+          0.72,
+          0.38
+        ],
+        "floor": "#0b0908"
+      }
+    },
+    "living-blue": {
+      "summary": "calm dark living room in the evening, navy-charcoal walls, soft blue-violet cove glow, matte-black console",
+      "room": "A calm, dark modern living room in the evening: deep navy-charcoal walls, a soft cool blue and violet ambient glow from hidden cove lighting, the edge of a dark boucle sofa in shadow at the far left foreground, a low matte-black media console at the right.",
+      "area": "a large, empty stretch of navy-charcoal wall above the low matte-black media console, nothing hanging on the wall and nothing standing on the console",
+      "gradient": {
+        "base": "#0d1120",
+        "glow": "#3b4fb8",
+        "glowAt": [
+          0.74,
+          0.4
+        ],
+        "floor": "#080a12"
+      }
+    },
+    "living-sound": {
+      "summary": "warm dark living room at night, espresso wood-panelled wall, long low oak console, brass lamp glow",
+      "room": "A dark, warm modern living room at night: a deep espresso wood-panelled wall, a long low oak media console running across the right half of the room, a warm brass floor lamp glowing at the far left, a soft amber glow behind the console.",
+      "area": "the long low oak media console and the dark panelled wall above it, both completely empty",
+      "gradient": {
+        "base": "#15100c",
+        "glow": "#9a5a24",
+        "glowAt": [
+          0.74,
+          0.5
+        ],
+        "floor": "#0c0907"
+      }
+    },
+    "studio-burgundy": {
+      "summary": "seamless deep burgundy (#4a0a1e) studio, magenta-red glow, glossy dark floor",
+      "room": "A seamless deep burgundy (#4a0a1e) studio set with a soft magenta-red glow of light rising behind the right of the frame, a glossy dark floor that softly reflects the glow, a gentle vignette.",
+      "area": "an empty patch of glossy floor in front of the glow",
+      "gradient": {
+        "base": "#4a0a1e",
+        "glow": "#c2185b",
+        "glowAt": [
+          0.76,
+          0.42
+        ],
+        "floor": "#22040d"
+      }
+    },
+    "studio-rgb": {
+      "summary": "seamless black studio, soft red, green and blue glows, glossy black floor",
+      "room": "A seamless black studio set; soft overlapping glows of pure red, green and blue light bloom on the back wall behind the right of the frame, like light from tiny coloured pixels; a glossy black floor faintly reflecting the colours.",
+      "area": "an empty patch of glossy black floor in front of the coloured glows",
+      "gradient": {
+        "base": "#050507",
+        "glow": "#5a2bd6",
+        "glowAt": [
+          0.76,
+          0.42
+        ],
+        "floor": "#020203"
+      }
+    },
+    "studio-charcoal": {
+      "summary": "seamless charcoal studio, soft cool blue glow, satin floor",
+      "room": "A seamless charcoal-grey studio set with a soft cool blue glow on the back wall at the right and a faint warm rim of light along the floor; a smooth satin floor; calm and premium.",
+      "area": "an empty patch of satin floor in front of the glow",
+      "gradient": {
+        "base": "#1d1f24",
+        "glow": "#3c6fb0",
+        "glowAt": [
+          0.76,
+          0.42
+        ],
+        "floor": "#121316"
+      }
+    },
+    "studio-green": {
+      "summary": "seamless near-black studio, soft emerald glow, satin black floor",
+      "room": "A seamless near-black studio set with a soft emerald-green glow blooming on the back wall at the right, a subtle green rim of light on a satin black floor; a calm late-night gaming mood.",
+      "area": "an empty patch of satin black floor in front of the green glow",
+      "gradient": {
+        "base": "#050806",
+        "glow": "#1f8a4c",
+        "glowAt": [
+          0.76,
+          0.42
+        ],
+        "floor": "#030504"
+      }
+    },
+    "laundry-evening": {
+      "summary": "refined laundry room in warm evening light, sage-green cabinetry, oak shelf with towels, stone floor",
+      "room": "A refined laundry room in warm evening light: deep sage-green painted cabinetry and a light oak open shelf with neatly folded white towels and a small plant high at the left, a pale stone floor, warm under-shelf lighting, a soft warm glow on the back wall at the right.",
+      "area": "an empty stretch of stone floor in front of a plain sage-green wall, nothing standing there",
+      "gradient": {
+        "base": "#1a1f1a",
+        "glow": "#b07a3a",
+        "glowAt": [
+          0.76,
+          0.45
+        ],
+        "floor": "#2a2722"
+      }
+    },
+    "laundry-burgundy": {
+      "summary": "boutique laundry room at dusk, deep burgundy panelling, brass rail, herringbone wood floor, rosy glow",
+      "room": "A boutique laundry room at dusk: deep burgundy (#4a0a1e) painted panelling, a slim brass rail with a few empty wooden hangers high at the left, a warm herringbone wood floor, a soft rosy glow on the back wall at the right.",
+      "area": "an empty stretch of herringbone floor in front of the plain burgundy panelling, nothing standing there",
+      "gradient": {
+        "base": "#3a0918",
+        "glow": "#b0364f",
+        "glowAt": [
+          0.76,
+          0.45
+        ],
+        "floor": "#2b1610"
+      }
+    },
+    "kitchen-evening": {
+      "summary": "modern kitchen at night, matte charcoal and walnut cabinets at the left, dark stone backsplash, concrete floor, amber glow",
+      "room": "A modern kitchen at night: matte charcoal flat-front cabinets above a dark walnut run of base cabinets at the far left, a warm-lit dark stone backsplash wall, a polished concrete floor, a soft warm amber glow on the back wall at the right.",
+      "area": "an empty stretch of polished concrete floor in front of the dark stone backsplash wall, with no cabinets and nothing standing there",
+      "gradient": {
+        "base": "#17140f",
+        "glow": "#a8692e",
+        "glowAt": [
+          0.76,
+          0.45
+        ],
+        "floor": "#22201c"
+      }
+    },
+    "kitchen-wide": {
+      "summary": "spacious kitchen in the evening, walnut and matte black cabinetry at the far left, long dark stone wall, pendant glow, oak floor",
+      "room": "A spacious modern kitchen in the evening: warm walnut and matte black cabinetry at the far left only, a long dark stone feature wall, the warm glow of a brass pendant light, a light oak floor.",
+      "area": "a wide, open, empty stretch of light oak floor in front of the plain dark stone wall, with no cabinets and nothing standing there",
+      "gradient": {
+        "base": "#16130f",
+        "glow": "#9c6a32",
+        "glowAt": [
+          0.74,
+          0.42
+        ],
+        "floor": "#3a2c1e"
+      }
+    }
+  },
+  "products": {
+    "S90TY": {
+      "erase": [
+        [
+          300,
+          85,
+          400,
+          140
+        ]
+      ],
+      "note": "LG's composited \"perfect match for LG OLED evo\" label erased from the ground beside the product (whole connected parts inside the box only); the white glow around the dark body faded at the edge",
+      "matte": {
+        "band": 24,
+        "lo": 0.42,
+        "hi": 0.62
+      }
+    },
+    "M7-P4_H7_W7": {
+      "erase": [
+        [
+          230,
+          25,
+          400,
+          56
+        ],
+        [
+          255,
+          340,
+          400,
+          392
+        ]
+      ],
+      "note": "LG's composited series and audio-format wordmarks erased from the ground above and below the set (whole connected parts inside the boxes only); the white glow around the dark bodies faded at the edge",
+      "matte": {
+        "band": 14,
+        "lo": 0.42,
+        "hi": 0.62
+      }
+    },
+    "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT": {
+      "erase": [
+        [
+          310,
+          46,
+          400,
+          148
+        ]
+      ],
+      "note": "LG's composited \"America's Most Reliable\" shield erased from the ground above the dishwasher (whole connected parts inside the box only)",
+      "trimBase": true
+    },
+    "WM4000HWA_DLEX4000W_WD300CW_WDP6W": {
+      "erase": [
+        [
+          296,
+          18,
+          392,
+          126
+        ]
+      ],
+      "note": "LG's composited \"America's Most Reliable\" shield erased from the ground above the dryer (whole connected parts inside the box only)",
+      "trimBase": true
+    },
+    "OLED65C6PUA": {
+      "note": "on its own stand"
+    },
+    "OLED65C6PUA#wall": {
+      "sku": "OLED65C6PUA",
+      "standCut": true,
+      "note": "the stand cropped off below the panel, for a wall-mounted TV"
+    },
+    "WM4000HWA": {
+      "trimBase": true,
+      "note": "white appliance: the ragged ground below its base cleared"
+    },
+    "LSGL6335X": {
+      "trimBase": true,
+      "note": "white appliance: the ragged ground below its base cleared"
+    },
+    "WKE100HWA": {
+      "trimBase": true,
+      "note": "white appliance: the ragged ground below its base cleared"
+    },
+    "LDNPM654S": {
+      "trimBase": true,
+      "note": "white appliance: the ragged ground below its base cleared"
+    },
+    "WM6700HWA": {
+      "trimBase": true,
+      "note": "white appliance: the ragged ground below its base cleared"
+    }
+  },
+  "substitutes": {
+    "LDNTH753S": {
+      "with": "LDNPM654S",
+      "why": "LG's image of LDNTH753S carries a composited Consumer Reports badge across the door, which cannot be removed without editing the product; LDNPM654S, a stainless dishwasher in the same piece's featured list, has a clean image"
+    }
+  },
+  "rooms": {
+    "room_living_room": {
+      "title": "TVs",
+      "view": "tvs",
+      "room": "living-room"
+    },
+    "room_laundry_room": {
+      "title": "Laundry",
+      "view": "laundry",
+      "room": "laundry-room"
+    },
+    "room_kitchen": {
+      "title": "Kitchen",
+      "view": "kitchen",
+      "room": "kitchen"
+    }
+  },
+  "pieces": [
+    {
+      "id": "hero_nfl_gift_card",
+      "kind": "hero",
+      "product": "OLED77G6WUA",
+      "mount": "wall",
+      "scene": "living-amber",
+      "formats": {
+        "slide": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.765,
+            "bottom": 0.635,
+            "boxW": 0.38,
+            "boxH": 0.56,
+            "shrink": 0.46
+          }
+        },
+        "slide540": {}
+      }
+    },
+    {
+      "id": "hero_living_room",
+      "kind": "hero",
+      "product": "OLED65C6PUA",
+      "mount": "console",
+      "scene": "living-blue",
+      "formats": {
+        "slide": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.77,
+            "bottom": 0.705,
+            "boxW": 0.36,
+            "boxH": 0.55,
+            "shrink": 0.48
+          }
+        },
+        "slide540": {}
+      }
+    },
+    {
+      "id": "hero_laundry_room",
+      "kind": "hero",
+      "product": "WM4000HWA",
+      "mount": "floor",
+      "scene": "laundry-evening",
+      "formats": {
+        "slide": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.78,
+            "bottom": 0.88,
+            "boxW": 0.36,
+            "boxH": 0.68,
+            "shrink": 0.75
+          }
+        },
+        "slide540": {}
+      }
+    },
+    {
+      "id": "hero_kitchen",
+      "kind": "hero",
+      "product": "LSGL6335X",
+      "mount": "floor",
+      "scene": "kitchen-evening",
+      "formats": {
+        "slide": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.79,
+            "bottom": 0.93,
+            "boxW": 0.36,
+            "boxH": 0.7,
+            "shrink": 0.75
+          }
+        },
+        "slide540": {}
+      }
+    },
+    {
+      "id": "pin_micro_rgb_evo",
+      "kind": "hero",
+      "product": "75MRGB95BUA",
+      "mount": "floor",
+      "reflection": true,
+      "scene": "studio-rgb",
+      "formats": {
+        "slide": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.77,
+            "bottom": 0.8,
+            "boxW": 0.38,
+            "boxH": 0.6,
+            "shrink": 0.46
+          }
+        },
+        "slide540": {},
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.72,
+            "bottom": 0.78,
+            "boxW": 0.46,
+            "boxH": 0.6
+          }
+        },
+        "tall": {
+          "pick": "d",
+          "layout": {
+            "cx": 0.56,
+            "bottom": 0.62,
+            "boxW": 0.84,
+            "boxH": 0.42,
+            "shrink": 0.52
+          }
+        }
+      }
+    },
+    {
+      "id": "hero_continue",
+      "kind": "hero",
+      "product": null,
+      "scene": "studio-charcoal",
+      "note": "no product by design: the continue hero paints the shopper's own configuration, so the page draws her product into the product zone",
+      "formats": {
+        "slide": {
+          "pick": "a"
+        },
+        "slide540": {}
+      }
+    },
+    {
+      "id": "deal_nfl_gift_card",
+      "kind": "deal",
+      "product": "OLED77G6WUA",
+      "mount": "wall",
+      "scene": "living-amber",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.75,
+            "bottom": 0.64,
+            "boxW": 0.48,
+            "boxH": 0.5
+          }
+        },
+        "tall": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.6,
+            "bottom": 0.62,
+            "boxW": 0.7,
+            "boxH": 0.46,
+            "shrink": 0.44
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_matching_soundbar",
+      "kind": "deal",
+      "product": "S90TY",
+      "mount": "console",
+      "scene": "living-sound",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.74,
+            "bottom": 0.68,
+            "boxW": 0.46,
+            "boxH": 0.5
+          }
+        },
+        "tall": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.58,
+            "bottom": 0.56,
+            "boxW": 0.75,
+            "boxH": 0.36
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_sound_suite_bundle",
+      "kind": "deal",
+      "product": "M7-P4_H7_W7",
+      "mount": "console",
+      "scene": "living-sound",
+      "formats": {
+        "tile": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.74,
+            "bottom": 0.72,
+            "boxW": 0.46,
+            "boxH": 0.5
+          }
+        },
+        "tall": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.62,
+            "bottom": 0.59,
+            "boxW": 0.66,
+            "boxH": 0.4
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_free_wall_mounting",
+      "kind": "deal",
+      "product": "OLED65C6PUA#wall",
+      "mount": "wall",
+      "scene": "living-blue",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.72,
+            "bottom": 0.6,
+            "boxW": 0.48,
+            "boxH": 0.48
+          }
+        },
+        "tall": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.62,
+            "bottom": 0.6,
+            "boxW": 0.7,
+            "boxH": 0.4,
+            "shrink": 0.47
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_big_screens",
+      "kind": "deal",
+      "product": "75MRGB95BUA",
+      "mount": "floor",
+      "reflection": true,
+      "scene": "studio-burgundy",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.72,
+            "bottom": 0.8,
+            "boxW": 0.44,
+            "boxH": 0.62
+          }
+        },
+        "tall": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.5,
+            "bottom": 0.66,
+            "boxW": 0.8,
+            "boxH": 0.42,
+            "shrink": 0.52
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_xbox_controller",
+      "kind": "deal",
+      "product": "27LX6TYGA",
+      "mount": "floor",
+      "reflection": true,
+      "scene": "studio-green",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.72,
+            "bottom": 0.86,
+            "boxW": 0.3,
+            "boxH": 0.8
+          }
+        },
+        "tall": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.6,
+            "bottom": 0.66,
+            "boxW": 0.4,
+            "boxH": 0.6
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_laundry_pair",
+      "kind": "deal",
+      "product": "WM4000HWA",
+      "mount": "floor",
+      "scene": "laundry-evening",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.75,
+            "bottom": 0.88,
+            "boxW": 0.4,
+            "boxH": 0.72
+          }
+        },
+        "tall": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.62,
+            "bottom": 0.68,
+            "boxW": 0.6,
+            "boxH": 0.46
+          },
+          "scrim": {
+            "strength": 0.85,
+            "reach": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_laundry_sets",
+      "kind": "deal",
+      "product": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+      "mount": "floor",
+      "scene": "laundry-burgundy",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.74,
+            "bottom": 0.9,
+            "boxW": 0.46,
+            "boxH": 0.74
+          }
+        },
+        "tall": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.55,
+            "bottom": 0.68,
+            "boxW": 0.8,
+            "boxH": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_range_microwave",
+      "kind": "deal",
+      "product": "LSGL6335X",
+      "mount": "floor",
+      "scene": "kitchen-evening",
+      "formats": {
+        "tile": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.76,
+            "bottom": 0.85,
+            "boxW": 0.42,
+            "boxH": 0.66
+          }
+        },
+        "tall": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.55,
+            "bottom": 0.68,
+            "boxW": 0.72,
+            "boxH": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_kitchen_packages",
+      "kind": "deal",
+      "product": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "mount": "floor",
+      "scene": "kitchen-wide",
+      "formats": {
+        "tile": {
+          "pick": "c",
+          "layout": {
+            "cx": 0.72,
+            "bottom": 0.86,
+            "boxW": 0.46,
+            "boxH": 0.52
+          },
+          "scrim": {
+            "strength": 0.7
+          }
+        },
+        "tall": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.56,
+            "bottom": 0.7,
+            "boxW": 0.86,
+            "boxH": 0.46
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_fridge_dishwasher",
+      "kind": "deal",
+      "product": "LDNTH753S",
+      "mount": "floor",
+      "scene": "kitchen-wide",
+      "formats": {
+        "tile": {
+          "pick": "d",
+          "layout": {
+            "cx": 0.66,
+            "bottom": 0.86,
+            "boxW": 0.44,
+            "boxH": 0.6
+          }
+        },
+        "tall": {
+          "scene": "kitchen-evening",
+          "pick": "b",
+          "layout": {
+            "cx": 0.55,
+            "bottom": 0.68,
+            "boxW": 0.6,
+            "boxH": 0.48
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_thinq_warranty",
+      "kind": "deal",
+      "product": "WM4000HWA",
+      "mount": "floor",
+      "reflection": true,
+      "scene": "studio-charcoal",
+      "formats": {
+        "tile": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.7,
+            "bottom": 0.84,
+            "boxW": 0.42,
+            "boxH": 0.66
+          }
+        },
+        "tall": {
+          "pick": "d",
+          "layout": {
+            "cx": 0.56,
+            "bottom": 0.68,
+            "boxW": 0.6,
+            "boxH": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "deal_wash1000",
+      "kind": "deal",
+      "product": "WM6700HWA",
+      "mount": "floor",
+      "scene": "laundry-burgundy",
+      "formats": {
+        "tile": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.68,
+            "bottom": 0.9,
+            "boxW": 0.42,
+            "boxH": 0.72
+          }
+        },
+        "tall": {
+          "pick": "b",
+          "layout": {
+            "cx": 0.55,
+            "bottom": 0.66,
+            "boxW": 0.66,
+            "boxH": 0.48
+          }
+        }
+      }
+    },
+    {
+      "id": "tile_tvs",
+      "kind": "tile",
+      "product": "OLED65C6PUA",
+      "mount": "console",
+      "scene": "living-blue",
+      "formats": {
+        "tile": {
+          "pick": "c",
+          "layout": {
+            "cx": 0.75,
+            "bottom": 0.69,
+            "boxW": 0.46,
+            "boxH": 0.55
+          }
+        }
+      }
+    },
+    {
+      "id": "tile_audio",
+      "kind": "tile",
+      "product": "S90TY",
+      "mount": "console",
+      "scene": "living-sound",
+      "formats": {
+        "tile": {
+          "pick": "c",
+          "layout": {
+            "cx": 0.74,
+            "bottom": 0.69,
+            "boxW": 0.46,
+            "boxH": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "tile_laundry",
+      "kind": "tile",
+      "product": "WM4000HWA",
+      "mount": "floor",
+      "scene": "laundry-evening",
+      "formats": {
+        "tile": {
+          "pick": "c",
+          "layout": {
+            "cx": 0.76,
+            "bottom": 0.9,
+            "boxW": 0.4,
+            "boxH": 0.72
+          }
+        }
+      }
+    },
+    {
+      "id": "tile_washtower",
+      "kind": "tile",
+      "product": "WKE100HWA",
+      "mount": "floor",
+      "scene": "laundry-burgundy",
+      "formats": {
+        "tile": {
+          "pick": "c",
+          "layout": {
+            "cx": 0.72,
+            "bottom": 0.92,
+            "boxW": 0.3,
+            "boxH": 0.82
+          }
+        }
+      }
+    },
+    {
+      "id": "tile_cooking",
+      "kind": "tile",
+      "product": "LSGL6335X",
+      "mount": "floor",
+      "scene": "kitchen-evening",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.68,
+            "bottom": 0.9,
+            "boxW": 0.42,
+            "boxH": 0.68
+          }
+        }
+      }
+    },
+    {
+      "id": "tile_dishwashers",
+      "kind": "tile",
+      "product": "LDNTH753S",
+      "mount": "floor",
+      "scene": "kitchen-wide",
+      "formats": {
+        "tile": {
+          "pick": "e",
+          "layout": {
+            "cx": 0.72,
+            "bottom": 0.86,
+            "boxW": 0.42,
+            "boxH": 0.6
+          }
+        }
+      }
+    },
+    {
+      "id": "tile_packages",
+      "kind": "tile",
+      "product": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "mount": "floor",
+      "scene": "kitchen-wide",
+      "formats": {
+        "tile": {
+          "pick": "a",
+          "layout": {
+            "cx": 0.74,
+            "bottom": 0.86,
+            "boxW": 0.5,
+            "boxH": 0.56
+          }
+        }
+      }
+    },
+    {
+      "id": "room_living_room",
+      "kind": "room",
+      "product": "OLED65C6PUA",
+      "mount": "console",
+      "scene": "living-amber",
+      "formats": {
+        "banner": {
+          "pick": "c",
+          "position": "bottom",
+          "layout": {
+            "cx": 0.75,
+            "bottom": 0.645,
+            "boxW": 0.3,
+            "boxH": 0.6
+          }
+        },
+        "banner-tall": {}
+      }
+    },
+    {
+      "id": "room_laundry_room",
+      "kind": "room",
+      "product": "WM4000HWA_DLEX4000W_WD300CW_WDP6W",
+      "mount": "floor",
+      "scene": "laundry-evening",
+      "formats": {
+        "banner": {
+          "pick": "c",
+          "position": "bottom",
+          "layout": {
+            "cx": 0.8,
+            "bottom": 0.92,
+            "boxW": 0.3,
+            "boxH": 0.82
+          }
+        },
+        "banner-tall": {}
+      }
+    },
+    {
+      "id": "room_kitchen",
+      "kind": "room",
+      "product": "LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT",
+      "mount": "floor",
+      "scene": "kitchen-evening",
+      "formats": {
+        "banner": {
+          "pick": "a",
+          "position": "bottom",
+          "layout": {
+            "cx": 0.78,
+            "bottom": 0.94,
+            "boxW": 0.4,
+            "boxH": 0.84
+          }
+        },
+        "banner-tall": {}
+      }
+    }
+  ],
+  "gate": {
+    "hero_nfl_gift_card/slide": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "2a890bb51704952d9dd1ee03dd71d9f21a906cbf06056c08d55996b320a7b3d3",
+      "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.5:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_nfl_gift_card/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "d3f9db426aff43aaf955d51613321ed1495f3acc9bee31df297ec45bde9ea92a",
+      "note": "Dark living room, amber stadium-light glow on the left wall; the G6 hung on the charcoal wall above the walnut console with a soft wall shadow; badge corner bottom right. Cut from hero_nfl_gift_card/slide's frame at 1440x540 (from row 0 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.2:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_living_room/slide": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "b12fe93fde49ee4ad638abb1730131999f7c1b2c74d13a2bae3cedd121b47da8",
+      "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. R5's ruling: the product at 0.48 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_living_room/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "7418acf8bff98d4834a2cffccc67798661e1b504d18dc54c53cbab4ab8fe62fd",
+      "note": "Navy living room with blue-violet cove light; the C6 on its own stand on the matte-black console; sofa edge in shadow at the left. Cut from hero_living_room/slide's frame at 1440x540 (from row 0 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.48 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.4:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_laundry_room/slide": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "3a9e2937639c9cb1d38b1fdf69b9e06a363f50418938fefdad9cfb470c320853",
+      "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.8:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "laundry-evening--wide--b: cabinetry fills the product side"
+      ]
+    },
+    "hero_laundry_room/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "c2003e6bfc3586b6c585852f3e007a4d13a3dd2b0c3d1443bf423feb2c94ca9c",
+      "note": "Sage-green laundry room, oak shelf with towels and a plant at the far left; the washer stands on the stone floor in the warm glow; top-right corner clear for a badge. Cut from hero_laundry_room/slide's frame at 1440x540 (from row 64 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.5:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_kitchen/slide": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "f22fc357b2c7987d1443f76e61f9afacec85dd97ffae4f28f0d02eda47ecf8f8",
+      "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.9:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "kitchen-evening--wide--c: the kitchen run fills the product side"
+      ]
+    },
+    "hero_kitchen/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "7f4142a1c72caf0df119dd367a1f47b1fd69931ffaf42c0441f47d6fce6491a6",
+      "note": "Kitchen at night, charcoal cabinets at the left; the slide-in range stands in front of the backlit stone panel with a contact shadow. Cut from hero_kitchen/slide's frame at 1440x540 (from row 96 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.75 of its fitted size, the box shrunk toward its right edge on the same base; no panel mark on this product. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 11.7:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "pin_micro_rgb_evo/slide": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "0f21b2fa1544e7ff96a2db8def4ac8ae9fcfefaf3c2d7cf52446c7e9f84d4a1b",
+      "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "pin_micro_rgb_evo/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "7ab5cf0a63e0ddf6aec3bc692695e452020069409a4431706ddca1c13cbe969c",
+      "note": "Black studio with red, green and blue glows; the MRGB95 on its feet on the glossy floor, its own reflection fading below. Cut from pin_micro_rgb_evo/slide's frame at 1440x540 (from row 13 of 640), for M1c's full-bleed hero: the same scene, product and size. R5's ruling: the product at 0.46 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 17.0 px as shown), 0.78 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.9:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "pin_micro_rgb_evo/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "13b0d338771d12d827add2d865629f793873e99ea97ea3d0b4a541f1112c1faa",
+      "note": "Black studio, RGB glow behind; the MRGB95 on the glossy floor with a faint reflection. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.2:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "pin_micro_rgb_evo/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "2c433c7bfb83e20ed9682f3c8425bd773131ce57f973fc24117463516c87f0c4",
+      "note": "Re-rolled candidate d (seamless floor); the MRGB95 on the floor with the RGB glow at its edges. R5's ruling: the product at 0.52 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 18 px in the art (about 17.2 px as shown), 0.79 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.8:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "studio-rgb--tall--a: a hard grey band across the floor at two thirds of the height (in the first compose, replaced)",
+        "studio-rgb--tall--b: the same band and a bright point light at the centre",
+        "studio-rgb--tall--c: no defect; d has the cleaner floor"
+      ]
+    },
+    "hero_continue/slide": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "c23af0f4d9708d2c6c279748aba353b4703a5a9562e10698076e635cef72ce56",
+      "note": "Charcoal studio with a cool blue glow and an empty product zone by design: the page draws her own configuration there. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.8:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "hero_continue/slide540": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "a5ecf041c625f37a261ece98ac3582eb8d918e2e55451701ef04096c9d49d7fe",
+      "note": "Charcoal studio with a cool blue glow and an empty product zone by design: the page draws her own configuration there. Cut from hero_continue/slide's frame at 1440x540, for M1c's full-bleed hero: the same scene, product and size. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.3:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_nfl_gift_card/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "4ebd9667535e202861bf09449db4331b46c339569676de699f86dd042c02c839",
+      "note": "Amber living room; the G6 hung above the walnut console. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.9:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "living-amber--card--b: the console is at an angle to a straight-on TV"
+      ]
+    },
+    "deal_nfl_gift_card/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "0792af7c6f3924e9dd25616ce0e447535cb8bc4f5ece97db75aa5c4be301cd3a",
+      "note": "Amber living room; the G6 hung above the console, the lower third in shadow for the headline. R5's ruling: the product at 0.44 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 17 px in the art (about 16.2 px as shown), 0.75 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled77g6wua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.9:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_matching_soundbar/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "77a128a0b5b5b17b5dd033590c20637099b7f2789f3fd11c065d9b1a386c3ff3",
+      "note": "Espresso-panelled room, brass lamp at the left; the S90TY and its subwoofer on the oak console. LG's composited label erased from the ground; the white glow faded at the edge, no halo at 1:1. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.1:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "first compose: a white glow ring around the dark soundbar (LG's ground), fixed by the dark matte"
+      ]
+    },
+    "deal_matching_soundbar/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "89de97e2b21e3963a7cd7cfd0b8005f5419f24359ec083d9ef670d4188d43e53",
+      "note": "The S90TY and subwoofer on the backlit oak console; label erased, edge clean at 1:1. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.9:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_sound_suite_bundle/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "88658d9b1db823fb710b367d6079b8354689534c79f03573cf13f37da40b654f",
+      "note": "The Sound Suite set (M7 pair, H7, W7) on the oak console; LG's series and audio-format wordmarks erased from the ground, edges clean. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.6:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_sound_suite_bundle/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "1ebd55bbd1763b98288a30e3b141810a16c8302a3e4565a0be14320ed65c8352",
+      "note": "The Sound Suite set on the oak console, lamp at the left; wordmarks erased, edges clean. Product drawn from D2's 840-pixel cutout (products/m7-p4-h7-w7.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.1:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_free_wall_mounting/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "b05039737ccbecbdb5ae1a9090ff9a3c00f0da417f840511e04209d63ade92f0",
+      "note": "Navy living room; the C6 panel with its stand cropped off, hung on the wall above the console: a wall-mounted TV for the free mounting offer. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.9:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "living-blue--card--b: angled perspective"
+      ]
+    },
+    "deal_free_wall_mounting/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "4ebdfeab67c1af013d1a48777d13037950d13a8ffa574ae816e710e5705474c2",
+      "note": "The C6 panel (stand cropped) hung above the console, sofa in shadow at the left. R5's ruling: the product at 0.47 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 18 px in the art (about 17.2 px as shown), 0.79 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 15.4:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_big_screens/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "ac366158e5771763d13fdb50748506e719aed9d64c408688558dd53dd0285793",
+      "note": "Deep burgundy studio with a magenta glow; the MRGB95 on the glossy floor with a faint reflection. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.6:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "first compose: the reflection mirrored the top of the screen (sharp extracts before it flips), fixed"
+      ]
+    },
+    "deal_big_screens/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "b79dd53ba42063a2b164c19d15b3009851bbfb4c1f5f8ba008c3e066b054c605",
+      "note": "Burgundy studio, curved wall catching the glow; the MRGB95 on the floor. R5's ruling: the product at 0.52 of its fitted size, the box shrunk toward its right edge on the same base; its panel mark's cap is 18 px in the art (about 17.2 px as shown), 0.79 of the OH. wordmark's 21.8 px cap. Product drawn from D2's 840-pixel cutout (products/75mrgb95bua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "studio-burgundy--tall--b: a rectangular plinth at the right reads as an object"
+      ]
+    },
+    "deal_xbox_controller/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "65488bc2da35aa7bc84ce5beb1fb55432ee4944cf8cf3e0f517e845ec49bb043",
+      "note": "Near-black studio with an emerald glow; the StanbyME on its stand. No game-console mark anywhere. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.3:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "studio-green--card--b: the rectangular green glow reads as a lit screen"
+      ]
+    },
+    "deal_xbox_controller/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "ef265a76d5efa8cb90f50dbb2b8b3b6bd0acda60575bf52735dc9c6d727fe00c",
+      "note": "Emerald-glow studio; the StanbyME on its stand with a faint floor reflection. Product drawn from D2's 840-pixel cutout (products/27lx6tyga.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.9:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_laundry_pair/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "13492935064c67b6245d9610f54c150593e72cee9045c0c51676ff839ddc1344",
+      "note": "Sage laundry room, towels and a plant on the oak shelf; the washer on the stone floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.7:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_laundry_pair/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "a28d2c435ffb0916e904749c0f2d89fcf1e7e2ac37a902087bae7c6f813a9db5",
+      "note": "Sage laundry room in warm light; the washer on the floor, the lower third darkened (scrim 0.85) because the floor is pale. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "laundry-evening--tall--a: a hard step from pale stone to a dark band across the floor"
+      ]
+    },
+    "deal_laundry_sets/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "24df8a017cfa9798623777a6fe520ba7180052ddf3a23933d837aac52e727150",
+      "note": "Burgundy panelled laundry room, brass rail with empty hangers; the washer, dryer and pedestals set. LG's shield erased from the ground. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 19.6:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_laundry_sets/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "907b204048743cccd9e336974815be9309a79e3a8c349e07240e1e462cdb4354",
+      "note": "Burgundy laundry room; the laundry set on the herringbone floor, shield erased. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.2:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_range_microwave/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "9f33ebf6b68abdccfe75d125ba5fb533b1c8b54857fa3e5ebddec23f1a05753a",
+      "note": "Kitchen at night; the slide-in range on the concrete floor in front of the lit stone wall. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 9.9:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_range_microwave/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "82411f0f64310b049fbc576bebe3dda37548b33f722bd260216d7dee7f946076",
+      "note": "Kitchen at night, warm-lit alcove; the range on the floor. Product drawn from D2's 840-pixel cutout (products/lsgl6335x.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_kitchen_packages/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "33fb19d74542af8fab8020f8a5d70ae0c009c97968fc185144be4da76f219d99",
+      "note": "Walnut and black kitchen with a brass pendant; the four-piece package on the oak floor, LG's shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 8.3:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_kitchen_packages/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "8b90949f20d5b62624cfb8e801cf335fe4eb41d1e3a967cd296b84a925077602",
+      "note": "Kitchen with a dark stone wall and pendant; the package on the oak floor, shield erased. Product drawn from D2's 840-pixel cutout (products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.7:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "kitchen-wide--tall--b, --c: a hard band across the floor"
+      ]
+    },
+    "deal_fridge_dishwasher/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "33970403f20f8c730a92f22557fdcd0666a25747e318046e75b3c66a3f8d7beb",
+      "note": "Walnut kitchen, stone wall; LDNPM654S stands in for LDNTH753S, whose image carries a Consumer Reports badge across the door. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.1:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_fridge_dishwasher/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "965a67e6bc4807db650e0f50b98cf12dfbcfd22883051dc1f1eb2b7c98bd9d62",
+      "note": "Kitchen at night (kitchen-evening b, seamless floor); LDNPM654S in place of the badged LDNTH753S. Product drawn from D2's 840-pixel cutout (products/ldnpm654s.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.8:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "kitchen-wide--tall--b, --c: a hard band across the floor; this job moved to kitchen-evening b"
+      ]
+    },
+    "deal_thinq_warranty/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "041d62ed85937b4890230e8c78e0cbf21a341ec456da94d6ffe0f0d0ba9e02ad",
+      "note": "Charcoal studio with a cool blue glow; the washer on the floor with a faint reflection. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.6:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "studio-charcoal--card--a: a light floor slab reads as a stage edge"
+      ]
+    },
+    "deal_thinq_warranty/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "f3cc41837d8c0d823395339e8e3dae230c8822344858830b0e1cda7f89705bc2",
+      "note": "Re-rolled candidate d (seamless floor); the washer in the blue glow with a faint reflection. Product drawn from D2's 840-pixel cutout (products/wm4000hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 13.5:1 at the text zone's 90th percentile.",
+      "rejected": [
+        "studio-charcoal--tall--a: the curved cyclorama edge reads as a band (in the first compose, replaced)",
+        "studio-charcoal--tall--b, --c: a hard step across the floor"
+      ]
+    },
+    "deal_wash1000/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "16befce289d560be5982b8cbd0c8019d2a3c536f1d0c6cb43b9d92afed3134ca",
+      "note": "Burgundy laundry room, hangers on the brass rail; the WM6700HWA on the herringbone floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.2:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "deal_wash1000/tall": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "6e1e8416245035b02469028d73d447769a97f49bb3f7cb4aa7c46f62e26c11f4",
+      "note": "Burgundy laundry room; the WM6700HWA on the floor. Product drawn from D2's 840-pixel cutout (products/wm6700hwa.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.6:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "tile_tvs/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "59c9bebfcbc923b1c421e8974b695958fd8aa34f788d0d165683892b5c41e598",
+      "note": "Navy living room, cove light; the C6 on its stand on the console. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 18.5:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "tile_audio/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "56a933a0fb594317d3ffbe65450a7d7cc7173bd6ab53b0db7c154438b5d7ac8a",
+      "note": "Espresso-panelled room; the S90TY and subwoofer on the oak console; label erased, edge clean. Product drawn from D2's 840-pixel cutout (products/s90ty.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 17.5:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "tile_laundry/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "a35909c515850e9efa288ed9e6be4d89727c5fd799f701927687288cf7decbbe",
+      "note": "Sage laundry room, cabinet and shelf at the left; the washer on the stone floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 6.7:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "tile_washtower/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "85dd6979465cdbf799d0b3a95cd29f2e1d27aca970783befa21442a697272c4f",
+      "note": "Burgundy laundry room with hangers; the WashTower on the herringbone floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 16.5:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "tile_cooking/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "8bc3a1480c3a3c31cf036452fccc2402d13b688ac494b0fcc7aca5391ea0cba4",
+      "note": "Kitchen at night, amber glow; the range on the concrete floor. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 12:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "tile_dishwashers/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "eec4abd35fdce17dd24c86c439f90d8da25470a5e484a43d69e39ae695acb525",
+      "note": "Walnut kitchen with a pendant; LDNPM654S in place of the badged LDNTH753S. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.6:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "tile_packages/tile": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "5fa5b6f4a4f77daad1c4135db803cf20439cafb5e9b3a86b7b286ffd58083eef",
+      "note": "Walnut kitchen with a pendant; the four-piece package, shield erased. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.3:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "room_living_room/banner": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "98ce8910e5ec20bd5a3da5598c606bf5fa06879f0d45026f73106980edf47fdc",
+      "note": "Amber living room cropped from the bottom of the frame; the C6 on its stand on the walnut console. Product drawn from D2's 840-pixel cutout (products/oled65c6pua.840.webp, from LG's 1600x1062 zoom rendition) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 9.8:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "room_laundry_room/banner": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "4847e5251d32deb0ad19199a4293f4e82f359f07eaa00ae4462ae00a28b81505",
+      "note": "Sage laundry room, warm glow at the right; the washer and dryer set on pedestals, shield erased. Product drawn from D2's 840-pixel cutout (products/wm4000hwa-dlex4000w-wd300cw-wdp6w.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 7.4:1 at the text zone's 90th percentile.",
+      "rejected": []
+    },
+    "room_kitchen/banner": {
+      "verdict": "accept",
+      "checked": "2026-10-02",
+      "sha": "53d5c1e538224cb2a340c7c88ce12a86e1d383def2c4862950c5108182607a7a",
+      "note": "Walnut kitchen run at the left, lit stone wall at the right; the four-piece package, shield erased. Product drawn from D2's 840-pixel cutout (products/lf24z6530s-lsgl5833x-mvem1825f-adfd5448at.840.webp) into the same box as the 420 version, so the zones and the scene's pixels are unchanged; sharper at 1:1, edges and erased labels re-checked at 840. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers or marks in the generated scene, no people; the only marks are LG's own on the product as LG publishes it (D2's ruling); product edges clean, no halo, shadow under the foot; white headline contrast 14.1:1 at the text zone's 90th percentile.",
+      "rejected": []
+    }
+  },
+  "panelMarkRule": {
+    "ruling": "R5 (2026-10-02): a TV's own panel mark must be visibly smaller than the page's OH. wordmark (30 px Inter 800, cap about 21.8 px).",
+    "target": "the panel mark's cap height at about 0.8 of the wordmark's cap (17.4 px) at the art's display size: slides 1:1 at 1440, tall tiles at 688/720 in the bento",
+    "measured": "cap heights before the ruling: slides 36-38 px, tall tiles 33-39 px shown; 0.75 of the size left them at 27-29 px, still larger than the wordmark, so each TV's shrink is set from its own measurement",
+    "nonTv": "the washer and range hero slides shrink 0.75 with the others, as ruled; they carry no panel mark",
+    "anchor": "the fitted box shrinks toward its own right edge on the same base, so the product keeps its place on the console or floor and the left of the frame stays calm"
+  },
+  "defaultTone": "light",
+  "tones": {
+    "dark": {
+      "about": "A1's night set (lane A1, 2026-10-02): the base keys of this file exactly as A1 committed them, with no overlay. Composing it needs A1's own candidates; without them a compose keeps the committed files."
+    },
+    "light": {
+      "about": "The art in lg.com's tone, daylight and colour. Every scene is a sunlit, lived-in room (living rooms, laundry rooms, kitchens) in warm saturated colour, or a colour-lit studio set in daylight, measured to land near lg.com's own hero (mean luma about 110 to 140 on the art half, a sixth to a quarter of the pixels darker than 60); the products are placed at exactly A1's scale (art.json's boxes and shrinks). Slides and banners carry no scrim, because the page sets dark type on its own white panel there (M1c); deal tiles and tall tiles keep a shaded foot for their white headlines; room tiles carry their text under the picture, so no scrim.",
+      "style": "Photographic lifestyle campaign image for a premium home-electronics and home-appliance store's homepage, in the family of a flagship electronics brand's own website banners: a real, warm, lived-in interior on a sunny day, sunlit and inviting, in rich, saturated natural colour with a full tonal range: warm sunlit highlights, rich mid-tones in the coloured walls, the natural wood and the green plants, and soft deep shadows in the corners, under the furniture and toward the edges of the frame; one soft colour glow. Like a premium lifestyle-magazine photograph: colourful and warm, never white-washed, never pale, never high-key, never overexposed, and never dark, moody or night-time. Straight-on, eye-level camera with a level horizon and one-point perspective; sharp focus; photographic realism. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO signage, NO posters or artwork with writing, NO watermarks, NO people, NO hands, NO faces, NO pets. NO television, NO screen, NO monitor, NO speaker and NO appliance anywhere in the frame.",
+      "aspects": {
+        "wide": "Wide banner framing, one single continuous photograph of one room, never a split, a diptych, a panel or a visible seam: the same back wall and the same floor run unbroken across the whole frame; the left three fifths of the wall are calm and simple (plain and sunlit, with no objects of interest); the right two fifths hold {area}, empty and lit by warm daylight, with one leafy potted plant standing at the very right edge of the frame.",
+        "card": "Card framing: the right half holds {area}, empty and lit by warm daylight; the left half is calm and simple; the lower edge of the frame is plain floor falling into soft shade.",
+        "tall": "Portrait card framing: {area} fills the upper middle of the frame, empty and lit by warm daylight; below it the same floor continues seamlessly to the bottom edge, calm and plain, gradually falling into soft shade toward the bottom, with no band, no step and no edge across it."
+      },
+      "scenes": {
+        "living-amber": {
+          "summary": "sunlit living room in late-afternoon light, warm terracotta-clay walls, golden sun glow, low walnut and oak console",
+          "room": "A sunlit modern living room in the late afternoon: warm terracotta-clay limewashed walls, golden late-afternoon sunlight streaming in from a tall window out of frame at the left and washing across the back wall in a warm amber glow with soft window-pane light patterns, a low walnut-and-oak media console along the floor at the right, a warm oak floor with a woven rug.",
+          "area": "a large, empty stretch of terracotta-clay wall above the low walnut-and-oak media console, nothing hanging on the wall and nothing standing on the console",
+          "gradient": {
+            "base": "#b98a6c",
+            "glow": "#f2a65a",
+            "glowAt": [
+              0.72,
+              0.38
+            ],
+            "floor": "#7a5a42"
+          }
+        },
+        "living-blue": {
+          "summary": "living room in soft morning daylight, dusty-blue walls, soft blue and lavender cove glow, low oak console",
+          "room": "A modern living room in soft morning daylight: dusty-blue painted walls, a soft cool blue and lavender glow from hidden cove lighting along the ceiling, the arm of a deep-blue velvet sofa at the far left foreground, a low natural-oak media console at the right, a warm oak floor.",
+          "area": "a large, empty stretch of dusty-blue wall above the low natural-oak media console, nothing hanging on the wall and nothing standing on the console",
+          "gradient": {
+            "base": "#7f93a8",
+            "glow": "#8fa4e8",
+            "glowAt": [
+              0.74,
+              0.4
+            ],
+            "floor": "#6e5a46"
+          }
+        },
+        "living-sound": {
+          "summary": "warm daylight living room, honey-oak slatted wall, long low walnut console, soft amber glow",
+          "room": "A warm modern living room in daylight: a honey-oak slatted wood wall, a long low walnut media console running across the right half of the room, a woven paper floor lamp at the far left, warm sunlight from the left and a soft amber glow behind the console, a rust-coloured rug on a warm oak floor.",
+          "area": "the long low walnut media console and the honey-oak slatted wall above it, both completely empty",
+          "gradient": {
+            "base": "#a8794e",
+            "glow": "#e3a35c",
+            "glowAt": [
+              0.74,
+              0.5
+            ],
+            "floor": "#6b4a30"
+          }
+        },
+        "studio-burgundy": {
+          "summary": "seamless raspberry-red and warm rose studio in daylight, magenta-red glow, glossy floor",
+          "room": "A seamless studio set in rich raspberry red and warm rose, filled with soft daylight, a soft magenta-red glow of light rising behind the right of the frame, a glossy floor in the same colour that softly reflects the glow, gently deeper colour toward the edges.",
+          "area": "an empty patch of glossy floor in front of the glow",
+          "gradient": {
+            "base": "#a8324f",
+            "glow": "#f06292",
+            "glowAt": [
+              0.76,
+              0.42
+            ],
+            "floor": "#7a2038"
+          }
+        },
+        "studio-rgb": {
+          "summary": "seamless lavender and violet studio in daylight, soft red, green and blue glows, glossy floor",
+          "room": "A seamless studio set in soft lavender and violet, filled with soft daylight; soft overlapping glows of red, green and blue light bloom on the back wall behind the right of the frame, like light from tiny coloured pixels; a glossy lavender floor reflecting the colours, gently deeper violet toward the edges.",
+          "area": "an empty patch of glossy lavender floor in front of the coloured glows",
+          "gradient": {
+            "base": "#8a7fc0",
+            "glow": "#c3a6ff",
+            "glowAt": [
+              0.76,
+              0.42
+            ],
+            "floor": "#5d5390"
+          }
+        },
+        "studio-charcoal": {
+          "summary": "seamless warm stone-grey studio in daylight, soft cool blue glow, satin floor",
+          "room": "A seamless studio set in warm stone grey and soft taupe, filled with soft daylight, a soft cool blue glow on the back wall at the right and a warm rim of sunlight along the floor; a smooth satin floor, gently deeper grey toward the edges; calm and premium.",
+          "area": "an empty patch of satin floor in front of the glow",
+          "gradient": {
+            "base": "#9a948c",
+            "glow": "#8fb2e0",
+            "glowAt": [
+              0.76,
+              0.42
+            ],
+            "floor": "#6f6a63"
+          }
+        },
+        "studio-green": {
+          "summary": "seamless jade and mint studio in daylight, soft emerald glow, satin green floor",
+          "room": "A seamless studio set in fresh jade green and soft mint, filled with soft daylight, a soft emerald-green glow blooming on the back wall at the right and a subtle green rim of light on a satin green floor, gently deeper green toward the edges; a playful daytime gaming mood.",
+          "area": "an empty patch of satin green floor in front of the emerald glow",
+          "gradient": {
+            "base": "#5f9e82",
+            "glow": "#46c27f",
+            "glowAt": [
+              0.76,
+              0.42
+            ],
+            "floor": "#3c6d57"
+          }
+        },
+        "laundry-evening": {
+          "summary": "sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor",
+          "room": "A sunlit laundry room in the morning: sage-green painted walls and sage cabinetry, a light-oak open shelf with neatly folded white towels and a small plant high at the left, a warm oak floor, sunlight streaming in from a window out of frame at the left, a soft warm glow on the back wall at the right.",
+          "area": "an empty stretch of warm oak floor in front of a plain sage-green wall, nothing standing there",
+          "gradient": {
+            "base": "#8fa48a",
+            "glow": "#f0b878",
+            "glowAt": [
+              0.76,
+              0.45
+            ],
+            "floor": "#8a6a4a"
+          }
+        },
+        "laundry-burgundy": {
+          "summary": "sunlit boutique laundry room, muted raspberry-rose panelling, brass rail, herringbone oak floor, rosy glow",
+          "room": "A sunlit boutique laundry room in daylight: muted raspberry-rose painted panelling, a slim brass rail with a few empty wooden hangers high at the left, a warm herringbone oak floor, warm sunlight from the left, a soft rosy glow on the back wall at the right.",
+          "area": "an empty stretch of herringbone floor in front of the plain raspberry-rose panelling, nothing standing there",
+          "gradient": {
+            "base": "#b07a82",
+            "glow": "#e08a9a",
+            "glowAt": [
+              0.76,
+              0.45
+            ],
+            "floor": "#8a6440"
+          }
+        },
+        "kitchen-evening": {
+          "summary": "sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow",
+          "room": "A sunlit modern kitchen in daylight: cream flat-front upper cabinets above a walnut run of base cabinets at the far left, a warm greige stone backsplash wall, a warm oak floor, sunlight from a window out of frame at the left, a soft warm amber glow on the back wall at the right.",
+          "area": "an empty stretch of warm oak floor in front of the greige stone wall, with no cabinets and nothing standing there",
+          "gradient": {
+            "base": "#a39686",
+            "glow": "#efb06a",
+            "glowAt": [
+              0.76,
+              0.45
+            ],
+            "floor": "#7d5f43"
+          }
+        },
+        "kitchen-wide": {
+          "summary": "spacious sunlit kitchen, oak and sage cabinetry at the far left, long warm taupe plaster wall, brass pendant glow, oak floor",
+          "room": "A spacious, sunlit modern kitchen in daylight: natural-oak and sage-green cabinetry at the far left only, a long warm taupe plaster feature wall, the warm glow of a brass pendant light, a warm oak floor, soft sunlight from the left.",
+          "area": "a wide, open, empty stretch of warm oak floor in front of the plain taupe plaster wall, with no cabinets and nothing standing there",
+          "gradient": {
+            "base": "#a8957f",
+            "glow": "#e7a95e",
+            "glowAt": [
+              0.74,
+              0.42
+            ],
+            "floor": "#7d5f43"
+          }
+        }
+      },
+      "formats": {
+        "slide": {
+          "scrim": {
+            "strength": 0
+          }
+        },
+        "banner": {
+          "scrim": {
+            "strength": 0
+          }
+        },
+        "tile": {
+          "scrim": {
+            "kind": "bottom-left",
+            "strength": 0.45,
+            "reach": 0.55
+          }
+        },
+        "tall": {
+          "scrim": {
+            "kind": "bottom",
+            "strength": 0.5,
+            "reach": 0.42
+          }
+        },
+        "banner-tall": {
+          "scrim": {
+            "strength": 0
+          }
+        }
+      },
+      "kindScrim": {
+        "tile": {
+          "tile": {
+            "strength": 0
+          }
+        }
+      },
+      "shadow": {
+        "contact": 0.5,
+        "wall": 0.38
+      },
+      "vignette": 0.12,
+      "sceneFilter": {
+        "blur": 0.9
+      },
+      "encode": {
+        "webp": {
+          "quality": 46,
+          "effort": 6,
+          "smartSubsample": true
+        },
+        "avif": {
+          "quality": 48,
+          "effort": 8,
+          "chromaSubsampling": "4:2:0"
+        },
+        "jpg": {
+          "quality": 30,
+          "mozjpeg": true,
+          "progressive": true
+        }
+      },
+      "jobs": {
+        "hero_nfl_gift_card/slide": {
+          "pick": "b",
+          "at": {
+            "cx": 0.631,
+            "bottom": 0.62
+          },
+          "lift": 1.12
+        },
+        "hero_living_room/slide": {
+          "pick": "b",
+          "at": {
+            "cx": 0.644,
+            "bottom": 0.712
+          }
+        },
+        "hero_laundry_room/slide": {
+          "pick": "b",
+          "at": {
+            "cx": 0.724,
+            "bottom": 0.88
+          }
+        },
+        "hero_kitchen/slide": {
+          "pick": "a",
+          "at": {
+            "cx": 0.757,
+            "bottom": 0.93
+          }
+        },
+        "pin_micro_rgb_evo/slide": {
+          "pick": "a",
+          "at": {
+            "cx": 0.601,
+            "bottom": 0.8
+          }
+        },
+        "pin_micro_rgb_evo/tile": {
+          "pick": "b"
+        },
+        "pin_micro_rgb_evo/tall": {
+          "pick": "b",
+          "at": {
+            "cx": 0.503
+          }
+        },
+        "hero_continue/slide": {
+          "pick": "a",
+          "scrim": {
+            "kind": "bottom",
+            "strength": 0.55,
+            "reach": 0.32
+          }
+        },
+        "deal_nfl_gift_card/tile": {
+          "pick": "b",
+          "lift": 1.1,
+          "scrim": {
+            "strength": 0.55
+          }
+        },
+        "deal_nfl_gift_card/tall": {
+          "pick": "b",
+          "at": {
+            "cx": 0.484,
+            "bottom": 0.6
+          }
+        },
+        "deal_matching_soundbar/tile": {
+          "pick": "c",
+          "at": {
+            "bottom": 0.635
+          }
+        },
+        "deal_matching_soundbar/tall": {
+          "pick": "b",
+          "at": {
+            "bottom": 0.59
+          }
+        },
+        "deal_sound_suite_bundle/tile": {
+          "pick": "d",
+          "lift": 1.12
+        },
+        "deal_sound_suite_bundle/tall": {
+          "pick": "a",
+          "at": {
+            "bottom": 0.615
+          },
+          "lift": 1.12
+        },
+        "deal_free_wall_mounting/tile": {
+          "pick": "a"
+        },
+        "deal_free_wall_mounting/tall": {
+          "pick": "a",
+          "at": {
+            "bottom": 0.575
+          },
+          "scrim": {
+            "strength": 0.6
+          }
+        },
+        "deal_big_screens/tile": {
+          "pick": "a",
+          "at": {
+            "cx": 0.723
+          },
+          "lift": 1.15
+        },
+        "deal_big_screens/tall": {
+          "pick": "a",
+          "scrim": {
+            "strength": 0.58
+          }
+        },
+        "deal_xbox_controller/tile": {
+          "pick": "a",
+          "scrim": {
+            "strength": 0.55
+          }
+        },
+        "deal_xbox_controller/tall": {
+          "pick": "b"
+        },
+        "deal_laundry_pair/tile": {
+          "pick": "a"
+        },
+        "deal_laundry_pair/tall": {
+          "pick": "a"
+        },
+        "deal_laundry_sets/tile": {
+          "pick": "b"
+        },
+        "deal_laundry_sets/tall": {
+          "pick": "a",
+          "lift": 1.1
+        },
+        "deal_range_microwave/tile": {
+          "pick": "b"
+        },
+        "deal_range_microwave/tall": {
+          "pick": "a"
+        },
+        "deal_kitchen_packages/tile": {
+          "pick": "c"
+        },
+        "deal_kitchen_packages/tall": {
+          "pick": "b"
+        },
+        "deal_fridge_dishwasher/tile": {
+          "pick": "d"
+        },
+        "deal_fridge_dishwasher/tall": {
+          "pick": "c",
+          "scrim": {
+            "strength": 0.68
+          }
+        },
+        "deal_thinq_warranty/tile": {
+          "pick": "b"
+        },
+        "deal_thinq_warranty/tall": {
+          "pick": "b"
+        },
+        "deal_wash1000/tile": {
+          "pick": "d"
+        },
+        "deal_wash1000/tall": {
+          "pick": "b",
+          "lift": 1.1,
+          "scrim": {
+            "strength": 0.62,
+            "reach": 0.55
+          }
+        },
+        "tile_tvs/tile": {
+          "pick": "c",
+          "at": {
+            "bottom": 0.625
+          }
+        },
+        "tile_audio/tile": {
+          "pick": "a",
+          "at": {
+            "bottom": 0.645
+          }
+        },
+        "tile_laundry/tile": {
+          "pick": "c"
+        },
+        "tile_washtower/tile": {
+          "pick": "c"
+        },
+        "tile_cooking/tile": {
+          "pick": "a"
+        },
+        "tile_dishwashers/tile": {
+          "pick": "b"
+        },
+        "tile_packages/tile": {
+          "pick": "a"
+        },
+        "room_living_room/banner": {
+          "pick": "c",
+          "at": {
+            "cx": 0.7,
+            "bottom": 0.685
+          },
+          "position": 0.66,
+          "lift": 1.25
+        },
+        "room_laundry_room/banner": {
+          "pick": "c",
+          "at": {
+            "cx": 0.78,
+            "bottom": 0.92
+          }
+        },
+        "room_kitchen/banner": {
+          "pick": "c",
+          "at": {
+            "cx": 0.745,
+            "bottom": 0.94
+          }
+        }
+      },
+      "gate": {
+        "hero_nfl_gift_card/slide": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "3b5f88ce3cc9e610a0e19e269d76517afcec2ab9b7ac044f893c45849b7e155f",
+          "note": "A1b light tone. sunlit living room in late-afternoon light, warm terracotta-clay walls, golden sun glow, low walnut and oak console (living-amber--wide--b). OLED77G6WUA hung on the wall above the console at A1's exact scale (art.json's box and shrink 0.46; 219x165 px, the same as A1's file), moved only in position onto this frame's console line. Scene exposure lifted x1.12. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.2:1 at the text zone's 90th percentile).",
+          "rejected": [
+            "living-amber--wide a, b, c of the first roll: a hard seam down the middle of the frame (the model drew two panels); re-rolled with \"one single continuous photograph\""
+          ]
+        },
+        "hero_nfl_gift_card/slide540": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "0b060b603ebf88ed27378fcede6952ac3e1b751e9cdb68707f2797b660806873",
+          "note": "A1b light tone. sunlit living room in late-afternoon light, warm terracotta-clay walls, golden sun glow, low walnut and oak console (living-amber--wide--b). Cut from hero_nfl_gift_card/slide's frame. OLED77G6WUA hung on the wall above the console at A1's exact scale (art.json's box and shrink 0.46; 219x165 px, the same as A1's file), moved only in position onto this frame's console line. Scene exposure lifted x1.12. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.2:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "hero_living_room/slide": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "36d7edd1c5222424d41c940454241a6f84bb8d934ed0658ac41f1dde2ba6b191",
+          "note": "A1b light tone. living room in soft morning daylight, dusty-blue walls, soft blue and lavender cove glow, low oak console (living-blue--wide--b). OLED65C6PUA standing on the console top at A1's exact scale (art.json's box and shrink 0.48; 214x169 px, the same as A1's file), moved only in position onto this frame's console line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.1:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "hero_living_room/slide540": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "6eea986549625cf7553ac8e4d9e9f8df21f3794285e9d2ff70ee2581806f72f2",
+          "note": "A1b light tone. living room in soft morning daylight, dusty-blue walls, soft blue and lavender cove glow, low oak console (living-blue--wide--b). Cut from hero_living_room/slide's frame. OLED65C6PUA standing on the console top at A1's exact scale (art.json's box and shrink 0.48; 214x169 px, the same as A1's file), moved only in position onto this frame's console line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.1:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "hero_laundry_room/slide": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "1780a9c71e21e313a685cd9cbcc5dd7917ed701441cc1a242699e49711a2e7b2",
+          "note": "A1b light tone. sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor (laundry-evening--wide--b). WM4000HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.75; 227x326 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.2:1 at the text zone's 90th percentile).",
+          "rejected": [
+            "laundry-evening--wide of the first roll: a hard seam at the middle; the first light roll (the high-key recipe): walls near white, art half 220, washed out"
+          ]
+        },
+        "hero_laundry_room/slide540": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "0807270874e7e5c22f9ce49f368c8d7ec0f556bb05947b0bd92aecf6517e7965",
+          "note": "A1b light tone. sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor (laundry-evening--wide--b). Cut from hero_laundry_room/slide's frame. WM4000HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.75; 227x326 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.2:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "hero_kitchen/slide": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "9f3bddbcf03acbd2bab7ffb463699a53ea01d51ad3c0549497be8d85c1cbf3f2",
+          "note": "A1b light tone. sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--wide--a). LSGL6335X standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.75; 282x336 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "hero_kitchen/slide540": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "4acfb1926e567b47f5118ca89b12af9269d1a4e95c351cb14ac095954013c81b",
+          "note": "A1b light tone. sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--wide--a). Cut from hero_kitchen/slide's frame. LSGL6335X standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.75; 282x336 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.4:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "pin_micro_rgb_evo/slide": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "bbe42783b43829ae710410cf7083280a668d8414b1b6bea9580c22915585b1cb",
+          "note": "A1b light tone. seamless lavender and violet studio in daylight, soft red, green and blue glows, glossy floor (studio-rgb--wide--a). 75MRGB95BUA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.46; 218x177 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.3:1 at the text zone's 90th percentile).",
+          "rejected": [
+            "studio-rgb--wide b: a harder seam at the middle than a"
+          ]
+        },
+        "pin_micro_rgb_evo/slide540": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "4b78f98f9a1ded8ae327db109e207d9901a7379537188b528586274793a5c175",
+          "note": "A1b light tone. seamless lavender and violet studio in daylight, soft red, green and blue glows, glossy floor (studio-rgb--wide--a). Cut from pin_micro_rgb_evo/slide's frame. 75MRGB95BUA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.46; 218x177 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "pin_micro_rgb_evo/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "2e4c62c3f719c21c96156ecf785e6931b6fa4458866d5058adbfe45bd37a605d",
+          "note": "A1b light tone. seamless lavender and violet studio in daylight, soft red, green and blue glows, glossy floor (studio-rgb--card--b). 75MRGB95BUA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 311x252 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 4.3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "pin_micro_rgb_evo/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "87ceb7d12f9060c1adfa9332a3d169ba33e89386d3b7a989b20f277ee7b8351c",
+          "note": "A1b light tone. seamless lavender and violet studio in daylight, soft red, green and blue glows, glossy floor (studio-rgb--tall--b). 75MRGB95BUA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.52; 232x188 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 8.8:1 at the text zone's 90th percentile).",
+          "rejected": [
+            "studio-rgb--tall a: a side table in front of where the TV stands"
+          ]
+        },
+        "hero_continue/slide": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "90c56d067f3bedd6edb15f79c2ea161c3e8580ffc2865b4f264b3feb08956894",
+          "note": "A1b light tone. seamless warm stone-grey studio in daylight, soft cool blue glow, satin floor (studio-charcoal--wide--a). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.8:1 at the text zone's 90th percentile). No product by design (the page draws the visitor's own configuration in the product zone); a shaded foot kept for the receipt line the page sets in white at phone width.",
+          "rejected": []
+        },
+        "hero_continue/slide540": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "fb5703685d768c9e9520429bb106212c313bf3d286950cc7aedd5f7caa791ca2",
+          "note": "A1b light tone. seamless warm stone-grey studio in daylight, soft cool blue glow, satin floor (studio-charcoal--wide--a). Cut from hero_continue/slide's frame. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.8:1 at the text zone's 90th percentile). No product by design; cut from the 1440x640 frame; a shaded foot kept for the receipt line the page sets in white at phone width.",
+          "rejected": []
+        },
+        "deal_nfl_gift_card/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "741a06caf17169dcaa0a4cf19a5e0a26cdb3850d8b418619d2b501a9b8376f44",
+          "note": "A1b light tone. sunlit living room in late-afternoon light, warm terracotta-clay walls, golden sun glow, low walnut and oak console (living-amber--card--b). OLED77G6WUA hung on the wall above the console at A1's exact scale (art.json's box; 278x210 px, the same as A1's file), moved only in position onto this frame's console line. Scene exposure lifted x1.1. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.7:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_nfl_gift_card/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "62993ce34fdd3aa353143c909ca1f222e10936480357daf3a622b1e6ee262c30",
+          "note": "A1b light tone. sunlit living room in late-afternoon light, warm terracotta-clay walls, golden sun glow, low walnut and oak console (living-amber--tall--b). OLED77G6WUA hung on the wall above the console at A1's exact scale (art.json's box and shrink 0.44; 222x167 px, the same as A1's file), moved only in position onto this frame's console line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 6.2:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_matching_soundbar/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "472b46c71ae9645fb3e7f88f018e2b3849d1d26e9f305083e1cef76c6aaf8a19",
+          "note": "A1b light tone. warm daylight living room, honey-oak slatted wall, long low walnut console, soft amber glow (living-sound--card--c). S90TY standing on the console top at A1's exact scale (art.json's box; 331x195 px, the same as A1's file), moved only in position onto this frame's console line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.5:1 at the text zone's 90th percentile). The bar is LG's angled product shot, set with its lowest point on the console's front edge, as A1 set it.",
+          "rejected": []
+        },
+        "deal_matching_soundbar/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "dd8f154d04e888c01aa10f39f49d7d671cac365b50ae1019721253c3286742ad",
+          "note": "A1b light tone. warm daylight living room, honey-oak slatted wall, long low walnut console, soft amber glow (living-sound--tall--b). S90TY standing on the console top at A1's exact scale (art.json's box; 474x279 px, the same as A1's file), moved only in position onto this frame's console line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 5.3:1 at the text zone's 90th percentile). The bar is LG's angled product shot, set with its lowest point on the console's front edge, as A1 set it.",
+          "rejected": []
+        },
+        "deal_sound_suite_bundle/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "9a2711e527c922ecfed4ad0071f980cab2b86542f3d70c237e33dceef6564fa4",
+          "note": "A1b light tone. warm daylight living room, honey-oak slatted wall, long low walnut console, soft amber glow (living-sound--card--d). M7-P4_H7_W7 standing on the console top at A1's exact scale (art.json's box; 331x171 px, the same as A1's file), moved only in position onto this frame's console line. Scene exposure lifted x1.12. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.4:1 at the text zone's 90th percentile). LG's group shot: the bar on the console's front edge, the speakers behind it as LG composed them.",
+          "rejected": []
+        },
+        "deal_sound_suite_bundle/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "d540666ff72916f869c70dec609034c598ade8c3229526bb1ec3f1e7c0659f3d",
+          "note": "A1b light tone. warm daylight living room, honey-oak slatted wall, long low walnut console, soft amber glow (living-sound--tall--a). M7-P4_H7_W7 standing on the console top at A1's exact scale (art.json's box; 475x245 px, the same as A1's file), moved only in position onto this frame's console line. Scene exposure lifted x1.12. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 5.4:1 at the text zone's 90th percentile). LG's group shot: the bar on the console's front edge, the speakers behind it as LG composed them.",
+          "rejected": []
+        },
+        "deal_free_wall_mounting/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "e1f9440102f65e8f96924eac9becafe65ce6da75be4edd7e5a00c64e8753663b",
+          "note": "A1b light tone. living room in soft morning daylight, dusty-blue walls, soft blue and lavender cove glow, low oak console (living-blue--card--a). OLED65C6PUA hung on the wall above the console at A1's exact scale (art.json's box; 288x202 px, the same as A1's file), moved only in position onto this frame's console line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.6:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_free_wall_mounting/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "c35ba0d600ee7ff9214652ac3fd3a916fe13f707bddf772c9ea8490d9d892978",
+          "note": "A1b light tone. living room in soft morning daylight, dusty-blue walls, soft blue and lavender cove glow, low oak console (living-blue--tall--a). OLED65C6PUA hung on the wall above the console at A1's exact scale (art.json's box and shrink 0.47; 231x162 px, the same as A1's file), moved only in position onto this frame's console line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_big_screens/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "c93c7eb51895add38ab1fb14ca5e2a85fe7b384ebff5aaae2552697565d1ff0e",
+          "note": "A1b light tone. seamless raspberry-red and warm rose studio in daylight, magenta-red glow, glossy floor (studio-burgundy--card--a). 75MRGB95BUA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 317x257 px, the same as A1's file), moved only in position onto this frame's floor line. Scene exposure lifted x1.15. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 4.9:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_big_screens/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "f5c26ffb541088aabdfbab76fb85ca782218c4b73481264e11fcfdb2427149b9",
+          "note": "A1b light tone. seamless raspberry-red and warm rose studio in daylight, magenta-red glow, glossy floor (studio-burgundy--tall--a). 75MRGB95BUA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box and shrink 0.52; 232x188 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.4:1 at the text zone's 90th percentile). The bookshelf's spines are unlettered colour at 1:1.",
+          "rejected": [
+            "studio-burgundy--tall b: a large glossy board behind the TV that reads as a second screen"
+          ]
+        },
+        "deal_xbox_controller/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "3e2987b5091040d3bd17a0e2c3b426d87d34a3ea0b7a2f973c8fabf017a6c29a",
+          "note": "A1b light tone. seamless jade and mint studio in daylight, soft emerald glow, satin green floor (studio-green--card--a). 27LX6TYGA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 98x336 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.7:1 at the text zone's 90th percentile). The bookshelf's spines are unlettered colour at 1:1.",
+          "rejected": [
+            "studio-green--card b: the StanbyME's base would stand on the coffee table"
+          ]
+        },
+        "deal_xbox_controller/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "fbf388fda67875df3f644f855df44337a3403e5d95c558d450a3ea53d71cb17d",
+          "note": "A1b light tone. seamless jade and mint studio in daylight, soft emerald glow, satin green floor (studio-green--tall--b). 27LX6TYGA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 151x516 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 4:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_laundry_pair/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "9f6f0017c5c9f44978eda17612b85e15d81765fe15a6dada2784f7ab25c42253",
+          "note": "A1b light tone. sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor (laundry-evening--card--a). WM4000HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 211x302 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 8:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_laundry_pair/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "62ebfc9e2a0559608eceb86a491b7b4534c19521e5ad32db74164737155dba1f",
+          "note": "A1b light tone. sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor (laundry-evening--tall--a). WM4000HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 276x396 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 4.6:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_laundry_sets/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "74b91d607ff01e5d876a8d9334982e0313ec0fff4d74ea19e76475d7465baf1b",
+          "note": "A1b light tone. sunlit boutique laundry room, muted raspberry-rose panelling, brass rail, herringbone oak floor, rosy glow (laundry-burgundy--card--b). WM4000HWA_DLEX4000W_WD300CW_WDP6W standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 303x311 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 5.7:1 at the text zone's 90th percentile).",
+          "rejected": [
+            "laundry-burgundy--card a: the model drew a white frame line around the picture"
+          ]
+        },
+        "deal_laundry_sets/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "825e4ee1db33939531e2ff2b3d487087b45aeedcd3538a8c65d30d8118f8b5dc",
+          "note": "A1b light tone. sunlit boutique laundry room, muted raspberry-rose panelling, brass rail, herringbone oak floor, rosy glow (laundry-burgundy--tall--a). WM4000HWA_DLEX4000W_WD300CW_WDP6W standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 420x430 px, the same as A1's file), moved only in position onto this frame's floor line. Scene exposure lifted x1.1. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 4.1:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_range_microwave/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "c0c90346503f1b0b01a8bd3459e5454d898fd032bb44dea553088b3a9fbbe4ea",
+          "note": "A1b light tone. sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--card--b). LSGL6335X standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 233x277 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 7.2:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_range_microwave/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "3424c3028ae000fd536d973277b8ecd17e5384a100425c28b64e477ec56ec899",
+          "note": "A1b light tone. sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--tall--a). LSGL6335X standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 361x430 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 6.6:1 at the text zone's 90th percentile).",
+          "rejected": [
+            "kitchen-evening--tall b: the wall line sits at the product's base height, so the range floats"
+          ]
+        },
+        "deal_kitchen_packages/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "ac4ece2e9b0ee9a9d9607006b5fda1c85e8fd68824224e2b40f97da8d6a109a8",
+          "note": "A1b light tone. spacious sunlit kitchen, oak and sage cabinetry at the far left, long warm taupe plaster wall, brass pendant glow, oak floor (kitchen-wide--card--c). LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 306x218 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 6:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_kitchen_packages/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "51e821585a118c19068a6b9a9b9143158cb46257b5aa6167ebb16e68b9b92e84",
+          "note": "A1b light tone. spacious sunlit kitchen, oak and sage cabinetry at the far left, long warm taupe plaster wall, brass pendant glow, oak floor (kitchen-wide--tall--b). LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 554x396 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 5.8:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_fridge_dishwasher/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "ccd0722235481d3bee7ae9fb7cfc7d062719ec78c0d364461f2ad79ef96e0825",
+          "note": "A1b light tone. spacious sunlit kitchen, oak and sage cabinetry at the far left, long warm taupe plaster wall, brass pendant glow, oak floor (kitchen-wide--card--d). LDNPM654S standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 183x252 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 4.1:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_fridge_dishwasher/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "c99a11874fc25d1ef655eaa5c58788682b8a21a56a59596b7768c7f66f8d2db6",
+          "note": "A1b light tone. sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--tall--c). LDNPM654S standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 299x413 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.2:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_thinq_warranty/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "e308c5f5c241cffb32f50c51598b688bd866bc31909e5530416b705b6b079265",
+          "note": "A1b light tone. seamless warm stone-grey studio in daylight, soft cool blue glow, satin floor (studio-charcoal--card--b). WM4000HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 193x277 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 6.3:1 at the text zone's 90th percentile). The framed picture is an unlettered abstract.",
+          "rejected": []
+        },
+        "deal_thinq_warranty/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "a6bc893e99d9f5f820d959961edae693064db1bf7ce2678cb32ba29af3f64ee9",
+          "note": "A1b light tone. seamless warm stone-grey studio in daylight, soft cool blue glow, satin floor (studio-charcoal--tall--b). WM4000HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 299x430 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 4.4:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "deal_wash1000/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "0a4bf29d97cd7bf3f1968338ef168fd1890a464519c452dec59780609f6690b9",
+          "note": "A1b light tone. sunlit boutique laundry room, muted raspberry-rose panelling, brass rail, herringbone oak floor, rosy glow (laundry-burgundy--card--d). WM6700HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 248x302 px, the same as A1's file), moved only in position onto this frame's floor line. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light (white 4.5:1 at the text zone's 90th percentile).",
+          "rejected": [
+            "laundry-burgundy--card a: the model drew a white frame line around the picture"
+          ]
+        },
+        "deal_wash1000/tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "9d777becea5fc870fc33b2c4544a7280f62324e08901bd8a963b21cf3327a9f9",
+          "note": "A1b light tone. sunlit boutique laundry room, muted raspberry-rose panelling, brass rail, herringbone oak floor, rosy glow (laundry-burgundy--tall--b). WM6700HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 339x413 px, the same as A1's file), moved only in position onto this frame's floor line. Scene exposure lifted x1.1. A shaded foot kept for the white headline (the page adds its own foot gradient on top). Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3.5:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "tile_tvs/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "416d1b97e539b04dcda0fc79bfca9e18191b1e7c4477746a559068809f005c44",
+          "note": "A1b light tone. living room in soft morning daylight, dusty-blue walls, soft blue and lavender cove glow, low oak console (living-blue--card--c). OLED65C6PUA standing on the console top at A1's exact scale (art.json's box; 293x231 px, the same as A1's file), moved only in position onto this frame's console line. No scrim: the room tile sets its text under the picture. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 2:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "tile_audio/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "248990ac062e9f823792cbe120fab1f84c231346d3923d993ffe3c231e75dbbe",
+          "note": "A1b light tone. warm daylight living room, honey-oak slatted wall, long low walnut console, soft amber glow (living-sound--card--a). S90TY standing on the console top at A1's exact scale (art.json's box; 331x195 px, the same as A1's file), moved only in position onto this frame's console line. No scrim: the room tile sets its text under the picture. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 2.2:1 at the text zone's 90th percentile). The bar is LG's angled product shot, set with its lowest point on the console's front edge, as A1 set it.",
+          "rejected": []
+        },
+        "tile_laundry/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "ba158d84ca2609374dae7bedd7f2c6816d3460a0138eb6605ada7f7e43066bc2",
+          "note": "A1b light tone. sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor (laundry-evening--card--c). WM4000HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 211x302 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the room tile sets its text under the picture. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "tile_washtower/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "425e837b9892fc1f6d2e3846a3c64938e46b3dc84e083d8f1efcf73d4438b645",
+          "note": "A1b light tone. sunlit boutique laundry room, muted raspberry-rose panelling, brass rail, herringbone oak floor, rosy glow (laundry-burgundy--card--c). WKE100HWA standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 151x344 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the room tile sets its text under the picture. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.9:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "tile_cooking/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "66eb170a23ea27f286533cb2456e901bab3882d6eeac5c44f1eabfc369a6dc1f",
+          "note": "A1b light tone. sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--card--a). LSGL6335X standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 240x286 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the room tile sets its text under the picture. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink light-large (white 4.3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "tile_dishwashers/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "3763e90b2017f87af16d925909224810d691c9df39d1ec36a43b847c8b4608f3",
+          "note": "A1b light tone. spacious sunlit kitchen, oak and sage cabinetry at the far left, long warm taupe plaster wall, brass pendant glow, oak floor (kitchen-wide--card--b). LDNPM654S standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 183x252 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the room tile sets its text under the picture. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 2:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "tile_packages/tile": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "973d73faf7480f7b0a361ede5ede4e6b970aea792440be6fa439c613d96104b4",
+          "note": "A1b light tone. spacious sunlit kitchen, oak and sage cabinetry at the far left, long warm taupe plaster wall, brass pendant glow, oak floor (kitchen-wide--card--a). LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 330x235 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the room tile sets its text under the picture. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.6:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "room_living_room/banner": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "331b8e312dd650154702e2351d5cd1ac2536fe7ab54ca2e345d64c0a9feb9936",
+          "note": "A1b light tone. sunlit living room in late-afternoon light, warm terracotta-clay walls, golden sun glow, low walnut and oak console (living-amber--wide--c). OLED65C6PUA standing on the console top at A1's exact scale (art.json's box; 274x216 px, the same as A1's file), moved only in position onto this frame's console line. Scene exposure lifted x1.25. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "room_laundry_room/banner": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "09dff02814f7a374b8029ea651072775a134a1813346a5c27fdaf5ab7d92a832",
+          "note": "A1b light tone. sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor (laundry-evening--wide--c). WM4000HWA_DLEX4000W_WD300CW_WDP6W standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 288x295 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.3:1 at the text zone's 90th percentile). The small white sliver under the dryer pedestal is part of LG's cut as A1 treated it (present in A1's file too; product treatment unchanged).",
+          "rejected": []
+        },
+        "room_kitchen/banner": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "e2c04480ecfce015b4271279bbd4283cd7e27e25d3f166a3e1e27acc63e7c6f4",
+          "note": "A1b light tone. sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--wide--c). LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT standing on the floor in front of the wall, with a contact shadow at A1's exact scale (art.json's box; 424x302 px, the same as A1's file), moved only in position onto this frame's floor line. No scrim: the page sets dark type on its own white panel over this art. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the generated scene; no seam across the frame where the page shows it; product edges clean on the light ground, shadow present; the only marks are LG's own on its product as LG publishes it. Ink dark (white 1.4:1 at the text zone's 90th percentile).",
+          "rejected": []
+        },
+        "room_living_room/banner-tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "e31ca7384e3d58d3294f151524ebd56c78df7e98f3c436266717d6a5b8f10d6c",
+          "note": "A1b light tone, banner-tall (the coordinator's addition for M1e's taller banner). sunlit living room in late-afternoon light, warm terracotta-clay walls, golden sun glow, low walnut and oak console (living-amber--wide--c), the 1440x360 banner's own scene extended 160 px upward from the same bottom edge. OLED65C6PUA at the banner's very pixel size (274x216, scale 0.74) and scene position. Scene exposure lifted x1.25, as the banner. No scrim: the page sets dark type on its own white panel. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the scene, and nothing new in the extension above the banner's frame but wall and window light; product edges clean, shadow present; the only marks are LG's own on its product. Ink dark (white 1.3:1 at the text zone's 90th percentile). The C6's own panel mark has a 22 px cap at 1:1, the same as in the 360 banner (the product is not rescaled, as ruled).",
+          "rejected": []
+        },
+        "room_laundry_room/banner-tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "6b7db1f23306f880b09cc5a09bf8e39991f91d21c8602c93935d96386cd23b1b",
+          "note": "A1b light tone, banner-tall (the coordinator's addition for M1e's taller banner). sunlit laundry room, sage-green walls and cabinetry, oak shelf with towels, warm oak floor (laundry-evening--wide--c), the 1440x360 banner's own scene extended 160 px upward from the same bottom edge. WM4000HWA_DLEX4000W_WD300CW_WDP6W at the banner's very pixel size (288x295, scale 1.03) and scene position. No scrim: the page sets dark type on its own white panel. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the scene, and nothing new in the extension above the banner's frame but wall and window light; product edges clean, shadow present; the only marks are LG's own on its product. Ink dark (white 1.2:1 at the text zone's 90th percentile). The small white sliver under the dryer pedestal is part of LG's cut as A1 treated it (as in the 360 banner).",
+          "rejected": []
+        },
+        "room_kitchen/banner-tall": {
+          "verdict": "accept",
+          "checked": "2026-10-03",
+          "sha": "bd814aadca7714b80494c76721a47e0eb86a1083d0221438547ecf7b6243fd76",
+          "note": "A1b light tone, banner-tall (the coordinator's addition for M1e's taller banner). sunlit modern kitchen, walnut base and cream upper cabinets at the left, warm greige stone wall, oak floor, amber glow (kitchen-evening--wide--c), the 1440x360 banner's own scene extended 160 px upward from the same bottom edge. LF24Z6530S_LSGL5833X_MVEM1825F_ADFD5448AT at the banner's very pixel size (424x302, scale 1.15) and scene position. No scrim: the page sets dark type on its own white panel. Checked by eye on the contact sheet and at 1:1: no text, letters, numbers, logos or people in the scene, and nothing new in the extension above the banner's frame but wall and window light; product edges clean, shadow present; the only marks are LG's own on its product. Ink dark (white 1.3:1 at the text zone's 90th percentile).",
+          "rejected": []
+        }
+      }
+    }
+  }
+}

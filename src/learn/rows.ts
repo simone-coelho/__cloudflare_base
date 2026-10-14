@@ -195,7 +195,12 @@ export function decodeCursor(s: string | undefined | null): Cursor | null {
 
 // ── What is exploring ────────────────────────────────────────────────────────
 
-export interface ExploringRow { item: string; customer_item_id: string | null; title: string | null; n: number; to_floor: number }
+/** P11: the exposures n still lacks of the evidence floor F, never below 0. */
+const toEvidenceFloor = (floor: number, n: number): number => r3(Math.max(0, floor - n));
+
+export interface ExploringRow { item: string; customer_item_id: string | null; title: string | null; n: number; to_floor: number;
+  /** P11: the exposures this piece still lacks of its page's configured evidence floor, never below 0; only where the page has one. */
+  to_evidence_floor?: number }
 
 /**
  * The items under the slot's observation floor, least observed first: what
@@ -211,16 +216,37 @@ export interface ExploringRow { item: string; customer_item_id: string | null; t
  * Absent (a caller that has no catalogue in hand), nothing is filtered and the
  * list is exactly what it was.
  */
-export function exploringRows(snap: LiftSnapshot, names: Names, floor: number, catalogue?: ReadonlySet<string>): ExploringRow[] {
+export function exploringRows(snap: LiftSnapshot, names: Names, floor: number, catalogue?: ReadonlySet<string>, evidenceFloor?: number | null): ExploringRow[] {
   const out: ExploringRow[] = [];
   for (const [id, byKey] of Object.entries(snap.items)) {
     if (catalogue && !catalogue.has(id)) continue;
     const n = byKey['*']?.n ?? 0;
     if (n >= floor) continue;
     const nm = names.get(id);
-    out.push({ item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null, n: r3(n), to_floor: r3(floor - n) });
+    out.push({ item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null, n: r3(n), to_floor: r3(floor - n),
+      // P11: against the page's configured evidence floor, where the page has one; the row is otherwise exactly as before.
+      ...(typeof evidenceFloor === 'number' ? { to_evidence_floor: toEvidenceFloor(evidenceFloor, n) } : {}) });
   }
   return out.sort((a, b) => a.n - b.n || a.item.localeCompare(b.item));
+}
+
+/**
+ * P11 (decisions D1, D2): each piece's exposures-to-floor against its page's
+ * configured evidence floor F — F − n at level everyone, never below 0 — for
+ * every item of the snapshot, keys sorted. The operator's lift route answers it
+ * beside the floor (`toEvidenceFloor`). It reports; it changes no estimate. Pure.
+ */
+export function toEvidenceFloorOf(snap: unknown, floor: number): Record<string, number> {
+  const items = snap !== null && typeof snap === 'object' ? (snap as { items?: unknown }).items : undefined;
+  if (items === null || typeof items !== 'object' || Array.isArray(items)) return {};
+  const out: Record<string, number> = {};
+  for (const id of Object.keys(items).sort()) {
+    const byKey = (items as Record<string, unknown>)[id];
+    const root = byKey !== null && typeof byKey === 'object' ? (byKey as Record<string, { n?: unknown } | undefined>)['*'] : undefined;
+    const n = typeof root?.n === 'number' && Number.isFinite(root.n) && root.n > 0 ? root.n : 0;
+    out[id] = toEvidenceFloor(floor, n);
+  }
+  return out;
 }
 
 /** A plain page of any list, with the next offset. */

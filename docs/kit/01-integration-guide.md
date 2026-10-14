@@ -119,9 +119,14 @@ client.listen.subscribe('hero', (decisions) => {
   void client.emit.rendered('hero', d.contentId, heroElement, d.decisionId);
 });
 
-void client.listen.refresh({ page: 'home' });             // coalesced latest intent
-client.connect();                                       // optional updates; reconnect refreshes
+void client.listen.refresh({ page: 'home' });  // paints the first answer; defaults stand at the deadline
+client.connect();                              // optional updates; opened during the first answer, one refresh after it
 ```
+
+The first line asks for the page view's first answer and paints it when it arrives; if nothing has
+arrived by the deadline the defaults stand, and a later answer still paints. The second line opens the
+optional live channel. Opening it while that first answer is in flight does not cancel the answer: the
+answer is painted and acknowledged first, then the page refreshes exactly once.
 
 Here `renderHero` synchronously resolves your CMS ID and returns `true` only after the matching,
 eligible asset has actually painted in `heroElement`. Missing, deleted or cross-category assets
@@ -138,17 +143,34 @@ ours for the events you send back.
 
 Customer snapshots are read-only offers: receiving or polling a choice creates no behavioral, ledger or learning exposure. Explicitly publish `slots.{slot}.measurementBasis: 'rendered-v1'` for new rendered measurement, with durable recovery and approved original ledger/online retention. Missing basis remains historical `served-v1`; switching a used slot requires compatible config/reset-generation handling, not relabeling or mixing old counters/priors.
 
-A current tracked choice carries `decisionId` and opaque `renderOffer`. After actual paint, `await client.emit.rendered(slot, contentId, element, decisionId)` returns `{version:1, decisionId, eventId, pageInstance, status:'durable', source:'pending'|'recovered'}` or null. This ACK proves owner-durable source admission, not completed sinks or human visibility. On null, retry the same paint: the SDK retains its original envelope, ID and timestamp, with at most three attempts. Unchanged placement and asset retain the painted receipt across polls; changed asset/page/owner invalidates it.
+A current tracked choice carries `decisionId` and opaque `renderOffer`. After actual paint, `await client.emit.rendered(slot, contentId, element, decisionId)` returns `{version:1, decisionId, eventId, pageInstance, status:'durable', source:'pending'|'recovered'}` or null. This ACK proves owner-durable source admission, not completed sinks or human visibility. On null, retry the same paint: the SDK retains its original envelope, ID and timestamp, with at most three attempts. A painted receipt is keyed by slot, position within the slot (`slotPosition`, from 0, as the delivered list orders the slot) and item. An unchanged placement and asset keep the painted receipt across polls even when the page-wide `order` shifts, so a change in one slot's selection never repaints or re-receipts another slot; the same item at another position within its slot is a new placement, repainted with the receipt of the answer that moved it; a changed asset, page or owner invalidates the receipt.
 
 `client.emit.contentClick(id, slot, {decisionId})`, dwell and supported custom/data-layer aliases wait for that exact ACK, with no uncorrelated fallback to a newer offer. Three-argument `rendered()` resolves only one matching current choice. Declarative attributes alone cannot mint an offer. Never log/export/store `renderOffer`; the transport strips it before ordinary behavior/debug/egress. Original item/slot/session/time and consent checks remain. Current report computation is version4; legacy1–3 remain historical, never pooled with incompatible bases.
 
-`listen.refresh({page})` permits one active snapshot and one coalesced pending latest intent; stale page/owner/consent responses cannot repaint. Acknowledged non-impression/non-dwell interactions and socket connection/reconnection refresh automatically. Route changes call `refresh({page})`. Optional publication polling is the third `createClient` argument, for example `createClient(config, undefined, {refreshMs:5000})` (off by default; clamp1s–5min). `hydrate` is a direct one-shot. No production `content_decisions` push is promised.
+`listen.refresh({page})` permits one active snapshot and one coalesced pending latest intent; stale page/owner/consent responses cannot repaint. Acknowledged non-impression/non-dwell interactions and socket connection/reconnection refresh automatically. While the first snapshot of a page view is in flight they do not cancel it: its answer is painted, then exactly one refresh follows, however many of them arrived; during any later snapshot they coalesce as the page's own `refresh()` calls do. Route changes call `refresh({page})`. Optional publication polling is the third `createClient` argument, for example `createClient(config, undefined, {refreshMs:5000})` (off by default; clamp1s–5min). `hydrate` is a direct one-shot. No production `content_decisions` push is promised.
 
-On snapshot failure or the 1.5-second deadline (`hydrateTimeoutMs`), every slot subscriber receives
-`[]` with the requested page, `onDecisions` receives `null`, and `current()` becomes `null`. Existing
-dwell capture is cancelled; restoring defaults does not create an impression. Late slot subscribers
+**The first decision on the first request.** A new visitor's first decision set arrives on one call: when the browser holds no session of its own, no return-recognition proof and no return in flight, the first `hydrate` (or `refresh`) sends the decision request without a session, and the engine issues the session with that answer, as `session`, so no separate round trip to `/identity/session` comes first. The session it issues is the one `POST /v1/{tenant}/identity/session` would have issued that browser, with the same consent default, and the SDK keeps and uses it exactly as it keeps that route's. That one request carries only the page, its page instance, the brand and the refusals the browser already holds: the browsing session, the channel, the arrival (`entry`) and `customerId` are sent from the next request on, once the shopper's consent choice allows tracking. A browser that already holds a session or a recognition proof, and a client configured with a `sessionBroker`, take the session route first as before, and the SDK falls back to the session route, then the decision request, when an answer carries no session. On the server, `bridge.snapshot(request, page)` serves a new visitor (no session cookie and no recognition-proof cookie) from that one call to the engine and sets the shopper's session cookie from the answer; the session never enters the bootstrap, and an answer without a session falls back to the session call, then the decision request, as before.
+
+On snapshot failure, or at the 1.5-second deadline (`hydrateTimeoutMs`) when nothing has arrived, every
+slot subscriber receives `[]` with the requested page, `onDecisions` receives `null`, and `current()`
+becomes `null`. The deadline is a hard ceiling measured from the page view's first snapshot request: no
+re-ask restarts it, so by then the page has the decisions or `[]`. A later answer still paints, and a
+re-ask after the first paint leaves the page as it is until its own answer arrives; its failure restores
+the defaults. Existing dwell capture is cancelled; restoring defaults does not create an impression. Late slot subscribers
 receive known absence too; a subscription before any delivery stays silent. A successful empty set
 remains a set, with `[]` for each slot.
+
+**Holding a layout for the page view.** `const release = client.listen.hold('layout')` holds that slot as it
+was last delivered, for the page view in progress. A later answer of the same page view (after an
+acknowledged interaction, a reconnect or a poll) does not repaint it: its subscribers are not called with
+another list, a late subscriber receives the held one, and its painted receipts stay valid, so `rendered`
+and the clicks, dwell and other correlated outcomes of a held module carry the `decisionId` it was painted
+and acknowledged with, although the newer answer moved or dropped the module. Every other slot keeps
+following the answers. Calling `release()` ends the hold, and so does a new page view (another page, or a
+new page instance); a release does not repaint by itself: the next answer the page receives repaints the
+slot (call `refresh()` to ask for one at once). A hold never holds back known absence: a consent refusal,
+an identity change or a failed answer still restores the defaults. Made before the first `refresh` or
+`hydrate`, or after an identity change, a hold holds nothing.
 
 Keep defaults in the initial HTML and restore them on `[]`; asynchronous client refresh can repaint defaults. For server-first paint use the delivered server-side source module `src/sdk/server.ts`, not a browser global or a claimed published npm artifact:
 
@@ -233,6 +255,60 @@ carry only the new identity.
 
 **Listen-only.** `listenOnly:true` disables rendered admission and declarative capture. Explicit commerce/page/data-layer events remain available; the current SDK does not bypass the missing render ACK for content outcomes.
 
+**Thresholds and event conventions.** Each threshold below is either the platform's or one your page sets, and
+each event travels exactly as written here.
+
+- **The viewable impression, `content_viewable`.** The SDK measures it and your page never sends it. Once a
+  piece's render acknowledgement is held, a container reported at least half in view for one second without
+  interruption sends one `content_viewable` per piece per page instance, carrying `contentId`, `slot`,
+  `slotPosition`, `decisionId`, `page`, `pageInstance` and `position` (the page-wide order). The second is
+  continuous: leaving view, a detach, `destroy()`, a consent refusal or a new identity generation cancels it, and
+  with the declarative capture the next time in view starts a new second; a container in view for less than a second
+  at a time, or never half in view, sends none. A piece acknowledged through `rendered(slot, contentId, element)` is
+  measured only while the SDK observes that element, until it first leaves view: a second time in view sends none
+  there, so mark module containers for the declarative capture. It weighs 0 whatever your registry says, builds no interest and counts no exposure, so
+  what a slot learns from is unchanged. A renderer that measures visibility itself reports it with
+  `client.listen.visible(slot, contentId, inView, decisionId)`; `client.emit.track('content_viewable')` sends nothing.
+- **The video view, `video_view`.** Call `client.emit.videoView(contentId, slot)` when your player has played
+  three seconds of the painted piece, beside `client.emit.videoComplete(contentId, slot)` at its end. It waits for
+  the piece's render acknowledgement, as a click does, and builds interest in the piece's format as your catalogue
+  names it (`tags.contentType`), at the weight your registry publishes for it (`weights.video_view`, 1 in the shipped
+  registry); a registry that names no `video_view` weight weighs it 0, as it weighs every action it does not name.
+- **A dwell minimum per slot, `dwellMinMsBySlot`.** A dwell is sent when a piece leaves view after its minimum on
+  screen, one second by default (`dwellMinMs`). `client.emit.declarative({ dwellMinMsBySlot: { 'pdp-editorial': 30000 } })`
+  holds a named slot to its own minimum (here 30 seconds on editorial) while every other slot keeps one second;
+  `createClient(config, host, { dwellMinMsBySlot })` does the same for `rendered()` with an element.
+- **The product dwell, `product_dwell`.** Once per product view, when the shopper has stayed on the product page
+  past 20 seconds, send `client.emit.track('product_dwell', { productId: 'SKU-123', dwellMs: 21000 })`. Its `dwellMs`
+  feeds the visit's dwell counter your journey thresholds read (`category_dwell_ms`); it is captured at weight 0.
+- **A purchase is unique per `orderId`.** A second purchase naming an `orderId` this shopper's purchase already named is answered `200` with `dropped: "duplicate_order"` and writes no outcome, no credit and no interest.
+  The same event sent again (the same `eventId`) is not a second purchase, and a purchase without an `orderId` is
+  never deduplicated.
+- **Search, `search`.** Send `client.emit.custom('search', { category: 'Handbags', line: 'Tabby' })` with what your
+  search resolved the query to, in your registry's source fields: the resolved values only, never the query text.
+- **Filters, `filter_applied`.** Send `client.emit.custom('filter_applied', { dimension: 'category', value: 'Handbags', category: 'Handbags' })`:
+  the facet's dimension and value, with the value also in the registry's own source field. The sale filter and the sale page both send `filter_applied` with `dimension: 'priceStatus'`, `value: 'sale'` and `priceStatus: 'sale'`, raising `priceStatus` sale.
+- **Removing from the bag, `remove_from_cart`.** Send `client.emit.custom('remove_from_cart', { productId: 'SKU-123' })`;
+  it is captured at weight 0 until the negative-signal release (P39) gives it a meaning.
+- **Their registry values.** The shipped registry weighs `video_view` 1 and `content_viewable` 0, and names no
+  weight for `search`, `filter_applied`, `remove_from_cart` or `product_dwell`, so each of those is captured at
+  weight 0 until your registry publishes one (`weights.search`, `weights.filter_applied`). An event's own values,
+  such as a search's resolved `category` or the sale filter's `priceStatus`, build interest only where your
+  registry names that source field as a dimension and scores event attributes (`eventAttributes: "event-when-unknown"`).
+
+### Before sign-in: the loaded hook and your identifier for the shopper
+
+```js
+client.core.onLoaded(() => {
+  // runs once, when the client has loaded
+});
+client.core.setCustomerId(hashedId);   // your hashed identifier for this shopper, before sign-in
+```
+
+`client.core.onLoaded(callback)` runs `callback` once, when the client has loaded (its first session is in hand), or once at the next turn when the client had already loaded; a callback that throws changes nothing of the client, and registering one never starts a call.
+
+`client.core.setCustomerId(id)` passes your own identifier for the shopper before recognition: a hashed identifier, such as a SHA-256 digest of the e-mail address, of 1 to 128 letters, digits and `_ + / = . -`, so a raw e-mail address is refused. While tracking is allowed, every event the SDK sends and every decision request it makes then carries it as `customerId`, beside the engine's own visitor identifier, and the decision and outcome records written from them carry it as `customer_id` beside `visitor_id`. The `customerId` is carried, never treated as proof of identity: it links nothing, merges nothing, issues no recognised session and selects no other shopper's state, even when an account is linked under the same value. Signing in still takes `identify()` with your backend's signed assertion, below; the link's answer then names, as `customerId`, the identifier this browser carried before it (absent when it carried none), while the link itself is the signed account's. Any other value clears the identifier, as does a logout; the SDK holds it in memory for the page and never stores it.
+
 ## 5. Sign-in and sign-out
 
 The visitor id is anonymous until your page says who the person is.
@@ -264,6 +340,42 @@ newline:
 
 If the browser still carries the previous person's id, the platform refuses with409. Static `{exp, assertion}` proof is never reused for another visitor and does not trigger retry. To support one safe retry, supply `getAssertion: async ({tenant, visitorId, accountId}) => …` that obtains fresh backend-signed `{exp, assertion}` for those exact values. Only after a successful detach does the SDK call that provider again for the new visitor and retry once; the result then says `retried:true`.
 
+### The account identifier's format, and a change of identifier
+
+Your account identifier may take a fixed form: an identifier your site assigns at a shopper's first
+landing, and later one derived from the shopper's e-mail address (a hash of it) once it is known.
+Declare those forms as `accountIdFormat` on the reflex document with `PUT /config/reflex`, no deployment:
+`{ "firstLanding": "^…$", "hashedEmail": "^…$" }`, at least one of the two, each the source of a regular
+expression anchored with `^` and `$` that a whole identifier must match ([API reference](./02-api-reference.md#account-identifier-format-and-identifier-changes)).
+A link whose account identifier matches none of the declared forms is refused with `400`, naming
+`accountIdFormat`, and nothing is linked or merged; a tenant that declares no format links any
+identifier exactly as before.
+
+When the shopper's identifier changes from one form to the other, your backend signs an `accountChange`
+statement over both identifiers, and the page passes it to identify() with the link's own proof:
+
+```js
+const r = await client.identify(hashedEmailId, { source: 'login', getAssertion,
+  accountChange: { from: firstLandingId, exp, statement } });
+```
+
+`statement` is an HMAC-SHA256, base64url without padding, with the same identity secret, over five lines
+joined by a newline, where `to` is the account identifier you pass to identify():
+
+```
+<tenant>\naccount-change\n<from>\n<to>\n<exp>
+```
+
+`exp` is a unix time in seconds, at most 24 hours ahead. The two accounts' profiles merge only on an
+`accountChange` statement that verifies, and the merge never overrides either profile: both histories
+are kept and added, each decayed by its age, so what the shopper does now still outranks both. A
+statement that is missing, names another pair of identifiers, is signed with a secret the tenant does
+not hold, has expired or expires more than 24 hours ahead is refused with `401`, naming the account
+change, and nothing is linked or merged. The earlier account's profile is merged once: the SDK sends
+`accountChange` unchanged on every link request of the call, the retry after a `409` and a detach
+included, and the same statement presented again merges nothing more while the sign-in itself is
+accepted. The earlier account keeps its own profile.
+
 ## 6. The live channel
 
 `client.connect()` opens a socket under the visitor id. What arrives:
@@ -284,7 +396,7 @@ without resetting the high-water. Identity transition resets it; reconnect does 
 eviction and bypass can admit echoes; clock rollback can suppress valid updates, so this is neither a
 causal sequence nor exactly-once delivery. Superseded update listeners stop, and `core.send()` returns
 `null` for rejected/superseded updates without undoing independent sent/receipt acknowledgments.
-The socket is optional. Supported coalesced refresh follows acknowledged interactions and reconnect; snapshots alone create no exposure. `content_decisions` remains a client-compatible shape, not a promised production frame.
+The socket is optional. Supported coalesced refresh follows acknowledged interactions and reconnect (an open during a page view's first snapshot lets its answer paint first, then refreshes once); snapshots alone create no exposure. `content_decisions` remains a client-compatible shape, not a promised production frame.
 
 ## 7. Content: what the engine chooses from
 
@@ -295,6 +407,148 @@ item names the slots it may fill, the tags it carries, its lifecycle and, option
 and season, promotion and margin signals. Your merchandiser's slot document names the slots on each page
 and the weight of each dimension in each slot, and can pin an item to a slot. Both documents are
 versioned: every change has an author and a note, and a rollback is a new revision.
+
+Tag values are free text until your brand approves an attribute vocabulary: a versioned list of the values
+each attribute may take, each an id with your display name and the words your source systems send for it
+(`PUT /content/vocabulary`, then approved on the console's Vocabulary screen or with
+`POST /content/vocabulary/approve/{n}`; [API reference](./02-api-reference.md#the-attribute-vocabulary-contentvocabulary),
+[schema](./03-payload-schemas.md#the-attribute-vocabulary)). From the approval on, a feed or an event may keep
+sending its own words: each is mapped through the vocabulary's mapping table to the value's id, an id passes
+unchanged, and a value the vocabulary does not list refuses the catalogue publication (naming the item and the
+tag) or, on an event, builds no interest and is counted in your rejection report
+(`GET /content/vocabulary/rejections`). Send ids where you can; list every other spelling as a synonym.
+
+### A page's layout: modules in one declared slot
+
+A page's modules (a category grid, recommendations, a styling story, reviews and the like) are content
+items too: each is registered in the content catalog with its own `id`, its kind as `type` and the
+journey stages it is made for as `journeyStageFit`, and names the layout slot in its `slotTypes`. Your
+merchandiser declares the page's layout as one slot of the slot document, marked `layout: true` in a
+document marked `governanceVersion: 4`, at most one per page. Its `take` is the number of positions K
+(1 to 50), and the registered modules that name the slot are its M candidates, M at least K. Each
+decision returns up to K module ids for that slot, in rank order, with eligibility (lifecycle, publish
+window, stock), the slot's exclusions and page-wide de-duplication applied; with nothing known about the
+shopper yet, they are the first K eligible modules in catalogue order. When fewer than K modules are
+eligible, the slot returns only those, never a filler.
+
+The list the layout slot returns is the layout's sequence: draw the modules in that order, one container
+per position. A module that is not returned is not drawn, and its container stays hidden. Every drawn
+module is acknowledged with `client.emit.rendered(slot, contentId, element, decisionId)` once it has
+actually painted, exactly as section 3 describes for any slot, and a module that failed to paint is not
+acknowledged. This contract is about a decision that answered: when the snapshot fails or misses its
+deadline, the subscriber receives `[]` and your page's own default layout stands, as for every slot.
+
+Measure the layout slot on `rendered-v1`: publish `slots.{slot}.measurementBasis: 'rendered-v1'` for it in
+the learn document, so a module that was drawn and acknowledged is one exposure, however often its
+acknowledgement is retried, and a module that was returned but never drawn, or not returned, is none. A
+layout slot left on `served-v1` is still served, but carries no render offer and is never counted as an
+exposure; the engine's decision set names that mismatch internally (`layoutDiagnostics`), and the
+snapshot answer does not carry it.
+
+### Modules with nothing to show, and eligibility rules
+
+Only your page knows when a module has nothing to show for this page view (a recently-viewed rail on a
+first visit, a reviews block for a product without reviews), so the page says so when it asks for the
+page's decisions:
+
+```js
+void client.listen.refresh({ page: 'pdp', nothingToShow: ['module.PDP.reviews.1'] });
+```
+
+The SDK sends the ids on the decision request as one JSON-encoded string field, `nothingToShow`, and sends
+nothing when the list is empty. A module named in `nothingToShow` is withheld before ranking, so it is not
+returned, not recorded and never counted as an exposure, and the slot fills its positions from the
+remaining ranked modules. The report can only withhold, never add: an id naming a module that is not
+eligible, excluded by the slot or not registered changes nothing.
+
+A module may also carry its own eligibility rule in the catalogue, `eligibleWhen`, by region (a region key
+such as `US-NY`, or a country such as `US`, which admits every region inside it), entry channel
+(`entry_channel`, among the six channel words, or your own channel ids when your tenant publishes a context
+vocabulary), visit bucket (`visit_bucket`: `1`, `2-3` or `4+`, or the names of your own visit-bucket cut) and
+journey stage (`journey_stage`: `exploring`, `considering` or `deciding`), and every condition it names
+must hold ([schema](./03-payload-schemas.md#the-content-piece)). The engine evaluates the rule on its own
+reading of the decision (the region the edge reports, the visit's entry channel, its visit bucket and the
+shopper's journey stage), never on a value your page sends. The rule fails closed: an unknown value
+satisfies no rule, so a module whose rule names a region is withheld while the shopper's region is
+unknown, and a module without a rule is unaffected. Publication refuses a rule that names any other
+signal, or a value outside its signal's words, naming the rule and the word. On the layout slot, a module
+withheld from a position the layout would otherwise have filled is named in the layout reason with its
+cause, `nothing_to_show` or `eligibility_rule`; a pinned module that is withheld refuses its pin, as an
+expired one does.
+
+### Module impressions and engagements
+
+Mark each module container the way the declarative capture marks any piece, `data-op-content` with the module id
+and `data-op-slot` with the layout slot, on the element that holds the module, and bind the page once with
+`client.emit.declarative()`. A container may also declare the interactions that count as using the module, as
+DOM event types, space separated, in `data-op-engage`:
+
+```html
+<section data-op-slot="pdp-modules" data-op-content="module.PDP.reviews.1" data-op-engage="swipe reviews-open">…</section>
+```
+
+- **The impression.** A marked module container sends one impression per module per page instance, when it is
+  first on screen. That impression is the module's render acknowledgement, the `content_impression` this guide
+  describes in section 3, never a second event: a repeated visibility, a re-subscribe, a redelivered decision
+  set, or your own `rendered()` call over the same container sends no other.
+- **The engagement.** A click anywhere inside the container is one engagement, and so is each interaction the
+  container declares in `data-op-engage`, each time it happens: your own code dispatches the event (bubbling) on
+  the container or inside it, as a carousel dispatches `swipe`. `click` needs no declaration, and an interaction
+  the container does not declare sends nothing. An engagement is a `content_click`, the slot's click reward: it
+  carries the module id as `contentId`, the `slot`, the `decisionId` of the module's render acknowledgement and
+  the position within the slot as `slotPosition`, and for a declared interaction its name as `interaction`. It waits for that acknowledgement, so a module that was never drawn and acknowledged is
+  never engaged and never credited.
+- **The position within the slot.** Every decision the snapshot returns carries `slotPosition`, the module's
+  position within its slot (what its decision record calls `position`), beside its page-wide `order`; the
+  acknowledgement carries both (`position` is the page-wide order), every engagement carries `slotPosition`, and
+  the outcome record of an engagement keeps the module id, the slot, the position within the slot and the
+  decision. The SDK carries `slotPosition` exactly as the decision names it and never computes one: a decision
+  adopted from the server-rendered bootstrap names none, and its acknowledgement is admitted on `position` as
+  before.
+- **The viewable impression.** Once its impression is acknowledged, a module container at least half in view for
+  one second without interruption sends one `content_viewable` per page instance (section 4, thresholds), carrying
+  the module id, the slot, `slotPosition` and the decision of its acknowledgement; less than a second at a time
+  sends none. It weighs 0, builds no interest and is never an exposure: the slot's exposures are its
+  acknowledgements, as above.
+- **Declared interactions of the module that owns them.** A size guide or a reviews panel opened inside a module is
+  that module's engagement: declare `data-op-engage="sizeguide:open reviews:open"` on its container and dispatch the
+  event, bubbling, from inside it when the shopper opens one (`new Event('sizeguide:open', { bubbles: true })`, or
+  `reviews:open`). Each is one `content_click` naming `interaction: "sizeguide:open"` or `"reviews:open"`.
+- **Consent.** Without the shopper's tracking consent, and in `listenOnly` mode, a marked container sends none of them.
+
+### A cached layout: one answer per context
+
+Where your front end caches a page's layout, your merchandiser can switch the page's declared layout slot to
+context-only with `contextOnly: { enabled: true }` on that slot of the slot document (a `governanceVersion: 4`
+member), which is off by default: absent, or `enabled: false`, the slot is decided exactly as before. Adding
+`region: true` admits the shopper's region into the context. Publication refuses the switch on any slot but the
+page's declared layout slot, naming `contextOnly` and the slot
+([schema](./03-payload-schemas.md#the-context-only-layout-switch)).
+
+A context-only slot is decided for its context and never for the shopper: the page, the entry channel, the visit
+bucket, the device class the request reports (`mobile` or `desktop`, none when the request reports neither) and,
+where admitted, the region. The shopper's interests, journey stage and fatigue play no part, nor does a seed rule
+on a signal outside the context (only `entry_channel` and `device` rules fire), and a module's eligibility rule is
+read on the context alone. Its learned lift answers from the channel and visit bucket or coarser, and its
+exploration is drawn from the context and the hour, so every shopper of one context, decided within the same hour,
+receives the identical order. A per-context order that names a device serves that device's shoppers, and one that
+names none serves every device. The regional population prior applies only where the region is admitted, as for a
+shopper with no interest. A shopper on the holdout's default arm, or without consent, receives the slot's default
+variant.
+
+Every answer for such a page carries the `X-Context-Key` response header, a non-identifying context key built from
+the page, the channel, the visit bucket, the device and, where admitted, the region, or naming the page's default
+variant, with a seal the engine adds; it never holds a visitor, session or decision identifier, or the user agent.
+Every shopper of one context gets the same key. The decision response itself stays `Cache-Control: no-store`: the
+caching is your front end's, keyed on that header.
+
+A page drawn from your cache tells the engine what it drew, so learning counts the exposure: call
+`client.listen.layoutExposure({ contextKey, page, slot, modules })` once per page view, with the key the cached
+layout was answered under and the module ids drawn, in drawn order. The SDK sends it as the `layout_exposure`
+action only under the shopper's tracking consent, once per page view and slot, and asks for no decisions because
+of it. The engine adds one exposure per drawn module to that context's learning (its channel and visit bucket; the
+device is no learning level), and adds nothing for a beacon sent without tracking consent, with a key it did not
+issue, or repeated for the same page view. Only a layout slot measured on `rendered-v1` counts it.
 
 ## 8. What to test before the freeze
 
@@ -321,5 +575,5 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | `sessionBroker` | absent | Same-origin POST broker for the server-first-paint path |
 | `heartbeatMs` | 25000 | Socket keepalive |
 | `reconnectMs` | 3000 | Socket reconnect delay |
-| `hydrateTimeoutMs` | 1500 | The deadline after which defaults stand |
+| `hydrateTimeoutMs` | 1500 | The page view's first-decision deadline, after which defaults stand: measured from its first snapshot request, never restarted by a re-ask |
 | `visitorIdKey` | `opt_visitor_id` | Storage key for the visitor id |
