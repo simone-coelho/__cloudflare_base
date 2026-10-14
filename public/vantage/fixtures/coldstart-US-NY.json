@@ -1,0 +1,21 @@
+{
+ "ok": true,
+ "fixture": "L2 build fixture for GET /vantage/api/coldstart (lane L4). The census row is real (migrations/seed/seed_011_geo.sql, geo_census region NY); the lean is representative until L4's seeded regional prior answers.",
+ "region": { "key": "US-NY", "label": "New York", "city": "New York", "source": "asserted" },
+ "grain": { "used": "state", "label": "New York (state)", "ladder": ["metro", "state", "country", "global"], "why": "State grain: IP location on a mobile network is off by about 200 km at the median, so the ZIP rung is never used." },
+ "census": { "label": "New York", "medianHhIncomeUsd": 85820, "medianHomeValueUsd": 449800, "source": "Census ACS 2024 1-yr", "vintage": "2024", "role": "shown, never scored" },
+ "lean": {
+  "label": "Regional device sales",
+  "dataSource": "synthetic → warehouse",
+  "level": "region",
+  "events": 2210,
+  "shares": {
+   "ecosystem": { "ios": 0.64, "android": 0.36 },
+   "brand": { "apple": 0.64, "samsung": 0.22, "google": 0.10, "motorola": 0.04 },
+   "priceBand": { "premium": 0.52, "core": 0.34, "entry": 0.14 }
+  },
+  "summary": "Leans iPhone, premium price band."
+ },
+ "platform": { "family": null, "note": "OS family from the request only, never a model." },
+ "sentence": "Aggregate, never the individual; we curate, never price."
+}

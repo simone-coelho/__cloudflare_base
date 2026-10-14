@@ -1,0 +1,64 @@
+{
+ "name": "07-compare-storage",
+ "beat": 7,
+ "act": 3,
+ "actName": "The phone page follows intent",
+ "press": "Compare storage, camera specs",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "events": [
+  {
+   "type": "custom",
+   "data": {
+    "event": "select",
+    "control": "storage",
+    "productId": "galaxy-s26",
+    "storage": "512gb",
+    "price_usd": 1099.99
+   },
+   "note": "the storage step: 256 GB → 512 GB"
+  },
+  {
+   "type": "custom",
+   "data": {
+    "event": "compare",
+    "spec": "storage",
+    "productId": "galaxy-s26",
+    "storage": "512gb",
+    "price_usd": 1099.99,
+    "contentType": "compare"
+   },
+   "note": "compare: the storage row"
+  },
+  {
+   "type": "custom",
+   "data": {
+    "event": "compare",
+    "spec": "camera",
+    "productId": "galaxy-s26",
+    "brand": "samsung",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 1099.99,
+    "contentType": "compare"
+   },
+   "note": "compare: the camera row"
+  }
+ ],
+ "snapshot": {
+  "page": "phone",
+  "phone": "galaxy-s26",
+  "slots": [
+   "pdp-modules",
+   "plan-pairing"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  }
+ },
+ "engine": "The 512 GB step is a $1,099.99 touch, so priceBand premium rises; the compare moves contentType compare.",
+ "sees": "Storage & memory rises and leads with 512 GB at its real monthly delta (+$5.56 on this phone); protection follows the premium band."
+}

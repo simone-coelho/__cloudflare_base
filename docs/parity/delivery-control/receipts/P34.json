@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P34",
+  "workOrderHash": "sha256:fcc086aeb2c4de27cd1cd1c592087bc50a1df0db79a46f66a9b8e4c3b7570f11",
+  "artifact": {
+    "revision": "c458be69b189d528850530541fa9a203a52018ff",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p34-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P34 built on rem/p34-build in one round. 113e4125 merges rem/integration 2f01a33a (P02 to P13 of this programme, P36 to P40 of the second, the governance files) into the specification lane's head e9f503da (rem/spec-p34-fix1, specification round 1 under R-P68 and R-P69 reviewed PASS, the gate re-recorded at e9f503da); RED baseline 7 failed and 2 passed on P34's own reasons (T1 at :212, T2 at :243, T3 at :268, T4 at :344, T5 leg (a) at :422; green the T5 fresh-browser LOCK and the build-check lock), no PRECONDITION; 1fdd3a1a the SDK (src/sdk/listen.ts, src/sdk/types.ts, both bundle pairs with the 0.2.0 copies, packages/sdk/types/listen.d.ts and types.d.ts, packages/sdk/package.json): an answer in flight when an acknowledged event or a socket open arrives during the first snapshot is applied and then refreshed exactly once while the page's own refresh keeps its coalescing (C13) and a later re-ask keeps the discard-and-re-ask rule of listen.test.ts:491; the first-decision deadline a hard ceiling measured from the first request of the page view, never re-armed by a re-ask or a trigger, bound to the page instance; listen.hold(slot) holding a slot's current decisions for the page view with the held modules' receipts kept valid after a later answer moves or drops them, released by the returned function, a new page view or an identity change, absence delivered rather than held; receipts keyed by slot, position within the slot and item (the derived index, equal to P03's slotPosition on engine answers by code reading, S3F-C6) so one slot's selection change leaves the other slots untouched and no second impression is sent; no request member and no snapshot key added (R-P7, C8); the ESM bundle 100410 to 102594 bytes and the IIFE 105481 to 107773, both budgets re-recorded under R-P63 (ESM 102400 to 107520, IIFE 107520 to 112640); c458be69 the kit (docs/kit/01-integration-guide.md, docs/kit/02-api-reference.md): the ten-line example annotated with connect() still creating the socket before the first answer, the receipt key, the first-answer rule, the hard deadline and listen.hold documented; core.ts, emit.ts, index.ts, browser.ts, server.ts, scripts/build-sdk.mjs, every test and fixture untouched; the Meridian bundle unchanged (--check exact at 73711 bytes); acceptance 9/9 at c458be69 with src/sdk 82/82, W17 13/13, W18 16/16, W20 34/34, P03 8/8, P13 13/13, W40 9/9 and the second programme's units on the merged tree; four builder probes in a temporary test file removed before the commit (a socket open during the C18 fallback re-ask paints and refreshes once, the deadline on a fresh browser covers the fallback, several triggers before the answer give one refresh, a re-ask after the first delivery arms no deadline); the gate at c458be69 GATE_OK on its first run (implementer/logs/gate.log: 3101 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks exit 0, build-sdk and build-meridian --check exact), and the reviewer's own gate at the same sha GATE_OK with the same numbers (reviewer/logs/gate.log).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P34/implementer/REPORT.md",
+      "git commits on rem/p34-build up to c458be69"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P34 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P34/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P34/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P34/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P34/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-14T00:55:03.661Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

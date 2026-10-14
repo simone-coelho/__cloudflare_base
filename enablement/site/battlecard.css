@@ -1,0 +1,246 @@
+/* enablement/site/battlecard.css
+   The battlecard, /battlecard (lane A1, LANE-BRIEF-V3 4.4): one screen that prints on one sheet, Letter or A4. It loads
+   nothing and imports nothing. The chrome comes from /site.css and the compact spine from /spine.css; this sheet lays
+   out the six blocks after the spine as a sheet, with site.css's tokens only, so light and dark follow the same
+   prefers-color-scheme switch, and its print rules at the end fit the page to one sheet. Classes start with bc- (this
+   page), a1- (shared with the sellers' page: icons, captions, marks), fr- (the pillars' drawings) or st- (the pillar
+   strips). Nothing moves on this page, so there is nothing to still for reduced motion. */
+
+/* ---------- shared: the icon sprite, icons, captions, marks ---------- */
+.a1-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.a1-ico { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bc figure { margin: 0; }
+.a1-mark {
+  display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.a1-mark .a1-ico { width: 13px; height: 13px; stroke-width: 2.8; }
+.a1-mark-say { background: var(--lf-green); color: var(--fir); }
+.a1-mark-never { background: var(--ink); color: var(--bg); }
+.a1-k { font-weight: 800; }
+
+/* ---------- the sheet ---------- */
+.piece.bc { max-width: none; }
+.bc .reader-line { margin-bottom: 18px; }
+.bc-sheet { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 28px; }
+@media (min-width: 1000px) {
+  .bc-sheet { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 28px 30px; }
+  .bc-pillars-sec, .bc-reasons-sec, .bc-demos-sec, .bc-fixed-sec { grid-column: 1 / -1; }
+  .bc-objs-sec { grid-column: 1 / span 7; }
+  .bc-disc-sec { grid-column: 8 / -1; }
+}
+.bc .bc-sec { min-width: 0; }
+.bc .bc-sec h2 {
+  margin: 0 0 4px; padding-top: 12px; border-top: 2px solid var(--ink);
+  font: 800 clamp(1.2rem, 2.2vw, 1.45rem)/1.15 var(--head); letter-spacing: -.01em;
+}
+.bc .a1-cap { max-width: none; margin: 0 0 12px; color: var(--muted); font: 600 .9375rem/1.4 var(--body); }
+.bc p, .bc li { max-width: none; }
+
+/* pillars, each with a drawing and one proof */
+.bc-pillars-list { counter-reset: pillar; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 640px) { .bc-pillars-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .bc-pillars-list { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.bc .bc-pillar {
+  counter-increment: pillar; display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 14px 16px 14px;
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line-soft);
+}
+.bc .bc-pillar::marker { content: none; }
+.bc-art { display: block; width: 120px; height: auto; }
+.bc .bc-pillar-t { display: flex; align-items: flex-start; gap: 8px; margin: 0; font: 800 1.0625rem/1.25 var(--head); }
+.bc-pillar-t::before {
+  content: counter(pillar); flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; margin-top: -1px;
+  border-radius: 50%; background: var(--fir); color: var(--white); font: 700 .75rem/1 var(--mono);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.bc .bc-proof { margin: 0; font-size: .875rem; line-height: 1.45; }
+
+/* the ten reasons, a compact grid with no order */
+.bc-reasons-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 640px) { .bc-reasons-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .bc-reasons-list { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.bc .bc-reason {
+  display: flex; align-items: center; gap: 10px; margin: 0; padding: 10px 12px; border-radius: var(--radius-s);
+  background: var(--surface); border: 1px solid var(--line-soft); font: 700 .9375rem/1.3 var(--body);
+}
+.bc .bc-reason::marker { content: none; }
+.bc-reason .a1-ico { width: 20px; height: 20px; color: var(--light-fir); }
+
+/* six objections, say and never say */
+.bc-objs-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 640px) { .bc-objs-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.bc .bc-obj {
+  display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 12px 14px; border-radius: var(--radius-s);
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.bc .bc-obj::marker { content: none; }
+.bc .bc-obj-q { margin: 0; font: 800 1rem/1.25 var(--head); }
+.bc .bc-say, .bc .bc-never { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: .875rem; line-height: 1.45; }
+.bc .bc-say { flex: 1; }
+.bc .bc-never { padding-top: 6px; border-top: 1px dashed var(--line); }
+
+/* six questions and the measures they lead to */
+.bc-dtable {
+  width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border-radius: var(--radius-s);
+  background: var(--surface); border: 1px solid var(--line-soft); font-size: .875rem; line-height: 1.45;
+}
+.bc-dtable th { padding: 9px 12px; text-align: left; vertical-align: bottom; background: var(--th-bg); color: var(--th-ink); font: 700 .78rem/1.3 var(--body); }
+.bc-dtable td { padding: 9px 12px; vertical-align: top; border-top: 1px solid var(--line-soft); }
+.bc-dtable tbody tr:first-child td { border-top: 0; }
+.bc-dtable .bc-dq { width: 58%; font-style: italic; }
+.bc-dtable .bc-dm { font-weight: 700; }
+.bc-dm .a1-ico { width: 15px; height: 15px; margin-right: 6px; vertical-align: -3px; color: var(--muted); }
+@media (max-width: 520px) {
+  .bc-dtable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .bc-dtable, .bc-dtable tbody, .bc-dtable tr, .bc-dtable td { display: block; width: 100%; }
+  .bc-dtable tr { padding: 10px 12px; border-top: 1px solid var(--line-soft); }
+  .bc-dtable tbody tr:first-child { border-top: 0; }
+  .bc-dtable td, .bc-dtable .bc-dq { width: 100%; padding: 2px 0; border: 0; }
+}
+
+/* the demo map in one row */
+.bc-demos-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 640px) { .bc-demos-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .bc-demos-row { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+.bc .bc-demo {
+  position: relative; margin: 0; padding: 10px 12px 36px; border-radius: var(--radius-s); background: var(--surface); border: 1px solid var(--line-soft);
+  font: 800 .9375rem/1.25 var(--head);
+}
+.bc .bc-demo::marker { content: none; }
+.bc-demo-kind { display: block; margin: 2px 0 6px; color: var(--muted); font: 400 .8125rem/1.35 var(--body); }
+.bc-strip { position: absolute; left: 12px; bottom: 11px; display: block; width: 80px; height: auto; }
+.bc-strip text { font: 700 9px var(--mono); }
+.st-on { fill: var(--fir); }
+.st-on-t { fill: var(--white); }
+.st-off { fill: none; stroke: var(--line); stroke-width: 1; }
+.st-off-t { fill: var(--muted); }
+
+/* the four sentences said word for word */
+.bc-fixed-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 640px) { .bc-fixed-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .bc-fixed-list { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.bc .bc-fixed {
+  display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 14px 16px; border-radius: var(--radius-m);
+  background: var(--rule-bg); color: var(--rule-ink); border: 2px solid var(--rule-bg);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.bc .bc-fixed::marker { content: none; }
+.bc-fixed .a1-ico { margin-top: 1px; color: var(--rule-accent); }
+.bc .bc-fixed p { margin: 0; font-size: .9375rem; line-height: 1.45; }
+.bc-fixed strong { color: var(--rule-accent); }
+
+/* the pillars' drawings */
+.fr-entry { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 3.5 2.5; }
+.fr-vessel-r { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.2; }
+.fr-liquid { fill: var(--grass); }
+.fr-liquid-soft { fill: var(--light-blue); }
+.fr-line { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.fr-pin { fill: var(--light-blue); }
+.fr-bar { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+.fr-hot { fill: var(--tint); stroke: var(--light-fir); stroke-width: 1.4; }
+.fr-glyph { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fr-accent { stroke: var(--light-fir); }
+.fr-muted { stroke: var(--muted); }
+.fr-on-pin { stroke: var(--fir); }
+.fr-link { stroke: var(--ink); stroke-width: 1.4; }
+.fr-link-dash { stroke-dasharray: 3 2.5; }
+
+@media (prefers-color-scheme: dark) {
+  .bc-pillar-t::before { background: var(--lf-green); color: var(--fir); }
+  .bc-reason .a1-ico { color: var(--lf-green); }
+  .st-on { fill: var(--lf-green); }
+  .st-on-t { fill: var(--fir); }
+  .bc .bc-fixed { border-color: var(--lf-green); }
+  .fr-hot { stroke: var(--lf-green); }
+  .fr-accent { stroke: var(--lf-green); }
+}
+
+/* ---------- print: one sheet, Letter or A4 ----------
+   The binding limits are A4's width and Letter's height, so the rules below are sized to fit about 194 by 263 mm.
+   Site.css already drops the navigation, the skip link and the footer's list of pieces in print. On paper the sheet
+   has two columns: the pillars across; the objections on the left beside the reasons and the questions on the right;
+   then the demos and the four sentences across. The order of the page itself does not change. The compact spine
+   (enablement/partials/spine-compact.html, lane S1's) is tightened here for this page only: each contrast reads as
+   one line, its name leading. */
+@media print {
+  @page { margin: 8mm; }
+  body { font-size: 7.4pt; line-height: 1.3; }
+  .masthead-inner { padding: 0 0 2pt; }
+  .eyebrow { padding: 1.5pt 6pt; font-size: 6.4pt; }
+  main { padding: 0; }
+  .piece-meta { gap: 3pt 8pt; margin: 0 0 2pt; }
+  .reader-tag { padding: 1.5pt 6pt; font-size: 6.4pt; }
+  .stamp { font-size: 6.4pt; }
+  .title { margin: 0 0 1pt; }
+  .title .kicker { margin: 0; font-size: 7.6pt; }
+  .title .title-main { font-size: 14pt; line-height: 1.05; }
+  .bc .reader-line { margin: 0 0 3pt; font-size: 7.4pt; }
+  .piece.bc a[href^="http"]::after { content: none; }
+
+  .bc .spine .spine-compact-card { padding: 4pt 6pt; border-radius: 6pt; }
+  .bc .spine .spine-compact-headline { margin: 0 0 3pt; font-size: 10pt; line-height: 1.15; }
+  .bc .spine .spine-compact-rows { gap: 2pt; }
+  .bc .spine .spine-compact-row { gap: 0 5pt; padding: 1.6pt 6pt; border-radius: 4pt; }
+  .bc .spine .spine-compact-row .spine-who { display: inline; margin: 0 3pt 0 0; font-size: 7pt; }
+  .bc .spine .spine-compact-row .spine-who .spine-icon { width: 8pt; height: 8pt; }
+  .bc .spine .spine-compact-row .spine-line { display: inline; font-size: 7pt; line-height: 1.25; }
+  .bc .spine .spine-compact-arrow { width: 9pt; height: 9pt; }
+
+  .bc-sheet {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 4pt 9pt; margin-top: 4pt;
+    grid-template-areas: "pillars pillars" "objs reasons" "objs disc" "demos demos" "fixed fixed";
+  }
+  .bc-pillars-sec { grid-area: pillars; }
+  .bc-reasons-sec { grid-area: reasons; }
+  .bc-objs-sec { grid-area: objs; }
+  .bc-disc-sec { grid-area: disc; }
+  .bc-demos-sec { grid-area: demos; }
+  .bc-fixed-sec { grid-area: fixed; }
+  .bc .bc-sec { display: flex; flex-wrap: wrap; align-items: baseline; align-content: flex-start; gap: 0 6pt; break-inside: avoid; page-break-inside: avoid; }
+  .bc .bc-sec::before { content: ""; flex: 1 1 100%; order: -1; border-top: 1pt solid var(--ink); }
+  .bc .bc-sec > figure { display: contents; }
+  .bc .bc-sec h2 { flex: none; margin: 0; padding-top: 2pt; border-top: 0; font-size: 9pt; }
+  .bc .a1-cap { flex: 1 1 20em; margin: 0 0 2pt; font-size: 6.8pt; }
+  .bc-pillars-list, .bc-reasons-list, .bc-objs-list, .bc-dtable, .bc-demos-row, .bc-fixed-list { flex: 1 1 100%; }
+
+  .bc-pillars-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4pt; }
+  .bc .bc-pillar { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "art title" "proof proof"; gap: 2pt 4pt; align-items: center; padding: 3pt 5pt 4pt; border-radius: 5pt; }
+  .bc-art { grid-area: art; width: 30pt; }
+  .bc .bc-pillar-t { grid-area: title; }
+  .bc .bc-proof { grid-area: proof; align-self: start; }
+  .bc .bc-pillar-t { gap: 3pt; font-size: 7.6pt; }
+  .bc-pillar-t::before { width: 9pt; height: 9pt; margin-top: 0; font-size: 5.6pt; }
+  .bc .bc-proof { font-size: 6.8pt; line-height: 1.22; }
+
+  .bc-reasons-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2pt 3pt; }
+  .bc .bc-reason { gap: 3pt; padding: 1.4pt 4pt; border-radius: 4pt; font-size: 6.7pt; line-height: 1.15; }
+  .bc-reason .a1-ico { width: 8.5pt; height: 8.5pt; }
+
+  .bc-objs-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3pt; }
+  .bc .bc-obj { gap: 1.5pt; padding: 3pt 5pt; border-radius: 4pt; }
+  .bc .bc-obj-q { font-size: 7.4pt; }
+  .bc .bc-say, .bc .bc-never { gap: 3pt; font-size: 6.7pt; line-height: 1.22; }
+  .bc .bc-never { padding-top: 1.5pt; }
+  .a1-mark { width: 8pt; height: 8pt; margin-top: 0; }
+  .a1-mark .a1-ico { width: 5.8pt; height: 5.8pt; }
+
+  .bc-dtable { font-size: 6.7pt; line-height: 1.2; border-radius: 4pt; }
+  .bc-dtable th { padding: 2pt 4pt; font-size: 6.3pt; }
+  .bc-dtable td { padding: 1.6pt 4pt; }
+  .bc-dtable .bc-dq { width: 56%; }
+  .bc-dm .a1-ico { width: 6.5pt; height: 6.5pt; margin-right: 2pt; vertical-align: -1pt; }
+
+  .bc-demos-row { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3pt; }
+  .bc .bc-demo { padding: 2.5pt 4pt 13pt; border-radius: 4pt; font-size: 6.8pt; }
+  .bc-demo-kind { margin: 1pt 0 0; font-size: 6.2pt; }
+  .bc-strip { left: 4pt; bottom: 2.5pt; width: 32pt; }
+
+  .bc-fixed-list { grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 1fr)); gap: 4pt; }
+  .bc .bc-fixed { gap: 3pt; padding: 3pt 5pt; border-radius: 5pt; }
+  .bc-fixed .a1-ico { width: 9pt; height: 9pt; }
+  .bc .bc-fixed p { font-size: 6.7pt; line-height: 1.22; }
+
+  .bc .bc-pillar, .bc .bc-reason, .bc .bc-obj, .bc .bc-demo, .bc-dtable { border-color: var(--line); }
+  .foot { margin-top: 3pt; padding: 2pt 0 0; }
+  .internal { font-size: 6.4pt; }
+}

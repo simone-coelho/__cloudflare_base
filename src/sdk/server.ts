@@ -162,12 +162,37 @@ export function createServerBridge(config: ServerBridgeConfig, transport: typeof
     const headers = new Headers(privateHeaders);
     try {
       if (!/^[A-Za-z0-9_.-]{1,64}$/.test(page)) throw new Error();
-      const { session, setCookies } = await resolve(request); for (const value of setCookies) headers.append('Set-Cookie', value);
       const pageInstance = crypto.randomUUID();
-      const raw = await bounded(async signal => json(await transport(`${endpoint.origin}/v1/${config.tenant}/decisions/snapshot`, {
+      type Answer = DecisionSet & { ok?: boolean; tenant?: string; session?: { tenant?: string; capability?: string; exp?: number } };
+      const ask = (capability?: string) => bounded(async signal => json(await transport(`${endpoint.origin}/v1/${config.tenant}/decisions/snapshot`, {
         method: 'POST', redirect: 'manual', signal, headers: { 'Content-Type': 'application/json', 'X-Tenant': config.tenant, 'X-SDK-Key': config.sdkKey,
-          'X-Shopper-Session': session.capability! }, body: JSON.stringify({ page, pageInstance }),
-      }), MAX_BYTES, signal)) as DecisionSet & { ok?: boolean; tenant?: string };
+          ...(capability ? { 'X-Shopper-Session': capability } : {}) }, body: JSON.stringify({ page, pageInstance }),
+      }), MAX_BYTES, signal)) as Promise<Answer>;
+      let session: Answer['session'], raw: Answer | null = null;
+      // P13 (H4): a browser with neither a session cookie nor a recognition
+      // proof cookie is a new visitor, and its first decision set is served
+      // from ONE call to the engine: the decision request, sent with the site
+      // key and no session, which the engine answers with the set and the
+      // session it issued. The session becomes this first-party cookie and
+      // never enters the bootstrap. An answer without a session, a refusal or a
+      // failure falls back to the session call, then the decision request, as
+      // before. A session whose expiry has passed by this server's clock gets a
+      // cookie that expires at once and a bootstrap the SDK will not adopt.
+      const proofCookie = (request.headers.get('Cookie') ?? '').split(';').some(v => v.trim().startsWith(continuityCookieName + '='));
+      if (cookie(request) === undefined && request.headers.get('X-Shopper-Session') === null && !proofCookie) {
+        const answered = await ask().catch(() => null), issued = answered?.session;
+        if (issued !== undefined) {
+          if (!issued || issued.tenant !== config.tenant || typeof issued.capability !== 'string' || !tokenPattern.test(issued.capability)
+            || !Number.isSafeInteger(issued.exp)) throw new Error();
+          session = issued; raw = answered;
+          headers.append('Set-Cookie', `${cookieName}=${issued.capability}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${Math.max(0, issued.exp! - Math.floor(Date.now() / 1000))}`);
+        }
+      }
+      if (!session || !raw) {
+        const resolved = await resolve(request); for (const value of resolved.setCookies) headers.append('Set-Cookie', value);
+        session = resolved.session; raw = await ask(session.capability!);
+      }
+      if (!session) throw new Error();
       if (raw?.ok !== true || raw.tenant !== config.tenant || raw.page !== page || raw.pageInstance !== pageInstance || !Array.isArray(raw.decisions)
         || raw.decisions.length > 1000 || raw.decisions.some(d => !d || typeof d.contentId !== 'string' || typeof d.slot !== 'string' || !Number.isSafeInteger(d.order))) throw new Error();
       // No full score drivers/profile/source diagnostics in the HTML bootstrap.

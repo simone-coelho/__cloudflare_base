@@ -6,11 +6,11 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, type AttributionContract, type PairCounts, type PositionPolicy, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, positionHistoryKey, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
-import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
+import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
 import { isCatalogueName, LEARN_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
@@ -18,14 +18,17 @@ import { attributionContractOf, policyOf } from '@/learn/route';
 import { loadTombstone } from '@/ledger/erasure';
 import { requireRetention } from '@/retention';
 import { learningEffectId, recoveryDigest, RECOVERY_LIMITS, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
-import { entryChannelOf } from '@/services/visit';
+import { channelIn } from '@/services/visit';
+import { contextTermsOf, TODAY_TERMS, type ContextTerms } from '@/content/cell';
 
 const PUBLISH_DELAY_MS = 30_000;
 /** Conservative application budgets, not a measurement of a provider limit. */
 export const LEARN_LIMITS = { requestBytes: 256 * 1024, rows: 1000, stateBytes: 512 * 1024,
   items: 256, counters: 4096, component: 256, keyBytes: 2048,
   priorRows: 4096, priorBytes: 256 * 1024, snapshotBytes: 2 * 1024 * 1024,
-  repairBytes: 8 * 1024 * 1024, repairCounters: 65536, totalBytes: 640 * 1024 } as const;
+  repairBytes: 8 * 1024 * 1024, repairCounters: 65536, totalBytes: 640 * 1024,
+  /** P05: the highest position, counted from 1 within a slot, an adjacent swap or a credit may name. */
+  positions: 64 } as const;
 const rewards = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
 const utf8 = new TextEncoder();
 interface EffectMarker { digest: string; subject: string; ts: number; expiresAt: number; item: string }
@@ -35,12 +38,25 @@ interface EffectMarker { digest: string; subject: string; ts: number; expiresAt:
  * part of this object's identity exactly as the tenant, brand and slot are.
  */
 interface Stored { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; stats: StatsState;
-  effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }> }
+  effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }>;
+  /**
+   * P05 (decision D1): per adjacent pair (k, k + 1), keyed by k, what the slot's
+   * swaps have shown (`PairCounts`). Absent on a slot that has swapped nothing,
+   * so no other object's state gains a member.
+   */
+  positions?: Record<string, PairCounts> }
 /** Every instant the alarm must remove a live or retired learning-effect marker at. */
 const effectExpiries = (stored: Stored | null | undefined): number[] =>
   [...Object.values(stored?.effects ?? {}), ...Object.values(stored?.retiredEffects ?? {})].map(marker => marker.expiresAt);
 interface GenerationFence { whole: number; items: Record<string, number> }
-type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string };
+/**
+ * P05: `position` is the decision's position counted from 1 within its slot,
+ * carried for a module of a page's declared layout slot; `swap` names the two
+ * adjacent positions an adjacent swap exchanged on that decision, carried only
+ * for the two modules it exchanged.
+ */
+type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string;
+  position?: number; swap?: [number, number] };
 /**
  * W22 D1.02 (F16 §7, §2.3): the bounded, durable journal of exposures this
  * object has already applied, so a REDELIVERED exposure — the at-least-once
@@ -153,7 +169,7 @@ function configValid(v: unknown): v is SlotLearnConfig {
     && finite(s.liftMax) && s.liftMax >= 1 && s.liftMax > s.liftMin;
 }
 function stateValid(value: unknown, repairing = false): asserts value is Stored {
-  if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects']) || !component(value.tenant) || !component(value.brand)
+  if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects', 'positions']) || !component(value.tenant) || !component(value.brand)
     || !slotName(value.slot) || (value.page !== undefined && !isCatalogueName(value.page)) || !configValid(value.config)) throw invalid();
   if (value.effects !== undefined && (!object(value.effects) || Object.keys(value.effects).length > RECOVERY_LIMITS.effects
     || Object.entries(value.effects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id)
@@ -163,6 +179,10 @@ function stateValid(value: unknown, repairing = false): asserts value is Stored 
     || Object.entries(value.retiredEffects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id) || !fields(m, ['digest', 'expiresAt'])
       || typeof m.digest !== 'string' || !/^[a-f0-9]{64}$/.test(m.digest) || !time(m.expiresAt)))) throw invalid();
   if (Object.keys(value.effects ?? {}).length + Object.keys(value.retiredEffects ?? {}).length > RECOVERY_LIMITS.effects) throw capacity();
+  // P05: the adjacent swaps' counts, one entry per pair's lower position, whole numbers.
+  const whole = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 0;
+  if (value.positions !== undefined && (!object(value.positions) || Object.entries(value.positions).some(([k, c]) => !/^[1-9][0-9]*$/.test(k)
+    || Number(k) >= LEARN_LIMITS.positions || !fields(c, ['pairs', 'first', 'second']) || !whole(c.pairs) || !whole(c.first) || !whole(c.second)))) throw invalid();
   const st = value.stats;
   if (!fields(st, ['items', 'slot', 'events', 'updatedAt', 'bounded']) || !object(st.items) || !object(st.slot)
     || !Number.isSafeInteger(st.events) || (st.events as number) < 0 || !time(st.updatedAt)) throw invalid();
@@ -242,9 +262,16 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
       || !time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
     if (row.decision !== undefined && (typeof row.decision !== 'string' || !row.decision || utf8.encode(row.decision).length > LEARN_LIMITS.keyBytes)) throw invalid();
     if (row.digest !== undefined && (typeof row.digest !== 'string' || !/^[a-f0-9]{64}$/.test(row.digest))) throw invalid();
+    // P05: a position counted from 1 within the slot, and the adjacent pair a swap exchanged, naming that position.
+    const place = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 1 && (v as number) <= LEARN_LIMITS.positions;
+    if (row.position !== undefined && !place(row.position)) throw invalid();
+    if (row.swap !== undefined && (!Array.isArray(row.swap) || row.swap.length !== 2 || !place(row.swap[0]) || row.swap[1] !== (row.swap[0] as number) + 1
+      || (row.position !== row.swap[0] && row.position !== row.swap[1]))) throw invalid();
     accepted.push({ item: row.item, cell, ts, ...(kind === 'credits' ? { reward: row.reward as RewardType, weight } : {}),
       ...(typeof row.decision === 'string' ? { decision: row.decision } : {}),
       ...(typeof row.digest === 'string' ? { digest: row.digest } : {}),
+      ...(row.position !== undefined ? { position: row.position as number } : {}),
+      ...(row.swap !== undefined ? { swap: [row.swap[0] as number, row.swap[1] as number] as [number, number] } : {}),
       ...(Object.hasOwn(row, 'effect') ? { effect: row.effect as LearningEffect } : {}) });
   }
   return accepted;
@@ -252,11 +279,17 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
 
 export class LearnStats {
   private data: Stored | null = null;
+  /**
+   * P05: this placement's published position-policy history, as last read from
+   * or written to its one copy in storage (`positionHistoryKey`); null until
+   * first needed. This object is its only writer.
+   */
+  private positionPolicies: { key: string; policies: PositionPolicy[] } | null = null;
   private chain: Promise<unknown> = Promise.resolve();
   private lastAllocated = 0;
   private synthetic: SyntheticObjectBoundary;
   constructor(private state: DurableObjectState, private env: Env) {
-    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => { this.data = null; this.lastAllocated = 0; });
+    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => { this.data = null; this.lastAllocated = 0; this.positionPolicies = null; });
     this.state = this.synthetic.state; this.env = this.synthetic.env;
   }
 
@@ -518,6 +551,21 @@ export class LearnStats {
       // exactly; a row stamped after it is still counted, at the present.
       const engineNow = Date.now();
       const journal = !managed && kind === 'exposures' ? await this.seenExposures() : null;
+      // P36 (R-P52): a bounded object counts each row under the tenant's own
+      // terms — its channel ids and its published cut's buckets — so a tenant
+      // with a context vocabulary learns in its own cells; anything else, and
+      // every value of a tenant without the settings outside today's six words
+      // and three buckets, is counted under unknown exactly as before.
+      const terms = candidate.stats.bounded ? await this.contextTerms(tenant) : TODAY_TERMS;
+      // P05 (decision D2): a credit that names its position is weighed by the
+      // position policy in force when it happened — the newest this object had
+      // published at or before the credit's time — exactly as the hourly fold
+      // weighs it. A history that cannot be read weighs nothing: the credit is
+      // applied exactly as before.
+      let policies: readonly PositionPolicy[] | null = null;
+      if (kind === 'credits' && rows.some(row => row.position !== undefined)) {
+        try { policies = await this.positionHistory(candidate); } catch { policies = null; }
+      }
       const applied = journal ? new Set(journal.map(row => `${row.id}:${row.digest}`)) : null;
       const added: SeenExposure[] = [];
       let newlyApplied = 0, alreadyApplied = 0, suppressed = 0;
@@ -560,11 +608,21 @@ export class LearnStats {
           if (applied.has(key)) continue;
           applied.add(key); added.push({ id: row.decision, digest: row.digest, ts: row.ts });
         }
-        const cell = candidate.stats.bounded ? { ...row.cell, channel: entryChannelOf(row.cell.channel) ?? 'unknown',
-          visit_bucket: ['1', '2-3', '4+'].includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
+        const cell = candidate.stats.bounded ? { ...row.cell, channel: channelIn(row.cell.channel, terms.published ? terms.channels : null) ?? 'unknown',
+          visit_bucket: terms.buckets.includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
         if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
-        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
+        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight! * positionWeightAt(policies, row.position, row.ts), candidate.config.stats, engineNow);
+        // P05 (decision D1): the adjacent swaps' evidence. A swapped decision is
+        // counted once, when its module at the pair's lower position is exposed;
+        // a click credited to either module it exchanged is counted at the
+        // position that module was served at. Counted exactly when the row is
+        // applied, so a redelivery recognized above counts nothing again.
+        if (row.swap) {
+          const pair = ((candidate.positions ??= {})[String(row.swap[0])] ??= { pairs: 0, first: 0, second: 0 });
+          if (kind === 'exposures') { if (row.position === row.swap[0]) pair.pairs += 1; }
+          else if (row.reward === 'click') { if (row.position === row.swap[0]) pair.first += 1; else pair.second += 1; }
+        }
         this.fit(candidate);
         newlyApplied++;
       }
@@ -768,6 +826,9 @@ export class LearnStats {
     // itself from that restart, and not from evidence it may not have yet.
     const restarted = await this.accumulationTransition();
     const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract, restarted?.at);
+    // P05 (decision D1): each position's effect from the slot's adjacent swaps, only where it has swapped.
+    const effects = positionEffectsOf(d.positions);
+    if (effects) snap.positionEffects = effects;
     snap.witness = await this.witness(d, await this.fence());
     // W23 H1.01: only an object that was actually repaired names a basis.
     const basis = await this.rebuiltFrom();
@@ -857,6 +918,17 @@ export class LearnStats {
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     const frozen = await this.snapshot(d);
+    // P05 (decision D2): the position policy this publication puts in force:
+    // normalised only while the slot's switch is on in the tenant's learn
+    // document AND the swaps have estimated a position's effect. The history is
+    // consulted only for a slot that has swapped or holds a history already —
+    // any other slot publishes exactly as before, reading nothing more — and it
+    // is read before any write, so an unreadable one refuses the publication.
+    const effects: Record<string, number> = {};
+    for (const e of frozen.positionEffects ?? []) if (typeof e.effect === 'number' && e.effect > 0) effects[String(e.position)] = e.effect;
+    const normalize = Object.keys(effects).length > 0 && await this.positionSwitch(d);
+    const history = Object.keys(d.positions ?? {}).length > 0 || (this.positionPolicies?.policies.length ?? 0) > 0
+      ? await this.positionHistory(d) : null;
     // W25 N1.01 (doc 22 §8, F20 §4.5): an item with an imported prior and no
     // live events yet HAS an estimate — that is what importing a prior is for —
     // so a slot whose only evidence is its priors publishes it, and a cold item
@@ -879,6 +951,15 @@ export class LearnStats {
           onlyIf: new Headers({ 'If-None-Match': '*' }), httpMetadata: { contentType: 'application/json' },
         });
         if (archived === null) continue; // A retained key is never overwritten, including after reset/restart.
+        // P05: a changed position policy is published before the snapshot reaches
+        // the serving key, under this version as the moment it takes force.
+        const nextHistory = history ? nextPositionHistory(history, { at: version, normalize, effects: normalize ? effects : {} }, Date.now()) : null;
+        if (nextHistory) {
+          const key = positionHistoryKey(d.tenant, d.brand, d.slot, d.page);
+          await this.env.STORAGE.put(key, JSON.stringify({ version: 1, tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}), policies: nextHistory }),
+            { httpMetadata: { contentType: 'application/json' } });
+          this.positionPolicies = { key, policies: nextHistory };
+        }
         if (!archived || archived.key !== key || typeof archived.etag !== 'string' || !archived.etag.trim()
           || archived.etag.length > 256 || archived.size !== size) throw new Error('Archive acknowledgement unavailable');
         await this.state.storage.put('learnPublished', publication);
@@ -899,6 +980,38 @@ export class LearnStats {
     }
   }
 
+  /** P05: this placement's position-policy history, read once from its one copy and then held; a malformed copy refuses. */
+  private async positionHistory(d: Pick<Stored, 'tenant' | 'brand' | 'slot' | 'page'>): Promise<PositionPolicy[]> {
+    const key = positionHistoryKey(d.tenant, d.brand, d.slot, d.page);
+    if (this.positionPolicies?.key === key) return this.positionPolicies.policies;
+    const stored = await this.env.STORAGE.get(key);
+    const policies = stored === null ? [] : positionHistoryOf(await stored.json(), { tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}) });
+    if (policies === null) throw recovery();
+    this.positionPolicies = { key, policies };
+    return policies;
+  }
+
+  /** P05 (decision D2): whether the slot's position-normalisation switch is on in the tenant's current learn document. */
+  private async positionSwitch(d: Stored): Promise<boolean> {
+    const pin = await pinPublication(this.env, d.tenant, true);
+    const learn = await readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin);
+    return learn.value.slots?.[d.slot]?.positionNormalization === true;
+  }
+
+  /**
+   * P36 (R-P52): the tenant's context terms, from its current learn publication,
+   * read as this object already reads that document (`attributionContract`,
+   * `priorsFor`). It cannot refuse a write: a publication that cannot be read
+   * answers today's terms, so a row is then counted exactly as before.
+   */
+  private async contextTerms(tenant: string): Promise<ContextTerms> {
+    try {
+      const pin = await pinPublication(this.env, tenant, true);
+      const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
+      return contextTermsOf(learn.value.contextVocabulary);
+    } catch { return TODAY_TERMS; }
+  }
+
   /** The tenant's published attribution policy, as this object's own snapshot
    * declares it. Absent when the publication cannot be read: the snapshot then
    * carries no contract rather than a guessed one. */
@@ -913,8 +1026,14 @@ export class LearnStats {
   private async priorsFor(d: Stored): Promise<{ version: number; index: ReturnType<typeof indexPriors> } | null> {
     // Unavailable authority is not an explicit empty prior document. Never
     // publish a prior-free replacement merely because the authority failed.
+    // Lane E2: a committed set that carries NO prior member is not a failure of
+    // the authority. The sealed set is the authority's whole answer, and it says
+    // this tenant has imported no priors (the demo bootstrap creates reflex,
+    // catalog, slots and learn, and no prior). That reads as no priors, the
+    // snapshot's `priorVersion` 0, and learns exactly what an empty document
+    // does. A prior member the set lists and that cannot be read still refuses.
     const pin = await pinPublication(this.env, d.tenant, true);
-    const [rev, learn] = await Promise.all([readPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
+    const [rev, learn] = await Promise.all([readOptionalPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
     const configured = { reward: learn.value.slots?.[d.slot]?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
       objective: learn.value.slots?.[d.slot]?.objective ?? 'unit', measurementBasis: learn.value.slots?.[d.slot]?.measurementBasis ?? 'served-v1' };
     const stored = await recoveryDigest({ ...d.config, objective: d.config.objective ?? 'unit', measurementBasis: d.config.measurementBasis ?? 'served-v1' });
@@ -930,6 +1049,8 @@ export class LearnStats {
       if (!authorized || await recoveryDigest({ ...configured, reward: authorized.reward,
         objective: authorized.objective, measurementBasis: authorized.measurementBasis }) !== stored) throw recovery();
     }
+    // The configuration check above still ran: absence of priors excuses nothing else.
+    if (!rev) return null;
     if (!Array.isArray(rev.value.rows) || rev.value.rows.length > LEARN_LIMITS.priorRows || bytes(rev.value) > LEARN_LIMITS.priorBytes) throw capacity();
     // W25 Z1.01 (F20 §1.5): a prior is a probability, and a slot whose objective
     // is money does not learn one. The import door refuses such a row, so this
