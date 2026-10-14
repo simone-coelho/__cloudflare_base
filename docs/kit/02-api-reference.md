@@ -1169,6 +1169,12 @@ experiment. A tenant without the member is written exactly as before, term for t
   odp.profile fields in their order }`, identically from both hosts
   ([shapes](./03-payload-schemas.md#the-odp-writes-and-the-second-identifier)). The audience read on
   `/v3/graphql` is unchanged.
+- **Retention.** Naming `secondIdentifier` changes your ODP connector configuration, so its destination
+  digest and its `external.odp.<digest>` retention category change, as with any change of that
+  configuration ([retention](#explicit-retention-configuration-and-erasure-reconciliation)). A profile
+  carries the authority of the destination categories that had a policy when it was born, so provide the
+  new category's policy before you name the setting: a profile born before that policy existed sends
+  nothing more to ODP once the setting is named, while one born after it is written as described here.
 - **Consent, erasure, tenants.** The identifier rides only on the writes your shopper's consent already
   allows: events under tracking consent, profile upserts under personalization consent. The operator's
   erasure of the person removes it from the person's record (the person's object and its
