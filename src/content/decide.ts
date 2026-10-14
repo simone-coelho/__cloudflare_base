@@ -12,7 +12,7 @@ import type {
 import { OFF_LIMITS_ITEM } from '@/ledger/records';
 import { contextSpecificity, validateSeedRules } from './kinds';
 import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, type RecencyBucket } from '@/services/visit';
-import { TODAY_TERMS, type ContextTerms } from './cell';
+import { contextCellOf, contextKeyOf, defaultContextKeyOf, TODAY_TERMS, type ContextTerms } from './cell';
 import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
 import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, type EligibilityContext } from './lifecycle';
@@ -120,6 +120,14 @@ export interface DecideInput {
    * Absent: no device, so no device rule fires and no device context matches.
    */
   device?: DeviceClass | null;
+  /**
+   * P30: the region that enters the context of a context-only layout slot whose
+   * switch admits it (`region: true`): the region the regional prior is read
+   * for, as the serving path resolves it, which the context key names. The
+   * replay passes the one the record carries (`inputs.context_only.region`).
+   * Absent: none, so such a key names the region as none.
+   */
+  contextRegion?: string | null;
   /**
    * P37: the recency bucket of the shopper's visit, from the stored last visit
    * (the visit in progress records it; a visit about to open derives it), for
@@ -510,6 +518,26 @@ export function contextOnlySlots(slots: readonly Pick<SlotStrategy, 'slot' | 'la
 }
 
 /**
+ * P30 (decision D1): the page's declared layout slot switched to context-only
+ * (`contextOnly: { enabled: true }`), and whether its switch admits the region;
+ * null on a page without one. Only a declared layout slot that serves (not
+ * off-limits) can be switched; publication refuses the switch anywhere else.
+ * Pure and total: it reads only the page's slots.
+ */
+export function contextOnlyLayoutSlot(slots: readonly Pick<SlotStrategy, 'slot' | 'layout' | 'offLimits' | 'contextOnly'>[]): { slot: string; region: boolean } | null {
+  for (const s of slots) if (s.layout === true && !s.offLimits && s.contextOnly?.enabled === true) return { slot: s.slot, region: s.contextOnly.region === true };
+  return null;
+}
+
+/**
+ * P30: the seed signals a context-only layout slot reads — the ones its context
+ * names (the entry channel, and the device class the request reports). A rule on
+ * any other signal (campaign term, referrer network, platform, visit context,
+ * recency) is outside the context, so it never fires there.
+ */
+const CONTEXT_SEED_SIGNALS: ReadonlySet<string> = new Set(['entry_channel', 'device']);
+
+/**
  * P10 (decision D2): the population prior at full weight, as the regional blend
  * gives it to a shopper with no evidence of their own (λ = 1: the share, to three
  * decimals, where it is above zero). Nothing in it reads the individual shopper.
@@ -625,7 +653,30 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // and on no term that reads the individual shopper: not the shopper's
   // interests, journey stage, fatigue or own memberships, ladder levels 3 to 5 or
   // visitor-hashed exploration. Every other slot decides exactly as before.
-  const below = contextOnlySlots(i.slots, i.signalFloor, i.arm);
+  // P30 (decision D1): the page's declared layout slot switched to context-only.
+  // On an arm that personalizes it is decided for its CONTEXT alone — the page,
+  // the channel and visit bucket, the device the request reports and, where its
+  // switch admits it, the region — on the population priors of that context at
+  // full weight, the seed rules on a signal of the context, the configured order
+  // (P01), the learned ladder at levels 0 to 2, exploration hashed on the
+  // context and the hour, and the slot's own pins, exclusions, eligibility,
+  // freshness and merchandising; never on the shopper's interests, journey
+  // stage, fatigue, memberships, ladder levels 3 to 5 or a seed rule outside
+  // its context, so every shopper of one context is served the identical order.
+  // On the holdout's default arm the slot is the default variant, as every slot
+  // there is. Absent: every slot decides exactly as before.
+  const layoutSwitch = contextOnlyLayoutSlot(i.slots);
+  const contextual = new Map<string, { region: boolean }>(layoutSwitch && i.arm !== 'default' ? [[layoutSwitch.slot, { region: layoutSwitch.region }]] : []);
+  // P10's signal floor never holds a switched slot: the switch decides it. Every other slot as before.
+  const below = contextOnlySlots(contextual.size ? i.slots.filter((s) => !contextual.has(s.slot)) : i.slots, i.signalFloor, i.arm);
+  // P30 (decision D2): the context the switched slot is decided in, as its key
+  // names it (src/content/cell.ts), on an arm that personalizes; on the
+  // holdout's default arm the page's default variant. Built only from the page,
+  // the cell's channel and visit bucket, the request's device class and the
+  // admitted region — never from a visitor, session or decision identifier.
+  const layoutContext = layoutSwitch && contextual.size ? contextKeyOf({ page: i.page, channel: i.cell.channel, visitBucket: i.cell.visit_bucket,
+    device: i.device ?? null, admitsRegion: layoutSwitch.region, region: i.contextRegion ?? null, arm: i.arm }) : null;
+  const contextKey = layoutSwitch ? layoutContext ?? defaultContextKeyOf(i.page) : null;
   const signalCount = wholeCount(i.signalFloor?.signals);
   // P39: the suppressions in force at this decision's time, well formed and sorted
   // (keys sorted, by dimension then value); none on the default arm, which reads
@@ -637,6 +688,15 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const contextShare = i.arm === 'default' ? null : i.contextBlendShare ?? i.contextBlend?.share ?? null;
   const fullWeight = contextShare ? sharesBeside(contextPrior, contextShare) : contextPrior;
   const contextView: AffinityViewLike = below.size && fullWeight ? priorAtFullWeight(fullWeight) : NO_SIGNAL;
+  // P30 (S4-C21): a context-only layout slot is scored on the population priors
+  // of its context at full weight, as for a shopper with no interest: the context
+  // prior of its channel and visit bucket (P07), and the regional prior only where
+  // its switch admits the region (R-P38). Nothing in it reads the shopper.
+  const layoutShare = layoutSwitch?.region ? fullWeight : contextShare;
+  const layoutView: AffinityViewLike = contextual.size && layoutShare ? priorAtFullWeight(layoutShare) : NO_SIGNAL;
+  // P30: the modules the context-only slot withholds although the page admits
+  // them (their eligibility rule read on the context, below); filled before ranking.
+  const contextWithheld = new Set<string>();
   // The slots that prefer what completes the anchor product the request names,
   // through the composer's `prefer` hook. The anchor is context the page asserts,
   // never evidence about the shopper and never kept beyond the receipt's driver.
@@ -646,9 +706,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const anchorSignal = i.eligibility?.signals?.[ANCHOR_SIGNAL];
   const anchor = typeof anchorSignal === 'string' ? anchorSignal.trim() : '';
   const completesAnchor = (p: ContentPieceLike): boolean => anchor !== '' && ((p as ContentPiece).complements ?? []).includes(anchor);
+  // P30: never on a context-only layout slot, whose context does not name the anchor the page asserts.
   const complementsOf = new Map<string, number>(i.arm === 'default' || anchor === '' ? [] : i.slots.flatMap((s) => {
     const w = s.complements?.weight;
-    return typeof w === 'number' && Number.isFinite(w) && w > 0 && w <= 1 ? [[s.slot, w] as const] : [];
+    return !contextual.has(s.slot) && typeof w === 'number' && Number.isFinite(w) && w > 0 && w <= 1 ? [[s.slot, w] as const] : [];
   }));
   // P01 decision D2: a configured per-context order is personalization by
   // context, so it is resolved only on an arm that personalizes — never on the
@@ -683,7 +744,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     .map((spec) => complementsOf.has(spec.slot) ? { ...spec, prefer: { test: completesAnchor, bonus: complementsOf.get(spec.slot)!, label: anchor } } : spec)
     .map((spec) => blends.has(spec.slot) ? { ...spec, blend: true as const } : spec)
     // P10: a slot below the floor is scored on the context view, never on the shopper's interests.
-    .map((spec) => below.has(spec.slot) ? { ...spec, affinity: contextView } : spec);
+    .map((spec) => below.has(spec.slot) ? { ...spec, affinity: contextView }
+      // P30: a context-only layout slot is scored on its context's view, and withholds what its context does not admit.
+      : contextual.has(spec.slot) ? { ...spec, affinity: layoutView, withheld: contextWithheld } : spec);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
   // P31: nor does a module whose own eligibility rule the decision's cell does
@@ -707,6 +770,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const report = [...new Set((i.nothingToShow ?? []).filter((id): id is string => typeof id === 'string' && id.length > 0))].sort();
   const reported = new Set(report), pageSlots = new Set(i.slots.map((s) => s.slot));
   const verdicts = new Map<string, boolean>(), withheldBy = new Map<string, LayoutWithheldCause>();
+  const pageWithheldBy = withheldBy;
+  // P30: the context-only layout slot reads a module's eligibility rule on its
+  // context alone — the channel and the visit bucket, the region only where its
+  // switch admits it, never the shopper's journey stage (src/content/cell.ts).
+  const contextRule = layoutSwitch && contextual.size ? cellEligibility(contextCellOf(i.cell, layoutSwitch.region)) : null;
   for (const original of i.pieces) {
     const piece = projectTypes ? withContentTypeAffinity(original) : original;
     byId.set(piece.id, piece);
@@ -719,6 +787,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     }
     if (reported.has(piece.id)) { withheldBy.set(piece.id, 'nothing_to_show'); continue; }
     eligible.push(piece);
+    // P30: a module the page admits whose rule the context does not satisfy is
+    // withheld from the context-only slot alone, so a rule can never make two
+    // shoppers of one context differ; every other slot is untouched. A rule holds
+    // on the context only where it holds on the shopper's own cell, which reads
+    // the same channel, bucket and region and more.
+    if (contextRule && layoutSwitch && piece.eligibleWhen && piece.slotTypes.includes(layoutSwitch.slot)
+      && !matchesEligibility(piece.eligibleWhen, contextRule)) contextWithheld.add(piece.id);
   }
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
@@ -747,7 +822,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // unknown: an unknown stage is recorded as such, never guessed, and a guess would demote by accident.
   const visitorStage: StageWord | null = i.arm !== 'default' && i.cell.stage && i.cell.stage !== 'unknown' ? STAGE_WORDS[i.cell.stage] : null;
   // P10: never on a slot decided below the signal floor, whose decision reads no journey stage of the shopper's.
-  const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (!below.has(s.slot) && s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
+  // P30: nor on a context-only layout slot, whose decision reads no journey stage of the shopper's.
+  const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (!below.has(s.slot) && !contextual.has(s.slot) && s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
   const hasStage = visitorStage !== null && stageRules.size > 0;
   const stageOf = new Map<string, { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }>();
   // CW30 (BTIE D2): freshness and fatigue. Recent content gets a bonus that halves every `halfLifeDays`
@@ -756,7 +832,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // itemised as the delta they caused. The served counts travel on the record's inputs for the replay.
   const freshRules = new Map(i.slots.flatMap((s) => (s.freshness && s.freshness.weight > 0 ? [[s.slot, s.freshness] as const] : [])));
   // P10: fatigue reads the shopper's own history, so never on a slot decided below the signal floor.
-  const fatigueRules = new Map(i.slots.flatMap((s) => (!below.has(s.slot) && s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
+  // P30: nor on a context-only layout slot.
+  const fatigueRules = new Map(i.slots.flatMap((s) => (!below.has(s.slot) && !contextual.has(s.slot) && s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
   const hasFresh = i.arm !== 'default' && freshRules.size > 0;
   const hasFatigue = i.arm !== 'default' && fatigueRules.size > 0 && Boolean(i.served);
   const freshOf = new Map<string, { ageDays: number; decay: number; applied: number }>();
@@ -806,9 +883,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const drivers: SeedDriver[] = [];
     for (const rule of rules) {
       if (!fires(rule)) continue;
+      // P30: a context-only layout slot fires only the rules on a signal its context names.
+      if (contextual.has(slot) && !CONTEXT_SEED_SIGNALS.has(rule.signal)) continue;
       // Each interest her own evidence holds multiplies the rule down; the receipt names every one.
       // P10: below the signal floor the rule fires at its published weight, the shopper's memberships unread.
-      const damped = below.has(slot) ? [] : (rule.dampen ?? []).filter((d) => held.has(audienceKey(d.dimension, d.value)));
+      // P30: and so on a context-only layout slot.
+      const damped = below.has(slot) || contextual.has(slot) ? [] : (rule.dampen ?? []).filter((d) => held.has(audienceKey(d.dimension, d.value)));
       const weight = damped.reduce((w, d) => w * d.factor, rule.weight);
       for (const tag of rule.tags) {
         const w = weights[tag.dimension] ?? 0;
@@ -890,7 +970,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const contextLadder = (cell: Cell) => new Set(levelKeys(cell).slice(0, Math.min(CONTEXT_LADDER_LEVELS, ladderDepth + 1)));
   const liftAt = (slot: string, item: string) => {
     const snap = learning?.snapshots[slot];
-    if (!below.has(slot) || !snap) return liftFor(snap, item, i.cell, ladderDepth);
+    // P30: a context-only layout slot answers from the same context levels, whatever its switch admits.
+    if ((!below.has(slot) && !contextual.has(slot)) || !snap) return liftFor(snap, item, i.cell, ladderDepth);
     const keys = contextLadder(i.cell), byKey = snap.items[item];
     return byKey ? liftFor({ ...snap, items: { [item]: Object.fromEntries(Object.entries(byKey).filter(([key]) => keys.has(key))) } }, item, i.cell) : null;
   };
@@ -983,7 +1064,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // already holding: no I/O, nothing that can fail or change the ranking.
     const controlled = new Set<string>();
     if (learning.controlOf) for (const r of ranked) if (learning.controlOf(slot, r.id)) controlled.add(r.id);
-    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical, historicalRules);
+    // P30 (decision D1): a context-only layout slot is hashed on its context and the hour, never on the visitor.
+    const pick = explorationPick({ visitorId: i.visitorId, ...(contextual.has(slot) && layoutContext ? { context: layoutContext } : {}),
+      slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical, historicalRules);
     if (!pick) return null;
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
@@ -1015,7 +1098,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const pairs = served.slice(1).flatMap((d, k) => (d.strategy !== 'tenant-pinned' && served[k]!.strategy !== 'tenant-pinned' ? [k + 1] : []));
     const controlled = new Set<string>();
     if (learning.controlOf) for (const d of served) if (learning.controlOf(s.slot, d.contentId)) controlled.add(d.contentId);
-    const pick = explorationPick({ visitorId: i.visitorId, slot: s.slot, nowMs: i.nowMs, ranked: served.map((d) => ({ id: d.contentId, score: d.score })),
+    // P30: on a context-only layout slot the swap's bucket is hashed on the context and the hour, as its exploration is.
+    const pick = explorationPick({ visitorId: i.visitorId, ...(contextual.has(s.slot) && layoutContext ? { context: layoutContext } : {}),
+      slot: s.slot, nowMs: i.nowMs, ranked: served.map((d) => ({ id: d.contentId, score: d.score })),
       snapshot: learning.snapshots[s.slot], cfg, controlled, pairs }, historical, historicalRules);
     if (!pick?.positions) continue;
     const upperAt = at[pick.positions[0] - 1]!, lowerAt = at[pick.positions[1] - 1]!;
@@ -1098,8 +1183,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const reg = i.regional; if (!reg || i.arm === 'default') return null;
     const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
     if (!piece || !spec) return null;
+    // P30: a context-only layout slot whose switch does not admit the region takes nothing from it.
+    const context = contextual.get(d.slot);
+    if (context && !context.region) return null;
     // P10: below the signal floor the prior is at full weight, the shopper's own evidence not weighing it down.
-    const lambda = below.has(d.slot) ? 1 : reg.lambda;
+    // P30: and so on a context-only layout slot that admits the region, as for a shopper with no interest.
+    const lambda = below.has(d.slot) || context ? 1 : reg.lambda;
     let contribution = 0;
     for (const [dim, values] of Object.entries(piece.tags)) {
       const w = spec.weights[dim] ?? 0; if (!w) continue;
@@ -1115,8 +1204,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const ctx = i.contextBlend; if (!ctx || i.arm === 'default') return null;
     const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
     if (!piece || !spec) return null;
-    // Below the signal floor the prior is a context term at full weight, as the region's is (P10).
-    const lambda = below.has(d.slot) ? 1 : ctx.lambda;
+    // Below the signal floor the prior is a context term at full weight, as the region's is (P10), and so on a context-only layout slot (P30).
+    const lambda = below.has(d.slot) || contextual.has(d.slot) ? 1 : ctx.lambda;
     let contribution = 0;
     for (const [dim, values] of Object.entries(piece.tags)) {
       const w = spec.weights[dim] ?? 0; if (!w) continue;
@@ -1180,7 +1269,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // was decided below the signal floor, that is the context view alone; where
   // any slot personalized, it is the shopper's vector as before, and the context view is
   // derived again from the recorded prior shares.
-  const contextOnlyPage = below.size > 0 && i.slots.every((slot) => slot.offLimits || below.has(slot.slot));
+  // P30: and where every such slot is context-only, below the floor or by its switch, the context's own view.
+  const contextOnlyPage = (below.size > 0 || contextual.size > 0) && i.slots.every((slot) => slot.offLimits || below.has(slot.slot) || contextual.has(slot.slot));
   // P29: the population priors the layout reason itemises — each one's λ and
   // shares — from the blends on the serving path and, on a replay, from what the
   // record carries (`layoutPriors`). A page whose declared layout slot ranks
@@ -1190,7 +1280,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // the record already implies.
   const regionalPrior = i.arm === 'default' ? null : i.layoutPriors?.regional ?? (i.regional ? { lambda: i.regional.lambda, share: i.regional.share } : null);
   const contextPriorTerm = i.arm === 'default' ? null : i.layoutPriors?.context ?? (i.contextBlend ? { lambda: i.contextBlend.lambda, share: i.contextBlend.share } : null);
-  const layoutRanksAbove = i.slots.some((slot) => slot.layout === true && !slot.offLimits && !below.has(slot.slot));
+  // P30: a context-only layout slot takes its priors at λ 1, as below the floor, which the record already implies.
+  const layoutRanksAbove = i.slots.some((slot) => slot.layout === true && !slot.offLimits && !below.has(slot.slot) && !contextual.has(slot.slot));
   // P31 (R-P59 (1)): an off-limits mark applies on the page whenever it names a
   // module the declared layout slot could have ranked but for the withholding —
   // the composer counts a mark only for an eligible module — so the page states
@@ -1207,7 +1298,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const priorLambda = layoutRanksAbove && (regionalPrior || contextPriorTerm)
     ? { ...(contextPriorTerm ? { context: contextPriorTerm.lambda } : {}), ...(regionalPrior ? { regional: regionalPrior.lambda } : {}) } : null;
   const inputs: DecisionInputs & { explorationRules?: ExplorationRules } = {
-    affinity: plain((contextOnlyPage ? contextView : affinity).dims) as DecisionInputs['affinity'],
+    affinity: plain((contextOnlyPage ? (below.size ? contextView : layoutView) : affinity).dims) as DecisionInputs['affinity'],
     replay: {
       version: 1, learning: learning !== null, candidateLimit: i.candidateLimit ?? 10,
       ...(historical === HISTORICAL_EXPLORATION ? {} : { exploration: 'supported-only' as const }),
@@ -1236,6 +1327,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // verdict on the cell (keys sorted), page-level and only when there is one.
     ...(report.length ? { nothing_to_show: [...report] } : {}),
     ...(verdicts.size ? { eligibility_verdicts: Object.fromEntries([...verdicts].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) } : {}),
+    // P30: the context a switched slot was decided in beyond the record's page and
+    // cell — the device, and the region where admitted — written only when one was (C11, keys sorted).
+    ...(layoutSwitch && contextual.size ? { context_only: {
+      ...(i.device === 'mobile' || i.device === 'desktop' ? { device: i.device } : {}),
+      ...(layoutSwitch.region && typeof i.contextRegion === 'string' && i.contextRegion ? { region: i.contextRegion } : {}) } } : {}),
     ...rules,
   };
 
@@ -1265,7 +1361,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const slotIndex = new Map(i.slots.map((slot, index) => [slot.slot, index] as const));
     const live = eligible.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
     // P31 (R-P23 C7): and the same before the withholding; the same list when nothing was withheld.
-    const admittedLive = withheldBy.size ? admitted.filter((p) => (p.lifecycle?.status ?? 'live') === 'live') : live;
+    // P30: and so where the context-only slot withheld a module its context does not admit.
+    const admittedLive = withheldBy.size || contextWithheld.size ? admitted.filter((p) => (p.lifecycle?.status ?? 'live') === 'live') : live;
     const pinRefused = new Set((pinDiagnostics ?? []).map((d) => d.slot));
     for (const [index, s] of i.slots.entries()) {
       if (s.layout !== true || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))) continue;
@@ -1414,8 +1511,14 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   }
   /** P29: one declared layout slot's reason, as the comment above defines it. */
   function layoutReasonOf(s: SlotStrategy, index: number, served: typeof decisions, slotIndex: ReadonlyMap<string, number>,
-    live: readonly ContentPiece[], admittedLive: readonly ContentPiece[], pinRefused: ReadonlySet<string>): LayoutReason {
+    pageLive: readonly ContentPiece[], admittedLive: readonly ContentPiece[], pinRefused: ReadonlySet<string>): LayoutReason {
     const spec = specOf.get(s.slot)!, keyOf = (id: string) => `${s.slot}:${id}`;
+    // P30: on the context-only layout slot, a module its context does not admit
+    // is withheld by its eligibility rule for this slot, as a page-wide one is
+    // (P31); every other slot reads the page's own lists exactly as before.
+    const ownWithheld = contextual.has(s.slot) && contextWithheld.size ? contextWithheld : null;
+    const live = ownWithheld ? pageLive.filter((p) => !ownWithheld.has(p.id)) : pageLive;
+    const withheldBy = ownWithheld ? new Map<string, LayoutWithheldCause>([...pageWithheldBy, ...[...ownWithheld].map((id) => [id, 'eligibility_rule'] as const)]) : pageWithheldBy;
     const fixed = (d: (typeof decisions)[number]) => d.strategy === 'tenant-pinned';
     // What the slot could fill around its fixed positions, pooled as the composer pools it.
     const gate = compileSlotConstraints(spec, true);
@@ -1505,7 +1608,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       else if (scored.length && !answered) {
         cause = 'no_level_reached_nmin';
         // The n the ladder has — the most evidence any candidate holds at any level of the shopper's cell — and the nMin it needs.
-        const snapshot = learning?.snapshots[s.slot] ?? null, levels = levelKeys(i.cell);
+        // P30: a context-only layout slot's ladder is its context levels, the only ones it reads.
+        const snapshot = learning?.snapshots[s.slot] ?? null, levels = contextual.has(s.slot) ? [...contextLadder(i.cell)] : levelKeys(i.cell);
         let n = 0;
         for (const id of scored) for (const level of levels) { const held = snapshot?.items[id]?.[level]?.n; if (typeof held === 'number' && Number.isFinite(held) && held > n) n = held; }
         ladder = { n: r3(n), nMin: snapshot?.nMin ?? learning?.metadataOf?.(s.slot)?.stats?.nMin ?? DEFAULT_STATS.nMin };
@@ -1608,7 +1712,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     if (tag === undefined) return null;
     // P06: the shadow's learned term (`learned`) in place of the served one; every other term is the served ranking's own.
     const blendOf = learned ? learned.blend.get(key) : blendTerms.get(key), scale = blendOf ? 1 - blendOf.p : 1;
-    const full = below.has(slot);
+    // P30: a context-only layout slot is scored on its context's priors at λ 1 too, the region's only where admitted.
+    const layout = contextual.get(slot);
+    const full = below.has(slot) || layout !== undefined;
     const share = (prior: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } | null, own: Readonly<Record<string, Readonly<Record<string, number>>>> | null) => {
       const shares = full ? own : prior?.share ?? null, lambda = full ? 1 : prior?.lambda ?? 0;
       if (!shares || !piece || !spec || !lambda) return 0;
@@ -1620,7 +1726,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       return total;
     };
     // Below the signal floor the slot is scored on the context view, the priors at λ 1.
-    const regional = share(regionalPrior, full ? i.contextPrior ?? i.regional?.share ?? null : null);
+    const regional = share(regionalPrior, full && (!layout || layout.region) ? i.contextPrior ?? i.regional?.share ?? null : null);
     const context = share(contextPriorTerm, full ? i.contextBlendShare ?? i.contextBlend?.share ?? null : null);
     const completes = complementsOf.has(slot) && piece && completesAnchor(piece) ? complementsOf.get(slot)! : 0;
     const base = baseOf.get(key), merch = merchOf.get(key);
@@ -1699,7 +1805,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         // P06: the slot's baseline and shadow orders, cut at the take, and the terms that would have moved each module, the same on every record of the slot (keys sorted).
         ...(shadows.has(d.slot) ? shadowRecord(shadows.get(d.slot)!) : {}),
         // P39: the suppressions in force, on every record of a slot that read the shopper's interests (keys sorted).
-        ...(suppressions.length && !below.has(d.slot) ? { suppressions: suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
+        // P30: never on a context-only layout slot, which reads none of the shopper's interests either.
+        ...(suppressions.length && !below.has(d.slot) && !contextual.has(d.slot) ? { suppressions: suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
       },
       inputs,
     };
@@ -1736,6 +1843,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(constraintDiagnostics ? { constraintDiagnostics } : {}),
     ...(pageReason ? { layoutReason: layoutReasonRecord(pageReason) } : {}),
     ...(offLimitsRecords.length ? { offLimitsRecords } : {}),
+    // P30 (decision D2): the page's context key, readable, on a page whose declared layout slot is switched to context-only.
+    ...(contextKey ? { contextKey } : {}),
   };
 }
 

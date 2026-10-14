@@ -34,6 +34,7 @@ import { captureRetention, RetentionUnavailable } from '@/retention';
 import { captureBehavior } from '@/ledger/behavior';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import { redeemRenderOffer } from '@/content/renderOffer';
+import { admitLayoutExposure, layoutExposureBeaconOf } from '@/content/service';
 
 const realtimeRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 for (const path of ['/ws', '/action', '/personalization/:userId', '/reflex', '/session/reset', '/session/preferences', '/session/:sessionId/preferences', '/session/:sessionId/analytics', '/segments/:userId', '/connections/:userId']) {
@@ -207,6 +208,24 @@ realtimeRoutes.post('/action', async (c) => {
     const priorConsent = await currentOwnerConsent();
     if (!priorConsent) throw new SessionAccessError();
     const captureConsent = intersectConsent(priorConsent, consentFromCookies(c.req.header('Cookie')), refusalHints(actionEvent.data.consent));
+    // P30 (decision D2): the per-view beacon of a cached layout, answered here
+    // before any host. It is no behaviour of the shopper's: it reaches neither
+    // the shopper's state (no interest, journey counter, visit or signal), nor
+    // the ledger, the outcome path or any provider. Under the tracking consent
+    // just resolved, it only counts the drawn modules' exposures in the learning
+    // of the context its key names (src/content/service.ts `admitLayoutExposure`),
+    // after the answer; without it, or with a key the engine did not issue,
+    // nothing at all. The brand is the action's own, as an outcome's is.
+    if (validatedEvent.type === 'layout_exposure') {
+      const beacon = layoutExposureBeaconOf(actionEvent.data);
+      if (!beacon) return c.json({ error: 'Invalid layout exposure' }, 400);
+      const named = actionEvent.data.brand;
+      const brand = typeof named === 'string' && named.trim() ? named.trim() : c.get('tenant');
+      const { answer, work } = await admitLayoutExposure(c.env, { tenant: c.get('tenant'), brand, subject: shopperPrincipal(c.req.raw).subject,
+        tracking: captureConsent.tracking, beacon, now: engineNow });
+      if (work) { try { c.executionCtx.waitUntil(work); } catch { void work; } }
+      return c.json({ success: true, ...answer });
+    }
     if (captureConsent.tracking && !actionEvent.eventId) actionEvent.eventId = crypto.randomUUID();
     const hasOffer = Object.hasOwn(actionEvent.data, 'renderOffer');
     if (hasOffer && actionEvent.type !== 'content_impression') throw new SessionAccessError();

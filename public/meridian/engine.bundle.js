@@ -1314,7 +1314,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
           const malformed = Boolean(slot.pinnedPieceId) || prefix.ids.length > 50 || prefix.ids.length > prefix.take || new Set(prefix.ids).size !== prefix.ids.length || prefix.ids.some((id) => typeof id !== "string" || !id.length);
           invalid = malformed;
           for (const [pinIndex, id] of prefix.ids.entries()) {
-            const piece = prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
+            const piece = slot.withheld?.has(id) ? void 0 : prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
             const blocked2 = piece ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(piece) : gates.get(slot)?.reason(void 0, id);
             const reason2 = blocked2 ?? (malformed ? "invalid_take" : !piece ? "missing_or_ineligible" : !piece.slotTypes.includes(slot.slot) ? "slot_type" : ownerSlot2 !== void 0 ? "duplicate_pin" : null);
             if (reason2) {
@@ -1343,7 +1343,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
           }
           let refusedPin = false;
           for (const pin of pins) {
-            const id = pin.pieceId, piece = prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
+            const id = pin.pieceId, piece = slot.withheld?.has(id) ? void 0 : prefixCatalog.get(id), ownerSlot2 = reserved2.get(id);
             const blocked2 = piece ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(piece) : gates.get(slot)?.reason(void 0, id);
             const reason2 = blocked2 ?? (malformed ? "invalid_take" : !piece ? "missing_or_ineligible" : !piece.slotTypes.includes(slot.slot) ? "slot_type" : ownerSlot2 !== void 0 ? "duplicate_pin" : null);
             if (reason2) {
@@ -1370,7 +1370,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         continue;
       }
       if (!slot.pinnedPieceId) continue;
-      const p = live.find((piece) => piece.id === slot.pinnedPieceId);
+      const p = slot.withheld?.has(slot.pinnedPieceId) ? void 0 : live.find((piece) => piece.id === slot.pinnedPieceId);
       const blocked = p ? offLimits.has(slot) ? "off_limits" : forbidden.get(slot)?.get(p) : gates.get(slot)?.reason(void 0, slot.pinnedPieceId);
       if (blocked) {
         pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: slot.pinnedPieceId, reason: blocked });
@@ -1434,7 +1434,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     const remaining = prefix ? prefix.take - prefix.ids.length : slot.take;
     if (prefix && remaining <= 0 || rankingSlots && !rankingSlots.has(slot.slot)) continue;
     const excluded = forbidden.get(slot);
-    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p));
+    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !slot.withheld?.has(p.id) && !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p));
     const pinsAt = positioned.get(slot) ?? /* @__PURE__ */ new Map();
     const marks = !historicalPins && slot.offLimitsPieceIds?.length ? new Set(slot.offLimitsPieceIds) : null;
     const fixedSlot = pinsAt.size > 0 || marks !== null;
@@ -1445,7 +1445,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       const own = /* @__PURE__ */ new Set([...prefix?.ids ?? [], ...[...pinsAt.values()].map((p) => p.id)]);
       const servable = /* @__PURE__ */ new Map();
       for (const p of live) {
-        if (servable.has(p.id) || !p.slotTypes.includes(slot.slot) || excluded?.has(p)) continue;
+        if (servable.has(p.id) || !p.slotTypes.includes(slot.slot) || excluded?.has(p) || slot.withheld?.has(p.id)) continue;
         if (own.has(p.id) || !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p)) servable.set(p.id, p);
       }
       const baseline = slot.order ? [...new Set(slot.order)].filter((id) => servable.has(id)) : [...servable.keys()];

@@ -15,7 +15,7 @@ import { anonymousWithConsent } from '@/identity/consentContinuity';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import type { Env } from '@/types/env';
 import { syntheticOperation } from '@/ops/synthetic';
-import { serveContentDecisions } from '@/content/service';
+import { sealContextKey, serveContentDecisions } from '@/content/service';
 import { requireRetention, type RetentionStamp } from '@/retention';
 import { ENTRY_QUERY_LIMIT, validEntry, type ChannelSignals } from '@/services/visit';
 import { deviceOf, platformOf } from '@/services/platform';
@@ -890,6 +890,9 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   if (!body || body.ok !== true) return c.json({ ok: false, error: 'Snapshot unavailable' }, 503);
   const timing = answered.headers.get('Server-Timing');
   if (timing) c.header('Server-Timing', timing);
+  // P30 (decision D2): the first decision set's context key, as the route answered it.
+  const contextKey = answered.headers.get('X-Context-Key');
+  if (contextKey) c.header('X-Context-Key', contextKey);
   c.header('Cache-Control', 'no-store');
   return c.json({ ...body, session });
 });
@@ -1000,6 +1003,16 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   if (c.req.method === 'POST' && context.customerId !== undefined && out.sources.consent.tracking) await carryOwnerCustomerId(c.env, principal, context.customerId);
   // Where the time went, for whoever is measuring: one Server-Timing entry per stage.
   c.header('Server-Timing', Object.entries(out.sources.timings).map(([k, v]) => `${k};dur=${v}`).join(', '));
+  // P30 (decision D2): a page whose declared layout slot is context-only names
+  // its context in the `X-Context-Key` header, sealed (src/content/service.ts):
+  // the page, the channel, the visit bucket, the device and, where admitted, the
+  // region — or its default variant — never a visitor, session or decision
+  // identifier, and never a member of the answer. A key that cannot be sealed is
+  // left off; the decision is the same either way, and the answer stays no-store.
+  if (out.contextKey) {
+    const key = await sealContextKey(c.env, tenant, out.brand, out.contextKey);
+    if (key) c.header('X-Context-Key', key);
+  }
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
   // CW31: nothing at all when the shopper withheld tracking consent.
   // Ruling L-R10 (P02 decision D1): exactly the records the serve-time capture

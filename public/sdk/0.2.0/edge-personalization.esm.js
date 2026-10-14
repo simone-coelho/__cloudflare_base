@@ -158,7 +158,8 @@ var ACTION_EVENT_TYPES = [
   "video_complete",
   "content_viewable",
   "video_view",
-  "product_dwell"
+  "product_dwell",
+  "layout_exposure"
 ];
 var ACTION_EVENT_TYPE_SET = new Set(ACTION_EVENT_TYPES);
 var isEventNonce = (value) => typeof value === "string" && value.length >= 1 && value.length <= 128 && !/[^A-Za-z0-9_-]/.test(value);
