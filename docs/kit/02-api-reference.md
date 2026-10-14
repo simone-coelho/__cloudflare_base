@@ -204,6 +204,27 @@ again is recorded again; and a sign-in that merges two profiles merges their int
   interaction of the visit and weighs 0 unless the registry publishes a weight. As for any product event, one naming
   a product the tenant does not hold, whose every value the catalogue refuses, is dropped as `unknown_product`.
 
+### The cached layout's exposure beacon (`layout_exposure`)
+
+A page drawn from a cached layout (the context-only layout switch, **A context-only layout slot and its key** in
+section 2) sends one `layout_exposure` per page view through the SDK's
+`client.listen.layoutExposure({ contextKey, page, slot, modules })`, under the shopper's tracking consent only.
+`data` carries `contextKey` (the `X-Context-Key` the cached layout was answered under), `page`, `slot`, `modules`
+(the module ids drawn, in drawn order, at most 50 and each once) and `pageInstance` (the page view), with
+`data.brand` as every action carries it. The route answers it itself, before either shopper host: it changes
+nothing about the shopper (no interest, journey counter, visit, signal or outcome record) and only counts
+exposures. One exposure per drawn module is added, after the answer, to the learning of the context the key names,
+at its channel and visit bucket and the coarser levels (the device is no learning level), when every condition
+holds: the shopper's tracking consent; a key the engine issued for this tenant and brand, naming this page; a
+context of an arm that learns (a key of the default variant or of the holdout's no-learning arm counts nothing);
+the page's declared layout slot switched to context-only as the key says, named as `slot`; that slot measured on
+`rendered-v1`; modules of the published catalogue that name the slot, no more than its `take`; and a retention
+policy in force for online learning. The answer is `{ "success": true, "exposure": "admitted", "modules": n }`, or
+`{ "success": true, "exposure": "ignored", "reason": … }` with `reason` one of `tracking_refused`,
+`key_not_issued`, `not_learning`, `not_context_only`, `not_measured`, `unknown_module` or `unavailable`; a beacon
+whose `data` is not of this shape answers `400` `Invalid layout exposure`. A repeat for the same page view adds
+nothing, whatever modules it names.
+
 ### Event conventions
 
 These travel as `custom` events (`client.emit.custom(name, data)`, `data.event` the name), each built only from what
@@ -493,6 +514,27 @@ blend, a context-only decision's `B` holds the context terms alone (0 where none
 from ladder levels 0 to 2. Every record of a context-only slot carries `explain.signalFloor: { floor,
 signals }` (keys sorted), and its receipt says that the shopper is below the signal floor, with the
 shopper's count of signals and the floor in force.
+
+**A context-only layout slot and its key.** A page's declared layout slot switched to context-only
+(`contextOnly: { enabled: true }` on the slot, off by default; `region: true` admits the region;
+[the context-only layout switch](./03-payload-schemas.md#the-context-only-layout-switch)) is decided for its
+context: the page, the entry channel and visit bucket the cell records, the device class the request reports (none
+when it reports none) and, where admitted, the region. On an arm that personalizes it is scored on its context's
+population priors at full weight (the context prior, and the regional prior only where the region is admitted), the
+seed rules on `entry_channel` and `device` alone, the per-context order for its context (one naming a device serves
+only that device), the learned lift from ladder levels 0 to 2, exploration hashed on the context and the hour
+instead of the visitor, and its pins, exclusions, freshness and merchandising, with every module's eligibility rule
+read on the context alone; none of the shopper's interests, journey stage, fatigue, memberships, anchor preference
+or other seed rules applies, so every shopper of one context is served the identical order within the hour, and the
+slot's records claim no journey stage. The switch decides the slot: the signal floor never holds a switched slot.
+On the holdout's `default` arm, and for a shopper without consent, the slot is the default variant. Every answer
+for such a page carries the response header `X-Context-Key`, a non-identifying key built from the page, the channel,
+the visit bucket, the device where one was read and the region where admitted (`pdp|c=paid_social|v=1|d=mobile`,
+then `|k=` and a seal of 32 hexadecimal digits), or `pdp|default|k=…` for the default variant, with `|arm=no_learning`
+added on the holdout's no-learning arm; it holds no visitor, session or decision identifier and no user agent, and
+every shopper of one context gets the same key. It is a header, never a member of the answer, which stays
+`Cache-Control: no-store`, and a new visitor's first request carries it too. A page drawn from a cache under that
+key reports its exposures with the `layout_exposure` beacon (section 1).
 
 **The context prior.** A tenant can let the arrival's context shape a first decision through a population
 prior per context, beside the regional prior: `contextPrior: { enabled, kBlend, minEvents }` in the learn
@@ -1312,6 +1354,17 @@ what it wrote before; a replay of a record without the marker decides the page w
 marker with another value, on the holdout's `default` arm, without a whole count, or over a slots revision
 whose floors hold no slot of the page below that count, refuses as `invalid page replay manifest`. The
 record's `explain.signalFloor` is compared by value in replay.
+
+The context-only switch (`contextOnly: { enabled, region? }`, a version-4 member kept exactly as authored) is set
+only on a page's declared layout slot: publication refuses it on any other slot with `422`, naming
+`pages.{page}[i].contextOnly` and the slot in `errors[]` and writing no revision; a value that is not
+`{ enabled: boolean, region?: boolean }` is refused the same way, and a write marked 1, 2 or 3 that carries it is
+refused naming the version (an unmarked write that carries it is read under version 4). A decision on which a
+switched slot was decided for its context writes `inputs.context_only` (the device class and the admitted region
+it was decided with, keys sorted, each only when there was one) beside the page's other inputs, and every other
+decision writes exactly what it wrote before; a replay decides the slot in the same context, hashing exploration on
+the same key, and refuses as `invalid context-only inputs` a record whose page revision and arm and whose inputs
+disagree.
 
 `pinnedPieceIds` pins a required ordered prefix (up to 50 distinct exact nonempty IDs, [] neutral),
 followed by ranking up to total take. It is mutually exclusive with scalar `pinnedPieceId`, even with [].

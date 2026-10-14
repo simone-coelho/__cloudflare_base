@@ -23,6 +23,7 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `content_click`, `video_complete`, `video_view` | `contentId`, `slot`, original acknowledged `decisionId`; optional `customerContentId` and `contentType`; from the SDK, `slotPosition`, the acknowledged placement's position within the slot, when its decision named one. A `content_click` is also a module engagement: a click inside a marked module container, or an interaction it declares in `data-op-engage`, named as `interaction` (the declared interactions `sizeguide:open` and `reviews:open` of a module that owns a size guide or reviews). A `video_view` is the video played for three seconds: a content action read off the piece's catalogue format (`tags.contentType`) as `video_complete` is, at the weight the registry publishes for it (`weights.video_view`, 1 in the shipped registry; a registry that names none weighs it 0, as every weight), and not a reward |
 | `content_dwell` | the same, plus `ms`, milliseconds on screen; the SDK sends it only after the slot's minimum on screen, its own in `dwellMinMsBySlot` (for example 30000 on an editorial slot), else `dwellMinMs`, one second |
 | `product_dwell` | `productId` and `dwellMs`, the milliseconds on the product page, sent once per product view past 20 seconds, plus the registry's attributes when the brand scores them from the event. `product_dwell` with its `dwellMs` feeds the visit's dwell counter (`category_dwell_ms`), counts as an interaction and weighs 0 unless the registry publishes a weight |
+| `layout_exposure` | The per-view beacon of a cached layout, sent by the SDK (`client.listen.layoutExposure`) once per page view and only under tracking consent: `contextKey` (the `X-Context-Key` the cached layout was answered under), `page`, `slot`, `modules` (the module ids drawn, in drawn order, at most 50, each once) and `pageInstance`. It is answered by the route before either shopper host, so it builds no interest, is no signal and no interaction of the visit and writes no outcome record; it adds one exposure per drawn module to the learning of the context its key names, and nothing without tracking consent, with a key the engine did not issue or for a page view already counted ([the context-only layout switch](#the-context-only-layout-switch)) |
 | `custom` | `event`, the real name, plus anything |
 
 The event conventions, each a `custom` event weighing 0 until the tenant's registry publishes a weight for its
@@ -880,6 +881,46 @@ as the tenant floor (`signalFloor`), and any floor that is not a whole number of
 read under every governance version and does not by itself change the version a write is stamped with.
 Every record of a context-only slot carries `explain.signalFloor: { floor, signals }`, keys sorted, and the
 shopper's receipt says that the shopper is below the signal floor, with both numbers.
+
+### The context-only layout switch
+
+```json
+{
+  "governanceVersion": 4,
+  "pages": { "pdp": [
+    { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 }, "contextOnly": { "enabled": true, "region": true } }
+  ] }
+}
+```
+
+`contextOnly` on the page's declared layout slot switches that slot to context-only; it is off by default (absent,
+or `enabled: false`, decides the slot exactly as before), and `region: true` admits the shopper's region into the
+context. It is a version-4 member, kept exactly as authored, and publication refuses it on any other slot
+(`pages.{page}[i].contextOnly`, naming the slot). The context is the page, the entry channel and visit bucket the
+decision's cell records, the device class the request reports (`mobile` or `desktop`; none when it reports
+neither) and, where admitted, the region. On an arm that personalizes the slot is scored on that context alone: its
+population priors at full weight (the context prior, and the regional prior only where the region is admitted), the
+seed rules on `entry_channel` and `device`, the per-context order for the context (one naming a device serves that
+device only), the learned lift from ladder levels 0 to 2, exploration hashed on the context and the hour, and every
+module's eligibility rule read on the context, never the shopper's interests, journey stage, fatigue, memberships
+or another seed rule. Every shopper of one context is therefore served the identical order within the hour. The
+switch decides the slot, so the signal floor never holds a switched slot; on the holdout's `default` arm, and for a
+shopper without consent, the slot is the default variant.
+
+The answer's `X-Context-Key` header is a non-identifying key: `{page}|c={channel}|v={visit bucket}`, then
+`|d={device}` when the request reported a device class, `|r={region}` when the region is admitted (`none` when
+unknown) and `|arm=no_learning` on the holdout's no-learning arm, each value percent-encoded, then `|k=` and the
+engine's seal, 32 lowercase hexadecimal digits; the default variant's key is `{page}|default|k={seal}`. It holds no
+visitor, session or decision identifier and no user agent, and every shopper of one context gets the same key. The
+seal lets the engine tell a key it issued from one it did not; it is derived from the deployment's signing
+configuration, so an answer carries no key where none is configured.
+
+A page drawn from a cached layout reports what it drew with one `layout_exposure` per page view
+([event payloads](#event-payloads-by-type)): each drawn module is one exposure in the context's learning, at its
+channel and visit bucket (the device is no learning level), on a slot measured on `rendered-v1`. A decision on
+which the switched slot was decided for its context carries `inputs.context_only: { device?, region? }`, the device
+class and the admitted region it was decided with (keys sorted, each only when there was one), so its replay
+decides the slot in the same context.
 
 ## The learn document
 

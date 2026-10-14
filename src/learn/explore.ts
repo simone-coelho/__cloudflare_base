@@ -96,6 +96,17 @@ export function bucketOf(visitorId: string, slot: string, hourKey: string): numb
   return hash32(`explore:${visitorId}:${slot}:${hourKey}`) / 4294967296;
 }
 export const hourKeyOf = (ms: number) => String(Math.floor(ms / 3_600_000));
+/**
+ * P30 (decision D1): the same unit interval for a context-only layout slot,
+ * hashed on its CONTEXT — the readable context key (src/content/cell.ts
+ * `contextKeyOf`: the page, the channel, the visit bucket, the device and, where
+ * admitted, the region) — the slot and the hour, in place of the visitor, so
+ * every shopper of one context draws alike within the hour. A slot without the
+ * switch keeps `bucketOf` and the visitor hash exactly as before.
+ */
+export function contextBucketOf(context: string, slot: string, hourKey: string): number {
+  return hash32(`explore-context:${context}:${slot}:${hourKey}`) / 4294967296;
+}
 
 /** Observations of an item in the slot, from the snapshot's coarsest level. */
 export function observationsOf(snap: LiftSnapshot | null | undefined, item: string): number {
@@ -171,6 +182,12 @@ export function explorationPick(
     visitorId: string; slot: string; nowMs: number; ranked: readonly Ranked[];
     snapshot: LiftSnapshot | null | undefined; cfg: ExploreConfig;
     /**
+     * P30: the context of a context-only layout slot (its readable context
+     * key). Present, the decision is hashed on it and the hour instead of the
+     * visitor (`contextBucketOf`); absent, on the visitor, exactly as before.
+     */
+    context?: string;
+    /**
      * W28.M1.01 (F23 §4.3): items whose learned treatment a merchandiser has
      * taken manual control of — `reject` removed the learned evidence from the
      * item's treatment, `freeze` replaced it with a chosen value. Exploration
@@ -199,11 +216,12 @@ export function explorationPick(
   if (cfg.mode === 'off' || ranked.length < 2) return null;
   if (cfg.mode === 'thompson' && historical !== HISTORICAL_EXPLORATION) return null;
   const share = Math.min(1, Math.max(0, cfg.share));
-  const bucket = Math.round(bucketOf(visitorId, slot, hourKeyOf(nowMs)) * 1000) / 1000;
+  const context = input.context;
+  const bucket = Math.round((context === undefined ? bucketOf(visitorId, slot, hourKeyOf(nowMs)) : contextBucketOf(context, slot, hourKeyOf(nowMs))) * 1000) / 1000;
 
   if (cfg.mode === 'thompson') {
     // Every decision ranks on a sampled rate; the sample is the exploration.
-    const rng = mulberry32(hash32(`thompson:${visitorId}:${slot}:${hourKeyOf(nowMs)}`));
+    const rng = mulberry32(hash32(`thompson:${context === undefined ? visitorId : `context:${context}`}:${slot}:${hourKeyOf(nowMs)}`));
     const samples: Record<string, number> = {};
     for (const r of ranked) {
       const st = snapshot?.items[r.id]?.['*'];

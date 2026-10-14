@@ -91,6 +91,15 @@ export interface ContentSlotSpec {
    */
   affinity?: AffinityViewLike;
   /**
+   * P30: modules THIS slot does not consider on this decision although the page
+   * admits them — on a context-only layout slot, a module whose eligibility rule
+   * the slot's context does not satisfy (src/content/decide.ts). Each is treated
+   * as ineligible for this slot alone: not pooled, ranked or held, and a pin of
+   * one is refused as missing or ineligible. Every other slot is untouched.
+   * Absent or empty, the slot decides exactly as before.
+   */
+  withheld?: ReadonlySet<string>;
+  /**
    * P04: modules pinned at a position of this slot, counted from 1 to `take`
    * after any prefix pins. Each is reserved page-wide before any slot ranks,
    * with the prefix pins, and served at exactly its position, never scored or
@@ -291,7 +300,7 @@ export function composeContentDetailed(
             || new Set(prefix.ids).size !== prefix.ids.length || prefix.ids.some(id => typeof id !== 'string' || !id.length);
           invalid = malformed;
           for (const [pinIndex, id] of prefix.ids.entries()) {
-            const piece = prefixCatalog.get(id), ownerSlot = reserved.get(id);
+            const piece = slot.withheld?.has(id) ? undefined : prefixCatalog.get(id), ownerSlot = reserved.get(id);
             const blocked = piece ? (offLimits.has(slot) ? 'off_limits' : forbidden.get(slot)?.get(piece)) : gates.get(slot)?.reason(undefined, id);
             const reason = blocked ?? (malformed ? 'invalid_take' : !piece ? 'missing_or_ineligible'
               : !piece.slotTypes.includes(slot.slot) ? 'slot_type' : ownerSlot !== undefined ? 'duplicate_pin' : null);
@@ -319,7 +328,7 @@ export function composeContentDetailed(
           }
           let refusedPin = false;
           for (const pin of pins) {
-            const id = pin.pieceId, piece = prefixCatalog.get(id), ownerSlot = reserved.get(id);
+            const id = pin.pieceId, piece = slot.withheld?.has(id) ? undefined : prefixCatalog.get(id), ownerSlot = reserved.get(id);
             const blocked = piece ? (offLimits.has(slot) ? 'off_limits' : forbidden.get(slot)?.get(piece)) : gates.get(slot)?.reason(undefined, id);
             const reason = blocked ?? (malformed ? 'invalid_take' : !piece ? 'missing_or_ineligible'
               : !piece.slotTypes.includes(slot.slot) ? 'slot_type' : ownerSlot !== undefined ? 'duplicate_pin' : null);
@@ -347,7 +356,7 @@ export function composeContentDetailed(
         continue;
       }
       if (!slot.pinnedPieceId) continue;
-      const p = live.find(piece => piece.id === slot.pinnedPieceId);
+      const p = slot.withheld?.has(slot.pinnedPieceId) ? undefined : live.find(piece => piece.id === slot.pinnedPieceId);
       const blocked = p ? (offLimits.has(slot) ? 'off_limits' : forbidden.get(slot)?.get(p)) : gates.get(slot)?.reason(undefined, slot.pinnedPieceId);
       if (blocked) { pinDiagnostics.push({ slot: slot.slot, pinnedPieceId: slot.pinnedPieceId, reason: blocked }); continue; }
       if (historicalPins === HISTORICAL_PINS) continue;
@@ -395,7 +404,7 @@ export function composeContentDetailed(
     const remaining = prefix ? prefix.take - prefix.ids.length : slot.take;
     if ((prefix && remaining <= 0) || (rankingSlots && !rankingSlots.has(slot.slot))) continue;
     const excluded = forbidden.get(slot);
-    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !used.has(p.id) && !reserved.has(p.id) && !prefixOwnedPieces.has(p));
+    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !slot.withheld?.has(p.id) && !used.has(p.id) && !reserved.has(p.id) && !prefixOwnedPieces.has(p));
     // P04: the slot's own fixed positions — its modules pinned at a position
     // (reserved above), and its off-limits modules, each held at its BASELINE
     // position: its place, counted from 1, among the modules the slot could
@@ -415,7 +424,7 @@ export function composeContentDetailed(
       const own = new Set([...(prefix?.ids ?? []), ...[...pinsAt.values()].map((p) => p.id)]);
       const servable = new Map<string, ContentPieceLike>();
       for (const p of live) {
-        if (servable.has(p.id) || !p.slotTypes.includes(slot.slot) || excluded?.has(p)) continue;
+        if (servable.has(p.id) || !p.slotTypes.includes(slot.slot) || excluded?.has(p) || slot.withheld?.has(p.id)) continue;
         if (own.has(p.id) || (!used.has(p.id) && !reserved.has(p.id) && !prefixOwnedPieces.has(p))) servable.set(p.id, p);
       }
       const baseline = slot.order ? [...new Set(slot.order)].filter((id) => servable.has(id)) : [...servable.keys()];

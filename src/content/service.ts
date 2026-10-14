@@ -20,23 +20,25 @@ import { channelIn, projectVisit, validEntry, validVisitContext, visitArrival, t
 import { deviceClassOf, platformWordOf, type DeviceClass, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
-import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND, VOCABULARY_APPROVAL_KIND, vocabularyTableOf, type VocabularyTable } from './kinds';
+import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, isCatalogueName, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND, VOCABULARY_APPROVAL_KIND, vocabularyTableOf, type VocabularyTable } from './kinds';
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
-import { cellFor, contextTermsOf, type CfLike } from './cell';
+import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { contextOnlySlots, decideContent, layoutBlendOf } from './decide';
+import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, layoutBlendOf } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
-import { currentLiftWitness, fanDecisions, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
+import { currentLiftWitness, fanDecisions, fanLayoutExposure, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
-import type { ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, SlotCatalog } from './types';
-import { captureRetention, RetentionUnavailable } from '@/retention';
+import type { ContentCatalog, ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, LearnConfig, SlotCatalog } from './types';
+import { captureRetention, requireRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { enqueueDecisions } from '@/ledger/enqueue';
 import { isCarriedCustomerId } from '@/ledger/records';
 import { createRenderOffer } from './renderOffer';
+import { readSigningConfig } from '@/auth/signingConfig.mjs';
+import { isEventNonce } from '@/events/actionTypes';
 import { syntheticOperation } from '@/ops/synthetic';
 
 export interface ServeRequest {
@@ -808,11 +810,11 @@ export async function serveContentDecisions(
   const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
   let affinity: { dims: Record<string, Record<string, number>> } | null = ownView;
   let regional: (NonNullable<Parameters<typeof decideContent>[0]['regional']> & { asserted?: true }) | null = null;
+  // DEMO PROFILE ONLY: an asserted region also selects the prior, so one
+  // laptop can rehearse two regions. Every other profile keeps the rule
+  // below (an asserted region moves no affinity); the receipt says asserted.
+  const assertedPrior = demoAssertedRegion(env, consent.tracking ? r.context?.region : undefined);
   if (regionalCfg.enabled && arm !== 'default') {
-    // DEMO PROFILE ONLY: an asserted region also selects the prior, so one
-    // laptop can rehearse two regions. Every other profile keeps the rule
-    // below (an asserted region moves no affinity); the receipt says asserted.
-    const assertedPrior = demoAssertedRegion(env, consent.tracking ? r.context?.region : undefined);
     const trend = await readTrend(env, scope, assertedPrior ?? regionKeyOf(r.cf), regionalCfg.minEvents, now);
     if (trend) {
       const lambda = lambdaFor(shopper.affinity?.dims, regionalCfg.kBlend);
@@ -878,10 +880,21 @@ export async function serveContentDecisions(
   // below the floor of is decided on context alone; a floor of 0, the default,
   // holds nobody below and every slot decides exactly as before.
   const signalFloor = personalized ? { floor: slotsDoc.signalFloor ?? 0, signals: shopper.signals ?? 0 } : null;
-  const below = contextOnlySlots(activeSlots, signalFloor, arm);
+  // P30 (decision D1): the page's declared layout slot switched to context-only,
+  // decided for its context on an arm that personalizes (read off the document
+  // already held: no read is added). P10's floor never holds it: its switch does.
+  const layoutSwitch = contextOnlyLayoutSlot(activeSlots);
+  const contextual = layoutSwitch && arm !== 'default' ? layoutSwitch : null;
+  const below = contextOnlySlots(contextual ? activeSlots.filter(s => s.slot !== contextual.slot) : activeSlots, signalFloor, arm);
+  // P30: the region that enters the switched slot's context where its switch
+  // admits it — the region its regional prior is read for (the edge's region,
+  // or on the demo profile the asserted one that selects the prior), which the
+  // context key names; under the tracking gate the cell's region is read under.
+  const contextRegion = contextual?.region && consent.tracking ? ((regionalCfg.enabled ? assertedPrior : null) ?? regionKeyOf(r.cf)) : null;
   // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.
   // P10: and never for a slot decided below the signal floor, which reads none of the shopper's history.
-  const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0 && !below.has(s.slot));
+  // P30: nor for the context-only layout slot, which reads none of it.
+  const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0 && !below.has(s.slot) && s.slot !== contextual?.slot);
   const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot), identityPage(pageScoped, s.slot, r.page)); }))]);
   for (const entry of ring ?? []) if (entry.brand === brand) pinRetention(env, entry.retention?.online, r.tenant, 'online');
   const served = ring ? servedCounts(ring.filter(e => e.brand === brand), activeSlots.map(s => ({ ...s, measurementBasis: configOf(s.slot).measurementBasis })), now) : null;
@@ -925,6 +938,8 @@ export async function serveContentDecisions(
     // seed rules and configured orders that name them; each only when there is one.
     ...(device ? { device } : {}),
     ...(recency ? { recency } : {}),
+    // P30: the region of the context-only slot's context, where its switch admits it.
+    ...(contextRegion ? { contextRegion } : {}),
     ...(personalizes(consent) && shopper.affinity?.audiences?.length ? { audiences: shopper.affinity.audiences } : {}),
     ...(signalFloor ? { signalFloor } : {}),
     // P39: the suppressions in force, itemised on the records (their interest already left out above).
@@ -976,7 +991,8 @@ export async function serveContentDecisions(
   // shopper's, so it claims none.
   if (personalized && shopper.stage) {
     const journey = { stage: shopper.stage, version: journeySource.version };
-    for (const record of [...set.records, ...offLimitsRecords]) if (!record.explain.signalFloor) record.journey = journey;
+    // P30: nor does a record of the context-only layout slot, decided for its context alone.
+    for (const record of [...set.records, ...offLimitsRecords]) if (!record.explain.signalFloor && record.slot !== contextual?.slot) record.journey = journey;
   }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
@@ -1084,4 +1100,130 @@ export async function serveContentDecisions(
       timings,
     },
   };
+}
+
+// ── P30 (decision D2): the context key, sealed, and the per-view beacon ──────
+//
+// A context-only layout slot's answer is named by its context key, so that a
+// cache can hold the answer for every shopper of that context, and a page drawn
+// from such a cache tells the engine what it drew through a light per-view
+// beacon, so that learning counts the exposure. The key is the readable context
+// (`contextKeyOf`, src/content/cell.ts) and a seal: an HMAC of it, the tenant
+// and the brand, under a key derived (HKDF) for this purpose alone from the
+// deployment's signing configuration, as the render offer derives its own. The
+// seal is the same for every shopper of one context, so the key identifies a
+// context and never a shopper; and it lets the engine tell a key it issued from
+// one it did not without storing anything.
+
+const encoder = new TextEncoder();
+const CONTEXT_KEY_PURPOSE = 'content-context-key/v1';
+/** P30: the longest key the beacon accepts: a readable context and its seal, far beyond any the engine issues. */
+const CONTEXT_KEY_MAX = 512;
+
+async function contextKeySeal(env: Pick<Env, 'JWT_SECRET' | 'JWT_ISSUER' | 'JWT_AUDIENCE'>, tenant: string, brand: string, readable: string): Promise<string | null> {
+  const cfg = readSigningConfig(env);
+  if (!cfg) return null;
+  const material = await crypto.subtle.importKey('raw', cfg.key, 'HKDF', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: encoder.encode(JSON.stringify([cfg.issuer, cfg.audience])),
+    info: encoder.encode(CONTEXT_KEY_PURPOSE) }, material, { name: 'HMAC', hash: 'SHA-256', length: 256 }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(JSON.stringify([CONTEXT_KEY_PURPOSE, tenant, brand, readable]))));
+  return [...mac.subarray(0, 16)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * P30 (decision D2): the context key a context-only answer carries in its
+ * `X-Context-Key` header: the readable context, then `|k=` and its seal (32
+ * lowercase hexadecimal digits). Null when no signing configuration is in force
+ * or the seal cannot be computed: the answer then carries no key, and nothing
+ * about the decision changes.
+ */
+export async function sealContextKey(env: Pick<Env, 'JWT_SECRET' | 'JWT_ISSUER' | 'JWT_AUDIENCE'>, tenant: string, brand: string, readable: string): Promise<string | null> {
+  try {
+    const seal = await contextKeySeal(env, tenant, brand, readable);
+    return seal ? `${readable}|k=${seal}` : null;
+  } catch { return null; }
+}
+
+/** P30: the readable context of a key this engine issued for the tenant and brand; null for any other value. */
+export async function openContextKey(env: Pick<Env, 'JWT_SECRET' | 'JWT_ISSUER' | 'JWT_AUDIENCE'>, tenant: string, brand: string, key: unknown): Promise<string | null> {
+  if (typeof key !== 'string' || key.length > CONTEXT_KEY_MAX) return null;
+  const at = key.lastIndexOf('|k=');
+  if (at < 1) return null;
+  const readable = key.slice(0, at), seal = key.slice(at + 3);
+  if (!/^[0-9a-f]{32}$/.test(seal)) return null;
+  let expected: string | null;
+  try { expected = await contextKeySeal(env, tenant, brand, readable); } catch { return null; }
+  if (expected === null) return null;
+  let difference = 0;
+  for (let k = 0; k < seal.length; k++) difference |= expected.charCodeAt(k) ^ seal.charCodeAt(k);
+  return difference === 0 ? readable : null;
+}
+
+/** P30: the data of a `layout_exposure` beacon: the key the page drew its layout under, the page, the slot, the modules drawn in order and the page view. */
+export interface LayoutExposureBeacon { contextKey: string; page: string; slot: string; modules: string[]; pageInstance: string }
+/** P30: why a well-formed beacon added nothing. */
+export type LayoutExposureRefusal = 'tracking_refused' | 'key_not_issued' | 'not_learning' | 'not_context_only' | 'not_measured' | 'unknown_module' | 'unavailable';
+export type LayoutExposureAnswer = { exposure: 'admitted'; modules: number } | { exposure: 'ignored'; reason: LayoutExposureRefusal };
+
+/** P30: a beacon's data read strictly — at most 50 distinct modules, as a slot takes — or null when it is not one. */
+export function layoutExposureBeaconOf(data: Record<string, unknown>): LayoutExposureBeacon | null {
+  const { contextKey, page, slot, modules, pageInstance } = data;
+  if (typeof contextKey !== 'string' || !contextKey || contextKey.length > CONTEXT_KEY_MAX || !isCatalogueName(page) || !isCatalogueName(slot)
+    || !isEventNonce(pageInstance) || !Array.isArray(modules) || modules.length < 1 || modules.length > 50
+    || !modules.every(id => typeof id === 'string' && id.length > 0 && id.length <= 256) || new Set(modules).size !== modules.length) return null;
+  return { contextKey, page, slot, modules: [...modules] as string[], pageInstance };
+}
+
+/**
+ * P30 (decision D2): the per-view beacon of a cached layout. It adds one exposure
+ * per drawn module to its context's learning (`fanLayoutExposure`, after the
+ * answer) only when every condition holds, and nothing otherwise:
+ *   · the shopper's tracking consent, as the action route resolved it;
+ *   · a key this engine issued for the tenant and the brand (its seal), naming
+ *     the beacon's own page and a context of an arm that learns — the default
+ *     variant and the no-learning arm are the holdout's, which learns nothing;
+ *   · the page's declared layout slot, switched to context-only as the key says
+ *     (the region admitted or not) in the slots document in force, is the slot;
+ *   · that slot measured on `rendered-v1` (P02 decision D1: a drawn module is an
+ *     exposure; on any other basis a layout is never captured);
+ *   · modules of the published catalogue that name the slot, no more than its take;
+ *   · a retention policy in force for online learning.
+ * It reads only the published documents, through the same pinned set the
+ * decision path reads, and writes nothing about the shopper: no state, no ring,
+ * no ledger row. A repeat for the same page view is counted once by the
+ * statistics object's journal. Never throws.
+ */
+export async function admitLayoutExposure(env: Env, input: { tenant: string; brand: string; subject: string; tracking: boolean; beacon: LayoutExposureBeacon; now: number }):
+  Promise<{ answer: LayoutExposureAnswer; work: Promise<unknown> | null }> {
+  const ignored = (reason: LayoutExposureRefusal) => ({ answer: { exposure: 'ignored' as const, reason }, work: null });
+  const { tenant, brand, subject, beacon, now } = input;
+  if (!input.tracking) return ignored('tracking_refused');
+  const readable = await openContextKey(env, tenant, brand, beacon.contextKey);
+  const context = readable === null ? null : parseContextKey(readable);
+  if (!context || context.page !== beacon.page) return ignored('key_not_issued');
+  if (context.variant !== 'context' || context.arm !== 'personalized') return ignored('not_learning');
+  let catalog: ContentCatalog, slots: SlotCatalog, learn: LearnConfig;
+  try {
+    const pin = await pinPublication(env, tenant, true);
+    const [catalogRev, slotsRev, learnRev] = await Promise.all([readPinnedPublication(env, CONTENT_KIND, tenant, pin),
+      readPinnedPublication(env, SLOTS_KIND, tenant, pin), readPinnedPublication(env, LEARN_KIND, tenant, pin)]);
+    catalog = catalogRev?.value ?? EMPTY_CATALOG; slots = slotsRev?.value ?? { pages: {} }; learn = learnRev?.value ?? DEFAULT_LEARN;
+  } catch (error) {
+    if (error instanceof SessionAccessError) throw error;
+    return ignored('unavailable');
+  }
+  const page = slots.pages[beacon.page] ?? [];
+  const layout = contextOnlyLayoutSlot(page), spec = page.find(slot => slot.slot === beacon.slot);
+  if (!layout || !spec || layout.slot !== beacon.slot || layout.region !== context.admitsRegion) return ignored('not_context_only');
+  const config = slotLearnConfigOf(learn)(beacon.slot);
+  if ((config.measurementBasis ?? 'served-v1') !== 'rendered-v1') return ignored('not_measured');
+  const modules = new Set(catalog.pieces.filter(piece => piece.slotTypes.includes(beacon.slot)).map(piece => piece.id));
+  if (beacon.modules.length > spec.take || !beacon.modules.every(id => modules.has(id))) return ignored('unknown_module');
+  try { requireRetention(env, captureRetention(env, tenant, now, now).online, tenant, 'online', now); }
+  catch { return ignored('unavailable'); }
+  const scoped = new Set(pageScopedSlotNames(slots));
+  const work = fanLayoutExposure(env, { tenant, brand, slot: beacon.slot, page: identityPage(scoped, beacon.slot, beacon.page), viewPage: beacon.page,
+    config, subject, pageInstance: beacon.pageInstance, modules: beacon.modules,
+    cell: { channel: context.channel, visit_bucket: context.visitBucket, region: null, affinity: null, stage: 'unknown' }, at: now });
+  return { answer: { exposure: 'admitted', modules: beacon.modules.length }, work };
 }

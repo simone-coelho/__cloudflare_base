@@ -239,7 +239,31 @@ export interface SlotStrategy {
    * means the slot decides exactly as before.
    */
   offLimitsPieceIds?: string[];
+  /**
+   * P30 (decision D1): the context-only layout switch of the page's declared
+   * layout slot (version 4 only), off by default: absent, or `enabled: false`,
+   * decides the slot exactly as before. Switched on, the slot is decided for its
+   * CONTEXT — the page, the shopper's entry channel and visit bucket, the device
+   * class the request reports (P37) and, with `region: true`, the region — and
+   * never for the shopper: no interest, journey stage, fatigue or out-of-context
+   * seed rule, the learned ladder no finer than channel and visit bucket, and
+   * exploration hashed on the context and the hour, so every shopper of one
+   * context is served the identical order, named by a non-identifying context
+   * key (decision D2). The holdout's default arm, and a shopper without
+   * consent, are served the slot's default variant under a key of its own.
+   * Publication refuses the switch on any slot but the page's declared layout
+   * slot. Distinct from P10's signal floor (`signalFloor`), which keeps its own
+   * meaning: a switched slot is never held below a floor, its switch decides it.
+   */
+  contextOnly?: ContextOnlySwitch;
 }
+
+/**
+ * P30: the context-only layout switch as published on the declared layout slot:
+ * `enabled` turns it on, `region` admits the shopper's region into the context
+ * (and so into its key and its population prior). Kept exactly as authored.
+ */
+export interface ContextOnlySwitch { enabled: boolean; region?: boolean }
 
 /** P04: one module pinned at a position of a slot, counted from 1. */
 export interface PositionPin { pieceId: string; position: number }
@@ -833,6 +857,16 @@ export interface DecisionInputs {
    * without it was decided where no rule could act.
    */
   eligibility_verdicts?: Record<string, boolean>;
+  /**
+   * P30: the context a context-only layout slot of the page was decided in,
+   * beyond what the record already carries (its page, and its cell's channel and
+   * visit bucket): the device class the request reported, and the region where
+   * the slot admits it (keys sorted, each only when there is one). Written only
+   * on a decision on which a switched slot was decided for its context (C11), so
+   * a replay hashes exploration on the same context and serves the same device
+   * order; every other record carries exactly what it carried before.
+   */
+  context_only?: { device?: DeviceClass; region?: string };
 }
 
 /** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
@@ -1102,6 +1136,17 @@ export interface ContentDecisionSet {
    * the ledger, and so to the export, under the shopper's tracking consent.
    */
   offLimitsRecords?: DecisionRecord[];
+  /**
+   * P30 (decision D2): the context key of a page whose declared layout slot is
+   * switched to context-only, in its readable form (`contextKeyOf`,
+   * src/content/cell.ts): the page, the channel, the visit bucket, the device
+   * and, where admitted, the region of the context the slot was decided in, or
+   * the page's default variant on the holdout's default arm. Built from those
+   * alone, never from a visitor, session or decision identifier. Host-internal:
+   * the route answers it, sealed, as the `X-Context-Key` header, never as a
+   * member of the answer. Absent on every other page.
+   */
+  contextKey?: string;
 }
 
 /**

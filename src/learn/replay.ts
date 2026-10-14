@@ -11,7 +11,7 @@ import type { Env } from '@/types/env';
 import { requireRetention } from '@/retention';
 import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
-import { BLEND_RULES, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES } from '@/content/decide';
+import { BLEND_RULES, contextOnlyLayoutSlot, contextOnlySlots, decideContent, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
 import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
@@ -293,6 +293,12 @@ const unruled = (slot: SlotStrategy): SlotStrategy => {
   return rest;
 };
 
+/** P30: the context a context-only page was decided in, as a record carries it: only a device class and a region, each when there was one. */
+const contextOnlyInputs = (value: unknown): value is NonNullable<DecisionInputs['context_only']> => object(value)
+  && Object.keys(value).every(key => key === 'device' || key === 'region')
+  && (value.device === undefined || value.device === 'mobile' || value.device === 'desktop')
+  && (value.region === undefined || (typeof value.region === 'string' && value.region.length > 0 && value.region.length <= 64));
+
 /** Identity and the numeric structure consumed by lift/exploration, not a new archive schema. */
 function usableSnapshot(value: unknown, served: DecisionRecord, row: Manifest['slots'][number]): value is LiftSnapshot {
   if (!object(value) || value.tenant !== served.tenant || value.brand !== served.brand || value.slot !== row.slot
@@ -427,18 +433,29 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     ...(typeof lambdas.context === 'number' && inputs.context_share ? { context: { lambda: lambdas.context, share: inputs.context_share } } : {}),
   } : null;
   const extCfg = learn.external ?? null;
+  // P02: a record that states no layout marker is replayed as its page was
+  // decided — without the declaration — whatever the revision carries.
+  // P01: and a record that states no orders marker without the page's orders.
+  // P04: and a record that states no module-rules marker without its position pins and off-limits marks.
+  const decidedSlots = (manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared)).map(slot => manifest?.orders === ORDER_RULES ? slot : unordered(slot))
+    .map(slot => manifest?.moduleRules === MODULE_RULES ? slot : unruled(slot));
+  // P30: a page whose declared layout slot is switched to context-only was
+  // decided, on an arm that personalizes, in the context its records carry
+  // beyond their page and cell (`inputs.context_only`: the device, the admitted
+  // region), and on its priors' recorded shares at full weight; so the replay
+  // hashes exploration on the same context and serves the same device order. A
+  // record whose page and arm say one thing and whose inputs another is refused.
+  const contextOnly = inputs.context_only;
+  if ((contextOnlyLayoutSlot(decidedSlots) !== null && served.arm !== 'default') !== (contextOnly !== undefined)
+    || (contextOnly !== undefined && !contextOnlyInputs(contextOnly))) return fail(served, 'invalid context-only inputs');
   let set: ReturnType<typeof decideContent>;
   requireRetention(env, served.retention?.ledger, served.tenant, 'ledger');
   try { set = decideContent({
     ...(hasNonce ? { requestId: served.request_id } : {}),
     tenant: served.tenant, brand: served.brand, page: served.page, visitorId: served.visitor_id, sessionId: served.session_id,
     identityAnchor: served.identity_anchor, nowMs: served.ts,
-    // P02: a record that states no layout marker is replayed as its page was
-    // decided — without the declaration — whatever the revision carries.
-    // P01: and a record that states no orders marker without the page's orders.
-    // P04: and a record that states no module-rules marker without its position pins and off-limits marks.
-    pieces: catalog.pieces, slots: (manifest?.layout === LAYOUT_RULES ? selected : selected.map(undeclared)).map(slot => manifest?.orders === ORDER_RULES ? slot : unordered(slot))
-      .map(slot => manifest?.moduleRules === MODULE_RULES ? slot : unruled(slot)),
+    // The page's slots as its markers say it was decided (above).
+    pieces: catalog.pieces, slots: decidedSlots,
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
     affinity: { dims: inputs.affinity }, regional, ...(contextBlend ? { contextBlend } : {}), ...(layoutPriors ? { layoutPriors } : {}), cell: served.cell, arm: served.arm,
     ...(report?.length ? { nothingToShow: report } : {}),
@@ -471,6 +488,10 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
       ? { signalFloor: { floor: slots.signalFloor ?? 0, signals: inputs.signals as number }, contextPrior: inputs.regional_share ?? null,
         // P07: and the context prior's recorded shares beside the region's, when it applied.
         contextBlendShare: inputs.context_share ?? null } : {}),
+    // P30: the context-only page's device and admitted region, and its priors'
+    // recorded shares, which its context-only slot was scored on at full weight.
+    ...(contextOnly ? { ...(contextOnly.device ? { device: contextOnly.device } : {}), ...(contextOnly.region ? { contextRegion: contextOnly.region } : {}),
+      contextPrior: inputs.regional_share ?? null, contextBlendShare: inputs.context_share ?? null } : {}),
     // P39: the suppressions the record itemises. Their interest is already out of
     // the recorded interest vector, which the page was scored on; a record that
     // carries none was decided with none and replays as before.

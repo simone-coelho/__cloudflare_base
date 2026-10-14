@@ -753,6 +753,42 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
   return reportFanOutLoss(env, set.tenant, finish(out));
 }
 
+/** P30: the purpose a cached layout's exposure identity is drawn under, so it can never be another row's. */
+const LAYOUT_EXPOSURE_PURPOSE = 'layout-exposure/v1';
+
+/**
+ * P30 (decision D2): the exposures of a CACHED layout, counted from its per-view
+ * beacon (`layout_exposure`): one exposure per drawn module, in the slot's own
+ * statistics object, in the cell of the context the key named — its channel and
+ * visit bucket, nothing of the shopper's (stage unknown, no region, no interest)
+ * — so they land at level 2 (channel and visit bucket) and the coarser levels,
+ * whatever the device. The caller admitted the beacon (src/content/service.ts
+ * `admitLayoutExposure`). Each row's identity is the page view's own — the
+ * shopper, the page, the slot, the position drawn and the page instance — with
+ * no module or key in it, so the object's applied-delivery journal (W22 D1.02)
+ * recognises any repeat for the same page view and counts it once; the subject
+ * stands where every journal identity carries it, so erasure removes it as it
+ * removes a decision's. The holdout's arms are never counted (the caller refuses
+ * their keys) and nothing reaches the shopper's ring: no decision of the
+ * shopper's stands behind a cached layout. Never throws; a delivery the object
+ * did not acknowledge is counted as lost evidence, like any fan-out's.
+ */
+export async function fanLayoutExposure(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'CACHE'>>, input: {
+  tenant: string; brand: string; slot: string; /** W26 R2: the page of a page-scoped slot name only. */ page?: string; viewPage: string;
+  config: SlotLearnConfig; subject: string; pageInstance: string; modules: readonly string[]; cell: DecisionRecord['cell']; at: number;
+}): Promise<StatsDelivery> {
+  try {
+    const { tenant, brand, slot, page, config } = input;
+    const exposures = await Promise.all(input.modules.map(async (item, position) => ({ item, cell: input.cell, ts: input.at,
+      decision: `${tenant}:view:${input.subject}:${input.viewPage}:${slot}:${position}:${input.pageInstance}`,
+      digest: await recoveryDigest([LAYOUT_EXPOSURE_PURPOSE, tenant, brand, input.subject, input.viewPage, slot, position, input.pageInstance]) })));
+    const delivery = await deliverStats(env.LEARN_STATS, statsName(tenant, brand, slot, page), 'exposures',
+      { tenant, brand, slot, ...(page ? { page } : {}), config, exposures }, exposures.length);
+    await recordEvidenceLoss(env, tenant, 'fanOutRejected', delivery.rowsUnknown);
+    return delivery;
+  } catch { return emptyStatsDelivery(); }
+}
+
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
 export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null, pageScoped?: ReadonlySet<string>): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);

@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { TODAY_TERMS, type ContextTerms } from './cell';
@@ -448,6 +448,8 @@ const carriesOrders = (s: unknown): boolean => isRecord(s) && s.orders !== undef
 /** P04: a slot member `positionPins` or `offLimitsPieceIds` that carries something: anything but absent or an empty list. */
 const carriesList = (s: unknown, key: 'positionPins' | 'offLimitsPieceIds'): boolean => isRecord(s) && s[key] !== undefined && !(Array.isArray(s[key]) && s[key].length === 0);
 const carriesModuleRules = (s: unknown): boolean => carriesList(s, 'positionPins') || carriesList(s, 'offLimitsPieceIds');
+/** P30: a slot member `contextOnly`, whatever it carries (a switch that is off is still authored on the slot). */
+const carriesContextOnly = (s: unknown): boolean => isRecord(s) && s.contextOnly !== undefined;
 
 // ── P01: per-context orders on the declared layout slot ─────────────────────
 
@@ -886,6 +888,22 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (s.signalFloor === 'never' || isSignalCount(s.signalFloor)) signalFloor = s.signalFloor;
     else errors.push(`${at}.signalFloor: ${quoted(s.signalFloor)} is not a signal floor; a slot's floor is a whole number of 0 or more, or never on the page's declared layout slot`);
   }
+  // P30 (decision D1): the context-only layout switch, a version-4 member like
+  // the declaration itself, kept exactly as authored: `enabled`, and `region`
+  // when given. That it is published only on the page's declared layout slot is
+  // an authoring rule of `validateSlotCatalog`, never reinterpreted on a read.
+  let contextOnly: ContextOnlySwitch | undefined;
+  if (carriesContextOnly(s)) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const c = s.contextOnly;
+      if (!isRecord(c) || typeof c.enabled !== 'boolean' || (c.region !== undefined && typeof c.region !== 'boolean')
+        || Object.keys(c).some(key => key !== 'enabled' && key !== 'region')) {
+        errors.push(`${at}.contextOnly: { enabled: boolean, region?: boolean } when present — the context-only layout switch, off by default (absent or enabled: false)`);
+      } else contextOnly = { enabled: c.enabled, ...(c.region !== undefined ? { region: c.region } : {}) };
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.contextOnly: the context-only layout switch needs governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces it; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
@@ -895,6 +913,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}),
     ...(signalFloor !== undefined ? { signalFloor } : {}),
     ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
+    ...(contextOnly ? { contextOnly } : {}),
   };
 }
 
@@ -914,7 +933,7 @@ function parseSlotCatalog(candidate: unknown, current = false, terms: SlotTerms 
   // carrying them is read under version 4 and refused there if misplaced.
   // P04: as are position pins and off-limits marks.
   const declares = current && !marked && isRecord(candidate.pages)
-    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s)));
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s) || carriesContextOnly(s)));
   const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
   const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
@@ -1004,6 +1023,16 @@ export function validateSlotCatalog(candidate: unknown, terms: SlotTerms = TODAY
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     slots.forEach((slot, index) => {
       if (slot.signalFloor === 'never' && slot.layout !== true) errors.push(`pages.${page}[${index}].signalFloor: never is set only on the page's declared layout slot (layout: true); slot '${slot.slot}' is not the declared layout slot of page '${page}', so its floor is a whole number of 0 or more`);
+    });
+  }
+  // P30 (decision D1): the context-only switch makes a page's layout one answer
+  // per context, so it is set only on the page's declared layout slot; on any
+  // other slot it is refused by name where it is authored (a retained document
+  // is never reinterpreted, and the decision reads the switch on the declared
+  // layout slot alone).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => {
+      if (slot.contextOnly !== undefined && slot.layout !== true) errors.push(`pages.${page}[${index}].contextOnly: slot '${slot.slot}' is not the declared layout slot of page '${page}'; the context-only switch is set only on the slot that declares layout: true`);
     });
   }
   for (const [page, slots] of Object.entries(checked.value.pages)) {

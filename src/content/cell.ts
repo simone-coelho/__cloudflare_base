@@ -133,3 +133,85 @@ export function cellFor(input: {
     stage: asStage(input.stage) ?? 'unknown',
   };
 }
+
+// ── P30: the context of a context-only layout slot, and its key ─────────────
+
+/**
+ * P30 (decision D2): the context a context-only layout slot is decided in — the
+ * page, the shopper's entry channel and visit bucket as the cell records them,
+ * the device class the request reports (P37; none when it reports none) and,
+ * where the slot admits it, the region — on the arm it was decided for.
+ */
+export interface LayoutContext {
+  page: string;
+  channel: string;
+  visitBucket: string;
+  device?: 'mobile' | 'desktop' | null;
+  /** Whether the slot's switch admits the region (`region: true`); the region itself is `region`, none when unknown. */
+  admitsRegion: boolean;
+  region?: string | null;
+  /** The no-learning arm of the holdout decides a context-only slot without learning, a variant of its own. */
+  arm?: string;
+}
+
+const keySegment = (value: string): string => encodeURIComponent(value);
+
+/**
+ * P30 (decision D2): the readable context key of a context-only layout slot's
+ * answer: `page|c=<channel>|v=<visit bucket>`, then `|d=<device>` when the
+ * request reported a device class, `|r=<region>` when the slot admits the
+ * region (`none` when none is known), and `|arm=no_learning` for the holdout's
+ * no-learning arm. Every segment is the context's own value, percent-encoded so
+ * no value can open another segment; nothing in it is a visitor, session or
+ * decision identifier, and no user agent: two shoppers of one context get the
+ * same key, and a context that differs in any of its parts gets another.
+ */
+export function contextKeyOf(context: LayoutContext): string {
+  const parts = [keySegment(context.page), `c=${keySegment(context.channel || 'unknown')}`, `v=${keySegment(context.visitBucket || 'unknown')}`];
+  if (context.device === 'mobile' || context.device === 'desktop') parts.push(`d=${context.device}`);
+  if (context.admitsRegion) parts.push(`r=${keySegment(typeof context.region === 'string' && context.region ? context.region : 'none')}`);
+  if (context.arm === 'no_learning') parts.push('arm=no_learning');
+  return parts.join('|');
+}
+
+/** P30: the readable key of the page's default variant — the holdout's default arm, and a shopper without consent. */
+export const defaultContextKeyOf = (page: string): string => `${keySegment(page)}|default`;
+
+/** P30: a readable context key read back into its parts; null when it is not one `contextKeyOf` or `defaultContextKeyOf` writes. */
+export type ParsedContextKey = { page: string; variant: 'default' }
+  | { page: string; variant: 'context'; channel: string; visitBucket: string; device: 'mobile' | 'desktop' | null; admitsRegion: boolean; region: string | null; arm: 'personalized' | 'no_learning' };
+export function parseContextKey(readable: string): ParsedContextKey | null {
+  const decode = (value: string): string | null => { try { const out = decodeURIComponent(value); return out && keySegment(out) === value ? out : null; } catch { return null; } };
+  const parts = readable.split('|');
+  const page = decode(parts[0] ?? '');
+  if (page === null) return null;
+  if (parts.length === 2 && parts[1] === 'default') return { page, variant: 'default' };
+  const named = parts.slice(1).map(part => { const at = part.indexOf('='); return at < 1 ? null : [part.slice(0, at), part.slice(at + 1)] as const; });
+  if (named.some(part => part === null)) return null;
+  const order = ['c', 'v', 'd', 'r', 'arm'];
+  let last = -1;
+  const value = new Map<string, string>();
+  for (const [name, raw] of named as Array<readonly [string, string]>) {
+    const at = order.indexOf(name), decoded = decode(raw);
+    if (at <= last || decoded === null) return null;
+    last = at; value.set(name, decoded);
+  }
+  const channel = value.get('c'), visitBucket = value.get('v'), device = value.get('d'), arm = value.get('arm');
+  if (channel === undefined || visitBucket === undefined || (device !== undefined && device !== 'mobile' && device !== 'desktop')
+    || (arm !== undefined && arm !== 'no_learning')) return null;
+  const region = value.get('r');
+  const parsed = { page, variant: 'context' as const, channel, visitBucket, device: (device ?? null) as 'mobile' | 'desktop' | null,
+    admitsRegion: region !== undefined, region: region === undefined || region === 'none' ? null : region, arm: (arm ?? 'personalized') as 'personalized' | 'no_learning' };
+  // Only the one spelling the engine writes: a key read back must be written again exactly.
+  return contextKeyOf({ ...parsed, arm: parsed.arm }) === readable ? parsed : null;
+}
+
+/**
+ * P30: the cell a context-only layout slot reads a module's eligibility rule on
+ * (`cellEligibility`, P31): the context's channel and visit bucket, the region
+ * only where the slot admits it, and never the shopper's journey stage, interest
+ * or anything else of the shopper's own.
+ */
+export function contextCellOf(cell: Pick<Cell, 'channel' | 'visit_bucket' | 'region'>, admitsRegion: boolean): Cell {
+  return { channel: cell.channel, visit_bucket: cell.visit_bucket, region: admitsRegion ? cell.region : null, affinity: null, stage: 'unknown' };
+}
