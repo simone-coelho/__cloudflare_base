@@ -516,6 +516,40 @@ DOM event types, space separated, in `data-op-engage`:
   `reviews:open`). Each is one `content_click` naming `interaction: "sizeguide:open"` or `"reviews:open"`.
 - **Consent.** Without the shopper's tracking consent, and in `listenOnly` mode, a marked container sends none of them.
 
+### A cached layout: one answer per context
+
+Where your front end caches a page's layout, your merchandiser can switch the page's declared layout slot to
+context-only with `contextOnly: { enabled: true }` on that slot of the slot document (a `governanceVersion: 4`
+member), which is off by default: absent, or `enabled: false`, the slot is decided exactly as before. Adding
+`region: true` admits the shopper's region into the context. Publication refuses the switch on any slot but the
+page's declared layout slot, naming `contextOnly` and the slot
+([schema](./03-payload-schemas.md#the-context-only-layout-switch)).
+
+A context-only slot is decided for its context and never for the shopper: the page, the entry channel, the visit
+bucket, the device class the request reports (`mobile` or `desktop`, none when the request reports neither) and,
+where admitted, the region. The shopper's interests, journey stage and fatigue play no part, nor does a seed rule
+on a signal outside the context (only `entry_channel` and `device` rules fire), and a module's eligibility rule is
+read on the context alone. Its learned lift answers from the channel and visit bucket or coarser, and its
+exploration is drawn from the context and the hour, so every shopper of one context, decided within the same hour,
+receives the identical order. A per-context order that names a device serves that device's shoppers, and one that
+names none serves every device. The regional population prior applies only where the region is admitted, as for a
+shopper with no interest. A shopper on the holdout's default arm, or without consent, receives the slot's default
+variant.
+
+Every answer for such a page carries the `X-Context-Key` response header, a non-identifying context key built from
+the page, the channel, the visit bucket, the device and, where admitted, the region, or naming the page's default
+variant, with a seal the engine adds; it never holds a visitor, session or decision identifier, or the user agent.
+Every shopper of one context gets the same key. The decision response itself stays `Cache-Control: no-store`: the
+caching is your front end's, keyed on that header.
+
+A page drawn from your cache tells the engine what it drew, so learning counts the exposure: call
+`client.listen.layoutExposure({ contextKey, page, slot, modules })` once per page view, with the key the cached
+layout was answered under and the module ids drawn, in drawn order. The SDK sends it as the `layout_exposure`
+action only under the shopper's tracking consent, once per page view and slot, and asks for no decisions because
+of it. The engine adds one exposure per drawn module to that context's learning (its channel and visit bucket; the
+device is no learning level), and adds nothing for a beacon sent without tracking consent, with a key it did not
+issue, or repeated for the same page view. Only a layout slot measured on `rendered-v1` counts it.
+
 ## 8. What to test before the freeze
 
 On a separately authorized staging origin, complete these before M5 with the agreed20–30 real assets. Local DOM/native and synthetic script evidence is not customer browser/SFCC, latency or business acceptance.
