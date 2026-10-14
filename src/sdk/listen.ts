@@ -37,10 +37,27 @@ export type SlotCallback = (decisions: ContentDecision[], set: DecisionSet) => v
 export type SetCallback = (set: DecisionSet | null) => void;
 
 export interface Listen {
-  /** Fetch the first-paint snapshot and apply it. Resolves null on absence or failure, never rejects. */
+  /**
+   * Fetch the first-paint snapshot and apply it. Resolves null on absence or failure, never rejects.
+   * P34: the page view's first snapshot request starts its one deadline (`hydrateTimeoutMs`); no
+   * re-ask restarts it, so by then every slot subscriber has the decisions or the empty list.
+   */
   hydrate(opts: HydrateOptions): Promise<DecisionSet | null>;
-  /** One active refresh and one coalesced pending intent; no overlapping fetches. */
+  /**
+   * One active refresh and one coalesced pending intent; no overlapping fetches. P34: an
+   * acknowledged event or a socket open during the page view's first snapshot does not cancel it:
+   * its answer is delivered, then exactly one refresh follows.
+   */
   refresh(opts?: HydrateOptions): Promise<DecisionSet | null>;
+  /**
+   * P34: hold the slot's decisions for this page view. Until released, a later answer of the same
+   * page view leaves the slot as it was last delivered: its subscribers are not called with another
+   * list and its painted receipts stay valid, so `rendered` and the correlated outcomes of a held
+   * module carry the decision identifier it was painted with. The returned function releases it,
+   * and so does a new page view; the next answer then repaints the slot (a release does not repaint
+   * by itself). Known absence (a consent refusal, an identity change, a failed answer) is never held.
+   */
+  hold(slot: string): () => void;
   /** Verify the same broker grant and existing DOM before adopting without repaint. */
   adopt(bootstrap: unknown, opts: HydrateOptions): Promise<boolean>;
   /**
@@ -91,7 +108,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   const dwellMinMs = opts.dwellMinMs ?? 1_000;
   const slotSubs = new Map<string, Set<SlotCallback>>();
   const setSubs = new Set<SetCallback>();
-  type Paint = { piece: ContentDecision; page: string; pageInstance: string; generation: number; envelope: ActionEnvelope;
+  type Paint = { key: string; piece: ContentDecision; page: string; pageInstance: string; generation: number; envelope: ActionEnvelope;
     ack?: RenderAcknowledgment; pending?: Promise<RenderAcknowledgment | null>; attempts: number; observed?: boolean;
     /** P03 decision D3: the placement's position within its slot, carried by its acknowledgement and every engagement of it. */
     slotPosition?: number;
@@ -106,10 +123,39 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   let selected: HydrateOptions | undefined, pageInstance = '', destroyed = false;
   let refreshing: Promise<DecisionSet | null> | undefined, trailing = false;
   let adopted = false;
+  /**
+   * P34: the page view (its page instance) and its one first-decision deadline,
+   * measured from its first snapshot request; `met` once anything was delivered,
+   * `expired` once the deadline delivered the empty list.
+   */
+  let pageView: { instance: string; deadline?: unknown; met: boolean; expired?: boolean } = { instance: '', met: true };
+  /** P34: the page view's first snapshot while in flight, and whether an acknowledged event or a socket open asked to follow it. */
+  let opening: { owner: number; follow?: boolean } | undefined;
+  /** P34: the slots the page holds, each for the page view it was held in. */
+  const holds = new Map<object, { slot: string; pageInstance: string }>();
   const content = core.bindContent((type, data) => type === 'content_impression'
     ? rendered(String(data.slot ?? ''), String(data.contentId ?? ''), undefined, typeof data.decisionId === 'string' ? data.decisionId : undefined).then(() => null)
     : outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data));
-  const placement = (d: Pick<ContentDecision, 'slot' | 'order' | 'contentId'>) => JSON.stringify([d.slot, d.order, d.contentId]);
+  /** Each slot's decisions, in order. */
+  function bySlot(decisions: ContentDecision[]): Map<string, ContentDecision[]> {
+    const slots = new Map<string, ContentDecision[]>();
+    for (const d of decisions) { const list = slots.get(d.slot) ?? []; list.push(d); slots.set(d.slot, list); }
+    for (const list of slots.values()) list.sort((a, b) => a.order - b.order);
+    return slots;
+  }
+  /**
+   * P34: a painted receipt is keyed by its slot, its position within the slot and
+   * its item. The position is derived from the delivered list (the slot's
+   * decisions in order, from 0), which is the engine's `slotPosition` whenever the
+   * answer names it, on delivery and on adoption alike; a shift of the page-wide
+   * `order` alone changes no key.
+   */
+  function placements(set: DecisionSet | null): Map<ContentDecision, string> {
+    const keys = new Map<ContentDecision, string>();
+    for (const [slot, list] of bySlot(set?.decisions ?? [])) list.forEach((d, i) => keys.set(d, JSON.stringify([slot, i, d.contentId])));
+    return keys;
+  }
+  const placement = (set: DecisionSet | null, d: ContentDecision) => placements(set).get(d) ?? '';
   /** The decisions of a set a page's report names: by slot and piece, and by receipt when it gives one. */
   const pick = (set: DecisionSet | null, slot: string, contentId: string, decisionId?: string) => set?.decisions.filter(d => d.slot === slot
     && d.contentId === contentId && (decisionId === undefined || decisionId === d.decisionId)) ?? [];
@@ -167,8 +213,8 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     wait(1_000);
   }
   function visible(slot: string, contentId: string, shown: boolean, decisionId?: string): void {
-    const matches = pick(admittedCurrent(), slot, contentId, decisionId);
-    if (matches.length === 1) view(placement(matches[0]!), shown);
+    const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
+    if (matches.length === 1) view(placement(set, matches[0]!), shown);
   }
   const offConsent = core.onConsentChange(() => { if (!core.trackingAllowed) resetCapture(); if (!permitted(current)) deliver(null, current?.page ?? ''); });
 
@@ -194,37 +240,50 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     if (!permitted(set)) set = null;
     if (generation !== core.generation || owner !== intent) return -1;
     const epoch = ++delivery;
+    // P34: the page view has received the decisions or the empty list: its deadline is met.
+    pageView.met = true; host.clearTimeout(pageView.deadline);
+    for (const [token, held] of holds) if (held.pageInstance !== pageInstance) holds.delete(token);
     // Read purpose/authority before the reentrancy fences: observing a new
     // refusal can itself synchronously dispatch a newer absence/default.
     const active = () => permitted(set) && (!set || core.isCurrent(generation))
       && generation === core.generation && owner === intent && epoch === delivery;
     const previous = current;
-    if (!set || previous && (previous.page !== set.page || previous.pageInstance !== set.pageInstance)) resetCapture();
+    const sameView = !!set && !!previous && previous.page === set.page && previous.pageInstance === set.pageInstance;
+    if (!set || previous && !sameView) resetCapture();
     if (set) {
-      const keys = new Set(set.decisions.map(placement));
-      for (const key of painted.keys()) if (!keys.has(key)) painted.delete(key);
+      // P34: a slot the page holds for this page view stays as it was last
+      // delivered, its painted receipts with it; known absence is never held.
+      const held = new Set(sameView ? [...holds.values()].filter(h => h.pageInstance === set!.pageInstance).map(h => h.slot) : []);
+      if (held.size) {
+        const done = new Set<string>();
+        const keep = (slot: string) => done.has(slot) ? [] : (done.add(slot), previous!.decisions.filter(d => d.slot === slot));
+        set = { ...set, decisions: [...set.decisions.flatMap(d => held.has(d.slot) ? keep(d.slot) : [d]), ...[...held].flatMap(keep)] };
+      }
+      const keys = placements(set), live = new Set(keys.values());
+      for (const key of painted.keys()) if (!live.has(key)) painted.delete(key);
       // An unchanged DOM placement keeps the receipt that was actually painted,
-      // even when a newer poll carries another offer for the same item.
+      // even when a newer poll carries another offer for the same item; it takes
+      // the page-wide order the newer answer gives it, so its slot stays in order.
       set = { ...set, decisions: set.decisions.map(d => {
-        const paint = painted.get(placement(d));
-        if (paint && !sameAsset(paint.piece, d)) painted.delete(placement(d));
-        return paint && sameAsset(paint.piece, d) && paint.generation === generation && paint.pageInstance === set!.pageInstance ? paint.piece : d;
+        const key = keys.get(d)!, paint = painted.get(key);
+        if (paint && !sameAsset(paint.piece, d)) painted.delete(key);
+        return paint && sameAsset(paint.piece, d) && paint.generation === generation && paint.pageInstance === set!.pageInstance
+          ? paint.piece.order === d.order ? paint.piece : { ...paint.piece, order: d.order } : d;
       }) };
     }
-    const unchanged = previous && set && previous.page === set.page && previous.pageInstance === set.pageInstance
-      && JSON.stringify(previous.decisions) === JSON.stringify(set.decisions);
+    const unchanged = sameView && JSON.stringify(previous!.decisions) === JSON.stringify(set!.decisions);
     current = set;
     adopted = false;
     absence = set ? null : { page, decisions: [] };
     const context = set ?? absence!;
     if (unchanged) return epoch;
-    const bySlot = new Map<string, ContentDecision[]>();
-    for (const d of context.decisions ?? []) { const list = bySlot.get(d.slot) ?? []; list.push(d); bySlot.set(d.slot, list); }
-    for (const list of bySlot.values()) list.sort((a, b) => a.order - b.order);
+    // P34: a slot whose placements are unchanged is not repainted, whatever the
+    // page-wide order of its decisions now is.
+    const lists = bySlot(context.decisions ?? []), before = sameView ? bySlot(previous!.decisions) : undefined;
+    const shape = (list: ContentDecision[] = []) => JSON.stringify(list.map(d => ({ ...d, order: 0 })));
     for (const [slot, subs] of slotSubs) {
-      const list = bySlot.get(slot) ?? [];
-      if (set && previous && previous.page === set.page && previous.pageInstance === set.pageInstance
-        && JSON.stringify(previous.decisions.filter(d => d.slot === slot).sort((a, b) => a.order - b.order)) === JSON.stringify(list)) continue;
+      const list = lists.get(slot) ?? [];
+      if (before && shape(before.get(slot)) === shape(list)) continue;
       for (const cb of subs) { if (!active()) return epoch; try { cb(list, context); } catch { /* never break the page */ } }
     }
     for (const cb of setSubs) { if (!active()) return epoch; try { cb(set); } catch { /* never break the page */ } }
@@ -245,59 +304,77 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     pageInstance = ''; deliver(null, page);
   });
 
-  async function hydrate(o: HydrateOptions): Promise<DecisionSet | null> {
+  function hydrate(o: HydrateOptions): Promise<DecisionSet | null> { return load(o, false); }
+
+  async function load(o: HydrateOptions, looped: boolean): Promise<DecisionSet | null> {
     if (destroyed) return null;
     if (!pageInstance || !selected || selected.page !== o.page || selected.channel !== o.channel) { pageInstance = host.uuid(); resetCapture(); }
     selected = { ...o };
     // ready() can synchronously change identity and reenter through a listener.
     const owner = ++intent;
-    // P13 (H4): a new visitor's session is issued with this decision request, one
-    // call; consent-dependent context (session, channel, entry) is never sent then.
-    const nothingToShow = nothingToShowField(o.nothingToShow);
-    const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}) } };
-    const pending = core.ready(false, first);
-    const generation = core.generation;
-    const active = () => owner === intent && generation === core.generation;
-    if (!active()) return null;
-    let settled = false;
-    let timedOut = false;
-    const timer = host.setTimeout(() => { if (!settled && active()) { timedOut = true; deliver(null, o.page); } }, core.config.hydrateTimeoutMs);
-    if (!await pending || !active() || !core.isCurrent(generation)) {
-      settled = true; host.clearTimeout(timer);
-      if (!timedOut && active()) deliver(null, o.page);
-      return null;
+    // P34: the first snapshot request of a page view starts its one deadline,
+    // a hard ceiling: no re-ask restarts it, and a re-ask after the first
+    // delivery leaves the page as it is until its own answer or failure.
+    let flight: typeof opening;
+    if (pageView.instance !== pageInstance) {
+      host.clearTimeout(pageView.deadline);
+      const v: typeof pageView = pageView = { instance: pageInstance, met: false };
+      v.deadline = host.setTimeout(() => {
+        if (pageView === v && !v.met && !destroyed && pageInstance === v.instance) { v.expired = true; deliver(null, o.page); }
+      }, core.config.hydrateTimeoutMs);
+      opening = flight = { owner };
     }
-    const consent = core.consent;
-    const json = (first.answered ? first.answer : await core.getJson(core.config.paths.snapshot, {
-      page: o.page,
-      pageInstance,
-      browsingSessionId: consent.tracking ? core.sessionId : undefined, brand: core.config.brand, channel: consent.tracking ? o.channel : undefined,
-      entry: consent.tracking ? snapshotEntry(core.entry) : undefined,
-      trackingConsent: consent.tracking ? undefined : 'false', personalizationEnabled: consent.personalization ? undefined : 'false',
-      nothingToShow,
-    })) as { ok?: boolean; page?: string; pageInstance?: string; arm?: string; versions?: Record<string, number>; config_label?: string; decisions?: unknown; ts?: number } | null;
-    settled = true;
-    host.clearTimeout(timer);
-    if (!active() || !core.isCurrent(generation)) return null;
-    if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== undefined && json.page !== o.page
-      || json.pageInstance !== undefined && json.pageInstance !== pageInstance) {
-      if (!timedOut) deliver(null, o.page);
-      return null;
+    const v = pageView, expired = v.expired;
+    /** The deadline already delivered the empty list while this request was in flight. */
+    const timedOut = () => !!v.expired && !expired;
+    try {
+      // P13 (H4): a new visitor's session is issued with this decision request, one
+      // call; consent-dependent context (session, channel, entry) is never sent then.
+      const nothingToShow = nothingToShowField(o.nothingToShow);
+      const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}) } };
+      const pending = core.ready(false, first);
+      const generation = core.generation;
+      const active = () => owner === intent && generation === core.generation;
+      if (!active()) return null;
+      if (!await pending || !active() || !core.isCurrent(generation)) {
+        if (!timedOut() && active()) deliver(null, o.page);
+        return null;
+      }
+      const consent = core.consent;
+      const json = (first.answered ? first.answer : await core.getJson(core.config.paths.snapshot, {
+        page: o.page,
+        pageInstance,
+        browsingSessionId: consent.tracking ? core.sessionId : undefined, brand: core.config.brand, channel: consent.tracking ? o.channel : undefined,
+        entry: consent.tracking ? snapshotEntry(core.entry) : undefined,
+        trackingConsent: consent.tracking ? undefined : 'false', personalizationEnabled: consent.personalization ? undefined : 'false',
+        nothingToShow,
+      })) as { ok?: boolean; page?: string; pageInstance?: string; arm?: string; versions?: Record<string, number>; config_label?: string; decisions?: unknown; ts?: number } | null;
+      if (!active() || !core.isCurrent(generation)) return null;
+      if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== undefined && json.page !== o.page
+        || json.pageInstance !== undefined && json.pageInstance !== pageInstance) {
+        if (!timedOut()) deliver(null, o.page);
+        return null;
+      }
+      const set: DecisionSet = {
+        page: json.page ?? o.page,
+        ...(json.pageInstance ? { pageInstance: json.pageInstance } : {}),
+        ...(json.arm ? { arm: json.arm } : {}),
+        ...(json.versions ? { versions: json.versions } : {}),
+        ...(json.config_label ? { config_label: json.config_label } : {}),
+        ...(typeof json.ts === 'number' ? { ts: json.ts } : {}),
+        decisions: json.decisions as ContentDecision[],
+      };
+      // A late snapshot after the timeout is still applied: absence first, then
+      // the decision when it arrives. The page never waited.
+      const epoch = deliver(set, set.page);
+      const accepted = admittedCurrent();
+      return accepted && active() && epoch === delivery && core.isCurrent(generation) ? accepted : null;
+    } finally {
+      // P34: an acknowledged event or a socket open during this first snapshot
+      // asked to follow it: now that its answer is delivered, one refresh.
+      if (opening === flight) opening = undefined;
+      if (flight?.follow && owner === intent && !destroyed) { if (looped) trailing = true; else void refresh(); }
     }
-    const set: DecisionSet = {
-      page: json.page ?? o.page,
-      ...(json.pageInstance ? { pageInstance: json.pageInstance } : {}),
-      ...(json.arm ? { arm: json.arm } : {}),
-      ...(json.versions ? { versions: json.versions } : {}),
-      ...(json.config_label ? { config_label: json.config_label } : {}),
-      ...(typeof json.ts === 'number' ? { ts: json.ts } : {}),
-      decisions: json.decisions as ContentDecision[],
-    };
-    // A late snapshot after the timeout is still applied: absence first, then
-    // the decision when it arrives. The page never waited.
-    const epoch = deliver(set, set.page);
-    const accepted = admittedCurrent();
-    return accepted && active() && epoch === delivery && core.isCurrent(generation) ? accepted : null;
   }
 
   function refresh(o?: HydrateOptions): Promise<DecisionSet | null> {
@@ -308,7 +385,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     if (refreshing) { ++intent; trailing = true; return refreshing; }
     const operation = (async () => {
       let result: DecisionSet | null = null;
-      do { trailing = false; result = await hydrate(selected!); } while (trailing && !destroyed);
+      do { trailing = false; result = await load(selected!, true); } while (trailing && !destroyed);
       return result;
     })();
     refreshing = operation;
@@ -340,7 +417,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     if (!set?.pageInstance || matches.length !== 1) return null;
     const piece = matches[0]!;
     if (!piece.renderOffer || !piece.decisionId) return null;
-    const key = placement(piece), generation = core.generation;
+    const key = placement(set, piece), generation = core.generation;
     let paint = painted.get(key);
     if (!paint) {
       // P03 decision D1: this acknowledgement is the module's one impression on
@@ -350,7 +427,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
       const data = { contentId, slot, decisionId: piece.decisionId, page: set.page, position: piece.order,
         ...(slotPosition !== undefined ? { slotPosition } : {}), pageInstance: set.pageInstance,
         renderOffer: piece.renderOffer, customerContentId: piece.customerContentId, contentType: piece.type };
-      paint = { piece, page: set.page, pageInstance: set.pageInstance, generation, envelope: core.envelope('content_impression', data), attempts: 0,
+      paint = { key, piece, page: set.page, pageInstance: set.pageInstance, generation, envelope: core.envelope('content_impression', data), attempts: 0,
         ...(slotPosition !== undefined ? { slotPosition } : {}) };
       painted.set(key, paint);
     }
@@ -403,7 +480,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     if (candidates.length !== 1) return null;
     const paint = candidates[0]!, ack = paint.ack ?? await paint.pending;
     if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance
-      || painted.get(placement(paint.piece)) !== paint) return null;
+      || painted.get(paint.key) !== paint) return null;
     const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
     void _offer; void _action; void _event; void _eventName; void _slotPosition;
     // P03 decision D3: an engagement names the position within the slot of the
@@ -412,6 +489,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId,
       ...(paint.slotPosition !== undefined ? { slotPosition: paint.slotPosition } : {}) });
   }
+
+  /** A server-rendered element's placement as its attributes name it: slot, page-wide position (`data-op-position`) and item. */
+  const element = (d: Pick<ContentDecision, 'slot' | 'order' | 'contentId'>) => JSON.stringify([d.slot, d.order, d.contentId]);
 
   async function adopt(value: unknown, o: HydrateOptions): Promise<boolean> {
     const owner = ++intent, generation = core.generation;
@@ -426,13 +506,13 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const elements = [...host.dom.querySelectorAll('[data-op-page-instance]')];
     const expected = new Map<string, ContentDecision>();
     for (const d of b.decisions) {
-      if (!d || typeof d.contentId !== 'string' || typeof d.slot !== 'string' || !Number.isSafeInteger(d.order) || expected.has(placement(d))) return fail();
-      expected.set(placement(d), d);
+      if (!d || typeof d.contentId !== 'string' || typeof d.slot !== 'string' || !Number.isSafeInteger(d.order) || expected.has(element(d))) return fail();
+      expected.set(element(d), d);
     }
     if (elements.length !== expected.size) return fail();
     const matched = new Set<string>();
     for (const el of elements) {
-      const key = placement({ slot: el.getAttribute('data-op-slot') ?? '', contentId: el.getAttribute('data-op-content') ?? '', order: Number(el.getAttribute('data-op-position')) });
+      const key = element({ slot: el.getAttribute('data-op-slot') ?? '', contentId: el.getAttribute('data-op-content') ?? '', order: Number(el.getAttribute('data-op-position')) });
       const d = expected.get(key);
       if (!d || matched.has(key) || el.getAttribute('data-op-page-instance') !== b.pageInstance
         || (el.getAttribute('data-op-decision-id') ?? undefined) !== d.decisionId) return fail();
@@ -440,14 +520,34 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     }
     if (owner !== intent || generation !== core.generation || !core.isCurrent(generation) || host.now() >= b.until || !permitted(b)) return fail();
     resetCapture(); selected = { ...o }; pageInstance = b.pageInstance; current = { ...b, decisions: b.decisions.map(d => ({ ...d })) }; absence = null; adopted = true; ++delivery;
+    // P34: the server's paint is this page view's first delivery; a later snapshot is a re-ask.
+    host.clearTimeout(pageView.deadline); pageView = { instance: b.pageInstance, met: true };
     for (const el of elements) void rendered(el.getAttribute('data-op-slot')!, el.getAttribute('data-op-content')!, el,
       el.getAttribute('data-op-decision-id') ?? undefined);
     return true;
   }
 
-  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable'].includes(event.type) && selected) void refresh(); });
-  const offSocket = core.on('socket', status => { if (status === 'connected' && selected) void refresh(); });
+  /**
+   * P34: an acknowledged event or a socket open asks again. While the page
+   * view's first snapshot is in flight it is not cancelled: its answer is
+   * delivered, then one refresh follows, however many arrived. Later they
+   * coalesce exactly as the page's own `refresh()` does.
+   */
+  function follow(): void {
+    if (!selected) return;
+    if (opening && opening.owner === intent) opening.follow = true;
+    else void refresh();
+  }
+
+  function hold(slot: string): () => void {
+    const token = {};
+    if (!destroyed) holds.set(token, { slot, pageInstance });
+    return () => { holds.delete(token); };
+  }
+
+  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable'].includes(event.type)) follow(); });
+  const offSocket = core.on('socket', status => { if (status === 'connected') follow(); });
   const timer = opts.refreshMs === undefined ? undefined : host.setInterval(() => { if (selected) void refresh(); }, Math.max(1_000, Math.min(300_000, opts.refreshMs)));
-  function destroy(): void { destroyed = true; ++intent; resetCapture(); content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
-  return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
+  function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
+  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
 }

@@ -1839,8 +1839,26 @@ function createListen(core, opts = {}) {
   let selected, pageInstance = "", destroyed = false;
   let refreshing, trailing = false;
   let adopted = false;
+  let pageView = { instance: "", met: true };
+  let opening;
+  const holds = /* @__PURE__ */ new Map();
   const content = core.bindContent((type, data) => type === "content_impression" ? rendered(String(data.slot ?? ""), String(data.contentId ?? ""), void 0, typeof data.decisionId === "string" ? data.decisionId : void 0).then(() => null) : outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data));
-  const placement = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
+  function bySlot(decisions) {
+    const slots = /* @__PURE__ */ new Map();
+    for (const d of decisions) {
+      const list = slots.get(d.slot) ?? [];
+      list.push(d);
+      slots.set(d.slot, list);
+    }
+    for (const list of slots.values()) list.sort((a, b) => a.order - b.order);
+    return slots;
+  }
+  function placements(set) {
+    const keys = /* @__PURE__ */ new Map();
+    for (const [slot, list] of bySlot(set?.decisions ?? [])) list.forEach((d, i) => keys.set(d, JSON.stringify([slot, i, d.contentId])));
+    return keys;
+  }
+  const placement = (set, d) => placements(set).get(d) ?? "";
   const pick = (set, slot, contentId, decisionId) => set?.decisions.filter((d) => d.slot === slot && d.contentId === contentId && (decisionId === void 0 || decisionId === d.decisionId)) ?? [];
   const slotPositionOf = (piece) => Number.isSafeInteger(piece.slotPosition) && piece.slotPosition >= 0 ? piece.slotPosition : void 0;
   const sameAsset = (a, b) => a.customerContentId === b.customerContentId && a.type === b.type;
@@ -1887,8 +1905,8 @@ function createListen(core, opts = {}) {
     wait(1e3);
   }
   function visible(slot, contentId, shown, decisionId) {
-    const matches = pick(admittedCurrent(), slot, contentId, decisionId);
-    if (matches.length === 1) view(placement(matches[0]), shown);
+    const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
+    if (matches.length === 1) view(placement(set, matches[0]), shown);
   }
   const offConsent = core.onConsentChange(() => {
     if (!core.trackingAllowed) resetCapture();
@@ -1912,34 +1930,39 @@ function createListen(core, opts = {}) {
     if (!permitted(set)) set = null;
     if (generation !== core.generation || owner !== intent) return -1;
     const epoch = ++delivery;
+    pageView.met = true;
+    host.clearTimeout(pageView.deadline);
+    for (const [token, held] of holds) if (held.pageInstance !== pageInstance) holds.delete(token);
     const active = () => permitted(set) && (!set || core.isCurrent(generation)) && generation === core.generation && owner === intent && epoch === delivery;
     const previous = current;
-    if (!set || previous && (previous.page !== set.page || previous.pageInstance !== set.pageInstance)) resetCapture();
+    const sameView = !!set && !!previous && previous.page === set.page && previous.pageInstance === set.pageInstance;
+    if (!set || previous && !sameView) resetCapture();
     if (set) {
-      const keys = new Set(set.decisions.map(placement));
-      for (const key of painted.keys()) if (!keys.has(key)) painted.delete(key);
+      const held = new Set(sameView ? [...holds.values()].filter((h) => h.pageInstance === set.pageInstance).map((h) => h.slot) : []);
+      if (held.size) {
+        const done = /* @__PURE__ */ new Set();
+        const keep = (slot) => done.has(slot) ? [] : (done.add(slot), previous.decisions.filter((d) => d.slot === slot));
+        set = { ...set, decisions: [...set.decisions.flatMap((d) => held.has(d.slot) ? keep(d.slot) : [d]), ...[...held].flatMap(keep)] };
+      }
+      const keys = placements(set), live = new Set(keys.values());
+      for (const key of painted.keys()) if (!live.has(key)) painted.delete(key);
       set = { ...set, decisions: set.decisions.map((d) => {
-        const paint = painted.get(placement(d));
-        if (paint && !sameAsset(paint.piece, d)) painted.delete(placement(d));
-        return paint && sameAsset(paint.piece, d) && paint.generation === generation && paint.pageInstance === set.pageInstance ? paint.piece : d;
+        const key = keys.get(d), paint = painted.get(key);
+        if (paint && !sameAsset(paint.piece, d)) painted.delete(key);
+        return paint && sameAsset(paint.piece, d) && paint.generation === generation && paint.pageInstance === set.pageInstance ? paint.piece.order === d.order ? paint.piece : { ...paint.piece, order: d.order } : d;
       }) };
     }
-    const unchanged = previous && set && previous.page === set.page && previous.pageInstance === set.pageInstance && JSON.stringify(previous.decisions) === JSON.stringify(set.decisions);
+    const unchanged = sameView && JSON.stringify(previous.decisions) === JSON.stringify(set.decisions);
     current = set;
     adopted = false;
     absence = set ? null : { page, decisions: [] };
     const context = set ?? absence;
     if (unchanged) return epoch;
-    const bySlot = /* @__PURE__ */ new Map();
-    for (const d of context.decisions ?? []) {
-      const list = bySlot.get(d.slot) ?? [];
-      list.push(d);
-      bySlot.set(d.slot, list);
-    }
-    for (const list of bySlot.values()) list.sort((a, b) => a.order - b.order);
+    const lists = bySlot(context.decisions ?? []), before = sameView ? bySlot(previous.decisions) : void 0;
+    const shape = (list = []) => JSON.stringify(list.map((d) => ({ ...d, order: 0 })));
     for (const [slot, subs] of slotSubs) {
-      const list = bySlot.get(slot) ?? [];
-      if (set && previous && previous.page === set.page && previous.pageInstance === set.pageInstance && JSON.stringify(previous.decisions.filter((d) => d.slot === slot).sort((a, b) => a.order - b.order)) === JSON.stringify(list)) continue;
+      const list = lists.get(slot) ?? [];
+      if (before && shape(before.get(slot)) === shape(list)) continue;
       for (const cb of subs) {
         if (!active()) return epoch;
         try {
@@ -1968,7 +1991,10 @@ function createListen(core, opts = {}) {
     pageInstance = "";
     deliver(null, page);
   });
-  async function hydrate(o) {
+  function hydrate(o) {
+    return load(o, false);
+  }
+  async function load(o, looped) {
     if (destroyed) return null;
     if (!pageInstance || !selected || selected.page !== o.page || selected.channel !== o.channel) {
       pageInstance = host.uuid();
@@ -1976,57 +2002,67 @@ function createListen(core, opts = {}) {
     }
     selected = { ...o };
     const owner = ++intent;
-    const nothingToShow = nothingToShowField(o.nothingToShow);
-    const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {} } };
-    const pending = core.ready(false, first2);
-    const generation = core.generation;
-    const active = () => owner === intent && generation === core.generation;
-    if (!active()) return null;
-    let settled = false;
-    let timedOut = false;
-    const timer2 = host.setTimeout(() => {
-      if (!settled && active()) {
-        timedOut = true;
-        deliver(null, o.page);
+    let flight;
+    if (pageView.instance !== pageInstance) {
+      host.clearTimeout(pageView.deadline);
+      const v2 = pageView = { instance: pageInstance, met: false };
+      v2.deadline = host.setTimeout(() => {
+        if (pageView === v2 && !v2.met && !destroyed && pageInstance === v2.instance) {
+          v2.expired = true;
+          deliver(null, o.page);
+        }
+      }, core.config.hydrateTimeoutMs);
+      opening = flight = { owner };
+    }
+    const v = pageView, expired = v.expired;
+    const timedOut = () => !!v.expired && !expired;
+    try {
+      const nothingToShow = nothingToShowField(o.nothingToShow);
+      const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {} } };
+      const pending = core.ready(false, first2);
+      const generation = core.generation;
+      const active = () => owner === intent && generation === core.generation;
+      if (!active()) return null;
+      if (!await pending || !active() || !core.isCurrent(generation)) {
+        if (!timedOut() && active()) deliver(null, o.page);
+        return null;
       }
-    }, core.config.hydrateTimeoutMs);
-    if (!await pending || !active() || !core.isCurrent(generation)) {
-      settled = true;
-      host.clearTimeout(timer2);
-      if (!timedOut && active()) deliver(null, o.page);
-      return null;
+      const consent = core.consent;
+      const json = first2.answered ? first2.answer : await core.getJson(core.config.paths.snapshot, {
+        page: o.page,
+        pageInstance,
+        browsingSessionId: consent.tracking ? core.sessionId : void 0,
+        brand: core.config.brand,
+        channel: consent.tracking ? o.channel : void 0,
+        entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
+        trackingConsent: consent.tracking ? void 0 : "false",
+        personalizationEnabled: consent.personalization ? void 0 : "false",
+        nothingToShow
+      });
+      if (!active() || !core.isCurrent(generation)) return null;
+      if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== void 0 && json.page !== o.page || json.pageInstance !== void 0 && json.pageInstance !== pageInstance) {
+        if (!timedOut()) deliver(null, o.page);
+        return null;
+      }
+      const set = {
+        page: json.page ?? o.page,
+        ...json.pageInstance ? { pageInstance: json.pageInstance } : {},
+        ...json.arm ? { arm: json.arm } : {},
+        ...json.versions ? { versions: json.versions } : {},
+        ...json.config_label ? { config_label: json.config_label } : {},
+        ...typeof json.ts === "number" ? { ts: json.ts } : {},
+        decisions: json.decisions
+      };
+      const epoch = deliver(set, set.page);
+      const accepted = admittedCurrent();
+      return accepted && active() && epoch === delivery && core.isCurrent(generation) ? accepted : null;
+    } finally {
+      if (opening === flight) opening = void 0;
+      if (flight?.follow && owner === intent && !destroyed) {
+        if (looped) trailing = true;
+        else void refresh();
+      }
     }
-    const consent = core.consent;
-    const json = first2.answered ? first2.answer : await core.getJson(core.config.paths.snapshot, {
-      page: o.page,
-      pageInstance,
-      browsingSessionId: consent.tracking ? core.sessionId : void 0,
-      brand: core.config.brand,
-      channel: consent.tracking ? o.channel : void 0,
-      entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
-      trackingConsent: consent.tracking ? void 0 : "false",
-      personalizationEnabled: consent.personalization ? void 0 : "false",
-      nothingToShow
-    });
-    settled = true;
-    host.clearTimeout(timer2);
-    if (!active() || !core.isCurrent(generation)) return null;
-    if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== void 0 && json.page !== o.page || json.pageInstance !== void 0 && json.pageInstance !== pageInstance) {
-      if (!timedOut) deliver(null, o.page);
-      return null;
-    }
-    const set = {
-      page: json.page ?? o.page,
-      ...json.pageInstance ? { pageInstance: json.pageInstance } : {},
-      ...json.arm ? { arm: json.arm } : {},
-      ...json.versions ? { versions: json.versions } : {},
-      ...json.config_label ? { config_label: json.config_label } : {},
-      ...typeof json.ts === "number" ? { ts: json.ts } : {},
-      decisions: json.decisions
-    };
-    const epoch = deliver(set, set.page);
-    const accepted = admittedCurrent();
-    return accepted && active() && epoch === delivery && core.isCurrent(generation) ? accepted : null;
   }
   function refresh(o) {
     if (destroyed || !o && !selected) return Promise.resolve(null);
@@ -2045,7 +2081,7 @@ function createListen(core, opts = {}) {
       let result = null;
       do {
         trailing = false;
-        result = await hydrate(selected);
+        result = await load(selected, true);
       } while (trailing && !destroyed);
       return result;
     })();
@@ -2087,7 +2123,7 @@ function createListen(core, opts = {}) {
     if (!set?.pageInstance || matches.length !== 1) return null;
     const piece = matches[0];
     if (!piece.renderOffer || !piece.decisionId) return null;
-    const key = placement(piece), generation = core.generation;
+    const key = placement(set, piece), generation = core.generation;
     let paint = painted.get(key);
     if (!paint) {
       const slotPosition = slotPositionOf(piece);
@@ -2104,6 +2140,7 @@ function createListen(core, opts = {}) {
         contentType: piece.type
       };
       paint = {
+        key,
         piece,
         page: set.page,
         pageInstance: set.pageInstance,
@@ -2174,7 +2211,7 @@ function createListen(core, opts = {}) {
     const candidates = [...painted.values()].filter((p) => p.piece.slot === slot && p.piece.contentId === contentId && (attrs.decisionId === void 0 || attrs.decisionId === p.piece.decisionId));
     if (candidates.length !== 1) return null;
     const paint = candidates[0], ack = paint.ack ?? await paint.pending;
-    if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance || painted.get(placement(paint.piece)) !== paint) return null;
+    if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance || painted.get(paint.key) !== paint) return null;
     const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
     void _offer;
     void _action;
@@ -2189,6 +2226,7 @@ function createListen(core, opts = {}) {
       ...paint.slotPosition !== void 0 ? { slotPosition: paint.slotPosition } : {}
     });
   }
+  const element = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
   async function adopt(value, o) {
     const owner = ++intent, generation = core.generation;
     const fail = () => {
@@ -2201,13 +2239,13 @@ function createListen(core, opts = {}) {
     const elements = [...host.dom.querySelectorAll("[data-op-page-instance]")];
     const expected = /* @__PURE__ */ new Map();
     for (const d of b.decisions) {
-      if (!d || typeof d.contentId !== "string" || typeof d.slot !== "string" || !Number.isSafeInteger(d.order) || expected.has(placement(d))) return fail();
-      expected.set(placement(d), d);
+      if (!d || typeof d.contentId !== "string" || typeof d.slot !== "string" || !Number.isSafeInteger(d.order) || expected.has(element(d))) return fail();
+      expected.set(element(d), d);
     }
     if (elements.length !== expected.size) return fail();
     const matched = /* @__PURE__ */ new Set();
     for (const el of elements) {
-      const key = placement({ slot: el.getAttribute("data-op-slot") ?? "", contentId: el.getAttribute("data-op-content") ?? "", order: Number(el.getAttribute("data-op-position")) });
+      const key = element({ slot: el.getAttribute("data-op-slot") ?? "", contentId: el.getAttribute("data-op-content") ?? "", order: Number(el.getAttribute("data-op-position")) });
       const d = expected.get(key);
       if (!d || matched.has(key) || el.getAttribute("data-op-page-instance") !== b.pageInstance || (el.getAttribute("data-op-decision-id") ?? void 0) !== d.decisionId) return fail();
       matched.add(key);
@@ -2220,6 +2258,8 @@ function createListen(core, opts = {}) {
     absence = null;
     adopted = true;
     ++delivery;
+    host.clearTimeout(pageView.deadline);
+    pageView = { instance: b.pageInstance, met: true };
     for (const el of elements) void rendered(
       el.getAttribute("data-op-slot"),
       el.getAttribute("data-op-content"),
@@ -2228,11 +2268,23 @@ function createListen(core, opts = {}) {
     );
     return true;
   }
+  function follow() {
+    if (!selected) return;
+    if (opening && opening.owner === intent) opening.follow = true;
+    else void refresh();
+  }
+  function hold(slot) {
+    const token = {};
+    if (!destroyed) holds.set(token, { slot, pageInstance });
+    return () => {
+      holds.delete(token);
+    };
+  }
   const offSent = core.on("sent", (event) => {
-    if (!["content_impression", "content_dwell", "content_viewable"].includes(event.type) && selected) void refresh();
+    if (!["content_impression", "content_dwell", "content_viewable"].includes(event.type)) follow();
   });
   const offSocket = core.on("socket", (status) => {
-    if (status === "connected" && selected) void refresh();
+    if (status === "connected") follow();
   });
   const timer = opts.refreshMs === void 0 ? void 0 : host.setInterval(() => {
     if (selected) void refresh();
@@ -2241,6 +2293,8 @@ function createListen(core, opts = {}) {
     destroyed = true;
     ++intent;
     resetCapture();
+    host.clearTimeout(pageView.deadline);
+    holds.clear();
     content.release();
     offSent();
     offSocket();
@@ -2253,7 +2307,7 @@ function createListen(core, opts = {}) {
     current = null;
     absence = null;
   }
-  return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
+  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, destroy };
 }
 
 // src/sdk/identify.ts

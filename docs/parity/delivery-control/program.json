@@ -2234,7 +2234,7 @@
     {
       "id": "P34",
       "title": "First paint and hold: the in-flight answer applied, a layout held per page view, receipts keyed per slot position",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
@@ -2358,7 +2358,7 @@
     {
       "id": "P30",
       "title": "Context-only layout mode per slot, with an exposure beacon",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/BTI-Parity-Build-Tickets.md (frozen copy committed beside the program)",
