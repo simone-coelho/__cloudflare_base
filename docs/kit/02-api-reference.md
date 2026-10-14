@@ -1138,6 +1138,53 @@ itself, at a consent choice or on a read.
   `reason: "unavailable"`, and the event and every decision are served exactly as they would be for a
   shopper ODP knows nothing about.
 
+### The second ODP identifier (`odp.secondIdentifier`)
+
+Your ODP connector configuration (`TENANT_CONNECTORS`, the tenant's `odp` object) may name
+`secondIdentifier`: an identifier field your ODP already defines, such as the one your experimentation
+platform resolves a visitor by, so that a segment built in ODP on the engine's fields can target an
+experiment. A tenant without the member is written exactly as before, term for term.
+
+- **The setting.** `secondIdentifier` is the name of one ODP identifier field: a letter, then up to 95
+  letters, digits and underscores. It may not be `vuid` and may not name one of your `odp.profile`
+  fields, so it can replace neither. Any other value (a number, an empty string, another name) makes the
+  connector configuration invalid, and it is refused with the rest of it, as any invalid member is: the
+  tenant's connectors are unavailable (`Tenant connector unavailable`) until the configuration is
+  corrected.
+- **What the person's record keeps.** At a verified sign-in (`POST link` with your backend's signed
+  assertion) made while the setting is configured, the person's own identity record keeps the link's own
+  `accountId`, the one your backend signed and the person's shopper id is derived from, which is your
+  hashed account identifier when you link with one (declare its form as `accountIdFormat` to refuse any
+  other). Never an earlier identifier an `accountChange` names, and never the `customerId` a page carried
+  before sign-in. It is kept only under the person's tracking consent: a sign-in under refused tracking
+  keeps nothing and removes an identifier kept before. A sign-in made while the setting is absent keeps
+  nothing, so a person who signed in before you configured it gets it at the next sign-in; a value kept
+  while the setting was configured stays on the record, unused, if you remove the setting, and is read
+  again only while the setting is configured.
+- **What is written.** `secondIdentifier` is written only when the setting is configured and the
+  person's record holds the hashed account identifier; a shopper who never signed in, or signed in
+  without the setting, is written with the vuid alone. With both, every event the engine forwards to
+  `/v3/events` carries `identifiers: { vuid, <secondIdentifier>: <account identifier> }` and every profile
+  upsert to `/v3/profiles` carries `attributes: { vuid, <secondIdentifier>: <account identifier>, …your
+  odp.profile fields in their order }`, identically from both hosts
+  ([shapes](./03-payload-schemas.md#the-odp-writes-and-the-second-identifier)). The audience read on
+  `/v3/graphql` is unchanged.
+- **Consent, erasure, tenants.** The identifier rides only on the writes your shopper's consent already
+  allows: events under tracking consent, profile upserts under personalization consent. The operator's
+  erasure of the person removes it from the person's record (the person's object and its
+  `identity:shopper:` projection), so no later write carries it, whatever the person does next; a later
+  sign-in made while the setting is configured keeps it again. Only the tenant that configured the setting
+  writes it; another tenant's setting changes nothing for yours.
+- **Nothing is created.** The engine creates nothing in ODP: it calls only the event, profile and audience
+  endpoints it calls without the setting, and creates no field, segment or audience, so your ODP owner
+  defines the identifier field and builds any segment on the engine's fields.
+- **Never answered.** The kept identifier is on no answer: the operator's visitor and shopper reads and the
+  export leave it out, and the link answer's `customerId` is only ever the identifier the browser carried
+  before sign-in, never the kept account identifier.
+- **The page-side path.** Without any setting, the page can pass the engine's segments and interest values
+  to the experimentation user context as attributes ([Integration guide](./01-integration-guide.md#your-experiments-and-the-engines-audiences-the-second-odp-identifier)),
+  so an experiment targets them directly; that path writes nothing to ODP.
+
 ### Experiment enrollment across a link
 
 A shopper who has consented to personalization is enrolled once, against a persistent enrollment
