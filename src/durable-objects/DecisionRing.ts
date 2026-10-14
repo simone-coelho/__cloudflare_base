@@ -164,6 +164,37 @@ function moneyPolicyOf(value: unknown): MoneyPolicy | null {
     && Object.keys(value).every(key => key === 'currency' || key === 'nonpositive')
     ? { currency, nonpositive } : null;
 }
+/**
+ * P33 (decision D1, freeze item 11; R-P39, S4F-C6): the slots whose OWN slot
+ * configuration names their own attribution policy, sorted, read before
+ * anything is attributed. `module-tied` is the only one; any other value, or
+ * one on the document default (which is no slot's own), refuses the whole
+ * plan before anything is sent, as every other malformed configuration does.
+ */
+function moduleTiedSlotsOf(slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig): string[] {
+  if (object(defaultSlotConfig) && Object.hasOwn(defaultSlotConfig, 'attribution')) throw new Error('Credit configuration unavailable');
+  if (!object(slotConfig)) return [];
+  const out: string[] = [];
+  for (const [slot, config] of Object.entries(slotConfig)) {
+    if (!object(config) || !Object.hasOwn(config, 'attribution')) continue;
+    if (config.attribution !== 'module-tied') throw new Error('Credit configuration unavailable');
+    out.push(slot);
+  }
+  return out.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+/**
+ * P33: the policy this ring credits by. The brand-wide policy the producer
+ * sent, with each slot's own attribution policy taken from the slot
+ * configuration alone (its one carrier into the ring), so a member the body's
+ * policy carried itself is never read; with no such slot, the policy as sent.
+ */
+function ringPolicyOf(policy: AttributionPolicy, tied: readonly string[]): AttributionPolicy {
+  const { slotAttribution: _carried, ...brand } = policy;
+  void _carried;
+  if (!tied.length) return Object.hasOwn(policy, 'slotAttribution') ? brand : policy;
+  return { ...brand, slotAttribution: Object.fromEntries(tied.map(slot => [slot, 'module-tied' as const])) };
+}
+
 interface SavedPlan { version: 1; digest: string; generation: number; tenant: string; subject: string; ts: number;
   retention: RetentionStamp; consentUntil: number; plan: CreditPlan; completed: Record<string, StatsDelivery>; cleanup?: true; retired?: true }
 
@@ -509,6 +540,15 @@ export class DecisionRing {
     // silent about a correlated credit refused for a brand disagreement.
     const plan: CreditPlan = { receipt: { version: 1, kind: 'outcome', received: 1, cutoffSkipped: 0,
       attributed: 0, eligible: 0, weightSkipped: 0, outsideWindow: 0, brandMismatched: 0, credits: emptyStatsDelivery() }, batches: [] };
+    // P33 (R-P35, S4F-C5): the itemisation of how this outcome was credited,
+    // written here, on the attribution record this ring derives — the credit
+    // plan's receipt, on the managed and the unmanaged path alike — for every
+    // outcome, one that credits nothing included, and only when a slot names
+    // its own attribution policy. Each entry's `credited` is filled from the
+    // credit effects below; an outcome that returns before them credited none.
+    const tied = moduleTiedSlotsOf(slotConfig, defaultSlotConfig), credited = new Map<string, string[]>();
+    const attributing = ringPolicyOf(policy, tied);
+    if (tied.length) plan.receipt.attribution = tied.map(slot => ({ slot, policy: 'module-tied' as const, credited: [] }));
     if (managed) plan.retention = requireRetention(this.env, outcome.retention?.online, tenant, 'online');
     if (cutoff !== undefined && outcome.ts <= cutoff) { plan.receipt.cutoffSkipped = 1; return plan; }
     requireRetention(this.env, outcome.retention?.online, tenant, 'online');
@@ -519,7 +559,7 @@ export class DecisionRing {
     const pageOfDecision = new Map(all.map(e => [e.id, e.page]));
     const ring = correlated ? all : all.filter((e) => e.arm === 'personalized' && e.brand === outcome.brand);
     const compatible = ring.filter(e => (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1'));
-    const attribution = attributeWindowed(outcome, compatible, policy);
+    const attribution = attributeWindowed(outcome, compatible, attributing);
     const credits = attribution.credits.filter(c => !correlated
       || all.some(e => e.id === c.decision_id && e.arm === 'personalized'));
     // What the reward's own window refused, counted over the same candidates
@@ -538,7 +578,7 @@ export class DecisionRing {
     // never counted.
     plan.receipt.brandMismatched = correlated ? attribution.brandMismatched
       : uncorrelatedBrandMismatches(outcome, all.filter(e => e.arm === 'personalized' && typeof e.brand === 'string' && e.brand !== outcome.brand
-        && (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1')), policy, attribution.credits);
+        && (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1')), attributing, attribution.credits);
     // Prepare every destination before sending, preserving the existing per-slot objective arithmetic.
     const bySlot = new Map<string, typeof credits>();
     for (const c of credits) bySlot.set(c.slot, [...(bySlot.get(c.slot) ?? []), c]);
@@ -559,7 +599,8 @@ export class DecisionRing {
       if (!object(config) || !['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'].includes(config.reward)
         || (config.objective !== undefined && !['unit', 'revenue', 'margin'].includes(config.objective)) || !object(config.stats)) throw new Error('Credit configuration unavailable');
       const s = config.stats;
-      if (!Object.keys(config).every(k => ['reward', 'stats', 'objective', 'measurementBasis'].includes(k))
+      if (!Object.keys(config).every(k => ['reward', 'stats', 'objective', 'measurementBasis', 'attribution'].includes(k))
+        || config.attribution !== undefined && config.attribution !== 'module-tied'
         || config.measurementBasis !== undefined && config.measurementBasis !== 'served-v1' && config.measurementBasis !== 'rendered-v1'
         || !Object.keys(s).every(k => ['n0', 'tauLearnMs', 'nMin', 'liftMin', 'liftMax'].includes(k))
         || ![s.n0, s.tauLearnMs, s.nMin, s.liftMin, s.liftMax].every(v => typeof v === 'number' && Number.isFinite(v))
@@ -599,6 +640,12 @@ export class DecisionRing {
       // decision was served in — the slot, and the page where the tenant's
       // catalogue carries this slot name on more than one page — read off the
       // ring entry that earned it, never inferred from the outcome.
+      if (tied.includes(slot)) credited.set(slot, weighed.map(credit => credit.decision_id));
+      // P33 (S4F-C6): the statistics object is sent the slot's configuration
+      // without the slot's own attribution policy, so the configuration it
+      // receives is exactly reward, stats, objective and measurement basis.
+      const sent: SlotLearnConfig = Object.hasOwn(config, 'attribution')
+        ? Object.fromEntries(Object.entries(config).filter(([key]) => key !== 'attribution')) as unknown as SlotLearnConfig : config;
       const placements = new Map<string, { page?: string; credits: typeof weighed }>();
       for (const credit of weighed) {
         const page = identityPage(scoped, slot, pageOfDecision.get(credit.decision_id));
@@ -612,9 +659,10 @@ export class DecisionRing {
       // off the record this ring holds, so the statistics object can count the
       // swap's clicks and weigh the credit by the position policy in force.
       for (const [name, group] of placements) plan.batches.push({ name, received: group.credits.length,
-        body: { tenant, brand, slot, ...(group.page ? { page: group.page } : {}), config,
+        body: { tenant, brand, slot, ...(group.page ? { page: group.page } : {}), config: sent,
           credits: group.credits.map(credit => ({ ...credit, ...positionRowOf(recordOf.get(credit.decision_id)) })) } });
     }
+    if (plan.receipt.attribution) for (const entry of plan.receipt.attribution) entry.credited = credited.get(entry.slot) ?? [];
     if (refusedBySlot.size) {
       plan.receipt.refusedBySlot = Object.fromEntries(refusedBySlot);
       plan.receipt.refused = refusedBySlot.size;

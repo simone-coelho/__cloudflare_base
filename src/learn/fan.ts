@@ -43,7 +43,7 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
   try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
-import type { DecisionRecord } from '@/content/types';
+import type { DecisionRecord, SlotAttribution } from '@/content/types';
 import { isOffLimitsLayoutRecord, type OutcomeRecord } from '@/ledger/records';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
@@ -309,7 +309,22 @@ export interface OutcomeReceipt {
    * `DecisionRing` always sets it.
    */
   brandMismatched?: number;
+  /**
+   * P33 (decision D1, freeze item 11; R-P35, S4F-C5): the itemisation of how
+   * the outcome was credited, on the attribution record the visitor's ring
+   * derives when it credits the outcome — this receipt, kept on the ring's
+   * credit plan. One entry per slot whose learn dials name their own
+   * attribution policy, sorted by slot: `policy` is that policy and `credited`
+   * the decision identifiers it credited, `[]` when none, the same decisions
+   * the plan's credit effects carry. Written for every outcome, one that
+   * credits nothing included, and ABSENT when no slot names a policy of its
+   * own, so such a receipt is exactly what it was. The stored outcome record
+   * is the admitted source and never carries it.
+   */
+  attribution?: SlotAttributionEntry[];
 }
+/** P33: one slot's line of the itemisation. */
+export interface SlotAttributionEntry { slot: string; policy: SlotAttribution; credited: string[] }
 export interface LearningReceipt {
   version: 1; kind: 'decisions' | 'outcome'; ok: boolean;
   code: 'complete' | 'invalid' | 'barrier' | 'config' | 'incomplete'; received: number; cutoffSkipped: number;
@@ -420,6 +435,26 @@ function refusalsBySlot(value: unknown): Record<string, 'reward' | 'money'> | nu
   if (!entries.length || entries.some(([slot, reason]) => !slot || (reason !== 'reward' && reason !== 'money'))) return null;
   return Object.fromEntries(entries) as Record<string, 'reward' | 'money'>;
 }
+/**
+ * P33: the itemisation on a ring reply, read back: entries of exactly
+ * `{ slot, policy, credited }`, one per slot, `policy` the module-tied policy
+ * and `credited` decision identifiers, never more credited decisions than the
+ * receipt credited. Null when malformed: an itemisation the caller cannot read
+ * is a malformed reply, never a silent credit.
+ */
+function attributionReply(value: unknown, eligible: unknown): SlotAttributionEntry[] | null {
+  if (!Array.isArray(value) || !value.length || value.length > FAN_LIMITS.rows || !count(eligible)) return null;
+  const out: SlotAttributionEntry[] = [], seen = new Set<string>();
+  let credited = 0;
+  for (const entry of value as unknown[]) {
+    if (!object(entry) || Object.keys(entry).some(key => key !== 'slot' && key !== 'policy' && key !== 'credited')
+      || typeof entry.slot !== 'string' || !entry.slot || seen.has(entry.slot) || entry.policy !== 'module-tied'
+      || !Array.isArray(entry.credited) || entry.credited.some(id => typeof id !== 'string' || !id)) return null;
+    seen.add(entry.slot); credited += entry.credited.length;
+    out.push({ slot: entry.slot, policy: 'module-tied', credited: [...entry.credited as string[]] });
+  }
+  return credited <= eligible ? out : null;
+}
 /** W24 R1.02: the money refusal on a ring reply, read back; null when malformed. */
 function moneyReply(value: unknown): MoneyRefusal | null {
   if (!object(value) || value.reason !== 'money_policy_unset'
@@ -442,6 +477,8 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   // receipt cannot name, and never read as a credit.
   const refusedBySlot = r.refusedBySlot === undefined ? undefined : refusalsBySlot(r.refusedBySlot);
   const money = r.money === undefined ? undefined : moneyReply(r.money);
+  // P33: present or absent, never malformed.
+  const attribution = r.attribution === undefined ? undefined : attributionReply(r.attribution, r.eligible);
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
@@ -449,7 +486,7 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     // W23 T1.01, W26 C1.01: present or absent, never malformed.
     || (r.outsideWindow !== undefined && !count(r.outsideWindow))
     || (r.brandMismatched !== undefined && !count(r.brandMismatched))
-    || refusedBySlot === null || money === null
+    || refusedBySlot === null || money === null || attribution === null
     || (refusedBySlot === undefined ? r.refused !== undefined : r.refused !== Object.keys(refusedBySlot).length)
     // "No slot learns from this" is a statement about an outcome nothing took.
     || (r.notCredited !== undefined && (!['reward', 'money'].includes(r.notCredited as string) || r.attributed !== 0))) return null;
@@ -460,7 +497,8 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     ...(refusedBySlot !== undefined ? { refusedBySlot } : {}),
     ...(r.refused !== undefined ? { refused: r.refused as number } : {}),
     ...(money !== undefined ? { money } : {}),
-    ...(r.notCredited !== undefined ? { notCredited: r.notCredited as 'reward' | 'money' } : {}) };
+    ...(r.notCredited !== undefined ? { notCredited: r.notCredited as 'reward' | 'money' } : {}),
+    ...(attribution !== undefined ? { attribution } : {}) };
 }
 /**
  * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the
@@ -596,8 +634,15 @@ export const ringEntryOf = (r: DecisionRecord): RingEntry =>
     measurementBasis: r.measurementBasis ?? 'served-v1', ...(r.rendered ? { renderedAt: r.rendered.at } : {}),
     item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell, ...(r.retention ? { retention: r.retention } : {}), ...(r.featured_product_ids?.length ? { products: [...r.featured_product_ids] } : {}) });
 
-/** The slot's configuration the statistics object publishes against. */
-export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; measurementBasis?: import('@/content/types').MeasurementBasis; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin' }
+/**
+ * The slot's configuration the statistics object publishes against. P33
+ * (R-P39, S4F-C6): `attribution`, the slot's own attribution policy, rides it
+ * only to the visitor's ring (`slotConfigsOf`), which credits by it and never
+ * forwards it: the configuration a statistics object receives is exactly
+ * reward, stats, objective and measurement basis.
+ */
+export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; measurementBasis?: import('@/content/types').MeasurementBasis; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin';
+  attribution?: SlotAttribution }
 
 export async function learningGenerations(ns: NS, name: string, items: string[]): Promise<Record<string, LearningGeneration>> {
   if (!ns) throw new Error('Learning generation unavailable');
@@ -867,6 +912,11 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
  * rebuild starts a generation now out of what the platform still holds: it is
  * not a reconstruction of the decay an object that had been counting all along
  * would show, and the snapshot says so through `rebuiltFrom` and `restartedAt`.
+ *
+ * P33 (decision D1, freeze item 11): `policy` is the tenant's learning policy
+ * as `policyOf` reads it, each slot's own attribution policy included
+ * (`slotAttribution`), so a module-tied slot is folded by the rule the
+ * visitor's ring credited it by, and a slot without one exactly as before.
  */
 export function foldRetainedDay(input: {
   tenant: string; brand: string; slot: string; config: SlotLearnConfig; policy: AttributionPolicy;
