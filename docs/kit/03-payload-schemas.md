@@ -1005,6 +1005,26 @@ what it changes.
 | `slots.{slot}.external.weight` | Historical-only scoring weight; does not re-enable withdrawn runtime scoring | inactive |
 | `contextVocabulary` | The tenant's context vocabulary: `channels`, `rules`, `sourcePlatforms`, `landingPageTypes`, optionally `visitBuckets` and `ladder` ([below](#the-context-vocabulary)) | absent: the six channel words, today's classification, buckets `1`, `2-3`, `4+`, depth 5 |
 
+### The performance percentage
+
+The console's Dials screen shows and edits each slot's performance percentage `P`, a number from 0 to
+100, beside its trust dial, and the Slots screen shows it in the slot's row. It is the tuning screen's
+form of a dial this document already stores, never a second stored value: the learn document has no
+percentage member, and the screen saves it as the one dial it stands for.
+
+| Slot | The percentage is | Saving `P` writes | A stored dial shows as |
+|---|---|---|---|
+| A content slot, or a layout slot that does not opt into the layout blend | the trust dial, γ × 100 | `slots.{slot}.gamma` = P / 100, nothing else | γ × 100: γ 0.35 as 35 |
+| A page's declared layout slot that opts into the layout blend (`slots.{slot}.blend`) | the blend weight, p × 100 | `slots.{slot}.blend.p` = P / 100, with the blend's `shadowP` and the slot's γ kept as they were | p × 100: p 0.6 as 60 |
+
+On a content slot γ = P / 100, and on a layout slot in the blend p = P / 100. The quotient is read as
+decimals, so 33.3 percent saves 0.333. A dial the document does not name reads 0, as the decision reads
+it, so a slot with no dials shows 0 percent and nothing is written until the percentage is edited. A
+percentage outside 0 to 100, or text that is not a number, is refused on the screen and nothing is sent.
+Saving a percentage sends every other member of the document, and every other slot, exactly as it was
+read. At 0 percent a slot decides exactly as it does with its dial at 0, every slot's default, so 0
+percent reproduces today's decisions term for term.
+
 ### Where a page conversion lands
 
 ```json
