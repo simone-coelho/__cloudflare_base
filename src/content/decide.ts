@@ -981,6 +981,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
    */
   const preLift = (p: ContentPieceLike, slot: string, base0: number, record: boolean): number => {
     const key = `${slot}:${p.id}`;
+    // P15 (R-P76): a recording scoring starts from no itemised term, so a
+    // candidate scored again (on a slot with position bands, once per band run)
+    // keeps only the terms of its last scoring, the one that ranked it, never a
+    // block an earlier scoring wrote. A candidate scored once is unaffected.
+    if (record) { extOf.delete(key); stageOf.delete(key); freshOf.delete(key); fatigueOf.delete(key); merchOf.delete(key); }
     let base = base0;
     if (ext && ext.status === 'ok') {
       const w = ext.weightOf(slot), s = ext.scores[p.id];
