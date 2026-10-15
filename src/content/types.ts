@@ -59,6 +59,16 @@ export interface ContentPiece extends ContentPieceLike {
    */
   eligibleWhen?: EligibilityRule;
   excerpt?: string;
+  /**
+   * P08 (decision D1, freeze item 27): the catalogue DECLARES this module
+   * pooled. Its exposures and credits, wherever it is served — every page and
+   * every slot that names it — make ONE evidence record, with the page as a
+   * level of that record directly after everyone (`p=<page>`, decision D2;
+   * `pooledLevelKeys`, src/learn/stats.ts). `true` is the only value; absent,
+   * the module keeps the page-scoped identity unit:W26.R2 gives it, exactly as
+   * before. A declaration, never inferred: two pages never pool silently.
+   */
+  pooled?: true;
 }
 
 /**
@@ -732,6 +742,14 @@ export interface LiftApplied {
    * applied: a page without one, or n at or above it.
    */
   evidenceFloor?: EvidenceFloorApplied;
+  /**
+   * P08 (decision D1): the lift was read from the module's ONE pooled record —
+   * the catalogue declares it pooled — so `level_words` names that record's
+   * ladder (everyone, then the page, then the page with today's levels) and
+   * `n` counts every page's evidence at everyone. Absent for every module the
+   * catalogue does not declare pooled.
+   */
+  pooled?: true;
 }
 
 /** What the population contributed to a decision set, so a reader can see the prior. */

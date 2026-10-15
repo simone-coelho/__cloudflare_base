@@ -37,6 +37,12 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
  * advisory diagnostics channel instead of dropping it without a word (F27 §5.4).
  * The feed adapter's accepted spellings are this set plus its aliases
  * (`FEED_FIELD_ALIASES`, src/content/import.ts); nothing else is a field.
+ *
+ * P08: `validatePiece` also reads `pooled` (decision D1), which this set does
+ * not list, because unit:W19.F3.04 locks the set to the field list kit 03's
+ * piece table published before it; a direct write that carries the
+ * declaration is therefore also named on the advisory channel as an ignored
+ * field, although the stored piece keeps it.
  */
 export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime',
   'tags', 'slotTypes', 'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
@@ -244,6 +250,14 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     else complements = [...new Set((p.complements as string[]).map((x) => x.trim()).filter(Boolean))];
   }
   if (p.inStock !== undefined && typeof p.inStock !== 'boolean') errors.push(`${at}.inStock: boolean when present`);
+  // P08 (decision D1, freeze item 27): pooling is DECLARED per module, with the
+  // one value `true`. Any other value is refused by name rather than read as
+  // undeclared, which would leave the author believing the module pooled. A
+  // retained document is read, never refused, for it: there only `true`
+  // declares, and anything else is the undeclared module it always was.
+  if (!stored && p.pooled !== undefined && p.pooled !== true) {
+    errors.push(`${at}.pooled: ${quoted(p.pooled)} is not a pooling declaration; true pools the module's evidence in one record across every page it is served on, and absent keeps it per placement`);
+  }
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
     id, customerContentId: cid, type, title, tags, slotTypes,
@@ -261,6 +275,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(isStr(p.excerpt) ? { excerpt: p.excerpt } : {}),
     ...(window && (window.from || window.to) ? { window } : {}),
     ...(eligibleWhen ? { eligibleWhen } : {}),
+    ...(p.pooled === true ? { pooled: true as const } : {}),
   };
 }
 
