@@ -16,7 +16,7 @@ import { contextCellOf, contextKeyOf, defaultContextKeyOf, TODAY_TERMS, type Con
 import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
 import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, type EligibilityContext } from './lifecycle';
-import { DEFAULT_STATS, levelKeys, liftFor, underEvidenceFloor, type LiftSnapshot } from '@/learn/stats';
+import { DEFAULT_STATS, levelKeys, liftFor, pooledLevelKeys, underEvidenceFloor, type LiftSnapshot } from '@/learn/stats';
 import { ADJACENT_SWAP, EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
@@ -1022,13 +1022,23 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // P36 (R-P46): a published ladder depth stops the lookup there, never reading
   // a finer level; below the floor the context levels bound it as well.
   const ladderDepth = i.contextTerms?.depth ?? 5;
-  const contextLadder = (cell: Cell) => new Set(levelKeys(cell).slice(0, Math.min(CONTEXT_LADDER_LEVELS, ladderDepth + 1)));
+  // P08 (decisions D1, D2): a module the catalogue declares pooled reads its ONE
+  // record on the pooled ladder of this page — everyone, the page, then the page
+  // with today's levels (`pooledLevelKeys`) — from the catalogue this decision
+  // already holds; no read is added. The page is context, so below the signal
+  // floor and on a context-only slot its context levels keep the page level
+  // between everyone and the channel. Every other module: exactly as before.
+  const pooledIds = new Set(i.pieces.filter((p) => p.pooled === true).map((p) => p.id));
+  const pooledPage = (item: string): string | undefined => (pooledIds.has(item) ? i.page : undefined);
+  const contextLadder = (cell: Cell, page?: string) => new Set(page === undefined
+    ? levelKeys(cell).slice(0, Math.min(CONTEXT_LADDER_LEVELS, ladderDepth + 1))
+    : pooledLevelKeys(cell, page).slice(0, Math.min(CONTEXT_LADDER_LEVELS, ladderDepth + 1) + 1));
   const liftAt = (slot: string, item: string) => {
-    const snap = learning?.snapshots[slot];
+    const snap = learning?.snapshots[slot], page = pooledPage(item);
     // P30: a context-only layout slot answers from the same context levels, whatever its switch admits.
-    if ((!below.has(slot) && !contextual.has(slot)) || !snap) return liftFor(snap, item, i.cell, ladderDepth);
-    const keys = contextLadder(i.cell), byKey = snap.items[item];
-    return byKey ? liftFor({ ...snap, items: { [item]: Object.fromEntries(Object.entries(byKey).filter(([key]) => keys.has(key))) } }, item, i.cell) : null;
+    if ((!below.has(slot) && !contextual.has(slot)) || !snap) return liftFor(snap, item, i.cell, ladderDepth, page);
+    const keys = contextLadder(i.cell, page), byKey = snap.items[item];
+    return byKey ? liftFor({ ...snap, items: { [item]: Object.fromEntries(Object.entries(byKey).filter(([key]) => keys.has(key))) } }, item, i.cell, 5, page) : null;
   };
   // P11 (decisions D1, D2; freeze items 25 and 40): the page's evidence floor,
   // read off the learn document the caller already holds. The level that
@@ -1057,7 +1067,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       liftOf.set(key, { reward: metadata?.reward ?? 'click', objective: metadata?.objective ?? 'unit', measurementBasis: metadata?.measurementBasis ?? 'served-v1', level: look?.level ?? 0, level_words: 'frozen by a merchandiser', n: look?.n ?? 0, s: look?.s ?? 0, p0: look?.p0 ?? 0, n0: look?.n0 ?? 0, p_hat: look?.p_hat ?? 0, lift: control.lift ?? 1, gamma, applied });
     } else if (look) {
       liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied, ...(look.prior ? { prior: look.prior } : {}),
-        ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}) });
+        ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}), ...(look.pooled ? { pooled: true as const } : {}) });
     }
     blendTerms.set(key, { B, Q, R, p: blend.p });
     blendedSlots.add(slot);
@@ -1100,7 +1110,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // must be able to say so instead of claiming an influence there was not.
     const lifted = base * Math.pow(look.lift, gamma);
     liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied: r3(lifted - base), ...(look.prior ? { prior: look.prior } : {}),
-      ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}) });
+      ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}), ...(look.pooled ? { pooled: true as const } : {}) });
     return lifted;
   } : undefined;
   // P29: per candidate, the score the composer handed over (the tag sum and any
@@ -1682,9 +1692,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         cause = 'no_level_reached_nmin';
         // The n the ladder has — the most evidence any candidate holds at any level of the shopper's cell — and the nMin it needs.
         // P30: a context-only layout slot's ladder is its context levels, the only ones it reads.
-        const snapshot = learning?.snapshots[s.slot] ?? null, levels = contextual.has(s.slot) ? [...contextLadder(i.cell)] : levelKeys(i.cell);
+        // P08: a pooled module's ladder is its pooled record's, on this page.
+        const snapshot = learning?.snapshots[s.slot] ?? null;
+        const levelsOf = (id: string) => { const page = pooledPage(id);
+          return contextual.has(s.slot) ? [...contextLadder(i.cell, page)] : page === undefined ? levelKeys(i.cell) : pooledLevelKeys(i.cell, page); };
         let n = 0;
-        for (const id of scored) for (const level of levels) { const held = snapshot?.items[id]?.[level]?.n; if (typeof held === 'number' && Number.isFinite(held) && held > n) n = held; }
+        for (const id of scored) for (const level of levelsOf(id)) { const held = snapshot?.items[id]?.[level]?.n; if (typeof held === 'number' && Number.isFinite(held) && held > n) n = held; }
         ladder = { n: r3(n), nMin: snapshot?.nMin ?? learning?.metadataOf?.(s.slot)?.stats?.nMin ?? DEFAULT_STATS.nMin };
       } else if (scored.length && scored.every((id) => (baseOf.get(keyOf(id)) ?? support.get(id) ?? 0) === 0)) cause = 'zero_base';
       else if (ranked.some((d) => scored.some((id) => id !== d.contentId && scoreOf(id) !== undefined && scoreOf(id) === scoreOf(d.contentId)))) cause = 'catalogue_order_ties';

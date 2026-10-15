@@ -37,7 +37,7 @@
 //     seed arithmetic rule weight × slot weight (unit:W16.C3.01), the receipt's
 //     "Arrival context" sentence (src/learn/receipts.ts:139-141), the cell's five
 //     keys and the ladder keys (src/content/cell.ts:61-70, src/learn/stats.ts:43-46),
-//     the cell grammar ladder-cell version 2 (src/learn/priors.ts:70-77).
+//     the cell grammar in force (src/learn/priors.ts CELL_GRAMMAR).
 //
 // THE REPRESENTATION THIS FILE RULES (one for all six criteria):
 //   · The device class is 'mobile' or 'desktop', read from the request: the client
@@ -85,6 +85,8 @@
 // home page, putKind).
 
 import { describe, expect, it, vi } from 'vitest';
+
+import { CELL_GRAMMAR } from '@/learn/priors';
 
 import {
   declaredSlots, errorsOf, HOSTS, layoutSlot, LAYOUT, learnDocument, loadSlots, M, MODULES, mount, pageInstanceOf, putSlots, readTree, receiptsOf,
@@ -352,7 +354,7 @@ describe('unit:P37.DV4', () => {
 // ===========================================================================
 
 describe('unit:P37.DV5', () => {
-  const PRIORS_TODAY = { version: 'parity5-priors', cellGrammar: { name: 'ladder-cell', version: 2, order: ['c', 'v', 's', 'r', 'a'] },
+  const PRIORS_TODAY = { version: 'parity5-priors', cellGrammar: { name: CELL_GRAMMAR.name, version: CELL_GRAMMAR.version, order: [...CELL_GRAMMAR.order] },
     rows: [{ slot: 'home-hero', item: 'story.harbor', cell: 'c=paid_social|v=1', p_prior: 0.05, n_equiv: 20 }] };
   /** The six ladder keys of a paid-social first visit, as src/learn/stats.ts:43-46 builds them from the five-key cell. */
   const LADDER = ['*', 'c=paid_social', 'c=paid_social|v=1', 'c=paid_social|v=1|s=early', 'c=paid_social|v=1|s=early|r=none', 'c=paid_social|v=1|s=early|r=none|a=none'];

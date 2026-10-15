@@ -43,7 +43,7 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
   try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
-import type { DecisionRecord, SlotAttribution } from '@/content/types';
+import type { ContentPiece, DecisionRecord, SlotAttribution, SlotCatalog } from '@/content/types';
 import { isOffLimitsLayoutRecord, type OutcomeRecord } from '@/ledger/records';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
@@ -175,6 +175,40 @@ export function pageScopedOf(value: unknown): ReadonlySet<string> | null {
 }
 /** W26 R2: the wire form of a set of page-scoped names — absent when empty, so an unscoped body is byte-identical to before. */
 export const pageScopedWire = (scoped: ReadonlySet<string>): { pageScoped?: string[] } => scoped.size ? { pageScoped: [...scoped].sort() } : {};
+
+/**
+ * P08 (decision D1, freeze item 27): one placement a module the catalogue
+ * declares pooled is served in — a slot it names (`slotTypes`) on a page the
+ * slots document carries that slot on. `identity` is the page in the
+ * placement's own storage identity, present only for a page-scoped slot name
+ * (W26 R2, `identityPage`), so the placement is the very object its decisions
+ * are fanned to and its credits forwarded to, untouched.
+ */
+export interface PooledPlacement { slot: string; page: string; identity?: string }
+/**
+ * P08 (decisions D1, D2): every placement of every module the catalogue
+ * declares pooled, by module. A pooled module's exposures and credits keep
+ * landing where they always have — each placement's own statistics object,
+ * page-scoped where W26 R2 says so — and every placement's publication reads
+ * them all into the module's ONE record, the page as its level after everyone
+ * (`LearnStats`, `buildSnapshot`). An undeclared module has no entry: it is
+ * never read outside its own placement, exactly as before. Pure.
+ */
+export function pooledPlacementsOf(pieces: ReadonlyArray<Pick<ContentPiece, 'id' | 'slotTypes' | 'pooled'>>, slots: Pick<SlotCatalog, 'pages'> | null | undefined): Map<string, PooledPlacement[]> {
+  const pages = slotPagesOf(slots);
+  const scoped = new Set([...pages].filter(([, on]) => on.length > 1).map(([slot]) => slot));
+  const out = new Map<string, PooledPlacement[]>();
+  for (const piece of pieces) {
+    if (piece.pooled !== true || out.has(piece.id)) continue;
+    const placements: PooledPlacement[] = [];
+    for (const slot of new Set(piece.slotTypes)) for (const page of pages.get(slot) ?? []) {
+      if (!isPlacementSlot(slot) || !isCatalogueName(page)) continue;
+      placements.push({ slot, page, ...(scoped.has(slot) ? { identity: page } : {}) });
+    }
+    if (placements.length) out.set(piece.id, placements);
+  }
+  return out;
+}
 
 type NS = DurableObjectNamespace | undefined;
 export interface StatsWriteReceipt {

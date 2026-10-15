@@ -1655,6 +1655,54 @@ and `toEvidenceFloor: { item: F − n }` for every item of the snapshot at level
 exploring screen shows the page's evidence floor and each piece's exposures to it. A page without a floor
 carries none of these members, and every answer for it is exactly as before.
 
+### Pooled modules (`pooled`)
+
+A module that appears on more than one page can pool its evidence once, as an explicit, declared policy: the
+catalogue declares it per module, with `"pooled": true` on the piece, published with `PUT /content/catalog`.
+A pooled module accumulates one evidence record across every page and every slot it is served on. Its
+exposures and credits reach each placement's statistics object exactly as before, and every placement that
+serves it publishes that one record in its own snapshot under the module's id, so `GET /v1/{tenant}/lift`
+answers the same record for either placement (`snapshot.items[module]`). In the pooled record the page is a
+ladder level directly after everyone: its keys are `*` (everyone: every page's evidence), then `p=<page>` (that
+page's own evidence), then that page with the ladder's own levels (`p=<page>|c=…`, `p=<page>|c=…|v=…`, and so on
+to the affinity cell), levels 0 to 6. A decision on the module, on any of its pages, reads its lift from that
+record on its own page's ladder, and the finest level reaching `nMin` answers: a page whose own evidence reaches
+it answers at its page levels, and a page whose own evidence does not answers at everyone, where every page's
+evidence is pooled. The record says so: `explain.lift.level_words` names the page level `page` (and `page and
+channel`, `page, channel and visit bucket` and so on below it), `explain.lift.pooled` is `true`, and the
+shopper's receipt says whose evidence the count is. The lift is measured against the rate of the slot that
+reads the record, in that cell, as every lift is; the evidence floor of the decision's page shrinks the estimate
+of whichever level answers, the page level included; below the signal floor and on a context-only layout slot
+the context levels keep the page between everyone and the channel. A pooled decision replays exactly, from the
+archived snapshot that holds the record, and no replay marker is written.
+
+An undeclared module keeps its page-scoped storage exactly as before: its evidence stays with its own
+placement, and a slot name a retained slots document carries on more than one page keeps one statistics object,
+snapshot and archive per page (`slot@page`), never a pooled record. A pooled module served under such a
+retained name still pools: one record for both pages. Records pool only among placements whose counters mean the
+same thing (the same reward, objective, measurement basis and decay horizon in the learn document); a placement
+whose dials differ keeps its evidence out of the record. Publication refuses any value of `pooled` other than
+`true` with `422`, naming `pieces[i].pooled` in `errors[]`, and the catalogue in force stays in force; a retained
+catalogue whose `pooled` is anything else reads as undeclared. A catalogue without a pooled module publishes,
+decides, records and replays exactly as before. Limits: a feed import or pull carries no `pooled` member, so a
+catalogue refreshed from a feed declares no pooled module (declare it with a direct publication), and the answer
+to a direct publication lists `pooled` among the ignored fields on its advisory channel although the stored piece
+keeps it. A snapshot reads the record from every placement when it is published: a placement whose own
+evidence has not moved since another page's did serves the record as it last published it. A day report's
+grids, from folded hours or from a day's ledger records, are still built per slot from that slot's own
+evidence, so a pooled module's row there is its own placement's and not the pooled record.
+
+The cell grammar is version 3 (`cellGrammar { "name": "ladder-cell", "version": 3, "order": ["c", "v", "s", "r", "a"] }`).
+Its order is unchanged, so every cell of an undeclared module names the level it named under version 2, and a
+pooled module's cell is written in the pooled order, its page first: `*` or a prefix of `p=`, `c=`, `v=`, `s=`,
+`r=`, `a=`, such as `p=pdp` or `p=pdp|c=email`. A priors file declaring version 2 is refused by
+`PUT /content/priors` and `POST /content/priors/validate` naming `cellGrammar` and the migration (re-export it
+declaring version 3), while a priors document already stored under version 2 keeps being read and applied
+exactly as it was; stored snapshots and archives carry no grammar version and are not touched. A tenant whose
+context vocabulary derives another grammar writes a pooled module's cell the same way, the page first and then
+its own order. A prior cell is read under the ladder of the record it names, so a pooled module's cell in the
+ladder's own order, or an undeclared module's cell naming a page, reaches no level of that module's record.
+
 ### The context vocabulary (`contextVocabulary`)
 
 A tenant's entry channels, the published mapping that classifies an arrival into them, its source platforms,
@@ -1701,7 +1749,7 @@ buckets `1`, `2-3`, `4+` and the full ladder, exactly. A vocabulary with nine ch
   grammar in force is the one the learn document published in the same request derives (the primary document or a
   `publicationChanges` member of the learn kind, in any case of the word), or else the learn document in force; a
   file declaring nothing is read under the current grammar. A vocabulary that changes none of the three keeps
-  `ladder-cell` version 2.
+  `ladder-cell` version 3 ([pooled modules](#pooled-modules-pooled)), the default grammar.
 - What is stored: a tenant without the settings stores no new member; a visit classified under a vocabulary
   stores the channel id, the source platform and the landing-page type it records, with the learn revision that
   classified it, inside the shopper's existing record.
@@ -1740,7 +1788,7 @@ to publish and nothing to deploy:
   published without one keeps its meaning and writes `inputs.replay.orders: "configured-order-v1"` as before. The
   record's and the receipt's `configuredOrder.context` carry the device as published, and the receipt's sentence
   names it ("any channel, any visit, on mobile").
-- What does not change: the learning cell keeps its five keys, its grammar (`ladder-cell` version 2) and its six
+- What does not change: the learning cell keeps its five keys, its grammar (`ladder-cell` version 3) and its six
   ladder keys, and the context prior's populations stay keyed on the entry channel and the visit bucket, so a
   priors file exported before imports as it did; device and recency are first-paint context, never learning-cell
   levels. A tenant that publishes no device context and no device or recency rule decides exactly as before,

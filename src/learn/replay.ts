@@ -311,7 +311,8 @@ function usableSnapshot(value: unknown, served: DecisionRecord, row: Manifest['s
   for (const levels of Object.values(value.items)) {
     if (!object(levels)) return false;
     for (const stat of Object.values(levels)) {
-      if (!object(stat) || !identity(stat.level) || stat.level > 5 || typeof stat.key !== 'string'
+      // P08: a pooled record's levels run to 6 (the page at 1, its affinity cell at 6); every other record's to 5.
+      if (!object(stat) || !identity(stat.level) || typeof stat.key !== 'string' || stat.level > (stat.key.startsWith('p=') ? 6 : 5)
         || !['n', 's', 'p0', 'p_hat', 'lift'].every(key => finite(stat[key]) && stat[key] >= 0)
         || (own(stat, 'n0') && !finite(stat.n0))
         || (own(stat, 'prior') && (!object(stat.prior) || !finite(stat.prior.p) || !finite(stat.prior.n)))) return false;
