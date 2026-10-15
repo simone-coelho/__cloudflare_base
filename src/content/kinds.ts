@@ -616,8 +616,8 @@ export function validateBands(candidate: unknown, take: number): ValidationResul
       const f = from as number, t = to as number;
       if (f < next) {
         errors.push(previous
-          ? `${at}: ${positionsWords(f, t)} overlap bands[${previous.k}] (${positionsWords(previous.from, previous.to)}); the bands are contiguous and do not overlap, so this band starts at position ${next}`
-          : `${at}: ${positionsWords(f, t)} overlap an earlier band; the bands are contiguous and do not overlap, so this band starts at position ${next}`);
+          ? `${at}: ${positionsWords(f, t)} overlap bands[${previous.k}] (${positionsWords(previous.from, previous.to)}); the bands are contiguous and do not overlap, listed from position 1, each starting where the one before it ends`
+          : `${at}: ${positionsWords(f, t)} overlap an earlier band; the bands are contiguous and do not overlap, listed from position 1, each starting where the one before it ends`);
       } else if (f > next) {
         errors.push(previous
           ? `${at}: starts at position ${f}, so ${positionsWords(next, f - 1)} ${f - 1 === next ? 'lies' : 'lie'} in no band (bands[${previous.k}] ends at position ${previous.to}); the bands are contiguous, with no gap, and cover positions 1 to take`
