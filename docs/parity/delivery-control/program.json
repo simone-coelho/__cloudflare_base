@@ -3759,14 +3759,23 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "eb456472fc031a79dd2c6a83bcf32ee23f7e3f5f on rem/spec-parity-c (batch S3 fix round; P12 242d64ba, P34 a3d2bc4d, P11 f1b3f5a4, P08 f01d286f, P15 164a1c7a, P26 eb456472, each ticket files byte-identical at eb456472; harness src/units/_parity.ts byte-identical to S1 and src/units/_parity3.ts byte-identical to 4b82e0de; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "e01acbbe8c8d15babad91325d071ab334c3876f3 on rem/spec-p15-fix1 (P15 fix round 1 under R-P76, cut from the P15 artifact c0bc5939; one commit adding to src/units/P15/LEDGER.unit.test.ts two header sentences and two legs RED at c0bc5939 on both hosts: the M1 diversity-yield leg, position 2 filled by band 1's next module under band 1's weights, the yielding module ranked under band 2 later, with the unbanded control, and the M4 stale-merchandising leg, a module ranked in a later band at a zero base carrying no merchandising block on its record and no merchandising sentence on its receipt, with the slot-weights control; no existing leg changed, every harness and every other test byte-identical to c0bc5939; reviewed PASS: both legs HONEST, recomputed by hand, satisfiable on one product with the FIX01 and DIV01 scratch probes 16/16, teeth shown by MD1, MD2, MC1, MX1a, MX1b, MC2, no R10 collision; the gate recorded at eb456472 before it)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/logs/02-head-p15.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/logs/mutants/FIX01.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/logs/05-mutants.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/logs/08-hand.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/specifier/logs/b-after-e01acbbe.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/specifier/logs/c-fix01.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/specifier/logs/d-fix01-div01.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-merge-P12.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-retained-U5.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-fan-page-Q3-soft.log",
