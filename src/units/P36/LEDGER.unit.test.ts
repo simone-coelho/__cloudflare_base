@@ -32,7 +32,7 @@
 //     type from the first page type of the visit);
 //   · the code at af671ce7 for what "today" is: the six words and their tables
 //     (src/services/visit.ts:37, :124, :239-250, :426-474), the visit-bucket cut
-//     (src/content/cell.ts:44-49), the cell grammar `ladder-cell` version 2 with the
+//     (src/content/cell.ts:44-49), the cell grammar `ladder-cell` in force (src/learn/priors.ts CELL_GRAMMAR) with the
 //     order c, v, s, r, a and its refusal naming the migration
 //     (src/learn/priors.ts:70-77, :102-110), the seed arithmetic rule weight ×
 //     slot weight (unit:W16.C3.01) and the receipt's "Arrival context" sentence
@@ -82,7 +82,7 @@
 //   the settings), and recorded on the decision's cell as any channel is.
 //   A tenant whose published vocabulary changes the channel values has another
 //   cell grammar: a priors document declaring the grammar it was exported under
-//   before the vocabulary (`ladder-cell`, version 2, c, v, s, r, a) is refused by
+//   before the vocabulary (`ladder-cell` in force, CELL_GRAMMAR: c, v, s, r, a) is refused by
 //   `PUT /content/priors` with an error naming `cellGrammar` and a migration
 //   sentence that names the re-export; a document declaring nothing is read under
 //   the tenant's current grammar (W25).
@@ -197,6 +197,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { invalidatePublicationCache } from '@/config/publication';
+import { CELL_GRAMMAR } from '@/learn/priors';
 import { trendKey } from '@/reflex/regionTrend';
 
 import {
@@ -825,8 +826,8 @@ describe('unit:P36.CH4', () => {
 // ===========================================================================
 
 describe('unit:P36.CH5', () => {
-  /** A priors document exported under today's grammar, declaring it (W25: src/learn/priors.ts:70-77; kit 03:609-615). */
-  const PRIORS_TODAY = { version: 'parity5-priors', cellGrammar: { name: 'ladder-cell', version: 2, order: ['c', 'v', 's', 'r', 'a'] },
+  /** A priors document exported under today's grammar, declaring it (W25: src/learn/priors.ts:70-77; kit 03:609-615): the grammar in force, read from CELL_GRAMMAR (R-P75). */
+  const PRIORS_TODAY = { version: 'parity5-priors', cellGrammar: { name: CELL_GRAMMAR.name, version: CELL_GRAMMAR.version, order: [...CELL_GRAMMAR.order] },
     rows: [{ slot: 'home-hero', item: 'story.harbor', cell: 'c=email', p_prior: 0.05, n_equiv: 20 }] };
   const PRIORS_UNDECLARED = { version: 'parity5-priors', rows: [{ slot: 'home-hero', item: 'story.harbor', cell: '*', p_prior: 0.05, n_equiv: 20 }] };
 
@@ -1192,7 +1193,7 @@ describe('unit:P36.CH5', () => {
   // depth 5. The vocabulary below names today's six words with a mapping of its own
   // (an SMS arrival read as email, where today's tables read it as direct), so the
   // channel values do not change and, with today's cut and ladder, no cell changes:
-  // the grammar stays today's, `ladder-cell` version 2 (a change of the channel
+  // the grammar stays today's, CELL_GRAMMAR (a change of the channel
   // values bumps it, the bump leg above). Its source platforms and landing-page
   // types are kept: they are not ruled optional.
   const CHANNELS_ONLY = {
@@ -1217,8 +1218,8 @@ describe('unit:P36.CH5', () => {
     expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
     const written = await publishLearn(m, { contextVocabulary: CHANNELS_ONLY });
     expect(written.status, `P36.CH5 — a vocabulary without visitBuckets and ladder publishes: ${JSON.stringify(errorsOf(written))}`).toBe(200);
-    expect.soft(await grammarInForce(m), 'P36.CH5 — the grammar in force is today\'s, no bump: ladder-cell version 2, whose cells are c, v, s, r, a in that order')
-      .toEqual({ name: 'ladder-cell', version: 2, order: TODAY_ORDER });
+    expect.soft(await grammarInForce(m), 'P36.CH5 — the grammar in force is today\'s grammar, no bump: CELL_GRAMMAR\'s name, version and order (src/learn/priors.ts)')
+      .toEqual({ name: CELL_GRAMMAR.name, version: CELL_GRAMMAR.version, order: [...CELL_GRAMMAR.order] });
     await learnedLift(m, HERO, LEARNED, DIRECT_FIRST, 'served-v1', HOME);
     expect.soft(await harborLift(m), 'P36.CH5 — today\'s order at full depth: a lift learned at every level of the shopper\'s cell is read from level 5')
       .toEqual([5, 'channel, visit bucket, stage, region and affinity cell']);
@@ -1300,7 +1301,7 @@ describe('unit:P36.CH5', () => {
       .toEqual([422, true, beforeA]);
 
     // (b) A vocabulary tenant (the depth leg's: the nine channel values, the ladder at depth 2) reads a derived grammar:
-    // today's version-2 file is refused beside a learn document and beside a slots document, the related kind in any case.
+    // today's file (CELL_GRAMMAR) is refused beside a learn document and beside a slots document, the related kind in any case.
     const b = await mount('session', { ...NO_SETTINGS, learn: homeLearn({ contextVocabulary: DEPTH_2 }) });
     expect(b.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
     const derived = await grammarInForce(b);
@@ -1322,7 +1323,7 @@ describe('unit:P36.CH5', () => {
     for (const [name, primary, document, kind] of casesB) {
       const answer = await publishBeside(b, primary, document, [{ kind, document: PRIORS_TODAY }], `r-p54 (b) ${name}`);
       expect.soft([...byGrammar(answer), await revisionsOf(b)],
-        `P36.CH5 (R-P54 b) — on a vocabulary tenant today's version-2 priors file ${name} is refused (422) naming cellGrammar and the re-export, and no revision is written (${answer.status}: ${JSON.stringify(errorsOf(answer))})`)
+        `P36.CH5 (R-P54 b) — on a vocabulary tenant a priors file under today's grammar ${name} is refused (422) naming cellGrammar and the re-export, and no revision is written (${answer.status}: ${JSON.stringify(errorsOf(answer))})`)
         .toEqual([422, true, beforeB]);
     }
 
@@ -1336,14 +1337,14 @@ describe('unit:P36.CH5', () => {
     expect(controlC.status,
       `CONTROL (c) — a priors file declaring today's grammar publishes with a related learn member that leaves the channel values as they are: ${JSON.stringify(errorsOf(controlC))}`).toBe(200);
     // With a related learn member whose vocabulary changes the channel values (the same vocabulary as (b)), today's
-    // version-2 file is refused, so the tenant keeps today's grammar and its version-2 priors, which agree.
+    // file is refused, so the tenant keeps today's grammar and its priors under it, which agree.
     const beforeC = await revisionsOf(c);
     const stale = await publishBeside(c, 'priors', { ...PRIORS_TODAY, version: 'parity5-priors-c' }, [{ kind: 'learn', document: learnB }], 'r-p54 (c)');
     expect.soft([...byGrammar(stale), await revisionsOf(c)],
-      `P36.CH5 (R-P54 c) — a priors file declaring today's version 2, published with a related learn member whose vocabulary changes the channel values, is refused (422) naming cellGrammar and the re-export, and no revision is written (${stale.status}: ${JSON.stringify(errorsOf(stale))})`)
+      `P36.CH5 (R-P54 c) — a priors file declaring today's grammar, published with a related learn member whose vocabulary changes the channel values, is refused (422) naming cellGrammar and the re-export, and no revision is written (${stale.status}: ${JSON.stringify(errorsOf(stale))})`)
       .toEqual([422, true, beforeC]);
     expect.soft([await declaredInForce(c), await grammarInForce(c)],
-      'P36.CH5 (R-P54 c) — and afterwards the priors in force and the grammar in force agree: both today\'s, ladder-cell version 2 with c, v, s, r, a')
+      'P36.CH5 (R-P54 c) — and afterwards the priors in force and the grammar in force agree: both today\'s grammar (CELL_GRAMMAR)')
       .toEqual([PRIORS_TODAY.cellGrammar, PRIORS_TODAY.cellGrammar]);
     // The learn member of the same request, not the learn document in force: on a tenant whose learn document in force
     // is still today's, the file re-exported under the grammar that learn member derives publishes with it.
