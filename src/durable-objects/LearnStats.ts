@@ -6,12 +6,12 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, type AttributionContract, type PairCounts, type PositionPolicy, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, positionHistoryKey, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type PositionPolicy, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
-import { isCatalogueName, LEARN_KIND } from '@/content/kinds';
+import { CONTENT_KIND, isCatalogueName, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
 import { attributionContractOf, policyOf } from '@/learn/route';
@@ -157,6 +157,29 @@ function keyBound(key: string): void {
   if (key !== '*' && key.split('|').some((part, i) => !part.startsWith(['c=', 'v=', 's=', 'r=', 'a='][i]!)
     || part.length < 3 || part.length > LEARN_LIMITS.component + 2 || part.slice(2).includes('=') || control(part.slice(2)))) throw invalid();
 }
+/**
+ * P08 (decision D2): a key of a pooled record, or a prior cell written for one —
+ * `p=<page>` first, then today's levels in today's order, at most six pairs —
+ * bounded exactly as `keyBound` bounds every other key. Any other key is held
+ * to `keyBound` itself, unchanged. Stored counters never carry a pooled key: a
+ * pooled module's evidence is kept in each placement as every module's is.
+ */
+function pooledKeyBound(key: string): void {
+  if (!isPooledKey(key)) { keyBound(key); return; }
+  if (Object.prototype.hasOwnProperty.call(Object.prototype, key)) throw invalid();
+  const parts = key.split('|');
+  if (utf8.encode(key).length > LEARN_LIMITS.keyBytes || parts.length > 6) throw capacity();
+  if (parts.some((part, i) => !part.startsWith(['p=', 'c=', 'v=', 's=', 'r=', 'a='][i]!)
+    || part.length < 3 || part.length > LEARN_LIMITS.component + 2 || part.slice(2).includes('=') || control(part.slice(2)))) throw invalid();
+}
+/** P08: what a placement's counters MEAN — the accumulation tuple two placements must share for their evidence to be one record. */
+const accumulationOf = (config: SlotLearnConfig) => ({ reward: config.reward, objective: config.objective ?? 'unit',
+  measurementBasis: config.measurementBasis ?? 'served-v1', tauLearnMs: config.stats.tauLearnMs });
+/** P08: one stored counter, as `stateValid` reads it. */
+const counterValid = (c: unknown): c is Counter => {
+  const entry = (v: unknown) => fields(v, ['s', 't']) && finite(v.s) && v.s >= 0 && time(v.t);
+  return fields(c, ['n', 's']) && entry(c.n) && object(c.s) && Object.entries(c.s).every(([reward, e]) => rewards.has(reward) && entry(e));
+};
 function configValid(v: unknown): v is SlotLearnConfig {
   if (!fields(v, ['reward', 'stats', 'objective', 'measurementBasis']) || typeof v.reward !== 'string' || !rewards.has(v.reward)
     || v.measurementBasis !== undefined && v.measurementBasis !== 'served-v1' && v.measurementBasis !== 'rendered-v1'
@@ -390,6 +413,21 @@ export class LearnStats {
         if ((b.version !== undefined && b.version !== 2) || (managed ? rows.length !== raw.length || rows.some(row => !row.effect) : rows.some(row => row.effect))) throw invalid();
         return await this.writeRows(kind, raw.length, b.tenant, b.brand, b.slot, b.config, rows, managed, b.page as string | undefined);
       }
+      if (path === '/pooled') {
+        // P08 (decisions D1, D2): this placement's own counters for the pooled
+        // modules another placement's publication reads into each module's ONE
+        // record, with what they mean (`accumulationOf`). A read of COMMITTED
+        // state, never queued behind this object's own work and never caching
+        // anything, so two placements publishing at once never wait on each other.
+        const b = await input(request);
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page) || !Array.isArray(b.items)
+          || b.items.length > LEARN_LIMITS.items || b.items.some(item => !itemName(item))) throw invalid();
+        const current = await this.committed();
+        if (current && (current.tenant !== b.tenant || current.brand !== b.brand || current.slot !== b.slot || !samePage(current, b.page))) throw recovery();
+        const items: Record<string, Record<string, Counter>> = {};
+        if (current) for (const item of b.items as string[]) if (Object.hasOwn(current.stats.items, item)) items[item] = current.stats.items[item]!;
+        return json({ ok: true, config: current ? accumulationOf(current.config) : null, items });
+      }
       if (path === '/snapshot') {
         const snapshot = await this.serialize(() => this.currentSnapshot());
         return json({ ok: true, snapshot });
@@ -514,6 +552,15 @@ export class LearnStats {
     if (stored === undefined) return null;
     try { stateValid(stored); } catch { throw recovery(); }
     this.data = stored; return stored;
+  }
+
+  /** P08: the committed state, read without caching it, for a read that is not serialized (`/pooled`). */
+  private async committed(): Promise<Stored | null> {
+    if (this.data) return this.data;
+    const stored: unknown = await this.state.storage.get('learn');
+    if (stored === undefined) return null;
+    try { stateValid(stored); } catch { throw recovery(); }
+    return stored;
   }
 
   private async candidate(tenant: string, brand: string, slot: string, config: SlotLearnConfig, page?: string): Promise<Stored> {
@@ -806,26 +853,33 @@ export class LearnStats {
     // keeps (`ONLINE_RING_REACH_MS`, the ring's own age limit), never
     // a constant of its own.
     const contract = await this.attributionContract(d);
+    // P08 (decisions D1, D2): each pooled module's ONE record, read from every
+    // placement it is served in. Undefined for a catalogue that declares no
+    // pooled module this slot serves, and then nothing below changes.
+    const pooled = await this.pooledCounters(d);
+    const isPooled = (item: string) => !!pooled && Object.hasOwn(pooled, item);
     // Count exactly the item/cell identities the builder will materialize.
-    const byItem = new Map(Object.entries(d.stats.items).map(([item, keys]) => [item, new Set(Object.keys(keys))]));
+    const byItem = new Map(Object.entries(d.stats.items).filter(([item]) => !isPooled(item)).map(([item, keys]) => [item, new Set(Object.keys(keys))]));
     const slotKeys = new Set(Object.keys(d.stats.slot));
+    for (const [item, record] of Object.entries(pooled ?? {})) byItem.set(item, new Set(Object.keys(record)));
     for (const [item, cells] of priors?.index ?? []) {
       if (!itemName(item)) throw capacity();
       const keys = byItem.get(item) ?? new Set<string>();
-      for (const cell of cells.keys()) keys.add(cell);
+      // P08: a prior cell is read under the ladder of the record it names (`buildSnapshot`).
+      for (const cell of cells.keys()) if (cell === '*' || isPooledKey(cell) === isPooled(item)) keys.add(cell);
       byItem.set(item, keys);
     }
     if (byItem.size > LEARN_LIMITS.items) throw capacity();
     let count = 0;
     for (const keys of byItem.values()) for (const key of keys) {
-      keyBound(key); count++;
-      for (let k: string | null = key; k !== null; k = parentKey(k)) slotKeys.add(k);
+      pooledKeyBound(key); count++;
+      for (let k: string | null = unpagedKey(key); k !== null; k = parentKey(k)) slotKeys.add(k);
     }
     if (count + slotKeys.size > LEARN_LIMITS.counters) throw capacity();
     // W24 G1.01: a generation this object was actually restarted into dates
     // itself from that restart, and not from evidence it may not have yet.
     const restarted = await this.accumulationTransition();
-    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract, restarted?.at);
+    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract, restarted?.at, pooled);
     // P05 (decision D1): each position's effect from the slot's adjacent swaps, only where it has swapped.
     const effects = positionEffectsOf(d.positions);
     if (effects) snap.positionEffects = effects;
@@ -1023,6 +1077,97 @@ export class LearnStats {
     } catch { return undefined; }
   }
 
+  /**
+   * P08 (decisions D1, D2; freeze item 27): the pooled records this placement
+   * publishes. The catalogue in force says which modules it declares pooled; a
+   * module this slot serves is one of them only where this object is one of the
+   * module's placements (`pooledPlacementsOf`: a slot it names, on a page the
+   * slots document carries the slot on, under W26 R2's own identity). Each such
+   * module's evidence stays where it lands — every placement's own object — and
+   * is read here from all of them, this one included: one counter list per
+   * pooled key, `*` holding every page's root and `p=<page>…` each page's own
+   * counters. A placement whose counters mean something else (another reward,
+   * objective, measurement basis or decay horizon) is not part of this record.
+   *
+   * Read from the same publication set this object reads its priors and learn
+   * document from. A catalogue that declares no pooled module this slot serves
+   * reads nothing more and answers undefined, so its snapshot is exactly what it
+   * was. Fails closed: an unreadable catalogue, slots document or placement
+   * refuses the publication, as an unreadable prior does, and the snapshot in
+   * force keeps serving; it never publishes a record that pools part of the
+   * evidence.
+   */
+  private async pooledCounters(d: Stored): Promise<PooledCounters | undefined> {
+    const pin = await pinPublication(this.env, d.tenant, true);
+    const catalog = await readOptionalPinnedPublication(this.env, CONTENT_KIND, d.tenant, pin);
+    const declared = (catalog?.value.pieces ?? []).filter(piece => piece.pooled === true && piece.slotTypes.includes(d.slot));
+    if (!declared.length) return undefined;
+    const slots = await readOptionalPinnedPublication(this.env, SLOTS_KIND, d.tenant, pin);
+    const self = statsName(d.tenant, d.brand, d.slot, d.page);
+    const order = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+    const modules = new Map<string, Array<{ name: string; slot: string; page: string; identity?: string }>>();
+    for (const [item, placements] of pooledPlacementsOf(declared, slots?.value)) {
+      if (!itemName(item)) throw capacity();
+      const named = placements.map(p => ({ ...p, name: statsName(d.tenant, d.brand, p.slot, p.identity) }))
+        .sort((a, b) => order(a.page, b.page) || order(a.name, b.name));
+      if (named.some(p => p.name === self)) modules.set(item, named);
+    }
+    if (!modules.size) return undefined;
+    // One read per other placement, naming the pooled modules it serves.
+    const wanted = new Map<string, { slot: string; identity?: string; items: Set<string> }>();
+    for (const [item, placements] of modules) for (const p of placements) if (p.name !== self) {
+      const entry = wanted.get(p.name) ?? { slot: p.slot, ...(p.identity ? { identity: p.identity } : {}), items: new Set<string>() };
+      entry.items.add(item); wanted.set(p.name, entry);
+    }
+    const held = new Map<string, Readonly<Record<string, Record<string, Counter>>>>([[self, d.stats.items]]);
+    await Promise.all([...wanted].map(async ([name, w]) => {
+      const counters = await this.placementCounters(d, name, w.slot, w.identity, [...w.items].sort());
+      if (counters) held.set(name, counters);
+    }));
+    const out: PooledCounters = {};
+    for (const item of [...modules.keys()].sort(order)) {
+      const record: Record<string, Counter[]> = {};
+      for (const p of modules.get(item)!) {
+        const counters = held.get(p.name), byKey = counters && Object.hasOwn(counters, item) ? counters[item]! : null;
+        if (!byKey) continue;
+        for (const [key, c] of Object.entries(byKey)) {
+          const at = key === '*' ? `p=${p.page}` : `p=${p.page}|${key}`;
+          (record[at] ??= []).push(c);
+          if (key === '*') (record['*'] ??= []).push(c);
+        }
+      }
+      out[item] = record;
+    }
+    return out;
+  }
+
+  /**
+   * P08: one other placement's counters for the pooled modules named, read
+   * through its own `/pooled` door; null where its counters mean something else
+   * than this object's (`accumulationOf`), so they are no part of its record.
+   * Anything malformed or unanswered refuses (the publication then fails closed).
+   */
+  private async placementCounters(d: Stored, name: string, slot: string, page: string | undefined, items: string[]): Promise<Record<string, Record<string, Counter>> | null> {
+    const namespace = this.env.LEARN_STATS;
+    if (!namespace) throw recovery();
+    const response = await namespace.get(namespace.idFromName(name)).fetch('https://learn/pooled', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant: d.tenant, brand: d.brand, slot, ...(page ? { page } : {}), items }) });
+    if (!response.ok) throw recovery();
+    const value: unknown = await response.json();
+    if (!fields(value, ['ok', 'config', 'items']) || value.ok !== true || !object(value.items)) throw recovery();
+    const config = value.config, mine = accumulationOf(d.config);
+    if (config !== null && (!fields(config, ['reward', 'objective', 'measurementBasis', 'tauLearnMs']) || typeof config.reward !== 'string')) throw recovery();
+    const out: Record<string, Record<string, Counter>> = {};
+    for (const [item, byKey] of Object.entries(value.items)) {
+      if (!items.includes(item) || !object(byKey)) throw recovery();
+      for (const [key, c] of Object.entries(byKey)) { keyBound(key); if (!counterValid(c)) throw recovery(); }
+      out[item] = byKey as Record<string, Counter>;
+    }
+    if (config === null) return out;
+    return config.reward === mine.reward && config.objective === mine.objective && config.measurementBasis === mine.measurementBasis
+      && config.tauLearnMs === mine.tauLearnMs ? out : null;
+  }
+
   private async priorsFor(d: Stored): Promise<{ version: number; index: ReturnType<typeof indexPriors> } | null> {
     // Unavailable authority is not an explicit empty prior document. Never
     // publish a prior-free replacement merely because the authority failed.
@@ -1063,12 +1208,14 @@ export class LearnStats {
     if (unit.length) throw new Refusal(409, `statistics prior unit incompatible: ${unit[0]}`);
     for (const row of rev.value.rows) if (row.slot === d.slot) {
       if (!itemName(row.item)) throw capacity();
-      keyBound(row.cell);
+      // P08: a cell may name a pooled module's page level under the bumped grammar.
+      pooledKeyBound(row.cell);
     }
     const index = indexPriors(rev.value, d.slot, d.config.measurementBasis ?? 'served-v1');
     if (d.stats.bounded) for (const [item, keys] of index) {
       if (d.stats.bounded.closed && !Object.hasOwn(d.stats.items, item)) { index.delete(item); continue; }
-      for (const key of keys.keys()) if (depth(key) > d.stats.bounded.depth) keys.delete(key);
+      // P08: a pooled record's cell is not one of this placement's own levels, so its own projection does not cut it.
+      for (const key of keys.keys()) if (!isPooledKey(key) && depth(key) > d.stats.bounded.depth) keys.delete(key);
       if (!keys.size) index.delete(item);
     }
     return { version: rev.revision, index };

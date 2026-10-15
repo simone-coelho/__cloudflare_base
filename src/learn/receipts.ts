@@ -146,6 +146,14 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
  */
 const SIGNIFICANT_DIGITS = 3;
 const shownAs = (x: number): string => (Number.isFinite(x) ? x.toPrecision(SIGNIFICANT_DIGITS) : String(x));
+/**
+ * P08 (decision D1): where the lift was read from a module's ONE pooled record,
+ * the sentence says whose evidence the count is — every page the module is
+ * served on at everyone, this page's own at a page level. Empty for every other
+ * record, so its sentence is the one it has always been.
+ */
+const pooledEvidence = (l: { pooled?: true; level: number }): string => !l.pooled ? ''
+  : l.level === 0 ? ' pooled across every page the module is served on' : ' on this page, in the module\'s one pooled record';
 
 export function contextOf(cell: DecisionRecord['cell']): string {
   const stage = cell.stage && cell.stage !== 'unknown' ? ({ early: 'exploring', mid: 'considering', late: 'deciding' } as Record<string, string>)[cell.stage] ?? cell.stage : 'stage unknown';
@@ -354,7 +362,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       const prior = l.prior ? `, shrunk toward an imported prior of ${l.prior.p} at strength ${l.prior.n} (belief, not observed exposures)` : '';
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}: clamped and less one, the performance term Q is ${r3(b.Q)}.`
-        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}: clamped and less one, the performance term Q is ${r3(b.Q)}, not corrected for position or placement.`);
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}${pooledEvidence(l)}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}: clamped and less one, the performance term Q is ${r3(b.Q)}, not corrected for position or placement.`);
       liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
         n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
@@ -396,7 +404,7 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       // estimate, and nothing was measured for it to be uncorrected of.
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
-        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}, not corrected for position or placement.`);
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}${pooledEvidence(l)}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}, not corrected for position or placement.`);
       liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
         n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
