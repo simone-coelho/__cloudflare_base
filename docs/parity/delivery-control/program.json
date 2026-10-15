@@ -3621,14 +3621,20 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "eb456472fc031a79dd2c6a83bcf32ee23f7e3f5f on rem/spec-parity-c (batch S3 fix round; P12 242d64ba, P34 a3d2bc4d, P11 f1b3f5a4, P08 f01d286f, P15 164a1c7a, P26 eb456472, each ticket files byte-identical at eb456472; harness src/units/_parity.ts byte-identical to S1 and src/units/_parity3.ts byte-identical to 4b82e0de; per-ticket branches are cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "reviewedRevision": "a36d6fe085be43bf1f17d866070531439b05be07 on rem/spec-p08-fix1 (P08 fix round 1 under R-P75, cut from the P08 mechanism head da0c2f5e; 02897063 src/units/P36/LEDGER.unit.test.ts and src/units/P37/LEDGER.unit.test.ts derive today's cell grammar from CELL_GRAMMAR in place of the literal version 2, a36d6fe0 the P36 R-P52 title at the lead's ruling; P08's own file and every harness byte-identical to eb456472; reviewed PASS: unit:P36.CH5 and unit:P37.DV5 HONEST, derived, green at version 3 and 2, RED on a no-vocabulary bump; the gate recorded at eb456472 before it)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P08/fix1/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P08/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P08/fix1/reviewer-spec/logs/c-a-p08.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P08/fix1/reviewer-spec/logs/c-b-p36.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P08/fix1/reviewer-spec/logs/c-b-p37.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P08/fix1/specifier/logs/f-p08-scratch-v2.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-merge-P12.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-retained-U5.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/logs/probe-nc-fan-page-Q3-soft.log",
