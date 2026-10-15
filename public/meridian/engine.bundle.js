@@ -1266,6 +1266,41 @@ function compileSlotConstraints(slot, extended = true) {
 }
 
 // src/reflex/contentCompose.ts
+function wellFormedBands(slot) {
+  const bands = slot.bands;
+  if (!Array.isArray(bands) || bands.length === 0) return null;
+  let next = 1;
+  for (const band of bands) {
+    if (!band || typeof band.weights !== "object" || band.weights === null || !Number.isSafeInteger(band.from) || band.from !== next || !Number.isSafeInteger(band.to) || band.to < band.from) return null;
+    next = band.to + 1;
+  }
+  return next === slot.take + 1 ? bands : null;
+}
+function bandRunsOf(bands, positions) {
+  const runs = [];
+  for (const position of positions) {
+    const band = bands.find((b) => b.from <= position && position <= b.to);
+    if (!band) continue;
+    const last = runs[runs.length - 1];
+    if (last && last.band === band) last.count += 1;
+    else runs.push({ band, count: 1 });
+  }
+  return runs;
+}
+function rankBanded(pool, runs, score, order) {
+  const out = [];
+  let left = [...pool], tail = [];
+  for (const run of runs) {
+    if (!left.length) break;
+    const ranked = left.map((p) => score(p, run.band)).sort(order);
+    const taken = ranked.slice(0, run.count);
+    out.push(...taken);
+    tail = ranked.slice(run.count);
+    const ids = new Set(taken.map((s) => s.p.id));
+    left = left.filter((p) => !ids.has(p.id));
+  }
+  return [...out, ...tail];
+}
 var positionPinNote = (position) => `pinned at position ${position} \u2014 the merchandiser\u2019s module at exactly this position; ranking and exploration never ran for this piece`;
 var offLimitsNote = (position) => `off-limits module held at its baseline position ${position} \u2014 no term and no exploration moved it; ranking never ran for this piece`;
 var CONFIGURED_ORDER_NOTE = "configured order position \u2014 the merchandiser\u2019s order for this context placed it; the ranking did not";
@@ -1415,6 +1450,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
   const ordered = [];
   const placements = [];
   const orderBaseline = /* @__PURE__ */ new Set();
+  const bandPlacements = [];
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
     const prefix = prefixes.get(slot);
@@ -1482,11 +1518,12 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     const rankBase = (pool) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length]));
     const catalogueBase = blended ? rankBase(eligible) : null;
     const view = slot.affinity ?? affinity;
-    const scoreOf = (p, R) => {
+    const scoreOf = (p, R, band) => {
       const drivers = [];
+      const weights = band ? band.weights : slot.weights;
       let score = 0;
       for (const [dim2, values] of Object.entries(p.tags)) {
-        const w = slot.weights[dim2] ?? 0;
+        const w = weights[dim2] ?? 0;
         if (!w) continue;
         for (const v of values) {
           const a = view.dims[dim2]?.[v] ?? 0;
@@ -1500,12 +1537,22 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         drivers.push("completes", slot.prefer.label, 1, slot.prefer.bonus);
       }
       if (adjust) {
-        const adjusted = R === void 0 ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R });
+        const adjusted = band ? adjust(p, slot.slot, score, R === void 0 ? void 0 : { R }, band) : R === void 0 ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R });
         if (Number.isFinite(adjusted) && (adjusted >= 0 || R !== void 0)) score = adjusted;
       }
-      return { p, score, drivers };
+      return { p, score, drivers, band };
     };
-    const scored = rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id))).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
+    const byScoreThenCatalogue = (x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
+    const rankUnbanded = () => rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id))).sort(byScoreThenCatalogue);
+    const fillPositions = [];
+    for (let position = prefixLength + 1; position <= slot.take && fillPositions.length < free; position++) {
+      if (!pinsAt.has(position) && !held.has(position)) fillPositions.push(position);
+    }
+    const bands = wellFormedBands(slot);
+    const exactOrder = Boolean(slot.order) && !blended;
+    const explorable = Boolean(explore) && rankable.length > 1 && (!fixedSlot || free > 0);
+    const runs = bands && fillPositions.length && (!exactOrder || explorable) ? bandRunsOf(bands, fillPositions) : null;
+    let scored = runs?.length ? rankBanded(rankable, runs, (p, band) => scoreOf(p, catalogueBase?.get(p.id), band), byScoreThenCatalogue) : rankUnbanded();
     let byScore = null;
     let promoted = null;
     let picked = false;
@@ -1524,6 +1571,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         }
       }
     }
+    if (runs?.length && exactOrder && !picked) scored = rankUnbanded();
     const limit = Math.max(0, candidateLimit);
     const support = limit > 0 && byScore && promoted !== null ? [scored[0], ...byScore.slice(0, limit).filter((s) => s.p.id !== promoted)] : scored.slice(0, limit);
     candidates[slot.slot] = support.map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
@@ -1548,6 +1596,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       const cold = s.score <= 0;
       used.add(s.p.id);
+      if (s.band) bandPlacements.push({ slot: slot.slot, contentId: s.p.id, from: s.band.from, to: s.band.to });
       const decision = {
         contentId: s.p.id,
         customerContentId: s.p.customerContentId,
@@ -1574,7 +1623,9 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
           }
         }
         const base = rankBase(listed), at = new Map(listed.map((p, i) => [p.id, i]));
-        const ranked = (marks ? listed.filter((p) => !marks.has(p.id)) : listed).map((p) => scoreOf(p, base.get(p.id))).sort((x, y) => y.score - x.score || at.get(x.p.id) - at.get(y.p.id));
+        const rankedPool = marks ? listed.filter((p) => !marks.has(p.id)) : listed;
+        const byScoreThenOrder = (x, y) => y.score - x.score || at.get(x.p.id) - at.get(y.p.id);
+        const ranked = runs?.length ? rankBanded(rankedPool, runs, (p, band) => scoreOf(p, base.get(p.id), band), byScoreThenOrder) : rankedPool.map((p) => scoreOf(p, base.get(p.id))).sort(byScoreThenOrder);
         candidates[slot.slot] = ranked.slice(0, limit).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
         for (const s of ranked.slice(0, capacity)) serve(s, void 0, BLENDED_ORDER_NOTE);
       } else {
@@ -1652,7 +1703,8 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     ...ordered.length ? { ordered } : {},
     ...placements.length ? { moduleRules: placements } : {},
     ...ruled.size ? { ruled: pageOrder(ruled) } : {},
-    ...orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}
+    ...orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {},
+    ...bandPlacements.length ? { bands: bandPlacements } : {}
   };
 }
 function composeContent(pieces, affinity, slots) {

@@ -120,6 +120,81 @@ export interface ContentSlotSpec {
    * pin policy only.
    */
   offLimitsPieceIds?: readonly string[];
+  /**
+   * P15 (decision D1): position bands. Each band covers the positions `from` to
+   * `to` of this slot, counted from 1, and its `weights` replace the slot's
+   * `weights` for those positions. Positions are filled in order: a fixed
+   * position (a prefix pin, a position pin, a held off-limits module) stays its
+   * rule's, and every other position is filled from the candidates still
+   * eligible (after the slot's exclusions, eligibility, the page's reservations
+   * and every module already served on the page) ranked with the weights of the
+   * band that covers it, `adjust` handed the band so that every other term is
+   * computed as without it. That BANDED RANKING is the slot's ranking:
+   * exploration and diversity act on it and never re-rank it, and a configured
+   * `order` served exactly is ranked without the bands. Read only when the bands
+   * are contiguous over positions 1 to `take`; absent (or malformed), the slot
+   * decides exactly as before.
+   */
+  bands?: ReadonlyArray<SlotBand>;
+}
+
+/** P15: a position band as the composer ranks with it: the positions it covers, counted from 1, and its weights. */
+export interface SlotBand { from: number; to: number; weights: Readonly<Record<string, number>> }
+
+/** P15: a module the composer ranked in a band of its slot, and the positions that band covers. */
+export interface BandPlacement { slot: string; contentId: string; from: number; to: number }
+
+/**
+ * P15: a slot's bands when they are well formed — listed from position 1, each
+ * starting where the one before it ends, the last ending at the take — else
+ * null, so a slot whose bands could not be published decides exactly as one
+ * without them.
+ */
+function wellFormedBands(slot: ContentSlotSpec): readonly SlotBand[] | null {
+  const bands = slot.bands;
+  if (!Array.isArray(bands) || bands.length === 0) return null;
+  let next = 1;
+  for (const band of bands) {
+    if (!band || typeof band.weights !== 'object' || band.weights === null || !Number.isSafeInteger(band.from) || band.from !== next
+      || !Number.isSafeInteger(band.to) || band.to < band.from) return null;
+    next = band.to + 1;
+  }
+  return next === slot.take + 1 ? bands : null;
+}
+
+/** P15: the positions a ranking fills, grouped into runs of consecutive positions that one band covers. */
+function bandRunsOf(bands: readonly SlotBand[], positions: readonly number[]): Array<{ band: SlotBand; count: number }> {
+  const runs: Array<{ band: SlotBand; count: number }> = [];
+  for (const position of positions) {
+    const band = bands.find((b) => b.from <= position && position <= b.to);
+    if (!band) continue;
+    const last = runs[runs.length - 1];
+    if (last && last.band === band) last.count += 1; else runs.push({ band, count: 1 });
+  }
+  return runs;
+}
+
+/**
+ * P15: the banded ranking of a pool. Run by run, in position order, the
+ * modules still in the pool are ranked with the run's band and the first of
+ * them fill its positions; what is left after the last run follows in that
+ * run's order. Each module is scored only in the runs it was still in the pool
+ * for, so a ranked module's last scoring is the band it was ranked in.
+ */
+function rankBanded<S extends { p: ContentPieceLike }>(pool: readonly ContentPieceLike[], runs: ReadonlyArray<{ band: SlotBand; count: number }>,
+  score: (p: ContentPieceLike, band: SlotBand) => S, order: (x: S, y: S) => number): S[] {
+  const out: S[] = [];
+  let left = [...pool], tail: S[] = [];
+  for (const run of runs) {
+    if (!left.length) break;
+    const ranked = left.map((p) => score(p, run.band)).sort(order);
+    const taken = ranked.slice(0, run.count);
+    out.push(...taken);
+    tail = ranked.slice(run.count);
+    const ids = new Set(taken.map((s) => s.p.id));
+    left = left.filter((p) => !ids.has(p.id));
+  }
+  return [...out, ...tail];
 }
 
 /** P04: what a module pinned at a position says on its explain. */
@@ -211,6 +286,8 @@ export interface ComposeContentResult {
   ruled?: string[];
   /** P04: the slots whose `order` supplied the baseline of an off-limits mark that decided something, in page order. */
   orderBaseline?: string[];
+  /** P15: each served module a band of its slot ranked, with the positions that band covers. Absent when no band ranked one. */
+  bands?: BandPlacement[];
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -224,9 +301,11 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
  * before ranking. The learning layer uses it to multiply by lift^γ; the base
  * score is handed back so the receipt can show both. On a slot that opted into
  * the layout blend (`blend`, P28) the composer also hands it the candidate's
- * rank base `R`, and the returned score is the blend's.
+ * rank base `R`, and the returned score is the blend's. On a slot with position
+ * bands (P15) it also hands the band the candidate is being ranked in, whose
+ * weights replace the slot's wherever the adjustment reads them.
  */
-export type ScoreAdjust = (piece: ContentPieceLike, slot: string, baseScore: number, rank?: { R: number }) => number;
+export type ScoreAdjust = (piece: ContentPieceLike, slot: string, baseScore: number, rank?: { R: number }, band?: SlotBand) => number;
 
 /**
  * An optional exploration hook, given the slot's ranked candidates after
@@ -377,6 +456,8 @@ export function composeContentDetailed(
   // P04: what the slots' position pins and off-limits marks placed, and the slots whose order supplied a mark's baseline.
   const placements: ModulePlacement[] = [];
   const orderBaseline = new Set<ContentSlotSpec>();
+  // P15: the served modules a band ranked, with the positions their band covers.
+  const bandPlacements: BandPlacement[] = [];
 
   for (const slot of slots) {
     if (offLimits.has(slot)) continue;
@@ -451,13 +532,15 @@ export function composeContentDetailed(
     const rankBase = (pool: readonly ContentPieceLike[]) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length] as const));
     const catalogueBase = blended ? rankBase(eligible) : null;
     const view = slot.affinity ?? affinity;
-    const scoreOf = (p: ContentPieceLike, R?: number) => {
+    // P15: on a position band, the band's weights in place of the slot's; absent, the slot's own, exactly as before.
+    const scoreOf = (p: ContentPieceLike, R?: number, band?: SlotBand) => {
       // Capture values now: prefer/adjust/explore may mutate the source inputs.
       // Only served candidates need driver objects and their presentation order.
       const drivers: Array<string | number> = [];
+      const weights = band ? band.weights : slot.weights;
       let score = 0;
       for (const [dim, values] of Object.entries(p.tags)) {
-        const w = slot.weights[dim] ?? 0; if (!w) continue;
+        const w = weights[dim] ?? 0; if (!w) continue;
         for (const v of values) {
           const a = view.dims[dim]?.[v] ?? 0; if (a <= 0) continue;
           score += a * w; drivers.push(dim, v, a, w);
@@ -468,11 +551,30 @@ export function composeContentDetailed(
         drivers.push('completes', slot.prefer.label, 1, slot.prefer.bonus);
       }
       // The blend's score is taken whatever its sign: a learned lift below 1 subtracts.
-      if (adjust) { const adjusted = R === undefined ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R }); if (Number.isFinite(adjusted) && (adjusted >= 0 || R !== undefined)) score = adjusted; }
-      return { p, score, drivers };
+      if (adjust) {
+        const adjusted = band ? adjust(p, slot.slot, score, R === undefined ? undefined : { R }, band)
+          : R === undefined ? adjust(p, slot.slot, score) : adjust(p, slot.slot, score, { R });
+        if (Number.isFinite(adjusted) && (adjusted >= 0 || R !== undefined)) score = adjusted;
+      }
+      return { p, score, drivers, band };
     };
-    const scored = rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id)))
-      .sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
+    const byScoreThenCatalogue = (x: { p: ContentPieceLike; score: number }, y: { p: ContentPieceLike; score: number }) =>
+      y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
+    const rankUnbanded = () => rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id))).sort(byScoreThenCatalogue);
+    // P15 (decision D1): the positions the ranking fills — the take after the
+    // prefix, less the positions a pin or a held module fixes — each ranked with
+    // the band that covers it. A configured order served exactly is ranked
+    // without its bands (R-P34), so they rank it only where exploration could
+    // pick instead and the slot would then serve its own, banded, decision.
+    const fillPositions: number[] = [];
+    for (let position = prefixLength + 1; position <= slot.take && fillPositions.length < free; position++) {
+      if (!pinsAt.has(position) && !held.has(position)) fillPositions.push(position);
+    }
+    const bands = wellFormedBands(slot);
+    const exactOrder = Boolean(slot.order) && !blended;
+    const explorable = Boolean(explore) && rankable.length > 1 && (!fixedSlot || free > 0);
+    const runs = bands && fillPositions.length && (!exactOrder || explorable) ? bandRunsOf(bands, fillPositions) : null;
+    let scored = runs?.length ? rankBanded(rankable, runs, (p, band) => scoreOf(p, catalogueBase?.get(p.id), band), byScoreThenCatalogue) : rankUnbanded();
 
     // W28.C1.01(b) (F23 §4.2): where an exploration moved ONE piece to the front,
     // the support the ledger records is the top candidates BY SCORE — taken
@@ -496,6 +598,10 @@ export function composeContentDetailed(
         if (i > 0) { byScore = scored.slice(); promoted = pick.first; scored.unshift(...scored.splice(i, 1)); }
       }
     }
+    // P15 (R-P34): exploration picked nothing, so the slot serves its configured
+    // order exactly, and an order is ranked without the bands: the slot is scored
+    // again as without them, last, so every score and term it records is that one.
+    if (runs?.length && exactOrder && !picked) scored = rankUnbanded();
 
     const limit = Math.max(0, candidateLimit);
     const support = limit > 0 && byScore && promoted !== null
@@ -528,6 +634,8 @@ export function composeContentDetailed(
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       const cold = s.score <= 0;
       used.add(s.p.id);
+      // P15: a module a band ranked, and the positions that band covers.
+      if (s.band) bandPlacements.push({ slot: slot.slot, contentId: s.p.id, from: s.band.from, to: s.band.to });
       const decision: ContentDecision = { contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
         slot: slot.slot, order: rankedOut ? -1 : order++, score: round3(s.score),
         strategy: cold ? 'default' : 'affinity',
@@ -557,7 +665,11 @@ export function composeContentDetailed(
           if (p && !used.has(p.id) && !seen.has(p.id)) { seen.add(p.id); listed.push(p); }
         }
         const base = rankBase(listed), at = new Map(listed.map((p, i) => [p.id, i] as const));
-        const ranked = (marks ? listed.filter((p) => !marks.has(p.id)) : listed).map((p) => scoreOf(p, base.get(p.id))).sort((x, y) => y.score - x.score || at.get(x.p.id)! - at.get(y.p.id)!);
+        const rankedPool = marks ? listed.filter((p) => !marks.has(p.id)) : listed;
+        const byScoreThenOrder = (x: { p: ContentPieceLike; score: number }, y: { p: ContentPieceLike; score: number }) => y.score - x.score || at.get(x.p.id)! - at.get(y.p.id)!;
+        // P15 (R-P34): the blend ranks the listed modules, so on a banded slot each band's positions rank them with its weights (B only).
+        const ranked = runs?.length ? rankBanded(rankedPool, runs, (p, band) => scoreOf(p, base.get(p.id), band), byScoreThenOrder)
+          : rankedPool.map((p) => scoreOf(p, base.get(p.id))).sort(byScoreThenOrder);
         candidates[slot.slot] = ranked.slice(0, limit).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
         for (const s of ranked.slice(0, capacity)) serve(s, undefined, BLENDED_ORDER_NOTE);
       } else {
@@ -620,7 +732,7 @@ export function composeContentDetailed(
   const pageOrder = (set: ReadonlySet<ContentSlotSpec>) => slots.filter((slot) => set.has(slot)).map((slot) => slot.slot);
   return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}), ...(ordered.length ? { ordered } : {}),
     ...(placements.length ? { moduleRules: placements } : {}), ...(ruled.size ? { ruled: pageOrder(ruled) } : {}),
-    ...(orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}) };
+    ...(orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}), ...(bandPlacements.length ? { bands: bandPlacements } : {}) };
 }
 
 /** The delivery contract alone: one decision per slot position, in page order. */
