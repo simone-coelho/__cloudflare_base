@@ -599,11 +599,12 @@ export function validateBands(candidate: unknown, take: number): ValidationResul
   const errors: string[] = [];
   if (candidate.length > BANDS_MAX) errors.push(`: at most ${BANDS_MAX} bands`);
   const bands: PositionBand[] = [];
-  // The position the next band must start at, and the band that ended just before it.
-  let next = 1, previous: { k: number; from: number; to: number } | null = null, covered = true;
+  // Each band's positions where they are well formed, by its place in the list.
+  const spans: Array<{ k: number; from: number; to: number }> = [];
+  let allSpans = true;
   Array.from(candidate).forEach((raw: unknown, k) => {
     const at = `[${k}]`;
-    if (!isRecord(raw)) { errors.push(`${at}: a band is { from, to, weights } and nothing else`); covered = false; return; }
+    if (!isRecord(raw)) { errors.push(`${at}: a band is { from, to, weights } and nothing else`); allSpans = false; return; }
     const before = errors.length;
     const other = Object.keys(raw).filter(key => !(BAND_KEYS as readonly string[]).includes(key));
     if (other.length) errors.push(`${at}: a band overrides only the slot's dimension weights, so it carries { from, to, weights } and nothing else; ${other.map(key => quoted(key)).join(', ')} ${other.length === 1 ? 'is' : 'are'} not a band setting`);
@@ -613,19 +614,11 @@ export function validateBands(candidate: unknown, take: number): ValidationResul
     if (!wholePosition(to) || to > take) { errors.push(`${at}.to: ${quoted(to)} is not a position of the slot; a band ends at a whole position from 1 to ${take} (its take), and the bands cover positions 1 to take`); span = false; }
     else if (wholePosition(from) && to < from) { errors.push(`${at}.to: the band ends at position ${to}, before it starts at position ${from}`); span = false; }
     if (span) {
-      const f = from as number, t = to as number;
-      if (f < next) {
-        errors.push(previous
-          ? `${at}: ${positionsWords(f, t)} overlap bands[${previous.k}] (${positionsWords(previous.from, previous.to)}); the bands are contiguous and do not overlap, listed from position 1, each starting where the one before it ends`
-          : `${at}: ${positionsWords(f, t)} overlap an earlier band; the bands are contiguous and do not overlap, listed from position 1, each starting where the one before it ends`);
-      } else if (f > next) {
-        errors.push(previous
-          ? `${at}: starts at position ${f}, so ${positionsWords(next, f - 1)} ${f - 1 === next ? 'lies' : 'lie'} in no band (bands[${previous.k}] ends at position ${previous.to}); the bands are contiguous, with no gap, and cover positions 1 to take`
-          : `${at}: the first band starts at position ${f}, so ${positionsWords(1, f - 1)} ${f === 2 ? 'lies' : 'lie'} in no band; the bands start at position 1 and cover positions 1 to take`);
-      }
-      next = Math.max(next, t + 1);
-      previous = { k, from: f, to: t };
-    } else covered = false;
+      // R-P76 (3): the list is in position order, each band listed after the bands of earlier positions.
+      const previous = spans[spans.length - 1];
+      if (previous && (from as number) < previous.from) errors.push(`${at}: covers ${positionsWords(from as number, to as number)} but is listed after bands[${previous.k}] (${positionsWords(previous.from, previous.to)}); the bands are listed in position order, from position 1, each starting where the one before it ends`);
+      spans.push({ k, from: from as number, to: to as number });
+    } else allSpans = false;
     const weights: Record<string, number> = {};
     if (!isRecord(raw.weights)) errors.push(`${at}.weights: required object of dimension → number 0..1, the weights this band's positions are ranked with in place of the slot's`);
     else for (const [dim, w] of Object.entries(raw.weights)) {
@@ -635,7 +628,24 @@ export function validateBands(candidate: unknown, take: number): ValidationResul
     // Keys in sorted order, as every member a replay reads is built.
     if (errors.length === before) bands.push({ from: from as number, to: to as number, weights });
   });
-  if (covered && next <= take) errors.push(`: the bands end at position ${next - 1}, short of the slot's take ${take}; together they cover positions 1 to ${take}, contiguous, so ${positionsWords(next, take)} ${next === take ? 'lies' : 'lie'} in no band`);
+  // The positions the bands cover, read in position order whatever the order of
+  // the list: an overlap is named wherever two bands share a position; a gap, a
+  // late first band and a short last band only when every band's positions are
+  // known, since a band refused above might have covered them.
+  const ordered = [...spans].sort((a, b) => a.from - b.from || a.k - b.k);
+  let reach: { k: number; to: number } | null = null;
+  for (const band of ordered) {
+    if (!reach) {
+      if (allSpans && band.from > 1) errors.push(`[${band.k}]: the earliest band starts at position ${band.from}, so ${positionsWords(1, band.from - 1)} ${band.from === 2 ? 'lies' : 'lie'} in no band; the bands start at position 1 and cover positions 1 to take`);
+    } else if (band.from <= reach.to) {
+      const other = spans.find(s => s.k === reach!.k)!;
+      errors.push(`[${band.k}]: ${positionsWords(band.from, band.to)} overlap bands[${other.k}] (${positionsWords(other.from, other.to)}); the bands are contiguous and do not overlap`);
+    } else if (allSpans && band.from > reach.to + 1) {
+      errors.push(`[${band.k}]: starts at position ${band.from}, so ${positionsWords(reach.to + 1, band.from - 1)} ${band.from - 1 === reach.to + 1 ? 'lies' : 'lie'} in no band (bands[${reach.k}] ends at position ${reach.to}); the bands are contiguous, with no gap, and cover positions 1 to take`);
+    }
+    if (!reach || band.to > reach.to) reach = { k: band.k, to: band.to };
+  }
+  if (allSpans && reach && reach.to < take) errors.push(`: the bands end at position ${reach.to}, short of the slot's take ${take}; together they cover positions 1 to ${take}, contiguous, so ${positionsWords(reach.to + 1, take)} ${reach.to + 1 === take ? 'lies' : 'lie'} in no band`);
   return errors.length ? { ok: false, errors } : { ok: true, value: bands };
 }
 
