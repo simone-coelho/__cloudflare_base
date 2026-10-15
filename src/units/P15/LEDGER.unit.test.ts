@@ -38,6 +38,11 @@
 //     stays eligible for the later positions and is ranked there under their
 //     bands' weights; exploration is applied to the banded result as before
 //     (R-P34); a slot without bands keeps today's diversity (R-P76).
+//     A draw that moves nothing (an exploration pick that lands on the banded
+//     ranking's leader) leaves every position filled as with no draw, the
+//     leader recorded explored; only a pick that moved a module is served
+//     first and the rest in today's take loop over the banded ranking, the
+//     diversity rule acting on that order as on a slot without bands (R-P77).
 //   EVERY READ OF THE WEIGHTS (M2). The band's weights replace the slot's
 //     `weights` wherever the composition reads them for a position of the band:
 //     the tag sum Σ a·w, and the slot weight a seed rule's contribution is
@@ -78,6 +83,7 @@ import { describe, expect, it } from 'vitest';
 
 import { validateSlotCatalog } from '@/content/kinds';
 import type { Cell, DecisionRecord } from '@/content/types';
+import { bucketOf, hourKeyOf } from '@/learn/explore';
 
 import {
   expectPublished, HOSTS, layoutSlot, LAYOUT, learnDocument, M, MODULES, mount, PAID_SOCIAL_ENTRY, PAGE_VIEW, pageInstanceOf,
@@ -216,6 +222,66 @@ const DIV_BANDED: Array<[string, number, { from: number; to: number }]> = [
 const DIV_UNBANDED: Array<[string, number]> = [[M.reco2, 0.8 * A + 0.5 * A], [M.grid, 1 * A], [M.reco1, 0.5 * 0.8], [M.ugc, 0], [M.editorial, 0.8 * A]];
 
 // ---------------------------------------------------------------------------
+// M1's exploration legs (R-P77): the diversity world above (DIV_SLOT with
+// DIV_BANDS, the shopper of warmShopper) under a rotation draw. The learn dials:
+// rotation, share 1, floor 50, gamma 0, so the learned term is lift^0 = 1 and
+// every score is the one computed above. Rotation draws the module under the
+// floor with the fewest observations (W28; read only to build the fixture). The
+// fixture leaves exactly ONE module under the floor: the four others are fed 100
+// exposures and 20 credits each in a cell that shares only everyone with the
+// shopper (M2_ELSEWHERE), so they hold 100 observations at everyone, over the
+// floor; the one left unfed holds 0. Every shopper is drawn with a decision
+// bucket below 1.000 (visitor, slot, hour; R-P62 (4)), so a share of 1 holds
+// every decision.
+//   LEADER DRAW: reco.2 left unfed, so the draw is reco.2. reco.2 leads the
+//     banded ranking (band 1, position 1: 0.78125 over editorial.1 0.625,
+//     reco.1 0.5, grid.1 and ugc.1 0) and the unbanded one (0.8125 over grid.1
+//     0.625, editorial.1 0.5, reco.1 0.4, ugc.1 0): the draw lands on the leader
+//     of both and moves nothing.
+//     → the banded slot serves DIV_BANDED exactly, its order with no draw:
+//       reco.2 0.78125 {1,2}, reco.1 0.5 {1,2} (editorial.1 yields at position 2
+//       to band 1's next module under band 1's weights), grid.1 0.625 {3,5},
+//       ugc.1 0 {3,5}, editorial.1 0 {3,5} relaxed; reco.2 recorded explored
+//       (mode rotation) at position 1 and no other position explored.
+//     → CONTROL, without bands: DIV_UNBANDED exactly, its order with no draw,
+//       reco.2 explored at position 1 the same way (R-P7).
+//     Today's loop over the precomputed banded ranking (the order R-P76
+//     rejected) serves instead reco.2, grid.1 0.625 {3,5} at position 2, reco.1
+//     0 {3,5}, ugc.1, editorial.1 0.625 {1,2} relaxed.
+//   MOVED PICK (MD3, R-P34): editorial.1 left unfed, so the draw is editorial.1.
+//     The banded ranking (the banded result before the diversity rule, run by
+//     run as RANKING fills positions):
+//       band 1 ranks the five; positions 1–2 take reco.2 (line 1 × a +
+//         occasion 0.25 × a = 0.78125) and editorial.1 (line 1 × a = 0.625);
+//       band 2 ranks what is left; positions 3–5 take grid.1 (category 1 × a
+//         = 0.625), reco.1 (0: band 2 weights no line, so the seed adds 0) and
+//         ugc.1 (0; catalogue order breaks the tie).
+//     editorial.1 is second, so the draw moves it: editorial.1, then reco.2,
+//     grid.1, reco.1, ugc.1, and today's take loop with the diversity rule (line,
+//     at most 1) acts on that order as on a slot without bands:
+//       position 1 editorial.1 (line Tabby, 1 of the 1 allowed), explored;
+//       reco.2 (Tabby) yields; position 2 grid.1 (no line), naming reco.2;
+//       position 3 reco.1 (Willow); position 4 ugc.1 (no line);
+//       position 5 reco.2, the only module left, over the limit (relaxed).
+//     Each module keeps the score and the band of the run that ranked it:
+//     nothing is re-ranked per position.
+//     A fill that also ran after a moved pick would serve the per-position order
+//     DIV_BANDED (reco.2, reco.1, grid.1, ugc.1, editorial.1) and record no
+//     position explored.
+// ---------------------------------------------------------------------------
+const ROTATION_LEARN = learnDocument({ [LAYOUT]: { measurementBasis: 'rendered-v1', reward: 'click', gamma: 0, exploration: { mode: 'rotation', share: 1, floor: 50 } } }, { stats: M2_STATS });
+/** The modules the slot ranks in the diversity world; every one but the module left under the floor is fed. */
+const DIV_ELIGIBLE = [M.grid, M.reco1, M.reco2, M.editorial, M.ugc];
+type Yield = { skipped: string[]; relaxed: boolean } | null;
+/** Position by position under the moved pick: the module, its score and band from the run that ranked it, and the diversity rule's note on the position. */
+const DIV_MOVED: Array<[string, number, { from: number; to: number }, Yield]> = [
+  [M.editorial, 1 * A, B1, null], [M.grid, 1 * A, B2, { skipped: [M.reco2], relaxed: false }], [M.reco1, 0 + 0.5 * 0, B2, null], [M.ugc, 0, B2, null],
+  [M.reco2, 1 * A + 0.25 * A, B1, { skipped: [], relaxed: true }]];
+/** The positions (from 1) a stored decision records as explored, with the module and the exploration's mode. */
+const exploredIn = (records: DecisionRecord[]) => records.filter(r => r.explored).map(r => [r.position + 1, r.item_id, r.explain.exploration?.mode ?? null]);
+const yieldOf = (r: DecisionRecord): Yield => (r.explain.diversity ? { skipped: r.explain.diversity.skipped, relaxed: r.explain.diversity.relaxed } : null);
+
+// ---------------------------------------------------------------------------
 // M4's X1 leg (R-P76): a merchandised module that the first band's run scored
 // on a positive base and the second band ranked at a base of 0.
 // Bands: position 1 (line 1, occasion 1), positions 2–5 (category 1); the slot's
@@ -269,6 +335,40 @@ async function warmShopper(m: Mounted) {
   for (const view of TABBY_VIEWS.slice(0, 3)) expect((await s.action(view)).status, `${m.host}: PRECONDITION — the shopper's view is accepted`).toBe(200);
   return s;
 }
+/** R-P77: the diversity world's slot under the rotation dials, every eligible module but `underFloor` fed to 100 observations, the snapshot published. */
+async function rotationWorld(host: Host, slot: Record<string, unknown>, underFloor: string): Promise<Mounted> {
+  const m = await mount(host, { pieces: MODULES, slots: slotsDoc([modulesSlot(slot), recentSlot()]), learn: ROTATION_LEARN });
+  expectPublished(m, 'P15.M1 (R-P77) — the slot and the learn document with the rotation dials publish');
+  for (const item of DIV_ELIGIBLE.filter(id => id !== underFloor)) {
+    await feedStats(m, { slot: LAYOUT, item, cell: M2_ELSEWHERE, exposures: 100, credits: 20, config: { reward: 'click', stats: M2_STATS, objective: 'unit', measurementBasis: 'rendered-v1' } });
+  }
+  await publishStats(m);
+  return m;
+}
+/** R-P62 (4): a shopper whose decision bucket (visitor, slot, hour) lies below 1.000 this hour and the next, so a share of 1 holds; then warmShopper's arrival and views. */
+async function warmInsideShare(m: Mounted) {
+  const inside = (subject: string, at: number) => Math.round(bucketOf(subject, LAYOUT, hourKeyOf(at)) * 1000) / 1000 < 1;
+  for (let draw = 0; draw < 20; draw++) {
+    const s = await shopperOn(m), now = Date.now();
+    if (!inside(s.subject, now) || !inside(s.subject, now + 3_600_000)) continue;
+    await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY);
+    for (const view of TABBY_VIEWS.slice(0, 3)) expect((await s.action(view)).status, `${m.host}: PRECONDITION — the shopper's view is accepted`).toBe(200);
+    return s;
+  }
+  return expect.unreachable(`${m.host}: PRECONDITION — none of twenty shoppers drawn has a bucket below 1.000`);
+}
+/** R-P77: one decision of the slot, every position acknowledged and its record read back from the ledger, in position order. */
+async function rotationDecision(m: Mounted, label: string) {
+  const s = await warmInsideShare(m);
+  const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf(label) });
+  expect(page.status, JSON.stringify(page.body).slice(0, 300)).toBe(200);
+  const layout = page.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
+  for (const d of layout) expect((await s.ack(page, d)).status, `${m.host}: PRECONDITION — ${d.contentId} acknowledged`).toBe(200);
+  await m.drainLedger();
+  const records = storedDecisions(m, s.subject).filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+  expect([...new Set(records.map(r => r.cell.channel))], `${m.host}: PRECONDITION — the shopper arrived from paid social, so the seed rule fires`).toEqual(['paid_social']);
+  return { page, layout, records };
+}
 
 // ===========================================================================
 // unit:P15.M1 — two bands, one de-duplicated result
@@ -312,6 +412,49 @@ describe('unit:P15.M1', () => {
       const today = await (await warmShopper(await world(host, slotsDoc([modulesSlot(DIV_SLOT), recentSlot()])))).snapshot('pdp', { pageInstance: pageInstanceOf('p15-m1-diversity-control') });
       expect(today.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order).map(d => [d.contentId, scoreOf(d)]),
         `${host}: CONTROL — without bands: reco.2, grid.1, editorial.1 yields to reco.1, ugc.1, editorial.1 over the limit`).toEqual(DIV_UNBANDED.map(([id, score]) => [id, r2(score)]));
+    });
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P77 — a rotation draw that lands on the banded ranking's leader moves nothing, so the slot serves exactly the per-position order it serves with no draw, the leader recorded explored with its mode and each record naming the band its position was ranked in; CONTROL: the same slot without bands under the same leader draw serves exactly its order with no draw`, async () => {
+      const { page, layout, records } = await rotationDecision(await rotationWorld(host, { ...DIV_SLOT, bands: DIV_BANDS }, M.reco2), 'p15-m1-leader-draw');
+      expect.soft(exploredIn(records), `${host}: P15.M1 (R-P77) — the rotation drew reco.2, the only module under the floor and the banded ranking's leader: recorded explored (mode rotation) at position 1, no other position explored`)
+        .toEqual([[1, M.reco2, 'rotation']]);
+      expect.soft(layout.map(d => d.contentId), `${host}: P15.M1 (R-P77) — a draw on the leader moves nothing: editorial.1 yields at position 2 and band 1's next module under band 1's weights, reco.1 (0.5), takes it as with no draw, not band 2's grid.1 from today's loop over the banded ranking; positions 3–5 by band 2, editorial.1 among them`)
+        .toEqual(DIV_BANDED.map(([id]) => id));
+      expect.soft(layout.map(d => [d.contentId, scoreOf(d)]), `${host}: P15.M1 (R-P77) — under the leader draw each module is scored under the weights of the band covering the position it fills, as with no draw`)
+        .toEqual(DIV_BANDED.map(([id, score]) => [id, r2(score)]));
+      expect.soft(records.map(r => [r.item_id, (r.explain as unknown as { band?: unknown }).band ?? null]), `${host}: P15.M1 (R-P77) — under the leader draw each record names the band its position was ranked in, as with no draw`)
+        .toEqual(DIV_BANDED.map(([id, , band]) => [id, band]));
+      const ids = page.decisions.map(d => d.contentId);
+      expect(ids.length, `${host}: P15.M1 — no module twice on the page`).toBe(new Set(ids).size);
+
+      // CONTROL (R-P7): the same slot without bands under the same draw, which lands on its own leader too.
+      const today = await rotationDecision(await rotationWorld(host, DIV_SLOT, M.reco2), 'p15-m1-leader-draw-control');
+      expect.soft(exploredIn(today.records), `${host}: CONTROL — without bands the draw is reco.2 again, the slot's own leader (0.8125): recorded explored (mode rotation) at position 1`)
+        .toEqual([[1, M.reco2, 'rotation']]);
+      expect(today.layout.map(d => [d.contentId, scoreOf(d)]), `${host}: CONTROL — without bands a draw on the leader serves exactly the order with no draw: reco.2, grid.1, editorial.1 yields to reco.1, ugc.1, editorial.1 over the limit`)
+        .toEqual(DIV_UNBANDED.map(([id, score]) => [id, r2(score)]));
+    });
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P77 LOCKED (MD3, R-P34) — a rotation draw that moves a module serves the pick first, recorded explored, and the rest in today's take loop over the banded ranking, the diversity rule acting on that order as on a slot without bands and nothing re-ranked per position; CONTROL: the pick is first and recorded explored, which a fill that also ran after a moved pick would lose`, async () => {
+      const { page, layout, records } = await rotationDecision(await rotationWorld(host, { ...DIV_SLOT, bands: DIV_BANDS }, M.editorial), 'p15-m1-moved-pick');
+      expect.soft(layout.map(d => d.contentId), `${host}: P15.M1 (R-P77, R-P34) — the pick editorial.1 first, then today's take loop over the banded ranking reco.2, grid.1, reco.1, ugc.1: reco.2 yields to grid.1 and is served last, over the limit`)
+        .toEqual(DIV_MOVED.map(([id]) => id));
+      expect.soft(layout.map(d => [d.contentId, scoreOf(d)]), `${host}: P15.M1 (R-P77, R-P34) — each module keeps the score of the band run that ranked it: nothing is re-ranked per position`)
+        .toEqual(DIV_MOVED.map(([id, score]) => [id, r2(score)]));
+      expect.soft(records.map(r => [r.item_id, (r.explain as unknown as { band?: unknown }).band ?? null]), `${host}: P15.M1 (R-P77, R-P34) — each record names the band whose run ranked the module, reco.2 band 1 at position 5`)
+        .toEqual(DIV_MOVED.map(([id, , band]) => [id, band]));
+      expect.soft(records.map(r => [r.item_id, yieldOf(r)]), `${host}: P15.M1 (R-P77, R-P34) — the diversity rule acts on the explored order as on a slot without bands: grid.1 names reco.2 as yielding, reco.2 is served relaxed`)
+        .toEqual(DIV_MOVED.map(([id, , , note]) => [id, note]));
+      const ids = page.decisions.map(d => d.contentId);
+      expect(ids.length, `${host}: P15.M1 — no module twice on the page`).toBe(new Set(ids).size);
+
+      // CONTROL (the lock's teeth): a fill that also ran after a moved pick would serve the per-position order with the pick lost from the records.
+      expect([layout[0]?.contentId ?? null, exploredIn(records)], `${host}: CONTROL — the pick editorial.1 is served first and recorded explored (mode rotation) at position 1; a fill that also ran after a moved pick would serve reco.2, reco.1, grid.1, ugc.1, editorial.1 (the per-position order) and record no position explored`)
+        .toEqual([M.editorial, [[1, M.editorial, 'rotation']]]);
     });
   }
 });
