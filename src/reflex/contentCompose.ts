@@ -586,6 +586,9 @@ export function composeContentDetailed(
     let byScore: typeof scored | null = null;
     let promoted: string | null = null;
     let picked = false;
+    // P15 (R-P77): whether the pick moved a module. A draw that lands on the
+    // ranking's own leader is an exploration (W28.C1.01(a)) but reorders nothing.
+    let moved = false;
     // P04: exploration acts on the ranked positions only, so a slot whose every position is fixed does not explore.
     if (explore && scored.length > 1 && (!fixedSlot || free > 0)) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
@@ -593,9 +596,10 @@ export function composeContentDetailed(
       if (pick?.ranking) {
         const order = new Map(pick.ranking.map((id, i) => [id, i]));
         scored.sort((x, y) => (order.get(x.p.id) ?? 1e9) - (order.get(y.p.id) ?? 1e9));
+        moved = true;
       } else if (pick?.first) {
         const i = scored.findIndex((s) => s.p.id === pick.first);
-        if (i > 0) { byScore = scored.slice(); promoted = pick.first; scored.unshift(...scored.splice(i, 1)); }
+        if (i > 0) { byScore = scored.slice(); promoted = pick.first; scored.unshift(...scored.splice(i, 1)); moved = true; }
       }
     }
     // P15 (R-P34): exploration picked nothing, so the slot serves its configured
@@ -684,16 +688,18 @@ export function composeContentDetailed(
         }
       }
       ordered.push(slot.slot);
-    } else if (rule && runs?.length && !picked) {
+    } else if (rule && runs?.length && !moved) {
       // P15 (R-P76): the diversity rule on a slot with position bands, position
       // by position. Each run of positions one band covers ranks the modules
       // still eligible with that band's weights; each position takes the first
       // of them the rule admits, the ones over the limit before it yielding
       // (named on it), and when every module left is over the limit, the first
       // of them, relaxed. A module that yields stays eligible: the next run
-      // ranks it again under its own band's weights. A decision exploration
-      // picked keeps its order and the rule acts on it as on any ranking
-      // (below): it is never re-ranked by the bands (R-P34).
+      // ranks it again under its own band's weights. So with no exploration
+      // pick, and with a draw on the ranking's own leader, which moves nothing
+      // (R-P77; the leader keeps its explored mark). A decision whose
+      // exploration pick moved a module keeps that order and the rule acts on
+      // it as on any ranking (below): it is never re-ranked by the bands (R-P34).
       const takeNote = blended ? BLENDED_NOTE : undefined;
       let left = [...rankable];
       for (const run of runs) {

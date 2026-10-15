@@ -1556,18 +1556,21 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     let byScore = null;
     let promoted = null;
     let picked = false;
+    let moved = false;
     if (explore && scored.length > 1 && (!fixedSlot || free > 0)) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
       picked = Boolean(pick);
       if (pick?.ranking) {
         const order2 = new Map(pick.ranking.map((id, i) => [id, i]));
         scored.sort((x, y) => (order2.get(x.p.id) ?? 1e9) - (order2.get(y.p.id) ?? 1e9));
+        moved = true;
       } else if (pick?.first) {
         const i = scored.findIndex((s) => s.p.id === pick.first);
         if (i > 0) {
           byScore = scored.slice();
           promoted = pick.first;
           scored.unshift(...scored.splice(i, 1));
+          moved = true;
         }
       }
     }
@@ -1640,7 +1643,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         }
       }
       ordered.push(slot.slot);
-    } else if (rule && runs?.length && !picked) {
+    } else if (rule && runs?.length && !moved) {
       const takeNote = blended ? BLENDED_NOTE : void 0;
       let left = [...rankable];
       for (const run of runs) {
