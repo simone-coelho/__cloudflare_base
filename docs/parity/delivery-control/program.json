@@ -3759,9 +3759,11 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "e01acbbe8c8d15babad91325d071ab334c3876f3 on rem/spec-p15-fix1 (P15 fix round 1 under R-P76, cut from the P15 artifact c0bc5939; one commit adding to src/units/P15/LEDGER.unit.test.ts two header sentences and two legs RED at c0bc5939 on both hosts: the M1 diversity-yield leg, position 2 filled by band 1's next module under band 1's weights, the yielding module ranked under band 2 later, with the unbanded control, and the M4 stale-merchandising leg, a module ranked in a later band at a zero base carrying no merchandising block on its record and no merchandising sentence on its receipt, with the slot-weights control; no existing leg changed, every harness and every other test byte-identical to c0bc5939; reviewed PASS: both legs HONEST, recomputed by hand, satisfiable on one product with the FIX01 and DIV01 scratch probes 16/16, teeth shown by MD1, MD2, MC1, MX1a, MX1b, MC2, no R10 collision; the gate recorded at eb456472 before it)",
+        "reviewedRevision": "5c2103f10e9846fd8d591168cca1fc3b75d5ab1c on rem/spec-p15-fix2 (P15 fix round 2 under R-P77, cut from the fix-round-1 artifact 9de2447b; one commit adding to src/units/P15/LEDGER.unit.test.ts one header sentence and two legs under unit:P15.M1 on both hosts: the leader-draw leg, RED at 9de2447b, a rotation draw landing on the banded ranking's leader serving exactly the no-draw per-position order with the leader recorded explored and the unbanded control, and the MD3 LOCK leg, green at 9de2447b, a moved rotation pick served first and the rest in today's take loop over the banded ranking with nothing re-ranked and its control; no existing leg changed, every harness and every other test byte-identical to 9de2447b; reviewed PASS: both legs HONEST, recomputed by hand, satisfiable with the FIXL scratch remedy 20/20, teeth shown by MD3, LD1, LD2 and LK1, no R10 collision; the gate recorded at e01acbbe before it, and at eb456472 before that)",
         "verdict": "PASS",
         "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/specifier/REPORT.md",
           "/home/simonecoelho/rem/_evidence/parity-step3/S3-fix/reviewer-spec/REPORT.md",
@@ -3769,6 +3771,15 @@
           "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md"
         ],
         "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/reviewer-spec/logs/01-head-p15.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/reviewer-spec/logs/04-FIXL.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/reviewer-spec/logs/04-MD3.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/reviewer-spec/logs/04-LD1.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/reviewer-spec/logs/04-LD2.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/reviewer-spec/logs/04-LK1.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/specifier/logs/b-after-5c2103f1.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/specifier/logs/c-FIXL.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix2/specifier/logs/c-MD3.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/logs/02-head-p15.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/logs/mutants/FIX01.log",
           "/home/simonecoelho/rem/_evidence/parity-step3/P15/fix1/reviewer-spec/logs/05-mutants.log",
