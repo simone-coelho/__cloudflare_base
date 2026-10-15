@@ -1655,6 +1655,43 @@ and `toEvidenceFloor: { item: F − n }` for every item of the snapshot at level
 exploring screen shows the page's evidence floor and each piece's exposures to it. A page without a floor
 carries none of these members, and every answer for it is exactly as before.
 
+### Pooled modules (`pooled`)
+
+A module that appears on more than one page can pool its evidence once, as an explicit, declared policy: the
+catalogue declares it per module, with `"pooled": true` on the piece, published with `PUT /content/catalog`.
+A pooled module accumulates one evidence record across every page and every slot it is served on. Its
+exposures and credits reach each placement's statistics object exactly as before, and every placement that
+serves it publishes that one record in its own snapshot under the module's id, so `GET /v1/{tenant}/lift`
+answers the same record for either placement (`snapshot.items[module]`). In the pooled record the page is a
+ladder level directly after everyone: its keys are `*` (everyone: every page's evidence), then `p=<page>` (that
+page's own evidence), then that page with the ladder's own levels (`p=<page>|c=…`, `p=<page>|c=…|v=…`, and so on
+to the affinity cell), levels 0 to 6. A decision on the module, on any of its pages, reads its lift from that
+record on its own page's ladder, and the finest level reaching `nMin` answers: a page whose own evidence reaches
+it answers at its page levels, and a page whose own evidence does not answers at everyone, where every page's
+evidence is pooled. The record says so: `explain.lift.level_words` names the page level `page` (and `page and
+channel`, `page, channel and visit bucket` and so on below it), `explain.lift.pooled` is `true`, and the
+shopper's receipt says whose evidence the count is. The lift is measured against the rate of the slot that
+reads the record, in that cell, as every lift is; the evidence floor of the decision's page shrinks the estimate
+of whichever level answers, the page level included; below the signal floor and on a context-only layout slot
+the context levels keep the page between everyone and the channel. A pooled decision replays exactly, from the
+archived snapshot that holds the record, and no replay marker is written.
+
+An undeclared module keeps its page-scoped storage exactly as before: its evidence stays with its own
+placement, and a slot name a retained slots document carries on more than one page keeps one statistics object,
+snapshot and archive per page (`slot@page`), never a pooled record. A pooled module served under such a
+retained name still pools: one record for both pages. Records pool only among placements whose counters mean the
+same thing (the same reward, objective, measurement basis and decay horizon in the learn document); a placement
+whose dials differ keeps its evidence out of the record. Publication refuses any value of `pooled` other than
+`true` with `422`, naming `pieces[i].pooled` in `errors[]`, and the catalogue in force stays in force; a retained
+catalogue whose `pooled` is anything else reads as undeclared. A catalogue without a pooled module publishes,
+decides, records and replays exactly as before. Limits: a feed import or pull carries no `pooled` member, so a
+catalogue refreshed from a feed declares no pooled module (declare it with a direct publication), and the answer
+to a direct publication lists `pooled` among the ignored fields on its advisory channel although the stored piece
+keeps it. A snapshot reads the record from every placement when it is published: a placement whose own
+evidence has not moved since another page's did serves the record as it last published it. A day report's
+grids, from folded hours or from a day's ledger records, are still built per slot from that slot's own
+evidence, so a pooled module's row there is its own placement's and not the pooled record.
+
 ### The context vocabulary (`contextVocabulary`)
 
 A tenant's entry channels, the published mapping that classifies an arrival into them, its source platforms,

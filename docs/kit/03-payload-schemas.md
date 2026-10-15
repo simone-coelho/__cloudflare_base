@@ -145,7 +145,8 @@ One per admitted position, available through authenticated operator/ledger readb
 | `n₀` (`n0`) | The strength of the prior in exposures: how many observations the baseline is worth when the item's estimate is shrunk toward it. An imported prior brings its own |
 | `p̂` (`p_hat`) | Smoothed per-exposure quantity `(s + n₀ × target) / (n + n₀)`, where target is imported prior `p` when applicable, otherwise slot `p0` |
 | `lift` | Dimensionless relative rate `p̂ / p₀`, clamped; not causal incrementality, universally CTR, or evidence of visibility. Frozen values are labeled controls, not observations |
-| `level`, `level_words` | Which cell answered, from `everyone` to `channel, visit bucket, region and affinity cell`: the finest level with enough evidence |
+| `level`, `level_words` | Which cell answered, from `everyone` to `channel, visit bucket, region and affinity cell`: the finest level with enough evidence. On a pooled module's record, from `everyone` (every page's evidence) through `page` (level 1, this page's own) and `page and channel` to `page, channel, visit bucket, stage, region and affinity cell` (level 6) |
+| `pooled` | `true` when the lift was read from the one record of a module the catalogue declares pooled; absent for every other module |
 | `γ` (`gamma`) | The trust dial per slot, 0 to 1: how much the lift moves the score |
 | `prior` | `{ p, n }` when an imported prior was in force for the item |
 | `evidenceFloor` | `{ floor, lacking, n, page }`, keys sorted, when the page's evidence floor shrank the estimate: `p_hat` is then the estimate shrunk toward `p0` by `lacking`, F − n, exposures at the baseline rate, and `lift` follows from it ([evidence floors](#evidence-floors-evidencefloors)) |
@@ -230,6 +231,7 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `featuredProductIds` | no | The products the piece features, in your product ids (your `featured_product_ids`). Carried and validated, never rewritten. They link, attribute and recognize, and nothing more: the decision receipt names them, an outcome naming one credits the decision that served the piece, and a product event naming one is recognized. The piece inherits no attribute of a product it features — no tag, merchandising value, stock flag or affinity — and no ranking reads those products' attributes |
 | `complements` | no | The products the piece completes, in your product ids, validated as `featuredProductIds` is (trimmed, de-duplicated, empty entries dropped; an empty list is none). A slot whose `complements: { weight }` rule (0 to 1) is in force adds that weight to the base score of a piece that completes the anchor product the request names as `ctx.anchor=<product id>` on the snapshot's query string, and the receipt names it as a `completes` driver. A request that names no anchor prefers nothing, and the holdout's default arm never does. In CSV: a `|` list, as `featuredProductIds` |
 | `inStock` | no | Your catalog's stock flag. `false` removes the piece from every decision; absent means in stock. In a feed, `in_stock` or `ats` (Y/N, 0/1, true/false) is read the same way |
+| `pooled` | no | `true` declares the module pooled, the catalogue's own per-module declaration: a pooled module accumulates one evidence record across every page and every slot it is served on, the page a ladder level directly after everyone in that record (`*`, then `p=<page>`, then that page with the ladder's own levels), and every decision on any of its pages reads its lift from that record ([the lift snapshot](#the-lift-snapshot)). Any other value is refused at publication naming `pieces[i].pooled`. Absent, the module is undeclared and keeps its page-scoped storage exactly as before: its evidence stays with its own placement, one record per page under a slot name a retained slots document carries on more than one page. A feed import or pull does not carry it |
 
 With an approved [attribute vocabulary](#the-attribute-vocabulary) in effect, a tag on an attribute it governs is
 stored as the vocabulary's ids, mapped from the words the feed sends; a value it does not list refuses the
@@ -1247,7 +1249,11 @@ exactly as written (its `version` is not stamped). Each value is `{ id, name, sy
 `GET /v1/{tenant}/lift`. `{ tenant, brand, slot, reward, objective, measurementBasis, tauLearnMs, version, publishedAt, events, n0, nMin, liftMin,
 liftMax, priorVersion, items, slotRates, attributionContract, generation, restartedAt, exposuresSinceRestart, witness, completeness?,
 rebuiltFrom?, positionEffects? }` — the stored snapshot exactly as it was published, member for member. `items` is item id → cell key → `{ level, key, n, s, p0, n0,
-p_hat, lift, liftReference, prior? }` with the symbols defined above; `liftReference` is `slot-rate` where the
+p_hat, lift, liftReference, prior? }` with the symbols defined above. For a module the catalogue declares
+`pooled`, its entry is the module's one pooled record, the same counts in the snapshot of every placement that
+serves it: keys `*`, `p=<page>` and that page with the ladder's own levels, levels 0 to 6, each `p0` the reading slot's
+own rate in the cell the key stands on; an undeclared module's entry is its own placement's evidence, exactly as
+before. `liftReference` is `slot-rate` where the
 slot has a rate in that cell and `none` where it has none, so a `lift` of 1 at `p0: 0` is read as "no
 reference" and not as "measured, and equal to the slot"; it is absent on a snapshot archived before it was
 named. `slotRates` is cell key → the slot's own `{ n, s,
