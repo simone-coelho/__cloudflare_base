@@ -11,7 +11,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { parseCsv } from '@/content/import';
 import type { Cell } from '@/content/types';
-import { levelKeys, pooledLevelKeys } from '@/learn/stats';
+import { levelKeys } from '@/learn/stats';
 import { ENTRY_CHANNELS, type ContextVocabulary } from '@/services/visit';
 
 export interface PriorRow { slot: string; item: string; cell: string; p_prior: number; n_equiv: number; measurementBasis?: import('@/content/types').MeasurementBasis }
@@ -46,14 +46,6 @@ export interface CellGrammar {
   version: number;
   /** The ladder's key letters, coarsest first. */
   order: readonly string[];
-  /**
-   * P08 (decision D2, freeze item 27): the order a cell of a module the
-   * catalogue declares pooled is written in — its page first (`p=`), directly
-   * after everyone, then `order` — so such a cell is `*` or a prefix of this
-   * order and every other cell is read under `order`, exactly as before.
-   * Absent on a grammar that has no page level.
-   */
-  pooledOrder?: readonly string[];
   /** What a file exported under another grammar has to do; named in every refusal. */
   migration: string;
 }
@@ -70,39 +62,21 @@ export interface CellGrammar {
  * from is the unplaced shopper, whose values are the ladder's own defaults and
  * contain neither `|` nor `=`.
  */
-const UNPLACED: Cell = { channel: 'unknown', visit_bucket: 'unknown', stage: 'unknown', region: null, affinity: null };
-const keyLetters = (finest: string): readonly string[] => Object.freeze(finest.split('|').map((pair) => pair.slice(0, pair.indexOf('='))));
 function ladderOrder(): readonly string[] {
-  return keyLetters(levelKeys(UNPLACED).at(-1) ?? '');
-}
-/** P08: the pooled ladder's key letters, read off that ladder the same way (`pooledLevelKeys`): the page, then `ladderOrder`. */
-function pooledLadderOrder(): readonly string[] {
-  return keyLetters(pooledLevelKeys(UNPLACED, 'page').at(-1) ?? '');
+  const unplaced: Cell = { channel: 'unknown', visit_bucket: 'unknown', stage: 'unknown', region: null, affinity: null };
+  const finest = levelKeys(unplaced).at(-1) ?? '';
+  return Object.freeze(finest.split('|').map((pair) => pair.slice(0, pair.indexOf('='))));
 }
 
 export const CELL_GRAMMAR: CellGrammar = {
   name: 'ladder-cell',
-  // 1 was the pre-CW29 ladder (`c=`, `v=`, `r=`, `a=`); 2 carries the journey
-  // stage; 3 (P08, decision D2) adds a pooled module's page level directly
-  // after everyone, in its own order (`pooledOrder`), and keeps `order` as it
-  // was, so every cell written under 2 names the same level under 3.
+  // 1 was the pre-CW29 ladder (`c=`, `v=`, `r=`, `a=`); 2 carries the journey stage.
   // A document declaring this version with another order is still refused:
   // `grammarError` compares the declared order with this derived one, pair by pair.
-  version: 3,
+  version: 2,
   order: ladderOrder(),
-  pooledOrder: pooledLadderOrder(),
-  migration: 're-export the prior file declaring ladder-cell version 3 (a cell written under version 2 names the same level under version 3), with every cell written as `*` or a prefix of the current ladder order, or for a module the catalogue declares pooled of the pooled order, its page first, then import it again',
+  migration: 're-export the prior file with every cell written as `*` or a prefix of the current ladder order, then import it again',
 };
-
-/**
- * P08 (decision D2): the grammar before the page level, version 2, exactly as
- * W25 retained it on a stored document (`validatePriors` keeps the declaration
- * it read). Only a STORED document is read under it (`PRIORS_KIND.validateStored`):
- * every one of its cells names the same level under version 3, so a prior
- * imported before the bump keeps being applied exactly as it was, while the
- * import door refuses a new file declaring it, with the migration named.
- */
-const PREVIOUS_GRAMMAR: CellGrammar = { name: CELL_GRAMMAR.name, version: 2, order: CELL_GRAMMAR.order, migration: CELL_GRAMMAR.migration };
 
 /** `c=, v=, s=, r=, a=` — the order as a refusal can print it. */
 const orderWords = (order: readonly string[]): string => order.map((k) => `${k}=`).join(', ');
@@ -137,16 +111,10 @@ export function cellGrammarFor(vocabulary: ContextVocabulary | null | undefined)
   const depth = vocabulary.ladder?.depth ?? CELL_GRAMMAR.order.length;
   const today = [...ENTRY_CHANNELS].sort();
   if (channels.length === today.length && channels.every((c, i) => c === today[i]) && cut.join(',') === '1,2,4' && depth === CELL_GRAMMAR.order.length) return CELL_GRAMMAR;
-  // P08: CELL_GRAMMAR is version 3 now, so the one hash that would derive
-  // exactly 3 is moved past every 32-bit hash; no other vocabulary's version moves.
-  const hash = fnv1a(JSON.stringify({ channels, cut, depth }));
-  const order = Object.freeze(CELL_GRAMMAR.order.slice(0, Math.max(1, Math.min(CELL_GRAMMAR.order.length, depth))));
   return {
     name: CELL_GRAMMAR.name,
-    version: 3 + (hash === 0 ? 2 ** 32 : hash),
-    order,
-    // P08: a pooled module's cell under the tenant's grammar: its page first, then the order cut at the depth.
-    pooledOrder: Object.freeze(['p', ...order]),
+    version: 3 + fnv1a(JSON.stringify({ channels, cut, depth })),
+    order: Object.freeze(CELL_GRAMMAR.order.slice(0, Math.max(1, Math.min(CELL_GRAMMAR.order.length, depth)))),
     migration: 're-export the prior file under the tenant\'s current context vocabulary (contextVocabulary), with every cell written as `*` or a prefix of the current ladder order, then import it again',
   };
 }
@@ -160,35 +128,27 @@ export function cellGrammarFor(vocabulary: ContextVocabulary | null | undefined)
  */
 function derivedGrammar(declared: unknown): CellGrammar | null {
   const g = declared && typeof declared === 'object' && !Array.isArray(declared) ? declared as Record<string, unknown> : null;
-  // P08: a derived version is above CELL_GRAMMAR's own (`cellGrammarFor`); a document declaring that one is read under it.
-  if (!g || g.name !== CELL_GRAMMAR.name || typeof g.version !== 'number' || !Number.isSafeInteger(g.version) || g.version <= CELL_GRAMMAR.version || !Array.isArray(g.order)) return null;
+  if (!g || g.name !== CELL_GRAMMAR.name || typeof g.version !== 'number' || !Number.isSafeInteger(g.version) || g.version < 3 || !Array.isArray(g.order)) return null;
   const order = (g.order as unknown[]).map((k) => String(k));
   if (order.length < 1 || order.length > CELL_GRAMMAR.order.length || !order.every((k, i) => k === CELL_GRAMMAR.order[i])) return null;
-  return { name: CELL_GRAMMAR.name, version: g.version, order: Object.freeze(order), pooledOrder: Object.freeze(['p', ...order]), migration: CELL_GRAMMAR.migration };
+  return { name: CELL_GRAMMAR.name, version: g.version, order: Object.freeze(order), migration: CELL_GRAMMAR.migration };
 }
 
 /**
  * Why this cell is not a ladder cell, or null when it is. Pure and exported so
  * the import door, the CSV reader and any future writer share one grammar.
  * P36: `order` is the grammar in force (today's order when omitted).
- * P08 (decision D2): `pooledOrder` is that grammar's pooled order, when it has
- * one (CELL_GRAMMAR's when `order` is omitted): a cell whose first key is the
- * page is read under it, every other cell under `order`, exactly as before.
  */
-export function cellGrammarError(cell: string, order: readonly string[] = CELL_GRAMMAR.order,
-  pooledOrder: readonly string[] | null = order === CELL_GRAMMAR.order ? CELL_GRAMMAR.pooledOrder ?? null : null): string | null {
+export function cellGrammarError(cell: string, order: readonly string[] = CELL_GRAMMAR.order): string | null {
   if (cell === '*') return null;
   const pairs = cell.split('|');
-  const expected = `'*' or the ladder's own keys in order — ${orderWords(order)} — as a prefix`
-    + (pooledOrder ? `, or for a module the catalogue declares pooled its page first — ${orderWords(pooledOrder)} — as a prefix` : '');
-  const first = pairs[0]!.indexOf('=');
-  const ladder = pooledOrder && first > 0 && pairs[0]!.slice(0, first) === pooledOrder[0] ? pooledOrder : order;
-  if (pairs.length > ladder.length) return `${expected}; '${cell}' names ${pairs.length} levels and the ladder has ${ladder.length}`;
+  const expected = `'*' or the ladder's own keys in order — ${orderWords(order)} — as a prefix`;
+  if (pairs.length > order.length) return `${expected}; '${cell}' names ${pairs.length} levels and the ladder has ${order.length}`;
   for (let i = 0; i < pairs.length; i++) {
     const at = pairs[i]!.indexOf('=');
     if (at < 1) return `${expected}; '${cell}' is not written as key=value pairs joined by |`;
     const key = pairs[i]!.slice(0, at);
-    if (key !== ladder[i]) return `${expected}; '${cell}' has '${key}=' at level ${i + 1}, where this ladder has '${ladder[i]}='`;
+    if (key !== order[i]) return `${expected}; '${cell}' has '${key}=' at level ${i + 1}, where this ladder has '${order[i]}='`;
   }
   return null;
 }
@@ -206,8 +166,7 @@ function grammarError(declared: unknown, grammar: CellGrammar = CELL_GRAMMAR): s
   const same = !!g && g.name === grammar.name && g.version === grammar.version
     && order !== null && order.length === grammar.order.length && order.every((k, i) => k === grammar.order[i]);
   if (same) return null;
-  return `cellGrammar: this engine reads ${grammar.name} version ${grammar.version}, whose cells are ${orderWords(grammar.order)} in that order`
-    + `${grammar.pooledOrder ? ` (a pooled module's: ${orderWords(grammar.pooledOrder)})` : ''}; this document declares ${JSON.stringify(declared)} — ${grammar.migration}`;
+  return `cellGrammar: this engine reads ${grammar.name} version ${grammar.version}, whose cells are ${orderWords(grammar.order)} in that order; this document declares ${JSON.stringify(declared)} — ${grammar.migration}`;
 }
 
 /**
@@ -235,7 +194,7 @@ export function validatePriors(candidate: unknown, grammar: CellGrammar = CELL_G
     if (x.measurementBasis !== undefined && x.measurementBasis !== 'served-v1' && x.measurementBasis !== 'rendered-v1') errors.push(`rows[${i}].measurementBasis: served-v1 | rendered-v1`);
     if (!SLUG.test(slot)) errors.push(`rows[${i}].slot: slug`);
     if (!item) errors.push(`rows[${i}].item: required`);
-    const cellWhy = cellGrammarError(cell, grammar.order, grammar.pooledOrder ?? null);
+    const cellWhy = cellGrammarError(cell, grammar.order);
     if (cellWhy) errors.push(`rows[${i}].cell: ${cellWhy}`);
     if (!Number.isFinite(p) || p < 0 || p > 1) errors.push(`rows[${i}].p_prior: number 0..1`);
     if (!Number.isFinite(n) || n <= 0) errors.push(`rows[${i}].n_equiv: positive number`);
@@ -318,19 +277,6 @@ export function parsePriorsCsv(text: string): PriorsDoc {
   return { rows };
 }
 
-/**
- * P08 (decision D2): whether a document declares exactly the grammar before the
- * page level — `ladder-cell` version 2 with today's order — as W25 retained the
- * declaration on every document stored under it.
- */
-function declaresPreviousGrammar(candidate: unknown): boolean {
-  const g = candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? (candidate as Record<string, unknown>).cellGrammar : undefined;
-  return !!g && typeof g === 'object' && !Array.isArray(g) && (g as Record<string, unknown>).name === PREVIOUS_GRAMMAR.name
-    && (g as Record<string, unknown>).version === PREVIOUS_GRAMMAR.version && Array.isArray((g as Record<string, unknown>).order)
-    && ((g as Record<string, unknown>).order as unknown[]).length === PREVIOUS_GRAMMAR.order.length
-    && ((g as Record<string, unknown>).order as unknown[]).every((k, i) => k === PREVIOUS_GRAMMAR.order[i]);
-}
-
 export const PRIORS_KIND: DocumentKind<PriorsDoc> = {
   name: 'prior',
   publication: 'r2',
@@ -340,11 +286,6 @@ export const PRIORS_KIND: DocumentKind<PriorsDoc> = {
   // grammar in force first. Anything else reads exactly as W25 rules it.
   validate: (candidate) => validatePriors(candidate, (candidate && typeof candidate === 'object' && !Array.isArray(candidate)
     ? derivedGrammar((candidate as Record<string, unknown>).cellGrammar) : null) ?? CELL_GRAMMAR),
-  // P08 (decision D2): a document STORED under version 2 is read as it was
-  // written, every cell naming the level it named then; a write declaring it is
-  // still refused with the migration named (`validate`). Every other stored
-  // document is read exactly as `validate` reads it.
-  validateStored: (candidate) => (declaresPreviousGrammar(candidate) ? validatePriors(candidate, PREVIOUS_GRAMMAR) : PRIORS_KIND.validate(candidate)),
   stamp: (v, r) => ({ ...v, version: `${(v.version ?? 'prior').replace(/\+r\d+$/, '')}+r${r}` }),
   versionOf: (v) => v.version ?? '',
 };

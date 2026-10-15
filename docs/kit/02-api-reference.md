@@ -1692,17 +1692,6 @@ evidence has not moved since another page's did serves the record as it last pub
 grids, from folded hours or from a day's ledger records, are still built per slot from that slot's own
 evidence, so a pooled module's row there is its own placement's and not the pooled record.
 
-The cell grammar is version 3 (`cellGrammar { "name": "ladder-cell", "version": 3, "order": ["c", "v", "s", "r", "a"] }`).
-Its order is unchanged, so every cell of an undeclared module names the level it named under version 2, and a
-pooled module's cell is written in the pooled order, its page first: `*` or a prefix of `p=`, `c=`, `v=`, `s=`,
-`r=`, `a=`, such as `p=pdp` or `p=pdp|c=email`. A priors file declaring version 2 is refused by
-`PUT /content/priors` and `POST /content/priors/validate` naming `cellGrammar` and the migration (re-export it
-declaring version 3), while a priors document already stored under version 2 keeps being read and applied
-exactly as it was; stored snapshots and archives carry no grammar version and are not touched. A tenant whose
-context vocabulary derives another grammar writes a pooled module's cell the same way, the page first and then
-its own order. A prior cell is read under the ladder of the record it names, so a pooled module's cell in the
-ladder's own order, or an undeclared module's cell naming a page, reaches no level of that module's record.
-
 ### The context vocabulary (`contextVocabulary`)
 
 A tenant's entry channels, the published mapping that classifies an arrival into them, its source platforms,
@@ -1749,7 +1738,7 @@ buckets `1`, `2-3`, `4+` and the full ladder, exactly. A vocabulary with nine ch
   grammar in force is the one the learn document published in the same request derives (the primary document or a
   `publicationChanges` member of the learn kind, in any case of the word), or else the learn document in force; a
   file declaring nothing is read under the current grammar. A vocabulary that changes none of the three keeps
-  `ladder-cell` version 3 ([pooled modules](#pooled-modules-pooled)), the default grammar.
+  `ladder-cell` version 2.
 - What is stored: a tenant without the settings stores no new member; a visit classified under a vocabulary
   stores the channel id, the source platform and the landing-page type it records, with the learn revision that
   classified it, inside the shopper's existing record.
@@ -1788,7 +1777,7 @@ to publish and nothing to deploy:
   published without one keeps its meaning and writes `inputs.replay.orders: "configured-order-v1"` as before. The
   record's and the receipt's `configuredOrder.context` carry the device as published, and the receipt's sentence
   names it ("any channel, any visit, on mobile").
-- What does not change: the learning cell keeps its five keys, its grammar (`ladder-cell` version 3) and its six
+- What does not change: the learning cell keeps its five keys, its grammar (`ladder-cell` version 2) and its six
   ladder keys, and the context prior's populations stay keyed on the entry channel and the visit bucket, so a
   priors file exported before imports as it did; device and recency are first-paint context, never learning-cell
   levels. A tenant that publishes no device context and no device or recency rule decides exactly as before,
