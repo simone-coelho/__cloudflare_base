@@ -122,11 +122,14 @@ function fnv1a(text: string): number {
  * without regard to order), the visit-bucket cut or the ladder depth. So:
  *   · a tenant without the settings, or one whose settings change none of the
  *     three (today's six words, the cut [1, 2, 4], depth 5), reads CELL_GRAMMAR
- *     unchanged (`ladder-cell` version 2, c, v, s, r, a);
+ *     unchanged (`ladder-cell` version 3, c, v, s, r, a, with the pooled order
+ *     p, c, v, s, r, a);
  *   · any other setting reads `ladder-cell` at a version DERIVED from those
- *     three members (3 plus a 32-bit FNV-1a of their canonical form, so it is
- *     never 1 or 2 and is the same wherever it is computed), its order today's
- *     order cut at the depth (R-P51: the order itself is not a setting).
+ *     three members (3 plus a 32-bit FNV-1a of their canonical form, a hash of 0
+ *     moved past every 32-bit hash, so it is always above CELL_GRAMMAR's 3 and is
+ *     the same wherever it is computed), its order today's order cut at the
+ *     depth (R-P51: the order itself is not a setting) and its pooled order the
+ *     page first, then that order.
  * The refusal of a file declaring any other grammar keeps W25's sentence, which
  * names the grammar in force and the re-export.
  */
