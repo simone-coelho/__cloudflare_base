@@ -1618,6 +1618,45 @@ any stored record.
 - **Stated limits.** A delivery through the buffered door (`"processing": "buffered"`) and a history import
   (`POST /v1/{tenant}/identity/events`) count by the action's own weight.
 
+### Position bands (`bands`)
+
+A slot strategy may carry position bands, `bands: [{ from, to, weights }]`, so that positions 1 to 2 of
+one slot run one strategy and positions 3 to 5 another
+(`"bands": [{ "from": 1, "to": 2, "weights": { "category": 1 } }, { "from": 3, "to": 5, "weights": { "line": 1 } }]`
+on a slot of `take` 5); positions are counted from 1 within the slot, and each band's `weights` are
+`{ dimension: weight }`, each 0 to 1, as the slot's own `weights`. A band overrides only the slot's
+dimension weights: its weights replace the slot's wherever the composition reads them for a position of
+the band, the tag sum Σ a·w and the slot weight a seed rule's contribution is scaled by, so a seed rule
+whose dimension a band does not weight adds nothing in that band, while the seed rule's own weight,
+freshness, fatigue, the journey stage, merchandising, the learned lift and every other rule of the slot
+(its take, pins, exclusions and eligibility) apply unchanged in every band. The bands are contiguous, do
+not overlap and together cover positions 1 to `take`, listed from position 1. Publication —
+`PUT /content/slots` and `POST /content/slots/validate` alike — refuses with `422`, naming
+`pages.{page}[i].bands` in `errors[]` and writing no revision, bands that overlap, leave a gap, start after
+position 1, or end before or beyond the slot's `take` (so a change of `take` moves the bands with it), an
+empty list, and a band carrying anything but `from`, `to` and `weights` (a take, a pin or any other
+setting); seed rules are still checked against the slot's own `weights`, so publication never refuses a
+seed rule because a band does not weight its dimension.
+
+Positions are filled in order: a position the pinned prefix holds, and on a declared layout slot a module
+pinned at a position or an off-limits module held at its place, stays its rule's, and every other
+position is filled by ranking the modules still eligible (after the slot's exclusions, eligibility, the
+page's reservations and every module already served on the page) with the weights of the band that
+covers it, so the bands return one de-duplicated result, never twice the same module in the slot or on
+the page. That banded ranking is the slot's ranking: under the layout blend the bands act on the behaviour
+term `B` only (`R` and `Q` as without them); an exploration pick and the adjacent swap are applied to it
+and never re-ranked by the bands, and the diversity rule acts on it as on any ranking; a configured
+per-context order is served exactly as published, its positions ranked without the bands; the shadow
+order ranks with the same bands.
+
+The record of each position a band ranked carries `explain.band: { from, to }`, keys sorted, naming the
+band it was ranked in, and the shopper's receipt carries the same block as `band`, with no new sentence
+in `why`; a pinned or held position, a position a configured order set and every record of a slot
+without bands carry none. A banded decision replays exactly: the replay reads the slots revision the
+record names (`versions.slots`), whose bands decide again, and compares `explain.band` by value, with no
+replay marker; a slot without bands decides, records and replays exactly as before, with exactly the
+page-manifest markers it wrote before.
+
 ### Evidence floors per page type (`evidenceFloors`)
 
 A page type is a page key of the slots document, and each page key can carry an evidence floor: the learn
