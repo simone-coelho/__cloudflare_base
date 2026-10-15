@@ -1629,7 +1629,9 @@ dimension weights: its weights replace the slot's wherever the composition reads
 the band, the tag sum Σ a·w and the slot weight a seed rule's contribution is scaled by, so a seed rule
 whose dimension a band does not weight adds nothing in that band, while the seed rule's own weight,
 freshness, fatigue, the journey stage, merchandising, the learned lift and every other rule of the slot
-(its take, pins, exclusions and eligibility) apply unchanged in every band. The bands are contiguous, do
+(its take, pins, exclusions and eligibility) apply unchanged in every band, and a position's record and
+receipt explain only the terms of the scoring that ranked it: merchandising, which multiplies a base above
+0, is explained on a position only where the band that ranked it gave the module such a base. The bands are contiguous, do
 not overlap and together cover positions 1 to `take`, listed from position 1. Publication —
 `PUT /content/slots` and `POST /content/slots/validate` alike — refuses with `422`, naming
 `pages.{page}[i].bands` in `errors[]` and writing no revision, bands that overlap, leave a gap, start after
@@ -1643,11 +1645,17 @@ pinned at a position or an off-limits module held at its place, stays its rule's
 position is filled by ranking the modules still eligible (after the slot's exclusions, eligibility, the
 page's reservations and every module already served on the page) with the weights of the band that
 covers it, so the bands return one de-duplicated result, never twice the same module in the slot or on
-the page. That banded ranking is the slot's ranking: under the layout blend the bands act on the behaviour
-term `B` only (`R` and `Q` as without them); an exploration pick and the adjacent swap are applied to it
-and never re-ranked by the bands, and the diversity rule acts on it as on any ranking; a configured
-per-context order is served exactly as published, its positions ranked without the bands; the shadow
-order ranks with the same bands.
+the page. Under the layout blend the bands act on the behaviour term `B` only (`R` and `Q` as without
+them). The slot's diversity rule is applied position by position: when the first module of a position's
+ranking would put a value over the limit it yields, the next module still eligible under the weights of
+the band covering that position takes the position (named in its record's `explain.diversity`), and the
+module that yielded stays eligible for the later positions, ranked there under their bands' weights;
+when every module left is over the limit, the first of them fills the position, relaxed. An exploration
+pick is applied to the banded ranking (each position ranked with its band's weights, before the diversity
+rule) and the adjacent swap to the served result, and neither is ever re-ranked by the bands: on a
+decision an exploration pick moved, the other modules keep the banded ranking's order and the diversity
+rule acts on that order as on a slot without bands. A configured per-context order is served exactly as
+published, its positions ranked without the bands; the shadow order ranks with the same bands.
 
 The record of each position a band ranked carries `explain.band: { from, to }`, keys sorted, naming the
 band it was ranked in, and the shopper's receipt carries the same block as `band`, with no new sentence

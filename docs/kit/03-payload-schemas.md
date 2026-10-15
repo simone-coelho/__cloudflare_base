@@ -646,15 +646,22 @@ as the slot weight a seed rule's contribution is scaled by, `rule.weight × the 
 dimension`, so a seed rule on a dimension the band does not weight contributes nothing in that band. Seed
 rules are still checked against the slot's own `weights` at publication, never against a band's. Every
 other term — the seed rule's own weight, their model, the journey stage, freshness, fatigue, merchandising
-and the learned lift — is computed exactly as without bands, in the same order. Positions are filled in
+and the learned lift — is computed exactly as without bands, in the same order, and a record explains only
+the terms of the scoring that ranked its position: a merchandising block, which multiplies a base above
+0, only where the band that ranked the position gave the module such a base. Positions are filled in
 order: the pinned prefix (and, on a declared layout slot, a position pin or a held off-limits module)
 keeps its position, and every other position is ranked from the modules still eligible — after the slot's
 exclusions, eligibility, the page's reservations and every module already served on the page — with the
 weights of the band that covers it, so the bands give one de-duplicated result, with no module twice in
-the slot or on the page. That banded ranking is the slot's ranking: an exploration pick and the adjacent
-swap are applied to it and never re-ranked by the bands, the diversity rule acts on it, under the layout
-blend the bands act on the behaviour term `B` only, a configured order served exactly is served as
-published and its positions are ranked without the bands, and the shadow order ranks with the same bands.
+the slot or on the page. The diversity rule is applied position by position: a module that would put a
+value over the limit yields, the next module still eligible under the weights of the band covering the
+position takes it, and the module that yielded stays eligible for the later positions, ranked there under
+their bands' weights (relaxed only when every module left is over the limit). An exploration pick is
+applied to the banded ranking (each position ranked with its band's weights, before the diversity rule)
+and the adjacent swap to the served result, never re-ranked by the bands: on a decision an exploration
+pick moved, the diversity rule acts on that order as on a slot without bands. Under the layout blend the
+bands act on the behaviour term `B` only, a configured order served exactly is served as published and its
+positions are ranked without the bands, and the shadow order ranks with the same bands.
 
 The record of each position a band ranked carries `explain.band: { from, to }`, keys sorted, naming the
 band it was ranked in, and its receipt carries the same block as `band`; a pinned or held position, a
