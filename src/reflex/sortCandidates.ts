@@ -52,13 +52,30 @@ export interface SortWeights {
 }
 
 export interface SortDriver {
+  /** The registry dimension the touch is on; `regional` for the region's part of a touch (see `SortRegional`). */
   dim: string;
+  /** The touch's value; the region key on a `regional` driver. */
   value: string;
-  /** The shopper's affinity for this value. */
+  /** The shopper's affinity for this value, as ranked (the regional prior already blended in); λ on a `regional` driver. */
   a: number;
-  /** The dimension weight applied. */
+  /** The dimension weight applied; the region's share × that weight on a `regional` driver. */
   w: number;
   contribution: number;
+}
+
+/**
+ * The regional prior a sort was ranked with (src/content/sortPrior.ts), for
+ * the itemisation the homepage receipts carry: a `regional` driver per touch
+ * the region moved, `a = λ` and `w = share × the dimension weight`, so its
+ * contribution is the region's part of that touch's driver. The touch drivers
+ * already carry the blended affinity, exactly as a decision's tag drivers do;
+ * the regional drivers say how much of it was the population's, and are not
+ * added to the score a second time.
+ */
+export interface SortRegional {
+  region: string;
+  lambda: number;
+  share: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }
 
 export interface SortedCandidate {
@@ -111,10 +128,13 @@ export function sortCandidates(
   dims: AffinityDims,
   config: ReflexConfig,
   weights: SortWeights = {},
+  regional?: SortRegional | null,
 ): SortResult {
   const affinityWeight = clamp(weights.affinity, 0, 10, 1);
   const dimWeight = (dim: string) => clamp(weights.dims?.[dim], 0, 10, 1);
   const folded = foldDims(dims);
+  const lambda = regional && Number.isFinite(regional.lambda) ? Math.min(1, Math.max(0, regional.lambda)) : 0;
+  const regionShare = regional && lambda > 0 ? foldDims(regional.share as AffinityDims) : null;
 
   const seen = new Set<string>();
   let dropped = 0;
@@ -126,6 +146,7 @@ export function sortCandidates(
     seen.add(id);
 
     const drivers: SortDriver[] = [];
+    const fromRegion: SortDriver[] = [];
     let score = 0;
     for (const touch of extractTouches(candidate, config)) {
       const a = folded.get(touch.dim)?.get(touch.value.toLowerCase()) ?? 0;
@@ -134,7 +155,13 @@ export function sortCandidates(
       const contribution = a * w;
       score += contribution;
       drivers.push({ dim: touch.dim, value: touch.value, a: r4(a), w: r4(w), contribution: r4(contribution) });
+      // The region's part of this touch, itemised and never re-added. A share is
+      // at most 1 and a weight at most 10, so the driver stays inside the
+      // product-sort record's own bounds.
+      const share = Math.min(1, regionShare?.get(touch.dim)?.get(touch.value.toLowerCase()) ?? 0);
+      if (share > 0 && w > 0) fromRegion.push({ dim: 'regional', value: regional!.region, a: r4(lambda), w: r4(share * w), contribution: r4(lambda * share * w) });
     }
+    drivers.push(...fromRegion);
 
     scored.push({ id, feedRank, rank: -1, score: r4(score * affinityWeight), drivers });
   });

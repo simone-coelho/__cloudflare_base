@@ -1,0 +1,66 @@
+{
+ "version": "slots-shn",
+ "pages": {
+  "home": [
+   {
+    "slot": "top-offers",
+    "take": 2,
+    "weights": {
+     "category": 0.4,
+     "subcategory": 0.22,
+     "brand": 0.18,
+     "offerType": 0.12,
+     "priceBand": 0.08
+    },
+    "diversity": {
+     "dimension": "category",
+     "max": 2
+    },
+    "freshness": {
+     "weight": 0.08,
+     "halfLifeDays": 5
+    },
+    "merchandising": {
+     "promotion": 0.25,
+     "maxBoost": 1.6,
+     "minBoost": 0.7
+    },
+    "pinnedPieceIds": [
+     "shn_bea_01"
+    ]
+   }
+  ],
+  "category": [
+   {
+    "slot": "banner-category",
+    "take": 1,
+    "weights": {
+     "category": 0.45,
+     "subcategory": 0.25,
+     "brand": 0.15,
+     "offerType": 0.15
+    },
+    "freshness": {
+     "weight": 0.05,
+     "halfLifeDays": 5
+    }
+   }
+  ],
+  "search": [
+   {
+    "slot": "banner-search",
+    "take": 1,
+    "weights": {
+     "category": 0.45,
+     "subcategory": 0.25,
+     "brand": 0.15,
+     "offerType": 0.15
+    },
+    "freshness": {
+     "weight": 0.05,
+     "halfLifeDays": 5
+    }
+   }
+  ]
+ }
+}

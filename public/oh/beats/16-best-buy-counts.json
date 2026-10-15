@@ -1,0 +1,13 @@
+{
+ "name": "16-best-buy-counts",
+ "beat": 16,
+ "act": 8,
+ "actName": "Best Buy counts",
+ "press": "she presses Best Buy pickup on one page and Find a Retailer on another; the day report",
+ "kind": "context",
+ "label": "Best Buy counts",
+ "who": "shopper",
+ "lane": "P3",
+ "engine": "two named outcomes, attach, attribution; “not yet significant”",
+ "sees": "the report LG does not have today"
+}

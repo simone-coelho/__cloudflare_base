@@ -1,0 +1,149 @@
+/* public/demo-kit/tokens.css: the demo kit's token sheet.
+ *
+ * Every colour, font and shared radius the kit's chrome draws with (kit.css,
+ * the director bar, the machine panel, the before/now rows, the sheets,
+ * predict-then-prove and the compare chrome) is a token here, and so are the
+ * brand tokens a demo's own stylesheet builds its site from. The values are
+ * VANTAGE'S, as the documented defaults: a carrier's 2024 palette without its
+ * mark (red #EE0000, black, white, a yellow used sparingly), Inter and
+ * JetBrains Mono, and a dark, instrument-like machine panel.
+ *
+ * A new demo restyles by overriding tokens in its own stylesheet (loaded after
+ * this one), never by editing kit.css: set the brand group first; the machine
+ * palette (--m-*) and the light panels follow the brand only where noted.
+ * Tokens marked "with --brand" or "with --accent" are alpha or tint variants of
+ * those colours (html2canvas, which draws Compare's frames, cannot read
+ * color-mix), so a palette change sets them together.
+ */
+:root {
+  /* ── The brand: the site's palette ─────────────────────────────────────── */
+  --brand: #EE0000;          /* the primary: buttons, a decided slot's rule, the pressed beat, Next */
+  --brand-deep: #B80000;     /* the primary pressed, and in small type */
+  --accent: #F5FF1E;         /* used sparingly: badges, one underline, the machine's highlights */
+  --black: #000000;          /* the deepest ink: dark chips, the hero, the home band */
+  --ink: #111111;            /* headings, strong text, a dark row */
+  --text: #242424;           /* body text */
+  --muted: #666666;          /* secondary text */
+  --paper: #FFFFFF;          /* the page, and the light surfaces on it */
+  --on-dark: #FFFFFF;        /* text and marks on ink, black and brand surfaces */
+  --line: #E2E2E2;           /* rules and borders */
+  --line-2: #CFCFCF;         /* stronger rules */
+  --soft: #F6F6F6;           /* quiet surfaces: the before/now strip, chips */
+  --soft-2: #EEEEEE;         /* quieter surfaces */
+  --up: #0A7A3D;             /* what rose or entered */
+  --up-bg: #E4F4EA;          /* its ground */
+  --down: #5B5B5B;           /* what fell */
+  --gated: #0A6C86;          /* a rule: eligible by region or by an answer */
+  --gated-bg: #E3F2F6;       /* its ground */
+  --brand-wash: #FFF1F1;     /* with --brand: a light wash (the row that differs, the press to watch) */
+  --brand-glow: rgba(238,0,0,.7);    /* with --brand: a performed press, as it lands */
+  --brand-glow-2: rgba(238,0,0,.45); /* with --brand: its halo */
+  --brand-glow-0: rgba(238,0,0,0);   /* with --brand: the halo, faded out */
+
+  /* ── Type ─────────────────────────────────────────────────────────────── */
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ── Radii ────────────────────────────────────────────────────────────── */
+  --radius: 10px;            /* cards, the strips, the panels' cards */
+  --radius-sm: 6px;          /* small chips and buttons */
+  --radius-lg: 14px;         /* the explain panel, large cards */
+  --radius-pill: 999px;      /* pills */
+
+  /* ── Layout ───────────────────────────────────────────────────────────── */
+  --machine-w: 372px;        /* the machine panel's column (narrower at 1440 and 1380, below) */
+  --bar-h: 84px;             /* the director bar; the page keeps this much clear at its foot */
+
+  /* ── The machine panel and the director bar: the engine's side, dark and instrument-like ── */
+  --m-bg: #0B0B0C;
+  --m-card: #141416;
+  --m-card-2: #1B1B1E;
+  --m-line: #2A2A2F;
+  --m-text: #F1F1F1;
+  --m-muted: #A3A3AA;
+  --m-dim: #74747C;
+  --m-red: #FF3A3A;          /* the engine's own red: a meter's fill, the selected tab */
+  --m-green: #37D27B;        /* the entry threshold's tick, the engine on its own */
+  --m-on: #FFFFFF;           /* text and marks on the machine and the bar */
+  --m-ink: #000000;          /* dark text on the machine's white chips */
+  --m-bar: #000000;          /* the director bar, the machine's edge, the browser-Back chip */
+  --m-bar-line: #222222;
+  --m-track: #26262B;        /* a meter's track */
+  --m-chip: #2B2B31;         /* a session line's verb */
+  --m-merch: #4A3E00;        /* the merchandiser's verb */
+  --m-engine: #0E3B22;       /* the engine's own verb; a built item */
+  --m-flag: #2A2600;         /* a flag on the machine: designed, attribution not incrementality, a refusal */
+  --m-flag-line: rgba(245,255,30,.3);     /* with --accent */
+  --m-accent-line: rgba(245,255,30,.45);  /* with --accent: a representative tag */
+  --m-green-line: rgba(55,210,123,.45);   /* a real tag */
+  --m-green-edge: rgba(55,210,123,.6);    /* the engine's press */
+  --m-red-line: rgba(255,58,58,.5);       /* a fixture tag */
+  --m-red-glow: rgba(255,58,58,.8);       /* a meter that just moved */
+  --m-red-wash: rgba(255,58,58,.2);       /* a session line that just landed */
+  --m-bad: #FF9A9A;          /* a refusal on the status line */
+  --m-gated: #9FD8E6;        /* context chips, the region's line in a receipt */
+  --m-gated-bg: rgba(10,108,134,.22);
+  --m-gated-line: rgba(80,180,210,.35);
+  --m-disabled: #2A2A2A;     /* Next, when the walkthrough is complete */
+  --m-on-08: rgba(255,255,255,.08);  /* white on the bar, by strength */
+  --m-on-10: rgba(255,255,255,.1);
+  --m-on-14: rgba(255,255,255,.14);
+  --m-on-16: rgba(255,255,255,.16);
+  --m-on-20: rgba(255,255,255,.2);
+  --m-on-22: rgba(255,255,255,.22);
+  --m-on-30: rgba(255,255,255,.3);
+  --m-on-50: rgba(255,255,255,.5);
+  --m-on-55: rgba(255,255,255,.55);
+  --m-on-60: rgba(255,255,255,.6);
+  --m-on-62: rgba(255,255,255,.62);
+  --m-on-70: rgba(255,255,255,.7);
+  --m-on-85: rgba(255,255,255,.85);
+  --m-on-88: rgba(255,255,255,.88);
+  --m-on-90: rgba(255,255,255,.9);
+
+  /* ── Predict, then prove: the light panel over the page ────────────────── */
+  --pd-ground: #F4F4F4;
+  --pd-line: #D6D6D6;
+  --pd-rule: #E6E6E6;
+  --pd-rule-2: #F0F0F0;
+  --pd-wash: #FAFAFA;
+  --pd-label: #555555;
+  --pd-text: #333333;
+  --pd-done: #EFEFEF;        /* what the visitor has done */
+  --pd-done-edge: #777777;
+  --pd-will: #E9F6EE;        /* what will change */
+  --pd-will-ink: #0D5A2F;
+  --pd-pinned: #FFE5E5;      /* the merchandiser's pin */
+  --pd-fixture: #FFF6B0;     /* a fixture's answer */
+  --pd-fixture-ink: #5A5200;
+  --pd-slot-1: var(--ink);   /* the before and after maps: one colour per position */
+  --pd-slot-2: var(--brand-deep);
+  --pd-slot-3: var(--up);
+  --pd-slot-4: var(--down);
+  --pd-slot-5: var(--gated);
+  --pd-slot-6: #6B4E00;
+
+  /* ── The rows, the chips and the notices ───────────────────────────────── */
+  --ghost-art: #1a1a1a;      /* a before thumbnail's ground */
+  --chip-down: #4A4A4A;      /* a card that fell */
+  --notice: #FFFBD6;         /* the engine did not answer: the page keeps what it showed */
+  --notice-ink: #3D3800;
+  --notice-line: #E7DE7A;
+
+  /* ── Shades: scrims and shadows ────────────────────────────────────────── */
+  --shade-25: rgba(0,0,0,.25);
+  --shade-28: rgba(0,0,0,.28);
+  --shade-30: rgba(0,0,0,.3);
+  --shade-35: rgba(0,0,0,.35);
+  --shade-42: rgba(0,0,0,.42);
+  --shade-45: rgba(0,0,0,.45);
+  --shade-60: rgba(0,0,0,.6);
+  --shade-62: rgba(0,0,0,.62);
+}
+/* The viewports the room actually uses: 1920, 1440, 1366. The machine narrows so the site keeps its width. */
+@media (max-width: 1440px) {
+  :root { --machine-w: 352px; }
+}
+@media (max-width: 1380px) {
+  :root { --machine-w: 336px; }
+}

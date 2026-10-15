@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P35",
+  "workOrderHash": "sha256:5c7c73d3b91419716d2666b05270238bfc9613f2a3310ef7b3b83e6d27ae39ce",
+  "artifact": {
+    "revision": "64f8425bd9cbaadc68975a2e3723ad808db1ca92",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p35-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P35 built on rem/p35-build in one round. 725859cd merges rem/integration e4abbb94 (P02 to P13, P34, P30, P33, P32, P09, P11 and P14 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P35 (240a7904, the S4-fix specification revision fa247eb5 reviewed PASS, R-P28 and R-P36 applied); RED baseline 11 of 11 on P35's own reasons (the host legs at the schema's refusal of the second identifier, the kit nine statements short), no PRECONDITION; b658f7a9 the engine (src/connectors/config.ts, src/identity/link.ts, src/identity/store.ts, src/durable-objects/ShopperReflex.ts, src/services/odpLoop.ts): the second ODP identifier an optional member of the tenant's ODP connector configuration, a field name that is never the vuid nor a profile field, any other value refused by the strict registry as today; the customer's hashed identifier, the account identifier of the person's verified P12 link, kept on the person's link record and its projection only while the setting is configured at link time and only under tracking consent, written through an internal door that admits only the link's own account identifier and never a merged-away one, never created, written only on a change, and never copied to the browser's record, the receipts, the intents, the registrations or the queues (D1, R-P36, S4F-C1, S4F-C3); read on both hosts inside the person's own operation by the ODP loop only while the setting is configured, the event write carrying the identifier beside the vuid and the profile write beside the vuid and the configured fields in their order, the write going out with the vuid alone when nothing is kept, the setting is absent or a read fails, so a tenant without the setting or a shopper without a link writes byte for byte today's (R-P7); exactly the three ODP endpoints called today, the audience read never carrying the identifier, nothing created in ODP (D2); the page's carried identifier never an ODP identity and the link answer never naming the kept identifier (S4F-C2); the operator reads and the export never returning it; cleared by erasure in the person's object and its projection, by identity retention expiry and by a configured link under refused tracking (S4F-C4); 265fe5ff and de50d7a6 the kit (docs/kit/01-integration-guide.md, 02-api-reference.md, 03-payload-schemas.md: the setting and its pattern, the writes and their shapes, retention, consent, erasure and tenancy, nothing created in ODP, the page-side path of the engine's segments and interest values into the experimentation user context); 64f8425b the record member order (P12's identifier change and the import keeping the kept identifier the record's last member so the record and its projection stay equal); src/identity/erase.ts, src/routes/identity.ts and src/services/RealtimeSegmentEngine.ts unchanged; no bundle changed, build-sdk and build-meridian --check exact; acceptance 11/11 on both hosts at 64f8425b with P12, P13, W41, W38, W36, W16, W21, W35, P02, P03, P30, P33, P32, P09, P11, P14, P34, P36 to P40, W40 and the kit readers green, src/identity, src/connectors, src/services and src/sdk whole green, src/reflex, src/routes and the API boundary file failing on baseline entries only with the identity key-set pins passing; both typechecks exit 0; eslint identical at head and base; twenty-eight probes on both hosts in a temporary test file removed before the commits (the setting configured after a link and removed after one, a merge keeping the link's own identifier, the operator reads and the export, the link answer, refused tracking, erasure with the setting on and off, the write order, the audience read, the setting-absent calls, members, projection and answers, the retention category change on any connector configuration change); the gate at 64f8425b GATE_OK on its first run (implementer/logs/gate.log: 3193 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P35/implementer/REPORT.md",
+      "git commits on rem/p35-build up to 64f8425b"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P35 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P35/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P35/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P35/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P35/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P35/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-15T13:35:23.254Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

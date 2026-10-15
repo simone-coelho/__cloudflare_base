@@ -11,7 +11,7 @@
       "env": {
         "NODE_ENV": "production",
         "MCP_MODE": "true",
-        "OPTIMIZELY_API_TOKEN": "2:K0omYPe8MYqZRDtBaozQO0d1dzTpDHf-_SRdPVHnLis2ROYd88jc",
+        "OPTIMIZELY_API_TOKEN": "",
         "OPTIMIZELY_PROJECT_IDS": "5463296774504448",
         "STORAGE_DATABASE_PATH": "/mnt/c/Users/LAH/Documents/__Development/Optimizely/__cloudflare_base/data/optimizely-cache.db",
         "LOG_LEVEL": "debug",
