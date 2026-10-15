@@ -33,6 +33,11 @@
 //     page's reservations and every module already served on the page — with the
 //     weights of the band that covers k in place of the slot's `weights`; every
 //     other term is computed exactly as today. One de-duplicated result.
+//     A diversity yield at position k is filled by the next still-eligible
+//     candidate under the weights of the band covering k; the yielding module
+//     stays eligible for the later positions and is ranked there under their
+//     bands' weights; exploration is applied to the banded result as before
+//     (R-P34); a slot without bands keeps today's diversity (R-P76).
 //   EVERY READ OF THE WEIGHTS (M2). The band's weights replace the slot's
 //     `weights` wherever the composition reads them for a position of the band:
 //     the tag sum Σ a·w, and the slot weight a seed rule's contribution is
@@ -49,6 +54,9 @@
 //     fixture, and fatigue needs the ring's served counts of an earlier page.
 //   MEMBERS. The record of a banded position carries `explain.band = { from, to }`
 //     and its receipt `band = { from, to }`; built with sorted keys (R-P3).
+//     The record and the receipt of a position carry only the terms of the
+//     scoring that ranked it: a term that did not apply to the score is not
+//     explained (R-P76).
 //
 // NO NEW EXPORT IS IMPORTED. `bands` and the members are read loosely. The slots
 // are content slots without the P02 declaration (governance 3), so no unit waits
@@ -160,6 +168,96 @@ const M2_WHY: Record<string, string> = {
 };
 const M2_ORDER = [M.ugc, M.grid, M.editorial, M.reco1, M.reco2];
 
+// ---------------------------------------------------------------------------
+// M1's diversity leg (R-P76): a yield at position 2, inside the first band.
+// The slot carries a diversity rule on line, at most 1 per line (CW33: a module
+// that would put a value over the limit yields to the next candidate; when
+// nothing else is eligible it fills the position over the limit, relaxed), the
+// seed rule of M2 (arrivals from paid social are evidence for line Willow, rule
+// weight 0.5 × the ranking's weight for line) and its own weights (line 0.8,
+// category 1, occasion 0.5), which only the CONTROL ranks with: the bands cover
+// 1..5. a = 0.625 for line Tabby, category Handbags and occasion evening (above);
+// line Willow and Small Leather Goods read 0.
+//   band 1 (line 1, occasion 0.25), position 1, every eligible module:
+//     reco.2       line 1 × a + occasion 0.25 × a        = 0.78125
+//     editorial.1  line 1 × a                            = 0.625
+//     reco.1       0 + seed 0.5 × line 1                 = 0.5
+//     grid.1, ugc.1                                      = 0
+//     → position 1: reco.2 (line Tabby, 1 of the 1 allowed)
+//   band 1, position 2, over what is left: editorial.1 (0.625) yields, line Tabby
+//     being at its limit, so the next still-eligible module under band 1's
+//     weights takes it: reco.1 (0.5)
+//   band 2 (category 1), positions 3–5, over what is left, editorial.1 among them:
+//     grid.1       category 1 × a                        = 0.625
+//     editorial.1  0 — band 2 weights no line            = 0
+//     ugc.1        0                                     = 0
+//     → position 3: grid.1; position 4: editorial.1 yields again and ugc.1 takes
+//       it (catalogue order breaks the tie at 0); position 5: editorial.1, the
+//       only module left, over the limit (relaxed), ranked under band 2's
+//       weights at 0
+// Without the seed, position 2 would go to grid.1 (0, first in catalogue order),
+// hence the PRECONDITION on the arrival. Diversity applied to a precomputed
+// banded ranking instead puts band 2's top pick, grid.1, at position 2 and serves
+// editorial.1 at position 5 with band 1's score and band.
+// CONTROL, the same slot without bands (its own weights, today's rule):
+//     reco.2 0.8 × a + 0.5 × a = 0.8125, grid.1 1 × a = 0.625, editorial.1
+//     0.8 × a = 0.5, reco.1 seed 0.5 × line 0.8 = 0.4, ugc.1 0
+//     → reco.2, grid.1, editorial.1 yields, reco.1, ugc.1, editorial.1 relaxed
+// ---------------------------------------------------------------------------
+const r2 = (x: number) => Math.round(x * 100) / 100;
+/** A delivered decision's score to two places, null when it carries none. */
+const scoreOf = (d: { score?: number }) => (typeof d.score === 'number' ? r2(d.score) : null);
+const B1 = { from: 1, to: 2 }, B2 = { from: 3, to: 5 };
+const DIV_BANDS = [{ ...B1, weights: { line: 1, occasion: 0.25 } }, { ...B2, weights: { category: 1 } }];
+const DIV_SLOT = { weights: { line: 0.8, category: 1, occasion: 0.5 }, diversity: { dimension: 'line', max: 1 }, seeds: M2_RULES.seeds };
+/** Position by position: the module, its score under the weights that ranked it, and the band it was ranked in. */
+const DIV_BANDED: Array<[string, number, { from: number; to: number }]> = [
+  [M.reco2, 1 * A + 0.25 * A, B1], [M.reco1, 0 + 0.5 * 1, B1], [M.grid, 1 * A, B2], [M.ugc, 0, B2], [M.editorial, 0, B2]];
+const DIV_UNBANDED: Array<[string, number]> = [[M.reco2, 0.8 * A + 0.5 * A], [M.grid, 1 * A], [M.reco1, 0.5 * 0.8], [M.ugc, 0], [M.editorial, 0.8 * A]];
+
+// ---------------------------------------------------------------------------
+// M4's X1 leg (R-P76): a merchandised module that the first band's run scored
+// on a positive base and the second band ranked at a base of 0.
+// Bands: position 1 (line 1, occasion 1), positions 2–5 (category 1); the slot's
+// merchandising { promotion 0.5 }; reco.2 and editorial.1 on promotion (1):
+// × (1 + 0.5 × 1) = 1.5 on a positive base, and a multiplier on nothing is
+// nothing (src/reflex/merchandising.ts applyMerchandising).
+//   band 1, position 1, every eligible module:
+//     reco.2       (line 1 × a + occasion 1 × a) × 1.5    = 1.875   → position 1
+//     editorial.1  (line 1 × a) × 1.5                     = 0.9375
+//     grid.1, reco.1, ugc.1                                = 0
+//   band 2 (category 1), positions 2–5, over what is left:
+//     grid.1 category 1 × a = 0.625; reco.1, editorial.1, ugc.1 0 (catalogue order)
+//     → editorial.1 at position 4 on a base of 0: no merchandising applied to the
+//       score that ranked it, so its record carries no merchandising block and no
+//       other term, its receipt no merchandising sentence, and both name band 2
+//       ({ from: 2, to: 5 }); reco.2 at position 1 keeps its merchandising
+//       (× 1.5) on both, and both name band 1 ({ from: 1, to: 1 }).
+// CONTROL, band 2's weights as the slot's own (category 1) and no bands:
+//     grid.1 0.625; reco.1, reco.2, editorial.1, ugc.1 0 → editorial.1 at
+//     position 4 on a base of 0, no term, no merchandising sentence.
+// ---------------------------------------------------------------------------
+const X1_PIECES = MODULES.map(p => p.id === M.reco2 || p.id === M.editorial ? { ...p, merchandising: { promotion: 1 } } : p);
+const X1_MERCHANDISING = { promotion: 0.5 };
+const X1_BOOST = 1 + 0.5 * 1;
+const X1_BANDS = [{ from: 1, to: 1, weights: { line: 1, occasion: 1 } }, { from: 2, to: 5, weights: { category: 1 } }];
+const X1_ORDER = [M.reco2, M.grid, M.reco1, M.editorial, M.ugc];
+const X1_CONTROL_ORDER = [M.grid, M.reco1, M.reco2, M.editorial, M.ugc];
+/** The terms a record explains between its base and its final score (src/content/types.ts, DecisionRecord.explain). */
+const TERMS = ['contextual', 'external', 'stage', 'freshness', 'fatigue', 'merchandising'] as const;
+const X1_EXPECTED: Record<string, unknown> = {
+  [M.reco2]: { position: 1, band: { from: 1, to: 1 }, score: r2((1 * A + 1 * A) * X1_BOOST), terms: [`merchandising ×${X1_BOOST}`], receipt: { band: { from: 1, to: 1 }, merchandisingSentences: 1 } },
+  [M.editorial]: { position: 4, band: { from: 2, to: 5 }, score: 0, terms: [], receipt: { band: { from: 2, to: 5 }, merchandisingSentences: 0 } },
+};
+/** What a stored record and its receipt explain for one position: the band, the final score, every term present, the receipt's merchandising sentences. */
+const explainedOf = (r: DecisionRecord, receipt: Record<string, unknown> | undefined) => ({
+  position: r.position + 1,
+  band: (r.explain as unknown as { band?: unknown }).band ?? null,
+  score: r2(r.explain.score_final),
+  terms: TERMS.filter(t => r.explain[t] != null).map(t => t === 'merchandising' ? `merchandising ×${r.explain.merchandising!.boost}` : t),
+  receipt: { band: receipt?.band ?? null, merchandisingSentences: ((receipt?.why ?? []) as string[]).filter(w => w.startsWith('Merchandising:')).length },
+});
+
 async function world(host: Host, slots: unknown, basis: 'served-v1' | 'rendered-v1' = 'rendered-v1', retainedSlots = false): Promise<Mounted> {
   const m = await mount(host, { pieces: MODULES, slots, learn: learnOf(basis), retainedSlots }, basis === 'served-v1' ? { recovery: false } : {});
   expectPublished(m, 'P15 — the page with its banded slot publishes');
@@ -187,6 +285,33 @@ describe('unit:P15.M1', () => {
       expect(servedIn(page, RECENT_SLOT), `${host}: the recently-viewed slot keeps its pinned module`).toEqual([M.recent]);
       const ids = page.decisions.map(d => d.contentId);
       expect(ids.length, `${host}: P15.M1 — no module twice on the page`).toBe(new Set(ids).size);
+    });
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P76 — a diversity yield at position 2 inside the first band is filled by the first band's next module under its weights, and the yielding module stays eligible for positions 3 to 5 under the second band's weights, each record naming the band its position was ranked in; CONTROL: the same slot without bands serves today's order under the same yield`, async () => {
+      const m = await world(host, slotsDoc([modulesSlot({ ...DIV_SLOT, bands: DIV_BANDS }), recentSlot()]));
+      const s = await warmShopper(m);
+      const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf('p15-m1-diversity') });
+      expect(page.status, JSON.stringify(page.body).slice(0, 300)).toBe(200);
+      const layout = page.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
+      for (const d of layout) expect((await s.ack(page, d)).status, `${host}: PRECONDITION — ${d.contentId} acknowledged`).toBe(200);
+      await m.drainLedger();
+      const records = storedDecisions(m, s.subject).filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+      expect([...new Set(records.map(r => r.cell.channel))], `${host}: PRECONDITION — the shopper arrived from paid social, so the seed rule fires`).toEqual(['paid_social']);
+      expect.soft(layout.map(d => d.contentId), `${host}: P15.M1 (R-P76) — editorial.1 yields at position 2 and band 1's next module under band 1's weights, reco.1 (0.5), takes it, not band 2's top pick; positions 3–5 by band 2, editorial.1 among them`)
+        .toEqual(DIV_BANDED.map(([id]) => id));
+      expect.soft(layout.map(d => [d.contentId, scoreOf(d)]), `${host}: P15.M1 (R-P76) — each module scored under the weights of the band covering the position it fills`)
+        .toEqual(DIV_BANDED.map(([id, score]) => [id, r2(score)]));
+      expect.soft(records.map(r => [r.item_id, (r.explain as unknown as { band?: unknown }).band ?? null]), `${host}: P15.M1 (R-P76) — each record names the band its position was ranked in`)
+        .toEqual(DIV_BANDED.map(([id, , band]) => [id, band]));
+      const ids = page.decisions.map(d => d.contentId);
+      expect(ids.length, `${host}: P15.M1 — no module twice on the page`).toBe(new Set(ids).size);
+
+      // CONTROL (R-P7): the same slot without bands keeps today's diversity under the same yield.
+      const today = await (await warmShopper(await world(host, slotsDoc([modulesSlot(DIV_SLOT), recentSlot()])))).snapshot('pdp', { pageInstance: pageInstanceOf('p15-m1-diversity-control') });
+      expect(today.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order).map(d => [d.contentId, scoreOf(d)]),
+        `${host}: CONTROL — without bands: reco.2, grid.1, editorial.1 yields to reco.1, ugc.1, editorial.1 over the limit`).toEqual(DIV_UNBANDED.map(([id, score]) => [id, r2(score)]));
     });
   }
 });
@@ -318,6 +443,40 @@ describe('unit:P15.M4', () => {
         const replay = await replayOf(sv, record.decision_id);
         expect.soft([replay.status, replay.body.classification ?? replay.body.reason ?? null], `${host}: P15.M4 — ${record.item_id} at position ${record.position + 1} replays equal (${JSON.stringify(replay.body.diff ?? replay.body.reason ?? '').slice(0, 160)})`).toEqual([200, 'equal']);
       }
+    });
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P76 — a merchandised module that the first band's run scored on a positive base and the second band ranked at a base of 0 carries no merchandising block on its record and no merchandising sentence on its receipt, both naming the band that ranked it, while the position merchandising ranked keeps it; CONTROL: with band 2's weights as the slot's own and no bands the module explains no merchandising either`, async () => {
+      const read = async (slot: Record<string, unknown>, label: string) => {
+        const m = await mount(host, { pieces: X1_PIECES, slots: slotsDoc([slot, recentSlot()]), learn: learnOf('rendered-v1') });
+        expectPublished(m, `P15.M4 (R-P76) — the ${label} slot with merchandising publishes`);
+        const s = await warmShopper(m);
+        const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf(`p15-m4-x1-${label}`) });
+        expect(page.status, JSON.stringify(page.body).slice(0, 300)).toBe(200);
+        for (const d of page.decisions.filter(x => x.slot === LAYOUT)) expect((await s.ack(page, d)).status, `${host}: PRECONDITION — ${d.contentId} acknowledged`).toBe(200);
+        await m.drainLedger();
+        const records = storedDecisions(m, s.subject).filter(r => r.slot === LAYOUT);
+        const receipts = await receiptsOf(m, s.subject);
+        const explained = (id: string) => {
+          const r = records.find(x => x.item_id === id);
+          return r ? explainedOf(r, receipts.find(x => x.decision_id === r.decision_id)) : null;
+        };
+        return { served: servedIn(page, LAYOUT), explained };
+      };
+      const banded = await read(modulesSlot({ bands: X1_BANDS, merchandising: X1_MERCHANDISING }), 'banded');
+      expect.soft(banded.served, `${host}: P15.M4 (R-P76) — reco.2 by band 1, then grid.1, reco.1, editorial.1, ugc.1 by band 2`).toEqual(X1_ORDER);
+      expect.soft(banded.explained(M.reco2), `${host}: P15.M4 (R-P76) — reco.2 at position 1, ranked by band 1 on a positive base, explains its merchandising (× 1.5) on its record and its receipt, band 1 on both`)
+        .toEqual(X1_EXPECTED[M.reco2]);
+      expect.soft(banded.explained(M.editorial), `${host}: P15.M4 (R-P76) — editorial.1 at position 4, ranked by band 2 on a base of 0: no merchandising block (and no other term) on its record, no merchandising sentence on its receipt, band 2 on both`)
+        .toEqual(X1_EXPECTED[M.editorial]);
+
+      // CONTROL: band 2's weights published as the slot's own, without bands.
+      const control = await read(modulesSlot({ weights: { category: 1 }, merchandising: X1_MERCHANDISING }), 'control');
+      expect.soft(control.served, `${host}: CONTROL — grid.1, then the modules at 0 in catalogue order`).toEqual(X1_CONTROL_ORDER);
+      const plain = control.explained(M.editorial);
+      expect.soft(plain && { position: plain.position, score: plain.score, terms: plain.terms, merchandisingSentences: plain.receipt.merchandisingSentences },
+        `${host}: CONTROL — editorial.1 at position 4 on a base of 0 explains no merchandising on its record or its receipt`).toEqual({ position: 4, score: 0, terms: [], merchandisingSentences: 0 });
     });
   }
 });
