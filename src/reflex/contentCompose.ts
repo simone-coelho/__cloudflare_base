@@ -684,6 +684,31 @@ export function composeContentDetailed(
         }
       }
       ordered.push(slot.slot);
+    } else if (rule && runs?.length && !picked) {
+      // P15 (R-P76): the diversity rule on a slot with position bands, position
+      // by position. Each run of positions one band covers ranks the modules
+      // still eligible with that band's weights; each position takes the first
+      // of them the rule admits, the ones over the limit before it yielding
+      // (named on it), and when every module left is over the limit, the first
+      // of them, relaxed. A module that yields stays eligible: the next run
+      // ranks it again under its own band's weights. A decision exploration
+      // picked keeps its order and the rule acts on it as on any ranking
+      // (below): it is never re-ranked by the bands (R-P34).
+      const takeNote = blended ? BLENDED_NOTE : undefined;
+      let left = [...rankable];
+      for (const run of runs) {
+        if (!left.length) break;
+        const ranked = left.map((p) => scoreOf(p, catalogueBase?.get(p.id), run.band)).sort(byScoreThenCatalogue);
+        for (let filled = 0; filled < run.count && ranked.length; filled++) {
+          const at = ranked.findIndex((c) => !(c.p.tags[rule.dimension] ?? []).some((v) => (seen.get(v) ?? 0) >= rule.max));
+          const s = ranked.splice(Math.max(at, 0), 1)[0]!;
+          const skipped = at > 0 ? ranked.slice(0, at).map((c) => c.p.id) : [];
+          for (const v of s.p.tags[rule.dimension] ?? []) seen.set(v, (seen.get(v) ?? 0) + 1);
+          serve(s, at < 0 ? { dimension: rule.dimension, max: rule.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule.max} per ${rule.dimension}: nothing else was eligible` }
+            : skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(', ')} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : undefined, takeNote);
+          left = left.filter((p) => p.id !== s.p.id);
+        }
+      }
     } else {
       const takeNote = blended ? BLENDED_NOTE : undefined;
       let taken = 0;

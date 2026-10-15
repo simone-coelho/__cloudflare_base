@@ -1640,6 +1640,21 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         }
       }
       ordered.push(slot.slot);
+    } else if (rule && runs?.length && !picked) {
+      const takeNote = blended ? BLENDED_NOTE : void 0;
+      let left = [...rankable];
+      for (const run of runs) {
+        if (!left.length) break;
+        const ranked = left.map((p) => scoreOf(p, catalogueBase?.get(p.id), run.band)).sort(byScoreThenCatalogue);
+        for (let filled = 0; filled < run.count && ranked.length; filled++) {
+          const at = ranked.findIndex((c) => !(c.p.tags[rule.dimension] ?? []).some((v) => (seen.get(v) ?? 0) >= rule.max));
+          const s = ranked.splice(Math.max(at, 0), 1)[0];
+          const skipped = at > 0 ? ranked.slice(0, at).map((c) => c.p.id) : [];
+          for (const v of s.p.tags[rule.dimension] ?? []) seen.set(v, (seen.get(v) ?? 0) + 1);
+          serve(s, at < 0 ? { dimension: rule.dimension, max: rule.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule.max} per ${rule.dimension}: nothing else was eligible` } : skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(", ")} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : void 0, takeNote);
+          left = left.filter((p) => p.id !== s.p.id);
+        }
+      }
     } else {
       const takeNote = blended ? BLENDED_NOTE : void 0;
       let taken = 0;
