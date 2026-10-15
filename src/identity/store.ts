@@ -12,9 +12,13 @@
 //   identity:shopper:{shopperId}   → every browser linked to this person, and
 //                                    whether the id was minted with a salt.
 //
-// The raw account id appears in neither. What the warehouse can join on is the
-// shopper id, which is on every record that leaves; the site's backend can
-// compute it (same salt, same hash) or ask `POST /v1/:tenant/identity/resolve`.
+// The raw account id appears in neither, with one exception a tenant opts into:
+// while its ODP connector names a second ODP identifier (P35), the person's
+// record keeps the account identifier of the person's verified link for that
+// identifier, and erasure removes it with the record (`odpIdentifier` below).
+// What the warehouse can join on is the shopper id, which is on every record
+// that leaves; the site's backend can compute it (same salt, same hash) or ask
+// `POST /v1/:tenant/identity/resolve`.
 //
 // These are NOT on the decision path. A request for a linked browser is served
 // from the profile that already carries the pointer (SessionManager's
@@ -58,7 +62,34 @@ export interface ShopperRecord {
   visitors: Array<{ visitorId: string; linkedAt: number; assurance: Assurance; source: LinkSource }>;
   /** Historical rows applied to this shopper, if any: how many and the latest event time. */
   history?: { rows: number; latestAt: number; appliedAt: number };
+  /**
+   * P12 (decision D1). The shopper ids of the accounts whose profiles a verified
+   * identifier change has merged into this person, oldest first: each earlier
+   * account named by a change statement, and every account already merged into
+   * it. What makes a change merge ONCE: an account listed here merges nothing
+   * more, whatever statement names it again. Salted shopper ids only, never an
+   * account identifier; written only when a change merges, so a person with none
+   * carries exactly the members it carried before; at most MAX_MERGED_ACCOUNTS,
+   * the oldest forgotten first. Erased with the person.
+   */
+  mergedAccounts?: string[];
+  /**
+   * P35 (decision D1). The account identifier of this person's verified link
+   * (the link's own `accountId`, which names this person: never an earlier
+   * account an identifier change merged in), kept only when the tenant's ODP
+   * connector names a second ODP identifier at link time and the person's
+   * consent covers tracking, and read by the ODP writes only while the setting
+   * is configured (src/services/odpLoop.ts). The person's own object writes it
+   * after the link (ShopperReflex, `/identity/odp-identifier`); absent for every
+   * other tenant and person, so their record carries exactly what it did before.
+   * Never answered: the operator reads and the export parse the record without
+   * it. Erased with the record.
+   */
+  odpIdentifier?: string;
 }
+
+/** P12: the most merged accounts one person's record remembers. */
+export const MAX_MERGED_ACCOUNTS = 50;
 
 export class IdentityStore {
   private readonly kv: KVLike;

@@ -3,7 +3,8 @@
 // src/services/visit.ts
 var VISIT_GAP_MS = 30 * 60 * 1e3;
 var ENTRY_QUERY_LIMIT = 4096;
-var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, utmCampaign: 256, referrer: 2048, siteHost: 253 };
+var ENTRY_CAMPAIGN_LIMIT = ENTRY_LIMITS.utmCampaign;
 var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
 function parsed(value) {
   try {
@@ -90,19 +91,22 @@ function rotateBrowsingSession(host, key = DEFAULT_SESSION_KEY) {
   }
 }
 function entrySignals(host) {
-  let utmMedium = "", utmSource = "", utmTerm = "";
+  let utmMedium = "", utmSource = "", utmTerm = "", utmCampaign = "";
   try {
     const usp = new URLSearchParams(host.location?.search ?? "");
     utmMedium = usp.get("utm_medium") ?? "";
     utmSource = usp.get("utm_source") ?? "";
     utmTerm = usp.get("utm_term") ?? "";
     if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = "";
+    utmCampaign = usp.get("utm_campaign") ?? "";
+    if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = "";
   } catch {
   }
   return {
     utmMedium,
     utmSource,
     ...utmTerm ? { utmTerm } : {},
+    ...utmCampaign ? { utmCampaign } : {},
     referrer: host.referrer ?? "",
     siteHost: host.location?.hostname ?? ""
   };
@@ -123,7 +127,11 @@ var WIRE = {
   content_impression: { type: "content_impression" },
   content_click: { type: "content_click" },
   content_dwell: { type: "content_dwell" },
-  video_complete: { type: "video_complete" }
+  video_complete: { type: "video_complete" },
+  content_viewable: { type: "content_viewable" },
+  video_view: { type: "video_view" },
+  product_dwell: { type: "product_dwell" },
+  layout_exposure: { type: "layout_exposure" }
 };
 function toWire(type, data) {
   const m = WIRE[type] ?? WIRE.custom;
@@ -148,7 +156,11 @@ var ACTION_EVENT_TYPES = [
   "content_impression",
   "content_click",
   "content_dwell",
-  "video_complete"
+  "video_complete",
+  "content_viewable",
+  "video_view",
+  "product_dwell",
+  "layout_exposure"
 ];
 var ACTION_EVENT_TYPE_SET = new Set(ACTION_EVENT_TYPES);
 var isEventNonce = (value) => typeof value === "string" && value.length >= 1 && value.length <= 128 && !/[^A-Za-z0-9_-]/.test(value);
@@ -188,9 +200,14 @@ function resolveConfig(c, host) {
   };
 }
 function contentInteraction(type, data) {
-  return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete"].includes(name));
+  return [data.action, data.eventName, data.event, type].map((name) => typeof name === "string" ? name.trim() : "").find((name) => ["content_impression", "content_click", "content_dwell", "video_complete", "content_viewable", "video_view"].includes(name));
+}
+function dwellMinFor(slot, fallback, bySlot) {
+  const ms = bySlot?.[slot];
+  return typeof ms === "number" && ms >= 0 ? ms : fallback;
 }
 var CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+var CUSTOMER_ID = /^[A-Za-z0-9_+/=.-]{1,128}$/;
 function createPageBindings() {
   const listeners = /* @__PURE__ */ new Set();
   const observed = /* @__PURE__ */ new Map();
@@ -237,6 +254,33 @@ function createCore(config, host) {
   const cfg = resolveConfig(config, host);
   const bindings = createPageBindings();
   let visitorId = "", sessionId = "", anonId = "";
+  let customerId;
+  let loaded = false;
+  const loadedHooks = [];
+  const runHook = (fn) => {
+    void Promise.resolve().then(() => {
+      try {
+        fn();
+      } catch {
+      }
+    });
+  };
+  const markLoaded = () => {
+    if (!loaded) {
+      loaded = true;
+      for (const fn of loadedHooks.splice(0)) runHook(fn);
+    }
+  };
+  function onLoaded(fn) {
+    if (typeof fn === "function") {
+      if (loaded) runHook(fn);
+      else loadedHooks.push(fn);
+    }
+  }
+  function setCustomerId(id) {
+    customerId = typeof id === "string" && CUSTOMER_ID.test(id) ? id : void 0;
+    return customerId !== void 0;
+  }
   let generation = 0;
   let eventSequence = 0;
   let transitioning = false;
@@ -635,6 +679,7 @@ function createCore(config, host) {
     visitorId = "";
     sessionId = "";
     anonId = "";
+    customerId = void 0;
     if (lease?.generation === g && sharedCurrent()) {
       try {
         host.storage.set(capabilityKey, "");
@@ -657,6 +702,7 @@ function createCore(config, host) {
     if (g !== generation) return false;
     const previous = visitorId;
     if (previous && previous !== v.subject && consent().tracking) rotateBrowsingSession(host);
+    if (reason === "logout" && previous && previous !== v.subject) customerId = void 0;
     visitorId = v.subject;
     sessionId = v.sessionId;
     capability = v.capability;
@@ -724,6 +770,13 @@ function createCore(config, host) {
       return false;
     }
   }
+  function freshBrowser() {
+    try {
+      return !host.storage.get(capabilityKey) && !host.storage.get(continuityKey) && !host.storage.get(continuityOperationKey);
+    } catch {
+      return false;
+    }
+  }
   function brokerHoldsProof() {
     try {
       return host.storage.get(continuityBrokerKey) === "1";
@@ -749,10 +802,13 @@ function createCore(config, host) {
     } catch {
     }
   }
-  function ready(transition = false) {
+  function ready(transition = false, first2) {
     consent();
     if (transitioning && !transition) return Promise.resolve(false);
-    if (isCurrent(generation) && (!transition || lease?.generation === generation)) return Promise.resolve(true);
+    if (isCurrent(generation) && (!transition || lease?.generation === generation)) {
+      markLoaded();
+      return Promise.resolve(true);
+    }
     if (bootstrapping) return bootstrapping;
     if (capability && !transition) {
       const g2 = beginTransition();
@@ -840,6 +896,36 @@ function createCore(config, host) {
             body: JSON.stringify({ ...Object.keys(active).length ? { consent: active } : {}, ...returning && !cfg.sessionBroker ? { continuity: returning } : {} })
           }, 16384);
         };
+        if (first2 && !transition && !cfg.sessionBroker && !capability && freshBrowser()) {
+          try {
+            const res2 = await boundedJSON(url(cfg.paths.snapshot), {
+              method: "POST",
+              credentials: "include",
+              headers: headers({ "Content-Type": "application/json" }),
+              body: JSON.stringify({
+                ...first2.body,
+                ...active.tracking === false ? { trackingConsent: "false" } : {},
+                ...active.personalization === false ? { personalizationEnabled: "false" } : {}
+              })
+            });
+            const answer = res2.json;
+            if (g !== generation) return false;
+            if (res2.ok && answer?.ok === true && answer.session !== void 0 && adoptSession(answer.session, g, "logout")) {
+              let admitted = answer;
+              if (Array.isArray(answer.decisions)) {
+                acknowledge(answer.sources?.consent);
+                const acknowledgedEpoch = consentEpoch;
+                await saveRefusal();
+                if (decisionRequiresConsent({ arm: answer.arm, decisions: answer.decisions }) && (!personalizationAllowed() || acknowledgedEpoch !== consentEpoch)) admitted = null;
+              } else restrict(answer.sources?.consent);
+              first2.answered = true;
+              first2.answer = admitted;
+              return true;
+            }
+          } catch {
+          }
+          if (g !== generation) return false;
+        }
         let res = await request();
         if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
           rememberUnknownConsent();
@@ -885,6 +971,9 @@ function createCore(config, host) {
     void operation.finally(() => {
       if (bootstrapping === operation) bootstrapping = null;
     });
+    void operation.then((ok) => {
+      if (ok) markLoaded();
+    });
     return operation;
   }
   function envelope(type, data = {}) {
@@ -911,7 +1000,8 @@ function createCore(config, host) {
       source: cfg.source,
       ...cfg.surface ? { surface: cfg.surface } : {},
       entry: entryOf(),
-      timestamp
+      timestamp,
+      ...tracking && customerId ? { customerId } : {}
     };
   }
   let contentHandler;
@@ -1053,7 +1143,9 @@ function createCore(config, host) {
         delete context.visitorId;
         delete context.userId;
         delete context.sessionId;
+        delete context.customerId;
       }
+      if (context && customerId && consent().tracking) context.customerId = customerId;
       const res = await boundedJSON(url(path, snapshotRequest ? void 0 : query), snapshotRequest ? { method: "POST", headers: headers({ "Content-Type": "application/json" }), credentials: "include", body: JSON.stringify(context ?? {}) } : { method: "GET", headers: headers(), credentials: "include" });
       const json = res.json;
       if (!res.ok || !isCurrent(g)) return null;
@@ -1188,6 +1280,7 @@ function createCore(config, host) {
     expiresAt = 0;
     sessionId = "";
     anonId = "";
+    if (reason === "logout") customerId = void 0;
     if (trackingAllowed()) rotateBrowsingSession(host);
     visitorId = id;
     emit("identity", { visitorId: id, previous, reason });
@@ -1372,6 +1465,8 @@ function createCore(config, host) {
       return generation;
     },
     ready,
+    onLoaded,
+    setCustomerId,
     beginTransition,
     finishTransition,
     forgetSession,
@@ -1412,6 +1507,17 @@ function createCore(config, host) {
 }
 
 // src/sdk/emit.ts
+var ENGAGE_TOKEN = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
+var MAX_DECLARED_INTERACTIONS = 16;
+function declaredInteractions(el) {
+  const out = [];
+  for (const token of (el.getAttribute("data-op-engage") ?? "").split(/\s+/)) {
+    if (!ENGAGE_TOKEN.test(token) || token === "click" || out.includes(token)) continue;
+    out.push(token);
+    if (out.length === MAX_DECLARED_INTERACTIONS) break;
+  }
+  return out;
+}
 var first = (v) => Array.isArray(v) && v[0] && typeof v[0] === "object" ? v[0] : {};
 var eco = (e) => e.ecommerce && typeof e.ecommerce === "object" ? e.ecommerce : e;
 function ga4Item(e) {
@@ -1498,13 +1604,13 @@ function createEmit(core, listen) {
       void 0,
       typeof data.decisionId === "string" ? data.decisionId : void 0
     ).then(() => null);
-    if (["content_click", "content_dwell", "video_complete"].includes(type)) return listen.outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data);
+    if (content) return listen.outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data);
     return core.send(type, data);
   };
   const withItem = (type) => (productId, attrs = {}) => core.send(type, () => ({ productId, ...attrs }));
   const withContent = (type) => (contentId, slot, attrs = {}) => track(type, () => ({ contentId, slot, ...attrs }));
   const scans = /* @__PURE__ */ new Map();
-  function scan(dom, dwellMinMs) {
+  function scan(dom, dwellMinMs, bySlot) {
     const holds = [];
     const seen = /* @__PURE__ */ new Set();
     let detached = false, installed = false, binding = 0;
@@ -1535,10 +1641,17 @@ function createEmit(core, listen) {
           };
         };
         let shownAt = null;
+        let viewing = null;
+        const report = (inView) => listen.visible(String(viewing.slot), String(viewing.contentId), inView, viewing.decisionId);
+        const unview = () => {
+          if (viewing) report(false);
+          viewing = null;
+        };
         const off = core.bindings.addObserver(dom, el, (visible) => {
           const attrs = shown();
           if (!permitted() || !attrs) {
             shownAt = null;
+            unview();
             return;
           }
           if (visible) {
@@ -1548,22 +1661,33 @@ function createEmit(core, listen) {
               seen.add(key);
               void track("content_impression", attrs);
             }
+            if (!viewing) {
+              viewing = attrs;
+              report(true);
+            }
             return;
           }
+          unview();
           if (shownAt === null) return;
           const ms = host.now() - shownAt;
           shownAt = null;
-          if (ms >= dwellMinMs) void track("content_dwell", { ...attrs, ms });
+          if (ms >= dwellMinFor(String(attrs.slot), dwellMinMs, bySlot)) void track("content_dwell", { ...attrs, ms });
         });
         if (!permitted()) {
           off?.();
           return;
         }
-        if (off) holds.push(off);
+        if (off) holds.push(off, unview);
         holds.push(core.bindings.addListener(el, "click", () => {
           const attrs = permitted() ? shown() : null;
           if (attrs) void track("content_click", attrs);
         }));
+        for (const interaction of declaredInteractions(el)) {
+          holds.push(core.bindings.addListener(el, interaction, () => {
+            const attrs = permitted() && declaredInteractions(el).includes(interaction) ? shown() : null;
+            if (attrs) void track("content_click", { ...attrs, interaction });
+          }));
+        }
       }
       for (const el of dom.querySelectorAll("[data-op-track]")) {
         if (!permitted()) return;
@@ -1602,7 +1726,7 @@ function createEmit(core, listen) {
     const dom = opts.dom ?? host.dom;
     if (!dom) return () => {
     };
-    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1e3);
+    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1e3, opts.dwellMinMsBySlot);
     scans.set(dom, attachment);
     attachment.refs++;
     let released = false;
@@ -1689,6 +1813,7 @@ function createEmit(core, listen) {
     contentClick: withContent("content_click"),
     contentDwell: (contentId, slot, ms, attrs = {}) => track("content_dwell", () => ({ contentId, slot, ms, ...attrs })),
     videoComplete: withContent("video_complete"),
+    videoView: withContent("video_view"),
     custom: (name, data = {}) => track("custom", () => ({ event: name, ...data })),
     declarative,
     dataLayer,
@@ -1698,20 +1823,48 @@ function createEmit(core, listen) {
 }
 
 // src/sdk/listen.ts
+function nothingToShowField(ids) {
+  if (!Array.isArray(ids)) return void 0;
+  const named = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
+  return named.length ? JSON.stringify(named) : void 0;
+}
 function createListen(core, opts = {}) {
   const host = core.host;
   const dwellMinMs = opts.dwellMinMs ?? 1e3;
   const slotSubs = /* @__PURE__ */ new Map();
   const setSubs = /* @__PURE__ */ new Set();
   const painted = /* @__PURE__ */ new Map();
+  const views = /* @__PURE__ */ new Set();
   const observers = /* @__PURE__ */ new Set();
   let current = null;
   let absence = null;
   let selected, pageInstance = "", destroyed = false;
   let refreshing, trailing = false;
   let adopted = false;
+  let pageView = { instance: "", met: true };
+  let opening;
+  const holds = /* @__PURE__ */ new Map();
+  let cachedView = null;
+  const exposed = /* @__PURE__ */ new Set();
   const content = core.bindContent((type, data) => type === "content_impression" ? rendered(String(data.slot ?? ""), String(data.contentId ?? ""), void 0, typeof data.decisionId === "string" ? data.decisionId : void 0).then(() => null) : outcome(type, String(data.contentId ?? ""), String(data.slot ?? ""), data));
-  const placement = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
+  function bySlot(decisions) {
+    const slots = /* @__PURE__ */ new Map();
+    for (const d of decisions) {
+      const list = slots.get(d.slot) ?? [];
+      list.push(d);
+      slots.set(d.slot, list);
+    }
+    for (const list of slots.values()) list.sort((a, b) => a.order - b.order);
+    return slots;
+  }
+  function placements(set) {
+    const keys = /* @__PURE__ */ new Map();
+    for (const [slot, list] of bySlot(set?.decisions ?? [])) list.forEach((d, i) => keys.set(d, JSON.stringify([slot, i, d.contentId])));
+    return keys;
+  }
+  const placement = (set, d) => placements(set).get(d) ?? "";
+  const pick = (set, slot, contentId, decisionId) => set?.decisions.filter((d) => d.slot === slot && d.contentId === contentId && (decisionId === void 0 || decisionId === d.decisionId)) ?? [];
+  const slotPositionOf = (piece) => Number.isSafeInteger(piece.slotPosition) && piece.slotPosition >= 0 ? piece.slotPosition : void 0;
   const sameAsset = (a, b) => a.customerContentId === b.customerContentId && a.type === b.type;
   const permitted = (set) => {
     if (!set || !decisionRequiresConsent(set)) return true;
@@ -1720,8 +1873,44 @@ function createListen(core, opts = {}) {
   };
   let intent = 0, delivery = 0;
   function resetCapture() {
+    for (const paint of painted.values()) host.clearTimeout(paint.viewTimer);
     painted.clear();
+    views.clear();
     for (const stop of [...observers]) stop();
+  }
+  function view(key, shown) {
+    const paint = painted.get(key);
+    if (!shown) {
+      views.delete(key);
+      if (paint) {
+        host.clearTimeout(paint.viewTimer);
+        paint.viewTimer = void 0;
+      }
+      return;
+    }
+    views.add(key);
+    if (!paint?.ack || paint.viewed || paint.viewTimer !== void 0) return;
+    const since = host.now();
+    const wait = (ms) => {
+      paint.viewTimer = host.setTimeout(() => {
+        paint.viewTimer = void 0;
+        const left = since + 1e3 - host.now();
+        if (!views.has(key) || painted.get(key) !== paint || paint.viewed) return;
+        if (left > 0) {
+          if (left < 1e3) wait(left);
+          return;
+        }
+        paint.viewed = true;
+        const { renderOffer: _offer, ...data } = paint.envelope.data;
+        void _offer;
+        void content.send("content_viewable", data);
+      }, ms);
+    };
+    wait(1e3);
+  }
+  function visible(slot, contentId, shown, decisionId) {
+    const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
+    if (matches.length === 1) view(placement(set, matches[0]), shown);
   }
   const offConsent = core.onConsentChange(() => {
     if (!core.trackingAllowed) resetCapture();
@@ -1745,34 +1934,39 @@ function createListen(core, opts = {}) {
     if (!permitted(set)) set = null;
     if (generation !== core.generation || owner !== intent) return -1;
     const epoch = ++delivery;
+    pageView.met = true;
+    host.clearTimeout(pageView.deadline);
+    for (const [token, held] of holds) if (held.pageInstance !== pageInstance) holds.delete(token);
     const active = () => permitted(set) && (!set || core.isCurrent(generation)) && generation === core.generation && owner === intent && epoch === delivery;
     const previous = current;
-    if (!set || previous && (previous.page !== set.page || previous.pageInstance !== set.pageInstance)) resetCapture();
+    const sameView = !!set && !!previous && previous.page === set.page && previous.pageInstance === set.pageInstance;
+    if (!set || previous && !sameView) resetCapture();
     if (set) {
-      const keys = new Set(set.decisions.map(placement));
-      for (const key of painted.keys()) if (!keys.has(key)) painted.delete(key);
+      const held = new Set(sameView ? [...holds.values()].filter((h) => h.pageInstance === set.pageInstance).map((h) => h.slot) : []);
+      if (held.size) {
+        const done = /* @__PURE__ */ new Set();
+        const keep = (slot) => done.has(slot) ? [] : (done.add(slot), previous.decisions.filter((d) => d.slot === slot));
+        set = { ...set, decisions: [...set.decisions.flatMap((d) => held.has(d.slot) ? keep(d.slot) : [d]), ...[...held].flatMap(keep)] };
+      }
+      const keys = placements(set), live = new Set(keys.values());
+      for (const key of painted.keys()) if (!live.has(key)) painted.delete(key);
       set = { ...set, decisions: set.decisions.map((d) => {
-        const paint = painted.get(placement(d));
-        if (paint && !sameAsset(paint.piece, d)) painted.delete(placement(d));
-        return paint && sameAsset(paint.piece, d) && paint.generation === generation && paint.pageInstance === set.pageInstance ? paint.piece : d;
+        const key = keys.get(d), paint = painted.get(key);
+        if (paint && !sameAsset(paint.piece, d)) painted.delete(key);
+        return paint && sameAsset(paint.piece, d) && paint.generation === generation && paint.pageInstance === set.pageInstance ? paint.piece.order === d.order ? paint.piece : { ...paint.piece, order: d.order } : d;
       }) };
     }
-    const unchanged = previous && set && previous.page === set.page && previous.pageInstance === set.pageInstance && JSON.stringify(previous.decisions) === JSON.stringify(set.decisions);
+    const unchanged = sameView && JSON.stringify(previous.decisions) === JSON.stringify(set.decisions);
     current = set;
     adopted = false;
     absence = set ? null : { page, decisions: [] };
     const context = set ?? absence;
     if (unchanged) return epoch;
-    const bySlot = /* @__PURE__ */ new Map();
-    for (const d of context.decisions ?? []) {
-      const list = bySlot.get(d.slot) ?? [];
-      list.push(d);
-      bySlot.set(d.slot, list);
-    }
-    for (const list of bySlot.values()) list.sort((a, b) => a.order - b.order);
+    const lists = bySlot(context.decisions ?? []), before = sameView ? bySlot(previous.decisions) : void 0;
+    const shape = (list = []) => JSON.stringify(list.map((d) => ({ ...d, order: 0 })));
     for (const [slot, subs] of slotSubs) {
-      const list = bySlot.get(slot) ?? [];
-      if (set && previous && previous.page === set.page && previous.pageInstance === set.pageInstance && JSON.stringify(previous.decisions.filter((d) => d.slot === slot).sort((a, b) => a.order - b.order)) === JSON.stringify(list)) continue;
+      const list = lists.get(slot) ?? [];
+      if (before && shape(before.get(slot)) === shape(list)) continue;
       for (const cb of subs) {
         if (!active()) return epoch;
         try {
@@ -1797,11 +1991,16 @@ function createListen(core, opts = {}) {
   }
   const offDecisions = core.on("decisions", (set) => apply(set));
   const offGeneration = core.on("generation", () => {
+    cachedView = null;
+    exposed.clear();
     const page = current?.page ?? absence?.page ?? "";
     pageInstance = "";
     deliver(null, page);
   });
-  async function hydrate(o) {
+  function hydrate(o) {
+    return load(o, false);
+  }
+  async function load(o, looped) {
     if (destroyed) return null;
     if (!pageInstance || !selected || selected.page !== o.page || selected.channel !== o.channel) {
       pageInstance = host.uuid();
@@ -1809,54 +2008,67 @@ function createListen(core, opts = {}) {
     }
     selected = { ...o };
     const owner = ++intent;
-    const pending = core.ready();
-    const generation = core.generation;
-    const active = () => owner === intent && generation === core.generation;
-    if (!active()) return null;
-    let settled = false;
-    let timedOut = false;
-    const timer2 = host.setTimeout(() => {
-      if (!settled && active()) {
-        timedOut = true;
-        deliver(null, o.page);
+    let flight;
+    if (pageView.instance !== pageInstance) {
+      host.clearTimeout(pageView.deadline);
+      const v2 = pageView = { instance: pageInstance, met: false };
+      v2.deadline = host.setTimeout(() => {
+        if (pageView === v2 && !v2.met && !destroyed && pageInstance === v2.instance) {
+          v2.expired = true;
+          deliver(null, o.page);
+        }
+      }, core.config.hydrateTimeoutMs);
+      opening = flight = { owner };
+    }
+    const v = pageView, expired = v.expired;
+    const timedOut = () => !!v.expired && !expired;
+    try {
+      const nothingToShow = nothingToShowField(o.nothingToShow);
+      const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {} } };
+      const pending = core.ready(false, first2);
+      const generation = core.generation;
+      const active = () => owner === intent && generation === core.generation;
+      if (!active()) return null;
+      if (!await pending || !active() || !core.isCurrent(generation)) {
+        if (!timedOut() && active()) deliver(null, o.page);
+        return null;
       }
-    }, core.config.hydrateTimeoutMs);
-    if (!await pending || !active() || !core.isCurrent(generation)) {
-      settled = true;
-      host.clearTimeout(timer2);
-      if (!timedOut && active()) deliver(null, o.page);
-      return null;
+      const consent = core.consent;
+      const json = first2.answered ? first2.answer : await core.getJson(core.config.paths.snapshot, {
+        page: o.page,
+        pageInstance,
+        browsingSessionId: consent.tracking ? core.sessionId : void 0,
+        brand: core.config.brand,
+        channel: consent.tracking ? o.channel : void 0,
+        entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
+        trackingConsent: consent.tracking ? void 0 : "false",
+        personalizationEnabled: consent.personalization ? void 0 : "false",
+        nothingToShow
+      });
+      if (!active() || !core.isCurrent(generation)) return null;
+      if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== void 0 && json.page !== o.page || json.pageInstance !== void 0 && json.pageInstance !== pageInstance) {
+        if (!timedOut()) deliver(null, o.page);
+        return null;
+      }
+      const set = {
+        page: json.page ?? o.page,
+        ...json.pageInstance ? { pageInstance: json.pageInstance } : {},
+        ...json.arm ? { arm: json.arm } : {},
+        ...json.versions ? { versions: json.versions } : {},
+        ...json.config_label ? { config_label: json.config_label } : {},
+        ...typeof json.ts === "number" ? { ts: json.ts } : {},
+        decisions: json.decisions
+      };
+      const epoch = deliver(set, set.page);
+      const accepted = admittedCurrent();
+      return accepted && active() && epoch === delivery && core.isCurrent(generation) ? accepted : null;
+    } finally {
+      if (opening === flight) opening = void 0;
+      if (flight?.follow && owner === intent && !destroyed) {
+        if (looped) trailing = true;
+        else void refresh();
+      }
     }
-    const consent = core.consent;
-    const json = await core.getJson(core.config.paths.snapshot, {
-      page: o.page,
-      pageInstance,
-      browsingSessionId: consent.tracking ? core.sessionId : void 0,
-      brand: core.config.brand,
-      channel: consent.tracking ? o.channel : void 0,
-      entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
-      trackingConsent: consent.tracking ? void 0 : "false",
-      personalizationEnabled: consent.personalization ? void 0 : "false"
-    });
-    settled = true;
-    host.clearTimeout(timer2);
-    if (!active() || !core.isCurrent(generation)) return null;
-    if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== void 0 && json.page !== o.page || json.pageInstance !== void 0 && json.pageInstance !== pageInstance) {
-      if (!timedOut) deliver(null, o.page);
-      return null;
-    }
-    const set = {
-      page: json.page ?? o.page,
-      ...json.pageInstance ? { pageInstance: json.pageInstance } : {},
-      ...json.arm ? { arm: json.arm } : {},
-      ...json.versions ? { versions: json.versions } : {},
-      ...json.config_label ? { config_label: json.config_label } : {},
-      ...typeof json.ts === "number" ? { ts: json.ts } : {},
-      decisions: json.decisions
-    };
-    const epoch = deliver(set, set.page);
-    const accepted = admittedCurrent();
-    return accepted && active() && epoch === delivery && core.isCurrent(generation) ? accepted : null;
   }
   function refresh(o) {
     if (destroyed || !o && !selected) return Promise.resolve(null);
@@ -1875,7 +2087,7 @@ function createListen(core, opts = {}) {
       let result = null;
       do {
         trailing = false;
-        result = await hydrate(selected);
+        result = await load(selected, true);
       } while (trailing && !destroyed);
       return result;
     })();
@@ -1913,25 +2125,36 @@ function createListen(core, opts = {}) {
   }
   async function rendered(slot, contentId, el, decisionId) {
     if (destroyed || core.config.listenOnly || !core.trackingAllowed) return null;
-    const set = admittedCurrent(), matches = set?.decisions.filter((d) => d.slot === slot && d.contentId === contentId && (decisionId === void 0 || decisionId === d.decisionId)) ?? [];
+    const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
     if (!set?.pageInstance || matches.length !== 1) return null;
     const piece = matches[0];
     if (!piece.renderOffer || !piece.decisionId) return null;
-    const key = placement(piece), generation = core.generation;
+    const key = placement(set, piece), generation = core.generation;
     let paint = painted.get(key);
     if (!paint) {
+      const slotPosition = slotPositionOf(piece);
       const data = {
         contentId,
         slot,
         decisionId: piece.decisionId,
         page: set.page,
         position: piece.order,
+        ...slotPosition !== void 0 ? { slotPosition } : {},
         pageInstance: set.pageInstance,
         renderOffer: piece.renderOffer,
         customerContentId: piece.customerContentId,
         contentType: piece.type
       };
-      paint = { piece, page: set.page, pageInstance: set.pageInstance, generation, envelope: core.envelope("content_impression", data), attempts: 0 };
+      paint = {
+        key,
+        piece,
+        page: set.page,
+        pageInstance: set.pageInstance,
+        generation,
+        envelope: core.envelope("content_impression", data),
+        attempts: 0,
+        ...slotPosition !== void 0 ? { slotPosition } : {}
+      };
       painted.set(key, paint);
     }
     const selectedPaint = paint;
@@ -1941,7 +2164,10 @@ function createListen(core, opts = {}) {
       paint.attempts++;
       paint.pending = core.sendRender(paint.envelope).then((ack2) => {
         if (!active()) return null;
-        if (ack2) selectedPaint.ack = ack2;
+        if (ack2) {
+          selectedPaint.ack = ack2;
+          if (views.has(key)) view(key, true);
+        }
         return ack2;
       }).finally(() => {
         selectedPaint.pending = void 0;
@@ -1960,23 +2186,25 @@ function createListen(core, opts = {}) {
         if (stopped) return;
         stopped = true;
         shownAt = null;
+        view(key, false);
         off();
         observers.delete(stop);
       };
       observers.add(stop);
-      const release = core.bindings.addObserver(host.dom, el, (visible) => {
+      const release = core.bindings.addObserver(host.dom, el, (visible2) => {
         if (stopped || !active()) {
           stop();
           return;
         }
-        if (visible) {
+        view(key, visible2);
+        if (visible2) {
           if (shownAt === null) shownAt = host.now();
           return;
         }
         if (shownAt === null) return;
         const ms = host.now() - shownAt;
         shownAt = null;
-        if (ms >= dwellMinMs) void outcome("content_dwell", contentId, slot, { ...data, ms });
+        if (ms >= dwellMinFor(slot, dwellMinMs, opts.dwellMinMsBySlot)) void outcome("content_dwell", contentId, slot, { ...data, ms });
         stop();
       });
       if (release) off = release;
@@ -1985,18 +2213,26 @@ function createListen(core, opts = {}) {
     return ack;
   }
   async function outcome(type, contentId, slot, attrs = {}) {
-    if (type === "content_impression") return null;
+    if (type === "content_impression" || type === "content_viewable") return null;
     const candidates = [...painted.values()].filter((p) => p.piece.slot === slot && p.piece.contentId === contentId && (attrs.decisionId === void 0 || attrs.decisionId === p.piece.decisionId));
     if (candidates.length !== 1) return null;
     const paint = candidates[0], ack = paint.ack ?? await paint.pending;
-    if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance || painted.get(placement(paint.piece)) !== paint) return null;
-    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, ...safe } = attrs;
+    if (!ack || destroyed || !core.isCurrent(paint.generation) || !core.trackingAllowed || current?.pageInstance !== paint.pageInstance || painted.get(paint.key) !== paint) return null;
+    const { renderOffer: _offer, action: _action, event: _event, eventName: _eventName, slotPosition: _slotPosition, ...safe } = attrs;
     void _offer;
     void _action;
     void _event;
     void _eventName;
-    return content.send(type, { ...safe, contentId, slot, decisionId: ack.decisionId });
+    void _slotPosition;
+    return content.send(type, {
+      ...safe,
+      contentId,
+      slot,
+      decisionId: ack.decisionId,
+      ...paint.slotPosition !== void 0 ? { slotPosition: paint.slotPosition } : {}
+    });
   }
+  const element = (d) => JSON.stringify([d.slot, d.order, d.contentId]);
   async function adopt(value, o) {
     const owner = ++intent, generation = core.generation;
     const fail = () => {
@@ -2009,13 +2245,13 @@ function createListen(core, opts = {}) {
     const elements = [...host.dom.querySelectorAll("[data-op-page-instance]")];
     const expected = /* @__PURE__ */ new Map();
     for (const d of b.decisions) {
-      if (!d || typeof d.contentId !== "string" || typeof d.slot !== "string" || !Number.isSafeInteger(d.order) || expected.has(placement(d))) return fail();
-      expected.set(placement(d), d);
+      if (!d || typeof d.contentId !== "string" || typeof d.slot !== "string" || !Number.isSafeInteger(d.order) || expected.has(element(d))) return fail();
+      expected.set(element(d), d);
     }
     if (elements.length !== expected.size) return fail();
     const matched = /* @__PURE__ */ new Set();
     for (const el of elements) {
-      const key = placement({ slot: el.getAttribute("data-op-slot") ?? "", contentId: el.getAttribute("data-op-content") ?? "", order: Number(el.getAttribute("data-op-position")) });
+      const key = element({ slot: el.getAttribute("data-op-slot") ?? "", contentId: el.getAttribute("data-op-content") ?? "", order: Number(el.getAttribute("data-op-position")) });
       const d = expected.get(key);
       if (!d || matched.has(key) || el.getAttribute("data-op-page-instance") !== b.pageInstance || (el.getAttribute("data-op-decision-id") ?? void 0) !== d.decisionId) return fail();
       matched.add(key);
@@ -2028,6 +2264,8 @@ function createListen(core, opts = {}) {
     absence = null;
     adopted = true;
     ++delivery;
+    host.clearTimeout(pageView.deadline);
+    pageView = { instance: b.pageInstance, met: true };
     for (const el of elements) void rendered(
       el.getAttribute("data-op-slot"),
       el.getAttribute("data-op-content"),
@@ -2036,11 +2274,34 @@ function createListen(core, opts = {}) {
     );
     return true;
   }
+  function follow() {
+    if (!selected) return;
+    if (opening && opening.owner === intent) opening.follow = true;
+    else void refresh();
+  }
+  async function layoutExposure(beacon) {
+    if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== "object") return;
+    const { contextKey, page, slot } = beacon, modules = Array.isArray(beacon.modules) ? beacon.modules : [];
+    if (typeof contextKey !== "string" || !contextKey || contextKey.length > 512 || typeof page !== "string" || !page || typeof slot !== "string" || !slot || !modules.length || modules.length > 50 || !modules.every((id) => typeof id === "string" && id.length > 0) || new Set(modules).size !== modules.length) return;
+    const instance = pageInstance && selected?.page === page ? pageInstance : cachedView?.page === page ? cachedView.instance : (cachedView = { page, instance: host.uuid() }).instance;
+    const once = JSON.stringify([instance, slot]);
+    if (exposed.has(once)) return;
+    if (exposed.size >= 256) exposed.delete(exposed.values().next().value);
+    exposed.add(once);
+    await core.send("layout_exposure", { contextKey, page, slot, modules: [...modules], pageInstance: instance });
+  }
+  function hold(slot) {
+    const token = {};
+    if (!destroyed) holds.set(token, { slot, pageInstance });
+    return () => {
+      holds.delete(token);
+    };
+  }
   const offSent = core.on("sent", (event) => {
-    if (!["content_impression", "content_dwell"].includes(event.type) && selected) void refresh();
+    if (!["content_impression", "content_dwell", "content_viewable", "layout_exposure"].includes(event.type)) follow();
   });
   const offSocket = core.on("socket", (status) => {
-    if (status === "connected" && selected) void refresh();
+    if (status === "connected") follow();
   });
   const timer = opts.refreshMs === void 0 ? void 0 : host.setInterval(() => {
     if (selected) void refresh();
@@ -2049,6 +2310,10 @@ function createListen(core, opts = {}) {
     destroyed = true;
     ++intent;
     resetCapture();
+    host.clearTimeout(pageView.deadline);
+    holds.clear();
+    exposed.clear();
+    cachedView = null;
     content.release();
     offSent();
     offSocket();
@@ -2061,7 +2326,7 @@ function createListen(core, opts = {}) {
     current = null;
     absence = null;
   }
-  return { hydrate, refresh, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, destroy };
+  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, destroy };
 }
 
 // src/sdk/identify.ts
@@ -2090,7 +2355,8 @@ function createIdentity(core) {
       accountId,
       ...o.source ? { source: o.source } : {},
       ...typeof exp === "number" ? { exp } : {},
-      ...assertion ? { assertion } : {}
+      ...assertion ? { assertion } : {},
+      ...o.accountChange !== void 0 ? { accountChange: o.accountChange } : {}
     });
     if (!core.isCurrent(generation) || core.visitorId !== visitorId) return { failure: failure("identity changed during identify", 0, retry) };
     return { visitorId, response };

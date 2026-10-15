@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P08",
+  "workOrderHash": "sha256:c8fddb85c5c8b131363f7fb7024099e6ee1ff98b0739359d687c74e046f96248",
+  "artifact": {
+    "revision": "cde6f02ad2bc85e433af30fe449e92608e2abef6",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p08-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P08 built on rem/p08-build in one build round with one specification fix round. 3c0161a6 merges rem/integration 1df342f3 (P02 to P13, P34, P30, P33, P32, P09, P11, P14 and P35 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P08 (0f102665, the S3-fix specification revision eb456472 reviewed PASS, R-P37 applied); RED baseline all fourteen tests on P08's own reasons, no PRECONDITION; a1b2c805 the declaration (src/content/types.ts, src/content/kinds.ts): a catalogue piece declaring itself pooled, any other value refused naming the piece's member (D1); b37ca4ed the pooled record (src/learn/stats.ts, src/learn/fan.ts, src/durable-objects/LearnStats.ts, src/content/decide.ts, src/learn/replay.ts, src/learn/receipts.ts): a pooled module's exposures and credits landing in each placement's own object under the page-scoped name W26 R2 gave it and assembled at each placement's publication into the module's one record through a read-only door, no new storage key and no new object, the record keyed by everyone, then the page, then the page with today's levels, the slot no longer qualifying the keys or the counts, the lift route answering that record for either placement and every decision on either page reading its lift from it with the page level named on the record and the receipt, placements whose reward, objective, measurement basis or horizon differ excluded, the offline recomputation equal to the online record key for key, replay from the archived snapshot holding the record with no marker written, the evidence floor, the blend and the context-only switch reading the pooled lift, an undeclared module keeping its page-scoped identity exactly as before (D1, D2, R-P37); e4c49d21 the grammar bump (src/learn/priors.ts): the cell grammar version 3 with today's order unchanged and the pooled order a separate member, a file declaring version 2 refused at the import door with the migration named, a stored version-2 document read as written, snapshots and archives untouched, the derived grammars of the second programme's vocabulary bump kept above the version in force (D2); a7ab780f and da0c2f5e the kit (docs/kit/02-api-reference.md, docs/kit/03-payload-schemas.md: declared pooling, the one record, the page level, the undeclared path, the refusal, the grammar version); 7607b0b3 the withdrawal of the bump on the R10 collision with the P36 and P37 unit files' literal version 2, ruled R-P75 and corrected in fix round 1 (rem/spec-p08-fix1 at a36d6fe0, the two files deriving today's grammar from the engine's constant, reviewed PASS, the gate re-recorded); f67bd80a merges rem/integration 7bcf257a and bfb8c6d5 merges the corrected specification; d681eac9 restores the bump and its kit sentences byte-identical to da0c2f5e; cde6f02a corrects the grammar comment in priors.ts; src/content/cell.ts, src/content/service.ts and src/learn/hourly.ts unchanged; no bundle changed, build-meridian and build-sdk --check exact; acceptance 14/14 on both hosts at cde6f02a with P36 48/48, P37 16/16, W25 15/15, W26 23/23, W24 23/23, P11, P33, P30, P32 and P10 green at head and W21, W28, W36, P28, P29, P31, P05, P01, P02, P03, P04, P07, P12, P13, P34, P09, P14, P35, P38, P39, P40, W40, W35 and the kit readers green on the mechanism head, src/learn, src/content and src/routes failing on baseline entries only, src/services whole green; both typechecks exit 0; eslint 0 new; twenty-six probes on both hosts in a temporary test file removed before the commits (three pages, one page, an undeclared module beside a pooled one, a catalogue without a pooled piece byte-identical to the base in statistics objects, snapshots, archives, records, receipts, replays, lift answers and a prior import, a version-3 prior, version 2 refused and a stored one read as written, the offline recomputation, the hourly fold, a floor, the blend and the switch, malformed declarations, a retained declaration, a direct write's advisory, another reward excluded); the gate at cde6f02a GATE_OK on its first run (implementer/logs/gate.log: 3207 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P08/implementer/REPORT.md",
+      "git commits on rem/p08-build up to cde6f02a"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P08 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P08/reviewer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P08/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P08/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P08/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-15T17:15:35.906Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

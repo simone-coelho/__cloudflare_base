@@ -1,0 +1,392 @@
+{
+  "about": "Vantage device imagery for the demo kit, and since part b (2026-10-01) the source: scripts/fetch-vantage-devices.mjs is a thin wrapper over scripts/demo-kit/fetch-imagery.mjs with this section. The URL list, the makers’ licence notes and the two view sentences were transcribed from that script (its DEVICES and LICENCE, commit c720907) and match public/vantage/img/MANIFEST.json; `gate` is its GATE, the human defect-check verdict per device, each bound to the sha256 of the exact file reviewed (a changed byte reads pending until someone looks again). Rendered at 800 square, 86 % fill, the kit’s defaults, which are Vantage’s own.",
+  "dir": "public/vantage/img",
+  "manifest": "public/vantage/img/MANIFEST.json",
+  "section": "devices",
+  "subdir": "devices",
+  "cacheName": "vantage-device-cache",
+  "budgetMegabytes": 25,
+  "placeholder": {
+    "key": "device",
+    "file": "placeholder-device.svg"
+  },
+  "manifestAbout": "Provenance and the human defect-check verdict for every image under public/vantage/img/. Devices are written by scripts/fetch-vantage-devices.mjs; promos, heroes, plans, modules and placeholders by scripts/generate-vantage-art.mjs. A verdict holds only for the sha256 it was given to; a changed file reads pending. No image carries a carrier mark; the makers' own marks on their devices are part of the product.",
+  "views": {
+    "pair": "maker's own back-and-front render",
+    "compose": "back and front renders, placed as a pair"
+  },
+  "render": {
+    "size": 800,
+    "fill": 0.86
+  },
+  "licences": {
+    "apple": "Official product render published by Apple on apple.com (Apple Store buy page). © Apple Inc.; iPhone and Apple are Apple trademarks. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+    "samsung": "Official product render published by Samsung on samsung.com/us (unlocked SKU, so no carrier variant). © Samsung Electronics; Galaxy is a Samsung trademark. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+    "google": "Official product renders published by Google on the Google Store (store.google.com, unlocked SKU). © Google LLC; Pixel is a Google trademark. No licence is granted by the page; used only to identify the product in an internal demo. The back and front renders are placed as a pair by this script; each render is unmodified apart from scale and ground.",
+    "motorola": "Official press-box image from Motorola News (motorolanews.com/pressbox, Motorola's own newsroom, \"All rights reserved\"). © Motorola Mobility LLC; razr and moto are Motorola trademarks. Press-box images are published for media use; used only to identify the product in an internal demo. Crop, scale and ground only."
+  },
+  "sources": [
+    {
+      "id": "iphone-18-pro-max",
+      "name": "Apple iPhone 18 Pro Max",
+      "maker": "apple",
+      "colour": "Glacier",
+      "page": "https://www.apple.com/shop/buy-iphone/iphone-18-pro",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-18-pro-max-finish-select-glacier-202609?wid=1880&hei=2224&fmt=png-alpha"
+        }
+      ]
+    },
+    {
+      "id": "iphone-18-pro",
+      "name": "Apple iPhone 18 Pro",
+      "maker": "apple",
+      "colour": "Burgundy",
+      "page": "https://www.apple.com/shop/buy-iphone/iphone-18-pro",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-18-pro-finish-select-burgundy-202609?wid=1880&hei=2224&fmt=png-alpha"
+        }
+      ]
+    },
+    {
+      "id": "iphone-duo",
+      "name": "Apple iPhone Duo",
+      "maker": "apple",
+      "colour": "Night Sky",
+      "page": "https://www.apple.com/shop/buy-iphone/iphone-duo",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-duo-finish-select-night-sky-202609?wid=1880&hei=2224&fmt=png-alpha"
+        }
+      ]
+    },
+    {
+      "id": "iphone-air",
+      "name": "Apple iPhone Air",
+      "maker": "apple",
+      "colour": "Sky Blue",
+      "page": "https://www.apple.com/shop/buy-iphone/iphone-air",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-air-finish-select-skyblue-202509?wid=1880&hei=2224&fmt=png-alpha"
+        }
+      ]
+    },
+    {
+      "id": "iphone-17",
+      "name": "Apple iPhone 17",
+      "maker": "apple",
+      "colour": "Sage",
+      "page": "https://www.apple.com/shop/buy-iphone/iphone-17",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-17-finish-select-sage-202509_GEO_US?wid=1880&hei=2224&fmt=png-alpha"
+        }
+      ]
+    },
+    {
+      "id": "galaxy-s26-ultra",
+      "name": "Samsung Galaxy S26 Ultra",
+      "maker": "samsung",
+      "colour": "Black",
+      "page": "https://www.samsung.com/us/smartphones/galaxy-s26-ultra/buy/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/s2602/gallery/us-galaxy-s26-ultra-s948-sm-s948uzkaxaa-550993359?fmt=png-alpha&scl=1"
+        }
+      ]
+    },
+    {
+      "id": "galaxy-s26-plus",
+      "name": "Samsung Galaxy S26+",
+      "maker": "samsung",
+      "colour": "Cobalt Violet",
+      "page": "https://www.samsung.com/us/smartphones/galaxy-s26-plus/buy/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/s2602/gallery/us-galaxy-s26-s947-sm-s947uzvaxaa-550994937?fmt=png-alpha&scl=1"
+        }
+      ]
+    },
+    {
+      "id": "galaxy-s26",
+      "name": "Samsung Galaxy S26",
+      "maker": "samsung",
+      "colour": "White",
+      "page": "https://www.samsung.com/us/smartphones/galaxy-s26/buy/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/s2602/gallery/us-galaxy-s26-s942-sm-s942uzwexaa-550995764?fmt=png-alpha&scl=1"
+        }
+      ]
+    },
+    {
+      "id": "galaxy-z-fold8",
+      "name": "Samsung Galaxy Z Fold8",
+      "maker": "samsung",
+      "colour": "Graphite",
+      "page": "https://www.samsung.com/us/smartphones/galaxy-z-fold8/buy/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/f2607/gallery/us-galaxy-z-fold8-f971-600257-sm-f971uzkaxaa-553841319?fmt=png-alpha&scl=1"
+        }
+      ]
+    },
+    {
+      "id": "galaxy-z-flip8",
+      "name": "Samsung Galaxy Z Flip8",
+      "maker": "samsung",
+      "colour": "Pink",
+      "page": "https://www.samsung.com/us/smartphones/galaxy-z-flip8/buy/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/f2607/gallery/us-galaxy-zflip8-f776-sm-f776uliaxaa-553843032?fmt=png-alpha&scl=1"
+        }
+      ]
+    },
+    {
+      "id": "pixel-11-pro-xl",
+      "name": "Google Pixel 11 Pro XL",
+      "maker": "google",
+      "colour": "Canyon",
+      "spare": "not in phones.json on 2026-09-30; ready if it is added",
+      "page": "https://store.google.com/us/config/pixel_11_pro?hl=en-US",
+      "kind": "compose",
+      "src": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/jEVeFlAk_7Dy27zIImbR5s0tX--gd9pjhrItGqBriNCF7NDrGzfiqf48V_LbB2srWU29xkuoZzbJgsBtBWPydKgoLjq5tBbO5_o=s0"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/8zef4fGTcFZobQv7kgKa0mlPWF3hUON4dzIhPTZ4cdd2teR6L9LSA6B-luoqFbfPmszWODZ_XRZXdXbuAPoJflt4pWBwWNd_Xg=s0"
+        }
+      ]
+    },
+    {
+      "id": "pixel-11-pro",
+      "name": "Google Pixel 11 Pro",
+      "maker": "google",
+      "colour": "Fog",
+      "page": "https://store.google.com/us/config/pixel_11_pro?hl=en-US",
+      "kind": "compose",
+      "src": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/z9YDvMS3im_9IxTkZrqOpFKbnsR7NwOJ6anTSxUJmuj7MxNPD6D0lZIAXnqGk33QNnI2sEpe1w3kNosJHy8yuZgA85M1BFJXvxA=s0"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/NjsIE4dhO3c3zSHglEJDjKWZlaXS92TnjoUCXyKumttGOzBGauXJSVQtO2xschcmeTz1Y9iniYcG_M3AALDmO1QbD1fL23NSUuY=s0"
+        }
+      ]
+    },
+    {
+      "id": "pixel-11",
+      "name": "Google Pixel 11",
+      "maker": "google",
+      "colour": "Frost",
+      "page": "https://store.google.com/us/config/pixel_11?hl=en-US",
+      "kind": "compose",
+      "src": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/kyHms-QRU2yPH7fecJnDdhXdRXWYQOismjTeOPYkQAZyzuS2VM6XjcmLnK_DxKw395F45EvItfctXpBadIOZhrN6lpqhB55pCw=s0"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/8mhmE9H4q6GY7rEkTJaRgXfBoqWQ1basSU39-M7nEqhdexfsOP7XQMgLTJQidiuQuFFtJgW1bSEwk5sMncrR8CtvAFOqJBfxE5ie=s0"
+        }
+      ]
+    },
+    {
+      "id": "pixel-10a",
+      "name": "Google Pixel 10a",
+      "maker": "google",
+      "colour": "Lavender",
+      "page": "https://store.google.com/us/config/pixel_10a?hl=en-US",
+      "kind": "compose",
+      "src": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/IdB9Le3UUPMZBqGC5TduhBB8n12Dv8xKFJpmOnyWzLf0IHN_4qoXupO-3mTGstYuI-NETHcrhG2LdU85dXCH59OJ8HVf_-WftV8=s0"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/9EjM7hLTMa6gUVkxl44VV_qHqJUBpnt9SLQpbwq9_DErsjofjDkB7phtHMwxm5G-yH0Kh7Sx6L4LauKI8v1WtBskRl5K9DRYPyc=s0",
+          "key": "black",
+          "keyTol": 72
+        }
+      ]
+    },
+    {
+      "id": "razr-2026",
+      "name": "Motorola razr (2026)",
+      "maker": "motorola",
+      "colour": "PANTONE Sporting Green",
+      "page": "https://motorolanews.com/pressbox/motorola-razr/motorola-razr-70-motorola-razr/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://motorolanews.com/download/905/motorola-razr-70-razr/194871/razr-70-sporting-green-hero.png",
+          "shadow": "remove"
+        }
+      ]
+    },
+    {
+      "id": "edge-2026",
+      "name": "Motorola edge (2026)",
+      "maker": "motorola",
+      "colour": "PANTONE Martini Olive",
+      "page": "https://motorolanews.com/pressbox/motorola-edge-family/motorola-edge-2026/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://motorolanews.com/download/933/motorola-edge-2026/228545/motorola-edge-2026_pdp-hero.png"
+        }
+      ]
+    },
+    {
+      "id": "moto-g-2026",
+      "name": "Motorola moto g (2026)",
+      "maker": "motorola",
+      "colour": "PANTONE Slipstream",
+      "page": "https://motorolanews.com/pressbox/moto-g-family/moto-g-2026/",
+      "kind": "pair",
+      "src": [
+        {
+          "role": "pair",
+          "url": "https://motorolanews.com/download/759/pantone-slipstream/171017/2026_moto-g-hero_slipstream.png"
+        }
+      ]
+    }
+  ],
+  "gate": {
+    "iphone-18-pro-max": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "866decdd9c4bc6392bca6f0f1678a0ac22e07d84abb62274e0ad68fdf266ec0a",
+      "note": "Apple's own back-and-front pair; edges intact; only the Apple mark on the back; wallpaper on screen, no status bar, no carrier name."
+    },
+    "iphone-18-pro": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "4710ecc5ff8efed8760e1cf7dde7b2a8cbbfbbbd62c8417357f8f8d513e8a35e",
+      "note": "Apple's own back-and-front pair in the launch colour; edges intact; Apple mark only; clean at 1:1."
+    },
+    "iphone-duo": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "af9dff3cfeb7c1c00cb965ddf3ff703a686da3c3e7e940b8fda1a7cbd14c8007",
+      "note": "Back and the open inner display. Wider than tall, so it fills by width and sits lower than the bar phones: correct, not a framing fault."
+    },
+    "iphone-air": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "8ce5713f3bc3bd9363e1e41503ce48542127e5aa9a20bd06044e1a610ca8d610",
+      "note": "Apple's own back-and-front pair in Sky Blue; edges intact; Apple mark only."
+    },
+    "iphone-17": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "9802af1c7a0a3c4e89d1296392e153738185938659ea8ed8ba432dc0247edd78",
+      "note": "US (eSIM-only) render; clean."
+    },
+    "galaxy-s26-ultra": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "255347990688db7d8e7c3621422230f208ebae6218022d61f9c6d73ddd0105d0",
+      "note": "Samsung's default pair with the S Pen, as Samsung shoots it; SAMSUNG wordmark on the back is the maker's own; unlocked SKU image."
+    },
+    "galaxy-s26-plus": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "42e4cd9aca7d9df95f562b443fa5d486db085565d3723485c688509dca10f6cf",
+      "note": "Clean pair, unlocked SKU."
+    },
+    "galaxy-s26": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "af985f4c056275188bb71d057fdd39a3aeb140f6e870164209df1a00e54c03d4",
+      "note": "White back carries its own grey outline, so it holds on a white card."
+    },
+    "galaxy-z-fold8": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "1d9fd43701258caf88b64dc12aabed36dcb7b174235741eeae275a64915122ac",
+      "note": "Cover side and open inner screen; wide, fills by width."
+    },
+    "galaxy-z-flip8": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "9e6e110c966a20f2a81178114115b487c487e163a032bb3f21f473231ae339db",
+      "note": "Folded cover screen and open phone; clean."
+    },
+    "pixel-11-pro-xl": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "b337c120020d806ac0b1c66a8b80b80d594de202496b080f27d1369a3404ef4b",
+      "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only."
+    },
+    "pixel-11-pro": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "6ee1fcf9e3450a2606f78351d7de6ddb798ec1a364f4844a4465d925050b0d21",
+      "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only; clean."
+    },
+    "pixel-11": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "8b29bd79d29d1e4e27589821428436ef04f85ea5a63b60635f849c8ee05612fb",
+      "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only; clean."
+    },
+    "pixel-10a": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "eb493f8a0981429bfb36eff5912d30060e39a1b6f36afb59d008164b4db49227",
+      "note": "Front keyed from the store's black JPEG ground. A faint grey fringe of one to two pixels is visible at the front's corners only at 3x zoom; clean at 1:1 on white. Recorded, not hidden."
+    },
+    "razr-2026": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "64c27422d763eac552a633054ad4df00b082038dfe2f3b34f5107a1f50345fe8",
+      "note": "Press hero, open and folded; the floor shadow ran off the source frame and showed as a grey box, so it is dropped. Lock screens show the time and date of the maker's render, no carrier; razr and batwing marks are the maker's own."
+    },
+    "edge-2026": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "edda551883ba62622abf8db4d0340c090c37805228b7808b54790b744353b431",
+      "note": "Press pair at a dynamic angle; lock screen time and date only, no carrier."
+    },
+    "moto-g-2026": {
+      "verdict": "accept",
+      "checked": "2026-09-30",
+      "sha": "b20436309916a732b97f79d03b20ab1c7e250ee421d9d233c8afea0fad896f3d",
+      "note": "Press pair at a dynamic angle; lock screen time and date only, no carrier."
+    }
+  }
+}

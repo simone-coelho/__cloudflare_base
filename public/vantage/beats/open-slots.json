@@ -1,0 +1,151 @@
+{
+ "name": "open-slots",
+ "beat": 0,
+ "act": 0,
+ "actName": "Reset",
+ "press": "Reset: the opening slots",
+ "kind": "publish",
+ "publish": {
+  "kind": "slots",
+  "document": {
+   "version": "slots-vantage",
+   "pages": {
+    "home": [
+     {
+      "slot": "hero",
+      "take": 1,
+      "weights": {
+       "intent": 0.5,
+       "lines": 0.35,
+       "brand": 0.1,
+       "ecosystem": 0.1,
+       "campaign": 0.3
+      },
+      "stage": {
+       "outOfStage": 0,
+       "inStage": 0.5
+      },
+      "seeds": [
+       {
+        "signal": "campaign_term",
+        "value": "iphone-18-pro",
+        "tags": [
+         {
+          "dimension": "campaign",
+          "value": "iphone-18-pro"
+         }
+        ],
+        "weight": 0.2
+       }
+      ]
+     },
+     {
+      "slot": "deals",
+      "take": 4,
+      "weights": {
+       "brand": 0.2,
+       "ecosystem": 0.15,
+       "priceBand": 0.1,
+       "intent": 1,
+       "lines": 0.4,
+       "perk": 0.1,
+       "category": 0.1,
+       "campaign": 0.3
+      },
+      "diversity": {
+       "dimension": "brand",
+       "max": 2
+      },
+      "merchandising": {
+       "promotion": 0.1,
+       "maxBoost": 1.6,
+       "minBoost": 0.7
+      },
+      "seeds": [
+       {
+        "signal": "campaign_term",
+        "value": "iphone-18-pro",
+        "tags": [
+         {
+          "dimension": "campaign",
+          "value": "iphone-18-pro"
+         }
+        ],
+        "weight": 0.2
+       },
+       {
+        "signal": "platform",
+        "value": "ios",
+        "tags": [
+         {
+          "dimension": "ecosystem",
+          "value": "ios"
+         }
+        ],
+        "weight": 1,
+        "dampen": [
+         {
+          "dimension": "intent",
+          "value": "switch",
+          "factor": 0.5
+         },
+         {
+          "dimension": "ecosystem",
+          "value": "android",
+          "factor": 0
+         }
+        ]
+       },
+       {
+        "signal": "platform",
+        "value": "android",
+        "tags": [
+         {
+          "dimension": "ecosystem",
+          "value": "android"
+         }
+        ],
+        "weight": 1,
+        "dampen": [
+         {
+          "dimension": "intent",
+          "value": "switch",
+          "factor": 0.5
+         },
+         {
+          "dimension": "ecosystem",
+          "value": "ios",
+          "factor": 0
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "phone": [
+     {
+      "slot": "pdp-modules",
+      "take": 6,
+      "weights": {
+       "priceBand": 0.2,
+       "contentType": 0.2,
+       "perk": 0.35,
+       "intent": 0.2,
+       "lines": 0.3,
+       "category": 0.15
+      }
+     },
+     {
+      "slot": "plan-pairing",
+      "take": 3,
+      "weights": {
+       "intent": 0.5,
+       "perk": 0.35,
+       "lines": 0.25
+      }
+     }
+    ]
+   }
+  }
+ }
+}

@@ -324,12 +324,14 @@ const KIT_PIECE = {
   slotTypes: ['hero', 'story'],
   lifecycle: { status: 'live' },
   window: { from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z' },
+  eligibleWhen: { regions: ['US-NY'] },
   art: 'https://cdn.example.invalid/w19/tabby-after-dark.jpg',
   renderUrl: 'https://www.example.invalid/stories/tabby-after-dark',
   merchandising: { season: 0.9, promotion: 1, margin: 0.4 },
   journeyStageFit: ['exploring', 'considering'],
   freshnessDate: '2026-09-01T00:00:00.000Z',
   featuredProductIds: ['COA-CW620', 'COA-CH857'],
+  complements: ['prod-card-case-1'],
   inStock: true,
 };
 
@@ -346,12 +348,14 @@ const KIT_PIECE_TWO = {
   slotTypes: ['story'],
   lifecycle: { status: 'live' },
   window: { from: '2026-02-01T00:00:00.000Z', to: '2026-11-30T00:00:00.000Z' },
+  eligibleWhen: { regions: ['US-NY'] },
   art: 'https://cdn.example.invalid/w19/rogue-rebuilt.jpg',
   renderUrl: 'https://www.example.invalid/stories/rogue-rebuilt',
   merchandising: { season: 0.2, promotion: 0, margin: 0.75 },
   journeyStageFit: ['considering', 'deciding'],
   freshnessDate: '2026-08-15T00:00:00.000Z',
   featuredProductIds: ['COA-CP133'],
+  complements: ['prod-card-case-1'],
   inStock: true,
 };
 
@@ -359,8 +363,8 @@ type KitPiece = typeof KIT_PIECE;
 
 /** The documented CSV columns for the fields above (kit 03 :102, :131-:152). */
 const CSV_HEADER = ['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime', 'tags', 'slotTypes',
-  'status', 'art', 'renderUrl', 'windowFrom', 'windowTo', 'merchandising', 'journeyStageFit', 'freshnessDate',
-  'featuredProductIds', 'inStock'] as const;
+  'status', 'art', 'renderUrl', 'windowFrom', 'windowTo', 'eligibleWhen', 'merchandising', 'journeyStageFit', 'freshnessDate',
+  'featuredProductIds', 'complements', 'inStock'] as const;
 
 const csvCell = (value: string) => /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 const csvOf = (columns: readonly string[], rows: Record<string, string>[]) =>
@@ -377,9 +381,10 @@ function csvRowOf(piece: Record<string, unknown>): Record<string, string> {
     slotTypes: list(p.slotTypes), status: p.lifecycle?.status ?? '',
     art: typeof p.art === 'string' ? p.art : '', renderUrl: p.renderUrl ?? '',
     windowFrom: p.window?.from ?? '', windowTo: p.window?.to ?? '',
+    eligibleWhen: p.eligibleWhen ? JSON.stringify(p.eligibleWhen) : '',
     merchandising: p.merchandising ? JSON.stringify(p.merchandising) : '',
     journeyStageFit: list(p.journeyStageFit), freshnessDate: p.freshnessDate ?? '',
-    featuredProductIds: list(p.featuredProductIds), inStock: typeof p.inStock === 'boolean' ? String(p.inStock) : '',
+    featuredProductIds: list(p.featuredProductIds), complements: list(p.complements), inStock: typeof p.inStock === 'boolean' ? String(p.inStock) : '',
   };
 }
 

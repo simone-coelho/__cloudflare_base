@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="660" viewBox="0 0 1100 660" role="img" aria-labelledby="selr-t selr-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="selr-t">Learning behind the dial, and the receipt</title>
+  <desc id="selr-d">Three panels. The learning dial: a dial from 0 to 1, its needle at 0. A score is multiplied by lift to the power gamma; gamma starts at 0, so lift to the power gamma is 1, and what is learned is recorded and changes nothing. Lift is p-hat over p0, held between half and double, where p-hat is s plus 30 times p0, over n plus 30; a piece never shown in a context has n and s at 0, so p-hat is p0 and its lift is 1. The holdout: a grid of one hundred dots, each a visitor, five of them hollow. A stable share of the visitors who consent is held out, 5 percent by default, on the brand's own page or on personalization without learning, and the brand compares the groups on its own numbers. A receipt for the tailored coats, place 2 in the edit, decided by the engine: coats 0.667 times 0.3 is 0.200, tailored 0.571 times 0.2 is 0.114, the seed for the campaign term wool-coat adds 0.060, and lift at gamma 0 multiplies by 1, for a score of 0.374; the regional prior's lambda is 0.483; the context is paid social, a first visit, the region US-IL and the journey stage exploring; the revisions of every published document in force are named; the top ten candidates and the vector as scored are kept too.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5, item 3. Facts: the Vantage facts sheet
+       (FACTS.md) section 5 (the estimate, the clamp, the dial, the holdout arms) and section 9 (the receipt's fields);
+       research/S2-engine-facts.md 3.13 to 3.15, 3.17 (n0 30, lift 0.5 to 2, the dial 0, a 5 percent holdout in the compiled
+       learn settings) and 5.2 to 5.3. The receipt is the worked example's, after the first click, computed at the defaults.
+       The learning sentence of docs/enablement/LANE-BRIEF-V2.md section 3 stands verbatim on the page, just above this figure. -->
+  <rect x="0" y="0" width="1100" height="660" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">Learning behind the dial, and the receipt</text>
+  <text x="20" y="82" font-size="20" fill="#197050">The dial holds back what is learned, the holdout keeps a comparison, and the receipt keeps the arithmetic.</text>
+
+  <!-- The learning dial (S2 3.11 step 7; 3.13; 5.2) -->
+  <g data-box="dial">
+    <rect x="20" y="108" width="340" height="532" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M20,120 a12,12 0 0 1 12,-12 h316 a12,12 0 0 1 12,12 v40 h-340 z" fill="#E4F0DA"/>
+    <rect x="20" y="108" width="340" height="532" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="142" font-size="21" font-weight="700">The learning dial</text>
+    <path d="M100,300 A90,90 0 0 1 280,300" fill="none" stroke="#E4F0DA" stroke-width="22" stroke-linecap="round"/>
+    <line x1="190" y1="300" x2="112" y2="300" stroke="#08251A" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="190" cy="300" r="9" fill="#08251A"/>
+    <text x="190" y="270" font-size="26" font-weight="700" text-anchor="middle">γ = 0</text>
+    <text x="100" y="340" font-size="18" text-anchor="middle">0</text>
+    <text x="280" y="340" font-size="18" text-anchor="middle">1</text>
+    <text x="190" y="190" font-size="18" text-anchor="middle">0.5</text>
+    <text x="36" y="382" font-size="20" font-weight="700" fill="#197050">score × lift^γ</text>
+    <text x="36" y="412" font-size="18">γ starts at 0, so lift^γ = 1:</text>
+    <text x="36" y="434" font-size="18">what is learned is recorded</text>
+    <text x="36" y="456" font-size="18">and changes nothing.</text>
+    <text x="36" y="494" font-size="18">lift = p̂ / p0, held between</text>
+    <text x="36" y="516" font-size="18">half and double</text>
+    <text x="36" y="548" font-size="18">p̂ = (s + 30 · p0) / (n + 30)</text>
+    <text x="36" y="586" font-size="18" fill="#197050">Never shown: n = s = 0,</text>
+    <text x="36" y="608" font-size="18" fill="#197050">so p̂ = p0 and lift = 1.</text>
+  </g>
+
+  <!-- The holdout (S2 3.17: 5 percent to the default arm in the compiled learn settings; 5.3: stable, consenting visitors only) -->
+  <g data-box="holdout">
+    <rect x="380" y="108" width="340" height="532" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M380,120 a12,12 0 0 1 12,-12 h316 a12,12 0 0 1 12,12 v40 h-340 z" fill="#E4F0DA"/>
+    <rect x="380" y="108" width="340" height="532" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="396" y="142" font-size="21" font-weight="700">The holdout</text>
+    <g fill="#197050">
+      <circle cx="442" cy="196" r="8"/><circle cx="466" cy="196" r="8"/><circle cx="490" cy="196" r="8"/><circle cx="514" cy="196" r="8"/><circle cx="538" cy="196" r="8"/><circle cx="562" cy="196" r="8"/><circle cx="610" cy="196" r="8"/><circle cx="634" cy="196" r="8"/><circle cx="658" cy="196" r="8"/>
+      <circle cx="442" cy="220" r="8"/><circle cx="466" cy="220" r="8"/><circle cx="490" cy="220" r="8"/><circle cx="514" cy="220" r="8"/><circle cx="538" cy="220" r="8"/><circle cx="562" cy="220" r="8"/><circle cx="586" cy="220" r="8"/><circle cx="610" cy="220" r="8"/><circle cx="634" cy="220" r="8"/><circle cx="658" cy="220" r="8"/>
+      <circle cx="442" cy="244" r="8"/><circle cx="490" cy="244" r="8"/><circle cx="514" cy="244" r="8"/><circle cx="538" cy="244" r="8"/><circle cx="562" cy="244" r="8"/><circle cx="586" cy="244" r="8"/><circle cx="610" cy="244" r="8"/><circle cx="634" cy="244" r="8"/><circle cx="658" cy="244" r="8"/>
+      <circle cx="442" cy="268" r="8"/><circle cx="466" cy="268" r="8"/><circle cx="490" cy="268" r="8"/><circle cx="514" cy="268" r="8"/><circle cx="538" cy="268" r="8"/><circle cx="562" cy="268" r="8"/><circle cx="586" cy="268" r="8"/><circle cx="610" cy="268" r="8"/><circle cx="634" cy="268" r="8"/><circle cx="658" cy="268" r="8"/>
+      <circle cx="442" cy="292" r="8"/><circle cx="466" cy="292" r="8"/><circle cx="490" cy="292" r="8"/><circle cx="514" cy="292" r="8"/><circle cx="538" cy="292" r="8"/><circle cx="562" cy="292" r="8"/><circle cx="586" cy="292" r="8"/><circle cx="610" cy="292" r="8"/><circle cx="658" cy="292" r="8"/>
+      <circle cx="442" cy="316" r="8"/><circle cx="466" cy="316" r="8"/><circle cx="490" cy="316" r="8"/><circle cx="514" cy="316" r="8"/><circle cx="538" cy="316" r="8"/><circle cx="562" cy="316" r="8"/><circle cx="586" cy="316" r="8"/><circle cx="610" cy="316" r="8"/><circle cx="634" cy="316" r="8"/><circle cx="658" cy="316" r="8"/>
+      <circle cx="442" cy="340" r="8"/><circle cx="466" cy="340" r="8"/><circle cx="490" cy="340" r="8"/><circle cx="538" cy="340" r="8"/><circle cx="562" cy="340" r="8"/><circle cx="586" cy="340" r="8"/><circle cx="610" cy="340" r="8"/><circle cx="634" cy="340" r="8"/><circle cx="658" cy="340" r="8"/>
+      <circle cx="442" cy="364" r="8"/><circle cx="466" cy="364" r="8"/><circle cx="490" cy="364" r="8"/><circle cx="514" cy="364" r="8"/><circle cx="538" cy="364" r="8"/><circle cx="562" cy="364" r="8"/><circle cx="586" cy="364" r="8"/><circle cx="610" cy="364" r="8"/><circle cx="634" cy="364" r="8"/><circle cx="658" cy="364" r="8"/>
+      <circle cx="442" cy="388" r="8"/><circle cx="466" cy="388" r="8"/><circle cx="490" cy="388" r="8"/><circle cx="514" cy="388" r="8"/><circle cx="538" cy="388" r="8"/><circle cx="586" cy="388" r="8"/><circle cx="610" cy="388" r="8"/><circle cx="634" cy="388" r="8"/><circle cx="658" cy="388" r="8"/>
+      <circle cx="442" cy="412" r="8"/><circle cx="466" cy="412" r="8"/><circle cx="490" cy="412" r="8"/><circle cx="514" cy="412" r="8"/><circle cx="538" cy="412" r="8"/><circle cx="562" cy="412" r="8"/><circle cx="586" cy="412" r="8"/><circle cx="610" cy="412" r="8"/><circle cx="634" cy="412" r="8"/><circle cx="658" cy="412" r="8"/>
+    </g>
+    <g fill="#FFFFFF" stroke="#08251A" stroke-width="2.5">
+      <circle cx="586" cy="196" r="7"/><circle cx="466" cy="244" r="7"/><circle cx="634" cy="292" r="7"/><circle cx="514" cy="340" r="7"/><circle cx="562" cy="388" r="7"/>
+    </g>
+    <text x="396" y="462" font-size="18">Each dot is a visitor. A stable</text>
+    <text x="396" y="484" font-size="18">share of those who consent is</text>
+    <text x="396" y="506" font-size="18">held out, 5 percent by default:</text>
+    <text x="396" y="528" font-size="18">the hollow dots, on the brand's</text>
+    <text x="396" y="550" font-size="18">own page or on personalization</text>
+    <text x="396" y="572" font-size="18">without learning.</text>
+    <text x="396" y="608" font-size="18" fill="#197050">The brand compares the groups.</text>
+  </g>
+
+  <!-- A receipt (S2 3.14; FACTS 9): the worked example's tailored coats, after the first click -->
+  <g data-box="receipt-panel">
+    <rect x="740" y="108" width="340" height="532" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <path d="M740,120 a12,12 0 0 1 12,-12 h316 a12,12 0 0 1 12,12 v40 h-340 z" fill="#E4F0DA"/>
+    <rect x="740" y="108" width="340" height="532" rx="12" fill="none" stroke="#08251A" stroke-width="2"/>
+    <text x="756" y="142" font-size="21" font-weight="700">A receipt</text>
+    <g data-box="receipt">
+      <rect x="756" y="176" width="308" height="448" rx="6" fill="#F3F8EE" stroke="#C3CEAF" stroke-width="1.5"/>
+      <text x="772" y="206" font-size="19" font-weight="700">Tailored coats</text>
+      <text x="772" y="230" font-size="17" fill="#197050">the edit, place 2, by the engine</text>
+      <line x1="772" y1="246" x2="1048" y2="246" stroke="#C3CEAF" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="772" y="276" font-size="18">coats</text>
+      <text x="866" y="276" font-size="18">0.667 × 0.3</text>
+      <text x="1048" y="276" font-size="18" text-anchor="end">0.200</text>
+      <text x="772" y="304" font-size="18">tailored</text>
+      <text x="866" y="304" font-size="18">0.571 × 0.2</text>
+      <text x="1048" y="304" font-size="18" text-anchor="end">0.114</text>
+      <text x="772" y="332" font-size="18">seed</text>
+      <text x="866" y="332" font-size="18">wool-coat</text>
+      <text x="1048" y="332" font-size="18" text-anchor="end">0.060</text>
+      <text x="772" y="360" font-size="18">lift</text>
+      <text x="866" y="360" font-size="18">γ 0</text>
+      <text x="1048" y="360" font-size="18" text-anchor="end">× 1</text>
+      <line x1="772" y1="376" x2="1048" y2="376" stroke="#08251A" stroke-width="1.5"/>
+      <text x="772" y="404" font-size="19" font-weight="700">score</text>
+      <text x="1048" y="404" font-size="19" font-weight="700" text-anchor="end">0.374</text>
+      <text x="772" y="444" font-size="18">regional prior: λ 0.483</text>
+      <text x="772" y="476" font-size="18">context: paid social, first</text>
+      <text x="772" y="498" font-size="18">visit, US-IL, exploring</text>
+      <text x="772" y="530" font-size="18">revisions: every published</text>
+      <text x="772" y="552" font-size="18">document in force</text>
+      <text x="772" y="586" font-size="17" fill="#197050">Kept too: the top ten candidates</text>
+      <text x="772" y="608" font-size="17" fill="#197050">and the vector as scored.</text>
+    </g>
+  </g>
+</svg>

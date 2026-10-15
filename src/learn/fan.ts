@@ -43,8 +43,8 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
   try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
-import type { DecisionRecord } from '@/content/types';
-import type { OutcomeRecord } from '@/ledger/records';
+import type { ContentPiece, DecisionRecord, SlotAttribution, SlotCatalog } from '@/content/types';
+import { isOffLimitsLayoutRecord, type OutcomeRecord } from '@/ledger/records';
 import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
 // `@/durable-objects/DecisionRing` re-exports under the same name. It is read
@@ -120,6 +120,13 @@ export const statsName = (tenant: string, brand: string, slot: string, page?: st
 export const liftKey = (tenant: string, brand: string, slot: string, page?: string) => `lift:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
 export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/${version}.json`;
+/**
+ * P05 (decision D2): where a placement's statistics object publishes its
+ * position-policy history (`positionHistoryOf`, src/learn/stats.ts), beside the
+ * snapshot archive and named so no archive reading takes it for a version. The
+ * object writes it; the online credit and the hourly fold both read it.
+ */
+export const positionHistoryKey = (tenant: string, brand: string, slot: string, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/positions.json`;
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
   scoped.has(slot) ? page : undefined;
@@ -168,6 +175,40 @@ export function pageScopedOf(value: unknown): ReadonlySet<string> | null {
 }
 /** W26 R2: the wire form of a set of page-scoped names — absent when empty, so an unscoped body is byte-identical to before. */
 export const pageScopedWire = (scoped: ReadonlySet<string>): { pageScoped?: string[] } => scoped.size ? { pageScoped: [...scoped].sort() } : {};
+
+/**
+ * P08 (decision D1, freeze item 27): one placement a module the catalogue
+ * declares pooled is served in — a slot it names (`slotTypes`) on a page the
+ * slots document carries that slot on. `identity` is the page in the
+ * placement's own storage identity, present only for a page-scoped slot name
+ * (W26 R2, `identityPage`), so the placement is the very object its decisions
+ * are fanned to and its credits forwarded to, untouched.
+ */
+export interface PooledPlacement { slot: string; page: string; identity?: string }
+/**
+ * P08 (decisions D1, D2): every placement of every module the catalogue
+ * declares pooled, by module. A pooled module's exposures and credits keep
+ * landing where they always have — each placement's own statistics object,
+ * page-scoped where W26 R2 says so — and every placement's publication reads
+ * them all into the module's ONE record, the page as its level after everyone
+ * (`LearnStats`, `buildSnapshot`). An undeclared module has no entry: it is
+ * never read outside its own placement, exactly as before. Pure.
+ */
+export function pooledPlacementsOf(pieces: ReadonlyArray<Pick<ContentPiece, 'id' | 'slotTypes' | 'pooled'>>, slots: Pick<SlotCatalog, 'pages'> | null | undefined): Map<string, PooledPlacement[]> {
+  const pages = slotPagesOf(slots);
+  const scoped = new Set([...pages].filter(([, on]) => on.length > 1).map(([slot]) => slot));
+  const out = new Map<string, PooledPlacement[]>();
+  for (const piece of pieces) {
+    if (piece.pooled !== true || out.has(piece.id)) continue;
+    const placements: PooledPlacement[] = [];
+    for (const slot of new Set(piece.slotTypes)) for (const page of pages.get(slot) ?? []) {
+      if (!isPlacementSlot(slot) || !isCatalogueName(page)) continue;
+      placements.push({ slot, page, ...(scoped.has(slot) ? { identity: page } : {}) });
+    }
+    if (placements.length) out.set(piece.id, placements);
+  }
+  return out;
+}
 
 type NS = DurableObjectNamespace | undefined;
 export interface StatsWriteReceipt {
@@ -302,7 +343,22 @@ export interface OutcomeReceipt {
    * `DecisionRing` always sets it.
    */
   brandMismatched?: number;
+  /**
+   * P33 (decision D1, freeze item 11; R-P35, S4F-C5): the itemisation of how
+   * the outcome was credited, on the attribution record the visitor's ring
+   * derives when it credits the outcome — this receipt, kept on the ring's
+   * credit plan. One entry per slot whose learn dials name their own
+   * attribution policy, sorted by slot: `policy` is that policy and `credited`
+   * the decision identifiers it credited, `[]` when none, the same decisions
+   * the plan's credit effects carry. Written for every outcome, one that
+   * credits nothing included, and ABSENT when no slot names a policy of its
+   * own, so such a receipt is exactly what it was. The stored outcome record
+   * is the admitted source and never carries it.
+   */
+  attribution?: SlotAttributionEntry[];
 }
+/** P33: one slot's line of the itemisation. */
+export interface SlotAttributionEntry { slot: string; policy: SlotAttribution; credited: string[] }
 export interface LearningReceipt {
   version: 1; kind: 'decisions' | 'outcome'; ok: boolean;
   code: 'complete' | 'invalid' | 'barrier' | 'config' | 'incomplete'; received: number; cutoffSkipped: number;
@@ -413,6 +469,26 @@ function refusalsBySlot(value: unknown): Record<string, 'reward' | 'money'> | nu
   if (!entries.length || entries.some(([slot, reason]) => !slot || (reason !== 'reward' && reason !== 'money'))) return null;
   return Object.fromEntries(entries) as Record<string, 'reward' | 'money'>;
 }
+/**
+ * P33: the itemisation on a ring reply, read back: entries of exactly
+ * `{ slot, policy, credited }`, one per slot, `policy` the module-tied policy
+ * and `credited` decision identifiers, never more credited decisions than the
+ * receipt credited. Null when malformed: an itemisation the caller cannot read
+ * is a malformed reply, never a silent credit.
+ */
+function attributionReply(value: unknown, eligible: unknown): SlotAttributionEntry[] | null {
+  if (!Array.isArray(value) || !value.length || value.length > FAN_LIMITS.rows || !count(eligible)) return null;
+  const out: SlotAttributionEntry[] = [], seen = new Set<string>();
+  let credited = 0;
+  for (const entry of value as unknown[]) {
+    if (!object(entry) || Object.keys(entry).some(key => key !== 'slot' && key !== 'policy' && key !== 'credited')
+      || typeof entry.slot !== 'string' || !entry.slot || seen.has(entry.slot) || entry.policy !== 'module-tied'
+      || !Array.isArray(entry.credited) || entry.credited.some(id => typeof id !== 'string' || !id)) return null;
+    seen.add(entry.slot); credited += entry.credited.length;
+    out.push({ slot: entry.slot, policy: 'module-tied', credited: [...entry.credited as string[]] });
+  }
+  return credited <= eligible ? out : null;
+}
 /** W24 R1.02: the money refusal on a ring reply, read back; null when malformed. */
 function moneyReply(value: unknown): MoneyRefusal | null {
   if (!object(value) || value.reason !== 'money_policy_unset'
@@ -435,6 +511,8 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   // receipt cannot name, and never read as a credit.
   const refusedBySlot = r.refusedBySlot === undefined ? undefined : refusalsBySlot(r.refusedBySlot);
   const money = r.money === undefined ? undefined : moneyReply(r.money);
+  // P33: present or absent, never malformed.
+  const attribution = r.attribution === undefined ? undefined : attributionReply(r.attribution, r.eligible);
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
@@ -442,7 +520,7 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     // W23 T1.01, W26 C1.01: present or absent, never malformed.
     || (r.outsideWindow !== undefined && !count(r.outsideWindow))
     || (r.brandMismatched !== undefined && !count(r.brandMismatched))
-    || refusedBySlot === null || money === null
+    || refusedBySlot === null || money === null || attribution === null
     || (refusedBySlot === undefined ? r.refused !== undefined : r.refused !== Object.keys(refusedBySlot).length)
     // "No slot learns from this" is a statement about an outcome nothing took.
     || (r.notCredited !== undefined && (!['reward', 'money'].includes(r.notCredited as string) || r.attributed !== 0))) return null;
@@ -453,7 +531,8 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     ...(refusedBySlot !== undefined ? { refusedBySlot } : {}),
     ...(r.refused !== undefined ? { refused: r.refused as number } : {}),
     ...(money !== undefined ? { money } : {}),
-    ...(r.notCredited !== undefined ? { notCredited: r.notCredited as 'reward' | 'money' } : {}) };
+    ...(r.notCredited !== undefined ? { notCredited: r.notCredited as 'reward' | 'money' } : {}),
+    ...(attribution !== undefined ? { attribution } : {}) };
 }
 /**
  * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the
@@ -566,13 +645,38 @@ export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ 
   return out;
 }
 
+/**
+ * P05: what a decision tells the statistics object about its position — the
+ * position counted from 1 within its slot, for a module of a page's declared
+ * layout slot (a record carrying the layout reason, P29), the only slot a
+ * position estimate and its normalisation exist for; and, on each of the two
+ * modules an adjacent swap exchanged, the pair it exchanged. `swapOnly` keeps
+ * only the latter. Empty for any other record, so its row is exactly as before.
+ */
+export function positionRowOf(r: DecisionRecord | undefined, swapOnly = false): { position?: number; swap?: [number, number] } {
+  if (!r || !Number.isSafeInteger(r.position) || r.position < 0 || r.position >= 64) return {};
+  const x = r.explain?.exploration;
+  if (x?.mode === 'adjacent-swap' && Array.isArray(x.positions) && x.positions.length === 2 && Number.isSafeInteger(x.positions[0])
+    && x.positions[1] === x.positions[0] + 1 && (r.position + 1 === x.positions[0] || r.position + 1 === x.positions[1])) {
+    return { position: r.position + 1, swap: [x.positions[0], x.positions[1]] };
+  }
+  return !swapOnly && r.explain?.layoutReason !== undefined ? { position: r.position + 1 } : {};
+}
+
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, tenant: r.tenant, visitor_id: r.visitor_id, brand: r.brand, ts: r.ts, page: r.page, slot: r.slot, position: r.position,
     measurementBasis: r.measurementBasis ?? 'served-v1', ...(r.rendered ? { renderedAt: r.rendered.at } : {}),
     item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell, ...(r.retention ? { retention: r.retention } : {}), ...(r.featured_product_ids?.length ? { products: [...r.featured_product_ids] } : {}) });
 
-/** The slot's configuration the statistics object publishes against. */
-export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; measurementBasis?: import('@/content/types').MeasurementBasis; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin' }
+/**
+ * The slot's configuration the statistics object publishes against. P33
+ * (R-P39, S4F-C6): `attribution`, the slot's own attribution policy, rides it
+ * only to the visitor's ring (`slotConfigsOf`), which credits by it and never
+ * forwards it: the configuration a statistics object receives is exactly
+ * reward, stats, objective and measurement basis.
+ */
+export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; measurementBasis?: import('@/content/types').MeasurementBasis; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin';
+  attribution?: SlotAttribution }
 
 export async function learningGenerations(ns: NS, name: string, items: string[]): Promise<Record<string, LearningGeneration>> {
   if (!ns) throw new Error('Learning generation unavailable');
@@ -591,7 +695,8 @@ export async function learningGenerations(ns: NS, name: string, items: string[])
  */
 export function exposureDestinations(records: readonly DecisionRecord[], scoped: ReadonlySet<string>): string[] {
   const names = new Set<string>();
-  for (const row of records) if (row.arm === 'personalized') {
+  // P29 (decision D2): an off-limits layout slot's record is no exposure, so it lands in no statistics object.
+  for (const row of records) if (row.arm === 'personalized' && !isOffLimitsLayoutRecord(row)) {
     if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
     names.add(statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)));
   }
@@ -600,7 +705,7 @@ export function exposureDestinations(records: readonly DecisionRecord[], scoped:
 
 export async function prepareExposureEffects(env: Env, records: DecisionRecord[], consentUntil: number, scoped: ReadonlySet<string> = new Set()): Promise<Record<string, LearningEffect>> {
   const result: Record<string, LearningEffect> = {}, groups = new Map<string, DecisionRecord[]>();
-  for (const row of records) if (row.arm === 'personalized') {
+  for (const row of records) if (row.arm === 'personalized' && !isOffLimitsLayoutRecord(row)) {
     if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
     const name = statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)); groups.set(name, [...(groups.get(name) ?? []), row]);
   }
@@ -644,6 +749,10 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     const detached: DecisionRecord[] = [];
     for (const row of members) {
       if (!object(row) || !owned(row)) return finish(out);
+      // P29 (decision D2): an off-limits layout slot's record goes to the ledger
+      // only: never to the shopper's ring, which receipts and attribution read,
+      // and never to the statistics as an exposure.
+      if (isOffLimitsLayoutRecord(row)) continue;
       const copy = budget.detach(row, 'decision');
       if (!owned(copy)) return finish(out);
       detached.push(copy);
@@ -702,6 +811,8 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     const exposures = await Promise.all([...bySlot].map(async ([name, { slot, page, rows }]) => ({ name, body: {
       tenant, brand, slot, ...(page ? { page } : {}), config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
       exposures: await Promise.all(rows.map(async r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts,
+        // P05: a module an adjacent swap exchanged carries its position and the pair, so the object counts the swap.
+        ...positionRowOf(r, true),
         ...(managed ? { effect: managed.effects[r.decision_id] } : { decision: r.decision_id, digest: await recoveryDigest(r) }) }))),
     } })));
     // All validation/barrier/config reads precede starting either destination.
@@ -719,6 +830,42 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     out.exposures = sumStatsDeliveries(stats);
   } catch { if (out.code === 'complete') out.code = 'incomplete'; }
   return reportFanOutLoss(env, set.tenant, finish(out));
+}
+
+/** P30: the purpose a cached layout's exposure identity is drawn under, so it can never be another row's. */
+const LAYOUT_EXPOSURE_PURPOSE = 'layout-exposure/v1';
+
+/**
+ * P30 (decision D2): the exposures of a CACHED layout, counted from its per-view
+ * beacon (`layout_exposure`): one exposure per drawn module, in the slot's own
+ * statistics object, in the cell of the context the key named — its channel and
+ * visit bucket, nothing of the shopper's (stage unknown, no region, no interest)
+ * — so they land at level 2 (channel and visit bucket) and the coarser levels,
+ * whatever the device. The caller admitted the beacon (src/content/service.ts
+ * `admitLayoutExposure`). Each row's identity is the page view's own — the
+ * shopper, the page, the slot, the position drawn and the page instance — with
+ * no module or key in it, so the object's applied-delivery journal (W22 D1.02)
+ * recognises any repeat for the same page view and counts it once; the subject
+ * stands where every journal identity carries it, so erasure removes it as it
+ * removes a decision's. The holdout's arms are never counted (the caller refuses
+ * their keys) and nothing reaches the shopper's ring: no decision of the
+ * shopper's stands behind a cached layout. Never throws; a delivery the object
+ * did not acknowledge is counted as lost evidence, like any fan-out's.
+ */
+export async function fanLayoutExposure(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'CACHE'>>, input: {
+  tenant: string; brand: string; slot: string; /** W26 R2: the page of a page-scoped slot name only. */ page?: string; viewPage: string;
+  config: SlotLearnConfig; subject: string; pageInstance: string; modules: readonly string[]; cell: DecisionRecord['cell']; at: number;
+}): Promise<StatsDelivery> {
+  try {
+    const { tenant, brand, slot, page, config } = input;
+    const exposures = await Promise.all(input.modules.map(async (item, position) => ({ item, cell: input.cell, ts: input.at,
+      decision: `${tenant}:view:${input.subject}:${input.viewPage}:${slot}:${position}:${input.pageInstance}`,
+      digest: await recoveryDigest([LAYOUT_EXPOSURE_PURPOSE, tenant, brand, input.subject, input.viewPage, slot, position, input.pageInstance]) })));
+    const delivery = await deliverStats(env.LEARN_STATS, statsName(tenant, brand, slot, page), 'exposures',
+      { tenant, brand, slot, ...(page ? { page } : {}), config, exposures }, exposures.length);
+    await recordEvidenceLoss(env, tenant, 'fanOutRejected', delivery.rowsUnknown);
+    return delivery;
+  } catch { return emptyStatsDelivery(); }
 }
 
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
@@ -799,6 +946,11 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
  * rebuild starts a generation now out of what the platform still holds: it is
  * not a reconstruction of the decay an object that had been counting all along
  * would show, and the snapshot says so through `rebuiltFrom` and `restartedAt`.
+ *
+ * P33 (decision D1, freeze item 11): `policy` is the tenant's learning policy
+ * as `policyOf` reads it, each slot's own attribution policy included
+ * (`slotAttribution`), so a module-tied slot is folded by the rule the
+ * visitor's ring credited it by, and a slot without one exactly as before.
  */
 export function foldRetainedDay(input: {
   tenant: string; brand: string; slot: string; config: SlotLearnConfig; policy: AttributionPolicy;
@@ -813,6 +965,10 @@ export function foldRetainedDay(input: {
   let decisions = 0, outcomes = 0;
   for (const d of input.decisions) {
     if (!object(d) || d.tenant !== input.tenant || d.brand !== input.brand || seen.has(d.decision_id)) continue;
+    // P29 (decision D2): an off-limits layout slot's record never entered the
+    // shopper's ring, so a rebuilt ring holds it no more than the live one did:
+    // it is neither an exposure nor a decision any outcome can be credited to.
+    if (isOffLimitsLayoutRecord(d)) continue;
     seen.add(d.decision_id); pageOf.set(d.decision_id, d.page);
     rings.set(d.visitor_id, [...(rings.get(d.visitor_id) ?? []), ringEntryOf(d)]);
     if (d.slot !== input.slot || !placed(d.page) || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;

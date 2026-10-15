@@ -2404,8 +2404,9 @@ describe('W35.02 visit context', () => {
     f.env.EVENT_QUEUE = { send: async (v: { records?: Array<{ cell: unknown }> }) => { queued.push(v); } } as unknown as Queue;
     const state = () => host === 'session' ? f.sessions.data.get(tenantKey('meridian', `session:${g.sessionId}`))
       : JSON.stringify([...f.objects.get(shopperObjectName('meridian', g.subject))?.data ?? []]);
+    let pageInstances = 0;
     const snapshot = (entry?: unknown, extra = '') => f.call(`/v1/meridian/decisions/snapshot?page=home&visitorId=${g.subject}&sessionId=${g.sessionId}`
-      + (entry === undefined ? '' : `&entry=${encodeURIComponent(JSON.stringify(entry))}`) + extra, g.capability);
+      + (entry === undefined ? '' : `&entry=${encodeURIComponent(JSON.stringify(entry))}`) + `&pageInstance=w35-${host}-${++pageInstances}` + extra, g.capability);
     return { ...f, g, queued, state, snapshot };
   }
 
@@ -2419,11 +2420,13 @@ describe('W35.02 visit context', () => {
     try {
       for (const host of ['session', 'do']) {
         const f = await fixture(host), before = f.state();
-        // A public snapshot is an offer: "Only a subsequent authenticated render may
-        // capture them" (src/content/service.ts:35). The route always passes an offer
-        // (src/routes/decisions.ts:465), so it returns no private replay inputs
-        // (src/routes/decisions.ts:478) and captures nothing. Those three are what it
-        // can be held to here; the visit context the engine derived is read below
+        // A public snapshot that carries a page instance is an offer: the route passes
+        // the offer exactly when one is given (src/routes/decisions.ts:888), and "Only a
+        // subsequent authenticated render may capture them" (src/content/service.ts:41),
+        // so it returns no private replay inputs and captures nothing. Without a page
+        // instance the served-v1 content slot is captured at serve time (L-R10, the
+        // landing), so every snapshot of this fixture carries one. Those three are what
+        // it can be held to here; the visit context the engine derived is read below
         // through the real personalization path and its decision provider.
         const offer = async (entry?: unknown, extra = '') => { const queued = f.queued.length, r = await f.snapshot(entry, extra);
           expect(r.status).toBe(200);
@@ -2692,7 +2695,8 @@ it('W22.07 validates explicit buffered context before effects and transports zer
       expect((await explicitChoice(f, f.g, true, true)).response.status).toBe(200);
       for (const [timestamp, browsingSessionId] of [[0, null], [1, 'original-browsing']] as const) {
         const decisionId = `meridian:0:${f.g.subject}:home:hero:0`;
-        expect((await f.send({ timestamp, browsingSessionId, eventId: `old-${timestamp}`, data: { ...f.event.data, decisionId } })).status).toBe(200);
+        // R10 (P40, R-P48): two distinct purchase events, each with its own order id (one order is one purchase).
+        expect((await f.send({ timestamp, browsingSessionId, eventId: `old-${timestamp}`, data: { ...f.event.data, orderId: `historical-order-${timestamp}`, decisionId } })).status).toBe(200);
         await f.drain(); expect(f.queued.at(-1)).toMatchObject({ ts: timestamp, session_id: browsingSessionId, event_id: `old-${timestamp}`, decision_id: decisionId });
         expect(f.learned).toEqual(f.queued);
       }
@@ -6375,8 +6379,9 @@ describe('SDK ↔ /realtime/action contract', () => {
         expect(() => outcomeFromAction(invalid, g.tenant)).toThrow('Invalid decision reference');
         expect(queued).toEqual([]); expect(learned).toEqual([]);
       }
-      for (const reference of [decisionId, exact]) {
-        expect((await f.call('/realtime/action', g.capability, { ...action, data: { ...action.data, decisionId: reference } })).status).toBe(200);
+      // R10 (P40, R-P48): each distinct purchase event its own order id (one order is one purchase).
+      for (const [reference, orderId] of [[decisionId, 'order-2'], [exact, 'order-3']] as const) {
+        expect((await f.call('/realtime/action', g.capability, { ...action, data: { ...action.data, orderId, decisionId: reference } })).status).toBe(200);
         await f.drain(); expect(queued.at(-1)).toMatchObject({ decision_id: reference, tenant: g.tenant, visitor_id: g.subject });
         expect(learned).toEqual(queued);
       }
@@ -6414,8 +6419,9 @@ describe('SDK ↔ /realtime/action contract', () => {
         } }) },
       });
       const action = { type: 'purchase', userId: g.subject, sessionId: g.sessionId, source: 'sdk', data: { orderId: 'same', value: 1 }, timestamp: Date.now() };
+      // R10 (P40, R-P48): each distinct purchase event its own order id; base36-1 delivered again is the same event (same order).
       for (const eventId of ['base36-1', 'base36-2', 'base36-1']) {
-        expect((await f.call('/realtime/action', g.capability, { ...action, eventId })).status).toBe(200);
+        expect((await f.call('/realtime/action', g.capability, { ...action, eventId, data: { ...action.data, orderId: `order-${eventId}` } })).status).toBe(200);
         await f.drain();
       }
       expect(queued).toHaveLength(3); expect(learned).toEqual(queued);
@@ -6432,11 +6438,11 @@ describe('SDK ↔ /realtime/action contract', () => {
         expect((await f.call('/realtime/action', g.capability, { ...action, ...malformed })).status).toBe(400);
         expect(f.effects).toEqual(before.effects); expect(f.sessions.calls).toEqual(before.sessions);
       }
-      expect((await f.call('/realtime/action', g.capability, { ...action, eventId: 'epoch-zero', timestamp: 0 })).status).toBe(200);
+      expect((await f.call('/realtime/action', g.capability, { ...action, eventId: 'epoch-zero', timestamp: 0, data: { ...action.data, orderId: 'order-epoch-zero' } })).status).toBe(200);
       await f.drain(); expect(queued.at(-1)).toMatchObject({ event_id: 'epoch-zero', ts: 0 });
-      expect((await f.call('/realtime/action', g.capability, { ...action, timestamp: 0 })).status).toBe(200);
+      expect((await f.call('/realtime/action', g.capability, { ...action, timestamp: 0, data: { ...action.data, orderId: 'order-request-0' } })).status).toBe(200);
       await f.drain(); expect(queued.at(-1)).toMatchObject({ event_id_source: 'request', ts: 0 });
-      for (let i = 0; i < 2; i++) { expect((await f.call('/realtime/action', g.capability, action)).status).toBe(200); await f.drain(); }
+      for (let i = 0; i < 2; i++) { expect((await f.call('/realtime/action', g.capability, { ...action, data: { ...action.data, orderId: `order-request-${i + 1}` } })).status).toBe(200); await f.drain(); }
       expect(queued.at(-1)).toMatchObject({ event_id_source: 'request' });
       expect(queued.at(-1)!.outcome_id).not.toBe(queued.at(-2)!.outcome_id); expect(learned).toEqual(queued);
       const legacy = outcomeFromAction(action, g.tenant)!;

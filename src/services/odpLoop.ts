@@ -27,6 +27,7 @@
 //     subset:["realtime"] silently returned nothing.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { actionOf } from '@/reflex/contentTelemetry';
 import { shopperObject } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
@@ -108,6 +109,54 @@ export async function mergeOdpState(env: Env, tenant: string, first: (OdpState &
 
 async function mappedIdentity(tenant: string, identity: OdpIdentity, config?: OdpConfiguration): Promise<string> {
   return config ? connectorIdentity(tenant, config.identityNamespace, identityKeyOf(identity).key) : vuidFor(identity);
+}
+
+/**
+ * P35 (decision D1): THE SECOND ODP IDENTIFIER.
+ *
+ * A tenant's ODP connector may name `secondIdentifier`, an identifier field its
+ * own ODP already defines (src/connectors/config.ts). The value is the
+ * customer's hashed account identifier, and it comes from one place only: the
+ * person's own link record, which keeps the account identifier of the person's
+ * verified link (the link's own `accountId`, never an earlier account an
+ * identifier change merged) while the tenant has the setting configured at link
+ * time and under the person's tracking consent, and which erasure clears with
+ * the rest of the record (src/identity/link.ts, ShopperReflex's
+ * `/identity/odp-identifier`). The identifier a page carries before recognition
+ * (P13's `customerId`) is carried, never proof, and is never an ODP identity.
+ *
+ * The record lives in the person's own object, and both hosts make every ODP
+ * write inside one of that object's operations, so the object hands its reader
+ * to the writes it runs through this scope, as it hands its consent to them
+ * (`currentOwnerConsent`). A write reads the record only while its tenant has
+ * the setting configured, so a tenant without it reads nothing new; a write
+ * outside any object's operation, for a shopper with no link, or whose reader
+ * fails, carries the vuid alone, exactly as before. Nothing else changes: the
+ * same endpoints, the same consent fences, nothing created in ODP.
+ */
+export type KeptOdpIdentifierReader = (tenant: string, subject: string) => Promise<string | null>;
+const keptOdpIdentifiers = new AsyncLocalStorage<KeptOdpIdentifierReader>();
+
+/** Run `work` with the reader of the account identifier the running object's link record keeps (ShopperReflex's operations). */
+export function withKeptOdpIdentifier<T>(reader: KeptOdpIdentifierReader, work: () => T): T {
+  return keptOdpIdentifiers.run(reader, work);
+}
+
+/** `{ [secondIdentifier]: <the kept account identifier> }` for this shopper's ODP write, or `{}`: then the write is exactly as before. */
+async function secondOdpIdentifier(tenant: string, identity: OdpIdentity, config?: OdpConfiguration): Promise<Record<string, string>> {
+  const field = config?.secondIdentifier;
+  if (!field) return {};
+  const read = keptOdpIdentifiers.getStore();
+  const { key, stable } = identityKeyOf(identity);
+  if (!read || !stable) return {};
+  try {
+    const kept = await read(tenant, key);
+    return typeof kept === 'string' && kept !== '' ? { [field]: kept } : {};
+  } catch (error) {
+    if (error instanceof SessionAccessError) throw error;
+    console.warn('[odp] second identifier unreadable');
+    return {};
+  }
 }
 
 /**
@@ -365,11 +414,13 @@ export async function forwardEventToOdp(
     if (!mapped) return;
     await admitOdp(env, tenant, resolved, currentProfileBirth(tenant) ?? admittedAt);
     const vuid = await mappedIdentity(tenant, identity, resolved.config);
+    // P35: the tenant's second identifier beside the vuid, only when the person's link record keeps one.
+    const second = await secondOdpIdentifier(tenant, identity, resolved.config);
     const res = await ownerFetch(`${resolved.host}/v3/events`, {
       redirect: 'error',
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': resolved.key },
-      body: JSON.stringify({ ...mapped, identifiers: { vuid } }),
+      body: JSON.stringify({ ...mapped, identifiers: { vuid, ...second } }),
     });
     if (!res.ok) console.warn('[odp] event forward HTTP', res.status);
     if (receiptId) {
@@ -420,7 +471,8 @@ export async function upsertOdpProfile(
     const dims = affinity.dims ?? {};
     const lines = dims.line ?? {};
     const dominant = Object.entries(lines).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
-    const attributes: Record<string, unknown> = resolved.config ? { vuid } : {
+    // P35: the tenant's second identifier beside the vuid, only when the person's link record keeps one.
+    const attributes: Record<string, unknown> = resolved.config ? { vuid, ...await secondOdpIdentifier(tenant, identity, resolved.config) } : {
       vuid,
       line_affinity_tabby: lines.Tabby ?? 0,
       silhouette_affinity_tote: dims.silhouette?.tote ?? 0,
