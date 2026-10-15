@@ -311,6 +311,18 @@ const membersSchema = z.object({ shopperId: z.string().refine(isShopperId), crea
   // P35: the account identifier of this person's verified link, kept for the tenant's second ODP identifier.
   odpIdentifier: z.string().min(1).max(200).optional(),
 }).strict();
+/**
+ * P35: a person's record that keeps the second ODP identifier keeps it as its
+ * last member, the member order its schema parses to, so a member added later
+ * (an identifier change's `mergedAccounts`, an import's `history`) never moves it
+ * and the record and its `identity:shopper:` projection stay byte-identical
+ * however either is written. A record without it is returned unchanged.
+ */
+function keptIdentifierLast(record: ShopperRecord): ShopperRecord {
+  if (record.odpIdentifier === undefined) return record;
+  const { odpIdentifier, ...rest } = record;
+  return { ...rest, odpIdentifier };
+}
 async function identityDigest(value: unknown): Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value))))]
     .map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -3286,8 +3298,8 @@ export class ShopperReflex {
       const now = Date.now();
       const cfg = await resolveTenantReflexConfig(this.env, context.tenant, this.surface());
       const { affinity, pipeline, merged } = await this.mergedIdentity(context.tenant, context.subject, source.affinity, source.pipeline, now, cfg);
-      const next: ShopperRecord = { ...members,
-        mergedAccounts: [...new Set([...held, ...source.mergedAccounts, body.from])].filter(id => id !== context.subject).slice(-MAX_MERGED_ACCOUNTS) };
+      const next: ShopperRecord = keptIdentifierLast({ ...members,
+        mergedAccounts: [...new Set([...held, ...source.mergedAccounts, body.from])].filter(id => id !== context.subject).slice(-MAX_MERGED_ACCOUNTS) });
       await this.persistAudienceState(affinity, pipeline, null, true, { identityMembers: next });
       await this.scheduleNextCrossing(now, cfg);
       // The compatibility projections follow the one commit, as after a link.
@@ -3678,8 +3690,8 @@ export class ShopperReflex {
         if (identityAlarm === null || identityAlarm > members.retention!.expiresAt) await this.state.storage.setAlarm(members.retention!.expiresAt);
         if (members.shopperId !== context.subject) throw new SessionAccessError();
         const behavioralRows = rows.filter(row => !('kind' in row));
-        members = { ...members, history: { rows: (members.history?.rows ?? 0) + behavioralRows.length,
-          latestAt: Math.max(members.history?.latestAt ?? 0, ...behavioralRows.map(row => row.at)), appliedAt: now } };
+        members = keptIdentifierLast({ ...members, history: { rows: (members.history?.rows ?? 0) + behavioralRows.length,
+          latestAt: Math.max(members.history?.latestAt ?? 0, ...behavioralRows.map(row => row.at)), appliedAt: now } });
       }
       const result = { ok: true, applied, outcomes, audiences: [...new Set([...evaluated.state.audiences, ...enrichmentInputs(profileEnrichment).audiences])].sort(), changes: evaluated.changes };
       const projectionKey = 'sessionProjection:' + tenantKey(context.tenant, 'session:' + pipeline.sessionId);
