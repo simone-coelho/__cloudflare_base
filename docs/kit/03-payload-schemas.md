@@ -1600,8 +1600,44 @@ overriding either, each history decayed by its age so recent behaviour outranks 
 names another pair, is signed with a secret the tenant does not hold, has expired or expires more than 24 hours
 ahead is refused with `401`, naming the account change, and merges nothing. The later account's identity record
 keeps `mergedAccounts`, the shopper ids of the accounts merged into it (salted ids only, written only when a change
-merges, at most 50, erased with the person), so a statement presented again merges nothing more; no account
-identifier is stored, and the hydrate and the decision records carry nothing new.
+merges, at most 50, erased with the person), so a statement presented again merges nothing more; an identifier
+change stores no account identifier, and the hydrate and the decision records carry nothing new.
+
+## The ODP writes and the second identifier
+
+The tenant's ODP connector configuration (`TENANT_CONNECTORS`, its `odp` object) may name one more ODP identifier
+field ([API reference](./02-api-reference.md#the-second-odp-identifier-odpsecondidentifier)):
+
+```json
+{ "odp": { "apiHost": "https://…", "publicKeyRef": "CONNECTOR_SECRET_…", "identityNamespace": "…",
+  "actions": { … }, "audiences": { … }, "profile": { … }, "secondIdentifier": "hashed_customer_id" } }
+```
+
+| Member | Meaning |
+|---|---|
+| `odp.secondIdentifier` | Optional. An identifier field your ODP already defines: a letter, then up to 95 letters, digits and underscores; never `vuid`, never one of the `odp.profile` fields. Any other value makes the connector configuration invalid |
+| `odpIdentifier` (the person's identity record) | Kept only while the setting is configured at a verified sign-in and under the person's tracking consent: the link's own `accountId`. Erased with the record, and never answered by the operator reads, the export or the link answer |
+
+`secondIdentifier` is written beside the vuid only when the setting is configured and the person's record holds
+the hashed account identifier of the person's verified sign-in. The engine's ODP writes then take these shapes,
+from both hosts; the event is sent under tracking consent and the profile upsert under personalization consent:
+
+```json
+POST /v3/events
+{ "type": "<type>", "action": "<action>", "data": { "<mapped field>": "<value>" },
+  "identifiers": { "vuid": "<vuid>", "<secondIdentifier>": "<account identifier>" } }
+
+POST /v3/profiles
+[ { "attributes": { "vuid": "<vuid>", "<secondIdentifier>": "<account identifier>", "<profile field>": "<value>" } } ]
+```
+
+Without the setting, or for a shopper whose record holds no account identifier, every write is exactly what it
+was: `identifiers: { vuid }` on an event and `attributes: { vuid, …the profile fields in their order }` on a
+profile upsert. The audience read (`POST /v3/graphql`, `customer(vuid)`) is the same with or without the setting.
+The engine creates nothing in ODP: no field, segment or audience, and no endpoint beyond these three. The
+page-side path writes nothing to ODP at all: the page passes the engine's segments and interest values (an
+update's `segments` and `affinity.dims`) to the experimentation user context as attributes
+([Integration guide](./01-integration-guide.md#your-experiments-and-the-engines-audiences-the-second-odp-identifier)).
 
 ## The interest hydrate's restoration provenance
 

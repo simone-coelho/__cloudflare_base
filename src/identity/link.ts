@@ -34,6 +34,7 @@ import type { Assurance } from '@/identity/assertion';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
 import { consentOf, type Consent } from '@/content/consent';
 import { mergeEnrichment } from '@/identity/profileEnrichment';
+import { odpSecondIdentifier } from '@/connectors/config';
 
 export type LinkOutcome = 'linked' | 'already' | 'relinked';
 
@@ -98,7 +99,11 @@ export async function linkVisitor(
       || body.result.visitorId !== input.visitorId || typeof body.result.sessionId !== 'string' || !body.result.sessionId
       || !body.result.grant || body.result.grant.subject !== shopperId || body.result.grant.sessionId !== body.result.sessionId
       || body.result.grant.tenant !== tenant || body.result.grant.kind !== 'recognized') throw new SessionAccessError();
-    return input.accountChange ? applyAccountChange(env, tenant, shopperId, input.accountChange.from, body.result) : body.result;
+    const linked = input.accountChange ? await applyAccountChange(env, tenant, shopperId, input.accountChange.from, body.result) : body.result;
+    // P35 (decision D1): a verified link of a tenant whose ODP connector names a second
+    // identifier leaves the link's own account identifier on the person's record.
+    if (input.principal) await keepOdpIdentifier(env, tenant, shopperId, input.accountId);
+    return linked;
   }
   const shopperId = await shopperIdFor(env, tenant, input.accountId);
   const store = new IdentityStore(env.SESSIONS as never, tenant);
@@ -191,6 +196,34 @@ async function applyAccountChange(env: Env, tenant: TenantId, shopperId: string,
     },
     cookieHeaders: body.cookieHeaders,
   };
+}
+
+// ── P35: the account identifier for the tenant's second ODP identifier ───────
+//
+// Only while the tenant's ODP connector names `secondIdentifier` at link time,
+// and only for a verified link (the public link, the site's backend having
+// signed the account identifier), the person's own object keeps the link's own
+// account identifier on the person's record (ShopperReflex,
+// `/identity/odp-identifier`): never an earlier account an identifier change
+// names, never the identifier a page carried before recognition. The object
+// keeps it only under the person's tracking consent and refuses any identifier
+// that does not name this person. For every other tenant nothing is asked and
+// nothing is kept, so the link's calls, stores and answer are exactly as before.
+// The link stands whatever this answers: a refusal keeps nothing, and the
+// person's ODP writes then carry the vuid alone, as before.
+
+async function keepOdpIdentifier(env: Env, tenant: TenantId, shopperId: string, accountId: string): Promise<void> {
+  if (odpSecondIdentifier(env, tenant) === null) return;
+  try {
+    const response = await shopperObject(env.SHOPPER_REFLEX, shopperId, tenant).fetch('https://shopper-reflex/identity/odp-identifier', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': shopperId },
+      body: JSON.stringify({ accountId }),
+    });
+    const body = await response.json() as { ok?: unknown };
+    if (!response.ok || body.ok !== true) console.warn('[identity] second ODP identifier not kept');
+  } catch {
+    console.warn('[identity] second ODP identifier not kept');
+  }
 }
 
 // ── The session host ─────────────────────────────────────────────────────────

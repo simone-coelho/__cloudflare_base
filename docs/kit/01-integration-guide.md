@@ -376,6 +376,42 @@ change, and nothing is linked or merged. The earlier account's profile is merged
 included, and the same statement presented again merges nothing more while the sign-in itself is
 accepted. The earlier account keeps its own profile.
 
+### Your experiments and the engine's audiences: the second ODP identifier
+
+An experiment on your experimentation platform can target the audiences the engine builds in two ways.
+Neither path creates anything in ODP: the engine never creates an ODP field, segment or audience on your
+behalf, so your ODP owner defines the identifier field and builds any segment on the engine's fields.
+
+**The page-side path** needs no setting. On the page, pass the engine's segments and interest values to
+your experimentation user context as attributes, and build the experiment's audience on those attributes.
+Every engine update carries them (`client.on('update', …)`): `segments` lists the segments the shopper
+qualifies for, and `affinity.dims` holds the interest values, one number in `[0, 1)` per dimension and
+value. Updates arrive only while the shopper allows personalization, so the attributes follow that choice.
+
+```js
+// `user` is your experimentation SDK's user context for this visitor; each attribute name is one your
+// experimentation project defines before an audience can use it.
+client.on('update', (u) => {
+  if (Array.isArray(u.segments)) user.setAttribute('edge_segments', u.segments.join(','));
+  for (const [dimension, values] of Object.entries(u.affinity?.dims ?? {})) {
+    for (const [value, score] of Object.entries(values)) user.setAttribute(`edge_${dimension}_${value}`, score);
+  }
+});
+```
+
+**The second ODP identifier** lets a segment built in ODP on the engine's fields reach your experiments
+through an identifier your experimentation platform resolves. Your ODP connector configuration
+(`TENANT_CONNECTORS`, the tenant's `odp` object) names that identifier field as `secondIdentifier`, with
+no page change. Where your ODP connector configuration names `secondIdentifier`, the engine writes the
+shopper's hashed account identifier into that field beside its own vuid only when the shopper has signed
+in through the verified link above and the person's record holds the link's account identifier. That is
+the `accountId` your backend signed, so link with your hashed account identifier (declaring its form as
+`accountIdFormat` keeps any other form out); an earlier identifier an `accountChange` names, and the
+`customerId` a page carried before sign-in, are never written to ODP. The person's record keeps it only
+under the shopper's tracking consent, from a sign-in made while the setting is configured; a person who
+signed in before you configured it gets it at the next sign-in, and an erasure removes it. Every other
+write is exactly as before ([API reference](./02-api-reference.md#the-second-odp-identifier-odpsecondidentifier)).
+
 ## 6. The live channel
 
 `client.connect()` opens a socket under the visitor id. What arrives:
