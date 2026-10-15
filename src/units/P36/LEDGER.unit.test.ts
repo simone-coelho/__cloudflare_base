@@ -1213,7 +1213,7 @@ describe('unit:P36.CH5', () => {
     landingPageTypes: VOCABULARY.landingPageTypes,
   };
 
-  it('host: R-P52 — visitBuckets and ladder are optional: a vocabulary naming its channels and rules without them publishes and is in force, and keeps today\'s order at full depth (the grammar in force ladder-cell version 2 with c, v, s, r, a, a lift learned at every level read from level 5), today\'s grammar (a priors file exported under it imports) and today\'s cut (a second visit in 2-3)', async () => {
+  it('host: R-P52 — visitBuckets and ladder are optional: a vocabulary naming its channels and rules without them publishes and is in force, and keeps today\'s order at full depth (the grammar in force, CELL_GRAMMAR\'s name, version and order, a lift learned at every level read from level 5), today\'s grammar (a priors file exported under it imports) and today\'s cut (a second visit in 2-3)', async () => {
     const m = await mount('session', NO_SETTINGS);
     expect(m.refused, 'PRECONDITION: the tenant documents publish').toBeNull();
     const written = await publishLearn(m, { contextVocabulary: CHANNELS_ONLY });
