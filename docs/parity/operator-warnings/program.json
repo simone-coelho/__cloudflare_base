@@ -115,13 +115,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S6 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S6 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S6 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/head-P41.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p41-advisory-everywhere.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p41-refuse-omitting.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/all4-P41.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/acceptance-P41.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/nc-p41-sketch.log"
         ]
       },
       "doneWhen": [
@@ -236,13 +242,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S6 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S6 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S6 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-head-P42.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-p42-door-only.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-p42-sketch-guarded.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-p42-clear-door-only.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p42-lift-marked.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p42-recovery-text.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p42-snapshot-marked.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/fix-P42-head.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/fix-nc-p42-door-only.log"
         ]
       },
       "doneWhen": [
@@ -349,13 +366,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S6 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S6 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S6 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/head-P43.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p43-release-inner-pin.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p43-entry-every-pin.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p43-entry-every-inner-pin.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/all4-P43.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/acceptance-P43.log"
         ]
       },
       "doneWhen": [
@@ -462,13 +485,19 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: recorded at the S6 specification gate",
-        "verdict": "PENDING",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
         "evidence": [
-          "TBD: the S6 reports"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
         ],
         "negativeControlEvidence": [
-          "TBD: the S6 control logs"
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/head-P44.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p44-fields-P44.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p44-fields-W19.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/all4-W19.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/acceptance-P44.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/W19-corrected-head.log"
         ]
       },
       "doneWhen": [
