@@ -47,6 +47,20 @@
           "kind": "LOCAL",
           "observable": "docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md state the advisory, its shape and when it is given; where the console shows publication advisories for the learn document, it shows this one.",
           "proof": "The P41 acceptance command runs the tests named unit:P41.CW3 in src/units/P41 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "A table that omits the slot's own reward is still published and the publication tells the operator, in the existing advisory shape (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
         }
       ],
       "existingEvidence": [
@@ -101,13 +115,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: exact reviewed test revision",
-        "verdict": "PASS",
+        "reviewedRevision": "TBD: recorded at the S6 specification gate",
+        "verdict": "PENDING",
         "evidence": [
-          "TBD: specification review evidence"
+          "TBD: the S6 reports"
         ],
         "negativeControlEvidence": [
-          "TBD: negative-control evidence"
+          "TBD: the S6 control logs"
         ]
       },
       "doneWhen": [
@@ -153,6 +167,20 @@
           "kind": "LOCAL",
           "observable": "docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md state the named refusal and the stale marker.",
           "proof": "The P42 acceptance command runs the tests named unit:P42.PW4 in src/units/P42 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "Fail-closed stays; the refusal names the faulty placement and the lift reads mark the slot stale until a publication succeeds (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
         }
       ],
       "existingEvidence": [
@@ -208,13 +236,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: exact reviewed test revision",
-        "verdict": "PASS",
+        "reviewedRevision": "TBD: recorded at the S6 specification gate",
+        "verdict": "PENDING",
         "evidence": [
-          "TBD: specification review evidence"
+          "TBD: the S6 reports"
         ],
         "negativeControlEvidence": [
-          "TBD: negative-control evidence"
+          "TBD: the S6 control logs"
         ]
       },
       "doneWhen": [
@@ -254,6 +282,20 @@
           "kind": "LOCAL",
           "observable": "A page without `inner`, and a nested page whose every module is returned, carry no such entry and their decisions are byte for byte today's on both hosts; docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md state the entry.",
           "proof": "The P43 acceptance command runs the tests named unit:P43.RP3 in src/units/P43 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "The reservation stays as P26 ruled it and the page's pin diagnostics report the pin as reserved and unserved, naming the slot, the module and the piece (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
         }
       ],
       "existingEvidence": [
@@ -307,13 +349,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: exact reviewed test revision",
-        "verdict": "PASS",
+        "reviewedRevision": "TBD: recorded at the S6 specification gate",
+        "verdict": "PENDING",
         "evidence": [
-          "TBD: specification review evidence"
+          "TBD: the S6 reports"
         ],
         "negativeControlEvidence": [
-          "TBD: negative-control evidence"
+          "TBD: the S6 control logs"
         ]
       },
       "doneWhen": [
@@ -353,6 +395,20 @@
           "kind": "LOCAL",
           "observable": "docs/kit/03-payload-schemas.md's piece table lists both members with their meaning and kit 02 states that a direct publication keeps them; the W19 pieces-contract units are green with their field-list lock derived from the validator's list (the specifier's R10 correction, R-P75 form), every other W19 assertion unchanged.",
           "proof": "The P44 acceptance command runs the tests named unit:P44.PF3 in src/units/P44 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "The validator's field list grows by pooled and successEvent and the W19 lock derives from it, a test-only correction under R10 in the R-P75 form (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
         }
       ],
       "existingEvidence": [
@@ -406,13 +462,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD: exact reviewed test revision",
-        "verdict": "PASS",
+        "reviewedRevision": "TBD: recorded at the S6 specification gate",
+        "verdict": "PENDING",
         "evidence": [
-          "TBD: specification review evidence"
+          "TBD: the S6 reports"
         ],
         "negativeControlEvidence": [
-          "TBD: negative-control evidence"
+          "TBD: the S6 control logs"
         ]
       },
       "doneWhen": [
