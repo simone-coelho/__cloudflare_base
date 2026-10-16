@@ -12,7 +12,7 @@ import { parseId, type OutcomeRecord } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
 import { logicalIdentity, LOGICAL_EXCLUDED_FIELDS } from '@/ledger/delivery';
-import { attributeWindowed, creditWeight, uncorrelatedBrandMismatches, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+import { attributeWindowed, successCreditOf, uncorrelatedBrandMismatches, type AttributionPolicy, type RingEntry } from '@/learn/policy';
 /**
  * How far back this ring reaches. Exported because it is not this object's
  * private business: the online fan-out declares it as the horizon it actually
@@ -582,6 +582,15 @@ export class DecisionRing {
     // Prepare every destination before sending, preserving the existing per-slot objective arithmetic.
     const bySlot = new Map<string, typeof credits>();
     for (const c of credits) bySlot.set(c.slot, [...(bySlot.get(c.slot) ?? []), c]);
+    // P16 (decision D1, freeze item 14): the entry each credit was attributed
+    // from, whose record names the decision's success event where its slot
+    // publishes a conversion table; and the slots whose only matching
+    // decisions named another success event, refused below for their reward
+    // exactly as a slot learning another reward is (holdout decisions are
+    // never credited, so never named).
+    const entryOf = new Map(all.map(e => [e.id, e] as const));
+    const unsuccessful = new Set((attribution.unsuccessful ?? []).map(id => entryOf.get(id))
+      .filter((e): e is RingEntry => e !== undefined && e.arm === 'personalized').map(e => e.slot));
     /**
      * W24 R1.03/R1.04 (build review findings 1 and 2): what each slot refused,
      * decided HERE — per credited slot, with that slot's own configuration —
@@ -623,10 +632,17 @@ export class DecisionRing {
        * learns from purchases; the click-learning slot takes nothing from it
        * and says so by name.
        */
-      if (config.reward !== outcome.type) { refusedBySlot.set(slot, 'reward'); continue; }
-      plan.receipt.attributed += list.length;
+      //
+      // P16 (decision D1, freeze items 14 and 43): or, for a decision whose
+      // record names its success event, against that event, at the value the
+      // record names in the slot's currency, kept under the slot's own reward
+      // counter (`successCreditOf`, the one rule every offline fold reads too).
+      const priced = list.map(c => ({ c, success: successCreditOf(entryOf.get(c.decision_id)?.successEvent, config, outcome) }));
+      const taken = priced.filter((p): p is { c: typeof p.c; success: NonNullable<typeof p.success> } => p.success !== null);
+      if (!taken.length) { refusedBySlot.set(slot, 'reward'); continue; }
+      plan.receipt.attributed += taken.length;
       // CW27: the credit is worth what the slot's objective says; a worthless credit is not sent.
-      const weighed = list.map((c) => ({ ...c, weight: creditWeight(config.objective, outcome) })).filter((c) => c.weight > 0);
+      const weighed = taken.map(({ c, success }) => ({ ...c, reward: success.reward, weight: success.weight })).filter((c) => c.weight > 0);
       if (managed) for (const credit of weighed) {
         const selected = d.ring.filter(row => row.decision_id === credit.decision_id);
         if (selected.length !== 1) throw new Collision();
@@ -635,7 +651,7 @@ export class DecisionRing {
         const original = requireRetention(this.env, selected[0]!.retention?.online, tenant, 'online');
         plan.retention = mergeRetention(plan.retention, original, tenant, 'online');
       }
-      plan.receipt.eligible += weighed.length; plan.receipt.weightSkipped += list.length - weighed.length;
+      plan.receipt.eligible += weighed.length; plan.receipt.weightSkipped += taken.length - weighed.length;
       // W26 R2: each credit goes to the statistics object of the PLACEMENT its
       // decision was served in — the slot, and the page where the tenant's
       // catalogue carries this slot name on more than one page — read off the
@@ -658,10 +674,21 @@ export class DecisionRing {
       // declared layout slot, and the pair an adjacent swap exchanged there, read
       // off the record this ring holds, so the statistics object can count the
       // swap's clicks and weigh the credit by the position policy in force.
+      // P16: a credit kept under the slot's reward for another event (an add to
+      // bag in a click slot's currency) is not a click of the adjacent swap's
+      // estimate, which counts clicks; its position still weighs it.
       for (const [name, group] of placements) plan.batches.push({ name, received: group.credits.length,
         body: { tenant, brand, slot, ...(group.page ? { page: group.page } : {}), config: sent,
-          credits: group.credits.map(credit => ({ ...credit, ...positionRowOf(recordOf.get(credit.decision_id)) })) } });
+          credits: group.credits.map(credit => {
+            const place = positionRowOf(recordOf.get(credit.decision_id));
+            if (credit.reward === outcome.type || place.swap === undefined) return { ...credit, ...place };
+            const { swap: _swap, ...kept } = place; void _swap;
+            return { ...credit, ...kept };
+          }) } });
     }
+    // P16: a slot whose matching decisions all named another success event
+    // took nothing from this outcome for its reward, and says so by name.
+    for (const slot of unsuccessful) if (!bySlot.has(slot) && !refusedBySlot.has(slot)) refusedBySlot.set(slot, 'reward');
     if (plan.receipt.attribution) for (const entry of plan.receipt.attribution) entry.credited = credited.get(entry.slot) ?? [];
     if (refusedBySlot.size) {
       plan.receipt.refusedBySlot = Object.fromEntries(refusedBySlot);

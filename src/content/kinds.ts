@@ -10,6 +10,7 @@ import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platfo
 import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionBand, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
+import { isRewardType, REWARD_TYPES } from '@/ledger/records';
 import { TYPE_FALLBACK_RETIRED, typeFallbackRetired } from './typeAffinity';
 import { TODAY_TERMS, type ContextTerms } from './cell';
 import { ELIGIBILITY_SIGNALS } from './lifecycle';
@@ -258,6 +259,18 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   if (!stored && p.pooled !== undefined && p.pooled !== true) {
     errors.push(`${at}.pooled: ${quoted(p.pooled)} is not a pooling declaration; true pools the module's evidence in one record across every page it is served on, and absent keeps it per placement`);
   }
+  // P16 (decision D1, freeze item 14): the module's own success event, one
+  // reward of the list spelled exactly as the learn dials spell it. Any other
+  // value is refused by name rather than read as undeclared, which would leave
+  // the author believing the module is credited for it. A retained document is
+  // read, never refused, for it: a value outside the list there is the
+  // undeclared module it always was. Like `pooled` (P08), it is read here and
+  // not listed in PIECE_FIELDS, which unit:W19.F3.04 locks to kit 03's earlier
+  // piece table, so a direct write carrying it is also named on the advisory
+  // channel as an ignored field although the stored piece keeps it.
+  if (!stored && p.successEvent !== undefined && !isRewardType(p.successEvent)) {
+    errors.push(`${at}.successEvent: ${quoted(p.successEvent)} is not a success event; one of ${REWARD_TYPES.join(' | ')}, the reward an outcome of the module counts as its success (absent: the slot's own reward)`);
+  }
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
     id, customerContentId: cid, type, title, tags, slotTypes,
@@ -276,6 +289,7 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(window && (window.from || window.to) ? { window } : {}),
     ...(eligibleWhen ? { eligibleWhen } : {}),
     ...(p.pooled === true ? { pooled: true as const } : {}),
+    ...(isRewardType(p.successEvent) ? { successEvent: p.successEvent } : {}),
   };
 }
 
@@ -1611,6 +1625,16 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
           if (d.attribution === 'module-tied') dials.attribution = 'module-tied';
           else if (!historical) errors.push(`slots.${slot}.attribution: module-tied is the only attribution policy a slot may carry of its own (absent: the brand-wide policy credits the slot); got ${shown(d.attribution)}`);
         }
+        // P16 (decision D1, freeze items 14 and 43): the slot's conversion
+        // table into its own currency, kept exactly as authored; absent, the
+        // slot's reward and objective credit it as before. A RETAINED document
+        // whose table the current contract refuses keeps reading with the
+        // member dropped, so its slot is credited exactly as it was.
+        if (d.conversions !== undefined) {
+          const refused = conversionTableErrors(d.conversions, slot);
+          if (!refused.length) dials.conversions = Object.fromEntries(Object.entries(d.conversions as Record<string, number>)) as NonNullable<typeof dials.conversions>;
+          else if (!historical) errors.push(...refused);
+        }
         if (d.autonomy !== undefined) {
           const a = d.autonomy;
           const okMode = isRecord(a) && ['configured', 'assisted', 'autonomous'].includes(String(a.mode));
@@ -1667,6 +1691,26 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       ...(evidenceFloors ? { evidenceFloors } : {}),
     },
   };
+}
+
+/**
+ * P16 (decision D1, freeze items 14 and 43): the refusals of a slot's
+ * conversion table: an object naming at least one reward of the list, each
+ * valued by a finite number above zero, what one success of it is worth in the
+ * slot's own currency. Each error names `conversions` (`slots.<slot>.conversions`
+ * or `slots.<slot>.conversions.<reward>`) and the offending value.
+ */
+function conversionTableErrors(candidate: unknown, slot: string): string[] {
+  const at = `slots.${slot}.conversions`;
+  if (!isRecord(candidate)) return [`${at}: ${shown(candidate)} is not a conversion table; an object of reward (${REWARD_TYPES.join(' | ')}) → a finite number above zero, what one success of it is worth in the slot's currency`];
+  const entries = Object.entries(candidate);
+  if (!entries.length) return [`${at}: an empty table values no reward, so the slot would learn nothing; name at least one reward with its value in the slot's currency, or leave conversions out to credit the slot's own reward as before`];
+  const errors: string[] = [];
+  for (const [reward, value] of entries) {
+    if (!isRewardType(reward)) errors.push(`${at}: ${shown(reward)} is not a reward; a conversion table names rewards of the list (${REWARD_TYPES.join(' | ')})`);
+    else if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) errors.push(`${at}.${reward}: ${shown(value)} is not a conversion value; a finite number above zero, what one ${reward} success is worth in the slot's currency`);
+  }
+  return errors;
 }
 
 /**

@@ -106,6 +106,14 @@ export const recordStream = (row: CapturedRecord): LedgerStream => 'decision_id'
   : 'outcome_id' in row ? 'outcome' : 'event_id' in row ? 'behavior' : 'product-sort';
 
 export type RewardType = 'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom';
+/**
+ * P16 (decision D1, freeze item 14): the reward list as one value, so the
+ * catalogue's per-piece success event, a slot's conversion table and the
+ * credit read the same names `rewardOf` maps the wire to. The wire is not
+ * changed: these are the reward TYPES an outcome record carries.
+ */
+export const REWARD_TYPES: readonly RewardType[] = ['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'];
+export const isRewardType = (value: unknown): value is RewardType => typeof value === 'string' && (REWARD_TYPES as readonly string[]).includes(value);
 
 /** Validate original evidence kind before any online/offline counter can see it. */
 export function validDecisionMeasurement(value: Pick<DecisionRecord, 'measurementBasis' | 'rendered' | 'ts'>): boolean {

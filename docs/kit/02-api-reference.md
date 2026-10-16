@@ -982,6 +982,56 @@ The offline recomputation, `rebuildFrom` on `POST /v1/{tenant}/learn/generation`
 under the same per-slot rule, so a module-tied slot rebuilt from the ledger holds the counters online
 credit gave it ([where a page conversion lands](03-payload-schemas.md#where-a-page-conversion-lands)).
 
+A module may declare its own success event and a slot may convert every success into its own currency.
+A catalogue piece may carry `successEvent`, one reward of the list (`click`, `dwell`, `video_complete`,
+`wishlist`, `add_to_bag`, `purchase`, `custom`); `successEvent` is absent by default, and absent the
+module is credited for its slot's reward exactly as before. A slot's learn dials may publish a conversion
+table, `slots.{slot}.conversions: { <reward>: <value> }`; `conversions` converts each reward it names into
+the slot's currency at a finite value above zero, and is absent by default. Without a table nothing
+changes: the slot's `reward` and `objective` credit every module as before, a declared success event
+included, and no record, receipt, credit, replay or manifest changes. With a table, an outcome of a
+module's declared success event credits that module's decision the table's value for the event, and a
+module that declares none is credited for the slot's reward at the table's value for the slot's reward (so
+a table valuing the slot's reward at 1 credits such a module exactly as today, and one valuing it at 3
+credits each of its successes 3). A success event the table does not value credits nothing, and neither
+does any other event: a click on a module whose success event is `add_to_bag` credits its decision
+nothing, the outcome receipt naming the slot `reward` in `refusedBySlot`, and a table that does not value
+the slot's own reward credits nothing to a module that declares no success event. The value is multiplied
+by what the slot's objective weighs the outcome (1 under `unit`, the outcome's value under `revenue`, its
+margin under `margin`, with the money refusals above unchanged) and kept in the counter of the slot's own
+reward, which is the slot's currency, so modules with different success events are compared on lifts in
+one currency and ranked in one slot; on a layout slot that normalises positions, the position effect then
+divides it, live and in the hourly fold alike. The slot's attribution policy still decides which decision
+is credited (a module-tied slot only for an outcome that originated inside the module), and among the
+decisions of one slot an outcome matches only the decisions it is the success of, before the credit rule
+picks one. `custom` stands for every outcome of the custom reward, a partner pickup or a retailer
+referral, whatever its own name. An event that is no reward (a page view, `content_viewable`,
+`video_view`, `product_dwell`) is no outcome and credits nothing whatever a table says, and an outcome
+the objective weighs zero stays zero under any table. A product-type weight (action weights per product
+type) scales only the shopper's interest update and never this credit.
+
+Every decision record of a slot with a table carries `explain.successEvent: { event, value }`, keys
+sorted: the module's declared success event, else the slot's reward, and the table's value for it, `value:
+null` when the table does not value it; every arm carries it, and the shopper's receipt carries the same
+block as `successEvent`, with no new sentence. The credit of a decision is read off its record, online in
+the visitor's ring and in every offline fold — the offline recomputation (`rebuildFrom` on `POST
+/v1/{tenant}/learn/generation`) and the hourly fold alike — so a declaration or a table changed after a
+decision changes nothing that decision earns, and the next decision names the new one. Publication —
+`PUT /content/catalog`, `PUT /content/learn`, a `publicationChanges` member and `POST
+/content/{kind}/validate` alike — refuses with `422` a `successEvent` outside the list, naming `pieces[i].successEvent` in `errors[]`, and
+a table that is not an object, is empty, names a key outside the reward list or values a reward with
+anything but a finite number above zero, naming `conversions`; a stored document's member the current
+contract refuses reads as absent. Limits: a feed import or pull carries no `successEvent` (declare it with
+a direct publication), and the answer to a direct publication lists `successEvent` among the ignored
+fields on its advisory channel although the stored piece keeps it; the learn validator does not read the
+slots document, so a table on a slot no page carries is accepted and changes nothing; adding, changing or
+removing a table does not start a new accumulation generation, so what the slot counted before stays at
+the values it was credited with; the replay does not compare `explain.successEvent` and a replayed record
+omits it, which changes no score; and the day report built from the ledger's raw day (`POST
+/v1/{tenant}/learn/report` on a day with no folded hours) counts a declared success event only where it
+is the slot's own reward, unweighted by the table
+([success events and conversion tables](03-payload-schemas.md#success-events-and-conversion-tables)).
+
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
 New statistics monotonically drop complete fine levels from both item and slot maps when cardinality/bytes saturate. Retained ancestor counts are used directly, never sums of overlapping levels. After256 item identities, additional items contribute to a root-only anonymous overflow aggregate; their own estimates are unavailable/neutral, not zero. The admitted population is first-seen (explicit repair uses lexical selection), so selection bias remains; coarser pooling loses within-cell distinctions. Snapshot `completeness` exposes depth, item omission and reason. No finer partial estimates are recreated. W23 original-time weighting and W24 configuration compatibility remain unchanged.

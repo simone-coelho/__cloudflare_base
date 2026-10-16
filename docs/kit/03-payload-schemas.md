@@ -132,6 +132,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.baselineOrder` | The baseline of the page's declared layout slot, a list of module ids cut at the slot's take: the merchandiser's fixed positions where their rules put them and, on every other position, the configured order for the shopper's context where one matches, else the modules the slot can serve in catalogue order, drawn before a module is withheld (the layout reason's baseline). The same value on every record of the slot, present beside `explain.shadowOrder` and `explain.shadowTerms` on every record of a declared layout slot decided on an arm that personalizes (never on the holdout's `default` arm, never on an off-limits layout slot's record), compared by value in replay, a record without it replaying as before ([the baseline and the shadow](#the-baseline-and-the-shadow)) |
 | `explain.shadowOrder` | The order the slot would have served with every term applied and the learned term at full trust, γ 1, whatever γ serves (a merchandiser's frozen lift applied like a learned one), or on a slot that opts into the layout blend at its `shadowP`: ranked as the served order is, pins and off-limits modules fixed, withheld modules absent, with no exploration pick and no adjacent swap, cut at the take. Recording only: nothing served, counted or credited reads it |
 | `explain.shadowTerms` | `{ module: [term] }`, keys sorted: for each module whose place in `shadowOrder` differs from its place in the baseline (less any withheld module, as the layout reason's moves compare), every term that would have moved it, in the layout reason's words and the engine's fixed order. A module of the baseline's take that the shadow pushes out of its take is named with the terms that moved it down, compared with the modules of the shadow's take that passed it; a module in neither take is not named; `{}` when no module moved |
+| `explain.successEvent` | This position's slot publishes a conversion table (`slots.{slot}.conversions`): `{ event, value }`, keys sorted, the success event the module is credited for — its declared `successEvent`, else the slot's reward — and the table's value for it in the slot's currency, `value` null when the table does not value it, so an outcome of it credits nothing. Present on every record of such a slot, every arm, and on no other record; the decision's credit is read off it online and in every offline fold, and the shopper's receipt carries the same block as `successEvent` ([success events and conversion tables](#success-events-and-conversion-tables)) |
 | `inputs` | The interest vector as scored, the regional shares, the context prior's shares (`context_share`, keys sorted), your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact. Where a population prior applied and the page's declared layout slot ranked above the signal floor, `prior_lambda: { context?, regional? }` (keys sorted) states each prior's weight λ, so the layout reason replays exactly from any record of the page. `nothing_to_show` is the page's report of the modules with nothing to show for this page view as the decision accepted it (each id once, sorted), written when the page sent one, and `eligibility_verdicts` each eligibility rule's verdict on the decision's cell, module to `true` or `false` (keys sorted), for every live module of the page that carries a rule; the replay withholds the recorded report again and evaluates each rule again on the recorded cell, with no new replay marker. `inputs.replay` is the page manifest the REST reference describes. `inputs.explorationRules` sits beside it, never inside it: `"recorded-draws-v1"` names the exploration rules the decision was made under — a draw inside the configured share is `explored` even where it agreed with the ranking's own leader, `candidates` is the top candidates by score before the explored piece moved with that piece beside them, and an item under a merchandiser `reject` or `freeze` is never explored. Every record whose decision had the learning layer carries it (without that layer no exploration rule runs). A record without it was written before those rules and replays under the rules it was written with; a present value this build does not implement refuses the replay |
 
 ### The lift block, and every symbol in it
@@ -233,6 +234,7 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `complements` | no | The products the piece completes, in your product ids, validated as `featuredProductIds` is (trimmed, de-duplicated, empty entries dropped; an empty list is none). A slot whose `complements: { weight }` rule (0 to 1) is in force adds that weight to the base score of a piece that completes the anchor product the request names as `ctx.anchor=<product id>` on the snapshot's query string, and the receipt names it as a `completes` driver. A request that names no anchor prefers nothing, and the holdout's default arm never does. In CSV: a `|` list, as `featuredProductIds` |
 | `inStock` | no | Your catalog's stock flag. `false` removes the piece from every decision; absent means in stock. In a feed, `in_stock` or `ats` (Y/N, 0/1, true/false) is read the same way |
 | `pooled` | no | `true` declares the module pooled, the catalogue's own per-module declaration: a pooled module accumulates one evidence record across every page and every slot it is served on, the page a ladder level directly after everyone in that record (`*`, then `p=<page>`, then that page with the ladder's own levels), and every decision on any of its pages reads its lift from that record ([the lift snapshot](#the-lift-snapshot)). Any other value is refused at publication naming `pieces[i].pooled`. Absent, the module is undeclared and keeps its page-scoped storage exactly as before: its evidence stays with its own placement, one record per page under a slot name a retained slots document carries on more than one page. A feed import or pull does not carry it |
+| `successEvent` | no | The module's own success event, one reward of the list: `click`, `dwell`, `video_complete`, `wishlist`, `add_to_bag`, `purchase` or `custom`. Absent by default, and absent the module is credited for its slot's reward. Read only in a slot whose learn dials publish a conversion table: there an outcome of this event credits the module's decision the table's value for it in the slot's currency, any other event credits it nothing, and a success event the table does not value credits nothing ([success events and conversion tables](#success-events-and-conversion-tables)). Any other value is refused at publication naming `pieces[i].successEvent`; a retained catalogue whose value is anything else reads as undeclared. A feed import or pull does not carry it |
 
 With an approved [attribute vocabulary](#the-attribute-vocabulary) in effect, a tag on an attribute it governs is
 stored as the vocabulary's ids, mapped from the words the feed sends; a value it does not list refuses the
@@ -1052,6 +1054,7 @@ what it changes.
 | `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| adjacent-swap \| off, share, floor }`; new writes reject Thompson, retained settings are inactive; `adjacent-swap`, on a page's declared layout slot only, swaps one pair of adjacent positions on `share` of the slot's decisions ([adjacent swaps](#adjacent-swaps-and-position-effects)) | off |
 | `slots.{slot}.positionNormalization` | `true` or `false`, on a page's declared layout slot only, off by default: `true` divides the credit of an engagement at a position by that position's effect from `positionEffects`, live and in the hourly recomputation alike ([adjacent swaps](#adjacent-swaps-and-position-effects)) | absent (off) |
 | `slots.{slot}.attribution` | The slot's own attribution policy, absent by default: absent, the slot is credited under the brand-wide `policy` exactly as before; `module-tied`, the only per-slot policy, credits a decision of the slot only for an outcome that carries that decision's `decisionId` or the module's identifier as `contentId`, so a buy-box conversion, which names no module, credits no decision of the slot ([where a page conversion lands](#where-a-page-conversion-lands)). Publication refuses any other value with an error naming `attribution` and writes no revision; a stored document naming another value still reads, with the member dropped. When a slot names it, the attribution record the visitor's ring derives when it credits an outcome (its credit receipt) itemises the policy and the decisions it credited | absent (the brand-wide policy) |
+| `slots.{slot}.conversions` | The slot's conversion table, `{ <reward>: <value> }`: each reward it names converted into the slot's own currency at a finite value above zero. With it every record of the slot names its module's success event and the value applied, an outcome of a module's declared success event credits its decision the table's value for it, and a module without a declaration is credited for the slot's reward at the table's value for it, each times the objective's weight and kept in the counter of the slot's reward ([success events and conversion tables](#success-events-and-conversion-tables)). Publication refuses anything but an object naming at least one reward of the list, each with a finite value above zero, with an error naming `conversions`; a stored document's refused table reads as absent | absent (the slot's reward and objective) |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
 | `slots.{slot}.blend` | `{ p, shadowP }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. `shadowP`, from 0 to 1 and 0.1 when the dial names none, is the p the slot's shadow order is ranked at ([the baseline and the shadow](#the-baseline-and-the-shadow)); it changes nothing served. Publication refuses a `p` outside 0 to 1, a `shadowP` outside 0 to 1 with an error naming `shadowP`, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the members exactly as published | absent (no blend); `p` 0 and `shadowP` 0.1 when the dial names none |
@@ -1116,6 +1119,61 @@ the learning fan-out; no public route answers it. The offline recomputation (`PO
 /v1/{tenant}/learn/generation` with `rebuildFrom`) folds the retained day under the same per-slot rule,
 so a module-tied slot rebuilt from the ledger holds the counters online credit gave it; so do the hourly
 fold and the day report under their `learning` policy, while the reporting presets stay brand-wide.
+
+### Success events and conversion tables
+
+```json
+{ "pieces": [ { "id": "story.bag", "customerContentId": "S-BAG", "type": "editorial", "title": "Carry it",
+    "tags": { "line": ["classic"] }, "slotTypes": ["home-stories"], "successEvent": "add_to_bag" } ] }
+```
+
+```json
+{ "slots": { "home-stories": { "reward": "click", "conversions": { "click": 1, "add_to_bag": 5 } } } }
+```
+
+A piece's `successEvent` is optional and absent by default: one reward of the list (`click`, `dwell`,
+`video_complete`, `wishlist`, `add_to_bag`, `purchase`, `custom`) that counts as the module's success,
+and absent the module is credited for its slot's reward. A slot's `conversions` table converts each
+reward it names into the slot's own currency at a finite value above zero; it too is absent by default,
+and without it the slot's `reward` and `objective` credit every module exactly as before, a declared
+success event included, with no new member on any record, receipt, credit or manifest. With a table, an
+outcome of a module's declared success event credits that module's decision the table's value for the
+event, and a module that declares none is credited for the slot's reward at the table's value for the
+slot's reward: in the example an add to bag on `story.bag` credits it 5 and a click on an undeclared
+story credits that story 1, exactly today's click. A success event the table does not value credits
+nothing (a module declaring `purchase` above earns nothing for a purchase), and neither does any event
+other than the module's success event: a click on `story.bag` credits its decision nothing, and the
+outcome receipt names the slot `reward` in `refusedBySlot`. A table that does not value the slot's own
+reward credits nothing to a module that declares no success event. Each value is multiplied by what the
+slot's objective weighs the outcome — 1 under `unit`, its value under `revenue`, its margin under
+`margin`, the money refusals unchanged — and kept in the counter of the slot's own reward, the slot's
+currency, so the lifts of modules with different success events are measured in one currency and rank
+them in one slot. On a declared layout slot that normalises positions the position effect then divides
+the credit, live and in the hourly fold alike. The slot's attribution policy decides which decision is
+credited (`module-tied` included), and among one slot's decisions an outcome matches only those it is the
+success of, before the credit rule picks one. `custom` stands for every outcome of the custom reward (a
+partner pickup, a retailer referral) whatever its own name. An event that is no reward (a page view,
+`content_viewable`, `video_view`, `product_dwell`) is no outcome and credits nothing whatever the table
+says, an outcome the objective weighs zero stays zero, and a product-type weight scales the shopper's
+interest update, never this credit.
+
+Every decision record of a slot with a table carries `explain.successEvent: { event, value }` (keys
+sorted): the module's declared event, else the slot's reward, and the table's value for it, `value: null`
+when the table does not value it. Every arm carries it; the shopper's receipt carries the same block as
+`successEvent` and adds no sentence. A decision's credit is read off its record, by one rule online in
+the visitor's ring and in every offline fold, the offline recomputation (`rebuildFrom` on `POST
+/v1/{tenant}/learn/generation`) and the hourly fold included, so a declaration or a table changed after a
+decision changes nothing that decision earns, and the next decision names the new one. Publication
+refuses with `422` a `successEvent` outside the list, naming `pieces[i].successEvent`, and a `conversions`
+member that is not an object, is empty, names a key outside the reward list or values a reward with
+anything but a finite number above zero, naming `conversions`; a retained document's refused member reads
+as absent. Limits: a feed import or pull carries no `successEvent`, and a direct publication's advisory
+channel lists it among the ignored fields although the stored piece keeps it; a table on a slot no page
+carries is accepted and changes nothing (the learn validator does not read the slots document); adding,
+changing or removing a table starts no new accumulation generation, so earlier credits stay at the values
+they were credited with; the replay does not compare `explain.successEvent`, and a replayed record omits
+it, which changes no score; the raw-day report built from the ledger counts a declared success event only
+where it is the slot's own reward, unweighted by the table.
 
 ### The context vocabulary
 
