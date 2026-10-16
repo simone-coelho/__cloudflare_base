@@ -815,8 +815,9 @@ export function composeContentDetailed(
   // — in the order that slot SERVED its modules, after its pins, its off-limits
   // modules, the withholding and the adjacent swap (`settle`), never a ranking
   // nothing served — and only when its module was returned. One whose module
-  // was not returned is not decided at all: it serves, ranks, records and
-  // reserves nothing more. Each inner decision names its module (`within`).
+  // was not returned is not decided at all: it serves, ranks and records
+  // nothing (its pins were reserved page-wide before any slot ranked, as every
+  // pin is, and stay so). Each inner decision names its module (`within`).
   // `used` is the page's one de-duplication across all three kinds of slot.
   // A page without inner content slots is decided in document order exactly as before.
   const nesting = innerSlotsOf(slots);
