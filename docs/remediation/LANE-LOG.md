@@ -573,6 +573,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 | `POST /realtime/action` in the session host: the session projection's two KV writes (about 97 ms each on a rig) are now the largest share of the answer; answering before the fan-out would buy about 200 ms on add_to_cart but changes what a 200 acknowledges (W05.02, W06.12) | `src/durable-objects/ShopperReflex.ts` | W04, W05 | Open; the lead's ruling for the demo was to leave the acknowledgement contract as it is (lane E4, `docs/lg/lanes/E4.md`, R6 §11) |
 | `/content/priors` answers 503 for a demo tenant; the demo bootstrap accepts only four publication members; the entry contract still refuses `gclid` (W16's ruling) | content and publication routes | W16, W37 | Open, from the demo kit's lanes (`docs/demo-kit/Demo-Kit-Design.md`) |
 
+- 2026-10-16 night — **Pilot path (owner "Your recommendation is approved")**: staging first through the guarded workflow, then production, then the pilot tenant. Finding: the guarded workflow cannot target `edge-platform-staging`; path A/B is the owner's ruling (asked once); W08-C1 opened for the missing customer-profile initializer (lanes `spec-w08` 21d54361, `build-w08`); scripts prepared under `_evidence/pilot/`; nothing deployed. Amendment 2: P42 c7f74beb in `review-p42`; R-P81.
+
 ## Commits
 
 | Sha | What |
