@@ -1843,7 +1843,9 @@ const LEARN_CONVERSION_WARNING_SAMPLE = 50;
  * P41: one warning per slot of the learn document whose `conversions` table
  * does not value the slot's own reward (its `reward` dial, `click` when the
  * dial is absent, `custom` included: the table must name `custom` itself), in
- * the document's slot order; null when no slot warns, so a document without a
+ * slot-name order, the order the store keeps a published document's slots in
+ * (publication.ts canonical), so the validate door lists them exactly as the
+ * PUT of the same document will; null when no slot warns, so a document without a
  * table, or whose every table names its slot's reward, is answered exactly as
  * before. A pure function of the document alone: it reads neither the slots
  * document nor anything stored, so a table on a slot no page carries is told
@@ -1857,8 +1859,10 @@ export function learnConversionDiagnostics(learn: Pick<LearnConfig, 'slots'> | n
   if (!slots) return null;
   const warnings: LearnConversionWarning[] = [];
   let warningCount = 0;
-  for (const [slot, dials] of Object.entries(slots)) {
-    const conversions: unknown = isRecord(dials) ? dials.conversions : undefined;
+  for (const slot of Object.keys(slots).sort()) {
+    const dials = slots[slot];
+    if (!dials || typeof dials !== 'object') continue;
+    const conversions: unknown = dials.conversions;
     if (!isRecord(conversions)) continue;
     const reward: RewardType = dials.reward ?? 'click';
     // The value an undeclared module's record would carry (successEventOf): a finite number above zero, else null.
