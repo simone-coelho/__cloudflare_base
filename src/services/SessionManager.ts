@@ -13,9 +13,10 @@ import { retentionBirth, externalRetentionBirths, requireRetention, mergeRetenti
 import { pinProfileRetention } from '@/identity/sessionAuthority';
 
 import {
-  liveVisit, mergeVisits, validEntry,
-  type ChannelSignals, type EntryChannel,
+  entryChannelOf, isContextId, liveVisit, mergeVisits, RECENCY_BUCKETS, validEntry, visitArrival, visitContextMembers,
+  type ChannelSignals, type RecencyBucket, type VisitInputs,
 } from '@/services/visit';
+import { DEVICE_CLASSES, type DeviceClass } from '@/services/platform';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 
 export interface SessionData {
@@ -81,8 +82,22 @@ export interface SessionData {
     visitCount?: number;
     /** When the current visit began. */
     lastVisitAt?: number;
-    /** How this visit was entered. Classified once per visit, then carried. */
-    entryChannel?: EntryChannel;
+    /**
+     * How this visit was entered. Classified once per visit, then carried. One of
+     * the six channel words; P36: one of the tenant's channel ids when the visit
+     * was classified under its published vocabulary (`vocabularyRevision`).
+     */
+    entryChannel?: string;
+    /** P36: the source platform the visit's arrival names under the tenant's vocabulary, when it names one. */
+    sourcePlatform?: string;
+    /** P36: the landing-page type of the visit's first event naming one of the tenant's types. */
+    landingPageType?: string;
+    /** P36: the learn revision whose published vocabulary classified this visit; present only then. */
+    vocabularyRevision?: number;
+    /** P37: the device class the request that opened this visit reported; present only when it reported one. */
+    device?: DeviceClass;
+    /** P37: this visit's recency from the stored last visit; absent on a first visit. */
+    recency?: RecencyBucket;
     engagementScore: number;
     lastSegmentUpdate: number;
     journeyStage?: 'early' | 'mid' | 'late';
@@ -115,6 +130,26 @@ export interface SessionCookies {
   lastUpdate: string;
   trackingConsent: string;
   personalizationEnabled: string;
+}
+
+/**
+ * P36: the stored visit's channel and context attributes as the session record
+ * keeps them. One of the six channel words is always kept; a channel id, a
+ * source platform or a landing-page type outside them only on a visit marked
+ * with the vocabulary revision that classified it; anything else degrades to
+ * undefined, as an unrecognised channel always has. Nothing is added: a record
+ * without the new members parses to exactly what it parsed to before.
+ */
+function visitMetadata<M extends { entryChannel?: string; sourcePlatform?: string; landingPageType?: string; vocabularyRevision?: number; device?: string; recency?: string }>(m: M): M {
+  const marked = m.vocabularyRevision !== undefined;
+  const out = { ...m };
+  if (out.entryChannel !== undefined && entryChannelOf(out.entryChannel) !== out.entryChannel && !(marked && isContextId(out.entryChannel))) out.entryChannel = undefined;
+  if (out.sourcePlatform !== undefined && !(marked && isContextId(out.sourcePlatform))) delete out.sourcePlatform;
+  if (out.landingPageType !== undefined && !(marked && isContextId(out.landingPageType))) delete out.landingPageType;
+  if (marked && !(out.entryChannel !== undefined && entryChannelOf(out.entryChannel) !== out.entryChannel) && out.sourcePlatform === undefined && out.landingPageType === undefined) delete out.vocabularyRevision;
+  // P37: as the other context attributes, a key is kept only with a value.
+  for (const key of ['sourcePlatform', 'landingPageType', 'vocabularyRevision', 'device', 'recency'] as const) if (Object.hasOwn(out, key) && out[key] === undefined) delete out[key];
+  return out;
 }
 
 export const sessionDataSchema = z.object({
@@ -154,17 +189,24 @@ export const sessionDataSchema = z.object({
     // getSession() turns a parse failure into null.
     visitCount: z.number().optional(),
     lastVisitAt: z.number().optional(),
-    // An enum, so the parsed type matches the interface, with .catch so an
-    // unrecognised stored value degrades to undefined instead of failing the
-    // parse and taking the whole session with it.
-    entryChannel: z
-      .enum(['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'])
-      .optional()
-      .catch(undefined),
+    // With .catch so an unrecognised stored value degrades to undefined instead
+    // of failing the parse and taking the whole session with it. P36: a value
+    // outside the six channel words is kept only on a visit marked with the
+    // vocabulary revision that classified it (see `visitMetadata` below), so an
+    // unmarked unrecognised value still degrades to undefined.
+    entryChannel: z.string().optional().catch(undefined),
+    sourcePlatform: z.string().optional().catch(undefined),
+    landingPageType: z.string().optional().catch(undefined),
+    vocabularyRevision: z.number().int().positive().optional().catch(undefined),
+    // P37: the visit's device and recency. Declared or .parse() silently STRIPS
+    // them, and with .catch so an unrecognised stored value degrades to absent
+    // (unknown stays unknown) instead of failing the parse.
+    device: z.enum(DEVICE_CLASSES as [DeviceClass, ...DeviceClass[]]).optional().catch(undefined),
+    recency: z.enum(RECENCY_BUCKETS as [RecencyBucket, ...RecencyBucket[]]).optional().catch(undefined),
     engagementScore: z.number(),
     lastSegmentUpdate: z.number(),
     journeyStage: z.enum(['early', 'mid', 'late']).optional()
-  }),
+  }).transform(visitMetadata),
   preferences: z.object({
     trackingConsent: z.boolean(),
     personalizationEnabled: z.boolean(),
@@ -253,6 +295,13 @@ export class SessionManager {
      * visitor's record in here.
      */
     owner?: string,
+    /**
+     * P36: the tenant's published context vocabulary and the event's own page
+     * type, for a call that opens or continues a visit: the arrival is then
+     * classified by the published rules, and the visit records its source
+     * platform and landing-page type. Optional: absent, today's six words.
+     */
+    inputs?: VisitInputs,
   ): Promise<SessionData> {
     if (!validEntry(entry)) throw new SessionAccessError();
     if (this.principal) {
@@ -279,9 +328,12 @@ export class SessionManager {
       // otherwise close the gap it is being measured against, and every event
       // would look like a new visit.
       const priorLastSeen = existingSession?.metadata.lastSeen;
-      const visit = observedLive ? liveVisit(existingSession?.metadata, priorLastSeen, now, entry) : {
+      // P37: beside it, the visit's device and recency (`visitArrival`): written by
+      // the event that opens the visit and carried for the visit, each only when there is one.
+      const visit = observedLive ? { ...liveVisit(existingSession?.metadata, priorLastSeen, now, entry, inputs),
+        ...visitArrival(existingSession?.metadata, priorLastSeen, now, inputs?.device) } : {
         visitCount: existingSession?.metadata.visitCount, lastVisitAt: existingSession?.metadata.lastVisitAt,
-        entryChannel: existingSession?.metadata.entryChannel,
+        entryChannel: existingSession?.metadata.entryChannel, ...visitContextMembers(existingSession?.metadata),
       };
       // A record written before visitCount existed resolves to visit 1. That
       // under-counts a returning shopper once, which is honest; seeding from

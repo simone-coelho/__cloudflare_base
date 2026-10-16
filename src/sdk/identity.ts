@@ -5,7 +5,7 @@
 // cookie as fallback, both written. The formats are the demo storefront's,
 // verbatim, so a visitor known to the demo is the same visitor to the SDK.
 
-import { ENTRY_TERM_LIMIT } from '../services/visit';
+import { ENTRY_CAMPAIGN_LIMIT, ENTRY_TERM_LIMIT } from '../services/visit';
 import type { EntrySignals, Host } from './types';
 
 export const DEFAULT_VISITOR_KEY = 'opt_visitor_id';
@@ -79,7 +79,7 @@ export function rotateBrowsingSession(host: Host, key = DEFAULT_SESSION_KEY): vo
  * one that crosses a visit boundary. The server decides that.
  */
 export function entrySignals(host: Host): EntrySignals {
-  let utmMedium = '', utmSource = '', utmTerm = '';
+  let utmMedium = '', utmSource = '', utmTerm = '', utmCampaign = '';
   try {
     const usp = new URLSearchParams(host.location?.search ?? '');
     utmMedium = usp.get('utm_medium') ?? '';
@@ -91,9 +91,13 @@ export function entrySignals(host: Host): EntrySignals {
     // rest of the arrival still travels, so an overlong term costs the term only.
     utmTerm = usp.get('utm_term') ?? '';
     if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = '';
+    // P36: the campaign name, for a tenant whose published mapping reads it
+    // (the brand split), from the same read and refused at its bound the same way.
+    utmCampaign = usp.get('utm_campaign') ?? '';
+    if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = '';
   } catch { /* no search */ }
-  // Absent stays absent: a page load with no keyword carries no keyword field,
-  // so the arrival every other page load sends is unchanged.
-  return { utmMedium, utmSource, ...(utmTerm ? { utmTerm } : {}),
+  // Absent stays absent: a page load with no keyword or campaign carries no such
+  // field, so the arrival every other page load sends is unchanged.
+  return { utmMedium, utmSource, ...(utmTerm ? { utmTerm } : {}), ...(utmCampaign ? { utmCampaign } : {}),
     referrer: host.referrer ?? '', siteHost: host.location?.hostname ?? '' };
 }

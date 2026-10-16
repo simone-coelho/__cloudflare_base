@@ -6,7 +6,7 @@
 // finest level with enough exposures answers.
 
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
-import type { Cell } from '@/content/types';
+import type { Cell, EvidenceFloorApplied } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import type { PriorIndex } from './priors';
 
@@ -49,8 +49,52 @@ export function levelKeys(cell: Cell): string[] {
   return ['*', `c=${c}`, `c=${c}|v=${v}`, `c=${c}|v=${v}|s=${st}`, `c=${c}|v=${v}|s=${st}|r=${r}`, `c=${c}|v=${v}|s=${st}|r=${r}|a=${a}`];
 }
 
+/**
+ * P08 (decision D2, freeze item 27): the ladder of a module the catalogue
+ * declares pooled (`ContentPiece.pooled`). Its evidence, wherever it is served,
+ * is ONE record, and the page is a level of that record directly after
+ * everyone: `*`, then `p=<page>`, then the page with today's levels in today's
+ * order (`p=<page>|c=…`, `p=<page>|c=…|v=…`, … to the affinity cell). The
+ * finest level reaching nMin still answers (`liftFor`), so a page whose own
+ * evidence reaches it answers at its own levels and a page whose evidence does
+ * not answers at everyone, where every page's evidence is pooled. A module the
+ * catalogue does not declare keeps `levelKeys` and its own record per
+ * placement (unit:W26.R2), exactly as before.
+ */
+export type PooledLevel = Level | 6;
+export const POOLED_LEVEL_WORDS: Record<PooledLevel, string> = {
+  0: 'everyone', 1: 'page', 2: 'page and channel', 3: 'page, channel and visit bucket', 4: 'page, channel, visit bucket and journey stage',
+  5: 'page, channel, visit bucket, stage and region', 6: 'page, channel, visit bucket, stage, region and affinity cell',
+};
+/** P08: the seven keys a pooled module's record materializes for a cell on one page, coarsest first. */
+export function pooledLevelKeys(cell: Cell, page: string): string[] {
+  const at = `p=${page}`;
+  return ['*', at, ...levelKeys(cell).slice(1).map((key) => `${at}|${key}`)];
+}
+/** P08: whether a key is one of a pooled record's page levels (`p=<page>…`); no key of today's ladder is. */
+export const isPooledKey = (key: string): boolean => key.startsWith('p=');
+/**
+ * P08: the key of today's ladder a pooled record's key stands on — the page
+ * pair taken off, `*` for the page level itself. A pooled record's lift is
+ * measured against the slot rate of the placement that reads it, in that
+ * cell, as every lift is (`buildSnapshot`).
+ */
+export function unpagedKey(key: string): string {
+  if (!isPooledKey(key)) return key;
+  const bar = key.indexOf('|');
+  return bar < 0 ? '*' : key.slice(bar + 1);
+}
+
 /** Decayed accumulators for one key. */
 export interface Counter { n: ReflexEntry; s: Partial<Record<RewardType, ReflexEntry>> }
+
+/**
+ * P08: the counters of the pooled records one placement publishes — item →
+ * pooled key → every placement's counter for it, kept apart and summed where
+ * they are read at the snapshot's own present. `*` holds every page's root,
+ * `p=<page>` that page's root, `p=<page>|<key>` that page's counter at the key.
+ */
+export type PooledCounters = Record<string, Record<string, Counter[]>>;
 
 export interface StatsState {
   /** item → level key → counter */
@@ -206,7 +250,8 @@ const ev = (e: ReflexEntry | undefined, now: number, tau: number) => (e ? effect
 export type LiftReference = 'slot-rate' | 'none';
 
 export interface LevelStat {
-  level: Level; key: string; n: number; s: number; p0: number; p_hat: number; lift: number;
+  /** The key's depth: today's levels 0 to 5, and a pooled record's (P08) 0 to 6, the page at 1. */
+  level: PooledLevel; key: string; n: number; s: number; p0: number; p_hat: number; lift: number;
   /** The strength the estimate was shrunk with: the imported prior's n_equiv when one applied, else the slot's n₀. */
   n0?: number;
   /** Doc 22 §8: the imported prior in force for this key, when there is one. */
@@ -299,6 +344,128 @@ export interface LiftSnapshot {
    * snapshot, and no snapshot of an unaffected slot, gains a member.
    */
   rebuiltFrom?: RebuildBasis;
+  /**
+   * P05 (decision D1): each position's effect, estimated from the slot's
+   * adjacent swaps as a click ratio (`positionEffectsOf`), with the swapped
+   * decisions behind it. Absent on a slot that has swapped nothing.
+   */
+  positionEffects?: PositionEffect[];
+}
+
+/**
+ * P05: what the statistics object counts of the swaps of ONE adjacent pair
+ * (k, k + 1), positions counted from 1 within the slot: the swapped decisions
+ * whose module at position k was exposed (`pairs`), and the clicks credited to
+ * the module served at position k (`first`) and at position k + 1 (`second`)
+ * on decisions that swapped that pair. Whole counts, never decayed.
+ */
+export interface PairCounts { pairs: number; first: number; second: number }
+/** P05: one position's effect, as the slot's learning read publishes it; `effect` null where the swaps cannot estimate it yet. */
+export interface PositionEffect { position: number; effect: number | null; pairs: number }
+
+/**
+ * P05 (decision D1, R-P21): each position's effect from the adjacent-swap
+ * pairs, as a click ratio. Position 1's effect is 1; position k + 1's is
+ * position k's times (the clicks at k + 1 / the clicks at k), both counted over
+ * the decisions on which (k, k + 1) was swapped, at three decimals. An effect
+ * the chain cannot reach — no click at k on those swaps, or no effect at k — is
+ * null. `pairs` is the swapped decisions behind it: for position 1 those of
+ * (1, 2), for position k + 1 those of (k, k + 1). Positions run to the highest
+ * one a swap has reached. Null when no pair has been swapped. Pure.
+ */
+export function positionEffectsOf(counts: Readonly<Record<string, PairCounts>> | undefined): PositionEffect[] | null {
+  const pairs = (k: number) => counts?.[String(k)]?.pairs ?? 0;
+  let top = 0;
+  for (const key of Object.keys(counts ?? {})) { const k = Number(key); if (Number.isSafeInteger(k) && k >= 1 && pairs(k) > 0) top = Math.max(top, k); }
+  if (top === 0) return null;
+  const out: PositionEffect[] = [{ position: 1, effect: 1, pairs: pairs(1) }];
+  let effect: number | null = 1;
+  for (let k = 1; k <= top; k++) {
+    const c = counts?.[String(k)];
+    effect = effect !== null && c && c.first > 0 ? effect * (c.second / c.first) : null;
+    out.push({ position: k + 1, effect: effect === null ? null : Math.round(effect * 1000) / 1000, pairs: pairs(k) });
+  }
+  return out;
+}
+
+/**
+ * P05 (decision D2): the position policy one publication of a slot's statistics
+ * put in force at `at` (its snapshot version): whether the slot's
+ * normalisation switch was on, and then the effect of each position (from 1)
+ * the estimate holds above zero. The history of these is the one source the
+ * online credit and the offline recomputation both read.
+ */
+export interface PositionPolicy { at: number; normalize: boolean; effects: Record<string, number> }
+
+/** P05: the policy in force at `ts`: the newest one published at or before it; null before the first. Pure. */
+export function positionPolicyAt(policies: readonly PositionPolicy[] | null | undefined, ts: number): PositionPolicy | null {
+  let found: PositionPolicy | null = null;
+  for (const policy of policies ?? []) if (policy.at <= ts && (found === null || policy.at >= found.at)) found = policy;
+  return found;
+}
+
+/** P05: the bounds of a slot's published position-policy history. */
+export const POSITION_HISTORY = { policies: 512, positions: 64, horizonMs: 8 * 24 * 60 * 60 * 1000 } as const;
+
+const plainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
+  && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+
+/**
+ * P05: a slot's position-policy history as its statistics object publishes it
+ * (`{ version: 1, tenant, brand, slot, page?, policies }`), read for that
+ * placement: the policies oldest first, or null when the document is malformed
+ * or names another placement. Pure.
+ */
+export function positionHistoryOf(value: unknown, ids: { tenant: string; brand: string; slot: string; page?: string }): PositionPolicy[] | null {
+  if (!plainObject(value) || value.version !== 1 || value.tenant !== ids.tenant || value.brand !== ids.brand || value.slot !== ids.slot
+    || (value.page ?? undefined) !== (ids.page ?? undefined) || !Array.isArray(value.policies) || value.policies.length > POSITION_HISTORY.policies) return null;
+  const out: PositionPolicy[] = [];
+  let previous = 0;
+  for (const policy of value.policies as unknown[]) {
+    if (!plainObject(policy) || !Object.keys(policy).every(key => ['at', 'normalize', 'effects'].includes(key)) || !Number.isSafeInteger(policy.at)
+      || (policy.at as number) <= previous || typeof policy.normalize !== 'boolean' || !plainObject(policy.effects)
+      || Object.keys(policy.effects).length > POSITION_HISTORY.positions) return null;
+    const effects: Record<string, number> = {};
+    for (const [position, effect] of Object.entries(policy.effects)) {
+      if (!/^[1-9][0-9]*$/.test(position) || Number(position) > POSITION_HISTORY.positions || typeof effect !== 'number' || !Number.isFinite(effect) || effect <= 0) return null;
+      effects[position] = effect;
+    }
+    previous = policy.at as number;
+    out.push({ at: previous, normalize: policy.normalize, effects });
+  }
+  return out;
+}
+
+/**
+ * P05: the history after a publication puts `policy` in force: appended when it
+ * differs from the newest policy (a slot that never normalised writes none), at
+ * a moment after every earlier one, then kept to the horizon — the newest policy
+ * older than it stays, so a credit just inside the horizon still finds the
+ * policy it was weighed by — and to the bound. Null when nothing changes. Pure.
+ */
+export function nextPositionHistory(policies: readonly PositionPolicy[], policy: PositionPolicy, now: number): PositionPolicy[] | null {
+  const last = policies.at(-1);
+  const sameEffects = (a: Record<string, number>, b: Record<string, number>) =>
+    Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([position, effect]) => b[position] === effect);
+  if (last ? last.normalize === policy.normalize && sameEffects(last.effects, policy.effects) : !policy.normalize) return null;
+  const next = [...policies, { at: Math.max(policy.at, (last?.at ?? 0) + 1), normalize: policy.normalize, effects: { ...policy.effects } }];
+  const inside = next.findIndex(p => p.at > now - POSITION_HISTORY.horizonMs);
+  const kept = next.slice(inside <= 0 ? 0 : inside - 1);
+  return kept.length > POSITION_HISTORY.policies ? kept.slice(-POSITION_HISTORY.policies) : kept;
+}
+
+/**
+ * P05 (decision D2): what an engagement at `position` (from 1) at `ts` is
+ * credited times: 1 / that position's effect where the policy in force had the
+ * switch on and holds a positive effect for the position, else 1 — the credit
+ * exactly as before. Changes the credit's amount only, never whether it is
+ * counted. Pure.
+ */
+export function positionWeightAt(policies: readonly PositionPolicy[] | null | undefined, position: number | undefined, ts: number): number {
+  if (position === undefined || !Number.isSafeInteger(position) || position < 1) return 1;
+  const policy = positionPolicyAt(policies, ts);
+  const effect = policy?.normalize ? policy.effects[String(position)] : undefined;
+  return typeof effect === 'number' && Number.isFinite(effect) && effect > 0 ? 1 / effect : 1;
 }
 
 /** How a repaired object's counters were started again, and under whose operation. */
@@ -376,7 +543,17 @@ function earliestAnchor(st: StatsState, now: number): number {
  * an item's events at a fine level are the same events at every coarser one,
  * and shrinking toward yourself is not shrinkage. §5.3's example is exact.
  */
-export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit', measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1', attributionContract?: AttributionContract, restartedAt?: number): LiftSnapshot {
+export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit', measurementBasis: import('@/content/types').MeasurementBasis = 'served-v1', attributionContract?: AttributionContract, restartedAt?: number,
+  /**
+   * P08 (decision D1): the pooled records this placement publishes, one per
+   * module the catalogue declares pooled and this slot serves, gathered from
+   * every placement the module is served in (`LearnStats`). Such an item's
+   * entry is that ONE record, keyed `*`, `p=<page>`, `p=<page>|…`; its own
+   * counters here still count toward the slot's rates, exactly as before.
+   * Absent — every catalogue without a pooled module — the snapshot is
+   * exactly what it was.
+   */
+  pooled?: Readonly<PooledCounters>): LiftSnapshot {
   const tau = cfg.tauLearnMs;
   /**
    * W24 T1.02 (F19 §7.3, §4.4, over the retained "item reset retains the slot
@@ -433,11 +610,43 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
     }
     return null;
   };
+  // P08: a prior cell is read under the ladder of the record it names — the
+  // pooled order for a pooled module's record, today's order for every other —
+  // so a cell written for the other ladder reaches no key of this record.
+  const priorCells = (item: string, pooledRecord: boolean): string[] =>
+    [...(priors?.index.get(item)?.keys() ?? [])].filter((cell) => cell === '*' || isPooledKey(cell) === pooledRecord);
+  /**
+   * P08 (decisions D1, D2): ONE pooled record from every placement's counters.
+   * n and s at each key are the sum of every placement's decayed counters at
+   * this snapshot's present; the estimate is shrunk toward the reading slot's
+   * rate in the cell the key stands on (`unpagedKey`) or toward an imported
+   * prior the pooled order names, exactly as every other record is, and the
+   * lift is measured against that same slot rate. Levels are the keys' depths:
+   * everyone 0, the page 1, the page with today's levels 2 to 6.
+   */
+  const pooledRecord = (item: string, record: Readonly<Record<string, Counter[]>>): Record<string, LevelStat> => {
+    const keys = new Set([...Object.keys(record), ...priorCells(item, true)]);
+    const out: Record<string, LevelStat> = {};
+    for (const key of [...keys].sort((a, b) => depth(a) - depth(b))) {
+      let n = 0, s = 0;
+      for (const c of Object.hasOwn(record, key) ? record[key]! : []) { n += ev(c.n, now, tau); s += ev(c.s[reward], now, tau); }
+      const p0slot = slotRate(unpagedKey(key));
+      const prior = priorFor(item, key);
+      const target = prior ? prior.p : p0slot, n0 = prior ? prior.n : cfg.n0;
+      const p_hat = (s + n0 * target) / (n + n0);
+      const lift = p0slot > 0 ? Math.min(cfg.liftMax, Math.max(cfg.liftMin, p_hat / p0slot)) : 1;
+      out[key] = { level: depth(key) as PooledLevel, key, n, s, p0: p0slot, n0, p_hat, lift,
+        liftReference: p0slot > 0 ? 'slot-rate' : 'none',
+        ...(prior ? { prior: { p: prior.p, n: prior.n } } : {}) };
+    }
+    return out;
+  };
   const items: LiftSnapshot['items'] = {};
-  for (const item of new Set([...Object.keys(st.items), ...(priors?.index.keys() ?? [])])) {
+  for (const item of new Set([...Object.keys(st.items), ...(priors?.index.keys() ?? []), ...Object.keys(pooled ?? {})])) {
+    if (pooled && Object.hasOwn(pooled, item)) { items[item] = pooledRecord(item, pooled[item]!); continue; }
     if (st.bounded?.closed && !Object.hasOwn(st.items, item)) continue;
     const byKey = st.items[item] ?? {};
-    const keys = new Set([...Object.keys(byKey), ...(priors?.index.get(item)?.keys() ?? [])]);
+    const keys = new Set([...Object.keys(byKey), ...priorCells(item, false)]);
     const out: Record<string, LevelStat> = {};
     for (const key of [...keys].sort((a, b) => depth(a) - depth(b))) {
       if (st.bounded && depth(key) > st.bounded.depth) continue;
@@ -472,25 +681,70 @@ export function parentKey(key: string): string | null {
   return parts.length === 1 ? '*' : parts.slice(0, -1).join('|');
 }
 
-export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number };
+export interface LiftLookup { measurementBasis: import('@/content/types').MeasurementBasis; level: PooledLevel; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number };
   /** W25 Z1.01: what this lift was measured against. Derived for an archive built before the member existed, never guessed: p₀ is on the row. */
-  liftReference: LiftReference }
+  liftReference: LiftReference;
+  /** P11: the page's evidence floor shrank this estimate (`underEvidenceFloor`); absent where no floor applied. */
+  evidenceFloor?: EvidenceFloorApplied;
+  /** P08: read from the module's one pooled record on the pooled ladder (`pooledLevelKeys`); absent for every other record. */
+  pooled?: true }
 
 /** What a row's lift was measured against, from the row itself. */
 export const liftReferenceOf = (st: Pick<LevelStat, 'p0' | 'liftReference'>): LiftReference => st.liftReference ?? (st.p0 > 0 ? 'slot-rate' : 'none');
 
-/** The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet. */
-export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell): LiftLookup | null {
+/**
+ * The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet.
+ * P36 (R-P46): `depth` is how many levels below everyone the tenant's published
+ * ladder consults (5, every level, when it publishes none); a level beyond it is
+ * never read. The counts at finer levels are kept, never discarded by a depth.
+ *
+ * P08 (decisions D1, D2): `page` is passed for a module the catalogue declares
+ * pooled, and only for one: its ONE record is read on the pooled ladder of that
+ * page (`pooledLevelKeys`) — everyone, the page, then the page with today's
+ * levels, `depth` of them — and the finest of those reaching nMin answers, its
+ * words naming the page level `page`. The lookup then says it read the pooled
+ * record (`pooled: true`). Without `page` it is exactly today's lookup.
+ */
+export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell, depth = 5, page?: string): LiftLookup | null {
   if (!snap) return null;
   const byKey = snap.items[item];
   if (!byKey) return null;
-  const keys = levelKeys(cell);
+  const levels = (Number.isSafeInteger(depth) && depth >= 0 && depth < 5 ? depth : 5) + 1;
+  const keys = page === undefined ? levelKeys(cell).slice(0, levels) : pooledLevelKeys(cell, page).slice(0, levels + 1);
   for (let i = keys.length - 1; i >= 0; i--) {
     const st = byKey[keys[i]!];
     // A level with an imported prior counts the prior's strength toward the threshold (doc 22 §8).
     if (st && st.n + (st.prior?.n ?? 0) >= snap.nMin) {
-      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, liftReference: liftReferenceOf(st), ...(st.prior ? { prior: st.prior } : {}) };
+      return { measurementBasis: snap.measurementBasis ?? 'served-v1', level: st.level, level_words: page === undefined ? LEVEL_WORDS[st.level as Level] : POOLED_LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, liftReference: liftReferenceOf(st), ...(st.prior ? { prior: st.prior } : {}),
+        ...(page === undefined ? {} : { pooled: true as const }) };
     }
   }
   return null;
+}
+
+/**
+ * P11 (decisions D1, D2; freeze items 25 and 40): the estimate the ladder
+ * answered with, under the evidence floor F of the decision's page.
+ *
+ * The answering level is today's — the finest level reaching nMin, chosen by
+ * `liftFor` and never moved here — and it holds n exposures and the estimate
+ * p̂; p₀ is the slot's rate in that cell, the lift's own reference. Where
+ * n < F the estimate is shrunk toward that baseline by the F − n exposures it
+ * lacks, `p_F = (n·p̂ + (F − n)·p₀) / F`, and the lift becomes p_F / p₀,
+ * clamped by the snapshot's own `liftMin` and `liftMax` exactly as today's
+ * lift is (1 where p₀ is 0, as today): applied, never skipped. The answer
+ * carries `evidenceFloor: { floor, lacking, n, page }`, keys sorted. n is the
+ * observed exposures of the answering level, the `n` its record states; an
+ * imported prior's strength is not an exposure and does not count toward F.
+ *
+ * At or above the floor, or with no floor, the lookup is returned exactly as
+ * given: nothing changes and nothing is added. A piece with no level reaching
+ * nMin has no lookup to shrink, so it still gets no lift (W25). Pure.
+ */
+export function underEvidenceFloor(look: LiftLookup, floor: { page: string; floor: number } | null | undefined, clamp: { liftMin: number; liftMax: number }): LiftLookup {
+  if (!floor || !Number.isSafeInteger(floor.floor) || floor.floor < 1 || !(look.n < floor.floor)) return look;
+  const n = look.n, lacking = floor.floor - n;
+  const p_hat = (n * look.p_hat + lacking * look.p0) / floor.floor;
+  const lift = look.p0 > 0 ? Math.min(clamp.liftMax, Math.max(clamp.liftMin, p_hat / look.p0)) : 1;
+  return { ...look, p_hat, lift, evidenceFloor: { floor: floor.floor, lacking, n, page: floor.page } };
 }

@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="900" viewBox="0 0 1100 900" role="img" aria-labelledby="seint-t seint-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="seint-t">One connection, three products beside the engine</title>
+  <desc id="seint-d">At the top, Opal, backstage with the brand's team: it authors audiences and tests, explains results and tags content; when a signal arrives from another channel, Opal drafts an experiment or a CMAB test, launched once a person approves, and it never takes part in a live decision. A line runs from Opal to Feature Experimentation and none runs to the engine. On the left, the brand's side, each joined to the engine by one connection. The visitor's browser: the page and the engine's script, which start a session, pass the visitor's consent choice, send events and ask for every slot's decision in one call. The brand's server: a signed proof at sign-in merges the anonymous and known profiles. The commerce platform: a product list comes back in the visitor's order, with nothing removed. Each carries the call it uses. In the middle, the engine, at the edge, decides from the published rules and calls no AI model to decide; it keeps a receipt for each decision and lands every decision and outcome in the brand's warehouse. On the right, beside the engine: Feature Experimentation, where an experiment or a CMAB test can run on any slot beside the engine's decisions; ODP, where events and the audiences the engine forms land as lasting facts and a returning visitor's interests can be restored, and decisions never wait on it; and the optional AI add-ons, AI search, the style concierge and generated imagery, which the brand switches on and pays for from its credits, and in AI search a model reads the query and the engine ranks the results.</desc>
+  <!-- Lane G1, drawn by hand for docs/enablement/LANE-BRIEF-V3.md section 4.5, item 5. Facts: research/S2-engine-facts.md 2.7
+       (arrows 1 to 3, 7, 18 and 19, the calls), 3.1, 7.1 to 7.4, 6.1 and 6.2; research/S5-product-as-designed.md rows B9,
+       B10, C8, V10, V11, V12 and F16; docs/enablement/LANE-BRIEF-V2.md section 2.3 (K9 to K12). Opal is joined to Feature
+       Experimentation and to nothing in the engine, as in the architecture figure. -->
+  <defs>
+    <marker id="seint-head" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#08251A"/>
+    </marker>
+    <marker id="seint-tail" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+      <path d="M10,0 L0,5 L10,10 z" fill="#08251A"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="900" fill="#FFFFFF"/>
+
+  <text x="20" y="48" font-size="32" font-weight="700">One connection, three products beside the engine</text>
+  <text x="20" y="82" font-size="20" fill="#197050">The site connects once; Opal, ODP and Feature Experimentation work beside the engine.</text>
+
+  <!-- Opal, backstage (S5 B10, C8, F14; S2 6.2): joined to Feature Experimentation, never to the engine -->
+  <g data-box="opal">
+    <rect x="20" y="108" width="1060" height="130" rx="12" fill="#197050" stroke="#197050" stroke-width="2"/>
+    <text x="36" y="142" font-size="22" font-weight="700" fill="#FFFFFF">Opal, backstage with the brand's team</text>
+    <text x="36" y="172" font-size="19" fill="#FFFFFF">Authors audiences and tests, explains results and tags content.</text>
+    <text x="36" y="197" font-size="19" fill="#FFFFFF">When a signal arrives from another channel, Opal drafts an experiment or a CMAB test,</text>
+    <text x="36" y="222" font-size="19" fill="#FFFFFF">launched once a person approves. It never takes part in a live decision.</text>
+  </g>
+  <g stroke="#08251A" stroke-width="3" marker-end="url(#seint-head)">
+    <line x1="895" y1="240" x2="895" y2="264"/>
+  </g>
+  <text x="909" y="262" font-size="18" font-weight="500" fill="#197050">a test, once approved</text>
+
+  <!-- the brand's side, one connection each (S2 2.7 arrows 1 to 3, 7, 18, 19) -->
+  <g data-box="browser">
+    <rect x="20" y="280" width="430" height="304" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="314" font-size="22" font-weight="700">The visitor's browser</text>
+    <text x="36" y="342" font-size="18">The page and the engine's script:</text>
+    <text x="36" y="378" font-size="18" font-weight="700">a session</text>
+    <text x="36" y="400" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /v1/{tenant}/identity/session</text>
+    <text x="36" y="434" font-size="18" font-weight="700">the visitor's consent choice</text>
+    <text x="36" y="456" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /realtime/session/preferences</text>
+    <text x="36" y="490" font-size="18" font-weight="700">events</text>
+    <text x="36" y="512" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /realtime/action</text>
+    <text x="36" y="546" font-size="18" font-weight="700">every slot's decision, in one call</text>
+    <text x="36" y="568" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">GET /v1/{tenant}/decisions/snapshot</text>
+  </g>
+  <g data-box="server">
+    <rect x="20" y="604" width="430" height="128" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="638" font-size="22" font-weight="700">The brand's server</text>
+    <text x="36" y="666" font-size="18">A signed proof at sign-in merges the</text>
+    <text x="36" y="688" font-size="18">anonymous and known profiles:</text>
+    <text x="36" y="714" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /v1/{tenant}/identity/link</text>
+  </g>
+  <g data-box="commerce">
+    <rect x="20" y="752" width="430" height="128" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="36" y="786" font-size="22" font-weight="700">The commerce platform</text>
+    <text x="36" y="814" font-size="18">A product list comes back in the</text>
+    <text x="36" y="836" font-size="18">visitor's order, nothing removed:</text>
+    <text x="36" y="862" font-size="17" font-family="'Roboto Mono', Consolas, 'Courier New', monospace">POST /sort</text>
+  </g>
+
+  <!-- the engine, at the edge (S5 A8; S2 6.1) -->
+  <g data-box="engine">
+    <rect x="490" y="280" width="180" height="600" rx="12" fill="#08251A" stroke="#08251A" stroke-width="2"/>
+    <text x="580" y="318" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">The engine,</text>
+    <text x="580" y="344" font-size="21" font-weight="700" fill="#ABFF44" text-anchor="middle">at the edge</text>
+    <text x="580" y="384" font-size="18" fill="#FFFFFF" text-anchor="middle">decides from</text>
+    <text x="580" y="406" font-size="18" fill="#FFFFFF" text-anchor="middle">the published</text>
+    <text x="580" y="428" font-size="18" fill="#FFFFFF" text-anchor="middle">rules, and calls</text>
+    <text x="580" y="450" font-size="18" fill="#FFFFFF" text-anchor="middle">no AI model</text>
+    <text x="580" y="472" font-size="18" fill="#FFFFFF" text-anchor="middle">to decide</text>
+    <text x="580" y="528" font-size="18" fill="#FFFFFF" text-anchor="middle">keeps a receipt</text>
+    <text x="580" y="550" font-size="18" fill="#FFFFFF" text-anchor="middle">for each decision</text>
+    <text x="580" y="606" font-size="18" fill="#FFFFFF" text-anchor="middle">and lands every</text>
+    <text x="580" y="628" font-size="18" fill="#FFFFFF" text-anchor="middle">decision and</text>
+    <text x="580" y="650" font-size="18" fill="#FFFFFF" text-anchor="middle">outcome in the</text>
+    <text x="580" y="672" font-size="18" fill="#FFFFFF" text-anchor="middle">brand's own</text>
+    <text x="580" y="694" font-size="18" fill="#FFFFFF" text-anchor="middle">warehouse</text>
+  </g>
+  <g stroke="#08251A" stroke-width="3" marker-start="url(#seint-tail)" marker-end="url(#seint-head)">
+    <line x1="465" y1="432" x2="475" y2="432"/>
+    <line x1="465" y1="668" x2="475" y2="668"/>
+    <line x1="465" y1="816" x2="475" y2="816"/>
+    <line x1="685" y1="350" x2="695" y2="350"/>
+    <line x1="685" y1="542" x2="695" y2="542"/>
+    <line x1="685" y1="770" x2="695" y2="770"/>
+  </g>
+
+  <!-- beside the engine (S5 C8, F16, V11; S2 7.3, 7.4, 6.1) -->
+  <g data-box="fx">
+    <rect x="710" y="280" width="370" height="140" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="726" y="314" font-size="22" font-weight="700">Feature Experimentation</text>
+    <text x="726" y="344" font-size="19">An experiment or a CMAB test</text>
+    <text x="726" y="368" font-size="19">can run on any slot, beside</text>
+    <text x="726" y="392" font-size="19">the engine's decisions.</text>
+  </g>
+  <g data-box="odp">
+    <rect x="710" y="440" width="370" height="204" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="726" y="474" font-size="22" font-weight="700">ODP</text>
+    <text x="726" y="504" font-size="19">Events and the audiences the</text>
+    <text x="726" y="528" font-size="19">engine forms land as lasting</text>
+    <text x="726" y="552" font-size="19">facts, and a returning visitor's</text>
+    <text x="726" y="576" font-size="19">interests can be restored.</text>
+    <text x="726" y="610" font-size="19">Decisions never wait on it.</text>
+  </g>
+  <g data-box="addons">
+    <rect x="710" y="664" width="370" height="216" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+    <text x="726" y="698" font-size="22" font-weight="700">Optional AI add-ons</text>
+    <text x="726" y="728" font-size="19">AI search, the style concierge</text>
+    <text x="726" y="752" font-size="19">and generated imagery, switched</text>
+    <text x="726" y="776" font-size="19">on by the brand and paid from</text>
+    <text x="726" y="800" font-size="19">its credits. In AI search a model</text>
+    <text x="726" y="824" font-size="19">reads the query and the engine</text>
+    <text x="726" y="848" font-size="19">ranks the results.</text>
+  </g>
+</svg>

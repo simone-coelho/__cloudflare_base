@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="818" viewBox="0 0 1100 818" role="img" aria-labelledby="bda-t bda-d" lang="en-US" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#08251A">
+  <title id="bda-t">One visitor's session: what happens before, during and after</title>
+  <desc id="bda-d">The engine decides: the engine calls no AI model to decide. Opal creates and explains: Opal is where people ask and generative AI creates, and that is where credits apply. Before, the team's preparation: the team publishes the documents the engine follows, with no credits; Opal authors audiences, tests and explanations from plain words and a person approves, and credits apply; Opal suggests tags for content and a person approves each one, and credits apply. Credits follow the team's requests, not the traffic. During, the visit: the engine decides at the edge, from the published rules, with no credits; each decision's receipt is written as data, by the engine, with no credits; optional AI add-ons let a visitor use AI search, the style concierge or generated imagery, and credits apply. No decision uses a credit; the add-ons are optional. After, the results: the engine records what works from the first day and changes nothing until the brand turns the dial, with no credits; the team reads the receipts and the day report, and analysts measure lift against holdouts, with no credits; asking Opal to explain results or find patterns in them, credits apply. The learning costs no credits; asking Opal about it does.</desc>
+  <!-- Lane D1, drawn by hand, version 2 (docs/enablement/LANE-BRIEF-V2.md): the finished product, in the credits page's three
+       parts of the session, with no label, chip or legend. Each card's first line says, in words, whether credits apply, where
+       V2 section 3's AI sentence puts them: with Opal and the AI add-ons, never in a decision. Facts: research/S5-product-as-designed.md
+       rows B3, B10, A8, F1, F5, F7, F12, F13, F14, V11, C7, C8; research/S2-engine-facts.md 3.14, 3.16, 4.1-4.5, 5.1-5.3, 6.1-6.2;
+       docs/Opal-Credit-Boundary-Pricing-Guide.md 1-4; the glossary's "AI credits", "Opal" and "Typed search". -->
+  <rect x="0" y="0" width="1100" height="818" fill="#FFFFFF"/>
+
+  <text x="16" y="46" font-size="32" font-weight="700">One visitor's session: what happens before, during and after</text>
+
+  <!-- V2 section 3, the AI sentence, verbatim across the two halves -->
+  <g data-box="rule engine">
+    <rect x="16" y="66" width="529" height="96" rx="16" fill="#08251A"/>
+    <text x="36" y="100" font-size="24" font-weight="700" fill="#ABFF44">The engine decides.</text>
+    <text x="36" y="134" font-size="20" fill="#FFFFFF">The engine calls no AI model to decide.</text>
+  </g>
+  <g data-box="rule opal">
+    <rect x="555" y="66" width="529" height="96" rx="16" fill="#197050"/>
+    <text x="575" y="100" font-size="24" font-weight="700" fill="#FFFFFF">Opal creates and explains.</text>
+    <text x="575" y="128" font-size="20" fill="#FFFFFF">Opal is where people ask and generative AI</text>
+    <text x="575" y="151" font-size="20" fill="#FFFFFF">creates, and that is where credits apply.</text>
+  </g>
+
+  <!-- BEFORE: the team's preparation -->
+  <g data-box="column before">
+    <rect x="16" y="182" width="346" height="618" rx="18" fill="#E4F0DA"/>
+    <text x="34" y="218" font-size="28" font-weight="700">Before</text>
+    <text x="34" y="246" font-size="20" fill="#197050">The team's preparation</text>
+
+    <!-- S5 C7; S2 4.1-4.5 -->
+    <g data-box="publishes">
+      <rect x="24" y="266" width="330" height="112" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="296" font-size="19" font-weight="700">No credits</text>
+      <text x="38" y="328" font-size="20">The team publishes the</text>
+      <text x="38" y="353" font-size="20">documents the engine follows.</text>
+    </g>
+
+    <!-- S5 B10, C8; Opal guide 2 (Before); glossary "Opal" -->
+    <g data-box="opal authors">
+      <rect x="24" y="392" width="330" height="137" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="422" font-size="19" font-weight="700">Credits apply</text>
+      <text x="38" y="454" font-size="20">Opal authors audiences, tests</text>
+      <text x="38" y="479" font-size="20">and explanations from plain</text>
+      <text x="38" y="504" font-size="20">words; a person approves.</text>
+    </g>
+
+    <!-- S5 B3; glossary "Design-time tagging" -->
+    <g data-box="opal tags">
+      <rect x="24" y="543" width="330" height="112" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="38" y="573" font-size="19" font-weight="700">Credits apply</text>
+      <text x="38" y="605" font-size="20">Opal suggests tags for content;</text>
+      <text x="38" y="630" font-size="20">a person approves each one.</text>
+    </g>
+
+    <text x="34" y="750" font-size="20" font-weight="700">Credits follow the team's</text>
+    <text x="34" y="776" font-size="20" font-weight="700">requests, not the traffic.</text>
+  </g>
+
+  <!-- DURING: the visit -->
+  <g data-box="column during">
+    <rect x="377" y="182" width="346" height="618" rx="18" fill="#E4F0DA"/>
+    <text x="395" y="218" font-size="28" font-weight="700">During</text>
+    <text x="395" y="246" font-size="20" fill="#197050">The visit</text>
+
+    <!-- S5 A8; S2 1, 6.1 -->
+    <g data-box="decides">
+      <rect x="385" y="266" width="330" height="112" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="296" font-size="19" font-weight="700">No credits</text>
+      <text x="399" y="328" font-size="20">The engine decides at the edge,</text>
+      <text x="399" y="353" font-size="20">from the published rules.</text>
+    </g>
+
+    <!-- S5 F1; S2 3.14, 6.2 (receipts produced as data) -->
+    <g data-box="receipt">
+      <rect x="385" y="392" width="330" height="112" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="422" font-size="19" font-weight="700">No credits</text>
+      <text x="399" y="454" font-size="20">Each decision's receipt is</text>
+      <text x="399" y="479" font-size="20">written as data, by the engine.</text>
+    </g>
+
+    <!-- V2 section 1 (the AI add-ons, switched on with credits, told as optional); S5 V11; glossary "Typed search" -->
+    <g data-box="add-ons">
+      <rect x="385" y="518" width="330" height="162" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="399" y="548" font-size="19" font-weight="700">Credits apply</text>
+      <text x="399" y="580" font-size="20" font-weight="700">Optional AI add-ons</text>
+      <text x="399" y="605" font-size="20">A visitor can use AI search,</text>
+      <text x="399" y="630" font-size="20">the style concierge or</text>
+      <text x="399" y="655" font-size="20">generated imagery.</text>
+    </g>
+
+    <text x="395" y="750" font-size="20" font-weight="700">No decision uses a credit;</text>
+    <text x="395" y="776" font-size="20" font-weight="700">the add-ons are optional.</text>
+  </g>
+
+  <!-- AFTER: the results -->
+  <g data-box="column after">
+    <rect x="738" y="182" width="346" height="618" rx="18" fill="#E4F0DA"/>
+    <text x="756" y="218" font-size="28" font-weight="700">After</text>
+    <text x="756" y="246" font-size="20" fill="#197050">The results</text>
+
+    <!-- S5 F3, F7; S2 3.15, 5.1, 5.2; the learning sentence of V2 section 3 -->
+    <g data-box="learning">
+      <rect x="746" y="266" width="330" height="162" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="296" font-size="19" font-weight="700">No credits</text>
+      <text x="760" y="328" font-size="20">The engine records what works</text>
+      <text x="760" y="353" font-size="20">from the first day and changes</text>
+      <text x="760" y="378" font-size="20">nothing until the brand turns</text>
+      <text x="760" y="403" font-size="20">the dial.</text>
+    </g>
+
+    <!-- S5 F1, F5, F12, F13; S2 3.14, 3.16, 4.5, 5.3 -->
+    <g data-box="reads">
+      <rect x="746" y="442" width="330" height="137" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="472" font-size="19" font-weight="700">No credits</text>
+      <text x="760" y="504" font-size="20">The team reads the receipts and</text>
+      <text x="760" y="529" font-size="20">the day report; analysts measure</text>
+      <text x="760" y="554" font-size="20">lift against holdouts.</text>
+    </g>
+
+    <!-- S5 F14, B10; Opal guide 2 (After); glossary "Opal" -->
+    <g data-box="asking opal">
+      <rect x="746" y="593" width="330" height="112" rx="12" fill="#FFFFFF" stroke="#08251A" stroke-width="2"/>
+      <text x="760" y="623" font-size="19" font-weight="700">Credits apply</text>
+      <text x="760" y="655" font-size="20">Asking Opal to explain results</text>
+      <text x="760" y="680" font-size="20">or find patterns in them.</text>
+    </g>
+
+    <text x="756" y="750" font-size="20" font-weight="700">The learning costs no credits;</text>
+    <text x="756" y="776" font-size="20" font-weight="700">asking Opal about it does.</text>
+  </g>
+</svg>

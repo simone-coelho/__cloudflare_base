@@ -1,0 +1,411 @@
+{
+ "about": "L2 build fixture. Colours, a rating and four key specs per phone, merged into public/vantage/phones.json (lane L1) only where that file does not carry them. Content, never decided. Colour names from the makers' own buy pages and the carrier grid as captured 2026-09-30; specs are the makers' headline figures. Replace by folding colors/specs/rating into phones.json. colorHex: swatch shades for the colour names lane L1 publishes in phones.json (display only; a name it does not list paints a neutral grey).",
+ "asOf": "2026-09-30",
+ "phones": {
+  "iphone-18-pro": {
+   "rating": 4.2,
+   "reviews": 116,
+   "colors": [
+    {
+     "name": "Burgundy",
+     "hex": "#5B1E2A"
+    },
+    {
+     "name": "Black",
+     "hex": "#2A2A2C"
+    },
+    {
+     "name": "Silver",
+     "hex": "#E3E4E1"
+    },
+    {
+     "name": "Glacier",
+     "hex": "#C9D8DF"
+    }
+   ],
+   "specs": {
+    "display": "6.3-inch Super Retina XDR, ProMotion 120 Hz",
+    "camera": "48MP Fusion Main (variable aperture) · 48MP Ultra Wide · 48MP 4x Telephoto",
+    "zoom": "8x optical-quality · up to 40x digital",
+    "battery": "Up to 24 hours typical use"
+   }
+  },
+  "iphone-18-pro-max": {
+   "rating": 4.6,
+   "reviews": 42,
+   "colors": [
+    {
+     "name": "Burgundy",
+     "hex": "#5B1E2A"
+    },
+    {
+     "name": "Black",
+     "hex": "#2A2A2C"
+    },
+    {
+     "name": "Silver",
+     "hex": "#E3E4E1"
+    },
+    {
+     "name": "Glacier",
+     "hex": "#C9D8DF"
+    }
+   ],
+   "specs": {
+    "display": "6.9-inch Super Retina XDR, ProMotion 120 Hz",
+    "camera": "48MP Fusion Main (variable aperture) · 48MP Ultra Wide · 48MP 4x Telephoto",
+    "zoom": "8x optical-quality · up to 40x digital",
+    "battery": "Up to 30 hours typical use"
+   }
+  },
+  "galaxy-s26-ultra": {
+   "rating": 4.6,
+   "reviews": 2310,
+   "colors": [
+    {
+     "name": "Black",
+     "hex": "#26272B"
+    },
+    {
+     "name": "White",
+     "hex": "#F1F1EF"
+    },
+    {
+     "name": "Sky Blue",
+     "hex": "#B7CBE0"
+    },
+    {
+     "name": "Cobalt Violet",
+     "hex": "#5E5B86"
+    }
+   ],
+   "specs": {
+    "display": "6.9-inch Dynamic AMOLED 2X, 120 Hz",
+    "camera": "200MP wide · 50MP ultra-wide · 50MP 5x telephoto · 10MP 3x telephoto",
+    "zoom": "5x optical · up to 100x Space Zoom",
+    "battery": "5,000 mAh"
+   }
+  },
+  "pixel-11-pro": {
+   "rating": 4.5,
+   "reviews": 388,
+   "colors": [
+    {
+     "name": "Obsidian",
+     "hex": "#2B2C2E"
+    },
+    {
+     "name": "Porcelain",
+     "hex": "#ECE7DF"
+    },
+    {
+     "name": "Moonstone",
+     "hex": "#8E9AA6"
+    }
+   ],
+   "specs": {
+    "display": "6.3-inch Super Actua, 120 Hz",
+    "camera": "50MP wide · 48MP ultrawide · 48MP 5x telephoto",
+    "zoom": "5x optical · up to 100x Super Res Zoom",
+    "battery": "Over 24 hours"
+   }
+  },
+  "iphone-17": {
+   "rating": 4.5,
+   "reviews": 5120,
+   "colors": [
+    {
+     "name": "Lavender",
+     "hex": "#CFC4E4"
+    },
+    {
+     "name": "Black",
+     "hex": "#2A2A2C"
+    },
+    {
+     "name": "White",
+     "hex": "#F3F3F1"
+    },
+    {
+     "name": "Mist Blue",
+     "hex": "#AFC3D6"
+    },
+    {
+     "name": "Sage",
+     "hex": "#B9C4AE"
+    }
+   ],
+   "specs": {
+    "display": "6.3-inch Super Retina XDR, ProMotion 120 Hz",
+    "camera": "48MP Dual Fusion · 48MP Ultra Wide",
+    "zoom": "2x optical-quality",
+    "battery": "Up to 30 hours video"
+   }
+  },
+  "galaxy-s26": {
+   "rating": 4.4,
+   "reviews": 1480,
+   "colors": [
+    {
+     "name": "Black",
+     "hex": "#26272B"
+    },
+    {
+     "name": "White",
+     "hex": "#F1F1EF"
+    },
+    {
+     "name": "Sky Blue",
+     "hex": "#B7CBE0"
+    },
+    {
+     "name": "Cobalt Violet",
+     "hex": "#5E5B86"
+    }
+   ],
+   "specs": {
+    "display": "6.3-inch Dynamic AMOLED 2X, 120 Hz",
+    "camera": "50MP wide · 12MP ultra-wide · 10MP 3x telephoto",
+    "zoom": "3x optical · up to 30x Space Zoom",
+    "battery": "4,300 mAh"
+   }
+  },
+  "pixel-11": {
+   "rating": 4.4,
+   "reviews": 612,
+   "colors": [
+    {
+     "name": "Obsidian",
+     "hex": "#2B2C2E"
+    },
+    {
+     "name": "Frost",
+     "hex": "#DCE6EC"
+    },
+    {
+     "name": "Lemongrass",
+     "hex": "#DDE3A4"
+    }
+   ],
+   "specs": {
+    "display": "6.3-inch Actua, 120 Hz",
+    "camera": "48MP wide · 13MP ultrawide · 10.8MP 5x telephoto",
+    "zoom": "5x optical",
+    "battery": "Over 24 hours"
+   }
+  },
+  "iphone-air": {
+   "rating": 4.3,
+   "reviews": 2240,
+   "colors": [
+    {
+     "name": "Sky Blue",
+     "hex": "#C3D6E6"
+    },
+    {
+     "name": "Space Black",
+     "hex": "#27272A"
+    },
+    {
+     "name": "Cloud White",
+     "hex": "#F2F1EE"
+    },
+    {
+     "name": "Light Gold",
+     "hex": "#E6D8BF"
+    }
+   ],
+   "specs": {
+    "display": "6.5-inch Super Retina XDR, ProMotion 120 Hz",
+    "camera": "48MP Fusion Main",
+    "zoom": "2x optical-quality",
+    "battery": "Up to 27 hours video"
+   }
+  },
+  "galaxy-z-fold8": {
+   "rating": 4.5,
+   "reviews": 318,
+   "colors": [
+    {
+     "name": "Graphite",
+     "hex": "#3B3C40"
+    },
+    {
+     "name": "Lavender",
+     "hex": "#C8BEDC"
+    },
+    {
+     "name": "Cream",
+     "hex": "#EFE8D8"
+    }
+   ],
+   "specs": {
+    "display": "8-inch main, 6.5-inch cover, 120 Hz",
+    "camera": "200MP wide · 12MP ultra-wide · 10MP 3x telephoto",
+    "zoom": "3x optical",
+    "battery": "4,400 mAh"
+   }
+  },
+  "razr-2026": {
+   "rating": 4.3,
+   "reviews": 204,
+   "colors": [
+    {
+     "name": "PANTONE Hematite",
+     "hex": "#4B4D52"
+    },
+    {
+     "name": "PANTONE Sporting Green",
+     "hex": "#3E6B4F"
+    },
+    {
+     "name": "PANTONE Violet Ice",
+     "hex": "#B9B3D6"
+    }
+   ],
+   "specs": {
+    "display": "6.9-inch pOLED main, 3.6-inch external",
+    "camera": "50MP main · 13MP ultrawide",
+    "zoom": "2x digital",
+    "battery": "4,500 mAh"
+   }
+  },
+  "iphone-17e": {
+   "rating": 4.4,
+   "reviews": 930,
+   "colors": [
+    {
+     "name": "Soft Pink",
+     "hex": "#EBD3D6"
+    },
+    {
+     "name": "Black",
+     "hex": "#2A2A2C"
+    },
+    {
+     "name": "White",
+     "hex": "#F3F3F1"
+    }
+   ],
+   "specs": {
+    "display": "6.1-inch Super Retina XDR",
+    "camera": "48MP Fusion",
+    "zoom": "2x optical-quality",
+    "battery": "Up to 26 hours video"
+   }
+  },
+  "edge-2026": {
+   "rating": 4.2,
+   "reviews": 156,
+   "colors": [
+    {
+     "name": "PANTONE Gibraltar Sea",
+     "hex": "#2F4A5E"
+    },
+    {
+     "name": "PANTONE Peach",
+     "hex": "#E8B89A"
+    }
+   ],
+   "specs": {
+    "display": "6.7-inch pOLED, 144 Hz",
+    "camera": "50MP main · 13MP ultrawide",
+    "zoom": "2x digital",
+    "battery": "5,200 mAh"
+   }
+  },
+  "pixel-10a": {
+   "rating": 4.3,
+   "reviews": 870,
+   "colors": [
+    {
+     "name": "Obsidian",
+     "hex": "#2B2C2E"
+    },
+    {
+     "name": "Lavender",
+     "hex": "#C9C2DE"
+    }
+   ],
+   "specs": {
+    "display": "6.3-inch Actua, 120 Hz",
+    "camera": "48MP wide · 13MP ultrawide",
+    "zoom": "Super Res Zoom 8x",
+    "battery": "Over 30 hours"
+   }
+  },
+  "galaxy-a37": {
+   "rating": 4.1,
+   "reviews": 512,
+   "colors": [
+    {
+     "name": "Awesome Graphite",
+     "hex": "#3A3B3F"
+    },
+    {
+     "name": "Awesome Lilac",
+     "hex": "#CBBBD9"
+    }
+   ],
+   "specs": {
+    "display": "6.7-inch Super AMOLED, 120 Hz",
+    "camera": "50MP main · 8MP ultra-wide · 5MP macro",
+    "zoom": "2x digital",
+    "battery": "5,000 mAh"
+   }
+  },
+  "moto-g-2026": {
+   "rating": 4,
+   "reviews": 1044,
+   "colors": [
+    {
+     "name": "Forest Gray",
+     "hex": "#4E5A53"
+    },
+    {
+     "name": "Slate",
+     "hex": "#6C7480"
+    }
+   ],
+   "specs": {
+    "display": "6.7-inch LCD, 120 Hz",
+    "camera": "50MP main · 2MP macro",
+    "zoom": "digital",
+    "battery": "5,000 mAh"
+   }
+  }
+ },
+ "colorHex": {
+  "Burgundy": "#5B1E2A",
+  "Black": "#2A2A2C",
+  "Silver": "#E3E4E1",
+  "Glacier": "#C9D8DF",
+  "Night Sky": "#1F2433",
+  "Star White": "#F1F0EC",
+  "Sky Blue": "#A9C7E3",
+  "White": "#F2F2F0",
+  "Cobalt Violet": "#5A4E8C",
+  "Graphite": "#4A4A4D",
+  "Lavender": "#C8B8E0",
+  "Cream": "#EFE6D2",
+  "Pink": "#F2C6CF",
+  "Mint": "#BFE3D0",
+  "Fog": "#D9DCDD",
+  "Canyon": "#B5694A",
+  "Obsidian": "#202124",
+  "Olive": "#6B6F4A",
+  "Frost": "#E4ECF1",
+  "Pistachio": "#C7D9A7",
+  "Hibiscus": "#C8385A",
+  "Light Gold": "#E9D9B8",
+  "Space Black": "#2B2B2D",
+  "Cloud White": "#F4F4F2",
+  "Sage": "#A8B89A",
+  "Mist Blue": "#B9C9D9",
+  "PANTONE Sporting Green": "#2E5E4E",
+  "Hematite": "#4B4B50",
+  "Violet Ice": "#C9C3DE",
+  "PANTONE Martini Olive": "#6E6B45",
+  "PANTONE Slipstream": "#8FA7B3"
+ }
+}

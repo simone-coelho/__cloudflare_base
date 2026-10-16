@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P29",
+  "workOrderHash": "sha256:3e06085135c9b2d488ffacca2882e3dbd1f1293117bf8ae51abc6b7b5be967bb",
+  "artifact": {
+    "revision": "54ea527234fc10f656e4eacbc4ba56bf3183a6b1",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p29-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P29 built on rem/p29-build: 84055e3a merges rem/integration 9bf4fdca (P02, P01, P28, P03, P10, P07, P04 and the landing of the product branch) into the per-ticket branch rem/tkt/P29 (bc567ba5 over 66fc338b, specification reviewed PASS on rem/spec-parity-b after the S2 fix round); RED baseline 11 failed / 0 passed on the missing layoutReason and the missing off-limits record, no PRECONDITION; 73ca239a the mechanism (src/content/types.ts, decide.ts, service.ts, src/learn/receipts.ts, replay.ts, fan.ts, src/ledger/records.ts: one layoutReason value on the decision set, on every record of the declared layout slot as explain.layoutReason and on every receipt of that slot, sorted keys, status unchanged with exactly one cause in the ticket's order or status changed with the term that moved each moved module; the baseline with fixed positions where the pins and holds put them and the rest the configured order for the context else the eligible pool in catalogue order, R-P23 C7; the causes read from the landed members, P04's moduleRule, P10's floor set, P28's p, the ladder's n and nMin, P07's prior as a term; the off-limits layout slot's record built as set.offLimitsRecords, never in the shopper's ring, written to the ledger only under tracking consent on a rendered-v1 layout, skipped by the fan-in, the exposure, the receipts and the credit, D2 and W20.G1.08; the reason riding the export unchanged; the two interest sentences; inputs.prior_lambda written only when a prior applied above the floor so prior terms replay exactly, no new manifest marker; retained records without the member replaying as before; the existing why arrays unchanged, R-P10); eb644ad1 the kit (docs/kit/02 and 03: the reason, its two statuses, its causes and the off-limits layout record); the SDK and Meridian bundles unchanged (both --check exact); acceptance 11/11 on both hosts at eb644ad1; gate GATE_OK once at eb644ad1 (2852 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact); then fix round 1 (R-P56 and its amendment, the delivery review at eb644ad1 having passed R2 to R5 and failed R1 on the move term naming the largest score contribution so that a module moved only by the lift was named affinity): the specification 5ab68366 fast-forwarded in (the R1 lift-term leg with the mixed world, its control, the R5 kit lock), rem/integration 8636e9d7 (P36 landed) merged cleanly as e4335339 with no hunk resolved by hand and no earlier leg turning red, 5017177b the attribution in src/content/decide.ts (a moved module names the term by which it differs most from the modules it passed or that passed it taken together, exploration and diversity as placed, an exact tie to the earlier term in the fixed order), c380e621 and 7ca140da the kit sentences in docs/kit/02 and 03 and the rule-term fallback; acceptance 18/18 on both hosts at 7ca140da with P28 29/29, P04 13/13, P07 19/19 and P36 48/48 on the merged tree; the gate GATE_OK once at 7ca140da (fix1/implementer/logs/gate.log: 2907 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact); then fix round 2 (R-P57, the verification at 7ca140da having passed R2 to R5 and the lift worlds and failed R1 on a lift-moved module named diversity in a diversity slot): the specification a6264855 fast-forwarded in (the diversity world per host), rem/integration 1448e3bb (P37 landed) merged cleanly as 3244b0fb with no hunk resolved by hand and no earlier leg turning red, 54ea5272 the attribution comparing rule-placed or displaced modules like any other with the rule's name only for the module the rule itself placed or displaced and the kit sentences in docs/kit/02 and 03 including the past-the-take clause; acceptance 20/20 on both hosts at 54ea5272 with P28 29/29, P04 13/13, P07 19/19, P36 48/48 and P37 16/16 on the merged tree; the gate GATE_OK once at 54ea5272 (fix2/implementer/logs/gate.log: 2925 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S2/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P29/implementer/REPORT.md",
+      "git commits on rem/p29-build up to 54ea5272"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P29 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/implementer/logs/acceptance-P29-1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix2/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P29/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P29/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-12T20:15:36.848Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

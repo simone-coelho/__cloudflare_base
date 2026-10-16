@@ -6,26 +6,29 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type PositionPolicy, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
-import { committedPublication, pinPublication, readPinnedPublication } from '@/config/publication';
-import { isCatalogueName, LEARN_KIND } from '@/content/kinds';
+import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
+import { CONTENT_KIND, isCatalogueName, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
 import { attributionContractOf, policyOf } from '@/learn/route';
 import { loadTombstone } from '@/ledger/erasure';
 import { requireRetention } from '@/retention';
 import { learningEffectId, recoveryDigest, RECOVERY_LIMITS, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
-import { entryChannelOf } from '@/services/visit';
+import { channelIn } from '@/services/visit';
+import { contextTermsOf, TODAY_TERMS, type ContextTerms } from '@/content/cell';
 
 const PUBLISH_DELAY_MS = 30_000;
 /** Conservative application budgets, not a measurement of a provider limit. */
 export const LEARN_LIMITS = { requestBytes: 256 * 1024, rows: 1000, stateBytes: 512 * 1024,
   items: 256, counters: 4096, component: 256, keyBytes: 2048,
   priorRows: 4096, priorBytes: 256 * 1024, snapshotBytes: 2 * 1024 * 1024,
-  repairBytes: 8 * 1024 * 1024, repairCounters: 65536, totalBytes: 640 * 1024 } as const;
+  repairBytes: 8 * 1024 * 1024, repairCounters: 65536, totalBytes: 640 * 1024,
+  /** P05: the highest position, counted from 1 within a slot, an adjacent swap or a credit may name. */
+  positions: 64 } as const;
 const rewards = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
 const utf8 = new TextEncoder();
 interface EffectMarker { digest: string; subject: string; ts: number; expiresAt: number; item: string }
@@ -35,12 +38,25 @@ interface EffectMarker { digest: string; subject: string; ts: number; expiresAt:
  * part of this object's identity exactly as the tenant, brand and slot are.
  */
 interface Stored { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; stats: StatsState;
-  effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }> }
+  effects?: Record<string, EffectMarker>; retiredEffects?: Record<string, { digest: string; expiresAt: number }>;
+  /**
+   * P05 (decision D1): per adjacent pair (k, k + 1), keyed by k, what the slot's
+   * swaps have shown (`PairCounts`). Absent on a slot that has swapped nothing,
+   * so no other object's state gains a member.
+   */
+  positions?: Record<string, PairCounts> }
 /** Every instant the alarm must remove a live or retired learning-effect marker at. */
 const effectExpiries = (stored: Stored | null | undefined): number[] =>
   [...Object.values(stored?.effects ?? {}), ...Object.values(stored?.retiredEffects ?? {})].map(marker => marker.expiresAt);
 interface GenerationFence { whole: number; items: Record<string, number> }
-type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string };
+/**
+ * P05: `position` is the decision's position counted from 1 within its slot,
+ * carried for a module of a page's declared layout slot; `swap` names the two
+ * adjacent positions an adjacent swap exchanged on that decision, carried only
+ * for the two modules it exchanged.
+ */
+type Row = { item: string; cell: Cell; ts: number; reward?: RewardType; weight?: number; effect?: LearningEffect; decision?: string; digest?: string;
+  position?: number; swap?: [number, number] };
 /**
  * W22 D1.02 (F16 §7, §2.3): the bounded, durable journal of exposures this
  * object has already applied, so a REDELIVERED exposure — the at-least-once
@@ -141,6 +157,29 @@ function keyBound(key: string): void {
   if (key !== '*' && key.split('|').some((part, i) => !part.startsWith(['c=', 'v=', 's=', 'r=', 'a='][i]!)
     || part.length < 3 || part.length > LEARN_LIMITS.component + 2 || part.slice(2).includes('=') || control(part.slice(2)))) throw invalid();
 }
+/**
+ * P08 (decision D2): a key of a pooled record, or a prior cell written for one —
+ * `p=<page>` first, then today's levels in today's order, at most six pairs —
+ * bounded exactly as `keyBound` bounds every other key. Any other key is held
+ * to `keyBound` itself, unchanged. Stored counters never carry a pooled key: a
+ * pooled module's evidence is kept in each placement as every module's is.
+ */
+function pooledKeyBound(key: string): void {
+  if (!isPooledKey(key)) { keyBound(key); return; }
+  if (Object.prototype.hasOwnProperty.call(Object.prototype, key)) throw invalid();
+  const parts = key.split('|');
+  if (utf8.encode(key).length > LEARN_LIMITS.keyBytes || parts.length > 6) throw capacity();
+  if (parts.some((part, i) => !part.startsWith(['p=', 'c=', 'v=', 's=', 'r=', 'a='][i]!)
+    || part.length < 3 || part.length > LEARN_LIMITS.component + 2 || part.slice(2).includes('=') || control(part.slice(2)))) throw invalid();
+}
+/** P08: what a placement's counters MEAN — the accumulation tuple two placements must share for their evidence to be one record. */
+const accumulationOf = (config: SlotLearnConfig) => ({ reward: config.reward, objective: config.objective ?? 'unit',
+  measurementBasis: config.measurementBasis ?? 'served-v1', tauLearnMs: config.stats.tauLearnMs });
+/** P08: one stored counter, as `stateValid` reads it. */
+const counterValid = (c: unknown): c is Counter => {
+  const entry = (v: unknown) => fields(v, ['s', 't']) && finite(v.s) && v.s >= 0 && time(v.t);
+  return fields(c, ['n', 's']) && entry(c.n) && object(c.s) && Object.entries(c.s).every(([reward, e]) => rewards.has(reward) && entry(e));
+};
 function configValid(v: unknown): v is SlotLearnConfig {
   if (!fields(v, ['reward', 'stats', 'objective', 'measurementBasis']) || typeof v.reward !== 'string' || !rewards.has(v.reward)
     || v.measurementBasis !== undefined && v.measurementBasis !== 'served-v1' && v.measurementBasis !== 'rendered-v1'
@@ -153,7 +192,7 @@ function configValid(v: unknown): v is SlotLearnConfig {
     && finite(s.liftMax) && s.liftMax >= 1 && s.liftMax > s.liftMin;
 }
 function stateValid(value: unknown, repairing = false): asserts value is Stored {
-  if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects']) || !component(value.tenant) || !component(value.brand)
+  if (!fields(value, ['tenant', 'brand', 'slot', 'page', 'config', 'stats', 'effects', 'retiredEffects', 'positions']) || !component(value.tenant) || !component(value.brand)
     || !slotName(value.slot) || (value.page !== undefined && !isCatalogueName(value.page)) || !configValid(value.config)) throw invalid();
   if (value.effects !== undefined && (!object(value.effects) || Object.keys(value.effects).length > RECOVERY_LIMITS.effects
     || Object.entries(value.effects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id)
@@ -163,6 +202,10 @@ function stateValid(value: unknown, repairing = false): asserts value is Stored 
     || Object.entries(value.retiredEffects).some(([id, m]) => !/^[a-f0-9]{64}$/.test(id) || !fields(m, ['digest', 'expiresAt'])
       || typeof m.digest !== 'string' || !/^[a-f0-9]{64}$/.test(m.digest) || !time(m.expiresAt)))) throw invalid();
   if (Object.keys(value.effects ?? {}).length + Object.keys(value.retiredEffects ?? {}).length > RECOVERY_LIMITS.effects) throw capacity();
+  // P05: the adjacent swaps' counts, one entry per pair's lower position, whole numbers.
+  const whole = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 0;
+  if (value.positions !== undefined && (!object(value.positions) || Object.entries(value.positions).some(([k, c]) => !/^[1-9][0-9]*$/.test(k)
+    || Number(k) >= LEARN_LIMITS.positions || !fields(c, ['pairs', 'first', 'second']) || !whole(c.pairs) || !whole(c.first) || !whole(c.second)))) throw invalid();
   const st = value.stats;
   if (!fields(st, ['items', 'slot', 'events', 'updatedAt', 'bounded']) || !object(st.items) || !object(st.slot)
     || !Number.isSafeInteger(st.events) || (st.events as number) < 0 || !time(st.updatedAt)) throw invalid();
@@ -242,9 +285,16 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
       || !time(ts) || !Number.isFinite(weight) || weight < 0 || (kind === 'credits' && (typeof row.reward !== 'string' || !rewards.has(row.reward)))) throw invalid();
     if (row.decision !== undefined && (typeof row.decision !== 'string' || !row.decision || utf8.encode(row.decision).length > LEARN_LIMITS.keyBytes)) throw invalid();
     if (row.digest !== undefined && (typeof row.digest !== 'string' || !/^[a-f0-9]{64}$/.test(row.digest))) throw invalid();
+    // P05: a position counted from 1 within the slot, and the adjacent pair a swap exchanged, naming that position.
+    const place = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 1 && (v as number) <= LEARN_LIMITS.positions;
+    if (row.position !== undefined && !place(row.position)) throw invalid();
+    if (row.swap !== undefined && (!Array.isArray(row.swap) || row.swap.length !== 2 || !place(row.swap[0]) || row.swap[1] !== (row.swap[0] as number) + 1
+      || (row.position !== row.swap[0] && row.position !== row.swap[1]))) throw invalid();
     accepted.push({ item: row.item, cell, ts, ...(kind === 'credits' ? { reward: row.reward as RewardType, weight } : {}),
       ...(typeof row.decision === 'string' ? { decision: row.decision } : {}),
       ...(typeof row.digest === 'string' ? { digest: row.digest } : {}),
+      ...(row.position !== undefined ? { position: row.position as number } : {}),
+      ...(row.swap !== undefined ? { swap: [row.swap[0] as number, row.swap[1] as number] as [number, number] } : {}),
       ...(Object.hasOwn(row, 'effect') ? { effect: row.effect as LearningEffect } : {}) });
   }
   return accepted;
@@ -252,11 +302,17 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
 
 export class LearnStats {
   private data: Stored | null = null;
+  /**
+   * P05: this placement's published position-policy history, as last read from
+   * or written to its one copy in storage (`positionHistoryKey`); null until
+   * first needed. This object is its only writer.
+   */
+  private positionPolicies: { key: string; policies: PositionPolicy[] } | null = null;
   private chain: Promise<unknown> = Promise.resolve();
   private lastAllocated = 0;
   private synthetic: SyntheticObjectBoundary;
   constructor(private state: DurableObjectState, private env: Env) {
-    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => { this.data = null; this.lastAllocated = 0; });
+    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => { this.data = null; this.lastAllocated = 0; this.positionPolicies = null; });
     this.state = this.synthetic.state; this.env = this.synthetic.env;
   }
 
@@ -356,6 +412,21 @@ export class LearnStats {
         const managed = b.version === 2;
         if ((b.version !== undefined && b.version !== 2) || (managed ? rows.length !== raw.length || rows.some(row => !row.effect) : rows.some(row => row.effect))) throw invalid();
         return await this.writeRows(kind, raw.length, b.tenant, b.brand, b.slot, b.config, rows, managed, b.page as string | undefined);
+      }
+      if (path === '/pooled') {
+        // P08 (decisions D1, D2): this placement's own counters for the pooled
+        // modules another placement's publication reads into each module's ONE
+        // record, with what they mean (`accumulationOf`). A read of COMMITTED
+        // state, never queued behind this object's own work and never caching
+        // anything, so two placements publishing at once never wait on each other.
+        const b = await input(request);
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page) || !Array.isArray(b.items)
+          || b.items.length > LEARN_LIMITS.items || b.items.some(item => !itemName(item))) throw invalid();
+        const current = await this.committed();
+        if (current && (current.tenant !== b.tenant || current.brand !== b.brand || current.slot !== b.slot || !samePage(current, b.page))) throw recovery();
+        const items: Record<string, Record<string, Counter>> = {};
+        if (current) for (const item of b.items as string[]) if (Object.hasOwn(current.stats.items, item)) items[item] = current.stats.items[item]!;
+        return json({ ok: true, config: current ? accumulationOf(current.config) : null, items });
       }
       if (path === '/snapshot') {
         const snapshot = await this.serialize(() => this.currentSnapshot());
@@ -483,6 +554,15 @@ export class LearnStats {
     this.data = stored; return stored;
   }
 
+  /** P08: the committed state, read without caching it, for a read that is not serialized (`/pooled`). */
+  private async committed(): Promise<Stored | null> {
+    if (this.data) return this.data;
+    const stored: unknown = await this.state.storage.get('learn');
+    if (stored === undefined) return null;
+    try { stateValid(stored); } catch { throw recovery(); }
+    return stored;
+  }
+
   private async candidate(tenant: string, brand: string, slot: string, config: SlotLearnConfig, page?: string): Promise<Stored> {
     const existing = await this.loadIfAny();
     if (existing && (existing.tenant !== tenant || existing.brand !== brand || existing.slot !== slot || !samePage(existing, page))) throw recovery();
@@ -518,6 +598,21 @@ export class LearnStats {
       // exactly; a row stamped after it is still counted, at the present.
       const engineNow = Date.now();
       const journal = !managed && kind === 'exposures' ? await this.seenExposures() : null;
+      // P36 (R-P52): a bounded object counts each row under the tenant's own
+      // terms — its channel ids and its published cut's buckets — so a tenant
+      // with a context vocabulary learns in its own cells; anything else, and
+      // every value of a tenant without the settings outside today's six words
+      // and three buckets, is counted under unknown exactly as before.
+      const terms = candidate.stats.bounded ? await this.contextTerms(tenant) : TODAY_TERMS;
+      // P05 (decision D2): a credit that names its position is weighed by the
+      // position policy in force when it happened — the newest this object had
+      // published at or before the credit's time — exactly as the hourly fold
+      // weighs it. A history that cannot be read weighs nothing: the credit is
+      // applied exactly as before.
+      let policies: readonly PositionPolicy[] | null = null;
+      if (kind === 'credits' && rows.some(row => row.position !== undefined)) {
+        try { policies = await this.positionHistory(candidate); } catch { policies = null; }
+      }
       const applied = journal ? new Set(journal.map(row => `${row.id}:${row.digest}`)) : null;
       const added: SeenExposure[] = [];
       let newlyApplied = 0, alreadyApplied = 0, suppressed = 0;
@@ -560,11 +655,21 @@ export class LearnStats {
           if (applied.has(key)) continue;
           applied.add(key); added.push({ id: row.decision, digest: row.digest, ts: row.ts });
         }
-        const cell = candidate.stats.bounded ? { ...row.cell, channel: entryChannelOf(row.cell.channel) ?? 'unknown',
-          visit_bucket: ['1', '2-3', '4+'].includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
+        const cell = candidate.stats.bounded ? { ...row.cell, channel: channelIn(row.cell.channel, terms.published ? terms.channels : null) ?? 'unknown',
+          visit_bucket: terms.buckets.includes(row.cell.visit_bucket) ? row.cell.visit_bucket : 'unknown',
           stage: ['early', 'mid', 'late'].includes(row.cell.stage ?? '') ? row.cell.stage : 'unknown' } as Cell : row.cell;
         if (kind === 'exposures') recordExposure(candidate.stats, row.item, cell, row.ts, candidate.config.stats, engineNow);
-        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight!, candidate.config.stats, engineNow);
+        else recordSuccess(candidate.stats, row.item, cell, row.reward!, row.ts, row.weight! * positionWeightAt(policies, row.position, row.ts), candidate.config.stats, engineNow);
+        // P05 (decision D1): the adjacent swaps' evidence. A swapped decision is
+        // counted once, when its module at the pair's lower position is exposed;
+        // a click credited to either module it exchanged is counted at the
+        // position that module was served at. Counted exactly when the row is
+        // applied, so a redelivery recognized above counts nothing again.
+        if (row.swap) {
+          const pair = ((candidate.positions ??= {})[String(row.swap[0])] ??= { pairs: 0, first: 0, second: 0 });
+          if (kind === 'exposures') { if (row.position === row.swap[0]) pair.pairs += 1; }
+          else if (row.reward === 'click') { if (row.position === row.swap[0]) pair.first += 1; else pair.second += 1; }
+        }
         this.fit(candidate);
         newlyApplied++;
       }
@@ -748,26 +853,36 @@ export class LearnStats {
     // keeps (`ONLINE_RING_REACH_MS`, the ring's own age limit), never
     // a constant of its own.
     const contract = await this.attributionContract(d);
+    // P08 (decisions D1, D2): each pooled module's ONE record, read from every
+    // placement it is served in. Undefined for a catalogue that declares no
+    // pooled module this slot serves, and then nothing below changes.
+    const pooled = await this.pooledCounters(d);
+    const isPooled = (item: string) => !!pooled && Object.hasOwn(pooled, item);
     // Count exactly the item/cell identities the builder will materialize.
-    const byItem = new Map(Object.entries(d.stats.items).map(([item, keys]) => [item, new Set(Object.keys(keys))]));
+    const byItem = new Map(Object.entries(d.stats.items).filter(([item]) => !isPooled(item)).map(([item, keys]) => [item, new Set(Object.keys(keys))]));
     const slotKeys = new Set(Object.keys(d.stats.slot));
+    for (const [item, record] of Object.entries(pooled ?? {})) byItem.set(item, new Set(Object.keys(record)));
     for (const [item, cells] of priors?.index ?? []) {
       if (!itemName(item)) throw capacity();
       const keys = byItem.get(item) ?? new Set<string>();
-      for (const cell of cells.keys()) keys.add(cell);
+      // P08: a prior cell is read under the ladder of the record it names (`buildSnapshot`).
+      for (const cell of cells.keys()) if (cell === '*' || isPooledKey(cell) === isPooled(item)) keys.add(cell);
       byItem.set(item, keys);
     }
     if (byItem.size > LEARN_LIMITS.items) throw capacity();
     let count = 0;
     for (const keys of byItem.values()) for (const key of keys) {
-      keyBound(key); count++;
-      for (let k: string | null = key; k !== null; k = parentKey(k)) slotKeys.add(k);
+      pooledKeyBound(key); count++;
+      for (let k: string | null = unpagedKey(key); k !== null; k = parentKey(k)) slotKeys.add(k);
     }
     if (count + slotKeys.size > LEARN_LIMITS.counters) throw capacity();
     // W24 G1.01: a generation this object was actually restarted into dates
     // itself from that restart, and not from evidence it may not have yet.
     const restarted = await this.accumulationTransition();
-    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract, restarted?.at);
+    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, priors, d.config.objective ?? 'unit', d.config.measurementBasis ?? 'served-v1', contract, restarted?.at, pooled);
+    // P05 (decision D1): each position's effect from the slot's adjacent swaps, only where it has swapped.
+    const effects = positionEffectsOf(d.positions);
+    if (effects) snap.positionEffects = effects;
     snap.witness = await this.witness(d, await this.fence());
     // W23 H1.01: only an object that was actually repaired names a basis.
     const basis = await this.rebuiltFrom();
@@ -857,6 +972,17 @@ export class LearnStats {
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     const frozen = await this.snapshot(d);
+    // P05 (decision D2): the position policy this publication puts in force:
+    // normalised only while the slot's switch is on in the tenant's learn
+    // document AND the swaps have estimated a position's effect. The history is
+    // consulted only for a slot that has swapped or holds a history already —
+    // any other slot publishes exactly as before, reading nothing more — and it
+    // is read before any write, so an unreadable one refuses the publication.
+    const effects: Record<string, number> = {};
+    for (const e of frozen.positionEffects ?? []) if (typeof e.effect === 'number' && e.effect > 0) effects[String(e.position)] = e.effect;
+    const normalize = Object.keys(effects).length > 0 && await this.positionSwitch(d);
+    const history = Object.keys(d.positions ?? {}).length > 0 || (this.positionPolicies?.policies.length ?? 0) > 0
+      ? await this.positionHistory(d) : null;
     // W25 N1.01 (doc 22 §8, F20 §4.5): an item with an imported prior and no
     // live events yet HAS an estimate — that is what importing a prior is for —
     // so a slot whose only evidence is its priors publishes it, and a cold item
@@ -879,6 +1005,15 @@ export class LearnStats {
           onlyIf: new Headers({ 'If-None-Match': '*' }), httpMetadata: { contentType: 'application/json' },
         });
         if (archived === null) continue; // A retained key is never overwritten, including after reset/restart.
+        // P05: a changed position policy is published before the snapshot reaches
+        // the serving key, under this version as the moment it takes force.
+        const nextHistory = history ? nextPositionHistory(history, { at: version, normalize, effects: normalize ? effects : {} }, Date.now()) : null;
+        if (nextHistory) {
+          const key = positionHistoryKey(d.tenant, d.brand, d.slot, d.page);
+          await this.env.STORAGE.put(key, JSON.stringify({ version: 1, tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}), policies: nextHistory }),
+            { httpMetadata: { contentType: 'application/json' } });
+          this.positionPolicies = { key, policies: nextHistory };
+        }
         if (!archived || archived.key !== key || typeof archived.etag !== 'string' || !archived.etag.trim()
           || archived.etag.length > 256 || archived.size !== size) throw new Error('Archive acknowledgement unavailable');
         await this.state.storage.put('learnPublished', publication);
@@ -899,6 +1034,38 @@ export class LearnStats {
     }
   }
 
+  /** P05: this placement's position-policy history, read once from its one copy and then held; a malformed copy refuses. */
+  private async positionHistory(d: Pick<Stored, 'tenant' | 'brand' | 'slot' | 'page'>): Promise<PositionPolicy[]> {
+    const key = positionHistoryKey(d.tenant, d.brand, d.slot, d.page);
+    if (this.positionPolicies?.key === key) return this.positionPolicies.policies;
+    const stored = await this.env.STORAGE.get(key);
+    const policies = stored === null ? [] : positionHistoryOf(await stored.json(), { tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}) });
+    if (policies === null) throw recovery();
+    this.positionPolicies = { key, policies };
+    return policies;
+  }
+
+  /** P05 (decision D2): whether the slot's position-normalisation switch is on in the tenant's current learn document. */
+  private async positionSwitch(d: Stored): Promise<boolean> {
+    const pin = await pinPublication(this.env, d.tenant, true);
+    const learn = await readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin);
+    return learn.value.slots?.[d.slot]?.positionNormalization === true;
+  }
+
+  /**
+   * P36 (R-P52): the tenant's context terms, from its current learn publication,
+   * read as this object already reads that document (`attributionContract`,
+   * `priorsFor`). It cannot refuse a write: a publication that cannot be read
+   * answers today's terms, so a row is then counted exactly as before.
+   */
+  private async contextTerms(tenant: string): Promise<ContextTerms> {
+    try {
+      const pin = await pinPublication(this.env, tenant, true);
+      const learn = await readPinnedPublication(this.env, LEARN_KIND, tenant, pin);
+      return contextTermsOf(learn.value.contextVocabulary);
+    } catch { return TODAY_TERMS; }
+  }
+
   /** The tenant's published attribution policy, as this object's own snapshot
    * declares it. Absent when the publication cannot be read: the snapshot then
    * carries no contract rather than a guessed one. */
@@ -910,11 +1077,108 @@ export class LearnStats {
     } catch { return undefined; }
   }
 
+  /**
+   * P08 (decisions D1, D2; freeze item 27): the pooled records this placement
+   * publishes. The catalogue in force says which modules it declares pooled; a
+   * module this slot serves is one of them only where this object is one of the
+   * module's placements (`pooledPlacementsOf`: a slot it names, on a page the
+   * slots document carries the slot on, under W26 R2's own identity). Each such
+   * module's evidence stays where it lands — every placement's own object — and
+   * is read here from all of them, this one included: one counter list per
+   * pooled key, `*` holding every page's root and `p=<page>…` each page's own
+   * counters. A placement whose counters mean something else (another reward,
+   * objective, measurement basis or decay horizon) is not part of this record.
+   *
+   * Read from the same publication set this object reads its priors and learn
+   * document from. A catalogue that declares no pooled module this slot serves
+   * reads nothing more and answers undefined, so its snapshot is exactly what it
+   * was. Fails closed: an unreadable catalogue, slots document or placement
+   * refuses the publication, as an unreadable prior does, and the snapshot in
+   * force keeps serving; it never publishes a record that pools part of the
+   * evidence.
+   */
+  private async pooledCounters(d: Stored): Promise<PooledCounters | undefined> {
+    const pin = await pinPublication(this.env, d.tenant, true);
+    const catalog = await readOptionalPinnedPublication(this.env, CONTENT_KIND, d.tenant, pin);
+    const declared = (catalog?.value.pieces ?? []).filter(piece => piece.pooled === true && piece.slotTypes.includes(d.slot));
+    if (!declared.length) return undefined;
+    const slots = await readOptionalPinnedPublication(this.env, SLOTS_KIND, d.tenant, pin);
+    const self = statsName(d.tenant, d.brand, d.slot, d.page);
+    const order = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+    const modules = new Map<string, Array<{ name: string; slot: string; page: string; identity?: string }>>();
+    for (const [item, placements] of pooledPlacementsOf(declared, slots?.value)) {
+      if (!itemName(item)) throw capacity();
+      const named = placements.map(p => ({ ...p, name: statsName(d.tenant, d.brand, p.slot, p.identity) }))
+        .sort((a, b) => order(a.page, b.page) || order(a.name, b.name));
+      if (named.some(p => p.name === self)) modules.set(item, named);
+    }
+    if (!modules.size) return undefined;
+    // One read per other placement, naming the pooled modules it serves.
+    const wanted = new Map<string, { slot: string; identity?: string; items: Set<string> }>();
+    for (const [item, placements] of modules) for (const p of placements) if (p.name !== self) {
+      const entry = wanted.get(p.name) ?? { slot: p.slot, ...(p.identity ? { identity: p.identity } : {}), items: new Set<string>() };
+      entry.items.add(item); wanted.set(p.name, entry);
+    }
+    const held = new Map<string, Readonly<Record<string, Record<string, Counter>>>>([[self, d.stats.items]]);
+    await Promise.all([...wanted].map(async ([name, w]) => {
+      const counters = await this.placementCounters(d, name, w.slot, w.identity, [...w.items].sort());
+      if (counters) held.set(name, counters);
+    }));
+    const out: PooledCounters = {};
+    for (const item of [...modules.keys()].sort(order)) {
+      const record: Record<string, Counter[]> = {};
+      for (const p of modules.get(item)!) {
+        const counters = held.get(p.name), byKey = counters && Object.hasOwn(counters, item) ? counters[item]! : null;
+        if (!byKey) continue;
+        for (const [key, c] of Object.entries(byKey)) {
+          const at = key === '*' ? `p=${p.page}` : `p=${p.page}|${key}`;
+          (record[at] ??= []).push(c);
+          if (key === '*') (record['*'] ??= []).push(c);
+        }
+      }
+      out[item] = record;
+    }
+    return out;
+  }
+
+  /**
+   * P08: one other placement's counters for the pooled modules named, read
+   * through its own `/pooled` door; null where its counters mean something else
+   * than this object's (`accumulationOf`), so they are no part of its record.
+   * Anything malformed or unanswered refuses (the publication then fails closed).
+   */
+  private async placementCounters(d: Stored, name: string, slot: string, page: string | undefined, items: string[]): Promise<Record<string, Record<string, Counter>> | null> {
+    const namespace = this.env.LEARN_STATS;
+    if (!namespace) throw recovery();
+    const response = await namespace.get(namespace.idFromName(name)).fetch('https://learn/pooled', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant: d.tenant, brand: d.brand, slot, ...(page ? { page } : {}), items }) });
+    if (!response.ok) throw recovery();
+    const value: unknown = await response.json();
+    if (!fields(value, ['ok', 'config', 'items']) || value.ok !== true || !object(value.items)) throw recovery();
+    const config = value.config, mine = accumulationOf(d.config);
+    if (config !== null && (!fields(config, ['reward', 'objective', 'measurementBasis', 'tauLearnMs']) || typeof config.reward !== 'string')) throw recovery();
+    const out: Record<string, Record<string, Counter>> = {};
+    for (const [item, byKey] of Object.entries(value.items)) {
+      if (!items.includes(item) || !object(byKey)) throw recovery();
+      for (const [key, c] of Object.entries(byKey)) { keyBound(key); if (!counterValid(c)) throw recovery(); }
+      out[item] = byKey as Record<string, Counter>;
+    }
+    if (config === null) return out;
+    return config.reward === mine.reward && config.objective === mine.objective && config.measurementBasis === mine.measurementBasis
+      && config.tauLearnMs === mine.tauLearnMs ? out : null;
+  }
+
   private async priorsFor(d: Stored): Promise<{ version: number; index: ReturnType<typeof indexPriors> } | null> {
     // Unavailable authority is not an explicit empty prior document. Never
     // publish a prior-free replacement merely because the authority failed.
+    // Lane E2: a committed set that carries NO prior member is not a failure of
+    // the authority. The sealed set is the authority's whole answer, and it says
+    // this tenant has imported no priors (the demo bootstrap creates reflex,
+    // catalog, slots and learn, and no prior). That reads as no priors, the
+    // snapshot's `priorVersion` 0, and learns exactly what an empty document
+    // does. A prior member the set lists and that cannot be read still refuses.
     const pin = await pinPublication(this.env, d.tenant, true);
-    const [rev, learn] = await Promise.all([readPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
+    const [rev, learn] = await Promise.all([readOptionalPinnedPublication(this.env, PRIORS_KIND, d.tenant, pin), readPinnedPublication(this.env, LEARN_KIND, d.tenant, pin)]);
     const configured = { reward: learn.value.slots?.[d.slot]?.reward ?? 'click', stats: learn.value.stats ?? DEFAULT_STATS,
       objective: learn.value.slots?.[d.slot]?.objective ?? 'unit', measurementBasis: learn.value.slots?.[d.slot]?.measurementBasis ?? 'served-v1' };
     const stored = await recoveryDigest({ ...d.config, objective: d.config.objective ?? 'unit', measurementBasis: d.config.measurementBasis ?? 'served-v1' });
@@ -930,6 +1194,8 @@ export class LearnStats {
       if (!authorized || await recoveryDigest({ ...configured, reward: authorized.reward,
         objective: authorized.objective, measurementBasis: authorized.measurementBasis }) !== stored) throw recovery();
     }
+    // The configuration check above still ran: absence of priors excuses nothing else.
+    if (!rev) return null;
     if (!Array.isArray(rev.value.rows) || rev.value.rows.length > LEARN_LIMITS.priorRows || bytes(rev.value) > LEARN_LIMITS.priorBytes) throw capacity();
     // W25 Z1.01 (F20 §1.5): a prior is a probability, and a slot whose objective
     // is money does not learn one. The import door refuses such a row, so this
@@ -942,12 +1208,14 @@ export class LearnStats {
     if (unit.length) throw new Refusal(409, `statistics prior unit incompatible: ${unit[0]}`);
     for (const row of rev.value.rows) if (row.slot === d.slot) {
       if (!itemName(row.item)) throw capacity();
-      keyBound(row.cell);
+      // P08: a cell may name a pooled module's page level under the bumped grammar.
+      pooledKeyBound(row.cell);
     }
     const index = indexPriors(rev.value, d.slot, d.config.measurementBasis ?? 'served-v1');
     if (d.stats.bounded) for (const [item, keys] of index) {
       if (d.stats.bounded.closed && !Object.hasOwn(d.stats.items, item)) { index.delete(item); continue; }
-      for (const key of keys.keys()) if (depth(key) > d.stats.bounded.depth) keys.delete(key);
+      // P08: a pooled record's cell is not one of this placement's own levels, so its own projection does not cut it.
+      for (const key of keys.keys()) if (!isPooledKey(key) && depth(key) > d.stats.bounded.depth) keys.delete(key);
       if (!keys.size) index.delete(item);
     }
     return { version: rev.revision, index };

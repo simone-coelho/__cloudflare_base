@@ -87,7 +87,8 @@ export async function slotConstraintDiagnostics(env: Env, slots: SlotCatalog | n
       return { ...unavailable, status: 'not_required', catalog: { source: 'not_read', revision: null }, warningCount: 0, omittedWarningCount: 0, warnings: [] };
     }
     const catalog = await readPublication(env, CONTENT_KIND, tenant), now = Date.now();
-    const found = slotDocumentConstraintDiagnostics(catalog.value.pieces, slots.pages, now);
+    // P32: under the catalogue's typeFallback marker the gates match a piece's own contentType tag alone, as the decision's do.
+    const found = slotDocumentConstraintDiagnostics(catalog.value.pieces, slots.pages, now, catalog.value.typeFallback);
     return { ...unavailable, status: 'available', catalog: { source: 'stored', revision: catalog.revision }, checkedAt: new Date(now).toISOString(),
       warningCount: found.warningCount, omittedWarningCount: found.omittedWarningCount, warnings: found.warnings };
   } catch { return unavailable; } // Advice never turns the slot read it rides on into a failed response.

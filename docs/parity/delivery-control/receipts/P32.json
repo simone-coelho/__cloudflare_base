@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P32",
+  "workOrderHash": "sha256:d14876c6527404e0619dc136929fd163a903dd52e944800573761493c32f61f2",
+  "artifact": {
+    "revision": "4c6d592573c5d526c2c6a60e6996199bae545ca0",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p32-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P32 built on rem/p32-build in one round after a boundary ruling. 75894a2d merges rem/integration 661fa426 (P02 to P13, P34, P30 and P33 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P32 (0aa78ca4, the S4 specification revision b435cc2b reviewed PASS); RED baseline 7 failed and 4 passed on P32's own reasons (the Y3 LOCK legs and the Y4 replay LOCK legs green on both hosts; Y1 without dimensionRoles, Y2 with interest 0, Y4's first leg without the marker, Y5 twelve statements missing), no PRECONDITION P02; ca105f8e the diagnostics, the marker, the retirement and the replay marker (src/content/typeAffinity.ts, catalogDiagnostics.ts, slotConstraints.ts, kinds.ts, types.ts, decide.ts, src/learn/replay.ts, public/meridian/engine.bundle.js regenerated): the moduleType registry-draft dimension registered as its own entry with values in the module's tags and kept apart from content format, the catalogue diagnostics carrying dimensionRoles derived from the registry in force and a typeFallback member of their own naming each piece the fallback scores without the marker and each piece without an explicit content-type tag under it, with warnings, counts and warningCount unchanged (D1); the catalogue document's typeFallback marker retiring the free-text type in ranking and in slot exclusions, a misspelt marker refused by name, a catalogue without the marker scoring byte for byte as today, and a replay marker written only on a decision made under the marker where the fallback could reach it so decisions under either replay equal and a forged marker is not replayable (D3, item 42); ae5e72d6 the teaching (src/reflex/contentTelemetry.ts, core.ts, configStore.ts, src/services/RealtimeSegmentEngine.ts, src/durable-objects/ShopperReflex.ts): a module engagement, a content click naming a catalogue piece on the page's declared layout slot, adding the registry document's moduleEngagementWeight to the shopper's interest on the module's type value and on each value of its other registered tags on both hosts, nothing read and nothing touched at weight 0 or absent, the weight never a signal under P10's floor (D2, R-P33); 494a47c4 and 4c6d5925 the kit (docs/kit/02-api-reference.md, docs/kit/03-payload-schemas.md: the dimension as a registry draft with the nine draft values, the teaching weight, the marker and the diagnostics); c2174ed7 the catalogue read only for a declared layout slot; e1215ca4 merges rem/integration 82140f73 (R-P73: src/content/service.ts and src/content/slotDiagnostics.ts in the boundary); b01216ba the serving call handing the held catalogue's marker to the decision as one input member without a new read, and the slots document's constraint diagnostics taking the same marker; no existing request member, payload key set, storage key or record changed for a tenant without the dimension, the weight or the marker (the base comparison over five scenarios on both hosts identical but for the clock fields and the ruled diagnostics member); the Meridian bundle 73886 to 74282 bytes with --check exact, the SDK bundles untouched and exact; acceptance 11/11 on both hosts at 4c6d5925 with P30, P13, P34, P10, P28, P29, P31, P02, P03, W19, W16, W25, W30, W31 and W37 green at head, P05, P01, P04, P07, P12, P33, P36 to P40, W20, W21, W36, W28, W35 and W40 green on the engine head, src/content, src/routes, src/reflex and src/learn failing on baseline entries only, src/services whole green; both typechecks exit 0; eslint 0 new; eleven probes on both hosts in temporary test files removed before the commits (a registry without the dimension, a value outside the nine, a module carrying only its type, two engagements, a click on a non-layout slot, the marker on a fully tagged catalogue, the misspelt marker, unmarked records replayed after the marker, a forged marker, the P30 context-only slot under the marker, a slots document reading no content type); the gate at 4c6d5925 GATE_OK on its first run (implementer/logs/gate.log: 3149 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P32/implementer/REPORT.md",
+      "git commits on rem/p32-build up to 4c6d5925"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P32 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P32/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P32/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P32/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P32/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-14T15:43:42.587Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -3,7 +3,8 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { DecisionRecord } from '@/content/types';
+import type { BandSpan, DecisionRecord, EvidenceFloorApplied, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause, SuccessEventApplied } from '@/content/types';
+import type { Suppression } from '@/reflex/core';
 import type { Names } from './rows';
 
 export interface Receipt {
@@ -56,6 +57,76 @@ export interface Receipt {
    * lift, so no receipt names terms its own sentences do not.
    */
   lift_terms?: LiftTerms;
+  /**
+   * P01: the configured per-context order that set this position, exactly as
+   * the record carries it — the context it was published for and the whole
+   * order — and absent on every position no configured order set.
+   */
+  configuredOrder?: NonNullable<DecisionRecord['explain']['configuredOrder']>;
+  /**
+   * P28 (decision D1): the layout blend's terms for this position, exactly as
+   * the record carries them — the rank base R, the behaviour term B, the
+   * performance term Q and p, keys sorted — so that R + (1 − p) × B + p × Q is
+   * `score_final`; absent on every position the blend did not rank.
+   */
+  blend?: LayoutBlendTerms;
+  /**
+   * P10 (decision D2): this position's slot was decided on context alone because
+   * the shopper was below its signal floor — the floor in force and the
+   * shopper's count of signals, exactly as the record carries them; absent on
+   * every position of a slot that personalized.
+   */
+  signalFloor?: NonNullable<DecisionRecord['explain']['signalFloor']>;
+  /**
+   * P04: a position pin or an off-limits mark placed this module — the rule and
+   * the position it set, counted from 1, exactly as the record carries them,
+   * keys sorted; absent on every other position.
+   */
+  moduleRule?: NonNullable<DecisionRecord['explain']['moduleRule']>;
+  /**
+   * P29 (decision D1): the layout reason of the declared layout slot this
+   * position belongs to, exactly as the record carries it — unchanged against
+   * the baseline with one cause, or changed with the term that moved each moved
+   * module — keys sorted; the last sentence of `why` says it in words. Absent on
+   * every position of any other slot and on a record written before it.
+   */
+  layoutReason?: LayoutReason;
+  /**
+   * P39 (decisions D1, D2): the suppressions in force on the shopper when this
+   * decision was made, exactly as the record carries them — each value, the
+   * action that recorded it and its expiry in epoch milliseconds, keys sorted —
+   * and one `why` sentence names each value, its action and its expiry date.
+   * Absent on every record decided with none in force.
+   */
+  suppressions?: Suppression[];
+  /**
+   * P11 (decisions D1, D2): the page's evidence floor shrank the learned
+   * estimate of this decision toward the slot's rate — the page, the floor, the
+   * exposures n the answering level held and the F − n it lacked — exactly as
+   * the record carries it (`explain.lift.evidenceFloor`), keys sorted. A MEMBER,
+   * never a new or altered `why` sentence (`src/learn/receipts.test.ts:41-51`);
+   * `lift_terms` carries the shrunk estimate. Absent where no floor applied.
+   */
+  evidenceFloor?: EvidenceFloorApplied;
+  /**
+   * P15 (decision D1): the position band of its slot this position was ranked
+   * in — the positions the band covers, counted from 1 within the slot — exactly
+   * as the record carries it (`explain.band`), keys sorted. A MEMBER, never a
+   * new or altered `why` sentence (`src/learn/receipts.test.ts:41-51`). Absent on
+   * a pinned or held position, on a position a configured order set, and on
+   * every position of a slot without bands.
+   */
+  band?: BandSpan;
+  /**
+   * P16 (decision D1, freeze items 14 and 43): the success event this decision
+   * is credited for and the conversion value its slot's table applies to it in
+   * the slot's currency, `value` null when the table does not value it (an
+   * outcome of it then credits nothing) — exactly as the record carries it
+   * (`explain.successEvent`), keys sorted. A MEMBER, never a new or altered
+   * `why` sentence (`src/learn/receipts.test.ts:41-51`). Absent on every record
+   * of a slot whose learn dials publish no conversion table.
+   */
+  successEvent?: SuccessEventApplied;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -94,6 +165,14 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
  */
 const SIGNIFICANT_DIGITS = 3;
 const shownAs = (x: number): string => (Number.isFinite(x) ? x.toPrecision(SIGNIFICANT_DIGITS) : String(x));
+/**
+ * P08 (decision D1): where the lift was read from a module's ONE pooled record,
+ * the sentence says whose evidence the count is — every page the module is
+ * served on at everyone, this page's own at a page level. Empty for every other
+ * record, so its sentence is the one it has always been.
+ */
+const pooledEvidence = (l: { pooled?: true; level: number }): string => !l.pooled ? ''
+  : l.level === 0 ? ' pooled across every page the module is served on' : ' on this page, in the module\'s one pooled record';
 
 export function contextOf(cell: DecisionRecord['cell']): string {
   const stage = cell.stage && cell.stage !== 'unknown' ? ({ early: 'exploring', mid: 'considering', late: 'deciding' } as Record<string, string>)[cell.stage] ?? cell.stage : 'stage unknown';
@@ -101,37 +180,164 @@ export function contextOf(cell: DecisionRecord['cell']): string {
   return `${cell.channel === 'unknown' ? 'channel unknown' : `from ${cell.channel}`}, ${visit}, ${stage}, ${cell.region ? `in ${cell.region}` : 'region unknown'}, ${cell.affinity ? `leaning ${cell.affinity.replace(':', ' ')}` : 'no leading interest yet'}`;
 }
 
+/** P01: a published context in words: its channel, or any channel; its visit buckets, or any visit; P37: and its device, when it names one. */
+function orderContextOf(context: NonNullable<DecisionRecord['explain']['configuredOrder']>['context']): string {
+  const visit = (bucket: string) => (bucket === '1' ? 'first visit' : `visit ${bucket}`);
+  return `${context.channel === 'any' ? 'any channel' : `from ${context.channel}`}, ${context.visitBuckets === 'any' ? 'any visit' : context.visitBuckets.map(visit).join(' or ')}${context.device === undefined ? '' : `, on ${context.device}`}`;
+}
+
+/** P37: a recency bucket in words, as the kit names it. */
+const RECENCY_WORDS: Readonly<Record<string, string>> = { same_day: 'same day', within_7_days: 'within 7 days', '8_to_30_days': '8 to 30 days', '30_and_more': '30 and more' };
+/** W16 C3: a fired seed's signal and value in words; P37: a recency bucket named in words, never by its id. */
+const seedValueOf = (signal: string, value: string): string => (signal === 'recency' ? RECENCY_WORDS[value] ?? value : value);
+
+/**
+ * P07: the context prior in words — "population prior", the shopper's entry
+ * channel and, where the channel-and-visit population answered, the visit
+ * ("population prior, paid social, first visit"); where the channel alone
+ * answered, no visit is claimed — and what it contributed with its weight.
+ */
+function contextPriorSentence(c: NonNullable<DecisionRecord['explain']['contextPrior']>): string {
+  const channel = c.channel.replace(/_/g, ' ');
+  const context = c.level === 'channel_visit'
+    ? `${channel}, ${c.visitBucket === '1' ? 'first visit' : `visit ${c.visitBucket}`}`
+    : `${channel}, every visit (${c.visitBucket === 'unknown' ? 'the visit number is unknown' : 'the channel and visit together had fewer events than the minimum'})`;
+  return `Population prior, ${context}: what visitors arriving this way engage with contributed ${r3(c.contribution)} (the prior's share of the score: ${r3(c.lambda)}).`;
+}
+
+/**
+ * P10: the signal floor in words — the shopper's count of signals beside the
+ * floor in force, and what that meant for this decision.
+ */
+function signalFloorSentence(f: NonNullable<DecisionRecord['explain']['signalFloor']>): string {
+  const count = `${f.signals} signal${f.signals === 1 ? '' : 's'}`;
+  return f.floor === 'never'
+    ? `Below the signal floor: this shopper has ${count} and this slot's floor is never, so it is decided on context alone for every shopper; no term that reads the individual shopper applies.`
+    : `Below the signal floor: this shopper has ${count} and the floor in force is ${f.floor}, so this slot was decided on context alone and no term that reads the individual shopper applied; the first personalized decision follows signal ${f.floor + 1}.`;
+}
+
+/**
+ * P04: the rule that placed a module, in words, with the position it set, and
+ * the position it was served at where a layout with fewer modules than the
+ * positions before it moved it up. A prefix pin keeps the sentence it has
+ * always had.
+ */
+function moduleRuleSentence(r: DecisionRecord, rule: NonNullable<DecisionRecord['explain']['moduleRule']>): string {
+  const served = r.position + 1 !== rule.position ? ` It was served at position ${r.position + 1}, because fewer modules could be served than the positions before it.` : '';
+  if (rule.rule === 'pinned') return `Pinned by the merchandiser at position ${rule.position} of this slot; the engine never ranked or explored it.${served}`;
+  const baseline = r.explain.configuredOrder
+    ? `its place in the configured order for this context (${orderContextOf(r.explain.configuredOrder.context)})`
+    : 'its place among the modules this slot could serve, in catalogue order';
+  return `Off-limits: the merchandiser marked this module never to move, so it holds its baseline position ${rule.position}, ${baseline}; the engine never ranked it, and no term and no exploration moved it.${served}`;
+}
+
+/**
+ * The exploration placement in words. P05: a module an adjacent swap exchanged
+ * names the swap and the two positions, counted from 1 within the slot; every
+ * other mode keeps the sentence it has always had.
+ */
+function explorationSentence(x: NonNullable<DecisionRecord['explain']['exploration']>): string {
+  if (x.mode === 'adjacent-swap' && Array.isArray(x.positions) && x.positions.length === 2) {
+    return `Swapped on purpose with the module beside it to measure the effect of position (adjacent-swap): positions ${x.positions[0]} and ${x.positions[1]} of this slot exchanged, ${x.reason}.`;
+  }
+  return `Served on purpose to explore (${x.mode}): ${x.reason}.`;
+}
+
+/** P29: each cause of an unchanged layout in words (decision D1). A cause a later build adds is quoted as written. */
+const CAUSE_WORDS: Readonly<Record<LayoutReasonCause, string>> = {
+  pinned: 'the merchandiser pinned every position',
+  off_limits: 'the merchandiser holds it off-limits',
+  holdout_or_consent: "the shopper is served the site's own defaults (the holdout's default arm, or personalization is off)",
+  below_signal_floor: 'the shopper is below the signal floor, so it was decided on context alone',
+  blend_or_trust_zero: 'the layout blend or the trust dial is at zero, so no learned term could move it',
+  no_level_reached_nmin: 'no level of the learned ladder reached nMin',
+  zero_base: "no module's base score was above zero",
+  catalogue_order_ties: 'tied scores were broken by catalogue order',
+  nothing_else_eligible: 'nothing else eligible took a position from it',
+};
+
+/** P31: each cause of a module withheld from a changed layout, in words. A cause a later build adds is quoted as written. */
+const WITHHELD_WORDS: Readonly<Record<LayoutWithheldCause, string>> = {
+  nothing_to_show: 'the page reported it has nothing to show for this page view',
+  eligibility_rule: "its eligibility rule is not satisfied by this shopper's context",
+};
+
+/**
+ * P29: the layout reason in words — unchanged against the baseline with its
+ * cause (and the n the ladder has beside the nMin it needs), or changed with
+ * each moved module, the positions it moved between and the term that moved it.
+ * P31: a changed layout first names each module withheld from it and why.
+ */
+function layoutReasonSentence(reason: LayoutReason): string {
+  if (reason.status === 'changed') {
+    const withheld = (reason.withheld ?? []).map((w) => `${w.module} withheld, ${WITHHELD_WORDS[w.cause] ?? w.cause}`);
+    const moves = reason.moves.map((m) => `${m.module} from ${m.from === null ? 'outside the baseline' : `position ${m.from}`} to ${m.to}, moved by ${m.term.replace(/_/g, ' ')}`);
+    return `Layout changed against its baseline: ${[...withheld, ...moves].join('; ')}.`;
+  }
+  const ladder = reason.cause === 'no_level_reached_nmin' && reason.n !== undefined && reason.nMin !== undefined ? ` (n ${r3(reason.n)} of the ${reason.nMin} it needs)` : '';
+  return `Layout unchanged against its baseline: ${CAUSE_WORDS[reason.cause] ?? reason.cause}${ladder}.`;
+}
+
+/** P29: the layout reason as the record carries it, keys sorted, the moves (and P31's withheld modules) copied. */
+const layoutReasonOf = (reason: LayoutReason): LayoutReason => (reason.status === 'changed'
+  ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed',
+    ...(reason.withheld?.length ? { withheld: reason.withheld.map((w) => ({ cause: w.cause, module: w.module })) } : {}) }
+  : { cause: reason.cause, ...(reason.n !== undefined ? { n: reason.n } : {}), ...(reason.nMin !== undefined ? { nMin: reason.nMin } : {}), slot: reason.slot, status: 'unchanged' });
+
+/**
+ * P39: the suppressions in force in words — each value with its dimension, the
+ * action that recorded it and the date it lapses (UTC) — and what that meant:
+ * the shopper's own interest in it was not scored.
+ */
+function suppressionSentence(suppressions: readonly Suppression[]): string {
+  const one = suppressions.length === 1;
+  const each = suppressions.map((s) => `${s.dimension} ${s.value} by ${s.action} until ${new Date(s.expiresAt).toISOString().slice(0, 10)}`);
+  return `Suppressed for this shopper, so the shopper's own interest in ${one ? 'it was' : 'them was'} not scored: ${each.join('; ')}.`;
+}
+
+/** P29: does the interest vector the page was scored on hold any interest at all? */
+const holdsInterest = (affinity: Record<string, Record<string, number>> | undefined): boolean =>
+  Object.values(affinity ?? {}).some((values) => values !== null && typeof values === 'object' && Object.values(values).some((a) => typeof a === 'number' && a > 0));
+
+/**
+ * P29 (R3): a position of a declared layout slot that no interest of the shopper's
+ * reached, when the shopper does hold interests: they lie on dimensions or values
+ * this layout's weights give this module nothing for. "No interest signal yet"
+ * stays for a shopper with no interest at all.
+ */
+const NO_LAYOUT_INTEREST = "No interest on the dimensions this layout weights matched this module: this shopper's interests lie elsewhere";
+
 /** The record as sentences. Every number on the record has a place here, so nothing is said that the record does not carry. */
 export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   const why: string[] = [];
   const e = r.explain;
+  // P29 (R3): on a declared layout slot's position, a shopper who holds interests
+  // that reached none of this module's weighted tags is told so, never that the
+  // shopper has no interest; a record without the layout reason reads as before.
+  const interestElsewhere = e.layoutReason !== undefined && holdsInterest(r.inputs?.affinity);
   // W23 X1.02: set exactly where the learned-lift sentence is written, so the
   // terms and the sentence can never describe two different decisions.
   let liftTerms: LiftTerms | undefined;
-  // W26 U1.01 (R153(b), F21 §5 item 5): the admitted render is the declared
-  // exposure unit. The VIEWABLE impression is a different thing and the
-  // learning loop counts none of it today (`learningInputOf` in
-  // `src/ledger/records.ts` states the same fact in code), so the receipt that
-  // reports an admitted render says both — no reader may take "rendered" for
-  // "seen", or for the event the platform learns from.
-  why.push(r.measurementBasis === 'rendered-v1'
-    ? 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'
-    : 'Legacy served-decision exposure; rendering was not confirmed.');
-  if (r.authority === 'pin') why.push('Pinned by the merchandiser for this slot; the engine never ranked it.');
-  else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
-  else {
-    if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
+  /**
+   * The sentences of every term before the learned one — the interests matched,
+   * the arrival's context, the region's trend, their model, the journey stage,
+   * freshness, fatigue, merchandising and diversity — read the same way for a
+   * ranked position and for one the layout blend ranked (whose behaviour term B
+   * they make up); only what a position with none of them says differs.
+   */
+  const behaviour = (noSignal: string) => {
     const drivers = (e.drivers || []).filter((d) => !['regional', 'external', 'merchandising', 'stage', 'freshness', 'fatigue', 'completes'].includes(d.dim)).slice(0, 3);
     if (drivers.length) why.push(`Interest matched: ${drivers.map((d) => `${d.dim} ${d.value} (interest ${r3(d.a)} × weight ${r3(d.weight)})`).join(', ')}.`);
-    else if (e.score_base === 0 && !e.freshness && !e.stage) why.push('No interest signal yet for this shopper: the slot served its catalogue order.');
+    else if (e.score_base === 0 && !e.freshness && !e.stage) why.push(noSignal);
     for (const d of (e.drivers || []).filter((d) => d.dim === 'completes')) why.push(`Completes what she committed to: ${d.value} (+${r3(d.weight)}).`);
     // W16 C3: the arrival's own evidence, named rule by rule with the delta it
     // caused. A candidate the rules never named says nothing here rather than
     // claiming a context it did not have.
     if (e.contextual && e.contextual.drivers.length) {
-      why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${d.value} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
+      why.push(`Arrival context: ${e.contextual.drivers.map((d) => `${d.signal.replace(/_/g, ' ')} ${seedValueOf(d.signal, d.value)} → ${d.dimension} ${d.tag} (weight ${r3(d.weight)}, ${d.contribution < 0 ? '' : '+'}${r3(d.contribution)})`).join(', ')}.`);
     }
     if (e.regional) why.push(`What is trending ${e.regional.region === '*' ? 'everywhere' : `in ${e.regional.region}`} contributed ${r3(e.regional.contribution)} (the trend's share of the score: ${r3(e.regional.lambda)}).`);
+    if (e.contextPrior) why.push(contextPriorSentence(e.contextPrior));
     if (e.external) {
       if ('status' in e.external) why.push(`Their model (${e.external.ref}) was unavailable: ${e.external.reason}; the term was omitted.`);
       else why.push(`Their model (${e.external.ref}, ${e.external.version}) scored it ${r3(e.external.score)}; at weight ${r3(e.external.weight)} that added ${r3(e.external.contribution)}.`);
@@ -141,6 +347,59 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     if (e.fatigue) why.push(`Fatigue: ${e.fatigue.sentence}.`);
     if (e.merchandising) why.push(`Merchandising: ${e.merchandising.sentence}${e.merchandising.sentence.endsWith('.') ? '' : '.'}`);
     if (e.diversity) why.push(`Diversity: ${e.diversity.sentence}.`);
+  };
+  // W26 U1.01 (R153(b), F21 §5 item 5): the admitted render is the declared
+  // exposure unit. The VIEWABLE impression is a different thing and the
+  // learning loop counts none of it today (`learningInputOf` in
+  // `src/ledger/records.ts` states the same fact in code), so the receipt that
+  // reports an admitted render says both — no reader may take "rendered" for
+  // "seen", or for the event the platform learns from.
+  why.push(r.measurementBasis === 'rendered-v1'
+    ? 'Client-reported rendering was durably admitted; this is not proof of human visibility, and a viewable impression is not a learning input today.'
+    : 'Legacy served-decision exposure; rendering was not confirmed.');
+  // P10: a slot decided below the signal floor says so before any term, with both
+  // numbers, so no sentence after it is read as a claim about the shopper's own interests.
+  if (e.signalFloor) why.push(signalFloorSentence(e.signalFloor));
+  if (r.authority === 'pin') why.push(e.moduleRule ? moduleRuleSentence(r, e.moduleRule) : 'Pinned by the merchandiser for this slot; the engine never ranked it.');
+  else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
+  else if (e.blend) {
+    // P28 (decision D1, R-P42): the layout blend ranked this position, so the
+    // receipt reads out each of its terms — where the rank base came from, what
+    // the shopper's behaviour contributed, what learned performance contributed —
+    // and the sum, and never claims that the ranking did not place it. Under a
+    // configured order the order supplied R: k of n counts over the whole order.
+    const b = e.blend;
+    if (e.configuredOrder) {
+      const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
+      why.push(`Rank base R ${r3(b.R)} from the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered, ranked with them by the layout blend; a module the order does not list is not shown in this context.`);
+    } else why.push(`Rank base R ${r3(b.R)} from the slot's catalogue order of the modules it could serve.`);
+    behaviour(e.signalFloor ? 'No context term moved it: the behaviour term B is 0.'
+      : interestElsewhere ? `${NO_LAYOUT_INTEREST}, so the behaviour term B is 0.` : 'No interest signal yet for this shopper: the behaviour term B is 0.');
+    if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece: the performance term Q is 0.');
+    else if (e.lift) {
+      const l = e.lift;
+      const prior = l.prior ? `, shrunk toward an imported prior of ${l.prior.p} at strength ${l.prior.n} (belief, not observed exposures)` : '';
+      why.push(e.control === 'freeze'
+        ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}: clamped and less one, the performance term Q is ${r3(b.Q)}.`
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}${pooledEvidence(l)}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}: clamped and less one, the performance term Q is ${r3(b.Q)}, not corrected for position or placement.`);
+      liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
+        n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
+        shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
+    } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: the performance term Q is 0.');
+    if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned term held at zero.');
+    why.push(`Layout blend at p ${b.p}: score ${r3(e.score_final)} = R ${r3(b.R)} + (1 − ${b.p}) × B ${r3(b.B)} + ${b.p} × Q ${r3(b.Q)}.`);
+    if (r.explored && e.exploration) why.push(explorationSentence(e.exploration));
+  } else if (e.configuredOrder) {
+    // P01: the configured order placed it, so no ranking sentence is claimed for
+    // its position; the numbers the ranking computed stay on the record. Only on
+    // a slot that does not opt into the layout blend (P28; the branch above).
+    const listed = e.configuredOrder.modules.indexOf(r.item_id) + 1, count = e.configuredOrder.modules.length;
+    why.push(`Placed by the configured order for this context (${orderContextOf(e.configuredOrder.context)}): it is ${listed} of the ${count} module${count === 1 ? '' : 's'} the merchandiser ordered`
+      + `${listed !== r.position + 1 ? `, served at position ${r.position + 1} because a module listed before it could not be served` : ''}; a module the order does not list is not shown in this context.`);
+  } else {
+    if (e.note && /shopper/.test(e.note)) why.push(e.note.endsWith('.') ? e.note : `${e.note}.`);
+    behaviour(e.signalFloor ? 'No context term moved it: the slot served its catalogue order.'
+      : interestElsewhere ? `${NO_LAYOUT_INTEREST}, so its base score is 0.` : 'No interest signal yet for this shopper: the slot served its catalogue order.');
     if (e.control === 'reject') why.push('A merchandiser rejected the learned lift for this piece; it competes on its base score alone.');
     if (e.lift) {
       const l = e.lift;
@@ -164,18 +423,22 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
       // estimate, and nothing was measured for it to be uncorrected of.
       why.push(e.control === 'freeze'
         ? `Learned lift frozen by a merchandiser at ${r3(l.lift)}, ${applied}.`
-        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}, not corrected for position or placement.`);
+        : `Learned lift ${r3(l.lift)} from ${l.level_words} (${r3(l.n)} ${l.measurementBasis === 'rendered-v1' ? 'client-reported renders' : 'served exposures'}${pooledEvidence(l)}, ${r3(l.s)} weighted credit in ${l.objective ?? 'unit'} units)${prior}, ${applied}, not corrected for position or placement.`);
       liftTerms = { p0: l.p0, p_hat: l.p_hat, lift: l.lift,
         n: l.n, n0: l.n0, ...(l.prior ? { prior: l.prior } : {}), prior_version: r.versions?.prior ?? 0,
         shown: { p0: shownAs(l.p0), p_hat: shownAs(l.p_hat), lift: shownAs(l.lift) } };
     } else if (r.arm === 'personalized') why.push('Nothing learned yet for this piece in this shopper\'s context: no lift.');
     if (r.arm === 'no_learning') why.push('This shopper is in the no-learning arm: personalized, with the learned lift held at zero.');
-    if (r.explored && e.exploration) why.push(`Served on purpose to explore (${e.exploration.mode}): ${e.exploration.reason}.`);
+    if (r.explored && e.exploration) why.push(explorationSentence(e.exploration));
   }
+  // P39: the suppressions in force, a fact about the shopper this decision read, after the terms it shaped.
+  if (e.suppressions?.length) why.push(suppressionSentence(e.suppressions));
   // W20 G2 (R86(c)): the shortfall is a fact about the SLOT, not about the
   // ranking of this piece, so it is read out for a pinned position exactly as
   // for a ranked one — the way every other block on `explain` is read out.
   if (e.shortTake) why.push(`Short take: ${e.shortTake.sentence}.`);
+  // P29: the layout reason is a fact about the whole layout, so it is read out last, on every position of the slot.
+  if (e.layoutReason) why.push(layoutReasonSentence(e.layoutReason));
   const nm = names.get(r.item_id);
   return {
     measurementBasis: r.measurementBasis ?? 'served-v1', renderedAt: r.rendered?.at ?? null,
@@ -186,6 +449,17 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(r.journey ? { journey: r.journey } : {}),
     score_base: r3(e.score_base), score_final: r3(e.score_final),
     ...(liftTerms ? { lift_terms: liftTerms } : {}),
+    ...(e.configuredOrder ? { configuredOrder: e.configuredOrder } : {}),
+    ...(e.blend ? { blend: { B: e.blend.B, Q: e.blend.Q, R: e.blend.R, p: e.blend.p } } : {}),
+    ...(e.signalFloor ? { signalFloor: { floor: e.signalFloor.floor, signals: e.signalFloor.signals } } : {}),
+    ...(e.moduleRule ? { moduleRule: { position: e.moduleRule.position, rule: e.moduleRule.rule } } : {}),
+    ...(e.layoutReason ? { layoutReason: layoutReasonOf(e.layoutReason) } : {}),
+    ...(e.suppressions?.length ? { suppressions: e.suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
+    ...(e.lift?.evidenceFloor ? { evidenceFloor: { floor: e.lift.evidenceFloor.floor, lacking: e.lift.evidenceFloor.lacking, n: e.lift.evidenceFloor.n, page: e.lift.evidenceFloor.page } } : {}),
+    // P15: the band this position was ranked in, keys sorted.
+    ...(e.band ? { band: { from: e.band.from, to: e.band.to } } : {}),
+    // P16: the success event and the conversion value applied, keys sorted.
+    ...(e.successEvent ? { successEvent: { event: e.successEvent.event, value: e.successEvent.value } } : {}),
     why,
   };
 }
