@@ -28,7 +28,7 @@ import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
   readOptionalPublication, readPublication, recoverPublication, type PublicationPin } from '@/config/publication';
-import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnPositionLayoutErrors, namesPositionDials, PIECE_FIELDS, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
+import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnPositionLayoutErrors, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
 import { contextTermsOf } from '@/content/cell';
@@ -304,10 +304,20 @@ async function requestCatalogueVocabularyRefusals(c: Context<Ctx>, scope: string
  * one, otherwise the catalogue in force. Fail closed: a catalogue that cannot
  * be read refuses the publication rather than publishing an unchecked order;
  * an absent catalogue registers no module.
+ *
+ * P26 (NC5, R-P24): the same check, at the same door and against the same
+ * catalogue, refuses a declared layout slot's `inner` key naming a module the
+ * catalogue does not define as a candidate of that layout slot (no piece has
+ * the id, or the piece does not name the slot in its `slotTypes`), by name
+ * (`pages.{page}[i].inner['…']`). A slots document with neither orders nor
+ * inner content slots is never touched: no read is made for it.
  */
 async function orderRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unknown, catalogCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
   const valid = SLOTS_KIND.validate(slotsCandidate);
-  if (!valid.ok || !Object.values(valid.value.pages).some(slots => slots.some(slot => slot.orders?.length))) return null;
+  // P26 (NC5, R-P24): a layout slot's inner content slots name modules too, so they are checked here as well.
+  const ordered = valid.ok && Object.values(valid.value.pages).some(slots => slots.some(slot => slot.orders?.length));
+  const nested = valid.ok && Object.values(valid.value.pages).some(slots => slots.some(slot => slot.layout === true && slot.inner));
+  if (!valid.ok || (!ordered && !nested)) return null;
   let catalog: ContentCatalog;
   if (catalogCandidate !== undefined) {
     const checked = CONTENT_KIND.validate(catalogCandidate);
@@ -315,9 +325,12 @@ async function orderRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unk
     catalog = checked.value;
   } else {
     try { catalog = (await readPublication(c.env, CONTENT_KIND, scope))?.value ?? EMPTY_CATALOG; }
-    catch { return { status: 503, errors: ['catalog: the content catalogue is unavailable, so a per-context order cannot be checked against the modules it registers'] }; }
+    catch {
+      return { status: 503, errors: [...(ordered ? ['catalog: the content catalogue is unavailable, so a per-context order cannot be checked against the modules it registers'] : []),
+        ...(nested ? ['catalog: the content catalogue is unavailable, so a module\'s inner content slot (inner) cannot be checked against the modules it registers'] : [])] };
+    }
   }
-  const errors = slotOrderCatalogueErrors(valid.value, catalog);
+  const errors = [...(ordered ? slotOrderCatalogueErrors(valid.value, catalog) : []), ...(nested ? slotInnerCatalogueErrors(valid.value, catalog) : [])];
   return errors.length ? { status: 422, errors } : null;
 }
 /**
