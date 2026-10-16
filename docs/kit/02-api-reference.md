@@ -344,6 +344,17 @@ platform's own trusted synthetic monitor; the decision set names the mismatch as
 `layoutDiagnostics: [{measurementBasis, reason: "measurement_basis", slot}]`, which is host-internal and
 not a member of this answer.
 
+**Inner content slots: the content inside each module.** Where the page's declared layout slot names inner
+content slots (`inner`, [below](#inner-content-slots-inner)), the same answer decides the layout and the inner
+content slot of every module the layout returned, in one page decision: in `decisions`, the inner slots' decisions
+follow the layout's directly, in the order the layout returned its modules, and `order` runs on across them before
+the slots after the layout. Each decision of an inner slot carries `within: { module, slot }`, keys sorted: the
+layout slot and the module whose content it is, beside its own `slot` and `slotPosition`. A module that is not
+returned has its inner slot undecided: the answer carries no decision, no `within` and no `pinDiagnostics` entry for
+it, and no record is written. No piece is served twice on the page: de-duplication spans the layout, every inner
+slot and every other slot. The answer's top-level members are unchanged, and a page whose layout slot names no
+inner content slot is answered exactly as before.
+
 **The position within the slot, and module events.** Every decision carries `slotPosition`, its position
 within its slot (what its decision record calls `position`, from 0), beside `order`, its page-wide order; a
 page whose slot is not its first numbers the two differently. A module container is marked as any piece is,
@@ -1044,7 +1055,7 @@ Statistics exposures and credits require an explicit valid slot configuration (m
 
 The upgraded statistics publisher freezes estimates/time, creates the R2 archive without overwriting a retained key, validates its acknowledgement, then awaits live KV publication. Same-millisecond/reset/restart collisions try at most eight positive safe-integer versions; only a definite collision advances, while missing, failed or malformed acknowledgements stop. Final serialized bytes remain within the snapshot budget. Publication failure schedules another attempt in 30 seconds and still fails; scheduling failure also fails. The object's one alarm also removes each learning-effect marker at its expiry, so the failure sets it to the earlier of the 30-second retry and the earliest pending effect expiry: a failed publication never pushes an effect's removal later than it is due. State/prior/snapshot refusals retain their existing behavior. Operator publish/reset requires coherent downstream success; failures return503 and reset does not append a successful revision. KV or item-reset may already have committed, so failure is not rollback. Ambiguous archive writes may leave orphan versions. This does not establish globally chronological/idempotent version identity, retention/history repair or mixed-version rollout. Old unconditional publishers and externally removed/corrupt archives remain separate work; no extra decision hot-path read is added.
 
-New decision inputs include `replay: {version:1, exploration:'supported-only', learning, candidateLimit, slots:[{slot,lift,prior}]}`: the ordered full page's effective learning presence, candidate limit, snapshot identities and live exploration policy. Thompson is rejected by new configuration writes and suppressed on live decisions, including retained documents; only a trusted historical replay of an absent policy marker preserves the old seeded sampler. A present unknown/malformed marker refuses, never selects legacy behavior. Pins/default-arm slots name zero dependencies. Replay validates this manifest and required archive owner/version/prior/consumed structure, then runs the ranked prefix through the target; a genuine catalog pin runs alone without unused archives. Gamma zero still requires any snapshots used for raw receipts or exploration. Returned records retain detached full-page inputs; `used.lift/prior` describes the consumed target snapshot, while the manifest can name later archives that were not read. Comparison includes authority and exploration metadata. Absent legacy personalized multi-slot manifests refuse; default/pin and qualified single-slot compatibility cannot recover arbitrary old pure-call candidate limits or ambiguous zero-lift exploration/controls. Repeated page metadata counts toward existing full-record queue budgets. This is deterministic forward replay, not cryptographic receipt integrity, repaired archives, complete retention/rollout/resource assurance or validation of an exploration model. Older readers may reject the new marker; no mixed-version rollout is proved. Beside the manifest, never inside it, every new record whose decision had the learning layer carries `inputs.explorationRules: 'recorded-draws-v1'`, the exploration rules it was decided under (a draw inside the share is recorded as `explored` even where it agreed with the leader, the recorded support is the pre-reorder top by score with the explored piece beside it, and a controlled item is never drawn). The replay chooses its exploration rules from that member alone, never from whichever rules happen to reproduce the record: absent, the record was written before those rules and replays under the ones it was written with (a rotation or epsilon draw that agreed with the leader unflagged, a controlled item drawable, the support cut after the move), so it never replays as an `item` difference; present with any other value, the replay refuses with `invalid exploration rules marker` before any archive is read. This axis is independent of the Thompson marker, as the pin, content-type and governance markers are of each other.
+New decision inputs include `replay: {version:1, exploration:'supported-only', learning, candidateLimit, slots:[{slot,lift,prior}]}`: the ordered full page's effective learning presence, candidate limit, snapshot identities and live exploration policy. Thompson is rejected by new configuration writes and suppressed on live decisions, including retained documents; only a trusted historical replay of an absent policy marker preserves the old seeded sampler. A present unknown/malformed marker refuses, never selects legacy behavior. Pins/default-arm slots name zero dependencies. Replay validates this manifest and required archive owner/version/prior/consumed structure, then runs the ranked prefix through the target; a genuine catalog pin runs alone without unused archives. On a page whose declared layout slot names inner content slots, `slots` names every slot of the page in document order except an inner slot the layout did not return the module of, which was not decided, and the ranked prefix is taken in the order the page was decided in, each inner slot directly after its layout slot ([inner content slots](#inner-content-slots-inner)). Gamma zero still requires any snapshots used for raw receipts or exploration. Returned records retain detached full-page inputs; `used.lift/prior` describes the consumed target snapshot, while the manifest can name later archives that were not read. Comparison includes authority and exploration metadata. Absent legacy personalized multi-slot manifests refuse; default/pin and qualified single-slot compatibility cannot recover arbitrary old pure-call candidate limits or ambiguous zero-lift exploration/controls. Repeated page metadata counts toward existing full-record queue budgets. This is deterministic forward replay, not cryptographic receipt integrity, repaired archives, complete retention/rollout/resource assurance or validation of an exploration model. Older readers may reject the new marker; no mixed-version rollout is proved. Beside the manifest, never inside it, every new record whose decision had the learning layer carries `inputs.explorationRules: 'recorded-draws-v1'`, the exploration rules it was decided under (a draw inside the share is recorded as `explored` even where it agreed with the leader, the recorded support is the pre-reorder top by score with the explored piece beside it, and a controlled item is never drawn). The replay chooses its exploration rules from that member alone, never from whichever rules happen to reproduce the record: absent, the record was written before those rules and replays under the ones it was written with (a rotation or epsilon draw that agreed with the leader unflagged, a controlled item drawable, the support cut after the move), so it never replays as an `item` difference; present with any other value, the replay refuses with `invalid exploration rules marker` before any archive is read. This axis is independent of the Thompson marker, as the pin, content-type and governance markers are of each other.
 
 Exploration is off by default: a learn document with no exploration block explores nothing, and the compiled default states the same. Both operator editors require explicit replacement of dormant Thompson settings before saving; operator exploration/slot summaries, the learning console's exploring panel and the day report's `exploration` row all report effective off while identifying the retained setting (`configuredMode`, `unsupported`), and publish no configured share for it. A decision the exploration rule made is recorded as `explored` even where the draw agreed with the ranking's own leader, so the realized share can be compared with the configured one; the recorded candidate support is the slot's top candidates by score before that pick was moved to the front, with the explored piece recorded beside them, and the served ranking is unchanged by that record. An item under a merchandiser `reject` or `freeze` is not chosen by a supported exploration mode, because both modes select on the learned evidence the control removed from its treatment. The supported modes are reward-free and model no unit reward; an evaluated exploration and its contract remain an open owner decision, not a delivered capability. Reset-item refuses an unwritable current learn document before contacting the statistics object. After acknowledged reset it re-reads current settings before recording a revision; a revision failure returns503 with `resetCompleted:true` and `revisionOutcome:'unknown'`, not success or rollback. This is not a transactional configuration/reset protocol or a customer-policy amendment.
 
@@ -1714,6 +1725,57 @@ without bands carry none. A banded decision replays exactly: the replay reads th
 record names (`versions.slots`), whose bands decide again, and compares `explain.band` by value, with no
 replay marker; a slot without bands decides, records and replays exactly as before, with exactly the
 page-manifest markers it wrote before.
+
+### Inner content slots (`inner`)
+
+A module's own content (the items of a complete-the-look module, the story of a styling module) is an ordinary
+slot of the same page, carrying everything a slot may carry (`take`, `weights`, pins, exclusions, bands, the
+diversity rule, seed rules and the rest), and the page's declared layout slot names which module's content each
+such slot is: `inner: { [moduleId]: innerSlotName }`, a governance version 4 member
+(`"inner": { "module.PDP.reco.2": "pdp-ctl-items", "module.PDP.editorial.1": "pdp-story-items" }`;
+[the schema](./03-payload-schemas.md#inner-content-slots)). Publication — `PUT /content/slots`, a slots
+`publicationChanges` member, and `POST /content/slots/validate` alike — refuses with `422`, naming
+`pages.{page}[i].inner` in `errors[]` and writing no revision: `inner` on a slot that is not the page's declared
+layout slot; a value naming no slot of the same page; a value naming a layout slot, the layout slot itself
+included; one inner slot named for two modules; and, checked against the catalogue the same request publishes or
+else the one in force, as an order's modules are, a key naming a module the catalogue does not define as a
+candidate of that layout slot (no item has the id, or the item does not name the layout slot in its `slotTypes`),
+the module named in the error (`pages.{page}[i].inner['module…']: … is not a module of slot …`). A catalogue that
+cannot be read answers `503` rather than publishing an unchecked `inner`. A document marked 1, 2 or 3 carrying
+`inner` is refused by name; an unmarked write carrying it is read under version 4.
+
+The decision: the page's slots are decided in document order, except that an inner slot is decided only directly
+after its layout slot, in the order the layout returned its modules, and only when its module was returned. That
+order is the one the layout served: after its prefix and position pins, its off-limits modules, a configured
+per-context order, the modules withheld by the page's `nothingToShow` report or their eligibility rules, an
+exploration pick and the adjacent swap (applied before any slot after the layout is decided), never the shadow
+order (**The baseline and the shadow**, above), which is recorded only. A module that is not
+returned (withheld, ineligible, excluded, or ranked beyond the take) has its inner slot undecided: it serves and
+records nothing, adds no row to the page manifest and names no refused pin, short take or constraint. An inner slot
+whose module was returned but that has nothing eligible left after de-duplication serves nothing and writes no
+record, and the module stays returned. A pin of an inner slot is reserved page-wide before any slot ranks, as every
+pin is, whether or not its module is then returned, so a piece pinned in an undecided inner slot is served nowhere
+on that page view. De-duplication is page-wide across the layout, every inner slot and every other slot: no piece
+twice on the page.
+
+Every decision of an inner slot carries `within: { module, slot }`, keys sorted, the layout slot and the module it
+sits in: in the snapshot answer, on its decision record (`within`, compared by value in replay) and on the shopper's
+receipt (`within`, a member, with no new `why` sentence). An inner slot is an ordinary slot in everything else: its
+own learn dials, measurement basis, statistics, exploration, signal floor (a number; `never` and the context-only
+switch are set on the layout slot alone), position bands, the layout blend excluded (a layout slot's own), and its
+records' `explain` members, each as the [decision record](./03-payload-schemas.md#the-decision-record) defines it.
+Its render acknowledgements and engagements credit the inner slot's own statistics object, under the page-scoped
+name where a retained slots document carries that slot name on more than one page, never the module's
+layout position. On a context-only layout slot the inner slots are decided for the shopper, as any slot of the page
+is, and `X-Context-Key` names the layout's context alone.
+
+The page's decisions, layout and inner slots alike, are one receipt set: one composition, one `ts`, and one page
+manifest (`inputs.replay`) on every record naming, in document order, every slot that was decided, an undecided
+inner slot naming none. A record replays exactly: the replay reads the slots revision the record names
+(`versions.slots`), re-executes the page in the order it was decided (each inner slot directly after its layout
+slot), and compares `within` by value, with no replay marker, since no revision written before inner content slots
+existed carries one. A page whose layout slot names no inner content slot decides, records and replays exactly as
+before, with the same members and markers.
 
 ### Evidence floors per page type (`evidenceFloors`)
 

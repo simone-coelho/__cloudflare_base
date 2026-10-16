@@ -76,6 +76,7 @@ One item in snapshot `decisions[]`; the set carries its original `pageInstance`.
 | `customerContentId` | Your id for the piece; what you render by |
 | `type` | The piece's kind: `editorial`, `guide`, `film`, `lookbook`, `campaign`, or your own |
 | `slot` | The slot on the page |
+| `within` | On a decision of an inner content slot only: `{ module, slot }`, keys sorted, the page's declared layout slot and the module whose content the inner slot is ([inner content slots](#inner-content-slots)). Absent on every other decision |
 | `order` | Position across the whole page, in page order |
 | `score` | The final score that ranked it |
 | `strategy` | `affinity`: the shopper's interests decided. `default`: nothing was known, the catalog's order decided. `tenant-pinned`: a merchandiser pinned it |
@@ -98,6 +99,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `measurementBasis` | `served-v1` (also absent legacy metadata) or `rendered-v1`; incompatible counts are not pooled |
 | `rendered` | Rendered-v1 only: `{version:1,eventId,at,pageInstance}` from the original durably admitted renderer signal, not proof of human visibility |
 | `page`, `slot`, `position` | Where it was served, and the rank inside the slot |
+| `within` | The record of an inner content slot names the module it sits in: `{ module, slot }`, keys sorted, the page's declared layout slot and the module whose content the slot is. Absent on every record of any other slot, compared by value in replay, and carried on the shopper's receipt as `within` with no new sentence ([inner content slots](#inner-content-slots)) |
 | `item_id`, `customer_item_id` | What was served, both ids |
 | `candidates[]` | `{ contentId, score }` for the top candidates considered |
 | `cell` | The shopper's context: `channel`, `visit_bucket` (`1`, `2-3`, `4+`, `unknown`), `region`, `affinity` (the leading interest as `dim:value`, or null), `stage` (`early`, `mid`, `late`, `unknown`: the stored token the learning statistics pool on) |
@@ -920,6 +922,55 @@ consent and only for a layout slot measured on `rendered-v1`, so every report an
 aside as a row recorded under another basis than its slot's; its replay decides the page again and
 compares it. The reason rides every exported decision record unchanged, and a record written before it
 replays without it.
+
+#### Inner content slots
+
+```json
+{
+  "governanceVersion": 4,
+  "pages": { "pdp": [
+    { "slot": "pdp-hero", "take": 1, "weights": { "line": 1 } },
+    { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1, "category": 0.5 },
+      "inner": { "module.PDP.reco.2": "pdp-ctl-items", "module.PDP.editorial.1": "pdp-story-items" } },
+    { "slot": "pdp-footer", "take": 1, "weights": { "line": 1 } },
+    { "slot": "pdp-story-items", "take": 1, "weights": { "line": 1 } },
+    { "slot": "pdp-ctl-items", "take": 2, "weights": { "line": 1 }, "excludedTags": [{ "dimension": "line", "value": "Willow" }] }
+  ] }
+}
+```
+
+`inner` (governance version 4) on the page's declared layout slot maps each module id to the name of its inner
+content slot, the slot that holds that module's own content: `{ [moduleId]: innerSlotName }`, kept exactly as
+authored, an empty object carrying nothing. An inner slot is an ordinary slot of the same page and carries the full
+slot set (`take`, `weights`, `pinnedPieceIds`, `excludedPieceIds`, `excludedTags`, `allowedTypes`, `bands`,
+`diversity`, seed rules, merchandising, the stage, freshness and fatigue rules, a numeric `signalFloor`), listed
+anywhere on the page; `layout`, `orders`, `positionPins`, `offLimitsPieceIds`, `contextOnly` and the `never` floor
+stay the layout slot's own. Publication refuses, naming `pages.{page}[i].inner` (and the module,
+`pages.{page}[i].inner['…']`, for a value or a key): `inner` on a slot that is not the declared layout slot; a
+value naming no slot of the page; a value naming a layout slot, the layout slot itself included; one inner slot
+named for two modules; a value that is not a slot name or a key that is not a module id (1 to 1024 characters);
+`inner` in a document marked 1, 2 or 3; and, at `PUT /content/slots` against the catalogue published with it or
+else the one in force, a key naming a module the catalogue does not define as a candidate of the layout slot (no
+item with that id, or one whose `slotTypes` does not name the layout slot).
+
+One decision decides the layout slot and the inner content slot of every module it returned, in the same page
+decision: the page's slots in document order, except that each inner slot is decided directly after the layout
+slot, in the order the layout returned its modules (after its pins, off-limits modules, configured order,
+withheld modules, exploration pick and adjacent swap), never where the document lists it. A module that is not
+returned has its inner slot undecided: no decision, no `within`, no record, no row in the page manifest and no
+refused-pin or short-take entry are written for it. De-duplication spans the layout, every inner slot and every
+other slot of the page, so no piece is served twice on the page and an inner slot decided earlier in the layout's
+order takes a piece before a later one or any slot after the layout. Each inner decision carries
+`within: { module, slot }`, keys sorted, naming the layout slot and the module, on the snapshot's decision, on
+its record and on its receipt.
+
+In the example, after three views of one handbag line the layout returns `module.PDP.reco.2`,
+`module.PDP.editorial.1` and two more modules: `pdp-ctl-items` is decided first (the hero's piece already served,
+it takes the next two items), then `pdp-story-items` (an item `pdp-ctl-items` took is not repeated), then
+`pdp-footer`, which yields every piece served above it. An inner slot listed for a module the layout did not
+return is not decided and none of its pieces is served or recorded. The page's records are one receipt set: one
+`ts`, one manifest on every record (`inputs.replay.slots` naming the slots decided, in document order), each
+record replaying equal; a page whose layout slot names no inner slot decides in document order exactly as before.
 
 ### The baseline and the shadow
 

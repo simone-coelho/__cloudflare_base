@@ -586,6 +586,51 @@ of it. The engine adds one exposure per drawn module to that context's learning 
 device is no learning level), and adds nothing for a beacon sent without tracking consent, with a key it did not
 issue, or repeated for the same page view. Only a layout slot measured on `rendered-v1` counts it.
 
+### Content inside a module: inner content slots
+
+A module can hold content of its own: a complete-the-look module shows the items that complete the look, a
+styling story shows one story. Each such content area is an ordinary slot of the same page in the slot document,
+with its own `take`, weights, pins, exclusions, bands and every other slot rule, and the page's declared layout
+slot names which module's content each one is with `inner`, an object of module id to slot name
+(`"inner": { "module.PDP.reco.2": "pdp-ctl-items", "module.PDP.editorial.1": "pdp-story-items" }`, a
+`governanceVersion: 4` member; [schema](./03-payload-schemas.md#inner-content-slots)).
+
+One decision request decides the layout and, in the same page decision, the inner content slot of every module
+the layout returned: each inner slot is decided directly after the layout slot, in the order the layout returned
+its modules (after its pinned and off-limits modules, the modules withheld by your page's report or their
+eligibility rules, and the adjacent swap), whatever order the slot document lists the inner slots in. A module
+that is not returned has its inner slot left undecided: no decision is returned for it, no record is written and
+its subscriber receives `[]`, so its container and its content stay hidden. An inner slot whose module was returned
+but that has nothing left to serve returns no decision either, while the module itself stays returned; drawing
+the module without its content, or reporting it in `nothingToShow` on the next request, is your page's choice.
+
+De-duplication is page-wide across the layout, every inner slot and every other slot of the page: no piece is
+served twice on the page, so an item the hero already shows is not repeated inside a module, an inner slot
+decided earlier in the layout's order takes an item before a later one, and a slot further down the page yields
+to them both.
+
+Each decision of an inner slot carries `within: { "module": "module.PDP.reco.2", "slot": "pdp-modules" }`, the
+layout slot and the module it sits in, beside its own `slot`. Subscribe to an inner slot by its name, as to any
+slot (`client.listen.subscribe('pdp-ctl-items', …)`), and draw its items inside the container of the module that
+`within.module` names. The SDK treats an inner slot like any other slot: its first paint, a hold, its painted
+receipts (keyed by its own slot, `slotPosition` and item) and its render acknowledgements are its own.
+
+Mark each drawn inner item with `data-op-content` (the item) and `data-op-slot` (the inner slot), or acknowledge it
+with `client.emit.rendered(innerSlot, contentId, element, decisionId)`: its impressions and engagements are the
+inner slot's own, credited to the inner slot's statistics, never to the module's position in the layout. A click on
+an inner item that sits inside the module's marked container also reaches that container, so it is one engagement
+of the item and one of the module, each credited to its own slot.
+
+The page's decisions, layout and inner slots alike, are one receipt set: one decision time, one page manifest
+naming every slot decided, and every record replays exactly. Publication refuses, naming
+`pages.{page}[i].inner`, an `inner` on a slot that is not the page's declared layout slot, a value naming no slot of
+the page or naming the layout slot itself, one inner slot named for two modules, and (at `PUT /content/slots`,
+against the published catalogue) a module that no catalogue item with that id names the layout slot for in its
+`slotTypes`. On a context-only layout slot (above) the module order is one per context, while its inner slots are
+ordinary slots decided for the shopper: `X-Context-Key` names the layout's context alone, so cache the module order,
+never an inner slot's items. A page whose layout slot names no inner slot is decided exactly as before, in the
+order the slot document lists its slots.
+
 ## 8. What to test before the freeze
 
 On a separately authorized staging origin, complete these before M5 with the agreed20–30 real assets. Local DOM/native and synthetic script evidence is not customer browser/SFCC, latency or business acceptance.
