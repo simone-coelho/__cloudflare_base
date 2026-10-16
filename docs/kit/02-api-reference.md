@@ -1043,6 +1043,30 @@ omits it, which changes no score; and the day report built from the ledger's raw
 is the slot's own reward, unweighted by the table
 ([success events and conversion tables](03-payload-schemas.md#success-events-and-conversion-tables)).
 
+A table that does not name the slot's own reward is still accepted, and the publication tells the
+operator so: the warning is advice and refuses nothing. Such a table is published as written, and the
+success answers of `PUT /content/learn` and of `POST /content/learn/validate` carry the advisory member
+`diagnostics` in the envelope the catalogue's and the pin channel's advisories use, `{ advisory: true,
+omittedWarningCount, schema: "learn-conversion-diagnostics/v1", status: "available", warningCount,
+warnings }`, keys sorted, with one warning per slot whose table omits the slot's own reward, `{ code:
+"conversions_omit_slot_reward", consequence: "undeclared_pieces_earn_nothing", reward, slot }`, keys
+sorted, where `slot` names the slot, `reward` the slot's reward the table omits, and the consequence
+says that every module on that slot which declares no success event earns nothing from then on (its
+record names `{ event: <the slot's reward>, value: null }`, so its outcomes credit nothing). The member is
+given only when at least one table omits its slot's reward, and only on those two success answers: a
+document without a table, or whose every table names its slot's reward, is answered byte for byte as
+before, with no `diagnostics` member, and no read carries it (`GET /content/learn`, its history and
+revisions, the console's reads and the lift reads alike), so a document stored with such a table before
+the advisory existed is told only when it is next published or validated. The document is published or
+validated with the same status and members as without the warning, and its credits, records, receipts
+and replays are the ones above. A slot's reward is its `reward` dial, `click` when the dial is absent, and
+a table names it only by that key, `custom` included. Warnings follow the document's slot order, one per
+slot; at most 50 are listed, `warningCount` counts them all and `omittedWarningCount` is the rest. A table
+on a slot no page carries is told like any other, because the learn publication does not read the slots
+document and such a table omits its reward the moment a page carries the slot. Limits: a rollback (`POST
+/content/learn/rollback/{n}`) and a learn document published as a `publicationChanges` member of another
+document's request carry no advisory.
+
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
 New statistics monotonically drop complete fine levels from both item and slot maps when cardinality/bytes saturate. Retained ancestor counts are used directly, never sums of overlapping levels. After256 item identities, additional items contribute to a root-only anonymous overflow aggregate; their own estimates are unavailable/neutral, not zero. The admitted population is first-seen (explicit repair uses lexical selection), so selection bias remains; coarser pooling loses within-cell distinctions. Snapshot `completeness` exposes depth, item omission and reason. No finer partial estimates are recreated. W23 original-time weighting and W24 configuration compatibility remain unchanged.
@@ -1391,6 +1415,8 @@ Slots current GET, successful validation, PUT and rollback add `pinDiagnostics: 
 Available pin feedback names the strict uncached committed catalog revision and observation time. At most50 samples use zero-based `pageIndex`/`slotIndex` and `reason: missing_piece | slot_type | currently_ineligible | off_limits | excluded | type_not_allowed | excluded_tag`; total/omitted counts include all warning occurrences, and no pin IDs or page/slot names are echoed. Hard off-limits/exclusion/type gates apply in addition to lifecycle, publish window, stock and slot-type eligibility, before pins and ranking. These warnings do not block scheduled, draft, missing or temporarily unavailable pins or rewrite documents. The existing Rules screen shows current/draft checks and the original save response; History retains the original rollback response summary with a Rules link. Catalog and slots remain independent: a later catalog change can invalidate a pin, runtime refusal/reservation remains authoritative, and feedback is neither an atomic activation guarantee nor persisted receipt metadata.
 
 The slots current GET also adds `constraintDiagnostics: {schema: 'slot-constraint-diagnostics/v1', advisory: true, status, slotsRevision, catalog: {source, revision}, checkedAt, warningCount, omittedWarningCount, warnings: [{page, slot, contentId, reason, dimension?, value?}]}`: the operator's home for the refusals a decision set's own `constraintDiagnostics` names one page load at a time (below), read for the whole stored document. Each page is decided as serving decides it — the strict uncached committed catalog revision, eligibility at `checkedAt`, the page's pin reservations and its compiled hard controls — so only a slot that ranks contributes (not off-limits, with ranked positions left after its pins, and with no refused pinned prefix), and only a piece that slot could otherwise have served is named (live, inside its window, in stock, and naming the slot in its `slotTypes`). Every refused eligible piece is counted; at most 50 are named, in page order, then slot order, then catalogue order, and `omittedWarningCount` is the rest; an excluded-tag refusal names the published pair that matched. Unlike the pin channel it names pages, slots and piece ids, because those are what a merchandiser acts on. A document that publishes no hard control is `not_required` with zero counts and catalog `not_read`; a legacy GET fallback, an unbound selector or a catalog that cannot be read is `unavailable` with null counts, list, catalog revision and time, never a zero nobody checked. It is advice, never serving authority: the runtime decision stays authoritative, and a later catalog change or the passage of a publish window can change the answer.
+
+Learn successful validation and PUT add `diagnostics: {advisory: true, omittedWarningCount, schema: 'learn-conversion-diagnostics/v1', status: 'available', warningCount, warnings: [{code: 'conversions_omit_slot_reward', consequence: 'undeclared_pieces_earn_nothing', reward, slot}]}`, keys sorted, only when a slot's `conversions` table does not name that slot's own reward: one warning per such slot in the document's slot order, at most 50 listed, `warningCount` all of them and `omittedWarningCount` the rest. The document is still published or validated exactly as without it; the member is computed from the answer's own document with no read, a document that warns nothing answers byte for byte as before, and the current GET, history, revisions and rollback never carry it ([success events and conversion tables](03-payload-schemas.md#success-events-and-conversion-tables)).
 
 Current slot validation/publication accepts absent/1/2/3/4 markers and emits `governanceVersion: 3`, or `4` for a
 document marked 4 and for an unmarked document that declares a layout slot or carries per-context orders (below), with optional per-slot
