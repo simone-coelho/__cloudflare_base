@@ -1900,11 +1900,12 @@ order, then slot order, and once that one answers the next refused publication n
 of any other cause keeps its text, `503` `statistics recovery required` at the object and
 `statistics acknowledgement unavailable` at `POST learn/publish`, with no `stale` member, and leaves a marker
 already recorded as it was: a learn document that changes the slot's reward, objective, measurement basis or decay
-horizon refuses its publications for that cause until `POST learn/generation` starts the new generation and
-publishes it, and a marker ends only when a publication succeeds. The marker is recorded beside the snapshot, never
-inside it, so the snapshot, its archive and what every decision reads are exactly as published, and a slot whose
-publications succeed publishes, stores and reads exactly as before; neither the five-minute monitor nor the hourly
-job reads it. The console's lift grid does not show the marker yet: read it from `GET /v1/{tenant}/lift`.
+horizon refuses its publications for that cause until `POST /v1/{tenant}/learn/generation` starts the new
+generation and publishes it, and a marker ends only when a publication succeeds. The marker is recorded beside the
+snapshot, never inside it, so the snapshot, its archive and what every decision reads are exactly as published, and
+a slot whose publications succeed publishes, stores and reads exactly as before; neither the five-minute monitor
+nor the hourly job reads it. The console's lift grid does not show the marker yet: read it from
+`GET /v1/{tenant}/lift`.
 
 The cell grammar is version 3 (`cellGrammar { "name": "ladder-cell", "version": 3, "order": ["c", "v", "s", "r", "a"] }`).
 Its order is unchanged, so every cell of an undeclared module names the level it named under version 2, and a
