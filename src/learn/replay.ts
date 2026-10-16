@@ -13,7 +13,7 @@ import { readVersion, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND } from '@/content/kinds';
 import { BLEND_RULES, contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, LAYOUT_RULES, layoutBlendOf, MODULE_RULES, ORDER_RULES, SIGNAL_FLOOR_RULES, TYPE_FALLBACK_RULES } from '@/content/decide';
 import { HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, recordedExplorationRules } from '@/learn/explore';
-import { HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1 } from '@/reflex/contentCompose';
+import { compositionOrder, HISTORICAL_PINS, HISTORICAL_PINS_V1, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, innerSlotsOf } from '@/reflex/contentCompose';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
 import { HISTORICAL_CONTENT_TYPES, TYPE_FALLBACK_RETIRED, typeFallbackRetired } from '@/content/typeAffinity';
 import { cellEligibility, isEligibleAt } from '@/content/lifecycle';
@@ -82,6 +82,8 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('measurementBasis', served.measurementBasis ?? 'served-v1', replayed.measurementBasis ?? 'served-v1');
   eq('rendered', served.rendered, replayed.rendered);
   eq('item_id', served.item_id, replayed.item_id);
+  // P26: the layout slot and the module an inner content slot's decision sits in, by value (keys sorted); absent on both for any other record.
+  eq('within', served.within, replayed.within);
   if (served.inputs?.replay?.pins === 'prefix-reserved-v2') eq('ranking_position', served.ranking_position, replayed.ranking_position);
   eq('explored', served.explored, replayed.explored);
   eq('authority', served.authority, replayed.authority);
@@ -190,6 +192,11 @@ function manifestVersionRefusal(value: unknown): string | null {
   return `page replay manifest version ${value.version} is not supported`;
 }
 
+/** P26: a page's slots as the composer nests them: `inner` read on the declared layout slot alone. */
+function nestingOf(page: readonly SlotStrategy[]): Array<{ slot: string; inner?: Record<string, string> }> {
+  return page.map((slot) => ({ slot: slot.slot, ...(slot.layout === true && slot.inner ? { inner: slot.inner } : {}) }));
+}
+
 function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord, learn: LearnConfig, floor: { tenant: number; signals: unknown }, offLimits = false): Manifest | null {
   if (!object(value) || Object.keys(value).filter(key => key !== 'exploration' && key !== 'pins' && key !== 'contentTypes' && key !== 'governance' && key !== 'layout' && key !== 'orders' && key !== 'blend' && key !== 'signalFloor' && key !== 'moduleRules' && key !== 'typeFallback').sort().join(',') !== 'candidateLimit,learning,slots,version'
     || (own(value, 'exploration') && value.exploration !== 'supported-only')
@@ -223,14 +230,26 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     // declares the retirement is checked beside the catalogue read (replayAdmitted).
     || (own(value, 'typeFallback') && value.typeFallback !== TYPE_FALLBACK_RULES)
     || value.version !== MANIFEST_VERSION || typeof value.learning !== 'boolean' || !finite(value.candidateLimit)
-    || !Array.isArray(value.slots) || value.slots.length !== page.length || (served.arm === 'default' && value.learning)) return null;
+    || !Array.isArray(value.slots) || (served.arm === 'default' && value.learning)) return null;
+  // One row per slot of the page, in document order. P26: an inner content slot
+  // of the page's declared layout slot whose module the layout did not return
+  // was not decided and has no row; every other slot has one. A page without
+  // inner content slots: exactly one row per slot, as before.
+  const optional = own(value, 'layout') && value.pins === 'prefix-reserved-v2' ? innerSlotsOf(nestingOf(page)) : new Map<string, unknown>();
+  const listed = Array.from(value.slots), named: SlotStrategy[] = [];
+  for (const slot of page) {
+    const row = listed[named.length];
+    if (object(row) && row.slot === slot.slot) named.push(slot);
+    else if (!optional.has(slot.slot)) return null;
+  }
+  if (named.length !== listed.length) return null;
   const seen = new Set<string>(), rows: Manifest['slots'] = [];
-  for (const [index, row] of Array.from(value.slots).entries()) {
+  for (const [index, row] of listed.entries()) {
     if (!object(row) || Object.keys(row).sort().join(',') !== 'lift,prior,slot' || typeof row.slot !== 'string'
-      || row.slot !== page[index]!.slot || seen.has(row.slot) || !identity(row.lift) || !identity(row.prior)
-      || (row.lift === 0 && row.prior !== 0) || ((!value.learning || page[index]!.pinnedPieceId
-        || (value.pins === 'prefix-reserved-v2' && rankedCapacity({ ...page[index]!, offLimits: false }) === 0)
-        || (own(value, 'governance') && page[index]!.offLimits)) && (row.lift !== 0 || row.prior !== 0))) return null;
+      || row.slot !== named[index]!.slot || seen.has(row.slot) || !identity(row.lift) || !identity(row.prior)
+      || (row.lift === 0 && row.prior !== 0) || ((!value.learning || named[index]!.pinnedPieceId
+        || (value.pins === 'prefix-reserved-v2' && rankedCapacity({ ...named[index]!, offLimits: false }) === 0)
+        || (own(value, 'governance') && named[index]!.offLimits)) && (row.lift !== 0 || row.prior !== 0))) return null;
     seen.add(row.slot); rows.push({ slot: row.slot, lift: row.lift, prior: row.prior });
   }
   const target = rows.find(row => row.slot === served.slot);
@@ -396,7 +415,21 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
   // P29: a pinned position that carries its layout slot's reason is replayed with
   // the page executed again up to its slot, because the reason is a fact about
   // the whole slot, not about the pin; any other pinned position as before.
-  const rankingSlots = prefixPolicy ? new Set(pinned && served.explain.layoutReason === undefined ? [] : page.slice(0, targetIndex + 1).map(slot => slot.slot)) : undefined;
+  // P26: on a page whose declared layout slot names inner content slots (the
+  // layout marker stated), the slots decided before the record's slot are the
+  // ones before it in the order the page was decided in (`compositionOrder`),
+  // each inner content slot directly after its layout slot; a record of an inner
+  // content slot replays the page through the last of them, whose order among
+  // themselves is the order the layout served, its pinned positions too, since
+  // its slot is decided only when the layout returns its module. Any other page
+  // as before.
+  const nesting = manifest?.layout === LAYOUT_RULES && prefixPolicy ? nestingOf(page) : [];
+  const inner = innerSlotsOf(nesting), innerTarget = inner.has(served.slot);
+  const composed = inner.size ? compositionOrder(nesting) : [];
+  const through = innerTarget ? Math.max(...composed.flatMap((slot, k) => (inner.has(slot) ? [k] : []))) : composed.indexOf(served.slot);
+  const rankingSlots = !prefixPolicy ? undefined
+    : inner.size ? new Set(pinned && !innerTarget && served.explain.layoutReason === undefined ? [] : composed.slice(0, through + 1))
+      : new Set(pinned && served.explain.layoutReason === undefined ? [] : page.slice(0, targetIndex + 1).map(slot => slot.slot));
   const selected = prefixPolicy ? page : manifest?.pins === 'reserved-eligible-v1'
     ? page.filter((slot, index) => Boolean(slot.pinnedPieceId) || (!pinned && index <= targetIndex))
     : pinned ? [target] : page.slice(0, targetIndex + 1);
