@@ -625,8 +625,8 @@ The page's decisions, layout and inner slots alike, are one receipt set: one dec
 naming every slot decided, and every record replays exactly. Publication refuses, naming
 `pages.{page}[i].inner`, an `inner` on a slot that is not the page's declared layout slot, a value naming no slot of
 the page or naming the layout slot itself, one inner slot named for two modules, and (at `PUT /content/slots`,
-against the published catalogue) a module that no catalogue item with that id names the layout slot for in its
-`slotTypes`. On a context-only layout slot (above) the module order is one per context, while its inner slots are
+against the published catalogue) a module the catalogue does not define for the layout slot: no item has that id,
+or the item does not name the layout slot in its `slotTypes`. On a context-only layout slot (above) the module order is one per context, while its inner slots are
 ordinary slots decided for the shopper: `X-Context-Key` names the layout's context alone, so cache the module order,
 never an inner slot's items. A page whose layout slot names no inner slot is decided exactly as before, in the
 order the slot document lists its slots.
