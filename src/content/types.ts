@@ -300,7 +300,31 @@ export interface SlotStrategy {
    * slot decides and replays exactly as before.
    */
   bands?: PositionBand[];
+  /**
+   * P26 (decision D1): the inner content slots of the page's declared layout
+   * slot (version 4 only), `{ [moduleId]: innerSlotName }`: which module's own
+   * content each inner slot is. An inner slot is an ordinary slot of the same
+   * page, carrying everything a slot may carry. Within the one page decision
+   * it is decided directly after its layout slot, in the order the layout
+   * served its modules (after pins, the adjacent swap and withholding), and
+   * only when its module was returned; one whose module was not returned is
+   * not decided and leaves no record. De-duplication spans the layout, every
+   * inner slot and every other slot of the page. Publication refuses by name
+   * (`pages.{page}[i].inner`) the member on any slot but the declared layout
+   * slot, a value naming no slot of the page or naming a layout slot, one inner
+   * slot named for two modules, and (at the slots route, against the published
+   * catalogue) a key naming no module of the layout slot. Absent: the page is
+   * decided in document order exactly as before.
+   */
+  inner?: Record<string, string>;
 }
+
+/**
+ * P26: the module an inner content slot's decision sits in, on the snapshot
+ * answer's decision and on its record (`within`): the page's declared layout
+ * slot and the module whose content it is, keys sorted.
+ */
+export interface InnerPlacement { module: string; slot: string }
 
 /**
  * P15 (decision D1): one position band of a slot: the positions it covers,
@@ -1034,6 +1058,13 @@ export interface DecisionRecord {
   ts: number;
   page: string;
   slot: string;
+  /**
+   * P26 (decision D1): this decision is of an inner content slot — the page's
+   * declared layout slot and the module whose content the slot is, keys
+   * sorted. Absent on every record of any other slot; compared by value in
+   * replay.
+   */
+  within?: InnerPlacement;
   position: number;
   /** Current pin policy only: ordinal within the ranked remainder; absent for pins. */
   ranking_position?: number;
