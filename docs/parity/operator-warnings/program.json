@@ -21,7 +21,7 @@
     {
       "id": "P41",
       "title": "A conversion table that omits the slot's own reward says so (**amendment 2, 2026-10-16**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",
