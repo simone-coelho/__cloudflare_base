@@ -136,6 +136,15 @@ export interface ContentSlotSpec {
    * decides exactly as before.
    */
   bands?: ReadonlyArray<SlotBand>;
+  /**
+   * P26 (decision D1): the inner content slots of this slot, `{ [moduleId]:
+   * slotName }`, set by the caller on a page's declared layout slot alone. Each
+   * named slot of the page is decided directly after this one, in the order
+   * this slot served its modules and only for the modules it returned; one
+   * whose module it did not return is not decided. Absent, the page is decided
+   * in document order exactly as before.
+   */
+  inner?: Readonly<Record<string, string>>;
 }
 
 /** P15: a position band as the composer ranks with it: the positions it covers, counted from 1, and its weights. */
@@ -236,6 +245,12 @@ export interface ContentDecision {
     /** CW33: the slot's diversity rule touched this position. */
     diversity?: { dimension: string; max: number; skipped: string[]; relaxed: boolean; sentence: string };
   };
+  /**
+   * P26 (decision D1): this decision is of an inner content slot — the slot
+   * whose `inner` names it (the page's declared layout slot) and the module
+   * whose content it is, keys sorted. Absent on every other decision.
+   */
+  within?: { module: string; slot: string };
 }
 
 export interface AffinityViewLike { dims: Readonly<Record<string, Readonly<Record<string, number>>>> }
@@ -288,6 +303,12 @@ export interface ComposeContentResult {
   orderBaseline?: string[];
   /** P15: each served module a band of its slot ranked, with the positions that band covers. Absent when no band ranked one. */
   bands?: BandPlacement[];
+  /**
+   * P26: the inner content slots that were not decided because the layout did
+   * not return their module, in page order. Absent when every one was decided,
+   * and on a page without inner content slots.
+   */
+  undecided?: string[];
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -314,6 +335,17 @@ export type ScoreAdjust = (piece: ContentPieceLike, slot: string, baseScore: num
  */
 export type ExploreHook = (slot: string, ranked: ReadonlyArray<{ id: string; score: number }>) => { first?: string; ranking?: readonly string[] } | null;
 
+/**
+ * P05 (moved here by P26): an optional word from the caller on each slot once
+ * it has served and before any slot after it is decided: the decisions it
+ * served, in position order, and whether it served its configured `order`. It
+ * may name two positions, counted from 1 within the slot, whose modules then
+ * exchange places (the adjacent swap), so every slot decided after it — the
+ * inner content slots of a declared layout among them — reads the order the
+ * slot really served. Null leaves the slot exactly as served.
+ */
+export type SettleHook = (slot: string, served: readonly ContentDecision[], servedOrder: boolean) => readonly [number, number] | null;
+
 export function composeContentDetailed(
   pieces: readonly ContentPieceLike[],
   affinity: AffinityViewLike,
@@ -325,6 +357,8 @@ export function composeContentDetailed(
   historicalGovernance?: HistoricalGovernance,
   /** Replay retains all reservations but never runs unrelated later ranking. */
   rankingSlots?: ReadonlySet<string>,
+  /** P05 with P26: the caller's word on each slot once it has served, before any slot after it is decided. */
+  settle?: SettleHook,
 ): ComposeContentResult {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
   // "Catalogue order" is the document's order: the merchandiser's, not the ids'. Ties, and the cold
@@ -459,10 +493,11 @@ export function composeContentDetailed(
   // P15: the served modules a band ranked, with the positions their band covers.
   const bandPlacements: BandPlacement[] = [];
 
-  for (const slot of slots) {
-    if (offLimits.has(slot)) continue;
+  /** One slot of the page, decided: what it serves is added to `out` in its position order. */
+  const decideSlot = (slot: ContentSlotSpec): void => {
+    if (offLimits.has(slot)) return;
     const prefix = prefixes.get(slot);
-    if (refusedPrefixes.has(slot)) continue;
+    if (refusedPrefixes.has(slot)) return;
     if (prefix) for (const p of prefix.pieces) {
       used.add(p.id);
       out.push({ contentId: p.id, customerContentId: p.customerContentId, type: p.type,
@@ -480,10 +515,10 @@ export function composeContentDetailed(
           slot: slot.slot, order: order++, score: 0, strategy: 'tenant-pinned',
           explain: { drivers: [], note: 'non-personalizable slot — tenant config; ranking never ran' } });
       }
-      continue;
+      return;
     }
     const remaining = prefix ? prefix.take - prefix.ids.length : slot.take;
-    if ((prefix && remaining <= 0) || (rankingSlots && !rankingSlots.has(slot.slot))) continue;
+    if ((prefix && remaining <= 0) || (rankingSlots && !rankingSlots.has(slot.slot))) return;
     const excluded = forbidden.get(slot);
     const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !slot.withheld?.has(p.id) && !used.has(p.id) && !reserved.has(p.id) && !prefixOwnedPieces.has(p));
     // P04: the slot's own fixed positions — its modules pinned at a position
@@ -759,11 +794,107 @@ export function composeContentDetailed(
       if (pinsAt.size || marksDecided) ruled.add(slot);
       if (marksDecided && slot.order) orderBaseline.add(slot);
     }
+  };
+  /**
+   * P05 through `settle`: once a slot has served, and before any slot after it
+   * is decided, the caller may exchange the modules of two of its positions
+   * (the adjacent swap); the page-wide `order` of the two follows their place.
+   */
+  const settled = (slot: ContentSlotSpec, start: number, orderedBefore: number) => {
+    if (!settle) return;
+    const pair = settle(slot.slot, out.slice(start), ordered.length > orderedBefore);
+    if (!pair) return;
+    const upperAt = start + pair[0] - 1, lowerAt = start + pair[1] - 1;
+    if (pair[0] < 1 || pair[1] < 1 || upperAt === lowerAt || upperAt >= out.length || lowerAt >= out.length) return;
+    const upper = out[upperAt]!, lower = out[lowerAt]!;
+    [upper.order, lower.order] = [lower.order, upper.order];
+    out[upperAt] = lower; out[lowerAt] = upper;
+  };
+  // P26 (decision D1): the page's slots in document order, except that an inner
+  // content slot is decided only directly after the slot whose `inner` names it
+  // — in the order that slot SERVED its modules, after its pins, its off-limits
+  // modules, the withholding and the adjacent swap (`settle`), never a ranking
+  // nothing served — and only when its module was returned. One whose module
+  // was not returned is not decided at all: it serves, ranks and records
+  // nothing (its pins were reserved page-wide before any slot ranked, as every
+  // pin is, and stay so). Each inner decision names its module (`within`).
+  // `used` is the page's one de-duplication across all three kinds of slot.
+  // A page without inner content slots is decided in document order exactly as before.
+  const nesting = innerSlotsOf(slots);
+  const innerOf = new Map<string, Map<string, ContentSlotSpec>>();
+  for (const spec of slots) {
+    const placed = nesting.get(spec.slot);
+    if (!placed) continue;
+    const byModule = innerOf.get(placed.layout) ?? new Map<string, ContentSlotSpec>();
+    if (!byModule.has(placed.module)) byModule.set(placed.module, spec);
+    innerOf.set(placed.layout, byModule);
   }
+  const entered = new Set<ContentSlotSpec>();
+  for (const slot of slots) {
+    if (nesting.has(slot.slot)) continue;
+    const start = out.length, orderedBefore = ordered.length;
+    decideSlot(slot);
+    settled(slot, start, orderedBefore);
+    const byModule = innerOf.get(slot.slot);
+    if (!byModule) continue;
+    for (const module of out.slice(start).map((d) => d.contentId)) {
+      const inner = byModule.get(module);
+      if (!inner || entered.has(inner)) continue;
+      entered.add(inner);
+      const from = out.length, innerOrdered = ordered.length;
+      decideSlot(inner);
+      settled(inner, from, innerOrdered);
+      for (const d of out.slice(from)) d.within = { module, slot: slot.slot };
+    }
+  }
+  const undecided = nesting.size ? slots.filter((slot) => nesting.has(slot.slot) && !entered.has(slot)).map((slot) => slot.slot) : [];
   const pageOrder = (set: ReadonlySet<ContentSlotSpec>) => slots.filter((slot) => set.has(slot)).map((slot) => slot.slot);
   return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}), ...(ordered.length ? { ordered } : {}),
     ...(placements.length ? { moduleRules: placements } : {}), ...(ruled.size ? { ruled: pageOrder(ruled) } : {}),
-    ...(orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}), ...(bandPlacements.length ? { bands: bandPlacements } : {}) };
+    ...(orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}), ...(bandPlacements.length ? { bands: bandPlacements } : {}),
+    ...(undecided.length ? { undecided } : {}) };
+}
+
+/**
+ * P26 (decision D1): the inner content slots of a page, by name: for each, the
+ * slot whose `inner` names it and the module whose content it is. A name is
+ * taken only where it is another slot of the page that names no inner content
+ * slots itself, and once (the first module `inner` lists for it keeps it); any
+ * other entry is passed over, so nothing publication refuses is ever nested.
+ * The caller sets `inner` on a page's declared layout slot alone.
+ */
+export function innerSlotsOf(slots: ReadonlyArray<Pick<ContentSlotSpec, 'slot' | 'inner'>>): Map<string, { layout: string; module: string }> {
+  const out = new Map<string, { layout: string; module: string }>();
+  const carries = (s: Pick<ContentSlotSpec, 'inner'>) => s.inner !== null && typeof s.inner === 'object';
+  if (!slots.some(carries)) return out;
+  const names = new Set(slots.map((s) => s.slot)), carriers = new Set(slots.filter(carries).map((s) => s.slot));
+  for (const s of slots) {
+    if (!carries(s)) continue;
+    for (const [module, name] of Object.entries(s.inner!)) {
+      if (!module || typeof name !== 'string' || name === s.slot || !names.has(name) || carriers.has(name) || out.has(name)) continue;
+      out.set(name, { layout: s.slot, module });
+    }
+  }
+  return out;
+}
+
+/**
+ * P26: the order a page's slots are decided in, as far as it is known before
+ * anything is ranked: document order, a slot carrying inner content slots
+ * followed directly by all of them (here in document order; the composer
+ * decides them in the order that slot served its modules, and only those of
+ * the modules it returned). A page without inner content slots: document order.
+ */
+export function compositionOrder(slots: ReadonlyArray<Pick<ContentSlotSpec, 'slot' | 'inner'>>): string[] {
+  const nesting = innerSlotsOf(slots);
+  if (!nesting.size) return slots.map((s) => s.slot);
+  const order: string[] = [];
+  for (const s of slots) {
+    if (nesting.has(s.slot)) continue;
+    order.push(s.slot);
+    for (const t of slots) if (nesting.get(t.slot)?.layout === s.slot) order.push(t.slot);
+  }
+  return order;
 }
 
 /** The delivery contract alone: one decision per slot position, in page order. */

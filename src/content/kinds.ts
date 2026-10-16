@@ -488,6 +488,8 @@ const carriesList = (s: unknown, key: 'positionPins' | 'offLimitsPieceIds'): boo
 const carriesModuleRules = (s: unknown): boolean => carriesList(s, 'positionPins') || carriesList(s, 'offLimitsPieceIds');
 /** P30: a slot member `contextOnly`, whatever it carries (a switch that is off is still authored on the slot). */
 const carriesContextOnly = (s: unknown): boolean => isRecord(s) && s.contextOnly !== undefined;
+/** P26: a slot member `inner` that carries something: anything but absent or an empty object. */
+const carriesInner = (s: unknown): boolean => isRecord(s) && s.inner !== undefined && !(isRecord(s.inner) && Object.keys(s.inner).length === 0);
 
 // ── P01: per-context orders on the declared layout slot ─────────────────────
 
@@ -823,6 +825,78 @@ export function slotOrderCatalogueErrors(document: Pick<SlotCatalog, 'pages'>, c
   return errors;
 }
 
+// ── P26: the inner content slots of the declared layout slot ────────────────
+
+/**
+ * P26 (decision D1): a layout slot's inner content slots, structurally: an
+ * object of module id (a string of 1..1024 UTF-16 units) to the name of a slot
+ * (a slug), each kept exactly as authored. Errors are suffixes of the member's
+ * path. Which slots the names may be, and which slot may carry the member, are
+ * authoring rules (`innerAuthoringErrors`); whether each module is one the
+ * layout could return is checked against the catalogue at the slots route
+ * (`slotInnerCatalogueErrors`).
+ */
+export function validateInner(candidate: unknown): ValidationResult<Record<string, string>> {
+  if (!isRecord(candidate)) return { ok: false, errors: [': an object of module id → the name of a slot of the same page, the module\'s inner content slot'] };
+  const errors: string[] = [], entries: Array<[string, string]> = [];
+  for (const [id, name] of Object.entries(candidate)) {
+    if (!moduleId(id)) { errors.push(`[${quoted(id)}]: a module id, a string of 1..1024 UTF-16 units`); continue; }
+    if (!isStr(name) || !SLUG.test(name)) { errors.push(`[${quoted(id)}]: ${quoted(name)} is not a slot name; the module's inner content slot is named by its slot (a slug)`); continue; }
+    entries.push([id, name]);
+  }
+  // Own data properties only, whatever a module id is spelt as.
+  return errors.length ? { ok: false, errors } : { ok: true, value: Object.fromEntries(entries) };
+}
+
+/**
+ * P26 (decision D1): the authoring rules of a slot's inner content slots,
+ * applied at publication only and named `pages.{page}[i].inner`: the member is
+ * set only on the page's declared layout slot; each value names a slot of the
+ * same page that is no layout slot (the layout slot itself included); and one
+ * inner slot holds the content of one module.
+ */
+function innerAuthoringErrors(page: string, index: number, slot: SlotStrategy, pageSlots: readonly SlotStrategy[]): string[] {
+  const at = `pages.${page}[${index}].inner`, inner = slot.inner;
+  if (!inner) return [];
+  if (slot.layout !== true) return [`${at}: slot '${slot.slot}' is not the declared layout slot of page '${page}'; a module's inner content slots are named only on the slot that declares layout: true`];
+  const errors: string[] = [], byName = new Map(pageSlots.map((s) => [s.slot, s] as const)), owner = new Map<string, string>();
+  for (const [module, name] of Object.entries(inner)) {
+    const here = `${at}[${quoted(module)}]`, target = byName.get(name);
+    if (!target) { errors.push(`${here}: ${quoted(name)} is no slot of page '${page}'; a module's inner content slot is an ordinary slot of the same page`); continue; }
+    if (target.layout === true) { errors.push(`${here}: ${quoted(name)} is ${target === slot ? 'this layout slot itself' : `a layout slot of page '${page}'`}; a module's inner content slot is an ordinary content slot, never a layout slot`); continue; }
+    const first = owner.get(name);
+    if (first !== undefined) errors.push(`${here}: ${quoted(name)} is already the inner content slot of module ${quoted(first)}; one inner slot holds the content of one module`);
+    else owner.set(name, module);
+  }
+  return errors;
+}
+
+/**
+ * P26 (NC5, R-P24): a layout slot's inner content slots name modules, and only
+ * the catalogue says which modules exist, so the refusal of a key naming a
+ * module the catalogue does not define as a candidate of that layout slot — no
+ * piece has that id, or the piece does not name the layout slot in its
+ * `slotTypes`, so the layout could never return it — is made at the slots
+ * route beside P01's order check (src/routes/content.ts), against the catalogue
+ * published with it in the same request or else the one in force.
+ */
+export function slotInnerCatalogueErrors(document: Pick<SlotCatalog, 'pages'>, catalog: Pick<ContentCatalog, 'pieces'>): string[] {
+  const byId = new Map<string, ContentPiece>();
+  for (const piece of catalog.pieces) if (!byId.has(piece.id)) byId.set(piece.id, piece);
+  const errors: string[] = [];
+  for (const [page, slots] of Object.entries(document.pages)) {
+    slots.forEach((slot, index) => {
+      if (!slot.inner || slot.layout !== true) return;
+      for (const module of Object.keys(slot.inner)) {
+        const at = `pages.${page}[${index}].inner[${quoted(module)}]`, piece = byId.get(module);
+        if (!piece) errors.push(`${at}: ${quoted(module)} is not a module of slot '${slot.slot}': no piece of the published catalogue has that id`);
+        else if (!piece.slotTypes.includes(slot.slot)) errors.push(`${at}: ${quoted(module)} is in the catalogue but does not name slot '${slot.slot}' in its slotTypes, so the layout can never return it`);
+      }
+    });
+  }
+  return errors;
+}
+
 /**
  * @param governance The version the document is read under (0 = unmarked legacy).
  * @param earlyMark For a WRITE only: the version 1, 2 or 3 the candidate is marked
@@ -1034,6 +1108,22 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.bands${error}`);
     else bands = checked.value;
   }
+  // P26 (decision D1): the layout slot's inner content slots, a version-4
+  // member like the declaration itself, kept exactly as authored: each module
+  // id to the name of a slot of the same page. An empty object carries nothing
+  // and is not kept. How it relates to the page (the declared layout slot only,
+  // a slot of the page that is no layout slot, one module per inner slot) is an
+  // authoring rule of `validateSlotCatalog`, never reinterpreted on a read.
+  let inner: Record<string, string> | undefined;
+  if (carriesInner(s)) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validateInner(s.inner);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.inner${error}`);
+      else inner = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.inner: a module's inner content slots need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
@@ -1045,6 +1135,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
     ...(contextOnly ? { contextOnly } : {}),
     ...(bands ? { bands } : {}),
+    ...(inner ? { inner } : {}),
   };
 }
 
@@ -1063,8 +1154,9 @@ function parseSlotCatalog(candidate: unknown, current = false, terms: SlotTerms 
   // P01: per-context orders are a version-4 member too, so an unmarked write
   // carrying them is read under version 4 and refused there if misplaced.
   // P04: as are position pins and off-limits marks.
+  // P26: as are a layout slot's inner content slots.
   const declares = current && !marked && isRecord(candidate.pages)
-    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s) || carriesContextOnly(s)));
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s) || carriesContextOnly(s) || carriesInner(s)));
   const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
   const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
@@ -1165,6 +1257,13 @@ export function validateSlotCatalog(candidate: unknown, terms: SlotTerms = TODAY
     slots.forEach((slot, index) => {
       if (slot.contextOnly !== undefined && slot.layout !== true) errors.push(`pages.${page}[${index}].contextOnly: slot '${slot.slot}' is not the declared layout slot of page '${page}'; the context-only switch is set only on the slot that declares layout: true`);
     });
+  }
+  // P26 (decision D1): a module's inner content slots are named only on the
+  // page's declared layout slot, each an ordinary slot of the same page, one
+  // per module; refused by name where they are authored (a retained document is
+  // never reinterpreted, and the decision nests only under the declared layout).
+  for (const [page, slots] of Object.entries(checked.value.pages)) {
+    slots.forEach((slot, index) => errors.push(...innerAuthoringErrors(page, index, slot, slots)));
   }
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     const owners = new Map<string, string>();

@@ -3,7 +3,7 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { BandSpan, DecisionRecord, EvidenceFloorApplied, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause, SuccessEventApplied } from '@/content/types';
+import type { BandSpan, DecisionRecord, EvidenceFloorApplied, InnerPlacement, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause, SuccessEventApplied } from '@/content/types';
 import type { Suppression } from '@/reflex/core';
 import type { Names } from './rows';
 
@@ -127,6 +127,14 @@ export interface Receipt {
    * of a slot whose learn dials publish no conversion table.
    */
   successEvent?: SuccessEventApplied;
+  /**
+   * P26 (decision D1): this decision is of an inner content slot — the page's
+   * declared layout slot and the module whose content the slot is — exactly as
+   * the record carries it (`within`), keys sorted. A MEMBER, never a new or
+   * altered `why` sentence (`src/learn/receipts.test.ts:41-51`). Absent on every
+   * record of any other slot.
+   */
+  within?: InnerPlacement;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -460,6 +468,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.band ? { band: { from: e.band.from, to: e.band.to } } : {}),
     // P16: the success event and the conversion value applied, keys sorted.
     ...(e.successEvent ? { successEvent: { event: e.successEvent.event, value: e.successEvent.value } } : {}),
+    // P26: the layout slot and the module an inner content slot's decision sits in, keys sorted.
+    ...(r.within ? { within: { module: r.within.module, slot: r.within.slot } } : {}),
     why,
   };
 }

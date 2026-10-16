@@ -5,7 +5,7 @@
 // the same input yields the same output, which is what makes replay (doc 22
 // §12.3) a proof rather than a hope.
 
-import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust, type SlotBand } from '@/reflex/contentCompose';
+import { composeContentDetailed, compositionOrder, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust, type SettleHook, type SlotBand } from '@/reflex/contentCompose';
 import type {
   Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
   ConversionTable, SuccessEvent, SuccessEventApplied,
@@ -372,6 +372,8 @@ function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPi
     ...(typeFallback ? { typeFallback } : {}),
     // P15: the slot's position bands, each ranking its positions with its own weights.
     ...(s.bands?.length ? { bands: s.bands.map((band) => ({ from: band.from, to: band.to, weights: band.weights })) } : {}),
+    // P26: the inner content slots of the page's declared layout slot, under the current pin policy only.
+    ...(!historicalPins && s.layout === true && s.inner && Object.keys(s.inner).length ? { inner: { ...s.inner } } : {}),
   }));
 }
 
@@ -1216,21 +1218,6 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
-  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
-  // P15 (decision D1): the band each served module of a banded slot was ranked in, as the composer ranked it.
-  const bandOf = new Map<string, { from: number; to: number }>((rankedInBands ?? []).map((placed) => [`${placed.slot}:${placed.contentId}`, placed]));
-  /**
-   * P15: the dimension weights a candidate's scores were computed with — the
-   * band it was ranked in on a slot with position bands, else the slot's own —
-   * for every term itemised from the weights (the population priors' shares and
-   * P29's terms). A slot without bands reads its own weights exactly as before.
-   */
-  const weightsAt = (slot: string, id: string, spec: ContentSlotSpec): Readonly<Record<string, number>> => {
-    const key = `${slot}:${id}`;
-    if (rankedBand.has(key)) return rankedBand.get(key)?.weights ?? spec.weights;
-    const placed = bandOf.get(key);
-    return (placed && spec.bands?.find((band) => band.from === placed.from && band.to === placed.to)?.weights) || spec.weights;
-  };
   // P05 (decision D1): the adjacent swap. On a page's declared layout slot whose
   // exploration dial is `adjacent-swap`, a decision whose bucket (visitor, slot
   // and hour) falls under the share exchanges the modules of ONE pair of
@@ -1245,15 +1232,18 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // slot is served exactly as composed. Part of the learning layer, so never on
   // the holdout's `default` or `no_learning` arm, and hashed on the visitor, so
   // never below the signal floor (P10). Pure: it reads what this decision
-  // already computed, so a replay swaps the same pair.
+  // already computed, so a replay swaps the same pair. P26: the composer asks
+  // for it as the slot settles (`settle`), once the slot has served and before
+  // any slot after it is decided, so the inner content slots of the layout
+  // follow the order it really served; the pair is the one it always was.
   const swapped = new Map<string, ExplorePick & { positions: [number, number] }>();
-  if (learning?.exploreOf) for (const s of i.slots) {
-    if (s.layout !== true || s.offLimits || below.has(s.slot) || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))
-      || (ordered ?? []).includes(s.slot)) continue;
-    const cfg = learning.exploreOf(s.slot);
-    if (cfg?.mode !== ADJACENT_SWAP) continue;
-    const at = decisions.flatMap((d, index) => (d.slot === s.slot ? [index] : []));
-    const served = at.map((index) => decisions[index]!);
+  const strategyOf = new Map<string, SlotStrategy>();
+  for (const s of i.slots) if (!strategyOf.has(s.slot)) strategyOf.set(s.slot, s);
+  const settle: SettleHook | undefined = learning?.exploreOf ? (slot, served, servedOrder) => {
+    const s = strategyOf.get(slot);
+    if (!s || s.layout !== true || s.offLimits || below.has(s.slot) || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot)) || servedOrder) return null;
+    const cfg = learning.exploreOf!(s.slot);
+    if (cfg?.mode !== ADJACENT_SWAP) return null;
     const pairs = served.slice(1).flatMap((d, k) => (d.strategy !== 'tenant-pinned' && served[k]!.strategy !== 'tenant-pinned' ? [k + 1] : []));
     const controlled = new Set<string>();
     if (learning.controlOf) for (const d of served) if (learning.controlOf(s.slot, d.contentId)) controlled.add(d.contentId);
@@ -1261,13 +1251,31 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const pick = explorationPick({ visitorId: i.visitorId, ...(contextual.has(s.slot) && layoutContext ? { context: layoutContext } : {}),
       slot: s.slot, nowMs: i.nowMs, ranked: served.map((d) => ({ id: d.contentId, score: d.score })),
       snapshot: learning.snapshots[s.slot], cfg, controlled, pairs }, historical, historicalRules);
-    if (!pick?.positions) continue;
-    const upperAt = at[pick.positions[0] - 1]!, lowerAt = at[pick.positions[1] - 1]!;
-    const upper = decisions[upperAt]!, lower = decisions[lowerAt]!;
-    [upper.order, lower.order] = [lower.order, upper.order];
-    decisions[upperAt] = lower; decisions[lowerAt] = upper;
+    if (!pick?.positions) return null;
     swapped.set(s.slot, { ...pick, positions: pick.positions });
-  }
+    return pick.positions;
+  } : undefined;
+  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands, undecided: undecidedSlots } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots, settle);
+  // P26 (decision D1): the inner content slots the layout did not return the module of. Not decided:
+  // no record, no manifest row, no diagnostic and no page-level input is written for any of them.
+  const undecided = new Set(undecidedSlots ?? []);
+  // P26: each slot's place in the order the page is decided in: document order, an inner content slot directly after
+  // its layout slot (all of them there: which of them was decided, and in what order, nothing before the layout reads).
+  const compositionRank: ReadonlyMap<string, number> = new Map(compositionOrder(specs).map((slot, k) => [slot, k] as const));
+  // P15 (decision D1): the band each served module of a banded slot was ranked in, as the composer ranked it.
+  const bandOf = new Map<string, { from: number; to: number }>((rankedInBands ?? []).map((placed) => [`${placed.slot}:${placed.contentId}`, placed]));
+  /**
+   * P15: the dimension weights a candidate's scores were computed with — the
+   * band it was ranked in on a slot with position bands, else the slot's own —
+   * for every term itemised from the weights (the population priors' shares and
+   * P29's terms). A slot without bands reads its own weights exactly as before.
+   */
+  const weightsAt = (slot: string, id: string, spec: ContentSlotSpec): Readonly<Record<string, number>> => {
+    const key = `${slot}:${id}`;
+    if (rankedBand.has(key)) return rankedBand.get(key)?.weights ?? spec.weights;
+    const placed = bandOf.get(key);
+    return (placed && spec.bands?.find((band) => band.from === placed.from && band.to === placed.to)?.weights) || spec.weights;
+  };
   // P01: the slots whose configured order this decision served.
   const orderedSlots = new Set(ordered ?? []);
   // P04: the rule and the position that placed each module a position pin or an
@@ -1290,9 +1298,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // The slots the composer ran a ranking for, by its own conditions: capacity
   // left after off-limits and pins (`rankedCapacity`, the composer's `:227` and
   // `:237-250`), a pinned prefix it did not refuse, and — on a replay — the
-  // bounded set of slots that re-executed.
+  // bounded set of slots that re-executed; never (P26) an inner content slot
+  // that was not decided.
   const ranks = (spec: ContentSlotSpec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot)
-    && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot));
+    && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot)) && !undecided.has(spec.slot);
   const constraintDiagnostics = constraintDiagnosticsFor(eligible, specs, ranks, historicalGovernance);
   const specOf = new Map(specs.map((s) => [s.slot, s]));
   /**
@@ -1326,7 +1335,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const pins = (spec.pinnedPieceIds?.length ?? 0) + (spec.pinnedPieceId ? 1 : 0) + (spec.positionPins?.length ?? 0);
       // P01: a slot that served its configured order filled the positions the
       // order sets, by the merchandiser's choice; the order, not the take, says how many.
-      if (!pins || spec.offLimits || refusedSlots.has(spec.slot) || orderedSlots.has(spec.slot)) continue;
+      // P26: an inner content slot the layout did not return the module of was never decided, so it is never short.
+      if (!pins || spec.offLimits || refusedSlots.has(spec.slot) || orderedSlots.has(spec.slot) || undecided.has(spec.slot)) continue;
       if (i.replayRankingSlots && !i.replayRankingSlots.has(spec.slot)) continue;
       const take = spec.take, served = servedIn.get(spec.slot) ?? 0;
       if (!Number.isSafeInteger(take) || take <= 0 || served >= take) continue;
@@ -1433,7 +1443,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // any slot personalized, it is the shopper's vector as before, and the context view is
   // derived again from the recorded prior shares.
   // P30: and where every such slot is context-only, below the floor or by its switch, the context's own view.
-  const contextOnlyPage = (below.size > 0 || contextual.size > 0) && i.slots.every((slot) => slot.offLimits || below.has(slot.slot) || contextual.has(slot.slot));
+  // P26: an inner content slot that was not decided serves nothing, so it is not one of them, below the floor or not.
+  const belowDecided = undecided.size ? [...below.keys()].some((slot) => !undecided.has(slot)) : below.size > 0;
+  const contextOnlyPage = (belowDecided || contextual.size > 0) && i.slots.every((slot) => slot.offLimits || below.has(slot.slot) || contextual.has(slot.slot) || undecided.has(slot.slot));
   // P29: the population priors the layout reason itemises — each one's λ and
   // shares — from the blends on the serving path and, on a replay, from what the
   // record carries (`layoutPriors`). A page whose declared layout slot ranks
@@ -1460,8 +1472,16 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     }));
   const priorLambda = layoutRanksAbove && (regionalPrior || contextPriorTerm)
     ? { ...(contextPriorTerm ? { context: contextPriorTerm.lambda } : {}), ...(regionalPrior ? { regional: regionalPrior.lambda } : {}) } : null;
+  // P26 (decision D1): what the page records is what it decided. An inner
+  // content slot the layout did not return the module of has no manifest row
+  // and adds no marker, and none of its own served counts or rule verdicts are
+  // kept; a page without one records exactly as before.
+  const decidedSlots = undecided.size ? i.slots.filter((slot) => !undecided.has(slot.slot)) : i.slots;
+  const servedRecorded = !hasFatigue || !i.served ? null : !undecided.size ? i.served
+    : [...fatigueRules.keys()].some((slot) => !undecided.has(slot)) ? Object.fromEntries(Object.entries(i.served).filter(([slot]) => !undecided.has(slot))) : null;
+  const verdictsRecorded = [...verdicts].filter(([id]) => !undecided.size || (byId.get(id)?.slotTypes ?? []).some((slot) => pageSlots.has(slot) && !undecided.has(slot)));
   const inputs: DecisionInputs & { explorationRules?: ExplorationRules } = {
-    affinity: plain((contextOnlyPage ? (below.size ? contextView : layoutView) : affinity).dims) as DecisionInputs['affinity'],
+    affinity: plain((contextOnlyPage ? (belowDecided ? contextView : layoutView) : affinity).dims) as DecisionInputs['affinity'],
     replay: {
       version: 1, learning: learning !== null, candidateLimit: i.candidateLimit ?? 10,
       ...(historical === HISTORICAL_EXPLORATION ? {} : { exploration: 'supported-only' as const }),
@@ -1471,10 +1491,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(i.slots.some((slot) => slot.layout === true) ? { layout: LAYOUT_RULES } : {}),
       ...(ordersUsed ? { orders: ORDER_RULES } : {}),
       ...(blendedSlots.size ? { blend: BLEND_RULES } : {}),
-      ...(below.size ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
+      ...(belowDecided ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
       ...(ruled?.length || marksWithheld ? { moduleRules: MODULE_RULES } : {}),
-      ...(retiredFallback && typeFallbackReaches(i.pieces, i.slots.map(formatReadsOf)) ? { typeFallback: TYPE_FALLBACK_RULES } : {}),
-      slots: i.slots.map((slot) => {
+      ...(retiredFallback && typeFallbackReaches(i.pieces, decidedSlots.map(formatReadsOf)) ? { typeFallback: TYPE_FALLBACK_RULES } : {}),
+      // P26: one row per slot decided, in document order; an inner content slot that was not decided has none.
+      slots: decidedSlots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];
         return { slot: slot.slot, lift: snapshot?.version ?? 0, prior: snapshot?.priorVersion ?? 0 };
@@ -1485,12 +1506,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     ...(i.contextBlend && i.arm !== 'default' ? { context_share: sortedShares(i.contextBlend.share) } : {}),
     ...(priorLambda ? { prior_lambda: priorLambda } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
-    ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
-    ...(below.size ? { signals: signalCount } : {}),
+    ...(servedRecorded ? { served: plain(servedRecorded) } : {}),
+    ...(belowDecided ? { signals: signalCount } : {}),
     // P31: the page's report as the decision accepted it, and each rule's
     // verdict on the cell (keys sorted), page-level and only when there is one.
     ...(report.length ? { nothing_to_show: [...report] } : {}),
-    ...(verdicts.size ? { eligibility_verdicts: Object.fromEntries([...verdicts].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) } : {}),
+    ...(verdictsRecorded.length ? { eligibility_verdicts: Object.fromEntries(verdictsRecorded.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) } : {}),
     // P30: the context a switched slot was decided in beyond the record's page and
     // cell — the device, and the region where admitted — written only when one was (C11, keys sorted).
     ...(layoutSwitch && contextual.size ? { context_only: {
@@ -1522,7 +1543,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const refusedByWithholding = (slot: string) => (pinDiagnostics ?? []).filter((d) => d.slot === slot)
     .every((d) => d.reason === 'missing_or_ineligible' && withheldBy.has(d.pinnedPieceId));
   if (!historicalPins && historicalGovernance === undefined) {
-    const slotIndex = new Map(i.slots.map((slot, index) => [slot.slot, index] as const));
+    // P26: what the page served before the layout slot is read in the order the page was decided in, so an
+    // inner content slot, decided after its layout wherever the document lists it, is never before it.
+    const slotIndex = compositionRank;
     const live = eligible.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
     // P31 (R-P23 C7): and the same before the withholding; the same list when nothing was withheld.
     // P30: and so where the context-only slot withheld a module its context does not admit.
@@ -1535,7 +1558,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       const served = decisions.filter((d) => d.slot === s.slot);
       // P04's whole-slot refusal: a refused pin left the slot serving nothing and writing no record, so there is no reason to give.
       if (!served.length && pinRefused.has(s.slot)) continue;
-      const reason = layoutReasonOf(s, index, served, slotIndex, live, admittedLive, pinRefused);
+      const reason = layoutReasonOf(s, slotIndex.get(s.slot) ?? index, served, slotIndex, live, admittedLive, pinRefused);
       layoutReasons.set(s.slot, reason);
     }
   }
@@ -1566,7 +1589,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const drawn = layoutBaselines.get(s.slot);
     if (!drawn || !decisions.some((d) => d.slot === s.slot)) continue;
     try {
-      const shadow = shadowOf(s, index, drawn);
+      const shadow = shadowOf(s, compositionRank.get(s.slot) ?? index, drawn);
       if (shadow) shadows.set(s.slot, shadow);
     } catch { /* recording only: the slot's records carry no shadow */ }
   }
@@ -1600,7 +1623,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       liftAtOne.set(key, r3(lifted - base));
       return lifted;
     };
-    const slotIndex = new Map(i.slots.map((slot, k) => [slot.slot, k] as const));
+    const slotIndex = compositionRank;
     const before = new Set(decisions.filter((d) => (slotIndex.get(d.slot) ?? Number.POSITIVE_INFINITY) < index).map((d) => d.contentId));
     const composed = composeContentDetailed(eligible.filter((p) => !before.has(p.id)), affinity, specs, i.candidateLimit ?? 10, shadowAdjust, undefined,
       historicalPins, historicalGovernance, new Set([s.slot]));
@@ -1941,7 +1964,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       decision_id: `${i.tenant}:${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${d.slot}:${position}${hasNonce ? `:n1:${i.requestId}` : ''}`,
       ...(hasNonce ? { request_id: i.requestId } : {}),
       tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
-      page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
+      page: i.page, slot: d.slot,
+      // P26 (decision D1): an inner content slot's decision names the layout slot and the module it sits in, keys sorted.
+      ...(d.within ? { within: { module: d.within.module, slot: d.within.slot } } : {}),
+      position, item_id: d.contentId, customer_item_id: d.customerContentId,
       ...(!historicalPins && !pinned ? { ranking_position: rankingPosition } : {}),
       candidates: !historicalPins && pinned ? [{ contentId: d.contentId, score: 0 }] : supportOf(d.slot),
       cell: i.cell, arm: i.arm, explored: wasExplored, authority: authorityOf(d.strategy),
@@ -2009,14 +2035,19 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     });
   }
   const pageReason = i.slots.map((s) => layoutReasons.get(s.slot)).find((reason) => reason !== undefined);
+  // P26: the set names no refused pin and no ignored seed rule set of an inner content slot that was not decided:
+  // nothing of it was served, ranked or refused on this page view. A page without one: exactly as before.
+  const pinsKept = undecided.size && pinDiagnostics ? pinDiagnostics.filter((d) => !undecided.has(d.slot)) : null;
+  const pinDiagnosticsOut = pinsKept ? (pinsKept.length ? pinsKept : undefined) : pinDiagnostics;
+  const seedDiagnosticsOut = undecided.size ? seedDiagnostics.filter((d) => !undecided.has(d.slot)) : seedDiagnostics;
 
   return {
     tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
     regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
-    decisions, records, ...(pinDiagnostics ? { pinDiagnostics } : {}),
+    decisions, records, ...(pinDiagnosticsOut ? { pinDiagnostics: pinDiagnosticsOut } : {}),
     ...(shortTakes.length ? { shortTakes } : {}),
-    ...(seedDiagnostics.length ? { seedDiagnostics } : {}),
+    ...(seedDiagnosticsOut.length ? { seedDiagnostics: seedDiagnosticsOut } : {}),
     ...(constraintDiagnostics ? { constraintDiagnostics } : {}),
     ...(pageReason ? { layoutReason: layoutReasonRecord(pageReason) } : {}),
     ...(offLimitsRecords.length ? { offLimitsRecords } : {}),
