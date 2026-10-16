@@ -3,7 +3,7 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { DecisionRecord, EvidenceFloorApplied, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause } from '@/content/types';
+import type { BandSpan, DecisionRecord, EvidenceFloorApplied, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause } from '@/content/types';
 import type { Suppression } from '@/reflex/core';
 import type { Names } from './rows';
 
@@ -108,6 +108,15 @@ export interface Receipt {
    * `lift_terms` carries the shrunk estimate. Absent where no floor applied.
    */
   evidenceFloor?: EvidenceFloorApplied;
+  /**
+   * P15 (decision D1): the position band of its slot this position was ranked
+   * in — the positions the band covers, counted from 1 within the slot — exactly
+   * as the record carries it (`explain.band`), keys sorted. A MEMBER, never a
+   * new or altered `why` sentence (`src/learn/receipts.test.ts:41-51`). Absent on
+   * a pinned or held position, on a position a configured order set, and on
+   * every position of a slot without bands.
+   */
+  band?: BandSpan;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -437,6 +446,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.layoutReason ? { layoutReason: layoutReasonOf(e.layoutReason) } : {}),
     ...(e.suppressions?.length ? { suppressions: e.suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
     ...(e.lift?.evidenceFloor ? { evidenceFloor: { floor: e.lift.evidenceFloor.floor, lacking: e.lift.evidenceFloor.lacking, n: e.lift.evidenceFloor.n, page: e.lift.evidenceFloor.page } } : {}),
+    // P15: the band this position was ranked in, keys sorted.
+    ...(e.band ? { band: { from: e.band.from, to: e.band.to } } : {}),
     why,
   };
 }

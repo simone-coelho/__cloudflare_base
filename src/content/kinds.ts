@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionBand, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { TYPE_FALLBACK_RETIRED, typeFallbackRetired } from './typeAffinity';
@@ -569,6 +569,86 @@ function sharedShopper(a: OrderContext, b: OrderContext, terms: SlotTerms = TODA
   return `${channel === 'any channel' ? channel : `channel ${quoted(channel)}`}, visit ${bucket}${device === undefined ? '' : `, on a ${device} device`}`;
 }
 
+// ── P15: position bands inside one slot ─────────────────────────────────────
+
+/** The members a position band carries, and nothing else (decision D1). */
+const BAND_KEYS = ['from', 'to', 'weights'] as const;
+/** At most this many bands on one slot: each covers at least one position of a take of at most 50. */
+const BANDS_MAX = 50;
+const wholePosition = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 1;
+const positionsWords = (from: number, to: number): string => (from === to ? `position ${from}` : `positions ${from} to ${to}`);
+
+/**
+ * P15 (decision D1): one slot's position bands, against the slot's `take`.
+ * Errors are suffixes of the slot's `bands` address and name the band, the
+ * member and the positions, so a refusal says which band and where. Each band
+ * is exactly `{ from, to, weights }`: `from` and `to` whole positions counted
+ * from 1 within the slot, `from` no later than `to`, and `weights` the band's
+ * own `{ dimension: weight }`, each 0 to 1, as the slot's `weights`; a band
+ * overrides only the slot's dimension weights, so any other setting is refused.
+ * Listed from position 1, each band starts where the one before it ends, and
+ * the last one ends at the take: the bands are contiguous, do not overlap and
+ * together cover positions 1 to take. An empty list covers nothing and is
+ * refused. The same function reads a published candidate and a RETAINED
+ * document (no revision written before this build carries bands).
+ */
+export function validateBands(candidate: unknown, take: number): ValidationResult<PositionBand[]> {
+  const shape = `position bands are a list of { from, to, weights }, contiguous and together covering positions 1 to ${take} (the slot's take)`;
+  if (!Array.isArray(candidate)) return { ok: false, errors: [`: ${shape}`] };
+  if (candidate.length === 0) return { ok: false, errors: [`: an empty list covers no position; ${shape}, or leave bands out`] };
+  const errors: string[] = [];
+  if (candidate.length > BANDS_MAX) errors.push(`: at most ${BANDS_MAX} bands`);
+  const bands: PositionBand[] = [];
+  // Each band's positions where they are well formed, by its place in the list.
+  const spans: Array<{ k: number; from: number; to: number }> = [];
+  let allSpans = true;
+  Array.from(candidate).forEach((raw: unknown, k) => {
+    const at = `[${k}]`;
+    if (!isRecord(raw)) { errors.push(`${at}: a band is { from, to, weights } and nothing else`); allSpans = false; return; }
+    const before = errors.length;
+    const other = Object.keys(raw).filter(key => !(BAND_KEYS as readonly string[]).includes(key));
+    if (other.length) errors.push(`${at}: a band overrides only the slot's dimension weights, so it carries { from, to, weights } and nothing else; ${other.map(key => quoted(key)).join(', ')} ${other.length === 1 ? 'is' : 'are'} not a band setting`);
+    const from = raw.from, to = raw.to;
+    let span = true;
+    if (!wholePosition(from) || from > take) { errors.push(`${at}.from: ${quoted(from)} is not a position of the slot; a band starts at a whole position from 1 to ${take} (its take), counted from 1`); span = false; }
+    if (!wholePosition(to) || to > take) { errors.push(`${at}.to: ${quoted(to)} is not a position of the slot; a band ends at a whole position from 1 to ${take} (its take), and the bands cover positions 1 to take`); span = false; }
+    else if (wholePosition(from) && to < from) { errors.push(`${at}.to: the band ends at position ${to}, before it starts at position ${from}`); span = false; }
+    if (span) {
+      // R-P76 (3): the list is in position order, each band listed after the bands of earlier positions.
+      const previous = spans[spans.length - 1];
+      if (previous && (from as number) < previous.from) errors.push(`${at}: covers ${positionsWords(from as number, to as number)} but is listed after bands[${previous.k}] (${positionsWords(previous.from, previous.to)}); the bands are listed in position order, from position 1, each starting where the one before it ends`);
+      spans.push({ k, from: from as number, to: to as number });
+    } else allSpans = false;
+    const weights: Record<string, number> = {};
+    if (!isRecord(raw.weights)) errors.push(`${at}.weights: required object of dimension → number 0..1, the weights this band's positions are ranked with in place of the slot's`);
+    else for (const [dim, w] of Object.entries(raw.weights)) {
+      if (!isNum(w) || w < 0 || w > 1) { errors.push(`${at}.weights.${dim}: number 0..1`); continue; }
+      weights[dim] = w;
+    }
+    // Keys in sorted order, as every member a replay reads is built.
+    if (errors.length === before) bands.push({ from: from as number, to: to as number, weights });
+  });
+  // The positions the bands cover, read in position order whatever the order of
+  // the list: an overlap is named wherever two bands share a position; a gap, a
+  // late first band and a short last band only when every band's positions are
+  // known, since a band refused above might have covered them.
+  const ordered = [...spans].sort((a, b) => a.from - b.from || a.k - b.k);
+  let reach: { k: number; to: number } | null = null;
+  for (const band of ordered) {
+    if (!reach) {
+      if (allSpans && band.from > 1) errors.push(`[${band.k}]: the earliest band starts at position ${band.from}, so ${positionsWords(1, band.from - 1)} ${band.from === 2 ? 'lies' : 'lie'} in no band; the bands start at position 1 and cover positions 1 to take`);
+    } else if (band.from <= reach.to) {
+      const other = spans.find(s => s.k === reach!.k)!;
+      errors.push(`[${band.k}]: ${positionsWords(band.from, band.to)} overlap bands[${other.k}] (${positionsWords(other.from, other.to)}); the bands are contiguous and do not overlap`);
+    } else if (allSpans && band.from > reach.to + 1) {
+      errors.push(`[${band.k}]: starts at position ${band.from}, so ${positionsWords(reach.to + 1, band.from - 1)} ${band.from - 1 === reach.to + 1 ? 'lies' : 'lie'} in no band (bands[${reach.k}] ends at position ${reach.to}); the bands are contiguous, with no gap, and cover positions 1 to take`);
+    }
+    if (!reach || band.to > reach.to) reach = { k: band.k, to: band.to };
+  }
+  if (allSpans && reach && reach.to < take) errors.push(`: the bands end at position ${reach.to}, short of the slot's take ${take}; together they cover positions 1 to ${take}, contiguous, so ${positionsWords(reach.to + 1, take)} ${reach.to + 1 === take ? 'lies' : 'lie'} in no band`);
+  return errors.length ? { ok: false, errors } : { ok: true, value: bands };
+}
+
 // ── P04: position pins and off-limits marks on the declared layout slot ─────
 
 /** At most this many position pins on one slot: no more than the largest take. */
@@ -930,6 +1010,16 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
       errors.push(`${at}.contextOnly: the context-only layout switch needs governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces it; this document is marked governanceVersion ${earlyMark}`);
     }
   }
+  // P15 (decision D1): the slot's position bands, read under every governance
+  // version like the seed rules (no revision written before this build carries
+  // them). Absent means none; any list, an empty one included, must be
+  // contiguous over positions 1 to take, each band carrying only its weights.
+  let bands: PositionBand[] | undefined;
+  if (s.bands !== undefined && isNum(take) && Number.isInteger(take) && take >= 1 && take <= 50) {
+    const checked = validateBands(s.bands, take);
+    if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.bands${error}`);
+    else bands = checked.value;
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
@@ -940,6 +1030,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(signalFloor !== undefined ? { signalFloor } : {}),
     ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
     ...(contextOnly ? { contextOnly } : {}),
+    ...(bands ? { bands } : {}),
   };
 }
 

@@ -5,7 +5,7 @@
 // the same input yields the same output, which is what makes replay (doc 22
 // §12.3) a proof rather than a hope.
 
-import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
+import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust, type SlotBand } from '@/reflex/contentCompose';
 import type {
   Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
 } from './types';
@@ -305,6 +305,17 @@ const refusedSlotsOf = (diagnostics: readonly { slot: string; pinIndex?: number;
  */
 type DecisionSlotSpec = ContentSlotSpec & { typeFallback?: TypeFallbackMarker };
 
+/**
+ * P15: a slot as the type-fallback marker reads it (`typeFallbackReaches`): a
+ * slot whose position bands weight the content format reads the format in
+ * those positions, whatever its own weights say. A slot without bands, or
+ * whose own weights already read the format, is passed as it is.
+ */
+function formatReadsOf(slot: SlotStrategy): SlotStrategy {
+  const band = slot.bands?.find((b) => typeof b.weights.contentType === 'number' && b.weights.contentType !== 0);
+  return band && !slot.weights.contentType ? { ...slot, weights: { ...slot.weights, contentType: band.weights.contentType! } } : slot;
+}
+
 /** The composer's view of the page's slot strategies, as the decision builds it. */
 function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins, typeFallback?: TypeFallbackMarker): DecisionSlotSpec[] {
   return slots.map((s) => ({
@@ -322,6 +333,8 @@ function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPi
     ...(s.diversity ? { diversity: s.diversity } : {}),
     // P32: the catalogue retired the type fallback, so the slot's gates match the own contentType tag alone.
     ...(typeFallback ? { typeFallback } : {}),
+    // P15: the slot's position bands, each ranking its positions with its own weights.
+    ...(s.bands?.length ? { bands: s.bands.map((band) => ({ from: band.from, to: band.to, weights: band.weights })) } : {}),
   }));
 }
 
@@ -930,9 +943,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // Her own memberships, for a rule's dampen: an interest she has shown, never one the region lent her.
   const held = new Set(i.audiences ?? []);
   const weightsOf = new Map(i.slots.map((s) => [s.slot, s.weights]));
-  /** The rules this arrival fired for this candidate, each at `rule.weight × the slot's weight for the tag's dimension`. */
-  const seedDriversFor = (p: ContentPieceLike, slot: string): SeedDriver[] => {
-    const rules = seedRules.get(slot), weights = weightsOf.get(slot);
+  /**
+   * The rules this arrival fired for this candidate, each at `rule.weight × the slot's weight for the tag's dimension`.
+   * P15 (S3F-C4): ranked in a position band, the band's weight for the dimension in place of the slot's, so a rule
+   * whose dimension the band does not weight adds nothing there; the rule's own weight is unchanged.
+   */
+  const seedDriversFor = (p: ContentPieceLike, slot: string, bandWeights?: Readonly<Record<string, number>>): SeedDriver[] => {
+    const rules = seedRules.get(slot), weights = bandWeights ?? weightsOf.get(slot);
     if (!rules || !weights) return [];
     const piece = byId.get(p.id) ?? (p as ContentPiece);
     const drivers: SeedDriver[] = [];
@@ -964,6 +981,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
    */
   const preLift = (p: ContentPieceLike, slot: string, base0: number, record: boolean): number => {
     const key = `${slot}:${p.id}`;
+    // P15 (R-P76): a recording scoring starts from no itemised term, so a
+    // candidate scored again (on a slot with position bands, once per band run)
+    // keeps only the terms of its last scoring, the one that ranked it, never a
+    // block an earlier scoring wrote. A candidate scored once is unaffected.
+    if (record) { extOf.delete(key); stageOf.delete(key); freshOf.delete(key); fatigueOf.delete(key); merchOf.delete(key); }
     let base = base0;
     if (ext && ext.status === 'ok') {
       const w = ext.weightOf(slot), s = ext.scores[p.id];
@@ -1073,12 +1095,13 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     blendedSlots.add(slot);
     return R + (1 - blend.p) * B + blend.p * Q;
   };
-  const adjustScore: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue || seedRules.size ? (p, slot, base0, rank) => {
+  const adjustScore: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue || seedRules.size ? (p, slot, base0, rank, band) => {
     const key = `${slot}:${p.id}`;
     // The seeds enter where the slot's own tag sum lands, before merchandising,
     // because a seed supplies the missing interest for a canonical tag this
     // arrival is evidence for; they are never a global floor.
-    const drivers = seedDriversFor(p, slot);
+    // P15: in a position band, scaled by the band's weights; every later term exactly as without it.
+    const drivers = seedDriversFor(p, slot, band?.weights);
     let seeded = 0;
     for (const d of drivers) seeded += d.contribution;
     const base = preLift(p, slot, base0 + seeded, true);
@@ -1118,8 +1141,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // scored, so the layout reason reads the ranking the composer actually ran.
   // Recording only: the adjusted score is returned unchanged.
   const tagOf = new Map<string, number>(), finalOf = new Map<string, number>(), scoredIn = new Map<string, Set<string>>();
-  const adjust: ScoreAdjust | undefined = adjustScore ? (p, slot, base0, rank) => {
-    const value = adjustScore(p, slot, base0, rank), key = `${slot}:${p.id}`;
+  // P15: per candidate, the band its last scoring ranked it in (null: the slot's own weights), so every term itemised
+  // from the weights reads the ones its score was computed with. Recording only.
+  const rankedBand = new Map<string, SlotBand | null>();
+  const adjust: ScoreAdjust | undefined = adjustScore ? (p, slot, base0, rank, band) => {
+    const value = band ? adjustScore(p, slot, base0, rank, band) : adjustScore(p, slot, base0, rank), key = `${slot}:${p.id}`;
+    rankedBand.set(key, band ?? null);
     tagOf.set(key, base0);
     // The composer ranks by the adjusted score where it takes it, else by the tag sum (`composeContentDetailed`).
     finalOf.set(key, Number.isFinite(value) && (value >= 0 || rank !== undefined) ? value : base0);
@@ -1152,7 +1179,21 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
-  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
+  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
+  // P15 (decision D1): the band each served module of a banded slot was ranked in, as the composer ranked it.
+  const bandOf = new Map<string, { from: number; to: number }>((rankedInBands ?? []).map((placed) => [`${placed.slot}:${placed.contentId}`, placed]));
+  /**
+   * P15: the dimension weights a candidate's scores were computed with — the
+   * band it was ranked in on a slot with position bands, else the slot's own —
+   * for every term itemised from the weights (the population priors' shares and
+   * P29's terms). A slot without bands reads its own weights exactly as before.
+   */
+  const weightsAt = (slot: string, id: string, spec: ContentSlotSpec): Readonly<Record<string, number>> => {
+    const key = `${slot}:${id}`;
+    if (rankedBand.has(key)) return rankedBand.get(key)?.weights ?? spec.weights;
+    const placed = bandOf.get(key);
+    return (placed && spec.bands?.find((band) => band.from === placed.from && band.to === placed.to)?.weights) || spec.weights;
+  };
   // P05 (decision D1): the adjacent swap. On a page's declared layout slot whose
   // exploration dial is `adjacent-swap`, a decision whose bucket (visitor, slot
   // and hour) falls under the share exchanges the modules of ONE pair of
@@ -1270,9 +1311,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // P10: below the signal floor the prior is at full weight, the shopper's own evidence not weighing it down.
     // P30: and so on a context-only layout slot that admits the region, as for a shopper with no interest.
     const lambda = below.has(d.slot) || context ? 1 : reg.lambda;
+    // P15: the weights this module was ranked with (its band's on a banded slot).
+    const weights = weightsAt(d.slot, d.contentId, spec);
     let contribution = 0;
     for (const [dim, values] of Object.entries(piece.tags)) {
-      const w = spec.weights[dim] ?? 0; if (!w) continue;
+      const w = weights[dim] ?? 0; if (!w) continue;
       for (const v of values) contribution += lambda * (reg.share[dim]?.[v] ?? 0) * w;
     }
     if (contribution <= 0) return null;
@@ -1287,9 +1330,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     if (!piece || !spec) return null;
     // Below the signal floor the prior is a context term at full weight, as the region's is (P10), and so on a context-only layout slot (P30).
     const lambda = below.has(d.slot) || contextual.has(d.slot) ? 1 : ctx.lambda;
+    // P15: the weights this module was ranked with (its band's on a banded slot).
+    const weights = weightsAt(d.slot, d.contentId, spec);
     let contribution = 0;
     for (const [dim, values] of Object.entries(piece.tags)) {
-      const w = spec.weights[dim] ?? 0; if (!w) continue;
+      const w = weights[dim] ?? 0; if (!w) continue;
       for (const v of values) contribution += lambda * (ctx.share[dim]?.[v] ?? 0) * w;
     }
     if (contribution <= 0) return null;
@@ -1391,7 +1436,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       ...(blendedSlots.size ? { blend: BLEND_RULES } : {}),
       ...(below.size ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
       ...(ruled?.length || marksWithheld ? { moduleRules: MODULE_RULES } : {}),
-      ...(retiredFallback && typeFallbackReaches(i.pieces, i.slots) ? { typeFallback: TYPE_FALLBACK_RULES } : {}),
+      ...(retiredFallback && typeFallbackReaches(i.pieces, i.slots.map(formatReadsOf)) ? { typeFallback: TYPE_FALLBACK_RULES } : {}),
       slots: i.slots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];
@@ -1497,10 +1542,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // blended slot R + (1 − shadowP) × B + shadowP × Q with Q the clamped lift
     // minus one; each module's own learned term kept for its itemisation.
     const liftAtOne = new Map<string, number>(), blendAt = new Map<string, { p: number; Q: number }>();
-    const shadowAdjust: ScoreAdjust = (p, slot, base0, rank) => {
+    // P15 (R-P34): the shadow ranks with the same bands, a seed scaled by the band's weights as the served ranking scales it.
+    const shadowAdjust: ScoreAdjust = (p, slot, base0, rank, band) => {
       const key = `${slot}:${p.id}`;
       let seeded = 0;
-      for (const d of seedDriversFor(p, slot)) seeded += d.contribution;
+      for (const d of seedDriversFor(p, slot, band?.weights)) seeded += d.contribution;
       const base = preLift(p, slot, base0 + seeded, false);
       if (!learning) return base;
       const control = learning.controlOf?.(slot, p.id) ?? null;
@@ -1804,9 +1850,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const share = (prior: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } | null, own: Readonly<Record<string, Readonly<Record<string, number>>>> | null) => {
       const shares = full ? own : prior?.share ?? null, lambda = full ? 1 : prior?.lambda ?? 0;
       if (!shares || !piece || !spec || !lambda) return 0;
+      // P15: the weights the module was ranked with (its band's on a banded slot).
+      const weights = weightsAt(slot, id, spec);
       let total = 0;
       for (const [dim, values] of Object.entries(piece.tags)) {
-        const w = spec.weights[dim] ?? 0; if (!w) continue;
+        const w = weights[dim] ?? 0; if (!w) continue;
         for (const v of values) total += lambda * (shares[dim]?.[v] ?? 0) * w;
       }
       return total;
@@ -1880,6 +1928,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(!pinned && orderedSlots.has(d.slot) && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
         // P28: what the layout blend computed, keys sorted (a pinned position was never ranked and carries none).
         ...(!pinned && blendTerms.has(key) ? { blend: blendRecord(blendTerms.get(key)!) } : {}),
+        // P15: the position band this module was ranked in, keys sorted (a pinned or held position, and one a configured order set, carry none).
+        ...(!pinned && bandOf.has(key) ? { band: { from: bandOf.get(key)!.from, to: bandOf.get(key)!.to } } : {}),
         // P10: the slot was decided on context alone: the floor in force and the shopper's count of signals, keys sorted.
         ...(below.has(d.slot) ? { signalFloor: { floor: below.get(d.slot)!, signals: signalCount } } : {}),
         // P04: the rule that placed this module and the position it set, keys sorted. An off-limits

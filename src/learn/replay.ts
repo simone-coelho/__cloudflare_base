@@ -111,6 +111,9 @@ export function compareRecords(served: DecisionRecord, replayed: DecisionRecord)
   eq('explain.baselineOrder', served.explain.baselineOrder, replayed.explain.baselineOrder);
   eq('explain.shadowOrder', served.explain.shadowOrder, replayed.explain.shadowOrder);
   eq('explain.shadowTerms', served.explain.shadowTerms, replayed.explain.shadowTerms);
+  // P15: the position band a module was ranked in, by value (keys sorted); absent on both for a record of a slot
+  // without bands. No marker: the bands are a member of the slots revision the record already names.
+  eq('explain.band', served.explain.band, replayed.explain.band);
   return diff;
 }
 

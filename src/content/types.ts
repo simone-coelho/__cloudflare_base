@@ -273,7 +273,37 @@ export interface SlotStrategy {
    * meaning: a switched slot is never held below a floor, its switch decides it.
    */
   contextOnly?: ContextOnlySwitch;
+  /**
+   * P15 (decision D1): position bands. Positions 1 to 2 can run one strategy
+   * and positions 3 to 5 another inside this one slot: each band covers the
+   * positions `from` to `to`, counted from 1 within the slot, and carries
+   * nothing but its own dimension `weights`, which replace the slot's
+   * `weights` wherever the composition reads them for a position of the band
+   * (the tag sum and the scale of a seed rule's contribution). Every other rule
+   * of the slot applies unchanged in every band. The bands are contiguous, do
+   * not overlap and together cover positions 1 to `take`; publication refuses
+   * anything else by name (`pages.{page}[i].bands`). A pinned position stays
+   * the pin's, a configured order (P01) is served exactly, exploration acts on
+   * the banded ranking, and the result is one de-duplicated list. Absent: the
+   * slot decides and replays exactly as before.
+   */
+  bands?: PositionBand[];
 }
+
+/**
+ * P15 (decision D1): one position band of a slot: the positions it covers,
+ * counted from 1 within the slot, and the dimension weights its positions are
+ * ranked with in place of the slot's own (`{ dimension: weight }`, each 0 to
+ * 1, as the slot's `weights`). Nothing else: a band sets no take, pin, rule or
+ * dial of its own.
+ */
+export interface PositionBand { from: number; to: number; weights: Record<string, number> }
+
+/**
+ * P15: the band a ranked position was ranked in, as its record and its receipt
+ * name it: the positions the band covers, counted from 1, keys sorted.
+ */
+export interface BandSpan { from: number; to: number }
 
 /**
  * P30: the context-only layout switch as published on the declared layout slot:
@@ -1067,6 +1097,15 @@ export interface DecisionRecord {
      * R + (1 − p) × B + p × Q is `score_final`. Absent on every other record.
      */
     blend?: LayoutBlendTerms;
+    /**
+     * P15 (decision D1): this position's slot carries position bands and this
+     * module was ranked in one of them: the positions that band covers, counted
+     * from 1 within the slot, keys sorted. Its scores were computed with that
+     * band's weights in place of the slot's. Absent on a pinned or held position,
+     * on a position a configured order set, and on every record of a slot
+     * without bands; compared by value in replay.
+     */
+    band?: BandSpan;
     /**
      * P10 (decision D2): this position's slot was decided on context alone
      * because the shopper was below its signal floor: the floor in force (the

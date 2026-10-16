@@ -124,6 +124,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `explain.shortTake` | The pinned slot this position belongs to served what it could and still fell short of its `take`: `take`, `served`, `empty` and a sentence. Present on every record that slot wrote, pinned position or ranked, so the receipt says it; a slot whose pin was REFUSED writes no record at all, and the operator's per-slot `governance` counters on `GET /v1/{tenant}/learn/slots?evidence=1` are that occurrence's only home |
 | `explain.configuredOrder` | This position was set by the layout slot's configured per-context order: `{ context: { channel, visitBuckets }, modules }` (with `device` in the context when the order names one, `{ channel, device, visitBuckets }`), the context the order was published for and the whole order as published, keys sorted. Present only on the positions the order set — a pinned position keeps authority `pin` and carries none — and compared by value in replay; the record's own `position` is the position it was served at, so a listed module that was not eligible at decision time shows as a later module served one place earlier. The shopper's receipt carries the same block and says it in words. On a slot that opts into the layout blend the order supplied the rank base `R` and the blend ranked its listed modules, and the block is carried beside `explain.blend` An off-limits module held at its place in the order (P04) carries it too, beside `explain.moduleRule` |
 | `explain.blend` | The layout blend ranked this position: `{ B, Q, R, p }`, keys sorted, defined in [the blend block](#the-blend-block), so that `R + (1 − p) × B + p × Q` is `score_final`. Present on every position an opted-in layout slot's blend ranked, absent on a pinned position and on every other slot, and compared by value in replay; the shopper's receipt carries the same block as `blend` |
+| `explain.band` | The record names the band this module was ranked in on a slot with position bands: `{ from, to }`, keys sorted, the positions that band covers, counted from 1 within the slot, its scores (`score_base`, `score_final`, the drivers and the seed rules' contributions) computed with that band's weights. Absent on a pinned or held position, on a position a configured order set and on every record of a slot without bands, and compared by value in replay; the shopper's receipt carries the same block as `band` ([position bands](#position-bands)) |
 | `explain.signalFloor` | This position's slot was decided on context alone because the shopper was below its signal floor: `{ floor, signals }`, keys sorted, the floor in force (the slot's own, else the tenant's; a whole number or `never`) and the shopper's count of signals. Present on every record of such a slot and on no other, and compared by value in replay; the shopper's receipt carries the same block and says it in words ([the signal floor](#the-signal-floor)) |
 | `explain.moduleRule` | A position pin or an off-limits mark of the layout slot placed this module: `{ position, rule }`, keys sorted, `rule` `pinned` (the module pinned at a position, served there) or `off_limits` (the off-limits module held at its baseline position), and `position` the position the rule set, counted from 1. Present only on such a record, whose authority is `pin`, and compared by value in replay; the shopper's receipt carries the same block as `moduleRule` and says the rule and the position in words ([position pins and off-limits modules](#position-pins-and-off-limits-modules)) |
 | `explain.layoutReason` | The layout reason of the page's declared layout slot: `{ cause, slot, status }` (with `n` and `nMin` for the cause `no_level_reached_nmin`) when the served order is unchanged against the slot's baseline, or `{ moves, slot, status }` when it changed, each move `{ from, module, term, to }`, with `withheld: [{ cause, module }]` when a module the baseline would have served was withheld before ranking (`cause` `nothing_to_show` or `eligibility_rule`); keys sorted. The same value on every record of the slot and on the decision set, present only on a declared layout slot's records, and compared by value in replay; the shopper's receipt carries it as `layoutReason` and says it in words ([the layout reason](#the-layout-reason)) |
@@ -607,7 +608,7 @@ Supplied proposals remain explicitly unverified. The separately configured `/gen
 
 ## The slot document
 
-`{ version, pages: { [page]: [ { slot, take, weights, pinnedPieceId?, merchandising?, stage?, freshness?, fatigue?, diversity? } ] } }`.
+`{ version, pages: { [page]: [ { slot, take, weights, pinnedPieceId?, merchandising?, stage?, freshness?, fatigue?, diversity?, bands? } ] } }`.
 `take` is how many pieces the slot shows; `weights` is `{ dimension: weight }`, each 0 to 1, the slot's
 view of which dimensions matter; `pinnedPieceId` outranks the engine; `merchandising` is `{ season,
 promotion, margin, maxBoost, minBoost }`, the weight of each multiplier (−1 to 1) and the clamp on their
@@ -618,6 +619,55 @@ a bonus (0 to 1) for one made for the shopper's; `freshness` is `{ weight, halfL
 cap }`, a penalty of `weight × min(served, cap) / cap` for a piece this shopper was served inside the
 window; `diversity` is `{ dimension, max }`, at most `max` pieces sharing one value of the dimension in
 the slot, the piece over the limit yielding to the next and served only when nothing else is eligible.
+
+### Position bands
+
+```json
+{ "slot": "pdp-modules", "take": 5, "weights": { "line": 1, "category": 0.5, "occasion": 0.5 },
+  "bands": [
+    { "from": 1, "to": 2, "weights": { "category": 1, "occasion": 0.25 } },
+    { "from": 3, "to": 5, "weights": { "line": 1 } }
+  ] }
+```
+
+One slot can run one strategy on some of its positions and another on the rest: a slot may carry position
+bands, `bands: [{ from, to, weights }]`, where `from` and `to` are positions counted from 1 within the slot
+and `weights` is the band's own `{ dimension: weight }`, each 0 to 1, as the slot's `weights`. A band
+overrides only the slot's dimension weights and carries nothing else: no take, pin, exclusion, rule or dial
+of its own. The bands are contiguous, do not overlap and together cover positions 1 to `take`, listed from
+position 1, each starting where the one before it ends. Publication refuses anything else naming
+`pages.{page}[i].bands` (an overlap, a gap, a first band that does not start at 1, a last band that ends
+before or beyond the take, an empty list, or a band with any member but `from`, `to` and `weights`), and
+reads the member under every governance version.
+
+In a band the band's weights replace the slot's wherever the slot's weights are read for a position of
+the band: in the tag sum Σ a·w (the shopper's interests and the population priors blended into them) and
+as the slot weight a seed rule's contribution is scaled by, `rule.weight × the band's weight for the tag's
+dimension`, so a seed rule on a dimension the band does not weight contributes nothing in that band. Seed
+rules are still checked against the slot's own `weights` at publication, never against a band's. Every
+other term — the seed rule's own weight, their model, the journey stage, freshness, fatigue, merchandising
+and the learned lift — is computed exactly as without bands, in the same order, and a record explains only
+the terms of the scoring that ranked its position: a merchandising block, which multiplies a base above
+0, only where the band that ranked the position gave the module such a base. Positions are filled in
+order: the pinned prefix (and, on a declared layout slot, a position pin or a held off-limits module)
+keeps its position, and every other position is ranked from the modules still eligible — after the slot's
+exclusions, eligibility, the page's reservations and every module already served on the page — with the
+weights of the band that covers it, so the bands give one de-duplicated result, with no module twice in
+the slot or on the page. The diversity rule is applied position by position: a module that would put a
+value over the limit yields, the next module still eligible under the weights of the band covering the
+position takes it, and the module that yielded stays eligible for the later positions, ranked there under
+their bands' weights (relaxed only when every module left is over the limit). An exploration pick is
+applied to the banded ranking (each position ranked with its band's weights, before the diversity rule)
+and the adjacent swap to the served result, never re-ranked by the bands: on a decision an exploration
+pick moved, the diversity rule acts on that order as on a slot without bands. Under the layout blend the
+bands act on the behaviour term `B` only, a configured order served exactly is served as published and its
+positions are ranked without the bands, and the shadow order ranks with the same bands.
+
+The record of each position a band ranked carries `explain.band: { from, to }`, keys sorted, naming the
+band it was ranked in, and its receipt carries the same block as `band`; a pinned or held position, a
+position a configured order set and every record of a slot without bands carry none. A banded decision
+replays exactly from the slots revision its record names, `explain.band` compared by value, with no new
+replay marker; a slot without bands decides, records and replays exactly as before.
 
 ### The layout slot
 
