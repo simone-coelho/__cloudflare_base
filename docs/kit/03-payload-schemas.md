@@ -1105,7 +1105,7 @@ what it changes.
 | `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| adjacent-swap \| off, share, floor }`; new writes reject Thompson, retained settings are inactive; `adjacent-swap`, on a page's declared layout slot only, swaps one pair of adjacent positions on `share` of the slot's decisions ([adjacent swaps](#adjacent-swaps-and-position-effects)) | off |
 | `slots.{slot}.positionNormalization` | `true` or `false`, on a page's declared layout slot only, off by default: `true` divides the credit of an engagement at a position by that position's effect from `positionEffects`, live and in the hourly recomputation alike ([adjacent swaps](#adjacent-swaps-and-position-effects)) | absent (off) |
 | `slots.{slot}.attribution` | The slot's own attribution policy, absent by default: absent, the slot is credited under the brand-wide `policy` exactly as before; `module-tied`, the only per-slot policy, credits a decision of the slot only for an outcome that carries that decision's `decisionId` or the module's identifier as `contentId`, so a buy-box conversion, which names no module, credits no decision of the slot ([where a page conversion lands](#where-a-page-conversion-lands)). Publication refuses any other value with an error naming `attribution` and writes no revision; a stored document naming another value still reads, with the member dropped. When a slot names it, the attribution record the visitor's ring derives when it credits an outcome (its credit receipt) itemises the policy and the decisions it credited | absent (the brand-wide policy) |
-| `slots.{slot}.conversions` | The slot's conversion table, `{ <reward>: <value> }`: each reward it names converted into the slot's own currency at a finite value above zero. With it every record of the slot names its module's success event and the value applied, an outcome of a module's declared success event credits its decision the table's value for it, and a module without a declaration is credited for the slot's reward at the table's value for it, each times the objective's weight and kept in the counter of the slot's reward ([success events and conversion tables](#success-events-and-conversion-tables)). Publication refuses anything but an object naming at least one reward of the list, each with a finite value above zero, with an error naming `conversions`; a stored document's refused table reads as absent | absent (the slot's reward and objective) |
+| `slots.{slot}.conversions` | The slot's conversion table, `{ <reward>: <value> }`: each reward it names converted into the slot's own currency at a finite value above zero. With it every record of the slot names its module's success event and the value applied, an outcome of a module's declared success event credits its decision the table's value for it, and a module without a declaration is credited for the slot's reward at the table's value for it, each times the objective's weight and kept in the counter of the slot's reward ([success events and conversion tables](#success-events-and-conversion-tables)). Publication refuses anything but an object naming at least one reward of the list, each with a finite value above zero, with an error naming `conversions`; a stored document's refused table reads as absent. A table that does not name the slot's own reward is published as written, and the success answer of the PUT or the validate door carries the `conversions_omit_slot_reward` warning in its `diagnostics` advisory | absent (the slot's reward and objective) |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
 | `slots.{slot}.blend` | `{ p, shadowP }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. `shadowP`, from 0 to 1 and 0.1 when the dial names none, is the p the slot's shadow order is ranked at ([the baseline and the shadow](#the-baseline-and-the-shadow)); it changes nothing served. Publication refuses a `p` outside 0 to 1, a `shadowP` outside 0 to 1 with an error naming `shadowP`, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the members exactly as published | absent (no blend); `p` 0 and `shadowP` 0.1 when the dial names none |
@@ -1225,6 +1225,37 @@ changing or removing a table starts no new accumulation generation, so earlier c
 they were credited with; the replay does not compare `explain.successEvent`, and a replayed record omits
 it, which changes no score; the raw-day report built from the ledger counts a declared success event only
 where it is the slot's own reward, unweighted by the table.
+
+A table that does not name the slot's own reward, `{ "add_to_bag": 5 }` alone on a slot whose reward is
+`click`, is still published, and the publication tells the operator: the success answers of `PUT
+/content/learn` and `POST /content/learn/validate` carry, beside their other members, the advisory
+`diagnostics` member of schema `learn-conversion-diagnostics/v1`, in the envelope of the catalogue's and
+the pin channel's advisories, with one `conversions_omit_slot_reward` warning per such slot naming the
+`slot`, the omitted `reward` and the consequence `undeclared_pieces_earn_nothing`: every module on that
+slot which declares no success event earns nothing, because its record names the slot's reward with
+`value: null`.
+
+```json
+{ "diagnostics": { "advisory": true, "omittedWarningCount": 0, "schema": "learn-conversion-diagnostics/v1", "status": "available",
+    "warningCount": 1, "warnings": [ { "code": "conversions_omit_slot_reward", "consequence": "undeclared_pieces_earn_nothing",
+      "reward": "click", "slot": "home-stories" } ] } }
+```
+
+The member and each warning are written with their keys sorted. The member is present only when at least
+one table omits its slot's reward, and only on those two success answers: a document without a table, or
+whose every table names its slot's reward, is answered byte for byte as before, and no read carries the
+member (the current `GET /content/learn`, its history and revisions, the console's reads and the lift
+reads), so a retained document stored with such a table is told only when it is next published or
+validated. The warning refuses nothing and changes nothing: the document is published or validated with
+the same status and members, and the credits, records, receipts and replays are the ones described above.
+A slot's reward is its `reward` dial, `click` when the dial is absent, and a table names it only by that
+key, `custom` included. Warnings are listed one per slot in slot-name order, the order the published
+document keeps its slots in, so the validate door lists them exactly as the PUT of the same document will;
+at most 50 are listed, `warningCount` counts them all and `omittedWarningCount` is the rest. A table on a
+slot no page carries is warned like any other, since the learn publication does not read the slots
+document and the table omits the slot's reward the moment a page carries the slot. A rollback, and a
+learn document published as a `publicationChanges` member of another document's request, carry no
+advisory.
 
 ### The context vocabulary
 
