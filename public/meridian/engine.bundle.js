@@ -1310,7 +1310,7 @@ var HISTORICAL_PINS = /* @__PURE__ */ Symbol("historical-pins");
 var HISTORICAL_GOVERNANCE = /* @__PURE__ */ Symbol("historical-slot-governance");
 var HISTORICAL_GOVERNANCE_V1 = /* @__PURE__ */ Symbol("historical-slot-governance-v1");
 var round3 = (n) => Math.round(n * 1e3) / 1e3;
-function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, adjust, explore, historicalPins, historicalGovernance, rankingSlots) {
+function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, adjust, explore, historicalPins, historicalGovernance, rankingSlots, settle) {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? "live") === "live");
   const rank = new Map(pieces.map((p, i) => [p.id, i]));
   const used = /* @__PURE__ */ new Set();
@@ -1451,10 +1451,10 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
   const placements = [];
   const orderBaseline = /* @__PURE__ */ new Set();
   const bandPlacements = [];
-  for (const slot of slots) {
-    if (offLimits.has(slot)) continue;
+  const decideSlot = (slot) => {
+    if (offLimits.has(slot)) return;
     const prefix = prefixes.get(slot);
-    if (refusedPrefixes.has(slot)) continue;
+    if (refusedPrefixes.has(slot)) return;
     if (prefix) for (const p of prefix.pieces) {
       used.add(p.id);
       out.push({
@@ -1484,10 +1484,10 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
           explain: { drivers: [], note: "non-personalizable slot \u2014 tenant config; ranking never ran" }
         });
       }
-      continue;
+      return;
     }
     const remaining = prefix ? prefix.take - prefix.ids.length : slot.take;
-    if (prefix && remaining <= 0 || rankingSlots && !rankingSlots.has(slot.slot)) continue;
+    if (prefix && remaining <= 0 || rankingSlots && !rankingSlots.has(slot.slot)) return;
     const excluded = forbidden.get(slot);
     const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !excluded?.has(p) && !slot.withheld?.has(p.id) && !used.has(p.id) && !reserved2.has(p.id) && !prefixOwnedPieces.has(p));
     const pinsAt = positioned.get(slot) ?? /* @__PURE__ */ new Map();
@@ -1712,7 +1712,46 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       if (pinsAt.size || marksDecided) ruled.add(slot);
       if (marksDecided && slot.order) orderBaseline.add(slot);
     }
+  };
+  const settled = (slot, start, orderedBefore) => {
+    if (!settle) return;
+    const pair = settle(slot.slot, out.slice(start), ordered.length > orderedBefore);
+    if (!pair) return;
+    const upperAt = start + pair[0] - 1, lowerAt = start + pair[1] - 1;
+    if (pair[0] < 1 || pair[1] < 1 || upperAt === lowerAt || upperAt >= out.length || lowerAt >= out.length) return;
+    const upper = out[upperAt], lower = out[lowerAt];
+    [upper.order, lower.order] = [lower.order, upper.order];
+    out[upperAt] = lower;
+    out[lowerAt] = upper;
+  };
+  const nesting = innerSlotsOf(slots);
+  const innerOf = /* @__PURE__ */ new Map();
+  for (const spec of slots) {
+    const placed = nesting.get(spec.slot);
+    if (!placed) continue;
+    const byModule = innerOf.get(placed.layout) ?? /* @__PURE__ */ new Map();
+    if (!byModule.has(placed.module)) byModule.set(placed.module, spec);
+    innerOf.set(placed.layout, byModule);
   }
+  const entered = /* @__PURE__ */ new Set();
+  for (const slot of slots) {
+    if (nesting.has(slot.slot)) continue;
+    const start = out.length, orderedBefore = ordered.length;
+    decideSlot(slot);
+    settled(slot, start, orderedBefore);
+    const byModule = innerOf.get(slot.slot);
+    if (!byModule) continue;
+    for (const module of out.slice(start).map((d) => d.contentId)) {
+      const inner = byModule.get(module);
+      if (!inner || entered.has(inner)) continue;
+      entered.add(inner);
+      const from = out.length, innerOrdered = ordered.length;
+      decideSlot(inner);
+      settled(inner, from, innerOrdered);
+      for (const d of out.slice(from)) d.within = { module, slot: slot.slot };
+    }
+  }
+  const undecided = nesting.size ? slots.filter((slot) => nesting.has(slot.slot) && !entered.has(slot)).map((slot) => slot.slot) : [];
   const pageOrder = (set) => slots.filter((slot) => set.has(slot)).map((slot) => slot.slot);
   return {
     decisions: out,
@@ -1722,8 +1761,23 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     ...placements.length ? { moduleRules: placements } : {},
     ...ruled.size ? { ruled: pageOrder(ruled) } : {},
     ...orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {},
-    ...bandPlacements.length ? { bands: bandPlacements } : {}
+    ...bandPlacements.length ? { bands: bandPlacements } : {},
+    ...undecided.length ? { undecided } : {}
   };
+}
+function innerSlotsOf(slots) {
+  const out = /* @__PURE__ */ new Map();
+  const carries = (s) => s.inner !== null && typeof s.inner === "object";
+  if (!slots.some(carries)) return out;
+  const names = new Set(slots.map((s) => s.slot)), carriers = new Set(slots.filter(carries).map((s) => s.slot));
+  for (const s of slots) {
+    if (!carries(s)) continue;
+    for (const [module, name] of Object.entries(s.inner)) {
+      if (!module || typeof name !== "string" || name === s.slot || !names.has(name) || carriers.has(name) || out.has(name)) continue;
+      out.set(name, { layout: s.slot, module });
+    }
+  }
+  return out;
 }
 function composeContent(pieces, affinity, slots) {
   return composeContentDetailed(pieces, affinity, slots).decisions;
