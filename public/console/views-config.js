@@ -57,6 +57,89 @@
       h('div', {}, input, o.unit ? h('div', { class: 'unit' }, o.unit) : null));
   }
 
+  /** P14: the product-type weights card of the interests screen. */
+  function productTypeCard(D, B) {
+    const P = D.productTypeWeights && typeof D.productTypeWeights === 'object' ? D.productTypeWeights : null;
+    const BP = B.productTypeWeights && typeof B.productTypeWeights === 'object' ? B.productTypeWeights : null;
+    const spec = P ? D.dimensions.find((d) => d.key === P.dimension) : null;
+    const ownOf = (a) => (a in D.weights && Number.isFinite(D.weights[a]) ? D.weights[a] : Number.isFinite(cfg.effective[a]) ? cfg.effective[a] : 0);
+    const labelOf = (a) => { const g = GROUPS.find((x) => x.keys.includes(a)); return g ? `${g.label} (${a})` : a; };
+    const body = [];
+
+    const dimension = h('select', { class: 'small', 'data-focus-key': 'ptw-dimension', disabled: !C.canEdit() || null },
+      h('option', { value: '', selected: P ? null : true }, 'Choose an interest'),
+      ...D.dimensions.filter((d) => !d.derive).map((d) => h('option', { value: d.key, selected: P && P.dimension === d.key ? true : null }, `${d.key}, read from the event's ${d.source}`)));
+    dimension.addEventListener('change', () => {
+      if (!dimension.value) return;
+      D.productTypeWeights = { dimension: dimension.value, weights: P && P.weights ? P.weights : {} };
+      scheduleCheck();
+    });
+    body.push(h('div', { class: 'dial' },
+      h('div', {},
+        h('div', { class: 'name' }, 'The product type is'),
+        h('div', { class: 'help' }, P
+          ? `The value an event carries on the ${P.dimension} interest${spec ? `, read from the event's ${spec.source}` : ''}. An event with another value, or with none, counts the action's own points.`
+          : 'Not set: every action counts its own points, whatever the product. Choose the interest whose value names the product type, then add a weight below.'),
+        BP && P && BP.dimension !== P.dimension ? h('div', { class: 'derived' }, `Was ${BP.dimension}. The weights below now apply to values of ${P.dimension}.`) : null),
+      dimension));
+
+    if (P && P.weights && typeof P.weights === 'object') {
+      for (const a of Object.keys(P.weights)) {
+        const table = P.weights[a] && typeof P.weights[a] === 'object' ? P.weights[a] : {};
+        for (const v of Object.keys(table)) {
+          const w = table[v], was = BP && BP.weights && BP.weights[a] ? BP.weights[a][v] : undefined;
+          body.push(trow({
+            name: `${labelOf(a)}, product type ${v}`,
+            help: `What one such action on a product whose ${P.dimension} is ${v} adds to each interest it touches, in place of the action's own ${dec(ownOf(a))} points.`,
+            derived: w === undefined ? `Cleared: saving removes this weight, and the action's own ${dec(ownOf(a))} points apply.` : undefined,
+            raw: `${a} on ${P.dimension} = ${v}`,
+            value: w, changed: w !== was, unit: 'points', key: ptwKey(a, v), min: 0, max: 1000,
+            onChange: (nv) => { table[v] = nv; P.weights[a] = table; scheduleCheck(); },
+          }));
+        }
+      }
+    }
+
+    // Add a weight for an action on one product type.
+    const actions = [...new Set([...Object.keys(D.weights), ...cfg.inherited, ...Object.keys(cfg.effective)])].filter((a) => !NO_PRODUCT_TYPE.has(a));
+    const action = h('select', { class: 'small', 'data-focus-key': 'ptw-add:action', disabled: !C.canEdit() || null },
+      h('option', { value: '', selected: ptwAdd.action ? null : true }, 'Choose an action'),
+      ...actions.map((a) => h('option', { value: a, selected: ptwAdd.action === a ? true : null }, labelOf(a))));
+    action.addEventListener('change', () => { ptwAdd.action = action.value; });
+    const value = h('input', { class: 'num', 'data-focus-key': 'ptw-add:value', type: 'text', placeholder: 'product type', disabled: !C.canEdit() || null });
+    value.value = ptwAdd.value;
+    value.addEventListener('input', () => { ptwAdd.value = value.value; });
+    const weight = h('input', { class: 'num', 'data-focus-key': 'ptw-add:weight', type: 'number', step: 'any', min: 0, max: 1000, placeholder: 'points', disabled: !C.canEdit() || null });
+    weight.value = ptwAdd.weight;
+    weight.addEventListener('input', () => { ptwAdd.weight = weight.value; });
+    const add = h('button', { class: 'small', type: 'button', 'data-focus-key': 'ptw-add', disabled: !C.canEdit() || null }, 'Add');
+    add.addEventListener('click', () => {
+      const a = ptwAdd.action, v = ptwAdd.value.trim(), n = ptwAdd.weight === '' ? NaN : Number(ptwAdd.weight);
+      const dim = P ? P.dimension : dimension.value;
+      if (!dim) ptwAdd.note = 'Choose the interest that names the product type first.';
+      else if (!a || !v || !Number.isFinite(n)) ptwAdd.note = 'Choose an action, name a product type and give it a number of points.';
+      else {
+        const block = P || { dimension: dim, weights: {} };
+        block.weights[a] = { ...(block.weights[a] || {}), [v]: n };
+        D.productTypeWeights = block;
+        ptwAdd.action = ''; ptwAdd.value = ''; ptwAdd.weight = ''; ptwAdd.note = '';
+        scheduleCheck();
+        return;
+      }
+      C.render();
+    });
+    body.push(h('div', { class: 'dial' },
+      h('div', {},
+        h('div', { class: 'name' }, 'Add a weight for a product type'),
+        h('div', { class: 'help' }, 'Pick the action, type the product type exactly as events carry it, and the points it should add instead of the action\u2019s own.'),
+        ptwAdd.note ? h('div', { class: 'derived' }, ptwAdd.note) : null),
+      h('div', {}, action, value, weight, add)));
+
+    return card('What an action counts for, by product type',
+      'An action can count for more or less depending on the type of product it was on. A weight here replaces the action\u2019s own points for that product type, for the shopper\u2019s own interests only: the regional trend and what counts as a signal keep the action\u2019s own points. Each interest update itemises the weight it applied. In effect without a deployment.',
+      ...body);
+  }
+
   // ═══════════════════════════════════════════════════ Interests (tuning) ════
   // The engine keys actions by raw event name and several names mean the same
   // shopper behaviour. A merchandiser tunes BEHAVIOURS: one row each, with the
@@ -74,12 +157,45 @@
   ];
   const INHERITED = 'Inherited from the shipped defaults: this document does not mention it. Save any value to make it the document’s own; 0 switches the action off.';
 
-  const cfg = { base: null, draft: null, revision: 0, source: 'loading', inherited: [], warnings: [], errors: [], checking: false, timer: null };
+  const cfg = { base: null, draft: null, revision: 0, source: 'loading', inherited: [], warnings: [], errors: [], checking: false, timer: null, effective: {} };
   const groupValue = (doc, g) => {
     const vals = g.keys.filter((k) => k in doc.weights).map((k) => doc.weights[k]);
     if (!vals.length) return null;
     return vals.every((v) => v === vals[0]) ? vals[0] : null;
   };
+
+  // P14: an action's weight per product type (the reflex document's
+  // productTypeWeights). The product type is the value an event carries on one
+  // interest of the registry; a weight set here replaces the action's own
+  // points for that product type, for the shopper's own interests only. The
+  // block is saved whole with the rest of the patch: a cleared weight is left
+  // out of it, so saving removes that weight.
+  const NO_PRODUCT_TYPE = new Set(['tick', 'content_viewable']);
+  const ptwAdd = { action: '', value: '', weight: '', note: '' };
+  /** A focus key the repaint can find again (a value may carry a quote or a backslash). */
+  const ptwKey = (a, v) => `ptw:${/["\\]/.test(a) ? encodeURIComponent(a) : a}:${/["\\]/.test(v) ? encodeURIComponent(v) : v}`;
+  /** The block as it should stand: cleared weights, and an action left with none, dropped. */
+  function ptwBlock(block) {
+    if (!block || typeof block !== 'object') return undefined;
+    const weights = {};
+    const source = block.weights && typeof block.weights === 'object' ? block.weights : {};
+    for (const a of Object.keys(source)) {
+      const t = {};
+      for (const v of Object.keys(source[a] || {})) if (source[a][v] !== undefined) t[v] = source[a][v];
+      if (Object.keys(t).length) weights[a] = t;
+    }
+    return { dimension: block.dimension, weights };
+  }
+  function ptwChanges() {
+    if (!cfg.base || !cfg.draft) return 0;
+    const d = ptwBlock(cfg.draft.productTypeWeights), b = ptwBlock(cfg.base.productTypeWeights);
+    if (JSON.stringify(d) === JSON.stringify(b)) return 0;
+    const pairs = (x) => new Map(Object.entries((x && x.weights) || {}).flatMap(([a, t]) => Object.entries(t).map(([v, w]) => [`${a}\u0000${v}`, w])));
+    const dp = pairs(d), bp = pairs(b);
+    let n = (d && d.dimension) !== (b && b.dimension) ? 1 : 0;
+    for (const k of new Set([...dp.keys(), ...bp.keys()])) if (dp.get(k) !== bp.get(k)) n += 1;
+    return Math.max(n, 1);
+  }
 
   function buildPatch() {
     if (!cfg.base || !cfg.draft) return {};
@@ -96,12 +212,13 @@
       if (Object.keys(changed).length) dims.push({ key: d.key, ...changed });
     });
     if (dims.length) p.dimensions = dims;
+    if (ptwChanges() && cfg.draft.productTypeWeights) p.productTypeWeights = ptwBlock(cfg.draft.productTypeWeights);
     return p;
   }
   const patchCount = () => {
     const p = buildPatch();
-    return Object.keys(p).filter((k) => k !== 'weights' && k !== 'dimensions').length
-      + Object.keys(p.weights || {}).length + (p.dimensions || []).length;
+    return Object.keys(p).filter((k) => k !== 'weights' && k !== 'dimensions' && k !== 'productTypeWeights').length
+      + Object.keys(p.weights || {}).length + (p.dimensions || []).length + (p.productTypeWeights ? ptwChanges() : 0);
   };
 
   function scheduleCheck() {
@@ -125,6 +242,7 @@
     cfg.revision = data.revision || 0;
     cfg.source = data.source || 'compiled-default';
     cfg.inherited = data.inherited || [];
+    cfg.effective = (data.config && data.config.weights) || {};
     cfg.warnings = data.warnings || [];
     cfg.errors = [];
   }
@@ -178,6 +296,9 @@
       }
       host.append(card('What each shopper action counts for',
         'Every action adds points to the interests it touches. These are the points. They are relative to each other, so what matters is the ratio, not the size.', ...rows));
+
+      // 1b. What an action counts for, by product type (P14).
+      host.append(productTypeCard(D, B));
 
       // 2. Pace.
       const half = humanMs(halfLifeMs(D.tauMs));
@@ -477,10 +598,18 @@
       // the same call that draws it and its label is written once.
       const n = (label, help, value, onChange, key, opts, derived) => trow({ name: named((opts || {}).path, label), help, value, changed: false, key, unit: (opts || {}).unit, min: (opts || {}).min, max: (opts || {}).max, step: (opts || {}).step, derived, onChange });
 
+      // P04: the page's layout slot also pins a module at any position, so its
+      // sentence states that rule as it is served; every other slot keeps its own.
+      const layoutPins = st.layout === true;
+      const atPositions = layoutPins && Array.isArray(st.positionPins) && st.positionPins.length ? st.positionPins : null;
       host.append(card('What this slot shows',
-        st.offLimits ? 'Off-limits: no piece is selected; pin and ranking settings are dormant.' : 'Pins occupy the first positions in exact order. If any required prefix pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.',
+        st.offLimits ? 'Off-limits: no piece is selected; pin and ranking settings are dormant.'
+          : layoutPins ? 'A module pinned at a position is served at exactly that position, any position from 1 to the take, on every arm, and is never ranked or explored; the other positions are ranked around it. Prefix pins occupy the first positions in exact order. If any pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.'
+            : 'Pins occupy the first positions in exact order. If any required prefix pin fails, the whole slot is refused: no shifted positions or arbitrary replacement.',
         n('Pieces shown at once', 'Total capacity, including pinned first positions and the ranked remainder.', st.take, (v) => { st.take = v ?? 1; ruleCheck(); }, 'take', { min: 1, step: 1, unit: 'pieces', path: 'take' }),
-        h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned'), h('span', { class: 'v' }, st.offLimits ? `${JSON.stringify(st.pinnedPieceIds ?? st.pinnedPieceId ?? [])}; dormant while off-limits` : st.pinnedPieceIds ? `${JSON.stringify(st.pinnedPieceIds)} first; ${Math.max(0, st.take - st.pinnedPieceIds.length)} ranked positions` : st.pinnedPieceId ? `${st.pinnedPieceId}: the engine does not rank this slot at all` : 'nothing pinned; the engine ranks the slot'))));
+        h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned'), h('span', { class: 'v' }, st.offLimits ? `${JSON.stringify(st.pinnedPieceIds ?? st.pinnedPieceId ?? [])}; dormant while off-limits` : st.pinnedPieceIds ? `${JSON.stringify(st.pinnedPieceIds)} first; ${Math.max(0, st.take - st.pinnedPieceIds.length)} ranked positions` : st.pinnedPieceId ? `${st.pinnedPieceId}: the engine does not rank this slot at all` : atPositions ? 'no prefix pins; the modules below are pinned at their positions and the engine ranks the rest' : 'nothing pinned; the engine ranks the slot')),
+        // P04: the layout slot's modules pinned at a position, as authored.
+        atPositions ? h('div', { class: 'kv' }, h('span', { class: 'k' }, 'Pinned at a position'), h('span', { class: 'v' }, JSON.stringify(atPositions))) : null));
 
       const scope = rules.scope, draft = rules.draft;
       const currentEditor = () => scope === S.scope && draft === rules.draft && S.slot === st.slot && strategyOf(draft)?.strategy === st;
@@ -500,7 +629,7 @@
               delete st.pinnedPieceId; delete st.pinnedPieceIds;
               if (Array.isArray(value)) st.pinnedPieceIds = value;
               else if (value !== null) st.pinnedPieceId = value;
-            } else if (nullDeletes && value === null) delete st[field]; else st[field] = value;
+            } else if (nullDeletes && (value === null || (['orders', 'positionPins', 'offLimitsPieceIds'].includes(field) && Array.isArray(value) && value.length === 0))) delete st[field]; else st[field] = value;
           } catch { editor.error = syntax; }
           let fields = rules.exclusionEditors.get(st);
           if (!fields) { fields = new Map(); rules.exclusionEditors.set(st, fields); }
@@ -525,6 +654,30 @@
         h('div', { class: 'help' }, 'Any exact {"dimension":"…","value":"…"} match excludes a piece. Up to 1000 distinct pairs; both strings 1–1024 UTF-16 units. [] clears. No vocabulary, trimming or case conversion. Explicit own tags match literally; only absent contentType uses the safe rendering-type fallback on every arm.'),
         h('div', { class: 'name' }, named('allowedTypes', 'Allowed rendering types (JSON array or null)')), typeEditor,
         h('div', { class: 'help' }, 'Matches piece.type exactly, not tags.contentType. Use 1–1000 distinct strings of 1–1024 UTF-16 units; [] is invalid, null removes the limit. Saved controls apply when the serving worker reads that revision; caches may still hold an earlier revision.')));
+
+      // P01: the per-context order editor, on the page's declared layout slot
+      // only. It edits the slot's `orders` in the same JSON idiom as the hard
+      // controls above; the platform validates the draft and the save is the
+      // same slots publication as every other change on this screen.
+      if (st.layout === true) {
+        const orderEditor = jsonEditor('orders', 'layout.orders', [], 'Orders must be a valid JSON array of {"context":{"channel":…,"visitBuckets":…},"modules":[…]} objects. Use [] to clear; malformed text cannot be saved.', true);
+        host.append(card('Module order per context',
+          'This is the page’s layout slot. For a shopper in a context named here the slot serves exactly the listed modules, in this order; a module the order does not list is hidden in that context and is not counted as an exposure. Every other shopper keeps the slot’s own decision.',
+          h('div', { class: 'name' }, named('orders', 'Per-context orders (JSON array)')), orderEditor,
+          h('div', { class: 'help' }, 'Each order is {"context": {"channel": one of direct, paid_social, paid_search, email, organic, referral or "any", "visitBuckets": a list of "1", "2-3", "4+" or "any"}, "modules": [module ids, 1 up to the slot’s take]}. The most specific matching context wins; two contexts that match one shopper with equal specificity cannot be saved. A shopper whose channel or visit is unknown matches no context. An order keeps every pinned module at its position and lists no excluded module. The order is never served on the holdout’s default arm, without personalization consent, or when the slot’s exploration picks; those shoppers keep the slot’s own decision. [] clears.')));
+
+        // P04: a module pinned at any position, and per-module off-limits marks,
+        // on the page's layout slot only, in the same JSON idiom; each is written
+        // to the slot only when the operator authors it, and [] removes it.
+        const positionPinEditor = jsonEditor('positionPins', 'governance.positionPins', [], 'Pins at a position must be a valid JSON array of {"pieceId":"…","position":n} objects. Use [] to clear; malformed text cannot be saved.', true);
+        const offLimitsEditor = jsonEditor('offLimitsPieceIds', 'governance.offLimitsPieceIds', [], 'Off-limits modules must be a valid JSON array of module ids. Use [] to clear; malformed text cannot be saved.', true);
+        host.append(card('Pins at a position and off-limits modules',
+          'A module pinned at a position is served at exactly that position on every arm, reserved before any slot of the page ranks and never explored, while the other positions are ranked around it. An off-limits module keeps its baseline position — its place in the configured order for the shopper’s context, else in catalogue order among the modules this slot can serve — and no term and no exploration moves it; one whose baseline position lies beyond the take is not served.',
+          h('div', { class: 'name' }, named('positionPins', 'Modules pinned at a position (JSON array)')), positionPinEditor,
+          h('div', { class: 'help' }, 'Each pin is {"pieceId": a module id, "position": a whole number from 1 to the slot’s take}, after any prefix pins. One position holds one module and a module is pinned once, never also off-limits or excluded. An order keeps every pinned module at its position. A pinned module that is missing, ineligible or excluded when a shopper arrives refuses the whole slot: nothing is served from it and nothing is recorded, and the refusal names the module, its position and the reason. [] clears.'),
+          h('div', { class: 'name' }, named('offLimitsPieceIds', 'Off-limits modules (JSON array)')), offLimitsEditor,
+          h('div', { class: 'help' }, 'Module ids, each listed once. An off-limits module is never ranked: it holds its baseline position on every arm, the holdout’s default arm included, and is not served when that position lies beyond the take or on a pinned position. A module the slot cannot serve when a shopper arrives holds nothing. [] clears.')));
+      }
 
       const unregistered = Object.keys(st.weights).filter(key => !rules.dimensions.includes(key));
       host.append(card('How much each interest counts in this slot',

@@ -1,0 +1,40 @@
+{
+ "name": "06-open-the-galaxy",
+ "beat": 6,
+ "act": 3,
+ "actName": "The phone page follows intent",
+ "press": "Open the Galaxy",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1"
+ },
+ "events": [
+  {
+   "type": "product_view",
+   "data": {
+    "productId": "galaxy-s26",
+    "category": "phones",
+    "brand": "samsung",
+    "os": "android",
+    "ecosystem": "android",
+    "price_usd": 899.99,
+    "view": "page"
+   },
+   "note": "the Galaxy S26 phone page"
+  }
+ ],
+ "snapshot": {
+  "page": "phone",
+  "phone": "galaxy-s26",
+  "slots": [
+   "pdp-modules",
+   "plan-pairing"
+  ],
+  "ctx": {
+   "intent": "new",
+   "region": "US-NY"
+  }
+ },
+ "engine": "pdp-modules opens in the order her homepage behaviour already earns: the S26 Ultra card was a premium-band touch, and the regional prior blends the region’s shares in at λ = k / (k + Σa) with kBlend 0.5, so the premium-tagged modules score above the template’s zeros, and the receipt names the drivers; plan-pairing answers its default order.",
+ "sees": "Six modules in the order her behaviour earns: storage & memory and protection lead lightly (measured 0.085 each in New York, priceBand premium 0.43 on the receipt), the home bundle third, the rest in verizon.com’s order. The Compare tool’s frame is a fresh visitor in the same region (measured: storage & memory and protection 0.2 on the region’s premium lean, λ = 1 for a stranger); the published slots document’s template order is listed on the receipt as the reference, not shown as a frame. The buy box marked off limits; the trade-in module cites the offer the homepage led with (one decision on every surface: the page reads the deals decision, it does not re-decide)."
+}

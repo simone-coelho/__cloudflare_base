@@ -1,0 +1,211 @@
+{
+ "about": "Vantage is a fictional carrier. These are real plan SHAPES with our own names and illustrative prices, modelled on how US carriers sell online as seen on 2026-09-30 (two plan families side by side; per-line prices that fall with lines on AutoPay; perks at $10-15 a line; a mobile + home bundle at one price; loyalty that waives the activation fee). They are not any carrier's price card: plan prices run a few dollars below Verizon's as seen; device and offer figures elsewhere in this demo are the real ones. This file is content: the engine decides which plan LEADS inside 'Pair with a plan' (slot plan-pairing) and never a price, a discount or the multi-line arithmetic.",
+ "asOf": "2026-09-30",
+ "source": "scratchpad research-telco-buying.md, parts (a) 6-7 and (b), from verizon.com/plans/unlimited/, /plans/unlimited/myplan/, att.com/plans/wireless/ and t-mobile.com/cell-phone-plans (seen 2026-09-30)",
+ "currency": "USD",
+ "autopay": {
+  "discountPerLine": 10,
+  "note": "Prices are shown with AutoPay and paper-free billing; add $10 a line without it."
+ },
+ "families": [
+  {
+   "id": "simple",
+   "name": "Simple",
+   "note": "One flat price per line at any line count; less for switchers who bring a number."
+  },
+  {
+   "id": "unlimited",
+   "name": "Unlimited",
+   "note": "Three tiers, Go, More and Max; the per-line price falls at 2, 3 and 4+ lines."
+  }
+ ],
+ "tiers": [
+  {
+   "id": "simple",
+   "pieceId": "plan-simple",
+   "family": "simple",
+   "name": "Simple",
+   "perLine": {
+    "1": 40,
+    "2": 40,
+    "3": 40,
+    "4": 40
+   },
+   "switcherPerLine": 28,
+   "starter": {
+    "perk": null,
+    "intent": "switch",
+    "label": "Bring your phone and your number"
+   },
+   "includes": [
+    "Unlimited 5G data (may slow when the network is busy)",
+    "Talk and text to Mexico and Canada",
+    "5 GB hotspot"
+   ],
+   "legal": "Switcher price needs a number ported in from another carrier. Taxes and fees extra."
+  },
+  {
+   "id": "go",
+   "pieceId": "plan-go",
+   "family": "unlimited",
+   "name": "Unlimited Go",
+   "perLine": {
+    "1": 60,
+    "2": 50,
+    "3": 37,
+    "4": 28
+   },
+   "starter": {
+    "perk": "family",
+    "label": "Family starter: location sharing and a kids' watch line"
+   },
+   "includes": [
+    "Unlimited 5G data",
+    "Talk and text to Mexico and Canada",
+    "Family location sharing"
+   ],
+   "legal": "4+ line price per line. Taxes and fees extra."
+  },
+  {
+   "id": "more",
+   "pieceId": "plan-more",
+   "family": "unlimited",
+   "name": "Unlimited More",
+   "perLine": {
+    "1": 75,
+    "2": 65,
+    "3": 50,
+    "4": 42
+   },
+   "starter": {
+    "perk": "hotspot-travel",
+    "label": "Hotspot & travel starter: 30 GB hotspot, travel days"
+   },
+   "includes": [
+    "Unlimited premium 5G data",
+    "30 GB premium hotspot",
+    "Half-price watch or tablet line"
+   ],
+   "legal": "After 30 GB of hotspot data, speeds are reduced. Taxes and fees extra."
+  },
+  {
+   "id": "max",
+   "pieceId": "plan-max",
+   "family": "unlimited",
+   "name": "Unlimited Max",
+   "perLine": {
+    "1": 90,
+    "2": 80,
+    "3": 64,
+    "4": 55
+   },
+   "starter": {
+    "perk": "streaming",
+    "label": "Streaming starter: the streaming bundle included"
+   },
+   "includes": [
+    "Unlimited premium 5G data",
+    "60 GB premium hotspot",
+    "Data in 200+ destinations",
+    "Two half-price connected-device lines"
+   ],
+   "legal": "Streaming bundle included while on Unlimited Max. Taxes and fees extra."
+  }
+ ],
+ "perks": [
+  {
+   "id": "streaming",
+   "name": "Streaming bundle",
+   "perLine": 12
+  },
+  {
+   "id": "music-games",
+   "name": "Music & games",
+   "perLine": 10
+  },
+  {
+   "id": "hotspot-travel",
+   "name": "Hotspot+",
+   "perLine": 10
+  },
+  {
+   "id": "international",
+   "name": "International",
+   "perLine": 10
+  },
+  {
+   "id": "family",
+   "name": "Family",
+   "perLine": 5
+  }
+ ],
+ "bundle": {
+  "id": "mobile-home",
+  "name": "Mobile + Home",
+  "price": 75,
+  "includes": [
+   "One Unlimited Go line",
+   "Vantage 5G Home"
+  ],
+  "note": "One price with taxes and fees included, where 5G Home is available."
+ },
+ "homeInternet": {
+  "id": "5g-home",
+  "name": "Vantage 5G Home",
+  "withMobile": 35,
+  "alone": 60,
+  "note": "Available only where our 5G Home network covers the address; representative coverage in this demo."
+ },
+ "loyalty": {
+  "id": "rewards",
+  "name": "Vantage Rewards",
+  "activationFeeWaived": 40,
+  "note": "Members pay no activation or upgrade fee."
+ },
+ "protection": {
+  "perPhone": {
+   "from": 15,
+   "to": 18
+  },
+  "multiLine": {
+   "2": 36,
+   "3": 54,
+   "4": 64
+  },
+  "note": "Monthly, per account for 2+ phones."
+ },
+ "accessories": {
+  "buyMoreSaveMore": {
+   "2": 20,
+   "3": 25,
+   "4": 30
+  },
+  "note": "Percent off each accessory when you buy 2, 3 or 4+."
+ },
+ "connectedDevices": {
+  "watchLine": 10,
+  "tabletLine": 20,
+  "watchOffUpTo": 500,
+  "tabletOffUpTo": 600,
+  "note": "On a new line (up to $500 off a watch and $600 off a tablet, as seen on verizon.com 2026-09-30); monthly line prices on Unlimited More and Max are halved for one and two devices."
+ },
+ "storageMaths": {
+  "phone": "iphone-18-pro",
+  "months": 36,
+  "steps": [
+   {
+    "storage": "512gb",
+    "deltaMonthly": 5.55
+   },
+   {
+    "storage": "1tb",
+    "deltaMonthly": 16.66
+   },
+   {
+    "storage": "2tb",
+    "deltaMonthly": 33.33
+   }
+  ],
+  "note": "A trade-in credit is capped at the base model's monthly price, so a storage step raises the net monthly cost by the full delta. The storage module says so."
+ }
+}

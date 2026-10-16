@@ -2,6 +2,22 @@ import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/
 import type { Env } from '@/types/env';
 import { OptimizelyService } from './OptimizelyService';
 import type { SessionData } from './SessionManager';
+import { ownerBindingIdentity } from '@/identity/sessionAuthority';
+
+/**
+ * Lane E4: a shopper's stored overrides, remembered by this isolate for OVERRIDES_LIST_MS.
+ *
+ * Every action that built an update listed `override:<shopper>:` in KV (never edge-cached) to
+ * apply overrides to the feature-variable probes. The listed records are remembered per backing
+ * KV binding (`ownerBindingIdentity`), tenant and shopper; a set or a removal through any manager
+ * of this isolate forgets that shopper's list at once, and an override's own expiry is still
+ * checked on every read. Overrides written by another isolate are seen within OVERRIDES_LIST_MS.
+ */
+export const OVERRIDES_LIST_MS = 10_000;
+interface OverrideMemory { lists: Map<string, { at: number; records: FeatureVariableOverride[] }>; writes: Map<string, number> }
+let listedOverrides = new WeakMap<object, OverrideMemory>();
+/** Tests: forget every remembered override list. */
+export function forgetListedOverrides(): void { listedOverrides = new WeakMap(); }
 
 export interface FeatureVariable {
   key: string;
@@ -49,19 +65,37 @@ export class FeatureVariableManager {
     this.optimizelyService = new OptimizelyService(env, tenant);
   }
 
+  /** Lane E4: this isolate's remembered override lists for the backing binding, or null. */
+  private overrideMemory(): OverrideMemory | null {
+    const binding = ownerBindingIdentity(this.env.CACHE as unknown as object | undefined);
+    if (!binding) return null;
+    let memory = listedOverrides.get(binding);
+    if (!memory) { memory = { lists: new Map(), writes: new Map() }; listedOverrides.set(binding, memory); }
+    return memory;
+  }
+
+  /** A set or a removal through this isolate makes the shopper's remembered list unusable at once. */
+  private forgetOverrides(userId: string): void {
+    const memory = this.overrideMemory(), slot = `${this.tenant}\n${userId}`;
+    if (!memory) return;
+    memory.writes.set(slot, (memory.writes.get(slot) ?? 0) + 1); memory.lists.delete(slot);
+  }
+
   /**
    * Get feature variables for a user with enhanced caching and fallbacks
    */
   async getFeatureVariables(
     userId: string,
     userAttributes: Record<string, any>,
-    featureKeys?: string[]
+    featureKeys?: string[],
+    /** Lane E4: the per-event session probes read the remembered override list (OVERRIDES_LIST_MS). */
+    rememberedOverrides = false
   ): Promise<Record<string, FeatureVariableResult>> {
     const features = featureKeys || this.getDefaultFeatureKeys();
     const results: Record<string, FeatureVariableResult> = {};
 
     // Check for user-specific overrides first
-    const overrides = await this.getUserOverrides(userId);
+    const overrides = await this.getUserOverrides(userId, rememberedOverrides);
 
     for (const featureKey of features) {
       const cacheKey = `${userId}:${featureKey}:${JSON.stringify(userAttributes)}`;
@@ -143,7 +177,7 @@ export class FeatureVariableManager {
       personalization_enabled: sessionData.preferences.personalizationEnabled
     };
 
-    return this.getFeatureVariables(sessionData.userId, userAttributes);
+    return this.getFeatureVariables(sessionData.userId, userAttributes, undefined, true);
   }
 
   /**
@@ -161,8 +195,8 @@ export class FeatureVariableManager {
       Math.max(0, override.expiresAt - Date.now()) / 1000 : 
       24 * 60 * 60; // 24 hours default
 
-    await this.kv.put(key, JSON.stringify(data), { expirationTtl: ttl });
-    
+    try { await this.kv.put(key, JSON.stringify(data), { expirationTtl: ttl }); } finally { this.forgetOverrides(override.userId); }
+
     // Clear relevant cache entries
     this.clearUserCache(override.userId);
   }
@@ -176,23 +210,36 @@ export class FeatureVariableManager {
     variableKey: string
   ): Promise<void> {
     const key = `override:${userId}:${featureKey}:${variableKey}`;
-    await this.kv.delete(key);
+    try { await this.kv.delete(key); } finally { this.forgetOverrides(userId); }
     this.clearUserCache(userId);
   }
 
   /**
    * Get all overrides for a user
    */
-  async getUserOverrides(userId: string): Promise<FeatureVariableOverride[]> {
+  async getUserOverrides(userId: string, remembered = false): Promise<FeatureVariableOverride[]> {
     const overrides: FeatureVariableOverride[] = [];
-    
+
     try {
-      // List all override keys for this user (limited KV list operation)
-      const prefix = `override:${userId}:`;
-      const list = await this.kv.list({ prefix });
-      
-      for (const key of list.keys) {
-        const data = await this.kv.get(key.name, 'json') as FeatureVariableOverride;
+      // Lane E4: on the per-event path, the records this isolate listed for this shopper in the
+      // last OVERRIDES_LIST_MS; every other read (a direct getUserOverrides, analytics) asks KV as before.
+      const memory = this.overrideMemory(), slot = `${this.tenant}\n${userId}`, started = Date.now(), held = memory?.lists.get(slot);
+      let records: FeatureVariableOverride[];
+      if (remembered && held && Number.isFinite(started) && started >= held.at && started - held.at < OVERRIDES_LIST_MS) records = structuredClone(held.records);
+      else {
+        const writes = memory?.writes.get(slot) ?? 0;
+        // List all override keys for this user (limited KV list operation)
+        const prefix = `override:${userId}:`;
+        const list = await this.kv.list({ prefix });
+        records = [];
+        for (const key of list.keys) {
+          const data = await this.kv.get(key.name, 'json') as FeatureVariableOverride;
+          if (data) records.push(data);
+        }
+        // Remembered only when no set or removal through this isolate replaced the slot meanwhile.
+        if (memory && (memory.writes.get(slot) ?? 0) === writes) memory.lists.set(slot, { at: started, records: structuredClone(records) });
+      }
+      for (const data of records) {
         if (data && (!data.expiresAt || data.expiresAt > Date.now())) {
           overrides.push(data);
         }
