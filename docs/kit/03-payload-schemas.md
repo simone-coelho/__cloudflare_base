@@ -1472,6 +1472,29 @@ repaired (below). `positionEffects`, only on a slot whose adjacent swaps have be
 `[{ position, effect, pairs }]`: each position's effect estimated from the swaps as a click ratio
 ([adjacent swaps](#adjacent-swaps-and-position-effects)).
 
+**The stale marker (`stale`).** Beside the snapshot, never inside it, `GET /v1/{tenant}/lift` and
+`GET /v1/{tenant}/lift/rows` answer one more member, `stale`, last, and only while the slot's snapshot in
+force is stale because its publication was refused for the pooled cause: a pooled module's record is read from
+every placement the module is served on at publication, and a pooled publication refused because another
+placement's statistics cannot be read answers `503` `{ ok: false, error, stale }`, naming that placement's
+page and slot and the pooled modules the refused slot reads from it, at the statistics object and at
+`POST /v1/{tenant}/learn/publish` alike. The stale marker is
+`{ lastPublished: { publishedAt, version }, modules, placement: { page, slot } }`, keys sorted:
+`lastPublished` the `version` and `publishedAt` of the snapshot in force, `null` on a slot that has never
+published; `modules` the pooled modules the refused slot reads from the faulty placement, sorted, one to 256
+of them; `placement` the page and slot whose statistics could not be read. The refusal never publishes part of
+a pooled record: the slot's snapshot stays at its last successful version, member for member as it was
+published, so `lastPublished` names the very snapshot the lift read answers. The stale marker is carried until
+a later publication of the slot succeeds, and after it succeeds `GET /v1/{tenant}/lift` and
+`GET /v1/{tenant}/lift/rows` answer exactly their usual members again; a slot that was never refused this way
+never carries it, and its answers, snapshot and storage are exactly as before. The `error` begins
+`statistics recovery required:` and names the page, the slot, each pooled module and the version the snapshot
+stays at (or, with no earlier publication, that the slot stays unpublished); a recovery refusal of any other
+cause keeps its text exactly, `statistics recovery required` at the object and
+`statistics acknowledgement unavailable` at `POST learn/publish`, and carries no `stale`. When several
+placements cannot be read at once, the first in page order, then slot order, is named, and the next once that
+one answers. The console's lift grid does not show the marker.
+
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
 is part of the mixture it is being divided by, so the more of a slot's traffic one piece takes, the
