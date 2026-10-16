@@ -44,8 +44,8 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
 import type { ContentPiece, DecisionRecord, SlotAttribution, SlotCatalog } from '@/content/types';
-import { isOffLimitsLayoutRecord, type OutcomeRecord } from '@/ledger/records';
-import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
+import { isOffLimitsLayoutRecord, isRewardType, type OutcomeRecord } from '@/ledger/records';
+import { attribute, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
 // `@/durable-objects/DecisionRing` re-exports under the same name. It is read
 // from there and NOT from the ring itself because the ring imports this module:
@@ -666,7 +666,26 @@ export function positionRowOf(r: DecisionRecord | undefined, swapOnly = false): 
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, tenant: r.tenant, visitor_id: r.visitor_id, brand: r.brand, ts: r.ts, page: r.page, slot: r.slot, position: r.position,
     measurementBasis: r.measurementBasis ?? 'served-v1', ...(r.rendered ? { renderedAt: r.rendered.at } : {}),
-    item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell, ...(r.retention ? { retention: r.retention } : {}), ...(r.featured_product_ids?.length ? { products: [...r.featured_product_ids] } : {}) });
+    item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell, ...(r.retention ? { retention: r.retention } : {}), ...(r.featured_product_ids?.length ? { products: [...r.featured_product_ids] } : {}),
+    ...successEntryOf(r) });
+
+/**
+ * P16 (decision D1, freeze items 14 and 43): the success event a decision's
+ * record names (`explain.successEvent`), as attribution and the credit read it
+ * off the ring entry: the event and the table's value, exactly as recorded. A
+ * member that is present and not one this platform writes — an event outside
+ * the reward list, a value that is neither null nor a finite number above zero,
+ * another member — is kept as an event no outcome carries, so the decision is
+ * credited nothing rather than credited by a guess. Absent on a record that
+ * names none, so its entry is exactly as before.
+ */
+function successEntryOf(r: DecisionRecord): Pick<RingEntry, 'successEvent'> {
+  const named: unknown = (r.explain as { successEvent?: unknown } | undefined)?.successEvent;
+  if (named === undefined) return {};
+  const read = object(named) && Object.keys(named).sort().join(',') === 'event,value' && isRewardType(named.event)
+    && (named.value === null || (typeof named.value === 'number' && Number.isFinite(named.value) && named.value > 0));
+  return { successEvent: read ? { event: named.event as string, value: named.value as number | null } : { event: '', value: null } };
+}
 
 /**
  * The slot's configuration the statistics object publishes against. P33
@@ -951,6 +970,12 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
  * as `policyOf` reads it, each slot's own attribution policy included
  * (`slotAttribution`), so a module-tied slot is folded by the rule the
  * visitor's ring credited it by, and a slot without one exactly as before.
+ *
+ * P16 (decision D1, freeze items 14 and 43): a decision whose record names its
+ * success event (a slot with a conversion table) is folded by the rule the
+ * ring credited it by (`successCreditOf`): an outcome of that event, at the
+ * value the record names in the slot's currency; a record that names none,
+ * exactly as before.
  */
 export function foldRetainedDay(input: {
   tenant: string; brand: string; slot: string; config: SlotLearnConfig; policy: AttributionPolicy;
@@ -981,10 +1006,15 @@ export function foldRetainedDay(input: {
     if (!ring) continue;
     let credited = false;
     for (const c of attribute(o, ring, input.policy)) {
-      if (c.slot !== input.slot || !placed(pageOf.get(c.decision_id)) || c.reward !== input.config.reward) continue;  // the slot learns against one reward
-      const weight = creditWeight(input.config.objective, o);
+      if (c.slot !== input.slot || !placed(pageOf.get(c.decision_id))) continue;
+      // The slot learns against one reward — or, P16, the decision against the
+      // success event its record names, at its value in the slot's currency —
+      // by the one rule the visitor's ring credits by (`successCreditOf`).
+      const success = successCreditOf(ring.find((e) => e.id === c.decision_id)?.successEvent, input.config, o);
+      if (success === null) continue;
+      const weight = success.weight;
       if (weight <= 0) continue;
-      recordSuccess(stats, c.item, c.cell, c.reward, input.at, weight, input.config.stats, input.at);
+      recordSuccess(stats, c.item, c.cell, success.reward, input.at, weight, input.config.stats, input.at);
       credited = true;
     }
     if (credited) outcomes++;

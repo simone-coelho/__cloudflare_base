@@ -8,6 +8,7 @@
 import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust, type SlotBand } from '@/reflex/contentCompose';
 import type {
   Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
+  ConversionTable, SuccessEvent, SuccessEventApplied,
 } from './types';
 import { OFF_LIMITS_ITEM } from '@/ledger/records';
 import { contextSpecificity, validateSeedRules } from './kinds';
@@ -219,6 +220,42 @@ export interface DecideInput {
    * passes the ones the record carries. Absent: none, exactly as before.
    */
   suppressions?: readonly Suppression[] | null;
+  /**
+   * P16 (decision D1, freeze items 14 and 43), per slot: the conversion table
+   * the slot's learn dials publish and the slot's own reward, or null when the
+   * dials publish none (`slotConversionsOf`). Every record of a slot with a
+   * table names its module's success event and the table's value for it
+   * (`explain.successEvent`, every arm); it is what the slot's credit reads, and
+   * it changes no score. Absent: no slot has a table, and every record is
+   * exactly as before.
+   */
+  slotConversions?: (slot: string) => SlotConversions | null;
+}
+
+/** P16: a slot's conversion table with the reward an undeclared module is credited for. */
+export interface SlotConversions { reward: SuccessEvent; conversions: ConversionTable }
+
+/**
+ * P16 (decision D1): the slot's conversion table and reward from the learn
+ * document the caller already holds — no read of its own — or null when the
+ * slot's dials publish no table.
+ */
+export function slotConversionsOf(learn: Pick<LearnConfig, 'slots'>, slot: string): SlotConversions | null {
+  const dials = learn.slots && Object.hasOwn(learn.slots, slot) ? learn.slots[slot] : undefined;
+  return dials?.conversions ? { reward: dials.reward ?? 'click', conversions: dials.conversions } : null;
+}
+
+/**
+ * P16 (decision D1, freeze items 14 and 43): the success event a record of a
+ * slot with a conversion table names — the module's own declaration, else the
+ * slot's reward — and the table's value for it in the slot's currency, `null`
+ * when the table does not value it (an outcome of it then credits nothing).
+ * Keys sorted (R-P3).
+ */
+export function successEventOf(piece: Pick<ContentPiece, 'successEvent'> | undefined, slot: SlotConversions): SuccessEventApplied {
+  const event = piece?.successEvent ?? slot.reward;
+  const value = Object.hasOwn(slot.conversions, event) ? slot.conversions[event] : undefined;
+  return { event, value: typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null };
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -1896,6 +1933,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const inSwap = swap !== undefined && (position + 1 === swap.positions[0] || position + 1 === swap.positions[1]);
     const wasExplored = inSwap || Boolean(pick && (!historicalPins ? !pinned && rankingPosition === 0 : position === 0) && (pick.ranking ? pick.ranking[0] === d.contentId : pick.pieceId === d.contentId));
     const control = controlOf.get(key);
+    // P16: the slot's conversion table, where its learn dials publish one.
+    const conversions = i.slotConversions?.(d.slot) ?? null;
     return {
       // Tenant first, then time: the R2 partition (brand and hour) is derivable from the id alone,
       // so a support paste resolves without anyone having to remember which brand it came from.
@@ -1943,6 +1982,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         // P39: the suppressions in force, on every record of a slot that read the shopper's interests (keys sorted).
         // P30: never on a context-only layout slot, which reads none of the shopper's interests either.
         ...(suppressions.length && !below.has(d.slot) && !contextual.has(d.slot) ? { suppressions: suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
+        // P16: the module's success event and the conversion value applied, on every record of a slot with a table (keys sorted).
+        ...(conversions ? { successEvent: successEventOf(byId.get(d.contentId), conversions) } : {}),
       },
       inputs,
     };

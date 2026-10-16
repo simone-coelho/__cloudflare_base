@@ -24,7 +24,7 @@ import type { Env } from '@/types/env';
 import type { R2Like } from '@/ledger/writer';
 import { readRetention, requireRetention, mergeRetention, RetentionUnavailable, type RetentionEnv, type RetentionStamp } from '@/retention';
 import { effectiveScore, type ReflexEntry } from '@/reflex/core';
-import { attribute, creditWeight, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
+import { attribute, namedSlotOf, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
 import { positionHistoryKey, positionRowOf, ringEntryOf } from './fan';
 import { attributionArm, canonicalPolicySet, canonicalReportJson, countDayObjects, dayProvenance, presetPolicies, publishedAllocation, readCanonicalSummary, readStoredDay, rebuildLedgerDay, reportKey, reportCoverage, REPORT_MEASUREMENT, REPORT_LIMITS, ReportBudgetExceeded, ReportUnavailableError, ReportTooLarge, rawReportJson, storedReportText, validateReportIds, validateReportPolicies, validProvenance, runReport, noteCanonicalDay, writeCanonicalDay, type ArmRow, type CanonicalNote, type DayReport, type OpenHourEntry, type OpenHourRefusal, type ReportPolicy, type ReportPriors,
   addNamedOutcomes, creditNamedOutcome, emptyNamedOutcomes, namedOutcomeRow, validNamedOutcomes, type NamedOutcomes } from './report';
@@ -1344,8 +1344,12 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
     for (const p of ctx.policies) {
       const ph = policyHour(hb, p);
       for (const c of attribute(o, ring, p)) {
-        const reward = ctx.slotCfg[c.slot]?.reward ?? 'click';
-        if (c.reward !== reward) continue;                       // the slot learns against one reward
+        const credited = ring.find((e) => e.id === c.decision_id);
+        // The slot learns against one reward — or, P16, the decision against the
+        // success event its record names, at its value in the slot's currency —
+        // by the one rule the visitor's ring credits by (`successCreditOf`).
+        const success = successCreditOf(credited?.successEvent, { reward: ctx.slotCfg[c.slot]?.reward ?? 'click', objective: ctx.slotCfg[c.slot]?.objective }, o);
+        if (success === null) continue;
         if (ctx.creditedSlots) {
           const slots = ctx.creditedSlots.get(o.brand) ?? new Set<string>();
           slots.add(c.slot); ctx.creditedSlots.set(o.brand, slots);
@@ -1353,7 +1357,6 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
         ph.credits += 1;
         if (p.role === 'learning') learningCredits += 1;
         if (legacy) ph.legacyCredits = (ph.legacyCredits ?? 0) + 1;
-        const credited = ring.find((e) => e.id === c.decision_id);
         const arm = credited?.arm ?? 'personalized';
         ph.armCredits[`${c.slot}|${arm}`] = (ph.armCredits[`${c.slot}|${arm}`] ?? 0) + 1;
         // W21 C1.08: the same credit again, under the ASSIGNMENT of the decision
@@ -1366,9 +1369,9 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
           // P05 (decision D2, R-P62): a credit to a decision that names its position, exactly as the online credit
           // names it, is weighed by the position policy in force when it happened; the count above is unchanged.
           const weighed = credited?.creditPosition;
-          const w = creditWeight(ctx.slotCfg[c.slot]?.objective, o)
+          const w = success.weight
             * (ctx.positionWeight && credited && weighed !== undefined ? ctx.positionWeight(credited.brand, c.slot, credited.page, weighed, c.ts) : 1);
-          if (w > 0) recordSuccess((ph.stats[c.slot] ??= emptyStats()), c.item, c.cell, c.reward as RewardType, c.ts, w, ctx.statsCfg);
+          if (w > 0) recordSuccess((ph.stats[c.slot] ??= emptyStats()), c.item, c.cell, success.reward, c.ts, w, ctx.statsCfg);
         }
       }
     }

@@ -3,7 +3,7 @@
 // mutually exclusive choices. This is the LEARNING policy, applied online in the
 // visitor's own object; reporting policies run over the ledger in batch.
 
-import type { Cell, SlotAttribution } from '@/content/types';
+import type { Cell, Objective, SlotAttribution } from '@/content/types';
 import { isDecisionReference, parseId, type OutcomeRecord, type RewardType } from '@/ledger/records';
 
 export type Scope = 'session' | 'visitor';
@@ -68,6 +68,17 @@ export interface RingEntry {
   cell: Cell;
   /** CW32: the products the served piece features; a direct match accepts an outcome naming one of them. */
   products?: string[];
+  /**
+   * P16 (decision D1, freeze items 14 and 43): the success event the decision's
+   * record names (`explain.successEvent`, on every record of a slot whose learn
+   * dials publish a conversion table) and the table's value for it, `value`
+   * null when the table does not value it. Only an outcome of that event
+   * matches the decision (`attributeWindowed`), and `successCreditOf` weighs
+   * it. A member the platform cannot read is kept as an event no outcome
+   * carries, so it credits nothing. Absent on every other decision, whose
+   * entry is exactly as before.
+   */
+  successEvent?: { event: string; value: number | null };
 }
 
 /** One credited pair, on its way to the slot's statistics object. */
@@ -102,6 +113,42 @@ export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefine
 }
 
 /**
+ * P16 (decision D1, freeze items 14 and 43): what one credit of a decision is
+ * worth to its slot and the reward counter it is kept under — ONE rule, read by
+ * the visitor's ring online (`DecisionRing`) and by every offline fold of the
+ * ledger (`foldRetainedDay`, the hourly fold), so the offline recomputation
+ * holds what online credit gave (W24).
+ *
+ * A decision whose record names its success event (`RingEntry.successEvent`,
+ * written on every record of a slot whose learn dials publish a conversion
+ * table): an outcome of that event is worth the table's value for it, in the
+ * slot's own currency, times what the slot's objective weighs it
+ * (`creditWeight`: 1 under `unit`, the outcome's value or margin under
+ * `revenue` or `margin`), and is kept under the slot's own reward, whose
+ * counter IS the slot's currency (`buildSnapshot` reads that counter alone). An
+ * event the table does not value is worth nothing (freeze item 43), as is a
+ * product that is not a finite number. Any other event is not this decision's
+ * success: null.
+ *
+ * A decision whose record names none: exactly as before — the slot learns
+ * against its one reward, at the objective's weight, and any other reward is
+ * null.
+ *
+ * Null means the slot does not learn from this outcome for this decision (a
+ * `reward` refusal); a weight of zero means it does and the credit is worth
+ * nothing. The position effect (P05) multiplies the result where the credit is
+ * applied, online in the statistics object and in the hourly fold alike.
+ */
+export function successCreditOf(success: RingEntry['successEvent'], slot: { reward: RewardType; objective?: Objective },
+  outcome: Pick<OutcomeRecord, 'type' | 'value' | 'margin'>): { reward: RewardType; weight: number } | null {
+  if (success === undefined) return outcome.type === slot.reward ? { reward: slot.reward, weight: creditWeight(slot.objective, outcome) } : null;
+  if (success.event !== outcome.type) return null;
+  const value = success.value;
+  const weight = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value * creditWeight(slot.objective, outcome) : 0;
+  return { reward: slot.reward, weight: Number.isFinite(weight) ? weight : 0 };
+}
+
+/**
  * W23 T1.01: what attribution did, not only what it paid.
  *
  * `outsideWindow` counts the ring decisions this outcome MATCHED in every other
@@ -133,7 +180,17 @@ export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefine
  * so. This is a COUNT of decisions, never a flag and never a gate: it widens
  * nothing, credits nothing, and reaching it changes no decision.
  */
-export interface Attribution { credits: Credit[]; outsideWindow: number; brandMismatched: number }
+export interface Attribution { credits: Credit[]; outsideWindow: number; brandMismatched: number;
+  /**
+   * P16 (decision D1, freeze item 14): the decisions this outcome matched in
+   * every other way, inside the reward's window, whose record names another
+   * success event (`RingEntry.successEvent`): an outcome credits a decision of
+   * a slot with a conversion table only when it is that decision's success.
+   * Identifiers, so the ring can name the slot that refused it for its reward.
+   * Absent when there are none, so an attribution over decisions that name no
+   * success event is exactly what it was.
+   */
+  unsuccessful?: string[] }
 
 /**
  * The placement an outcome names, or null when it names none. Absent, empty and
@@ -239,21 +296,28 @@ export function attributeWindowed(outcome: OutcomeRecord, ring: readonly RingEnt
     }
     return exposureAt;
   };
-  const eligible: RingEntry[] = [];
+  const eligible: RingEntry[] = [], unsuccessful: string[] = [];
   let outsideWindow = 0;
   for (const e of candidates) {
     const exposureAt = matchedAt(e);
     if (exposureAt === null) continue;
-    if (outcome.ts - exposureAt > window) { outsideWindow++; continue; }
+    const late = outcome.ts - exposureAt > window;
+    // P16: a decision whose record names its success event is matched only by
+    // an outcome of that event, BEFORE the credit rule picks within its slot,
+    // so the pick lands on a decision this outcome is the success of. Another
+    // event is a miss by identity, never by time.
+    if (e.successEvent !== undefined && e.successEvent.event !== outcome.type) { if (!late) unsuccessful.push(e.id); continue; }
+    if (late) { outsideWindow++; continue; }
     eligible.push(e);
   }
-  if (eligible.length === 0) return { credits: [], outsideWindow, brandMismatched: 0 };
+  const missed = unsuccessful.length ? { unsuccessful } : {};
+  if (eligible.length === 0) return { credits: [], outsideWindow, brandMismatched: 0, ...missed };
   // Pick once within each eligible slot. Unspecified direct outcomes and `any`
   // retain their broad legacy behavior; an explicitly named direct outcome does not.
   const bySlot = new Map<string, RingEntry>();
   const ordered = [...eligible].sort((a, b) => (policy.credit === 'last' ? b.ts - a.ts : a.ts - b.ts));
   for (const e of ordered) if (!bySlot.has(e.slot)) bySlot.set(e.slot, e);
-  return { outsideWindow, brandMismatched: 0, credits: [...bySlot.values()].map((e) => ({
+  return { outsideWindow, brandMismatched: 0, ...missed, credits: [...bySlot.values()].map((e) => ({
     decision_id: e.id, slot: e.slot, item: e.item, cell: e.cell, reward: outcome.type, event: outcome.event, ts: outcome.ts, weight: 1,
   })) };
 }

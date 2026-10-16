@@ -69,6 +69,18 @@ export interface ContentPiece extends ContentPieceLike {
    * before. A declaration, never inferred: two pages never pool silently.
    */
   pooled?: true;
+  /**
+   * P16 (decision D1, freeze items 14 and 43): the module's own success event,
+   * one reward of the list (`click`, `dwell`, `video_complete`, `wishlist`,
+   * `add_to_bag`, `purchase`, `custom`), absent by default. It is read only in
+   * a slot whose learn dials publish a conversion table (`SlotDials.conversions`):
+   * there an outcome of this event credits the module's decision with the
+   * table's value for it in the slot's own currency, an outcome of any other
+   * event credits it nothing, and an event the table does not value credits
+   * nothing. In a slot without a table, and absent, the slot's own reward and
+   * objective credit the module exactly as before.
+   */
+  successEvent?: SuccessEvent;
 }
 
 /**
@@ -639,6 +651,22 @@ export type Objective = 'unit' | 'revenue' | 'margin';
 export type MeasurementBasis = 'served-v1' | 'rendered-v1';
 /** P33 (decision D1, freeze item 11): the one attribution policy a slot may carry of its own. */
 export type SlotAttribution = 'module-tied';
+/** P16 (decision D1): a success event — one reward of the list a slot learns against. */
+export type SuccessEvent = 'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom';
+/**
+ * P16 (decision D1, freeze items 14 and 43): a slot's conversion table, each
+ * reward it values to a finite positive value in the slot's own currency. A
+ * reward the table does not name is not valued, and a success of it credits
+ * nothing.
+ */
+export type ConversionTable = Partial<Record<SuccessEvent, number>>;
+/**
+ * P16: what a record of a slot with a conversion table names: the success
+ * event its module is credited for — the module's declared event, else the
+ * slot's reward — and the table's value for it in the slot's currency, `null`
+ * when the table does not value it (keys sorted).
+ */
+export interface SuccessEventApplied { event: SuccessEvent; value: number | null }
 
 export interface SlotDials {
   measurementBasis?: MeasurementBasis;
@@ -684,6 +712,19 @@ export interface SlotDials {
    * reward's window stay the brand-wide policy's.
    */
   attribution?: SlotAttribution;
+  /**
+   * P16 (decision D1, freeze items 14 and 43): the slot's conversion table
+   * into its own currency, absent by default. Absent, the slot's reward and
+   * objective credit every module exactly as before, a module's declared
+   * success event included. Present, every record of the slot names its
+   * module's success event and the value applied (`explain.successEvent`), an
+   * outcome of that event credits the decision with `conversions[event]` times
+   * what the objective weighs it (1 under `unit`), counted in the slot's own
+   * reward counter, the slot's currency; a module without a declaration is
+   * credited for the slot's reward at the table's value for it, and an event
+   * the table does not value credits nothing.
+   */
+  conversions?: ConversionTable;
 }
 
 /**
@@ -1171,6 +1212,17 @@ export interface DecisionRecord {
      * `{}` when the shadow keeps every module at its baseline place.
      */
     shadowTerms?: Record<string, LayoutMoveTerm[]>;
+    /**
+     * P16 (decision D1, freeze items 14 and 43): this position's slot publishes
+     * a conversion table on its learn dials: the success event the module is
+     * credited for (its declared `successEvent`, else the slot's reward) and the
+     * table's value for it in the slot's currency, `value` null when the table
+     * does not value it; keys sorted. Present on every record of such a slot,
+     * every arm, and on no other record. The credit of this decision, online and
+     * in every offline fold, is read off it: what the record names is what its
+     * outcomes are worth, whatever the catalogue or the table says later.
+     */
+    successEvent?: SuccessEventApplied;
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

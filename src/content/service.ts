@@ -24,7 +24,7 @@ import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, isCatalogueName, LEARN_KIND
 import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
 import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, layoutBlendOf } from './decide';
+import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, layoutBlendOf, slotConversionsOf } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { currentLiftWitness, fanDecisions, fanLayoutExposure, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
@@ -910,6 +910,11 @@ export async function serveContentDecisions(
   // document already held above — no read of its own, so it can neither fail
   // nor wait. A page without one passes none and decides exactly as before.
   const evidenceFloor = evidenceFloorOf(learn, r.page);
+  // P16 (decision D1): each slot's conversion table, read off the learn
+  // document already held above — no read of its own, so it can neither fail
+  // nor wait. Passed only when a slot on the page publishes one, so a page
+  // without a table decides and records exactly as before.
+  const tabled = activeSlots.some((s) => slotConversionsOf(learn, s.slot) !== null);
 
   const set = decideContent({
     ...(consent.tracking ? { requestId: crypto.randomUUID() } : {}),
@@ -952,6 +957,8 @@ export async function serveContentDecisions(
     ...(catalog.typeFallback === 'retired' ? { typeFallback: 'retired' as const } : {}),
     // P39: the suppressions in force, itemised on the records (their interest already left out above).
     ...(suppressions.length ? { suppressions } : {}),
+    // P16: the slots' conversion tables, named with each module's success event on the records.
+    ...(tabled ? { slotConversions: (slot: string) => slotConversionsOf(learn, slot) } : {}),
     // P36: a tenant's published terms, and the context its shopper's visit
     // records, under the same tracking gate as the arrival; a tenant without
     // the settings passes neither, so it decides exactly as before.

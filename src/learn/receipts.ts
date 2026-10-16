@@ -3,7 +3,7 @@
 // carries every term as numbers and a sentence per rule, read out as sentences
 // a merchandiser follows. Pure; the route reads the ring and joins the names.
 
-import type { BandSpan, DecisionRecord, EvidenceFloorApplied, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause } from '@/content/types';
+import type { BandSpan, DecisionRecord, EvidenceFloorApplied, LayoutBlendTerms, LayoutReason, LayoutReasonCause, LayoutWithheldCause, SuccessEventApplied } from '@/content/types';
 import type { Suppression } from '@/reflex/core';
 import type { Names } from './rows';
 
@@ -117,6 +117,16 @@ export interface Receipt {
    * every position of a slot without bands.
    */
   band?: BandSpan;
+  /**
+   * P16 (decision D1, freeze items 14 and 43): the success event this decision
+   * is credited for and the conversion value its slot's table applies to it in
+   * the slot's currency, `value` null when the table does not value it (an
+   * outcome of it then credits nothing) — exactly as the record carries it
+   * (`explain.successEvent`), keys sorted. A MEMBER, never a new or altered
+   * `why` sentence (`src/learn/receipts.test.ts:41-51`). Absent on every record
+   * of a slot whose learn dials publish no conversion table.
+   */
+  successEvent?: SuccessEventApplied;
   /** Why this piece was here, one sentence per reason, in the order the engine applied them. */
   why: string[];
 }
@@ -448,6 +458,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.lift?.evidenceFloor ? { evidenceFloor: { floor: e.lift.evidenceFloor.floor, lacking: e.lift.evidenceFloor.lacking, n: e.lift.evidenceFloor.n, page: e.lift.evidenceFloor.page } } : {}),
     // P15: the band this position was ranked in, keys sorted.
     ...(e.band ? { band: { from: e.band.from, to: e.band.to } } : {}),
+    // P16: the success event and the conversion value applied, keys sorted.
+    ...(e.successEvent ? { successEvent: { event: e.successEvent.event, value: e.successEvent.value } } : {}),
     why,
   };
 }
