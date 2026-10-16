@@ -28,7 +28,7 @@ import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
   readOptionalPublication, readPublication, recoverPublication, type PublicationPin } from '@/config/publication';
-import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnPositionLayoutErrors, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
+import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
 import { contextTermsOf } from '@/content/cell';
@@ -441,6 +441,21 @@ function pinDiagnosticsFor(c: Context<Ctx>, scope: string, slots: SlotCatalog | 
   return slotDiagnostics(c.env, slots, revision, slotCatalogTenant(c, scope));
 }
 /**
+ * P41 (R-P78): the learn publication's advisory channel, for the success
+ * answers of `PUT /content/learn` and `POST /content/learn/validate` alone: a
+ * `diagnostics` member only when a slot's conversion table does not name the
+ * slot's own reward, so every other answer is the bytes it was. Computed from
+ * the document the answer carries, with no read; advice, never a refusal, and
+ * never able to turn an accepted or committed publication into a failure.
+ */
+function learnAdvisory(kind: DocumentKind<unknown>, document: unknown): { diagnostics?: LearnConversionDiagnostics } {
+  if (kind.name !== LEARN_KIND.name) return {};
+  try {
+    const diagnostics = learnConversionDiagnostics(document as LearnConfig);
+    return diagnostics ? { diagnostics } : {};
+  } catch { return {}; }
+}
+/**
  * The records a direct publication submitted, for the advisory channel alone.
  * A direct PUT is never routed through the import normalizer (F27 §4.2), so the
  * field set it is read against is the validator's own closed one: a name
@@ -702,7 +717,8 @@ contentRoutes.post('/:kind/validate', async (c) => {
   return result.ok ? c.json({ valid: true, document: result.value,
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null,
       publishedRequest(candidate, candidate === body ? REQUEST_ENVELOPE_FIELDS : [])) } : {}),
-    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.value, null) } : {}) }) : c.json({ valid: false, errors: result.errors }, 422);
+    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.value, null) } : {}),
+    ...learnAdvisory(k.kind, result.value) }) : c.json({ valid: false, errors: result.errors }, 422);
 });
 
 // ── Writes ───────────────────────────────────────────────────────────────────
@@ -819,7 +835,8 @@ contentRoutes.put('/:kind', async (c) => {
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value,
         ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, publishedRequest(candidate, envelope)) } : {}),
-        ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.revision.value, result.revision.revision) } : {}) })
+        ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.revision.value, result.revision.revision) } : {}),
+        ...learnAdvisory(k.kind, result.revision.value) })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
 

@@ -10,7 +10,7 @@ import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platfo
 import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionBand, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
-import { isRewardType, REWARD_TYPES } from '@/ledger/records';
+import { isRewardType, REWARD_TYPES, type RewardType } from '@/ledger/records';
 import { TYPE_FALLBACK_RETIRED, typeFallbackRetired } from './typeAffinity';
 import { TODAY_TERMS, type ContextTerms } from './cell';
 import { ELIGIBILITY_SIGNALS } from './lifecycle';
@@ -1810,6 +1810,68 @@ function conversionTableErrors(candidate: unknown, slot: string): string[] {
     else if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) errors.push(`${at}.${reward}: ${shown(value)} is not a conversion value; a finite number above zero, what one ${reward} success is worth in the slot's currency`);
   }
   return errors;
+}
+
+/**
+ * P41 (R-P78, decision D1): the advisory a learn publication carries when a
+ * slot's conversion table does not name the slot's own reward. The table is
+ * published exactly as P16 accepts it (any table of rewards to values above
+ * zero) and nothing it does changes; the operator is told that every module on
+ * that slot which declares no success event now earns nothing, because its
+ * record names the slot's reward with `value: null` (decide.ts successEventOf).
+ * The envelope is the common core of the catalogue's and the slots document's
+ * advisory channels (catalogDiagnostics.ts, slotDiagnostics.ts), keys sorted
+ * (R-P3), with the same 50-warning sample and omitted count.
+ */
+export interface LearnConversionDiagnostics {
+  advisory: true;
+  omittedWarningCount: number;
+  schema: 'learn-conversion-diagnostics/v1';
+  status: 'available';
+  warningCount: number;
+  warnings: LearnConversionWarning[];
+}
+export interface LearnConversionWarning {
+  code: 'conversions_omit_slot_reward';
+  consequence: 'undeclared_pieces_earn_nothing';
+  reward: RewardType;
+  slot: string;
+}
+const LEARN_CONVERSION_WARNING_SAMPLE = 50;
+
+/**
+ * P41: one warning per slot of the learn document whose `conversions` table
+ * does not value the slot's own reward (its `reward` dial, `click` when the
+ * dial is absent, `custom` included: the table must name `custom` itself), in
+ * slot-name order, the order the store keeps a published document's slots in
+ * (publication.ts canonical), so the validate door lists them exactly as the
+ * PUT of the same document will; null when no slot warns, so a document without a
+ * table, or whose every table names its slot's reward, is answered exactly as
+ * before. A pure function of the document alone: it reads neither the slots
+ * document nor anything stored, so a table on a slot no page carries is told
+ * like any other (it starts to omit the moment a page carries the slot, by a
+ * slots publication that never re-reads this document). Callers give it the
+ * success answer of `PUT /content/learn` and `POST /content/learn/validate`
+ * only; no read of the document carries it.
+ */
+export function learnConversionDiagnostics(learn: Pick<LearnConfig, 'slots'> | null | undefined): LearnConversionDiagnostics | null {
+  const slots = learn && isRecord(learn.slots) ? learn.slots : null;
+  if (!slots) return null;
+  const warnings: LearnConversionWarning[] = [];
+  let warningCount = 0;
+  for (const slot of Object.keys(slots).sort()) {
+    const dials = slots[slot];
+    if (!dials || typeof dials !== 'object') continue;
+    const conversions: unknown = dials.conversions;
+    if (!isRecord(conversions)) continue;
+    const reward: RewardType = dials.reward ?? 'click';
+    // The value an undeclared module's record would carry (successEventOf): a finite number above zero, else null.
+    const value = Object.hasOwn(conversions, reward) ? conversions[reward] : undefined;
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) continue;
+    warningCount++;
+    if (warnings.length < LEARN_CONVERSION_WARNING_SAMPLE) warnings.push({ code: 'conversions_omit_slot_reward', consequence: 'undeclared_pieces_earn_nothing', reward, slot });
+  }
+  return warningCount ? { advisory: true, omittedWarningCount: warningCount - warnings.length, schema: 'learn-conversion-diagnostics/v1', status: 'available', warningCount, warnings } : null;
 }
 
 /**
