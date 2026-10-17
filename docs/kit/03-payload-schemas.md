@@ -606,7 +606,7 @@ publication receipt supply publication evidence. Missing headers return `428`, i
 operations reserve the catalog until the existing catalog publication status/recovery workflow finishes
 the exact retained intent; a currently granted operator or service may recover it without replacing
 its original approval or actor. Serving snapshots can remain cached for up to 30 seconds, excluding
-in-flight reads; publication is not an immediate-effect guarantee. No HTTP operation initializes a catalog.
+in-flight reads; publication is not an immediate-effect guarantee.
 
 Supplied proposals remain explicitly unverified. The separately configured `/generate` endpoint performs model generation; its verified witness describes the generation-time input/configuration/taxonomy and actual transport, not certification under today’s taxonomy. Human per-label review and current publication authority remain mandatory. Live model execution, customer sample calibration, UI handoff, cutover and approved data/retention policies remain separately evidenced acceptance.
 
@@ -958,7 +958,14 @@ decision: the page's slots in document order, except that each inner slot is dec
 slot, in the order the layout returned its modules (after its pins, off-limits modules, configured order,
 withheld modules, exploration pick and adjacent swap), never where the document lists it. A module that is not
 returned has its inner slot undecided: no decision, no `within`, no record, no row in the page manifest and no
-refused-pin or short-take entry are written for it. De-duplication spans the layout, every inner slot and every
+short-take entry are written for it, and a pin its own gates refused is left out, as it reserved nothing. A pin it
+kept reserved stays reserved page-wide, as every valid pin is, so its piece is served nowhere on that page view, and
+the decision's `pinDiagnostics` names it, after any refused pin, as
+`{ pinIndex, pinnedPieceId, reason: "module_not_returned", slot, within: { module, slot } }`, keys sorted: the inner
+slot, the piece, its place in the slot's `pinnedPieceIds` (`pinIndex`, absent for a scalar `pinnedPieceId`), and in
+`within` the module that was not returned and the layout slot; the entry refuses nothing, is counted in the
+snapshot's `refusedCount` as every entry is, and changes no decision, record, receipt, page manifest or replay.
+De-duplication spans the layout, every inner slot and every
 other slot of the page, so no piece is served twice on the page and an inner slot decided earlier in the layout's
 order takes a piece before a later one or any slot after the layout. Each inner decision carries
 `within: { module, slot }`, keys sorted, naming the layout slot and the module, on the snapshot's decision, on
@@ -1105,7 +1112,7 @@ what it changes.
 | `slots.{slot}.exploration` | `{ mode: rotation \| epsilon \| adjacent-swap \| off, share, floor }`; new writes reject Thompson, retained settings are inactive; `adjacent-swap`, on a page's declared layout slot only, swaps one pair of adjacent positions on `share` of the slot's decisions ([adjacent swaps](#adjacent-swaps-and-position-effects)) | off |
 | `slots.{slot}.positionNormalization` | `true` or `false`, on a page's declared layout slot only, off by default: `true` divides the credit of an engagement at a position by that position's effect from `positionEffects`, live and in the hourly recomputation alike ([adjacent swaps](#adjacent-swaps-and-position-effects)) | absent (off) |
 | `slots.{slot}.attribution` | The slot's own attribution policy, absent by default: absent, the slot is credited under the brand-wide `policy` exactly as before; `module-tied`, the only per-slot policy, credits a decision of the slot only for an outcome that carries that decision's `decisionId` or the module's identifier as `contentId`, so a buy-box conversion, which names no module, credits no decision of the slot ([where a page conversion lands](#where-a-page-conversion-lands)). Publication refuses any other value with an error naming `attribution` and writes no revision; a stored document naming another value still reads, with the member dropped. When a slot names it, the attribution record the visitor's ring derives when it credits an outcome (its credit receipt) itemises the policy and the decisions it credited | absent (the brand-wide policy) |
-| `slots.{slot}.conversions` | The slot's conversion table, `{ <reward>: <value> }`: each reward it names converted into the slot's own currency at a finite value above zero. With it every record of the slot names its module's success event and the value applied, an outcome of a module's declared success event credits its decision the table's value for it, and a module without a declaration is credited for the slot's reward at the table's value for it, each times the objective's weight and kept in the counter of the slot's reward ([success events and conversion tables](#success-events-and-conversion-tables)). Publication refuses anything but an object naming at least one reward of the list, each with a finite value above zero, with an error naming `conversions`; a stored document's refused table reads as absent | absent (the slot's reward and objective) |
+| `slots.{slot}.conversions` | The slot's conversion table, `{ <reward>: <value> }`: each reward it names converted into the slot's own currency at a finite value above zero. With it every record of the slot names its module's success event and the value applied, an outcome of a module's declared success event credits its decision the table's value for it, and a module without a declaration is credited for the slot's reward at the table's value for it, each times the objective's weight and kept in the counter of the slot's reward ([success events and conversion tables](#success-events-and-conversion-tables)). Publication refuses anything but an object naming at least one reward of the list, each with a finite value above zero, with an error naming `conversions`; a stored document's refused table reads as absent. A table that does not name the slot's own reward is published as written, and the success answer of the PUT or the validate door carries the `conversions_omit_slot_reward` warning in its `diagnostics` advisory | absent (the slot's reward and objective) |
 | `slots.{slot}.autonomy` | `{ mode: configured \| assisted \| autonomous, step, min, max, pinned, minN }` | configured |
 | `slots.{slot}.items.{item}` | `{ mode: reject }` or `{ mode: freeze, lift }` | none |
 | `slots.{slot}.blend` | `{ p, shadowP }`, `p` from 0 to 1: the layout blend, set only on a page's declared layout slot. The slot's modules are then scored `R + (1 − p) × B + p × Q` ([the blend block](#the-blend-block)) instead of `base × lift^γ`. At `p` 0 the slot serves its configured order, else its catalogue order, term for term — only when the layout weights no shopper dimension and sets no stage, freshness, fatigue, merchandising or complements term; otherwise the behaviour term moves it. `shadowP`, from 0 to 1 and 0.1 when the dial names none, is the p the slot's shadow order is ranked at ([the baseline and the shadow](#the-baseline-and-the-shadow)); it changes nothing served. Publication refuses a `p` outside 0 to 1, a `shadowP` outside 0 to 1 with an error naming `shadowP`, any other member, and an opt-in on a slot that is not a page's declared layout slot; the document keeps the members exactly as published | absent (no blend); `p` 0 and `shadowP` 0.1 when the dial names none |
@@ -1225,6 +1232,37 @@ changing or removing a table starts no new accumulation generation, so earlier c
 they were credited with; the replay does not compare `explain.successEvent`, and a replayed record omits
 it, which changes no score; the raw-day report built from the ledger counts a declared success event only
 where it is the slot's own reward, unweighted by the table.
+
+A table that does not name the slot's own reward, `{ "add_to_bag": 5 }` alone on a slot whose reward is
+`click`, is still published, and the publication tells the operator: the success answers of `PUT
+/content/learn` and `POST /content/learn/validate` carry, beside their other members, the advisory
+`diagnostics` member of schema `learn-conversion-diagnostics/v1`, in the envelope of the catalogue's and
+the pin channel's advisories, with one `conversions_omit_slot_reward` warning per such slot naming the
+`slot`, the omitted `reward` and the consequence `undeclared_pieces_earn_nothing`: every module on that
+slot which declares no success event earns nothing, because its record names the slot's reward with
+`value: null`.
+
+```json
+{ "diagnostics": { "advisory": true, "omittedWarningCount": 0, "schema": "learn-conversion-diagnostics/v1", "status": "available",
+    "warningCount": 1, "warnings": [ { "code": "conversions_omit_slot_reward", "consequence": "undeclared_pieces_earn_nothing",
+      "reward": "click", "slot": "home-stories" } ] } }
+```
+
+The member and each warning are written with their keys sorted. The member is present only when at least
+one table omits its slot's reward, and only on those two success answers: a document without a table, or
+whose every table names its slot's reward, is answered byte for byte as before, and no read carries the
+member (the current `GET /content/learn`, its history and revisions, the console's reads and the lift
+reads), so a retained document stored with such a table is told only when it is next published or
+validated. The warning refuses nothing and changes nothing: the document is published or validated with
+the same status and members, and the credits, records, receipts and replays are the ones described above.
+A slot's reward is its `reward` dial, `click` when the dial is absent, and a table names it only by that
+key, `custom` included. Warnings are listed one per slot in slot-name order, the order the published
+document keeps its slots in, so the validate door lists them exactly as the PUT of the same document will;
+at most 50 are listed, `warningCount` counts them all and `omittedWarningCount` is the rest. A table on a
+slot no page carries is warned like any other, since the learn publication does not read the slots
+document and the table omits the slot's reward the moment a page carries the slot. A rollback, and a
+learn document published as a `publicationChanges` member of another document's request, carry no
+advisory.
 
 ### The context vocabulary
 
@@ -1440,6 +1478,29 @@ when items were folded. `rebuiltFrom` names the repair the counters stand on, an
 repaired (below). `positionEffects`, only on a slot whose adjacent swaps have been counted, is
 `[{ position, effect, pairs }]`: each position's effect estimated from the swaps as a click ratio
 ([adjacent swaps](#adjacent-swaps-and-position-effects)).
+
+**The stale marker (`stale`).** Beside the snapshot, never inside it, `GET /v1/{tenant}/lift` and
+`GET /v1/{tenant}/lift/rows` answer one more member, `stale`, last, and only while the slot's snapshot in
+force is stale because its publication was refused for the pooled cause: a pooled module's record is read from
+every placement the module is served on at publication, and a pooled publication refused because another
+placement's statistics cannot be read answers `503` `{ ok: false, error, stale }`, naming that placement's
+page and slot and the pooled modules the refused slot reads from it, at the statistics object and at
+`POST /v1/{tenant}/learn/publish` alike. The stale marker is
+`{ lastPublished: { publishedAt, version }, modules, placement: { page, slot } }`, keys sorted:
+`lastPublished` the `version` and `publishedAt` of the snapshot in force, `null` on a slot that has never
+published; `modules` the pooled modules the refused slot reads from the faulty placement, sorted, one to 256
+of them; `placement` the page and slot whose statistics could not be read. The refusal never publishes part of
+a pooled record: the slot's snapshot stays at its last successful version, member for member as it was
+published, so `lastPublished` names the very snapshot the lift read answers. The stale marker is carried until
+a later publication of the slot succeeds, and after it succeeds `GET /v1/{tenant}/lift` and
+`GET /v1/{tenant}/lift/rows` answer exactly their usual members again; a slot that was never refused this way
+never carries it, and its answers, snapshot and storage are exactly as before. The `error` begins
+`statistics recovery required:` and names the page, the slot, each pooled module and the version the snapshot
+stays at (or, with no earlier publication, that the slot stays unpublished); a recovery refusal of any other
+cause keeps its text exactly, `statistics recovery required` at the object and
+`statistics acknowledgement unavailable` at `POST learn/publish`, and carries no `stale`. When several
+placements cannot be read at once, the first in page order, then slot order, is named, and the next once that
+one answers. The console's lift grid does not show the marker.
 
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item

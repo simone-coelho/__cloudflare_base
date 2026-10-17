@@ -1752,6 +1752,28 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     }
   }
   const undecided = nesting.size ? slots.filter((slot) => nesting.has(slot.slot) && !entered.has(slot)).map((slot) => slot.slot) : [];
+  const unreturnedPins = [];
+  if (undecided.length) for (const slot of slots) {
+    const placed = nesting.get(slot.slot);
+    if (!placed || entered.has(slot) || refusedPrefixes.has(slot)) continue;
+    const entry = (pinnedPieceId, at) => ({
+      ...at.pinIndex !== void 0 ? { pinIndex: at.pinIndex } : {},
+      pinnedPieceId,
+      ...at.position !== void 0 ? { position: at.position } : {},
+      reason: "module_not_returned",
+      slot: slot.slot,
+      within: { module: placed.module, slot: placed.layout }
+    });
+    const prefix = prefixes.get(slot);
+    if (prefix) {
+      for (const [pinIndex, id] of prefix.ids.entries()) if (reserved2.get(id) === slot.slot) unreturnedPins.push(entry(id, { pinIndex }));
+    }
+    for (const [position, piece] of [...positioned.get(slot) ?? []].sort((a, b) => a[0] - b[0])) {
+      if (reserved2.get(piece.id) === slot.slot) unreturnedPins.push(entry(piece.id, { position }));
+    }
+    const pinned = resolvedPins.get(slot);
+    if (pinned && reserved2.get(pinned.id) === slot.slot) unreturnedPins.push(entry(pinned.id, {}));
+  }
   const pageOrder = (set) => slots.filter((slot) => set.has(slot)).map((slot) => slot.slot);
   return {
     decisions: out,
@@ -1762,7 +1784,8 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     ...ruled.size ? { ruled: pageOrder(ruled) } : {},
     ...orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {},
     ...bandPlacements.length ? { bands: bandPlacements } : {},
-    ...undecided.length ? { undecided } : {}
+    ...undecided.length ? { undecided } : {},
+    ...unreturnedPins.length ? { unreturnedPins } : {}
   };
 }
 function innerSlotsOf(slots) {

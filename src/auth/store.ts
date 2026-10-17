@@ -33,7 +33,7 @@ export type AccountPatch = Partial<Pick<UserRecord, 'name' | 'roles' | 'permissi
 
 export type AuditAction =
   | 'sign_in' | 'sign_in_failed' | 'sign_in_locked' | 'sign_out' | 'password_changed'
-  | 'account_created' | 'account_reset' | 'account_disabled' | 'account_enabled' | 'account_changed' | 'account_removed' | 'account_migrated' | 'subject_read' | 'subject_operation' | 'ledger_recovery' | 'learning_recovery';
+  | 'account_created' | 'account_reset' | 'account_disabled' | 'account_enabled' | 'account_changed' | 'account_removed' | 'account_migrated' | 'subject_read' | 'subject_operation' | 'ledger_recovery' | 'learning_recovery' | 'publication_initialized';
 export const learningRecoveryAuditSchema = z.object({ v: z.literal(1), requestId: z.string().uuid(),
   operation: z.enum(['status', 'repair']), kind: z.enum(['stats', 'ring']), targetRef: z.string().regex(/^[a-f0-9]{64}$/),
   phase: z.enum(['admitted', 'result']), digest: z.string().regex(/^[a-f0-9]{64}$/).optional(),
