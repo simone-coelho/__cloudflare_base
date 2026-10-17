@@ -376,8 +376,27 @@
       h('div', {}, refused ? `${plural(refused, 'pin refusal')}` : 'no pin refused'),
       ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, ${words(p.reason)}`)),
       refused > named ? h('div', { class: 'itemid' }, `${plural(refused - named, 'more refusal')} not named`) : null,
+      ...unreturnedLines(g),
       h('div', {}, short ? `${plural(short, 'short take')}, ${plural(g.shortTakePositions, 'position')} left empty` : 'no short take'),
       day(g.since) ? h('div', { class: 'itemid' }, `since ${day(g.since)}`) : null);
+  }
+
+  /**
+   * P47 (R-P78): the pins of this slot left reserved and unserved because the
+   * layout did not return their module (the block's `unreturnedPinCount` and
+   * `unreturnedPins`) refuse nothing, so they are never called refusals: one
+   * line in their own words, then one per named pin with how often, the module
+   * and the layout slot. A block without any draws nothing more, exactly as before.
+   */
+  function unreturnedLines(g) {
+    const n = Number.isFinite(g.unreturnedPinCount) ? g.unreturnedPinCount : 0;
+    if (n <= 0) return [];
+    const pins = Array.isArray(g.unreturnedPins) ? g.unreturnedPins : [];
+    return [
+      h('div', {}, `${plural(n, 'pin')} reserved, unserved: the module was not returned`),
+      ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, reserved, unserved: `
+        + (p.within && p.within.module ? `${p.within.module} was not returned${p.within.slot ? ` by ${p.within.slot}` : ''}` : 'the module was not returned'))),
+    ];
   }
 
   /**
