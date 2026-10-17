@@ -452,7 +452,7 @@
   });
 
   // ══════════════════════════════════════════════════════════ Dials ══════════
-  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '', percent: null };
+  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '', percent: null, advisory: null };
   /** P09: a percentage the screen refused, held as typed for the slot it was typed on, or null. */
   const heldPercent = () => (dl.percent && dl.percent.slot === S.slot ? dl.percent : null);
   const dialsFor = () => { dl.draft.slots = dl.draft.slots || {}; return (dl.draft.slots[S.slot] = dl.draft.slots[S.slot] || {}); };
@@ -469,10 +469,15 @@
   function scheduleCheck() {
     clearTimeout(dl.timer);
     dl.checking = true;
+    // P46: an advisory stands only while the draft it advised is the draft on screen.
+    if (dl.advisory && dl.advisory.draft !== JSON.stringify(dl.draft)) dl.advisory = null;
     dl.timer = setTimeout(async () => {
       if (!changes().length) { dl.errors = []; dl.checking = false; C.render(); return; }
+      const checked = JSON.stringify(dl.draft);
       const r = await C.call(`/content/learn/validate${C.query({ scope: S.scope })}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document: dl.draft }) });
       dl.errors = r.data.valid ? [] : r.data.errors || ['The dials as drafted were refused.'];
+      // P46: the check's advisory, from this answer alone, unless the draft changed while it was asked.
+      if (JSON.stringify(dl.draft) === checked) dl.advisory = learnAdvisoryOf(r, 'check', checked);
       dl.checking = false;
       C.render();
     }, 350);
@@ -494,6 +499,7 @@
     dl.errors = [];
     dl.vocabularyText = null; dl.vocabularyError = '';
     dl.percent = null;
+    dl.advisory = null;
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
@@ -502,9 +508,51 @@
     dl.doc = res.data.document; dl.draft = copy(dl.doc); dl.revision = res.data.revision; dl.source = 'stored';
     dl.vocabularyText = null; dl.vocabularyError = '';
     dl.percent = null;
+    dl.advisory = learnAdvisoryOf(res, 'save', JSON.stringify(dl.draft));
     document.getElementById('note').value = '';
     C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Published; serving refreshes within the documented 30-second read bound.`);
     await C.loadSlots();
+  }
+
+  /**
+   * P46 (R-P78; P41's advisory): the learn publication's `diagnostics`, kept from the answer of the
+   * screen's check (`check`, the validate door) or of its save (`save`, the PUT) when, and only when,
+   * that answer carries the member, with the draft it advised. Nothing here asks the platform for
+   * anything, and an answer without the member keeps nothing, so the screen is drawn as before.
+   */
+  function learnAdvisoryOf(res, label, draft) {
+    const d = res && res.ok && res.data ? res.data.diagnostics : undefined;
+    return d && typeof d === 'object' && !Array.isArray(d) ? { label, diagnostics: d, draft } : null;
+  }
+  const LEARN_CONSEQUENCES = { undeclared_pieces_earn_nothing: 'undeclared pieces on this slot earn nothing' };
+  /**
+   * The kept advisory as ONE note (`data-learn-advisory` = check | save), drawn where the screen lists a
+   * refused draft's errors: one line per warning the answer lists, naming the slot, the slot's reward
+   * its conversion table omits and the consequence. It is kept only while the draft it advised is on
+   * screen: every edit runs `scheduleCheck`, which drops it, and entering the screen or discarding the
+   * draft clears it.
+   */
+  function learnAdvisory() {
+    const a = dl.advisory;
+    if (!a) return null;
+    const d = a.diagnostics;
+    const listed = (Array.isArray(d.warnings) ? d.warnings : []).filter((w) => w && typeof w === 'object');
+    const omitted = Number.isSafeInteger(d.omittedWarningCount) && d.omittedWarningCount > 0 ? d.omittedWarningCount : 0;
+    const line = (w) => {
+      const slot = typeof w.slot === 'string' && w.slot ? w.slot : 'unnamed';
+      const reward = typeof w.reward === 'string' && w.reward ? words(w.reward) : 'not named';
+      const what = w.code === 'conversions_omit_slot_reward' || w.code === undefined
+        ? `its conversion table does not name the slot's reward, ${reward}` : `${words(w.code)} (the slot's reward, ${reward})`;
+      const consequence = LEARN_CONSEQUENCES[w.consequence] || (typeof w.consequence === 'string' ? words(w.consequence) : '');
+      return h('li', {}, `Slot ${slot}: ${what}${consequence ? `; ${consequence}` : ''}.`);
+    };
+    return h('div', { class: 'msg note', 'data-learn-advisory': a.label },
+      h('strong', {}, a.label === 'save' ? 'Saved with a conversion warning: ' : 'This draft has a conversion warning: '),
+      a.label === 'save' ? 'the document was published as written, and on the slots below a piece that declares no success event of its own is credited nothing.'
+        : 'it is valid and would publish as written, and on the slots below a piece that declares no success event of its own would be credited nothing.',
+      listed.length ? h('ul', {}, ...listed.map(line)) : null,
+      omitted ? h('div', { class: 'help' }, `${plural(omitted, 'more warning')} not shown.`) : null,
+      h('div', { class: 'help' }, 'Advice only: nothing was refused. This screen does not edit conversion tables; to credit those pieces, name the slot\u2019s reward in its conversions table and publish the learn document.'));
   }
 
   const put = (host, ...items) => host.append(...items.flat().filter((x) => x !== null && x !== undefined && x !== false));
@@ -705,9 +753,11 @@
         checking: dl.checking,
         blocked: dl.errors.length > 0 || dl.vocabularyError !== '' || heldPercent() !== null,
         save: saveDials,
-        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; dl.percent = null; C.render(); },
+        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; dl.percent = null; dl.advisory = null; C.render(); },
       });
       if (dl.errors.length) host.append(h('div', { class: 'msg err' }, 'The dials as drafted were refused:', h('ul', {}, ...dl.errors.map((e) => h('li', {}, String(e))))));
+      const advisory = learnAdvisory();
+      if (advisory) host.append(advisory);
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
         dl.source === 'stored' ? `Reading revision ${fmt(dl.revision)} of the learn document.` : 'Nothing stored for this brand yet: these are the settings the engine shipped with.'));
       const slotCard = card(S.slot ? `This slot: ${S.slot}` : 'This slot', 'What the engine may do in this one place.', h('div', { class: 'body' }));
