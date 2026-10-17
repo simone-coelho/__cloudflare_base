@@ -249,7 +249,7 @@
     {
       "id": "P47",
       "title": "An unreturned module's pin is not called a refusal (**amendment 3, 2026-10-17**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
