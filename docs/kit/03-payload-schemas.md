@@ -1500,7 +1500,10 @@ stays at (or, with no earlier publication, that the slot stays unpublished); a r
 cause keeps its text exactly, `statistics recovery required` at the object and
 `statistics acknowledgement unavailable` at `POST learn/publish`, and carries no `stale`. When several
 placements cannot be read at once, the first in page order, then slot order, is named, and the next once that
-one answers. The console's lift grid does not show the marker.
+one answers. The console's lift grid marks a slot whose `GET /v1/{tenant}/lift/rows` answer carries `stale`:
+one note above the grid's table names the faulty `placement` (its page and slot), the pooled `modules` and the
+last successful publication from `lastPublished` (its version and time, or that the slot has none yet), and the
+mark is gone once a read no longer carries the marker.
 
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
