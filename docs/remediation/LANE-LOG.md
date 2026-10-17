@@ -575,6 +575,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-16 night — **Pilot path (owner "Your recommendation is approved")**: staging first through the guarded workflow, then production, then the pilot tenant. Finding: the guarded workflow cannot target `edge-platform-staging`; path A/B is the owner's ruling (asked once); W08-C1 opened for the missing customer-profile initializer (lanes `spec-w08` 21d54361, `build-w08`); scripts prepared under `_evidence/pilot/`; nothing deployed. Amendment 2: P42 c7f74beb in `review-p42`; R-P81.
 
+- 2026-10-17 small hours — **Amendment 2 LOCALLY COMPLETE 4/4** (P42 c7f74beb, P43 bd595ca0, P44 da7e7f31; last commit c7543471); **W08-C1 merged** 1f33f00c (the customer-profile tenant initializer the pilot needs); **amendment 3** drafted 6d82f8ff with the programme-4 draft ledger f31e5aa2, S7 specifying on `spec-parity-g`; the pilot still waits on the owner's four answers (path, retention, tenant identity, owner account). Rulings R-P81; next warning tickets recorded in AMENDMENTS.md.
+
 ## Commits
 
 | Sha | What |
