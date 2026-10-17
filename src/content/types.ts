@@ -1285,7 +1285,12 @@ export interface ContentDecisionSet {
      */
     slotPosition?: number }>;
   records: DecisionRecord[];
-  /** Refused pins have no delivery decision or ledger row. */
+  /**
+   * Refused pins have no delivery decision or ledger row. P43 (R-P78): after
+   * them, a `module_not_returned` entry for each pin an inner content slot kept
+   * reserved when the layout did not return its module (`within` names the
+   * module and the layout slot); its piece is served nowhere on that page view.
+   */
   pinDiagnostics?: PinDiagnostic[];
   /**
    * W20 G2: the pinned slots that served and still could not fill their `take`
