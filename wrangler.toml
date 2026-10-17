@@ -238,9 +238,9 @@ name = "edge-platform-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 DEPLOYMENT_PROFILE = "customer"
-LEDGER_RECOVERY_ENABLED = "false"
+LEDGER_RECOVERY_ENABLED = "true"   # pilot test deployment on the Optimizely account, 2026-10-17: durable recovery on; the unknown-owner policy is the pilot's 30-day test policy, not a customer policy
 # Policy-unset intake is held by workflow activation/resume preflight.
-LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events-staging","deadLetterQueue":"events-staging-dead-letter"}'
+LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events-staging","deadLetterQueue":"events-staging-dead-letter","unknown":{"id":"pilot-unknown-v1","revision":1,"durationMs":2592000000,"basis":"admitted","renewal":"new-record-only","disposal":"delete-on-expiry"}}'
 # Enforced: SDK keys on /realtime and /v1, JWT on operator writes, CORS allow-list only.
 AUTH_MODE = "enforced"
 # The customer's lower-environment origins, comma-separated (`*.example.com` allowed).
@@ -339,9 +339,9 @@ name = "edge-platform-production"
 [env.production.vars]
 ENVIRONMENT = "production"
 DEPLOYMENT_PROFILE = "customer"
-LEDGER_RECOVERY_ENABLED = "false"
+LEDGER_RECOVERY_ENABLED = "true"   # pilot test deployment on the Optimizely account, 2026-10-17: durable recovery on with the pilot's 30-day unknown-owner test policy
 # Policy-unset intake is held by workflow activation/resume preflight.
-LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events-production","deadLetterQueue":"events-production-dead-letter"}'
+LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events-production","deadLetterQueue":"events-production-dead-letter","unknown":{"id":"pilot-unknown-v1","revision":1,"durationMs":2592000000,"basis":"admitted","renewal":"new-record-only","disposal":"delete-on-expiry"}}'
 # Enforced: SDK keys on /realtime and /v1, JWT on operator writes, CORS allow-list only.
 AUTH_MODE = "enforced"
 # The customer's site origins, comma-separated (`*.example.com` allowed): an onboarding input.

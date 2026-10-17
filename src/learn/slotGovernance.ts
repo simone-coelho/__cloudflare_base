@@ -64,13 +64,31 @@ export interface SlotGovernance {
   shortTakeCount: number;
   /** Positions left empty across those times. */
   shortTakePositions: number;
+  /**
+   * P47 (R-P78): occurrences since `since` of a pin of this slot left reserved
+   * and unserved because the layout did not return its module (P43's
+   * `module_not_returned` entry). Such a pin refuses nothing, so it is counted
+   * here and never in `refusedPinCount`.
+   */
+  unreturnedPinCount: number;
+  /** The distinct such pins, bounded as `refusedPins` is, each naming the module and the layout slot. */
+  unreturnedPins: UnreturnedPin[];
 }
+
+/** P47: one pin left reserved and unserved, keys sorted (R-P3): how often, the piece, and the module and layout slot. */
+export interface UnreturnedPin { count: number; pinnedPieceId: string; within: { module: string; slot: string } }
 
 /** What one page load produced, as the decision path reports it. */
 export interface SlotGovernanceOccurrences {
   refusedPins: ReadonlyArray<{ slot: string; pinnedPieceId: string; reason: string }>;
   /** `short_take` (R86(b)): a pinned slot that served and still fell short. */
   shortTakes: ReadonlyArray<{ slot: string; empty: number }>;
+  /**
+   * P47: the page's `module_not_returned` entries (P43), apart from its
+   * refusals: the inner slot, its pinned piece and, in `within`, the module the
+   * layout did not return and the layout slot. Absent reads as none.
+   */
+  unreturnedPins?: ReadonlyArray<{ slot: string; pinnedPieceId: string; within?: { module: string; slot: string } }>;
 }
 
 /**
@@ -85,6 +103,14 @@ export interface TenantSlotGovernance {
   scope: SlotGovernanceScope;
   refusedPinCount: number;
   shortTakeCount: number;
+  /**
+   * P47: the tenant's total of pins left reserved and unserved because their
+   * module was not returned, after today's members. Present once the tenant's
+   * document has counted one within its horizon; a document that never has is
+   * in its former shape and answers without it, so a tenant whose pages only
+   * refuse reads exactly as before.
+   */
+  unreturnedPinCount?: number;
 }
 
 /** One read of the document: per slot, plus the tenant totals the monitor reports. */
@@ -119,13 +145,21 @@ export const slotGovernanceKey = (tenant: string): string => `slot-governance:v1
 
 /** A slot with nothing to report, at the horizon the answer states (R86(b)). */
 export const emptySlotGovernance = (since: number): SlotGovernance =>
-  ({ since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount: 0, refusedPins: [], shortTakeCount: 0, shortTakePositions: 0 });
+  ({ since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount: 0, refusedPins: [], shortTakeCount: 0, shortTakePositions: 0,
+    unreturnedPinCount: 0, unreturnedPins: [] });
 
 interface StoredSlot {
   refusedPinCount: number;
   refusedPins: Array<{ pinnedPieceId: string; reason: string; count: number }>;
   shortTakeCount: number;
   shortTakePositions: number;
+  /**
+   * P47: written on a slot only from the first pin of it counted as left
+   * reserved and unserved, so a slot that only ever refused keeps exactly the
+   * bytes it was written with before the members existed.
+   */
+  unreturnedPinCount?: number;
+  unreturnedPins?: UnreturnedPin[];
 }
 /**
  * What is kept in the store: the horizon and the counts, and nothing that an
@@ -159,7 +193,8 @@ function parseDocument(raw: unknown, now: number): StoredDocument | null {
   for (const [slot, entry] of Object.entries(stored as Record<string, unknown>)) {
     if (Object.keys(slots).length >= MAX_SLOTS) break;
     if (name(slot, 128) === null || !entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
-    const row = entry as { refusedPinCount?: unknown; refusedPins?: unknown; shortTakeCount?: unknown; shortTakePositions?: unknown };
+    const row = entry as { refusedPinCount?: unknown; refusedPins?: unknown; shortTakeCount?: unknown; shortTakePositions?: unknown;
+      unreturnedPinCount?: unknown; unreturnedPins?: unknown };
     const refusedPins: StoredSlot['refusedPins'] = [];
     if (Array.isArray(row.refusedPins)) {
       for (const pin of row.refusedPins as unknown[]) {
@@ -172,9 +207,34 @@ function parseDocument(raw: unknown, now: number): StoredDocument | null {
       }
     }
     slots[slot] = { refusedPinCount: count(row.refusedPinCount), refusedPins,
-      shortTakeCount: count(row.shortTakeCount), shortTakePositions: count(row.shortTakePositions) };
+      shortTakeCount: count(row.shortTakeCount), shortTakePositions: count(row.shortTakePositions),
+      ...(row.unreturnedPinCount !== undefined || row.unreturnedPins !== undefined
+        ? { unreturnedPinCount: count(row.unreturnedPinCount), unreturnedPins: parseUnreturned(row.unreturnedPins) } : {}) };
   }
   return { version: 1, since, slots };
+}
+
+/** P47: the stored unreturned pins, each rebuilt with its keys sorted; one that cannot be named whole is dropped. */
+function parseUnreturned(value: unknown): UnreturnedPin[] {
+  const pins: UnreturnedPin[] = [];
+  if (!Array.isArray(value)) return pins;
+  for (const pin of value as unknown[]) {
+    if (pins.length >= MAX_PINS_PER_SLOT) break;
+    if (!pin || typeof pin !== 'object' || Array.isArray(pin)) continue;
+    const candidate = pin as { count?: unknown; pinnedPieceId?: unknown; within?: unknown };
+    const named = unreturnedName(candidate.pinnedPieceId, candidate.within);
+    if (named) pins.push({ count: count(candidate.count), ...named });
+  }
+  return pins;
+}
+
+/** P47: a pin's piece, module and layout slot, each a name this document stores, or `null` when any is not. */
+function unreturnedName(pinnedPieceIdValue: unknown, withinValue: unknown): Omit<UnreturnedPin, 'count'> | null {
+  const pinnedPieceId = name(pinnedPieceIdValue, MAX_ID_LENGTH);
+  if (pinnedPieceId === null || !withinValue || typeof withinValue !== 'object' || Array.isArray(withinValue)) return null;
+  const within = withinValue as { module?: unknown; slot?: unknown };
+  const module = name(within.module, MAX_ID_LENGTH), slot = name(within.slot, 128);
+  return module === null || slot === null ? null : { pinnedPieceId, within: { module, slot } };
 }
 
 async function loadDocument(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<StoredDocument | null> {
@@ -209,15 +269,20 @@ export async function readSlotGovernance(env: Pick<Env, 'CACHE'>, tenant: string
 function viewOf(document: StoredDocument | null, now: number): SlotGovernanceView {
   const since = document?.since ?? now;
   const bySlot = new Map<string, SlotGovernance>();
-  let refusedPinCount = 0, shortTakeCount = 0;
+  let refusedPinCount = 0, shortTakeCount = 0, unreturnedPinCount = 0, unreturnedCounted = false;
   for (const [slot, entry] of Object.entries(document?.slots ?? {})) {
     bySlot.set(slot, { since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount: entry.refusedPinCount,
       refusedPins: entry.refusedPins.map(pin => ({ ...pin })),
-      shortTakeCount: entry.shortTakeCount, shortTakePositions: entry.shortTakePositions });
+      shortTakeCount: entry.shortTakeCount, shortTakePositions: entry.shortTakePositions,
+      unreturnedPinCount: entry.unreturnedPinCount ?? 0,
+      unreturnedPins: (entry.unreturnedPins ?? []).map(pin => ({ count: pin.count, pinnedPieceId: pin.pinnedPieceId,
+        within: { module: pin.within.module, slot: pin.within.slot } })) });
     refusedPinCount += entry.refusedPinCount;
     shortTakeCount += entry.shortTakeCount;
+    if (entry.unreturnedPinCount !== undefined) { unreturnedCounted = true; unreturnedPinCount += entry.unreturnedPinCount; }
   }
-  return { since, scope: SLOT_GOVERNANCE_SCOPE, bySlot, refusedPinCount, shortTakeCount };
+  return { since, scope: SLOT_GOVERNANCE_SCOPE, bySlot, refusedPinCount, shortTakeCount,
+    ...(unreturnedCounted ? { unreturnedPinCount } : {}) };
 }
 
 /**
@@ -228,7 +293,8 @@ function viewOf(document: StoredDocument | null, now: number): SlotGovernanceVie
  */
 export async function tenantSlotGovernance(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<TenantSlotGovernance | undefined> {
   const view = await observeSlotGovernance(env, tenant, now);
-  return view ? { since: view.since, scope: view.scope, refusedPinCount: view.refusedPinCount, shortTakeCount: view.shortTakeCount } : undefined;
+  return view ? { since: view.since, scope: view.scope, refusedPinCount: view.refusedPinCount, shortTakeCount: view.shortTakeCount,
+    ...(view.unreturnedPinCount !== undefined ? { unreturnedPinCount: view.unreturnedPinCount } : {}) } : undefined;
 }
 
 /**
@@ -240,7 +306,8 @@ export async function recordSlotGovernance(
   env: Pick<Env, 'CACHE'>, tenant: string, occurrences: SlotGovernanceOccurrences, now: number,
 ): Promise<void> {
   try {
-    if (!occurrences.refusedPins.length && !occurrences.shortTakes.length) return;
+    const unreturned = occurrences.unreturnedPins ?? [];
+    if (!occurrences.refusedPins.length && !occurrences.shortTakes.length && !unreturned.length) return;
     const previous = await loadDocument(env, tenant, now);
     const document: StoredDocument = previous ?? { version: 1, since: now, slots: {} };
     const slotOf = (slot: string): StoredSlot | null => {
@@ -267,6 +334,20 @@ export async function recordSlotGovernance(
       slot.shortTakeCount += 1;
       slot.shortTakePositions += count(shortfall.empty);
     }
+    // P47 (R-P78): a pin left reserved and unserved because its module was not
+    // returned refuses nothing; it is counted apart, per page load as a refusal
+    // is, and named with its module and layout slot, never in `refusedPins`.
+    for (const pin of unreturned) {
+      const slot = name(pin.slot, 128) === null ? null : slotOf(pin.slot);
+      if (!slot) continue;
+      slot.unreturnedPinCount = (slot.unreturnedPinCount ?? 0) + 1;
+      const pins = slot.unreturnedPins ??= [];
+      const named = unreturnedName(pin.pinnedPieceId, pin.within);
+      if (named === null) continue;   // counted, not named, as a refusal is
+      const seen = pins.find(p => p.pinnedPieceId === named.pinnedPieceId && p.within.module === named.within.module && p.within.slot === named.within.slot);
+      if (seen) seen.count += 1;
+      else if (pins.length < MAX_PINS_PER_SLOT) pins.push({ count: 1, ...named });
+    }
     // The counts are never dropped to stay inside the budget; the NAMES are.
     // A tenant whose document would outgrow the cap keeps every occurrence
     // counted and loses the per-pin sample first, so the operator still sees
@@ -275,7 +356,10 @@ export async function recordSlotGovernance(
     let body = JSON.stringify(document);
     for (const cap of [3, 0]) {
       if (bytes.encode(body).byteLength <= MAX_BYTES) break;
-      for (const slot of Object.values(document.slots)) if (slot.refusedPins.length > cap) slot.refusedPins.length = cap;
+      for (const slot of Object.values(document.slots)) {
+        if (slot.refusedPins.length > cap) slot.refusedPins.length = cap;
+        if (slot.unreturnedPins && slot.unreturnedPins.length > cap) slot.unreturnedPins.length = cap;
+      }
       body = JSON.stringify(document);
     }
     if (bytes.encode(body).byteLength > MAX_BYTES) return;   // the last state stands; nothing unbounded is written

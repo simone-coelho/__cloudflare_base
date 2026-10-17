@@ -22,7 +22,7 @@
     {
       "id": "P45",
       "title": "The console's lift grid shows a stale slot (**amendment 3, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
@@ -136,7 +136,7 @@
     {
       "id": "P46",
       "title": "The console's dials screen shows a learn publication's advisory (**amendment 3, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
@@ -249,7 +249,7 @@
     {
       "id": "P47",
       "title": "An unreturned module's pin is not called a refusal (**amendment 3, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
@@ -370,7 +370,7 @@
     {
       "id": "P48",
       "title": "A bootstrapped tenant's priors and proposals doors answer, not 503 (**amendment 3, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
