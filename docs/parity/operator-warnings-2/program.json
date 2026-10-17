@@ -136,7 +136,7 @@
     {
       "id": "P46",
       "title": "The console's dials screen shows a learn publication's advisory (**amendment 3, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
