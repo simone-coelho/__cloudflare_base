@@ -158,6 +158,12 @@ export function normalizePiece(raw: unknown): Record<string, unknown> | null {
   // carries it — a JSON cell in a CSV row, like `merchandising` — and the
   // validator, never this reshaping, decides whether it is well formed.
   copy('eligibleWhen', jsonCell);
+  // P44 (R-P78): the module's declarations travel on every import path as the
+  // direct publication carries them, and the validator decides them: a CSV
+  // `pooled` cell `true` is the declaration (JSON's `true`), any other value is
+  // refused by name; a `successEvent` cell is the reward word.
+  copy('pooled', jsonCell);
+  copy('successEvent');
   // An explicitly supplied canonical field always wins, even when invalid.
   if (supplied('lifecycle')) out.lifecycle = raw.lifecycle;
   else if (supplied('status')) out.lifecycle = { status: trimmed(raw.status) };
@@ -264,7 +270,7 @@ export function parseCsv(text: string): Record<string, string>[] {
 
 export const CSV_COLUMNS = [
   'id', 'customerContentId', 'type', 'title', 'subtitle', 'tags', 'slotTypes', 'status', 'art', 'renderUrl', 'excerpt', 'runtime', 'windowFrom', 'windowTo',
-  'eligibleWhen', 'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'complements', 'inStock', 'merchandising',
+  'eligibleWhen', 'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'complements', 'inStock', 'merchandising', 'pooled', 'successEvent',
 ] as const;
 
 // ── Assembly ────────────────────────────────────────────────────────────────

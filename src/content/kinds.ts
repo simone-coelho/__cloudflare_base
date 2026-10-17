@@ -39,15 +39,14 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
  * The feed adapter's accepted spellings are this set plus its aliases
  * (`FEED_FIELD_ALIASES`, src/content/import.ts); nothing else is a field.
  *
- * P08: `validatePiece` also reads `pooled` (decision D1), which this set does
- * not list, because unit:W19.F3.04 locks the set to the field list kit 03's
- * piece table published before it; a direct write that carries the
- * declaration is therefore also named on the advisory channel as an ignored
- * field, although the stored piece keeps it.
+ * P44 (R-P78): the set lists P08's `pooled` and P16's `successEvent`, both
+ * read by `validatePiece` and documented in kit 03's piece table, so a write
+ * that declares either keeps it without naming it as an ignored field, and the
+ * feed's accepted set, which derives from this one, carries both.
  */
 export const PIECE_FIELDS: ReadonlySet<string> = new Set(['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime',
   'tags', 'slotTypes', 'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate',
-  'featuredProductIds', 'complements', 'inStock']);
+  'featuredProductIds', 'complements', 'inStock', 'pooled', 'successEvent']);
 
 /**
  * Every key `contentCatalog` below reads on the catalogue DOCUMENT itself: its
@@ -264,10 +263,8 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
   // value is refused by name rather than read as undeclared, which would leave
   // the author believing the module is credited for it. A retained document is
   // read, never refused, for it: a value outside the list there is the
-  // undeclared module it always was. Like `pooled` (P08), it is read here and
-  // not listed in PIECE_FIELDS, which unit:W19.F3.04 locks to kit 03's earlier
-  // piece table, so a direct write carrying it is also named on the advisory
-  // channel as an ignored field although the stored piece keeps it.
+  // undeclared module it always was. Like `pooled` (P08), it is listed in
+  // PIECE_FIELDS (P44), so a write carrying it is never named as an ignored field.
   if (!stored && p.successEvent !== undefined && !isRewardType(p.successEvent)) {
     errors.push(`${at}.successEvent: ${quoted(p.successEvent)} is not a success event; one of ${REWARD_TYPES.join(' | ')}, the reward an outcome of the module counts as its success (absent: the slot's own reward)`);
   }
