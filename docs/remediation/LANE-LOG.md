@@ -585,6 +585,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-17 evening — **Amendment 3 LOCALLY COMPLETE 5/5** (P49 14b8e5a8; receipts 80466f2f, 3fb6db97, 100b5502, 338e0f4e, 1e8a7d56; last commit 00b6e455). Every ledger locally complete. Next under R-P78: amendment 4 (six items, AMENDMENTS.md). Owner's call: the 52-baseline-failures programme; redeploying the stamps with P45-P49.
 
+- 2026-10-17 evening — **Pilot stamps redeployed at fb65421f** (every ledger's local completion, P45 to P49 included): staging version 8222eb06, production 25ec617c; both ready; API smoke green on both (health, SDK bytes, session, consent, snapshot with 3 decisions, impression acknowledged). Logs `_evidence/pilot/logs/deploy-3-*`.
+
 ## Commits
 
 | Sha | What |
