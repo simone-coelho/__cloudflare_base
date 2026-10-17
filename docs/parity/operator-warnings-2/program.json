@@ -22,7 +22,7 @@
     {
       "id": "P45",
       "title": "The console's lift grid shows a stale slot (**amendment 3, 2026-10-17**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
