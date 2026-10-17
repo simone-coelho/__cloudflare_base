@@ -1071,6 +1071,16 @@ not read the slots document and such a table omits its reward the moment a page 
 a rollback (`POST /content/learn/rollback/{n}`) and a learn document published as a `publicationChanges`
 member of another document's request carry no advisory.
 
+The console's Dials screen shows this advisory beside the result of its check (the validate door, asked
+shortly after an edit) and of its save (the `PUT`): when that answer carries `diagnostics`, one note above the
+"Reading revision" line lists each warning, naming the slot, the slot's reward its conversion table omits
+and the consequence, that undeclared pieces on that slot earn nothing, and says how many more there are
+when `omittedWarningCount` is not zero. The screen makes no request it did not make before; an answer
+without the member leaves the screen exactly as it was; the check's note lasts while the draft it checked
+is on screen and the save's until the draft changes or the screen is entered again. The screen has no
+control for conversion tables, so a save republishes a stored table as it is and is told about it the
+same way. A rollback, made from the History screen, carries no advisory and shows none.
+
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
 New statistics monotonically drop complete fine levels from both item and slot maps when cardinality/bytes saturate. Retained ancestor counts are used directly, never sums of overlapping levels. After256 item identities, additional items contribute to a root-only anonymous overflow aggregate; their own estimates are unavailable/neutral, not zero. The admitted population is first-seen (explicit repair uses lexical selection), so selection bias remains; coarser pooling loses within-cell distinctions. Snapshot `completeness` exposes depth, item omission and reason. No finer partial estimates are recreated. W23 original-time weighting and W24 configuration compatibility remain unchanged.
