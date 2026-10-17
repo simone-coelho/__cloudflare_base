@@ -1502,14 +1502,35 @@ a later publication of the slot succeeds, and after it succeeds `GET /v1/{tenant
 `GET /v1/{tenant}/lift/rows` answer exactly their usual members again; a slot that was never refused this way
 never carries it, and its answers, snapshot and storage are exactly as before. The `error` begins
 `statistics recovery required:` and names the page, the slot, each pooled module and the version the snapshot
-stays at (or, with no earlier publication, that the slot stays unpublished); a recovery refusal of any other
-cause keeps its text exactly, `statistics recovery required` at the object and
-`statistics acknowledgement unavailable` at `POST learn/publish`, and carries no `stale`. When several
+stays at (or, with no earlier publication, that the slot stays unpublished); a refusal after a learn republish
+names its own cause (`republished`, below), and a recovery refusal of any other cause keeps its text exactly,
+`statistics recovery required` at the object and `statistics acknowledgement unavailable` at
+`POST learn/publish`, and carries no `stale`. When several
 placements cannot be read at once, the first in page order, then slot order, is named, and the next once that
 one answers. The console's lift grid marks a slot whose `GET /v1/{tenant}/lift/rows` answer carries `stale`:
 one note above the grid's table names the faulty `placement` (its page and slot), the pooled `modules` and the
 last successful publication from `lastPublished` (its version and time, or that the slot has none yet), and the
 mark is gone once a read no longer carries the marker.
+
+**The republish member (`republished`).** A slot's statistics accumulate under one tuple, the slot's `reward`,
+`objective` and `measurementBasis` and the learn document's `stats` block, and a learn document republished with
+another value for any of them, which no generation transition accounts for, has every publication of the slot
+refused, with the snapshot in force left as it was. That refusal answers `503` `{ ok: false, error, republished }`
+at the statistics object and at `POST /v1/{tenant}/learn/publish` alike, and from it until the slot's next
+successful publication `GET /v1/{tenant}/lift` (the snapshot in force) and `GET /v1/{tenant}/lift/rows` answer one
+more member, `republished`, last. The member is
+`{ changed: [{ member, new, old }], endedBy: "generation_transition", page?, slot }`, keys sorted: `changed` lists
+each member of the tuple whose value in the republished learn document (`new`) differs from the one the slot's
+statistics accumulate under (`old`), sorted by `member`, one to eight of them, named `measurementBasis`,
+`objective`, `reward`, `stats.liftMax`, `stats.liftMin`, `stats.n0`, `stats.nMin` or `stats.tauLearnMs`, the
+words of a dial as strings and the `stats` values as numbers; `endedBy` is `generation_transition`; `slot` names the
+refused slot and `page`, only on a page-scoped placement, its page. The `error` begins
+`statistics recovery required:`, names the slot, each changed member with its old and new values and the version
+the slot's statistics stay at (or, with no earlier publication, that the slot stays unpublished), and says what
+ends it. `republished` is carried until a publication of the slot succeeds, which happens after an operator starts
+the new generation with `POST /v1/{tenant}/learn/generation` (its own publication) or after the learn document is
+republished with the old values; the reads then answer exactly their usual members again. A republish that changes
+nothing in the tuple is not refused, and a slot whose tuple never changed never carries `republished`.
 
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
