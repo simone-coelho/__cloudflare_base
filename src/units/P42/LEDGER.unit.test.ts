@@ -94,6 +94,7 @@
 //     carrying a well-formed `stale`;
 //   · the KV doubles of src/learn/learn.test.ts:134 and src/content/consent.test.ts
 //     implement only get and put (the header's note for the build).
+//   · R-P82 (S7, P49): PW1's CONTROL leg's other cause is a damaged generation record, no longer a learn reward change, which P49 rules named; test-only, R-P75 form.
 //
 // HARNESS: src/units/_parity.ts (the mounted routes over the real Durable Object
 // classes, both shopper hosts), src/units/_parity3.ts (publication through every
@@ -106,7 +107,7 @@ import { statsName } from '@/learn/fan';
 import { DEFAULT_STATS } from '@/learn/stats';
 
 import {
-  asOperator, BRAND, expectPublished, HOSTS, mount, PAID_SOCIAL_ENTRY, pageInstanceOf, putDocument, shopperOn, storedDecisions, TENANT,
+  asOperator, BRAND, expectPublished, HOSTS, mount, PAID_SOCIAL_ENTRY, pageInstanceOf, shopperOn, storedDecisions, TENANT,
   VIEW_TABBY_26, type Answer, type Host, type Mounted,
 } from '../_parity';
 import { missingStatements, publishStats } from '../_parity3';
@@ -249,12 +250,13 @@ describe('unit:P42.PW1 (R-P78, D1)', () => {
       expect.soft(identityOf(await liftOf(m, PDP_MODULES)), `${host}: P42.PW1 — LOCKED (fail-closed stays): the snapshot in force is the last successful one`).toEqual(last);
     }, 120_000);
 
-    it(`host (${host}): CONTROL — a recovery refusal of another cause (the slot's reward changed in the learn document without an authorized transition) keeps today's text at the object's door and at the operator's publish, and the lift read stays today's`, async () => {
+    it(`host (${host}): CONTROL — a recovery refusal of another cause (the product slot's generation record damaged) keeps today's text at the object's door and at the operator's publish, and the lift read stays today's`, async () => {
       const m = await world(host, { pieces: P08_PIECES, slots: P08_SLOTS, learn: P08_LEARN });
       await visit(m, 'pdp'); await visit(m, 'home');
       await publishStats(m);
-      const changed = await putDocument(m, 'learn', learnOf({ [PDP_MODULES]: dials('add_to_bag'), [HOME_MODULES]: dials() }), 'p42-other-cause');
-      expect(changed.status, `${host}: PRECONDITION — the learn document changing the product slot's reward publishes (${JSON.stringify(changed.body).slice(0, 200)})`).toBe(200);
+      const placement = m.stats.get(statsName(TENANT, BRAND, PDP_MODULES));
+      expect(placement, `${host}: PRECONDITION — the product placement's statistics object exists`).toBeTruthy();
+      placement!.data.set('learnGeneration', { damaged: true });
       const refused = await objectPublish(m, PDP_MODULES);
       expect([refused.status, JSON.stringify(refused.body)], `${host}: P42.PW1 — another cause: the object's refusal is today's, byte for byte`).toEqual([503, JSON.stringify({ ok: false, error: 'statistics recovery required' })]);
       const routed = await operatorPublish(m, PDP_MODULES);
