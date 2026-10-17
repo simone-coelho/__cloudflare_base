@@ -534,10 +534,13 @@ interface UnavailableSlotGovernance {
   refusedPins: null;
   shortTakeCount: null;
   shortTakePositions: null;
+  /** P47: the unreturned pins' count and names, `null` as every count is when the store could not be read. */
+  unreturnedPinCount: null;
+  unreturnedPins: null;
 }
 type SlotRow = Omit<SlotIndexEntry, 'governance'> & { governance?: AvailableSlotGovernance | UnavailableSlotGovernance };
 const UNAVAILABLE_GOVERNANCE: UnavailableSlotGovernance = { status: 'unavailable', since: null, scope: SLOT_GOVERNANCE_SCOPE,
-  refusedPinCount: null, refusedPins: null, shortTakeCount: null, shortTakePositions: null };
+  refusedPinCount: null, refusedPins: null, shortTakeCount: null, shortTakePositions: null, unreturnedPinCount: null, unreturnedPins: null };
 
 /**
  * GET /v1/:tenant/learn/slots?brand=&q=&evidence=1 (doc 28 §4): every slot on every page, grouped by

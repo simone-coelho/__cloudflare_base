@@ -1046,11 +1046,18 @@ export async function serveContentDecisions(
   // that declares `selfCheck` is the platform composing the page to check
   // itself (R94(1)). Together they make the tenant-level signal the monitor
   // answers with the tenant's own serving, never a synthetic-probe value.
+  // P47 (R-P78): P43's `module_not_returned` entry refuses nothing, so it is
+  // handed over apart from the refusals, with its module and layout slot, and
+  // counted apart.
+  const pinEntries = set.pinDiagnostics ?? [];
   const governance = {
-    refusedPins: (set.pinDiagnostics ?? []).map(d => ({ slot: d.slot, pinnedPieceId: d.pinnedPieceId, reason: d.reason })),
+    refusedPins: pinEntries.filter(d => d.reason !== 'module_not_returned').map(d => ({ slot: d.slot, pinnedPieceId: d.pinnedPieceId, reason: d.reason })),
     shortTakes: (set.shortTakes ?? []).map(s => ({ slot: s.slot, empty: s.empty })),
+    unreturnedPins: pinEntries.filter(d => d.reason === 'module_not_returned')
+      .map(d => ({ slot: d.slot, pinnedPieceId: d.pinnedPieceId, ...(d.within ? { within: { module: d.within.module, slot: d.within.slot } } : {}) })),
   };
-  const counted = consent.tracking && !synthetic && !r.selfCheck && (governance.refusedPins.length > 0 || governance.shortTakes.length > 0)
+  const counted = consent.tracking && !synthetic && !r.selfCheck
+    && (governance.refusedPins.length > 0 || governance.shortTakes.length > 0 || governance.unreturnedPins.length > 0)
     ? recordSlotGovernance(env, scope, governance, now)
     : Promise.resolve();
   // W21 E1.05 (R118(3)): a decision that could not read its anchor is counted
