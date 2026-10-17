@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P46",
+  "workOrderHash": "sha256:7ec54edae1c49e94b0d048f2be0aadae9a893289cdc0ec8d0b57ac482269339d",
+  "artifact": {
+    "revision": "4976c99fd5f0b30cef91407d30cfe80323f6cdaa",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p46-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p46-build at 4976c99fd5f0b30cef91407d30cfe80323f6cdaa (d39d89e5 merges rem/integration 5068fa1a into rem/tkt/P46 85e81ad6; aae571fb public/console/views.js draws one data-learn-advisory note, valued check or save, in the Dials view after the refused-draft errors and before the Reading revision line, built from the answer's diagnostics warnings and omittedWarningCount, one line per warning naming the slot, the reward and the consequence, dropped on edit, on entering the screen, on Discard and on a later save without the member; 4976c99f kit 02's paragraph). Acceptance 5/5 on both hosts; the builder's gate GATE_OK at 4976c99f (3305 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 e84435a7…); both typechecks exit 0; both bundle checks exact; the unmarked screens and request lists byte-identical to the base console's; the History rollback untouched. Delivery review PASS (P46/reviewer/REPORT.md): DA1 to DA3 PASS, five mutants caught by the units, two caught by probes only (the note kept after an edit; the in-flight guard removed). Residuals: a History rollback republishing an omitting table is not told (P41's residual, outside the boundary); opening the screen on a stored omitting table shows no note until the first edit because no read carries the member (P41's design; a possible read-side warning ticket, named for the lead); no console control for conversion tables; the heading's singular; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P46/implementer/REPORT.md",
+      "git commits on rem/p46-build up to 4976c99f"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P46 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P46/reviewer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P46/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P46/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P46/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T16:36:35.976Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

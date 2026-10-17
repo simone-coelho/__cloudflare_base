@@ -965,6 +965,12 @@ the decision's `pinDiagnostics` names it, after any refused pin, as
 slot, the piece, its place in the slot's `pinnedPieceIds` (`pinIndex`, absent for a scalar `pinnedPieceId`), and in
 `within` the module that was not returned and the layout slot; the entry refuses nothing, is counted in the
 snapshot's `refusedCount` as every entry is, and changes no decision, record, receipt, page manifest or replay.
+The operator surfaces count a `module_not_returned` entry apart from refusals: the operator slots page's
+`governance` block counts it in `unreturnedPinCount` and names it in `unreturnedPins` (each
+`{ count, pinnedPieceId, within: { module, slot } }`, keys sorted), never in `refusedPinCount` or `refusedPins`, and
+the monitor's `governance` carries the tenant's `unreturnedPinCount` beside a `refusedPinCount` that counts refusals
+only. The console's Slots screen labels such a pin in its own words, "<n> pin(s) reserved, unserved: the module was
+not returned", with one line per pin naming its piece, how often, the module and the layout slot.
 De-duplication spans the layout, every inner slot and every
 other slot of the page, so no piece is served twice on the page and an inner slot decided earlier in the layout's
 order takes a piece before a later one or any slot after the layout. Each inner decision carries
@@ -1500,7 +1506,10 @@ stays at (or, with no earlier publication, that the slot stays unpublished); a r
 cause keeps its text exactly, `statistics recovery required` at the object and
 `statistics acknowledgement unavailable` at `POST learn/publish`, and carries no `stale`. When several
 placements cannot be read at once, the first in page order, then slot order, is named, and the next once that
-one answers. The console's lift grid does not show the marker.
+one answers. The console's lift grid marks a slot whose `GET /v1/{tenant}/lift/rows` answer carries `stale`:
+one note above the grid's table names the faulty `placement` (its page and slot), the pooled `modules` and the
+last successful publication from `lastPublished` (its version and time, or that the slot has none yet), and the
+mark is gone once a read no longer carries the marker.
 
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
