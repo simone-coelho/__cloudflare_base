@@ -5,7 +5,7 @@
 // which attributes it and forwards the credits itself.
 
 import type { Env } from '@/types/env';
-import type { LiftSnapshot, StaleMarker } from './stats';
+import type { LiftSnapshot, Republished, RepublishedChange, StaleMarker } from './stats';
 
 /**
  * Live authority is never satisfied by an eventually-consistent KV/cache hit.
@@ -54,7 +54,7 @@ import { attribute, successCreditOf, type AttributionPolicy, type RingEntry } fr
 // ring is the first of the two to load (src/learn/learn.test.ts imports it at
 // line 10, this module at line 12), which silently emptied the statistics
 // object's applied-delivery journal.
-import { emptyStats, recordExposure, recordSuccess, RING_MAX_AGE_MS, type StatsConfig, type StatsState } from './stats';
+import { emptyStats, recordExposure, recordSuccess, REPUBLISHED_MEMBERS, RING_MAX_AGE_MS, type StatsConfig, type StatsState } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
@@ -199,6 +199,116 @@ export function staleRefusalIn(body: unknown): StaleMarker | null {
   if (!plainObject(body) || !exactly(body, ['ok', 'error', 'stale']) || body.ok !== false) return null;
   const marker = staleMarkerOf(body.stale);
   return marker && body.error === staleRefusalOf(marker) ? marker : null;
+}
+/**
+ * P49 (R-P78, decision D1): where a placement's statistics object records what a
+ * publication refused after a learn republish names (`Republished`), with the
+ * snapshot in force it left in force: its own key, beside the snapshot's and
+ * never inside it, as P42's marker is (`liftStaleKey`). Only that refusal writes
+ * it; no publication of any placement reads or writes it, and a later successful
+ * publication supersedes it without a call of its own: it applies only while the
+ * snapshot in force is the one it names (`republishedIn`). `lift-republished:` is a
+ * prefix no `liftKey` and no `liftStaleKey` starts with.
+ */
+export const liftRepublishedKey = (tenant: string, brand: string, slot: string, page?: string) => `lift-republished:${tenant}:${brand}:${placementSlot(slot, page)}`;
+/** P49: the snapshot in force a refusal leaves in force, its version and publication time, or null where there is none. */
+type InForce = { publishedAt: number; version: number } | null;
+const inForceOf = (value: unknown): InForce | undefined => {
+  if (value === null) return null;
+  if (!plainObject(value) || !exactly(value, ['publishedAt', 'version']) || !Number.isSafeInteger(value.version) || (value.version as number) <= 0
+    || typeof value.publishedAt !== 'number' || !Number.isFinite(new Date(value.publishedAt).getTime())) return undefined;
+  return { publishedAt: value.publishedAt, version: value.version as number };
+};
+/** P49: a value a changed member may name, by member: the closed words of the slot's dials, or a finite number of the `stats` block. */
+const republishedValue = (member: RepublishedChange['member'], v: unknown): v is string | number => {
+  if (member === 'reward') return isRewardType(v);
+  if (member === 'objective') return v === 'unit' || v === 'revenue' || v === 'margin';
+  if (member === 'measurementBasis') return v === 'served-v1' || v === 'rendered-v1';
+  return typeof v === 'number' && Number.isFinite(v);
+};
+/**
+ * P49: the member, when `value` is one exactly as the statistics object writes
+ * it — keys `changed`, `endedBy` and `slot`, with `page` for a page-scoped
+ * placement, and no other; one to eight changes, each exactly `member`, `new` and
+ * `old`, a member of the tuple (`REPUBLISHED_MEMBERS`), sorted and distinct, both
+ * values of that member's kind and different; `endedBy` the generation
+ * transition; a catalogue slot and page — rebuilt with its keys sorted (R-P3).
+ * Anything else is no member (null), so nothing that is not one is ever
+ * answered as one.
+ */
+export function republishedOf(value: unknown): Republished | null {
+  if (!plainObject(value)) return null;
+  const scoped = Object.hasOwn(value, 'page');
+  if (!exactly(value, scoped ? ['changed', 'endedBy', 'page', 'slot'] : ['changed', 'endedBy', 'slot'])
+    || value.endedBy !== 'generation_transition' || !isCatalogueName(value.slot) || (scoped && !isCatalogueName(value.page))) return null;
+  const changed = value.changed;
+  if (!Array.isArray(changed) || changed.length === 0 || changed.length > REPUBLISHED_MEMBERS.length) return null;
+  const out: RepublishedChange[] = [];
+  for (const entry of changed as unknown[]) {
+    if (!plainObject(entry) || !exactly(entry, ['member', 'new', 'old'])) return null;
+    const member = REPUBLISHED_MEMBERS.find(name => name === entry.member);
+    if (!member || (out.length > 0 && !(out[out.length - 1]!.member < member))) return null;
+    if (!republishedValue(member, entry.new) || !republishedValue(member, entry.old) || entry.new === entry.old) return null;
+    out.push({ member, new: entry.new, old: entry.old });
+  }
+  return { changed: out, endedBy: 'generation_transition', ...(scoped ? { page: value.page as string } : {}), slot: value.slot as string };
+}
+/**
+ * P49: what a statistics object records under `liftRepublishedKey` — `{ lastPublished, republished }`
+ * exactly, the snapshot in force the refusal left in force (or null) and the member — or null for
+ * anything else.
+ */
+export function republishedRecordOf(value: unknown): { lastPublished: InForce; republished: Republished } | null {
+  if (!plainObject(value) || !exactly(value, ['lastPublished', 'republished'])) return null;
+  const lastPublished = inForceOf(value.lastPublished), republished = republishedOf(value.republished);
+  return lastPublished === undefined || !republished ? null : { lastPublished, republished };
+}
+/**
+ * P49: the member while it still applies — while the snapshot in force is the one
+ * the refusal left in force (its version and publication time), or, for a
+ * placement that had never published, while there is still none. Once a
+ * publication succeeds (the generation transition publishes one) the snapshot in
+ * force is another one, and the member no longer applies.
+ */
+export function republishedIn(record: { lastPublished: InForce; republished: Republished } | null, inForce: unknown): Republished | null {
+  if (!record) return null;
+  if (record.lastPublished === null) return inForce === null || inForce === undefined ? record.republished : null;
+  return plainObject(inForce) && inForce.version === record.lastPublished.version && inForce.publishedAt === record.lastPublished.publishedAt
+    ? record.republished : null;
+}
+/**
+ * P49: the refusal's sentence, composed from the member, the tenant and the
+ * version of the snapshot in force alone, so the statistics object and the
+ * operator's publish route say the same words: the slot (and its page), each
+ * changed member with its old and new values, the version the slot's statistics
+ * stay at (or that the slot stays unpublished), and what ends it, with the route.
+ * It begins with today's `statistics recovery required`, which every other
+ * recovery refusal keeps unchanged.
+ */
+export function republishedRefusalOf(republished: Republished, tenant: string, version: number | null): string {
+  const changes = republished.changed.map(c => `${c.member} from ${c.old} to ${c.new}`);
+  const list = changes.length > 1 ? `${changes.slice(0, -1).join(', ')} and ${changes[changes.length - 1]}` : changes[0];
+  return `statistics recovery required: the learn document republished for slot ${republished.slot}${republished.page ? ` on page ${republished.page}` : ''}`
+    + ` changed ${list}; `
+    + (version === null ? 'the slot has no successful publication yet and stays unpublished' : `the slot's statistics stay at version ${version}`)
+    + ` until an operator starts the new generation with POST /v1/${tenant}/learn/generation`
+    + ` (or the document is republished with the old value${changes.length > 1 ? 's' : ''})`;
+}
+/**
+ * P49: the member and the version of a statistics object's answer that is exactly
+ * the refusal after a learn republish — `{ ok: false, error, republished }`, no
+ * other member, a well-formed member and the object's own sentence for it, for
+ * this tenant and a version that is a safe whole number — or null for any other
+ * answer.
+ */
+export function republishedRefusalIn(body: unknown, tenant: string): { republished: Republished; version: number | null } | null {
+  if (!plainObject(body) || !exactly(body, ['ok', 'error', 'republished']) || body.ok !== false || typeof body.error !== 'string') return null;
+  const republished = republishedOf(body.republished);
+  if (!republished) return null;
+  const at = /; the slot's statistics stay at version ([1-9][0-9]{0,15}) until /.exec(body.error);
+  const version = at ? Number(at[1]) : null;
+  if (version !== null && !Number.isSafeInteger(version)) return null;
+  return body.error === republishedRefusalOf(republished, tenant, version) ? { republished, version } : null;
 }
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
