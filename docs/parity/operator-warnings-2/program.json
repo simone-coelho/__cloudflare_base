@@ -309,6 +309,7 @@
         }
       ],
       "allowedPaths": [
+        "src/learn/slotGovernance.ts",
         "src/content/service.ts",
         "src/ops/monitor.ts",
         "src/content/decide.ts",
@@ -402,7 +403,7 @@
         }
       ],
       "remainingWork": [
-        "Seed or repair: priors and proposals present for a demo-bootstrapped tenant.",
+        "Seed or repair: priors and proposals present for a demo-bootstrapped tenant; the one-time path POST /ops/demo-bootstrap/complete adds the two compiled empties to a committed four-member set through an explicit, minimal library capability in src/config/publication.ts that admits only those two members as additions to a head that lacks them, every existing refusal unchanged (R-P82).",
         "Telling: a tenant still lacking them is answered with the missing member and the path.",
         "Kit and seed: kit 02 states it; the hosted seed takes the path."
       ],
@@ -427,6 +428,8 @@
         "src/config/publication.ts",
         "src/routes/content.ts",
         "scripts/demo-kit/lib/host.mjs",
+        "src/config/publication.optionalMember.test.ts (the specifier's R10 correction only; the builder never edits a test)",
+        "scripts/demo-kit/lib/host.test.mjs (the specifier's R10 correction only; the builder never edits a test)",
         "docs/kit/02-api-reference.md"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P48 --minWorkers=1 --maxWorkers=1",
@@ -531,6 +534,7 @@
         "src/learn/stats.ts",
         "src/learn/fan.ts",
         "src/routes/decisions.ts",
+        "src/units/P42/LEDGER.unit.test.ts (the specifier's R10 correction of PW1's control leg only, in the R-P75 form; the builder never edits a test)",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md"
       ],
