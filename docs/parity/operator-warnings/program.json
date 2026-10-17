@@ -21,7 +21,7 @@
     {
       "id": "P41",
       "title": "A conversion table that omits the slot's own reward says so (**amendment 2, 2026-10-16**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",
@@ -141,7 +141,7 @@
     {
       "id": "P42",
       "title": "A pooled publication that fails closed names the faulty page, and the stale slot says it is stale (**amendment 2, 2026-10-16**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",
@@ -273,7 +273,7 @@
     {
       "id": "P43",
       "title": "A pin inside an unshown module's inner slot is reported (**amendment 2, 2026-10-16**)",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",

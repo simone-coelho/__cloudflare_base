@@ -66,6 +66,7 @@ export const CUSTOMER_ROUTES: readonly CustomerRoute[] = [
   { path: '/content/catalog/pull', methods: post },
   { path: '/content/catalog/publication', methods: read },
   { path: '/content/catalog/publication/recover', methods: post },
+  { path: '/content/publication/initialize', methods: post },
   { path: '/content/catalog/enrichment/proposals', methods: post },
   { path: '/content/catalog/enrichment/proposals/generate', methods: post },
   { path: '/content/catalog/enrichment/proposals/:id', methods: read },

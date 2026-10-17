@@ -24,15 +24,19 @@ import { InputError, inputRecords, readInputBytes, readInputJson, readInputText 
 import type { Env } from '@/types/env';
 import type { AuthContext } from '@/middleware/auth';
 import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
+import { storeFor } from '@/auth/accounts';
+import { stampOwner } from '@/auth/authority';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
-import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
-import { assertPublicationBase, documentBytes, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
-  readOptionalPublication, readPublication, recoverPublication, type PublicationPin } from '@/config/publication';
-import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnPositionLayoutErrors, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
+import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type Revision, type WriteMeta } from '@/config/versionedStore';
+import { assertPublicationBase, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
+  readOptionalPublication, readPublication, recoverPublication, type PublicationBaseline, type PublicationPin } from '@/config/publication';
+import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
 import { contextTermsOf } from '@/content/cell';
-import { REFLEX_KIND } from '@/reflex/configStore';
+import { invalidateConfigCache, REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
+import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
+import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
 import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
@@ -441,6 +445,21 @@ function pinDiagnosticsFor(c: Context<Ctx>, scope: string, slots: SlotCatalog | 
   return slotDiagnostics(c.env, slots, revision, slotCatalogTenant(c, scope));
 }
 /**
+ * P41 (R-P78): the learn publication's advisory channel, for the success
+ * answers of `PUT /content/learn` and `POST /content/learn/validate` alone: a
+ * `diagnostics` member only when a slot's conversion table does not name the
+ * slot's own reward, so every other answer is the bytes it was. Computed from
+ * the document the answer carries, with no read; advice, never a refusal, and
+ * never able to turn an accepted or committed publication into a failure.
+ */
+function learnAdvisory(kind: DocumentKind<unknown>, document: unknown): { diagnostics?: LearnConversionDiagnostics } {
+  if (kind.name !== LEARN_KIND.name) return {};
+  try {
+    const diagnostics = learnConversionDiagnostics(document as LearnConfig);
+    return diagnostics ? { diagnostics } : {};
+  } catch { return {}; }
+}
+/**
  * The records a direct publication submitted, for the advisory channel alone.
  * A direct PUT is never routed through the import normalizer (F27 §4.2), so the
  * field set it is read against is the validator's own closed one: a name
@@ -702,7 +721,8 @@ contentRoutes.post('/:kind/validate', async (c) => {
   return result.ok ? c.json({ valid: true, document: result.value,
     ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.value, null,
       publishedRequest(candidate, candidate === body ? REQUEST_ENVELOPE_FIELDS : [])) } : {}),
-    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.value, null) } : {}) }) : c.json({ valid: false, errors: result.errors }, 422);
+    ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.value, null) } : {}),
+    ...learnAdvisory(k.kind, result.value) }) : c.json({ valid: false, errors: result.errors }, 422);
 });
 
 // ── Writes ───────────────────────────────────────────────────────────────────
@@ -819,7 +839,8 @@ contentRoutes.put('/:kind', async (c) => {
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value,
         ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision, publishedRequest(candidate, envelope)) } : {}),
-        ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.revision.value, result.revision.revision) } : {}) })
+        ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, result.revision.value, result.revision.revision) } : {}),
+        ...learnAdvisory(k.kind, result.revision.value) })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
 
@@ -979,6 +1000,87 @@ contentRoutes.post('/catalog/publication/recover', async c => {
   const result = await recoverPublication(c.env, kind, scope, meta);
   return result.ok ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, document: result.revision.value,
     ...(kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision) } : {}) }) : c.json(result, 422);
+});
+
+// ── W08: a provisioned tenant's first configuration publication set ─────────
+
+/**
+ * W08 (document 35 §5 row W08: seed idempotently, fail visibly; decision D01):
+ * POST /content/publication/initialize creates a provisioned tenant's FIRST
+ * configuration publication set, on every deployment profile.
+ *
+ * Every versioned write publishes over a committed set, so a tenant without one
+ * can never be configured: the demo door (src/routes/demoBootstrap.ts) is not
+ * mounted on the customer profile, and scripts/init-local.mjs acts only on a
+ * local store. This door writes exactly what init-local writes — the six
+ * compiled defaults below, in its order, each at revision 1 — attributed to the
+ * caller. It takes no document: nothing is supplied, discovered, migrated or
+ * defaulted from the caller, and a request carrying anything is refused.
+ *
+ * Authority, in the order a request meets it: the tenant middleware (a
+ * provisioned tenant), `operatorJwt` above (a credential, then in enforced mode
+ * a grant on the tenant), `catalogScope` (a typed credential granted to the
+ * tenant, in every mode), then a stamp owner's own human session. A service
+ * credential never qualifies: its subject is whatever its issuer named.
+ *
+ * Idempotent, failing visibly:
+ *  · a committed set answers `already initialized` and writes nothing;
+ *  · a tenant with no committed set can hold only a pending INITIALIZATION
+ *    (the head validation of src/config/publication.ts); it is re-issued with
+ *    its own operationId, actor, note and time, which the library initializer
+ *    finishes when it is this same request and refuses 409
+ *    `publication_conflict`, before writing anything, when it is not;
+ *  · a storage failure answers its PublicationError (503, `contentRoutes.onError`),
+ *    and the same call again finishes what it left pending.
+ * One owner-action audit row is written per set this door writes.
+ */
+const INITIALIZE_NOTE = 'initialized from the compiled defaults (POST /content/publication/initialize)';
+const NO_DOCUMENT = 'no document is accepted; publish through /content and /config';
+/** init-local's members and compiled defaults, in init-local's order (scripts/init-local.mjs). */
+function compiledBaselines(tenant: string, revision: Omit<Revision<unknown>, 'value' | 'publication'>): PublicationBaseline[] {
+  const members: Array<[DocumentKind<unknown>, string, unknown]> = [
+    [CONTENT_KIND as DocumentKind<unknown>, tenant, EMPTY_CATALOG],
+    [SLOTS_KIND as DocumentKind<unknown>, tenant, DEFAULT_SLOTS],
+    [LEARN_KIND as DocumentKind<unknown>, tenant, DEFAULT_LEARN],
+    [REFLEX_KIND as DocumentKind<unknown>, reflexScopeForTenant(tenant), DEFAULT_REFLEX_CONFIG],
+    [PRIORS_KIND as DocumentKind<unknown>, tenant, EMPTY_PRIORS],
+    [PROPOSALS_KIND as DocumentKind<unknown>, tenant, EMPTY_PROPOSALS],
+  ];
+  return members.map(([kind, scope, value]) => ({ kind, scope, revision: { ...revision, value } }));
+}
+/** The door's only request: no body, or an empty JSON object. */
+function carriesNothing(text: string): boolean {
+  if (!text.trim()) return true;
+  try {
+    const value: unknown = JSON.parse(text);
+    return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
+  } catch { return false; }
+}
+contentRoutes.post('/publication/initialize', async (c) => {
+  const tenant = catalogScope(c), auth = c.get('auth'), user = auth.user!;
+  if (user.type !== 'access' || auth.authority?.credentialId !== undefined || !stampOwner(c.env, user.sub)) {
+    return c.json({ ok: false, error: 'Stamp owner required' }, 403);
+  }
+  if (!carriesNothing(await readInputText(c.req.raw.body))) return c.json({ ok: false, error: NO_DOCUMENT }, 400);
+
+  const status = await publicationStatus(c.env, CONTENT_KIND, tenant).catch((error: unknown) => {
+    if (error instanceof PublicationError && error.code === 'publication_uninitialized') return null; // no head at all
+    throw error;
+  });
+  if (status?.publication) return c.json({ ok: true, publication: status.publication.revision, state: 'already initialized' });
+  const intent = status
+    ? { operationId: status.operationId, actor: status.actor, note: status.note, at: status.at }
+    : { operationId: `0:${crypto.randomUUID()}`, actor: user.sub, note: INITIALIZE_NOTE, at: Date.now() };
+  const { operationId, actor, note, at } = intent;
+  if (typeof operationId !== 'string' || typeof actor !== 'string' || typeof note !== 'string' || typeof at !== 'number') {
+    throw new PublicationError('Configuration publication authority unavailable');
+  }
+  const set = await initializePublicationSet(c.env, compiledBaselines(tenant, { revision: 1, actor, note, at }), operationId);
+  invalidateConfigCache(reflexScopeForTenant(tenant));
+  const state = status ? 'initialization finished' : 'initialized';
+  await storeFor(c.env).audit({ at: Date.now(), action: 'publication_initialized', actorId: user.sub, actorEmail: user.email ?? null,
+    targetId: tenant, detail: JSON.stringify({ operationId, publication: set.revision, state }) });
+  return c.json({ ok: true, publication: set.revision, state });
 });
 
 // ── P38: the vocabulary's approval and its rejection report ─────────────────
