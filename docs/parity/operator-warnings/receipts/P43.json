@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P43",
+  "workOrderHash": "sha256:1d8d03e8faa9523133cf880766545332897faa5cf16474b77b2f7715bac51210",
+  "artifact": {
+    "revision": "bd595ca0589c76663ba53b9eb6a581b164d50634",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p43-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p43-build at bd595ca0589c76663ba53b9eb6a581b164d50634 (4809cb68 merges rem/integration 96881cf9 into rem/tkt/P43 cffc2089; cad8bf8d the mechanism in src/reflex/contentCompose.ts, src/content/decide.ts, src/content/types.ts and the regenerated public/meridian/engine.bundle.js: for each inner slot not entered whose pins were not refused, the composer names every pin that slot itself reserved as an entry with reason module_not_returned, the piece, the slot and within naming the module and the layout slot, keys sorted, carried in a new composer member unreturnedPins and appended by decide.ts after the refusals P26's filter keeps, so the refusal readers and the publication-time constraint diagnostics are unchanged; bdcaadbb kit 02 and 03, kit 03 also dropping the sentence denying a catalog initialization door under the W08-C1 ruling; bd595ca0 kit 02's snapshot count sentence). Acceptance 11/11 on both hosts; the builder's gate GATE_OK at bd595ca0 (3289 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 5afaf851…); both typechecks exit 0; both bundle checks exact (Meridian 82903 bytes regenerated from source, SDK 103933 and 109150 untouched); the pure dumps byte-identical at head and base for every world without an entry and identical apart from pinDiagnostics in the entry worlds; P26 14/14, P04 13/13 and W08 7/7 in head, minus and base. Delivery review PASS (P43/reviewer/REPORT.md): RP1 to RP3 PASS, five mutants caught by the units, five probe-only (the entries placed in the composer's own pinDiagnostics, which the probe shows would drop a publication-time constraint warning; an entry for a pin the slot's own gates refused; entry-level key order; entries placed before the refusals; the kit 03 sentence kept). Named residuals: the console Slots screen labels the entry a pin refusal and the monitor's tenant-level refusedPinCount rises with it (the next warning ticket under R-P78, outside the boundary); the position-pin and scalar forms, the order relative to refusals and the off-limits-layout case are probe-only; a pin plus an exclusion of the same piece is refused at publication with a general invalid_baseline; kit 02:761 still says \"in page and slot order\" for a sample whose entries follow the refusals; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P43/implementer/REPORT.md",
+      "git commits on rem/p43-build up to bd595ca0"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P43 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P43/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P43/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P43/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P43/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P43/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T03:54:32.467Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
