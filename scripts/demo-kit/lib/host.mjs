@@ -16,8 +16,10 @@
 //                queues exist: read-only; for anything missing it prints the owner's commands and stops
 //   4 deploy     a clean WSL worktree of the branch head (node_modules linked, autocrlf input), check:generated
 //                there, the builder, wrangler deploy, wrangler triggers deploy, the worktree removed
-//   5 seed       a fresh worktree of the head; the seed with an operator token minted here; the redeploy the seed
-//                makes necessary; the region seed; the worktree removed
+//   5 seed       a fresh worktree of the head; the seed with an operator token minted here; the tenant's one-time
+//                POST /ops/demo-bootstrap/complete (priors and proposals for a set bootstrapped with four members; a
+//                tenant that has them answers added: []); the redeploy the seed makes necessary; the region seed; the
+//                worktree removed
 //   6 verify     check-demo's suites against the hosted worker, and the URL
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, rmdirSync, unlinkSync } from 'node:fs';
@@ -40,11 +42,22 @@ const TITLES = Object.freeze({
   secrets: 'the worker\'s secrets, through stdin',
   database: 'the shared database\'s migrations and the worker\'s queues (read-only)',
   deploy: 'the branch head from a clean WSL worktree, then its crons',
-  seed: 'the hosted seed, the redeploy it requires, the region seed',
+  seed: 'the hosted seed, the tenant\'s bootstrap completion, the redeploy it requires, the region seed',
   verify: 'the suites against the hosted worker',
 });
 /** The secrets a hosted demo worker carries: the scaffold's five, and IDENTITY_SECRETS for a sign-in route. */
 export const HOSTED_SECRETS = Object.freeze([...WORKER_SECRETS, 'IDENTITY_SECRETS']);
+/**
+ * P48: the body of the hosted seed's call to the one-time path, run as `node --input-type=module -e` through the run's
+ * runner like every external call. Its arguments are the method, the URL and the tenant; the operator token is read
+ * from OPERATOR_TOKEN in the child's environment and is never an argument or a printed line. It prints the status and
+ * what was added, and exits 0 only on an answer of ok.
+ */
+export const BOOTSTRAP_COMPLETE_CALL = "const [method, url, tenant] = process.argv.slice(1); "
+  + "const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (process.env.OPERATOR_TOKEN ?? ''), 'X-Tenant': tenant }, body: '{}' }); "
+  + "const body = await res.json().catch(() => ({})); "
+  + "console.log(method + ' ' + new URL(url).pathname + ': ' + res.status + ' ' + JSON.stringify({ added: body.added, code: body.code, error: body.error, ok: body.ok })); "
+  + "process.exit(res.ok && body.ok === true ? 0 : 1);";
 /** The account's workers.dev subdomain every demo worker answers on. */
 export const WORKERS_DEV = 'expedge.workers.dev';
 export const hostedBase = (worker) => `https://${worker}.${WORKERS_DEV}`;
@@ -496,6 +509,10 @@ export async function runHost(argv, deps = {}) {
         let token = await mint(seedOp);
         let r = await exec('node', ['scripts/demo-kit/seed.mjs', '--config', slug, '--base', base], { cwd: opened.wt, env: { OPERATOR_TOKEN: token ?? '' }, labels: { OPERATOR_TOKEN: `a 30-minute operator token for ${seedOp}` }, stream: true });
         if (r.code !== 0) return fail('the hosted seed failed (above); nothing was redeployed');
+        // P48: the tenant's one-time path, with the seed's token: a set the demo door created with four members gets
+        // priors and proposals (the compiled empties); a set that has them answers added: [] and the run goes on.
+        r = await exec('node', ['--input-type=module', '-e', BOOTSTRAP_COMPLETE_CALL, 'POST', `${base}/ops/demo-bootstrap/complete?scope=${encodeURIComponent(tenant)}`, tenant], { cwd: opened.wt, env: { OPERATOR_TOKEN: token ?? '' }, labels: { OPERATOR_TOKEN: `a 30-minute operator token for ${seedOp}` }, stream: true, note: `POST /ops/demo-bootstrap/complete for ${tenant}: priors and proposals in its publication set, once` });
+        if (r.code !== 0) return fail(`POST /ops/demo-bootstrap/complete for ${tenant} failed (above): its priors and proposals reads stay refused until it is taken, and the seed has re-anchored ${config.seed.beats.dir}/ without the redeploy; run the seed step again before anyone presents`);
         for (const line of REDEPLOY_RULE(slug, config.seed.beats.dir)) say(line);
         if ((await deployFrom(opened.wt, `ships the re-anchored ${config.seed.beats.dir}/`)) === null) return fail(`the redeploy after the seed failed (above): ${worker} serves beat documents older than the ones just published; redeploy before anyone presents`);
         token = await mint(regionOp);
