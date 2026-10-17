@@ -2,6 +2,12 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-17, evening: amendment 3 LOCALLY COMPLETE (5/5); every ledger locally complete; the pilot stamps live
+
+- **Amendment 3** `tapestry-parity-operator-warnings-2`: Local done 5/5, Final 0/5 (`check` PASS). P45 5aed3f83, P46 4976c99f, P47 eb7ddbb8, P48 594df0d5, P49 14b8e5a8, each one round, reviewer PASS, merged and receipted (last commit 00b6e455). Five LIVE rows pending the owner's batched acceptance, as the earlier programmes' rows.
+- **Every ledger is locally complete:** remediation 26/26, parity 1 25/25, parity 2 5/5, amendment 2 4/4, amendment 3 5/5, plus W08-C1. Live acceptance of every row remains the owner's batched act; the pilot stamps (staging bc8bee07 at aa103c6e, production 83b665e8 at 1c3e6ad6) run the integration head of this morning; everything merged since (P45 to P49) is console, governance-record and refusal-wording work and is not yet deployed to the stamps.
+- **Next, under the owner's standing rule R-P78 (told, not asked):** amendment 4, the six warning items in AMENDMENTS.md's P49 closure line (a non-adopting generation transition stops counting exposures; the lift grid and the republish cause; the Dials screen read-side advisory; the Slots "more" line; the customer-profile four-member tenant's missing path; the republish member after a failed transition). **The owner's call:** whether to open the 52-baseline-failures programme first (offered 2026-10-17 morning) and when to redeploy the stamps with P45 to P49.
+
 ## 2026-10-17, morning: the pilot test deployment is LIVE on staging and production (the owner's own Optimizely account)
 
 - **Owner direction (2026-10-17):** the stamps are the owner's own test deployment on the Optimizely account, not a customer's; deploy without further questions. Executed by the lead through path B (direct `wrangler deploy --env <env>` from a clean detached worktree at the integration head), the scripts under `_evidence/pilot/` (`deploy-stamp-pathB.sh`, `provision.mjs`, `smoke.mjs`, `loop.mjs`, `loop2.mjs`), logs under `_evidence/pilot/logs/` (staging at the root, production under `production/`).
