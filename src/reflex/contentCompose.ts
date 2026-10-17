@@ -272,11 +272,19 @@ export type HistoricalGovernance = typeof HISTORICAL_GOVERNANCE | typeof HISTORI
 export interface PinDiagnostic {
   slot: string;
   pinnedPieceId: string;
-  reason: 'invalid_take' | 'missing_or_ineligible' | 'slot_type' | 'duplicate_pin' | SlotConstraintReason;
+  /**
+   * Why the pin served nothing. P43 (R-P78): `module_not_returned` is the one
+   * reason that refuses nothing — the pin of an inner content slot whose module
+   * the layout did not return stayed reserved page-wide, so its piece is served
+   * nowhere on that page view.
+   */
+  reason: 'invalid_take' | 'missing_or_ineligible' | 'slot_type' | 'duplicate_pin' | 'module_not_returned' | SlotConstraintReason;
   ownerSlot?: string;
   pinIndex?: number;
   /** P04: the refused position pin's position, counted from 1; absent on prefix and scalar pins. */
   position?: number;
+  /** P43: on a `module_not_returned` entry alone, the module whose inner slot it is and the layout slot that did not return it. */
+  within?: { module: string; slot: string };
 }
 
 export interface ComposeContentResult {
@@ -309,6 +317,15 @@ export interface ComposeContentResult {
    * and on a page without inner content slots.
    */
   undecided?: string[];
+  /**
+   * P43 (R-P78): for each pin an undecided inner content slot reserved, an
+   * entry naming the inner slot, the piece, the module and the layout slot
+   * (`within`), reason `module_not_returned`, keys sorted, in page order. The
+   * pin stayed reserved, so the piece is served nowhere on that page view. Kept
+   * apart from `pinDiagnostics`, whose entries are refusals; absent when there
+   * is none, and on a page without inner content slots.
+   */
+  unreturnedPins?: PinDiagnostic[];
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -848,11 +865,31 @@ export function composeContentDetailed(
     }
   }
   const undecided = nesting.size ? slots.filter((slot) => nesting.has(slot.slot) && !entered.has(slot)).map((slot) => slot.slot) : [];
+  // P43 (R-P78): an undecided inner slot's pins were reserved page-wide before
+  // any slot ranked and stay so; each piece it reserved is named, with the
+  // module and the layout slot, so the operator learns why it is served nowhere.
+  // Only what the slot itself reserved: a pin refused (off-limits, excluded,
+  // ineligible, a duplicate) reserved nothing and has no such entry.
+  const unreturnedPins: PinDiagnostic[] = [];
+  if (undecided.length) for (const slot of slots) {
+    const placed = nesting.get(slot.slot);
+    if (!placed || entered.has(slot) || refusedPrefixes.has(slot)) continue;
+    const entry = (pinnedPieceId: string, at: { pinIndex?: number; position?: number }): PinDiagnostic => ({
+      ...(at.pinIndex !== undefined ? { pinIndex: at.pinIndex } : {}), pinnedPieceId, ...(at.position !== undefined ? { position: at.position } : {}),
+      reason: 'module_not_returned', slot: slot.slot, within: { module: placed.module, slot: placed.layout } });
+    const prefix = prefixes.get(slot);
+    if (prefix) for (const [pinIndex, id] of prefix.ids.entries()) if (reserved.get(id) === slot.slot) unreturnedPins.push(entry(id, { pinIndex }));
+    for (const [position, piece] of [...(positioned.get(slot) ?? [])].sort((a, b) => a[0] - b[0])) {
+      if (reserved.get(piece.id) === slot.slot) unreturnedPins.push(entry(piece.id, { position }));
+    }
+    const pinned = resolvedPins.get(slot);
+    if (pinned && reserved.get(pinned.id) === slot.slot) unreturnedPins.push(entry(pinned.id, {}));
+  }
   const pageOrder = (set: ReadonlySet<ContentSlotSpec>) => slots.filter((slot) => set.has(slot)).map((slot) => slot.slot);
   return { decisions: out, candidates, ...(pinDiagnostics.length ? { pinDiagnostics } : {}), ...(ordered.length ? { ordered } : {}),
     ...(placements.length ? { moduleRules: placements } : {}), ...(ruled.size ? { ruled: pageOrder(ruled) } : {}),
     ...(orderBaseline.size ? { orderBaseline: pageOrder(orderBaseline) } : {}), ...(bandPlacements.length ? { bands: bandPlacements } : {}),
-    ...(undecided.length ? { undecided } : {}) };
+    ...(undecided.length ? { undecided } : {}), ...(unreturnedPins.length ? { unreturnedPins } : {}) };
 }
 
 /**

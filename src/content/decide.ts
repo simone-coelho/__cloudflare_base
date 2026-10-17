@@ -1255,9 +1255,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     swapped.set(s.slot, { ...pick, positions: pick.positions });
     return pick.positions;
   } : undefined;
-  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands, undecided: undecidedSlots } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots, settle);
+  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands, undecided: undecidedSlots, unreturnedPins } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots, settle);
   // P26 (decision D1): the inner content slots the layout did not return the module of. Not decided:
-  // no record, no manifest row, no diagnostic and no page-level input is written for any of them.
+  // no record, no manifest row, no diagnostic and no page-level input is written for any of them,
+  // except (P43, R-P78) the `module_not_returned` pin entry naming each pin such a slot kept reserved.
   const undecided = new Set(undecidedSlots ?? []);
   // P26: each slot's place in the order the page is decided in: document order, an inner content slot directly after
   // its layout slot (all of them there: which of them was decided, and in what order, nothing before the layout reads).
@@ -2037,8 +2038,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const pageReason = i.slots.map((s) => layoutReasons.get(s.slot)).find((reason) => reason !== undefined);
   // P26: the set names no refused pin and no ignored seed rule set of an inner content slot that was not decided:
   // nothing of it was served, ranked or refused on this page view. A page without one: exactly as before.
+  // P43 (R-P78): but each pin such a slot reserved is named after the refusals, reason `module_not_returned`,
+  // with its module and layout slot (`within`): the piece stayed reserved and is served nowhere on this page view.
   const pinsKept = undecided.size && pinDiagnostics ? pinDiagnostics.filter((d) => !undecided.has(d.slot)) : null;
-  const pinDiagnosticsOut = pinsKept ? (pinsKept.length ? pinsKept : undefined) : pinDiagnostics;
+  const pinDiagnosticsOut = unreturnedPins?.length ? [...(pinsKept ?? pinDiagnostics ?? []), ...unreturnedPins]
+    : pinsKept ? (pinsKept.length ? pinsKept : undefined) : pinDiagnostics;
   const seedDiagnosticsOut = undecided.size ? seedDiagnostics.filter((d) => !undecided.has(d.slot)) : seedDiagnostics;
 
   return {
