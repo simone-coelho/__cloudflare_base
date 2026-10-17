@@ -325,7 +325,8 @@
    */
   function staleMark(meta) {
     const s = meta && meta.stale;
-    if (!s || typeof s !== 'object') return null;
+    // An answer for another slot (the screen redraws while the next slot's read is in flight) marks nothing here.
+    if (!s || typeof s !== 'object' || (typeof meta.slot === 'string' && meta.slot !== S.slot)) return null;
     const p = s.placement || {};
     const modules = Array.isArray(s.modules) ? s.modules.filter((m) => typeof m === 'string' && m) : [];
     const last = s.lastPublished && Number.isFinite(s.lastPublished.version) ? s.lastPublished : null;
