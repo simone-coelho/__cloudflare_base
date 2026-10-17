@@ -1034,10 +1034,11 @@ decision changes nothing that decision earns, and the next decision names the ne
 /content/{kind}/validate` alike — refuses with `422` a `successEvent` outside the list, naming `pieces[i].successEvent` in `errors[]`, and
 a table that is not an object, is empty, names a key outside the reward list or values a reward with
 anything but a finite number above zero, naming `conversions`; a stored document's member the current
-contract refuses reads as absent. Limits: a feed import or pull carries no `successEvent` (declare it with
-a direct publication), and the answer to a direct publication lists `successEvent` among the ignored
-fields on its advisory channel although the stored piece keeps it; the learn validator does not read the
-slots document, so a table on a slot no page carries is accepted and changes nothing; adding, changing or
+contract refuses reads as absent. A direct publication (`PUT /content/catalog`) that declares `successEvent`
+keeps it on the stored piece with no `ignored_field` advisory for it, `POST /content/catalog/validate`
+answers the same advisories, and a feed import or pull carries it the same way (in CSV, a `successEvent`
+column holding the reward word), refused by the same name outside the list. Limits: the learn validator
+does not read the slots document, so a table on a slot no page carries is accepted and changes nothing; adding, changing or
 removing a table does not start a new accumulation generation, so what the slot counted before stays at
 the values it was credited with; the replay does not compare `explain.successEvent` and a replayed record
 omits it, which changes no score; and the day report built from the ledger's raw day (`POST
@@ -1880,10 +1881,11 @@ same thing (the same reward, objective, measurement basis and decay horizon in t
 whose dials differ keeps its evidence out of the record. Publication refuses any value of `pooled` other than
 `true` with `422`, naming `pieces[i].pooled` in `errors[]`, and the catalogue in force stays in force; a retained
 catalogue whose `pooled` is anything else reads as undeclared. A catalogue without a pooled module publishes,
-decides, records and replays exactly as before. Limits: a feed import or pull carries no `pooled` member, so a
-catalogue refreshed from a feed declares no pooled module (declare it with a direct publication), and the answer
-to a direct publication lists `pooled` among the ignored fields on its advisory channel although the stored piece
-keeps it. A snapshot reads the record from every placement when it is published: a placement whose own
+decides, records and replays exactly as before. A direct publication (`PUT /content/catalog`) that declares
+`pooled` keeps it on the stored piece with no `ignored_field` advisory for it, `POST /content/catalog/validate`
+answers the same advisories, and a feed import or pull carries it the same way, so a catalogue refreshed from a
+feed declares its pooled modules (in CSV, a `pooled` cell `true`; any other value is refused naming
+`pieces[i].pooled`, and a blank cell declares nothing). Limits: a snapshot reads the record from every placement when it is published: a placement whose own
 evidence has not moved since another page's did serves the record as it last published it. A day report's
 grids, from folded hours or from a day's ledger records, are still built per slot from that slot's own
 evidence, so a pooled module's row there is its own placement's and not the pooled record.

@@ -92,6 +92,8 @@
 //   7. The request-derived code is present in the sample whenever it occurred
 //      (W19.F3.02's second half).
 
+import { readFileSync } from 'node:fs';
+
 import { describe, it, expect, vi } from 'vitest';
 import * as jose from 'jose';
 import { Hono } from 'hono';
@@ -458,45 +460,80 @@ describe('unit:W19.F3.03', () => {
 // W19.F3.04 — PIECE_FIELDS is locked to the validator (finding 4)
 // ===========================================================================
 
-/** Kit 03 :133-149 "The content piece": every field the published contract lists. */
+/** Kit 03 :133-149 "The content piece": every field the published contract listed when W19 locked the set; each stays known. */
 const KIT_03_FIELDS = ['id', 'customerContentId', 'type', 'title', 'subtitle', 'excerpt', 'runtime', 'tags', 'slotTypes',
   'lifecycle', 'window', 'eligibleWhen', 'art', 'renderUrl', 'merchandising', 'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'complements', 'inStock'];
+
+/**
+ * R10 correction (P44, in the form of R-P75): the frozen literal above was the
+ * whole lock, so every member ruled after W19 (P08's `pooled`, P16's
+ * `successEvent`) either broke it or was kept off the validator's list. The lock
+ * now reads the contract as it stands — the field column of kit 03's piece table
+ * in the tree this file lives in, never the code it copies — and derives the
+ * whole-contract piece from the validator's own list, so it keeps its meaning
+ * under any ruled member: no field the set names is undocumented, no field W19
+ * published is dropped, a known field is kept and an unknown one is named.
+ * That every documented field is listed is P44.PF3's assertion.
+ */
+function kitPieceFields(): string[] {
+  const lines = readFileSync(new URL('../../../docs/kit/03-payload-schemas.md', import.meta.url), 'utf8').split('\n');
+  const at = lines.findIndex(line => /^## The content piece\s*$/.test(line));
+  const header = lines.findIndex((line, i) => i > at && /^\| Field \|/.test(line));
+  const fields: string[] = [];
+  for (const line of lines.slice(header + 2)) {
+    if (!line.startsWith('|')) break;
+    for (const match of (line.split('|')[1] ?? '').matchAll(/`([A-Za-z]+)(?:\.[A-Za-z]+)?`/g)) if (!fields.includes(match[1]!)) fields.push(match[1]!);
+  }
+  return fields;
+}
+/** A valid value for every field kit 03 documents: W19's whole-contract piece, and the members documented since (kit 03's `pooled` and `successEvent` rows). */
+const DOCUMENTED_VALUES: Record<string, unknown> = { ...KIT_PIECE, pooled: true, successEvent: 'add_to_bag' };
+/** The whole-contract piece of the validator's own list: every field PIECE_FIELDS names, with its documented value. */
+const contractPiece = (): Record<string, unknown> =>
+  Object.fromEntries([...PIECE_FIELDS].filter(field => Object.hasOwn(DOCUMENTED_VALUES, field)).map(field => [field, DOCUMENTED_VALUES[field]]));
 
 describe('unit:W19.F3.04', () => {
   it('logic: the exported field set is exactly the published contract\'s field list', () => {
     // Finding 4: `PIECE_FIELDS` (src/content/kinds.ts:33-35) is a hand-written
     // copy of what `validatePiece` reads. Its witness is not the code it copies
     // but the published contract it must equal, so the set is locked to kit 03
-    // rather than to itself.
-    expect([...PIECE_FIELDS].sort(),
-      'W19.F3.04 — the field set the write paths read a record against is exactly the field list kit 03 :133-149 publishes')
-      .toEqual([...KIT_03_FIELDS].sort());
+    // rather than to itself. R10 (P44, R-P75 form): to kit 03 as it stands, read
+    // from its piece table, and to the fields it published at W19.
+    const documented = kitPieceFields();
+    expect(documented.length, 'PRECONDITION: kit 03\'s piece table is read').toBeGreaterThanOrEqual(KIT_03_FIELDS.length);
+    expect([...PIECE_FIELDS].filter(field => !documented.includes(field)).sort(),
+      'W19.F3.04 — every field the write paths read a record against is a field kit 03\'s piece table publishes')
+      .toEqual([]);
+    expect(KIT_03_FIELDS.filter(field => !PIECE_FIELDS.has(field)),
+      'W19.F3.04 — and every field kit 03 :133-149 published at W19 stays in the set').toEqual([]);
   });
 
   it('host: a direct PUT of a piece carrying every published field stores every one of them and raises no ignored field, and one field outside the list raises exactly one naming it', async () => {
     // The lock against drift in the other direction: a name in the set that the
     // validator does not actually read would vanish from the stored piece, and a
     // field the validator reads that the set lacks would be reported as ignored.
+    const piece = contractPiece();
     const f = await feedFixture();
-    const answer = await f.put([KIT_PIECE]);
+    const answer = await f.put([piece]);
     expect(answer.status, 'the whole-contract piece is published').toBe(200);
     const stored = (await f.read()).document.pieces[0]!;
     expect(Object.keys(stored).sort(),
       'W19.F3.04 — the stored piece carries exactly the fields the exported set names: a name the validator drops, or a field it emits that the set omits, is drift')
-      .toEqual([...PIECE_FIELDS].sort());
-    expect(stored, 'W19.F3.04 — and every one of those fields survives with the value the contract carried').toEqual(KIT_PIECE);
+      .toEqual(Object.keys(piece).sort());
+    expect(stored, 'W19.F3.04 — and every one of those fields survives with the value the contract carried').toEqual(piece);
     expect(codesOf(answer.diagnostics),
       'W19.F3.04 — a piece made only of published fields raises no warning at all').toEqual([]);
 
     // One field outside the list, named once.
+    expect(PIECE_FIELDS.has('vertical'), 'PRECONDITION: `vertical` is outside the exported set').toBe(false);
     const extra = await feedFixture();
-    const extraAnswer = await extra.put([{ ...KIT_PIECE, vertical: 'menswear' }]);
+    const extraAnswer = await extra.put([{ ...piece, vertical: 'menswear' }]);
     expect(extraAnswer.status, 'the piece carrying one unlisted field is accepted').toBe(200);
     expect(warningsOf(extraAnswer.diagnostics),
       'W19.F3.04 — exactly one warning, naming the one field outside the published list')
       .toEqual([expect.objectContaining({ code: 'ignored_field', field: 'vertical' })]);
     expect((await extra.read()).document.pieces[0],
-      'W19.F3.04 — and the stored piece is the contract\'s own fields, unchanged').toEqual(KIT_PIECE);
+      'W19.F3.04 — and the stored piece is the contract\'s own fields, unchanged').toEqual(piece);
   });
 });
 
