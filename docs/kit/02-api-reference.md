@@ -350,8 +350,10 @@ content slot of every module the layout returned, in one page decision: in `deci
 follow the layout's directly, in the order the layout returned its modules, and `order` runs on across them before
 the slots after the layout. Each decision of an inner slot carries `within: { module, slot }`, keys sorted: the
 layout slot and the module whose content it is, beside its own `slot` and `slotPosition`. A module that is not
-returned has its inner slot undecided: the answer carries no decision, no `within` and no `pinDiagnostics` entry for
-it, and no record is written. No piece is served twice on the page: de-duplication spans the layout, every inner
+returned has its inner slot undecided: the answer carries no decision and no `within` for it, and no record is
+written. A pin of that inner slot still stays reserved page-wide, so its piece is served nowhere on that page view,
+and the answer's `pinDiagnostics` names it with reason `module_not_returned` and `within: { module, slot }`, the
+module that was not returned and the layout slot ([below](#inner-content-slots-inner)). No piece is served twice on the page: de-duplication spans the layout, every inner
 slot and every other slot. The answer's top-level members are unchanged, and a page whose layout slot names no
 inner content slot is answered exactly as before.
 
@@ -754,7 +756,7 @@ no decision at all. Her experimental assignment is unchanged, because it depends
 anchor and the published salt. The experience served is `default`. Nothing of the record is read,
 projected or renewed, and the poll stays read-only, as it is for every shopper.
 
-`pinDiagnostics` names the pins the slot governance refused for this page, so a dead pin is visible to the caller instead of silently falling back to the site's own default. Each entry is `{slot, pinnedPieceId, pinIndex?, reason, ownerSlot?}`: `pinIndex` is the refused position inside the slot's `pinnedPieceIds` prefix and is absent for a legacy scalar `pinnedPieceId`; `reason` is one of `invalid_take`, `missing_or_ineligible`, `slot_type`, `duplicate_pin`, `off_limits`, `excluded`, `excluded_tag`, `type_not_allowed`; `ownerSlot` names the slot that already holds the piece, on any refusal reason and not only `duplicate_pin` — the engine attaches it whenever another slot already owns the piece, whichever gate then decided the refusal. A refused required pin refuses its whole slot — no shifted position, no ranked replacement — so the slot carries no decision and no ledger row, and this member is the only place the answer names the refusal. The member is absent when nothing was refused; it reports configuration, never shopper state, and it changes no ranking, eligibility or stored record. A refused pin at a position (`positionPins`, on a declared layout slot) carries `position`, the position it was pinned at, counted from 1, in place of `pinIndex`, which stays on prefix pins alone.
+`pinDiagnostics` names the pins the slot governance refused for this page, so a dead pin is visible to the caller instead of silently falling back to the site's own default. Each entry is `{slot, pinnedPieceId, pinIndex?, reason, ownerSlot?}`: `pinIndex` is the refused position inside the slot's `pinnedPieceIds` prefix and is absent for a legacy scalar `pinnedPieceId`; `reason` is one of `invalid_take`, `missing_or_ineligible`, `slot_type`, `duplicate_pin`, `off_limits`, `excluded`, `excluded_tag`, `type_not_allowed`, or `module_not_returned` (below); `ownerSlot` names the slot that already holds the piece, on any refusal reason and not only `duplicate_pin` — the engine attaches it whenever another slot already owns the piece, whichever gate then decided the refusal. A refused required pin refuses its whole slot — no shifted position, no ranked replacement — so the slot carries no decision and no ledger row, and this member is the only place the answer names the refusal. The member is absent when nothing was refused and no pin was left reserved by an undecided inner slot; it reports configuration, never shopper state, and it changes no ranking, eligibility or stored record. A refused pin at a position (`positionPins`, on a declared layout slot) carries `position`, the position it was pinned at, counted from 1, in place of `pinIndex`, which stays on prefix pins alone. An entry with reason `module_not_returned` refuses nothing: it names a pin of an inner content slot whose module the declared layout slot did not return on this page view, which stayed reserved page-wide so its piece is served nowhere on that page view, and it alone carries `within: { module, slot }`, keys sorted, naming the module and the layout slot; such entries follow the refusals and are counted in `refusedCount` as every entry is ([inner content slots](#inner-content-slots-inner)).
 
 The member is BOUNDED, because the number of pins on a page is operator-authored: the array carries at most the first 50 entries in page and slot order, and `refusedCount` and `omittedCount` sit beside it — the same count/omitted-count pattern the advisory pin channel (`slot-pin-diagnostics/v1`) already publishes for its own 50-entry sample. All three appear together, and only when something was refused. `refusedCount` counts every refusal on the page, so a document whose slots refuse thousands of pins is still served with the whole total named: the bound is applied before the answer's own size guard, and a published slot document can never turn a served snapshot into a 503.
 
@@ -1780,11 +1782,17 @@ per-context order, the modules withheld by the page's `nothingToShow` report or 
 exploration pick and the adjacent swap (applied before any slot after the layout is decided), never the shadow
 order (**The baseline and the shadow**, above), which is recorded only. A module that is not
 returned (withheld, ineligible, excluded, or ranked beyond the take) has its inner slot undecided: it serves and
-records nothing, adds no row to the page manifest and names no refused pin, short take or constraint. An inner slot
+records nothing, adds no row to the page manifest and names no short take or constraint, and of its pins only those
+it kept reserved are named (below), a pin its own gates refused being left out as it reserved nothing. An inner slot
 whose module was returned but that has nothing eligible left after de-duplication serves nothing and writes no
 record, and the module stays returned. A pin of an inner slot is reserved page-wide before any slot ranks, as every
 pin is, whether or not its module is then returned, so a piece pinned in an undecided inner slot is served nowhere
-on that page view. De-duplication is page-wide across the layout, every inner slot and every other slot: no piece
+on that page view. Each such pin is named in the answer's `pinDiagnostics`, after any refused pin, as
+`{ pinIndex, pinnedPieceId, reason: "module_not_returned", slot, within: { module, slot } }`, keys sorted: the inner
+slot, the piece, its place in the slot's `pinnedPieceIds` (`pinIndex`, absent for a scalar `pinnedPieceId`), and in
+`within` the module that was not returned and the layout slot; the pin stays reserved and its piece served nowhere on
+that page view, the entry is counted in `refusedCount` as every entry is, and it changes no decision, record,
+receipt, page manifest or replay. De-duplication is page-wide across the layout, every inner slot and every other slot: no piece
 twice on the page.
 
 Every decision of an inner slot carries `within: { module, slot }`, keys sorted, the layout slot and the module it

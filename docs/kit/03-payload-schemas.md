@@ -606,7 +606,7 @@ publication receipt supply publication evidence. Missing headers return `428`, i
 operations reserve the catalog until the existing catalog publication status/recovery workflow finishes
 the exact retained intent; a currently granted operator or service may recover it without replacing
 its original approval or actor. Serving snapshots can remain cached for up to 30 seconds, excluding
-in-flight reads; publication is not an immediate-effect guarantee. No HTTP operation initializes a catalog.
+in-flight reads; publication is not an immediate-effect guarantee.
 
 Supplied proposals remain explicitly unverified. The separately configured `/generate` endpoint performs model generation; its verified witness describes the generation-time input/configuration/taxonomy and actual transport, not certification under today’s taxonomy. Human per-label review and current publication authority remain mandatory. Live model execution, customer sample calibration, UI handoff, cutover and approved data/retention policies remain separately evidenced acceptance.
 
@@ -958,7 +958,14 @@ decision: the page's slots in document order, except that each inner slot is dec
 slot, in the order the layout returned its modules (after its pins, off-limits modules, configured order,
 withheld modules, exploration pick and adjacent swap), never where the document lists it. A module that is not
 returned has its inner slot undecided: no decision, no `within`, no record, no row in the page manifest and no
-refused-pin or short-take entry are written for it. De-duplication spans the layout, every inner slot and every
+short-take entry are written for it, and a pin its own gates refused is left out, as it reserved nothing. A pin it
+kept reserved stays reserved page-wide, as every valid pin is, so its piece is served nowhere on that page view, and
+the decision's `pinDiagnostics` names it, after any refused pin, as
+`{ pinIndex, pinnedPieceId, reason: "module_not_returned", slot, within: { module, slot } }`, keys sorted: the inner
+slot, the piece, its place in the slot's `pinnedPieceIds` (`pinIndex`, absent for a scalar `pinnedPieceId`), and in
+`within` the module that was not returned and the layout slot; the entry refuses nothing, is counted in the
+snapshot's `refusedCount` as every entry is, and changes no decision, record, receipt, page manifest or replay.
+De-duplication spans the layout, every inner slot and every
 other slot of the page, so no piece is served twice on the page and an inner slot decided earlier in the layout's
 order takes a piece before a later one or any slot after the layout. Each inner decision carries
 `within: { module, slot }`, keys sorted, naming the layout slot and the module, on the snapshot's decision, on
