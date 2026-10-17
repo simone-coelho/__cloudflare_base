@@ -497,7 +497,7 @@
     {
       "id": "P49",
       "title": "A learn republish does not leave a bare \"statistics recovery required\" (**amendment 3, 2026-10-17**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-3/BTI-Parity-Amendment-2026-10-17.md (amendment 3, committed beside the program)",
