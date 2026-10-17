@@ -2,6 +2,15 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-17, morning: the pilot test deployment is LIVE on staging and production (the owner's own Optimizely account)
+
+- **Owner direction (2026-10-17):** the stamps are the owner's own test deployment on the Optimizely account, not a customer's; deploy without further questions. Executed by the lead through path B (direct `wrangler deploy --env <env>` from a clean detached worktree at the integration head), the scripts under `_evidence/pilot/` (`deploy-stamp-pathB.sh`, `provision.mjs`, `smoke.mjs`, `loop.mjs`, `loop2.mjs`), logs under `_evidence/pilot/logs/` (staging at the root, production under `production/`).
+- **Staging** `edge-platform-staging` (version 0c85766f at 9ab562a8, then bc8bee07 at aa103c6e with durable recovery on): dead-letter queue `events-staging-dead-letter` created; D1 0011–0013 applied; secrets set by name TENANTS, RETENTION, IDENTITY_SECRETS, SDK_KEYS, STAMP_OWNER_SUBJECTS (values only in the 0700 directory `/home/simonecoelho/rem/_pilot-secrets/`, never in evidence); owner account seeded (email the owner's, temporary password changed at first sign-in, new password in the same directory); tenant `pilot` initialized through `POST /content/publication/initialize` (six compiled defaults at revision 1); durable recovery ON with the pilot's 30-day retention and unknown-owner test policy (aa103c6e). Smoke: `/health/ready` 200, SDK bytes equal the commit, session, consent, snapshot, catalogue and slots published, rendered-v1 learn dials published, impression acknowledged durably, ledger record read, replay equal.
+- **Production** `edge-platform-production` (version 83b665e8 at 1c3e6ad6, recovery on): the same steps with its own material directory `/home/simonecoelho/rem/_pilot-secrets-production/`; the same smoke and loop green.
+- **Config commits:** aa103c6e (staging) and 1c3e6ad6 (production) in wrangler.toml: `LEDGER_RECOVERY_ENABLED = "true"` and the unknown-owner policy `pilot-unknown-v1`, 30 days, in `LEDGER_RECOVERY_CONFIG`. Not a customer policy.
+- **Known reads:** `GET /v1/:tenant/learn/proposals` is the proposals read (my script's `/content/proposals` 404 was the wrong path, not a defect); lift stays unpublished until the slot's statistics reach nMin.
+- **The 52 baseline failures** are the frozen pre-remediation baseline (`docs/remediation/baseline-failures.json`, 29 files at 7b01c14, 52 entries today after the landing); the gate ratchets against it so no change adds a failure; they are owed work, not regressions.
+
 ## 2026-10-17, small hours: amendment 2 LOCALLY COMPLETE (4/4); W08-C1 merged; amendment 3 drafted and S7 specifying; the pilot waits on the owner
 
 - **Amendment 2** `tapestry-parity-operator-warnings`: Local done 4/4, Final 0/4 (`check` PASS). P41 b6335a24, P42 c7f74beb (R-P81), P43 bd595ca0, P44 da7e7f31, each one round, reviewer PASS, merged and receipted (last commit c7543471). Four LIVE rows pending the owner's batched acceptance.

@@ -579,6 +579,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-17 morning — **Amendment 3 gated**: S7 specified on `spec-parity-g`, reviewed PASS at f235d2ef after three test-only fix rounds (R-P82, R-P83 and addenda); gates recorded 4e340d98; per-ticket branches rem/tkt/P45..P49; P45 ACTIVE 7c5cdde1 building in `build-p45`. Pilot still waiting on the owner's four answers.
 
+- 2026-10-17 morning — **PILOT TEST DEPLOYMENT EXECUTED** on the owner's direction ("We own the account… deploy"): staging 0c85766f→bc8bee07 (aa103c6e, recovery on) and production 83b665e8 (1c3e6ad6, recovery on), both provisioned with tenant `pilot`, owner account, six-member set, catalogue/slots/learn published, impression acknowledged durably, ledger and replay green. Material in the two 0700 `_pilot-secrets*` directories, never in evidence. P46 ACTIVE b71a8f4a building.
+
 ## Commits
 
 | Sha | What |
