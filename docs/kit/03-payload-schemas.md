@@ -965,6 +965,12 @@ the decision's `pinDiagnostics` names it, after any refused pin, as
 slot, the piece, its place in the slot's `pinnedPieceIds` (`pinIndex`, absent for a scalar `pinnedPieceId`), and in
 `within` the module that was not returned and the layout slot; the entry refuses nothing, is counted in the
 snapshot's `refusedCount` as every entry is, and changes no decision, record, receipt, page manifest or replay.
+The operator surfaces count a `module_not_returned` entry apart from refusals: the operator slots page's
+`governance` block counts it in `unreturnedPinCount` and names it in `unreturnedPins` (each
+`{ count, pinnedPieceId, within: { module, slot } }`, keys sorted), never in `refusedPinCount` or `refusedPins`, and
+the monitor's `governance` carries the tenant's `unreturnedPinCount` beside a `refusedPinCount` that counts refusals
+only. The console's Slots screen labels such a pin in its own words, "<n> pin(s) reserved, unserved: the module was
+not returned", with one line per pin naming its piece, how often, the module and the layout slot.
 De-duplication spans the layout, every inner slot and every
 other slot of the page, so no piece is served twice on the page and an inner slot decided earlier in the layout's
 order takes a piece before a later one or any slot after the layout. Each inner decision carries

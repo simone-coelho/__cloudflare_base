@@ -342,14 +342,23 @@ const safeChecks = (v: unknown): Record<string, CheckResult> => Object.fromEntri
  * as Infinity, a negative, a fraction, a number past the safe range — is a
  * corrupted record, and clamping it would state a count nobody observed beside
  * `scope: 'tenant'`. The whole member is dropped instead, exactly as for a run
- * whose counters could not be read: no result states a zero it did not observe. */
+ * whose counters could not be read: no result states a zero it did not observe.
+ *
+ * P47 (R-P78): `unreturnedPinCount`, the tenant's pins left reserved and
+ * unserved because their module was not returned, is kept after those members
+ * when the kept result carries it, under the same rule: a kept value that is not
+ * a whole non-negative number drops the whole member. A result written before
+ * the member existed, or for a tenant that never counted one, keeps its former
+ * shape. */
 const observedCount = (value: unknown, max: number): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= max;
 const safeGovernance = (value: unknown): MonitorResult['governance'] | undefined => {
   const since = field(value, 'since'), refusedPinCount = field(value, 'refusedPinCount'), shortTakeCount = field(value, 'shortTakeCount');
   if (!observedCount(since, 8_640_000_000_000_000) || !observedCount(refusedPinCount, Number.MAX_SAFE_INTEGER)
     || !observedCount(shortTakeCount, Number.MAX_SAFE_INTEGER)) return undefined;
-  return { since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount, shortTakeCount };
+  const unreturnedPinCount = field(value, 'unreturnedPinCount');
+  if (unreturnedPinCount !== undefined && !observedCount(unreturnedPinCount, Number.MAX_SAFE_INTEGER)) return undefined;
+  return { since, scope: SLOT_GOVERNANCE_SCOPE, refusedPinCount, shortTakeCount, ...(unreturnedPinCount !== undefined ? { unreturnedPinCount } : {}) };
 };
 
 /** The four loss counters a kept result carries, projected as safely as its
