@@ -109,10 +109,21 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "f235d2ef6bb70b4968170e120e8f48aa6660da3e on rem/spec-parity-g (batch S7, amendment 3; P45 db6d0419, P46 3e4aadb6, P47 756aff3f, P49 aeae67d4 reviewed PASS at aeae67d4 after fix rounds 1 and 2 (R-P82, R-P83); P48 reviewed PASS at f235d2ef6bb70b4968170e120e8f48aa6660da3e after fix round 3 (R-P83 addendum 2); the R-P82 test-only corrections of src/units/P42/LEDGER.unit.test.ts, src/config/publication.optionalMember.test.ts and scripts/demo-kit/lib/host.test.mjs; every pinned harness file byte-identical to c7543471; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-five sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix2.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-head-P45.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-weak-and-controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-sk-units.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/logs/fix2-nc-p45-request.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -211,10 +222,21 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "f235d2ef6bb70b4968170e120e8f48aa6660da3e on rem/spec-parity-g (batch S7, amendment 3; P45 db6d0419, P46 3e4aadb6, P47 756aff3f, P49 aeae67d4 reviewed PASS at aeae67d4 after fix rounds 1 and 2 (R-P82, R-P83); P48 reviewed PASS at f235d2ef6bb70b4968170e120e8f48aa6660da3e after fix round 3 (R-P83 addendum 2); the R-P82 test-only corrections of src/units/P42/LEDGER.unit.test.ts, src/config/publication.optionalMember.test.ts and scripts/demo-kit/lib/host.test.mjs; every pinned harness file byte-identical to c7543471; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-five sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix2.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-head-P46.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-weak-and-controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-sk-units.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/logs/fix2-nc-p46-request.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -322,10 +344,20 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "f235d2ef6bb70b4968170e120e8f48aa6660da3e on rem/spec-parity-g (batch S7, amendment 3; P45 db6d0419, P46 3e4aadb6, P47 756aff3f, P49 aeae67d4 reviewed PASS at aeae67d4 after fix rounds 1 and 2 (R-P82, R-P83); P48 reviewed PASS at f235d2ef6bb70b4968170e120e8f48aa6660da3e after fix round 3 (R-P83 addendum 2); the R-P82 test-only corrections of src/units/P42/LEDGER.unit.test.ts, src/config/publication.optionalMember.test.ts and scripts/demo-kit/lib/host.test.mjs; every pinned harness file byte-identical to c7543471; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-five sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix2.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-head-P47.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-sk-units.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/logs/fix1-sketch-locks.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -436,10 +468,23 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "f235d2ef6bb70b4968170e120e8f48aa6660da3e on rem/spec-parity-g (batch S7, amendment 3; P45 db6d0419, P46 3e4aadb6, P47 756aff3f, P49 aeae67d4 reviewed PASS at aeae67d4 after fix rounds 1 and 2 (R-P82, R-P83); P48 reviewed PASS at f235d2ef6bb70b4968170e120e8f48aa6660da3e after fix round 3 (R-P83 addendum 2); the R-P82 test-only corrections of src/units/P42/LEDGER.unit.test.ts, src/config/publication.optionalMember.test.ts and scripts/demo-kit/lib/host.test.mjs; every pinned harness file byte-identical to c7543471; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-five sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT-fix3.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix3.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-head-P48.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-nocred.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-weak-and-controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-sk-units.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -542,10 +587,21 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "f235d2ef6bb70b4968170e120e8f48aa6660da3e on rem/spec-parity-g (batch S7, amendment 3; P45 db6d0419, P46 3e4aadb6, P47 756aff3f, P49 aeae67d4 reviewed PASS at aeae67d4 after fix rounds 1 and 2 (R-P82, R-P83); P48 reviewed PASS at f235d2ef6bb70b4968170e120e8f48aa6660da3e after fix round 3 (R-P83 addendum 2); the R-P82 test-only corrections of src/units/P42/LEDGER.unit.test.ts, src/config/publication.optionalMember.test.ts and scripts/demo-kit/lib/host.test.mjs; every pinned harness file byte-identical to c7543471; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-five sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT-fix2.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-head-P49.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-weak-and-controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/logs/fix2-sk-units.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/logs/fix1-nc-p49-ctl-name-all.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
