@@ -239,8 +239,10 @@
           st.pages ? h('div', { style: 'margin-top:6px' }, ...st.pages.map((page) => h('button', { class: 'small', onclick: () => C.go('lift', { page, item: '' }) }, `The ${page} page's ${S.slot}`))) : null));
         return;
       }
+      // P45 (R-P78): the stale marker of the answer this screen holds, or null (nothing drawn).
+      const stale = staleMark(meta);
       if (!meta || meta.published === false) {
-        host.append(toolbar, h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
+        host.append(toolbar, ...(stale ? [stale] : []), h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
         return;
       }
 
@@ -305,11 +307,37 @@
         toolbar,
         h('div', { class: 'body', style: 'padding-top:8px;padding-bottom:0' }, h('div', { class: 'sub' },
           item ? `Every context ${item} was shown in. A context is who the shopper was and where they came from; the coarser ones answer until the finer ones have enough evidence.` : line)),
+        stale,
         rows.length ? C.table(cols, body, { sort: lift.sort, onSort: sortBy }) : empty,
         C.pager(st, item ? 'context' : 'piece', loadLift),
       ));
     },
   });
+
+  /**
+   * P45 (R-P78; P42's marker): when the lift/rows answer the screen holds carries `stale`, ONE element
+   * beside the numbers it qualifies, worded from the marker's members alone: the faulty placement's
+   * page and slot, the pooled modules this slot reads from it (as P42's refusal names them), and the
+   * last successful publication, its version and time, or that the slot has none yet. It is drawn
+   * from the answer `loadLift` already keeps, so it asks for nothing, and every later read replaces
+   * that answer: once a publication succeeds the next read carries no marker and nothing is drawn,
+   * which leaves the screen exactly as it was before P45.
+   */
+  function staleMark(meta) {
+    const s = meta && meta.stale;
+    // An answer for another slot (the screen redraws while the next slot's read is in flight) marks nothing here.
+    if (!s || typeof s !== 'object' || (typeof meta.slot === 'string' && meta.slot !== S.slot)) return null;
+    const p = s.placement || {};
+    const modules = Array.isArray(s.modules) ? s.modules.filter((m) => typeof m === 'string' && m) : [];
+    const last = s.lastPublished && Number.isFinite(s.lastPublished.version) ? s.lastPublished : null;
+    const at = last ? when(last.publishedAt) : '';
+    const cause = `a publication of this slot was refused because the statistics of page ${p.page || 'unnamed'}, slot ${p.slot || 'unnamed'} could not be read`
+      + (modules.length ? ` for the pooled module${modules.length > 1 ? 's' : ''} ${modules.join(', ')}` : '');
+    const held = last
+      ? `these numbers stay those of version ${last.version}${at ? `, published ${at}` : ''}, the slot's last successful publication, until a publication succeeds`
+      : 'the slot has no successful publication yet and stays unpublished until a publication succeeds';
+    return h('div', { class: 'msg note', 'data-lift-stale': true, style: 'margin:8px 14px' }, `${last ? 'Stale' : 'Unpublished'}: ${cause}; ${held}.`);
+  }
 
   /** W26 R5: the row's own correction; a row from a server that sends none is the uncorrected diagnostic it always was. */
   function correctionOf(r) {
