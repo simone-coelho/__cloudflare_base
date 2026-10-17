@@ -46,8 +46,9 @@ describe('E2 an optional member of the coherent publication set', () => {
     const f = await fixture(), pin = await pinPublication(f.env, f.scope);
     expect(Object.keys(pin.refs).sort()).toEqual(['content:oh', 'learn:oh', 'reflex:oh', 'slots:oh']);
     expect(await readOptionalPinnedPublication(f.env, PRIORS_KIND, f.scope, pin)).toBeNull();
-    // The same set through the required read is the error every demo rig logged.
-    await expect(readPinnedPublication(f.env, PRIORS_KIND, f.scope, pin)).rejects.toMatchObject({ status: 503, message: 'Configuration publication authority unavailable' });
+    // The same set through the required read is the error every demo rig logged; R-P82 (P48): its words may name the member and the path after today's text.
+    await expect(readPinnedPublication(f.env, PRIORS_KIND, f.scope, pin)).rejects.toMatchObject({ status: 503,
+      message: expect.stringMatching(/^Configuration publication authority unavailable(: priors\b.*\/ops\/demo-bootstrap\/complete.*)?$/) });
     // A member the set does carry reads through the optional door exactly as through the required one.
     const learn = await readOptionalPinnedPublication(f.env, LEARN_KIND, f.scope, pin);
     expect(learn).toEqual(await readPinnedPublication(f.env, LEARN_KIND, f.scope, pin));

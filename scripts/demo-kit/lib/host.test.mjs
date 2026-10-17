@@ -92,7 +92,8 @@ function kind(c) {
   if (line.includes('secret put')) return `secret put ${c.args[3]}`;
   if (line.includes('worktree add')) return `worktree add ${c.args.at(-2).includes('-seed-') ? 'seed' : 'deploy'}`;
   if (line.includes('worktree remove')) return `worktree remove${line.includes('--force') ? ' --force' : ''}`;
-  for (const [needle, name] of [['rev-parse', 'rev-parse'], ['show HEAD:src/index.ts', 'show index'], ['ls-tree', 'ls-tree'], ['migrations list', 'migrations list'],
+  // R-P82 (P48.BP3): the hosted seed's one-time path, a runner call whose line names POST /ops/demo-bootstrap/complete, right after the seed.
+  for (const [needle, name] of [['ops/demo-bootstrap/complete', 'bootstrap complete'], ['rev-parse', 'rev-parse'], ['show HEAD:src/index.ts', 'show index'], ['ls-tree', 'ls-tree'], ['migrations list', 'migrations list'],
     ['queues list', 'queues list'], ['status --porcelain', 'status'], ['check:generated', 'check:generated'], ['triggers deploy', 'triggers deploy'],
     ['wrangler deploy', 'deploy'], ['region-seed.mjs', 'region-seed'], ['seed.mjs', 'seed']]) if (line.includes(needle)) return name;
   return c.cmd;
@@ -300,7 +301,7 @@ test('a full run takes the steps in order; every secret goes through stdin only,
     ...HOSTED_SECRETS.map((n) => `secret put ${n}`),
     'ls-tree', 'migrations list', 'queues list',
     'worktree add deploy', 'ln', 'check:generated', 'builder', 'status', 'deploy', 'triggers deploy', 'unlink', 'status', 'worktree remove',
-    'worktree add seed', 'ln', 'check:generated', 'builder', 'status', 'seed', 'deploy', 'region-seed', 'unlink', 'status', 'worktree remove --force',
+    'worktree add seed', 'ln', 'check:generated', 'builder', 'status', 'seed', 'bootstrap complete', 'deploy', 'region-seed', 'unlink', 'status', 'worktree remove --force',
     'check-demo suites (node.exe)',
   ]);
   const puts = fake.calls.filter((c) => c.args.includes('secret'));
@@ -396,7 +397,7 @@ test('each step runs alone: the seed needs the JWT secret of the same run or the
   const kept = fakeRunner();
   const r2 = await host(['--config', 'oh', '--step', 'seed', '--confirm', 'edge-platform-oh'], { runner: kept.runner, devVarsText: `${DEV_VARS}\nOH_REMOTE_JWT_SECRET=${HELD}` });
   assert.equal(r2.code, 0, r2.all);
-  assert.deepEqual(kept.calls.map(kind), ['rev-parse', 'worktree add seed', 'ln', 'check:generated', 'builder', 'status', 'seed', 'deploy', 'region-seed', 'unlink', 'status', 'worktree remove --force']);
+  assert.deepEqual(kept.calls.map(kind), ['rev-parse', 'worktree add seed', 'ln', 'check:generated', 'builder', 'status', 'seed', 'bootstrap complete', 'deploy', 'region-seed', 'unlink', 'status', 'worktree remove --force']);
   const token = kept.calls.find((c) => kind(c) === 'seed').env.OPERATOR_TOKEN;
   assert.equal((await jwtVerify(token, new TextEncoder().encode(HELD), { issuer: 'edge-platform', audience: 'edge-platform-api' })).payload.sub, 'seed-oh');
   assert.ok(!r2.all.includes(HELD) && !r2.all.includes(token));
