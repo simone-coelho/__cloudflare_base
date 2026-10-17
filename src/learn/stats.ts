@@ -372,6 +372,37 @@ export interface StaleMarker {
 }
 
 /**
+ * P49 (R-P78, decision D1): the members of a slot's accumulation tuple that the
+ * statistics object's configuration check compares (the slot's `reward`,
+ * `objective` and `measurementBasis`, and the learn document's `stats` block),
+ * as a refusal after a learn republish names them, in sorted order.
+ */
+export const REPUBLISHED_MEMBERS = ['measurementBasis', 'objective', 'reward', 'stats.liftMax', 'stats.liftMin', 'stats.n0', 'stats.nMin', 'stats.tauLearnMs'] as const;
+export type RepublishedMember = typeof REPUBLISHED_MEMBERS[number];
+/**
+ * P49 (R-P78, decision D1): what a placement carries while its publications are
+ * refused because the learn document was republished with a changed
+ * accumulation tuple that no authorized generation transition accounts for.
+ * Keys sorted (R-P3).
+ *   · `changed`: each member of the tuple whose value in the published learn
+ *     document (`new`) differs from the one the slot's statistics accumulate
+ *     under (`old`), sorted by `member`; one at least.
+ *   · `endedBy`: what ends it, the operator's generation transition for the slot
+ *     (`POST /v1/:tenant/learn/generation`), whose publication succeeds; a
+ *     republish restoring the old values ends it too.
+ *   · `page`, only for a page-scoped placement, and `slot`: the refused placement.
+ * It is never a member of the snapshot: the snapshot in force stays exactly as
+ * it was published.
+ */
+export interface RepublishedChange { member: RepublishedMember; new: string | number; old: string | number }
+export interface Republished {
+  changed: RepublishedChange[];
+  endedBy: 'generation_transition';
+  page?: string;
+  slot: string;
+}
+
+/**
  * P05: what the statistics object counts of the swaps of ONE adjacent pair
  * (k, k + 1), positions counted from 1 within the slot: the swapped decisions
  * whose module at position k was exposed (`pairs`), and the clicks credited to

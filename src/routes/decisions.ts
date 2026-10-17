@@ -28,7 +28,7 @@ import type { DecisionRecord } from '@/content/types';
 import { isCarriedCustomerId, isLearningKey, parseId, type CapturedRecord, type LedgerStream } from '@/ledger/records';
 import { validCarrier, DELIVERY_FIELD } from '@/ledger/delivery';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
-import { liftArchiveKey, liftKey, liftStaleKey, placementSlot, ringName, staleMarkerIn, staleMarkerOf, staleRefusalIn, staleRefusalOf, statsName } from '@/learn/fan';
+import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, placementSlot, republishedIn, republishedRecordOf, republishedRefusalIn, republishedRefusalOf, ringName, staleMarkerIn, staleMarkerOf, staleRefusalIn, staleRefusalOf, statsName } from '@/learn/fan';
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
@@ -49,7 +49,7 @@ import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
-import type { LiftSnapshot, StaleMarker } from '@/learn/stats';
+import type { LiftSnapshot, Republished, StaleMarker } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
 import { readEnrollmentHealth } from '@/content/holdout';
 import type { LearnConfig } from '@/content/types';
@@ -443,6 +443,22 @@ async function staleMarkerFor(c: { env: Env }, tenant: string, brand: string, sl
 }
 
 /**
+ * P49 (R-P78, decision D1): what a placement's last publication refused after a
+ * learn republish names (`republished`), while the snapshot in force is still the
+ * one that refusal left in force; null otherwise. A record that cannot be read, or
+ * is not one, is none: the read answers as before.
+ */
+async function republishedFor(c: { env: Env }, tenant: string, brand: string, slot: string, page: string | undefined, inForce: unknown): Promise<Republished | null> {
+  try { return republishedIn(republishedRecordOf(await c.env.CACHE.get(liftRepublishedKey(tenant, brand, slot, page), 'json')), inForce); } catch { return null; }
+}
+
+/** P42 and P49: the members a lift read carries last, beside the snapshot in force, while they apply. */
+async function liftMarksFor(c: { env: Env }, tenant: string, brand: string, slot: string, page: string | undefined, inForce: unknown) {
+  const [stale, republished] = await Promise.all([staleMarkerFor(c, tenant, brand, slot, page, inForce), republishedFor(c, tenant, brand, slot, page, inForce)]);
+  return { ...(stale ? { stale } : {}), ...(republished ? { republished } : {}) };
+}
+
+/**
  * GET /v1/:tenant/lift/rows?slot=&brand=&page=&level=pooled|cells&item=&q=&sort=&dir=&limit=&cursor= (doc 28 §4).
  * The grid as pages: one pooled row per item, or one item's cells; filtered, sorted and cut by the
  * server, with the catalog's names and the merchandiser's controls joined on. The cursor names the
@@ -451,6 +467,7 @@ async function staleMarkerFor(c: { env: Env }, tenant: string, brand: string, sl
  * W26 R2: `page=` names the placement where the catalogue carries the slot name on more than one
  * page (required there, and carried by the cursor); a slot on one page is read without it.
  * P42: a placement whose snapshot in force is stale (`staleMarkerFor`) also answers `stale`, last.
+ * P49: and one whose publications are refused after a learn republish (`republishedFor`), `republished`, last.
  */
 decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -477,7 +494,7 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const offset = cur ? cur.o : 0;
   let snapshot: LiftSnapshot | null = null;
   try { snapshot = (await c.env.CACHE.get(liftKey(tenant, brand, slot, page), 'json')) as LiftSnapshot | null; } catch { snapshot = null; }
-  const stale = await staleMarkerFor(c, tenant, brand, slot, page, snapshot), marked = stale ? { stale } : {};
+  const marked = await liftMarksFor(c, tenant, brand, slot, page, snapshot);
   if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, level, total: 0, offset: 0, limit, rows: [], cursor: null, ...marked });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   const [catalog, learn] = await Promise.all([readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
@@ -753,6 +770,7 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
  * W26 R2: `page=` names the placement where the catalogue carries the slot name on
  * more than one page, for the snapshot in force and for an archived version alike.
  * P42: beside the snapshot in force (never an archived one), `stale`, last, while it is stale (`staleMarkerFor`).
+ * P49: and `republished`, last, while a learn republish keeps its publications refused (`republishedFor`).
  */
 decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -779,9 +797,9 @@ decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   // The learn document is read only for a slot that is on a page at all.
   const floorPage = placementPageOf(slotPages, slot, page);
   const evidenceFloor = floorPage === undefined ? null : placementEvidenceFloor(await publishedLearn(c, tenant), floorPage);
-  const stale = version > 0 ? null : await staleMarkerFor(c, tenant, brand, slot, page, snapshot);
+  const marked = version > 0 ? {} : await liftMarksFor(c, tenant, brand, slot, page, snapshot);
   return c.json({ ok: true, tenant, brand, slot, ...(page ? { page } : {}), snapshot,
-    ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}), ...(stale ? { stale } : {}) });
+    ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}), ...marked });
 });
 
 /** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from her own object. Authenticated. */
@@ -1568,6 +1586,15 @@ decisionRoutes.post('/:tenant/learn/publish', operatorJwt(), async (c) => {
     // downstream text is ever echoed; every other refusal stays the one below.
     const stale = response.status === 503 ? staleRefusalIn(res) : null;
     if (stale) { invalidateLiftCache(); return c.json({ ok: false, error: staleRefusalOf(stale), stale }, 503); }
+    // P49 (R-P78, D1): likewise the object's refusal after a learn republish, only
+    // when its answer is exactly that (503, `{ ok: false, error, republished }`, a
+    // well-formed member naming this placement and the object's own sentence for
+    // it); the words are composed here from the checked member and version.
+    const named = response.status === 503 ? republishedRefusalIn(res, tenant) : null;
+    if (named && named.republished.slot === b.slot && named.republished.page === page) {
+      invalidateLiftCache();
+      return c.json({ ok: false, error: republishedRefusalOf(named.republished, tenant, named.version), republished: named.republished }, 503);
+    }
     if (!response.ok || !res || res.ok !== true || typeof res.published !== 'boolean'
       || (res.published ? !res.snapshot || res.snapshot.tenant !== tenant || res.snapshot.brand !== brand || res.snapshot.slot !== b.slot
         || !Number.isSafeInteger(res.snapshot.version) || (res.snapshot.version as number) <= 0 : res.snapshot !== null)) throw new Error();

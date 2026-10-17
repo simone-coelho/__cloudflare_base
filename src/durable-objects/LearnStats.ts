@@ -6,8 +6,8 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type PositionPolicy, type RebuildBasis, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftStaleKey, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, staleMarkerOf, staleRefusalOf, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
@@ -144,6 +144,36 @@ class PooledFault extends Error {
 class StaleRefusal extends Refusal {
   constructor(readonly stale: StaleMarker) { super(503, staleRefusalOf(stale)); }
 }
+/**
+ * P49 (R-P78, decision D1): the configuration check refused because the published
+ * learn document names another accumulation tuple for the slot than the one its
+ * statistics accumulate under, and no authorized transition accounts for it —
+ * `changed` the members that differ. It IS today's refusal, `503 statistics
+ * recovery required`, to every caller but `publish()`, which turns it into the
+ * named refusal (`RepublishRefusal`); every other reader of the snapshot answers
+ * exactly what it answered before.
+ */
+class RepublishFault extends Refusal {
+  constructor(readonly changed: RepublishedChange[]) { super(503, 'statistics recovery required'); }
+}
+/** P49: a publication refused after a learn republish, answered `503 { ok: false, error, republished }` with its sentence and its member. */
+class RepublishRefusal extends Refusal {
+  constructor(readonly republished: Republished, words: string) { super(503, words); }
+}
+/**
+ * P49: the members of the slot's accumulation tuple whose value in the published
+ * learn document (`now`, as the configuration check reads it) differs from the
+ * one the slot's statistics accumulate under (`was`), in `REPUBLISHED_MEMBERS`
+ * order, each with its old and new values.
+ */
+function republishedChanges(was: SlotLearnConfig, now: { reward: string; objective: string; measurementBasis: string; stats: SlotLearnConfig['stats'] }): RepublishedChange[] {
+  const pairs: Array<[RepublishedChange['member'], unknown, unknown]> = [
+    ['measurementBasis', was.measurementBasis ?? 'served-v1', now.measurementBasis], ['objective', was.objective ?? 'unit', now.objective],
+    ['reward', was.reward, now.reward], ['stats.liftMax', was.stats.liftMax, now.stats?.liftMax], ['stats.liftMin', was.stats.liftMin, now.stats?.liftMin],
+    ['stats.n0', was.stats.n0, now.stats?.n0], ['stats.nMin', was.stats.nMin, now.stats?.nMin], ['stats.tauLearnMs', was.stats.tauLearnMs, now.stats?.tauLearnMs],
+  ];
+  return pairs.filter(([, old, next]) => old !== next).map(([member, old, next]) => ({ member, new: next as string | number, old: old as string | number }));
+}
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
   && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
 const fields = (v: unknown, keys: string[]): v is Record<string, unknown> => object(v) && Object.keys(v).every(k => keys.includes(k));
@@ -253,6 +283,7 @@ function json(body: unknown, status = 200): Response {
 }
 function failure(error: unknown): Response {
   if (error instanceof StaleRefusal) return json({ ok: false, error: error.message, stale: error.stale }, 503);
+  if (error instanceof RepublishRefusal) return json({ ok: false, error: error.message, republished: error.republished }, 503);
   return error instanceof Refusal
     ? json({ ok: false, error: error.message, ...(error.status === 413 || error.status === 409 ? { applied: false } : {}) }, error.status)
     : json({ ok: false, error: 'statistics acknowledgement unavailable' }, 503);
@@ -996,8 +1027,11 @@ export class LearnStats {
     // estimates and publication time once; allocation never recomputes them.
     // P42 (R-P78, D1): the pooled cause alone is refused by name, through every
     // caller of this publication alike (the /publish door, the alarm and the rest).
+    // P49 (R-P78, D1): and so is a learn republish that changed the slot's
+    // accumulation tuple, which the configuration check meets first.
     const frozen = await this.snapshot(d).catch(async (error: unknown) => {
-      throw error instanceof PooledFault ? await this.staleRefusal(d, error) : error;
+      throw error instanceof PooledFault ? await this.staleRefusal(d, error)
+        : error instanceof RepublishFault ? await this.republishRefusal(d, error) : error;
     });
     // P05 (decision D2): the position policy this publication puts in force:
     // normalised only while the slot's switch is on in the tenant's learn
@@ -1090,6 +1124,38 @@ export class LearnStats {
     try { await this.env.CACHE.put(liftStaleKey(d.tenant, d.brand, d.slot, d.page), JSON.stringify(stale)); }
     catch { /* the refusal still names the placement; only the reads go without the marker */ }
     return new StaleRefusal(stale);
+  }
+
+  /**
+   * P49 (R-P78, decision D1): a publication refused by the configuration check
+   * because the learn document was republished with a changed accumulation tuple is
+   * told, never left bare, and fail closed stays: nothing is published and the
+   * snapshot in force keeps serving. The member (`Republished`) names the slot (and
+   * its page), each changed member with its old and new values, and what ends it;
+   * it is recorded with the snapshot in force (read from the placement's own
+   * snapshot key; null where it has never published) under the placement's own key
+   * (`liftRepublishedKey`), which nothing but this refusal writes: a publication that
+   * succeeds makes no new call and keeps no new key, and the member stops applying
+   * once the snapshot in force is another one (`republishedIn`). The refusal says the
+   * same in words (`republishedRefusalOf`). Where the member cannot be formed, or the
+   * snapshot in force cannot be read or is not this placement's, the refusal is
+   * exactly what it was before; where recording it fails, the refusal still names
+   * it and the lift reads cannot.
+   */
+  private async republishRefusal(d: Stored, fault: RepublishFault): Promise<unknown> {
+    const republished = republishedOf({ changed: fault.changed, endedBy: 'generation_transition', ...(d.page ? { page: d.page } : {}), slot: d.slot });
+    if (!republished) return recovery();
+    let head: unknown;
+    try { head = await this.env.CACHE.get(liftKey(d.tenant, d.brand, d.slot, d.page), 'json'); } catch { return recovery(); }
+    let lastPublished: { publishedAt: number; version: number } | null = null;
+    if (head !== null && head !== undefined) {
+      if (!object(head) || head.tenant !== d.tenant || head.brand !== d.brand || head.slot !== d.slot
+        || !Number.isSafeInteger(head.version) || (head.version as number) <= 0 || !time(head.publishedAt)) return recovery();
+      lastPublished = { publishedAt: head.publishedAt as number, version: head.version as number };
+    }
+    try { await this.env.CACHE.put(liftRepublishedKey(d.tenant, d.brand, d.slot, d.page), JSON.stringify({ lastPublished, republished })); }
+    catch { /* the refusal still names the republish; only the reads go without the member */ }
+    return new RepublishRefusal(republished, republishedRefusalOf(republished, d.tenant, lastPublished?.version ?? null));
   }
 
   /** P05: this placement's position-policy history, read once from its one copy and then held; a malformed copy refuses. */
@@ -1260,8 +1326,15 @@ export class LearnStats {
       // refused as it always was, and an ordinary write under the document's own
       // configuration still meets `candidate()`'s 409 until the document follows.
       const authorized = await this.accumulationTransition();
-      if (!authorized || await recoveryDigest({ ...configured, reward: authorized.reward,
-        objective: authorized.objective, measurementBasis: authorized.measurementBasis }) !== stored) throw recovery();
+      // P49 (R-P78, D1): the refusal names what differs from the accumulation —
+      // the document's tuple as the check accepts it, the authorized transition's
+      // reward, objective and basis in place of the document's where one is on
+      // record — and is today's where nothing nameable differs.
+      const accepted = authorized ? { ...configured, reward: authorized.reward, objective: authorized.objective, measurementBasis: authorized.measurementBasis } : configured;
+      if (!authorized || await recoveryDigest(accepted) !== stored) {
+        const changed = republishedChanges(d.config, accepted);
+        throw changed.length ? new RepublishFault(changed) : recovery();
+      }
     }
     // The configuration check above still ran: absence of priors excuses nothing else.
     if (!rev) return null;
