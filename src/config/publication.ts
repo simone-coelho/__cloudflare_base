@@ -29,7 +29,7 @@ const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval']);
  */
 const COMPLETION_MEMBERS: ReadonlyMap<string, string> = new Map([['prior', 'priors'], ['proposals', 'proposals']]);
 const COMPLETION_PATH = 'POST /ops/demo-bootstrap/complete';
-const object =(v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= max && v.trim() === v;
 export class PublicationError extends Error {
