@@ -5,7 +5,7 @@
 // which attributes it and forwards the credits itself.
 
 import type { Env } from '@/types/env';
-import type { LiftSnapshot } from './stats';
+import type { LiftSnapshot, StaleMarker } from './stats';
 
 /**
  * Live authority is never satisfied by an eventually-consistent KV/cache hit.
@@ -127,6 +127,79 @@ export const liftArchiveKey = (tenant: string, brand: string, slot: string, vers
  * object writes it; the online credit and the hourly fold both read it.
  */
 export const positionHistoryKey = (tenant: string, brand: string, slot: string, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/positions.json`;
+/**
+ * P42 (R-P78, decision D1): where a placement's statistics object records the
+ * marker of a publication refused for the pooled cause (`StaleMarker`): its own
+ * key, beside the snapshot's and never inside it, so the snapshot at `liftKey`,
+ * its archive and its witness stay exactly what was published and the serving
+ * path reads nothing new. Only that refusal writes it; a placement that has
+ * never been refused so has no such key, and no publication of any placement
+ * reads or writes it. A later successful publication supersedes it without a
+ * call of its own: the marker applies only while the snapshot in force is the
+ * one it names (`staleMarkerIn`). `lift-stale:` is a prefix no `liftKey` starts with.
+ */
+export const liftStaleKey = (tenant: string, brand: string, slot: string, page?: string) => `lift-stale:${tenant}:${brand}:${placementSlot(slot, page)}`;
+/** P42: a module named by a marker, bounded as the statistics object bounds an item name. */
+const staleModule = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 256
+  && ![...v].some(char => char.charCodeAt(0) < 32) && !Object.prototype.hasOwnProperty.call(Object.prototype, v);
+const plainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+const exactly = (v: Record<string, unknown>, keys: readonly string[]) => Object.keys(v).length === keys.length && keys.every(key => Object.hasOwn(v, key));
+/**
+ * P42: the marker, when `value` is one exactly as the statistics object writes
+ * it — keys `lastPublished`, `modules` and `placement` and no other; a published
+ * version and time, or null; one to 256 module names, sorted and distinct; a
+ * catalogue page and slot — rebuilt with its keys sorted (R-P3). Anything else
+ * is no marker (null), so nothing that is not one is ever answered as one.
+ */
+export function staleMarkerOf(value: unknown): StaleMarker | null {
+  if (!plainObject(value) || !exactly(value, ['lastPublished', 'modules', 'placement'])) return null;
+  const { lastPublished: last, modules, placement } = value;
+  if (last !== null && (!plainObject(last) || !exactly(last, ['publishedAt', 'version'])
+    || !Number.isSafeInteger(last.version) || (last.version as number) <= 0
+    || typeof last.publishedAt !== 'number' || !Number.isFinite(new Date(last.publishedAt).getTime()))) return null;
+  if (!Array.isArray(modules) || modules.length === 0 || modules.length > 256 || !modules.every(staleModule)
+    || modules.some((module, i) => i > 0 && !((modules[i - 1] as string) < module))) return null;
+  if (!plainObject(placement) || !exactly(placement, ['page', 'slot']) || !isCatalogueName(placement.page) || !isCatalogueName(placement.slot)) return null;
+  return { lastPublished: last === null ? null : { publishedAt: last.publishedAt as number, version: last.version as number },
+    modules: [...modules as string[]], placement: { page: placement.page, slot: placement.slot } };
+}
+/**
+ * P42: the marker while it still applies — while the snapshot in force is the one
+ * it names (its version and publication time), or, for a placement that has never
+ * published, while there is still no snapshot in force. Once a publication
+ * succeeds the snapshot in force is another one, and the marker no longer applies.
+ */
+export function staleMarkerIn(marker: StaleMarker | null, inForce: unknown): StaleMarker | null {
+  if (!marker) return null;
+  if (marker.lastPublished === null) return inForce === null || inForce === undefined ? marker : null;
+  return plainObject(inForce) && inForce.version === marker.lastPublished.version && inForce.publishedAt === marker.lastPublished.publishedAt ? marker : null;
+}
+/**
+ * P42: the refusal's sentence, composed from the marker alone, so the statistics
+ * object and the operator's publish route say the same words: the faulty page,
+ * its slot, every pooled module the refused placement reads from it, and the
+ * version its snapshot stays at (or that it stays unpublished). It begins with
+ * today's `statistics recovery required`, which every other recovery refusal
+ * keeps unchanged.
+ */
+export function staleRefusalOf(marker: StaleMarker): string {
+  const { page, slot } = marker.placement;
+  return `statistics recovery required: this pooled publication was refused because the statistics of page ${page}, slot ${slot} could not be read`
+    + ` for the pooled module${marker.modules.length > 1 ? 's' : ''} ${marker.modules.join(', ')}; `
+    + (marker.lastPublished
+      ? `the slot's snapshot stays at version ${marker.lastPublished.version}, its last successful publication, until a publication succeeds`
+      : 'the slot has no successful publication yet and stays unpublished until a publication succeeds');
+}
+/**
+ * P42: the marker of a statistics object's answer that is exactly the pooled
+ * refusal — `{ ok: false, error, stale }`, no other member, a well-formed marker
+ * and the object's own sentence for it — or null for any other answer.
+ */
+export function staleRefusalIn(body: unknown): StaleMarker | null {
+  if (!plainObject(body) || !exactly(body, ['ok', 'error', 'stale']) || body.ok !== false) return null;
+  const marker = staleMarkerOf(body.stale);
+  return marker && body.error === staleRefusalOf(marker) ? marker : null;
+}
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
   scoped.has(slot) ? page : undefined;

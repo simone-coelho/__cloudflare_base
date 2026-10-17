@@ -6,8 +6,8 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type PositionPolicy, type RebuildBasis, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type PositionPolicy, type RebuildBasis, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftStaleKey, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, staleMarkerOf, staleRefusalOf, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
@@ -127,6 +127,23 @@ class Refusal extends Error {
 const capacity = () => new Refusal(413, 'statistics capacity exceeded');
 const invalid = () => new Refusal(400, 'invalid statistics input');
 const recovery = () => new Refusal(503, 'statistics recovery required');
+/**
+ * P42 (R-P78, decision D1): a sibling placement's `/pooled` door could not be
+ * read while this placement assembled a pooled record — `objectName`, `page` and `slot`
+ * that placement's, `modules` the pooled modules this placement reads from it,
+ * sorted, `original` what the read threw. Internal: `publish()` turns it into the
+ * named refusal (`StaleRefusal`); every other reader of the snapshot rethrows
+ * `original`, so it fails exactly as it did before.
+ */
+class PooledFault extends Error {
+  constructor(readonly objectName: string, readonly page: string, readonly slot: string, readonly modules: string[], readonly original: unknown) {
+    super('pooled statistics unavailable');
+  }
+}
+/** P42: a publication refused for the pooled cause, answered `503 { ok: false, error, stale }` with its sentence and its marker. */
+class StaleRefusal extends Refusal {
+  constructor(readonly stale: StaleMarker) { super(503, staleRefusalOf(stale)); }
+}
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
   && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
 const fields = (v: unknown, keys: string[]): v is Record<string, unknown> => object(v) && Object.keys(v).every(k => keys.includes(k));
@@ -235,6 +252,7 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 }
 function failure(error: unknown): Response {
+  if (error instanceof StaleRefusal) return json({ ok: false, error: error.message, stale: error.stale }, 503);
   return error instanceof Refusal
     ? json({ ok: false, error: error.message, ...(error.status === 413 || error.status === 409 ? { applied: false } : {}) }, error.status)
     : json({ ok: false, error: 'statistics acknowledgement unavailable' }, 503);
@@ -950,12 +968,17 @@ export class LearnStats {
    * rather than answering a "nothing" it did not establish.
    */
   private async currentSnapshot(): Promise<LiftSnapshot | null> {
-    const stored = await this.loadIfAny();
-    if (stored) return this.snapshot(stored);
-    const identity = await this.priorOnlyIdentity();
-    if (!identity) return null;
-    const snap = await this.snapshot(identity);
-    return Object.keys(snap.items).length === 0 ? null : snap;
+    try {
+      const stored = await this.loadIfAny();
+      if (stored) return await this.snapshot(stored);
+      const identity = await this.priorOnlyIdentity();
+      if (!identity) return null;
+      const snap = await this.snapshot(identity);
+      return Object.keys(snap.items).length === 0 ? null : snap;
+    } catch (error) {
+      // P42: a read is not a publication; a pooled fault fails it exactly as before.
+      throw error instanceof PooledFault ? error.original : error;
+    }
   }
 
   /**
@@ -971,7 +994,11 @@ export class LearnStats {
     if (!d) return null;
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
-    const frozen = await this.snapshot(d);
+    // P42 (R-P78, D1): the pooled cause alone is refused by name, through every
+    // caller of this publication alike (the /publish door, the alarm and the rest).
+    const frozen = await this.snapshot(d).catch(async (error: unknown) => {
+      throw error instanceof PooledFault ? await this.staleRefusal(d, error) : error;
+    });
     // P05 (decision D2): the position policy this publication puts in force:
     // normalised only while the slot's switch is on in the tenant's learn
     // document AND the swaps have estimated a position's effect. The history is
@@ -1032,6 +1059,37 @@ export class LearnStats {
       await this.state.storage.setAlarm(Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(d)));
       throw new Error('Snapshot publication unavailable');
     }
+  }
+
+  /**
+   * P42 (R-P78, decision D1): a publication refused because a sibling placement's
+   * `/pooled` door could not be read is told, never hidden, and fail closed stays:
+   * nothing is published and the snapshot in force keeps serving. The marker
+   * (`StaleMarker`) names the faulty placement, the pooled modules this placement
+   * reads from it and the snapshot in force (`lastPublished`, read from the
+   * placement's own snapshot key; null where it has never published), and is
+   * recorded under the placement's own marker key (`liftStaleKey`), which nothing
+   * but this refusal writes: a publication that succeeds makes no new call and
+   * keeps no new key, and the marker stops applying once the snapshot in force is
+   * another one (`staleMarkerIn`). The refusal says the same in words
+   * (`staleRefusalOf`). Where the snapshot in force cannot be read or is not this
+   * placement's, the refusal is exactly what it was before; where recording the
+   * marker fails, the refusal still names it and the lift reads cannot.
+   */
+  private async staleRefusal(d: Stored, fault: PooledFault): Promise<unknown> {
+    let head: unknown;
+    try { head = await this.env.CACHE.get(liftKey(d.tenant, d.brand, d.slot, d.page), 'json'); } catch { return fault.original; }
+    let lastPublished: StaleMarker['lastPublished'] = null;
+    if (head !== null && head !== undefined) {
+      if (!object(head) || head.tenant !== d.tenant || head.brand !== d.brand || head.slot !== d.slot
+        || !Number.isSafeInteger(head.version) || (head.version as number) <= 0 || !time(head.publishedAt)) return fault.original;
+      lastPublished = { publishedAt: head.publishedAt as number, version: head.version as number };
+    }
+    const stale = staleMarkerOf({ lastPublished, modules: fault.modules, placement: { page: fault.page, slot: fault.slot } });
+    if (!stale) return fault.original;
+    try { await this.env.CACHE.put(liftStaleKey(d.tenant, d.brand, d.slot, d.page), JSON.stringify(stale)); }
+    catch { /* the refusal still names the placement; only the reads go without the marker */ }
+    return new StaleRefusal(stale);
   }
 
   /** P05: this placement's position-policy history, read once from its one copy and then held; a malformed copy refuses. */
@@ -1114,16 +1172,27 @@ export class LearnStats {
     }
     if (!modules.size) return undefined;
     // One read per other placement, naming the pooled modules it serves.
-    const wanted = new Map<string, { slot: string; identity?: string; items: Set<string> }>();
+    const wanted = new Map<string, { slot: string; page: string; identity?: string; items: Set<string> }>();
     for (const [item, placements] of modules) for (const p of placements) if (p.name !== self) {
-      const entry = wanted.get(p.name) ?? { slot: p.slot, ...(p.identity ? { identity: p.identity } : {}), items: new Set<string>() };
+      const entry = wanted.get(p.name) ?? { slot: p.slot, page: p.page, ...(p.identity ? { identity: p.identity } : {}), items: new Set<string>() };
       entry.items.add(item); wanted.set(p.name, entry);
     }
     const held = new Map<string, Readonly<Record<string, Record<string, Counter>>>>([[self, d.stats.items]]);
+    // P42 (R-P78, D1): a placement whose door cannot be read is named, never
+    // skipped (fail closed stays). Every read is awaited, and where several fail
+    // the one named is the first in page, then slot, then object-name order, so
+    // the same publication always names the same placement.
+    if (wanted.size && !this.env.LEARN_STATS) throw recovery();
+    const faults: PooledFault[] = [];
     await Promise.all([...wanted].map(async ([name, w]) => {
-      const counters = await this.placementCounters(d, name, w.slot, w.identity, [...w.items].sort());
-      if (counters) held.set(name, counters);
+      const items = [...w.items].sort();
+      try {
+        const counters = await this.placementCounters(d, name, w.slot, w.identity, items);
+        if (counters) held.set(name, counters);
+      } catch (error) { faults.push(new PooledFault(name, w.page, w.slot, items, error)); }
     }));
+    const fault = faults.sort((a, b) => order(a.page, b.page) || order(a.slot, b.slot) || order(a.objectName, b.objectName))[0];
+    if (fault) throw fault;
     const out: PooledCounters = {};
     for (const item of [...modules.keys()].sort(order)) {
       const record: Record<string, Counter[]> = {};

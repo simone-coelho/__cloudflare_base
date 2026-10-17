@@ -353,6 +353,25 @@ export interface LiftSnapshot {
 }
 
 /**
+ * P42 (R-P78, decision D1): the marker a placement carries while its snapshot in
+ * force is STALE because a publication was refused for the pooled cause — a
+ * sibling placement's statistics, which a pooled module's one record is read
+ * from at publication, could not be read. Keys sorted (R-P3).
+ *   · `lastPublished`: the snapshot in force that the refusal leaves in force, its
+ *     `version` and `publishedAt`; null on a placement that has never published.
+ *   · `modules`: the pooled modules the refused placement reads from the faulty
+ *     placement, sorted; never a module whose other placements answered.
+ *   · `placement`: the faulty placement, its page and its slot.
+ * It is never a member of the snapshot: the snapshot, its archive and what a
+ * decision reads stay exactly as published.
+ */
+export interface StaleMarker {
+  lastPublished: { publishedAt: number; version: number } | null;
+  modules: string[];
+  placement: { page: string; slot: string };
+}
+
+/**
  * P05: what the statistics object counts of the swaps of ONE adjacent pair
  * (k, k + 1), positions counted from 1 within the slot: the swapped decisions
  * whose module at position k was exposed (`pairs`), and the clicks credited to

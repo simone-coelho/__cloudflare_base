@@ -28,7 +28,7 @@ import type { DecisionRecord } from '@/content/types';
 import { isCarriedCustomerId, isLearningKey, parseId, type CapturedRecord, type LedgerStream } from '@/ledger/records';
 import { validCarrier, DELIVERY_FIELD } from '@/ledger/delivery';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
-import { liftArchiveKey, liftKey, placementSlot, ringName, statsName } from '@/learn/fan';
+import { liftArchiveKey, liftKey, liftStaleKey, placementSlot, ringName, staleMarkerIn, staleMarkerOf, staleRefusalIn, staleRefusalOf, statsName } from '@/learn/fan';
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
@@ -49,7 +49,7 @@ import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
-import type { LiftSnapshot } from '@/learn/stats';
+import type { LiftSnapshot, StaleMarker } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
 import { readEnrollmentHealth } from '@/content/holdout';
 import type { LearnConfig } from '@/content/types';
@@ -433,6 +433,16 @@ function pagedPlacement(pages: ReadonlyMap<string, string[]>, slot: string, aske
 }
 
 /**
+ * P42 (R-P78, decision D1): the stale marker of a placement whose last publication
+ * was refused because another placement's pooled statistics could not be read,
+ * while the snapshot in force is still the one it names; null otherwise. A marker
+ * that cannot be read, or is not one, is no marker: the read answers as before.
+ */
+async function staleMarkerFor(c: { env: Env }, tenant: string, brand: string, slot: string, page: string | undefined, inForce: unknown): Promise<StaleMarker | null> {
+  try { return staleMarkerIn(staleMarkerOf(await c.env.CACHE.get(liftStaleKey(tenant, brand, slot, page), 'json')), inForce); } catch { return null; }
+}
+
+/**
  * GET /v1/:tenant/lift/rows?slot=&brand=&page=&level=pooled|cells&item=&q=&sort=&dir=&limit=&cursor= (doc 28 §4).
  * The grid as pages: one pooled row per item, or one item's cells; filtered, sorted and cut by the
  * server, with the catalog's names and the merchandiser's controls joined on. The cursor names the
@@ -440,6 +450,7 @@ function pagedPlacement(pages: ReadonlyMap<string, string[]>, slot: string, aske
  * moved on, the answer is 409 and the application starts the listing again. Same access as /lift.
  * W26 R2: `page=` names the placement where the catalogue carries the slot name on more than one
  * page (required there, and carried by the cursor); a slot on one page is read without it.
+ * P42: a placement whose snapshot in force is stale (`staleMarkerFor`) also answers `stale`, last.
  */
 decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -466,7 +477,8 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const offset = cur ? cur.o : 0;
   let snapshot: LiftSnapshot | null = null;
   try { snapshot = (await c.env.CACHE.get(liftKey(tenant, brand, slot, page), 'json')) as LiftSnapshot | null; } catch { snapshot = null; }
-  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, level, total: 0, offset: 0, limit, rows: [], cursor: null });
+  const stale = await staleMarkerFor(c, tenant, brand, slot, page, snapshot), marked = stale ? { stale } : {};
+  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, level, total: 0, offset: 0, limit, rows: [], cursor: null, ...marked });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   const [catalog, learn] = await Promise.all([readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
   // W32 S1.01 (F32 §4 item 5): the names are joined onto the rows this answer
@@ -485,7 +497,7 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   // W25 V1.01: the grid states WHICH prior document its numbers were built with,
   // so an export a data scientist downloads can be reconciled against the
   // document they imported. 0 where the snapshot was built without one.
-  return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, priorVersion: snapshot.priorVersion ?? 0, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor });
+  return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, priorVersion: snapshot.priorVersion ?? 0, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor, ...marked });
 });
 
 /**
@@ -737,6 +749,7 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
  * is required in enforced mode. This is the console's grid (doc 22 §12.2) as data.
  * W26 R2: `page=` names the placement where the catalogue carries the slot name on
  * more than one page, for the snapshot in force and for an archived version alike.
+ * P42: beside the snapshot in force (never an archived one), `stale`, last, while it is stale (`staleMarkerFor`).
  */
 decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -763,8 +776,9 @@ decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   // The learn document is read only for a slot that is on a page at all.
   const floorPage = placementPageOf(slotPages, slot, page);
   const evidenceFloor = floorPage === undefined ? null : placementEvidenceFloor(await publishedLearn(c, tenant), floorPage);
+  const stale = version > 0 ? null : await staleMarkerFor(c, tenant, brand, slot, page, snapshot);
   return c.json({ ok: true, tenant, brand, slot, ...(page ? { page } : {}), snapshot,
-    ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}) });
+    ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}), ...(stale ? { stale } : {}) });
 });
 
 /** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from her own object. Authenticated. */
@@ -1544,6 +1558,13 @@ decisionRoutes.post('/:tenant/learn/publish', operatorJwt(), async (c) => {
     const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot, page)));
     const response = await stub.fetch('https://learn/publish', { method: 'POST' });
     const res = await response.json() as { ok?: unknown; published?: unknown; snapshot?: { tenant?: unknown; brand?: unknown; slot?: unknown; version?: unknown } | null } | null;
+    // P42 (R-P78, decision D1): the one refusal passed through is the object's
+    // pooled refusal, and only when its answer is exactly that (503, `{ ok: false,
+    // error, stale }`, a well-formed marker and the object's own sentence for it).
+    // The words answered are composed here from the checked marker, so no other
+    // downstream text is ever echoed; every other refusal stays the one below.
+    const stale = response.status === 503 ? staleRefusalIn(res) : null;
+    if (stale) { invalidateLiftCache(); return c.json({ ok: false, error: staleRefusalOf(stale), stale }, 503); }
     if (!response.ok || !res || res.ok !== true || typeof res.published !== 'boolean'
       || (res.published ? !res.snapshot || res.snapshot.tenant !== tenant || res.snapshot.brand !== brand || res.snapshot.slot !== b.slot
         || !Number.isSafeInteger(res.snapshot.version) || (res.snapshot.version as number) <= 0 : res.snapshot !== null)) throw new Error();
