@@ -577,6 +577,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-17 small hours — **Amendment 2 LOCALLY COMPLETE 4/4** (P42 c7f74beb, P43 bd595ca0, P44 da7e7f31; last commit c7543471); **W08-C1 merged** 1f33f00c (the customer-profile tenant initializer the pilot needs); **amendment 3** drafted 6d82f8ff with the programme-4 draft ledger f31e5aa2, S7 specifying on `spec-parity-g`; the pilot still waits on the owner's four answers (path, retention, tenant identity, owner account). Rulings R-P81; next warning tickets recorded in AMENDMENTS.md.
 
+- 2026-10-17 morning — **Amendment 3 gated**: S7 specified on `spec-parity-g`, reviewed PASS at f235d2ef after three test-only fix rounds (R-P82, R-P83 and addenda); gates recorded 4e340d98; per-ticket branches rem/tkt/P45..P49; P45 ACTIVE 7c5cdde1 building in `build-p45`. Pilot still waiting on the owner's four answers.
+
 ## Commits
 
 | Sha | What |
