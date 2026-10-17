@@ -19,14 +19,35 @@ const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposal
  * every other member uses. No other member can be created or removed this way.
  */
 const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval']);
-const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+/**
+ * P48 (R-P78, R-P82 (4)): the two members a committed set lacks only because
+ * the demo bootstrap created it with four, by kind name, with the name an
+ * operator reads each by. They are not optional: a read or a publish of one the
+ * set lacks is still refused, in words that name it and the path that adds it.
+ * `completePublicationSet` is the one capability that adds them, each as its
+ * compiled empty and nothing else.
+ */
+const COMPLETION_MEMBERS: ReadonlyMap<string, string> = new Map([['prior', 'priors'], ['proposals', 'proposals']]);
+const COMPLETION_PATH = 'POST /ops/demo-bootstrap/complete';
+const object =(v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= max && v.trim() === v;
 export class PublicationError extends Error {
   constructor(message: string, readonly status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 428 | 503 = 503,
     readonly code = 'publication_unavailable') { super(message); }
 }
-const unavailable = () => new PublicationError('Configuration publication authority unavailable');
+const UNAVAILABLE = 'Configuration publication authority unavailable';
+const unavailable = () => new PublicationError(UNAVAILABLE);
+/**
+ * P48 (R-P78): the refusal for a member the set does not carry. Today's words,
+ * status and code for every member, followed, for the two a four-member demo
+ * bootstrap left out, by the member's name and the path that adds it.
+ */
+function absent(kind: { name: string }): PublicationError {
+  const name = COMPLETION_MEMBERS.get(kind.name);
+  return name ? new PublicationError(`${UNAVAILABLE}: ${name} is not in this tenant's publication set; add it with ${COMPLETION_PATH}, which adds its compiled empty once and changes no other member`)
+    : unavailable();
+}
 /**
  * A typed owner/consent refusal raised INSIDE a publication storage read or
  * write is that request's own answer, not a failure of the configuration
@@ -315,14 +336,28 @@ async function kindFor(name: string): Promise<DocumentKind<unknown>> {
     default: throw unavailable();
   }
 }
+/**
+ * P48: a completion member's compiled empty (EMPTY_PRIORS, EMPTY_PROPOSALS) as
+ * its kind's validator admits it, which is the value the initializer stores.
+ */
+async function compiledEmpty(kind: DocumentKind<unknown>): Promise<unknown> {
+  const value = kind.name === 'prior' ? (await import('@/learn/priors')).EMPTY_PRIORS
+    : kind.name === 'proposals' ? (await import('@/learn/cycle')).EMPTY_PROPOSALS : undefined;
+  const validated = value === undefined ? null : kind.validate(value);
+  if (!validated?.ok) throw unavailable();
+  return validated.value;
+}
 async function validatePending(storage: R2Bucket, loaded: Loaded): Promise<void> {
   const pending = loaded.head.pending; required(pending);
   const set = pending.set, base = loaded.head.committed ? await retainedSet(storage, set.scope, loaded.head.committed) : null;
   const changed = new Set<string>();
+  let completed = 0;
   // Every member of the committed set stays in the pending one; a member the
-  // pending set adds is an optional member it creates (P38), checked below.
+  // pending set adds is an optional member it creates (P38) or a completion
+  // member's compiled empty (P48), checked below.
   if (base) required(Object.keys(base.refs).every(key => Object.hasOwn(set.refs, key))
-    && Object.keys(set.refs).every(key => Object.hasOwn(base.refs, key) || OPTIONAL_MEMBERS.has((set.refs[key] as Ref).kind)));
+    && Object.keys(set.refs).every(key => Object.hasOwn(base.refs, key) || OPTIONAL_MEMBERS.has((set.refs[key] as Ref).kind)
+      || COMPLETION_MEMBERS.has((set.refs[key] as Ref).kind)));
   for (const raw of pending.documents) {
     const kind = await kindFor(raw.kind), document = await envelope(raw, kind, raw.scope), key = member(kind, raw.scope), ref = set.refs[key];
     required(ref && !changed.has(key)); changed.add(key);
@@ -330,7 +365,10 @@ async function validatePending(storage: R2Bucket, loaded: Loaded): Promise<void>
     if (base) {
       const previous: Ref | undefined = Object.hasOwn(base.refs, key) ? base.refs[key] : undefined;
       // P38: a created member starts at revision 1 over no previous one.
-      required(previous || (OPTIONAL_MEMBERS.has(kind.name) && ref.revision === 1 && ref.minRevision === 1));
+      // P48: so does an added completion member, as its compiled empty alone.
+      const completion = !previous && COMPLETION_MEMBERS.has(kind.name);
+      required(previous || ((OPTIONAL_MEMBERS.has(kind.name) || completion) && ref.revision === 1 && ref.minRevision === 1));
+      if (completion) { required(canonical(document.value) === canonical(await compiledEmpty(kind))); completed++; }
       const before = previous?.revision ?? 0;
       required(ref.revision === before + 1 && ref.minRevision === (previous?.minRevision ?? 1)
         && canonical(ref.index) === canonical([rowOf(kind, document), ...(previous?.index ?? [])].slice(0, LIMIT))
@@ -344,6 +382,8 @@ async function validatePending(storage: R2Bucket, loaded: Loaded): Promise<void>
     if (!changed.has(key)) required(base && canonical(base.refs[key]) === canonical(ref));
   }
   required(changed.has(member({ name: set.operation.kind }, set.operation.scope)));
+  // P48: a set that adds a completion member changes no other member.
+  required(completed === 0 || completed === changed.size);
 }
 async function requiredHead(storage: R2Bucket, scope: string): Promise<Loaded> {
   const found = await loadHead(storage, scope); if (!found) throw new PublicationError('Coherent configuration publication is uninitialized', 503, 'publication_uninitialized'); return found;
@@ -472,7 +512,7 @@ function publicRevision<T>(value: Envelope<T>, set: PublicationPin, kind: Docume
   return result;
 }
 export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, set: PublicationPin): Promise<Revision<T>> {
-  required(set.scope === publicationScope(kind, scope)); const key = member(kind, scope), ref = set.refs[key]; required(ref);
+  required(set.scope === publicationScope(kind, scope)); const key = member(kind, scope), ref = set.refs[key]; if (!ref) throw absent(kind);
   const storage = storageOf(env), binding = storageIdentity(storage), epoch = cacheEpoch, now = Date.now();
   for (const entry of cache) if (!fresh(entry.at, now)) remove(entry);
   const matching = [...cache].filter(e => e.binding === binding && e.scope === set.scope && e.value.digest === set.digest);
@@ -525,7 +565,7 @@ export async function publicationHistory<T>(env: Env, kind: DocumentKind<T>, sco
 }
 export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, scope: string, n: number): Promise<Revision<T> | null> {
   if (!integer(n) || n < 1) throw new PublicationError('Revision must be a positive safe integer', 400, 'invalid_revision');
-  const set = await pinPublication(env, publicationScope(kind, scope)), ref = set.refs[member(kind, scope)]; required(ref);
+  const set = await pinPublication(env, publicationScope(kind, scope)), ref = set.refs[member(kind, scope)]; if (!ref) throw absent(kind);
   if (n < ref.minRevision) throw new PublicationError('History predates the explicitly retained baseline', 409, 'legacy_history_unavailable');
   if (n > ref.revision) return null;
   const found = await readObject(storageOf(env), revisionKey(kind.name, scope, n));
@@ -614,7 +654,7 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
       // P38: an optional member the base set does not carry is created at
       // revision 1; any other absent member is the authority failing, as before.
       const present = Object.hasOwn(base.refs, member(change.kind, change.scope));
-      if (!present && !OPTIONAL_MEMBERS.has(change.kind.name)) throw unavailable();
+      if (!present && !OPTIONAL_MEMBERS.has(change.kind.name)) throw absent(change.kind);
       const current = present ? await readPinnedPublication(env, change.kind, change.scope, base) : null, previous = current?.revision ?? 0;
       if (previous === Number.MAX_SAFE_INTEGER || i === 0 && previous !== meta.expectedRevision) throw conflict();
       const validated = change.kind.validate(await change.candidate(current?.value as unknown, base)); if (!validated.ok) return validated;
@@ -810,6 +850,63 @@ export async function initializePublicationSet(env: Env, baselines: PublicationB
 export async function initializePublication<T>(env: Env, kind: DocumentKind<T>, scope: string, baseline: Revision<T>, operationId: string): Promise<Revision<T>> {
   const set = await initializePublicationSet(env, [{ kind, scope, revision: baseline } as PublicationBaseline], operationId);
   return readPinnedPublication(env, kind, scope, set);
+}
+/**
+ * P48 (R-P78, R-P82 (4); D01: it creates, it never overwrites): the one
+ * capability that ADDS a member that is not optional to a COMMITTED set.
+ *
+ * The demo bootstrap created sets of four members before it seeded six, and
+ * every read and publish refuses a member the set lacks, so such a tenant could
+ * never read or publish its priors or proposals. This adds exactly the
+ * completion members the committed set lacks, each as its compiled empty
+ * (EMPTY_PRIORS, EMPTY_PROPOSALS) at revision 1, as the initializer stores it,
+ * in one set publication that changes no other member: what init-local and the
+ * W08 door write for them, and what an absent member already means to the
+ * learning path (no imported prior, no proposal). Nothing but the attribution
+ * comes from the caller; the authority is the caller's (the demo door's).
+ *
+ *  · a set that has both answers `added: []` and writes nothing;
+ *  · a scope with no set refuses 503 `publication_uninitialized`, as a read does;
+ *  · a completion left pending by an interrupted call is finished by the next;
+ *    any other pending publication refuses 409 `publication_conflict`;
+ *  · an occupied revision address refuses 409 before the head is reserved, as
+ *    the initializer's check does, and a concurrent publication loses the CAS.
+ * `added` names the members as an operator reads them (`priors`, `proposals`).
+ */
+export async function completePublicationSet(env: Env, scope: string, attribution: { actor: string; note: string }): Promise<{ added: string[]; set: PublicationPin }> {
+  required(/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope));
+  const { actor, note } = attribution;
+  if (!text(actor, 256) || typeof note !== 'string' || note.length > 500) throw new PublicationError('Invalid publication attribution', 422, 'invalid_attribution');
+  const storage = storageOf(env), named = (kinds: string[]) => kinds.map(name => COMPLETION_MEMBERS.get(name)!);
+  return invalidating(storage, scope, async () => {
+    const loaded = await requiredHead(storage, scope), base = await currentSet(storage, loaded);
+    if (loaded.head.pending) {
+      // The head validation admits a completion member only in a set that changes nothing else.
+      const added = loaded.head.pending.documents.filter(d => COMPLETION_MEMBERS.has(d.kind) && !Object.hasOwn(base.refs, member({ name: d.kind }, d.scope)));
+      if (!added.length) throw conflict();
+      return { added: named(added.map(d => d.kind)), set: await finish(storage, loaded) };
+    }
+    const missing = [...COMPLETION_MEMBERS.keys()].filter(name => !Object.hasOwn(base.refs, member({ name }, scope)));
+    if (!missing.length) return { added: [], set: base };
+    const kinds = await Promise.all(missing.map(name => kindFor(name))), at = Date.now(), operationId = '0:' + crypto.randomUUID();
+    const requestDigest = await digest({ complete: missing, scope, actor, note, operationId });
+    const refs = structuredClone(base.refs), documents: Envelope<unknown>[] = [];
+    for (const kind of kinds) {
+      const document = await envelope(await sealed({ schema: 'catalog-revision/v1' as const, kind: kind.name, scope, revision: 1, value: await compiledEmpty(kind),
+        actor, note, at, operation: { operationId, expectedRevision: 0, requestDigest, initialize: false } }), kind, scope);
+      serialized(document); documents.push(document);
+      const occupied = await readObject(storage, revisionKey(kind.name, scope, 1));
+      if (occupied && canonical(occupied.value) !== canonical(document)) throw conflict();
+      refs[member(kind, scope)] = { kind: kind.name, scope, revision: 1, digest: document.digest, minRevision: 1, index: [rowOf(kind, document)] };
+    }
+    const set = await sealed({ schema: 'configuration-set/v1' as const, scope, revision: base.revision + 1, refs,
+      operation: { operationId, expectedRevision: 0, requestDigest, initialize: false, kind: kinds[0]!.name, scope, actor, note, at, base: identityOf(base) } });
+    await validateSet(set, scope);
+    const next = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: { set, documents } });
+    if (!await put(storage, headKey(scope), serialized(next), loaded.etag)) throw conflict();
+    const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
+    return { added: named(missing), set: await finish(storage, reservation) };
+  });
 }
 
 /*

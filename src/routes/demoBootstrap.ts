@@ -28,6 +28,15 @@
 //
 // It is deliberately boring: four documents, one intent, no inference. The
 // caller supplies every member; nothing is discovered, defaulted or migrated.
+//
+// P48 (R-P78, decision D1): beside the four, the set gets the two members a
+// tenant needs to read and publish its imported priors and its proposals,
+// `priors` = EMPTY_PRIORS and `proposals` = EMPTY_PROPOSALS at revision 1, the
+// compiled empties init-local and the W08 door write ("no imported prior, no
+// proposal"), so the caller still supplies every member that carries a
+// decision. A scope created with four before that has one path to the same
+// set, `POST /ops/demo-bootstrap/complete`: once, the two compiled empties it
+// lacks and nothing else, under the same guards, credential and grant.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Hono } from 'hono';
@@ -37,7 +46,9 @@ import { operatorJwt } from '@/middleware/operatorAuth';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND, reflexScopeForTenant, invalidateConfigCache } from '@/reflex/configStore';
-import { initializePublicationSet, readPublication, PublicationError, type PublicationBaseline } from '@/config/publication';
+import { completePublicationSet, initializePublicationSet, readPublication, PublicationError, type PublicationBaseline } from '@/config/publication';
+import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
+import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 
 type Ctx = { Bindings: Env; Variables: TenantVariables & { auth: AuthContext } };
 export const demoBootstrapRoutes = new Hono<Ctx>();
@@ -45,6 +56,28 @@ export const demoBootstrapRoutes = new Hono<Ctx>();
 /** The four documents a scope needs before the decision service can answer. */
 const MEMBERS = ['reflex', 'catalog', 'slots', 'learn'] as const;
 type Member = (typeof MEMBERS)[number];
+/** P48: the two members the door seeds as their compiled empties; a body never supplies them. */
+const SEEDED = ['priors', 'proposals'] as const;
+const SET_MEMBERS = [...MEMBERS, ...SEEDED];
+
+/** The facility's two guards: never on the customer profile, only in development. */
+function facilityRefusal(env: Env): { body: { ok: false; error: string }; status: 403 | 404 } | null {
+  if (env.DEPLOYMENT_PROFILE === 'customer') return { body: { ok: false, error: 'Not available' }, status: 404 };
+  if (env.ENVIRONMENT !== 'development') return { body: { ok: false, error: 'Demo scope bootstrap is a development facility' }, status: 403 };
+  return null;
+}
+
+/**
+ * P48 (R-P83 and its addenda): the one-time path answers its two guards before
+ * the credential middleware below, which then takes the operator credential and
+ * the per-tenant grant for it exactly as for the door, before its handler reads
+ * anything. A customer stamp's boundary answers 404 here before any of it.
+ */
+demoBootstrapRoutes.use('/complete', async (c, next) => {
+  const refused = facilityRefusal(c.env);
+  if (refused) { c.header('Cache-Control', 'no-store'); return c.json(refused.body, refused.status); }
+  return next();
+});
 
 demoBootstrapRoutes.use('*', async (c, next) => {
   c.header('Cache-Control', 'no-store');
@@ -66,10 +99,8 @@ async function alreadyInitialized(env: Env, scope: string): Promise<boolean> {
 }
 
 demoBootstrapRoutes.post('/', async (c) => {
-  if (c.env.DEPLOYMENT_PROFILE === 'customer') return c.json({ ok: false, error: 'Not available' }, 404);
-  if (c.env.ENVIRONMENT !== 'development') {
-    return c.json({ ok: false, error: 'Demo scope bootstrap is a development facility' }, 403);
-  }
+  const refused = facilityRefusal(c.env);
+  if (refused) return c.json(refused.body, refused.status);
 
   const scope = c.get('tenant');
   if (!isValidTenantId(scope)) return c.json({ ok: false, error: 'Invalid scope' }, 400);
@@ -81,6 +112,11 @@ demoBootstrapRoutes.post('/', async (c) => {
   const missing = MEMBERS.filter((m) => !body[m] || typeof body[m] !== 'object');
   if (missing.length) {
     return c.json({ ok: false, error: `Supply every member in one intent; missing: ${missing.join(', ')}` }, 422);
+  }
+  // P48: the door seeds these two itself; a document supplied for one is refused, never dropped in silence.
+  const supplied = SEEDED.filter((m) => Object.hasOwn(body, m));
+  if (supplied.length) {
+    return c.json({ ok: false, error: `The demo bootstrap creates ${SEEDED.join(' and ')} as their compiled empties and accepts no document for them (supplied: ${supplied.join(', ')}); publish priors through PUT /content/priors once the set exists` }, 422);
   }
 
   // Validate before anything is created, so a bad baseline never becomes a set.
@@ -108,11 +144,38 @@ demoBootstrapRoutes.post('/', async (c) => {
     scope: kinds[member].scope,
     revision: { revision: 1, value: body[member], actor, note: `demo scope bootstrap: ${member}`, at },
   }));
+  // P48: then the two compiled empties, in the same one initialization.
+  baselines.push(
+    { kind: PRIORS_KIND as PublicationBaseline['kind'], scope, revision: { revision: 1, value: EMPTY_PRIORS, actor, note: 'demo scope bootstrap: priors', at } },
+    { kind: PROPOSALS_KIND as PublicationBaseline['kind'], scope, revision: { revision: 1, value: EMPTY_PROPOSALS, actor, note: 'demo scope bootstrap: proposals', at } },
+  );
 
   try {
     const pin = await initializePublicationSet(c.env, baselines, `0:${crypto.randomUUID()}`);
     invalidateConfigCache(reflexScopeForTenant(scope));
-    return c.json({ ok: true, scope, members: MEMBERS, publication: pin });
+    return c.json({ ok: true, scope, members: SET_MEMBERS, publication: pin });
+  } catch (error) {
+    if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
+    throw error;
+  }
+});
+
+/**
+ * P48: POST /ops/demo-bootstrap/complete — a scope the door created with four
+ * members gets the two compiled empties it lacks, once, and nothing else
+ * changes (src/config/publication.ts `completePublicationSet`). No document is
+ * read. Its guards answer above, the credential and the grant in the
+ * middleware; a set that has both answers `added: []` and writes nothing, and a
+ * scope with no set is refused 503 `publication_uninitialized` (the door
+ * creates it, with six).
+ */
+demoBootstrapRoutes.post('/complete', async (c) => {
+  const scope = c.get('tenant');
+  if (!isValidTenantId(scope)) return c.json({ ok: false, error: 'Invalid scope' }, 400);
+  const actor = c.get('auth')?.user?.email || c.get('auth')?.user?.sub || 'demo-bootstrap';
+  try {
+    const { added, set } = await completePublicationSet(c.env, scope, { actor, note: 'demo scope bootstrap: complete' });
+    return c.json({ added, members: SET_MEMBERS, ok: true, publication: set, scope });
   } catch (error) {
     if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
     throw error;
