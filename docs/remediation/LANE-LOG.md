@@ -581,6 +581,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-17 morning — **PILOT TEST DEPLOYMENT EXECUTED** on the owner's direction ("We own the account… deploy"): staging 0c85766f→bc8bee07 (aa103c6e, recovery on) and production 83b665e8 (1c3e6ad6, recovery on), both provisioned with tenant `pilot`, owner account, six-member set, catalogue/slots/learn published, impression acknowledged durably, ledger and replay green. Material in the two 0700 `_pilot-secrets*` directories, never in evidence. P46 ACTIVE b71a8f4a building.
 
+- 2026-10-17 afternoon — **Amendment 3 at 4/5**: P45 5aed3f83, P46 4976c99f, P47 eb7ddbb8, P48 594df0d5 closed (receipts 80466f2f, 3fb6db97, 100b5502, 338e0f4e); P49 ACTIVE b04de94b building in `build-p49`. Pilot stamps unchanged since the morning deploy.
+
 ## Commits
 
 | Sha | What |
