@@ -593,6 +593,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-18 afternoon — **Amendment 4 at 4/6**: P52 89624512 (receipt bb18eb17) and P53 8e041963 (receipt ac54cf32) closed; P54 ACTIVE 7c6c32d1 building in `build-p54`; P55 staged. Pilot stamps unchanged since fb65421f.
 
+- 2026-10-18 evening — **Amendment 4 at 5/6**: P54 df3aec96 (receipt 2eff76ad) closed; P55 ACTIVE 3702de63 building in `build-p55`, the last ticket. Pilot stamps unchanged since fb65421f; a redeploy with amendment 4 follows its completion.
+
 ## Commits
 
 | Sha | What |
