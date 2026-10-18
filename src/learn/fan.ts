@@ -5,7 +5,7 @@
 // which attributes it and forwards the credits itself.
 
 import type { Env } from '@/types/env';
-import type { LiftSnapshot, Republished, RepublishedChange, StaleMarker } from './stats';
+import type { LiftSnapshot, NotAdopted, NotAdoptedChange, Republished, RepublishedChange, StaleMarker } from './stats';
 
 /**
  * Live authority is never satisfied by an eventually-consistent KV/cache hit.
@@ -54,7 +54,7 @@ import { attribute, successCreditOf, type AttributionPolicy, type RingEntry } fr
 // ring is the first of the two to load (src/learn/learn.test.ts imports it at
 // line 10, this module at line 12), which silently emptied the statistics
 // object's applied-delivery journal.
-import { emptyStats, recordExposure, recordSuccess, REPUBLISHED_MEMBERS, RING_MAX_AGE_MS, type StatsConfig, type StatsState } from './stats';
+import { ADOPTED_MEMBERS, emptyStats, recordExposure, recordSuccess, REPUBLISHED_MEMBERS, RING_MAX_AGE_MS, type StatsConfig, type StatsState } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
@@ -309,6 +309,65 @@ export function republishedRefusalIn(body: unknown, tenant: string): { republish
   const version = at ? Number(at[1]) : null;
   if (version !== null && !Number.isSafeInteger(version)) return null;
   return body.error === republishedRefusalOf(republished, tenant, version) ? { republished, version } : null;
+}
+/**
+ * P50 (R-P78, decision D1): the member, when `value` is one exactly as the
+ * statistics object writes it — keys `changed` and `slot`, with `page` for a
+ * page-scoped placement, and no other; one to three changes, each exactly
+ * `member`, `new` and `old`, a member an operator adopts (`ADOPTED_MEMBERS`),
+ * sorted and distinct, both values words of that member and different; a
+ * catalogue slot and page — rebuilt with its keys sorted (R-P3). Anything else
+ * is no member (null), so nothing that is not one is ever answered as one.
+ */
+export function notAdoptedOf(value: unknown): NotAdopted | null {
+  if (!plainObject(value)) return null;
+  const scoped = Object.hasOwn(value, 'page');
+  if (!exactly(value, scoped ? ['changed', 'page', 'slot'] : ['changed', 'slot'])
+    || !isCatalogueName(value.slot) || (scoped && !isCatalogueName(value.page))) return null;
+  const changed = value.changed;
+  if (!Array.isArray(changed) || changed.length === 0 || changed.length > ADOPTED_MEMBERS.length) return null;
+  const out: NotAdoptedChange[] = [];
+  for (const entry of changed as unknown[]) {
+    if (!plainObject(entry) || !exactly(entry, ['member', 'new', 'old'])) return null;
+    const member = ADOPTED_MEMBERS.find(name => name === entry.member);
+    if (!member || (out.length > 0 && !(out[out.length - 1]!.member < member))) return null;
+    if (!republishedValue(member, entry.new) || !republishedValue(member, entry.old) || entry.new === entry.old) return null;
+    out.push({ member, new: entry.new as string, old: entry.old as string });
+  }
+  return { changed: out, ...(scoped ? { page: value.page as string } : {}), slot: value.slot as string };
+}
+/**
+ * P50: the refusal's sentence, composed from the member and the tenant alone, so
+ * the statistics object and the operator's transition route say the same words:
+ * the slot (and its page), each member not adopted with its old and new values,
+ * that the slot would count no exposure, and how to adopt each: a `reward` or an
+ * `objective` by naming its new value in the body of the transition (or by a
+ * republish restoring the old value), the `measurementBasis`, which no
+ * transition moves, only by a republish restoring the old basis.
+ */
+export function notAdoptedRefusalOf(notAdopted: NotAdopted, tenant: string): string {
+  const and = (parts: string[]) => (parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0] ?? '');
+  const named = notAdopted.changed.filter(c => c.member !== 'measurementBasis');
+  const basis = notAdopted.changed.find(c => c.member === 'measurementBasis');
+  const how = [
+    ...(named.length ? [`name ${and(named.map(c => `${c.member} ${c.new}`))} in the body of POST /v1/${tenant}/learn/generation`
+      + ` (or republish the learn document with ${and(named.map(c => `${c.member} ${c.old}`))})`] : []),
+    ...(basis ? [`republish the learn document with measurementBasis ${basis.old}, since no generation transition moves the measurement basis`] : []),
+  ];
+  return `generation transition refused: the learn document republished for slot ${notAdopted.slot}${notAdopted.page ? ` on page ${notAdopted.page}` : ''}`
+    + ` changed ${and(notAdopted.changed.map(c => `${c.member} from ${c.old} to ${c.new}`))}`
+    + ` and this transition does not adopt ${notAdopted.changed.length > 1 ? 'them' : 'it'}, so the slot would count no exposure; ${how.join('; and ')}`;
+}
+/**
+ * P50: the member of a statistics object's answer that is exactly the
+ * transition's refusal of a member it does not adopt — `{ ok: false, error,
+ * notAdopted }`, no other member, a well-formed member and the object's own
+ * sentence for it, for this tenant — or null for any other answer.
+ */
+export function notAdoptedRefusalIn(body: unknown, tenant: string): NotAdopted | null {
+  if (!plainObject(body) || !exactly(body, ['ok', 'error', 'notAdopted']) || body.ok !== false || typeof body.error !== 'string') return null;
+  const notAdopted = notAdoptedOf(body.notAdopted);
+  return notAdopted && body.error === notAdoptedRefusalOf(notAdopted, tenant) ? notAdopted : null;
 }
 /** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
 export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
