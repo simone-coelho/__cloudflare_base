@@ -250,7 +250,7 @@
     {
       "id": "P52",
       "title": "A stored conversion table that omits the slot's reward is told on the Dials screen before the first edit (**amendment 4, 2026-10-17**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
