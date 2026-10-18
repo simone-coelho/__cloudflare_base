@@ -108,10 +108,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "4396ed1ecf808cc8feda2dd82469d97e62de60af on rem/spec-parity-g (batch S8, amendment 4; P50 40bec347 with src/units/_parity7.ts, P51 9601f8b8, P52 f3f28ca2, P53 366af68d, P54 ccb41a5c, P55 bb18752f, header citations through e0022954; P51, P52, P53 reviewed PASS at e0022954; P54 and P55 reviewed PASS at e8aef705 after fix round 1 (R-P84); P50 reviewed PASS at 4396ed1ecf808cc8feda2dd82469d97e62de60af after fix rounds 1 to 3 (R-P84 and its addenda); every pinned harness file byte-identical to f48c50b9; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-six sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix3.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix3.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/head-P50.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-sk-P50.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-controls-first-failing-lines.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -206,10 +220,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "4396ed1ecf808cc8feda2dd82469d97e62de60af on rem/spec-parity-g (batch S8, amendment 4; P50 40bec347 with src/units/_parity7.ts, P51 9601f8b8, P52 f3f28ca2, P53 366af68d, P54 ccb41a5c, P55 bb18752f, header citations through e0022954; P51, P52, P53 reviewed PASS at e0022954; P54 and P55 reviewed PASS at e8aef705 after fix round 1 (R-P84); P50 reviewed PASS at 4396ed1ecf808cc8feda2dd82469d97e62de60af after fix rounds 1 to 3 (R-P84 and its addenda); every pinned harness file byte-identical to f48c50b9; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-six sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix3.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix3.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/head-P51.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-sk-P51.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-controls-first-failing-lines.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -310,10 +338,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "4396ed1ecf808cc8feda2dd82469d97e62de60af on rem/spec-parity-g (batch S8, amendment 4; P50 40bec347 with src/units/_parity7.ts, P51 9601f8b8, P52 f3f28ca2, P53 366af68d, P54 ccb41a5c, P55 bb18752f, header citations through e0022954; P51, P52, P53 reviewed PASS at e0022954; P54 and P55 reviewed PASS at e8aef705 after fix round 1 (R-P84); P50 reviewed PASS at 4396ed1ecf808cc8feda2dd82469d97e62de60af after fix rounds 1 to 3 (R-P84 and its addenda); every pinned harness file byte-identical to f48c50b9; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-six sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix3.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix3.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/head-P52.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-sk-P52.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-controls-first-failing-lines.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -403,10 +445,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "4396ed1ecf808cc8feda2dd82469d97e62de60af on rem/spec-parity-g (batch S8, amendment 4; P50 40bec347 with src/units/_parity7.ts, P51 9601f8b8, P52 f3f28ca2, P53 366af68d, P54 ccb41a5c, P55 bb18752f, header citations through e0022954; P51, P52, P53 reviewed PASS at e0022954; P54 and P55 reviewed PASS at e8aef705 after fix round 1 (R-P84); P50 reviewed PASS at 4396ed1ecf808cc8feda2dd82469d97e62de60af after fix rounds 1 to 3 (R-P84 and its addenda); every pinned harness file byte-identical to f48c50b9; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-six sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix3.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix3.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/head-P53.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-sk-P53.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-controls-first-failing-lines.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -506,10 +562,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "4396ed1ecf808cc8feda2dd82469d97e62de60af on rem/spec-parity-g (batch S8, amendment 4; P50 40bec347 with src/units/_parity7.ts, P51 9601f8b8, P52 f3f28ca2, P53 366af68d, P54 ccb41a5c, P55 bb18752f, header citations through e0022954; P51, P52, P53 reviewed PASS at e0022954; P54 and P55 reviewed PASS at e8aef705 after fix round 1 (R-P84); P50 reviewed PASS at 4396ed1ecf808cc8feda2dd82469d97e62de60af after fix rounds 1 to 3 (R-P84 and its addenda); every pinned harness file byte-identical to f48c50b9; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-six sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix3.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix3.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/head-P54.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-sk-P54.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-controls-first-failing-lines.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
@@ -607,10 +677,24 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "TBD",
-        "verdict": "PENDING",
-        "evidence": [],
-        "negativeControlEvidence": []
+        "reviewedRevision": "4396ed1ecf808cc8feda2dd82469d97e62de60af on rem/spec-parity-g (batch S8, amendment 4; P50 40bec347 with src/units/_parity7.ts, P51 9601f8b8, P52 f3f28ca2, P53 366af68d, P54 ccb41a5c, P55 bb18752f, header citations through e0022954; P51, P52, P53 reviewed PASS at e0022954; P54 and P55 reviewed PASS at e8aef705 after fix round 1 (R-P84); P50 reviewed PASS at 4396ed1ecf808cc8feda2dd82469d97e62de60af after fix rounds 1 to 3 (R-P84 and its addenda); every pinned harness file byte-identical to f48c50b9; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the all-six sketch; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT-fix3.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix2.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT-fix3.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/head-P55.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/controls-first-failing-lines.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-sk-P55.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/logs/fix3-controls-first-failing-lines.log"
+        ]
       },
       "doneWhen": [
         "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
