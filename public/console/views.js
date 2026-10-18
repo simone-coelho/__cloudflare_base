@@ -437,10 +437,14 @@
     const n = Number.isFinite(g.unreturnedPinCount) ? g.unreturnedPinCount : 0;
     if (n <= 0) return [];
     const pins = Array.isArray(g.unreturnedPins) ? g.unreturnedPins : [];
+    // P53 (R-P78): past the names the block carries (bounded as refusedPins is), one line says how many
+    // more it does not name, computed as the refusals' line is; a block whose names cover the count draws none.
+    const named = pins.reduce((k, p) => k + (Number.isFinite(p.count) ? p.count : 0), 0);
     return [
       h('div', {}, `${plural(n, 'pin')} reserved, unserved: the module was not returned`),
       ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, reserved, unserved: `
         + (p.within && p.within.module ? `${p.within.module} was not returned${p.within.slot ? ` by ${p.within.slot}` : ''}` : 'the module was not returned'))),
+      ...(n > named ? [h('div', { class: 'itemid' }, `${plural(n - named, 'more pin')} reserved, unserved, not named`)] : []),
     ];
   }
 
