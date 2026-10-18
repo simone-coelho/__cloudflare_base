@@ -1056,11 +1056,15 @@ warnings }`, keys sorted, with one warning per slot whose table omits the slot's
 sorted, where `slot` names the slot, `reward` the slot's reward the table omits, and the consequence
 says that every module on that slot which declares no success event earns nothing from then on (its
 record names `{ event: <the slot's reward>, value: null }`, so its outcomes credit nothing). The member is
-given only when at least one table omits its slot's reward, and only on those two success answers: a
-document without a table, or whose every table names its slot's reward, is answered byte for byte as
-before, with no `diagnostics` member, and no read carries it (`GET /content/learn`, its history and
-revisions, the console's reads and the lift reads alike), so a document stored with such a table before
-the advisory existed is told only when it is next published or validated. The document is published or
+given only when at least one table omits its slot's reward: a document without a table, or whose every
+table names its slot's reward, is answered byte for byte as before, with no `diagnostics` member. The
+current read `GET /content/learn` carries the same `diagnostics` member, as its last member after its
+other members, when the learn document in force (the stored document, or the compiled default when none
+is stored) has at least one such table, computed on that read from that document and never stored, so a
+document stored with such a table before the advisory existed, or put back by a rollback, is told to
+whoever reads it; a document without such a table is read byte for byte as before, with no
+`diagnostics` member. The learn history and revision reads (`GET /content/learn/history` and `GET
+/content/learn/revisions/{n}`) and the lift reads never carry it. The document is published or
 validated with the same status and members as without the warning, and its credits, records, receipts
 and replays are the ones above. A slot's reward is its `reward` dial, `click` when the dial is absent, and
 a table names it only by that key, `custom` included. Warnings are listed one per slot in slot-name order,
@@ -1068,18 +1072,27 @@ the order the published document keeps its slots in, so the validate door lists 
 the same document will; at most 50 are listed, `warningCount` counts them all and `omittedWarningCount` is
 the rest. A table on a slot no page carries is told like any other, because the learn publication does
 not read the slots document and such a table omits its reward the moment a page carries the slot. Limits:
-a rollback (`POST /content/learn/rollback/{n}`) and a learn document published as a `publicationChanges`
-member of another document's request carry no advisory.
+the answers of a rollback (`POST /content/learn/rollback/{n}`) and of a learn document published as a
+`publicationChanges` member of another document's request carry no advisory; the next read of the
+document in force does.
 
 The console's Dials screen shows this advisory beside the result of its check (the validate door, asked
 shortly after an edit) and of its save (the `PUT`): when that answer carries `diagnostics`, one note above the
 "Reading revision" line lists each warning, naming the slot, the slot's reward its conversion table omits
 and the consequence, that undeclared pieces on that slot earn nothing, and says how many more there are
-when `omittedWarningCount` is not zero. The screen makes no request it did not make before; an answer
-without the member leaves the screen exactly as it was; the check's note lasts while the draft it checked
-is on screen and the save's until the draft changes or the screen is entered again. The screen has no
-control for conversion tables, so a save republishes a stored table as it is and is told about it the
-same way. A rollback, made from the History screen, carries no advisory and shows none.
+when `omittedWarningCount` is not zero. The Dials screen also shows the stored document's advisory on
+open, before the first edit: entering the screen reads `GET /content/learn`, as it always has, and when
+that read carries `diagnostics` the same note, valued for the read (`data-learn-advisory="read"`, where
+the check's is `check` and the save's `save`), lists each warning of the document in force. The first
+edit drops the read's note and the check's answer replaces it (with nothing when that answer carries no
+`diagnostics`), the save's answer replaces the check's, a discard clears it, and entering the screen
+again draws the read's anew; at most one such note is on screen at a time. The screen makes no request it
+did not make before; an answer without the member leaves the screen exactly as it was, so a document
+without a warning opens the screen as before; the read's note lasts until the first edit, a discard or
+the next entry, the check's while the draft it checked is on screen and the save's until the draft
+changes or the screen is entered again. The screen has no control for conversion tables, so a save
+republishes a stored table as it is and is told about it the same way. A rollback, made from the History
+screen, carries no advisory and shows none; the Dials screen entered after it shows the read's.
 
 Learning ingestion has conservative application budgets independent of gamma:256KiB/1000 rows per statistics request;256-code-unit components and2048-byte ordered keys;512KiB,256 item identities and4096 counters per learning value. The total640KiB budget also counts effect/retirement markers, reset fences, publication identity and repair receipt. Ring state remains1MiB/200 records/4096 index entries; its4MiB total includes at most64 immutable credit plans and cleanup debts. Needed retry/privacy witnesses are never evicted to admit work. Invalid input or witness capacity refuses the entire batch, without a partial counter commit.
 
@@ -1430,7 +1443,7 @@ Available pin feedback names the strict uncached committed catalog revision and 
 
 The slots current GET also adds `constraintDiagnostics: {schema: 'slot-constraint-diagnostics/v1', advisory: true, status, slotsRevision, catalog: {source, revision}, checkedAt, warningCount, omittedWarningCount, warnings: [{page, slot, contentId, reason, dimension?, value?}]}`: the operator's home for the refusals a decision set's own `constraintDiagnostics` names one page load at a time (below), read for the whole stored document. Each page is decided as serving decides it — the strict uncached committed catalog revision, eligibility at `checkedAt`, the page's pin reservations and its compiled hard controls — so only a slot that ranks contributes (not off-limits, with ranked positions left after its pins, and with no refused pinned prefix), and only a piece that slot could otherwise have served is named (live, inside its window, in stock, and naming the slot in its `slotTypes`). Every refused eligible piece is counted; at most 50 are named, in page order, then slot order, then catalogue order, and `omittedWarningCount` is the rest; an excluded-tag refusal names the published pair that matched. Unlike the pin channel it names pages, slots and piece ids, because those are what a merchandiser acts on. A document that publishes no hard control is `not_required` with zero counts and catalog `not_read`; a legacy GET fallback, an unbound selector or a catalog that cannot be read is `unavailable` with null counts, list, catalog revision and time, never a zero nobody checked. It is advice, never serving authority: the runtime decision stays authoritative, and a later catalog change or the passage of a publish window can change the answer.
 
-Learn successful validation and PUT add `diagnostics: {advisory: true, omittedWarningCount, schema: 'learn-conversion-diagnostics/v1', status: 'available', warningCount, warnings: [{code: 'conversions_omit_slot_reward', consequence: 'undeclared_pieces_earn_nothing', reward, slot}]}`, keys sorted, only when a slot's `conversions` table does not name that slot's own reward: one warning per such slot in slot-name order (the order the published document keeps, the same on both doors), at most 50 listed, `warningCount` all of them and `omittedWarningCount` the rest. The document is still published or validated exactly as without it; the member is computed from the answer's own document with no read, a document that warns nothing answers byte for byte as before, and the current GET, history, revisions and rollback never carry it ([success events and conversion tables](03-payload-schemas.md#success-events-and-conversion-tables)).
+Learn successful validation and PUT add `diagnostics: {advisory: true, omittedWarningCount, schema: 'learn-conversion-diagnostics/v1', status: 'available', warningCount, warnings: [{code: 'conversions_omit_slot_reward', consequence: 'undeclared_pieces_earn_nothing', reward, slot}]}`, keys sorted, only when a slot's `conversions` table does not name that slot's own reward: one warning per such slot in slot-name order (the order the published document keeps, the same on both doors), at most 50 listed, `warningCount` all of them and `omittedWarningCount` the rest. The document is still published or validated exactly as without it; the member is computed from the answer's own document with no read, a document that warns nothing answers byte for byte as before; the current `GET /content/learn` carries the same member as its last member when the stored learn document in force (or the compiled default) has such a table, computed on the read and never stored, and the console's Dials screen shows it on open, while the history, revisions and rollback never carry it ([success events and conversion tables](03-payload-schemas.md#success-events-and-conversion-tables)).
 
 Current slot validation/publication accepts absent/1/2/3/4 markers and emits `governanceVersion: 3`, or `4` for a
 document marked 4 and for an unmarked document that declares a layout slot or carries per-context orders (below), with optional per-slot

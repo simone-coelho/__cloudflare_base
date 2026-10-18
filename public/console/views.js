@@ -563,7 +563,9 @@
     dl.errors = [];
     dl.vocabularyText = null; dl.vocabularyError = '';
     dl.percent = null;
-    dl.advisory = null;
+    // P52 (R-P78): the read's own advisory, when the learn document in force carries one, kept for the
+    // draft read on entering; P46's rules then drop or replace it as they do the check's and the save's.
+    dl.advisory = data.document ? learnAdvisoryOf(res, 'read', JSON.stringify(dl.draft)) : null;
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
@@ -580,9 +582,10 @@
 
   /**
    * P46 (R-P78; P41's advisory): the learn publication's `diagnostics`, kept from the answer of the
-   * screen's check (`check`, the validate door) or of its save (`save`, the PUT) when, and only when,
-   * that answer carries the member, with the draft it advised. Nothing here asks the platform for
-   * anything, and an answer without the member keeps nothing, so the screen is drawn as before.
+   * screen's check (`check`, the validate door) or of its save (`save`, the PUT), and (P52) of the read
+   * the screen makes on entering (`read`, `GET /content/learn`), when, and only when, that answer
+   * carries the member, with the draft it advised. Nothing here asks the platform for anything, and an
+   * answer without the member keeps nothing, so the screen is drawn as before.
    */
   function learnAdvisoryOf(res, label, draft) {
     const d = res && res.ok && res.data ? res.data.diagnostics : undefined;
@@ -590,11 +593,11 @@
   }
   const LEARN_CONSEQUENCES = { undeclared_pieces_earn_nothing: 'undeclared pieces on this slot earn nothing' };
   /**
-   * The kept advisory as ONE note (`data-learn-advisory` = check | save), drawn where the screen lists a
+   * The kept advisory as ONE note (`data-learn-advisory` = read | check | save), drawn where the screen lists a
    * refused draft's errors: one line per warning the answer lists, naming the slot, the slot's reward
    * its conversion table omits and the consequence. It is kept only while the draft it advised is on
    * screen: every edit runs `scheduleCheck`, which drops it, and entering the screen or discarding the
-   * draft clears it.
+   * draft clears it (entering then draws the read's anew when the read carries one).
    */
   function learnAdvisory() {
     const a = dl.advisory;
@@ -611,9 +614,11 @@
       return h('li', {}, `Slot ${slot}: ${what}${consequence ? `; ${consequence}` : ''}.`);
     };
     return h('div', { class: 'msg note', 'data-learn-advisory': a.label },
-      h('strong', {}, a.label === 'save' ? 'Saved with a conversion warning: ' : 'This draft has a conversion warning: '),
+      h('strong', {}, a.label === 'save' ? 'Saved with a conversion warning: '
+        : a.label === 'read' ? 'The stored learn document has a conversion warning: ' : 'This draft has a conversion warning: '),
       a.label === 'save' ? 'the document was published as written, and on the slots below a piece that declares no success event of its own is credited nothing.'
-        : 'it is valid and would publish as written, and on the slots below a piece that declares no success event of its own would be credited nothing.',
+        : a.label === 'read' ? 'it is in force as written, and on the slots below a piece that declares no success event of its own is credited nothing.'
+          : 'it is valid and would publish as written, and on the slots below a piece that declares no success event of its own would be credited nothing.',
       listed.length ? h('ul', {}, ...listed.map(line)) : null,
       omitted ? h('div', { class: 'help' }, `${plural(omitted, 'more warning')} not shown.`) : null,
       h('div', { class: 'help' }, 'Advice only: nothing was refused. This screen does not edit conversion tables; to credit those pieces, name the slot\u2019s reward in its conversions table and publish the learn document.'));
