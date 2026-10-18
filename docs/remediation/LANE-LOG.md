@@ -589,6 +589,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-17 night — **Amendment 4 gated** (S8 at 4396ed1e after three P50 fix rounds, R-P84 and addenda; gates a9adb1c4; branches rem/tkt/P50..P55); **P50 ACTIVE 87003e0f building** in `build-p50`; lanes build-p51..p55 cut; briefs P51-P55 drafted. Pilot stamps unchanged since the evening redeploy at fb65421f.
 
+- 2026-10-18 — **Amendment 4 at 2/6**: P50 a08f3c46 (receipt ebfbd6ee) and P51 6340d7d0 (receipt 14bca678) closed; P52 ACTIVE 2abd8abf building in `build-p52`; P53-P55 staged. R-P74 gains W10.03 (api-boundary:1631). Pilot stamps unchanged since fb65421f.
+
 ## Commits
 
 | Sha | What |
