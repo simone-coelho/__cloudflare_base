@@ -242,7 +242,9 @@
       // P45 (R-P78): the stale marker of the answer this screen holds, or null (nothing drawn).
       const stale = staleMark(meta);
       if (!meta || meta.published === false) {
-        host.append(toolbar, ...(stale ? [stale] : []), h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
+        // P51 (R-P78): P49's republish cause, right after P45's mark, beside the message as P45's mark is.
+        const republished = republishedMark(meta, false);
+        host.append(toolbar, ...(stale ? [stale] : []), ...(republished ? [republished] : []), h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
         return;
       }
 
@@ -308,6 +310,7 @@
         h('div', { class: 'body', style: 'padding-top:8px;padding-bottom:0' }, h('div', { class: 'sub' },
           item ? `Every context ${item} was shown in. A context is who the shopper was and where they came from; the coarser ones answer until the finer ones have enough evidence.` : line)),
         stale,
+        republishedMark(meta, true),
         rows.length ? C.table(cols, body, { sort: lift.sort, onSort: sortBy }) : empty,
         C.pager(st, item ? 'context' : 'piece', loadLift),
       ));
@@ -337,6 +340,45 @@
       ? `these numbers stay those of version ${last.version}${at ? `, published ${at}` : ''}, the slot's last successful publication, until a publication succeeds`
       : 'the slot has no successful publication yet and stays unpublished until a publication succeeds';
     return h('div', { class: 'msg note', 'data-lift-stale': true, style: 'margin:8px 14px' }, `${last ? 'Stale' : 'Unpublished'}: ${cause}; ${held}.`);
+  }
+
+  /**
+   * P51 (R-P78; P49's member): when the lift/rows answer the screen holds carries `republished`, ONE element
+   * right after P45's mark (in its place when only this one applies), worded from the member's members alone:
+   * the slot, with its page on a page-scoped placement; each entry of `changed`, in the order served, with its
+   * old and new values; and what ends it under P50's rule (R-P84): a new generation adopts a changed reward or
+   * objective only when its body names the new value and takes a changed `stats.*` value from the document,
+   * no generation moves a changed measurementBasis, which only a learn republish with the old basis restores,
+   * and a republish with every old value ends it outright. `published` says which screen holds it: the grid
+   * (the numbers stay those of the last successful publication) or the "Nothing published" message (the slot
+   * stays unpublished). Like P45's mark it is drawn from the answer `loadLift` already keeps, so it asks for
+   * nothing, and an answer without the member draws nothing, which leaves the screen exactly as before P51.
+   */
+  function republishedMark(meta, published) {
+    const r = meta && meta.republished;
+    // An answer for another slot (the screen redraws while the next slot's read is in flight) marks nothing here.
+    if (!r || typeof r !== 'object' || (typeof meta.slot === 'string' && meta.slot !== S.slot)) return null;
+    const changed = Array.isArray(r.changed) ? r.changed.filter((c) => c && typeof c.member === 'string' && c.member) : [];
+    const said = (v) => (v === null || v === undefined || v === '' ? 'none' : String(v));
+    const and = (parts) => (parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0] || '');
+    const slot = typeof r.slot === 'string' && r.slot ? r.slot : 'unnamed';
+    const page = typeof r.page === 'string' && r.page ? r.page : '';
+    const basis = changed.filter((c) => c.member === 'measurementBasis');
+    const others = changed.filter((c) => c.member !== 'measurementBasis');
+    const restored = (list) => and(list.map((c) => `${c.member} ${said(c.old)}`)) || 'the old values';
+    const body = and([`slot ${slot}`, ...(page ? [`page ${page}`] : []),
+      ...others.filter((c) => c.member === 'reward' || c.member === 'objective').map((c) => `${c.member} ${said(c.new)}`)]);
+    const generation = `an operator starts the new generation with POST /v1/${S.scope}/learn/generation, its body naming ${body}`;
+    const cause = `publications of ${page ? `page ${page}, slot ${slot}` : `slot ${slot}`} are refused because the learn document was republished with `
+      + (changed.length ? and(changed.map((c) => `${c.member} changed from ${said(c.old)} to ${said(c.new)}`)) : 'a change to what the slot\'s statistics accumulate under');
+    const held = published
+      ? 'these numbers stay those of the slot\'s last successful publication until a publication succeeds'
+      : 'the slot has no successful publication yet and stays unpublished until a publication succeeds';
+    const ends = basis.length
+      ? `; no generation transition moves the measurement basis, so a publication succeeds only once the learn document is republished with ${restored(changed)}`
+        + (others.length ? `, or with ${restored(basis)} and then ${generation}` : '')
+      : `, which happens once ${generation}, or once the learn document is republished with ${restored(changed)}`;
+    return h('div', { class: 'msg note', 'data-lift-republished': true, style: 'margin:8px 14px' }, `Republished: ${cause}; ${held}${ends}.`);
   }
 
   /** W26 R5: the row's own correction; a row from a server that sends none is the uncorrected diagnostic it always was. */
