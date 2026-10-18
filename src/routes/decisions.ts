@@ -28,7 +28,7 @@ import type { DecisionRecord } from '@/content/types';
 import { isCarriedCustomerId, isLearningKey, parseId, type CapturedRecord, type LedgerStream } from '@/ledger/records';
 import { validCarrier, DELIVERY_FIELD } from '@/ledger/delivery';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
-import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, placementSlot, republishedIn, republishedRecordOf, republishedRefusalIn, republishedRefusalOf, ringName, staleMarkerIn, staleMarkerOf, staleRefusalIn, staleRefusalOf, statsName } from '@/learn/fan';
+import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedRefusalIn, notAdoptedRefusalOf, placementSlot, republishedIn, republishedRecordOf, republishedRefusalIn, republishedRefusalOf, ringName, staleMarkerIn, staleMarkerOf, staleRefusalIn, staleRefusalOf, statsName } from '@/learn/fan';
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
@@ -1669,6 +1669,16 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
     // Every isolate's per-request lift cache is dropped here for the same reason
     // publication drops it: what it holds is a generation that no longer stands.
     invalidateLiftCache();
+    // P50 (R-P78, D1): the one refusal passed through is the object's refusal of a
+    // transition that does not adopt a member a learn republish changed, only when
+    // its answer is exactly that (409, `{ ok: false, error, notAdopted }`, a
+    // well-formed member naming this placement and the object's own sentence for
+    // it); the words are composed here from the checked member, and every other
+    // refusal stays the one below.
+    const notAdopted = response.status === 409 ? notAdoptedRefusalIn(res, tenant) : null;
+    if (notAdopted && notAdopted.slot === b.slot && notAdopted.page === page) {
+      return c.json({ ok: false, error: notAdoptedRefusalOf(notAdopted, tenant), notAdopted, operationId }, 409);
+    }
     if (!response.ok || !res || res.ok !== true || typeof res.generation !== 'string' || !res.generation
       || !Number.isSafeInteger(res.restartedAt) || (res.archivedVersion !== null && !Number.isSafeInteger(res.archivedVersion))) {
       return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, response.status === 409 ? 409 : 503);
