@@ -1530,7 +1530,12 @@ the slot's statistics stay at (or, with no earlier publication, that the slot st
 ends it. `republished` is carried until a publication of the slot succeeds, which happens after an operator starts
 the new generation with `POST /v1/{tenant}/learn/generation` (its own publication) or after the learn document is
 republished with the old values; the reads then answer exactly their usual members again. A republish that changes
-nothing in the tuple is not refused, and a slot whose tuple never changed never carries `republished`.
+nothing in the tuple is not refused, and a slot whose tuple never changed never carries `republished`. The
+console's lift grid marks a slot whose `GET /v1/{tenant}/lift/rows` answer carries `republished`: one note, right
+after the `stale` note when both apply, names the `slot` (and `page`), each `changed` member with its `old` and
+`new` values and what ends it (a new generation that adopts every changed member, a `measurementBasis` only by a
+republish with the old basis, or the learn document republished with the old values), and the mark is gone once
+a read no longer carries the member.
 
 **The transition's refusal member (`notAdopted`).** A generation transition (`POST /v1/{tenant}/learn/generation`)
 that does not adopt a member of the slot's tuple that a learn republish changed, the slot's `reward`, `objective`
