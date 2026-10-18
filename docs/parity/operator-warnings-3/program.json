@@ -592,7 +592,7 @@
     {
       "id": "P55",
       "title": "After a transition whose own publication failed, the reads tell the truth (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
