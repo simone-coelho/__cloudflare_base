@@ -591,6 +591,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-18 — **Amendment 4 at 2/6**: P50 a08f3c46 (receipt ebfbd6ee) and P51 6340d7d0 (receipt 14bca678) closed; P52 ACTIVE 2abd8abf building in `build-p52`; P53-P55 staged. R-P74 gains W10.03 (api-boundary:1631). Pilot stamps unchanged since fb65421f.
 
+- 2026-10-18 afternoon — **Amendment 4 at 4/6**: P52 89624512 (receipt bb18eb17) and P53 8e041963 (receipt ac54cf32) closed; P54 ACTIVE 7c6c32d1 building in `build-p54`; P55 staged. Pilot stamps unchanged since fb65421f.
+
 ## Commits
 
 | Sha | What |
