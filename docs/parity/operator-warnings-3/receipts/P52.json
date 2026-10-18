@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P52",
+  "workOrderHash": "sha256:12a602909aaffeb149583b08629a287cfacb914ae40670816797ef30b44a9658",
+  "artifact": {
+    "revision": "89624512311da85ab987c9e0240a527de34efb48",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p52-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p52-build at 89624512311da85ab987c9e0240a527de34efb48 (3a4ce74e merges rem/integration 2abd8abf into rem/tkt/P52 8b422be7; 91b0e64b src/routes/content.ts: the current learn read's answer gains, last, P41's advisory envelope computed from the loaded document and never stored, every other kind and the history, revision, rollback and publish routes unchanged; src/content/kinds.ts a comment; public/console/views.js: loadDials sets the read's note drawn by P46's element valued read, replaced by the check's and the save's as P46 rules; 89624512 kit 02 and 03). Acceptance 7/7 on both hosts; the builder's gate GATE_OK on its first run at 89624512 (3363 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 0ce303bd…); both typechecks exit 0; both bundle checks exact; the reads without a warning byte-identical at head, a second head run and the base with the clock and the UUIDs frozen; storage per read 0 KV and 3 R2 at head and base; P16's credits, records, receipts and replays equal at head and base with an omitting table stored. Delivery review PASS (P52/reviewer/REPORT.md): RA1 to RA3 PASS, nine mutants caught by the units, one by a probe only (the member stored). Named for later under R-P78: the read's note is not redrawn when the draft returns to the document in force after an edit or a Discard, so an operator who discards and stays could take the warning as resolved (views.js:537, :539, :825); LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P52/implementer/REPORT.md",
+      "git commits on rem/p52-build up to 89624512"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P52 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P52/reviewer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P52/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P52/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P52/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-18T17:54:08.048Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -403,6 +403,33 @@ export interface Republished {
 }
 
 /**
+ * P50 (R-P78, decision D1): the members of a slot's accumulation tuple an
+ * operator adopts or restores, in sorted order: the body of the generation
+ * transition names `objective` and `reward`, and no transition moves
+ * `measurementBasis`, which only a learn republish restoring it adopts. The
+ * `stats` block is always the published document's, so it is never one of them.
+ */
+export const ADOPTED_MEMBERS = ['measurementBasis', 'objective', 'reward'] as const;
+export type AdoptedMember = typeof ADOPTED_MEMBERS[number];
+/**
+ * P50 (R-P78, decision D1): why a generation transition was refused: a learn
+ * republish changed a member of the slot's tuple and the accumulation the
+ * transition would start does not take the document's value for it, so the slot
+ * would count no exposure. Keys sorted (R-P3).
+ *   · `changed`: each member not adopted, sorted by `member`; one at least. `old`
+ *     the slot's accumulation's own value (the one its statistics count under, as
+ *     `Republished` names it), `new` the learn document's.
+ *   · `page`, only for a page-scoped placement, and `slot`: the refused placement.
+ * Nothing is written when it is answered.
+ */
+export interface NotAdoptedChange { member: AdoptedMember; new: string; old: string }
+export interface NotAdopted {
+  changed: NotAdoptedChange[];
+  page?: string;
+  slot: string;
+}
+
+/**
  * P05: what the statistics object counts of the swaps of ONE adjacent pair
  * (k, k + 1), positions counted from 1 within the slot: the swapped decisions
  * whose module at position k was exposed (`pairs`), and the clicks credited to

@@ -6,11 +6,11 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, ADOPTED_MEMBERS, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type NotAdopted, type NotAdoptedChange, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
-import { committedPublication, pinPublication, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
+import { committedPublication, pinPublication, publicationVersion, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
 import { CONTENT_KIND, isCatalogueName, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { DEFAULT_STATS } from '@/learn/stats';
 import { indexPriors, priorUnitErrors, PRIORS_KIND } from '@/learn/priors';
@@ -161,6 +161,26 @@ class RepublishRefusal extends Refusal {
   constructor(readonly republished: Republished, words: string) { super(503, words); }
 }
 /**
+ * P50 (R-P78, decision D1): a generation transition refused because it does not
+ * adopt a member of the slot's tuple that a learn republish changed, answered
+ * `409 { ok: false, error, notAdopted }` with its sentence and its member.
+ */
+class NotAdoptedRefusal extends Refusal {
+  constructor(readonly notAdopted: NotAdopted, words: string) { super(409, words); }
+}
+/**
+ * P50: the most learn revisions a transition reads back, through
+ * `publicationVersion`, to find the one in force when the slot's statistics
+ * started; a history longer than this is one that cannot be read, and then any
+ * difference counts (R-P84 addendum 2), so nothing is silently admitted.
+ */
+const TRANSITION_HISTORY_READS = 50;
+/** P50: the slot's own `measurementBasis`, `objective` and `reward` in a learn document, as the configuration check reads them. */
+const slotTuple = (learn: { slots?: Record<string, { reward?: string; objective?: string; measurementBasis?: string } | undefined> }, slot: string) => {
+  const dials = learn.slots?.[slot];
+  return { measurementBasis: dials?.measurementBasis ?? 'served-v1', objective: dials?.objective ?? 'unit', reward: dials?.reward ?? 'click' } as Record<NotAdoptedChange['member'], string>;
+};
+/**
  * P49: the members of the slot's accumulation tuple whose value in the published
  * learn document (`now`, as the configuration check reads it) differs from the
  * one the slot's statistics accumulate under (`was`), in `REPUBLISHED_MEMBERS`
@@ -284,6 +304,7 @@ function json(body: unknown, status = 200): Response {
 function failure(error: unknown): Response {
   if (error instanceof StaleRefusal) return json({ ok: false, error: error.message, stale: error.stale }, 503);
   if (error instanceof RepublishRefusal) return json({ ok: false, error: error.message, republished: error.republished }, 503);
+  if (error instanceof NotAdoptedRefusal) return json({ ok: false, error: error.message, notAdopted: error.notAdopted }, 409);
   return error instanceof Refusal
     ? json({ ok: false, error: error.message, ...(error.status === 413 || error.status === 409 ? { applied: false } : {}) }, error.status)
     : json({ ok: false, error: 'statistics acknowledgement unavailable' }, 503);
@@ -808,6 +829,11 @@ export class LearnStats {
       measurementBasis: current?.config.measurementBasis ?? dials?.measurementBasis ?? 'served-v1',
     };
     if (!configValid(config)) throw invalid();
+    // P50 (R-P78, D1): before anything is written, a transition that would leave
+    // the slot counting nothing because it does not adopt a member a learn
+    // republish changed is refused, naming the member and how to adopt it.
+    const notAdopted = await this.notAdopted(current, config, learn, tenant, slot, page);
+    if (notAdopted) throw new NotAdoptedRefusal(notAdopted, notAdoptedRefusalOf(notAdopted, tenant));
     const at = Date.now();
     // What this transition SUPERSEDES, preserved under its own version before
     // the new generation replaces it. A retained archive is never overwritten:
@@ -860,6 +886,56 @@ export class LearnStats {
     try { await this.publish(true); } catch { publicationOutcome = 'unknown'; }
     return json({ ok: true, generation: accumulationGeneration({ objective: record.objective, reward: record.reward, tauLearnMs: config.stats.tauLearnMs }, at),
       restartedAt: at, archivedVersion, publicationOutcome, ...(rebuiltFrom ? { rebuiltFrom } : {}) });
+  }
+
+  /**
+   * P50 (R-P78, decision D1): what the transition about to start does not adopt,
+   * or null. A member of the tuple (`ADOPTED_MEMBERS`) is CHANGED when its value in
+   * the learn document in force differs from the slot's accumulation's own value,
+   * and NOT ADOPTED when the accumulation this transition would start does not
+   * take the document's value for it. The one exception is a slot moved ahead of a
+   * document that has not changed for that slot: with a generation record on file,
+   * a member whose value for this slot, in every learn revision published after the
+   * record's `at`, is what it was in the latest revision published at or before
+   * that `at` is not changed. With no record on file, or a history that cannot be
+   * read (a damaged record, no such revision readable, a read failing, or more than
+   * `TRANSITION_HISTORY_READS` revisions), any difference counts. An object that
+   * holds no accumulation, and a transition that adopts every changed member, read
+   * nothing more than today and are answered as today.
+   */
+  private async notAdopted(current: Stored | null, config: SlotLearnConfig, learn: { revision: number; at: number; value: Parameters<typeof slotTuple>[0] },
+    tenant: string, slot: string, page: string | undefined): Promise<NotAdopted | null> {
+    if (!current) return null;
+    const held: Record<NotAdoptedChange['member'], string> = { measurementBasis: current.config.measurementBasis ?? 'served-v1',
+      objective: current.config.objective ?? 'unit', reward: current.config.reward };
+    const starting: Record<NotAdoptedChange['member'], string> = { measurementBasis: config.measurementBasis ?? 'served-v1',
+      objective: config.objective ?? 'unit', reward: config.reward };
+    const documented = slotTuple(learn.value, slot);
+    const candidates = ADOPTED_MEMBERS.filter(member => documented[member] !== held[member] && starting[member] !== documented[member]);
+    if (!candidates.length) return null;
+    let unchanged: (member: NotAdoptedChange['member']) => boolean = () => false;
+    try {
+      const record = await this.accumulationTransition();
+      if (record) {
+        let baseline: Record<NotAdoptedChange['member'], string> | null = null;
+        const later: Array<Record<NotAdoptedChange['member'], string>> = [];
+        for (let n = learn.revision; n >= 1 && learn.revision - n <= TRANSITION_HISTORY_READS; n--) {
+          const revision = n === learn.revision ? learn : await publicationVersion(this.env, LEARN_KIND, tenant, n);
+          if (!revision) break;
+          const values = slotTuple(revision.value, slot);
+          if (revision.at <= record.at) { baseline = values; break; }
+          later.push(values);
+        }
+        const since = baseline;
+        if (since) unchanged = member => later.every(values => values[member] === since[member]);
+      }
+    } catch { unchanged = () => false; /* a history that cannot be read admits nothing silently */ }
+    const changed = candidates.filter(member => !unchanged(member)).map(member => ({ member, new: documented[member], old: held[member] }));
+    if (!changed.length) return null;
+    // Formed from checked values, so always well formed; where it could not be, the transition is still refused.
+    const member = notAdoptedOf({ changed, ...(page ? { page } : {}), slot });
+    if (!member) throw recovery();
+    return member;
   }
 
   /**

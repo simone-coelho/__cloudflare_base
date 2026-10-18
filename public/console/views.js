@@ -242,7 +242,9 @@
       // P45 (R-P78): the stale marker of the answer this screen holds, or null (nothing drawn).
       const stale = staleMark(meta);
       if (!meta || meta.published === false) {
-        host.append(toolbar, ...(stale ? [stale] : []), h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
+        // P51 (R-P78): P49's republish cause, right after P45's mark, beside the message as P45's mark is.
+        const republished = republishedMark(meta, false);
+        host.append(toolbar, ...(stale ? [stale] : []), ...(republished ? [republished] : []), h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
         return;
       }
 
@@ -308,6 +310,7 @@
         h('div', { class: 'body', style: 'padding-top:8px;padding-bottom:0' }, h('div', { class: 'sub' },
           item ? `Every context ${item} was shown in. A context is who the shopper was and where they came from; the coarser ones answer until the finer ones have enough evidence.` : line)),
         stale,
+        republishedMark(meta, true),
         rows.length ? C.table(cols, body, { sort: lift.sort, onSort: sortBy }) : empty,
         C.pager(st, item ? 'context' : 'piece', loadLift),
       ));
@@ -337,6 +340,48 @@
       ? `these numbers stay those of version ${last.version}${at ? `, published ${at}` : ''}, the slot's last successful publication, until a publication succeeds`
       : 'the slot has no successful publication yet and stays unpublished until a publication succeeds';
     return h('div', { class: 'msg note', 'data-lift-stale': true, style: 'margin:8px 14px' }, `${last ? 'Stale' : 'Unpublished'}: ${cause}; ${held}.`);
+  }
+
+  /**
+   * P51 (R-P78; P49's member): when the lift/rows answer the screen holds carries `republished`, ONE element
+   * right after P45's mark (in its place when only this one applies), worded from the member's members alone:
+   * the slot, with its page on a page-scoped placement; each entry of `changed`, in the order served, with its
+   * old and new values; and what ends it under P50's rule (R-P84): a new generation adopts a changed reward or
+   * objective only when its body names the new value and takes a changed `stats.*` value from the document,
+   * no generation moves a changed measurementBasis, which only a learn republish with the old basis restores,
+   * and a republish with every old value ends it outright. `published` says which screen holds it: the grid
+   * (the numbers stay those of the last successful publication) or the "Nothing published" message (the slot
+   * stays unpublished). Like P45's mark it is drawn from the answer `loadLift` already keeps, so it asks for
+   * nothing, and an answer without the member draws nothing, which leaves the screen exactly as before P51.
+   */
+  function republishedMark(meta, published) {
+    const r = meta && meta.republished;
+    // An answer for another slot (the screen redraws while the next slot's read is in flight) marks nothing here.
+    if (!r || typeof r !== 'object' || (typeof meta.slot === 'string' && meta.slot !== S.slot)) return null;
+    const changed = Array.isArray(r.changed) ? r.changed.filter((c) => c && typeof c.member === 'string' && c.member) : [];
+    const said = (v) => (v === null || v === undefined || v === '' ? 'none' : String(v));
+    const and = (parts) => (parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0] || '');
+    const slot = typeof r.slot === 'string' && r.slot ? r.slot : 'unnamed';
+    const page = typeof r.page === 'string' && r.page ? r.page : '';
+    const basis = changed.filter((c) => c.member === 'measurementBasis');
+    const others = changed.filter((c) => c.member !== 'measurementBasis');
+    const restored = (list) => and(list.map((c) => `${c.member} ${said(c.old)}`)) || 'the old values';
+    const adopted = others.filter((c) => c.member === 'reward' || c.member === 'objective').map((c) => `${c.member} ${said(c.new)}`);
+    // The route takes a transition whose body names a reward, an objective or a rebuild day; a `stats.*` change
+    // alone is taken from the document by one that names the slot's own reward.
+    const own = published && typeof meta.reward === 'string' && meta.reward ? `reward ${meta.reward}` : 'the slot\'s own reward';
+    const body = and([`slot ${slot}`, ...(page ? [`page ${page}`] : []), ...(adopted.length ? adopted : [own])]);
+    const generation = `an operator starts the new generation with POST /v1/${S.scope}/learn/generation, its body naming ${body}`;
+    const cause = `publications of ${page ? `page ${page}, slot ${slot}` : `slot ${slot}`} are refused because the learn document was republished with `
+      + (changed.length ? and(changed.map((c) => `${c.member} changed from ${said(c.old)} to ${said(c.new)}`)) : 'a change to what the slot\'s statistics accumulate under');
+    const held = published
+      ? 'these numbers stay those of the slot\'s last successful publication until a publication succeeds'
+      : 'the slot has no successful publication yet and stays unpublished until a publication succeeds';
+    const ends = basis.length
+      ? `; no generation transition moves the measurement basis, so a publication succeeds only once the learn document is republished with ${restored(changed)}`
+        + (others.length ? `, or with ${restored(basis)} and then ${generation}` : '')
+      : `, which happens once ${generation}, or once the learn document is republished with ${restored(changed)}`;
+    return h('div', { class: 'msg note', 'data-lift-republished': true, style: 'margin:8px 14px' }, `Republished: ${cause}; ${held}${ends}.`);
   }
 
   /** W26 R5: the row's own correction; a row from a server that sends none is the uncorrected diagnostic it always was. */
@@ -392,10 +437,14 @@
     const n = Number.isFinite(g.unreturnedPinCount) ? g.unreturnedPinCount : 0;
     if (n <= 0) return [];
     const pins = Array.isArray(g.unreturnedPins) ? g.unreturnedPins : [];
+    // P53 (R-P78): past the names the block carries (bounded as refusedPins is), one line says how many
+    // more it does not name, computed as the refusals' line is; a block whose names cover the count draws none.
+    const named = pins.reduce((k, p) => k + (Number.isFinite(p.count) ? p.count : 0), 0);
     return [
       h('div', {}, `${plural(n, 'pin')} reserved, unserved: the module was not returned`),
       ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, reserved, unserved: `
         + (p.within && p.within.module ? `${p.within.module} was not returned${p.within.slot ? ` by ${p.within.slot}` : ''}` : 'the module was not returned'))),
+      ...(n > named ? [h('div', { class: 'itemid' }, `${plural(n - named, 'more pin')} reserved, unserved, not named`)] : []),
     ];
   }
 
@@ -518,7 +567,9 @@
     dl.errors = [];
     dl.vocabularyText = null; dl.vocabularyError = '';
     dl.percent = null;
-    dl.advisory = null;
+    // P52 (R-P78): the read's own advisory, when the learn document in force carries one, kept for the
+    // draft read on entering; P46's rules then drop or replace it as they do the check's and the save's.
+    dl.advisory = data.document ? learnAdvisoryOf(res, 'read', JSON.stringify(dl.draft)) : null;
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
@@ -535,9 +586,10 @@
 
   /**
    * P46 (R-P78; P41's advisory): the learn publication's `diagnostics`, kept from the answer of the
-   * screen's check (`check`, the validate door) or of its save (`save`, the PUT) when, and only when,
-   * that answer carries the member, with the draft it advised. Nothing here asks the platform for
-   * anything, and an answer without the member keeps nothing, so the screen is drawn as before.
+   * screen's check (`check`, the validate door) or of its save (`save`, the PUT), and (P52) of the read
+   * the screen makes on entering (`read`, `GET /content/learn`), when, and only when, that answer
+   * carries the member, with the draft it advised. Nothing here asks the platform for anything, and an
+   * answer without the member keeps nothing, so the screen is drawn as before.
    */
   function learnAdvisoryOf(res, label, draft) {
     const d = res && res.ok && res.data ? res.data.diagnostics : undefined;
@@ -545,11 +597,11 @@
   }
   const LEARN_CONSEQUENCES = { undeclared_pieces_earn_nothing: 'undeclared pieces on this slot earn nothing' };
   /**
-   * The kept advisory as ONE note (`data-learn-advisory` = check | save), drawn where the screen lists a
+   * The kept advisory as ONE note (`data-learn-advisory` = read | check | save), drawn where the screen lists a
    * refused draft's errors: one line per warning the answer lists, naming the slot, the slot's reward
    * its conversion table omits and the consequence. It is kept only while the draft it advised is on
    * screen: every edit runs `scheduleCheck`, which drops it, and entering the screen or discarding the
-   * draft clears it.
+   * draft clears it (entering then draws the read's anew when the read carries one).
    */
   function learnAdvisory() {
     const a = dl.advisory;
@@ -566,9 +618,11 @@
       return h('li', {}, `Slot ${slot}: ${what}${consequence ? `; ${consequence}` : ''}.`);
     };
     return h('div', { class: 'msg note', 'data-learn-advisory': a.label },
-      h('strong', {}, a.label === 'save' ? 'Saved with a conversion warning: ' : 'This draft has a conversion warning: '),
+      h('strong', {}, a.label === 'save' ? 'Saved with a conversion warning: '
+        : a.label === 'read' ? 'The stored learn document has a conversion warning: ' : 'This draft has a conversion warning: '),
       a.label === 'save' ? 'the document was published as written, and on the slots below a piece that declares no success event of its own is credited nothing.'
-        : 'it is valid and would publish as written, and on the slots below a piece that declares no success event of its own would be credited nothing.',
+        : a.label === 'read' ? 'it is in force as written, and on the slots below a piece that declares no success event of its own is credited nothing.'
+          : 'it is valid and would publish as written, and on the slots below a piece that declares no success event of its own would be credited nothing.',
       listed.length ? h('ul', {}, ...listed.map(line)) : null,
       omitted ? h('div', { class: 'help' }, `${plural(omitted, 'more warning')} not shown.`) : null,
       h('div', { class: 'help' }, 'Advice only: nothing was refused. This screen does not edit conversion tables; to credit those pieces, name the slot\u2019s reward in its conversions table and publish the learn document.'));

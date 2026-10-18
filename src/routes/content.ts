@@ -446,11 +446,14 @@ function pinDiagnosticsFor(c: Context<Ctx>, scope: string, slots: SlotCatalog | 
 }
 /**
  * P41 (R-P78): the learn publication's advisory channel, for the success
- * answers of `PUT /content/learn` and `POST /content/learn/validate` alone: a
+ * answers of `PUT /content/learn` and `POST /content/learn/validate`, and
+ * (P52) for the current read `GET /content/learn`, as its last member: a
  * `diagnostics` member only when a slot's conversion table does not name the
  * slot's own reward, so every other answer is the bytes it was. Computed from
- * the document the answer carries, with no read; advice, never a refusal, and
- * never able to turn an accepted or committed publication into a failure.
+ * the document the answer carries, with no further read and nothing stored;
+ * advice, never a refusal, and never able to turn an accepted or committed
+ * publication, or a read, into a failure. The history and revision reads never
+ * carry it.
  */
 function learnAdvisory(kind: DocumentKind<unknown>, document: unknown): { diagnostics?: LearnConversionDiagnostics } {
   if (kind.name !== LEARN_KIND.name) return {};
@@ -656,7 +659,10 @@ contentRoutes.get('/:kind', async (c) => {
     ...(k.kind.name === 'slots' ? { pinDiagnostics: await pinDiagnosticsFor(c, scope, rev?.value ?? null, rev?.revision ?? null),
       // W20 R1 (R77(b), R82(c)): the public home of the refusals the published
       // hard controls make, beside the pin channel and in a channel of its own.
-      constraintDiagnostics: await slotConstraintDiagnostics(c.env, rev?.value ?? null, rev?.revision ?? null, slotCatalogTenant(c, scope)) } : {}) });
+      constraintDiagnostics: await slotConstraintDiagnostics(c.env, rev?.value ?? null, rev?.revision ?? null, slotCatalogTenant(c, scope)) } : {}),
+    // P52 (R-P78): the learn document in force tells its reader what its
+    // publication would be told (P41's envelope), last; nothing for any other kind.
+    ...learnAdvisory(k.kind, value) });
 });
 
 contentRoutes.get('/:kind/history', async (c) => {

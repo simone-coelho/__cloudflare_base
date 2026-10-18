@@ -1255,20 +1255,24 @@ slot which declares no success event earns nothing, because its record names the
 ```
 
 The member and each warning are written with their keys sorted. The member is present only when at least
-one table omits its slot's reward, and only on those two success answers: a document without a table, or
-whose every table names its slot's reward, is answered byte for byte as before, and no read carries the
-member (the current `GET /content/learn`, its history and revisions, the console's reads and the lift
-reads), so a retained document stored with such a table is told only when it is next published or
-validated. The warning refuses nothing and changes nothing: the document is published or validated with
+one table omits its slot's reward: a document without a table, or whose every table names its slot's
+reward, is answered byte for byte as before. Beside those two success answers, the current read `GET
+/content/learn` carries the same `diagnostics` member, as its last member, when the learn document in
+force (the stored document, or the compiled default when none is stored) has such a table, computed on
+that read and never stored, so a retained document stored with such a table is told to whoever reads it.
+The console's Dials screen shows that advisory on open, before the first edit, in the note it uses for
+its check and its save (`data-learn-advisory="read"`); the first edit drops it, and the check's and then
+the save's note replace it. The learn history and revision reads and the lift reads never carry it. The warning
+refuses nothing and changes nothing: the document is published or validated with
 the same status and members, and the credits, records, receipts and replays are the ones described above.
 A slot's reward is its `reward` dial, `click` when the dial is absent, and a table names it only by that
 key, `custom` included. Warnings are listed one per slot in slot-name order, the order the published
 document keeps its slots in, so the validate door lists them exactly as the PUT of the same document will;
 at most 50 are listed, `warningCount` counts them all and `omittedWarningCount` is the rest. A table on a
 slot no page carries is warned like any other, since the learn publication does not read the slots
-document and the table omits the slot's reward the moment a page carries the slot. A rollback, and a
-learn document published as a `publicationChanges` member of another document's request, carry no
-advisory.
+document and the table omits the slot's reward the moment a page carries the slot. The answers of a
+rollback, and of a learn document published as a `publicationChanges` member of another document's
+request, carry no advisory; the next read of the document in force does.
 
 ### The context vocabulary
 
@@ -1530,7 +1534,25 @@ the slot's statistics stay at (or, with no earlier publication, that the slot st
 ends it. `republished` is carried until a publication of the slot succeeds, which happens after an operator starts
 the new generation with `POST /v1/{tenant}/learn/generation` (its own publication) or after the learn document is
 republished with the old values; the reads then answer exactly their usual members again. A republish that changes
-nothing in the tuple is not refused, and a slot whose tuple never changed never carries `republished`.
+nothing in the tuple is not refused, and a slot whose tuple never changed never carries `republished`. The
+console's lift grid marks a slot whose `GET /v1/{tenant}/lift/rows` answer carries `republished`: one note, right
+after the `stale` note when both apply, names the `slot` (and `page`), each `changed` member with its `old` and
+`new` values and what ends it (a new generation that adopts every changed member, a `measurementBasis` only by a
+republish with the old basis, or the learn document republished with the old values), and the mark is gone once
+a read no longer carries the member.
+
+**The transition's refusal member (`notAdopted`).** A generation transition (`POST /v1/{tenant}/learn/generation`)
+that does not adopt a member of the slot's tuple that a learn republish changed, the slot's `reward`, `objective`
+or `measurementBasis`, is refused: it answers `409` `{ ok: false, error, notAdopted, operationId }` and writes
+nothing, and `republished` stays as it was. The member `notAdopted` is `{ changed: [{ member, new, old }], page?, slot }`,
+keys sorted: `changed` lists, sorted by `member`, each member not adopted, one to three of them, named
+`measurementBasis`, `objective` or `reward`, `old` the value the slot's statistics count under and `new` the
+learn document's, both as words; `slot` names the refused slot and `page`, only on a page-scoped placement, its
+page. The `error` begins `generation transition refused:`, names the slot, each member with its old and new
+values, and says how to adopt it: a `reward` or an `objective` by naming its new value in the body of the
+transition (or by republishing the learn document with the old value), and a `measurementBasis`, which no
+transition moves, by republishing the learn document with the old measurement basis. A transition that adopts
+every changed member, or on a slot whose tuple did not change, answers its usual members.
 
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
