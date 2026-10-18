@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P54",
+  "workOrderHash": "sha256:f3cad4d2775410475d92db7dbc2572cd424db96db61c1500dfcde20502d4f994",
+  "artifact": {
+    "revision": "df3aec96f538b04a2de85c99476e6f521d3a65e6",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p54-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p54-build at df3aec96f538b04a2de85c99476e6f521d3a65e6 (85a41ca3 merges rem/integration ecede1aa into rem/tkt/P54 800c107b; f709b04f src/routes/content.ts, the sibling POST /content/publication/complete with the W08-C1 door's checks in its order before any read or write, calling P48's capability, one audit row with the existing publication_initialized action and a detail state completed only when members were added, and src/customerBoundary.ts's POST-only entry; 565e06f8 src/config/publication.ts's absent naming the sibling on the customer profile and P48's demo path otherwise at the three call sites; df3aec96 kit 02's own paragraph, the door's paragraph unchanged at 996 characters). Acceptance 9/9 on both hosts; the demo-kit node tests 162 pass, 0 fail, 1 skipped at head, minus and base; the builder's gate GATE_OK on its first run at df3aec96 (3377 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 793cc954…) and the reviewer's own gate at the same sha failing on W40.P4's symlink artifact alone; both typechecks exit 0; both bundle checks exact; the W08-C1 door's answers, writes and audit rows, a six-member tenant's reads and publish on both profiles, and the demo profile's P48 path and words byte-identical to the base on both hosts. Delivery review PASS (P54/reviewer/REPORT.md): CP1 to CP3 PASS, twelve mutants caught by the units, two uncovered (the human-session and credential check removed, which the head still refuses by probe; catalogScope alone, a redundant guard). Residuals: an audit write failing after the completion leaves a complete set with no row, as the W08-C1 door; W01.08's boundary leg stops before the new entry on a baseline failure; the proposals read's 500 pre-existing; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P54/implementer/REPORT.md",
+      "git commits on rem/p54-build up to df3aec96"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P54 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P54/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P54/implementer/logs/acceptance-1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P54/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P54/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P54/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-18T21:46:25.422Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
