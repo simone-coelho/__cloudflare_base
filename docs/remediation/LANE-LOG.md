@@ -587,6 +587,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-17 evening — **Pilot stamps redeployed at fb65421f** (every ledger's local completion, P45 to P49 included): staging version 8222eb06, production 25ec617c; both ready; API smoke green on both (health, SDK bytes, session, consent, snapshot with 3 decisions, impression acknowledged). Logs `_evidence/pilot/logs/deploy-3-*`.
 
+- 2026-10-17 night — **Amendment 4 gated** (S8 at 4396ed1e after three P50 fix rounds, R-P84 and addenda; gates a9adb1c4; branches rem/tkt/P50..P55); **P50 ACTIVE 87003e0f building** in `build-p50`; lanes build-p51..p55 cut; briefs P51-P55 drafted. Pilot stamps unchanged since the evening redeploy at fb65421f.
+
 ## Commits
 
 | Sha | What |
