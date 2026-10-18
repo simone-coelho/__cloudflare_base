@@ -475,7 +475,7 @@
     {
       "id": "P54",
       "title": "A customer-profile tenant with a four-member set is given its path (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
