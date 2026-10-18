@@ -13,6 +13,7 @@
 //   POST /content/:kind/rollback/:n      roll forward to an old body (JWT)
 //   POST /content/catalog/import         a JSON or CSV export, replace or merge (JWT)
 //   POST /content/catalog/pull           a JSON URL, the CMS/DAM seam (JWT)
+//   POST /content/publication/complete   P54: a four-member set's priors and proposals, once (stamp owner)
 //   POST /content/vocabulary/approve/:n  P38: put vocabulary revision n in effect (JWT)
 //   GET  /content/vocabulary/rejections  P38: the values the vocabulary in effect refused at ingest
 //
@@ -28,7 +29,7 @@ import { storeFor } from '@/auth/accounts';
 import { stampOwner } from '@/auth/authority';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type Revision, type WriteMeta } from '@/config/versionedStore';
-import { assertPublicationBase, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
+import { assertPublicationBase, completePublicationSet, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
   readOptionalPublication, readPublication, recoverPublication, type PublicationBaseline, type PublicationPin } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
@@ -1087,6 +1088,53 @@ contentRoutes.post('/publication/initialize', async (c) => {
   await storeFor(c.env).audit({ at: Date.now(), action: 'publication_initialized', actorId: user.sub, actorEmail: user.email ?? null,
     targetId: tenant, detail: JSON.stringify({ operationId, publication: set.revision, state }) });
   return c.json({ ok: true, publication: set.revision, state });
+});
+
+/**
+ * P54 (R-P78; D01: it creates, it never overwrites): POST
+ * /content/publication/complete, the W08 door's sibling, adds `priors` and
+ * `proposals` to a COMMITTED set that lacks them, on every deployment profile.
+ *
+ * A set holds four members only when the demo bootstrap created it before it
+ * seeded six, which reaches a customer deployment only through a retained
+ * adoption; the demo bootstrap's completion path is not mounted there, and the
+ * door answers such a set `already initialized`, which is true. This is the
+ * completion as its own named act: each member the committed set lacks is added
+ * as its compiled empty at revision 1, in one set publication that changes no
+ * other member (`completePublicationSet`, src/config/publication.ts), attributed
+ * to the caller.
+ *
+ * The door's authority, in the door's order: the tenant middleware,
+ * `operatorJwt` above, `catalogScope`, then a stamp owner's own human session;
+ * no document is accepted. Every refusal answers before anything is read or
+ * written.
+ *
+ *  · it answers `{ added, ok, publication, state: 'completed' }` with `added`
+ *    naming the members added as an operator reads them and `publication` the
+ *    new set's revision;
+ *  · a set that has both answers `added: []`, `already complete`, with the
+ *    committed set's revision, and writes nothing;
+ *  · a scope with no committed set is refused 503 `publication_uninitialized`
+ *    (`contentRoutes.onError`); the door initializes it, with six;
+ *  · a completion left pending by an interrupted call is finished by the next
+ *    one; any other pending publication is refused 409 `publication_conflict`.
+ * One owner-action audit row, the door's action, is written per set this path
+ * writes; none for `already complete`, a refusal or a failure.
+ */
+const COMPLETE_NOTE = 'completed with the compiled empties (POST /content/publication/complete)';
+contentRoutes.post('/publication/complete', async (c) => {
+  const tenant = catalogScope(c), auth = c.get('auth'), user = auth.user!;
+  if (user.type !== 'access' || auth.authority?.credentialId !== undefined || !stampOwner(c.env, user.sub)) {
+    return c.json({ ok: false, error: 'Stamp owner required' }, 403);
+  }
+  if (!carriesNothing(await readInputText(c.req.raw.body))) return c.json({ ok: false, error: NO_DOCUMENT }, 400);
+
+  const { added, set } = await completePublicationSet(c.env, tenant, { actor: user.sub, note: COMPLETE_NOTE });
+  if (!added.length) return c.json({ added, ok: true, publication: set.revision, state: 'already complete' });
+  const state = 'completed';
+  await storeFor(c.env).audit({ at: Date.now(), action: 'publication_initialized', actorId: user.sub, actorEmail: user.email ?? null,
+    targetId: tenant, detail: JSON.stringify({ added, operationId: set.operation.operationId, publication: set.revision, state }) });
+  return c.json({ added, ok: true, publication: set.revision, state });
 });
 
 // ── P38: the vocabulary's approval and its rejection report ─────────────────

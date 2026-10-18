@@ -28,7 +28,15 @@ const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval']);
  * compiled empty and nothing else.
  */
 const COMPLETION_MEMBERS: ReadonlyMap<string, string> = new Map([['prior', 'priors'], ['proposals', 'proposals']]);
+/**
+ * P54 (R-P78): the path that adds them, per deployment profile. The demo
+ * bootstrap's path is not mounted on the customer profile, so a customer
+ * deployment names the stamp owner's sibling of the W08 door
+ * (src/routes/content.ts), which is. Any other binding, the demo profile and a
+ * binding that names no profile, keeps P48's words.
+ */
 const COMPLETION_PATH = 'POST /ops/demo-bootstrap/complete';
+const CUSTOMER_COMPLETION_PATH = 'POST /content/publication/complete';
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= max && v.trim() === v;
@@ -41,11 +49,13 @@ const unavailable = () => new PublicationError(UNAVAILABLE);
 /**
  * P48 (R-P78): the refusal for a member the set does not carry. Today's words,
  * status and code for every member, followed, for the two a four-member demo
- * bootstrap left out, by the member's name and the path that adds it.
+ * bootstrap left out, by the member's name and the path that adds it on this
+ * deployment's profile (P54).
  */
-function absent(kind: { name: string }): PublicationError {
+function absent(env: Env, kind: { name: string }): PublicationError {
   const name = COMPLETION_MEMBERS.get(kind.name);
-  return name ? new PublicationError(`${UNAVAILABLE}: ${name} is not in this tenant's publication set; add it with ${COMPLETION_PATH}, which adds its compiled empty once and changes no other member`)
+  const path = env.DEPLOYMENT_PROFILE === 'customer' ? CUSTOMER_COMPLETION_PATH : COMPLETION_PATH;
+  return name ? new PublicationError(`${UNAVAILABLE}: ${name} is not in this tenant's publication set; add it with ${path}, which adds its compiled empty once and changes no other member`)
     : unavailable();
 }
 /**
@@ -512,7 +522,7 @@ function publicRevision<T>(value: Envelope<T>, set: PublicationPin, kind: Docume
   return result;
 }
 export async function readPinnedPublication<T>(env: Env, kind: DocumentKind<T>, scope: string, set: PublicationPin): Promise<Revision<T>> {
-  required(set.scope === publicationScope(kind, scope)); const key = member(kind, scope), ref = set.refs[key]; if (!ref) throw absent(kind);
+  required(set.scope === publicationScope(kind, scope)); const key = member(kind, scope), ref = set.refs[key]; if (!ref) throw absent(env, kind);
   const storage = storageOf(env), binding = storageIdentity(storage), epoch = cacheEpoch, now = Date.now();
   for (const entry of cache) if (!fresh(entry.at, now)) remove(entry);
   const matching = [...cache].filter(e => e.binding === binding && e.scope === set.scope && e.value.digest === set.digest);
@@ -565,7 +575,7 @@ export async function publicationHistory<T>(env: Env, kind: DocumentKind<T>, sco
 }
 export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, scope: string, n: number): Promise<Revision<T> | null> {
   if (!integer(n) || n < 1) throw new PublicationError('Revision must be a positive safe integer', 400, 'invalid_revision');
-  const set = await pinPublication(env, publicationScope(kind, scope)), ref = set.refs[member(kind, scope)]; if (!ref) throw absent(kind);
+  const set = await pinPublication(env, publicationScope(kind, scope)), ref = set.refs[member(kind, scope)]; if (!ref) throw absent(env, kind);
   if (n < ref.minRevision) throw new PublicationError('History predates the explicitly retained baseline', 409, 'legacy_history_unavailable');
   if (n > ref.revision) return null;
   const found = await readObject(storageOf(env), revisionKey(kind.name, scope, n));
@@ -654,7 +664,7 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
       // P38: an optional member the base set does not carry is created at
       // revision 1; any other absent member is the authority failing, as before.
       const present = Object.hasOwn(base.refs, member(change.kind, change.scope));
-      if (!present && !OPTIONAL_MEMBERS.has(change.kind.name)) throw absent(change.kind);
+      if (!present && !OPTIONAL_MEMBERS.has(change.kind.name)) throw absent(env, change.kind);
       const current = present ? await readPinnedPublication(env, change.kind, change.scope, base) : null, previous = current?.revision ?? 0;
       if (previous === Number.MAX_SAFE_INTEGER || i === 0 && previous !== meta.expectedRevision) throw conflict();
       const validated = change.kind.validate(await change.candidate(current?.value as unknown, base)); if (!validated.ok) return validated;
@@ -863,7 +873,8 @@ export async function initializePublication<T>(env: Env, kind: DocumentKind<T>, 
  * in one set publication that changes no other member: what init-local and the
  * W08 door write for them, and what an absent member already means to the
  * learning path (no imported prior, no proposal). Nothing but the attribution
- * comes from the caller; the authority is the caller's (the demo door's).
+ * comes from the caller; the authority is the caller's (the demo door's, or the
+ * stamp owner's sibling of the W08 door, P54).
  *
  *  · a set that has both answers `added: []` and writes nothing;
  *  · a scope with no set refuses 503 `publication_uninitialized`, as a read does;
