@@ -208,7 +208,9 @@ export function staleRefusalIn(body: unknown): StaleMarker | null {
  * it; no publication of any placement reads or writes it, and a later successful
  * publication supersedes it without a call of its own: it applies only while the
  * snapshot in force is the one it names (`republishedIn`). `lift-republished:` is a
- * prefix no `liftKey` and no `liftStaleKey` starts with.
+ * prefix no `liftKey` and no `liftStaleKey` starts with. P55: a generation
+ * transition whose own publication does not succeed supersedes it with one put
+ * under this same key (`supersededRecordOf`).
  */
 export const liftRepublishedKey = (tenant: string, brand: string, slot: string, page?: string) => `lift-republished:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** P49: the snapshot in force a refusal leaves in force, its version and publication time, or null where there is none. */
@@ -275,6 +277,20 @@ export function republishedIn(record: { lastPublished: InForce; republished: Rep
   if (record.lastPublished === null) return inForce === null || inForce === undefined ? record.republished : null;
   return plainObject(inForce) && inForce.version === record.lastPublished.version && inForce.publishedAt === record.lastPublished.publishedAt
     ? record.republished : null;
+}
+/**
+ * P55 (R-P78, decision D1): what a generation transition whose own publication did
+ * not succeed leaves under `liftRepublishedKey` in place of P49's record it
+ * supersedes: the record in its own form, the snapshot in force it named kept,
+ * with no change left outstanding (`changed: []`), because the transition adopted
+ * every changed member (P50 refuses one that does not). A record naming no change
+ * is no record (`republishedRecordOf`, since `republishedOf` requires one change or
+ * more), so neither lift read carries `republished` for the placement any longer;
+ * what still holds the slot then is the cause that failed the transition's
+ * publication, which P42's `stale` names when it is the pooled fault.
+ */
+export function supersededRecordOf(record: { lastPublished: InForce; republished: Republished }): { lastPublished: InForce; republished: Republished } {
+  return { lastPublished: record.lastPublished, republished: { ...record.republished, changed: [] } };
 }
 /**
  * P49: the refusal's sentence, composed from the member, the tenant and the
