@@ -1255,20 +1255,24 @@ slot which declares no success event earns nothing, because its record names the
 ```
 
 The member and each warning are written with their keys sorted. The member is present only when at least
-one table omits its slot's reward, and only on those two success answers: a document without a table, or
-whose every table names its slot's reward, is answered byte for byte as before, and no read carries the
-member (the current `GET /content/learn`, its history and revisions, the console's reads and the lift
-reads), so a retained document stored with such a table is told only when it is next published or
-validated. The warning refuses nothing and changes nothing: the document is published or validated with
+one table omits its slot's reward: a document without a table, or whose every table names its slot's
+reward, is answered byte for byte as before. Beside those two success answers, the current read `GET
+/content/learn` carries the same `diagnostics` member, as its last member, when the learn document in
+force (the stored document, or the compiled default when none is stored) has such a table, computed on
+that read and never stored, so a retained document stored with such a table is told to whoever reads it.
+The console's Dials screen shows that advisory on open, before the first edit, in the note it uses for
+its check and its save (`data-learn-advisory="read"`); the first edit drops it, and the check's and then
+the save's note replace it. The learn history and revision reads and the lift reads never carry it. The warning
+refuses nothing and changes nothing: the document is published or validated with
 the same status and members, and the credits, records, receipts and replays are the ones described above.
 A slot's reward is its `reward` dial, `click` when the dial is absent, and a table names it only by that
 key, `custom` included. Warnings are listed one per slot in slot-name order, the order the published
 document keeps its slots in, so the validate door lists them exactly as the PUT of the same document will;
 at most 50 are listed, `warningCount` counts them all and `omittedWarningCount` is the rest. A table on a
 slot no page carries is warned like any other, since the learn publication does not read the slots
-document and the table omits the slot's reward the moment a page carries the slot. A rollback, and a
-learn document published as a `publicationChanges` member of another document's request, carry no
-advisory.
+document and the table omits the slot's reward the moment a page carries the slot. The answers of a
+rollback, and of a learn document published as a `publicationChanges` member of another document's
+request, carry no advisory; the next read of the document in force does.
 
 ### The context vocabulary
 
