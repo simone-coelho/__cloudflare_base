@@ -366,8 +366,11 @@
     const basis = changed.filter((c) => c.member === 'measurementBasis');
     const others = changed.filter((c) => c.member !== 'measurementBasis');
     const restored = (list) => and(list.map((c) => `${c.member} ${said(c.old)}`)) || 'the old values';
-    const body = and([`slot ${slot}`, ...(page ? [`page ${page}`] : []),
-      ...others.filter((c) => c.member === 'reward' || c.member === 'objective').map((c) => `${c.member} ${said(c.new)}`)]);
+    const adopted = others.filter((c) => c.member === 'reward' || c.member === 'objective').map((c) => `${c.member} ${said(c.new)}`);
+    // The route takes a transition whose body names a reward, an objective or a rebuild day; a `stats.*` change
+    // alone is taken from the document by one that names the slot's own reward.
+    const own = published && typeof meta.reward === 'string' && meta.reward ? `reward ${meta.reward}` : 'the slot\'s own reward';
+    const body = and([`slot ${slot}`, ...(page ? [`page ${page}`] : []), ...(adopted.length ? adopted : [own])]);
     const generation = `an operator starts the new generation with POST /v1/${S.scope}/learn/generation, its body naming ${body}`;
     const cause = `publications of ${page ? `page ${page}, slot ${slot}` : `slot ${slot}`} are refused because the learn document was republished with `
       + (changed.length ? and(changed.map((c) => `${c.member} changed from ${said(c.old)} to ${said(c.new)}`)) : 'a change to what the slot\'s statistics accumulate under');

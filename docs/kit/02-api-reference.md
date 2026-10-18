@@ -1960,17 +1960,17 @@ and a slot whose tuple did not change publishes and reads exactly as before. Whe
 cause and a pooled fault, the configuration check runs first and the refusal names the republish, and a `stale`
 marker already recorded stays as it was. Like the marker, `republished` is recorded beside the snapshot, never
 inside it, and only a refused publication writes it. The console's lift grid marks a slot whose
-`GET /v1/{tenant}/lift/rows` answer carries `republished`: one note in the card that holds the grid, above its
-table and right after the `stale` note when both apply (on a slot that has never published, beside the "Nothing
-published for this slot yet" message), names the slot (and its page on a page-scoped placement) and each changed
-member with its old and new values, in the order served, and says what ends it: a new generation started with
-`POST /v1/{tenant}/learn/generation` whose body names the slot and each changed `reward` or `objective` with its
-new value (a changed `stats` value the transition takes from the document), or the learn document republished
-with the old values; a changed `measurementBasis`, which no generation transition moves, ends only with the learn
-document republished with the old basis, so for it the note offers a transition only after that republish; the
-grid makes no request it did not make before. The lift grid's republish mark lasts only while the answer carries
-`republished`: after a publication of the slot succeeds the next read carries no `republished`, the mark is gone
-and the screen is exactly that of a slot never refused.
+`GET /v1/{tenant}/lift/rows` answer carries `republished`: one note in the card that holds the grid, above its table
+and right after the `stale` note when both apply (on a slot that has never published, beside the "Nothing published
+for this slot yet" message), names the slot (and its page on a page-scoped placement) and each changed member with
+its old and new values, in the order served, and says what ends it: a new generation started with
+`POST /v1/{tenant}/learn/generation` whose body names the slot and each changed `reward` or `objective` with its new
+value (a changed `stats` value the transition takes from the document, its body then naming the slot's own
+`reward`), or the learn document republished with the old values; a changed `measurementBasis`, which no generation
+transition moves, ends only with the learn document republished with the old basis, so for it the note offers a
+transition only after that republish; the grid makes no request it did not make before. The lift grid's republish
+mark lasts only while the answer carries `republished`: after a publication of the slot succeeds the next read
+carries no `republished`, the mark is gone and the screen is exactly that of a slot never refused.
 
 **When a generation transition does not adopt the changed member (`notAdopted`).** After a learn republish
 changes the slot's `reward`, `objective` or `measurementBasis`, a generation transition whose new accumulation
