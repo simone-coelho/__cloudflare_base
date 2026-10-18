@@ -368,7 +368,7 @@
     {
       "id": "P53",
       "title": "The Slots screen says how many unreturned pins it does not name (**amendment 4, 2026-10-17**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
