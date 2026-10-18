@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P53",
+  "workOrderHash": "sha256:25ab67ea5ae375d5e03eb48dab49c65197bdb816e4d41456297f3b702c85de83",
+  "artifact": {
+    "revision": "8e041963cc9910260abcf1660ffbd4bd6362a33a",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p53-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p53-build at 8e041963cc9910260abcf1660ffbd4bd6362a33a (765f4bd2 merges rem/integration 5feaf09b into rem/tkt/P53 db28a069; 25c22892 public/console/views.js: four lines in unreturnedLines drawing, after the named pins and before the short-take line, one itemid line saying how many more pins are reserved and unserved but not named, the count minus the sum of the named counts as the refusals' line computes it, only when above zero; 8e041963 kit 02's sentence). Acceptance 5/5 on both hosts; the builder's gate GATE_OK on its first run at 8e041963 (3368 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 e7415364…); both typechecks exit 0; both bundle checks exact; blocks within the cap byte-identical to the base console's with equal request lists. Delivery review PASS (P53/reviewer/REPORT.md): SM1 to SM3 PASS, six mutants caught by the units, one by a probe only (the named count taken as the number of named entries rather than their counts). Residuals: P47's named line for a non-numeric count is pre-existing and never served; a test-only strengthening with named counts above 1 is a candidate; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P53/implementer/REPORT.md",
+      "git commits on rem/p53-build up to 8e041963"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P53 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P53/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P53/implementer/logs/acceptance-1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P53/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P53/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P53/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-18T19:37:16.600Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
