@@ -23,7 +23,7 @@
     {
       "id": "P50",
       "title": "A generation transition that does not adopt the changed member says so, or is refused (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
@@ -138,7 +138,7 @@
     {
       "id": "P51",
       "title": "The console's lift grid shows the republish cause (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
@@ -250,7 +250,7 @@
     {
       "id": "P52",
       "title": "A stored conversion table that omits the slot's reward is told on the Dials screen before the first edit (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
@@ -368,7 +368,7 @@
     {
       "id": "P53",
       "title": "The Slots screen says how many unreturned pins it does not name (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
@@ -475,7 +475,7 @@
     {
       "id": "P54",
       "title": "A customer-profile tenant with a four-member set is given its path (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",
@@ -592,7 +592,7 @@
     {
       "id": "P55",
       "title": "After a transition whose own publication failed, the reads tell the truth (**amendment 4, 2026-10-17**)",
-      "state": "NOT_STARTED",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-4/BTI-Parity-Amendment-2026-10-17b.md (amendment 4, committed beside the program)",

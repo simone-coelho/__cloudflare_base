@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P50",
+  "workOrderHash": "sha256:8ef88af8b4bf9560da241b43a2111e92a8294b47c1a7f108175f0d92838416fa",
+  "artifact": {
+    "revision": "a08f3c469b44752d8fed043b27dc81985817f60e",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p50-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p50-build at a08f3c469b44752d8fed043b27dc81985817f60e (2ac5b94c merges rem/integration 87003e0f into rem/tkt/P50 01caf15a; b9fb7827 the mechanism in src/durable-objects/LearnStats.ts, src/learn/stats.ts, src/learn/fan.ts and src/routes/decisions.ts: in transition(), after configValid and before any write, a member of the slot's tuple that the learn document changed since the slot's accumulation started and that the transition would not adopt is refused 409 with notAdopted, keys sorted, old the accumulation's own value, the one exception a slot moved ahead of a document unchanged for it (the history walked through publicationVersion to the revision in force at the generation record's time, bounded at 50 reads), any difference counting when no record or the history cannot be read; the route passing the refusal through only when exact and for this placement; d5441cde kit 02 and 03; a08f3c46 kit 02's row pointer). Acceptance 15/15 on both hosts; the builder's gate GATE_OK on its rerun at a08f3c46 (3349 tests, 52 failing, 0 outside the baseline of 52) after a first run that failed on W10.03 alone (src/index.api-boundary.test.ts:1631, the native /exposures 503, unreachable from the diff and passing alone 11 of 11 times), and the reviewer's own gate at the same sha with the 52 baseline entries plus W40.P4's symlink artifact only, W10.03 green in it and in both alone-reruns; both typechecks exit 0; both bundle checks exact; the R-P7 dumps A to F byte-identical at head and base on both hosts; the S8 reviewer's 134 probe rows at head equal to the S8 sketch, differing from the base on the 22 ruled rows only. Delivery review PASS (P50/reviewer/REPORT.md): GT1 to GT3 PASS, six mutants caught by the units, four by probes only (old from the previous revision; changed unsorted; the route passing an extra member or another slot's refusal). Named for later under R-P78: the words on the unreadable-history branch claim a republish where the real cause is an unreadable history; kit 02 does not say that more than 50 revisions counts as an unreadable history; LV1 deferred (the exception compares the config store's publication time with the object's clock).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P50/implementer/REPORT.md",
+      "git commits on rem/p50-build up to a08f3c46"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P50 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P50/reviewer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P50/implementer/logs/gate2.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P50/implementer/logs/gate2.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P50/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-18T13:22:45.793Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

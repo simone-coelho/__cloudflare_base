@@ -1848,8 +1848,10 @@ const LEARN_CONVERSION_WARNING_SAMPLE = 50;
  * document nor anything stored, so a table on a slot no page carries is told
  * like any other (it starts to omit the moment a page carries the slot, by a
  * slots publication that never re-reads this document). Callers give it the
- * success answer of `PUT /content/learn` and `POST /content/learn/validate`
- * only; no read of the document carries it.
+ * success answers of `PUT /content/learn` and `POST /content/learn/validate`
+ * and (P52) the current read `GET /content/learn`, computed on that read from
+ * the document in force and never stored; the history and revision reads do
+ * not carry it.
  */
 export function learnConversionDiagnostics(learn: Pick<LearnConfig, 'slots'> | null | undefined): LearnConversionDiagnostics | null {
   const slots = learn && isRecord(learn.slots) ? learn.slots : null;
