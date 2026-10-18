@@ -1532,6 +1532,19 @@ the new generation with `POST /v1/{tenant}/learn/generation` (its own publicatio
 republished with the old values; the reads then answer exactly their usual members again. A republish that changes
 nothing in the tuple is not refused, and a slot whose tuple never changed never carries `republished`.
 
+**The transition's refusal member (`notAdopted`).** A generation transition (`POST /v1/{tenant}/learn/generation`)
+that does not adopt a member of the slot's tuple that a learn republish changed, the slot's `reward`, `objective`
+or `measurementBasis`, is refused: it answers `409` `{ ok: false, error, notAdopted, operationId }` and writes
+nothing, and `republished` stays as it was. The member `notAdopted` is `{ changed: [{ member, new, old }], page?, slot }`,
+keys sorted: `changed` lists, sorted by `member`, each member not adopted, one to three of them, named
+`measurementBasis`, `objective` or `reward`, `old` the value the slot's statistics count under and `new` the
+learn document's, both as words; `slot` names the refused slot and `page`, only on a page-scoped placement, its
+page. The `error` begins `generation transition refused:`, names the slot, each member with its old and new
+values, and says how to adopt it: a `reward` or an `objective` by naming its new value in the body of the
+transition (or by republishing the learn document with the old value), and a `measurementBasis`, which no
+transition moves, by republishing the learn document with the old measurement basis. A transition that adopts
+every changed member, or on a slot whose tuple did not change, answers its usual members.
+
 **What `slot-rate` compares against, and what it does not prove.** The `slot-rate` reference is the
 slot's own rate in that cell, and that rate includes the item's own exposures and successes: the item
 is part of the mixture it is being divided by, so the more of a slot's traffic one piece takes, the
