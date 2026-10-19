@@ -1734,6 +1734,16 @@ export class ShopperReflex {
     if (reflexOn) Object.assign(attributes, reflexAttributes(aff.reflex, now, cfg));
 
     const visit = projectVisit(pipe, aff.lastSeen, now);
+    // W16 C5.09 (R85(b)): the decision is made in the one derivation's stage,
+    // never the stored token, which time alone does not move and a stale write
+    // can pin. An event's own decision names the word that event reached (the
+    // live-visit advance in ingest, which a purchase moves before it closes the
+    // journey); every other caller (a manual segment change, an alarm, a
+    // snapshot) projects the visit at read time, exactly as the hydrate, the
+    // qualification and the cell read it. The frame paints the word (R29); the
+    // decision context carries it through the one mapping point (R32(2)).
+    const journeyWord = candidate?.journeyWord
+      ?? journeyStageFrom(journeyCountersNow(pipe.journey, aff.lastSeen, now), journeyThresholdsInForce(cfg));
     const userAttributes = {
       segments: pipe.segments,
       ...attributes,
@@ -1742,7 +1752,7 @@ export class ShopperReflex {
       visit_number: visit.visitNumber,
       visit_bucket: visit.visitNumber === null ? 'unknown' : visitBucket(visit.visitNumber),
       entry_channel: visit.entryChannel ?? 'unknown',
-      journey_stage: pipe.journeyStage,
+      journey_stage: PERSISTED_STAGE[journeyWord],
       days_since_first_seen: Math.floor((now - pipe.firstSeen) / (24 * 60 * 60 * 1000)),
       // No cookie-consent surface on this host (no PII either) — mirrors the
       // session path's defaults for a consenting shopper.
@@ -1781,11 +1791,9 @@ export class ShopperReflex {
         featureVariables,
         recommendations,
         sortOrder,
-        // R29: the frame carries the shared vocabulary. An event's own decision
-        // names the stage that event reached; every other caller (a manual
-        // segment change, an alarm, a snapshot) projects the visit at read time.
-        journeyStage: candidate?.journeyWord
-          ?? journeyStageFrom(journeyCountersNow(pipe.journey, aff.lastSeen, now), journeyThresholdsInForce(cfg)),
+        // R29: the frame carries the shared vocabulary, the word the decision
+        // above was made in.
+        journeyStage: journeyWord,
         // Live affinity payload for the Affinity Instrument: dims (original catalog
         // value names) + memberships + this event's EXPLAIN records (§12 glass box)
         // + the ODP-confirmed subset — the exact shape the request path pushes.
