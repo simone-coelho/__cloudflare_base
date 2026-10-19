@@ -384,7 +384,8 @@
         }
       ],
       "remainingWork": [
-        "Move the outcome recovery (realtime.ts:256-286) from retained waitUntil work to the post-answer continuation."
+        "Move the outcome recovery (realtime.ts:256-286) from retained waitUntil work to the post-answer continuation.",
+        "The outcome's durable admission (savePayload and armRecovery) precedes the answer, as P56's render admission does, so an eviction between the answer and the continuation cannot lose it (R-P111)."
       ],
       "decisions": [],
       "deferredLiveAcceptance": [
@@ -399,7 +400,9 @@
         "src/routes/realtime.ts",
         "src/ledger/recovery.ts",
         "src/identity/sessionAuthority.ts",
-        "src/durable-objects/ShopperReflex.ts"
+        "src/durable-objects/ShopperReflex.ts",
+        "src/learn/route.ts",
+        "src/routes/realtime.sdkContract.test.ts (R10 update of W09.09 :604 and :612 only, by the specifier; R-P111)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P59 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
