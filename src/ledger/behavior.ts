@@ -4,7 +4,7 @@ import type { SessionCapability } from '@/identity/sessionCapability';
 import { admitOwnedRecovery, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { captureRetention, externalRetentionBirths } from '@/retention';
 import { behaviorItemSchema, isBehaviorRecord, ts36, type BehaviorRecord } from './records';
-import type { RecoveryReceipt } from './recovery';
+import type { RecoveryOptions, RecoveryReceipt } from './recovery';
 
 /** Deliberate typed event projection, not arbitrary raw data, query, URL, IP,
  * cookies, credentials, geography or private affinity. Actual event identity
@@ -15,7 +15,7 @@ export type BehaviorPersistence = { status: 'not_captured'; reason: 'tracking_re
   | { status: 'durable'; recordId: string; receipt: RecoveryReceipt };
 export async function captureBehavior(env: Env, principal: SessionCapability, consent: Consent,
   event: { type: string; eventId: string; eventIdSource: 'provided' | 'request'; timestamp: number; source: string; data: Record<string, unknown> },
-  sessionId: string | null): Promise<BehaviorPersistence> {
+  sessionId: string | null, options?: RecoveryOptions): Promise<BehaviorPersistence> {
   if (!consent.tracking) return { status: 'not_captured', reason: 'tracking_refused' };
   requireConsentPurpose(consent, 'tracking');
   if (env.LEDGER_RECOVERY_ENABLED !== 'true' && env.DEPLOYMENT_PROFILE === 'demo') return { status: 'not_captured', reason: 'legacy_demo' };
@@ -40,6 +40,6 @@ export async function captureBehavior(env: Env, principal: SessionCapability, co
     event_id: event.eventId, event_id_source: event.eventIdSource, event: event.type, source: event.source, ts: event.timestamp, data,
     retention: captureRetention(env, principal.tenant, event.timestamp), externalRetention: externalRetentionBirths(env, principal.tenant, event.timestamp) };
   if (!isBehaviorRecord(record)) throw new Error('Behavior record unavailable');
-  const receipt = await admitOwnedRecovery({ kind: 'behavior', tenant: principal.tenant, subject: principal.subject, brand: principal.tenant, record });
+  const receipt = await admitOwnedRecovery({ kind: 'behavior', tenant: principal.tenant, subject: principal.subject, brand: principal.tenant, record }, options);
   return { status: 'durable', recordId: record.record_id, receipt };
 }
