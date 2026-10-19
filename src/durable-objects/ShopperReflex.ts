@@ -1912,7 +1912,19 @@ export class ShopperReflex {
         await this.state.storage.delete('identityMembers');
       }
       if (this.affinity?.retention && readRetention(this.affinity.retention, this.affinity.retention.tenant, 'profile').expiresAt <= now) {
-        await this.state.storage.transaction(async transaction => { await transaction.delete(['affinity', 'pipeline', 'audienceOwner']); });
+        await this.state.storage.transaction(async transaction => {
+          await transaction.delete(['affinity', 'pipeline', 'audienceOwner']);
+          // W06.BASE.02: the expired profile leaves no grant naming its subject
+          // or session. The record stays, epoch and all, as the barrier that
+          // keeps a legacy writer out; only its grants go, in this same commit.
+          // A record the object would refuse to read is left exactly as it is.
+          const raw = (await transaction.list({ prefix: 'grantAuthority' })).get('grantAuthority');
+          const authority = authoritySchema.safeParse(raw);
+          if (authority.success && Object.keys(authority.data.grants).length && Object.entries(authority.data.grants).every(([id, grant]) =>
+            id === grant.grantId && grant.authorityEpoch === authority.data.epoch && this.isActualObject(grant.tenant, grant.subject))) {
+            await transaction.put({ grantAuthority: { ...(raw as GrantAuthority), grants: {} } });
+          }
+        });
         this.invalidateMirrors(); await this.load();
       }
       if (!this.affinity) {
