@@ -40,6 +40,9 @@ import { memoryStore, type OperationAuditDetail } from '@/auth/store';
 import { CONSENT_LIFETIME_MS, consentInstruction, type Consent, type ConsentInstruction } from '@/content/consent';
 import { runOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, type RetentionCategory } from '@/retention';
+import { visitContextMembers } from '@/services/visit';
+import { FIRST_JOURNEY_STAGE, PERSISTED_STAGE } from '@/services/JourneyStage';
+import { resolveSurface } from '@/demos/registry';
 
 
 class FakeKV {
@@ -128,6 +131,8 @@ const browse = (values: string[], at: number): ReflexState => {
 let env: Env;
 let auth: Record<string, string>;
 let ownedIds = new Map<string, string>();
+/** The capability each seeded browser holds: the grant its own object retains (seedDevice). */
+let ownedGrants = new Map<string, string>();
 let bound: ReturnType<typeof destinations> | undefined;
 
 /**
@@ -145,7 +150,7 @@ const owned = (tenant: string, subject: string): Consent => consentInstruction(e
 
 async function seedDevice(visitorId: string, sessionId: string, values: string[]) {
   ownedIds.set(visitorId, sessionId);
-  const sm = new SessionManager(env);
+  const sm = new SessionManager(env), kv = env.SESSIONS as unknown as FakeKV, put = vi.spyOn(kv, 'put');
   // The write only happens for an explicitly consenting shopper: a refused or
   // absent choice returns an untracked projection and stores nothing
   // (src/services/SessionManager.ts:298-322; src/content/consent.ts:139-163).
@@ -155,7 +160,42 @@ async function seedDevice(visitorId: string, sessionId: string, values: string[]
     // Built a few seconds ago, not at T0: the route merges at Date.now(), and a vector from 2023 is dust by now.
     await sm.createOrUpdateSession(sessionId, visitorId, { reflex: browse(values, Date.now() - 5_000), attributes: { product_views: values.length } });
   }, env.SESSIONS as never, undefined, async () => owned('coach', visitorId));
-  bound?.object.open(shopperObjectName('coach', visitorId)).data.set('consent', explicitChoice('coach', visitorId));
+  const written = (put.mock.calls as unknown as Array<[string, string, { expiration?: number }?]>).map(([key, value, options]) => ({ key, value, options }));
+  put.mockRestore();
+  if (!bound) return;
+  // R10 witness (baseline-52 #14-#17, G6; the retainedSession form of
+  // src/routes/realtime.sdkContract.test.ts:246-258): the owner's durable state
+  // is the authority and KV is only its acknowledged compatibility projection
+  // (src/durable-objects/ShopperReflex.ts:3949, :3982-3987 "No historical KV value
+  // acquires authority merely by being readable"), and the link transfers the
+  // owner's own `affinity`/`pipeline` (:2983) and forwards the browser's record
+  // only from its acknowledged projection (:3026-3052). So the browser's own
+  // object is seeded as its owned, tracked write leaves it
+  // (sessionProjectionStore.put, :4011-4021, :4067-4084): the grant it holds, its choice, a
+  // projection of each key the write published, and the durable profile derived
+  // from the session record exactly as that write derives it. The browser then
+  // presents that same grant (ownedCall).
+  const item = bound.object.open(shopperObjectName('coach', visitorId));
+  const issued = await issueSessionCapability(env, { tenant: 'coach', subject: visitorId, sessionId, kind: 'anonymous' });
+  const grant = await verifySessionCapability(env, issued.capability, 'coach');
+  ownedGrants.set(visitorId, issued.capability);
+  item.data.set('grantAuthority', { version: 1, epoch: grant.authorityEpoch, grants: { [grant.grantId!]: grant } });
+  item.data.set('consent', explicitChoice('coach', visitorId));
+  for (const { key, value, options } of written) item.data.set('sessionProjection:' + key,
+    { value, expires: options?.expiration ? options.expiration * 1000 : null, pending: false });
+  const session = JSON.parse(kv.store.get(tenantKey('coach', 'session:' + sessionId))!) as SessionData;
+  item.data.set('affinity', { shopperId: session.userId, reflex: session.reflex ?? emptyState(cfg),
+    retention: session.retention, externalRetention: session.externalRetention,
+    odpContext: session.odpContext, odpSeed: session.odpSeed ?? [], odpSeedAt: session.odpSeedAt ?? 0,
+    odpRecentEvents: session.odpRecentEvents ?? [], lastSeen: session.metadata.lastSeen, configVersion: cfg.version });
+  item.data.set('pipeline', { attributes: session.attributes, segments: session.segments,
+    journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId, visitorId: session.userId,
+    firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,
+    lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel, ...visitContextMembers(session.metadata),
+    surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
+    ...(session.journey === undefined ? {} : { journey: session.journey }) });
+  item.data.set('audienceOwner', { tenant: 'coach', subject: visitorId, sessionId });
+  item.object = new ShopperReflex(item.state, env);
 }
 
 function historyProfile(subject: string, now = Date.now()): SessionData {
@@ -203,8 +243,9 @@ async function call(path: string, init: RequestInit & { json?: unknown } = {}) {
 async function ownedCall(path: string, init: RequestInit & { json?: unknown }) {
   const visitorId = (init.json as { visitorId?: string })?.visitorId ?? 'vis-00000000-0000-4000-8000-000000000099';
   const subject = /^[A-Za-z0-9_.-]+$/.test(visitorId) ? visitorId : 'vis-00000000-0000-4000-8000-000000000099';
-  const session = await issueSessionCapability(env, { tenant: 'coach', subject, sessionId: ownedIds.get(subject) ?? 's-owned-fresh', kind: subject.startsWith('sh_') ? 'recognized' : 'anonymous' });
-  return call(path, { ...init, headers: { ...init.headers, [SHOPPER_HEADER]: session.capability } });
+  // A seeded browser presents the grant its own object retains (seedDevice).
+  const capability = ownedGrants.get(subject) ?? (await issueSessionCapability(env, { tenant: 'coach', subject, sessionId: ownedIds.get(subject) ?? 's-owned-fresh', kind: subject.startsWith('sh_') ? 'recognized' : 'anonymous' })).capability;
+  return call(path, { ...init, headers: { ...init.headers, [SHOPPER_HEADER]: capability } });
 }
 
 // Explicit positive-fixture signing only. The SDK transport below never uses this helper.
@@ -218,6 +259,7 @@ async function signedCall(path: string, init: RequestInit & { json?: unknown }) 
 beforeEach(async () => {
   env = mkEnv();
   ownedIds = new Map();
+  ownedGrants = new Map();
   bound = undefined;
   auth = { Authorization: `Bearer ${await token()}` };
 });
@@ -354,6 +396,12 @@ describe('the link, on the session host', () => {
   it('the old anonymous grant cannot follow the linked browser into the person', async () => {
     await seedDevice('vis-00000000-0000-4000-8000-000000000001', 's-phone', ['Tabby']);
     const a = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
+    // R10 witness (baseline-52 #16): `b` keeps the input it had when this test was
+    // written (7b01c143:src/routes/identity.test.ts:125-130), another anonymous
+    // grant minted for the browser's session, not the grant its object retains
+    // since the G6 seed. The exact retry carrying that retained grant replays the
+    // link's recorded answer by ruling (W35.03; W37 LG1, ShopperReflex.ts:3012-3017).
+    ownedGrants.delete('vis-00000000-0000-4000-8000-000000000001');
     const b = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
     expect(b.status).toBe(401);
     expect((await new SessionManager(env).getSessionByUserId(a.body.shopperId))!.attributes.product_views).toBe(1);
