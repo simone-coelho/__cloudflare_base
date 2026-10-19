@@ -317,7 +317,7 @@ class MergeValidationRefusal extends Error {
 const transferRefusalSchema = z.object({ ok: z.literal(false), refusal: z.literal('validation'),
   issues: z.array(z.object({ code: z.string().min(1).max(64), path: z.array(z.union([z.string().max(256), z.number()])).max(32), message: z.string().max(1024) }).passthrough()).min(1).max(64),
 }).strict();
-const preparedTransferSchema =z.object({ transfer: transferSchema, status: z.enum(['prepared', 'complete']), scrubbed: z.literal(true).optional() }).strict()
+const preparedTransferSchema = z.object({ transfer: transferSchema, status: z.enum(['prepared', 'complete']), scrubbed: z.literal(true).optional() }).strict()
   .refine(value => !value.scrubbed || value.status === 'complete' && value.transfer.affinity === null && value.transfer.pipeline === null);
 const transferReceiptSchema = z.object({ transfer: transferSchema.omit({ affinity: true, pipeline: true }), result: identityResultSchema,
   retention: z.custom<RetentionStamp>().optional(), externalRetention: z.custom<ExternalRetention>().optional(), scrubbed: z.literal(true).optional() }).strict();
