@@ -315,19 +315,20 @@
         "src/routes/realtime.ts",
         "src/durable-objects/ShopperReflex.ts",
         "src/identity/sessionAuthority.ts",
-        "src/routes/realtime.sdkContract.test.ts (R10 update of W14.05 :3530 only, by the specifier; addendum §4)"
+        "src/routes/realtime.sdkContract.test.ts (R10 update of W14.05 :3530 only, by the specifier; addendum §4)",
+        "src/identity/link.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P58 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "e110936c on rem/spec-ack-p58 (batch S10, amendment 5; P58 units 01fb46e0 with three levers in src/units/_parity8.ts; the W14.05 R10 0f94c1e5; BA4 native legs cbde4d91 through src/units/_native.ts; the W09.09 R10 e110936c)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+          "Specification review (SPEC mode) at 0f94c1e5 then e110936c: BA1 and BA2 RED 3/3 on both hosts (no answer while the queue send is held; no answer within ACK_DEADLINE_MS with 10 calls by the deadline), BA4 in-process and native legs RED (the native legs with the untyped 500 ZodError body, timing-free) and the logic leg RED, BA3 and BA5 GREEN locks with controls; honest (captureBehavior's row, outcomeFromAction, the committed projection, the SDK's named constant); satisfiable (the sketch 54/54 three times; the native legs satisfiable within the allowed paths); harness isolated (P56 P57 P50 P03 57/57 with the new levers); W14.05 and W09.09 R10s RED at the P57 head and GREEN on the sketch; evidence under _evidence/parity-step3/S10/reviewer/ and S10/specifier/"
         ],
         "negativeControlEvidence": [
-          "pending: named at the batch S9 specification review"
+          "Mutants of the sketch each caught on both hosts unless noted: M1 only product_view opted in (BA1 impression legs), M2 answer before the behaviour's armRecovery (BA1 alarm clause), M3 retained SessionAccessError also skipped (BA4 control), M4 recovery.ts:153 reverted to inline resume (BA5), M5a/M5b projection written from the answer-time value or committed after the answer (BA3, session host), M6 threshold change only (BA1 BA2), M7 opt-in only (BA4), M8 behaviour effects without continuation (BA1, BA3 record)"
         ]
       },
       "doneWhen": [
