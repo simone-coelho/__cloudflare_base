@@ -44,6 +44,17 @@ interface Marker { call: Signed<NativeCall>; terminal?: boolean }
 const held = new AsyncLocalStorage<{ raw: Env; env: Env; scope: Scope; until: number }>();
 const bytes = new TextEncoder();
 export class SyntheticUnavailable extends Error { constructor() { super('Synthetic monitor unavailable'); } }
+/**
+ * Baseline 52 (G10). The object's own storage rejected the boundary's read of
+ * its authority marker while admitting a request. That read precedes every
+ * write the boundary makes and decides whether the request is ordinary or held
+ * by a monitor operation, so the work never ran and the host can answer its
+ * typed refusal instead of an untyped failure. Raised only for that read's own
+ * rejection on a request: its deadline stays SyntheticUnavailable, an alarm or
+ * initialization rethrows the storage error itself, and nothing the work throws
+ * is ever this.
+ */
+export class BoundaryStorageUnavailable extends Error { constructor(readonly failure: unknown) { super('Synthetic boundary storage unavailable'); } }
 function deny(): never { throw new SyntheticUnavailable(); }
 const hash = (v: unknown) => connectorDigest(v);
 const base = (scope: Pick<Scope, 'tenant' | 'host'>) => `${SYNTHETIC_KIND}/${scope.tenant}/${scope.host}/`;
@@ -326,7 +337,7 @@ export class SyntheticObjectBoundary {
   }
   async run<T>(request: Request | undefined, work: () => Promise<T>): Promise<T> {
     const nested = held.getStore(); if (nested?.raw === this.rawEnv) return work();
-    const marker = await deadline(() => this.rawState.storage.get<Marker>(MARKER), 5000);
+    const marker = await deadline(() => this.markerRead(request), 5000);
     if (!request?.headers.has(SYNTHETIC_HEADER) && marker === undefined && !this.isolated) {
       this.ordinary++; try { return await work(); } finally { this.ordinary--; }
     }
@@ -358,8 +369,13 @@ export class SyntheticObjectBoundary {
       }), 5000);
     }
   }
+  /** The boundary's read of its own marker; see BoundaryStorageUnavailable. */
+  private async markerRead(request: Request | undefined): Promise<Marker | undefined> {
+    try { return await this.rawState.storage.get<Marker>(MARKER); }
+    catch (error) { if (!request || error instanceof SyntheticUnavailable) throw error; throw new BoundaryStorageUnavailable(error); }
+  }
   private async runScoped<T>(request: Request | undefined, work: () => Promise<T>): Promise<T> {
-    const header = request?.headers.get(SYNTHETIC_HEADER), stored = await this.rawState.storage.get<Marker>(MARKER);
+    const header = request?.headers.get(SYNTHETIC_HEADER), stored = await this.markerRead(request);
     if (!header && !stored) return work();
     let call: Signed<NativeCall>;
     try { call = header ? JSON.parse(header) : stored!.call; } catch { return deny(); }
@@ -463,7 +479,7 @@ export class SyntheticObjectBoundary {
   }
 }
 
-export interface SyntheticResult { state: 'held' | 'pending' | 'complete' | 'failed'; decision: boolean; event: boolean; producer: boolean; consumer: boolean; ledger: boolean; learning: boolean; dlq: boolean; decisionMs: number; eventMs: number; latencyExceeded?: boolean; failedStage?: 'admission' | 'consent' | 'decision' | 'event' | 'observation'; responseStatus?: number; responseFailure?: 'boundary' | 'request' }
+export interface SyntheticResult { state: 'held' | 'pending' | 'complete' | 'failed'; decision: boolean; event: boolean; producer: boolean; consumer: boolean; ledger: boolean; learning: boolean; dlq: boolean; decisionMs: number; eventMs: number; latencyExceeded?: boolean; failedStage?: 'admission' | 'consent' | 'decision' | 'event' | 'observation'; responseStatus?: number; responseFailure?: 'boundary' | 'storage' | 'request' }
 const initial = (): SyntheticResult => ({ state: 'held', decision: false, event: false, producer: false, consumer: false, ledger: false, learning: false, dlq: false, decisionMs: 0, eventMs: 0 });
 interface Control { scope: Signed<Scope>; result: SyntheticResult; phase: 'preparing' | 'started' | 'cleaning' | 'closed'; cleanupUntil?: number }
 async function clearData(raw: Env, scope: Scope) {
@@ -576,7 +592,7 @@ async function executeSynthetic(raw: Env, tenant: string, host: Host, runUntil: 
       const incoming = new Request('https://monitor.internal' + path, { method: body === undefined ? 'GET' : 'POST', headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
       Object.defineProperty(incoming, 'cf', { value: { country: 'US', regionCode: 'NY' } });
       guard(); const response = await forwardShopperRequest(env, incoming, principal as SessionCapability); guard();
-      if (!response.ok) { result.responseStatus = response.status; result.responseFailure = response.headers.get('X-Monitor-Refusal') === 'boundary' ? 'boundary' : 'request'; deny(); } return response.json<{ ok?: boolean; success?: boolean; dropped?: unknown;
+      if (!response.ok) { result.responseStatus = response.status; const refusal = response.headers.get('X-Monitor-Refusal'); result.responseFailure = refusal === 'boundary' || refusal === 'storage' ? refusal : 'request'; deny(); } return response.json<{ ok?: boolean; success?: boolean; dropped?: unknown;
         render?: { version: number; eventId: string; decisionId: string; pageInstance: string; status: string };
         decisions?: Array<{ contentId: string; slot: string; order: number; decisionId?: string; renderOffer?: string }>;
         records?: Array<{ arm: string; item_id: string; slot: string; decision_id: string }>; sources?: { state?: string; consent?: { personalized?: boolean } } }>();

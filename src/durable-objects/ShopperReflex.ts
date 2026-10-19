@@ -54,7 +54,7 @@ import { liveVisit, mergeVisits, projectVisit, recencyBucketOf, validEntry, vali
 import { deviceClassOf } from '@/services/platform';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
-import { SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
+import { BoundaryStorageUnavailable, SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { historicalReflexSchema, sessionDataSchema, SessionManager, SESSION_TTL_SECONDS, type SessionData } from '@/services/SessionManager';
@@ -451,6 +451,10 @@ export class ShopperReflex {
   async fetch(request: Request): Promise<Response> {
     return this.synthetic.run(request, () => this.fetchScoped(request)).catch(error => {
       if (error instanceof SyntheticUnavailable) { const response = json({ ok: false, error: 'Shopper session unavailable' }, 401); response.headers.set('X-Monitor-Refusal', 'boundary'); return response; }
+      // Baseline 52 (G10): this object's storage refused the boundary's marker
+      // read, so nothing ran. The session host's typed refusal, marked so the
+      // monitor tells a storage fault from the boundary's own refusal.
+      if (error instanceof BoundaryStorageUnavailable) { const response = json({ ok: false, error: 'Shopper session unavailable' }, 401); response.headers.set('X-Monitor-Refusal', 'storage'); return response; }
       throw error;
     });
   }
