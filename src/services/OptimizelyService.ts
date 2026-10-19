@@ -133,10 +133,10 @@ export class OptimizelyService {
 
   /**
    * `admission` (G19): how an FX dispatch's retained-data authority is admitted. 'profile' (the
-   * default, as before): the external retention her profile pinned in the owner operation.
-   * 'event': a durable admission per dispatch from her owner (eventExternalRetention), as the
+   * default, as before): the external retention the shopper's profile pinned in the owner operation.
+   * 'event': a durable admission per dispatch from the shopper's owner (eventExternalRetention), as the
    * generic tracking route admits each event, so a consenting shopper with no profile yet is
-   * admitted too; it is born under her own tenant, whichever tenant's connector sends it.
+   * admitted too; it is born under the shopper's own tenant, whichever tenant's connector sends it.
    */
   constructor(env: Env, readonly tenant: string = DEFAULT_TENANT, private readonly admission: 'profile' | 'event' = 'profile') {
     this.env = env;
@@ -245,7 +245,7 @@ export class OptimizelyService {
             const descriptor = settings.configuration ?? { eventsUrl: 'https://logx.optimizely.com/v1/events', accountId: String(this.datafile?.accountId), projectId: String(this.datafile?.projectId) };
             const category = await destinationRetentionCategory('fx', descriptor);
             if (this.admission === 'profile') { currentExternalRetention(this.env, this.tenant, category); return; }
-            // A destination her tenant declares no policy for is refused before anything is admitted.
+            // A destination the shopper's tenant declares no policy for is refused before anything is admitted.
             const owner = currentOwnerIdentity();
             if (!owner) throw new RetentionUnavailable();
             retentionPolicy(this.env, owner.tenant, category);
