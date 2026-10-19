@@ -778,7 +778,7 @@ test('W14 customer-kit origin probe executes browser-compatible subprotocols and
     if(u.pathname.endsWith('/identity/session'))return Response.json({session:{capability:'signed-capability',subject:'subject',sessionId:'session',grantId:'grant',iat:1,exp:9999999999}});
     const headers=init.headers,body=JSON.parse(init.body);assert.equal(headers['X-Shopper-Session'],'signed-capability');
     if(u.pathname.endsWith('/preferences')){assert.equal(body.trackingConsent,false);assert.equal(body.personalizationEnabled,false);return Response.json({consent:{tracking:false,personalization:false}});}
-    if(u.pathname.endsWith('/snapshot')){assert.equal(init.method,'POST');return headers['X-SDK-Key']==='site-key'?Response.json({decisions:[],write:false}):Response.json({ok:false},{status:401});}
+    if(u.pathname.endsWith('/snapshot')){assert.equal(init.method,'POST');return headers['X-SDK-Key']==='site-key'?Response.json({ok:true,arm:'default',decisions:[{contentId:'piece-1',slot:'hero',order:0,slotPosition:0}],sources:{consent:{tracking:false,personalization:false,personalized:false}}}):Response.json({ok:false},{status:401});}
     if(u.pathname==='/realtime/action')return Response.json({success:true});throw Error('Unexpected probe');
   };
   const http={request:(url,{headers})=>{

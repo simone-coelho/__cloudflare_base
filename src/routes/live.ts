@@ -258,7 +258,7 @@ interface AffinityRead {
  *
  * W36 (F14 R8). `clientSessionId` is the session the page's client sent. On the
  * session host it is looked up before the visitor's `user:` pointer, so a
- * pointer read that misses composes her page from her own session instead of
+ * pointer read that misses composes their page from their own session instead of
  * a new, empty one. It is used only when the record it names is this
  * visitor's own: another visitor's record is never served or written, even
  * when the first read of the id misses or fails (the engine binds its reread

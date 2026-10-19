@@ -323,12 +323,12 @@ Every slot's offered decision for the page, in page order; private records are n
   "regional": null,
   "decisions": [ { "contentId": "cnt_7cb1e039", "customerContentId": "CCH-001", "type": "campaign", "slot": "chero", "order": 0, "slotPosition": 0, "decisionId": "<original decision carrier>", "renderOffer": "<opaque ro1 offer>", "score": 0.455, "strategy": "affinity", "explain": { "drivers": [ { "dim": "line", "value": "Tabby", "a": 0.7286, "weight": 0.35 } ] } } ],
   "pinDiagnostics": [ { "slot": "chero", "pinnedPieceId": "cnt_9ab2f10c", "pinIndex": 1, "reason": "missing_or_ineligible" } ],
-  "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 }, "external": null, "state": "session", "consent": { "tracking": true, "personalization": true, "personalized": true } },
-  "write": false
+  "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 }, "external": null, "state": "session",
+    "consent": { "tracking": true, "personalization": true, "personalized": true } }
 }
 ```
 
-Customer snapshot polls are read-only: `write:false`, no ledger/learning exposure or behavioral admission solely for requesting a choice. Necessary identity/consent/refusal authority work is separate. Tracking-refused choices contain no render offer; personalization-refused choices use defaults. `sources.consent` names that state.
+A snapshot poll from a shopper who refuses tracking is read-only: no ledger/learning exposure or behavioral admission solely for requesting a choice. Necessary identity/consent/refusal authority work is separate. Its `200` answer shows the refusal in the members `scripts/verify-origin.sh` checks: `arm` is `"default"` (tracking- or personalization-refused choices use defaults), no decision carries a `renderOffer` (tracking-refused choices contain no render offer), and `sources.consent` names that state, with `tracking` and `personalization` both `false` after an explicit refusal of both. The answer has no `write` member: whether a request is recorded is internal to the platform, and the sample above, a consenting shopper's answer, carries none either.
 
 **A declared layout slot.** A slot the slot document declares with `layout: true` (under
 `governanceVersion: 4`, at most one per page) is the page's layout: its `decisions` are up to `take`

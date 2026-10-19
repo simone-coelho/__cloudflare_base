@@ -49,9 +49,9 @@ bash scripts/verify-origin.sh https://<platform-staging-host> https://staging.co
 |---|---|
 | Signing readiness | `GET /health/ready` answers 200; signing configuration only, not store/schema/queue readiness |
 | Cross-origin permission | A preflight from your origin is answered with your origin allowed and credentials permitted |
-| A decision | Signed `POST /v1/{tenant}/decisions/snapshot` after explicit refusal answers default decisions with `write:false`; no subject/session URL selectors |
+| A decision | Signed `POST /v1/{tenant}/decisions/snapshot` after explicit refusal answers 200 with `arm` `"default"`, a `decisions` array in which no decision carries a `renderOffer`, and `sources.consent.tracking` and `sources.consent.personalization` both `false`; no subject/session URL selectors |
 | The site key is enforced | The same call without a key answers 401 |
-| An event | Signed `POST /realtime/action` under explicit refusal answers200 without authorizing behavioral capture |
+| An event | Signed `POST /realtime/action` under explicit refusal answers 200 without authorizing behavioral capture |
 | The live channel | Browser-compatible `shopper-session-v1`, capability and `sdk-key-v1.<base64url-key>` subprotocol upgrade is accepted; no credential or subject/session query |
 | A wrong key is refused | A call with a key for another brand answers 403 |
 
