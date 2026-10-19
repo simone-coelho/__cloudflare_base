@@ -9,8 +9,9 @@ import { actionEventSchema } from './realtime';
 // W16-B9 (R91, an R10 correction): the one mapping point between the reported
 // journey vocabulary and the persisted token, and the thresholds that decide
 // which word a shopper's visit has reached (src/services/JourneyStage.ts:124-186).
-// Baseline 52 (G18 spec): JOURNEY_STAGES, the reported vocabulary of R29 (src/services/JourneyStage.ts:136).
-import { PERSISTED_STAGE, DEFAULT_JOURNEY_THRESHOLDS, JOURNEY_STAGES } from '@/services/JourneyStage';
+// Baseline 52 (G18 spec): JOURNEY_STAGES, the reported vocabulary of R29 (src/services/JourneyStage.ts:136), and the one
+// derivation the engine stores (journeyStageFrom over journeyCountersNow with the thresholds in force; R-P87(b)).
+import { PERSISTED_STAGE, DEFAULT_JOURNEY_THRESHOLDS, JOURNEY_STAGES, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce } from '@/services/JourneyStage';
 import { createCore } from '../sdk/core';
 import { createEmit } from '../sdk/emit';
 import { createListen } from '../sdk/listen';
@@ -3671,7 +3672,22 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
           // PERSISTED token (R29; src/content/service.ts:764 PERSISTED_STAGE[shopper.stage]), so 'early' is unchanged.
           expect(content.status).toBe(200); await content.json();
           expect((await serve.mock.results.at(-1)!.value).cell.stage).toBe('early');
-          await f.drain(); expect(readBytes()).toBe(beforeRead);
+          await f.drain();
+          // Baseline 52 (#37, G18 spec; R-P87(a), an R10 update): in recovery mode (the #37 fixture above) a tracked snapshot
+          // durably records its decisions in the shopper's object, W09's durable admission: one operation, its body chunk and
+          // its logical key, written in one transaction (src/ledger/recovery.ts:100 savePayload, :119; key forms :83-84). On the
+          // DO host every key the object held before the reads is byte-identical and nothing was removed (stricter than the
+          // bytes without the recovery keys), and the only keys added are those three, derived from what the object holds. The
+          // session host's readBytes is the session entry alone, which never held them; its check is unchanged.
+          if (host === 'do') {
+            const held = (bytes: string) => JSON.parse(bytes) as [string, unknown][];
+            const before = new Set(held(beforeRead!).map(([k]) => k)), after = held(readBytes()!);
+            expect(JSON.stringify(after.filter(([k]) => before.has(k)))).toBe(beforeRead);
+            const added = after.filter(([k]) => !before.has(k));
+            const operation = added.find(([k]) => k.startsWith('recoveryOperation:'))?.[0].slice('recoveryOperation:'.length);
+            const logical = added.find(([k, v]) => k.startsWith('recoveryLogical:') && (v as { operation?: unknown }).operation === operation)?.[0];
+            expect(added.map(([k]) => k).sort()).toEqual([`recoveryBody:${operation}:0`, `recoveryOperation:${operation}`, String(logical)].sort());
+          } else expect(readBytes()).toBe(beforeRead);
           expect(remote).toHaveBeenCalledTimes(beforeNetwork);
           if (host === 'do') {
             poison(true);
@@ -3707,7 +3723,20 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
             expect(refused.status).toBe(200);
             expect(state()).toMatchObject({ odpSeed: [], odpRecentEvents: [] });
             expect((item().data.get('pipeline') as PipelineRecord).segments).not.toContain('late_journey_ready_to_buy');
-            expect((item().data.get('pipeline') as PipelineRecord).journeyStage).toBe('early');
+            // Baseline 52 (#37, G18 spec; R-P87(b) and its addendum, an R10 update): the refused action (tracking on,
+            // personalization off) is this visit's third tracked interaction, and because the poisoned ODP seed changed, the seed
+            // clause of src/durable-objects/ShopperReflex.ts:1553 re-derives the stored stage from the shopper's own counters,
+            // with the inputs of :1540-1553 (journeyCountersNow over the stored journey and lastSeen, the thresholds in force),
+            // never the poisoned 'late' (the title: stale labels cannot pin journey). The comment at :1551-1552 ("keeps whatever
+            // was stored") disagrees with that clause; the lead recorded the question for the owner, and if the owner rules the
+            // clause a defect this line follows that fix. The default thresholds make three interactions `thinking`
+            // (src/services/JourneyStage.ts:181-198), the W16-B9 precondition below.
+            expect(DEFAULT_JOURNEY_THRESHOLDS.stages.find(stage => stage.stage === 'thinking')?.anyOf?.interactions,
+              'the published default thresholds this expectation is derived from').toBe(3);
+            const refusedPipeline = item().data.get('pipeline') as PipelineRecord;
+            const derived = journeyStageFrom(journeyCountersNow(refusedPipeline.journey, (item().data.get('affinity') as AffinityRecord).lastSeen, Date.now()),
+              journeyThresholdsInForce(await demoRegistry.resolveTenantReflexConfig(f.env, g.tenant)));
+            expect(refusedPipeline.journeyStage).toBe(PERSISTED_STAGE[derived]);
             expect(state().odpContext).toBe(originalPin);
             expect(JSON.stringify(state().odpRecentEvents)).not.toContain('foreign');
           } else {
