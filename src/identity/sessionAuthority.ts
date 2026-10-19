@@ -598,10 +598,18 @@ export function ownedRequestPath(request: Request): boolean {
     || /^\/sort\/?$/.test(path) || path === '/sort/intent' || path === '/search'
     || /^\/track\/(?:event|batch)$/.test(path) || /^\/optimizely\/(?:decisions|track)$/.test(path);
 }
-/** Reject ambiguous selectors before requireShopper can adopt/forward an owner. */
-export function assertShopperSelectors(request: Request): void {
+/**
+ * Reject ambiguous selectors before requireShopper can adopt/forward an owner.
+ * `consentHints: 'route'` is for the decision request alone, at the edge and in
+ * its route: there the two consent hints are request data the route validates
+ * itself, answering an admitted caller's malformed or repeated hint with its own
+ * 400 before any read or write. Every other caller, and the owner's check of a
+ * forwarded request, still refuses a malformed or repeated hint here.
+ */
+export function assertShopperSelectors(request: Request, options?: { consentHints?: 'route' }): void {
   const query = new URL(request.url).searchParams;
-  for (const name of ['tenant', 'userId', 'visitorId', 'sessionId', 'sdkKey', 'page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled']) {
+  for (const name of ['tenant', 'userId', 'visitorId', 'sessionId', 'sdkKey', 'page', 'brand', 'channel', 'entry', 'browsingSessionId',
+    ...(options?.consentHints === 'route' ? [] : ['trackingConsent', 'personalizationEnabled'])]) {
     const values = query.getAll(name);
     if (values.length > 1 || (values.length && (!values[0] || values[0] !== values[0].trim()))) throw new SessionAccessError();
     if (values.length && ['userId', 'visitorId', 'sessionId'].includes(name) && !/^[A-Za-z0-9_.-]{1,200}$/.test(values[0]!)) throw new SessionAccessError();
