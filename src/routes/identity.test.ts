@@ -510,7 +510,14 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
         // export/absorb/forward stubs returning invented private audiences.
         expect(r.body.session).toMatchObject({ kind: 'recognized', subject: r.body.shopperId });
         expect(r.body.audiences).toEqual([]);
-        expect(r.headers.has('set-cookie')).toBe(false);
+        // R10 witness (baseline-52 #19, G13; measured: not a W16 C6 continuity cookie, the link route sets none,
+        // src/routes/identity.ts:425-489): the person's receipt on the object host carries no session cookie, only the
+        // consent mirror of the choice it answers (src/durable-objects/ShopperReflex.ts:3156-3163, :4290-4291), which
+        // the link route sets on both hosts (src/routes/identity.ts:468-469; docs/kit/02-api-reference.md §3, "Both
+        // hosts answer a sign-in ... the same way"). That mirror alone, derived from the engine's own writer.
+        const consent = r.body.session.consent as Consent;
+        expect(r.headers.get('set-cookie')).toBe(new SessionManager(env, { tenant: 'coach' }).generateConsentCookieHeaders(
+          { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization }, consent).join(', '));
       } else expect(r.headers.has('set-cookie')).toBe(true);
     }
   });
