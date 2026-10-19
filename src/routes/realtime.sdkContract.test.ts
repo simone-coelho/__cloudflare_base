@@ -5542,6 +5542,21 @@ describe('W05.05 owned generic tracking', () => {
   };
   const state = (f: ReturnType<typeof boundary>, g: any, host: string) => host === 'session'
     ? f.sessions.data.get(tenantKey('meridian', `session:${g.sessionId}`)) : structuredClone([...f.objects.get(shopperObjectName('meridian', g.subject))!.data]);
+  // Baseline 52 (D2 spec; R-P89 D2 and its addendum: an R10 update of W05.05's "tracking writes nothing to the object").
+  // Since W06 the durable admission keeps one record per admitted event in the shopper's object, under
+  // 'externalAdmission:' + identityDigest(eventId), the SHA-256 hex of the id's JSON (src/durable-objects/ShopperReflex.ts
+  // admitEventRetention, :3957-3978, the key at :3961; identityDigest, :326-329), and the W06.12 lock reads that record
+  // (src/telemetry.boundary.test.ts:129-151). Tracking under the gates still writes nothing of the shopper's behaviour:
+  // the one addition admitted is the admission record of each event the test sent, derived here from its id, nothing else.
+  const ADMISSION = 'externalAdmission:';
+  const admissionRecords = async (ids: string[]) => Promise.all([...new Set(ids)].map(async id => ADMISSION
+    + [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(id))))].map(byte => byte.toString(16).padStart(2, '0')).join('')));
+  const heldAdmissions = (f: ReturnType<typeof boundary>, g: { subject: string }) =>
+    [...f.objects.get(shopperObjectName('meridian', g.subject))!.data.keys()].filter(key => key.startsWith(ADMISSION)).sort();
+  const stateBesides = (f: ReturnType<typeof boundary>, g: { sessionId: string; subject: string }, host: string, records: string[]) => {
+    const value = state(f, g, host);
+    return Array.isArray(value) ? value.filter(([key]) => !records.includes(key)) : value;
+  };
   function configured(f: ReturnType<typeof boundary>) {
     const sent: any[] = [], queued: any[] = [];
     f.env.WEBHOOK_ENDPOINTS = JSON.stringify([{ name: 'synthetic-retry', type: 'custom', url: 'https://synthetic.invalid/tracking', enabled: true, retryConfig: { maxRetries: 1, backoffMs: 1 } }]);
@@ -5559,6 +5574,7 @@ describe('W05.05 owned generic tracking', () => {
         for (const tracking of [false, true]) for (const personalization of [false, true]) {
           expect((await f.call(`/realtime/session/${g.sessionId}/preferences`, g.capability, prefs(tracking, personalization))).status).toBe(200);
           const before = state(f, g, host); io.clear(); page.mockClear();
+          const held = heldAdmissions(f, g), added = tracking ? (await admissionRecords([event(g).eventId, event(g, '00000000-0000-4000-8000-000000000002').eventId])).filter(key => !held.includes(key)) : [];
           const hints = { tracking: true, personalization: true };
           const single = await f.call('/track/event', g.capability, { ...event(g), consent: hints }); expect(single.status).toBe(200);
           const batch = await f.call('/track/batch', g.capability, { events: [{ ...event(g), consent: hints }, event(g, '00000000-0000-4000-8000-000000000002')], context: { sessionId: g.sessionId }, consent: hints }, 'meridian', 'opt_tracking_consent=true; opt_personalization_enabled=true');
@@ -5571,7 +5587,10 @@ describe('W05.05 owned generic tracking', () => {
           }
           expect(page).toHaveBeenCalledTimes(tracking ? 3 : 0); expect(io.sent).toHaveLength(tracking ? 3 : 0); expect(io.queued).toEqual([]);
           for (const payload of io.sent) { expect(payload.user.anonymousId).toBe(g.subject); expect(payload.user.userId).toBe(g.subject); expect(payload).not.toHaveProperty('consent'); expect(payload.user.traits).toEqual({ clientAsserted: true }); }
-          expect(state(f, g, host)).toEqual(before); expect(f.sessions.calls.filter(v => v.startsWith('put:'))).toEqual([]); expect(f.effects.filter(v => v.startsWith('store:'))).toEqual([]);
+          // R-P89 D2 (W06.12, src/telemetry.boundary.test.ts:129-151; ShopperReflex.ts admitEventRetention, :3957-3978): besides the
+          // admission record of each event this iteration admitted, the state and the object stay as they were.
+          expect(stateBesides(f, g, host, added)).toEqual(before); expect(f.sessions.calls.filter(v => v.startsWith('put:'))).toEqual([]); expect(f.effects.filter(v => v.startsWith('store:') && !added.includes(v.slice('store:'.length)))).toEqual([]);
+          expect(heldAdmissions(f, g)).toEqual([...held, ...added].sort());
           expect(f.effects.filter(v => v.startsWith('object:'))).toHaveLength(2);
         }
       }
@@ -5665,6 +5684,7 @@ describe('W05.05 owned generic tracking', () => {
         const f = boundary(host), g = await newAnonymousSession(f.env, 'meridian'); await warm(f, g); const io = configured(f);
         const original = { ...event(g), timestamp: 946_684_800_000 }, receipts = [receivedAt, receivedAt + 60_000];
         const before = state(f, g, host); io.clear();
+        const held = heldAdmissions(f, g);
         for (const receipt of receipts) {
           clock.mockReturnValue(receipt);
           const response = await f.call('/track/event', g.capability, original);
@@ -5687,9 +5707,13 @@ describe('W05.05 owned generic tracking', () => {
         expect(io.sent).toMatchObject(accepted.map((value, i) => ({ ...value, source: i < 2 ? 'api' : 'batch' })));
         accepted.forEach((value, i) => expect(io.sent[i].timestamp).toBe(value.timestamp));
         expect(io.queued).toEqual([]);
-        expect(state(f, g, host)).toEqual(before);
+        // R-P89 D2 (W06.12, src/telemetry.boundary.test.ts:129-151; ShopperReflex.ts admitEventRetention, :3957-3978): besides the
+        // admission record of each distinct event accepted here, the state and the object stay as they were.
+        const added = (await admissionRecords(accepted.map(value => value.eventId))).filter(key => !held.includes(key));
+        expect(stateBesides(f, g, host, added)).toEqual(before);
         expect(f.sessions.calls.filter(value => value.startsWith('put:'))).toEqual([]);
-        expect(f.effects.filter(value => value.startsWith('store:'))).toEqual([]);
+        expect(f.effects.filter(value => value.startsWith('store:') && !added.includes(value.slice('store:'.length)))).toEqual([]);
+        expect(heldAdmissions(f, g)).toEqual([...held, ...added].sort());
       }
     } finally { clock.mockRestore(); errors.mockRestore(); vi.unstubAllGlobals(); }
   });
