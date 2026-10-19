@@ -38,11 +38,12 @@ type DeliveryResponse = {
   result: { success: false; error: string; delivery: DeliveryReceipt };
 };
 
-/** HTTP acknowledgement only: neither durable processing nor safe resubmission. */
-export async function dispatchForResponse(dispatcher: EventDispatcher, event: Event): Promise<DeliveryResponse> {
+/** HTTP acknowledgement only: neither durable processing nor safe resubmission.
+ * `customer` is the event as the customer sent it, when a door stamps its own members onto `event`. */
+export async function dispatchForResponse(dispatcher: EventDispatcher, event: Event, customer?: Event): Promise<DeliveryResponse> {
   let delivery: DeliveryReceipt;
   try {
-    const results = await dispatcher.dispatch(event);
+    const results = await dispatcher.dispatch(event, customer);
     const attempted = results.length, acknowledged = results.filter(result => result.success).length;
     delivery = { status: attempted === 0 ? 'unconfigured' : acknowledged === attempted ? 'acknowledged'
       : acknowledged > 0 ? 'partial' : 'unconfirmed', attempted, acknowledged };
@@ -129,7 +130,13 @@ export class EventDispatcher {
     ];
   }
 
-  async dispatch(event: Event): Promise<DispatchResult[]> {
+  /**
+   * The durable admission binds `event.eventId` to the digest of the CUSTOMER's payload (`customer`,
+   * by default the dispatched event itself). A door that stamps its own members onto the dispatched
+   * copy (its `source`, the request's page context) passes the payload it received, so the same event
+   * re-sent through another door is one admission, and a reused id with a different payload is refused.
+   */
+  async dispatch(event: Event, customer: Event = event): Promise<DispatchResult[]> {
     const identity = currentOwnerIdentity();
     const consent = await currentOwnerConsent();
     if (consent) requireConsentPurpose(consent, 'tracking');
@@ -139,7 +146,8 @@ export class EventDispatcher {
     if (enabledDestinations.length === 0) {
       return results;
     }
-    const source = await eventExternalRetention(event.eventId, await connectorDigest(event), event.timestamp);
+    if (customer.eventId !== event.eventId || customer.timestamp !== event.timestamp) throw new Error('Event admission payload mismatch');
+    const source = await eventExternalRetention(event.eventId, await connectorDigest(customer), event.timestamp);
 
     const dispatchPromises = enabledDestinations.map(async (destination) => {
       const startTime = Date.now();

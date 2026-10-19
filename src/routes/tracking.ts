@@ -78,7 +78,8 @@ tracking.post('/event', requireShopper(), async (c) => {
     };
 
     const dispatcher = new EventDispatcher(c.env);
-    const delivery = await dispatchForResponse(dispatcher, enrichedEvent);
+    // Admission binds the customer's event, not this door's stamps (`source`, request page context).
+    const delivery = await dispatchForResponse(dispatcher, enrichedEvent, event);
 
     return c.json({
       ...delivery.result,
@@ -124,7 +125,7 @@ tracking.post('/batch', requireShopper(), async (c) => {
           } : getPageContext(c.req),
         };
 
-        const { result } = await dispatchForResponse(dispatcher, enrichedEvent);
+        const { result } = await dispatchForResponse(dispatcher, enrichedEvent, event);
         results.push(result.success ? {
           eventId: enrichedEvent.eventId,
           status: 'success',
