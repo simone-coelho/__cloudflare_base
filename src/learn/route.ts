@@ -2,13 +2,16 @@
 // The one call the action route makes for an outcome: read the scope's learn
 // document (cached by the store), then hand the outcome to the visitor's ring,
 // which attributes it and forwards the credits. Never throws, never awaited on
-// the response path.
+// the response path; with durable recovery on, the shopper's owner holds its
+// answer for the outcome's durable admission only, and the attribution and
+// credits continue after the answer (P59).
 
 import type { Env } from '@/types/env';
 import { readRevision } from '@/config/versionedStore';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
 import type { LearnConfig, SlotAttribution } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
+import type { RecoveryOptions, RecoveryReceipt } from '@/ledger/recovery';
 import { DEFAULT_POLICY, type AttributionPolicy } from './policy';
 import { DEFAULT_STATS, type AttributionContract } from './stats';
 import { fanOutcome, reportLearningIncomplete, type SlotLearnConfig } from './fan';
@@ -108,15 +111,30 @@ export function slotConfigsOf(learn: LearnConfig): Record<string, SlotLearnConfi
   return out;
 }
 
-/** An outcome into the learning loop for its scope. Resolves without throwing. */
-export async function outcomeToLearning(env: Env, scope: string, outcome: OutcomeRecord): Promise<void> {
+/**
+ * An outcome into the learning loop for its scope. Resolves without throwing.
+ *
+ * P59 (amendment 5): with durable recovery on and `answerAtAdmission`, it resolves
+ * once the outcome's durable admission is committed and its alarm armed (P56's
+ * mechanism, src/ledger/recovery.ts `RecoveryOptions`); the outcome's effects
+ * (attribution, queue, ledger, credits) continue right after the owner's answer in
+ * the shopper's own serializer, the alarm the backstop, and an incomplete end of
+ * them is reported when they end, as it is reported here when they run before the
+ * answer. The admitted outcome, its policy and configurations are the same either
+ * way; an admission that fails still fails as before.
+ */
+export async function outcomeToLearning(env: Env, scope: string, outcome: OutcomeRecord, options?: Pick<RecoveryOptions, 'answerAtAdmission'>): Promise<void> {
   try {
     const rev = await readRevision(env, LEARN_KIND, scope);
     const learn = rev?.value ?? DEFAULT_LEARN;
     if (env.LEDGER_RECOVERY_ENABLED === 'true') {
+      const report = (receipt: RecoveryReceipt | undefined) => { if (receipt?.source.state !== 'recovered') reportLearningIncomplete('outcome', receipt?.learning ?? null); };
       const result = await admitOwnedRecovery({ kind: 'outcome', tenant: scope, subject: outcome.visitor_id, brand: outcome.brand, outcome,
-        policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } });
-      if (result.source.state !== 'recovered') reportLearningIncomplete('outcome', result.learning ?? null);
+        policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } },
+        options?.answerAtAdmission ? { answerAtAdmission: true, afterEffects: report } : undefined);
+      // Answered at admission: no effect has run yet; they are reported when they end (`afterEffects`).
+      if (options?.answerAtAdmission && result.source.state === 'pending' && result.learning === undefined) return;
+      report(result);
       return;
     }
     // P33 (S4F-C6): the ring receives the brand-wide policy and each slot's own
