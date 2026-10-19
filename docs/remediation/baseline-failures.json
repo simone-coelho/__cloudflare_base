@@ -1,18 +1,8 @@
 {
-  "generated": "2026-10-19T10:57:09.314Z",
-  "commit": "3ca7875bf351a3190020ce076f7b641afd6319b1",
-  "vitest_sha256": "43bd87dbf0df3bdd3b4503bf88ef9c0d15a09755b53ec7d58fe1ace968261059",
+  "generated": "2026-10-19T16:25:18.798Z",
+  "commit": "425d61d48d011cf65c7635fb529410e0b3415c82",
+  "vitest_sha256": "baf39e468d840f6358c38b4d5f58a16efbfeb4905769253b22f1921abc917004",
   "note": "Shrink-only regeneration approved by the owner at the parity freeze (freeze sheet item 31, answered 2026-10-08) from the P02 delivery review gate report at artifact 5181b992 (GATE_OK, 2026-10-09; the product tree is identical to rem/integration after the P02 merge e7b78449): the entries that now pass leave the list, nothing is added.",
   "allow_grow_reason": null,
-  "failures": [
-    " POST /live/api/page + GET /live/api/decisions/export POST /live/api/events (batch) accepts an array and scores every member, in order",
-    " POST /live/api/page + GET /live/api/decisions/export burst ingestion applies EVERY event in a parallel burst — the lost-update bug is gone",
-    " POST /live/api/page + GET /live/api/decisions/export burst ingestion does not serialize DIFFERENT visitors against each other",
-    " POST /live/api/page + GET /live/api/decisions/export burst ingestion serializes a same-visitor burst — never two ingestions in flight at once",
-    " POST /live/api/page + GET /live/api/decisions/export proxies an event into the shared pipeline with the surface stamped server-side",
-    " W05.05 owned generic tracking gates all four stored switch combinations before context collection, with actual HTTP acknowledgement and one consent read per batch",
-    " W05.05 owned generic tracking preserves occurrence time for delayed, repeated and out-of-order events through synchronous HTTP dispatch",
-    " W05.05 owned generic tracking prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement",
-    " historical rows rows by visitor id land on the person when the browser was linked, on the browser when not"
-  ]
+  "failures": []
 }

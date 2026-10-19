@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 227/240 · W closed 4/26 (W16–W41) · suite 3388/3397 · residual 9 in 3 files · typecheck GREEN
+Units 227/240 · W closed 4/26 (W16–W41) · suite 3431/3431 · residual 0 in 0 files · typecheck GREEN
 
 ## W items
 
@@ -300,7 +300,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | ledger-integration.json (outside the checkout) |
-| vitest report sha256 | 43bd87dbf0df3bdd3b4503bf88ef9c0d15a09755b53ec7d58fe1ace968261059 |
-| commit | 3ca7875bf351a3190020ce076f7b641afd6319b1 |
-| generated | 2026-10-19T10:57:09.457Z |
+| vitest report | merged.json (outside the checkout) |
+| vitest report sha256 | baf39e468d840f6358c38b4d5f58a16efbfeb4905769253b22f1921abc917004 |
+| commit | 425d61d48d011cf65c7635fb529410e0b3415c82 |
+| generated | 2026-10-19T16:25:19.182Z |
