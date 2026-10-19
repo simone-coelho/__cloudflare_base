@@ -902,9 +902,7 @@ function nothingToShowOf(raw: string): string[] | null {
 async function snapshotContext(request: Request): Promise<Record<string, string>> {
   // The consent hints' own shape is checked below as a request error; every
   // other selector is checked here exactly as before.
-  const selectors = new URL(request.url);
-  for (const key of CONSENT_HINTS) selectors.searchParams.delete(key);
-  assertShopperSelectors(new Request(selectors, { method: request.method, headers: request.headers }));
+  assertShopperSelectors(request, { consentHints: 'route' });
   if (request.method === 'GET') {
     const query = new URL(request.url).searchParams;
     const context = Object.fromEntries(query);
