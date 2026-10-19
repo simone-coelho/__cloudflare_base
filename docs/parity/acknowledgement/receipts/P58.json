@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P58",
+  "workOrderHash": "sha256:f072771797e06a64553be6868226441e21ea01c03b462b801bbd245dbbce50c5",
+  "artifact": {
+    "revision": "d1e7a33eb337ed2a90bad9b06a3c73003e6bd471",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p58-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p58-build at 084c2e54 (f0c32edd: realtime.ts opts every tracked action's behaviour capture into answer-at-admission and the owner's drain threshold moves from >= 500 to >= 400 so the route's own answer stands over a retained rejection; 084c2e54: the account object's validation refusal crosses every object boundary typed (MergeValidationRefusal in ShopperReflex.ts, the transfer door answers 400 {ok:false, refusal:'validation', issues}, the browser object's link handler passes it on, src/identity/link.ts raises it as the validation error with the same issues; no message parsing), so the oversized identity merge reaches the shopper as the route's own 400 Validation error natively and in process), joined with the S10 specification (01fb46e0, 0f94c1e5 W14.05 R10, cbde4d91 native legs, e110936c W09.09 R10) and the W37 test-only clone fix 66f31349 at d1e7a33e; P58 22/22, P56 17/17, P57 17/17 on both hosts; product_view answers in 1514 ms / 3 calls (session) and 514 ms / 1 call (object) under 500 ms per remote call.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S10/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S10/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P58/implementer/REPORT.md",
+      "git commits on rem/p58-build up to d1e7a33e"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P58 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "_evidence/parity-step3/S10/reviewer-p58/logs/checkout/p58-1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S10/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P58/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-19T22:27:49.010Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
