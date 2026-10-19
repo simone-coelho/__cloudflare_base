@@ -5,7 +5,7 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 214/226 · W closed 4/26 (W16–W41) · suite 2100/2179 · residual 79 in 9 files · typecheck GREEN
+Units 226/240 · W closed 4/26 (W16–W41) · suite 3361/3384 · residual 23 in 7 files · typecheck GREEN
 
 ## W items
 
@@ -13,6 +13,7 @@ Units 214/226 · W closed 4/26 (W16–W41) · suite 2100/2179 · residual 79 in 
 |---|---|---|---|---|---|
 | W05 | 2 | 2 | no | — | — |
 | W06 | 2 | 1 | no | — | — |
+| W08 | 3 | 3 | no | — | — |
 | W09 | 1 | 1 | no | — | — |
 | W11 | 1 | 1 | no | — | — |
 | W16 | 68 | 68 | yes | PASS | b496f72e31a06ee2d997deb3b70b1941fbbf39b7 |
@@ -29,7 +30,9 @@ Units 214/226 · W closed 4/26 (W16–W41) · suite 2100/2179 · residual 79 in 
 | W27 | 6 | 5 | no | — | — |
 | W28 | 6 | 5 | no | — | — |
 | W29 | 3 | 2 | no | — | — |
+| W30 | 6 | 5 | no | — | — |
 | W31 | 5 | 4 | no | — | — |
+| W32 | 5 | 4 | no | — | — |
 | W37 | 1 | 1 | no | — | — |
 
 ## Units
@@ -40,6 +43,9 @@ Units 214/226 · W closed 4/26 (W16–W41) · suite 2100/2179 · residual 79 in 
 | W05.BASE.05 | green | 2 |
 | W06.BASE.01 | green | 1 |
 | W06.BASE.02 | red | 1 |
+| W08.C1.01 | green | 2 |
+| W08.C1.02 | green | 1 |
+| W08.C1.03 | green | 4 |
 | W09.BASE.02 | green | 1 |
 | W11.BASE.01 | green | 2 |
 | W16.C2.01 | green | 1 |
@@ -256,11 +262,22 @@ Units 214/226 · W closed 4/26 (W16–W41) · suite 2100/2179 · residual 79 in 
 | W29.P1.01 | unspecified | 0 |
 | W29.R1.01 | green | 2 |
 | W29.U1.01 | green | 2 |
+| W30.C1.01 | green | 1 |
+| W30.F1.01 | green | 2 |
+| W30.M1.01 | green | 2 |
+| W30.P1.01 | unspecified | 0 |
+| W30.R1.01 | green | 2 |
+| W30.V1.01 | green | 2 |
 | W31.C1.01 | green | 3 |
 | W31.M1.01 | green | 2 |
 | W31.P1.01 | unspecified | 0 |
 | W31.S1.01 | green | 2 |
 | W31.Z1.01 | green | 2 |
+| W32.E1.01 | green | 3 |
+| W32.L1.01 | green | 2 |
+| W32.P1.01 | unspecified | 0 |
+| W32.S1.01 | green | 2 |
+| W32.Z1.01 | green | 1 |
 | W37.BASE.01 | green | 1 |
 
 ## Failing tests outside the baseline
@@ -272,7 +289,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | 53e29d9437c6cc043636b28fac904ea89b8864d101ded5c4333bd3b9a86d6e86 |
+| units sha256 | d544c345cd701c2a21e0cbb2266ce678669bde5f52c9128f7e13810d60d14365 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -283,7 +300,7 @@ _None._
 
 | Input | Value |
 |---|---|
-| vitest report | vitest.json (outside the checkout) |
-| vitest report sha256 | dcec632ac199e038593aa008f6700aac3f0599bd9242270996a9c61cf9770115 |
-| commit | be4e45194cccf64b05330147b23cd800f0d1fcc8 |
-| generated | 2026-09-20T14:27:44.583Z |
+| vitest report | ledger-integration.json (outside the checkout) |
+| vitest report sha256 | 5d83321c473dac072e2e4a2622af083f43b7204d2a3955cc6f6cfb2d68d380de |
+| commit | 2821b161c3201939115932956389d77b042f65d9 |
+| generated | 2026-10-19T02:03:49.559Z |
