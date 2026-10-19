@@ -854,14 +854,31 @@ describe('unit:W38.B7', () => {
     }
   }, 60_000);
 
-  it('B7: the witness still verifies — a large snapshot whose digest the statistics object does not recognize is not served, and a health answer after the 50 ms budget serves nothing', async () => {
+  /**
+   * R10 (amendment 6, ticket P62; R-P110 decision 1, which raises the witness budget
+   * for the edge): this lock keeps its property with its literal replaced. It read "a
+   * health answer 200 ms late serves nothing" against the 50 ms literal of
+   * `currentLiftWitness` (src/learn/fan.ts:43): the budget plus a margin of 150 ms.
+   * The answer is now the budget in force plus that same margin late: the budget is
+   * `LIFT_WITNESS_BUDGET_MS`, which P62 exports from src/learn/fan.ts, and until it is
+   * exported the 50 ms literal, so the delay is today's 200 ms. Read loosely, so the
+   * constant is no type error before it exists.
+   */
+  const LATE_MARGIN_MS = 150;
+  const witnessBudgetInForce = async (): Promise<number> => {
+    const fan = await import('@/learn/fan') as unknown as Record<string, unknown>;
+    return typeof fan.LIFT_WITNESS_BUDGET_MS === 'number' ? fan.LIFT_WITNESS_BUDGET_MS : 50;
+  };
+
+  it('B7: the witness still verifies — a large snapshot whose digest the statistics object does not recognize is not served, and a health answer later than the budget plus the margin serves nothing', async () => {
     const large = await published(ITEMS, CELLS);
     const forged = serving(large.raw, { ...large.publication, digest: 'f'.repeat(64) });
     expect({ cold: (await forged(1_000))?.version ?? null, warm: (await forged(1_001))?.version ?? null },
       'W38.B7 — the digest comparison is kept: a snapshot the object did not publish is refused, cold and cached').toEqual({ cold: null, warm: null });
     invalidateLiftCache();
     const small = await published(ITEMS.slice(0, 4), CELLS.slice(0, 1));
-    const late = serving(small.raw, small.publication, 200);
-    expect((await late(1_000))?.version ?? null, 'W38.B7 — the 50 ms budget is kept: a health answer 200 ms late serves nothing').toBeNull();
+    const budget = await witnessBudgetInForce();
+    const late = serving(small.raw, small.publication, budget + LATE_MARGIN_MS);
+    expect((await late(1_000))?.version ?? null, `W38.B7 — the witness budget is kept: a health answer ${budget + LATE_MARGIN_MS} ms late (the ${budget} ms budget plus the ${LATE_MARGIN_MS} ms margin) serves nothing`).toBeNull();
   }, 60_000);
 });
