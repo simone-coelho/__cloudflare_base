@@ -1,15 +1,12 @@
 import { Hono } from 'hono';
-import { requireConsentPurpose, pinProfileRetention } from '@/identity/sessionAuthority';
+import { requireConsentPurpose } from '@/identity/sessionAuthority';
 import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { OptimizelyService } from '@/services/OptimizelyService';
-import { SessionManager } from '@/services/SessionManager';
 import { listBannerRules } from '@/services/optimizelyFx';
 import { jwt } from '@/middleware/auth';
 import { DEFAULT_TENANT, type TenantVariables } from '@/tenancy/tenant';
-import { shopperObject } from '@/tenancy/objects';
-import { RetentionUnavailable } from '@/retention';
-import { requireShopper, shopperPrincipal, assertSessionTarget, capabilityToken, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
+import { requireShopper, shopperPrincipal, assertSessionTarget, capabilityToken, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
 import { ownedConsent, establishRefusal } from '@/identity/consentContinuity';
 import { consentFromCookies, refusalHints, intersectConsent } from '@/content/consent';
 
@@ -40,32 +37,6 @@ async function resolveConsent(env: Env, principal: SessionCapability, token: str
   } catch { throw new SessionAccessError(); }
 }
 
-/**
- * G19: pin her profile's retention in this owner operation before any FX work, as the content
- * decision pins it (src/content/service.ts readShopper), so the FX dispatcher sends only under her
- * external retention for its destination (OptimizelyService.initialize). The session host reads her
- * record exactly as stored; the object host asks her own object's read-only export for it. A read
- * that fails is refused like any owned read. No record, or a stamp the authority in force no longer
- * honours, pins nothing: the dispatcher then refuses and nothing is sent, as before.
- */
-async function pinShopperProfile(env: Env, principal: SessionCapability, token: string): Promise<void> {
-  let record: Parameters<typeof pinProfileRetention>[1];
-  if ((env.REFLEX_HOST ?? 'session') === 'do') {
-    try {
-      const response = await shopperObject(env.SHOPPER_REFLEX, principal.subject, principal.tenant).fetch('https://shopper-reflex/identity/export', {
-        headers: { [SHOPPER_HEADER]: token, 'X-Tenant': principal.tenant },
-      });
-      if (!response.ok) throw new SessionAccessError();
-      const body = await response.json() as { ok?: unknown; affinity?: Parameters<typeof pinProfileRetention>[1] };
-      if (body.ok !== true) throw new SessionAccessError();
-      record = body.affinity;
-    } catch { throw new SessionAccessError(); }
-  } else record = await new SessionManager(env, { tenant: principal.tenant, principal }).readRaw(principal.sessionId, true);
-  if (!record) return;
-  try { pinProfileRetention(env, record, principal.tenant); }
-  catch (error) { if (!(error instanceof RetentionUnavailable)) throw error; }
-}
-
 optimizely.use('/decisions', jwt({ required: false }));
 optimizely.use('/track', jwt({ required: false }));
 
@@ -93,8 +64,7 @@ optimizely.post('/decisions', requireShopper(), async (c) => {
     }
 
     requireConsentPurpose(consent, 'personalization');
-    await pinShopperProfile(c.env, principal, capabilityToken(c.req.raw)!);
-    const optimizelyService = new OptimizelyService(c.env, DEFAULT_TENANT, principal.tenant);
+    const optimizelyService = new OptimizelyService(c.env, DEFAULT_TENANT, 'event');
     await optimizelyService.initialize();
 
     if (experiments.length > 0) {
@@ -203,9 +173,8 @@ optimizely.post('/track', requireShopper(), async (c) => {
     assertSessionTarget(principal);
     if (!consent.tracking) return c.json({ success: true, userId, eventKey, status: 'skipped', tracked: false, reason: 'tracking_refused', consent });
     requireConsentPurpose(consent, 'tracking');
-    await pinShopperProfile(c.env, principal, capabilityToken(c.req.raw)!);
 
-    const optimizelyService = new OptimizelyService(c.env, DEFAULT_TENANT, principal.tenant);
+    const optimizelyService = new OptimizelyService(c.env, DEFAULT_TENANT, 'event');
     await optimizelyService.initialize();
 
     assertSessionTarget(principal);

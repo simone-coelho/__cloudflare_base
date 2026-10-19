@@ -17,8 +17,8 @@ import optimizely from '@optimizely/optimizely-sdk/lite';
 import { HTTPException } from 'hono/http-exception';
 import type { Env } from '@/types/env';
 import { ownerEffect, ownerFetch, currentOwnerConsent, currentOwnerIdentity, currentProfileBirth, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
-import { currentExternalRetention } from '@/identity/sessionAuthority';
-import { destinationRetentionCategory } from '@/retention';
+import { currentExternalRetention, eventExternalRetention, pinRetention } from '@/identity/sessionAuthority';
+import { destinationRetentionCategory, retentionPolicy, RetentionUnavailable } from '@/retention';
 import { DEFAULT_TENANT } from '@/tenancy/tenant';
 import { connectorConfiguration, connectorDigest, connectorIdentity, connectorSecret, legacyConnectors, ConnectorConfigurationError, type FxConfiguration } from '@/connectors/config';
 
@@ -49,14 +49,14 @@ function quietLogger(minimumLevel = 3, suppressMissing = true): { log: (level: n
  * no-op dispatcher by default. Fire-and-forget on purpose: measurement must
  * never sit in front of a decision the shopper is waiting on.
  */
-function fetchEventDispatcher(destination?: string, accountId?: string, admit?: (at: number) => Promise<void>): {
+function fetchEventDispatcher(destination?: string, accountId?: string, admit?: (at: number, event: any) => Promise<void>): {
   dispatchEvent: (event: any, callback?: (response: { statusCode: number }) => void) => void;
 } {
   return {
     dispatchEvent: (event: any, callback?: (response: { statusCode: number }) => void) => {
       if (accountId && String(event.params?.account_id) !== accountId) { callback?.({ statusCode: 0 }); return; }
       const at = Date.now();
-      void ownerEffect(async () => { if (!admit) throw new Error('FX retention authority unavailable'); await admit(at); return ownerFetch(destination ?? event.url, {
+      void ownerEffect(async () => { if (!admit) throw new Error('FX retention authority unavailable'); await admit(at, event); return ownerFetch(destination ?? event.url, {
         redirect: 'error',
         method: event.httpVerb || 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,11 +132,13 @@ export class OptimizelyService {
   private initialized = false;
 
   /**
-   * `retentionTenant` (G19): the tenant of the shopper whose data an FX dispatch sends, whose
-   * pinned external retention admits it. A route that serves her through another tenant's
-   * connector names her tenant; by default it is the connector's tenant, as before.
+   * `admission` (G19): how an FX dispatch's retained-data authority is admitted. 'profile' (the
+   * default, as before): the external retention her profile pinned in the owner operation.
+   * 'event': a durable admission per dispatch from her owner (eventExternalRetention), as the
+   * generic tracking route admits each event, so a consenting shopper with no profile yet is
+   * admitted too; it is born under her own tenant, whichever tenant's connector sends it.
    */
-  constructor(env: Env, readonly tenant: string = DEFAULT_TENANT, private readonly retentionTenant: string = tenant) {
+  constructor(env: Env, readonly tenant: string = DEFAULT_TENANT, private readonly admission: 'profile' | 'event' = 'profile') {
     this.env = env;
   }
 
@@ -239,10 +241,16 @@ export class OptimizelyService {
         
         this.optimizelyClient = optimizely.createInstance({
           datafile: this.datafile,
-          eventDispatcher: fetchEventDispatcher(settings.configuration?.eventsUrl, settings.configuration?.accountId, async at => {
+          eventDispatcher: fetchEventDispatcher(settings.configuration?.eventsUrl, settings.configuration?.accountId, async (at, event) => {
             const descriptor = settings.configuration ?? { eventsUrl: 'https://logx.optimizely.com/v1/events', accountId: String(this.datafile?.accountId), projectId: String(this.datafile?.projectId) };
             const category = await destinationRetentionCategory('fx', descriptor);
-            currentExternalRetention(this.env, this.retentionTenant, category);
+            if (this.admission === 'profile') { currentExternalRetention(this.env, this.tenant, category); return; }
+            // A destination her tenant declares no policy for is refused before anything is admitted.
+            const owner = currentOwnerIdentity();
+            if (!owner) throw new RetentionUnavailable();
+            retentionPolicy(this.env, owner.tenant, category);
+            const source = await eventExternalRetention(crypto.randomUUID(), await connectorDigest(event), at);
+            pinRetention(this.env, source[category], owner.tenant, category);
           }),
           errorHandler: {
             handleError: (error: any) => {
