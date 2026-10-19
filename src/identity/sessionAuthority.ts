@@ -13,7 +13,7 @@ import type { Delivery, DeliveryCaptureReceipt } from '@/ledger/delivery';
 import { MANAGED_BYTES, deliveryClaimSubset, validDeliveryCaptureReceipt } from '@/ledger/delivery';
 import { isShopperId } from './shopperId';
 import { requireRetention, readRetention, mergeExternalRetention, type ExternalRetention, type RetentionStamp, type RetentionCategory, type RetentionEnv } from '@/retention';
-import type { RecoveryInput, RecoveryOptions, RecoveryReceipt } from '@/ledger/recovery';
+import type { AdmittedRender, RecoveryInput, RecoveryOptions, RecoveryReceipt } from '@/ledger/recovery';
 import { nameServingStorage } from '@/config/publication';
 
 interface Invocation {
@@ -39,6 +39,8 @@ interface Invocation {
   carry?: (customerId: string) => Promise<void>;
   /** G16: how this owner continues work past its answer (`continueAfterOwnerRead`). */
   continuation?: OwnerContinuation;
+  /** P57: this owner's read of the render its stored admission of one decision acknowledged (`readOwnedAdmission`). */
+  admission?: (tenant: string, subject: string, decisionId: string) => Promise<AdmittedRender | undefined>;
 }
 // Async descendants share a lifetime, not an ambient reusable authorization bit.
 const invocation = new AsyncLocalStorage<Invocation>();
@@ -369,6 +371,33 @@ export class RecoveryUnavailableError extends Error {
 export function durableRecoveryEnabled(env: Pick<Env, 'LEDGER_RECOVERY_ENABLED'>): boolean {
   return env.LEDGER_RECOVERY_ENABLED === 'true';
 }
+/**
+ * P57 (amendment 5): a render acknowledgement for a decision the shopper's owner
+ * already holds acknowledged under another event id (or on another page
+ * instance) is a conflict, refused by name before any admission or capture of
+ * it. The owner answers it 409 `{ ok: false, error }`, as it answers its other
+ * typed refusals. A re-send of the same render is no conflict: it is that
+ * render, answered with its original receipt.
+ */
+export class AcknowledgementConflictError extends Error {
+  constructor(message = 'Render acknowledgement conflict: this decision was already acknowledged with another event id') { super(message); this.name = 'AcknowledgementConflictError'; }
+}
+/**
+ * P57: the render the shopper's own owner holds acknowledged for one decision
+ * (`storedRenderOf`, src/ledger/recovery.ts), read inside the active owner
+ * operation for its one admitted principal, as `currentOwnerConsent` reads the
+ * consent in force: awaited, never retained, fenced before and after. Absent
+ * when nothing is stored; a failure is the caller's to answer.
+ */
+export async function readOwnedAdmission(tenant: string, subject: string, decisionId: string): Promise<AdmittedRender | undefined> {
+  const held = invocation.getStore();
+  if (!held?.active || !held.admission) throw new SessionAccessError();
+  recheckOwnerInvocation(held.owner);
+  if ([...held.principals.values()].filter(p => p.tenant === tenant && p.subject === subject).length !== 1) throw new SessionAccessError();
+  const stored = await held.admission(tenant, subject, decisionId);
+  recheckOwnerInvocation(held.owner);
+  return stored;
+}
 /** No token crosses this boundary or enters durable recovery storage. P56: an answer at admission only where the owner continues past its answer. */
 export async function admitOwnedRecovery(input: RecoveryInput, options?: RecoveryOptions): Promise<RecoveryReceipt> {
   const held = invocation.getStore();
@@ -494,16 +523,26 @@ export function ownerRelay(env: Env, operation: 'broadcast' | 'connections', ten
   if (!held?.active || held.env.SESSIONS !== env.SESSIONS || !held.relay) throw new SessionAccessError();
   return trackedIO(() => held.relay!(operation, subject, tenant, body));
 }
-export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery'], carry?: Invocation['carry'], continuation?: OwnerContinuation): Promise<T> {
-  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [], carry, continuation };
+export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery'], carry?: Invocation['carry'], continuation?: OwnerContinuation, admission?: Invocation['admission']): Promise<T> {
+  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [], carry, continuation, admission };
   return invocation.run(held, async () => {
     let failure: unknown, value: T | undefined;
     try { value = await work(); } catch (error) { failure = error; }
+    // P57 (amendment 5): once the work has answered a server failure of its own
+    // (an HTTP answer of 500 or more), a retained rejection is logged and that
+    // answer stands: it already tells the caller the operation failed, so nothing
+    // is claimed complete, and its words are not replaced by an untyped 500. An
+    // authority refusal still refuses, and a retained rejection still fails any
+    // other answer, as before.
+    const answeredFailure = failure === undefined && (value as unknown) instanceof Response && (value as unknown as Response).status >= 500;
     try {
       // Includes descendants registered while previously registered work settles.
       while (held.pending.length) {
         const settled = await Promise.allSettled(held.pending.splice(0));
-        for (const result of settled) if (result.status === 'rejected') failure ??= result.reason;
+        for (const result of settled) if (result.status === 'rejected') {
+          if (answeredFailure && !(result.reason instanceof SessionAccessError)) { console.error('Owner work failed after a failure answer'); continue; }
+          failure ??= result.reason;
+        }
       }
       if (failure !== undefined) throw failure;
       recheckOwnerInvocation(owner);
@@ -579,7 +618,7 @@ function reenterOwner<T>(first: Invocation, work: (env: Env) => Promise<T>): Pro
   // operation's lifetime: the serializer then starts a new operation, and nothing
   // of the answered one (inactive, so it refuses every effect) is carried into it.
   return invocation.exit(() => first.continuation ? first.continuation.serialize(continued)
-    : runOwnerOperation(first.owner, first.env, continued, first.sessions, first.relay, first.consent, first.restrictConsent, first.eventRetention, first.recovery, first.carry));
+    : runOwnerOperation(first.owner, first.env, continued, first.sessions, first.relay, first.consent, first.restrictConsent, first.eventRetention, first.recovery, first.carry, undefined, first.admission));
 }
 export function shopperRequestHeld(request: Request, principal: SessionCapability): boolean {
   const held = invocation.getStore(), admitted = held?.requests.get(request);
@@ -668,7 +707,9 @@ async function shopperRoutes() {
     ]);
     const app = new Hono<{ Bindings: Env }>();
     app.use('*', tenantMiddleware()); app.onError((error, c) => error instanceof SessionAccessError
-      ? c.json({ ok: false, error: 'Shopper session unavailable' }, 401) : errorHandler(error, c));
+      ? c.json({ ok: false, error: 'Shopper session unavailable' }, 401)
+      // P57: a conflicting render acknowledgement is a typed refusal of the owner, never an untyped 500.
+      : error instanceof AcknowledgementConflictError ? c.json({ ok: false, error: error.message }, 409) : errorHandler(error, c));
     app.route('/realtime', realtime); app.route('/v1', identityRoutes); app.route('/v1', decisionRoutes);
     app.route('/sort', sortRoutes); app.route('/search', searchRoutes); app.route('/track', trackingRoutes); app.route('/optimizely', optimizelyRoutes);
     return app;

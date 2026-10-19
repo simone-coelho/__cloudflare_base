@@ -58,11 +58,11 @@ import { BoundaryStorageUnavailable, SyntheticObjectBoundary, SyntheticUnavailab
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { historicalReflexSchema, sessionDataSchema, SessionManager, SESSION_TTL_SECONDS, type SessionData } from '@/services/SessionManager';
-import { assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwardLedgerOperation, LEDGER_OPERATION_HARD_BYTES, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
-import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
+import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, storedRenderOf, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
@@ -533,6 +533,8 @@ export class ShopperReflex {
         return dispatchOwnedRequest(this, this.env, owned, principal!, req => this.fetch(req));
       }).catch(error => {
         if (error instanceof SessionAccessError) return json({ ok: false, error: 'Shopper session unavailable' }, 401);
+        // P57: a conflicting render acknowledgement is this object's typed refusal, never an untyped 500.
+        if (error instanceof AcknowledgementConflictError) return json({ ok: false, error: error.message }, 409);
         throw error;
       });
     }
@@ -3914,7 +3916,8 @@ export class ShopperReflex {
         customerId => this.carryCustomerId(customerId),
         // G16: work this object continues past an answer re-enters through this serializer, its principals admitted
         // again against the grant authority now, and is kept alive by the object's own waitUntil.
-        { serialize: work => this.serialize(work), admit: principal => this.assertOwned(principal, undefined, false, false), waitUntil: task => this.state.waitUntil(task) }));
+        { serialize: work => this.serialize(work), admit: principal => this.assertOwned(principal, undefined, false, false), waitUntil: task => this.state.waitUntil(task) },
+        (tenant, subject, decisionId) => this.admittedRender(tenant, subject, decisionId)));
     const run = this.chain.then(start, start);
     this.chain = run.then(
       () => undefined,
@@ -3929,6 +3932,12 @@ export class ShopperReflex {
     const consent = await this.consentNow();
     requireConsentPurpose(consent, 'tracking');
     if (consentDeadline(consent, 'tracking') < until || until <= Date.now()) throw new SessionAccessError();
+  }
+
+  /** P57: the render this object's stored admission of one decision acknowledged, read from its own storage inside its own operation. */
+  private async admittedRender(tenant: string, subject: string, decisionId: string) {
+    if (!this.isActualObject(tenant, subject) || !ownerHeld(this)) throw new SessionAccessError();
+    return storedRenderOf(this.state.storage, tenant, subject, decisionId);
   }
 
   private async admitRecovery(input: RecoveryInput, principal: SessionCapability, options?: RecoveryOptions) {
