@@ -1970,7 +1970,16 @@ publication until the slot's next successful one, `GET /v1/{tenant}/lift` (the s
 beside their usual members and with the snapshot unchanged. `republished` ends when a publication of the slot
 succeeds: after an operator starts the new generation with `POST /v1/{tenant}/learn/generation`, whose own
 publication succeeds, or after the learn document is republished with the old values; the reads then carry their
-usual members only. A republish that changes nothing in the tuple, such as the trust dial `gamma`, is not refused,
+usual members only. A generation transition whose own publication does not succeed (its answer's
+`publicationOutcome` is `unknown`) ends `republished` too, because the transition adopted every changed member:
+from its answer on, `GET /v1/{tenant}/lift` and `GET /v1/{tenant}/lift/rows` for that slot no longer carry
+`republished`, the record behind it superseded in place under its own key, and the snapshot in force stays the last
+successful one. When the transition's publication failed on a pooled fault, the reads then carry `stale` alone,
+naming the faulty page and slot and the last successful publication, until a publication of the slot succeeds,
+exactly as the next `POST /v1/{tenant}/learn/publish` answers `503` `{ ok: false, error, stale }`; when it failed
+for another cause, the reads carry their usual members (and a `stale` marker already recorded, as it was). A
+transition whose own publication is itself refused for a further learn republish leaves the `republished` that
+refusal names. A republish that changes nothing in the tuple, such as the trust dial `gamma`, is not refused,
 and a slot whose tuple did not change publishes and reads exactly as before. When a publication meets both this
 cause and a pooled fault, the configuration check runs first and the refusal names the republish, and a `stale`
 marker already recorded stays as it was. Like the marker, `republished` is recorded beside the snapshot, never

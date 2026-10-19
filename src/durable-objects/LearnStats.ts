@@ -7,7 +7,7 @@ import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import { accumulationGeneration, ADOPTED_MEMBERS, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type NotAdopted, type NotAdoptedChange, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedIn, republishedOf, republishedRecordOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, supersededRecordOf, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, publicationVersion, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
@@ -883,9 +883,35 @@ export class LearnStats {
     // The fresh generation is published at once, so no isolate and no cache can
     // go on serving the generation this one superseded.
     let publicationOutcome = 'acknowledged';
-    try { await this.publish(true); } catch { publicationOutcome = 'unknown'; }
+    let failed: unknown = null;
+    try { await this.publish(true); } catch (error) { publicationOutcome = 'unknown'; failed = error; }
+    // P55 (R-P78, D1): this transition adopted the republish P49's record names,
+    // so where its own publication did not succeed the record no longer holds the
+    // slot; unless that publication was itself refused for a republish, whose record
+    // it has just written.
+    if (publicationOutcome === 'unknown' && !(failed instanceof RepublishRefusal)) await this.supersedeRepublished(tenant, brand, slot, page, head);
     return json({ ok: true, generation: accumulationGeneration({ objective: record.objective, reward: record.reward, tauLearnMs: config.stats.tauLearnMs }, at),
       restartedAt: at, archivedVersion, publicationOutcome, ...(rebuiltFrom ? { rebuiltFrom } : {}) });
+  }
+
+  /**
+   * P55 (R-P78, decision D1): after a generation transition's transaction, when its
+   * own publication did not succeed, P49's record for the placement — read once,
+   * under its own key — is superseded with one put under that same key
+   * (`supersededRecordOf`) if it still holds the slot, that is if it names the
+   * snapshot that was in force when the transition started (`head`, which the
+   * failed publication left in force). A placement with no record, a record that
+   * cannot be read or is not one, and a record that had already lapsed are left
+   * as they are, and nothing else is written. A successful publication never comes
+   * here: it ends the record by version, as before. Where the read or the put
+   * fails, the transition answers as it would have and the reads keep the record.
+   */
+  private async supersedeRepublished(tenant: string, brand: string, slot: string, page: string | undefined, head: unknown): Promise<void> {
+    const key = liftRepublishedKey(tenant, brand, slot, page);
+    try {
+      const record = republishedRecordOf(await this.env.CACHE.get(key, 'json'));
+      if (record && republishedIn(record, head)) await this.env.CACHE.put(key, JSON.stringify(supersededRecordOf(record)));
+    } catch { /* the reads keep the record until a publication succeeds, as before */ }
   }
 
   /**
