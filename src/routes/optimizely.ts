@@ -5,7 +5,7 @@ import type { Env } from '@/types/env';
 import { OptimizelyService } from '@/services/OptimizelyService';
 import { listBannerRules } from '@/services/optimizelyFx';
 import { jwt } from '@/middleware/auth';
-import type { TenantVariables } from '@/tenancy/tenant';
+import { DEFAULT_TENANT, type TenantVariables } from '@/tenancy/tenant';
 import { requireShopper, shopperPrincipal, assertSessionTarget, capabilityToken, SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
 import { ownedConsent, establishRefusal } from '@/identity/consentContinuity';
 import { consentFromCookies, refusalHints, intersectConsent } from '@/content/consent';
@@ -64,7 +64,7 @@ optimizely.post('/decisions', requireShopper(), async (c) => {
     }
 
     requireConsentPurpose(consent, 'personalization');
-    const optimizelyService = new OptimizelyService(c.env);
+    const optimizelyService = new OptimizelyService(c.env, DEFAULT_TENANT, 'event');
     await optimizelyService.initialize();
 
     if (experiments.length > 0) {
@@ -174,7 +174,7 @@ optimizely.post('/track', requireShopper(), async (c) => {
     if (!consent.tracking) return c.json({ success: true, userId, eventKey, status: 'skipped', tracked: false, reason: 'tracking_refused', consent });
     requireConsentPurpose(consent, 'tracking');
 
-    const optimizelyService = new OptimizelyService(c.env);
+    const optimizelyService = new OptimizelyService(c.env, DEFAULT_TENANT, 'event');
     await optimizelyService.initialize();
 
     assertSessionTarget(principal);

@@ -1916,7 +1916,21 @@ export class ShopperReflex {
         await this.state.storage.delete('identityMembers');
       }
       if (this.affinity?.retention && readRetention(this.affinity.retention, this.affinity.retention.tenant, 'profile').expiresAt <= now) {
-        await this.state.storage.transaction(async transaction => { await transaction.delete(['affinity', 'pipeline', 'audienceOwner']); });
+        await this.state.storage.transaction(async transaction => {
+          await transaction.delete(['affinity', 'pipeline', 'audienceOwner']);
+          // W06.BASE.02: the expired profile leaves no spent grant naming its
+          // subject or session. The record stays, epoch and all, as the barrier
+          // that keeps a legacy writer out; a grant still inside its own
+          // lifetime stays with it (W06.12: the expiry erases no live grant).
+          // A record the object would refuse to read is left exactly as it is.
+          const raw = (await transaction.list({ prefix: 'grantAuthority' })).get('grantAuthority');
+          const authority = authoritySchema.safeParse(raw);
+          if (!authority.success || !Object.entries(authority.data.grants).every(([id, grant]) =>
+            id === grant.grantId && grant.authorityEpoch === authority.data.epoch && this.isActualObject(grant.tenant, grant.subject))) return;
+          const stored = raw as GrantAuthority;
+          const live = Object.fromEntries(Object.entries(stored.grants).filter(([, grant]) => grant.exp > now / 1000));
+          if (Object.keys(live).length < Object.keys(stored.grants).length) await transaction.put({ grantAuthority: { ...stored, grants: live } });
+        });
         this.invalidateMirrors(); await this.load();
       }
       if (!this.affinity) {
@@ -3866,7 +3880,10 @@ export class ShopperReflex {
     const start = () => withKeptOdpIdentifier((tenant, subject) => this.keptOdpIdentifier(tenant, subject),
       () => runOwnerOperation(this, this.rawEnv, fn, this.sessionProjectionStore(), (...args) => this.relayOperation(...args), () => this.consentNow(), hints => this.setConsent(hints),
         (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal) => this.admitRecovery(input, principal),
-        customerId => this.carryCustomerId(customerId)));
+        customerId => this.carryCustomerId(customerId),
+        // G16: work this object continues past an answer re-enters through this serializer, its principals admitted
+        // again against the grant authority now, and is kept alive by the object's own waitUntil.
+        { serialize: work => this.serialize(work), admit: principal => this.assertOwned(principal, undefined, false, false), waitUntil: task => this.state.waitUntil(task) }));
     const run = this.chain.then(start, start);
     this.chain = run.then(
       () => undefined,

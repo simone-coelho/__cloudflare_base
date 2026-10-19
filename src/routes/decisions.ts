@@ -874,6 +874,16 @@ class InvalidEntryContext extends Error {}
  * `entry` — malformed. A REQUEST error, raised as the entry context's is.
  */
 class InvalidNothingToShow extends Error {}
+/**
+ * A malformed consent hint (`trackingConsent`, `personalizationEnabled`): a
+ * value that is not exactly `'true'` or `'false'`, or a hint the query names
+ * more than once. A REQUEST error, raised as the entry context's is, and only
+ * after every selector, tenant and customer-identifier check, so each of those
+ * refusals stays the 401 it was; an admitted caller reaches the route's own
+ * documented `400 'Invalid consent hint'`.
+ */
+class InvalidConsentHint extends Error {}
+const CONSENT_HINTS = ['trackingConsent', 'personalizationEnabled'] as const;
 /** P31: the report's bounds: the field's length, the identifiers it names, and one identifier's length. */
 const NOTHING_TO_SHOW_LIMIT = 4096, NOTHING_TO_SHOW_MODULES = 64, MODULE_ID_LIMIT = 256;
 /**
@@ -890,15 +900,21 @@ function nothingToShowOf(raw: string): string[] | null {
   return [...new Set(value as string[])];
 }
 async function snapshotContext(request: Request): Promise<Record<string, string>> {
-  assertShopperSelectors(request);
+  // The consent hints' own shape is checked below as a request error; every
+  // other selector is checked here exactly as before.
+  assertShopperSelectors(request, { consentHints: 'route' });
   if (request.method === 'GET') {
-    const context = Object.fromEntries(new URL(request.url).searchParams);
+    const query = new URL(request.url).searchParams;
+    const context = Object.fromEntries(query);
     if (context.tenant !== undefined) throw new SessionAccessError();
     if (context.entry !== undefined) {
       try { if (context.entry.length > ENTRY_QUERY_LIMIT || !validEntry(JSON.parse(context.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
     }
     if (context.nothingToShow !== undefined && nothingToShowOf(context.nothingToShow) === null) throw new InvalidNothingToShow();
-    for (const key of ['trackingConsent', 'personalizationEnabled']) if (context[key] !== undefined && context[key] !== 'true' && context[key] !== 'false') throw new SessionAccessError();
+    for (const key of CONSENT_HINTS) {
+      const values = query.getAll(key);
+      if (values.length > 1 || (values.length === 1 && values[0] !== 'true' && values[0] !== 'false')) throw new InvalidConsentHint();
+    }
     return context;
   }
   const query = new URL(request.url).searchParams;
@@ -920,8 +936,8 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
   if (out.nothingToShow !== undefined && nothingToShowOf(out.nothingToShow) === null) throw new InvalidNothingToShow();
-  for (const key of ['trackingConsent', 'personalizationEnabled']) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new SessionAccessError();
   if (out.customerId !== undefined && !isCarriedCustomerId(out.customerId)) throw new SessionAccessError();
+  for (const key of CONSENT_HINTS) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new InvalidConsentHint();
   return out;
 }
 
@@ -984,6 +1000,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   catch (error) {
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
   }
   await next();
@@ -993,6 +1010,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   catch (error) {
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
   }
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -1101,7 +1119,13 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   // Ruling L-R10 (P02 decision D1): exactly the records the serve-time capture
   // took, so a declared layout slot measured on served-v1 is never written here.
   const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.ledgerRecords) : Promise.resolve();
-  try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
+  // G16 (W06.05 under the W09 owner rule): this route runs inside the shopper's
+  // owner, whose waitUntil retains work until it answers. It retains everything
+  // after the answer but a learning fan-out waiting on its erasure read, which
+  // runs inside the owner later and which the owner keeps alive with the
+  // platform's waitUntil (`continueAfterOwnerRead`); otherwise `ownerDrain` is
+  // `afterResponse` itself.
+  try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.ownerDrain); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
   const refusedPins = out.pinDiagnostics ?? [];
   // Private replay inputs travel only inside authenticated encrypted offers.
