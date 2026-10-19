@@ -506,13 +506,14 @@ export class ShopperReflex {
           let preferences: Record<string, unknown> | null = null;
           if (/\/session\/(?:[^/]+\/)?preferences$/.test(new URL(routed.url).pathname)) {
             // Baseline 52 (G21, R-P86): a consent choice's body is read here once,
-            // where this hop always read it, and the owner gets a request rebuilt
-            // from those bytes: no clone of the forwarded stream is left behind
-            // (a dropped clone, collected, cancels its original in Node's undici).
-            // No byte or time bound is added or removed here: the routes' own
-            // (realtime.ts preferences, parseShopperContext) apply as before.
+            // where this hop always read it, parsed by the runtime's own JSON
+            // reader as before, and the owner gets a request rebuilt from the same
+            // bytes: no clone of the forwarded stream is left behind (a dropped
+            // clone, collected, cancels its original in Node's undici). No byte or
+            // time bound is added or removed here: the routes' own (realtime.ts
+            // preferences, parseShopperContext) apply as before.
             const body = await routed.arrayBuffer();
-            preferences = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
+            preferences = await new Response(body).json() as Record<string, unknown>;
             owned = new Request(selected, { method: request.method, headers, body });
             Object.defineProperty(owned, 'cf', { value: (routed as Request & { cf?: unknown }).cf });
           }
