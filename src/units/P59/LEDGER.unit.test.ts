@@ -52,6 +52,19 @@
 //     nothing answers while the send is held (measured on this harness at d1e7a33e, both
 //     hosts: _evidence/parity-step3/S12/specifier/logs/probe-p59-base.log, "no answer",
 //     one held send).
+//   · R-P111(1), "answers at admission" (CO1): the outcome's durable admission (savePayload
+//     and armRecovery, recovery.ts runOwnerRecovery) precedes the click's answer, exactly as
+//     P56's render admission does, so an eviction between the answer and the continuation
+//     cannot lose the outcome (the alarm is the backstop): read while the send is still held,
+//     the shopper object holds the outcome's recovery operation under its W06 id with its body,
+//     pending, and its alarm, cleared before the click (src/units/_parity8.ts
+//     `clearShopperAlarm`, as P56.AA1), is armed within 30 s. The alarm clause is met by any
+//     admission the click makes (its behaviour capture's included, P58); the outcome's own
+//     admission is told by its operation. Measured on two sketches on scratch copies: "defer
+//     only" (the outcome's whole work handed to `continueAfterOwnerAnswer`, sketch-p59.cjs) RED
+//     on both hosts on that clause (logs/fix1-p59-deferonly.log), "admit then defer" (P56's
+//     `answerAtAdmission` through src/learn/route.ts `outcomeToLearning`, sketch-p59-admit.cjs)
+//     13/13 (logs/fix1-p59-admit.log).
 //   · "After release and drain ... exist once" (CO1): the hold released, every pending
 //     piece of work awaited (src/units/_parity8.ts `settle`), the ledger batch written by
 //     the real consumer; then exactly one reward row for the click's event id, carrying the
@@ -62,11 +75,10 @@
 //     in flight). Today the click makes 26 remote calls before it answers on the session
 //     host and 24 on the object host (probe-p59-base.log, at 20 ms per call); at 500 ms each
 //     no answer comes within the deadline (measured: 10 calls made by then, both hosts): RED,
-//     the message counts the calls made by the deadline. A
-//     sketch of the work order's remaining work on a scratch copy (the outcome's work
-//     handed to `continueAfterOwnerAnswer`; _evidence/parity-step3/S12/specifier/scratch/
-//     sketch-p59.cjs) answers after 3 calls on the session host (STORAGE.get, two
-//     SESSIONS.put) and 1 on the object host.
+//     the message counts the calls made by the deadline. Both
+//     sketches on scratch copies (_evidence/parity-step3/S12/specifier/scratch/sketch-p59.cjs,
+//     sketch-p59-admit.cjs) answer after 3 calls on the session host (STORAGE.get, two
+//     SESSIONS.put) and 1 on the object host (probe-p59-sketch.log, probe-p59-admit-latency.log).
 //   · CO3 "the order of effects", the orders a witness fixes and nothing more:
 //       (a) a durable admission precedes its own effects (recovery.ts runOwnerRecovery,
 //           :176 "Durable admission precedes queue, R2, ring counters or credit effects"; the
@@ -89,18 +101,16 @@
 //     mechanism enters the outcome's work in the serializer after the behaviour capture's
 //     continuation, which P58 registers at the capture's admission before the engine runs,
 //     so a build sends the behaviour first (measured on the sketch: probe2-sketch.log). The
-//     one place that pins today's order is W09.09 (src/routes/realtime.sdkContract.test.ts
-//     :604), listed below for the lead.
+//     one place that pinned that order, W09.09 (src/routes/realtime.sdkContract.test.ts :604),
+//     is updated below.
 //   · "P56/P58 units unchanged": their own acceptance commands in the gate (a unit file is
 //     never imported into another); this file adds no lever to src/units/_parity8.ts.
 //
-// THE MECHANISM IS NOT RULED BEYOND THE OBSERVABLES: an outcome durably admitted before the
-// answer with its effects after it, or the whole outcome work after the answer, both satisfy
-// CO1-CO3 (the sketch is the second, the work order's wording; the first would need
-// src/learn/route.ts `outcomeToLearning`, outside P59's allowed paths, or a second copy of it).
+// THE MECHANISM (R-P111(1)): the outcome is durably admitted before the answer and only its
+// effects continue after it; P59's allowed paths include src/learn/route.ts for that.
 //
-// R10 (expectations a build of P59 changes, listed for the lead; none is edited here),
-// measured with the whole suite under the sketch on a scratch copy
+// R10 (expectations a build of P59 changes), measured with the whole suite under the "defer
+// only" sketch on a scratch copy
 // (_evidence/parity-step3/S12/specifier/logs/sketch-p59-full.json: 3453 of 3479, every other
 // failure the scratch's own environment — no .git for the console and seed files, re-run
 // with the worktree's git objects 48/48 in sketch-p59-gitfiles.log; W40.P4's deploy leg and
@@ -110,11 +120,11 @@
 //     purchase's behaviour capture sends first and its outcome is admitted after the answer,
 //     the expectation throws inside the send, `started` never resolves, and the test times
 //     out at :612, where it also expects the purchase unanswered while its send is held. The
-//     honest form (measured: green on the sketch, RED at d1e7a33e on :612 alone,
-//     logs/w0909-r10-p59.log and w0909-r10-base.log): :604 `expect(admitted.has(
-//     'recoveryOperation:' + sending)).toBe(true)` beside its body check (each send's operation
+//     R10 committed in its own commit (R-P111(2)), the line count kept: :604 `expect(admitted.has(
+//     'recoveryOperation:' + sending)).toBe(true)` beside its body check (each sent operation
 //     admitted with its body, the order left free), :612 `expect(returned).toBe(true)` (the
-//     purchase answered before its effects' held send; P59).
+//     purchase answered before its effects' held send); RED at d1e7a33e on :612 alone, green on
+//     both sketches (logs/fix1-w0909-base.log, fix1-w0909-p59a.log, fix1-w0909-p59.log).
 //
 // No new export is imported; every member read exists at this head.
 //
@@ -146,7 +156,7 @@ import {
   type Decision, type Host, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
 import {
-  ackWire, actionWire, admissionsOf, holdObjectDoor, holdQueue, remoteLatency, settle, shopperHeld, UNANSWERED, w06SourceOf, within, workerApp,
+  ackWire, actionWire, admissionsOf, clearShopperAlarm, holdObjectDoor, holdQueue, remoteLatency, settle, shopperHeld, shopperStorage, UNANSWERED, w06SourceOf, within, workerApp,
   type Identity, type Latency, type WorkerApp,
 } from '../_parity8';
 
@@ -231,14 +241,26 @@ function sendsAgainstAdmissions(m: Mounted, subject: string): Sent[] {
 
 describe('unit:P59.CO1', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): while the queue send is held unresolved, a content_click on an acknowledged decision answers 200 with its engine answer and its behaviour capture durable; after release and drain exactly one reward row, the click's, carries the decision, its credit is counted once to the acknowledged module, and one outcome recovery operation exists, recovered`, async () => {
+    it(`host (${host}): while the queue send is held unresolved, a content_click on an acknowledged decision answers 200 with its engine answer and its behaviour capture durable, its outcome already durably admitted (the outcome's recovery operation held by the shopper object with its body, pending) and the alarm armed within 30 s; after release and drain exactly one reward row, the click's, carries the decision, its credit is counted once to the acknowledged module, and one outcome recovery operation exists, recovered`, async () => {
       const { m, app, s, page, d } = await world(host, 'p59-co1');
       const click = clickOf(page, d), identity = { eventId: crypto.randomUUID(), timestamp: Date.now() };
       const outcome = outcomeOf(s, click, identity);
+      const operation = await outcomeOperationOf(s, outcome);
+      // R-P101 as P56.AA1: the acknowledgement's admissions armed the alarm first, and armRecovery never moves an earlier alarm
+      // (recovery.ts armRecovery); cleared, so the alarm clause below reads an alarm the click itself armed.
+      await clearShopperAlarm(m, s.subject);
       const held = holdQueue(m);
+      const sentWall = Date.now();
       const sent = actionWire(app, s, click, identity);
-      let answer: Awaited<typeof sent> | typeof UNANSWERED = UNANSWERED;
-      try { answer = await within(sent, HOLD_BOUND_MS); } finally { held.release(); }
+      let answer: Awaited<typeof sent> | typeof UNANSWERED = UNANSWERED, alarm: number | null = null, alarmRead = 0;
+      let admittedAtAnswer: { state: unknown; body: boolean } | undefined;
+      try {
+        answer = await within(sent, HOLD_BOUND_MS);
+        // Read while the send is still held: what the shopper object holds when the shopper is answered.
+        const admission = admissionsOf(m, s.subject).find(a => a.id === operation);
+        admittedAtAnswer = admission ? { state: admission.meta.receipt.source.state, body: admission.keys.some(key => key.startsWith(`recoveryBody:${operation}:`)) } : undefined;
+        alarm = await shopperStorage(m, s.subject).getAlarm(); alarmRead = Date.now();
+      } finally { held.release(); }
       const eventual = await sent;
       await settle(m, app);
       await m.drainLedger();
@@ -246,13 +268,20 @@ describe('unit:P59.CO1', () => {
       expect.soft(answer === UNANSWERED ? unanswered : [answer.status, answer.body.success, (answer.body.behavior as { status?: unknown } | undefined)?.status],
         `${host}: P59.CO1 — the content_click answers 200 at admission, its engine answer and its behaviour capture durable, while its outcome's queue send is held (its outcome recovery continues after the answer)`)
         .toEqual([200, true, 'durable']);
+      // R-P111(1): the outcome's durable admission (savePayload and armRecovery, recovery.ts runOwnerRecovery) precedes the click's
+      // answer, as P56's render admission does; only its effects continue after it, the alarm their backstop.
+      expect.soft(answer === UNANSWERED ? unanswered : admittedAtAnswer ? [admittedAtAnswer.state, admittedAtAnswer.body] : 'no admission of the click\'s outcome in the shopper object when the click was answered',
+        `${host}: P59.CO1 (R-P111(1)) — when the click answers, its outcome is already durably admitted: the shopper object holds the outcome's recovery operation (its W06 id) with its body, pending`)
+        .toEqual(['pending', true]);
+      const armed = typeof alarm === 'number' && alarm > sentWall && alarm <= alarmRead + 30_000;
+      expect.soft(answer === UNANSWERED ? unanswered : armed ? 'armed within 30 s' : `alarm ${String(alarm)} (sent ${sentWall}, read ${alarmRead})`,
+        `${host}: P59.CO1 (R-P111(1)) — when the click answers, the shopper object's alarm is armed within 30 s, the backstop of the held effects (recovery.ts armRecovery)`).toBe('armed within 30 s');
       const rows = storedOutcomes(m, s.subject).filter(row => row.event_id === identity.eventId);
       expect.soft(rows.map(row => [row.outcome_id, row.decision_id]), `${host}: P59.CO1 — after release and drain, exactly one reward row, the click's, carrying the decision it names`)
         .toEqual([[outcome.outcome_id, d.decisionId]]);
       const state = await learned(m);
       expect.soft([rounded(state, 's'), rounded(state, 'n')], `${host}: P59.CO1 — its credit counted once, to the acknowledged module (attribution read as P03/LEDGER.unit.test.ts:294), the exposure still once`)
         .toEqual([{ [d.contentId]: 1 }, { [d.contentId]: 1 }]);
-      const operation = await outcomeOperationOf(s, outcome);
       expect.soft(admissionsOf(m, s.subject).filter(a => a.id === operation || a.payload?.input.kind === 'outcome').map(a => [a.id, a.meta.receipt.source.state]),
         `${host}: P59.CO1 — one outcome recovery operation, the click's (recovery.ts runOwnerRecovery's id), recovered`).toEqual([[operation, 'recovered']]);
     }, 60_000);
