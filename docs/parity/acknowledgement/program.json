@@ -115,7 +115,7 @@
         "public/sdk/0.2.0/edge-personalization.js",
         "public/sdk/0.2.0/edge-personalization.esm.js",
         "src/routes/realtime.sdkContract.test.ts (R10 update of W15 :386 only, by the specifier)",
-        "src/index.api-boundary.test.ts (R10 update of W15 :1243 only, by the specifier)"
+        "src/index.api-boundary.test.ts (R10 update of W15 :1237 and :1243 only, by the specifier; R-P100(3))"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P56 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
