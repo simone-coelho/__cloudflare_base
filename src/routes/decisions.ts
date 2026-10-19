@@ -1101,7 +1101,13 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   // Ruling L-R10 (P02 decision D1): exactly the records the serve-time capture
   // took, so a declared layout slot measured on served-v1 is never written here.
   const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.ledgerRecords) : Promise.resolve();
-  try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
+  // G16 (W06.05 under the W09 owner rule): this route runs inside the shopper's
+  // owner, whose waitUntil retains work until it answers. It retains everything
+  // after the answer but a learning fan-out waiting on its erasure read, which
+  // runs inside the owner later and which the owner keeps alive with the
+  // platform's waitUntil (`continueAfterOwnerRead`); otherwise `ownerDrain` is
+  // `afterResponse` itself.
+  try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.ownerDrain); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
   const refusedPins = out.pinDiagnostics ?? [];
   // Private replay inputs travel only inside authenticated encrypted offers.

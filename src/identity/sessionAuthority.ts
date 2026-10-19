@@ -37,6 +37,8 @@ interface Invocation {
   recoveryDeadlines?: number[];
   /** P13 (R-P66 item 2): the owner keeps the customer's identifier the shopper's request carried. */
   carry?: (customerId: string) => Promise<void>;
+  /** G16: how this owner continues work past its answer (`continueAfterOwnerRead`). */
+  continuation?: OwnerContinuation;
 }
 // Async descendants share a lifetime, not an ambient reusable authorization bit.
 const invocation = new AsyncLocalStorage<Invocation>();
@@ -492,8 +494,8 @@ export function ownerRelay(env: Env, operation: 'broadcast' | 'connections', ten
   if (!held?.active || held.env.SESSIONS !== env.SESSIONS || !held.relay) throw new SessionAccessError();
   return trackedIO(() => held.relay!(operation, subject, tenant, body));
 }
-export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery'], carry?: Invocation['carry']): Promise<T> {
-  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [], carry };
+export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery'], carry?: Invocation['carry'], continuation?: OwnerContinuation): Promise<T> {
+  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [], carry, continuation };
   return invocation.run(held, async () => {
     let failure: unknown, value: T | undefined;
     try { value = await work(); } catch (error) { failure = error; }
@@ -508,6 +510,73 @@ export async function runOwnerOperation<T>(owner: object, env: Env, work: () => 
       return value as T;
     } finally { held.active = false; }
   });
+}
+/**
+ * G16 (W06.05 under the W09 owner rule): how an owner continues work past its
+ * answer. The shopper's object supplies it from its serializer
+ * (ShopperReflex.serialize); an owner without one has its continued operation
+ * run directly, with the same hooks.
+ */
+export interface OwnerContinuation {
+  /** The owner's own serializer: a continued operation is ordered with the owner's other operations, never beside them. */
+  serialize<T>(work: () => Promise<T>): Promise<T>;
+  /** The owner's own admission, against its grant authority now, of a principal an earlier operation admitted. */
+  admit(principal: SessionCapability): Promise<void>;
+  /** The platform's waitUntil, so work continued past the answer is not ended by the reply. */
+  waitUntil(task: Promise<unknown>): void;
+}
+/**
+ * G16 (W06.05 under the W09 owner rule): owner work that first waits on one read
+ * of private state, without that read holding the owner's answer, and without the
+ * work ever running outside an owner operation.
+ *
+ * It starts only inside an ACTIVE owner operation; otherwise nothing starts and
+ * it refuses with SessionAccessError. `read` starts at once, under that owner and
+ * fenced at its start as every owner effect is (`recheckOwnerInvocation`: the
+ * admitted grants, the pinned consent purposes, the retention guards); the owner
+ * does not retain its drain, so the answer is not held by it, and its result
+ * decides nothing (`work` reads again under its own operation). Whatever it
+ * settles to, `work` then runs inside the same owner:
+ *  - inline and retained while that operation is still active, so the owner
+ *    drains it before it answers, as it drains any other retained work;
+ *  - otherwise as a new operation of that owner, entered through the owner's own
+ *    serializer after any operation queued meanwhile, in which every principal
+ *    the first operation admitted is admitted again by the owner, the first
+ *    operation's consent, retention and recovery guards are pinned again, the
+ *    shopper's consent in force is read again and must still grant every purpose
+ *    the first operation pinned, and `work` is handed a fresh owner environment.
+ * The whole continuation is registered with the platform's waitUntil the owner
+ * supplies, so the reply does not end it.
+ */
+export function continueAfterOwnerRead<T>(env: Env, read: () => Promise<unknown>, work: (env: Env) => Promise<T>): Promise<T> {
+  const first = invocation.getStore();
+  if (!first?.active) return Promise.reject(new SessionAccessError());
+  let gate: Promise<unknown>;
+  try { recheckOwnerInvocation(first.owner); gate = read(); } catch (error) { gate = Promise.reject(error); }
+  const task = gate.then(() => undefined, () => undefined).then(() => {
+    if (first.active) { const inline = work(env); retainOwnerWork(inline); return inline; }
+    return reenterOwner(first, work);
+  });
+  first.continuation?.waitUntil(task.then(() => undefined, () => undefined));
+  return task;
+}
+function reenterOwner<T>(first: Invocation, work: (env: Env) => Promise<T>): Promise<T> {
+  const continued = async (): Promise<T> => {
+    for (const principal of first.principals.values()) {
+      if (first.continuation) await first.continuation.admit(principal); else admitOwnerPrincipal(first.owner, principal);
+    }
+    const held = invocation.getStore();
+    if (!held?.active || held === first || held.owner !== first.owner) throw new SessionAccessError();
+    held.consentGuards.push(...first.consentGuards);
+    if (first.retentionGuards?.length) (held.retentionGuards ??= []).push(...first.retentionGuards);
+    if (first.recoveryDeadlines?.length) (held.recoveryDeadlines ??= []).push(...first.recoveryDeadlines);
+    const consent = await currentOwnerConsent();
+    if (consent) for (const { purpose } of first.consentGuards) requireConsentPurpose(consent, purpose);
+    recheckOwnerInvocation(first.owner);
+    return work(ownerEnvironment(first.owner, first.env));
+  };
+  return first.continuation ? first.continuation.serialize(continued)
+    : runOwnerOperation(first.owner, first.env, continued, first.sessions, first.relay, first.consent, first.restrictConsent, first.eventRetention, first.recovery, first.carry);
 }
 export function shopperRequestHeld(request: Request, principal: SessionCapability): boolean {
   const held = invocation.getStore(), admitted = held?.requests.get(request);
