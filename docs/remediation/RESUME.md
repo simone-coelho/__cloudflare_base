@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-19, night: amendment 5 round 2 closed (P58); amendment 6 opened on the unserved learned lift
+
+- **Score (derived, round-2 official gate at d1e7a33e, GATE_OK):** `Tests 3487 passed (3487)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. P58 merged on its exact-sha review (dad5821c) and receipted at d1e7a33e (d920e40d): every tracked action answers at admission; a client error the route answered itself reaches the shopper as that error, in process and natively (the account object's validation refusal crosses typed). Amendment 5: P56 P57 P58 DONE_LOCAL, P59 ACTIVE (specifying with P60, batch S12).
+- **Deploy-9** from a clean worktree at d920e40d: staging bac21065, production b79841f1; API smoke 7/7 on both and on the Tapestry tenant; verify-origin PASS; render acknowledgement 1.5–2.2 s.
+- **Amendment 6** (`docs/parity/lift-witness`, P61–P63, opened 5257b234 on analysis LIFT-50): batch S11 (P61, P62) specifying. Build order by customer impact: P61 → P62 → P59 → P60 → P63.
+- **Live acceptance:** LIVE1 26 of 45; lane L2 finishing (its console rows are the headless lane's batch 3c); then the acceptance pair is redeployed at the amendment-5 head (runbook `_evidence/parity-step3/live/host/redeploy-pair.sh`) and P02 A3 / P03 E2 re-walked (R-P109); the lift-blocked rows follow P62 on a fresh tenant pair.
+
 ## 2026-10-19, evening: amendment 5 round 1 closed (P56, P57); the stamps answer acknowledgements in 1.5–1.8 s
 
 - **Score (derived, round-1 official gate at 9fadd50e, GATE_OK):** `Tests 3465 passed (3465)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. P56 (answer at durable admission; `ACK_DEADLINE_MS`) and P57 (idempotent same-id re-send; typed 409; the route's own 5xx stands) merged on exact-sha reviews (da48e65a, 380281d1); receipts at 9fadd50e (d55d2685); S9 specification gate PASS at 366b75c2.
