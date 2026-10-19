@@ -2,6 +2,12 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-19, evening: amendment 5 round 1 closed (P56, P57); the stamps answer acknowledgements in 1.5–1.8 s
+
+- **Score (derived, round-1 official gate at 9fadd50e, GATE_OK):** `Tests 3465 passed (3465)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. P56 (answer at durable admission; `ACK_DEADLINE_MS`) and P57 (idempotent same-id re-send; typed 409; the route's own 5xx stands) merged on exact-sha reviews (da48e65a, 380281d1); receipts at 9fadd50e (d55d2685); S9 specification gate PASS at 366b75c2.
+- **Deploy-8** from a clean worktree at d55d2685: staging eee4b726, production 57379538; API smoke 7/7 on both and on the Tapestry tenant; verify-origin PASS; **render acknowledgement 1528–1811 ms on both stamps (was 5100–6021 ms)**, under the SDK's 5 s cut.
+- **Next:** P58 ACTIVE (every tracked action's behaviour capture answers at admission; the route's own answer stands whatever its status, W14.05 R10; the pending-replay lock), specified at 0f94c1e5 (9 RED / 11 GREEN) and in spec review and build; then P59 (click outcome off the answer path) and P60 (SDK retry and named deadline). Live acceptance: LIVE1 22 of 45; lanes L1, L2, L3 reporting; headless batch 3 after they release their tenants.
+
 ## 2026-10-19, afternoon: amendment 5 opened on the acknowledgement latency; LIVE1 at 22 of 45; kit-1 merged
 
 - **Score unchanged** (`Units 227/240 · suite 3431/3431 · residual 0 in 0 files · typecheck GREEN`; head 9026e8b5 adds docs, scripts, comments and the programme only; the next official gate runs with P56's build).
