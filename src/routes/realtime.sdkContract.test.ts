@@ -1352,13 +1352,35 @@ describe('W04.03 serialized shopper authority', () => {
     expect([...item.data]).toEqual(barrier);
   });
   it('drains actual FX dispatcher and ODP query transports with bounded cancellation before queued detach', async () => {
+    const w0403Datafile = { revision: 'w0403', audiences: [], experiments: [], featureFlags: [] };
+    const odpConnectors = JSON.stringify({ version: 1, tenants: { meridian: { odp: {
+      apiHost: 'https://odp-meridian.invalid', publicKeyRef: 'CONNECTOR_SECRET_ODP', identityNamespace: 'customer',
+      actions: {}, audiences: { remote: 'ODP_ALLOWED' }, profile: {},
+    } } } });
+    // A refusal before the transport is named, never left to the 20 s test timeout (R-P88).
+    const entryBoundMs = 5_000;
     for (const provider of ['fx', 'odp']) {
       const f = boundary(), g = await newAnonymousSession(f.env, 'meridian');
+      // Baseline 52 (#36, R-P88, stale fixture): each provider transport starts only under a retention policy the shopper's
+      // tenant declares for that destination's category. FX: the dispatcher's admission (src/services/OptimizelyService.ts
+      // initialize, :248-251) refuses a category with no policy before anything is admitted; its category is the engine's
+      // own derivation from the demo descriptor (:245), the W05.07 fxRetention idiom. ODP: the read needs a birth on the
+      // shopper's profile, made only for the external categories declared when the profile is born (src/retention.ts
+      // externalRetentionBirths, :138-143; renewal 'new-record-only'), so both are declared before the first action. With
+      // them the drain is the W04.03 contract's (docs/remediation/evidence/W04.03/admission-v3.json source_findings[0]:
+      // "underlying transport can outlive owner drain"): FX cancelled by ownerFetch's bound, ODP by its read timeout.
+      await f.configureRetention(); const policies = JSON.parse(f.env.RETENTION!);
+      const fxCategory = await destinationRetentionCategory('fx', { eventsUrl: 'https://logx.optimizely.com/v1/events',
+        accountId: String((w0403Datafile as { accountId?: unknown }).accountId), projectId: String((w0403Datafile as { projectId?: unknown }).projectId) });
+      const odpCategory = (await configuredDestinations({ ...f.env, TENANT_CONNECTORS: odpConnectors }, 'meridian')).find(destination => destination.kind === 'odp')!.category;
+      if (provider === 'fx') policies.tenants.meridian[fxCategory] = fixtureRetentionPolicy;
+      if (provider === 'odp') policies.tenants.meridian[odpCategory] = fixtureRetentionPolicy;
+      f.env.RETENTION = JSON.stringify(policies);
       expect((await warm(f, g)).status).toBe(200); await f.drain();
       let started!: () => void; const entered = new Promise<void>(resolve => { started = resolve; });
       const attempts: string[] = [], cancelled: string[] = [];
       vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
-        if (url === 'https://synthetic.invalid/datafile') return Promise.resolve(Response.json({ revision: 'w0403', audiences: [], experiments: [], featureFlags: [] }));
+        if (url === 'https://synthetic.invalid/datafile') return Promise.resolve(Response.json(w0403Datafile));
         attempts.push(url); started();
         return new Promise<Response>((_resolve, reject) => init!.signal!.addEventListener('abort', () => {
           cancelled.push(url); reject(new Error('synthetic bounded transport cancellation'));
@@ -1370,12 +1392,12 @@ describe('W04.03 serialized shopper authority', () => {
           vi.spyOn(optimizelySdk, 'createInstance').mockImplementation((options: any) => ({ onReady: async () => undefined,
             track: () => options.eventDispatcher.dispatchEvent({ url: 'https://synthetic.invalid/fx-event', params: { synthetic: true } }),
           } as never));
-        } else Object.assign(f.env, { TENANT_CONNECTORS: JSON.stringify({ version: 1, tenants: { meridian: { odp: {
-          apiHost: 'https://odp-meridian.invalid', publicKeyRef: 'CONNECTOR_SECRET_ODP', identityNamespace: 'customer',
-          actions: {}, audiences: { remote: 'ODP_ALLOWED' }, profile: {},
-        } } } }), CONNECTOR_SECRET_ODP: 'synthetic' });
+        } else Object.assign(f.env, { TENANT_CONNECTORS: odpConnectors, CONNECTOR_SECRET_ODP: 'synthetic' });
         const pending = provider === 'fx' ? f.call('/optimizely/track', g.capability, { userId: g.subject, eventKey: 'synthetic' }) : warm(f, g);
-        await entered;
+        let bound: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([entered, new Promise<never>((_resolve, reject) => { bound = setTimeout(() => reject(new Error(
+          `W04.03 precondition: the ${provider} transport was never entered within ${entryBoundMs} ms (refused before the transport; R-P88)`)), entryBoundMs); })])
+          .finally(() => clearTimeout(bound));
         let detached = false;
         const detach = Promise.resolve(f.call('/v1/meridian/identity/detach', g.capability, {})).then(response => { detached = true; return response; });
         await Promise.resolve(); expect(detached).toBe(false);
