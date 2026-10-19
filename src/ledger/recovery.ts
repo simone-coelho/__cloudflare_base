@@ -7,7 +7,7 @@ import type { SlotLearnConfig, LearningReceipt } from '@/learn/fan';
 import type { AttributionPolicy } from '@/learn/policy';
 import type { PreparedMessage, LedgerDeliveryReceipt } from './enqueue';
 import type { CaptureReceipt } from './delivery';
-import { admitOwnedRecovery, continueAfterOwnerAnswer, durableRecoveryEnabled, RecoveryUnavailableError } from '@/identity/sessionAuthority';
+import { admitOwnedRecovery, continueAfterOwnerAnswer, durableRecoveryEnabled, readOwnedAdmission, RecoveryUnavailableError } from '@/identity/sessionAuthority';
 
 /** A generation is captured before durable admission, never refreshed on retry. */
 export interface LearningGeneration { whole: number; item: number }
@@ -353,6 +353,29 @@ export async function recoverDecisions(env: Env, set: { tenant: string; brand: s
   return admitOwnedRecovery({ kind: 'decisions', tenant: set.tenant, subject: set.visitor_id, brand: set.brand,
     records: set.records, configs: Object.fromEntries([...new Set(set.records.map(row => row.slot))].map(slot => [slot, config(slot)])),
     ...(firstAdmissionUntil === undefined ? {} : { firstAdmissionUntil }) }, options);
+}
+
+/** P57 (amendment 5): the render a decision's stored admission acknowledged (`DecisionRecord.rendered`). */
+export type AdmittedRender = NonNullable<DecisionRecord['rendered']>;
+/**
+ * P57: the render this owner's stored admission of one decision acknowledged.
+ * The operation is the one a render acknowledgement admits for that decision
+ * (`runOwnerRecovery`'s operation id for its one record), and its body is read
+ * and held to both its digests (`payloadOf`). Absent when no admission of the
+ * decision is stored, or its body was already cleaned up; a body that cannot be
+ * read or does not match its commitments refuses, as its resume would. A read
+ * only: nothing is written, armed or resumed here.
+ */
+export async function storedRenderOf(storage: DurableObjectStorage, tenant: string, subject: string, decisionId: string): Promise<AdmittedRender | undefined> {
+  const meta = await storage.get<OwnerRecovery>(metaKey(await recoveryDigest({ kind: 'decisions', tenant, subject, ids: [decisionId] })));
+  if (!meta || meta.cleanup) return undefined;
+  const { input } = await payloadOf(storage, meta);
+  if (input.kind !== 'decisions' || input.tenant !== tenant || input.subject !== subject) throw new Error('Recovery state unavailable');
+  return input.records.find(row => row.decision_id === decisionId)?.rendered;
+}
+/** P57: owner-held. The stored render of one decision, read by the shopper's own owner inside its operation (`readOwnedAdmission`). */
+export function admittedRender(tenant: string, subject: string, decisionId: string): Promise<AdmittedRender | undefined> {
+  return readOwnedAdmission(tenant, subject, decisionId);
 }
 
 /** A queue repair cannot turn a current operator into fresh shopper authority. */
