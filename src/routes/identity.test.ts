@@ -517,6 +517,10 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
 
   it('uses freshly signed new-visitor proof through the actual SDK/router and retries only once', async () => {
     destinations();
+    // R10 witness (baseline-52 #20, G2): every served request resolves the tenant's configuration through the
+    // coherent publication, which refuses an uninitialized scope (src/config/publication.ts:399); the explicit
+    // W11 baseline every other block of this file seeds (ensurePublication), never a re-admitted KV fallback.
+    await ensurePublication('coach');
     let sequence = 0;
     const requests: Array<{ path: string; status: number; visitorId: string; assertion?: string }> = [];
     const host = memoryHost({ acquireAuthorityLock: authorityLocks(), uuid: () => `w0401-varying-uuid-${++sequence}`,
@@ -554,8 +558,13 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
     expect(proofs).toHaveLength(2); expect(proofs[0]!.visitorId).toBe(old);
     expect(proofs[1]!.visitorId).not.toBe(old); expect(proofs[1]!.visitorId).toMatch(/^vis-/);
     expect(requests.filter(r => r.path.endsWith('/link')).map(r => ({ visitorId: r.visitorId, assertion: r.assertion }))).toEqual(proofs);
-    const person = await new SessionManager(env).getSessionByUserId(core.visitorId);
-    expect(person?.identity?.shopperId).toBe(core.visitorId);
+    // R10 witness (baseline-52 #20, the later assertion its fixture fix exposed): this flow records no explicit choice
+    // and detach carries only refusal (src/routes/identity.ts:491-494), so nothing of the shopper is kept (settled
+    // decision D06-W05; src/content/consent.ts:138-140): the person's session record is published only under the
+    // person's consent (src/durable-objects/ShopperReflex.ts:3149) and the run keeps none. The person the browser now carries is
+    // the link's own identity record, published on every link (:3153-3155), holding the browser that signed in.
+    expect(await new IdentityStore(env.SESSIONS as never, 'coach').shopper(core.visitorId))
+      .toMatchObject({ shopperId: core.visitorId, visitors: [{ visitorId: proofs[1]!.visitorId, assurance: 'signed', source: 'login' }] });
     expect(core.visitorId).toBe(await shopperIdFor(env, 'coach', 'acct-next'));
   });
 });
