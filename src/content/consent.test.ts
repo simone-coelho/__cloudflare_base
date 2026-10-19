@@ -1006,6 +1006,7 @@ describe('CW31 consent on the content service', () => {
     }, undefined, undefined, async () => fixtureConsent.get(env)!);
     expect(out.records).toHaveLength(1); expect(ring).toEqual([]);
     release(null); await out.afterResponse;
+    // Left RED (baseline-52 #4, class C): a fan-out outliving the owner's answer is refused at the owner fence (fan.ts:1053), and production keeps it inside the owner instead (decisions.ts:1104, sessionAuthority.ts:679), so the answer waits for this read.
     expect(ring).toEqual([`coach:${visitor} POST /append`]);
     for (const mode of ['refused-by-cutoff', 'unavailable', 'corrupt']) {
       ring.length = 0;
