@@ -951,12 +951,18 @@ describe('W06.01 durable local erasure retry', () => {
     const imported = applyHistory(env, tenant, [historyRowSchema.parse({ shopperId: subject, action: 'purchase', at, product: { line: 'Tabby' } })], at);
     release(); expect((await withdrawal).status).toBe(200);
     expect(await imported).toMatchObject({ applied: 0, shoppers: 0, skipped: [{ index: 0, reason: 'consent_refused' }] });
-    expect(item.writes.filter(w => w !== 'alarm')).toEqual(['put:consent']);
+    // R10 witness (baseline-52 #22, G13): the withdrawal of tracking also retires the owner's buffered recovery work
+    // in one storage transaction, committed even when nothing is buffered (src/durable-objects/ShopperReflex.ts:2145;
+    // src/ledger/recovery.ts:369-382); this fixture logs every transaction as 'erase-transaction'. The import that
+    // raced the withdrawal still writes nothing.
+    const withdrawalWrites = ['put:consent', 'erase-transaction'];
+    expect(item.writes.filter(w => w !== 'alarm')).toEqual(withdrawalWrites);
     expect((item.data.get('affinity') as { reflex: ReflexState }).reflex.dims).toEqual({});
     expect(item.data.has('audienceOwner')).toBe(false);
     item.object = new ShopperReflex(item.state, env);
     expect((await applyHistory(env, tenant, [historyRowSchema.parse({ shopperId: subject, action: 'purchase', at, product: { line: 'Tabby' } })], at)).applied).toBe(0);
-    expect(item.writes.filter(w => w !== 'alarm')).toEqual(['put:consent']);
+    // R10 witness (baseline-52 #22): the same withdrawal writes as above; the refused import after restart adds none.
+    expect(item.writes.filter(w => w !== 'alarm')).toEqual(withdrawalWrites);
     vi.restoreAllMocks();
     for (const host of ['session', 'do']) {
       env = mkEnv({ REFLEX_HOST: host }); const current = destinations(); await configureHistory(tenant);
