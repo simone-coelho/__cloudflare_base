@@ -316,19 +316,19 @@ Every slot's offered decision for the page, in page order; private records are n
 {
   "ok": true, "tenant": "coach", "brand": "coach", "page": "home", "pageInstance": "original-page-nonce",
   "ts": 1788541396189,
-  "arm": "personalized",
+  "arm": "personalized", "experiment": { "id": "<tenant>:<brand>:<salt>", "saltVersion": 1, "arm": "personalized", "anchorGeneration": 1 },
   "versions": { "config": 15, "catalog": 4, "slots": 7, "learn": 19, "lift": 1788540535150, "prior": 6, "policy": 19 },
   "config_label": "reflex-demo-v1+r15",
   "decisions": [ { "contentId": "cnt_7cb1e039", "customerContentId": "CCH-001", "type": "campaign", "slot": "chero", "order": 0, "slotPosition": 0, "decisionId": "<original decision carrier>", "renderOffer": "<opaque ro1 offer>",
     "score": 0.455, "strategy": "affinity", "explain": { "drivers": [ { "dim": "line", "value": "Tabby", "a": 0.7286, "weight": 0.35 } ] } } ],
-  "pinDiagnostics": [ { "slot": "chero", "pinnedPieceId": "cnt_9ab2f10c", "pinIndex": 1, "reason": "missing_or_ineligible" } ],
+  "pinDiagnostics": [ { "slot": "chero", "pinnedPieceId": "cnt_9ab2f10c", "pinIndex": 1, "reason": "missing_or_ineligible" } ], "refusedCount": 1, "omittedCount": 0,
   "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 },
-    "external": null, "state": "session",
-    "consent": { "tracking": true, "personalization": true, "personalized": true } }
+    "journey": { "version": "reflex-demo-v1+r15", "revision": 15, "reason": null }, "external": null, "state": "session",
+    "consent": { "tracking": true, "personalization": true, "personalized": true }, "timings": { "documents": 4, "shopper": 6, "trend": 0, "lift": 3, "decide": 2 } }
 }
 ```
 
-A snapshot poll from a shopper who refuses tracking is read-only: no ledger/learning exposure or behavioral admission solely for requesting a choice. Necessary identity/consent/refusal authority work is separate. Its `200` answer shows the refusal in the members `scripts/verify-origin.sh` checks: `arm` is `"default"` (tracking- or personalization-refused choices use defaults), no decision carries a `renderOffer` (tracking-refused choices contain no render offer), and `sources.consent` names that state, with `tracking` and `personalization` both `false` after an explicit refusal of both. The answer has no `write` member: whether a request is recorded is internal to the platform, and the sample above, a consenting shopper's answer, carries none either.
+A snapshot poll from a shopper who refuses tracking is read-only: no ledger/learning exposure or behavioral admission solely for requesting a choice. Necessary identity/consent/refusal authority work is separate. Its `200` answer shows the refusal in the members `scripts/verify-origin.sh` checks: `arm` is `"default"` (tracking- or personalization-refused choices use defaults), no decision carries a `renderOffer` (tracking-refused choices contain no render offer), and `sources.consent` names that state, with `tracking` and `personalization` both `false` after an explicit refusal of both. The answer has no `write` member: whether a request is recorded is internal to the platform, and the sample above carries none either. The sample is a signed, consenting shopper's answer: `experiment` appears because the request is signed (src/routes/decisions.ts:1137), `pinDiagnostics` with `refusedCount` and `omittedCount` because a pin was refused (:1151-1152), and `pageInstance` because the request sent one (:1153). Two members appear only under conditions the sample does not meet: `records`, only on the platform's own synthetic operation (:1152), and `sources.record: "unreadable"`, only when the shopper's stored record cannot be read out under the retention policy in force (src/content/service.ts:1145).
 
 **A declared layout slot.** A slot the slot document declares with `layout: true` (under
 `governanceVersion: 4`, at most one per page) is the page's layout: its `decisions` are up to `take`

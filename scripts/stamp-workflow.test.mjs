@@ -709,7 +709,7 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
           assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views===2,refused=issued===2;
           if(refused){assert.match(init.headers.Cookie,/opt_tracking_consent=false/);return reply({ok:true,arm:'default',pageInstance:body.pageInstance,sources:{consent:{tracking:false,personalization:false,personalized:false}},decisions:[{slot:id('hero'),contentId:id('h-explore'),order:0,slotPosition:0}]});}
           const entries=[['hero',mid?'h-consider':'h-explore'],['fresh','f-new'],['fresh','f-old'],['rail','r-d1'],['rail','r-t1'],['rail','r-d2'],['story','s-featured']];
-          const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',
+          const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',cell:{stage:mid?'mid':'unknown'},
             candidates:[{contentId:id(item)}],featured_product_ids:slot==='story'?['ACC-P-'+ownedPage.slice('acceptance-'.length)]:[],
             inputs:slot==='rail'&&mid?{served:{[id('rail')]:{[id('r-d1')]:1}}}:{},
             explain:{...(slot==='hero'&&mid?{stage:{visitor:'considering',applied:0.2}}:{}),
@@ -719,7 +719,7 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
           if(!heroDecision)heroDecision=records[0].decision_id;
           for(const record of records)offers.set(record.decision_id,{record,pageInstance:body.pageInstance});
           assert.equal(rendered.size,mid?7:0); // Fetching a choice did not capture it.
-          return reply({ok:true,arm:'personalized',pageInstance:body.pageInstance,sources:{state:'synthetic-protocol-fixture',consent:{tracking:true,personalization:true,personalized:true}},cell:{stage:mid?'mid':'unknown'},
+          return reply({ok:true,arm:'personalized',pageInstance:body.pageInstance,sources:{state:'synthetic-protocol-fixture',consent:{tracking:true,personalization:true,personalized:true}},
             decisions:entries.map(([slot,item],i)=>({slot:id(slot),contentId:id(item),order:i,decisionId:records[i].decision_id,renderOffer:'synthetic-offer-'+records[i].decision_id}))});
         }
         return reply({ok:false},503); // Stop before measurement assertions: protocol/cleanup fixture, not fabricated business success.

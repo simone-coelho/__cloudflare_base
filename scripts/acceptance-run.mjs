@@ -226,7 +226,7 @@ async function run() {
   // 1. The first snapshot: no events yet, so the stage is unknown and the stage rule is off.
   eq('first snapshot: read-only, consenting', [typeof first.pageInstance, first.sources.consent.tracking, first.sources.consent.personalization, first.sources.consent.personalized], ['string', true, true, true]); // read-only as in admitRendered; `sources.consent` is src/content/service.ts:1146 (`personalized` :737).
   first = await admitRendered(V, first);
-  eq('first snapshot: stage unknown before any event', first.cell.stage, 'unknown');
+  eq('first snapshot: stage unknown before any event', [...new Set(first.records.map(row => row.cell?.stage))], ['unknown']); // The answer carries no stage (src/routes/decisions.ts:1132-1153; `experiment` is the enrollment, src/content/types.ts:578-606, without one). The stage rides each record's `cell` (src/content/service.ts:762-775, src/content/cell.ts:133, src/content/decide.ts:1974), read here off the operator receipts admitRendered fetched (decisions.ts:238, :252).
   eq('acc-hero: catalogue order while the stage is unknown', servedIn(first, fixtureId('hero')), [fixtureId('h-explore')]);
   check('acc-hero: no stage block while the stage is unknown', rec(first, fixtureId('hero')).explain.stage === undefined);
   eq('acc-fresh: newest first, the undated one last, the out-of-stock one absent', servedIn(first, fixtureId('fresh')), [fixtureId('f-new'), fixtureId('f-old')]);
@@ -249,10 +249,10 @@ async function run() {
   // Polls create no exposures. Only the selected second set is acknowledged.
   let second = await until('second snapshot sees the acknowledged interactions', async () => {
     const r = await snapshot(V, S);
-    return r.status === 200 && r.json?.cell?.stage === 'mid' ? r.json : null;
+    return r.status === 200 && Array.isArray(r.json?.decisions) && servedIn(r.json, fixtureId('hero'))[0] === fixtureId('h-consider') ? r.json : null; // No member of the answer carries the stage (src/routes/decisions.ts:1132-1153); acc-hero is decided by its stage rule alone (:68, :84), so its pick is the answer's own sign that the stage moved. The stage itself is checked on the receipts below.
   }, { tries: 5, everyMs: 800 });
   second = await admitRendered(V, second);
-  eq('second snapshot: the stage is considering', second.cell.stage, 'mid');
+  eq('second snapshot: the stage is considering', [...new Set(second.records.map(row => row.cell?.stage))], ['mid']); // off the receipts' `cell`, as for the first snapshot (src/content/service.ts:774).
   eq('acc-hero: the piece made for a considering shopper now wins', servedIn(second, fixtureId('hero')), [fixtureId('h-consider')]);
   eq('acc-hero: the receipt itemises the stage rule', [rec(second, fixtureId('hero')).explain.stage?.visitor, rec(second, fixtureId('hero')).explain.stage?.applied], ['considering', 0.2]);
   const railSecond = rec(second, fixtureId('rail'), fixtureId('r-d1'));

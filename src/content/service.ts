@@ -213,9 +213,9 @@ export interface DecisionSources {
   external: { kind: string; ref: string; ok: boolean; ms: number; version: string | null; reason: string | null } | null;
   state: 'do' | 'session' | 'none';
   /**
-   * W16 R5 (LANE-LOG R19, R98(b)): present, as `'unreadable'`, only when her
+   * W16 R5 (LANE-LOG R19, R98(b)): present, as `'unreadable'`, only when the shopper's
    * stored record exists but cannot be read out under the retention policy in
-   * force, so she was served the site's default decision. Absent otherwise: a
+   * force, so the shopper was served the site's default decision. Absent otherwise: a
    * refusal is named by `consent`, and an expired session gets no decision.
    */
   record?: 'unreadable';
@@ -242,11 +242,11 @@ interface ShopperRead {
   visit?: VisitContext | null;
   lastSeen?: number | null;
   /**
-   * W16 R5 (LANE-LOG R19, R98(b)): her stored record exists but cannot be read
+   * W16 R5 (LANE-LOG R19, R98(b)): the shopper's stored record exists but cannot be read
    * out — the retained-data authority its profile stamp was born under is no
    * longer the one in force (`requireRetention`). Nothing of the record is
    * carried (no affinity, stage or visit), and the decision serves the site's
-   * default, naming why. Distinct from a refusal (her own choice) and from an
+   * default, naming why. Distinct from a refusal (the shopper's own choice) and from an
    * expired session (no answer at all).
    */
   unreadable?: true;
@@ -268,7 +268,7 @@ interface ShopperRead {
   suppressions?: Suppression[];
 }
 
-/** Her record could not be read out: the answer carries nothing of it (W16 R5). */
+/** The shopper's record could not be read out: the answer carries nothing of it (W16 R5). */
 const unreadableShopper = (sessionId: string, state: DecisionSources['state'], consent: Consent): ShopperRead =>
   ({ affinity: null, sessionId, isNewSession: null, state, stage: null, consent, visit: null, lastSeen: null, unreadable: true });
 
@@ -294,8 +294,8 @@ async function readShopper(
       if (!res.ok) throw new SessionAccessError();
       const body = (await res.json()) as { ok?: boolean; affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: unknown; visit?: VisitContext & { lastSeen?: number }; record?: unknown; signals?: unknown; suppressions?: unknown };
       if (!body || body.ok !== true || body.consent === undefined) throw new SessionAccessError();
-      // W16 R5: the object answered that her record cannot be read out. Only a
-      // consenting shopper's record is ever read, so only she can be told so; a
+      // W16 R5: the object answered that the shopper's record cannot be read out. Only a
+      // consenting shopper's record is ever read, so only that shopper can be told so; a
       // refusal is answered as the refusal it is.
       if (body.record !== undefined) {
         const consent = intersectConsent(storedConsent(body.consent), hints);
@@ -322,8 +322,8 @@ async function readShopper(
     if (!personalizes(consent)) await manager.restrictConsent(sessionId, consent, { sessionId, data: sessionData });
     if (personalizes(consent) && sessionData) {
       // W16 R5: a record whose profile stamp the authority in force no longer
-      // honours is not read out, and refusing to SERVE her page is not a
-      // retention remedy: she is served the site's default, named unreadable.
+      // honours is not read out, and refusing to SERVE the shopper's page is not a
+      // retention remedy: the shopper is served the site's default, named unreadable.
       try { pinProfileRetention(env, sessionData, tenant); }
       catch (error) {
         if (!(error instanceof RetentionUnavailable)) throw error;
@@ -728,11 +728,11 @@ export async function serveContentDecisions(
   lap('shopper');
   const consent = shopper.consent;
   if (consent.tracking) requireConsentPurpose(consent, personalizes(consent) ? 'personalization' : 'tracking');
-  // W16 R5: an unreadable record is served the site's default decision under her
+  // W16 R5: an unreadable record is served the site's default decision under the shopper's
   // own consent — nothing of the record is an input, and nothing is written that
-  // her consent does not already cover. Her ASSIGNMENT is untouched: it is a pure
-  // function of her anchor and the published salt, not of the record, so the
-  // experiment keeps her where she is and the served experience says `default`.
+  // that consent does not already cover. The shopper's ASSIGNMENT is untouched: it is a pure
+  // function of the shopper's anchor and the published salt, not of the record, so the
+  // experiment keeps the shopper where they are and the served experience says `default`.
   const unreadable = shopper.unreadable === true;
   const personalized = personalizes(consent) && !unreadable;
   // P39 (decisions D1, D2): the suppressions in force on the shopper, read with
@@ -775,7 +775,7 @@ export async function serveContentDecisions(
   });
   // W21 E1 (F07 §1.4, §7(b)): consent first, then enrollment. A shopper without
   // personalization consent is not drawn into the experiment at all; a
-  // consenting shopper is enrolled against her PERSISTENT anchor and the
+  // consenting shopper is enrolled against their PERSISTENT anchor and the
   // published salt, so the same draw answers on every later decision and
   // survives recognition. (`armUnder` labels the refusing shopper `default`
   // today and the ruled `ineligible` waits on the assertions named there.)
@@ -951,7 +951,7 @@ export async function serveContentDecisions(
     // else of it is kept by the decision.
     ...(consent.tracking && r.entry ? { entry: r.entry } : {}),
     // The OS family the request reports, under the same gate as the arrival,
-    // and her own memberships for a seed rule's dampen (none without consent).
+    // and the shopper's own memberships for a seed rule's dampen (none without consent).
     ...(consent.tracking && platformWordOf(r.platform) ? { platform: platformWordOf(r.platform) } : {}),
     // P37: the request's device class and the visit's recency bucket, for the
     // seed rules and configured orders that name them; each only when there is one.
@@ -1021,7 +1021,7 @@ export async function serveContentDecisions(
   }
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = `the site's defaults: ${!consent.tracking && !consent.personalization ? 'tracking and personalization are' : !consent.tracking ? 'tracking is' : 'personalization is'} off by the shopper's choice`;
-  // W16 R5: and one whose record could not be read sees that, not a choice she never made.
+  // W16 R5: and one whose record could not be read sees that, not a choice the shopper never made.
   else if (unreadable) for (const rec of set.records) rec.explain.note = "the site's defaults: the shopper's stored record is unreadable under the retention policy in force";
   // The owner drains actual private I/O. In durable mode the shared admission
   // must finish before either ledger or learning effects can start.
@@ -1086,7 +1086,7 @@ export async function serveContentDecisions(
   // W21 E1.05 (R118(3)): a decision that could not read its anchor is counted
   // for the operator, after the answer, under the same three conditions the
   // governance counters use — the shopper's tracking refusal means nothing is
-  // written about her request, and neither a synthetic operation nor the
+  // written about that shopper's request, and neither a synthetic operation nor the
   // platform's own self-check is the tenant's traffic.
   const anchorCounted = anchor?.unavailable && consent.tracking && !synthetic && !r.selfCheck
     ? recordAnchorUnavailable(env, scope, now)
