@@ -273,7 +273,7 @@ describe('unit:P61.LO1 (R-P110, D1)', () => {
       const { m } = await liftWorld(host);
       const shopper = await shopperOn(m, { tracking: false, personalization: false });
       const refused = await decide(m, 'pdp', { shopper, ack: false });
-      expect(refused.snapshot.body.arm, `${host}: PRECONDITION — her decision is the default arm`).toBe('default');
+      expect(refused.snapshot.body.arm, `${host}: PRECONDITION — the shopper's decision is the default arm`).toBe('default');
       expect(sourcesMember(refused.snapshot, 'lift'), `${host}: P61.LO1 — the default arm reads no lift and names none: sources.lift is {}`).toEqual({});
     }, 120_000);
   }
@@ -285,11 +285,11 @@ describe('unit:P61.LO1 (R-P110, D1)', () => {
 
 describe('unit:P61.LO2 (R-P110, D1)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): read — the product page's fatigue dial reads the visitor's ring, and the answer names sources.ring { outcome: 'read', ms } (an empty ring on her first page, the pooled module fatigued on her second)`, async () => {
+    it(`host (${host}): read — the product page's fatigue dial reads the visitor's ring, and the answer names sources.ring { outcome: 'read', ms } (an empty ring on the shopper's first page, the pooled module fatigued on the second)`, async () => {
       const { m } = await liftWorld(host);
       const first = await decide(m, 'pdp');
       const again = await decide(m, 'pdp', { shopper: first.shopper });
-      expect(fatigued(again.snapshot), `${host}: PRECONDITION — the ring was read: the module served on her first page is fatigued on her second`).toBe(true);
+      expect(fatigued(again.snapshot), `${host}: PRECONDITION — the ring was read: the module served on the shopper's first page is fatigued on the second`).toBe(true);
       expectRead(ringReadOf(first.snapshot), 'read', `${host}: P61.LO2 — read (an empty ring)`);
       expectRead(ringReadOf(again.snapshot), 'read', `${host}: P61.LO2 — read`);
     }, 120_000);
