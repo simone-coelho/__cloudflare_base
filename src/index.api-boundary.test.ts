@@ -6,7 +6,7 @@ import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import { outcomeFromAction, ts36 } from '@/ledger/records';
+import { hourPrefix, outcomeFromAction, ts36, type LedgerStream } from '@/ledger/records';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { publicationScope } from '@/config/publication';
@@ -92,7 +92,7 @@ type Probe = {
   recoveryRole?: 'admin' | 'operator' | 'none';
   explicitChoice?: boolean;
   reflexPublication?: string;
-  pinnedPreconditions?: boolean;
+  pinnedPreconditions?: boolean; ledgerBatches?: Array<[string, string]>;
 };
 type Result = {
   status: number;
@@ -524,7 +524,7 @@ export default {
     const sessions = new Map([['session:private', ${JSON.stringify(PRIVATE)}]]);
     if (input.seedAudiences || input.authoredAudience) cache.set('audience:authored', JSON.stringify({ key: 'authored', name: 'Customer authored', status: 'published', conditions: ['fixture', 'eq', true] }));
     const storage = new Map([[${JSON.stringify(STORAGE_KEY)}, ${JSON.stringify(PRIVATE)}],
-      ['acme/2026-09-06/13/decisions/private.ndjson', 'ACME_PRIVATE_VALUE']]);
+      ['acme/2026-09-06/13/decisions/private.ndjson', 'ACME_PRIVATE_VALUE'], ...(input.ledgerBatches ?? [])]);
     const publicationEtags = new Map(); let publicationVersion = 0;
     if (input.operatorDiagnostics) {
       for (const tenant of ['acme', 'globex']) {
@@ -3186,11 +3186,30 @@ it('W03.02 retains granted exact destinations and document revisions, rejecting 
     expect(JSON.parse(published.body)).toMatchObject({ write: { success: true, notifiedUsers: 0 }, readStatus: 200,
       read: { success: true, audiences: [{ key: 'w0302', status: 'published' }] } });
     expect(published.calls).toEqual([['CACHE.put', `t:${tenant}:audience:w0302`], ['CACHE.list', `t:${tenant}:audience:`], ['CACHE.get', `t:${tenant}:audience:w0302`]]);
-    const exportRead = await probe({ ...common, path: `/v1/${tenant}/ledger/batches?date=2026-09-06` });
+    // R10 witness (baseline-52 #29, G17): the export lists ledger batch objects only, keys
+    // `<tenant>/<yyyy-mm-dd>/<hh>/<decision|outcome>/...` (isLearningKey, src/ledger/records.ts:15, applied at
+    // src/routes/decisions.ts:1254), named as the writer names a batch (src/ledger/writer.ts:85-86, one JSON row per
+    // line). Each tenant's day holds one decision batch whose row the reader admits (rowShape,
+    // src/learn/report.ts:151-165), beside the shared non-ledger `decisions/` object every probe seeds.
+    const hour = Date.UTC(2026, 8, 6, 13), stream: LedgerStream = 'decision';
+    const batchKey = (owner: string) => `${hourPrefix(owner, hour)}/${stream}/${ts36(hour)}-${ts36(hour)}-w0302.ndjson`;
+    const ledgerBatches = ['acme', 'globex'].map((owner): [string, string] => [batchKey(owner), JSON.stringify({
+      decision_id: `${owner}:${ts36(hour)}:w0302-visitor:home:hero:0`, tenant: owner, brand: owner, visitor_id: 'w0302-visitor',
+      session_id: 'w0302-session', ts: hour, page: 'home', slot: 'hero', position: 0, item_id: 'w0302', cell: {},
+      arm: 'personalized', explored: false }) + '\n']);
+    // The listed object is { key, date, size, uploaded } (src/routes/decisions.ts:1255); this fixture's listing states
+    // no size or upload time, so `size` is absent from the JSON and `uploaded` echoes 'undefined'.
+    const exportRead = await probe({ ...common, path: `/v1/${tenant}/ledger/batches?date=2026-09-06`, ledgerBatches });
     expect(exportRead.status).toBe(200);
-    expect(JSON.parse(exportRead.body).objects).toEqual([{ key: `${tenant}/2026-09-06/13/decisions/private.ndjson`, uploaded: 'undefined' }]);
-    expect(exportRead.calls).toEqual([['ACCOUNTS.audit', 'admitted'], ['STORAGE.list', `${tenant}/2026-09-06/`],
-      ['STORAGE.list', `erasures/${tenant}/pending/`], ['ACCOUNTS.audit', 'result']]);
+    expect(JSON.parse(exportRead.body).objects).toEqual([{ key: batchKey(tenant), date: '2026-09-06', uploaded: 'undefined' }]);
+    // R10 witness (baseline-52 #29, G17): every storage call names this tenant's own keys, between the audit's admitted
+    // and result rows (src/auth/subjectAudit.ts:121, :131): the pending erasures first (loadTombstones,
+    // src/routes/decisions.ts:1195; src/ledger/erasure.ts:68, :176), then the day (src/routes/decisions.ts:1251), then the
+    // W22 R1.05 reconciliation of a whole-day listing (src/routes/decisions.ts:1269-1271), which opens the batch it just
+    // listed (src/learn/report.ts:1674) and reads the day report by its own key (src/learn/report.ts:1695, :588, :1600).
+    expect(exportRead.calls).toEqual([['ACCOUNTS.audit', 'admitted'], ['STORAGE.list', `erasures/${tenant}/pending/`],
+      ['STORAGE.list', `${tenant}/2026-09-06/`], ['STORAGE.get', batchKey(tenant)],
+      ['STORAGE.get', `reports/${tenant}/${tenant}/2026-09-06.json`], ['ACCOUNTS.audit', 'result']]);
     const identityRead = await probe({ ...common, path: `/v1/${tenant}/identity/visitor/fixture` });
     expect(identityRead.status).toBe(200); expect(identityRead.calls).toEqual([['ACCOUNTS.auditOperations', 'admitted', '1'],
       ['SESSIONS.get', `t:${tenant}:identity:visitor:fixture`], ['ACCOUNTS.auditOperations', 'result', '1']]);
