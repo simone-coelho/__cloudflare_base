@@ -25,8 +25,9 @@ try{
  const headers={...site,'X-Shopper-Session':s.capability};
  const consent=await call('/realtime/session/preferences',{method:'POST',headers,body:JSON.stringify({trackingConsent:false,personalizationEnabled:false,choice:{id:crypto.randomUUID(),expectedRevision:s.consent?.instruction?.revision??null,grantId:s.grantId,iat:s.iat,exp:s.exp}})});
  check('explicit refusal preserved',consent.response.status===200&&consent.json?.consent?.tracking===false&&consent.json?.consent?.personalization===false);
+ // A shopper under explicit refusal is answered 200 with the defaults (arm 'default') and no render offer; `sources.consent` names the refusal (docs/kit/02-api-reference.md:331). The answer carries no `write` member.
  const path='/v1/'+tenant+'/decisions/snapshot',snapshotBody=JSON.stringify({page:'home'});
- const snapshot=await call(path,{method:'POST',body:snapshotBody,headers});check('signed default decisions',snapshot.response.status===200&&Array.isArray(snapshot.json?.decisions)&&snapshot.json?.write===false);
+ const snapshot=await call(path,{method:'POST',body:snapshotBody,headers});check('signed default decisions',snapshot.response.status===200&&snapshot.json?.arm==='default'&&Array.isArray(snapshot.json?.decisions)&&snapshot.json.decisions.every(d=>d?.renderOffer===undefined)&&snapshot.json?.sources?.consent?.tracking===false&&snapshot.json?.sources?.consent?.personalization===false);
  const noKey=await call(path,{method:'POST',body:snapshotBody,headers:{Origin:origin,'Content-Type':'application/json','X-Tenant':tenant,'X-Shopper-Session':s.capability}});check('site key required',noKey.response.status===401||noKey.response.status===403);
  const wrong=await call(path,{method:'POST',body:snapshotBody,headers:{...headers,'X-SDK-Key':'not-a-site-key'}});check('wrong site key refused',wrong.response.status===401||wrong.response.status===403);
  const event=await call('/realtime/action',{method:'POST',headers,body:JSON.stringify({type:'page_view',source:'verify-origin',userId:s.subject,sessionId:s.sessionId,eventId:crypto.randomUUID(),timestamp:Date.now(),data:{pageType:'home'}})});

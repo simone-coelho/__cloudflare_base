@@ -84,7 +84,18 @@ app.use(
 
 // Preflights carry header names, not the tenant selector's value. CORS answers
 // that metadata first; actual requests resolve one tenant before route work.
-app.use('*', tenantMiddleware());
+//
+// The two health probes are the only requests that resolve none (H3-1): a load
+// balancer's or an operator's readiness check names no brand, and the routes read
+// none (src/routes/health.ts: the signing configuration, the identity material
+// against the stamp's registry, the recovery prerequisites). Left behind the
+// middleware, they answered a healthy customer stamp `403 Tenant unavailable`, which
+// reads as an outage. The path is matched as Hono routes it (`getPath`, decoded) and
+// only for the reads the customer boundary admits for them.
+const tenantRequired = tenantMiddleware();
+const tenantFreeProbe = (req: Request): boolean =>
+  (req.method === 'GET' || req.method === 'HEAD') && ['/health/ready', '/health/live'].includes(getPath(req));
+app.use('*', (c, next) => tenantFreeProbe(c.req.raw) ? next() : tenantRequired(c, next));
 
 // CW10 — the access gates. All three are pass-through while AUTH_MODE is
 // 'open' (the default), so the shared demo worker is unchanged; the staging
