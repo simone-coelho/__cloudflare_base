@@ -27,7 +27,7 @@ import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSo
 import { authorityLocks } from '@/sdk/testHost';
 import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { shopperObjectName } from '@/tenancy/objects';
-import { tenantKey } from '@/tenancy/tenant';
+import { tenantKey, TenantResolutionError } from '@/tenancy/tenant';
 import { applyHistory, historyRowSchema } from '@/identity/history';
 import { loadTombstone, tombstoneKey, writeTombstone } from '@/ledger/erasure';
 import { reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
@@ -40,6 +40,9 @@ import { memoryStore, type OperationAuditDetail } from '@/auth/store';
 import { CONSENT_LIFETIME_MS, consentInstruction, type Consent, type ConsentInstruction } from '@/content/consent';
 import { runOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, type RetentionCategory } from '@/retention';
+import { visitContextMembers } from '@/services/visit';
+import { FIRST_JOURNEY_STAGE, PERSISTED_STAGE } from '@/services/JourneyStage';
+import { resolveSurface } from '@/demos/registry';
 
 
 class FakeKV {
@@ -128,6 +131,8 @@ const browse = (values: string[], at: number): ReflexState => {
 let env: Env;
 let auth: Record<string, string>;
 let ownedIds = new Map<string, string>();
+/** The capability each seeded browser holds: the grant its own object retains (seedDevice). */
+let ownedGrants = new Map<string, string>();
 let bound: ReturnType<typeof destinations> | undefined;
 
 /**
@@ -145,7 +150,7 @@ const owned = (tenant: string, subject: string): Consent => consentInstruction(e
 
 async function seedDevice(visitorId: string, sessionId: string, values: string[]) {
   ownedIds.set(visitorId, sessionId);
-  const sm = new SessionManager(env);
+  const sm = new SessionManager(env), kv = env.SESSIONS as unknown as FakeKV, put = vi.spyOn(kv, 'put');
   // The write only happens for an explicitly consenting shopper: a refused or
   // absent choice returns an untracked projection and stores nothing
   // (src/services/SessionManager.ts:298-322; src/content/consent.ts:139-163).
@@ -155,7 +160,42 @@ async function seedDevice(visitorId: string, sessionId: string, values: string[]
     // Built a few seconds ago, not at T0: the route merges at Date.now(), and a vector from 2023 is dust by now.
     await sm.createOrUpdateSession(sessionId, visitorId, { reflex: browse(values, Date.now() - 5_000), attributes: { product_views: values.length } });
   }, env.SESSIONS as never, undefined, async () => owned('coach', visitorId));
-  bound?.object.open(shopperObjectName('coach', visitorId)).data.set('consent', explicitChoice('coach', visitorId));
+  const written = (put.mock.calls as unknown as Array<[string, string, { expiration?: number }?]>).map(([key, value, options]) => ({ key, value, options }));
+  put.mockRestore();
+  if (!bound) return;
+  // R10 witness (baseline-52 #14-#17, G6; the retainedSession form of
+  // src/routes/realtime.sdkContract.test.ts:246-258): the owner's durable state
+  // is the authority and KV is only its acknowledged compatibility projection
+  // (src/durable-objects/ShopperReflex.ts:3949, :3982-3987 "No historical KV value
+  // acquires authority merely by being readable"), and the link transfers the
+  // owner's own `affinity`/`pipeline` (:2983) and forwards the browser's record
+  // only from its acknowledged projection (:3026-3052). So the browser's own
+  // object is seeded as its owned, tracked write leaves it
+  // (sessionProjectionStore.put, :4011-4021, :4067-4084): the grant it holds, its choice, a
+  // projection of each key the write published, and the durable profile derived
+  // from the session record exactly as that write derives it. The browser then
+  // presents that same grant (ownedCall).
+  const item = bound.object.open(shopperObjectName('coach', visitorId));
+  const issued = await issueSessionCapability(env, { tenant: 'coach', subject: visitorId, sessionId, kind: 'anonymous' });
+  const grant = await verifySessionCapability(env, issued.capability, 'coach');
+  ownedGrants.set(visitorId, issued.capability);
+  item.data.set('grantAuthority', { version: 1, epoch: grant.authorityEpoch, grants: { [grant.grantId!]: grant } });
+  item.data.set('consent', explicitChoice('coach', visitorId));
+  for (const { key, value, options } of written) item.data.set('sessionProjection:' + key,
+    { value, expires: options?.expiration ? options.expiration * 1000 : null, pending: false });
+  const session = JSON.parse(kv.store.get(tenantKey('coach', 'session:' + sessionId))!) as SessionData;
+  item.data.set('affinity', { shopperId: session.userId, reflex: session.reflex ?? emptyState(cfg),
+    retention: session.retention, externalRetention: session.externalRetention,
+    odpContext: session.odpContext, odpSeed: session.odpSeed ?? [], odpSeedAt: session.odpSeedAt ?? 0,
+    odpRecentEvents: session.odpRecentEvents ?? [], lastSeen: session.metadata.lastSeen, configVersion: cfg.version });
+  item.data.set('pipeline', { attributes: session.attributes, segments: session.segments,
+    journeyStage: session.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionId, visitorId: session.userId,
+    firstSeen: session.metadata.firstSeen, sessionCount: session.metadata.sessionCount, visitCount: session.metadata.visitCount,
+    lastVisitAt: session.metadata.lastVisitAt, entryChannel: session.metadata.entryChannel, ...visitContextMembers(session.metadata),
+    surface: resolveSurface({ surface: session.surface }), profileEnrichment: session.profileEnrichment,
+    ...(session.journey === undefined ? {} : { journey: session.journey }) });
+  item.data.set('audienceOwner', { tenant: 'coach', subject: visitorId, sessionId });
+  item.object = new ShopperReflex(item.state, env);
 }
 
 function historyProfile(subject: string, now = Date.now()): SessionData {
@@ -203,8 +243,9 @@ async function call(path: string, init: RequestInit & { json?: unknown } = {}) {
 async function ownedCall(path: string, init: RequestInit & { json?: unknown }) {
   const visitorId = (init.json as { visitorId?: string })?.visitorId ?? 'vis-00000000-0000-4000-8000-000000000099';
   const subject = /^[A-Za-z0-9_.-]+$/.test(visitorId) ? visitorId : 'vis-00000000-0000-4000-8000-000000000099';
-  const session = await issueSessionCapability(env, { tenant: 'coach', subject, sessionId: ownedIds.get(subject) ?? 's-owned-fresh', kind: subject.startsWith('sh_') ? 'recognized' : 'anonymous' });
-  return call(path, { ...init, headers: { ...init.headers, [SHOPPER_HEADER]: session.capability } });
+  // A seeded browser presents the grant its own object retains (seedDevice).
+  const capability = ownedGrants.get(subject) ?? (await issueSessionCapability(env, { tenant: 'coach', subject, sessionId: ownedIds.get(subject) ?? 's-owned-fresh', kind: subject.startsWith('sh_') ? 'recognized' : 'anonymous' })).capability;
+  return call(path, { ...init, headers: { ...init.headers, [SHOPPER_HEADER]: capability } });
 }
 
 // Explicit positive-fixture signing only. The SDK transport below never uses this helper.
@@ -218,6 +259,7 @@ async function signedCall(path: string, init: RequestInit & { json?: unknown }) 
 beforeEach(async () => {
   env = mkEnv();
   ownedIds = new Map();
+  ownedGrants = new Map();
   bound = undefined;
   auth = { Authorization: `Bearer ${await token()}` };
 });
@@ -354,6 +396,12 @@ describe('the link, on the session host', () => {
   it('the old anonymous grant cannot follow the linked browser into the person', async () => {
     await seedDevice('vis-00000000-0000-4000-8000-000000000001', 's-phone', ['Tabby']);
     const a = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
+    // R10 witness (baseline-52 #16): `b` keeps the input it had when this test was
+    // written (7b01c143:src/routes/identity.test.ts:125-130), another anonymous
+    // grant minted for the browser's session, not the grant its object retains
+    // since the G6 seed. The exact retry carrying that retained grant replays the
+    // link's recorded answer by ruling (W35.03; W37 LG1, ShopperReflex.ts:3012-3017).
+    ownedGrants.delete('vis-00000000-0000-4000-8000-000000000001');
     const b = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
     expect(b.status).toBe(401);
     expect((await new SessionManager(env).getSessionByUserId(a.body.shopperId))!.attributes.product_views).toBe(1);
@@ -390,7 +438,11 @@ describe('the link, on the session host', () => {
   it('validates the body and the tenant', async () => {
     expect((await ownedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000005' } })).status).toBe(400);
     expect((await ownedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 't:kate-spade:vis-00000000-0000-4000-8000-000000000005', accountId: 'a' } })).status).toBe(401);
-    expect((await ownedCall('/not a tenant/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000005', accountId: 'a' } })).status).toBe(401);
+    // R10 witness (baseline-52 #18, G13): the tenant middleware validates the path tenant and refuses it before any
+    // credential is read, 403 in the words of the TenantResolutionError it caught (src/tenancy/middleware.ts:95-98, :118-123;
+    // src/tenancy/tenant.ts:148-149).
+    const invalidTenant = await ownedCall('/not a tenant/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000005', accountId: 'a' } });
+    expect(invalidTenant.status).toBe(403); expect(invalidTenant.body).toEqual({ ok: false, error: new TenantResolutionError().message });
   });
 });
 
@@ -458,13 +510,24 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
         // export/absorb/forward stubs returning invented private audiences.
         expect(r.body.session).toMatchObject({ kind: 'recognized', subject: r.body.shopperId });
         expect(r.body.audiences).toEqual([]);
-        expect(r.headers.has('set-cookie')).toBe(false);
+        // R10 witness (baseline-52 #19, G13; measured: not a W16 C6 continuity cookie, the link route sets none,
+        // src/routes/identity.ts:425-489): the person's receipt on the object host carries no session cookie, only the
+        // consent mirror of the choice it answers (src/durable-objects/ShopperReflex.ts:3156-3163, :4290-4291), which
+        // the link route sets on both hosts (src/routes/identity.ts:468-469; docs/kit/02-api-reference.md §3, "Both
+        // hosts answer a sign-in ... the same way"). That mirror alone, derived from the engine's own writer.
+        const consent = r.body.session.consent as Consent;
+        expect(r.headers.get('set-cookie')).toBe(new SessionManager(env, { tenant: 'coach' }).generateConsentCookieHeaders(
+          { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization }, consent).join(', '));
       } else expect(r.headers.has('set-cookie')).toBe(true);
     }
   });
 
   it('uses freshly signed new-visitor proof through the actual SDK/router and retries only once', async () => {
     destinations();
+    // R10 witness (baseline-52 #20, G2): every served request resolves the tenant's configuration through the
+    // coherent publication, which refuses an uninitialized scope (src/config/publication.ts:399); the explicit
+    // W11 baseline every other block of this file seeds (ensurePublication), never a re-admitted KV fallback.
+    await ensurePublication('coach');
     let sequence = 0;
     const requests: Array<{ path: string; status: number; visitorId: string; assertion?: string }> = [];
     const host = memoryHost({ acquireAuthorityLock: authorityLocks(), uuid: () => `w0401-varying-uuid-${++sequence}`,
@@ -502,8 +565,13 @@ describe('W04.01 mandatory proof and actual SDK retry', () => {
     expect(proofs).toHaveLength(2); expect(proofs[0]!.visitorId).toBe(old);
     expect(proofs[1]!.visitorId).not.toBe(old); expect(proofs[1]!.visitorId).toMatch(/^vis-/);
     expect(requests.filter(r => r.path.endsWith('/link')).map(r => ({ visitorId: r.visitorId, assertion: r.assertion }))).toEqual(proofs);
-    const person = await new SessionManager(env).getSessionByUserId(core.visitorId);
-    expect(person?.identity?.shopperId).toBe(core.visitorId);
+    // R10 witness (baseline-52 #20, the later assertion its fixture fix exposed): this flow records no explicit choice
+    // and detach carries only refusal (src/routes/identity.ts:491-494), so nothing of the shopper is kept (settled
+    // decision D06-W05; src/content/consent.ts:138-140): the person's session record is published only under the
+    // person's consent (src/durable-objects/ShopperReflex.ts:3149) and the run keeps none. The person the browser now carries is
+    // the link's own identity record, published on every link (:3153-3155), holding the browser that signed in.
+    expect(await new IdentityStore(env.SESSIONS as never, 'coach').shopper(core.visitorId))
+      .toMatchObject({ shopperId: core.visitorId, visitors: [{ visitorId: proofs[1]!.visitorId, assurance: 'signed', source: 'login' }] });
     expect(core.visitorId).toBe(await shopperIdFor(env, 'coach', 'acct-next'));
   });
 });
@@ -890,12 +958,18 @@ describe('W06.01 durable local erasure retry', () => {
     const imported = applyHistory(env, tenant, [historyRowSchema.parse({ shopperId: subject, action: 'purchase', at, product: { line: 'Tabby' } })], at);
     release(); expect((await withdrawal).status).toBe(200);
     expect(await imported).toMatchObject({ applied: 0, shoppers: 0, skipped: [{ index: 0, reason: 'consent_refused' }] });
-    expect(item.writes.filter(w => w !== 'alarm')).toEqual(['put:consent']);
+    // R10 witness (baseline-52 #22, G13): the withdrawal of tracking also retires the owner's buffered recovery work
+    // in one storage transaction, committed even when nothing is buffered (src/durable-objects/ShopperReflex.ts:2145;
+    // src/ledger/recovery.ts:369-382); this fixture logs every transaction as 'erase-transaction'. The import that
+    // raced the withdrawal still writes nothing.
+    const withdrawalWrites = ['put:consent', 'erase-transaction'];
+    expect(item.writes.filter(w => w !== 'alarm')).toEqual(withdrawalWrites);
     expect((item.data.get('affinity') as { reflex: ReflexState }).reflex.dims).toEqual({});
     expect(item.data.has('audienceOwner')).toBe(false);
     item.object = new ShopperReflex(item.state, env);
     expect((await applyHistory(env, tenant, [historyRowSchema.parse({ shopperId: subject, action: 'purchase', at, product: { line: 'Tabby' } })], at)).applied).toBe(0);
-    expect(item.writes.filter(w => w !== 'alarm')).toEqual(['put:consent']);
+    // R10 witness (baseline-52 #22): the same withdrawal writes as above; the refused import after restart adds none.
+    expect(item.writes.filter(w => w !== 'alarm')).toEqual(withdrawalWrites);
     vi.restoreAllMocks();
     for (const host of ['session', 'do']) {
       env = mkEnv({ REFLEX_HOST: host }); const current = destinations(); await configureHistory(tenant);
