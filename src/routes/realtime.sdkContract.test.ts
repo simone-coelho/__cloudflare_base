@@ -601,7 +601,7 @@ it('W09.09 both actual hosts durably admit before effects, drain held queue I/O 
       const gate = new Promise<void>(resolve => { release = resolve; }), started = new Promise<void>(resolve => { entered = resolve; });
       f.env.EVENT_QUEUE = { send: async (body: unknown) => {
         const metas = [...owner.data].filter(([key]) => key.startsWith('recoveryOperation:'));
-        expect(metas).toHaveLength(wires.length+1); expect([...owner.data.keys()].some(key => key.startsWith('recoveryBody:'))).toBe(true);
+        const sending = (body as { recovery_id?: string }).recovery_id, admitted = new Map(metas as Array<[string, OwnerRecovery]>); expect([metas.length, admitted.get('recoveryOperation:' + sending)?.learning]).toEqual([2, wires.length === 0]); expect([...owner.data.keys()].some(key => key.startsWith('recoveryBody:' + sending + ':'))).toBe(true); // R10 (amendment 5, P58): the purchase admits its behaviour capture (src/routes/realtime.ts:239-241) and then its outcome (emitOutcome, :250-286, retained), both before any effect; the outcome's effects run before the answer and send first, the behaviour capture's after the answer in the shopper's serializer (src/ledger/recovery.ts:179, :213-221); at each send both are admitted, and the one sent (its `recovery_id`, recovery.ts:168) with its body: durable admission precedes its effects (recovery.ts:176)
         expect([...raw.keys()].filter(key=>key.includes('-managed-'))).toHaveLength(wires.length); wires.push(structuredClone(body)); entered(); await gate;
         throw new Error('synthetic lost queue acknowledgement');
       } } as unknown as Queue;
