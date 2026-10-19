@@ -723,6 +723,9 @@ export class ShopperReflex {
         try { await this.assertOwned(p, request); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
         const now = Date.now();
         if (url.pathname === '/analytics') {
+          // W05.BASE.03: on the session host a kept profile is read from its published record
+          // (realtime.ts); its owner answers there only for a session that keeps none.
+          if ((this.env.REFLEX_HOST ?? 'session') === 'session' && (this.affinity || this.pipeline)) return json({ ok: false, error: 'Session not found' }, 404);
           if (this.affinity) pinProfileRetention(this.env, this.affinity, p.tenant);
           const analytics = { sessionId: p.sessionId, analytics: {
           sessionDuration: this.pipeline ? now - this.pipeline.firstSeen : 0,
