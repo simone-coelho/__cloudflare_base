@@ -154,7 +154,7 @@ import {
   pageInstanceOf, recentSlot, rounded, shopperOn, storedDecisions, TENANT, type Decision, type Host, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
 import {
-  ackWire, admissionsOf, clickWire, decisionAdmissionOf, holdObjectDoor, holdQueue, refuseAdmission, remoteLatency, rowsOf, settle, shopperHeld, shopperStorage,
+  ackWire, admissionsOf, clearShopperAlarm, clickWire, decisionAdmissionOf, holdObjectDoor, holdQueue, refuseAdmission, remoteLatency, rowsOf, settle, shopperHeld, shopperStorage,
   storedBehavior, UNANSWERED, w06SourceOf, within, workerApp, type Identity, type Latency, type WorkerApp,
 } from '../_parity8';
 
@@ -211,6 +211,9 @@ describe('unit:P56.AA1', () => {
       const d = layout[0]!;
       const held = holdQueue(m);
       const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() };
+      // R-P101: the page view's own admission already armed the alarm about 30 s ahead, and armRecovery never moves an
+      // earlier alarm (recovery.ts:126-129); cleared, so the alarm clause below reads the one this acknowledgement armed.
+      await clearShopperAlarm(m, s.subject);
       const sentWall = Date.now();
       const sent = ackWire(app, s, page, d, identity);
       const answer = await within(sent, HOLD_BOUND_MS);
@@ -278,15 +281,16 @@ describe('unit:P56.AA2', () => {
       const lever = latency!;
       const first = lever.calls.length;
       lever.set(perCall);
-      let answer: Awaited<ReturnType<typeof ackWire>> | typeof UNANSWERED = UNANSWERED;
+      let answer: Awaited<ReturnType<typeof ackWire>> | typeof UNANSWERED = UNANSWERED, byDeadline = 0;
       let eventual: Awaited<ReturnType<typeof ackWire>>;
       const sent = ackWire(app, s, page, d);
-      try { answer = await within(sent, deadline); }
+      try { answer = await within(sent, deadline); byDeadline = lever.calls.length - first; }
       finally { lever.set(0); eventual = await sent; await settle(m, app); }
-      const made = (answer === UNANSWERED ? lever.calls.slice(first) : lever.calls.slice(first).filter(call => call.at <= answer.answeredAt)).length;
+      // R-P101: only the calls made before the answer, or before the deadline passed without one.
+      const made = answer === UNANSWERED ? byDeadline : lever.calls.slice(first).filter(call => call.at <= answer.answeredAt).length;
       const elapsed = answer === UNANSWERED ? Infinity : answer.answeredAt - answer.sentAt;
       expect.soft(elapsed, `${host}: P56.AA2 — the acknowledgement answers in under ${deadline} ms with ${perCall} ms on every remote call: ${answer === UNANSWERED
-        ? `${UNANSWERED} within the deadline; ${made} remote calls made before it passed (${lever.calls.slice(first, first + 40).map(call => call.binding + '.' + call.method).join(' ')})`
+        ? `${UNANSWERED} within the deadline; ${made} remote calls made before it passed (${lever.calls.slice(first, first + made).map(call => call.binding + '.' + call.method).join(' ')})`
         : `answered in ${Math.round(elapsed)} ms after ${made} remote calls`}`).toBeLessThan(deadline);
       expect.soft([eventual.status, (eventual.body.render as { status?: unknown } | undefined)?.status], `${host}: P56.AA2 — and the answer is the durable acknowledgement (${show(eventual.body)})`)
         .toEqual([200, 'durable']);
@@ -363,6 +367,8 @@ describe('unit:P56.AA4', () => {
       const { m, app, s, page, layout } = await world(host, 'p56-aa4-admission');
       const d = layout[0]!;
       const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() };
+      // R-P101: cleared as in AA1 (the page view armed it first, and armRecovery never moves an earlier alarm), so the alarm clause below reads the one this acknowledgement armed.
+      await clearShopperAlarm(m, s.subject);
       const ack = await ackWire(app, s, page, d, identity);
       const alarm = await shopperStorage(m, s.subject).getAlarm(), alarmRead = Date.now();
       await settle(m, app);
