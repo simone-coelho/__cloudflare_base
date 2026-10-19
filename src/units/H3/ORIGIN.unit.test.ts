@@ -15,8 +15,8 @@
 // WebSocketPair, which node does not have. That check is read from the live rig (the lead's local-rig run), not here;
 // every other check is asserted.
 //
-// The kit's promise for a refusing shopper (docs/kit/02-api-reference.md:331): "Tracking-refused choices contain no render
-// offer; personalization-refused choices use defaults. `sources.consent` names that state."; `arm` is "the experience served" (:1327).
+// The kit's promise for a refusing shopper (docs/kit/02-api-reference.md:331): "Its `200` answer shows the refusal in the members
+// `scripts/verify-origin.sh` checks: `arm` is `"default"` (tracking- or personalization-refused choices use defaults), no decision carries a `renderOffer` (tracking-refused choices contain no render offer), and `sources.consent` names that state, with `tracking` and `personalization` both `false` after an explicit refusal of both."; `arm` is "the experience served" (:1327).
 
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
 vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the Agents router is not on these paths'); } }));

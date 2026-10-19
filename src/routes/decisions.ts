@@ -258,13 +258,13 @@ async function operatorRecent(env: Env, tenant: string, visitorId: string): Prom
 
 /**
  * W37 T5 (decision D2): the decision history the per-shopper export answers for
- * the ids of one person at one tenant — for each id her receipts, exactly as
+ * the ids of one person at one tenant — for each id their receipts, exactly as
  * `GET visitors/{id}/receipts` answers them (every one, not one page), the
- * entries of her own ring as `GET visitors/{id}/recent` answers them, and each
+ * entries of their own ring as `GET visitors/{id}/recent` answers them, and each
  * receipted decision's ledger record as `GET ledger/{id}` answers it. It writes
  * no per-read audit: the export's own subject-operation audit covers it. A ring
  * that cannot be read, or a record whose retention authority is no longer
- * honoured, refuses the export rather than leaving her history out; an erased
+ * honoured, refuses the export rather than leaving their history out; an erased
  * record is never answered.
  */
 export async function subjectDecisionHistory(c: { env: Env }, tenant: string, ids: readonly string[]): Promise<{
@@ -312,12 +312,12 @@ const EXPORT_STREAMS: readonly LedgerStream[] = ['decision', 'outcome', 'product
 export interface LedgerScanPosition { key: string | null; line: number | null }
 
 /**
- * W37 T5 (decision D2): every row of hers the tenant's ledger partition holds,
+ * W37 T5 (decision D2): every row the tenant's ledger partition holds for the shopper,
  * per stream, as stored — the R2 partition "is the export" (doc 22 §12.4), and
  * a row names its person or browser in `visitor_id`. The partition has no
  * per-shopper index, so the whole of the tenant's partition is read, oldest key
  * first, and nothing of any other tenant (its keys start with `{tenant}/`).
- * Whether a row's person or browser is hers is decided by `owns`, again by
+ * Whether a row's person or browser is the shopper's is decided by `owns`, again by
  * every call; `owns` answers `null` when the call may decide no more, and the
  * scan then stops at that row. One call also opens at most
  * `SUBJECT_EXPORT_LIMITS` of the partition. `next` is where the same export
@@ -732,7 +732,7 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
 
 /**
  * GET /v1/:tenant/visitors/:visitorId/receipts?limit=&cursor= (doc 28 §4): what this shopper was served,
- * newest first, each with the sentences that say why, from her own ring. Authenticated, like /recent.
+ * newest first, each with the sentences that say why, from the shopper's own ring. Authenticated, like /recent.
  * Records at or before the retained erasure cutoff are suppressed by the ring.
  */
 decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async (c) => {
@@ -802,7 +802,7 @@ decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
     ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}), ...marked });
 });
 
-/** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from her own object. Authenticated. */
+/** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from the visitor's own object. Authenticated. */
 decisionRoutes.get('/:tenant/visitors/:visitorId/recent', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const visitorId = (c.req.param('visitorId') ?? '').trim();
@@ -1132,8 +1132,8 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
     // W21 E1.03: the experiment this answer belongs to — `arm` above is the
     // experience served, `experiment.arm` the experimental assignment — so a
-    // customer can join their own outcome data to the population we served her
-    // in. Absent for an unsigned caller, which is no shopper.
+    // customer can join their own outcome data to the population the shopper was
+    // served in. Absent for an unsigned caller, which is no shopper.
     ...(out.experiment ? { experiment: out.experiment } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
     // A refused pin has no delivery decision and no ledger row, so without this member
@@ -1304,7 +1304,7 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
 /**
  * CW28, the ledger half of erasure (doc 22 §15). GET lists the pending
  * tombstones so an export consumer can apply them at once; POST writes one for
- * a visitor and empties her ring (the identity route calls the same function
+ * a visitor and empties that visitor's ring (the identity route calls the same function
  * after erasing the profile); POST .../rewrite runs the scheduled rewrite now,
  * as the nightly cron does. All authenticated; the list carries visitor ids.
  * Registered before /ledger/:id so the literal segment wins.
