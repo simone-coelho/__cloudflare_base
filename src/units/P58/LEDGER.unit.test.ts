@@ -80,15 +80,16 @@
 //     owner app answers the link with its own `400 Validation error` and today the drain
 //     rethrows the retained ZodError after it, which reaches the test as the framework's
 //     untyped 500. The drain rule itself is measured on `runOwnerOperation` (logic leg),
-//     its kept behaviours as controls. MEASURED AND NOT EXPRESSED (for the lead): in
-//     workerd (src/units/_native.ts) the shopper receives 500 `{"error":"Internal server
-//     error","message":"ZodError: [ … at most8 sources … ]"}` on both hosts, and still
-//     receives it under a sketch that moves the drain threshold to 400
-//     (_evidence/parity-step3/S10/specifier/logs/probe-c.log, sketch-units-1.log): the
-//     merge's refusal is raised in the account's own shopper object and crosses the
-//     Durable Object boundary to the browser's object as a plain Error, so there the
-//     route's own answer is already a 500. A native leg expecting 400 would need that
-//     refusal typed across the object boundary, beyond the threshold P58-D names.
+//     its kept behaviours as controls. In workerd (src/units/_native.ts, the native
+//     legs) the shopper receives today 500 `{"error":"Internal server error","message":
+//     "ZodError: [ … at most8 sources … ]"}` on both hosts, and still does when only the
+//     drain threshold moves to 400 (_evidence/parity-step3/S10/specifier/logs/probe-c.log,
+//     sketch-units-1.log): the merge's refusal is raised in the account's own shopper
+//     object and reaches the browser's object as a plain Error across the Durable Object
+//     boundary, so there the route's own answer is already a 500. R-P106 (the lead's ruling): P58 includes the native
+//     behaviour — that refusal crosses the boundary typed, and the browser-side route
+//     answers its own 400 with the same details natively. The native legs run every
+//     step in turn (no wait, no race): they do not depend on timing.
 //   · BA5 "an operation whose effects are still pending": the decision recovery of a
 //     render acknowledgement whose continuation failed once (the first read of its
 //     operation after the admission fails, src/units/_parity8.ts
@@ -118,25 +119,29 @@
 // No new export is imported; every member read exists at this head.
 //
 // FIXTURE. P02's world (src/units/P02/LEDGER.unit.test.ts:100-105) as P56's file builds
-// it; BA4 replays W14.05's oversized merge on the same documents (src/routes/realtime.sdkContract.test.ts:3502-3530): two shoppers'
+// it; BA4 replays W14.05's oversized merge on the same documents, in process and in workerd (src/routes/realtime.sdkContract.test.ts:3502-3530): two shoppers'
 // profile rows (sources crm, warehouse) linked to one account, then a third shopper
 // with seven more sources linked to it.
 //
 // HARNESS: src/units/_parity.ts, src/units/_parity3.ts (the identity routes and the
-// tenant's identity material) and src/units/_parity8.ts (the worker's error path, the
-// wire without a drain, the levers, the readers). Imports from src/units/: ../_parity,
-// ../_parity3, ../_parity8.
+// tenant's identity material), src/units/_parity8.ts (the worker's error path, the
+// wire without a drain, the levers, the readers) and src/units/_native.ts (workerd, for
+// BA4's native legs). Imports from src/units/: ../_parity, ../_parity3, ../_parity8,
+// ../_native.
 
 import { Hono } from 'hono';
+import { SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
 
 import { storedConsent } from '@/content/consent';
 import { signAssertion } from '@/identity/assertion';
 import { admitOwnerPrincipal, retainOwnerWork, runOwnerOperation } from '@/identity/sessionAuthority';
 import { SessionAccessError, verifySessionCapability } from '@/identity/sessionCapability';
+import { EMPTY_PRIORS } from '@/learn/priors';
 import { captureBehavior } from '@/ledger/behavior';
 import { outcomeFromAction, type BehaviorRecord } from '@/ledger/records';
 import { recoveryDigest, type RecoveryInput, type RecoveryReceipt } from '@/ledger/recovery';
+import { RETENTION_CATEGORIES } from '@/retention';
 import { identityRoutes } from '@/routes/identity';
 import { ACK_DEADLINE_MS } from '@/sdk/core';
 import { tenantMiddleware } from '@/tenancy/middleware';
@@ -144,7 +149,7 @@ import type { TenantId } from '@/tenancy/tenant';
 
 import {
   declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learned, learnDocument, M, MODULES, mount, PAGE_VIEW, PAID_SOCIAL_ENTRY, pageInstanceOf,
-  productView, recentSlot, rounded, shopperOn, slotPositionOf, storedDecisions, storedOutcomes, TENANT, VIEW_TABBY_26,
+  productView, recentSlot, REFLEX_DOCUMENT, rounded, shopperOn, slotPositionOf, storedDecisions, storedOutcomes, TENANT, VIEW_TABBY_26,
   type Decision, type Host, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
 import {
@@ -152,6 +157,7 @@ import {
   settle, shopperHeld, shopperStorage, storedBehavior, UNANSWERED, within, workerApp, type Identity, type Latency, type WorkerApp,
 } from '../_parity8';
 import { identityDoor, identitySecretOf } from '../_parity3';
+import { bundleNativeWorker, nativeScratchDirectory, openNativeRuntime } from '../_native';
 
 const DOCUMENTS = { pieces: MODULES, slots: declaredSlots([layoutSlot(), recentSlot()]), learn: learnDocument() };
 /** P02's cold layout (src/units/P02/LEDGER.unit.test.ts:105). */
@@ -415,6 +421,99 @@ async function oversizedMerge(host: Host): Promise<{ status: number; body: Recor
   return { status: answer.status, body: answer.body };
 }
 
+const NATIVE_SECRET = 'p58-native-operator-signing-material';
+const NATIVE_IDENTITY = 'p58-native-identity-material';
+/** The real src/index.ts in workerd; the doors only publish a tenant's documents and mint an anonymous grant (src/units/W37/LEDGER.unit.test.ts's idiom, :289-343). */
+const NATIVE_WRAPPER = `
+import worker, { ShopperReflex, PersonalizationWebSocket, DecisionRing, LearnStats, RegionTrend } from './src/index.ts';
+import { initializePublicationSet } from './src/config/publication.ts';
+import { REFLEX_KIND, reflexScopeForTenant } from './src/reflex/configStore.ts';
+import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from './src/content/kinds.ts';
+import { PRIORS_KIND } from './src/learn/priors.ts';
+import { newAnonymousSession } from './src/identity/sessionCapability.ts';
+export { ShopperReflex, PersonalizationWebSocket, DecisionRing, LearnStats, RegionTrend };
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    if (url.hostname !== 'p58-fixture') return worker.fetch(request, env, ctx);
+    const input = await request.json();
+    if (url.pathname === '/publish') {
+      const revision = value => ({ revision: 1, at: 1, actor: 'p58-native', note: '', value });
+      await initializePublicationSet(env, [
+        { kind: CONTENT_KIND, scope: input.tenant, revision: revision(input.content) }, { kind: SLOTS_KIND, scope: input.tenant, revision: revision(input.slots) },
+        { kind: LEARN_KIND, scope: input.tenant, revision: revision(input.learn) }, { kind: PRIORS_KIND, scope: input.tenant, revision: revision(input.priors) },
+        { kind: REFLEX_KIND, scope: reflexScopeForTenant(input.tenant), revision: revision(input.reflex) },
+      ], '0:' + crypto.randomUUID());
+      return Response.json({ published: input.tenant });
+    }
+    if (url.pathname === '/grant') return Response.json(await newAnonymousSession(env, input.tenant));
+    return new Response(null, { status: 404 });
+  },
+};`;
+let nativeBundle: Promise<string> | undefined;
+
+/**
+ * W14.05's oversized merge in workerd (src/units/_native.ts: the real src/index.ts,
+ * SQLite-backed Durable Objects, KV and R2, no network) on one host, every step
+ * awaited in turn: the same documents published, three browsers each with their
+ * explicit choice and a page view, the operator's profile rows through
+ * `POST /v1/:tenant/identity/events`, and the browsers' signed links through
+ * `POST /v1/:tenant/identity/link`. Returns the third browser's answer.
+ */
+async function oversizedMergeNative(host: Host): Promise<{ status: number; body: Record<string, unknown> }> {
+  const bundle = await (nativeBundle ??= bundleNativeWorker(NATIVE_WRAPPER, 'p58-ledger-native'));
+  const directory = nativeScratchDirectory('p58-ledger-native-');
+  const policy = { id: 'p58-native-policy', revision: 1, durationMs: 3650 * 86_400_000, basis: 'admitted', renewal: 'new-record-only' };
+  const runtime = await openNativeRuntime({ bundle, name: `p58-native-${host}`, persistDir: directory.path,
+    durableObjects: { SHOPPER_REFLEX: 'ShopperReflex', PERSONALIZATION_WEBSOCKET: 'PersonalizationWebSocket', DECISION_RING: 'DecisionRing', LEARN_STATS: 'LearnStats', REGION_TREND: 'RegionTrend' },
+    kvNamespaces: ['CACHE', 'SESSIONS'], r2Buckets: ['STORAGE'],
+    bindings: { DEPLOYMENT_PROFILE: 'demo', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', REFLEX_HOST: host, JWT_SECRET: NATIVE_SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
+      IDENTITY_SECRETS: `${TENANT}:${NATIVE_IDENTITY}`, LEDGER_RECOVERY_ENABLED: 'true', TENANTS: JSON.stringify({ provisioned: [TENANT], operatorGrants: { ops: [TENANT] } }),
+      RETENTION: JSON.stringify({ version: 1, tenants: { [TENANT]: Object.fromEntries(RETENTION_CATEGORIES.map(category => [category, policy])) } }) } });
+  try {
+    const door = async (path: string, body: unknown) => {
+      const response = await runtime.fetch(`https://p58-fixture${path}`, { method: 'POST', body: JSON.stringify(body) });
+      expect(response.status, `PRECONDITION (${host} native): fixture door ${path}`).toBe(200);
+      return await response.json() as Record<string, unknown>;
+    };
+    await door('/publish', { tenant: TENANT, content: { version: 'p58-native', pieces: MODULES }, slots: DOCUMENTS.slots, learn: DOCUMENTS.learn, priors: EMPTY_PRIORS, reflex: REFLEX_DOCUMENT });
+    const token = await new SignJWT({ sub: 'ops', type: 'service', roles: ['operator', 'admin'] }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('i').setAudience('a')
+      .setExpirationTime('2h').sign(new TextEncoder().encode(NATIVE_SECRET));
+    const browser = async () => {
+      const g = await door('/grant', { tenant: TENANT }) as unknown as { capability: string; subject: string; sessionId: string; grantId: string; iat: number; exp: number };
+      const call = async (path: string, body: unknown) => {
+        const response = await runtime.fetch(`https://shop.example${path}`, { method: 'POST',
+          headers: { 'X-Tenant': TENANT, 'X-Shopper-Session': g.capability, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const text = await response.text();
+        let parsed: Record<string, unknown>; try { parsed = JSON.parse(text) as Record<string, unknown>; } catch { parsed = { text }; }
+        return { status: response.status, body: parsed };
+      };
+      expect((await call(`/realtime/session/${g.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
+        choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: g.grantId, iat: g.iat, exp: g.exp } })).status, `PRECONDITION (${host} native): the browser's explicit choice`).toBe(200);
+      expect((await call('/realtime/action', { ...PAGE_VIEW, source: 'sdk', userId: g.subject, sessionId: g.sessionId, timestamp: Date.now(), eventId: crypto.randomUUID() })).status,
+        `PRECONDITION (${host} native): the browser's page view`).toBe(200);
+      const link = async (accountId: string) => {
+        const exp = Math.floor(Date.now() / 1000) + 300;
+        return call(`/v1/${TENANT}/identity/link`, { visitorId: g.subject, accountId, exp, assertion: await signAssertion(NATIVE_IDENTITY, TENANT as TenantId, g.subject, accountId, exp) });
+      };
+      return { subject: g.subject, link };
+    };
+    const rows = async (list: unknown[]) => {
+      const response = await runtime.fetch(`https://ops.example/v1/${TENANT}/identity/events`, { method: 'POST',
+        headers: { 'X-Tenant': TENANT, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: list }) });
+      expect(response.status, `PRECONDITION (${host} native): the operator's profile rows are applied (${(await response.text()).slice(0, 200)})`).toBe(200);
+    };
+    const row = (subject: string, source: string, empty = false) => ({ kind: 'profile', version: 1, source, visitorId: subject, at: Date.now() - 1000,
+      fields: empty ? {} : { tier: { type: 'string', meaning: 'Synthetic loyalty tier', value: 'gold' } }, audiences: empty ? {} : { vip: 'Synthetic provider VIP membership' } });
+    const a = await browser(), b = await browser();
+    await rows([row(a.subject, 'crm'), row(b.subject, 'warehouse')]);
+    expect([(await a.link('p58-person')).status, (await b.link('p58-person')).status], `PRECONDITION (${host} native): two browsers linked to one account carry two sources`).toEqual([200, 200]);
+    const d = await browser();
+    await rows(Array.from({ length: 7 }, (_, n) => row(d.subject, 'extra' + n, true)));
+    return await d.link('p58-person');
+  } finally { await runtime.dispose(); directory.remove(); }
+}
+
 /** How `runOwnerOperation` settles an answer of `status` while a retained piece of its work rejects with `retained`. */
 async function drainOf(status: number, retained: Error): Promise<string> {
   const owner = {};
@@ -433,6 +532,15 @@ describe('unit:P58.BA4', () => {
       const answer = await oversizedMerge(host);
       expect([answer.status, answer.body.error, (answer.body.details as Array<{ message?: unknown }> | undefined)?.map(detail => detail.message)],
         `${host}: P58.BA4 — the route's own answer stands (profileEnrichment.ts:18 refused by the owner's error path, error.ts:19-27): ${show(answer.body)}`)
+        .toEqual([400, 'Validation error', ['at most8 sources']]);
+    }, 120_000);
+  }
+
+  for (const host of HOSTS) {
+    it(`native (${host}): R-P106 — in workerd too, W14.05's oversized identity merge reaches the shopper as the route's own 400 Validation error naming "at most8 sources": the refusal raised in the account's own shopper object crosses the Durable Object boundary typed`, async () => {
+      const answer = await oversizedMergeNative(host);
+      expect([answer.status, answer.body.error, (answer.body.details as Array<{ message?: unknown }> | undefined)?.map(detail => detail.message)],
+        `${host} native: P58.BA4 (R-P106) — the browser-side route answers its own 400 with the same details, not a 500: ${show(answer.body)}`)
         .toEqual([400, 'Validation error', ['at most8 sources']]);
     }, 120_000);
   }
