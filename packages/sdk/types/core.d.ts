@@ -1,4 +1,10 @@
 import type { ActionEnvelope, ClientConfig, CoreEvents, DecisionSet, DomLike, ElementLike, EngineUpdate, EntrySignals, Host, Paths, SdkEventType, SocketStatus, RenderAcknowledgment } from './types.js';
+/**
+ * The deadline, in milliseconds, past which the SDK cuts a request it makes to
+ * the engine: the render acknowledgement first among them (amendment 5, P56),
+ * and every other request that shares the same bounded read.
+ */
+export declare const ACK_DEADLINE_MS = 5000;
 export declare const DEFAULT_PATHS: Paths;
 /** Only explicit default sets (including editorial pins) and empty absence
  * are public. Unknown/exploration arms need consent even with zero scores. */

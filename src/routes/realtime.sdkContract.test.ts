@@ -383,7 +383,7 @@ describe('W15 actual read-only offers and durable rendered admission', () => {
         stats: { events: 1, updatedAt: event.timestamp, items: { 'render-piece': { '*': { n: { s: 1, t: event.timestamp } } } } } });
       expect(JSON.stringify(r.rows('behavior'))).not.toContain(event.data.renderOffer);
       const original = r.recovery(), originalLearning = structuredClone(learned()); r.owner.shopper = new ShopperReflex(r.owner.state, r.f.env);
-      const retry = await r.f.call('/realtime/action', r.g.capability, wire, tenant); expect(retry.status).toBe(200); expect((await retry.json() as { render: unknown }).render).toEqual(result.render);
+      const retry = await r.f.call('/realtime/action', r.g.capability, wire, tenant); expect(retry.status).toBe(200); const answered = result.render as Record<string, unknown>; expect([answered.source, (await retry.json() as { render: unknown }).render]).toEqual(['pending', { ...answered, source: 'recovered' }]); // R10 (amendment 5, P56; R-P100(3)): the first answer is given at durable admission, its source the admission receipt's 'pending' (src/ledger/recovery.ts:174, :179, :221; src/content/renderOffer.ts:111); the identical retry after the effects replays the stored receipt, 'recovered' (recovery.ts:240, :280); every other member is the first answer's
       await r.f.drain(); expect(r.rows('decision')).toEqual(rows); expect(r.recovery()).toEqual(original); expect(learned()).toEqual(originalLearning);
     }
   }, 30000);

@@ -7,7 +7,7 @@ import type { SlotLearnConfig, LearningReceipt } from '@/learn/fan';
 import type { AttributionPolicy } from '@/learn/policy';
 import type { PreparedMessage, LedgerDeliveryReceipt } from './enqueue';
 import type { CaptureReceipt } from './delivery';
-import { admitOwnedRecovery, durableRecoveryEnabled, RecoveryUnavailableError } from '@/identity/sessionAuthority';
+import { admitOwnedRecovery, continueAfterOwnerAnswer, durableRecoveryEnabled, RecoveryUnavailableError } from '@/identity/sessionAuthority';
 
 /** A generation is captured before durable admission, never refreshed on retry. */
 export interface LearningGeneration { whole: number; item: number }
@@ -128,10 +128,10 @@ async function armRecovery(storage: DurableObjectStorage, deadline: number): Pro
   if (prior === null || prior <= Date.now() || prior > next) await storage.setAlarm(Math.max(Date.now() + 1, next));
 }
 
-/** Owner serializer remains held through admission and effects. The guard is the
- * owner's current exact grant/epoch and consent check, not a stored bearer. */
+/** Owner serializer remains held through admission and effects (after the answer, in that serializer, when the caller
+ * asks to be answered at admission: P56, `RecoveryOptions`). The guard is the owner's current exact grant/epoch and consent check, not a stored bearer. */
 export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, input: RecoveryInput,
-  principal: SessionCapability, consentUntil: number, guard: (principal: SessionCapability, until: number) => Promise<void>): Promise<RecoveryReceipt> {
+  principal: SessionCapability, consentUntil: number, guard: (principal: SessionCapability, until: number) => Promise<void>, options?: RecoveryOptions): Promise<RecoveryReceipt> {
   if (!durableRecoveryEnabled(env)) throw new RecoveryUnavailableError();
   input = JSON.parse(recoveryJSON(input)) as RecoveryInput;
   const { isCapturedMessage } = await import('./writer'), { logicalIdentity } = await import('./delivery');
@@ -150,7 +150,7 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
   let meta = await storage.get<OwnerRecovery>(metaKey(id));
   if (meta) {
     if (meta.digest !== digest) throw new Error('Recovery logical conflict');
-    return resumeOwnerRecovery(storage, env, meta, guard);
+    return options?.answerAtAdmission && effectsPending(meta) ? answerAtAdmission(storage, meta, guard, true) : resumeOwnerRecovery(storage, env, meta, guard);
   }
   if (await storage.get('recoveryTerminal:' + id)) throw new Error('Original recovery operation is terminal');
   const all = await storage.list<OwnerRecovery>({ prefix: 'recoveryOperation:', limit: RECOVERY_LIMITS.operations + 1 });
@@ -176,6 +176,7 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
   // Durable admission precedes queue, R2, ring counters or credit effects.
   await savePayload(storage, meta, payload, await Promise.all(ids.map(value => recoveryDigest({ stream, id: value }))), firstAdmissionUntil);
   await armRecovery(storage, meta.expiresAt);
+  if (options?.answerAtAdmission) return answerAtAdmission(storage, meta, guard, false);
   try { return await resumeOwnerRecovery(storage, env, meta, guard); }
   catch (error) {
     if (learningInput(input)) throw error;
@@ -183,6 +184,41 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
     // is pending recovery, never a false canonical completion or lost source.
     await guard(principal, consentUntil); return meta.receipt;
   }
+}
+
+/**
+ * P56 (amendment 5): how an admission answers its caller. With
+ * `answerAtAdmission`, `runOwnerRecovery` answers with the operation's receipt
+ * (source `pending`) once its source admission is durable and its alarm armed
+ * (`savePayload`, `armRecovery` above), and the operation's effects (queue,
+ * ledger, learning) continue right after the owner's answer, in the owner's own
+ * serializer, the alarm the backstop. Without it, the effects run before the
+ * answer, as they always have. The admission, its logical keys and deadline, its
+ * digests and its replay are the same either way, and an admission that fails
+ * still fails the caller.
+ */
+export interface RecoveryOptions { answerAtAdmission?: boolean }
+/** An admitted operation whose effects have not completed; a recovered, expired or cleaned one replays as it always has. */
+const effectsPending = (meta: OwnerRecovery): boolean => !meta.cleanup && meta.expiresAt > Date.now() && meta.receipt.source.state === 'pending';
+/**
+ * P56: the answer at admission. The operation's effects are handed to the owner
+ * to run right after its answer, through its own serializer
+ * (`continueAfterOwnerAnswer`): ahead of any request that reaches the owner after
+ * this one, never beside it. They run from the operation as it is stored then, so
+ * an alarm that resumed it first leaves nothing to repeat, and a failure leaves it
+ * pending for the alarm armed at its admission. A replay of an operation still
+ * pending is first held to its stored principal's grant and consent now, as its
+ * resume would hold it. The answer is the admission's receipt.
+ */
+async function answerAtAdmission(storage: DurableObjectStorage, meta: OwnerRecovery,
+  guard: (principal: SessionCapability, until: number) => Promise<void>, replay: boolean): Promise<RecoveryReceipt> {
+  if (replay) await guard(meta.principal, meta.consentUntil);
+  const id = meta.id;
+  void continueAfterOwnerAnswer(async env => {
+    const current = await storage.get<OwnerRecovery>(metaKey(id));
+    if (current && effectsPending(current)) await resumeOwnerRecovery(storage, env, current, guard);
+  }).catch(() => undefined);
+  return meta.receipt;
 }
 
 export async function resumeOwnerRecovery(storage: DurableObjectStorage, env: Env, meta: OwnerRecovery,
@@ -309,13 +345,14 @@ export async function disposeOwnerRecovery(storage: DurableObjectStorage, env: E
   });
 }
 
-export async function recoverDecisions(env: Env, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, config: (slot: string) => SlotLearnConfig, firstAdmissionUntil?: number): Promise<RecoveryReceipt> {
+export async function recoverDecisions(env: Env, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, config: (slot: string) => SlotLearnConfig, firstAdmissionUntil?: number,
+  options?: RecoveryOptions): Promise<RecoveryReceipt> {
   if (!durableRecoveryEnabled(env)) throw new RecoveryUnavailableError('Recovery admission disabled');
   // Register the owner-held I/O before yielding; a dynamic import here could
   // otherwise resume only after the caller's owner invocation has drained.
   return admitOwnedRecovery({ kind: 'decisions', tenant: set.tenant, subject: set.visitor_id, brand: set.brand,
     records: set.records, configs: Object.fromEntries([...new Set(set.records.map(row => row.slot))].map(slot => [slot, config(slot)])),
-    ...(firstAdmissionUntil === undefined ? {} : { firstAdmissionUntil }) });
+    ...(firstAdmissionUntil === undefined ? {} : { firstAdmissionUntil }) }, options);
 }
 
 /** A queue repair cannot turn a current operator into fresh shopper authority. */

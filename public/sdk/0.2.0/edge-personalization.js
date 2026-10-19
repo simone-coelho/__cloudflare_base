@@ -168,6 +168,7 @@
   var isEventTimestamp = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && Number.isFinite(new Date(value).getTime());
 
   // src/sdk/core.ts
+  var ACK_DEADLINE_MS = 5e3;
   var DEFAULT_PATHS = {
     identitySession: "/v1/{tenant}/identity/session",
     action: "/realtime/action",
@@ -1058,7 +1059,7 @@
     async function boundedJSON(path, init, maxBytes = 2 * 1024 * 1024) {
       const controller = new AbortController();
       let reader;
-      const timer = host.setTimeout(() => controller.abort(), 5e3);
+      const timer = host.setTimeout(() => controller.abort(), ACK_DEADLINE_MS);
       let abort;
       const stopped = new Promise((_, reject) => {
         abort = () => {

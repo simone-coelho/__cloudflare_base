@@ -13,7 +13,7 @@ import type { Delivery, DeliveryCaptureReceipt } from '@/ledger/delivery';
 import { MANAGED_BYTES, deliveryClaimSubset, validDeliveryCaptureReceipt } from '@/ledger/delivery';
 import { isShopperId } from './shopperId';
 import { requireRetention, readRetention, mergeExternalRetention, type ExternalRetention, type RetentionStamp, type RetentionCategory, type RetentionEnv } from '@/retention';
-import type { RecoveryInput, RecoveryReceipt } from '@/ledger/recovery';
+import type { RecoveryInput, RecoveryOptions, RecoveryReceipt } from '@/ledger/recovery';
 import { nameServingStorage } from '@/config/publication';
 
 interface Invocation {
@@ -33,7 +33,7 @@ interface Invocation {
   retentionGuards?: Array<{ env: RetentionEnv; stamp: RetentionStamp }>;
   externalRetention?: ExternalRetention;
   eventRetention?: (id: string, digest: string, occurredAt: number) => Promise<ExternalRetention>;
-  recovery?: (input: RecoveryInput, principal: SessionCapability) => Promise<RecoveryReceipt>;
+  recovery?: (input: RecoveryInput, principal: SessionCapability, options?: RecoveryOptions) => Promise<RecoveryReceipt>;
   recoveryDeadlines?: number[];
   /** P13 (R-P66 item 2): the owner keeps the customer's identifier the shopper's request carried. */
   carry?: (customerId: string) => Promise<void>;
@@ -369,15 +369,15 @@ export class RecoveryUnavailableError extends Error {
 export function durableRecoveryEnabled(env: Pick<Env, 'LEDGER_RECOVERY_ENABLED'>): boolean {
   return env.LEDGER_RECOVERY_ENABLED === 'true';
 }
-/** No token crosses this boundary or enters durable recovery storage. */
-export async function admitOwnedRecovery(input: RecoveryInput): Promise<RecoveryReceipt> {
+/** No token crosses this boundary or enters durable recovery storage. P56: an answer at admission only where the owner continues past its answer. */
+export async function admitOwnedRecovery(input: RecoveryInput, options?: RecoveryOptions): Promise<RecoveryReceipt> {
   const held = invocation.getStore();
   if (!held?.recovery) throw new SessionAccessError();
   if (!durableRecoveryEnabled(held.env)) throw new RecoveryUnavailableError();
   recheckOwnerInvocation(held.owner);
   const principals = [...held.principals.values()].filter(p => p.tenant === input.tenant && p.subject === input.subject);
   if (principals.length !== 1) throw new SessionAccessError();
-  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!)));
+  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!), options?.answerAtAdmission && held.continuation ? { answerAtAdmission: true } : undefined));
 }
 export function pinRecoveryDeadline(deadline: number): void {
   if (!Number.isSafeInteger(deadline) || deadline <= Date.now()) throw new SessionAccessError();
@@ -758,4 +758,30 @@ export async function dispatchOwnedRequest(owner: object, env: Env, request: Req
   }) });
   const context = { waitUntil: retainOwnerWork, passThroughOnException() {} } as ExecutionContext;
   return (await shopperRoutes()).fetch(request, scoped, context);
+}
+/**
+ * P56 (amendment 5): owner work that runs right after the owner's answer, never
+ * before it and never beside the owner's other operations.
+ *
+ * It starts only inside an ACTIVE owner operation whose owner supplies its own
+ * serializer (`OwnerContinuation`); otherwise nothing starts and it refuses with
+ * SessionAccessError. The owner does not retain it, so its drain before the
+ * answer does not wait on it. It is entered at once through the owner's own
+ * serializer, as `continueAfterOwnerRead` re-enters the owner once its operation
+ * has answered: a new operation of that owner, queued after the answering one and
+ * ahead of every request that reaches the owner later, in which every principal
+ * the answering operation admitted is admitted again, its consent, retention and
+ * recovery guards are pinned again, the shopper's consent in force must still
+ * grant every purpose it pinned, and `work` is handed a fresh owner environment.
+ * It is registered with the platform's waitUntil the owner supplies, so the reply
+ * does not end it. Its failure is the caller's to handle; it never reaches the
+ * answer.
+ */
+export function continueAfterOwnerAnswer<T>(work: (env: Env) => Promise<T>): Promise<T> {
+  const first = invocation.getStore();
+  if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
+  try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
+  const task = reenterOwner(first, work);
+  first.continuation.waitUntil(task.then(() => undefined, () => undefined));
+  return task;
 }
