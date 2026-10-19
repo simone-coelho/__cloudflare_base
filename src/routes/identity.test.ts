@@ -19,7 +19,7 @@ import { isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { createCore } from '@/sdk/core';
 import { createIdentity } from '@/sdk/identify';
 import { memoryHost } from '@/sdk/memoryHost';
-import { issueSessionCapability, verifySessionCapability, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { issueSessionCapability, verifySessionCapability, SHOPPER_HEADER, SessionAccessError } from '@/identity/sessionCapability';
 import { erasureJobKey, erasureRawDigest, ERASURE_STEP_LIMIT, ERASURE_DISCOVERY_PAGE_LIMIT } from '@/identity/erase';
 import { IdentityStore } from '@/identity/store';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
@@ -681,12 +681,48 @@ describe('historical rows', () => {
   it('rows by visitor id land on the person when the browser was linked, on the browser when not', async () => {
     await seedDevice('vis-00000000-0000-4000-8000-000000000001', 's-phone', ['Tabby']);
     const linked = await signedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000001', accountId: 'acct-1001' } });
-    await seedHistorySession('coach', 'vis-stranger');
+    const stranger = 'vis-00000000-0000-4000-8000-000000000002';
+    await seedHistorySession('coach', stranger);
     const r = await call('/coach/identity/events', { method: 'POST', headers: auth, json: { rows: [
       { visitorId: 'vis-00000000-0000-4000-8000-000000000001', action: 'purchase', at: Date.now() - 1000, product: { line: 'Rogue' } },
-      { visitorId: 'vis-stranger', action: 'purchase', at: Date.now() - 1000, product: { line: 'Rogue' } },
+      { visitorId: stranger, action: 'purchase', at: Date.now() - 1000, product: { line: 'Rogue' } },
     ] } });
-    expect(r.body.perShopper.map((p: { shopperId: string }) => p.shopperId).sort()).toEqual([linked.body.shopperId, 'vis-stranger'].sort());
+    expect(r.body.perShopper.map((p: { shopperId: string }) => p.shopperId).sort()).toEqual([linked.body.shopperId, stranger].sort());
+
+    // R10 witness (ruling R-P89, the owner's decision D3 taken by its
+    // conservative default; the open question W04.BASE.02, LANE-LOG R22): an
+    // unlinked legacy anonymous id that is not `vis-<uuid>` cannot present an
+    // adoption witness. A readable legacy `user:` pointer is not one
+    // (src/durable-objects/ShopperReflex.ts handleImport, :3610-3612), and the
+    // grant schema refuses a retained grant naming it (grantSchema, :208-212:
+    // `/^vis-[0-9a-f-]{36}$/` for an anonymous subject). So its rows are refused
+    // with the engine's own answer and import no history; admitting legacy ids
+    // is a customer-data decision the owner alone reopens.
+    const legacy = 'vis-stranger', legacySid = await seedHistorySession('coach', legacy);
+    const refusal = new SessionAccessError(), refused = { status: refusal.status, body: await refusal.getResponse().json() };
+    // Every store a history row can land in: the session records, pointers and
+    // person records (SESSIONS), the profile copies (CACHE), and each shopper
+    // object's own state.
+    const stores = () => structuredClone({ sessions: [...(env.SESSIONS as unknown as FakeKV).store], cache: [...(env.CACHE as unknown as FakeKV).store],
+      objects: [...bound!.object.items].map(([name, item]) => [name, [...item.data]] as const).filter(([, data]) => data.length > 0) });
+    const importLegacy = async () => {
+      const before = stores();
+      const answer = await call('/coach/identity/events', { method: 'POST', headers: auth, json: { rows: [
+        { visitorId: legacy, action: 'purchase', at: Date.now() - 1000, product: { line: 'Rogue' } },
+      ] } });
+      expect({ status: answer.status, body: answer.body }, 'an unlinked legacy id is refused with the engine’s own answer').toEqual(refused);
+      expect(stores(), 'the refused legacy row moved nothing in any store').toEqual(before);
+    };
+    // The legacy pointer alone, the shape a legacy browser's record has.
+    await importLegacy();
+    // The same browser also holding the grant a `vis-<uuid>` browser retains on
+    // its own session (seedHistorySession), naming the legacy id.
+    const item = bound!.object.open(shopperObjectName('coach', legacy));
+    const principal = await verifySessionCapability(env, (await issueSessionCapability(env, { tenant: 'coach', subject: stranger, sessionId: legacySid, kind: 'anonymous' })).capability, 'coach');
+    item.data.set('grantAuthority', { version: 1, epoch: principal.authorityEpoch, grants: { [principal.grantId!]: { ...principal, subject: legacy } } });
+    item.data.set('consent', explicitChoice('coach', legacy));
+    item.object = new ShopperReflex(item.state, env);
+    await importLegacy();
   });
 
   it('rejects a malformed row, an empty batch, and too many rows', async () => {
