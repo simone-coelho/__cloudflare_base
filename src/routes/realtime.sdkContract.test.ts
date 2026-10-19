@@ -3560,7 +3560,7 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
     const decisions = vi.spyOn(LiveDecisionProvider.prototype, 'decideAll');
     // Baseline 52 (#37, G18 spec, the G3 form of W05.04 below): the public snapshot no longer carries the cell (R10,
     // Baseline 52 #47/#48); the cell an answer was decided with is read where the route takes it, from the serve it calls
-    // (src/routes/decisions.ts:1055), through a pass-through spy, as W35.02 reads the provider the request path calls.
+    // (src/routes/decisions.ts:1073 in the /:tenant/decisions/snapshot handler of :998), through a pass-through spy, as W35.02 reads the provider the request path calls.
     const serve = vi.spyOn(contentService, 'serveContentDecisions');
     // Baseline 52 (#37, G18 spec; R29, LANE-LOG): the engine STORES the persisted token and REPORTS the shared word,
     // PERSISTED_STAGE being the one mapping point between them (src/services/JourneyStage.ts:136, :147-151). A read that
@@ -3672,12 +3672,12 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
           const reflex = await f.call('/realtime/reflex?userId=' + g.subject, g.capability, undefined, g.tenant);
           expect(reflex.status).toBe(200);
           // Baseline 52 (#37, G18 spec; R29): GET /realtime/reflex answers the REPORTED word of this visit's one derivation
-          // (src/durable-objects/ShopperReflex.ts:2113-2114 journeyStageFrom(journeyCountersNow(...))), never the stored token.
+          // (src/durable-objects/ShopperReflex.ts:2127-2128 in handleSnapshot, journeyStageFrom(journeyCountersNow(...))), never the stored token.
           if (host === 'do') expect(await reflex.json()).toMatchObject({ journeyStage: earlyWord });
           const content = await f.call('/v1/' + g.tenant + '/decisions/snapshot?page=home&visitorId=' + g.subject + '&sessionId=' + g.sessionId,
             g.capability, undefined, g.tenant);
           // Baseline 52 (#37, G18 spec): the cell is read from the serve the route called (the G3 form above); its stage is the
-          // PERSISTED token (R29; src/content/service.ts:764 PERSISTED_STAGE[shopper.stage]), so 'early' is unchanged.
+          // PERSISTED token (R29; src/content/service.ts:774 in serveContentDecisions, PERSISTED_STAGE[shopper.stage]), so 'early' is unchanged.
           expect(content.status).toBe(200); await content.json();
           expect((await serve.mock.results.at(-1)!.value).cell.stage).toBe('early');
           await f.drain();
