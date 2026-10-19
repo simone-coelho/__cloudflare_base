@@ -964,9 +964,9 @@ async function t5World(kind: 'session' | 'do') {
     await choose(h, g, true, true);
     const act = async (grant: Grant, type: string, data: Record<string, unknown>) => {
       const response = await h.call('/realtime/action', { grant, tenant, cf, body: { type, userId: grant.subject, sessionId: grant.sessionId, source: 'sdk', timestamp: Date.now(), eventId: crypto.randomUUID(), data } });
-      expect(response.status, `${kind} ${tenant} ${type}: ${await response.clone().text()}`).toBe(200);
+      const text = await response.text(); expect(response.status, `${kind} ${tenant} ${type}: ${text}`).toBe(200); // G21 class (R-P108(2)): the body is read once; a read clone collected by GC during the drain cancels the original's body under Node's undici ("Body is unusable")
       await h.drain();
-      return await response.json() as Record<string, unknown>;
+      return JSON.parse(text) as Record<string, unknown>;
     };
     const page = async (grant: Grant, pageInstance: string) => {
       const response = await h.call(`/v1/${tenant}/decisions/snapshot?page=home&pageInstance=${pageInstance}`, { grant, tenant, cf });
