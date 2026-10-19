@@ -672,4 +672,4 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 | `708e1c20` | 2026-10-18 | Merge baseline-52 lane apib (reviewer PASS at `22303a8a`): #23–#28, #30, #31 green; #29 → product unit G17 |
 | `7f4aa914` | 2026-10-18 | Merge baseline-52 product unit G9 (reviewer PASS at `23d3b2f6`): fan.ts reports the destinations a throwing configuration read skipped; entry #1 |
 | `2821b161` | 2026-10-18 | Merge baseline-52 lane sdkc (reviewer PASS at `0d7875f1`): #32–#35, #38, #42, #47, #52 green; #37 #39 #40 #48 → G18, G19, G20 |
-| (this) | 2026-10-18 | SCORE and baseline from the official gate on `2821b161` (GATE_OK, 23 failing, 0 outside 52, 29 entries retired): `Units 226/240 · suite 3361/3384 · residual 23 in 7 files · typecheck GREEN`; baseline-failures.json 52 → 23 by `--write-baseline` |
+| `66159d3a` | 2026-10-18 | SCORE and baseline from the official gate on `2821b161` (GATE_OK, 23 failing, 0 outside 52, 29 entries retired): `Units 226/240 · suite 3361/3384 · residual 23 in 7 files · typecheck GREEN`; baseline-failures.json 52 → 23 by `--write-baseline` |
