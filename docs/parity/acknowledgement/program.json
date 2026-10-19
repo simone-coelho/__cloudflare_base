@@ -1,0 +1,490 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-acknowledgement",
+    "title": "Tapestry parity, acknowledgement latency (amendment 5), 5 tickets",
+    "ticketIds": [
+      "P56",
+      "P57",
+      "P58",
+      "P59",
+      "P60"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P56",
+      "title": "The render acknowledgement answers at durable admission (**amendment 5, 2026-10-19**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",
+        "locator": "P56 · section 2 of amendment 5; ANALYSIS.md §3–§4",
+        "requirement": "see amendment 5 section 2, ticket P56 (copied verbatim in the specification)"
+      },
+      "outcome": "A storefront's acknowledgement of a rendered decision answers within the SDK's deadline on both hosts, so engagement, viewable and dwell are no longer lost after a cut, while the admission stays durable and the effects follow in order.",
+      "criteria": [
+        {
+          "id": "AA1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, an acknowledgement of a rendered-v1 decision answers 200 with render status durable and source pending once both source admissions are committed, while the queue send is held unresolved; after release and drain a same-id re-send answers source recovered, one ledger row exists and the exposure is counted once.",
+          "proof": "The P56 acceptance command runs the tests named unit:P56.AA1 in src/units/P56 and they pass."
+        },
+        {
+          "id": "AA2",
+          "kind": "LOCAL",
+          "observable": "Under the parity harness with one tenth of the SDK's named deadline added to every remote binding call, the acknowledgement answers in under that deadline on both hosts (RED today: at least 28 serial calls).",
+          "proof": "The P56 acceptance command runs the tests named unit:P56.AA2 in src/units/P56 and they pass."
+        },
+        {
+          "id": "AA3",
+          "kind": "LOCAL",
+          "observable": "A content_click sent immediately after a pending acknowledgement is attributed to that decision on both hosts (the ring append ran first in the serializer).",
+          "proof": "The P56 acceptance command runs the tests named unit:P56.AA3 in src/units/P56 and they pass."
+        },
+        {
+          "id": "AA4",
+          "kind": "LOCAL",
+          "observable": "Locks: the durable admission transaction, its logical keys and first-admission deadline, W06's recovery id and payload digests, the idempotent replay, the redemption checks and an admission failure failing the acknowledgement behave byte for byte as today; every unit that read source recovered on a first acknowledgement is updated in R10 form naming amendment 5.",
+          "proof": "The P56 acceptance command runs the tests named unit:P56.AA4 in src/units/P56 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/ack-latency/ANALYSIS.md (track-analyst at afa24293)",
+          "description": "Path, local reproduction (135 ms, 30/28 serial remote calls), the hosted 5.1–6.0 s on the stamps (R-P96), the conflict 500 reproduced 13/13."
+        }
+      ],
+      "remainingWork": [
+        "Mechanism: runOwnerRecovery opt-in that returns the receipt after savePayload and armRecovery and hands resumeOwnerRecovery to a post-answer continuation that re-enters through the owner's serializer and waitUntil, never through retainOwnerWork; carried through admitOwnedRecovery and ShopperReflex.admitRecovery; opted in by recoverDecisions from redeemRenderOffer and by captureBehavior on the same request.",
+        "SDK: the 5 s literal exported as a named constant for the budget test (the behaviour change of the SDK is P60).",
+        "R10 updates of every expectation that read recovered on a first acknowledgement, named by the specifier."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P99 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "A pending render receipt satisfies the rendered-v1 contract: durability is the admission plus the armed alarm; the SDK already accepts pending (core.ts:978-980)."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "R-P99 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "Both recoveries of the acknowledgement request (render redemption and behaviour capture) are in scope; other tracked actions are P58."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/ledger/recovery.ts",
+        "src/identity/sessionAuthority.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/content/renderOffer.ts",
+        "src/ledger/behavior.ts",
+        "src/routes/realtime.ts",
+        "src/sdk/core.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P56 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+        ],
+        "negativeControlEvidence": [
+          "pending: named at the batch S9 specification review"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P57",
+      "title": "A same-id acknowledgement re-send is idempotent; a conflicting one answers a typed 409, never an untyped 500 (**amendment 5, 2026-10-19**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",
+        "locator": "P57 · section 2 of amendment 5; ANALYSIS.md §5",
+        "requirement": "see amendment 5 section 2, ticket P57 (copied verbatim in the specification)"
+      },
+      "outcome": "A retried acknowledgement never fails the storefront with a 500: the same render gets its original receipt, a genuinely different event on an acknowledged decision is told so with a 409.",
+      "criteria": [
+        {
+          "id": "RC1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a first delivery whose client timestamp is 3 s ahead of the engine followed by a same-id, same-pageInstance re-send answers 200 twice with identical receipts and one ledger row and one behaviour record (RED today: the second answers 500 Recovery logical conflict).",
+          "proof": "The P57 acceptance command runs the tests named unit:P57.RC1 in src/units/P57 and they pass."
+        },
+        {
+          "id": "RC2",
+          "kind": "LOCAL",
+          "observable": "A different eventId on an already-acknowledged decision answers a typed 409 whose body names the conflict, on both hosts, and no second ledger row is written.",
+          "proof": "The P57 acceptance command runs the tests named unit:P57.RC2 in src/units/P57 and they pass."
+        },
+        {
+          "id": "RC3",
+          "kind": "LOCAL",
+          "observable": "Locks: W23's first-delivery clamp (realtime.ts:166-184), sourceOf and the payload digest unchanged; the in-flight same-id duplicate still answers 200 recovered; the owner's drain never answers an untyped 500 after the route answered.",
+          "proof": "The P57 acceptance command runs the tests named unit:P57.RC3 in src/units/P57 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/ack-latency/ANALYSIS.md (track-analyst at afa24293)",
+          "description": "Path, local reproduction (135 ms, 30/28 serial remote calls), the hosted 5.1–6.0 s on the stamps (R-P96), the conflict 500 reproduced 13/13."
+        }
+      ],
+      "remainingWork": [
+        "Before realtime.ts's render time is fixed, read this decision's stored admission through an owner-held helper in recovery.ts (same id and payloadOf); reuse its rendered.at when eventId and pageInstance match and pass the same time to captureBehavior; otherwise throw a typed conflict mapped to 409 in ShopperReflex and the owner app's onError."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P99 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "Same eventId and pageInstance on the same decision is the same render: idempotent 200 with the original receipt; a different eventId is a conflict: typed 409."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/ledger/recovery.ts",
+        "src/content/renderOffer.ts",
+        "src/routes/realtime.ts",
+        "src/ledger/behavior.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/identity/sessionAuthority.ts",
+        "src/middleware/error.ts",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P57 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+        ],
+        "negativeControlEvidence": [
+          "pending: named at the batch S9 specification review"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P58",
+      "title": "Every tracked action's behaviour capture answers at admission (**amendment 5, 2026-10-19**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",
+        "locator": "P58 · section 2 of amendment 5; ANALYSIS.md §1 step 13, out-of-scope note 2",
+        "requirement": "see amendment 5 section 2, ticket P58 (copied verbatim in the specification)"
+      },
+      "outcome": "A product view or any other tracked action answers within the SDK's deadline on both hosts while its behaviour capture stays durable and its effects follow in order.",
+      "criteria": [
+        {
+          "id": "BA1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a tracked action without a render offer answers 200 while the queue send is held unresolved; after release and drain its behaviour record and ledger row exist once.",
+          "proof": "The P58 acceptance command runs the tests named unit:P58.BA1 in src/units/P58 and they pass."
+        },
+        {
+          "id": "BA2",
+          "kind": "LOCAL",
+          "observable": "Under the parity harness with one tenth of the SDK's named deadline per remote call, product_view answers in under that deadline on both hosts.",
+          "proof": "The P58 acceptance command runs the tests named unit:P58.BA2 in src/units/P58 and they pass."
+        },
+        {
+          "id": "BA3",
+          "kind": "LOCAL",
+          "observable": "Locks: the behaviour record id, the projection writes and the outcome semantics byte for byte as today; P56's units unchanged.",
+          "proof": "The P58 acceptance command runs the tests named unit:P58.BA3 in src/units/P58 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/ack-latency/ANALYSIS.md (track-analyst at afa24293)",
+          "description": "Path, local reproduction (135 ms, 30/28 serial remote calls), the hosted 5.1–6.0 s on the stamps (R-P96), the conflict 500 reproduced 13/13."
+        }
+      ],
+      "remainingWork": [
+        "Opt captureBehavior's recovery into the P56 continuation for every tracked action; name every expectation that changes."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P99 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "Separate from P56 so each change is reviewed on its own."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/ledger/behavior.ts",
+        "src/ledger/recovery.ts",
+        "src/routes/realtime.ts",
+        "src/durable-objects/ShopperReflex.ts"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P58 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+        ],
+        "negativeControlEvidence": [
+          "pending: named at the batch S9 specification review"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P59",
+      "title": "The click's outcome recovery leaves the answer path (**amendment 5, 2026-10-19**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",
+        "locator": "P59 · section 2 of amendment 5; ANALYSIS.md out-of-scope note 1",
+        "requirement": "see amendment 5 section 2, ticket P59 (copied verbatim in the specification)"
+      },
+      "outcome": "A content_click answers within the SDK's deadline on both hosts; its attribution and ledger rows are unchanged.",
+      "criteria": [
+        {
+          "id": "CO1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a content_click after an acknowledged decision answers 200 while the queue send is held unresolved; after release and drain the outcome row and its attribution exist once.",
+          "proof": "The P59 acceptance command runs the tests named unit:P59.CO1 in src/units/P59 and they pass."
+        },
+        {
+          "id": "CO2",
+          "kind": "LOCAL",
+          "observable": "Under the parity harness with one tenth of the SDK's named deadline per remote call, content_click answers in under that deadline on both hosts.",
+          "proof": "The P59 acceptance command runs the tests named unit:P59.CO2 in src/units/P59 and they pass."
+        },
+        {
+          "id": "CO3",
+          "kind": "LOCAL",
+          "observable": "Locks: attribution to the decision, the reward row and P56/P58 units unchanged.",
+          "proof": "The P59 acceptance command runs the tests named unit:P59.CO3 in src/units/P59 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/ack-latency/ANALYSIS.md (track-analyst at afa24293)",
+          "description": "Path, local reproduction (135 ms, 30/28 serial remote calls), the hosted 5.1–6.0 s on the stamps (R-P96), the conflict 500 reproduced 13/13."
+        }
+      ],
+      "remainingWork": [
+        "Move the outcome recovery (realtime.ts:256-286) from retained waitUntil work to the post-answer continuation."
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/routes/realtime.ts",
+        "src/ledger/recovery.ts",
+        "src/identity/sessionAuthority.ts",
+        "src/durable-objects/ShopperReflex.ts"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P59 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+        ],
+        "negativeControlEvidence": [
+          "pending: named at the batch S9 specification review"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P60",
+      "title": "The SDK's deadline is one named constant, a cut acknowledgement is retried once with the same event id, and a recovered retry keeps the placement's engagement (**amendment 5, 2026-10-19**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",
+        "locator": "P60 · section 2 of amendment 5; ANALYSIS.md §4 'SDK half'",
+        "requirement": "see amendment 5 section 2, ticket P60 (copied verbatim in the specification)"
+      },
+      "outcome": "A slow acknowledgement no longer silently drops a placement's engagement, viewable and dwell; the SDK's deadline is one named value.",
+      "criteria": [
+        {
+          "id": "SD1",
+          "kind": "LOCAL",
+          "observable": "The 5 s literal is one exported constant used by session mint, snapshot, acknowledgement and the fourth call that shares it (core.ts:792, :805, :973, :1014); no other 5000 literal remains on those paths.",
+          "proof": "The P60 acceptance command runs the tests named unit:P60.SD1 in src/units/P60 and they pass."
+        },
+        {
+          "id": "SD2",
+          "kind": "LOCAL",
+          "observable": "After a cut acknowledgement the SDK re-sends the same envelope (same eventId) once; a retry answered recovered or pending leaves engagement, viewable and dwell armed for that placement (RED today: listen.ts:497-502 suppresses them).",
+          "proof": "The P60 acceptance command runs the tests named unit:P60.SD2 in src/units/P60 and they pass."
+        },
+        {
+          "id": "SD3",
+          "kind": "LOCAL",
+          "observable": "Locks: one envelope per placement; the bundles within their byte budgets; build-sdk.mjs --check an exact match; the SDK typecheck green.",
+          "proof": "The P60 acceptance command runs the tests named unit:P60.SD3 in src/units/P60 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/ack-latency/ANALYSIS.md (track-analyst at afa24293)",
+          "description": "Path, local reproduction (135 ms, 30/28 serial remote calls), the hosted 5.1–6.0 s on the stamps (R-P96), the conflict 500 reproduced 13/13."
+        }
+      ],
+      "remainingWork": [
+        "Name the constant; retry once after a cut with the same envelope; keep the placement's listeners armed when the retry is answered."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P99 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "Retry is safe only after P57; P60 is sequenced last."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/core.ts",
+        "src/sdk/listen.ts",
+        "packages/sdk/edge-personalization.js",
+        "packages/sdk/edge-personalization.esm.js",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P60 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+        ],
+        "negativeControlEvidence": [
+          "pending: named at the batch S9 specification review"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

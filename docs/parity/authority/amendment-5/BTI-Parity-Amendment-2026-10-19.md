@@ -1,0 +1,27 @@
+# BTI parity amendment 5 — acknowledgement latency (2026-10-19)
+
+Opened by the remediation lead under the owner's standing rule of 2026-10-16 (a behaviour that would surprise the visitor or the operator is told and fixed, not asked about; R-P78) on the measurement of 2026-10-19 (R-P96) and the analysis `_evidence/baseline-52/ack-latency/ANALYSIS.md` (track-analyst at afa24293). It extends the frozen parity programmes with five tickets, P56–P60, in strict order. Nothing in it reopens a settled decision; every ticket keeps W06's durable admission, its digests and the idempotent replay unchanged.
+
+## 1. The finding
+
+A render acknowledgement (`POST /realtime/action`, `type: content_impression` with the decision's `renderOffer`, exactly as the SDK sends it) answers 200 in **5.1–6.0 s on the customer-profile stamps with no other load** (staging 5479/5267/5100 ms, production 6021/4813/5114 ms). The SDK cuts its own acknowledgement request at 5 s (`src/sdk/core.ts:943-945`) and after a cut sends no engagement, viewable or dwell for that placement (`src/sdk/listen.ts:497-502`). A browser storefront would therefore lose most of its acknowledgements and the learning that follows them.
+
+Cause (SOURCE-TRACED, REPRODUCED locally): the acknowledgement runs two complete durable recoveries inline before it answers (the render redemption, `src/content/renderOffer.ts:108` → `src/ledger/recovery.ts:179` awaits `resumeOwnerRecovery`; the behaviour capture, `src/ledger/behavior.ts:43`), and the owner drains both before replying (`src/identity/sessionAuthority.ts:504-507`): 30 serial remote calls on the session host, 28 on the object host, against 3–5 for a snapshot. Locally that is ~135 ms; on the edge each call is a round trip.
+
+A same-id re-send of a first delivery whose client timestamp was ahead of the engine answers an untyped 500 `{"error":"Internal server error","message":"Recovery logical conflict"}` (`recovery.ts:152`: the clamp at `src/routes/realtime.ts:183-184` gives the re-send a different `rendered.at` and digest; reproduced 13/13).
+
+## 2. Requirements
+
+**P56 — the render acknowledgement answers at durable admission.** On both shopper hosts, an acknowledgement of a rendered-v1 decision answers 200 once both of its source admissions (`savePayload` and `armRecovery`, `recovery.ts:177-178`) are committed, with `render: { status: 'durable', source: 'pending' }`; the queue send, the ledger write and the learning fan-out of both recoveries continue right after the answer in the same shopper's FIFO serializer, with the existing alarm as backstop; a later request from the same shopper observes their effects (a click sent immediately after a `pending` acknowledgement is attributed to that decision); a same-id re-send after the effects answers `source: 'recovered'`, one ledger row exists and the exposure is counted once. Under the parity harness with one tenth of the SDK's deadline added to every remote binding call, the acknowledgement answers in under the SDK's deadline, exported as a named constant. The durable admission, W06's digests, the idempotent replay, the redemption checks and the rule that an admission failure fails the acknowledgement do not change. Every unit or walker expectation that read `recovered` on a first acknowledgement is updated in R10 form, naming this amendment.
+
+**P57 — a same-id re-send is idempotent; a conflicting one is told.** On both hosts, a re-send carrying the same `eventId` and `pageInstance` for the same decision answers 200 with the original receipt whatever the engine's clock did to the first delivery's timestamp (the stored `rendered.at` is reused; the behaviour record id is identical; one ledger row); a different `eventId` on an already-acknowledged decision answers a typed 409 with words naming the conflict; the owner's drain never turns a retained admission failure into an untyped 500 after the route has answered. W23's first-delivery clamp and the digest functions do not change.
+
+**P58 — every tracked action's behaviour capture answers at admission.** Same mechanism and same locks as P56 for `product_view` and every other tracked action whose behaviour capture runs a durable recovery on the answer path (hosted p50 2.7 s today); the engine's projection and outcome semantics unchanged.
+
+**P59 — the click's outcome recovery leaves the answer path.** `content_click` (hosted p50 6.6 s on the session host) answers at admission; its outcome recovery continues after the answer in the serializer; attribution and the ledger rows unchanged.
+
+**P60 — the SDK's deadline and retry.** The 5 s literal becomes one named, exported constant used by every SDK request that shares it; after a cut acknowledgement the SDK retries the same event id once (safe after P57); a retry that is answered `recovered` or `pending` no longer suppresses engagement, viewable and dwell for that placement; the SDK bundles stay within their byte budgets and `build-sdk.mjs --check` is an exact match.
+
+## 3. Acceptance
+
+Each ticket: RED units on both hosts in `src/units/P5x/LEDGER.unit.test.ts` written by the specifier from this document and the analysis, reviewed honest; the implementer's build reviewed on its exact sha; one official gate per round; the stamps redeployed from a clean worktree; per-phase timing re-measured on both stamps with the lead's latency script (3 samples each) and recorded in the receipt. The live rows (LIVE1 on the acceptance pair, LIVE2 in the customer's January integration) follow the parity programmes' rule.
