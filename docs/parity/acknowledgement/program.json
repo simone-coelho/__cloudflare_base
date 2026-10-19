@@ -105,7 +105,13 @@
         "src/routes/realtime.ts",
         "src/sdk/core.ts",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md"
+        "docs/kit/03-payload-schemas.md",
+        "packages/sdk/types/core.d.ts",
+        "packages/sdk/edge-personalization.js",
+        "packages/sdk/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js",
+        "src/units/P34/** (R10 update of a bundle lock only, by the specifier)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P56 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -463,7 +469,10 @@
         "src/sdk/listen.ts",
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "packages/sdk/types/core.d.ts",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P60 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
