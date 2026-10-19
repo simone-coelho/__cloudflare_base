@@ -2873,7 +2873,8 @@ it('W22.07 preserves exact session expiry metadata and DO commit mirrors with bo
       // R-P85 (G8, W06.BASE.02; R10): at the profile's retention expiry the
       // object removes the grants already spent (exp at or before that instant)
       // and keeps the record, its epoch and every live grant
-      // (src/durable-objects/ShopperReflex.ts:1914-1929). The expected record is
+      // (src/durable-objects/ShopperReflex.ts:1918-1933, alarmScoped's retention
+      // branch and its transaction). The expected record is
       // the one captured above minus its spent grants, read off the fixture's
       // own clock at the alarm, so a live grant would still be expected to stay.
       const captured = authority as { grants: Record<string, { exp: number }> }, nowSeconds = affinity.retention!.expiresAt / 1000;
@@ -4678,10 +4679,11 @@ describe('W37.03 tenant-owned DO audiences', () => {
       try { await retainedItem.shopper.alarm(); } finally { later.mockRestore(); }
       expect([...retainedItem.data.keys()]).toEqual(['grantAuthority']);
       // R-P85 (G8, W06.BASE.02; R10): the profile's retention expiry removed the
-      // grant spent by then (ShopperReflex.ts:1914-1929), so the grant presented
-      // now is unknown to the record and refused as such before any consent read
-      // (assertGrant, ShopperReflex.ts:2282-2283, over grantAuthority(),
-      // :2210-2218; the 401 of :706), and the manual assignment adopts nothing.
+      // grant spent by then (ShopperReflex.ts:1918-1933, alarmScoped's retention
+      // branch and its transaction), so the grant presented now is unknown to
+      // the record and refused as such before any consent read (assertGrant's
+      // refusal, ShopperReflex.ts:2286-2287, over grantAuthority(), :2214-2222;
+      // the 401 of :710 in fetchScoped), and the manual assignment adopts nothing.
       expect((await direct(retainedItem, '/segments', { segment: 'after-retention' }, retained)).status).toBe(401);
       expect([...retainedItem.data.keys()]).toEqual(['grantAuthority']);
 

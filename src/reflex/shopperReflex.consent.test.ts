@@ -202,7 +202,8 @@ describe('W05.02 shared reducer and timer boundaries', () => {
     // R-P85 addendum (G8; R10, the arrangement, never the expectation). The
     // shipped horizon is days (DEFAULT_REFLEX_CONFIG tau 14 days, W16 C8, R42),
     // the alarm qualifies and queries ODP only when membership changed
-    // (ShopperReflex.ts:1972-1973, the instant read :2003-2011), and a grant
+    // (ShopperReflex.ts:1976-1977 in alarmScoped, the instant read
+    // refreshOdpSeedIfDue :2007-2016), and a grant
     // lives 24 h (SHOPPER_MAX_AGE, src/identity/sessionCapability.ts:14). This
     // test scripts its continuation inside that grant, so it publishes the
     // 60-second demo cadence for its tenant through the publication door, as
@@ -224,9 +225,10 @@ describe('W05.02 shared reducer and timer boundaries', () => {
     // The clock follows the alarms the object itself arms, each at its first
     // whole millisecond (a crossing is fractional; the fake clock reads whole
     // ms). The first is the first view's crossing, kept as the nearer deadline
-    // (ShopperReflex.ts:4149-4151); the later views moved every crossing later,
-    // so it changes no membership and re-arms the object's next crossing
-    // (scheduleNextCrossing, :2038), where the continuation runs.
+    // (scheduleProjectionAlarm, ShopperReflex.ts:4153-4155); the later views
+    // moved every crossing later, so it changes no membership and re-arms the
+    // object's next crossing (the scheduleNextCrossing call at :2041 in
+    // alarmScoped, defined at :1837), where the continuation runs.
     vi.setSystemTime(Math.ceil(storage.alarm!)); storage.alarm = null; await shopper.alarm(); await drain();
     vi.setSystemTime(Math.ceil(storage.alarm!)); storage.alarm = null; await shopper.alarm(); await drain();
     expect(calls).toContain('/v3/graphql'); expect(frames.some(v => v.type === 'personalization_update')).toBe(true);
