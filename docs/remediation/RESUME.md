@@ -2,6 +2,14 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-19, midday: baseline-52 round 4 — the frozen baseline 9 → 0; every entry retired
+
+- **Score (derived, official gate at 425d61d4):** `Units 227/240 · suite 3431/3431 · residual 0 in 0 files · typecheck GREEN`; `Ratchet: 0 failing tests, 0 outside the baseline of 9, 9 baseline entries no longer fail`. The gate's first run ended GATE_FAIL on `unit:W40.P4` alone ("Stamp workflow unavailable": the gate worktree's symlinked node_modules, the known artifact); W40 re-run green in the corrected worktree at the same head, typecheck and both bundle checks green there; the merged report under `_evidence/baseline-52/gate-r4/` fed the shrink f037978d. 52 → 23 → 11 → 9 → 0 since 2026-10-18.
+- **Round 4, merged on exact-sha reviews:** D2 (G11) 8460b378 (the durable-admission digest binds the client's parsed event, not the door's stamps; the W05.05 no-write assertions R10-updated); H3-1 a93ce07a (`/health/ready` and `/health/live` answer without a tenant; `scripts/verify-origin.sh` checks the refusing-shopper payload the engine sends; units H3/PROBE and H3/ORIGIN); D1 (W37.BASE.02, honesty half) 425d61d4 (a refused `/live` event is reported 502 refused, batches carry `accepted`/`refused[]`, `/reflex` passes a refusal through; the composer tests rewritten). D3 merged in round 3 (7e7acd3d). Rulings R-P89–R-P93 in AMENDMENTS.md.
+- **Tapestry:** the staging tenant is live on `edge-platform-staging` since the morning (publication initialized, API smoke 7/7, CORS for their domain); the end-of-October "content-recommendations API in their staging" milestone is met on our side. Owed by the customer: hostnames/origins (H1), CSP (H2), their own network check (H3, `scripts/verify-origin.sh`), console users (H4), lower-environment window (H5), test metadata (W3).
+- **Live acceptance on the hosted pair:** lane L4 filed (PASS 29 / FAIL 0 / NOT OBSERVABLE 14 / DEFERRED 11); LIVE1 PASS for P32 and P39 (198d6efc); the deferred SDK and console rows are walked in a headless Chromium (R-P92) instead of a manual Chrome session; lanes L1, L2, L3, L7 re-dispatched from their records after an API limit cut them off.
+- **In build:** kit-1 (the kit's stale `write:false` sentences, the acceptance-run script's `.write` reads, test 3's deliberate recovery posture, comment pronouns; R-P93). **Pilot stamps:** redeploy from a clean worktree at this head follows (deploy-7).
+
 ## 2026-10-19, morning: baseline-52 round 3 — the frozen baseline 11 → 9; every entry a lead could close is closed
 
 - **Score (derived, official gate at 3ca7875b, GATE_OK):** `Units 227/240 · suite 3388/3397 · residual 9 in 2 files · typecheck GREEN`; `Ratchet: 9 failing tests, 0 outside the baseline of 9`. 52 → 23 → 11 → 9 in three rounds since 2026-10-18, each shrink from its own official gate.
