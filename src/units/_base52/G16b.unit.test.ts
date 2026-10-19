@@ -14,14 +14,23 @@
 //   leg A  the shopper's grant expires between the answer and the release of the
 //          held read: no destination is reached, and the loss is reported as the
 //          engine's not-attempted learning receipt;
+//   leg A2 the shopper withdraws personalization through the real preferences
+//          route between the answer and the release: the same refusal and receipt
+//          (the G16b review's finding F1);
 //   leg B  a clean release: both destinations are reached, each while the
 //          shopper's owner is held, in an operation that is not the answered one;
 //   leg C  durable recovery on: the answer still waits for the durable admission.
-// Leg A expires the GRANT (not consent): it pins the re-entered operation's own
-// admission of every principal the first operation admitted, against the grant
-// authority now (reenterOwner's admit loop, through ShopperReflex.assertOwned and
-// assertSessionTarget). A consent withdrawal would pin the consent re-read
-// instead, which a re-entry without the re-admission still performs.
+// Leg A expires the GRANT: it pins the re-entered operation's own admission of
+// every principal the first operation admitted, against the grant authority now
+// (reenterOwner's admit loop, through ShopperReflex.assertOwned and
+// assertSessionTarget), which the consent re-read does not replace. Leg A2
+// withdraws PERSONALIZATION and keeps tracking: personalization is the one
+// purpose the answered operation pinned (serveContentDecisions, service.ts:730,
+// for a shopper who personalizes; leg A2 reads the pinned guards and requires
+// it), so A2 pins the consent re-read for the purposes the first operation pinned
+// (reenterOwner, :573-574). A tracking withdrawal is refused too (the
+// personalization deadline requires tracking, `consentDeadline`, consent.ts:76-77),
+// but it would not catch a re-read that required tracking alone.
 //
 // WITNESSES (read at 3deaa0ba)
 //   · the ruling: _evidence/parity-step3/AMENDMENTS.md:285 ("Baseline-52 G16
@@ -39,6 +48,11 @@
 //     (:570-572); the consent in force read again (:573-574); recheck (:575);
 //     `work` on a fresh owner environment (:576); entered from outside the
 //     answered operation, through the owner's serializer (:578-582).
+//   · sessionAuthority.ts `currentOwnerConsent`, :410-417 (the owner's consent in
+//     force, read through the shopper object's `consentNow` hook, ShopperReflex.ts
+//     :3867), and `requireConsentPurpose`, :402-409 (refuses a purpose whose
+//     `consentDeadline` has passed; consent.ts:74-78 gives 0 for a purpose not
+//     granted); the re-entry calls both at :573-574.
 //   · sessionAuthority.ts `ownerHeld`, :258-261 (active and the same owner);
 //     `runOwnerOperation`, :497-513 (the answered operation ends, `held.active =
 //     false`, :511, before its answer is returned).
@@ -112,6 +126,8 @@ type Host = (typeof HOSTS)[number];
 const ANSWER_WAIT_MS = 5_000;
 /** How long leg C holds the durable admission before it looks for an answer. */
 const ADMISSION_HOLD_MS = 300;
+/** Leg A2's new choice: personalization withdrawn, tracking kept (the purpose the answered operation pinned, service.ts:730). */
+const WITHDRAWAL = { trackingConsent: true, personalizationEnabled: false };
 const sleep = (ms: number) => new Promise<void>(resolve => { setTimeout(resolve, ms); });
 
 // ---------------------------------------------------------------------------
@@ -119,7 +135,7 @@ const sleep = (ms: number) => new Promise<void>(resolve => { setTimeout(resolve,
 // ---------------------------------------------------------------------------
 
 /** The members of sessionAuthority.ts's `Invocation` (:19-42) this file reads. */
-interface OwnerOperation { owner: object; active: boolean }
+interface OwnerOperation { owner: object; active: boolean; consentGuards: Array<{ purpose: string }> }
 const isOwnerOperation = (store: unknown): store is OwnerOperation =>
   typeof store === 'object' && store !== null && 'owner' in store && 'active' in store && 'principals' in store && 'pending' in store && 'consentGuards' in store;
 type Run = (this: AsyncLocalStorage<unknown>, store: unknown, callback: (...args: unknown[]) => unknown, ...args: unknown[]) => unknown;
@@ -314,10 +330,16 @@ async function shopperOn(m: Mounted) {
   await m.drain();
   expect(chosen.status, 'PRECONDITION: the shopper\'s explicit choice is accepted').toBe(200);
   expect(m.shopper(), 'PRECONDITION: the shopper\'s object answered the choice').toBe(m.shoppers.get(shopperObjectName(TENANT as TenantId, grant.subject))?.object);
+  /** The revision of the choice in force, which the next choice names (the preferences route's `choice.expectedRevision`). */
+  const revision = ((await chosen.json()) as { consent?: { instruction?: { revision?: string } } }).consent?.instruction?.revision ?? null;
   const decide = () => m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, {
     method: 'POST', headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: grant.capability, 'Content-Type': 'application/json' },
     body: JSON.stringify({ page: PAGE, brand: BRAND }) }));
-  return { grant, decide };
+  /** A new explicit choice through the same route, after the one in force. */
+  const choose = (choice: { trackingConsent: boolean; personalizationEnabled: boolean }) => m.fetch(new Request(`https://shop.invalid/realtime/session/${grant.sessionId}/preferences`, {
+    method: 'POST', headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: grant.capability, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...choice, choice: { id: crypto.randomUUID(), expectedRevision: revision, grantId: grant.grantId, iat: grant.iat, exp: grant.exp } }) }));
+  return { grant, decide, choose };
 }
 
 /** The member names of an answer, recursively (arrays by their first element): its shape, not its values. */
@@ -351,6 +373,8 @@ interface HeldDecision {
   readUnderOwner: boolean;
   /** That operation had ended (`active` false) when its answer came back. */
   answeredOperationEnded: boolean;
+  /** The consent purposes that operation pinned (`requireConsentPurpose`, sessionAuthority.ts:402-409), sorted and distinct. */
+  pinnedPurposes: string[];
   /** Destination calls after the release. */
   callsAfterRelease: DestinationCall[];
   /** `learning_incomplete` lines from the held request to the end of the drain. */
@@ -362,7 +386,7 @@ interface HeldDecision {
  * while the read is held, run `between` (the leg's change) and release the read,
  * then drain everything the platform keeps alive.
  */
-async function heldDecision(m: Mounted, s: Awaited<ReturnType<typeof shopperOn>>, between: () => (() => void) | undefined): Promise<HeldDecision> {
+async function heldDecision(m: Mounted, s: Awaited<ReturnType<typeof shopperOn>>, between: () => Promise<(() => void) | undefined>): Promise<HeldDecision> {
   const plainResponse = await s.decide(); const plainBody = await plainResponse.json() as unknown; await m.drain();
   const plain = { status: plainResponse.status, body: plainBody, reached: m.calls.map(call => call.name).sort() };
   m.calls.length = 0;
@@ -377,7 +401,7 @@ async function heldDecision(m: Mounted, s: Awaited<ReturnType<typeof shopperOn>>
     readUnderOwner = !!owner && ownerHeld(owner) && !!operation?.active && operation.owner === owner;
   };
   const got: { response: Response | null } = { response: null };
-  let answeredWhileHeld = false, callsWhileHeld: DestinationCall[] = [], answeredOperationEnded = false;
+  let answeredWhileHeld = false, callsWhileHeld: DestinationCall[] = [], answeredOperationEnded = false, pinnedPurposes: string[] = [];
   let callsAfterRelease: DestinationCall[] = [], undo: (() => void) | undefined;
   const learning = await learningLines(async () => {
     const pending = s.decide().then(r => { got.response = r; return r; });
@@ -385,15 +409,16 @@ async function heldDecision(m: Mounted, s: Awaited<ReturnType<typeof shopperOn>>
     while (!got.response && Date.now() < deadline) await sleep(10);
     answeredWhileHeld = got.response !== null;
     answeredOperationEnded = m.answered.operation?.active === false;
+    pinnedPurposes = [...new Set((m.answered.operation?.consentGuards ?? []).map(guard => guard.purpose))].sort();
     callsWhileHeld = [...m.calls];
-    try { undo = answeredWhileHeld ? between() : undefined; release(null); await pending; await m.drain(); }
+    try { undo = answeredWhileHeld ? await between() : undefined; release(null); await pending; await m.drain(); }
     finally { if (undo) undo(); }
     callsAfterRelease = m.calls.slice(callsWhileHeld.length);
   });
   m.storage.gate = null; m.storage.onHeldRead = null;
   const answer = got.response;
   return { plain, answeredWhileHeld, callsWhileHeld, status: answer?.status ?? null, body: answer ? await answer.json() as unknown : null,
-    readUnderOwner, answeredOperationEnded, callsAfterRelease, learning };
+    readUnderOwner, answeredOperationEnded, pinnedPurposes, callsAfterRelease, learning };
 }
 
 describe('unit:G16b.W09 the decision answer is not held by the erasure read, and the fan-out after it re-enters the shopper\'s owner as a new operation or reaches no destination, on both hosts', () => {
@@ -401,7 +426,7 @@ describe('unit:G16b.W09 the decision answer is not held by the erasure read, and
     it(`host (leg A, ${host} host): the grant expires after the answer and before the held erasure read is released, so the re-entered fan-out reaches no destination and is reported as not attempted`, async () => {
       const refused = await notAttemptedReceipt();
       const m = await mount(host, false), s = await shopperOn(m);
-      const r = await heldDecision(m, s, () => {
+      const r = await heldDecision(m, s, async () => {
         // The shopper's grant expires now (sessionCapability.ts:206), after the answer, before the release.
         const clock = vi.spyOn(Date, 'now').mockReturnValue((s.grant.exp + 1) * 1000);
         return () => clock.mockRestore();
@@ -426,9 +451,45 @@ describe('unit:G16b.W09 the decision answer is not held by the erasure read, and
       expect(r.learning[0]).toMatchObject({ code: 3, ringNotAttempted: 1 });
     }, 60_000);
 
+    it(`host (leg A2, ${host} host): the shopper withdraws personalization through the preferences route after the answer and before the held erasure read is released, so the re-entered fan-out reaches no destination and is reported as not attempted`, async () => {
+      const refused = await notAttemptedReceipt();
+      const m = await mount(host, false), s = await shopperOn(m);
+      const withdrawal: { status: number | null; consent: unknown } = { status: null, consent: null };
+      const r = await heldDecision(m, s, async () => {
+        // After the answer, before the release: a new explicit choice through the real route, queued on the shopper's
+        // object like any request and answered before the held read is released.
+        const answer = await s.choose(WITHDRAWAL);
+        withdrawal.status = answer.status; withdrawal.consent = ((await answer.json()) as { consent?: unknown }).consent ?? null;
+        return undefined;
+      });
+      expect(r.plain.status, 'PRECONDITION: the plain decision answers').toBe(200);
+      expect(r.plain.reached, 'PRECONDITION: the plain decision fans out to the shopper\'s ring and the slot\'s statistics')
+        .toEqual([ringName(TENANT, s.grant.subject), statsName(TENANT, BRAND, SLOT)].sort());
+      expect(r.readUnderOwner, 'PRECONDITION: the erasure read starts inside the shopper\'s active owner operation (continueAfterOwnerRead, sessionAuthority.ts:552-555)').toBe(true);
+      // serveContentDecisions, service.ts:730: a decision for a shopper who personalizes pins the personalization purpose.
+      expect(r.pinnedPurposes, 'PRECONDITION: the answered operation pinned the purpose this leg withdraws').toContain('personalization');
+      // serveContentDecisions, service.ts:1042-1050 (W06.05): the answer is not held by the erasure read; status and shape are the plain answer's.
+      expect(r.answeredWhileHeld, 'the decision answered while its erasure read was held').toBe(true);
+      expect(r.status).toBe(r.plain.status);
+      expect(shapeOf(r.body)).toEqual(shapeOf(r.plain.body));
+      expect(r.callsWhileHeld, 'a destination reached while the erasure read was held').toEqual([]);
+      // The withdrawal is made only once the answer has come back while the read is held.
+      expect(withdrawal.status, 'PRECONDITION: the preferences route accepts the withdrawal').toBe(200);
+      expect(withdrawal.consent, 'PRECONDITION: the choice in force no longer grants personalization').toMatchObject({ tracking: true, personalization: false });
+      // sessionAuthority.ts reenterOwner, :573-574: the re-entered operation reads the consent in force again
+      // (`currentOwnerConsent`, :410-417, through the shopper object's `consentNow`) and requires it to grant every purpose the
+      // answered operation pinned (`requireConsentPurpose`, :402-409; `consentDeadline` is 0 for a purpose not granted,
+      // consent.ts:74-78): the withdrawn personalization is refused before `work` runs, so neither destination is reached.
+      expect(r.callsAfterRelease, 'a destination reached after the shopper withdrew personalization').toEqual([]);
+      // serveContentDecisions, service.ts:1057-1058 → reportLearningIncomplete, fan.ts:838, :841: the refusal is reported as the
+      // engine's not-attempted receipt.
+      expect(r.learning, 'the refused fan-out is reported as the engine\'s not-attempted learning receipt').toEqual([refused]);
+      expect(r.learning[0]).toMatchObject({ code: 3, ringNotAttempted: 1 });
+    }, 60_000);
+
     it(`host (leg B, ${host} host): released cleanly after the answer, the fan-out reaches both destinations, each while the shopper's owner is held, in an operation that is not the answered one`, async () => {
       const m = await mount(host, false), s = await shopperOn(m);
-      const r = await heldDecision(m, s, () => undefined);
+      const r = await heldDecision(m, s, async () => undefined);
       expect(r.plain.status, 'PRECONDITION: the plain decision answers').toBe(200);
       expect(r.plain.reached, 'PRECONDITION: the plain decision fans out to the shopper\'s ring and the slot\'s statistics')
         .toEqual([ringName(TENANT, s.grant.subject), statsName(TENANT, BRAND, SLOT)].sort());
@@ -437,8 +498,9 @@ describe('unit:G16b.W09 the decision answer is not held by the erasure read, and
       expect(r.answeredWhileHeld, 'the decision answered while its erasure read was held').toBe(true);
       expect(r.status).toBe(r.plain.status);
       expect(shapeOf(r.body)).toEqual(shapeOf(r.plain.body));
-      // sessionAuthority.ts runOwnerOperation, :511: the operation that started the read is the one that answered, and it has ended.
-      expect(r.answeredOperationEnded, 'PRECONDITION: the operation that started the erasure read is the one that answered').toBe(true);
+      // sessionAuthority.ts runOwnerOperation, :511: an operation ends (`held.active = false`) before its answer is returned; the
+      // operation that started the read has ended by the time the answer came back.
+      expect(r.answeredOperationEnded, 'PRECONDITION: the operation that started the erasure read had ended when the answer came back').toBe(true);
       expect(r.callsWhileHeld, 'a destination reached while the erasure read was held').toEqual([]);
       // sessionAuthority.ts reenterOwner, :568-569 and :578-582: after the release the fan-out runs in a NEW, active operation of
       // the same owner, entered through ShopperReflex.serialize (:3863-3879), and reaches the ring's /append and the placement's
