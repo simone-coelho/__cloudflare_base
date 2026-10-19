@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P55",
+  "workOrderHash": "sha256:f415d3a3056c186579c286598d34381aa22b477420f070df8d32d4e86440418d",
+  "artifact": {
+    "revision": "a2a1f0495bfb27cf8d039420d7082687fca782f4",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p55-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p55-build at a2a1f0495bfb27cf8d039420d7082687fca782f4 (4a8c53fd merges rem/integration 3702de63 into rem/tkt/P55 7da6fa0d; 00bd05c5 src/durable-objects/LearnStats.ts and src/learn/fan.ts: after the transaction and the transition's own publication, only when its outcome is unknown and the failure is not a further republish refusal, one get and one put under P49's existing key supersede the record with an empty change list when it names the snapshot in force, so the lift reads no longer apply it and agree with the next publish's answer; a throwing get or put caught; a2a1f049 kit 02 and 03). Acceptance 7/7 on both hosts; the builder's gate GATE_OK on its first run at a2a1f049 (3384 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 1cacfb5e…) and the reviewer's own gate at the same sha failing on W40.P4's symlink artifact alone; both typechecks exit 0; both bundle checks exact; the R-P7 dump A to F byte-identical at head and base on both hosts; the key set after the failed transition identical at head and base. Delivery review PASS (P55/reviewer/REPORT.md): TT1 to TT3 PASS, four mutants caught by the units, three by probes only (a lapsed record overwritten; a throwing get or put propagated; the further-republish exception removed). Named for later under R-P78: a publication that fails for a cause other than the pooled fault leaves no sign on the lift reads beyond the transition's publicationOutcome unknown (pre-existing); kit 02:1985-1986 still says only a refused publication writes the key; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P55/implementer/REPORT.md",
+      "git commits on rem/p55-build up to a2a1f049"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P55 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P55/reviewer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P55/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P55/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P55/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-19T00:13:58.230Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
