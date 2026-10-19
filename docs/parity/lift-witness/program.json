@@ -169,7 +169,8 @@
       "remainingWork": [
         "Constants and env override; the W38 B7 R10 (budget plus margin).",
         "The witness door on LearnStats with a cached verdict; the decision path's witness uses it.",
-        "The recent-publication window on the object; the same-generation acceptance; explain.lift.asOf only when not latest."
+        "The recent-publication window on the object; the same-generation acceptance; explain.lift.asOf only when not latest.",
+        "The ring call is aborted at its budget so the owner never waits past it (the lock's property made true, R-P112); the asOf member carried through replay.ts."
       ],
       "decisions": [
         {
@@ -204,7 +205,12 @@
         "wrangler.toml",
         "src/units/W38/LEDGER.unit.test.ts (R10 of the late-answer lock only, by the specifier)",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md"
+        "docs/kit/03-payload-schemas.md",
+        "src/learn/replay.ts",
+        "src/units/W38/LEDGER.unit.test.ts (R10 of :519 B4 stub and :831 B7 main test, budget-derived, by the specifier; R-P112)",
+        "src/content/consent.test.ts (R10 of W10.03 :757-794 and W24.01 :813-816 witness-door stubs only, by the specifier)",
+        "src/index.api-boundary.test.ts (R10 of the hold-health fault :284, :1724-1726 only, by the specifier)",
+        "src/learn/learn.test.ts (R10 of W06.06 :1771 timer advance derived from the ring budget, by the specifier)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P62 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
