@@ -4,7 +4,7 @@
 // the shape a commerce platform gets back, parity through the wire, and the two
 // refusals.
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, onTestFinished } from 'vitest';
 import { affinityFor, sortRoutes } from '@/routes/sort';
 import { newAnonymousSession, requireShopper, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import type { Env } from '@/types/env';
@@ -131,23 +131,6 @@ function sortHost(overrides: Record<string, unknown> = {}, snapshot?: (url: stri
   // under /realtime, which is where an owned consent choice is made.
   app.use('*', tenantMiddleware()); app.route('/sort', sortRoutes); app.route('/realtime', realtimeRoutes);
   return { env: e, app, asked, names, objects, pending };
-}
-
-/**
- * RETAINED probe driver for the two cases that inject the object's own snapshot
- * projection. On the real owner path the object serves its own projection:
- * dispatchOwnedRequest rewires SHOPPER_REFLEX.get(this object) to a local fetch
- * (src/identity/sessionAuthority.ts:616-626), so a namespace-level double is
- * unreachable and those two cases still drive the sub-router directly.
- */
-async function postDirect(body: unknown, e: Record<string, unknown>) {
-  const session = await newAnonymousSession(e as unknown as Env, 'coach');
-  const input = body as { userId?: string };
-  const target = input.userId && !input.userId.startsWith('t:') ? { ...input, userId: session.subject } : input;
-  const res = await sortRoutes.request('/', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: session.capability }, body: JSON.stringify(target),
-  }, e);
-  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
 async function post(body: unknown, host = sortHost()) {
@@ -304,12 +287,17 @@ describe('POST /sort', () => {
 
   it('W05.03 uses the existing signed snapshot projection and never lets a zero dial substitute for an empty refused vector', async () => {
     const asked: Array<{ url: string; headers: Headers }> = [];
-    const e = env({ REFLEX_HOST: 'do', SHOPPER_REFLEX: { idFromName: (n: string) => n, get: () => ({ fetch: async (url: string, init: RequestInit) => {
-      asked.push({ url, headers: new Headers(init.headers) });
+    // R10 (baseline-52 #8, G5): POST /sort is owner-dispatched (src/identity/sessionCapability.ts:288) and forwardShopperRequest refuses the bare sub-router path '/' (src/identity/sessionAuthority.ts:572; ownedRequestPath owns /sort only, :526), so the request goes through the mounted app and the real object.
+    const host = sortHost({ REFLEX_HOST: 'do' }), objectFetch = ShopperReflex.prototype.fetch;
+    // R10 (baseline-52 #8, G5): on that path the route's projection read is the object's own local fetch (src/identity/sessionAuthority.ts:668-673; ShopperReflex.ts:516), so the same refusing reply that carries a vector answers it there.
+    const projection = vi.spyOn(ShopperReflex.prototype, 'fetch').mockImplementation(async function (this: ShopperReflex, request: Request) {
+      if (new URL(request.url).pathname !== '/snapshot') return objectFetch.call(this, request);
+      asked.push({ url: request.url, headers: new Headers(request.headers) });
       return Response.json({ ok: true, consent: { tracking: false, personalization: true }, affinity: { dims: { line: { Tabby: 0.8 } } } });
-    } }) } });
+    });
+    onTestFinished(() => { projection.mockRestore(); });
     for (const affinity of [0, 4]) {
-      const { status, body } = await postDirect({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, e);
+      const { status, body } = await post({ userId: 'v', candidates: [...FEED, { id: ' P2 ', line: 'Rogue' }, { id: ' ' }], consent: { personalization: false }, weights: { affinity } }, host);
       expect(status).toBe(200); expect(body.order).toEqual(['P1', 'P2', 'P3']); expect(body.dropped).toBe(2); expect(body.affinityWeight).toBe(affinity);
       expect((body.items as any[]).every(item => item.score === 0 && item.drivers.length === 0)).toBe(true);
     }
