@@ -3527,7 +3527,7 @@ describe('W14.05 typed source snapshots', () => {
         }
         const d = await newAnonymousSession(f.env, 'meridian'); await warm(f, d);
         expect((await f.post(Array.from({ length: 7 }, (_, n) => ({ ...row(d, 'extra' + n), fields: {}, audiences: {} })))).status).toBe(200);
-        const beforeOversized = structuredClone(noBehavior(f,true)); clear(f); expect((await link(f, d, 'w1405-person')).status).toBe(500); expect(noBehavior(f,true)).toEqual(beforeOversized); expect(item(f,d).data.get('identityTransfer')).toMatchObject({status:'prepared'}); expect(item(f,d).data.get('forwardTo')).toBeUndefined();
+        const beforeOversized = structuredClone(noBehavior(f,true)); clear(f); const oversized = await link(f, d, 'w1405-person'), oversizedText = await oversized.text(); expect([oversized.status, oversizedText.startsWith('{') ? (JSON.parse(oversizedText) as { error?: unknown }).error : oversizedText]).toEqual([400, 'Validation error']); expect(noBehavior(f,true)).toEqual(beforeOversized); expect(item(f,d).data.get('identityTransfer')).toMatchObject({status:'prepared'}); expect(item(f,d).data.get('forwardTo')).toBeUndefined(); // R10 (amendment 5 addendum §4, P58-D): the route's own answer to the oversized merge, the owner app's 400 Validation error for the profile's "at most8 sources" (src/identity/profileEnrichment.ts:18; src/middleware/error.ts:19-27), reaches the shopper; a retained rejection after it no longer replaces it with an untyped 500 (src/identity/sessionAuthority.ts runOwnerOperation)
         if (host === 'session') {
           // Retain the trusted legacy session-repoint contract. It never
           // transfers the previous person's enrichment to the new person.
