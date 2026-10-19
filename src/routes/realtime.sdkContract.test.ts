@@ -9,7 +9,8 @@ import { actionEventSchema } from './realtime';
 // W16-B9 (R91, an R10 correction): the one mapping point between the reported
 // journey vocabulary and the persisted token, and the thresholds that decide
 // which word a shopper's visit has reached (src/services/JourneyStage.ts:124-186).
-import { PERSISTED_STAGE, DEFAULT_JOURNEY_THRESHOLDS } from '@/services/JourneyStage';
+// Baseline 52 (G18 spec): JOURNEY_STAGES, the reported vocabulary of R29 (src/services/JourneyStage.ts:136).
+import { PERSISTED_STAGE, DEFAULT_JOURNEY_THRESHOLDS, JOURNEY_STAGES } from '@/services/JourneyStage';
 import { createCore } from '../sdk/core';
 import { createEmit } from '../sdk/emit';
 import { createListen } from '../sdk/listen';
@@ -3548,6 +3549,15 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
   it('isolates two same-identity tenants across writes, reads, sockets and restarted alarms; stale labels cannot pin journey or manual updates', async () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
     const decisions = vi.spyOn(LiveDecisionProvider.prototype, 'decideAll');
+    // Baseline 52 (#37, G18 spec, the G3 form of W05.04 below): the public snapshot no longer carries the cell (R10,
+    // Baseline 52 #47/#48); the cell an answer was decided with is read where the route takes it, from the serve it calls
+    // (src/routes/decisions.ts:1055), through a pass-through spy, as W35.02 reads the provider the request path calls.
+    const serve = vi.spyOn(contentService, 'serveContentDecisions');
+    // Baseline 52 (#37, G18 spec; R29, LANE-LOG): the engine STORES the persisted token and REPORTS the shared word,
+    // PERSISTED_STAGE being the one mapping point between them (src/services/JourneyStage.ts:136, :147-151). A read that
+    // reports the stage says the shared word of the token this test pins ('early'): never the token itself, never the poisoned 'late'.
+    const earlyWord = JOURNEY_STAGES.find(word => PERSISTED_STAGE[word] === 'early');
+    expect(JOURNEY_STAGES, 'R29: the reported word of the persisted token this test pins').toContain(earlyWord);
     const remote = vi.fn(async (input: RequestInfo | URL) => {
       const tenant = String(input).includes('meridian') ? 'meridian' : 'brighthour';
       return Response.json({ data: { customer: { audiences: { edges: [{ node: { name: 'remote_' + tenant, state: 'qualified' } }] } } } });
@@ -3576,6 +3586,25 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
         await f.configureRetention(); const recoveryPolicies = JSON.parse(f.env.RETENTION!);
         for (const categories of Object.values(recoveryPolicies.tenants) as Record<string, unknown>[]) for (const key of ['recovery', 'quarantine']) categories[key] = fixtureRetentionPolicy;
         f.env.RETENTION = JSON.stringify(recoveryPolicies); f.env.LEDGER_RECOVERY_ENABLED = 'true';
+        // Baseline 52 (#37, G18 spec, stale fixture): a tracked snapshot's durable owner recovery prepares each personalized
+        // record's exposure against the slot's statistics object before the answer, reading that object's learning generation
+        // (src/ledger/recovery.ts:213; src/learn/fan.ts:983-990 prepareExposureEffects, :958-965 learningGenerations); with no
+        // binding the snapshot answers 500 "Learning generation unavailable" (:959). This deployment binds the actual LearnStats
+        // object, one per name as idFromName gives production, over in-memory storage (#38's actual DecisionRing idiom below).
+        const statsObjects = new Map<string, LearnStats>();
+        const statsState = (name: string) => {
+          const data = new Map<string, unknown>(); let alarm: number | null = null;
+          const operations = (target: Map<string, unknown>) => ({ get: async (key: string) => structuredClone(target.get(key)),
+            put: async (key: string, value: unknown) => { target.set(key, structuredClone(value)); }, delete: async (key: string) => target.delete(key) });
+          return { id: name, storage: { ...operations(data), getAlarm: async () => alarm, setAlarm: async (at: number) => { alarm = at; },
+            transaction: async (work: (tx: ReturnType<typeof operations>) => Promise<unknown>) => {
+              const candidate = structuredClone(data), result = await work(operations(candidate)); data.clear(); for (const [k, v] of candidate) data.set(k, v); return result;
+            } } } as unknown as DurableObjectState;
+        };
+        f.env.LEARN_STATS = { idFromName: (name: string) => name, get: (name: string) => ({ fetch: (url: string, init?: RequestInit) => {
+          let stats = statsObjects.get(name); if (!stats) { stats = new LearnStats(statsState(name), f.env); statsObjects.set(name, stats); }
+          return stats.fetch(new Request(url, init));
+        } }) } as unknown as DurableObjectNamespace;
         for (const tenant of Object.keys(tenants)) {
           // One coherent published set per tenant; legacy KV is never an authority
           // fallback (src/config/publication.ts:19; src/reflex/configStore.ts:408-415).
@@ -3633,10 +3662,15 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
           expect((await segments.json() as any).segments).not.toContain('late_journey_ready_to_buy');
           const reflex = await f.call('/realtime/reflex?userId=' + g.subject, g.capability, undefined, g.tenant);
           expect(reflex.status).toBe(200);
-          if (host === 'do') expect(await reflex.json()).toMatchObject({ journeyStage: 'early' });
+          // Baseline 52 (#37, G18 spec; R29): GET /realtime/reflex answers the REPORTED word of this visit's one derivation
+          // (src/durable-objects/ShopperReflex.ts:2113-2114 journeyStageFrom(journeyCountersNow(...))), never the stored token.
+          if (host === 'do') expect(await reflex.json()).toMatchObject({ journeyStage: earlyWord });
           const content = await f.call('/v1/' + g.tenant + '/decisions/snapshot?page=home&visitorId=' + g.subject + '&sessionId=' + g.sessionId,
             g.capability, undefined, g.tenant);
-          expect(content.status).toBe(200); expect((await content.json() as any).cell.stage).toBe('early');
+          // Baseline 52 (#37, G18 spec): the cell is read from the serve the route called (the G3 form above); its stage is the
+          // PERSISTED token (R29; src/content/service.ts:764 PERSISTED_STAGE[shopper.stage]), so 'early' is unchanged.
+          expect(content.status).toBe(200); await content.json();
+          expect((await serve.mock.results.at(-1)!.value).cell.stage).toBe('early');
           await f.drain(); expect(readBytes()).toBe(beforeRead);
           expect(remote).toHaveBeenCalledTimes(beforeNetwork);
           if (host === 'do') {
@@ -3647,13 +3681,17 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
             expect((await f.call('/realtime/segments/' + g.subject, g.capability, { segment: 'new-manual' }, g.tenant)).status).toBe(200);
             const manual = JSON.parse(ws.send.mock.calls.at(-1)![0]);
             expect(manual.data.segments).toContain('new-manual'); expect(manual.data.segments).not.toContain('late_journey_ready_to_buy');
-            expect(manual.data.journeyStage).toBe('early');
+            // Baseline 52 (#37, G18 spec; R29, R43: the socket envelope reports the shared word): the frame paints the word the
+            // decision was made in (src/durable-objects/ShopperReflex.ts:1745-1746 journeyWord, :1796 `journeyStage: journeyWord`).
+            expect(manual.data.journeyStage).toBe(earlyWord);
             poison(); ws.send.mockClear();
             await item().shopper.webSocketMessage(ws as unknown as WebSocket, JSON.stringify({ type: 'action', event }));
             expect(ws.close).not.toHaveBeenCalled();
             const frame = ws.send.mock.calls.map(c => JSON.parse(c[0])).find(c => c.type === 'personalization_update');
             expect(frame.data.segments).toContain('owned_' + g.tenant); expect(frame.data.segments).not.toContain('local_late');
-            expect(frame.data.journeyStage).toBe('early');
+            // Baseline 52 (#37, G18 spec; R29, R43): the action's frame reports the word its own event reached
+            // (src/durable-objects/ShopperReflex.ts:1745 candidate.journeyWord, :1796), the second interaction of this visit.
+            expect(frame.data.journeyStage).toBe(earlyWord);
             poison(); ws.send.mockClear();
             const crossing = nextCrossing(state().reflex!, Date.now(), { ...DEFAULT_REFLEX_CONFIG, version: 'w0307-' + g.tenant,
               dimensions: [{ key: 'taste', source: 'line' }], weights: { product_view: 2 }, tauMs: 1000, K: 1, thetaIn: 0.4, thetaOut: 0.2,
@@ -3676,7 +3714,9 @@ describe('W03.07 configured ODP provenance on both hosts', () => {
             const next = await f.call('/realtime/action', g.capability, event, g.tenant); expect(next.status).toBe(200);
             const update = (await next.json() as any).update;
             expect(update.data.segments).toContain('owned_' + g.tenant); expect(update.data.segments).not.toContain('local_late');
-            expect(update.data.journeyStage).toBe('early');
+            // Baseline 52 (#37, G18 spec; R29): the session host's update reports the shared word while the stored metadata keeps
+            // the persisted token (src/services/RealtimeSegmentEngine.ts:823-825 `journeyStage: journeyWord`).
+            expect(update.data.journeyStage).toBe(earlyWord);
             expect(state().odpContext).toBe(originalPin);
             expect(JSON.stringify(state().odpRecentEvents)).not.toContain('foreign');
             poison();
