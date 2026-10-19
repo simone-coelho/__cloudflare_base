@@ -49,7 +49,7 @@ function quietLogger(minimumLevel = 3, suppressMissing = true): { log: (level: n
  * no-op dispatcher by default. Fire-and-forget on purpose: measurement must
  * never sit in front of a decision the shopper is waiting on.
  */
-function fetchEventDispatcher(destination?: string, accountId?: string, admit?: (at: number, event: any) => Promise<void>): {
+function fetchEventDispatcher(destination?: string, accountId?: string, admit?: (at: number, event: unknown) => Promise<void>): {
   dispatchEvent: (event: any, callback?: (response: { statusCode: number }) => void) => void;
 } {
   return {
