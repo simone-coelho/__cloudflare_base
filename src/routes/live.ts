@@ -11,7 +11,8 @@
 //                                      closed-form next lifecycle boundary.
 //   POST /live/api/event             → the shopper's signal, PROXIED into the
 //                                      existing /realtime/action pipeline with
-//                                      surface:'brighthour' stamped.
+//                                      surface:'brighthour' stamped, under the
+//                                      visitor's own shopper session.
 //   GET  /live/api/reflex            → the visitor's live affinity snapshot,
 //                                      delegated to the (now surface-aware)
 //                                      /realtime/reflex.
@@ -31,6 +32,8 @@
 // remember. The proxy also drops the pipeline's Set-Cookie headers on purpose:
 // the Bright Hour page uses credentials:'omit' and resolves identity by its own
 // visitorId, so no coach session cookie can ever cross the surface boundary.
+// The shopper session the pipeline requires is issued to that visitorId inside
+// the worker and never leaves it (see "The demo visitor's shopper authority").
 //
 // The composer itself is pure (src/demos/brighthour/composer.ts). Everything
 // clock-, session- and D1-shaped lives here, at the edge of it.
@@ -39,7 +42,8 @@
 import type { TenantVariables } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
-import { Hono } from 'hono';
+import { tenantMiddleware } from '@/tenancy/middleware';
+import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 
 import type { Env } from '@/types/env';
@@ -48,6 +52,9 @@ import { RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';
 import { snapshot as reflexSnapshot } from '@/reflex/core';
 import { resolveReflexConfig } from '@/demos/registry';
 import realtimeRoutes from '@/routes/realtime';
+import { identityRoutes } from '@/routes/identity';
+import { SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { errorHandler } from '@/middleware/error';
 import { makeDemoClock } from '@/demos/brighthour/demoClock';
 import {
   BH_EXPERIMENT_SLOT,
@@ -91,6 +98,199 @@ function background(c: { executionCtx: ExecutionContext }, p: Promise<unknown>):
   const ctx = execCtxOf(c);
   if (ctx) ctx.waitUntil(p);
   else void p; // still runs — it just isn't kept alive by the runtime
+}
+
+// ── The demo visitor's shopper authority ─────────────────────────────────────
+//
+// Every shopper door of today's engine (/realtime/action, /realtime/reflex)
+// admits a caller only on a signed shopper session capability — one tenant, one
+// subject, one session, a bounded lifetime — and serves her from her own
+// object. The Bright Hour page holds no credential: `public/` is served
+// wholesale, so a token written there is a credential anyone can fetch, and the
+// page identifies its visitor by the id it keeps in its own storage. So, as the
+// Top Offers route does for operator authority (src/routes/topOffers.ts), the
+// credential stays in the worker:
+//
+//   • It is issued only where DEPLOYMENT_PROFILE is 'demo'. Anywhere else every
+//     shopper call this surface makes is answered with the refusal, and the
+//     worker's own boundary (src/index.ts) does not route /live/api on a
+//     customer stamp at all.
+//   • It is never fabricated. It is the capability the identity session door
+//     (POST /v1/:tenant/identity/session) issues to any new anonymous browser,
+//     with its own subject, session, grant and lifetime. Nothing here widens it:
+//     this surface only remembers which one was issued for which visitor, in
+//     this isolate, until shortly before it expires.
+//   • Every shopper call this surface makes carries it and X-Tenant and
+//     re-enters the ordinary doors, so the same tenant resolution, capability
+//     check, owner forwarding, consent, retention and refusals apply as for any
+//     browser. Whatever a door refuses is answered as refused, with the door's
+//     own status and reason, never as accepted.
+
+type LiveContext = Context<{ Bindings: Env; Variables: TenantVariables }>;
+
+/** The in-process origin every sub-request names. Never a network call. */
+const INTERNAL_ORIGIN = 'https://brighthour.internal';
+
+/**
+ * The ordinary shopper doors, at the paths the worker mounts them (src/index.ts)
+ * and behind the same tenant resolution and error handler. The owner forwarding
+ * inside them selects its operation by that path, so the path must be the real one.
+ */
+const shopperDoors = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
+shopperDoors.use('*', tenantMiddleware());
+shopperDoors.onError(errorHandler);
+shopperDoors.route('/realtime', realtimeRoutes);
+shopperDoors.route('/v1', identityRoutes);
+
+/** The session the identity door issued for one Bright Hour visitor. */
+interface DemoShopper {
+  tenant: TenantId;
+  subject: string;
+  sessionId: string;
+  capability: string;
+  /** The capability's own expiry, in epoch seconds. */
+  exp: number;
+}
+
+/** A door's refusal: the step it refused, the door's status and its own reason. */
+class Refused extends Error {
+  constructor(
+    readonly stage: 'session' | 'event' | 'affinity',
+    readonly status: number,
+    readonly reason: string
+  ) {
+    super(reason);
+    this.name = 'Refused';
+  }
+}
+
+/** A held session is replaced this long before its own expiry, never used past it. */
+const RENEW_BEFORE_SECONDS = 5 * 60;
+/** One demo stage, many visitors: past this bound the oldest entry goes first. */
+const MAX_DEMO_SHOPPERS = 10_000;
+
+interface DemoShopperEntry {
+  issued: Promise<DemoShopper>;
+  shopper?: DemoShopper;
+}
+const demoShoppers = new Map<string, DemoShopperEntry>();
+const demoShopperKey = (tenant: TenantId, visitorId: string) => `${tenant}\u0000${visitorId}`;
+const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+/** The request's tenant, named as readAffinity names it when none was resolved. */
+function tenantOrDefault(tenant: TenantId | undefined): TenantId {
+  return tenant ?? DEFAULT_TENANT;
+}
+
+/** Ask the identity session door for a new anonymous session, as a new browser does. */
+async function issueDemoShopper(env: Env, tenant: TenantId, ctx: ExecutionContext): Promise<DemoShopper> {
+  const res = await shopperDoors.fetch(
+    new Request(`${INTERNAL_ORIGIN}/v1/${encodeURIComponent(tenant)}/identity/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
+      body: '{}',
+    }),
+    env,
+    ctx
+  );
+  const body = (await res.json().catch(() => null)) as {
+    ok?: unknown;
+    error?: unknown;
+    session?: Partial<Record<keyof DemoShopper, unknown>>;
+  } | null;
+  const s = body?.session;
+  if (!res.ok || body?.ok !== true || !s || s.tenant !== tenant || typeof s.subject !== 'string'
+    || typeof s.sessionId !== 'string' || typeof s.capability !== 'string' || typeof s.exp !== 'number') {
+    throw new Refused('session', res.ok ? 502 : res.status,
+      typeof body?.error === 'string' ? body.error : 'the identity session door issued no session');
+  }
+  return { tenant, subject: s.subject, sessionId: s.sessionId, capability: s.capability, exp: s.exp };
+}
+
+/**
+ * The visitor's session: the one already issued while it has time left, else a
+ * new one from the identity door. Concurrent first calls share one issue, and a
+ * refused issue is not remembered, so her next call asks the door again.
+ */
+function demoShopperFor(env: Env, tenant: TenantId, visitorId: string, ctx: ExecutionContext): Promise<DemoShopper> {
+  if (env.DEPLOYMENT_PROFILE !== 'demo') {
+    return Promise.reject(new Refused('session', 403, 'the demo shopper session is issued only on the demo profile'));
+  }
+  const key = demoShopperKey(tenant, visitorId);
+  const held = demoShoppers.get(key);
+  if (held && (!held.shopper || held.shopper.exp - nowSeconds() > RENEW_BEFORE_SECONDS)) return held.issued;
+  const entry: DemoShopperEntry = { issued: issueDemoShopper(env, tenant, ctx) };
+  demoShoppers.delete(key);
+  demoShoppers.set(key, entry);
+  if (demoShoppers.size > MAX_DEMO_SHOPPERS) {
+    const oldest = demoShoppers.keys().next().value;
+    if (oldest !== undefined) demoShoppers.delete(oldest);
+  }
+  void entry.issued.then(
+    (shopper) => {
+      entry.shopper = shopper;
+    },
+    () => {
+      if (demoShoppers.get(key) === entry) demoShoppers.delete(key);
+    }
+  );
+  return entry.issued;
+}
+
+/** The visitor's session for this request, its issue's background work kept alive. */
+async function demoShopperOf(c: LiveContext, visitorId: string): Promise<DemoShopper> {
+  const { ctx, settled } = collectingCtx();
+  try {
+    return await demoShopperFor(c.env, tenantOrDefault(c.get('tenant')), visitorId, ctx);
+  } finally {
+    background(c, settled());
+  }
+}
+
+/** The session this isolate already holds for the visitor, if any. Never issues one. */
+async function heldDemoShopper(tenant: TenantId, visitorId: string): Promise<DemoShopper | undefined> {
+  const held = demoShoppers.get(demoShopperKey(tenant, visitorId));
+  if (!held) return undefined;
+  try {
+    const shopper = await held.issued;
+    return shopper.exp > nowSeconds() ? shopper : undefined;
+  } catch {
+    return undefined; // a refused issue holds no session
+  }
+}
+
+/** A session the doors no longer admit is not used again: her next call is issued a new one. */
+function forgetDemoShopper(shopper: DemoShopper, visitorId: string): void {
+  const key = demoShopperKey(shopper.tenant, visitorId);
+  if (demoShoppers.get(key)?.shopper === shopper) demoShoppers.delete(key);
+}
+
+/** What every shopper call of this surface carries. */
+const shopperHeaders = (shopper: DemoShopper): Record<string, string> => ({
+  [SHOPPER_HEADER]: shopper.capability,
+  'X-Tenant': shopper.tenant,
+});
+
+/** Her live affinity snapshot, read through her own session on the Bright Hour tuning. */
+const reflexRequestOf = (shopper: DemoShopper) =>
+  new Request(
+    `${INTERNAL_ORIGIN}/realtime/reflex?userId=${encodeURIComponent(shopper.subject)}&surface=${SURFACE}`,
+    { headers: shopperHeaders(shopper) }
+  );
+
+/**
+ * A refusal, answered as one. 400 and 413 are the request's own fault and keep
+ * their status; anything else a door refused is this surface failing to get the
+ * call through, so 503 for the session and 502 for the rest. The door's own
+ * status and reason are carried either way.
+ */
+function refusedAnswer(c: LiveContext, refusal: Refused, extra: Record<string, unknown> = {}) {
+  const status = refusal.status === 400 || refusal.status === 413 ? refusal.status
+    : refusal.stage === 'session' ? 503 : 502;
+  return c.json(
+    { ok: false, success: false, surface: SURFACE, stage: refusal.stage, status: refusal.status, error: refusal.reason, ...extra },
+    status as 502
+  );
 }
 
 // ── Burst-safe ingestion (the scroll-storm fix) ──────────────────────────────
@@ -293,6 +493,33 @@ async function readAffinity(
   return { sessionId, dims: snap.dims, memberships: snap.audiences };
 }
 
+/**
+ * The same affinity, read through the session this surface issued her: the
+ * ordinary /realtime/reflex door, her capability, the Bright Hour tuning. A
+ * refused or unreadable answer is a refusal of the page, never an empty vector
+ * served as if she were new.
+ */
+async function readOwnedAffinity(
+  env: Env, shopper: DemoShopper, visitorId: string, ctx: ExecutionContext | undefined,
+): Promise<AffinityRead> {
+  const res = await shopperDoors.fetch(reflexRequestOf(shopper), env, ctx);
+  const body = (await res.json().catch(() => null)) as {
+    ok?: unknown;
+    error?: unknown;
+    affinity?: { dims?: DimensionScores; audiences?: string[] } | null;
+  } | null;
+  if (!res.ok || !body || body.ok === false) {
+    if (res.status === 401) forgetDemoShopper(shopper, visitorId);
+    throw new Refused('affinity', res.ok ? 502 : res.status,
+      typeof body?.error === 'string' ? body.error : 'her session could not be read');
+  }
+  return {
+    sessionId: shopper.sessionId,
+    dims: body.affinity?.dims ?? {},
+    memberships: body.affinity?.audiences ?? [],
+  };
+}
+
 // ── Beat 13: the experiment view the page carries ────────────────────────────
 
 /**
@@ -403,7 +630,13 @@ liveRoutes.post('/page', async (c) => {
     // has already had accepted, so drain their queue (bounded) before reading.
     await settleVisitor(input.visitorId);
 
-    const affinity = await readAffinity(c.env, input.visitorId, realNowMs, c.get('tenant'), input.sessionId);
+    // Her own session, when this surface has issued her one: the events she sent
+    // were scored there, so that is what her page is composed from. A visitor
+    // this isolate holds no session for is read exactly as before.
+    const shopper = await heldDemoShopper(tenantOrDefault(c.get('tenant')), input.visitorId);
+    const affinity = shopper
+      ? await readOwnedAffinity(c.env, shopper, input.visitorId, execCtxOf(c))
+      : await readAffinity(c.env, input.visitorId, realNowMs, c.get('tenant'), input.sessionId);
     const sessionId = input.sessionId ?? affinity.sessionId;
 
     const page = composePage({
@@ -459,6 +692,7 @@ liveRoutes.post('/page', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ ok: false, error: 'Invalid page request', details: error.issues }, 400);
     }
+    if (error instanceof Refused) return refusedAnswer(c, error);
     console.error('Error composing Bright Hour page');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'compose failed' },
@@ -560,10 +794,11 @@ const eventSchema = z.object({
 type EventInput = z.infer<typeof eventSchema>;
 
 /** The /realtime/action body for one Bright Hour signal, surface stamped here. */
-function actionPayloadOf(input: EventInput): Record<string, unknown> {
+function actionPayloadOf(input: EventInput, shopper: DemoShopper): Record<string, unknown> {
   return {
     type: PASSTHROUGH_TYPES.has(input.action) ? input.action : 'custom',
-    userId: input.visitorId,
+    // The subject her session was issued for: the door admits no other.
+    userId: shopper.subject,
     // Both are stamped: `surface` is authoritative in the registry, `source`
     // is the belt-and-braces fallback for anything reading provenance only.
     surface: SURFACE,
@@ -574,28 +809,36 @@ function actionPayloadOf(input: EventInput): Record<string, unknown> {
       ...(input.itemId ? { product_id: input.itemId } : {}),
     },
     timestamp: input.timestamp ?? Date.now(),
-    ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+    // The page's own session id names her BROWSING session, which attributes
+    // the event; her profile session is the one her capability carries, and
+    // the door refuses any other in `sessionId`.
+    ...(input.sessionId ? { browsingSessionId: input.sessionId } : {}),
   };
 }
 
 /**
- * Push one signal through the shared pipeline.
+ * Push one signal through the shared pipeline, under her own session.
  *
  * ONE ingestion path for both demos. No Cookie header goes in, and no Set-Cookie
- * comes back out — the surfaces share a pipeline, never an identity.
+ * comes back out — the surfaces share a pipeline, never an identity. The answer
+ * is read, never just drained: anything but the pipeline's own acceptance is a
+ * refusal, thrown with the pipeline's status and reason.
  */
-async function ingestOne(env: Env, ctx: ExecutionContext, input: EventInput): Promise<void> {
-  const res = await realtimeRoutes.fetch(
-    new Request('https://brighthour.internal/action', {
+async function ingestOne(env: Env, ctx: ExecutionContext, shopper: DemoShopper, input: EventInput): Promise<void> {
+  const res = await shopperDoors.fetch(
+    new Request(`${INTERNAL_ORIGIN}/realtime/action`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(actionPayloadOf(input)),
+      headers: { 'Content-Type': 'application/json', ...shopperHeaders(shopper) },
+      body: JSON.stringify(actionPayloadOf(input, shopper)),
     }),
     env,
     ctx
   );
-  // Drain the body so the sub-response is never left dangling.
-  await res.json().catch(() => undefined);
+  const body = (await res.json().catch(() => undefined)) as { success?: unknown; error?: unknown } | undefined;
+  if (!res.ok || body?.success !== true) {
+    throw new Refused('event', res.ok ? 502 : res.status,
+      typeof body?.error === 'string' ? body.error : `the pipeline answered ${res.status} without accepting the event`);
+  }
 }
 
 /**
@@ -640,24 +883,47 @@ function isBhOfferClick(input: EventInput): boolean {
   return input.data?.slot_id === BH_EXPERIMENT_SLOT;
 }
 
-function acceptEvents(env: Env, inputs: EventInput[]): Promise<void> {
+/** One signal and the session it is sent under. */
+interface Member {
+  input: EventInput;
+  shopper: DemoShopper;
+}
+
+/**
+ * Queue every member on its visitor's chain, in order. `answers` holds each
+ * member's pipeline answer (null = accepted, else its refusal) as soon as its
+ * own pass has answered; `settled` is everything after that — the conversion
+ * forward, the breath between passes and the background work the passes
+ * registered — which stays off the response path.
+ */
+function acceptEvents(env: Env, members: readonly Member[]): { answers: Promise<Array<Refused | null>>; settled: Promise<void> } {
   const { ctx, settled } = collectingCtx();
-  let last: Promise<unknown> = Promise.resolve();
-  for (const input of inputs) {
-    last = serialByVisitor(input.visitorId, async () => {
+  const answered: Array<Promise<Refused | null>> = [];
+  const jobs = members.map(({ input, shopper }) => {
+    let answer: (refusal: Refused | null) => void = () => undefined;
+    answered.push(new Promise<Refused | null>((resolve) => {
+      answer = resolve;
+    }));
+    return serialByVisitor(input.visitorId, async () => {
+      let refusal: Refused | null = null;
       try {
-        await ingestOne(env, ctx, input);
+        await ingestOne(env, ctx, shopper, input);
       } catch (error) {
-        // A single bad signal must never break the queue behind it.
-        console.error('Bright Hour ingestion failed (non-fatal)');
+        // A single refused signal never breaks the queue behind it, and is
+        // answered as refused, never as accepted.
+        refusal = error instanceof Refused ? error : new Refused('event', 500, 'the pipeline could not be reached');
+        if (refusal.status === 401) forgetDemoShopper(shopper, input.visitorId);
+        console.error('Bright Hour ingestion refused');
+      } finally {
+        answer(refusal);
       }
 
-      // Beat 13: the same click, forwarded to Optimizely as the experiment's
-      // conversion, attributed to the arm this visitor was bucketed into. A
-      // no-op until the experiment is launched AND published, and its failure
-      // is never allowed to matter — measurement rides behind ingestion, not
-      // in front of it.
-      if (isBhOfferClick(input)) {
+      // Beat 13: the same click, once the pipeline accepted it, forwarded to
+      // Optimizely as the experiment's conversion, attributed to the arm this
+      // visitor was bucketed into. A no-op until the experiment is launched AND
+      // published, and its failure is never allowed to matter — measurement
+      // rides behind ingestion, not in front of it.
+      if (!refusal && isBhOfferClick(input)) {
         try {
           const assignment = await getAssignment(env, input.visitorId);
           await trackBhOfferClick(env, input.visitorId, assignment, {
@@ -675,20 +941,25 @@ function acceptEvents(env: Env, inputs: EventInput[]): Promise<void> {
         await new Promise((resolve) => setTimeout(resolve, DRAIN_YIELD_MS));
       }
     });
-  }
-  return last.then(() => settled());
+  });
+  return { answers: Promise.all(answered), settled: Promise.allSettled(jobs).then(() => settled()) };
 }
 
 /**
  * POST /live/api/event — one signal.
  *
- * Answers 202 as soon as the signal is ACCEPTED, with the pipeline work queued
- * behind this visitor's other events and drained off the response path. An
- * impression is passive telemetry: nothing on the page reads this response body
- * (public/live/live.js checks `r.ok` and discards the rest), and the affinity it
- * produces is read back through /live/api/page and /live/api/reflex — both of
- * which settle this visitor's queue first, so the numbers a presenter sees are
- * never behind the events they just generated.
+ * Answers 202 once the pipeline has ACCEPTED the signal, which it does on this
+ * visitor's queue behind her other events; the capture, provider and
+ * conversion legs that pass registers stay off the response path. Nothing on
+ * the page reads this response body (public/live/live.js checks `r.ok` and
+ * discards the rest), and the affinity it produces is read back through
+ * /live/api/page and /live/api/reflex — both of which settle this visitor's
+ * queue first, so the numbers a presenter sees are never behind the events
+ * they just generated.
+ *
+ * A signal that cannot be sent under her session (the identity door refused
+ * one), or that the pipeline refused, is answered as refused with the door's
+ * status and reason — never 202, never `success: true`.
  *
  * `success: true` and the `surface` stamp are kept in the body: they are the
  * fields this surface's contract has always carried.
@@ -697,17 +968,22 @@ liveRoutes.post('/event', async (c) => {
   try {
     const body = await c.req.json();
     const input = eventSchema.parse(body);
+    const shopper = await demoShopperOf(c, input.visitorId);
 
-    background(c, acceptEvents(c.env, [input]));
+    const { answers, settled } = acceptEvents(c.env, [{ input, shopper }]);
+    background(c, settled);
+    const [refusal] = await answers;
+    if (refusal) return refusedAnswer(c, refusal, { accepted: 0 });
 
     return c.json(
-      { ok: true, success: true, accepted: 1, deferred: true, surface: SURFACE },
+      { ok: true, success: true, accepted: 1, deferred: false, surface: SURFACE },
       202
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return c.json({ ok: false, error: 'Invalid event', details: error.issues }, 400);
     }
+    if (error instanceof Refused) return refusedAnswer(c, error, { accepted: 0 });
     console.error('Error forwarding Bright Hour event');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'event failed' },
@@ -756,14 +1032,29 @@ liveRoutes.post('/events', async (c) => {
       inputs.push({ ...member, visitorId });
     }
 
-    background(c, acceptEvents(c.env, inputs));
+    // Every visitor in the batch has her session before any member is queued:
+    // a refused issue refuses the whole batch, and nothing of it is sent.
+    const visitors = [...new Set(inputs.map((input) => input.visitorId))];
+    const issued = await Promise.all(visitors.map((visitorId) => demoShopperOf(c, visitorId)));
+    const shoppers = new Map(visitors.map((visitorId, i) => [visitorId, issued[i]!] as const));
+
+    const { answers, settled } = acceptEvents(
+      c.env,
+      inputs.map((input) => ({ input, shopper: shoppers.get(input.visitorId)! }))
+    );
+    background(c, settled);
+    const results = await answers;
+    const refused = results.flatMap((refusal, index) =>
+      refusal ? [{ index, stage: refusal.stage, status: refusal.status, error: refusal.reason }] : []);
+    const first = results.find((refusal): refusal is Refused => refusal !== null);
+    if (first) return refusedAnswer(c, first, { accepted: inputs.length - refused.length, refused });
 
     return c.json(
       {
         ok: true,
         success: true,
         accepted: inputs.length,
-        deferred: true,
+        deferred: false,
         surface: SURFACE,
       },
       202
@@ -772,6 +1063,7 @@ liveRoutes.post('/events', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({ ok: false, error: 'Invalid event batch', details: error.issues }, 400);
     }
+    if (error instanceof Refused) return refusedAnswer(c, error, { accepted: 0 });
     console.error('Error forwarding Bright Hour event batch');
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'event batch failed' },
@@ -792,8 +1084,14 @@ liveRoutes.get('/reflex', async (c) => {
   // Same read-your-writes contract the composition gets: the instrument never
   // shows a shopper fewer signals than the ones already accepted from them.
   await settleVisitor(visitorId);
-  const url = `https://brighthour.internal/reflex?userId=${encodeURIComponent(visitorId)}&surface=${SURFACE}`;
-  const res = await realtimeRoutes.fetch(new Request(url), c.env, execCtxOf(c));
+  let shopper: DemoShopper;
+  try {
+    shopper = await demoShopperOf(c, visitorId);
+  } catch (error) {
+    if (error instanceof Refused) return refusedAnswer(c, error);
+    throw error;
+  }
+  const res = await shopperDoors.fetch(reflexRequestOf(shopper), c.env, execCtxOf(c));
   const out = (await res.json()) as Record<string, unknown>;
   return c.json({ ...out, surface: SURFACE, visitorId }, res.status as 200);
 });
