@@ -131,7 +131,12 @@ export class OptimizelyService {
   private datafile: any = null;
   private initialized = false;
 
-  constructor(env: Env, readonly tenant: string = DEFAULT_TENANT) {
+  /**
+   * `retentionTenant` (G19): the tenant of the shopper whose data an FX dispatch sends, whose
+   * pinned external retention admits it. A route that serves her through another tenant's
+   * connector names her tenant; by default it is the connector's tenant, as before.
+   */
+  constructor(env: Env, readonly tenant: string = DEFAULT_TENANT, private readonly retentionTenant: string = tenant) {
     this.env = env;
   }
 
@@ -237,7 +242,7 @@ export class OptimizelyService {
           eventDispatcher: fetchEventDispatcher(settings.configuration?.eventsUrl, settings.configuration?.accountId, async at => {
             const descriptor = settings.configuration ?? { eventsUrl: 'https://logx.optimizely.com/v1/events', accountId: String(this.datafile?.accountId), projectId: String(this.datafile?.projectId) };
             const category = await destinationRetentionCategory('fx', descriptor);
-            currentExternalRetention(this.env, this.tenant, category);
+            currentExternalRetention(this.env, this.retentionTenant, category);
           }),
           errorHandler: {
             handleError: (error: any) => {
