@@ -239,7 +239,7 @@
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",
-        "locator": "P58 · section 2 of amendment 5; ANALYSIS.md §1 step 13, out-of-scope note 2",
+        "locator": "P58 · section 2 of amendment 5 and its addendum §4 (P58-D, P58-E); ANALYSIS.md §1 step 13, out-of-scope note 2",
         "requirement": "see amendment 5 section 2, ticket P58 (copied verbatim in the specification)"
       },
       "outcome": "A product view or any other tracked action answers within the SDK's deadline on both hosts while its behaviour capture stays durable and its effects follow in order.",
@@ -263,6 +263,18 @@
           "proof": "The P58 acceptance command runs the tests named unit:P58.BA3 in src/units/P58 and they pass."
         },
         {
+          "id": "BA4",
+          "kind": "LOCAL",
+          "observable": "On both hosts, after the route has answered with its own 4xx or 5xx, a retained rejection inside the owner never replaces that answer: the oversized identity merge of W14.05 reaches the shopper as the route's own 400 Validation error, not an untyped 500; the W14.05 expectation at src/routes/realtime.sdkContract.test.ts:3530 is updated in R10 form (addendum §4, P58-D).",
+          "proof": "The P58 acceptance command runs the tests named unit:P58.BA4 in src/units/P58 and they pass."
+        },
+        {
+          "id": "BA5",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a same-id re-send of an operation whose effects are still pending answers source pending and the effects complete once; reverting the pending-replay path to an inline resume turns the test red (addendum §4, P58-E).",
+          "proof": "The P58 acceptance command runs the tests named unit:P58.BA5 in src/units/P58 and they pass."
+        },
+        {
           "id": "LV1",
           "kind": "DEFERRED_LIVE",
           "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
@@ -277,7 +289,9 @@
         }
       ],
       "remainingWork": [
-        "Opt captureBehavior's recovery into the P56 continuation for every tracked action; name every expectation that changes."
+        "Opt captureBehavior's recovery into the P56 continuation for every tracked action; name every expectation that changes.",
+        "The route's own answer stands over a retained rejection whatever its status (the drain threshold at sessionAuthority.ts ~:537 from >= 500 to >= 400), with W14.05's R10 update.",
+        "A lock on the pending replay path."
       ],
       "decisions": [
         {
@@ -299,7 +313,9 @@
         "src/ledger/behavior.ts",
         "src/ledger/recovery.ts",
         "src/routes/realtime.ts",
-        "src/durable-objects/ShopperReflex.ts"
+        "src/durable-objects/ShopperReflex.ts",
+        "src/identity/sessionAuthority.ts",
+        "src/routes/realtime.sdkContract.test.ts (R10 update of W14.05 :3530 only, by the specifier; addendum §4)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P58 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
