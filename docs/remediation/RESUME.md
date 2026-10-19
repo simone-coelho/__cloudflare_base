@@ -2,6 +2,14 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-19, morning: baseline-52 round 3 — the frozen baseline 11 → 9; every entry a lead could close is closed
+
+- **Score (derived, official gate at 3ca7875b, GATE_OK):** `Units 227/240 · suite 3388/3397 · residual 9 in 2 files · typecheck GREEN`; `Ratchet: 9 failing tests, 0 outside the baseline of 9`. 52 → 23 → 11 → 9 in three rounds since 2026-10-18, each shrink from its own official gate.
+- **Round 3:** the two unverified entries analysed (R-P88): #36 was a stale fixture (the W04.03 drain test never declared its destinations' retention, so both transports were refused before they started; corrected test-only, merged a64ac5c7); #51 was a visitor-facing defect, now unit W05.BASE.03 (an account whose first sign-in declined personalization was locked against every later sign-in from any browser, answered "Shopper session unavailable"; a receipt holding no profile copy now proves the prior adoption; the shopper's own analytics read answers the same on both hosts; adversarial review of the proof PASS; merged 3ca7875b).
+- **The 9 that remain are the owner's three decisions, told with the lead's recommendation (AMENDMENTS.md, the "D1/D2/D3" lines):** D1 the five `src/demos/brighthour/composer.test.ts` entries (`/live` on today's engine needs a session capability; recommended: `live.ts` mints a demo session as Top Offers does); D2 the three W05.05 entries (an event id re-sent through the other tracking door is refused because the admission digest includes the door's stamp; recommended: digest the customer's payload only); D3 the one identity entry (a legacy visitor id without the `vis-` prefix importing history; the lead leans admit under the same owner checks; a customer-data rule, the owner's).
+- **Pilot stamps:** redeployed from a clean worktree at 3ca7875b (deploy-6; versions and smoke in LANE-LOG.md Commits).
+- **Amendment-5 candidates** accumulated across the three rounds are listed in AMENDMENTS.md (R-P78); the top item is the per-dispatch admission key growth in the shopper object (G19 review).
+
 ## 2026-10-19, small hours: baseline-52 round 2 — the frozen baseline 23 → 11; phase 2 complete; what is left is the owner's
 
 - **Score (derived, official gate at f47a887c, GATE_OK):** `Units 227/240 · suite 3384/3395 · residual 11 in 3 files · typecheck GREEN`; `Ratchet: 11 failing tests, 0 outside the baseline of 11`. The baseline file shrank 23 → 11 by `score.mjs --write-baseline` from the gate's json (this commit). From 52 at the programme's opening on 2026-10-18 to 11 in two rounds, nothing typed by hand.

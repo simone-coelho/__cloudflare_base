@@ -1,7 +1,7 @@
 {
-  "generated": "2026-10-19T06:40:20.012Z",
-  "commit": "f47a887c184c0c56c6b38accece2c2266ca41d54",
-  "vitest_sha256": "6d656e2406edbdeab1a65ed7853eeb72c69c1eae9be13ffb9b8cf42e7e728fae",
+  "generated": "2026-10-19T10:57:09.314Z",
+  "commit": "3ca7875bf351a3190020ce076f7b641afd6319b1",
+  "vitest_sha256": "43bd87dbf0df3bdd3b4503bf88ef9c0d15a09755b53ec7d58fe1ace968261059",
   "note": "Shrink-only regeneration approved by the owner at the parity freeze (freeze sheet item 31, answered 2026-10-08) from the P02 delivery review gate report at artifact 5181b992 (GATE_OK, 2026-10-09; the product tree is identical to rem/integration after the P02 merge e7b78449): the entries that now pass leave the list, nothing is added.",
   "allow_grow_reason": null,
   "failures": [
@@ -10,8 +10,6 @@
     " POST /live/api/page + GET /live/api/decisions/export burst ingestion does not serialize DIFFERENT visitors against each other",
     " POST /live/api/page + GET /live/api/decisions/export burst ingestion serializes a same-visitor burst — never two ingestions in flight at once",
     " POST /live/api/page + GET /live/api/decisions/export proxies an event into the shared pipeline with the surface stamped server-side",
-    " W04.03 serialized shopper authority drains actual FX dispatcher and ODP query transports with bounded cancellation before queued detach",
-    " W05.01 withdrawal continuity preserves all four switch combinations through both-host detach/reset and existing-account link without prior profile restoration",
     " W05.05 owned generic tracking gates all four stored switch combinations before context collection, with actual HTTP acknowledgement and one consent read per batch",
     " W05.05 owned generic tracking preserves occurrence time for delayed, repeated and out-of-order events through synchronous HTTP dispatch",
     " W05.05 owned generic tracking prevalidates all identities, SID and strict hints before any batch member, while persisting restrictive hints before acknowledgement",
