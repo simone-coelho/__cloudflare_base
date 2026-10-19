@@ -723,6 +723,9 @@ export class ShopperReflex {
         try { await this.assertOwned(p, request); } catch { return json({ ok: false, error: 'Shopper session unavailable' }, 401); }
         const now = Date.now();
         if (url.pathname === '/analytics') {
+          // W05.BASE.03: on the session host a kept profile is read from its published record
+          // (realtime.ts); its owner answers there only for a session that keeps none.
+          if ((this.env.REFLEX_HOST ?? 'session') === 'session' && (this.affinity || this.pipeline)) return json({ ok: false, error: 'Session not found' }, 404);
           if (this.affinity) pinProfileRetention(this.env, this.affinity, p.tenant);
           const analytics = { sessionId: p.sessionId, analytics: {
           sessionDuration: this.pipeline ? now - this.pipeline.firstSeen : 0,
@@ -2264,7 +2267,14 @@ export class ShopperReflex {
         const grant = missing.get(candidate?.result?.grant?.grantId ?? '');
         if (!grant) continue;
         const receipt = transferReceiptSchema.parse(raw), transfer = receipt.transfer;
-        if (!receipt.scrubbed || key !== 'identityReceipt:' + transfer.id || transfer.tenant !== first.tenant
+        // W05.BASE.03: an adoption whose target kept no profile (its sign-in did not
+        // personalize) wrote its receipt with no retention stamp, so the selective cleanup
+        // never scrubs it (pruneBehaviorCopies passes over a receipt without one). Such a
+        // receipt holds no profile copy to clean and proves the prior adoption as a scrubbed
+        // one does, through every witness below. A receipt holding a profile copy must still
+        // have been scrubbed, as before.
+        const copyless = receipt.retention === undefined && receipt.externalRetention === undefined;
+        if (!(receipt.scrubbed || copyless) || key !== 'identityReceipt:' + transfer.id || transfer.tenant !== first.tenant
           || transfer.shopperId !== first.subject || transfer.targetEpoch !== authority.epoch
           || transfer.targetSequence > highWater || transfer.fingerprint !== await transferFingerprint(transfer)
           || receipt.result.shopperId !== first.subject || receipt.result.sessionId !== first.sessionId

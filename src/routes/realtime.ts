@@ -732,6 +732,17 @@ realtimeRoutes.get('/session/:sessionId/analytics', async (c) => {
     const analytics = await segmentEngine.getSessionAnalytics(sessionId);
 
     if (!analytics) {
+      // W05.BASE.03 (host parity): a session that keeps no profile publishes no record on
+      // this host (nothing is stored without consent), yet the grant reading it is one its
+      // owner admitted on the way here. The owner answers it as the object host does, with
+      // its zeros; it answers nothing for a session holding a profile, and any refusal or
+      // failure of that read keeps this host's 404.
+      try {
+        const owned = await shopperObject(c.env.SHOPPER_REFLEX, shopperPrincipal(c.req.raw).subject, c.get('tenant')).fetch('https://shopper-reflex/analytics', { headers: privateShopperHeaders(c.req.raw) });
+        if (owned.ok) return new Response(owned.body, owned);
+      } catch {
+        // The owner's answer is unavailable: this host's own answer stands.
+      }
       return c.json({ error: 'Session not found' }, 404);
     }
 
