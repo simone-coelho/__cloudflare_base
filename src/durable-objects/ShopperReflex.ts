@@ -62,7 +62,7 @@ import { assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchO
 import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwardLedgerOperation, LEDGER_OPERATION_HARD_BYTES, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
-import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput } from '@/ledger/recovery';
+import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
@@ -3910,7 +3910,7 @@ export class ShopperReflex {
     // P35: the ODP writes this operation runs read the second identifier from this object's own link record.
     const start = () => withKeptOdpIdentifier((tenant, subject) => this.keptOdpIdentifier(tenant, subject),
       () => runOwnerOperation(this, this.rawEnv, fn, this.sessionProjectionStore(), (...args) => this.relayOperation(...args), () => this.consentNow(), hints => this.setConsent(hints),
-        (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal) => this.admitRecovery(input, principal),
+        (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal, options) => this.admitRecovery(input, principal, options),
         customerId => this.carryCustomerId(customerId),
         // G16: work this object continues past an answer re-enters through this serializer, its principals admitted
         // again against the grant authority now, and is kept alive by the object's own waitUntil.
@@ -3931,10 +3931,10 @@ export class ShopperReflex {
     if (consentDeadline(consent, 'tracking') < until || until <= Date.now()) throw new SessionAccessError();
   }
 
-  private async admitRecovery(input: RecoveryInput, principal: SessionCapability) {
+  private async admitRecovery(input: RecoveryInput, principal: SessionCapability, options?: RecoveryOptions) {
     if (!this.isActualObject(input.tenant, input.subject) || !ownerHeld(this)) throw new SessionAccessError();
     const consent = await this.consentNow(), until = Math.min(consentDeadline(consent, 'tracking'), principal.exp * 1000);
-    return runOwnerRecovery(this.state.storage, this.env, input, principal, until, (saved, deadline) => this.recoveryGuard(saved, deadline));
+    return runOwnerRecovery(this.state.storage, this.env, input, principal, until, (saved, deadline) => this.recoveryGuard(saved, deadline), options);
   }
 
   /**

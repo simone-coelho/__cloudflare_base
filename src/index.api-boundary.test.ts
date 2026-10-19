@@ -1234,13 +1234,13 @@ it('W15 native read-only polls, durable rendered sinks, exact retries and transa
           ...(host === 'session' ? { processing: 'buffered', browsingSessionId: g.sessionId } : {}),
           data: { ...piece, slot: 'hero', position: 0, page: 'home', pageInstance } };
         const rendered = await call('/realtime/action', event); expect(rendered.status, JSON.stringify(rendered.body)).toBe(200);
-        expect(rendered.body.render).toMatchObject({ status: 'durable', eventId: event.eventId, decisionId: piece.decisionId, pageInstance });
+        expect(rendered.body.render).toMatchObject({ status: 'durable', eventId: event.eventId, decisionId: piece.decisionId, pageInstance }); expect((await call('/realtime/reflex', undefined)).status).toBe(200); // R10 (amendment 5, P56; R-P100(3)): the effects run after the answer in the shopper object's serializer (src/ledger/recovery.ts:179, :213-221); a later request of the same shopper (here a read of its projection) is answered only after them, so the ring and the statistics below are read once they ran
         const ring = new Map(await state('DECISION_RING')).get('ring') as { ring: Array<Record<string, unknown>> };
         expect(ring.ring).toHaveLength(1); expect(ring.ring[0]).toMatchObject({ decision_id: piece.decisionId, measurementBasis: 'rendered-v1',
           rendered: { at: event.timestamp, eventId: event.eventId, pageInstance } });
         const learned = await state('LEARN_STATS'); expect(new Map(learned).get('learn')).toMatchObject({ config: { measurementBasis: 'rendered-v1' },
           stats: { events: 1, items: { 'native-render': { '*': { n: { s: 1, t: event.timestamp } } } } } });
-        const retained = await recovery(); expect((await call('/realtime/action', event)).body.render).toEqual(rendered.body.render);
+        const retained = await recovery(), answered = rendered.body.render as Record<string, unknown>; expect([answered.source, (await call('/realtime/action', event)).body.render]).toEqual(['pending', { ...answered, source: 'recovered' }]); // R10 (amendment 5, P56; R-P100(3)): the first answer is the admission's receipt, source 'pending' (src/ledger/recovery.ts:174, :179, :221; src/content/renderOffer.ts:111); the exact retry after the effects replays the stored receipt, 'recovered' (recovery.ts:240, :280); every other member is the first answer's
         expect(await recovery()).toEqual(retained); expect(await state('LEARN_STATS')).toEqual(learned);
         if (host === 'do' && tenant === 'globex') {
           const nextPage = crypto.randomUUID(), next = await call(`/v1/${tenant}/decisions/snapshot`, { page: 'home', pageInstance: nextPage });

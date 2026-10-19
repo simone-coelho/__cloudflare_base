@@ -105,7 +105,7 @@ export async function redeemRenderOffer(env: Env, principal: SessionCapability, 
   requireConsentPurpose(current, value.record.arm !== 'default' ? 'personalization' : 'tracking');
   lifetime(env, value, Date.now());
   const record: DecisionRecord = { ...value.record, rendered: { version: 1, eventId: event.eventId!, at: event.timestamp!, pageInstance: value.pageInstance } };
-  const receipt = await recoverDecisions(env, { tenant: principal.tenant, brand: record.brand, visitor_id: principal.subject, records: [record] }, () => value.config, value.until);
+  const receipt = await recoverDecisions(env, { tenant: principal.tenant, brand: record.brand, visitor_id: principal.subject, records: [record] }, () => value.config, value.until, { answerAtAdmission: true });
   if (!receipt.durable || !['pending', 'recovered'].includes(receipt.source.state)) throw new SessionAccessError();
   return { version: 1, decisionId: record.decision_id, eventId: event.eventId!, pageInstance: value.pageInstance,
     status: 'durable', source: receipt.source.state as 'pending' | 'recovered' };

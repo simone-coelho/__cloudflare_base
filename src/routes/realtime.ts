@@ -235,7 +235,7 @@ realtimeRoutes.post('/action', async (c) => {
     if (hasOffer) { const { renderOffer: _offer, ...data } = actionEvent.data; void _offer; actionEvent.data = data; }
     const behavior = await captureBehavior(c.env, shopperPrincipal(c.req.raw), captureConsent,
       { type: actionEvent.type, eventId: actionEvent.eventId!, eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
-        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null);
+        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null, hasOffer ? { answerAtAdmission: true } : undefined);
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
     // The outcome's session must be the session the decision record carries, or session-scope
     // attribution compares two id spaces and credits nothing (found 2026-09-04). Both now prefer the
