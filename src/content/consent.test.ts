@@ -1050,13 +1050,14 @@ describe('CW31 consent on the content service', () => {
 
       // R10 (baseline-52 #5; W11, LANE-LOG.md:40, a reviewer FAILs any KV fallback re-admitted): configuration is read through the publication
       // only (versionedStore.ts:92-95), so the read failure is injected at the publication's own storage read (publication.ts:177) and
-      // is a preparation failure: no fan-out, exactly the receipt the route reports for one (route.ts:127), numeric only.
+      // is a preparation failure: no fan-out, exactly the receipt the route reports for one (route.ts:127), numeric only. Only the learn
+      // member's own document read fails, so a re-admitted fallback would still read the catalogue and reach the ring.
       invalidateCache(); warn.mockClear();
       reportLearningIncomplete('outcome', null); const preparationFailure = warn.mock.calls[0]!; warn.mockClear();
       const ringCalls = ring.mock.calls.length, stored = env.STORAGE.get.bind(env.STORAGE);
       const failedPublication = vi.spyOn(env.STORAGE, 'get').mockImplementation((async (key: string) => {
-        if (key === tombstoneKey('coach', visitor)) return stored(key);
-        throw new Error('private configuration');
+        if (key.includes('/' + LEARN_KIND.name + '/')) throw new Error('private configuration');
+        return stored(key);
       }) as never);
       try { await outcomeToLearning(env, 'coach', event); } finally { failedPublication.mockRestore(); }
       expect(ring).toHaveBeenCalledTimes(ringCalls); expect(warn).toHaveBeenCalledTimes(1);
