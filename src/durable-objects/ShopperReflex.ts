@@ -2264,7 +2264,14 @@ export class ShopperReflex {
         const grant = missing.get(candidate?.result?.grant?.grantId ?? '');
         if (!grant) continue;
         const receipt = transferReceiptSchema.parse(raw), transfer = receipt.transfer;
-        if (!receipt.scrubbed || key !== 'identityReceipt:' + transfer.id || transfer.tenant !== first.tenant
+        // W05.BASE.03: an adoption that brought no profile (its fingerprinted digest is the
+        // empty profile's) and kept no copy of one (its receipt holds no retention stamp) left
+        // nothing for the selective cleanup to scrub, so its receipt proves the prior adoption
+        // as a scrubbed one does, through the same registration and admission witnesses below.
+        // A receipt still holding a live profile copy must have been scrubbed, as before.
+        const profileless = !receipt.scrubbed && receipt.retention === undefined && receipt.externalRetention === undefined
+          && transfer.profileDigest === await identityDigest({ affinity: null, pipeline: null });
+        if (!(receipt.scrubbed || profileless) || key !== 'identityReceipt:' + transfer.id || transfer.tenant !== first.tenant
           || transfer.shopperId !== first.subject || transfer.targetEpoch !== authority.epoch
           || transfer.targetSequence > highWater || transfer.fingerprint !== await transferFingerprint(transfer)
           || receipt.result.shopperId !== first.subject || receipt.result.sessionId !== first.sessionId
