@@ -235,7 +235,7 @@
     {
       "id": "P58",
       "title": "Every tracked action's behaviour capture answers at admission (**amendment 5, 2026-10-19**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",

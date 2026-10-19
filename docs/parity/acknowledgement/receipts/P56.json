@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P56",
+  "workOrderHash": "sha256:68e1e41d25abdd78723124a99bb0faa0d0bfd461ef4109b92cdf79f0ca89c7e9",
+  "artifact": {
+    "revision": "9fadd50e5650805f95d4a1808ffc953457d64f9a",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p56-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p56-build at 74f4bfbb (e682dd6d the mechanism: runOwnerRecovery's answerAtAdmission option returns the receipt with source pending after savePayload and armRecovery and hands resumeOwnerRecovery to continueAfterOwnerAnswer, which re-enters through the owner's serializer and waitUntil, never retainOwnerWork; opted in by recoverDecisions from redeemRenderOffer and by captureBehavior on the same request; 74f4bfbb ACK_DEADLINE_MS exported from src/sdk/core.ts and used at the acknowledgement's bounded read, bundles and types regenerated, kit 02/03), joined with the S9 specification (be184af7, ccd47f0a, spec fix 366b75c2) and the W15 R10 update ff1d7f71 at 308c518f; answer-path remote calls 30 -> 5 (session) and 28 -> 3 (object); P56 17/17 on both hosts; delivery review PASS at 308c518f.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P56/implementer/REPORT.md",
+      "git commits on rem/p56-build up to 9fadd50e"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P56 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/reviewer-p57/logs/p56-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P56/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-19T20:52:38.298Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
