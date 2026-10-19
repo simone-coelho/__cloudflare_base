@@ -20,15 +20,44 @@ import type { LiftSnapshot, NotAdopted, NotAdoptedChange, Republished, Republish
  * never digests the snapshot again. The comparison itself is
  * unchanged: a digest the object did not publish, or an answer after the budget,
  * serves nothing, and a digest that cannot be computed is a failed witness.
+ *
+ * P61 (amendment 6, R-P110): today's callers keep this boolean; it is `true`
+ * exactly when `liftWitnessOutcome` below answers `served`.
  */
 export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
   digest?: () => Promise<string>): Promise<boolean> {
-  if (!env.LEARN_STATS || typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return false;
+  return await liftWitnessOutcome(env, tenant, brand, slot, snapshot, page, digest) === 'served';
+}
+/** P61: what the witness can say of a copy that is present and compatible (`none` and `incompatible` are the reader's). */
+export type LiftWitnessOutcome = Exclude<LiftReadOutcome, 'none' | 'incompatible'>;
+/**
+ * P61 (amendment 6, R-P110): the witness of `currentLiftWitness`, returning its
+ * reason instead of a boolean. The check is the same check, in the same order,
+ * with the same budget; only the refusal is named:
+ *   · `failed`: no statistics binding, a digest that cannot be computed, a call
+ *     that errored, or an answer that is not this placement's witness answer
+ *     (not OK, not JSON, another tenant, brand, slot or page);
+ *   · `late`: no answer within the budget (the call is aborted, as before);
+ *   · `unhealthy`: the object answered a state other than `healthy`;
+ *   · `served`: the object's current witness, its latest publication's witness,
+ *     version and digest all match the copy — the one answer that serves;
+ *   · `superseded`: a copy the object no longer accepts because it has moved on
+ *     since: its latest publication is a later version, or it is this copy's
+ *     publication and the object's witness (configuration, fence, projection)
+ *     has changed since. The object answers only its latest publication, so an
+ *     older copy is named by its version alone;
+ *   · `unrecognized`: any other copy, a version or a digest the object never
+ *     published (a forged or damaged copy, or one without a witness).
+ */
+export async function liftWitnessOutcome(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
+  digest?: () => Promise<string>): Promise<LiftWitnessOutcome> {
+  if (!env.LEARN_STATS) return 'failed';
+  if (typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return 'unrecognized';
   const namespace = env.LEARN_STATS;
   let expected: string;
-  try { expected = await (digest ? digest() : recoveryDigest(snapshot)); } catch { return false; }
+  try { expected = await (digest ? digest() : recoveryDigest(snapshot)); } catch { return 'failed'; }
   const abort = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
-  const probe = async () => { try {
+  const probe = async (): Promise<LiftWitnessOutcome> => { try {
     // W26 R2: a page-scoped placement is witnessed by its own page's object,
     // which answers for that page and no other.
     const response = await namespace.get(namespace.idFromName(statsName(tenant, brand, slot, page))).fetch('https://learn/health', {
@@ -36,14 +65,18 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
     });
     const value = await response.json() as Record<string, unknown>;
     const publication = value.publication as { witness?: string; digest?: string; version?: number } | null;
-    return response.ok && value.ok === true && value.state === 'healthy' && value.tenant === tenant && value.brand === brand
-      && value.slot === slot && (value.page ?? undefined) === page && value.witness === snapshot.witness && !!publication && publication.witness === snapshot.witness
-      && publication.version === snapshot.version && publication.digest === expected;
-  } catch { return false; } };
-  try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
+    if (!response.ok || value.ok !== true || value.tenant !== tenant || value.brand !== brand || value.slot !== slot || (value.page ?? undefined) !== page) return 'failed';
+    if (value.state !== 'healthy') return 'unhealthy';
+    const published = !!publication && publication.witness === snapshot.witness && publication.version === snapshot.version && publication.digest === expected;
+    if (published) return value.witness === snapshot.witness ? 'served' : 'superseded';
+    return publication && typeof publication.version === 'number' && typeof snapshot.version === 'number' && publication.version > snapshot.version ? 'superseded' : 'unrecognized';
+  } catch { return 'failed'; } };
+  try { return await Promise.race([probe(), new Promise<'late'>(resolve => { timer = setTimeout(() => { abort.abort(); resolve('late'); }, 50); })]); }
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
-import type { ContentPiece, DecisionRecord, SlotAttribution, SlotCatalog } from '@/content/types';
+/** P61: whole milliseconds since `started` (a `performance.now()` reading), never negative. */
+export const elapsedMs = (started: number): number => Math.max(0, Math.round(performance.now() - started));
+import type { ContentPiece, DecisionRecord, LearningRead, LiftReadOutcome, RingReadOutcome, SlotAttribution, SlotCatalog } from '@/content/types';
 import { isOffLimitsLayoutRecord, isRewardType, type OutcomeRecord } from '@/ledger/records';
 import { attribute, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
@@ -857,8 +890,21 @@ export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: 
  * when the ring is unbound, slow or failing: no penalty, never an error.
  */
 export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = 60): Promise<RingEntry[] | null> {
+  return (await readRingWithOutcome(env, tenant, visitorId, timeoutMs)).ring;
+}
+/**
+ * P61 (amendment 6, R-P110): `readRing`, telling how the read ended, with its
+ * whole milliseconds from its start to its outcome: `read` (the ring answered
+ * within the budget, an empty ring included), `late` (it did not), `failed`
+ * (no ring binding, a call that errored, or an answer that is not a ring
+ * answer). The read, its budget and what it serves are `readRing`'s, unchanged.
+ */
+export async function readRingWithOutcome(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = 60):
+  Promise<{ ring: RingEntry[] | null; read: LearningRead<RingReadOutcome> }> {
+  const started = performance.now();
+  const told = (ring: RingEntry[] | null, outcome: RingReadOutcome) => ({ ring, read: { ms: elapsedMs(started), outcome } });
   const ns = env.DECISION_RING;
-  if (!ns) return null;
+  if (!ns) return told(null, 'failed');
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const read = ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent').then(async (res) => {
@@ -866,9 +912,10 @@ export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, 
       const body = (await res.json()) as { ok?: boolean; ring?: Array<DecisionRecord | RingEntry> };
       return body.ok && Array.isArray(body.ring) ? body.ring.map((r) => ('decision_id' in r ? ringEntryOf(r) : r)) : null;
     });
-    const late = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); });
-    return await Promise.race([read, late]);
-  } catch { return null; } finally { if (timer !== undefined) clearTimeout(timer); }
+    const late = new Promise<'late'>((resolve) => { timer = setTimeout(() => resolve('late'), timeoutMs); });
+    const ring = await Promise.race([read, late]);
+    return ring === 'late' ? told(null, 'late') : told(ring, ring ? 'read' : 'failed');
+  } catch { return told(null, 'failed'); } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
 /**
@@ -1285,4 +1332,86 @@ export function foldRetainedDay(input: {
     if (credited) outcomes++;
   }
   return { stats, decisions, outcomes };
+}
+
+// ── P61 (amendment 6, R-P110): every learning read, counted per tenant ───────
+//
+// The decision path names how each lift read and the ring read ended on its
+// answer (`sources.lift`, `sources.ring`); these counters keep the same outcomes
+// for the tenant, where the monitor reads them (`learningReads` on its result).
+// They follow the W20 G2 slot-governance counters (src/learn/slotGovernance.ts)
+// rule for rule: one small document per tenant in the operator cache (`CACHE`),
+// so no binding or store is added; written fire and forget after the answer is
+// decided, under the three conditions those counters are written under (the
+// shopper's tracking consent, no synthetic operation, no self-check), so the
+// monitor's own probe decisions and a shopper who withheld tracking are never
+// counted; never read on a decision path, and never able to fail one; holding
+// outcome words and counts only, nothing of the shopper; a floor, never an
+// overcount (the read-modify-write is last-write-wins, so concurrent decisions
+// may collapse into one increment); counted since a stated horizon, after which
+// the counts restart.
+
+/** P61: the lift read's outcomes, in the vocabulary `sources.lift` names them in. */
+export const LIFT_READ_OUTCOMES: readonly LiftReadOutcome[] = ['served', 'none', 'incompatible', 'late', 'superseded', 'unrecognized', 'unhealthy', 'failed'];
+/** P61: the ring read's outcomes, in the vocabulary `sources.ring` names them in. */
+export const RING_READ_OUTCOMES: readonly RingReadOutcome[] = ['read', 'late', 'failed', 'skipped'];
+/** P61: the one scope these counts are kept at, stated on every answer and never read from the store: the tenant's, across its brands. */
+export const LEARNING_READS_SCOPE = 'tenant';
+/** P61: the window the counts are measured over, the slot-governance counters' own; they restart when it lapses. */
+export const LEARNING_READS_HORIZON_MS = 30 * 86_400_000;
+export const learningReadsKey = (tenant: string): string => `learning-reads:v1:${tenant}`;
+
+/** P61: the tenant's counts of every outcome since `since`, zero reported as zero. */
+export interface LearningReads {
+  since: number;
+  scope: typeof LEARNING_READS_SCOPE;
+  lift: Record<LiftReadOutcome, number>;
+  ring: Record<RingReadOutcome, number>;
+}
+interface StoredLearningReads { version: 1; since: number; lift: Record<LiftReadOutcome, number>; ring: Record<RingReadOutcome, number> }
+
+const wholeCount = (value: unknown): number => (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0);
+/** Every outcome of the vocabulary with its stored count; anything stored that is not a whole, non-negative number reads as zero, and nothing outside the vocabulary is copied. */
+function outcomeCounts<O extends string>(names: readonly O[], block: unknown): Record<O, number> {
+  const held = block && typeof block === 'object' && !Array.isArray(block) ? block : null;
+  return Object.fromEntries(names.map(name => [name, wholeCount(held ? Object.getOwnPropertyDescriptor(held, name)?.value : undefined)])) as Record<O, number>;
+}
+/** The stored document, read back defensively: one written in another shape, or past its horizon, is none. */
+function learningReadsDocument(raw: unknown, now: number): StoredLearningReads | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const value = raw as { version?: unknown; since?: unknown; lift?: unknown; ring?: unknown };
+  const since = value.since;
+  if (value.version !== 1 || typeof since !== 'number' || !Number.isSafeInteger(since) || since < 0 || since > now
+    || now - since >= LEARNING_READS_HORIZON_MS) return null;
+  return { version: 1, since, lift: outcomeCounts(LIFT_READ_OUTCOMES, value.lift), ring: outcomeCounts(RING_READ_OUTCOMES, value.ring) };
+}
+
+/**
+ * P61: what the monitor reports for the tenant: every outcome counted since the
+ * horizon, zeros at a horizon of now when nothing was counted yet, or
+ * `undefined` when the store could not be read, so no result states a zero it
+ * did not observe. Never throws.
+ */
+export async function observeLearningReads(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<LearningReads | undefined> {
+  try {
+    const stored = learningReadsDocument(await env.CACHE.get(learningReadsKey(tenant), 'json'), now);
+    return { since: stored?.since ?? now, scope: LEARNING_READS_SCOPE,
+      lift: stored?.lift ?? outcomeCounts(LIFT_READ_OUTCOMES, null), ring: stored?.ring ?? outcomeCounts(RING_READ_OUTCOMES, null) };
+  } catch { return undefined; }
+}
+
+/**
+ * P61: one decision's outcomes added to the tenant's counts: each slot's lift
+ * read and the ring read. Called fire and forget after the answer is decided;
+ * it resolves whatever happens, so no failure of this diagnostic can reach a
+ * shopper's decision.
+ */
+export async function recordLearningReads(env: Pick<Env, 'CACHE'>, tenant: string, reads: { lift: readonly LiftReadOutcome[]; ring: RingReadOutcome }, now: number): Promise<void> {
+  try {
+    const document: StoredLearningReads = learningReadsDocument(await env.CACHE.get(learningReadsKey(tenant), 'json'), now)
+      ?? { version: 1, since: now, lift: outcomeCounts(LIFT_READ_OUTCOMES, null), ring: outcomeCounts(RING_READ_OUTCOMES, null) };
+    for (const outcome of reads.lift) if (LIFT_READ_OUTCOMES.includes(outcome)) document.lift[outcome] = Math.min(document.lift[outcome] + 1, Number.MAX_SAFE_INTEGER);
+    if (RING_READ_OUTCOMES.includes(reads.ring)) document.ring[reads.ring] = Math.min(document.ring[reads.ring] + 1, Number.MAX_SAFE_INTEGER);
+    await env.CACHE.put(learningReadsKey(tenant), JSON.stringify(document), { expirationTtl: Math.floor(LEARNING_READS_HORIZON_MS / 1000) });
+  } catch { /* a diagnostic counter never fails a decision, and never retries on the shopper's time */ }
 }

@@ -173,7 +173,7 @@ import { configuredDestinations, configuredOperationalDestinations, type Operati
 import { SLOT_GOVERNANCE_SCOPE, tenantSlotGovernance, type TenantSlotGovernance } from '@/learn/slotGovernance';
 import { EVIDENCE_LOSS_PATHS, readEvidenceLoss, type EvidenceLoss, type EvidenceLossPath } from '@/ledger/delivery';
 import { readWindowSummary, reportPrefix } from '@/learn/report';
-import { publishedSlotPagesOf, statsName } from '@/learn/fan';
+import { LEARNING_READS_SCOPE, LIFT_READ_OUTCOMES, observeLearningReads, publishedSlotPagesOf, RING_READ_OUTCOMES, statsName, type LearningReads } from '@/learn/fan';
 import type { LiftSnapshot } from '@/learn/stats';
 import { pinPublication, readPinnedPublication } from '@/config/publication';
 import { LEARN_KIND } from '@/content/kinds';
@@ -251,6 +251,21 @@ export interface MonitorResult {
    * states a clean slate it did not observe.
    */
   stoppedSlots?: StoppedSlots;
+  /**
+   * P61 (amendment 6, R-P110): the tenant's learning reads since the horizon
+   * they state — how many lift reads ended in each of `served`, `none`,
+   * `incompatible`, `late`, `superseded`, `unrecognized`, `unhealthy`, `failed`
+   * (one per learning slot a decision read), and how many ring reads in each
+   * of `read`, `late`, `failed`, `skipped` (one per decision) — the outcomes the
+   * decisions named on their answers' `sources`, every outcome present, zero
+   * reported as zero. Counted only for a decision the slot-governance counters
+   * would count (the shopper's tracking consent, no synthetic operation, no
+   * self-check), so the monitor's own probe decisions are never counted. It
+   * states its scope in the same word the governance counters do (`'tenant'`).
+   * A floor, never an overcount. Read here, never on a decision path; absent
+   * on a legacy record and on a run whose counter store could not be read.
+   */
+  learningReads?: LearningReads;
 }
 
 /**
@@ -374,6 +389,23 @@ const safeEvidenceLoss = (value: unknown): MonitorResult['evidenceLoss'] | undef
   return { since: bounded(since, 8_640_000_000_000_000), ...counts };
 };
 
+/** P61: the learning reads a kept result carries, rebuilt the same way: a
+ * horizon and every outcome of the platform's own vocabulary with a whole,
+ * non-negative count, the scope stated by the projection and never copied from
+ * the store. A kept member with any value that is not one is dropped whole, as
+ * `governance` is, so no kept result states a count nobody observed; a record
+ * written before the member existed keeps its former shape. */
+const safeLearningReads = (value: unknown): MonitorResult['learningReads'] | undefined => {
+  const since = field(value, 'since'), lift = field(value, 'lift'), ring = field(value, 'ring');
+  if (!observedCount(since, 8_640_000_000_000_000)) return undefined;
+  const counts = <O extends string>(names: readonly O[], block: unknown): Record<O, number> | undefined => {
+    const out = Object.fromEntries(names.map(name => [name, field(block, name)]));
+    return names.every(name => observedCount(out[name], Number.MAX_SAFE_INTEGER)) ? out as Record<O, number> : undefined;
+  };
+  const liftCounts = counts(LIFT_READ_OUTCOMES, lift), ringCounts = counts(RING_READ_OUTCOMES, ring);
+  return liftCounts && ringCounts ? { since, scope: LEARNING_READS_SCOPE, lift: liftCounts, ring: ringCounts } : undefined;
+};
+
 /** The cross-sink comparison a kept result carries, projected the same way:
  * two numbers, and a bounded list of rows whose members are rebuilt here rather
  * than copied through. A row that does not carry all five numbers is dropped. */
@@ -440,6 +472,7 @@ export function projectMonitor(value: unknown, tenant: string, environment: stri
   const evidenceLoss = safeEvidenceLoss(field(value, 'evidenceLoss'));
   const reconciliation = safeReconciliation(field(value, 'reconciliation'));
   const stoppedSlots = safeStoppedSlots(field(value, 'stoppedSlots'));
+  const learningReads = safeLearningReads(field(value, 'learningReads'));
   return { at: bounded(field(value, 'at'), 8_640_000_000_000_000),
     tenant: isValidTenantId(tenant) ? tenant : 'unknown', environment: environmentOf(environment),
     ok: field(value, 'ok') === true, checks, problems,
@@ -448,7 +481,8 @@ export function projectMonitor(value: unknown, tenant: string, environment: stri
     ...(governance ? { governance } : {}),
     ...(evidenceLoss ? { evidenceLoss } : {}),
     ...(reconciliation ? { reconciliation } : {}),
-    ...(stoppedSlots ? { stoppedSlots } : {}) };
+    ...(stoppedSlots ? { stoppedSlots } : {}),
+    ...(learningReads ? { learningReads } : {}) };
 }
 type Admission = { destination: OperationalDestination; stamp: RetentionStamp };
 async function admit(env: Env, tenant: string, kind: OperationalDestination['kind'], at: number): Promise<Admission | null> {
@@ -717,10 +751,14 @@ export async function runMonitor(env: Env, tenant: string, now = Date.now(), thr
   const reconciliation = await reconcileSinks(env, tenant, now);
   // W25 R1: the slots the tenant's own prior document stops publishing.
   const stoppedSlots = await priorStoppedSlots(env, tenant);
+  // P61 (R-P110): how the tenant's own decisions' lift and ring reads ended,
+  // read here from the counters the decision path writes; the checks' own
+  // probe decisions are excluded where those counters are written.
+  const learningReads = await observeLearningReads(env, tenant, now);
   const result: MonitorResult = { at: now, tenant, environment: environmentOf(env.ENVIRONMENT), ok: problems.length === 0, checks, problems,
     alert: { kind: null, status: 'not-needed' }, ...(governance ? { governance } : {}),
     ...(evidenceLoss ? { evidenceLoss } : {}), ...(reconciliation ? { reconciliation } : {}),
-    ...(stoppedSlots ? { stoppedSlots } : {}) };
+    ...(stoppedSlots ? { stoppedSlots } : {}), ...(learningReads ? { learningReads } : {}) };
   let previous: MonitorResult | null = null;
   let savedRecovery: unknown;
   try {

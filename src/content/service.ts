@@ -26,12 +26,12 @@ import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, layoutBlendOf, slotConversionsOf } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
-import { currentLiftWitness, fanDecisions, fanLayoutExposure, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type LearningReceipt, type SlotLearnConfig } from '@/learn/fan';
+import { elapsedMs, fanDecisions, fanLayoutExposure, identityPage, liftKey, liftWitnessOutcome, readRingWithOutcome, recordLearningReads, reportLearningIncomplete, servedCounts, type LearningReceipt, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
-import type { ContentCatalog, ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, LearnConfig, SlotCatalog } from './types';
+import type { ContentCatalog, ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, LearnConfig, LearningRead, LiftReadOutcome, RingReadOutcome, SlotCatalog } from './types';
 import { captureRetention, requireRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { enqueueDecisions } from '@/ledger/enqueue';
@@ -131,6 +131,12 @@ interface LiftEntry {
    * per entry and never inside the witness's 50 ms budget.
    */
   digest?: Promise<string>;
+  /**
+   * P61: present, as `failed`, only on an entry whose store read failed (it
+   * holds no snapshot, as one whose store holds none does), so a cached read
+   * names the same outcome as the read that filled the entry.
+   */
+  miss?: 'failed';
 }
 const liftCache = new Set<LiftEntry>();
 let liftCacheBytes = 0;
@@ -153,20 +159,40 @@ function liftDigest(entry: LiftEntry): Promise<string> {
  * isolate cache entry and its live witness are that page's own.
  */
 export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: string, brand: string, slot: string, now: number, config: SlotLearnConfig, page?: string): Promise<LiftSnapshot | null> {
+  return (await readLiftWithOutcome(env, tenant, brand, slot, now, config, page)).snapshot;
+}
+/**
+ * P61 (amendment 6, R-P110): `readLift`, telling how the read ended — the
+ * first that applies of `none`, `incompatible`, then the witness's own reason
+ * (`liftWitnessOutcome`: `failed`, `late`, `unhealthy`, `served`, `superseded`,
+ * `unrecognized`), and `failed` for a store read that failed — with its whole
+ * milliseconds from its start to its outcome. The read, its cache, its
+ * compatibility check, its witness and what it serves are `readLift`'s,
+ * unchanged: only the refusal is named.
+ */
+export async function readLiftWithOutcome(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: string, brand: string, slot: string, now: number, config: SlotLearnConfig,
+  page?: string): Promise<{ snapshot: LiftSnapshot | null; read: LearningRead<LiftReadOutcome> }> {
+  const started = performance.now();
+  const told = (snapshot: LiftSnapshot | null, outcome: LiftReadOutcome) => ({ snapshot, read: { ms: elapsedMs(started), outcome } });
   const compatible = (value: LiftSnapshot | null) => value !== null && typeof value === 'object' && !Array.isArray(value)
     && value.tenant === tenant && value.brand === brand && value.slot === slot && value.reward === config.reward
     && (value.measurementBasis ?? 'served-v1') === (config.measurementBasis ?? 'served-v1')
     && (value.objective === undefined ? 'unit' : value.objective) === (config.objective ?? 'unit') && value.tauLearnMs === config.stats.tauLearnMs
     && value.n0 === config.stats.n0 && value.nMin === config.stats.nMin
     && value.liftMin === config.stats.liftMin && value.liftMax === config.stats.liftMax;
+  /** The copy an entry holds, applied only when compatible and witnessed: what `readLift` has always served, with its outcome. */
+  const witnessed = async (entry: LiftEntry) => {
+    if (entry.value === null) return told(null, entry.miss ?? 'none');
+    if (!compatible(entry.value)) return told(null, 'incompatible');
+    const outcome = await liftWitnessOutcome(env, tenant, brand, slot, entry.value, page, () => liftDigest(entry));
+    return told(outcome === 'served' ? entry.value : null, outcome);
+  };
   const key = liftKey(tenant, brand, slot, page);
   const binding = ownerBindingIdentity(env.CACHE), stats = ownerBindingIdentity(env.LEARN_STATS);
   const resident = () => [...liftCache].find(e => e.binding === binding && e.stats === stats && e.key === key);
   const hit = resident();
-  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) {
-    return compatible(hit.value) && await currentLiftWitness(env, tenant, brand, slot, hit.value!, page, () => liftDigest(hit)) ? hit.value : null;
-  }
-  let value: LiftSnapshot | null = null, bytes = 0;
+  if (hit && now >= hit.at && now - hit.at < LIFT_TTL_MS) return witnessed(hit);
+  let value: LiftSnapshot | null = null, bytes = 0, failed = false;
   try {
     const stream = await env.CACHE.get(key, 'stream');
     if (stream) {
@@ -178,17 +204,17 @@ export async function readLift(env: Pick<Env, 'CACHE' | 'LEARN_STATS'>, tenant: 
       finally { reader.releaseLock(); }
       value = JSON.parse(raw) as LiftSnapshot; bytes = size;
     }
-  } catch { value = null; bytes = 0; }
+  } catch { value = null; bytes = 0; failed = true; }
   // One entry per placement: whatever another request stored for it while this
   // one read is replaced, so no snapshot is ever charged to the cache twice.
   for (let stale = resident(); stale; stale = resident()) forgetLift(stale);
-  const entry: LiftEntry = { binding, stats, key, at: now, value, bytes };
+  const entry: LiftEntry = { binding, stats, key, at: now, value, bytes, ...(failed ? { miss: 'failed' as const } : {}) };
   if (bytes <= LIFT_CACHE_MAX_BYTES) {
     while (liftCache.size && (liftCache.size >= LIFT_CACHE_MAX_ENTRIES || liftCacheBytes + bytes > LIFT_CACHE_MAX_BYTES)) forgetLift(liftCache.values().next().value!);
     liftCache.add(entry); liftCacheBytes += bytes;
   }
   // Cache the raw snapshot, never one request's compatibility verdict.
-  return compatible(value) && await currentLiftWitness(env, tenant, brand, slot, value!, page, () => liftDigest(entry)) ? value : null;
+  return witnessed(entry);
 }
 
 /** What each slot learns against: its reward and the estimator's constants, from the learn document. */
@@ -223,6 +249,16 @@ export interface DecisionSources {
   consent: Consent & { personalized: boolean };
   /** Milliseconds per stage of this decision: documents, shopper, trend, lift, decide. */
   timings: Record<string, number>;
+  /**
+   * P61 (amendment 6, R-P110): how each learning slot's lift read ended, keyed
+   * by slot name (sorted): one member for every slot whose lift this decision
+   * read — every active slot of the page on an arm that personalizes — each
+   * `{ ms, outcome }`; `{}` on the default arm, which reads no lift. Named on
+   * the answer only: the record, its replay and `decisions[]` are unchanged.
+   */
+  lift: Record<string, LearningRead<LiftReadOutcome>>;
+  /** P61: how the ring read ended, `{ ms, outcome }`; `{ ms: 0, outcome: 'skipped' }` when the decision read no ring. */
+  ring: LearningRead<RingReadOutcome>;
 }
 
 interface ShopperRead {
@@ -905,7 +941,14 @@ export async function serveContentDecisions(
   // P10: and never for a slot decided below the signal floor, which reads none of the shopper's history.
   // P30: nor for the context-only layout slot, which reads none of it.
   const wantsRing = arm !== 'default' && activeSlots.some((s) => (s.fatigue?.weight ?? 0) > 0 && !below.has(s.slot) && s.slot !== contextual?.slot);
-  const [ring] = await Promise.all([wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now, configOf(s.slot), identityPage(pageScoped, s.slot, r.page)); }))]);
+  // P61 (R-P110): each read also tells how it ended, named on the answer's
+  // `sources` and counted for the tenant below; what it serves is unchanged.
+  const liftReads = new Map<string, LearningRead<LiftReadOutcome>>();
+  let ringRead: LearningRead<RingReadOutcome> = { ms: 0, outcome: 'skipped' };
+  const [ring] = await Promise.all([wantsRing ? readRingWithOutcome(env, r.tenant, r.visitorId).then(told => { ringRead = told.read; return told.ring; }) : Promise.resolve(null), ...(arm === 'default' ? [] : activeSlots.map(async (s) => {
+    const told = await readLiftWithOutcome(env, scope, brand, s.slot, now, configOf(s.slot), identityPage(pageScoped, s.slot, r.page));
+    snapshots[s.slot] = told.snapshot; liftReads.set(s.slot, told.read);
+  }))]);
   for (const entry of ring ?? []) if (entry.brand === brand) pinRetention(env, entry.retention?.online, r.tenant, 'online');
   const served = ring ? servedCounts(ring.filter(e => e.brand === brand), activeSlots.map(s => ({ ...s, measurementBasis: configOf(s.slot).measurementBasis })), now) : null;
   lap('lift');
@@ -1107,8 +1150,18 @@ export async function serveContentDecisions(
       ? recoverDecisions(env, { ...set, records: offLimitsLedger }, slotLearnConfigOf(learn))
       : enqueueDecisions(env, offLimitsLedger)).then(() => undefined, () => undefined)
     : Promise.resolve();
-  const afterResponse = Promise.all([captured, counted, anchorCounted, offLimitsWritten]).then(() => undefined);
-  const ownerDrain = fanOutAfterRead ? Promise.all([counted, anchorCounted, offLimitsWritten]).then(() => undefined) : afterResponse;
+  // P61 (R-P110): every lift and ring outcome this decision named on its
+  // answer, counted for the tenant after the answer, fire and forget, under the
+  // same three conditions as the counters above, so the monitor's own probe
+  // decisions and a shopper who withheld tracking are never counted. Its
+  // failures are swallowed inside `recordLearningReads`; nothing is read back
+  // on this path and nothing about the shopper is written.
+  const lift = Object.fromEntries([...liftReads.keys()].sort().map(slot => [slot, liftReads.get(slot)!] as const));
+  const readsCounted = consent.tracking && !synthetic && !r.selfCheck
+    ? recordLearningReads(env, scope, { lift: Object.values(lift).map(read => read.outcome), ring: ringRead.outcome }, now)
+    : Promise.resolve();
+  const afterResponse = Promise.all([captured, counted, anchorCounted, offLimitsWritten, readsCounted]).then(() => undefined);
+  const ownerDrain = fanOutAfterRead ? Promise.all([counted, anchorCounted, offLimitsWritten, readsCounted]).then(() => undefined) : afterResponse;
 
   // P03 decision D3: every decision names its position within its slot — what its
   // record calls `position` — as `slotPosition`, beside the page-wide `order`, so
@@ -1145,6 +1198,8 @@ export async function serveContentDecisions(
       ...(unreadable ? { record: 'unreadable' as const } : {}),
       consent: { ...consent, personalized },
       timings,
+      lift,
+      ring: ringRead,
     },
   };
 }

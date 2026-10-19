@@ -1395,3 +1395,25 @@ export interface DocumentConstraintDiagnostics {
   omittedWarningCount: number;
   warnings: PageConstraintDiagnostic[];
 }
+
+/**
+ * P61 (amendment 6, R-P110): how a decision's read of one learning slot's lift
+ * ended, the first that applies: `none` (the store holds no copy for the
+ * placement), `incompatible` (the copy is not measured as the learn document in
+ * force measures the slot), `failed` (the store read or the witness call
+ * errored, or the witness answer is not a witness answer), `late` (no witness
+ * answer within its budget), `unhealthy` (the statistics object's state is not
+ * healthy), `served` (the copy was applied), `superseded` (a copy the object no
+ * longer accepts because it has moved on since), `unrecognized` (any other copy:
+ * a version or a digest the object never published).
+ */
+export type LiftReadOutcome = 'served' | 'none' | 'incompatible' | 'late' | 'superseded' | 'unrecognized' | 'unhealthy' | 'failed';
+/**
+ * P61: how a decision's read of the visitor's ring ended: `read` (it answered
+ * within its budget, an empty ring included), `late`, `failed`, or `skipped`
+ * (the decision read no ring: no slot of the page applies a fatigue dial, or
+ * the arm is the default's).
+ */
+export type RingReadOutcome = 'read' | 'late' | 'failed' | 'skipped';
+/** P61: one read as the answer's `sources` names it: its outcome and its whole milliseconds, from its start to its outcome (`0` when skipped). */
+export interface LearningRead<O extends string> { ms: number; outcome: O }
