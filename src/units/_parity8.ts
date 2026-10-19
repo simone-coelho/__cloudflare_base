@@ -238,6 +238,17 @@ export function shopperStorage(m: Mounted, subject: string): DurableObjectStorag
   return (item!.object as unknown as { state: DurableObjectState }).state.storage;
 }
 
+/**
+ * Clears the shopper object's alarm through its own storage, as `mount`'s stub
+ * supports it (a transaction's `deleteAlarm`, src/units/_parity.ts:279, :283), so a
+ * later read of the alarm names only an alarm armed after this call.
+ */
+export async function clearShopperAlarm(m: Mounted, subject: string): Promise<void> {
+  const storage = shopperStorage(m, subject);
+  await storage.transaction(async tx => { await tx.deleteAlarm(); });
+  expect(await storage.getAlarm() ?? 'no alarm', `PRECONDITION (${m.host}): the shopper object's alarm is cleared`).toBe('no alarm');
+}
+
 type Transaction = (run: (tx: DurableObjectTransaction) => Promise<unknown>) => Promise<unknown>;
 /**
  * From now until the returned function is called, the shopper object's storage
