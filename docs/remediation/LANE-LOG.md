@@ -673,3 +673,12 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 | `7f4aa914` | 2026-10-18 | Merge baseline-52 product unit G9 (reviewer PASS at `23d3b2f6`): fan.ts reports the destinations a throwing configuration read skipped; entry #1 |
 | `2821b161` | 2026-10-18 | Merge baseline-52 lane sdkc (reviewer PASS at `0d7875f1`): #32–#35, #38, #42, #47, #52 green; #37 #39 #40 #48 → G18, G19, G20 |
 | `66159d3a` | 2026-10-18 | SCORE and baseline from the official gate on `2821b161` (GATE_OK, 23 failing, 0 outside 52, 29 entries retired): `Units 226/240 · suite 3361/3384 · residual 23 in 7 files · typecheck GREEN`; baseline-failures.json 52 → 23 by `--write-baseline` |
+| `4a61d6aa` | 2026-10-19 | Merge baseline-52 G10 (reviewer PASS at `f3da47b4`): the object boundary's marker-read failure answers the typed 401 (`X-Monitor-Refusal: storage`); entries #41 #45 #49 #50 |
+| `f962fa94` | 2026-10-19 | Merge baseline-52 G17 joined (reviewer PASS at `60cc275f`): the configuration route's invalid scope → 403; the W03.02 export leg corrected; entry #29 |
+| `3deaa0ba` | 2026-10-19 | Merge baseline-52 G16 (reviewer PASS at `56d7de6f`): the erasure check no longer holds the decision answer; the owner re-entry; `src/units/_base52/G16.unit.test.ts`; entry #4 |
+| `21ca29da` | 2026-10-19 | Merge baseline-52 G20 (reviewer PASS at `55d5c1e4`): a malformed consent hint answers the route's 400 through the edge; entry #48 |
+| `2553662b` | 2026-10-19 | Merge baseline-52 G19 (reviewer PASS items 1-7 at `42f93614`, wording fixed `328f5e22`): the Optimizely routes admit each dispatch's retention; entries #39 #40 |
+| `6031e573` | 2026-10-19 | Merge baseline-52 G8 joined (reviewer PASS at `24bad32e`; R-P85 shape B): spent grants leave at the profile's expiry; W22.07/W37.03 R10; W05.02 cadence; entries #6 #7 |
+| `68cd5b14` | 2026-10-19 | Merge baseline-52 G16b (reviewer PASS at `d00f9b43`/`e730b8f4`): the host-level lock of G16's re-entry on both hosts |
+| `f47a887c` | 2026-10-19 | Merge baseline-52 G18 joined (reviewer PASS items 1-5 at `07e4ada9`, citations fixed `e99558c0`; R-P87): the decision context's journey stage is the one derivation; the W03.07 tail; entry #37 |
+| (this) | 2026-10-19 | SCORE and baseline from the official gate on `f47a887c` (GATE_OK, 11 failing, 0 outside 23, 12 entries retired): `Units 227/240 · suite 3384/3395 · residual 11 in 3 files · typecheck GREEN`; baseline-failures.json 23 → 11 by `--write-baseline`; units.json W06.BASE.02 residual closed |

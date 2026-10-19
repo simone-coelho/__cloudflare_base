@@ -5,14 +5,14 @@ typed by hand: `--check` re-derives every line above the provenance marker and e
 any difference. A W item is closed only when it has declared units, all of them are green, and
 `docs/remediation/reviews/<W>.json` records a reviewer PASS at a named commit.
 
-Units 226/240 · W closed 4/26 (W16–W41) · suite 3361/3384 · residual 23 in 7 files · typecheck GREEN
+Units 227/240 · W closed 4/26 (W16–W41) · suite 3384/3395 · residual 11 in 3 files · typecheck GREEN
 
 ## W items
 
 | W | Declared | Green | Closed | Review | Review sha |
 |---|---|---|---|---|---|
 | W05 | 2 | 2 | no | — | — |
-| W06 | 2 | 1 | no | — | — |
+| W06 | 2 | 2 | no | — | — |
 | W08 | 3 | 3 | no | — | — |
 | W09 | 1 | 1 | no | — | — |
 | W11 | 1 | 1 | no | — | — |
@@ -42,7 +42,7 @@ Units 226/240 · W closed 4/26 (W16–W41) · suite 3361/3384 · residual 23 in 
 | W05.BASE.01 | green | 1 |
 | W05.BASE.05 | green | 2 |
 | W06.BASE.01 | green | 1 |
-| W06.BASE.02 | red | 1 |
+| W06.BASE.02 | green | 1 |
 | W08.C1.01 | green | 2 |
 | W08.C1.02 | green | 1 |
 | W08.C1.03 | green | 4 |
@@ -289,7 +289,7 @@ _None._
 | Input | Value |
 |---|---|
 | units | docs/remediation/units.json |
-| units sha256 | d544c345cd701c2a21e0cbb2266ce678669bde5f52c9128f7e13810d60d14365 |
+| units sha256 | d5d5da5b268e96083088c955b9c85719a8783561ac9da6cbe34a025660d836c5 |
 | reviews | docs/remediation/reviews |
 | baseline | docs/remediation/baseline-failures.json |
 | typecheck | GREEN (from --typecheck) |
@@ -301,6 +301,6 @@ _None._
 | Input | Value |
 |---|---|
 | vitest report | ledger-integration.json (outside the checkout) |
-| vitest report sha256 | 5d83321c473dac072e2e4a2622af083f43b7204d2a3955cc6f6cfb2d68d380de |
-| commit | 2821b161c3201939115932956389d77b042f65d9 |
-| generated | 2026-10-19T02:03:49.559Z |
+| vitest report sha256 | 6d656e2406edbdeab1a65ed7853eeb72c69c1eae9be13ffb9b8cf42e7e728fae |
+| commit | f47a887c184c0c56c6b38accece2c2266ca41d54 |
+| generated | 2026-10-19T06:40:20.170Z |

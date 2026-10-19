@@ -271,7 +271,7 @@
     "status": "declared",
     "batch": "BASE-1b",
     "declared_from": "src/reflex/shopperReflex.test.ts > alarm — lazy re-evaluation, exits pushed, retention deleteAll > retention: idle past N days with no sockets → storage.deleteAll()",
-    "residual": "The same defect is measured a second time by src/reflex/shopperReflex.consent.test.ts 'W05.02 … honors withdrawal in serialized socket actions and pending alarms without skipping retention cleanup', which is left unwrapped and RED on the same assertion."
+    "residual": "Closed under ruling R-P85 (2026-10-19): the same outcome is measured a second time by src/reflex/shopperReflex.consent.test.ts 'W05.02 … honors withdrawal in serialized socket actions and pending alarms without skipping retention cleanup', green since the retention branch removes the spent grants (shape B)."
   },
   {
     "id": "W05.BASE.05",
