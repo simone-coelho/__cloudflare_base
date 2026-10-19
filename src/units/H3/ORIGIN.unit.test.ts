@@ -120,7 +120,7 @@ describe('unit:H3.1 the connection check against a customer-profile stamp', () =
     rewrite = b => ({ ...b, write: false });
     try { expect(withoutHandshake((await verify()).verdicts)).toEqual(everythingButHandshake()); }
     finally { rewrite = null; }
-    rewrite = b => { const { arm: _arm, ...rest } = b; return { ...rest, write: false }; };
+    rewrite = b => { const rest = { ...b }; delete rest.arm; return { ...rest, write: false }; };
     try { expect(withoutHandshake((await verify()).verdicts)).toEqual(everythingButHandshake(['signed default decisions'])); }
     finally { rewrite = null; }
   }, 120_000);
