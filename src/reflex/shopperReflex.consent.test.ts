@@ -10,7 +10,7 @@ import type { Env } from '@/types/env';
 import { issueSessionCapability, verifySessionCapability, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
 import { storedConsent } from '@/content/consent';
 import { setTimeout as settle } from 'node:timers/promises';
-import { initializePublicationSet, type PublicationBaseline } from '@/config/publication';
+import { initializePublicationSet, pinPublication, publishSet, type PublicationBaseline } from '@/config/publication';
 import { REFLEX_KIND, reflexScopeForTenant } from './configStore';
 import { DEFAULT_REFLEX_CONFIG } from './core';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
@@ -199,6 +199,20 @@ describe('W05.02 shared reducer and timer boundaries', () => {
 
   it('honors withdrawal in serialized socket actions and pending alarms without skipping retention cleanup', async () => {
     const calls = await destinations();
+    // R-P85 addendum (G8; R10, the arrangement, never the expectation). The
+    // shipped horizon is days (DEFAULT_REFLEX_CONFIG tau 14 days, W16 C8, R42),
+    // the alarm qualifies and queries ODP only when membership changed
+    // (ShopperReflex.ts:1972-1973, the instant read :2003-2011), and a grant
+    // lives 24 h (SHOPPER_MAX_AGE, src/identity/sessionCapability.ts:14). This
+    // test scripts its continuation inside that grant, so it publishes the
+    // 60-second demo cadence for its tenant through the publication door, as
+    // shopperReflex.test.ts does (R42/R50(d): tau 60 s, priceBand 150 s, every
+    // other value the shipped default's), and its consent choices stay at t0.
+    const cadence = { ...DEFAULT_REFLEX_CONFIG, tauMs: 60_000,
+      dimensions: DEFAULT_REFLEX_CONFIG.dimensions.map((d) => (d.key === 'priceBand' ? { ...d, tauMs: 150_000 } : d)) };
+    const pin = await pinPublication(env, 'coach'), scope = reflexScopeForTenant('coach'), revision = pin.refs[REFLEX_KIND.name + ':' + scope]!.revision;
+    expect((await publishSet(env, [{ kind: REFLEX_KIND, scope, request: cadence, candidate: () => cadence }],
+      { actor: 'synthetic-fixture', expectedRevision: revision, expectedPublication: { revision: pin.revision, digest: pin.digest }, operationId: revision + ':' + crypto.randomUUID() })).ok).toBe(true);
     await post('/consent', { tracking: true, personalization: true });
     for (let i = 0; i < 4; i++) { vi.setSystemTime(t0 + i * 5000); await post('/ingest', { ...view(), userId: subject }); }
     await drain();
@@ -207,7 +221,14 @@ describe('W05.02 shared reducer and timer boundaries', () => {
     sockets.push(ws);
     // A consenting alarm really performs the continuation, not just a no-op stub.
     calls.length = 0;
-    vi.setSystemTime(t0 + 300_000); storage.alarm = null; await shopper.alarm(); await drain();
+    // The clock follows the alarms the object itself arms, each at its first
+    // whole millisecond (a crossing is fractional; the fake clock reads whole
+    // ms). The first is the first view's crossing, kept as the nearer deadline
+    // (ShopperReflex.ts:4149-4151); the later views moved every crossing later,
+    // so it changes no membership and re-arms the object's next crossing
+    // (scheduleNextCrossing, :2038), where the continuation runs.
+    vi.setSystemTime(Math.ceil(storage.alarm!)); storage.alarm = null; await shopper.alarm(); await drain();
+    vi.setSystemTime(Math.ceil(storage.alarm!)); storage.alarm = null; await shopper.alarm(); await drain();
     expect(calls).toContain('/v3/graphql'); expect(frames.some(v => v.type === 'personalization_update')).toBe(true);
     for (const consent of [{ tracking: false, personalization: true }, { tracking: true, personalization: false }]) {
       await post('/consent', consent); const before = structuredClone([...storage.map]);
