@@ -528,13 +528,14 @@ export async function runOwnerOperation<T>(owner: object, env: Env, work: () => 
   return invocation.run(held, async () => {
     let failure: unknown, value: T | undefined;
     try { value = await work(); } catch (error) { failure = error; }
-    // P57 (amendment 5): once the work has answered a server failure of its own
-    // (an HTTP answer of 500 or more), a retained rejection is logged and that
-    // answer stands: it already tells the caller the operation failed, so nothing
-    // is claimed complete, and its words are not replaced by an untyped 500. An
-    // authority refusal still refuses, and a retained rejection still fails any
-    // other answer, as before.
-    const answeredFailure = failure === undefined && (value as unknown) instanceof Response && (value as unknown as Response).status >= 500;
+    // P57 (amendment 5), widened by P58 (addendum §4, P58-D): once the work has
+    // answered a failure of its own, a client error or a server failure (an HTTP
+    // answer of 400 or more, such as the route's own `400 Validation error`), a
+    // retained rejection is logged and that answer stands: it already tells the
+    // caller the operation failed, so nothing is claimed complete, and its words
+    // are not replaced by an untyped 500. An authority refusal still refuses, and
+    // a retained rejection still fails any other answer, as before.
+    const answeredFailure = failure === undefined && (value as unknown) instanceof Response && (value as unknown as Response).status >= 400;
     try {
       // Includes descendants registered while previously registered work settles.
       while (held.pending.length) {
