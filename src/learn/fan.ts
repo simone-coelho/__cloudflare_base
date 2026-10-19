@@ -1073,10 +1073,17 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
       const group = bySlot.get(name) ?? { slot: r.slot, ...(page ? { page } : {}), rows: [] };
       group.rows.push(r); bySlot.set(name, group);
     }
-    if (records.some(row => (row.measurementBasis ?? 'served-v1') !== (slotConfig(row.slot).measurementBasis ?? 'served-v1'))) return finish(out);
-    out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
-    out.exposures = { ...emptyStatsDelivery(), destinations: bySlot.size, notAttempted: bySlot.size,
-      received: [...bySlot.values()].reduce((n, g) => n + g.rows.length, 0), rowsNotAttempted: [...bySlot.values()].reduce((n, g) => n + g.rows.length, 0) };
+    const rowCount = [...bySlot.values()].reduce((n, g) => n + g.rows.length, 0);
+    const markNotAttempted = (): void => {
+      out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
+      out.exposures = { ...emptyStatsDelivery(), destinations: bySlot.size, notAttempted: bySlot.size, received: rowCount, rowsNotAttempted: rowCount };
+    };
+    // G9 (W09.BASE.03): a configuration read that throws still leaves through the
+    // catch below as `config`, now naming the ring and every placement's rows it
+    // did not attempt, as the catalogue refusal above names its destination.
+    try { if (records.some(row => (row.measurementBasis ?? 'served-v1') !== (slotConfig(row.slot).measurementBasis ?? 'served-v1'))) return finish(out); }
+    catch (error) { markNotAttempted(); throw error; }
+    markNotAttempted();
     // W22 D1.02 (F16 §7): "put `decision_id` back into the `/exposures` payload
     // so `LearnStats` can do the same". A decision is served once, so its
     // logical id is what makes a redelivered exposure recognizable — and the
