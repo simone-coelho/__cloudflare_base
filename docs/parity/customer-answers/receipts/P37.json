@@ -43,8 +43,10 @@
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
-      "status": "PENDING",
-      "evidence": []
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L3/records/P37.md"
+      ]
     }
   ]
 }
