@@ -25,3 +25,12 @@ A same-id re-send of a first delivery whose client timestamp was ahead of the en
 ## 3. Acceptance
 
 Each ticket: RED units on both hosts in `src/units/P5x/LEDGER.unit.test.ts` written by the specifier from this document and the analysis, reviewed honest; the implementer's build reviewed on its exact sha; one official gate per round; the stamps redeployed from a clean worktree; per-phase timing re-measured on both stamps with the lead's latency script (3 samples each) and recorded in the receipt. The live rows (LIVE1 on the acceptance pair, LIVE2 in the customer's January integration) follow the parity programmes' rule.
+
+## 4. Addendum (2026-10-19, after P56 and P57; R-P104, R-P105)
+
+**P58 gains two requirements** found by the P56 and P57 reviews, before it starts:
+
+- **P58-D (the route's answer stands).** After the route has answered, whatever its status, a retained rejection inside the owner never replaces the answer the shopper receives: a client error the route answered itself (for example the `400 Validation error` for an oversized identity merge) reaches the shopper as that 400, not as an untyped 500. The test at `src/routes/realtime.sdkContract.test.ts:3530` (W14.05), which pins today's 500 for that case, is updated in R10 form to the route's own 400 with a witness naming this addendum.
+- **P58-E (the pending replay, a lock).** A same-id re-send of an operation whose effects are still pending answers `source: 'pending'` and completes its effects once; reverting the pending-replay path (`recovery.ts`'s existing-meta branch) to an inline resume turns the lock red on both hosts.
+
+The P58 allowed paths therefore include `src/identity/sessionAuthority.ts` (the drain threshold) and the one W14.05 line. The SDK's acceptance of `pending` is locked by P60 with a behaviour test, not only by the bundle bytes.
