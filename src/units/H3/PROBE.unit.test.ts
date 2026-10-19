@@ -85,6 +85,14 @@ describe('unit:H3.1 a readiness probe names no tenant', () => {
     for (const [path] of PROBES) expect([path, (await ask(stamp.env, 'HEAD', path, { 'X-Tenant': TENANT })).status]).toEqual([path, 200]);
   });
 
+  it('a probe spelled with an encoded character is the same probe: the path is read as the router reads it', async () => {
+    const { stamp, ask } = await door();
+    for (const [path, status] of [['/health/%72eady', 'ready'], ['/health/l%69ve', 'alive']] as const) {
+      expect([path, ...said(await ask(stamp.env, 'GET', path))]).toEqual([path, 200, status]);
+      expect([path, ...said(await ask(stamp.env, 'GET', path, { 'X-Tenant': TENANT }))]).toEqual([path, 200, status]);
+    }
+  });
+
   it('a probe that is not ready still says so with no tenant: the exemption is of the tenant, not of the check', async () => {
     const { stamp, ask } = await door();
     const env = { ...stamp.env } as Env; delete (env as { JWT_SECRET?: string }).JWT_SECRET;
@@ -116,19 +124,29 @@ describe('unit:H3.1 a readiness probe names no tenant', () => {
       });
     }
 
-    it('a path that only begins like a probe is no probe (the boundary answers 404 or the tenant is refused, never an answer)', async () => {
+    // The two probes are the whole exemption. On a demo stamp (where the boundary does not pre-filter paths) any other
+    // path, and any other method on a probe, is still refused by the tenant middleware before a route sees it; on a customer
+    // stamp the boundary answers 404 for what it does not list. Neither is ever answered as a probe is.
+    const NOT_PROBES = ['/health/ready/', '/health/readyz', '/health/ready/x', '/health/live/x', '/healthz', '//health/ready', '/health/%72eady/x'];
+    const NOT_FOUND = { error: 'Not Found' };
+
+    it('a path that only begins like a probe is no probe: demo, the tenant is still required', async () => {
       const { stamp, ask } = await door();
-      for (const path of ['/health', '/health/', '/health/ready/', '/health/readyz', '/health/ready/x', '/health/live/x', '/healthz', '//health/ready']) {
-        const a = await ask(stamp.env, 'GET', path);
-        expect([path, a.status === 200, a.body.status]).toEqual([path, false, undefined]);
-      }
+      const env = { ...stamp.env, DEPLOYMENT_PROFILE: 'demo' } as Env;
+      for (const path of NOT_PROBES) { const a = await ask(env, 'GET', path); expect([path, a.status, a.body]).toEqual([path, 403, REFUSAL]); }
     });
 
-    it('a write to a probe is no probe: only the reads the customer boundary admits are answered', async () => {
+    it('a path that only begins like a probe is no probe: customer, the boundary does not list it', async () => {
       const { stamp, ask } = await door();
+      for (const path of [...NOT_PROBES, '/health', '/health/']) { const a = await ask(stamp.env, 'GET', path); expect([path, a.status, a.body]).toEqual([path, 404, NOT_FOUND]); }
+    });
+
+    it('a write to a probe is no probe: demo, the tenant is still required; customer, the boundary lists only the reads', async () => {
+      const { stamp, ask } = await door();
+      const demo = { ...stamp.env, DEPLOYMENT_PROFILE: 'demo' } as Env;
       for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) for (const [path] of PROBES) {
-        const a = await ask(stamp.env, method, path);
-        expect([method, path, a.status === 200, a.body.status]).toEqual([method, path, false, undefined]);
+        const d = await ask(demo, method, path), c = await ask(stamp.env, method, path);
+        expect([method, path, d.status, d.body, c.status, c.body]).toEqual([method, path, 403, REFUSAL, 404, NOT_FOUND]);
       }
     });
   });
