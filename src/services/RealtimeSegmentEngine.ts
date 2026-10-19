@@ -35,7 +35,7 @@ import { enrichmentInputs } from '@/identity/profileEnrichment';
 import { consentOf, consentFromCookies, intersectConsent, refusalHints, personalizes, withConsent, type Consent } from '@/content/consent';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
 import { priceBandOf, type CatalogService, type Product } from './CatalogService';
-import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, storedJourneyStage } from './JourneyStage';
+import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, storedJourneyStage, type JourneyWord } from './JourneyStage';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import {
   getConnectors,
@@ -808,7 +808,7 @@ export class RealtimeSegmentEngine {
       }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
 
       // 6. Decide the storefront modules through the Optimizely FX seam.
-      const personalizationConfig = await this.getPersonalizationConfig(sessionData, currentSessionId, reflexConfig);
+      const personalizationConfig = await this.getPersonalizationConfig(sessionData, currentSessionId, reflexConfig, journeyWord);
 
       // 7. Create the personalization update with retail payloads.
       const update: PersonalizationUpdate = {
@@ -929,7 +929,9 @@ export class RealtimeSegmentEngine {
   // lifted verbatim to exported module functions (applyEventToAttributes, …) so
   // the ShopperReflex DO runs the identical pipeline — see the P2 seam block above.
 
-  private async getPersonalizationConfig(sessionData: SessionData, sessionId: string, selectedConfig?: ReflexConfig): Promise<PersonalizationConfig> {
+  private async getPersonalizationConfig(sessionData: SessionData, sessionId: string, selectedConfig?: ReflexConfig,
+    /** W16 C4: the word THIS event's own decision is made in, from processAction's live-visit advance. Absent on a read. */
+    eventWord?: JourneyWord): Promise<PersonalizationConfig> {
     if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     if (this.principal && !personalizes(consentOf(sessionData))) return {
       decisions: {}, featureFlags: {}, experiments: {}, featureVariables: {}, enhancedFeatureVariables: {},
@@ -970,7 +972,16 @@ export class RealtimeSegmentEngine {
       visit_number: visitNumber,
       visit_bucket: visitNumber === null ? 'unknown' : visitBucket(visitNumber),
       entry_channel: visit.entryChannel ?? 'unknown',
-      journey_stage: sessionData.metadata.journeyStage,
+      // W16 C5.09 (R85(b)): the decision is made in the one derivation's stage,
+      // never the stored token, which time alone does not move and a stale write
+      // can pin. An event's own decision names the word that event reached (the
+      // live-visit advance in processAction, which a purchase moves before it
+      // closes the journey); a read projects this visit at read time from the
+      // stored counters, exactly as the hydrate, the enriched segments and the
+      // cell read it, through the one mapping point (R32(2)).
+      journey_stage: eventWord === undefined
+        ? storedJourneyStage(sessionData.journey, sessionData.metadata.lastSeen, Date.now(), cfg)
+        : PERSISTED_STAGE[eventWord],
       days_since_first_seen: Math.floor((Date.now() - sessionData.metadata.firstSeen) / (24 * 60 * 60 * 1000)),
       tracking_consent: sessionData.preferences.trackingConsent,
       personalization_enabled: sessionData.preferences.personalizationEnabled
