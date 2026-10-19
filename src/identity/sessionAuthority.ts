@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { shopperObject, shopperObjectName } from '@/tenancy/objects';
 import { tenantMiddleware } from '@/tenancy/middleware';
@@ -381,6 +382,32 @@ export function durableRecoveryEnabled(env: Pick<Env, 'LEDGER_RECOVERY_ENABLED'>
  */
 export class AcknowledgementConflictError extends Error {
   constructor(message = 'Render acknowledgement conflict: this decision was already acknowledged with another event id') { super(message); this.name = 'AcknowledgementConflictError'; }
+}
+/**
+ * P58 (amendment 5 addendum §4, P58-D; R-P106): a validation refusal that crosses
+ * an object boundary typed. An exception raised in one object reaches its caller in
+ * another as an untyped Error (workerd), so a refusal by validation inside the
+ * shopper object that owns a merge (src/durable-objects/ShopperReflex.ts, the
+ * transfer door) is answered as `400 { ok: false, refusal: 'validation', issues }`,
+ * carried as that answer by every object it passes through, and raised again as the
+ * validation error it is (a `z.ZodRealError` with the same issues, an Error as a
+ * parse raises it) by the route-side code that called the object
+ * (src/identity/link.ts), so the route answers its own `400 Validation error` with
+ * the same details on every runtime. Only a refusal of this exact shape is read as
+ * one; every other answer keeps its caller's own handling.
+ */
+const validationRefusalSchema = z.object({ ok: z.literal(false), refusal: z.literal('validation'),
+  issues: z.array(z.object({ code: z.string().min(1).max(64), path: z.array(z.union([z.string().max(256), z.number()])).max(32), message: z.string().max(1024) }).passthrough()).min(1).max(64),
+}).strict();
+/** The typed answer of a validation refusal, for the object that refuses and every object it passes through. */
+export function validationRefusal(issues: z.ZodError['issues']): Response {
+  return new Response(JSON.stringify({ ok: false, refusal: 'validation', issues }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+}
+/** The validation error an object's answer carries typed (status 400 and the exact refusal shape), or undefined for any other answer. */
+export function validationRefusalOf(status: number, body: unknown): z.ZodError | undefined {
+  if (status !== 400) return undefined;
+  const read = validationRefusalSchema.safeParse(body);
+  return read.success ? new z.ZodRealError(read.data.issues as z.ZodError['issues']) : undefined;
 }
 /**
  * P57: the render the shopper's own owner holds acknowledged for one decision

@@ -58,7 +58,7 @@ import { BoundaryStorageUnavailable, SyntheticObjectBoundary, SyntheticUnavailab
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { historicalReflexSchema, sessionDataSchema, SessionManager, SESSION_TTL_SECONDS, type SessionData } from '@/services/SessionManager';
-import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose, validationRefusal, validationRefusalOf } from '@/identity/sessionAuthority';
 import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwardLedgerOperation, LEDGER_OPERATION_HARD_BYTES, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
@@ -301,22 +301,19 @@ const identityResultSchema = z.object({
 /**
  * P58 (amendment 5 addendum §4, P58-D; R-P106): the person's own object refuses a
  * link whose merged profile its validation refuses (src/identity/profileEnrichment.ts,
- * for example more sources than one profile holds). The refusal crosses the object
- * boundary as the transfer door's typed answer, `400 { ok: false, refusal:
- * 'validation', issues }`, never as an exception: an exception raised in one object
- * reaches its caller in another as an untyped Error, which the browser's route would
- * answer as a 500. The browser's object raises it again as the validation error it is
- * (`handleLink`), so the route answers its own `400 Validation error` with the same
- * details whether the two objects share a process or not. Nothing else changes: the
- * person's object commits nothing of the refused link, and the browser's prepared
- * transfer stays as it was.
+ * for example more sources than one profile holds). The refusal leaves the operation
+ * as this error, which the transfer door answers typed
+ * (src/identity/sessionAuthority.ts `validationRefusal`), never as an exception
+ * thrown across the object boundary: the browser's object carries that answer to
+ * the link (`handleLink`), and src/identity/link.ts raises it again as the
+ * validation error it is, so the route answers its own `400 Validation error` with
+ * the same details on every runtime. Nothing else changes: the person's object
+ * commits nothing of the refused link, and the browser's prepared transfer stays as
+ * it was.
  */
 class MergeValidationRefusal extends Error {
   constructor(readonly issues: z.ZodError['issues']) { super('Merged profile refused by validation'); this.name = 'MergeValidationRefusal'; }
 }
-const transferRefusalSchema = z.object({ ok: z.literal(false), refusal: z.literal('validation'),
-  issues: z.array(z.object({ code: z.string().min(1).max(64), path: z.array(z.union([z.string().max(256), z.number()])).max(32), message: z.string().max(1024) }).passthrough()).min(1).max(64),
-}).strict();
 const preparedTransferSchema = z.object({ transfer: transferSchema, status: z.enum(['prepared', 'complete']), scrubbed: z.literal(true).optional() }).strict()
   .refine(value => !value.scrubbed || value.status === 'complete' && value.transfer.affinity === null && value.transfer.pipeline === null);
 const transferReceiptSchema = z.object({ transfer: transferSchema.omit({ affinity: true, pipeline: true }), result: identityResultSchema,
@@ -3076,10 +3073,9 @@ export class ShopperReflex {
           ...(principal ? { sourceCapability: capabilityToken(request) } : {}) }),
       });
       const resultBody = await response.json() as { ok?: unknown; result?: unknown };
-      // P58 (R-P106): the person's object refused the merged profile by validation; raised here as the validation error it is,
-      // an Error as a parse raises it (z.ZodRealError), so the route's error path answers it.
-      const refused = response.status === 400 ? transferRefusalSchema.safeParse(resultBody) : undefined;
-      if (refused?.success) throw new z.ZodRealError(refused.data.issues as z.ZodError['issues']);
+      // P58 (R-P106): the person's object refused the merged profile by validation; that typed answer is this link's answer.
+      const refused = validationRefusalOf(response.status, resultBody);
+      if (refused) return validationRefusal(refused.issues);
       if (!response.ok || resultBody.ok !== true) throw new SessionAccessError();
       const accepted = identityResultSchema.parse(resultBody.result);
       if (accepted.shopperId !== transfer.shopperId || accepted.visitorId !== transfer.visitorId || accepted.assurance !== transfer.assurance) throw new SessionAccessError();
@@ -3240,7 +3236,7 @@ export class ShopperReflex {
       return json({ ok: true, result: { ...receipt.result, ...(!personalizes(allowed) ? { audiences: [], changes: { entered: [], exited: [], explain: [] } } : {}), cookieHeaders, consent: allowed } });
     }).catch(error => {
       // P58 (R-P106): the operation failed as before and committed nothing of the link; only its answer is typed.
-      if (error instanceof MergeValidationRefusal) return json({ ok: false, refusal: 'validation', issues: error.issues }, 400);
+      if (error instanceof MergeValidationRefusal) return validationRefusal(error.issues);
       throw error;
     });
   }
