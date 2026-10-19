@@ -706,7 +706,7 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
         if(!snapshot){docs.catalog.pieces.push({id:'concurrent-legitimate',title:'Keep concurrent content'});docs.slots.pages.concurrent=[];docs.learn.slots.concurrent={reward:'purchase'};revision++;}snapshot=true;
         if(scenario==='owned-edit')docs.catalog.pieces.find(p=>p.id!=='acc-pre-existing'&&p.id!=='concurrent-legitimate').title='Concurrent owned edit';
         if(success){
-          assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views===3,refused=issued===2;
+          assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views>=3,refused=issued===2;
           if(refused){assert.match(init.headers.Cookie,/opt_tracking_consent=false/);return reply({ok:true,arm:'default',pageInstance:body.pageInstance,sources:{consent:{tracking:false,personalization:false,personalized:false}},decisions:[{slot:id('hero'),contentId:id('h-explore'),order:0,slotPosition:0}]});}
           const entries=[['hero',mid?'h-consider':'h-explore'],['fresh','f-new'],['fresh','f-old'],['rail','r-d1'],['rail','r-t1'],['rail','r-d2'],['story','s-featured']];
           const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',cell:{stage:mid?'mid':'early'},
@@ -737,7 +737,7 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
           return reply({success:true,render:{version:1,decisionId:row.decision_id,eventId:body.eventId,pageInstance:body.data.pageInstance,status:'durable',source:'recovered'}});
         }
         if(body.type==='content_click'&&issued===1){assert.equal(rendered.size,14);const row=rendered.get(body.data.decisionId);assert.ok(row);assert.equal(row.item_id,body.data.contentId);assert.equal(row.slot,body.data.slot);assert.equal(row.position,body.data.position);}
-        if(body.type==='product_view')views++;if(body.type==='purchase')credited=true;return reply({success:true});
+        if(body.type==='product_view'){const held=new Set(),product=body.data?.productId??body.data?.product_id??body.data?.sku;if(product!=null&&!held.has(String(product)))return reply({success:true,dropped:'unknown_product'});views++;}if(body.type==='purchase')credited=true;return reply({success:true}); // as the engine: no product catalogue a run can publish (src/demos/registry.ts:223), and a view naming an unheld product is dropped before the journey counter (src/services/RealtimeSegmentEngine.ts:538-539, :578-581)
       }
       if(success&&u.pathname.endsWith('/learn/publish')){const slot=body.slot;assert.ok(ownedSlots.includes(slot));const hero=slot.endsWith('-hero'),item=slot.slice(0,slot.lastIndexOf('-')+1)+(hero?'h-consider':'s-featured');
         return reply({ok:true,snapshot:{measurementBasis:'rendered-v1',objective:hero?'unit':'revenue',items:{[item]:{'*':{s:credited?(hero?1:250):0}}}}});}

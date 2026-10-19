@@ -241,10 +241,10 @@ async function run() {
   eq('seven records, one per position', first.records.length, 7);
   const heroDecisionId = rec(first, fixtureId('hero')).decision_id;
 
-  // 2. Three product views move the stage to considering: a scope initialized through the door carries the compiled default reflex document (src/routes/content.ts:1052), whose thresholds move the stage on the visit's third interaction (src/services/JourneyStage.ts:193-198, :480-481), and each view counts one (:335-336). The session host derives it per event.
+  // 2. Three product views move the stage to considering: a scope initialized through the door carries the compiled default reflex document (src/routes/content.ts:1052), whose thresholds move the stage on the visit's third interaction (src/services/JourneyStage.ts:193-198, :480-481), and each counted view is one (:335-336). The views name no product. A view naming a product the tenant does not hold is answered `dropped: "unknown_product"` before the journey counter (src/services/RealtimeSegmentEngine.ts:538-539, :578-581, before :603; docs/kit/02-api-reference.md:122-127); the engine holds no product catalogue for a tenant other than the default one and only its bundled one for that tenant (src/demos/registry.ts:223; src/services/CatalogService.ts:94), and the customer profile has no door that publishes one (src/customerBoundary.ts:55-76 admits reflex config and the content kinds, which are catalog, slots, learn, priors and vocabulary, src/routes/content.ts:84-91). The session host derives the stage per event.
   for (let i = 0; i < 3; i++) {
-    const r = await event(V, S, 'product_view', { productId: `ACC-P-${runId}`, product_id: `ACC-P-${runId}`, name: 'Acceptance bag', price: 250 });
-    check(`product view ${i + 1} accepted`, r.status === 200 && r.json?.success !== false, `status ${r.status} ${r.text.slice(0, 160)}`);
+    const r = await event(V, S, 'product_view', { name: 'Acceptance bag', price: 250 });
+    check(`product view ${i + 1} accepted and counted`, r.status === 200 && r.json?.success !== false && r.json?.dropped === undefined, `status ${r.status} ${r.text.slice(0, 160)}`);
   }
   // Polls create no exposures. Only the selected second set is acknowledged.
   let second = await until('second snapshot sees the acknowledged interactions', async () => {
