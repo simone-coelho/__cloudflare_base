@@ -121,13 +121,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "366b75c2 on rem/spec-ack (batch S9, amendment 5; P56 units be184af7 with src/units/_parity8.ts, P57 units ccd47f0a; spec fix 1 366b75c2 after the alarm-clause finding, R-P101)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+          "Specification review (SPEC mode) at ccd47f0a then the re-judge at 366b75c2: every unit RED for the right reason three runs out of three on both hosts (AA1 no answer while the queue send is held; AA2 the deadline is not a named constant, then no answer within the deadline; AA3 its AA1 precondition; RC1 the second delivery answers 500 Recovery logical conflict; RC2 500 not 409; RC3 the drain answers an untyped 500); honest (digests from the engine's own functions, the deadline from the SDK's named constant, no widening, nothing skipped); satisfiable (the specifier's sketch passes 34/34 three times; AA2 2.5 s session / 1.5 s object); harness isolated (P50 and P03 23/23 with _parity8.ts present); the authority text quoted verbatim; evidence under _evidence/parity-step3/S9/reviewer/ and S9/specifier*/"
         ],
         "negativeControlEvidence": [
-          "pending: named at the batch S9 specification review"
+          "Mutants of the sketch each caught by a named test on both hosts: Ma answer before armRecovery (AA1 and AA4 after 366b75c2, 3 of 3), Mb continuation outside the shopper's serializer (AA3, RC3 in-flight lock), Mc pending but effects awaited on the object host (AA1 AA2 AA3 object), Md/Md2 409 with a second row (RC2), Me render time reused with a new behaviour record id (RC1), Mf no continuation (AA1 AA3 AA4 RC1 RC2 RC3), Mg conflict answered 401 (RC2); lock controls: digest without the render, redemption time check removed, admission failure swallowed, every event stamped at the engine's present"
         ]
       },
       "doneWhen": [
@@ -215,13 +215,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "366b75c2 on rem/spec-ack (batch S9, amendment 5; P56 units be184af7 with src/units/_parity8.ts, P57 units ccd47f0a; spec fix 1 366b75c2 after the alarm-clause finding, R-P101)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+          "Specification review (SPEC mode) at ccd47f0a then the re-judge at 366b75c2: every unit RED for the right reason three runs out of three on both hosts (AA1 no answer while the queue send is held; AA2 the deadline is not a named constant, then no answer within the deadline; AA3 its AA1 precondition; RC1 the second delivery answers 500 Recovery logical conflict; RC2 500 not 409; RC3 the drain answers an untyped 500); honest (digests from the engine's own functions, the deadline from the SDK's named constant, no widening, nothing skipped); satisfiable (the specifier's sketch passes 34/34 three times; AA2 2.5 s session / 1.5 s object); harness isolated (P50 and P03 23/23 with _parity8.ts present); the authority text quoted verbatim; evidence under _evidence/parity-step3/S9/reviewer/ and S9/specifier*/"
         ],
         "negativeControlEvidence": [
-          "pending: named at the batch S9 specification review"
+          "Mutants of the sketch each caught by a named test on both hosts: Ma answer before armRecovery (AA1 and AA4 after 366b75c2, 3 of 3), Mb continuation outside the shopper's serializer (AA3, RC3 in-flight lock), Mc pending but effects awaited on the object host (AA1 AA2 AA3 object), Md/Md2 409 with a second row (RC2), Me render time reused with a new behaviour record id (RC1), Mf no continuation (AA1 AA3 AA4 RC1 RC2 RC3), Mg conflict answered 401 (RC2); lock controls: digest without the render, redemption time check removed, admission failure swallowed, every event stamped at the engine's present"
         ]
       },
       "doneWhen": [
