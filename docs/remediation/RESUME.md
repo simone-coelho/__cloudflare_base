@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-19, afternoon: amendment 5 opened on the acknowledgement latency; LIVE1 at 22 of 45; kit-1 merged
+
+- **Score unchanged** (`Units 227/240 · suite 3431/3431 · residual 0 in 0 files · typecheck GREEN`; head 9026e8b5 adds docs, scripts, comments and the programme only; the next official gate runs with P56's build).
+- **Product finding, told not asked (R-P96/R-P99):** a render acknowledgement answers in 5.1–6.0 s on both customer-profile stamps with no other load (the SDK cuts at 5 s and then drops the placement's engagement). Cause traced (`_evidence/baseline-52/ack-latency/ANALYSIS.md`): two durable recoveries run inline before the answer, 30 serial remote calls. **Amendment 5** `tapestry-parity-acknowledgement` P56–P60 opened (9026e8b5); batch S9 (P56 answer-at-admission, P57 idempotent same-id re-send and typed 409) being specified. A second finding: a learned lift is intermittently not served on a deployed worker (W38 B7's 50 ms budget; P42 PW3) is amendment-5 item 3.
+- **Live acceptance:** LIVE1 PASS 22 of 45 (delivery-control 5/25 incl. P26, customer-answers 3/5, operator-warnings 3/4, operator-warnings-2 5/5, operator-warnings-3 6/6), every SDK and console row walked headless (R-P92; the owner's Chrome list is empty); lanes L1, L2, L3 still reporting; P03 (R-P96), P35 (no ODP destination) and P42 (R-P97) stay pending on product or environment facts.
+- **kit-1 merged** (3b1ec825; three review rounds): the kit describes the snapshot answer the route sends, the acceptance run checks real members and counted views, stamp-workflow test 3 pins the deliberate recovery posture (23/23). No redeploy (comment-only in src).
+
 ## 2026-10-19, midday: baseline-52 round 4 — the frozen baseline 9 → 0; every entry retired
 
 - **Score (derived, official gate at 425d61d4):** `Units 227/240 · suite 3431/3431 · residual 0 in 0 files · typecheck GREEN`; `Ratchet: 0 failing tests, 0 outside the baseline of 9, 9 baseline entries no longer fail`. The gate's first run ended GATE_FAIL on `unit:W40.P4` alone ("Stamp workflow unavailable": the gate worktree's symlinked node_modules, the known artifact); W40 re-run green in the corrected worktree at the same head, typecheck and both bundle checks green there; the merged report under `_evidence/baseline-52/gate-r4/` fed the shrink f037978d. 52 → 23 → 11 → 9 → 0 since 2026-10-18.
