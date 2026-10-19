@@ -27,7 +27,7 @@ import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSo
 import { authorityLocks } from '@/sdk/testHost';
 import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { shopperObjectName } from '@/tenancy/objects';
-import { tenantKey } from '@/tenancy/tenant';
+import { tenantKey, TenantResolutionError } from '@/tenancy/tenant';
 import { applyHistory, historyRowSchema } from '@/identity/history';
 import { loadTombstone, tombstoneKey, writeTombstone } from '@/ledger/erasure';
 import { reflexScopeForTenant, REFLEX_KIND } from '@/reflex/configStore';
@@ -438,7 +438,11 @@ describe('the link, on the session host', () => {
   it('validates the body and the tenant', async () => {
     expect((await ownedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000005' } })).status).toBe(400);
     expect((await ownedCall('/coach/identity/link', { method: 'POST', json: { visitorId: 't:kate-spade:vis-00000000-0000-4000-8000-000000000005', accountId: 'a' } })).status).toBe(401);
-    expect((await ownedCall('/not a tenant/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000005', accountId: 'a' } })).status).toBe(401);
+    // R10 witness (baseline-52 #18, G13): the tenant middleware validates the path tenant and refuses it before any
+    // credential is read, 403 in the words of the TenantResolutionError it caught (src/tenancy/middleware.ts:95-98, :118-123;
+    // src/tenancy/tenant.ts:148-149).
+    const invalidTenant = await ownedCall('/not a tenant/identity/link', { method: 'POST', json: { visitorId: 'vis-00000000-0000-4000-8000-000000000005', accountId: 'a' } });
+    expect(invalidTenant.status).toBe(403); expect(invalidTenant.body).toEqual({ ok: false, error: new TenantResolutionError().message });
   });
 });
 
