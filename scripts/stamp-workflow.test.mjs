@@ -706,13 +706,13 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
         if(!snapshot){docs.catalog.pieces.push({id:'concurrent-legitimate',title:'Keep concurrent content'});docs.slots.pages.concurrent=[];docs.learn.slots.concurrent={reward:'purchase'};revision++;}snapshot=true;
         if(scenario==='owned-edit')docs.catalog.pieces.find(p=>p.id!=='acc-pre-existing'&&p.id!=='concurrent-legitimate').title='Concurrent owned edit';
         if(success){
-          assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views===2,refused=issued===2;
+          assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views===3,refused=issued===2;
           if(refused){assert.match(init.headers.Cookie,/opt_tracking_consent=false/);return reply({ok:true,arm:'default',pageInstance:body.pageInstance,sources:{consent:{tracking:false,personalization:false,personalized:false}},decisions:[{slot:id('hero'),contentId:id('h-explore'),order:0,slotPosition:0}]});}
           const entries=[['hero',mid?'h-consider':'h-explore'],['fresh','f-new'],['fresh','f-old'],['rail','r-d1'],['rail','r-t1'],['rail','r-d2'],['story','s-featured']];
-          const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',cell:{stage:mid?'mid':'unknown'},
+          const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',cell:{stage:mid?'mid':'early'},
             candidates:[{contentId:id(item)}],featured_product_ids:slot==='story'?['ACC-P-'+ownedPage.slice('acceptance-'.length)]:[],
             inputs:slot==='rail'&&mid?{served:{[id('rail')]:{[id('r-d1')]:1}}}:{},
-            explain:{...(slot==='hero'&&mid?{stage:{visitor:'considering',applied:0.2}}:{}),
+            explain:{...(slot==='hero'?{stage:{visitor:mid?'considering':'exploring',applied:0.2}}:{}),
               ...(item==='f-new'?{freshness:{applied:0.181}}:item==='f-old'?{freshness:{applied:0.004}}:{}),
               ...(item==='r-t1'?{diversity:{skipped:[id('r-d2')]}}:item==='r-d2'?{diversity:{relaxed:true}}:{}),
               ...(slot==='rail'&&mid?{fatigue:{served:1,applied:-0.1}}:{})}}));
