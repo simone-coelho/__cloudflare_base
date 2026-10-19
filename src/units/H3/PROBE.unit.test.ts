@@ -33,8 +33,17 @@ type Worker = { fetch(request: Request, env: Env, ctx: ExecutionContext): Promis
 const ORIGIN = 'https://stamp.invalid';
 const ctx = { waitUntil() { /* nothing is retained */ }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext;
 
+/**
+ * The W08 stamp, made READY for its two provisioned tenants: its signing material is the stamp's own, and its identity
+ * proof material names only the first tenant and is shorter than the 32 bytes a customer stamp requires
+ * (src/identity/material.mjs `safeIdentitySecret`, `validateIdentityMaterial`), which is a stamp that answers
+ * `/health/ready` 503 whatever the caller names. Here the one thing that must differ between two answers is the tenant header.
+ */
+const READY_IDENTITY = 'acme:h3-1-identity-proof-material-for-acme-0123,globex:h3-1-identity-proof-material-for-globex-0123';
+
 async function door() {
   const stamp = await customerStamp('session');
+  (stamp.env as { IDENTITY_SECRETS?: string }).IDENTITY_SECRETS = READY_IDENTITY;
   const worker = (await import('@/index')).default as unknown as Worker;
   const ask = async (env: Env, method: string, path: string, headers: Record<string, string> = {}) => {
     const response = await worker.fetch(new Request(ORIGIN + path, { method, headers }), env, ctx);
