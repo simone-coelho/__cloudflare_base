@@ -7,29 +7,30 @@
 // ruled for the same fix: no fan-out runs outside an owner operation (W09).
 // The consent lane's reviewer measured that an owner check tolerating an owner
 // that has already answered (control ctl4a: `if (held?.active)` in
-// `pinRetention`, sessionAuthority.ts:327) turns the whole consent file green,
+// `pinRetention`, sessionAuthority.ts:329) turns the whole consent file green,
 // so :1010 alone would accept a weakened W09 fence. This file is GREEN at
 // 3da22a90 and RED under ctl4a; the fix G16 builds must keep it green.
 //
-// WITNESSES (read at 3da22a90)
+// WITNESSES (read at 3da22a90; line numbers re-verified at 3deaa0ba, where G16 is merged)
 //   · the lead's ruling, `_evidence/parity-step3/AMENDMENTS.md:273` ("lane
 //     consent built"): G16's spec is :1010 "under both constraints at once: the
 //     decision answer is not held by the erasure read, and no fan-out runs
 //     outside an owner operation (W09)"; :276 ("lane consent merged"): "G16
 //     needs its own check that no fan-out runs outside an owner operation".
 //   · the owner fence: `recheckOwnerInvocation` refuses an invocation that is no
-//     longer active or belongs to another owner (sessionAuthority.ts:317-319);
+//     longer active or belongs to another owner (sessionAuthority.ts:319-321);
 //     `pinRetention` runs that recheck for any caller inside an owner's async
-//     lifetime before it admits a retained stamp (sessionAuthority.ts:325-328).
+//     lifetime before it admits a retained stamp (sessionAuthority.ts:327-330).
 //   · the fan-out pins every record's online stamp through that fence before
-//     either destination starts (fan.ts:1053, then the ring and statistics at
-//     fan.ts:1101-1104; "All validation/barrier/config reads precede starting
-//     either destination", fan.ts:1095).
+//     either destination starts (`fanDecisions`, fan.ts:1053, then the ring and
+//     statistics at fan.ts:1108-1111; "All validation/barrier/config reads precede
+//     starting either destination", fan.ts:1102).
 //   · the owner serializer: `runOwnerOperation` runs the work, drains every
 //     retained task, rechecks, then ends the invocation (`held.active = false`,
-//     sessionAuthority.ts:495-511); the shopper's object runs every owned request
-//     inside it (ShopperReflex.ts:3863 → :516), and the owner's `waitUntil` is
-//     `retainOwnerWork` (sessionAuthority.ts:265-270, :679).
+//     sessionAuthority.ts:497-513); the shopper's object runs every owned request
+//     inside it (`serialize`, ShopperReflex.ts:3863-3867 → the owned dispatch, :520),
+//     and the owner's `waitUntil` is `retainOwnerWork` (sessionAuthority.ts:267-272,
+//     the owner's execution context at :751).
 //
 // FIXTURE. A neutral tenant and one anonymous shopper; one personalized decision
 // in one slot, so the fan-out has both destinations (the shopper's ring and the
@@ -37,12 +38,12 @@
 // in-memory storage (the idiom of src/units/W24/LEDGER.unit.test.ts, which is
 // neither imported nor edited). Each destination call records the destination's
 // name and whether the owner's operation was held at that moment (`ownerHeld`,
-// sessionAuthority.ts:256-259). The decision's erasure (tombstone) read can be
+// sessionAuthority.ts:258-261). The decision's erasure (tombstone) read can be
 // held open, as consent.test.ts W06.05 holds it.
 //
 // RESIDUAL (named, not pinned here): the fence judges only work that descends
 // from an owner's operation; a fan-out with no owner in its async lifetime at all
-// is admitted (`if (held)`, sessionAuthority.ts:327; src/units/W24/LEDGER.unit.test.ts:283
+// is admitted (`if (held)` in `pinRetention`, sessionAuthority.ts:329; src/units/W24/LEDGER.unit.test.ts:283
 // fans out with no owner and is admitted). A fix that detached the serving fan-out from the owner's
 // lifetime would therefore pass this file; the build review reads the diff for it.
 
@@ -67,7 +68,7 @@ const SHOPPER = 'v-g16-shopper';
 const SLOT = 'hero';
 const DAY = 86_400_000;
 const LEARN = { stats: DEFAULT_STATS, slots: { [SLOT]: { reward: 'click' } } } as unknown as LearnConfig;
-/** What the serving path sends as each slot's learning configuration (service.ts:194-197, :1035). */
+/** What the serving path sends as each slot's learning configuration (`slotLearnConfigOf`, service.ts:195-198; `serveContentDecisions`, :1055-1056). */
 const SLOT_CONFIG = slotLearnConfigOf(LEARN);
 /** The catalogue's page-scoped slot names, as the serving caller already holds them (fan.ts:1003-1008): none here. */
 const PAGE_SCOPED: ReadonlySet<string> = new Set();
@@ -102,7 +103,7 @@ interface DestinationCall { name: string; held: boolean }
 interface World { env: Env; owner: object; storage: UnitR2; calls: DestinationCall[] }
 
 function world(): World {
-  /** The shopper's owner: ShopperReflex passes itself (`this`) to runOwnerOperation (ShopperReflex.ts:3863). */
+  /** The shopper's owner: ShopperReflex passes itself (`this`) to runOwnerOperation (`serialize`, ShopperReflex.ts:3867). */
   const owner = {};
   const calls: DestinationCall[] = [];
   const storage = new UnitR2();
@@ -174,7 +175,7 @@ function decision(env: Env, ts: number): DecisionRecord {
   } as unknown as DecisionRecord;
 }
 const setOf = (record: DecisionRecord) => ({ tenant: TENANT, brand: BRAND, visitor_id: SHOPPER, records: [record] });
-/** The destinations one admitted fan-out of this set reaches, named by the engine's own helpers (fan.ts:90, :119, :1101-1104). */
+/** The destinations one admitted fan-out of this set reaches, named by the engine's own helpers (fan.ts:90, :119, :1108-1111). */
 const destinations = () => [ringName(TENANT, SHOPPER), statsName(TENANT, BRAND, SLOT)].sort();
 const reached = (calls: DestinationCall[]) => calls.map(call => call.name).sort();
 
@@ -183,9 +184,9 @@ describe('unit:G16.W09 no fan-out runs outside an owner operation: the fan-out i
     const w = world(), record = decision(w.env, Date.now() - 60_000);
     let pinned: unknown, fan!: Promise<LearningReceipt>;
     await runOwnerOperation(w.owner, w.env, async () => {
-      // sessionAuthority.ts:325-328: inside the active operation the fence admits the record's stamp, the stamp requireRetention reads.
+      // `pinRetention`, sessionAuthority.ts:327-330: inside the active operation the fence admits the record's stamp, the stamp requireRetention reads.
       pinned = pinRetention(w.env, record.retention?.online, TENANT, 'online');
-      // decisions.ts:1104 hands afterResponse to waitUntil; inside the owner that is retainOwnerWork (sessionAuthority.ts:679, :265-270).
+      // decisions.ts:1110 hands the owner's drain to waitUntil; inside the owner that is retainOwnerWork (sessionAuthority.ts:751, :267-272).
       fan = fanDecisions(w.env, setOf(record), SLOT_CONFIG, undefined, PAGE_SCOPED);
       retainOwnerWork(fan);
     });
@@ -193,7 +194,7 @@ describe('unit:G16.W09 no fan-out runs outside an owner operation: the fan-out i
     const receipt = await fan;
     // fan.ts:812-818: `ok` only when every destination acknowledged.
     expect(receipt.ok, JSON.stringify(receipt)).toBe(true);
-    // fan.ts:1101-1104: both destinations reached, each while the owner's operation was held (sessionAuthority.ts:256-259).
+    // fan.ts:1108-1111: both destinations reached, each while the owner's operation was held (`ownerHeld`, sessionAuthority.ts:258-261).
     expect(reached(w.calls)).toEqual(destinations());
     expect(w.calls.every(call => call.held), JSON.stringify(w.calls)).toBe(true);
   });
@@ -217,12 +218,12 @@ describe('unit:G16.W09 no fan-out runs outside an owner operation: the fan-out i
     expect(answer).toBe('answered');
     release(null);
     const receipt = await fan;
-    // W09 (AMENDMENTS.md:273, :276): no fan-out outside an owner operation. fan.ts:1053 → sessionAuthority.ts:327 → :319
-    // refuses before either destination starts (fan.ts:1095, :1101-1104), so neither the ring nor the statistics is reached.
+    // W09 (AMENDMENTS.md:273, :276): no fan-out outside an owner operation. fan.ts:1053 → `pinRetention` sessionAuthority.ts:329 →
+    // `recheckOwnerInvocation` :321 refuses before either destination starts (fan.ts:1102, :1108-1111), so neither the ring nor the statistics is reached.
     expect(w.calls, 'a destination reached after the owner answered').toEqual([]);
     // fan.ts:812-818: a refused fan-out is not a delivered one.
     expect(receipt.ok, JSON.stringify(receipt)).toBe(false);
-    // sessionAuthority.ts:325-328 → :319: the fence itself refuses the finished owner, with the engine's own error.
+    // sessionAuthority.ts:327-330 → :321: the fence itself refuses the finished owner, with the engine's own error.
     await expect(pinLater).rejects.toBeInstanceOf(SessionAccessError);
     await expect(recheckLater).rejects.toBeInstanceOf(SessionAccessError);
   });
@@ -234,7 +235,7 @@ describe('unit:G16.W09 no fan-out runs outside an owner operation: the fan-out i
     let release!: (value: null) => void;
     w.storage.heldTombstone = new Promise<null>(resolve => { release = resolve; });
     let settled = false, pinned: unknown;
-    // A second operation of the same owner (ShopperReflex.ts:3863 serializes each one), running the erasure check and the fan-out.
+    // A second operation of the same owner (`serialize`, ShopperReflex.ts:3863, serializes each one), running the erasure check and the fan-out.
     const second = runOwnerOperation(w.owner, w.env, async () => {
       pinned = pinRetention(w.env, record.retention?.online, TENANT, 'online');
       return fanDecisions(w.env, setOf(record), SLOT_CONFIG, undefined, PAGE_SCOPED);
@@ -244,9 +245,9 @@ describe('unit:G16.W09 no fan-out runs outside an owner operation: the fan-out i
     expect(settled).toBe(false); expect(w.calls).toEqual([]);
     release(null);
     const receipt = await second;
-    // sessionAuthority.ts:325-328: inside the second operation the fence admits the stamp requireRetention reads.
+    // `pinRetention`, sessionAuthority.ts:327-330: inside the second operation the fence admits the stamp requireRetention reads.
     expect(pinned).toEqual(requireRetention(w.env, record.retention?.online, TENANT, 'online'));
-    // fan.ts:812-818 and :1101-1104: delivered to both destinations, each while that operation was held.
+    // fan.ts:812-818 and :1108-1111: delivered to both destinations, each while that operation was held.
     expect(receipt.ok, JSON.stringify(receipt)).toBe(true);
     expect(reached(w.calls)).toEqual(destinations());
     expect(w.calls.every(call => call.held), JSON.stringify(w.calls)).toBe(true);
