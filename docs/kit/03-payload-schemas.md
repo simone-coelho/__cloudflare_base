@@ -1476,6 +1476,11 @@ ones the tenant's published learn document names. `witness` is a digest of the s
 committed identity — tenant, brand, slot, configuration, generation fence and projection — which the
 serving path checks against the object itself, together with the published digest, before it trusts a
 cached snapshot: a snapshot the object does not confirm as its current, healthy publication serves no lift.
+The decision record of such a refusal carries `explain.lift: null` and `versions.lift: 0` and does not say
+why; the decision's answer does, per learning slot, in `sources.lift` (`served`, `none`, `incompatible`,
+`late`, `superseded`, `unrecognized`, `unhealthy` or `failed`, with its milliseconds), and the monitor
+counts each outcome for the tenant as `learningReads` (the API reference, the snapshot answer and the
+monitor).
 A slot name the tenant's catalogue carries on more than one page has one snapshot per page, read with
 `page=` (see the API reference); its `slot` member is still the slot name, the answer around it names the
 `page`, and the page is part of the committed identity its `witness` digests.

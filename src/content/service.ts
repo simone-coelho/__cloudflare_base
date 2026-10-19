@@ -1151,11 +1151,11 @@ export async function serveContentDecisions(
       : enqueueDecisions(env, offLimitsLedger)).then(() => undefined, () => undefined)
     : Promise.resolve();
   // P61 (R-P110): every lift and ring outcome this decision named on its
-  // answer, counted for the tenant after the answer, fire and forget, under the
-  // same three conditions as the counters above, so the monitor's own probe
-  // decisions and a shopper who withheld tracking are never counted. Its
-  // failures are swallowed inside `recordLearningReads`; nothing is read back
-  // on this path and nothing about the shopper is written.
+  // answer, counted for the tenant after the answer is decided, fire and
+  // forget, under the same three conditions as the counters above, so the
+  // monitor's own probe decisions and a shopper who withheld tracking are never
+  // counted. Its failures are swallowed inside `recordLearningReads`; no count
+  // is ever read to decide, and nothing about the shopper is written.
   const lift = Object.fromEntries([...liftReads.keys()].sort().map(slot => [slot, liftReads.get(slot)!] as const));
   const readsCounted = consent.tracking && !synthetic && !r.selfCheck
     ? recordLearningReads(env, scope, { lift: Object.values(lift).map(read => read.outcome), ring: ringRead.outcome }, now)

@@ -32,8 +32,9 @@ export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: 
 export type LiftWitnessOutcome = Exclude<LiftReadOutcome, 'none' | 'incompatible'>;
 /**
  * P61 (amendment 6, R-P110): the witness of `currentLiftWitness`, returning its
- * reason instead of a boolean. The check is the same check, in the same order,
- * with the same budget; only the refusal is named:
+ * reason instead of a boolean. It asks the same object the same question
+ * under the same budget, and serves on the same conjunction; only the refusal
+ * is named, the first of these that applies:
  *   · `failed`: no statistics binding, a digest that cannot be computed, a call
  *     that errored, or an answer that is not this placement's witness answer
  *     (not OK, not JSON, another tenant, brand, slot or page);
