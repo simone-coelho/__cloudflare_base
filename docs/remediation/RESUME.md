@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-18, evening: amendment 4 LOCALLY COMPLETE (6/6); every ledger locally complete; the pilot stamps redeployed
+
+- **Amendment 4** `tapestry-parity-operator-warnings-3`: Local done 6/6, Final 0/6 (`check` PASS). P50 a08f3c46, P51 6340d7d0, P52 89624512, P53 8e041963, P54 df3aec96, P55 a2a1f049, each one build round, reviewer PASS, merged and receipted (last commit 29beb622). P50's specification took three fix rounds (R-P84 and three addenda); every build passed its review first time. Six LIVE rows pending the owner's batched acceptance.
+- **Every ledger is locally complete:** remediation 26/26, parity 1 25/25, parity 2 5/5, amendment 2 4/4, amendment 3 5/5, amendment 4 6/6, plus W08-C1. 71 deferred live rows await the owner's batched acceptance.
+- **Pilot stamps redeployed** at 29beb622 (staging 7969e23c, production 7ae2932c); API smoke green on both (health, SDK bytes, session, consent, snapshot with decisions, impression acknowledged). Logs `_evidence/pilot/logs/deploy-4-*`.
+- **Next, under R-P78 (told, not asked):** the six items in AMENDMENTS.md's P55 closure line are the candidates for an amendment 5; none is a pilot blocker. **The owner's calls stand:** the 52-baseline-failures programme; the batched live acceptance.
+
 ## 2026-10-17, evening: amendment 3 LOCALLY COMPLETE (5/5); every ledger locally complete; the pilot stamps live
 
 - **Amendment 3** `tapestry-parity-operator-warnings-2`: Local done 5/5, Final 0/5 (`check` PASS). P45 5aed3f83, P46 4976c99f, P47 eb7ddbb8, P48 594df0d5, P49 14b8e5a8, each one round, reviewer PASS, merged and receipted (last commit 00b6e455). Five LIVE rows pending the owner's batched acceptance, as the earlier programmes' rows.

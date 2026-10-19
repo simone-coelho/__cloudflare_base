@@ -595,6 +595,8 @@ Found while hosting the OH demo on today's engine; recorded here so the owning W
 
 - 2026-10-18 evening — **Amendment 4 at 5/6**: P54 df3aec96 (receipt 2eff76ad) closed; P55 ACTIVE 3702de63 building in `build-p55`, the last ticket. Pilot stamps unchanged since fb65421f; a redeploy with amendment 4 follows its completion.
 
+- 2026-10-18 evening — **Amendment 4 LOCALLY COMPLETE 6/6** (P55 a2a1f049, receipt a5e28ae6; last commit 29beb622). Every ledger locally complete. **Pilot stamps redeployed at 29beb622**: staging 7969e23c, production 7ae2932c, smoke green. Next under R-P78: the six items in AMENDMENTS.md's P55 closure line (amendment 5 candidates). Owner's calls: the 52-baseline-failures programme; the batched live acceptance (71 rows).
+
 ## Commits
 
 | Sha | What |
