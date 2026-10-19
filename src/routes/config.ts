@@ -45,6 +45,19 @@ import {
 
 type Ctx = { Bindings: Env; Variables: TenantVariables & { auth: AuthContext; reflexScope?: ConfigScope } };
 
+/**
+ * The tenant that owns a Reflex scope selector, or null when the publication
+ * store's own scope test refuses the selector. `publicationScope` reads no
+ * storage and, with the kind fixed to `reflex`, throws only for a scope the
+ * store can never hold, so that refusal is the caller's scope refusal like its
+ * sibling selector refusals, not a publication outage (baseline-52 G17). A
+ * valid scope whose publication cannot be read still answers 503 from its
+ * handler.
+ */
+function reflexScopeOwner(scope: string): string | null {
+  try { return publicationScope({ name: 'reflex' }, scope); } catch (error) { if (error instanceof PublicationError) return null; throw error; }
+}
+
 export const configRoutes = new Hono<Ctx>();
 configRoutes.use('*', async (c, next) => {
   c.header('Cache-Control', 'no-store');
@@ -57,7 +70,7 @@ configRoutes.use('*', async (c, next) => {
   const tenants = c.req.queries('tenant'), scopes = c.req.queries('scope');
   if (tenants && (tenants.length !== 1 || tenants[0] !== tenant) || scopes && scopes.length !== 1) return c.json({ error: 'Tenant scope unavailable' }, 403);
   const scope = scopes?.[0] ?? reflexScopeForTenant(tenant);
-  if (publicationScope({ name: 'reflex' }, scope) !== tenant) return c.json({ error: 'Tenant scope unavailable' }, 403);
+  if (reflexScopeOwner(scope) !== tenant) return c.json({ error: 'Tenant scope unavailable' }, 403);
   c.set('reflexScope', scope); return next();
 });
 configRoutes.onError((error, c) => {
