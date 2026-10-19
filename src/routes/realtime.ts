@@ -29,7 +29,7 @@ import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHe
 import { anonymousWithConsent, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
 import { capabilityToken } from '@/identity/sessionCapability';
 import { SessionManager } from '@/services/SessionManager';
-import { assertShopperSelectors, carryOwnerCustomerId, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
+import { AcknowledgementConflictError, assertShopperSelectors, carryOwnerCustomerId, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
 import { captureRetention, RetentionUnavailable } from '@/retention';
 import { captureBehavior } from '@/ledger/behavior';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
@@ -229,7 +229,10 @@ realtimeRoutes.post('/action', async (c) => {
     if (captureConsent.tracking && !actionEvent.eventId) actionEvent.eventId = crypto.randomUUID();
     const hasOffer = Object.hasOwn(actionEvent.data, 'renderOffer');
     if (hasOffer && actionEvent.type !== 'content_impression') throw new SessionAccessError();
-    const render = hasOffer ? await redeemRenderOffer(c.env, shopperPrincipal(c.req.raw), captureConsent, actionEvent) : undefined;
+    const redeemed = hasOffer ? await redeemRenderOffer(c.env, shopperPrincipal(c.req.raw), captureConsent, actionEvent) : undefined;
+    const render = redeemed?.acknowledgment;
+    // P57: a re-send of an acknowledged render carries the time that render was admitted at, so its behaviour record is the same record.
+    if (redeemed) actionEvent.timestamp = redeemed.at;
     // The ciphertext is an admission capability, never behavior, demo capture,
     // pipeline input or provider data. Remove it before any ordinary handler.
     if (hasOffer) { const { renderOffer: _offer, ...data } = actionEvent.data; void _offer; actionEvent.data = data; }
@@ -421,7 +424,7 @@ realtimeRoutes.post('/action', async (c) => {
     }
 
   } catch (error) {
-      if (error instanceof SessionAccessError) throw error;
+      if (error instanceof SessionAccessError || error instanceof AcknowledgementConflictError) throw error;
     console.error('Error processing action event');
     
     if (error instanceof z.ZodError) {
