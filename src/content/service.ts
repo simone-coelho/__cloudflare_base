@@ -796,11 +796,11 @@ export async function serveContentDecisions(
     ? enrollmentFor({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
       anchor: anchor.anchor, anchorGeneration: anchor.anchorGeneration })
     : null;
-  // W21 E1.02 (R108): she is served the site's own defaults either way — the
-  // EXPERIENCE is unchanged — and the provenance says which population she is
+  // W21 E1.02 (R108): the shopper is served the site's own defaults either way — the
+  // EXPERIENCE is unchanged — and the provenance says which population the shopper is
   // in. A shopper who has not consented to personalization is `ineligible`: not
-  // drawn, so no anchor is consulted for her and no bucket is taken, and a
-  // report can never pool her with the randomised control.
+  // drawn, so no anchor is consulted for that shopper and no bucket is taken, and a
+  // report can never pool that shopper with the randomised control.
   const enrollment: EnrollmentProvenance | null = enrolled?.provenance
     ?? (r.principal ? ineligibleEnrollment({ tenant: r.tenant, brand, holdout: holdoutInForce, saltVersion,
       reason: personalizes(consent) ? 'anchor_unavailable' : 'personalization_consent' }) : null);

@@ -315,15 +315,15 @@ Every slot's offered decision for the page, in page order; private records are n
 ```json
 {
   "ok": true, "tenant": "coach", "brand": "coach", "page": "home", "pageInstance": "original-page-nonce",
-  "visitor_id": "vis-2f1c…", "session_id": "9cb1810f-…", "identity_anchor": "session", "ts": 1788541396189,
+  "ts": 1788541396189,
   "arm": "personalized",
-  "cell": { "channel": "direct", "visit_bucket": "1", "region": "US-NY", "affinity": "line:Tabby" },
   "versions": { "config": 15, "catalog": 4, "slots": 7, "learn": 19, "lift": 1788540535150, "prior": 6, "policy": 19 },
   "config_label": "reflex-demo-v1+r15",
-  "regional": null,
-  "decisions": [ { "contentId": "cnt_7cb1e039", "customerContentId": "CCH-001", "type": "campaign", "slot": "chero", "order": 0, "slotPosition": 0, "decisionId": "<original decision carrier>", "renderOffer": "<opaque ro1 offer>", "score": 0.455, "strategy": "affinity", "explain": { "drivers": [ { "dim": "line", "value": "Tabby", "a": 0.7286, "weight": 0.35 } ] } } ],
+  "decisions": [ { "contentId": "cnt_7cb1e039", "customerContentId": "CCH-001", "type": "campaign", "slot": "chero", "order": 0, "slotPosition": 0, "decisionId": "<original decision carrier>", "renderOffer": "<opaque ro1 offer>",
+    "score": 0.455, "strategy": "affinity", "explain": { "drivers": [ { "dim": "line", "value": "Tabby", "a": 0.7286, "weight": 0.35 } ] } } ],
   "pinDiagnostics": [ { "slot": "chero", "pinnedPieceId": "cnt_9ab2f10c", "pinIndex": 1, "reason": "missing_or_ineligible" } ],
-  "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 }, "external": null, "state": "session",
+  "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 },
+    "external": null, "state": "session",
     "consent": { "tracking": true, "personalization": true, "personalized": true } }
 }
 ```

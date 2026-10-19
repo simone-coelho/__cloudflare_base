@@ -153,11 +153,11 @@ test('W09.09 explicit recovery config preserves default off and validates all th
   const off=clone(d);off.vars.LEDGER_RECOVERY_ENABLED='false';const config=JSON.parse(off.vars.LEDGER_RECOVERY_CONFIG);delete config.unknown;off.vars.LEDGER_RECOVERY_CONFIG=JSON.stringify(config);validateDesired(off);
   assert.throws(()=>validateTransition('upload',d,desired()));assert.throws(()=>validateTransition('rotate',{...d,secrets:{...d.secrets,JWT_SECRET:d.secrets.JWT_SECRET+'9'}},desired(),['JWT_SECRET']));
   const manifest=parseToml(await readFile(new URL('../wrangler.toml',import.meta.url),'utf8'));
-  for(const target of [manifest,manifest.env.staging,manifest.env.production]){
-    assert.equal(target.vars.LEDGER_RECOVERY_ENABLED,'false');assert.equal(target.queues.consumers.length,2);
+  const THIRTY_DAYS_MS=30*24*60*60*1000,PILOT_UNKNOWN={id:'pilot-unknown-v1',revision:1,durationMs:2592000000,basis:'admitted',renewal:'new-record-only',disposal:'delete-on-expiry'};for(const [target,pilot] of [[manifest,false],[manifest.env.staging,true],[manifest.env.production,true]]){
+    // Witness (owner direction 2026-10-17; commits aa103c6e staging, 1c3e6ad6 production): the pilot stamps run durable recovery ON because a render acknowledgement is redeemed only through recoverDecisions (src/content/renderOffer.ts:108), refused while LEDGER_RECOVERY_ENABLED is not 'true' (src/ledger/recovery.ts:313); their unknown-owner policy is named and bounded at 30 days; the default target stays off with none.
+    assert.equal(target.vars.LEDGER_RECOVERY_ENABLED,pilot?'true':'false');assert.equal(target.queues.consumers.length,2);const config=JSON.parse(target.vars.LEDGER_RECOVERY_CONFIG);
     const source=target.queues.consumers.find(q=>q.dead_letter_queue);assert.ok(source);assert.ok(target.queues.consumers.some(q=>q.queue===source.dead_letter_queue&&!q.dead_letter_queue));
-    assert.equal(JSON.parse(target.vars.LEDGER_RECOVERY_CONFIG).unknown,undefined);
-  }
+    if(pilot){assert.deepEqual(config,{version:1,sourceQueue:source.queue,deadLetterQueue:source.dead_letter_queue,unknown:PILOT_UNKNOWN});assert.ok(config.unknown.durationMs<=THIRTY_DAYS_MS);}else{assert.deepEqual(config,{version:1,sourceQueue:source.queue,deadLetterQueue:source.dead_letter_queue});assert.equal(config.unknown,undefined);}}
   for(const path of ['src/ledger/recovery.ts','src/ledger/quarantine.ts','src/routes/ledgerRecovery.ts'])assert.ok(SECURITY_ROOTS.includes(path));
 });
 
@@ -707,7 +707,7 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
         if(scenario==='owned-edit')docs.catalog.pieces.find(p=>p.id!=='acc-pre-existing'&&p.id!=='concurrent-legitimate').title='Concurrent owned edit';
         if(success){
           assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views===2,refused=issued===2;
-          if(refused){assert.match(init.headers.Cookie,/opt_tracking_consent=false/);return reply({ok:true,arm:'default',write:false,sources:{consent:{tracking:false}},decisions:[]});}
+          if(refused){assert.match(init.headers.Cookie,/opt_tracking_consent=false/);return reply({ok:true,arm:'default',pageInstance:body.pageInstance,sources:{consent:{tracking:false,personalization:false,personalized:false}},decisions:[{slot:id('hero'),contentId:id('h-explore'),order:0,slotPosition:0}]});}
           const entries=[['hero',mid?'h-consider':'h-explore'],['fresh','f-new'],['fresh','f-old'],['rail','r-d1'],['rail','r-t1'],['rail','r-d2'],['story','s-featured']];
           const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',
             candidates:[{contentId:id(item)}],featured_product_ids:slot==='story'?['ACC-P-'+ownedPage.slice('acceptance-'.length)]:[],
@@ -719,7 +719,7 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
           if(!heroDecision)heroDecision=records[0].decision_id;
           for(const record of records)offers.set(record.decision_id,{record,pageInstance:body.pageInstance});
           assert.equal(rendered.size,mid?7:0); // Fetching a choice did not capture it.
-          return reply({ok:true,arm:'personalized',write:false,pageInstance:body.pageInstance,sources:{state:'synthetic-protocol-fixture',consent:{personalized:true}},cell:{stage:mid?'mid':'unknown'},
+          return reply({ok:true,arm:'personalized',pageInstance:body.pageInstance,sources:{state:'synthetic-protocol-fixture',consent:{tracking:true,personalization:true,personalized:true}},cell:{stage:mid?'mid':'unknown'},
             decisions:entries.map(([slot,item],i)=>({slot:id(slot),contentId:id(item),order:i,decisionId:records[i].decision_id,renderOffer:'synthetic-offer-'+records[i].decision_id}))});
         }
         return reply({ok:false},503); // Stop before measurement assertions: protocol/cleanup fixture, not fabricated business success.

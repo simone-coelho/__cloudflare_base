@@ -1132,8 +1132,8 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
     // W21 E1.03: the experiment this answer belongs to — `arm` above is the
     // experience served, `experiment.arm` the experimental assignment — so a
-    // customer can join their own outcome data to the population we served her
-    // in. Absent for an unsigned caller, which is no shopper.
+    // customer can join their own outcome data to the population the shopper was
+    // served in. Absent for an unsigned caller, which is no shopper.
     ...(out.experiment ? { experiment: out.experiment } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
     // A refused pin has no delivery decision and no ledger row, so without this member

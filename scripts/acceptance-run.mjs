@@ -173,7 +173,7 @@ const servedIn = (set, slot) => set.decisions.filter((d) => d.slot === slot).map
 // This CLI reports a synthetic renderer signal, not browser paint or visibility.
 // Private receipts are read separately with operator authority, never from a poll.
 async function admitRendered(visitor, set) {
-  check('snapshot is read-only and has no private receipts', set.write === false && !Object.hasOwn(set, 'records'));
+  check('snapshot is read-only and has no private receipts', typeof set.pageInstance === 'string' && !Object.hasOwn(set, 'records')); // No `write` member is sent (src/routes/decisions.ts:1132-1153). An echoed pageInstance (:1153) is the render-offer path (:1112), on which nothing is captured at serve time (src/content/service.ts:1038-1040, :1135); `records` only for the platform's own synthetic operation (decisions.ts:1152).
   const s = await shopper(visitor), expected = new Map();
   for (const choice of set.decisions) {
     check('renderable choice has an authenticated original offer', typeof choice.decisionId === 'string' && typeof choice.renderOffer === 'string' && !!set.pageInstance);
@@ -224,7 +224,7 @@ async function run() {
   log(`      signed shopper selected, state ${first.sources.state}`);
 
   // 1. The first snapshot: no events yet, so the stage is unknown and the stage rule is off.
-  eq('first snapshot: read-only, consenting', [first.write, first.sources.consent.personalized], [false, true]);
+  eq('first snapshot: read-only, consenting', [typeof first.pageInstance, first.sources.consent.tracking, first.sources.consent.personalization, first.sources.consent.personalized], ['string', true, true, true]); // read-only as in admitRendered; `sources.consent` is src/content/service.ts:1146 (`personalized` :737).
   first = await admitRendered(V, first);
   eq('first snapshot: stage unknown before any event', first.cell.stage, 'unknown');
   eq('acc-hero: catalogue order while the stage is unknown', servedIn(first, fixtureId('hero')), [fixtureId('h-explore')]);
@@ -329,7 +329,7 @@ async function run() {
   // 7. A shopper who withheld tracking consent: the defaults, nothing written, no ring.
   const W = `acc-w-${runId}`, cookie = 'opt_tracking_consent=false; opt_personalization_enabled=true';
   const withheld = await snapshot(W, `acc-ws-${runId}`, cookie);
-  eq('consent withheld: the default arm and nothing written', [withheld.json?.arm, withheld.json?.write, withheld.json?.sources?.consent?.tracking], ['default', false, false]);
+  eq('consent withheld: the default arm and nothing written', [withheld.json?.arm, withheld.json?.sources?.consent?.tracking, withheld.json?.sources?.consent?.personalization], ['default', false, false]); // `arm`: src/content/service.ts:807, src/content/consent.ts:176, :186. Without tracking consent nothing is written (service.ts:1051, :1135; src/routes/decisions.ts:1121); no `write` member is sent (decisions.ts:1132-1153); no render offer (service.ts:1120) is the next check.
   check('consent withheld: no private receipt or render authority', !Object.hasOwn(withheld.json, 'records')
     && Array.isArray(withheld.json.decisions) && withheld.json.decisions.every(choice => !choice.renderOffer && !choice.decisionId));
   const wClick = await event(W, `acc-ws-${runId}`, 'content_click', { contentId: fixtureId('h-explore'), slot: fixtureId('hero') }, cookie);
