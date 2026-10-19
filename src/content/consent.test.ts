@@ -9,7 +9,7 @@ import type { Env } from '@/types/env';
 import { invalidateCache, write as writePublication, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from './kinds';
 import { armUnder, consentFromCookies, consentOf, personalizes } from './consent';
-import { serveContentDecisions, invalidateLiftCache } from './service';
+import { serveContentDecisions, invalidateLiftCache, slotLearnConfigOf } from './service';
 import { compareRecords, replayDecision, replayDeps } from '@/learn/replay';
 import type { DecisionRecord, LearnConfig, SlotCatalog } from './types';
 import { consumeLedger } from '@/ledger/consume';
@@ -28,7 +28,7 @@ import { PROPOSALS_KIND, EMPTY_PROPOSALS } from '@/learn/cycle';
 import { tombstoneKey } from '@/ledger/erasure';
 import * as configStore from '@/config/versionedStore';
 import { DEFAULT_STATS, buildSnapshot, emptyStats, levelKeys, liftFor, recordExposure, recordSuccess, type LiftSnapshot, type StatsState } from '@/learn/stats';
-import { liftArchiveKey, liftKey } from '@/learn/fan';
+import { liftArchiveKey, liftKey, reportLearningIncomplete } from '@/learn/fan';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { DEFAULT_POLICY, type RingEntry } from '@/learn/policy';
@@ -741,9 +741,8 @@ describe('CW31 consent on the content service', () => {
   });
 
   it('W10.03 checks actual serving health on cold and cached snapshots and falls back after reset/restart', async () => {
-    const now = Date.now(), { env } = await envWith({ affinity: { dims: { line: { Drover: 0.9 } } } }, {
-      holdout: { share: 0, salt: '', arms: ['default'] }, stats: DEFAULT_STATS, slots: { hero: { gamma: 1, reward: 'click' } },
-    });
+    const learn: LearnConfig = { holdout: { share: 0, salt: '', arms: ['default'] }, stats: DEFAULT_STATS, slots: { hero: { gamma: 1, reward: 'click' } } };
+    const now = Date.now(), { env } = await envWith({ affinity: { dims: { line: { Drover: 0.9 } } } }, learn);
     class Storage {
       map = new Map<string, unknown>(); alarm: number | null = null;
       async get(k: string) { return structuredClone(this.map.get(k)); }
@@ -767,7 +766,8 @@ describe('CW31 consent on the content service', () => {
     env.DECISION_RING = fakeNs({ ok: true, receipt: { version: 1, kind: 'append', received: 1, accepted: 1, cutoffSkipped: 0, retained: 1, indexed: 1 } }, []);
     const cell = { channel: 'direct', visit_bucket: 'unknown', region: null, affinity: null };
     const send = (path: string, body: unknown) => target.fetch(new Request('https://learn' + path, { method: 'POST', body: JSON.stringify(body) }));
-    const base = { tenant: 'coach', brand: 'coach', slot: 'hero', config: { reward: 'click', objective: 'unit', stats: DEFAULT_STATS } };
+    // R10 (baseline-52 #2): the seeded state carries the slot configuration serving itself sends, derived by `slotLearnConfigOf` (service.ts:194-197), so the first serve's own fan-out cannot move the object's configuration witness (LearnStats.ts:1577-1580, `config` digested whole) away from the one /publish sealed; the W28 LG1 precedent at :543-547.
+    const base = { tenant: 'coach', brand: 'coach', slot: 'hero', config: slotLearnConfigOf(learn)('hero') };
     expect((await send('/exposures', { ...base, exposures: Array.from({ length: 200 }, (_, i) => ({ item: i % 2 ? 'a' : 'b', cell, ts: now })) })).status).toBe(200);
     expect((await send('/credits', { ...base, credits: Array.from({ length: 50 }, () => ({ item: 'b', cell, ts: now, reward: 'click', weight: 1 })) })).status).toBe(200);
     expect((await send('/publish', {})).status).toBe(200);
@@ -939,9 +939,14 @@ describe('CW31 consent on the content service', () => {
   it('W04.02 owned state honors a prior false hint without restoring legacy profile mirrors', async () => {
     const { env, ring } = await envWith({});
     Object.assign(env, { JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' });
-    const principal = await newAnonymousSession(env, 'coach');
-    const out = await serveContentDecisions(env, { tenant: 'coach', stateTenant: 'coach', page: 'home', visitorId: principal.subject, sessionId: principal.sessionId,
-      principal, capability: principal.capability, cookieHeader: 'opt_segments=PRIVATE; opt_session_id=victim; opt_tracking_consent=false' });
+    const principal = await newAnonymousSession(env, 'coach'), owner = {};
+    // R10 (baseline-52 #3): a signed principal is served only inside its owner's operation (`assertOwnerScope`, sessionAuthority.ts:443-446), so the unchanged request runs there exactly as this file's `serve` helper runs it (:209-217); every assertion below is unchanged.
+    const out = await runOwnerOperation(owner, env, async () => {
+      admitOwnerPrincipal(owner, principal);
+      const result = await serveContentDecisions(env, { tenant: 'coach', stateTenant: 'coach', page: 'home', visitorId: principal.subject, sessionId: principal.sessionId,
+        principal, capability: principal.capability, cookieHeader: 'opt_segments=PRIVATE; opt_session_id=victim; opt_tracking_consent=false' });
+      await result.afterResponse; return result;
+    }, undefined, undefined, async () => fixtureConsent.get(env)!);
     await out.afterResponse;
     expect(out.arm).toBe('default'); expect(out.write).toBe(false); expect(ring).toEqual([]);
     expect(out.sources.consent.tracking).toBe(false);
@@ -990,7 +995,15 @@ describe('CW31 consent on the content service', () => {
     let release!: (value: null) => void;
     const pending = new Promise<null>(resolve => { release = resolve; });
     env.STORAGE = { ...catalog, get: (key: string) => key === tombstoneKey('coach', visitor) ? pending : catalog.get(key) } as never;
-    const out = await serve(env);
+    // R10 (baseline-52 #4): `serve` awaits afterResponse inside the owner (:215), and that is the work this test holds open on the
+    // tombstone read; the decision is taken the W09.09 way instead (:222-225), afterResponse not awaited inside the owner operation.
+    const principal = await issueSessionCapability(env, { tenant: 'coach', subject: visitor, sessionId: 's1', kind: 'anonymous' }), owner = {};
+    const out = await runOwnerOperation(owner, env, async () => {
+      admitOwnerPrincipal(owner, principal);
+      const result = await serveContentDecisions(env, { tenant: 'coach', page: 'home', visitorId: visitor, sessionId: 's1', channel: 'direct',
+        cf: null, cookieHeader: null, stateTenant: 'coach', principal, capability: principal.capability });
+      void result.afterResponse.catch(() => {}); return result;
+    }, undefined, undefined, async () => fixtureConsent.get(env)!);
     expect(out.records).toHaveLength(1); expect(ring).toEqual([]);
     release(null); await out.afterResponse;
     expect(ring).toEqual([`coach:${visitor} POST /append`]);
@@ -1035,18 +1048,27 @@ describe('CW31 consent on the content service', () => {
       expect(Object.values(numeric).every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0)).toBe(true);
       expect(JSON.stringify(warn.mock.calls)).not.toMatch(/private|vis-|coach|cms-|content_click/);
 
+      // R10 (baseline-52 #5; W11, LANE-LOG.md:40, a reviewer FAILs any KV fallback re-admitted): configuration is read through the publication
+      // only (versionedStore.ts:92-95), so the read failure is injected at the publication's own storage read (publication.ts:177) and
+      // is a preparation failure: no fan-out, exactly the receipt the route reports for one (route.ts:127), numeric only.
       invalidateCache(); warn.mockClear();
-      env.CACHE = { get: async () => { throw new Error('private configuration'); } } as unknown as KVNamespace;
-      await outcomeToLearning(env, 'coach', event);
-      // Legacy config reads deliberately fall back; this task does not make them strict reads.
-      expect(ring).toHaveBeenCalledTimes(3); expect(warn).toHaveBeenCalledTimes(2);
-      expect(warn.mock.calls[0]).toEqual(['[config] read failed, serving fallback']);
-      expect(warn.mock.calls[1]).toEqual(['learning_incomplete', expect.objectContaining({ kind: 1, ringUnknown: 1 })]);
+      reportLearningIncomplete('outcome', null); const preparationFailure = warn.mock.calls[0]!; warn.mockClear();
+      const ringCalls = ring.mock.calls.length, stored = env.STORAGE.get.bind(env.STORAGE);
+      const failedPublication = vi.spyOn(env.STORAGE, 'get').mockImplementation((async (key: string) => {
+        if (key === tombstoneKey('coach', visitor)) return stored(key);
+        throw new Error('private configuration');
+      }) as never);
+      try { await outcomeToLearning(env, 'coach', event); } finally { failedPublication.mockRestore(); }
+      expect(ring).toHaveBeenCalledTimes(ringCalls); expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]).toEqual(preparationFailure);
+      expect(Object.values(warn.mock.calls[0]![1] as Record<string, unknown>).every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0)).toBe(true);
+      expect(JSON.stringify(warn.mock.calls)).not.toMatch(/private|vis-|coach|cms-|content_click/);
       // A propagated preparation failure is distinct: inject it at the existing dependency seam.
       const failedConfig = vi.spyOn(configStore, 'readRevision').mockRejectedValueOnce(new Error('private preparation'));
       try {
         warn.mockClear(); await outcomeToLearning(env, 'coach', event);
-        expect(ring).toHaveBeenCalledTimes(3); expect(warn).toHaveBeenCalledTimes(1);
+        // R10 (baseline-52 #5): the ring count before this preparation failure, which no longer includes the removed fallback's fan-out above.
+        expect(ring).toHaveBeenCalledTimes(ringCalls); expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0]).toEqual(['learning_incomplete', expect.objectContaining({ kind: 1, code: 3, ringNotAttempted: 1, creditPlanKnown: 0 })]);
         failedConfig.mockRejectedValueOnce(new Error('private preparation'));
         warn.mockImplementation(() => { throw new Error('private logger'); });
