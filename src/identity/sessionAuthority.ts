@@ -575,8 +575,11 @@ function reenterOwner<T>(first: Invocation, work: (env: Env) => Promise<T>): Pro
     recheckOwnerInvocation(first.owner);
     return work(ownerEnvironment(first.owner, first.env));
   };
-  return first.continuation ? first.continuation.serialize(continued)
-    : runOwnerOperation(first.owner, first.env, continued, first.sessions, first.relay, first.consent, first.restrictConsent, first.eventRetention, first.recovery, first.carry);
+  // Entered as any new request of the owner enters, from outside the answered
+  // operation's lifetime: the serializer then starts a new operation, and nothing
+  // of the answered one (inactive, so it refuses every effect) is carried into it.
+  return invocation.exit(() => first.continuation ? first.continuation.serialize(continued)
+    : runOwnerOperation(first.owner, first.env, continued, first.sessions, first.relay, first.consent, first.restrictConsent, first.eventRetention, first.recovery, first.carry));
 }
 export function shopperRequestHeld(request: Request, principal: SessionCapability): boolean {
   const held = invocation.getStore(), admitted = held?.requests.get(request);
