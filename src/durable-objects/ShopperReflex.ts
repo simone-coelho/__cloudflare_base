@@ -3866,7 +3866,10 @@ export class ShopperReflex {
     const start = () => withKeptOdpIdentifier((tenant, subject) => this.keptOdpIdentifier(tenant, subject),
       () => runOwnerOperation(this, this.rawEnv, fn, this.sessionProjectionStore(), (...args) => this.relayOperation(...args), () => this.consentNow(), hints => this.setConsent(hints),
         (id, digest, occurredAt) => this.admitEventRetention(id, digest, occurredAt), (input, principal) => this.admitRecovery(input, principal),
-        customerId => this.carryCustomerId(customerId)));
+        customerId => this.carryCustomerId(customerId),
+        // G16: work this object continues past an answer re-enters through this serializer, its principals admitted
+        // again against the grant authority now, and is kept alive by the object's own waitUntil.
+        { serialize: work => this.serialize(work), admit: principal => this.assertOwned(principal, undefined, false, false), waitUntil: task => this.state.waitUntil(task) }));
     const run = this.chain.then(start, start);
     this.chain = run.then(
       () => undefined,

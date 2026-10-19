@@ -5,7 +5,7 @@
 // persisted here. Owned state failures are terminal, never consenting defaults.
 
 import type { Env } from '@/types/env';
-import { assertOwnerScope, currentOwnerConsent, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
+import { assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
 import { carriedSaltVersion, PublicationError, pinPublication, publicationScope, readOptionalPinnedPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
@@ -26,7 +26,7 @@ import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
 import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, layoutBlendOf, slotConversionsOf } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
-import { currentLiftWitness, fanDecisions, fanLayoutExposure, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type SlotLearnConfig } from '@/learn/fan';
+import { currentLiftWitness, fanDecisions, fanLayoutExposure, identityPage, liftKey, readRing, reportLearningIncomplete, servedCounts, type LearningReceipt, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
@@ -35,6 +35,7 @@ import type { ContentCatalog, ContentDecisionSet, ContentPiece, EnrollmentProven
 import { captureRetention, requireRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { enqueueDecisions } from '@/ledger/enqueue';
+import { loadTombstone } from '@/ledger/erasure';
 import { isCarriedCustomerId } from '@/ledger/records';
 import { createRenderOffer } from './renderOffer';
 import { readSigningConfig } from '@/auth/signingConfig.mjs';
@@ -660,7 +661,16 @@ export async function serveContentDecisions(
    * of the answer except a declared layout slot measured on any basis but
    * rendered-v1, which is served and never captured at serve time.
    */
-  ledgerRecords: ContentDecisionSet['records'] }> {
+  ledgerRecords: ContentDecisionSet['records'];
+  /**
+   * G16 (W06.05 under the W09 owner rule): the part of `afterResponse` the
+   * shopper's owner drains before it answers: every after-response effect but a
+   * learning fan-out that waits on its erasure read without holding the answer
+   * and then runs inside the owner (`continueAfterOwnerRead`). The same promise
+   * as `afterResponse` whenever no fan-out waits so (durable recovery, tracking
+   * withheld, nothing captured).
+   */
+  ownerDrain: Promise<void> }> {
   if (!validEntry(r.entry, true)) throw new SessionAccessError();
   const hints = intersectConsent(consentFromCookies(r.cookieHeader), refusalHints(r.consent));
   // The monitor's explicit refusal is a synthetic default probe, not authority
@@ -1029,10 +1039,23 @@ export async function serveContentDecisions(
     : set.records.every(record => record.measurementBasis === 'served-v1') ? set.records.filter(capturable) : [];
   const servedCapture = !r.offer && captureRecords.length > 0;
   const captureSet = { ...set, records: captureRecords };
+  // G16 (W06.05 under the W09 owner rule): outside durable recovery the erasure
+  // check runs in the background. The tombstone read starts here, under the
+  // shopper's owner and fenced at its start, on the owner's own binding; the
+  // owner does not drain it, so the answer is not held by it. The fan-out then
+  // runs inside the owner, never outside one: inline while this operation is
+  // still active, otherwise as a new operation of the same owner entered through
+  // its serializer, where `fanDecisions` reads the erasure state again before
+  // either destination. Durable recovery keeps its admission before the answer.
+  const fanOutAfterRead = consent.tracking && captureRecords.length > 0 && env.LEDGER_RECOVERY_ENABLED !== 'true';
+  let fanned: LearningReceipt | null = null;
   const captured = consent.tracking && captureRecords.length > 0
     ? env.LEDGER_RECOVERY_ENABLED === 'true'
       ? recoverDecisions(env, captureSet, slotLearnConfigOf(learn)).then(result => { if (result.source.state !== 'recovered') reportLearningIncomplete('decisions', result.learning ?? null); })
-      : fanDecisions(env, captureSet, slotLearnConfigOf(learn), undefined, pageScoped).then(result => reportLearningIncomplete('decisions', result))
+      : continueAfterOwnerRead(env, () => loadTombstone(ownerBindingIdentity(env.STORAGE), captureSet.tenant, captureSet.visitor_id),
+        async owned => { fanned = await fanDecisions(owned, captureSet, slotLearnConfigOf(learn), undefined, pageScoped); })
+        // A fan-out the owner refused before it started is reported as not attempted (`null`).
+        .then(() => reportLearningIncomplete('decisions', fanned), () => reportLearningIncomplete('decisions', fanned))
     : Promise.resolve();
   // W20 G2 (R83, R86(a)/(b)): a refused pin has no decision and no ledger row,
   // and a pinned slot that fell short writes only what it served, so neither
@@ -1085,6 +1108,7 @@ export async function serveContentDecisions(
       : enqueueDecisions(env, offLimitsLedger)).then(() => undefined, () => undefined)
     : Promise.resolve();
   const afterResponse = Promise.all([captured, counted, anchorCounted, offLimitsWritten]).then(() => undefined);
+  const ownerDrain = fanOutAfterRead ? Promise.all([counted, anchorCounted, offLimitsWritten]).then(() => undefined) : afterResponse;
 
   // P03 decision D3: every decision names its position within its slot — what its
   // record calls `position` — as `slotPosition`, beside the page-wide `order`, so
@@ -1107,6 +1131,7 @@ export async function serveContentDecisions(
     ...(layoutDiagnostics.length ? { layoutDiagnostics } : {}),
     decisions,
     afterResponse,
+    ownerDrain,
     write: consent.tracking && servedCapture,
     ledgerRecords: captureRecords,
     sources: {
