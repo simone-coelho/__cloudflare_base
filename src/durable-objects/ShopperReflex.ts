@@ -501,15 +501,28 @@ export class ShopperReflex {
       return this.serialize(async () => {
         // Rotation/link receipts validate their exact retired source themselves.
         const transition = /\/(?:identity\/(?:link|detach)|session\/reset)$/.test(new URL(routed.url).pathname);
+        let owned = routed;
         if (!transition) {
-          const preferences = /\/session\/(?:[^/]+\/)?preferences$/.test(new URL(routed.url).pathname)
-            ? await routed.clone().json() as Record<string, unknown> : null;
+          let preferences: Record<string, unknown> | null = null;
+          if (/\/session\/(?:[^/]+\/)?preferences$/.test(new URL(routed.url).pathname)) {
+            // Baseline 52 (G21, R-P86): a consent choice's body is read here once,
+            // where this hop always read it, parsed by the runtime's own JSON
+            // reader as before, and the owner gets a request rebuilt from the same
+            // bytes: no clone of the forwarded stream is left behind (a dropped
+            // clone, collected, cancels its original in Node's undici). No byte or
+            // time bound is added or removed here: the routes' own (realtime.ts
+            // preferences, parseShopperContext) apply as before.
+            const body = await routed.arrayBuffer();
+            preferences = await new Response(body).json() as Record<string, unknown>;
+            owned = new Request(selected, { method: request.method, headers, body });
+            Object.defineProperty(owned, 'cf', { value: (routed as Request & { cf?: unknown }).cf });
+          }
           const restrictive = !!preferences;
-          try { await this.assertOwned(principal!, routed, restrictive); }
+          try { await this.assertOwned(principal!, owned, restrictive); }
           catch {
             // W16 R4: a grant her own recognized return retired is still
             // refused, but the refusal says so for the exact retry of that return.
-            if (await this.retiredByReturn(principal!, routed)) {
+            if (await this.retiredByReturn(principal!, owned)) {
               const refused = json({ ok: false, error: 'Shopper session unavailable' }, 401);
               refused.headers.set(CONTINUITY_RETIRED_HEADER, 'recognized');
               return refused;
@@ -517,7 +530,7 @@ export class ShopperReflex {
             throw new SessionAccessError();
           }
         }
-        return dispatchOwnedRequest(this, this.env, routed, principal!, req => this.fetch(req));
+        return dispatchOwnedRequest(this, this.env, owned, principal!, req => this.fetch(req));
       }).catch(error => {
         if (error instanceof SessionAccessError) return json({ ok: false, error: 'Shopper session unavailable' }, 401);
         throw error;
