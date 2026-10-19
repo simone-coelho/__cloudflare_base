@@ -13,6 +13,13 @@ import type {
   SdkEventType, SocketLike, SocketStatus, ConsentInstruction, RenderAcknowledgment,
 } from './types';
 
+/**
+ * The deadline, in milliseconds, past which the SDK cuts a request it makes to
+ * the engine: the render acknowledgement first among them (amendment 5, P56),
+ * and every other request that shares the same bounded read.
+ */
+export const ACK_DEADLINE_MS = 5000;
+
 export const DEFAULT_PATHS: Paths = {
   identitySession: '/v1/{tenant}/identity/session',
   action: '/realtime/action',
@@ -942,7 +949,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
 
   async function boundedJSON(path: string, init: import('./types').RequestInitLike, maxBytes = 2 * 1024 * 1024): Promise<{ ok: boolean; status: number; json: unknown }> {
     const controller = new AbortController(); let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-    const timer = host.setTimeout(() => controller.abort(), 5000);
+    const timer = host.setTimeout(() => controller.abort(), ACK_DEADLINE_MS);
     let abort!: () => void;
     const stopped = new Promise<never>((_, reject) => { abort = () => { void reader?.cancel().catch(() => undefined); reject(new Error('Request deadline')); }; controller.signal.addEventListener('abort', abort, { once: true }); });
     const work = (async () => {
