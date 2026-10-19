@@ -245,7 +245,7 @@ LEDGER_RECOVERY_CONFIG = '{"version":1,"sourceQueue":"events-staging","deadLette
 AUTH_MODE = "enforced"
 # The customer's lower-environment origins, comma-separated (`*.example.com` allowed).
 # Empty means the worker answers only same-origin callers and the local dev server.
-CORS_ORIGINS = ""
+CORS_ORIGINS = "*.kate-spade.com"
 CONNECTOR_MODE = "mock"
 DECISION_SOURCE = "mock"
 ODP_API_HOST = "https://api.zaius.com"
