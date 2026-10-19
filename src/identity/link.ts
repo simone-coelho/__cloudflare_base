@@ -32,6 +32,7 @@ import { IdentityStore, type LinkSource } from '@/identity/store';
 import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import type { Assurance } from '@/identity/assertion';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
+import { validationRefusalOf } from '@/identity/sessionAuthority';
 import { consentOf, type Consent } from '@/content/consent';
 import { mergeEnrichment } from '@/identity/profileEnrichment';
 import { odpSecondIdentifier } from '@/connectors/config';
@@ -95,6 +96,14 @@ export async function linkVisitor(
       body: JSON.stringify({ shopperId, now, assurance: input.assurance, source: input.source, salted: isSalted(env) }),
     });
     const body = await response.json() as { ok?: unknown; result?: LinkResult };
+    // P58 (amendment 5 addendum §4, P58-D; R-P106): the person's object refused the merged
+    // profile by validation, and the browser's object carried that typed answer here
+    // (src/identity/sessionAuthority.ts `validationRefusal`). It is raised as the validation
+    // error it is, with the same issues, so the route answers its own `400 Validation error`
+    // with the same details on every runtime; any other answer that is not the link's
+    // receipt is refused as before.
+    const refused = validationRefusalOf(response.status, body);
+    if (refused) throw refused;
     if (!response.ok || body.ok !== true || !body.result || body.result.shopperId !== shopperId
       || body.result.visitorId !== input.visitorId || typeof body.result.sessionId !== 'string' || !body.result.sessionId
       || !body.result.grant || body.result.grant.subject !== shopperId || body.result.grant.sessionId !== body.result.sessionId
