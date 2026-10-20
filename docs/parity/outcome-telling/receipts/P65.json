@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P65",
+  "workOrderHash": "sha256:f37b7bafd4fa8d5f0746056ffc5c6a563f28b1dfd1e00f0752f488090eabad85",
+  "artifact": {
+    "revision": "817135056abf51adcce93ff7ed051060d1084c0c",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p65-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p65-build at 55134d35 (5a649770 the mechanism, design B (R-P124): the outcome's admission input (record, retention, experiment block, the learn read) is prepared before the behaviour capture; the behaviour capture's admission carries it in the same transaction (W06 ids, digests and replay unchanged); the outcome is admitted after the engine from the prepared input with no second learn read, withdrawn (awaited, never retained) when the engine answers no outcome; the alarm settles a carried copy after the behaviour operation's resume: dropped if the outcome's own admission exists, re-decided for every engine drop (duplicate_order on both hosts, unknown_product on the live doors, profile_missing on the buffered doors) and admitted otherwise under the stored principal and consent deadline; a failed preparation carries nothing, names no outcome and counts producerFailed once after the answer; a carried outcome is never counted; 1c562ef4 kit 02; cf39cfac integration f7ec68f5; e08d293c/55134d35 the P64-review residuals (dead branch removed; the typed answer for a pre-store refusal withdrawn because P64's M7 leg pins 200 without a member); 026a8385 the P64 legs adfd147b); P65 23/23 ×3 and P64 26/26 on both hosts; a reset between the two admissions now leaves one behaviour and one outcome record after the alarm with the 401 typed answer; builder's whole suite 3666/3666.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P65/implementer/REPORT.md",
+      "git commits on rem/p65-joined up to 81713505"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P65 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/reviewer-p65/logs/p65-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P65/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T13:18:17.741Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
