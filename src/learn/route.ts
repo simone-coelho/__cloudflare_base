@@ -11,11 +11,12 @@ import { readRevision } from '@/config/versionedStore';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
 import type { LearnConfig, SlotAttribution } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
-import type { RecoveryOptions, RecoveryReceipt } from '@/ledger/recovery';
+import type { RecoveryInput, RecoveryOptions, RecoveryReceipt } from '@/ledger/recovery';
+import { recordEvidenceLoss } from '@/ledger/delivery';
 import { DEFAULT_POLICY, type AttributionPolicy } from './policy';
 import { DEFAULT_STATS, type AttributionContract } from './stats';
 import { fanOutcome, reportLearningIncomplete, type SlotLearnConfig } from './fan';
-import { admitOwnedRecovery } from '@/identity/sessionAuthority';
+import { admitOwnedRecovery, afterOwnerAnswer, ownerOperationActive } from '@/identity/sessionAuthority';
 
 /**
  * P33 (decision D1, freeze item 11): slot → its own attribution policy, for the
@@ -122,16 +123,47 @@ export function slotConfigsOf(learn: LearnConfig): Record<string, SlotLearnConfi
  * them is reported when they end, as it is reported here when they run before the
  * answer. The admitted outcome, its policy and configurations are the same either
  * way; an admission that fails still fails as before.
+ *
+ * P64 (amendment 7): with durable recovery on, the outcome reaches the ledger only
+ * through its durable admission here (the action route hands it to no producer
+ * beside it), so a failure of its learning preparation (the learn document's read,
+ * the policy and configurations taken from it), before the outcome is handed to
+ * that admission, loses it while the action still answers as before. Such a
+ * failure is counted once in the tenant's `producerFailed` lost-evidence counter,
+ * which the monitor reads (src/ledger/delivery.ts `recordEvidenceLoss`), beside the
+ * `learning_incomplete` line. Nothing is counted here without durable recovery,
+ * where the producer (`enqueueOutcome`) hands the outcome on and counts its own
+ * failures, nor once the outcome is handed to its admission (`admitOwnedRecovery`):
+ * its admission failing fails the action itself (the owner's drain rethrows it), a
+ * refusal of the owner's authority or recovery configuration there is a refusal,
+ * not a lost row, and an effect after the admission is the alarm's to complete.
+ * R-P125: the count adds nothing before the answer. Inside the shopper's owner it
+ * runs once the owner has answered and outside it (`afterOwnerAnswer`, R-P115:
+ * kept alive by the owner's waitUntil, never retained work the owner drains before
+ * it answers, never queued in its serializer), with the operator cache alone; an
+ * owner that refuses it, or an operation that did not answer, counts nothing;
+ * outside an owner operation it is counted here, as P61's learning reads are.
+ *
+ * P64 (R-P125): `onAdmitted` is told, once, that the outcome's durable admission
+ * completed (`admitOwnedRecovery` resolved: its admission committed, or an earlier
+ * one of the same outcome replayed), so the action route names the outcome on its
+ * answer only then. It reports and decides nothing; its failure is ignored, and the
+ * function still resolves to nothing.
  */
-export async function outcomeToLearning(env: Env, scope: string, outcome: OutcomeRecord, options?: Pick<RecoveryOptions, 'answerAtAdmission'>): Promise<void> {
+export async function outcomeToLearning(env: Env, scope: string, outcome: OutcomeRecord,
+  options?: Pick<RecoveryOptions, 'answerAtAdmission'> & { onAdmitted?: () => void }): Promise<void> {
+  let preparing = false;
   try {
+    preparing = env.LEDGER_RECOVERY_ENABLED === 'true';
     const rev = await readRevision(env, LEARN_KIND, scope);
     const learn = rev?.value ?? DEFAULT_LEARN;
     if (env.LEDGER_RECOVERY_ENABLED === 'true') {
       const report = (receipt: RecoveryReceipt | undefined) => { if (receipt?.source.state !== 'recovered') reportLearningIncomplete('outcome', receipt?.learning ?? null); };
-      const result = await admitOwnedRecovery({ kind: 'outcome', tenant: scope, subject: outcome.visitor_id, brand: outcome.brand, outcome,
-        policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } },
-        options?.answerAtAdmission ? { answerAtAdmission: true, afterEffects: report } : undefined);
+      const input: RecoveryInput = { kind: 'outcome', tenant: scope, subject: outcome.visitor_id, brand: outcome.brand, outcome,
+        policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } };
+      preparing = false;
+      const result = await admitOwnedRecovery(input, options?.answerAtAdmission ? { answerAtAdmission: true, afterEffects: report } : undefined);
+      try { options?.onAdmitted?.(); } catch { /* a report only: the admission stands */ }
       // Answered at admission: no effect has run yet; they are reported when they end (`afterEffects`).
       if (options?.answerAtAdmission && result.source.state === 'pending' && result.learning === undefined) return;
       report(result);
@@ -142,5 +174,9 @@ export async function outcomeToLearning(env: Env, scope: string, outcome: Outcom
     const result = await fanOutcome(env, scope, outcome, brandPolicyOf(learn), outcome.brand, slotConfigsOf(learn),
       { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS });
     reportLearningIncomplete('outcome', result);
-  } catch { reportLearningIncomplete('outcome', null); }
+  } catch {
+    reportLearningIncomplete('outcome', null);
+    if (preparing && ownerOperationActive(env)) void afterOwnerAnswer(operator => recordEvidenceLoss(operator, scope, 'producerFailed', 1)).catch(() => undefined);
+    else if (preparing) await recordEvidenceLoss(env, scope, 'producerFailed', 1);
+  }
 }

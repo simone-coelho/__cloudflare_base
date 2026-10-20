@@ -254,8 +254,18 @@ realtimeRoutes.post('/action', async (c) => {
     // has answered, so the server's session is known.
     // Both hosts return the strict stored/hint intersection; cookie mirrors are
     // not independent authority for capture or outcome processing.
-    const emitOutcome = (serverSessionId: unknown, consent: Consent) => {
-      if (!consent.tracking) return;
+    // P64 (amendment 7, R-P125): it returns the outcome it emitted as the answer names
+    // it, records.ts's own `outcome_id` (built from the time the engine admitted the
+    // event at, the time the behaviour record's id carries), with whether that outcome
+    // was durably admitted: with durable recovery on, its own admission
+    // (`outcomeToLearning`'s `onAdmitted`); without it, the producer's hand-off to the
+    // queue or the canonical store. The answer names `outcome: { recordId }` beside
+    // `behavior` only for an admitted outcome (`told` below). The owner already holds
+    // the answer for this work (P59), so the route's waiting for it there adds no
+    // remote call and no wait. No outcome (refused tracking, no reward): nothing.
+    type EmittedOutcome = { recordId: string; admitted: Promise<boolean> };
+    const emitOutcome =(serverSessionId: unknown, consent: Consent): EmittedOutcome | undefined => {
+      if (!consent.tracking) return undefined;
       if (actionEvent.processing !== 'buffered') {
         const capture = captureDemoEvent(c.env, c.get('tenant'), actionEvent, sessionId);
         try { c.executionCtx.waitUntil(capture); } catch { void capture; }
@@ -275,6 +285,7 @@ realtimeRoutes.post('/action', async (c) => {
         // read — and then stored and exported unchanged. An ineligible shopper's
         // outcome says `ineligible`; a failure to resolve leaves the block off
         // and never delays or drops the record.
+        let admitted = false;
         const p = (async () => {
           // W21 E1.06 (NR1): the annotation is CONTAINED here, at the producer,
           // and not only inside the resolver. The resolver's own guard cannot
@@ -296,12 +307,17 @@ realtimeRoutes.post('/action', async (c) => {
           // after the behaviour capture's (P58), the alarm the backstop. The record,
           // its experiment block and retention are the same as before.
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
-            ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true })
-            : Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]);
+            ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } })
+            : Promise.all([enqueueOutcome(c.env, outcome).then(receipt => { admitted = receipt.code === 'accepted' || receipt.capture?.ok === true; }),
+              outcomeToLearning(c.env, c.get('tenant'), outcome)]);
         })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }
+        return { recordId: outcome.outcome_id, admitted: p.then(() => admitted, () => false) };
       }
+      return undefined;
     };
+    /** P64 (R-P125): the answer's `outcome` member, only for an outcome emitted and durably admitted. */
+    const told = async (emitted: EmittedOutcome | undefined) => (emitted && await emitted.admitted ? { outcome: { recordId: emitted.recordId } } : {});
 
     // P13 (R-P66 item 2): an accepted event's carried identifier is handed to the
     // shopper's own object under the tracking consent the host answered, kept
@@ -327,12 +343,13 @@ realtimeRoutes.post('/action', async (c) => {
       });
       const out = (await doRes.json()) as Record<string, unknown>;
       c.header('Server-Timing', `object;dur=${Math.round(performance.now() - tEngine)}`);
+      let emitted: EmittedOutcome | undefined;
       if (doRes.ok && out.success === true && !out.dropped) {
         if (!out.consent) throw new Error('Consent state unavailable');
-        emitOutcome(out.sessionId, storedConsent(out.consent));
+        emitted = emitOutcome(out.sessionId, storedConsent(out.consent));
       }
       if (doRes.ok && out.success === true && out.consent) await carry(() => storedConsent(out.consent));
-      return c.json({ ...out, behavior, ...(render ? { render } : {}) }, doRes.status as 200);
+      return c.json({ ...out, behavior, ...(await told(emitted)), ...(render ? { render } : {}) }, doRes.status as 200);
     }
 
     // Get cookie header for session management
@@ -346,12 +363,12 @@ realtimeRoutes.post('/action', async (c) => {
     const consent = result.consent;
     // Where the time went: the engine's own work on the session host, for whoever is measuring.
     c.header('Server-Timing', `engine;dur=${Math.round(performance.now() - tEngine)}`);
-    if (!result.dropped) emitOutcome(result.sessionId, consent);
+    const emitted = result.dropped ? undefined : emitOutcome(result.sessionId, consent);
     await carry(() => consent);
     if (actionEvent.processing === 'buffered') return c.json({ success: true, processing: 'buffered',
       interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
       ...(result.signals ? { signals: result.signals } : {}),
-      sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(render ? { render } : {}) });
+      sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(await told(emitted)), ...(render ? { render } : {}) });
     // W35 A1: the drop is answered as the shopper's own object answers it
     // (ShopperReflex.ingest): named, with the signals that name the product, no
     // outcome, no provider forward and no cookie refresh. P40 (R-P48): a second
@@ -420,6 +437,7 @@ realtimeRoutes.post('/action', async (c) => {
         cookiesUpdated: result.cookieHeaders.length > 0,
         odp: odpReceipt,
         behavior,
+        ...(await told(emitted)),
         ...(render ? { render } : {}),
         consent,
       });
@@ -433,6 +451,7 @@ realtimeRoutes.post('/action', async (c) => {
         cookiesUpdated: result.cookieHeaders.length > 0,
         odp: odpReceipt,
         behavior,
+        ...(await told(emitted)),
         consent,
       });
     }
