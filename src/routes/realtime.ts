@@ -288,8 +288,15 @@ realtimeRoutes.post('/action', async (c) => {
           try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent)); }
           catch { experiment = null; }
           if (experiment) outcome.experiment = experiment;
+          // P59 (amendment 5): the outcome recovery answers at its durable admission
+          // (P56's mechanism, src/learn/route.ts `outcomeToLearning`): the owner's
+          // drain of this work holds the click's answer for the outcome's admission
+          // and its armed alarm only; its attribution, queue send, ledger write and
+          // credits continue right after the answer in the shopper's own serializer,
+          // after the behaviour capture's (P58), the alarm the backstop. The record,
+          // its experiment block and retention are the same as before.
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
-            ? outcomeToLearning(c.env, c.get('tenant'), outcome)
+            ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true })
             : Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]);
         })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }

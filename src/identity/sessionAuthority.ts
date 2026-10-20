@@ -425,7 +425,8 @@ export async function readOwnedAdmission(tenant: string, subject: string, decisi
   recheckOwnerInvocation(held.owner);
   return stored;
 }
-/** No token crosses this boundary or enters durable recovery storage. P56: an answer at admission only where the owner continues past its answer. */
+/** No token crosses this boundary or enters durable recovery storage. P56: an answer at admission only where the owner continues past its answer
+ * (P59: with the caller's report of how those continued effects ended, `RecoveryOptions.afterEffects`). */
 export async function admitOwnedRecovery(input: RecoveryInput, options?: RecoveryOptions): Promise<RecoveryReceipt> {
   const held = invocation.getStore();
   if (!held?.recovery) throw new SessionAccessError();
@@ -433,7 +434,8 @@ export async function admitOwnedRecovery(input: RecoveryInput, options?: Recover
   recheckOwnerInvocation(held.owner);
   const principals = [...held.principals.values()].filter(p => p.tenant === input.tenant && p.subject === input.subject);
   if (principals.length !== 1) throw new SessionAccessError();
-  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!), options?.answerAtAdmission && held.continuation ? { answerAtAdmission: true } : undefined));
+  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!), options?.answerAtAdmission && held.continuation
+    ? { answerAtAdmission: true, ...(options.afterEffects ? { afterEffects: options.afterEffects } : {}) } : undefined));
 }
 export function pinRecoveryDeadline(deadline: number): void {
   if (!Number.isSafeInteger(deadline) || deadline <= Date.now()) throw new SessionAccessError();
