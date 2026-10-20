@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "DELIVERY",
   "ticketId": "P60",
-  "workOrderHash": "sha256:288d753d75d5d001bb81aabc8fd4f6acd79b5ea1d9064147ee15a0673903f556",
+  "workOrderHash": "sha256:48652659b74fdf534f82521081d090723f7ec7e1f6180e32b9f9d30d05c8c4ed",
   "artifact": {
     "revision": "d201c1499d5cf124fc9d9d2749bb3d638d47c772",
     "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p60-build merged into rem/integration, local and not pushed"
@@ -38,7 +38,7 @@
       "/home/simonecoelho/rem/_evidence/parity-step3/P60/reviewer/REPORT.md"
     ]
   },
-  "completedAt": "2026-10-20T01:14:52.642Z",
+  "completedAt": "2026-10-20T01:15:40.689Z",
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",

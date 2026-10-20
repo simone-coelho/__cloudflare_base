@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "DELIVERY",
   "ticketId": "P59",
-  "workOrderHash": "sha256:8853c0d32b00101fa80fa5354add06a984eb8080d486c909decd75a1ae667453",
+  "workOrderHash": "sha256:9863d82bcce0400feda2b2eb8e65b7928528d965ee4570c276c35eca7032e36f",
   "artifact": {
     "revision": "d201c1499d5cf124fc9d9d2749bb3d638d47c772",
     "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p59-build merged into rem/integration, local and not pushed"
@@ -38,7 +38,7 @@
       "/home/simonecoelho/rem/_evidence/parity-step3/P59/reviewer/REPORT.md"
     ]
   },
-  "completedAt": "2026-10-20T01:14:52.613Z",
+  "completedAt": "2026-10-20T01:15:40.655Z",
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
