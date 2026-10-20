@@ -303,13 +303,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S11 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "0b1aa93cf28cfa086bc098fa24507e7077d69d39",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S11 (P61, P62) records the reviewed revision and the RED/HONEST evidence here"
+          "_evidence/parity-step3/S14/specifier/REPORT.md (rem-specifier; S14 at 41a8dba4, the R-P138 fix round at 0b1aa93c: NR2 credit-alone and learn-document-alone legs, NR3 marker legs from an alarm publication)",
+          "_evidence/parity-step3/S14/reviewer-spec/REPORT.md (rem-reviewer: FAIL on NR2/NR3 at 41a8dba4, PASS at the reviewed revision 0b1aa93c; NR1 RED for the right reason (E5) on both hosts \u00d73)"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "_evidence/parity-step3/S14/reviewer/rejudge-0b1aa93c/logs/ (sketches A2 26/26; B2 RED :255; G RED :221/:234; E RED :234; C RED :303; D 6/26; door mutants M1 RED :333, M2 RED :345)"
         ]
       },
       "doneWhen": [
