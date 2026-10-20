@@ -4026,7 +4026,7 @@ export class ShopperReflex {
     let held: ReflexState | undefined;
     if (onObject) {
       await this.load();
-      if (carried.buffered && (this.affinity === undefined || this.pipeline === undefined)) return 'profile_missing';
+      if (carried.buffered && (!this.affinity || !this.pipeline)) return 'profile_missing';
       held = this.affinity?.reflex;
     } else {
       const session = await new SessionManager(this.env, { tenant, principal }).readRaw(principal.sessionId, true);
