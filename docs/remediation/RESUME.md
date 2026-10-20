@@ -2,6 +2,14 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-20, 16:30: lane L9 filed 0/18 on the pair's third release (the 200 ms witness budget and a new 401 on immediate acknowledgements); the pair's fourth release runs 600 ms budgets; L10 re-walking
+
+- **Score (derived, amendment 7 round-3 official gate at 4f356541, GATE_OK):** `Tests 3709 passed (3709)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`. Amendments 5, 6, 7 LOCALLY COMPLETE (5/5, 3/3, 3/3); amendment 8 0/2 (P67 building, P68's specification in a fix round). **LIVE1 31 of 45.**
+- **Lane L9 (third release 03acf1ba):** all 18 lift rows FAIL: the witness misses the 200 ms default on cold hosted reads (`late`, 202–467 ms); a new product regression refuses the first render acknowledgement sent immediately after the snapshot answer (`401 Shopper session unavailable`, ~45 % of shoppers, 0 % after 1.5 s) and blocks the L2 rows; fresh brands do not reset tenant-keyed populations (P10 F2, P36 CH2, P07 C4 need fresh tenants).
+- **Fourth release** at f7cbf331 (amendments 5–7) with the bounded overrides `LIFT_WITNESS_BUDGET_MS=600` / `RING_READ_BUDGET_MS=600`: session b7a163b3, do 9039bf7f; **lane L10** re-walking the lift-only rows and the §2 probe. **ACK-401 analysis** running (bisect across the releases; fix shape) → amendment 9 with the edge-sized budget.
+- **Stamps** at deploy-14 (staging cb3b0d21, production 508eadbc; amendments 5–7). The ACK-401 regression is on the stamps too (deploy-13's first staging smoke met it): an operator would see immediate acknowledgements after a snapshot refused until the fix lands; the SDK does not retry an ordinary action on 401.
+- **Owner's items (told, not asked):** merge PR #1; hand the account team the staging host, tenant and site-key path; Tapestry's H1–H5 and W3; the lift probe's console step; worktree cleanup. Advisories: the ACK-401 regression (fix in amendment 9); a purchase reset at the wrong moment credited twice until P67 lands; a refused account-change merge blocks that sign-in statement.
+
 ## 2026-10-20, 15:25: amendments 5, 6 and 7 LOCALLY COMPLETE and deployed (deploy-14); amendment 8 building; the lift re-walk still on the pair's third release
 
 - **Score (derived, amendment 7 round-3 official gate at 4f356541, GATE_OK):** `Tests 3709 passed (3709)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 7 `tapestry-parity-outcome-telling`: Local done 3/3** (P64 at bb605dff, P65 at 81713505, P66 at 4f356541; merged at da4d55b6, receipt f7cbf331). **Amendment 6: 3/3. Amendment 5: 5/5.** **Amendment 8 `tapestry-parity-order-memory`: 0/2** (P67 ACTIVE, specification gate PASS at 800ff090, building; P68 specification in a fix round). LIVE1 31 of 45.
