@@ -20,26 +20,37 @@
 // the types are read from the tree this file lives in, never the working directory).
 //
 // THE READINGS THIS FILE RULES:
-//   · KT1, "lands on the construct it names": each citation of the three passages is paired, in
-//     the order the passage gives them, with the construct the passage's own words name for it
-//     (an identifier, a class, a member, a message or a constant, read from the sentence that
-//     carries the citation; the table `RENDER_ACK`, `ALARM_PUBLICATION_02` and
-//     `ALARM_PUBLICATION_03` below, each entry naming the words it is derived from); a citation
-//     `path:line` or `path:from-to` (or `:line` continuing the last path named) lands when the
-//     cited lines of that file at the artifact contain every pattern of its construct. The
-//     passages are found by their opening words, not by their line numbers, so a corrected
-//     passage is read where it then stands.
-//     MEASURED TODAY at 8d07696f (_evidence/parity-step3/S16/specifier/logs/): of the twelve
-//     citations the P63 build reported drifted (_evidence/parity-step3/P63/implementer/REPORT.md
-//     "More drifted citations", at f1073dad), eleven were corrected by the P64 and P65 builds'
-//     kit edits; ONE still drifts: `src/durable-objects/ShopperReflex.ts:537` (the object's typed
-//     409 for a conflicting acknowledgement, now at :553). Every citation of kit 02 :1171 and kit
-//     03 :1474-1488 lands. RED today for that one, and for the :1171 sentence below.
+//   · KT1, "lands on the construct it names": each citation of the four passages (kit 02's
+//     outcome paragraph, :99, and render-acknowledgement paragraph, :933, the amendment's own and
+//     R-P162's extension; kit 02 :1171; kit 03 :1474-1488) is paired, in the order the passage gives
+//     them, with the construct the passage's own words name for it. The constructs are HAND-WRITTEN
+//     per citation (the tables `OUTCOME_ANSWER`, `RENDER_ACK`, `ALARM_PUBLICATION_02`,
+//     `ALARM_PUBLICATION_03`, each entry naming the words it is read from): an identifier, a class, a
+//     member, a message or a constant the sentence carrying the citation names, as patterns; they are
+//     not derived from the kit at run time. A citation `path:line` or `path:from-to` (or `:line`
+//     continuing the last path named) lands when its range spans AT MOST 20 LINES (the widest honest
+//     landing in these passages is 19) and the cited lines of that file at the artifact contain every
+//     pattern of its construct. Hand-written patterns are honest enough with that cap: a pattern can
+//     occur on several lines of a file (`answerAtAdmission: true`, `withdrawCarried(`), but a citation
+//     can only land on a span of at most 20 lines that holds it, so a range widened to swallow the file
+//     (the specification review's façade, `ShopperReflex.ts:1-2400`) is refused, and each pattern is
+//     the construct's own name or text, not a word any line carries. The passages are found by their
+//     opening words, not by their line numbers, so a corrected passage is read where it then stands.
+//     MEASURED at 800ff090 (code 8d07696f; _evidence/parity-step3/S16/specifier/logs/): ONE citation
+//     drifts, `src/durable-objects/ShopperReflex.ts:537` in :933 (the object's typed 409 for a
+//     conflicting acknowledgement, at :553 there); of the twelve the P63 build reported drifted, nine
+//     were corrected by P65's kit edit and the rest never drifted on a construct reading (the
+//     specification review, finding 2). At the integration head with P66 (f7cbf331) two drift: :933's
+//     `ShopperReflex.ts:554` (the 409 is at :570) and :99's second `ShopperReflex.ts:1935` (the
+//     alarm's `settleCarriedOutcome` is at :1952; the P66 delivery review, finding 1). Every citation
+//     of kit 02 :1171 and kit 03 :1474-1488 lands at both.
 //   · KT1, "kit 02 :1171 says what a skipped alarm still writes": the passage says a skipped
 //     alarm "allocates, archives and writes nothing", where it still writes the placement's
 //     `learn` state when learning-effect markers expire (the P63 delivery review, finding 4); the
-//     passage states that the skipped alarm still writes its `learn` state (a sentence naming
-//     `learn` and that it still writes it). RED today.
+//     passage no longer says, unqualified, that it "writes nothing" (R-P162: a sentence that
+//     contradicts itself is refused), and one sentence states that the skipped alarm still writes
+//     its `learn` state when learning-effect markers expire (naming `learn`, "still writes" or
+//     "writes only", and the markers' expiry). RED today.
 //   · KT2, "declared ... with the bounded-override semantics P62 gave them (a type-level unit)":
 //     `src/types/env.ts`'s `Env` declares `LIFT_WITNESS_BUDGET_MS` and `RING_READ_BUDGET_MS`,
 //     each an OPTIONAL member of type exactly `string` (a deployment variable), checked by the
@@ -49,13 +60,13 @@
 //     (src/learn/fan.ts `learningReadBudgets`): a whole number of milliseconds above 0 and below
 //     the ceiling (5 000 ms, `LEARNING_READ_BUDGET_CEILING_MS`), any other value refused with the
 //     default kept. RED today: neither member is declared.
-//   · KT3 LOCKS, green at specification: the kit's line counts are kept (kit 02 2358 lines, kit 03
-//     1980), so every `kit 0x :line` reference elsewhere keeps landing; P62's override semantics
-//     are unchanged (`learningReadBudgets` admits a whole number of ms in (0, 5000) given as text
-//     or number, refuses anything else naming it, and keeps the default); the kit-reading tests
-//     (every test file that reads `docs/kit/`: at 8d07696f 106 files under src/, among them the units of
-//     P33, P42, P58, P61-P66 and src/content/*.test.ts) and every unit of amendments 5-7 unchanged:
-//     their own commands, in the gate.
+//   · KT3 LOCKS, green at specification: P62's override semantics are unchanged
+//     (`learningReadBudgets` admits a whole number of ms in (0, 5000) given as text or number,
+//     refuses anything else naming it, and keeps the default); the kit-reading tests (every
+//     `*.test.ts` file naming `docs/kit/`: at 8d07696f 104, among them the units of P33, P42, P58,
+//     P61-P66 and src/content/*.test.ts) and every unit of amendments 5-7 unchanged: their own
+//     commands, in the gate. The kit's line counts are STATED, not locked (program.json at 946c999a,
+//     R-P162): kit 02 2358 lines and kit 03 1980 at 8d07696f; kit 02 2371 at f7cbf331 (P66).
 //
 // SKETCH (a scratch copy of 8d07696f, never committed; _evidence/parity-step3/S16/specifier/sketches/sketch-p68.py):
 // the drifted citation corrected (:537 → :553), kit 02 :1171 saying the skipped alarm "still writes only its `learn`
@@ -78,8 +89,34 @@ import { learningReadBudgets } from '@/learn/fan';
 import { readTree } from '../_parity';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+/** R-P162: the widest span a citation may land on (the widest honest landing in these passages is 19 lines). */
+const MAX_SPAN = 20;
 type Construct = { says: string; patterns: RegExp[] };
 
+/** Kit 02's outcome paragraph (:99 today: the action answer's `outcome` member, P64 and P65), its citations in order. */
+const OUTCOME_ANSWER: Construct[] = [
+  { says: 'built from the time the engine admitted the event at (a client time ahead is named at the engine\'s present)', patterns: [/Math\.min\(validatedEvent\.timestamp/] },
+  { says: 'the answer names the outcome\'s `outcome_id`', patterns: [/recordId: outcome\.outcome_id/] },
+  { says: 'the answer names `outcome: { recordId }`', patterns: [/outcome: \{ recordId/] },
+  { says: '`{tenant}:{time in base 36}:{visitor}:{event}:n1:{eventId}`', patterns: [/outcome_id: `\$\{tenant\}:\$\{ts36\(ts\)\}/, /:n1:/] },
+  { says: 'only once the outcome is durably admitted (its own admission)', patterns: [/onAdmitted/] },
+  { says: 'with durable recovery on, its own admission, completed before the answer', patterns: [/onAdmitted/, /answerAtAdmission: true/] },
+  { says: 'without it, the producer\'s hand-off to the queue', patterns: [/receipt\.code === 'accepted'/] },
+  { says: 'counted once in producerFailed, a count made after the owner has answered', patterns: [/afterOwnerAnswer/, /producerFailed/] },
+  { says: 'an outcome whose learning preparation fails is not recorded and is counted', patterns: [/outcomePreparationFailed/] },
+  { says: 'the outcome\'s admission is prepared before the behaviour capture is admitted', patterns: [/const prepared = /] },
+  { says: 'the behaviour capture\'s admission carries it in the same transaction', patterns: [/captureBehaviorCarrying\(/] },
+  { says: 'the carried outcome', patterns: [/interface CarriedOutcome/] },
+  { says: 'leaving the behaviour operation\'s id, digests and replay as they were (the record names what it carries)', patterns: [/carries:/] },
+  { says: 'the alarm writes the behaviour record and then the outcome record', patterns: [/settleCarriedOutcome\(/] },
+  { says: 'unless it decides again that the engine drops the event', patterns: [/carriedEventDropped\(/] },
+  { says: 'the alarm\'s settlement of the carried outcome', patterns: [/function settleCarriedOutcome/] },
+  { says: 'the carried outcome is withdrawn before the answer (dropped)', patterns: [/withdrawCarried\(/] },
+  { says: 'the carried outcome is withdrawn before the answer (tracking refused)', patterns: [/withdrawCarried\(/] },
+  { says: 'the carried outcome is withdrawn before the answer (a failed action)', patterns: [/withdrawCarried\(/] },
+  { says: 'a refusal of the outcome\'s own admission is never counted lost (reported only)', patterns: [/reportLearningIncomplete\('outcome', null\)/] },
+  { says: 'and leaves the carried outcome for the alarm to write', patterns: [/settleCarriedOutcome\(/] },
+];
 /**
  * Kit 02's render-acknowledgement paragraph (:933 today), its citations in order, each with the construct the sentence
  * carrying it names (`says`: the passage's own words), as the patterns the cited lines must contain.
@@ -148,10 +185,25 @@ function drifted(citations: ReturnType<typeof passage>['citations'], constructs:
   return citations.map((citation, index) => {
     const construct = constructs[index];
     if (!construct) return `${citation.cited}: no construct named for it`;
+    const span = citation.to - citation.from + 1;
+    if (span < 1 || span > MAX_SPAN) return `${citation.cited} spans ${span} lines (a citation lands on at most ${MAX_SPAN})`;
     const cited = readFileSync(`${ROOT}${citation.path}`, 'utf8').split('\n').slice(citation.from - 1, citation.to).join('\n');
     const missing = construct.patterns.filter(pattern => !pattern.test(cited));
     return missing.length ? `${citation.cited} does not land on "${construct.says}" (missing ${missing.map(String).join(', ')})` : '';
   }).filter(Boolean);
+}
+
+/**
+ * What kit 02's alarm-publication passage says a skipped alarm writes: 'states what a skipped alarm still writes' when no
+ * sentence says, unqualified, that it "writes nothing" and one sentence names its `learn` state, that it still (or only)
+ * writes it, and the learning-effect markers' expiry; otherwise what it says instead.
+ */
+function skippedAlarmWording(text: string): string {
+  const sentences = text.replace(/`/g, '').split(/(?<=[.;])\s+/);
+  const nothing = sentences.find(sentence => /writes nothing(?! (?:but|except|other than|else))/i.test(sentence));
+  if (nothing) return `still says the skipped alarm writes nothing: "${nothing.slice(-160)}"`;
+  const says = sentences.some(sentence => /\blearn\b/.test(sentence) && /still writes?|writes only/i.test(sentence) && /marker/i.test(sentence) && /expir/i.test(sentence));
+  return says ? 'states what a skipped alarm still writes' : 'states no write of a skipped alarm';
 }
 
 // ===========================================================================
@@ -159,10 +211,12 @@ function drifted(citations: ReturnType<typeof passage>['citations'], constructs:
 // ===========================================================================
 
 describe('unit:P68.KT1', () => {
-  it('logic: every citation of kit 02\'s render-acknowledgement paragraph lands on the construct its sentence names', () => {
+  it('logic: every citation of kit 02\'s outcome paragraph (:99) and render-acknowledgement paragraph (:933) lands, on a span of at most 20 lines, on the construct its sentence names', () => {
+    const outcome = passage('docs/kit/02-api-reference.md', 'A tracked action whose outcome is recorded');
     const found = passage('docs/kit/02-api-reference.md', 'With explicit `rendered-v1` slot measurement');
-    expect(found.citations.length, `PRECONDITION — the paragraph (kit 02 :${found.line}) carries the ${RENDER_ACK.length} citations the table pairs`).toBe(RENDER_ACK.length);
-    expect.soft(drifted(found.citations, RENDER_ACK), `P68.KT1 — kit 02 :${found.line}: every citation lands on its construct`).toEqual([]);
+    expect([outcome.citations.length, found.citations.length], `PRECONDITION — the paragraphs (kit 02 :${outcome.line}, :${found.line}) carry the citations the tables pair`)
+      .toEqual([OUTCOME_ANSWER.length, RENDER_ACK.length]);
+    expect.soft([...drifted(outcome.citations, OUTCOME_ANSWER), ...drifted(found.citations, RENDER_ACK)], `P68.KT1 — kit 02 :${outcome.line} and :${found.line}: every citation lands on its construct`).toEqual([]);
   });
 
   it('logic: every citation of kit 02\'s alarm-publication sentences and of kit 03\'s alarm-publication passage lands on the construct it names', () => {
@@ -175,14 +229,16 @@ describe('unit:P68.KT1', () => {
 
   it('logic: kit 02\'s alarm-publication sentences say what a skipped alarm still writes: its `learn` state (the expired learning-effect markers\' commit)', () => {
     const { text, line } = passage('docs/kit/02-api-reference.md', 'The upgraded statistics publisher freezes estimates/time');
-    const sentences = text.replace(/`/g, '').split(/(?<=[.;])\s+/);
-    const says = sentences.some(sentence => /\blearn\b/.test(sentence) && /still writes?|writes only/i.test(sentence));
-    expect(says ? 'states what a skipped alarm still writes' : `kit 02 :${line} states no write of a skipped alarm (it says: "${(sentences.find(s => /writes nothing/.test(s)) ?? '').slice(-160)}")`,
-      'P68.KT1 — kit 02 :1171 says a skipped alarm still writes its learn state').toBe('states what a skipped alarm still writes');
+    expect(skippedAlarmWording(text), `P68.KT1 — kit 02 :${line} says a skipped alarm still writes its learn state, and no longer that it writes nothing`).toBe('states what a skipped alarm still writes');
   });
 
   it('CONTROL: the reading finds a drifted citation, pairs continuations with the last path, and accepts a landing one', () => {
     const cited = (path: string, from: number, to = from) => ({ path, from, to, cited: `${path}:${from}` });
+    expect(drifted([cited('src/sdk/core.ts', 1, 2400)], [{ says: 'the deadline', patterns: [/ACK_DEADLINE_MS = 5000/] }]), 'CONTROL (R-P162) — a range over 20 lines is refused even when it holds the construct')
+      .toEqual(['src/sdk/core.ts:1 spans 2400 lines (a citation lands on at most 20)']);
+    expect([skippedAlarmWording('The alarm writes nothing at all; it still writes nothing, not even its learn state when markers expire.'),
+      skippedAlarmWording('The alarm publishes nothing and still writes only its learn state when learning-effect markers expire.')],
+    'CONTROL (R-P162) — a sentence that still says "writes nothing" is refused; the corrected one is accepted').toEqual([expect.stringMatching(/^still says/), 'states what a skipped alarm still writes']);
     expect(drifted([cited('src/sdk/core.ts', 1)], [{ says: 'the deadline', patterns: [/ACK_DEADLINE_MS = 5000/] }]), 'CONTROL — a citation off its construct is named').toHaveLength(1);
     const line = readFileSync(`${ROOT}src/sdk/core.ts`, 'utf8').split('\n').findIndex(text => /ACK_DEADLINE_MS = 5000/.test(text)) + 1;
     expect(drifted([cited('src/sdk/core.ts', line)], [{ says: 'the deadline', patterns: [/ACK_DEADLINE_MS = 5000/] }]), 'CONTROL — a citation on its construct lands').toEqual([]);
@@ -241,15 +297,10 @@ describe('unit:P68.KT2', () => {
 });
 
 // ===========================================================================
-// unit:P68.KT3 — locks: the kit's line counts, P62's override semantics
+// unit:P68.KT3 — locks: P62's override semantics (the kit's line counts are stated in the header, not locked)
 // ===========================================================================
 
 describe('unit:P68.KT3', () => {
-  it('logic: LOCK — the kit\'s line counts are kept (kit 02 2358 lines, kit 03 1980), so every `kit :line` reference elsewhere keeps landing', () => {
-    expect([readTree('docs/kit/02-api-reference.md').split('\n').length - 1, readTree('docs/kit/03-payload-schemas.md').split('\n').length - 1],
-      'P68.KT3 — the line counts of kit 02 and kit 03').toEqual([2358, 1980]);
-  });
-
   it('logic: LOCK — P62\'s override semantics are unchanged: a whole number of milliseconds above 0 and below 5 000, as text or number, is admitted; anything else is refused, named and the default kept; unset names nothing', () => {
     expect.soft(learningReadBudgets({}), 'P68.KT3 — unset: the defaults, nothing named').toEqual({ lift: 200, ring: 200 });
     expect.soft(learningReadBudgets({ LIFT_WITNESS_BUDGET_MS: '150', RING_READ_BUDGET_MS: 4999 }), 'P68.KT3 — admitted values').toEqual({ lift: 150, ring: 4999 });
