@@ -157,6 +157,25 @@ export function anchoredAfter(st: StatsState, now: number): boolean {
   }
   return false;
 }
+/**
+ * P62 (amendment 6, R-P110): the latest instant any counter of the state is
+ * anchored at, read over exactly what `anchoredAfter` reads, so that
+ * `anchoredAfter(st, now)` is `latestAnchor(st) > now` at every `now`. The
+ * statistics object keeps it with the verdict its witness door answers from,
+ * computed once when the state is committed and compared with the clock at
+ * each call.
+ */
+export function latestAnchor(st: StatsState): number {
+  let latest = Number.NEGATIVE_INFINITY;
+  if (st.updatedAt > latest) latest = st.updatedAt;
+  const maps: Array<Record<string, Counter>> = [st.slot, ...Object.values(st.items)];
+  if (st.bounded) maps.push({ '*': st.bounded.omitted });
+  for (const map of maps) for (const c of Object.values(map)) {
+    if (c.n.t > latest) latest = c.n.t;
+    for (const entry of Object.values(c.s)) if (entry && entry.t > latest) latest = entry.t;
+  }
+  return latest;
+}
 const counter = (): Counter => ({ n: { s: 0, t: 0 }, s: {} });
 
 export const STAT_ITEM_BUDGET = 256;

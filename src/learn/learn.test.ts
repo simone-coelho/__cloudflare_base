@@ -1761,14 +1761,14 @@ describe('the objects', () => {
   });
 
   it('W06.06 leaves the existing fatigue timeout effective while its DO barrier read is held', async () => {
-    vi.useFakeTimers();
+    const fan = await import('./fan') as unknown as Record<string, unknown>, RING_TIMER_MARGIN_MS = 1, ringBudget = typeof fan.RING_READ_BUDGET_MS === 'number' ? fan.RING_READ_BUDGET_MS : 60; vi.useFakeTimers();
     try {
       const at = Date.now(), f = storedRing(saved([record('new', 'hero', 'A', at)]));
       let release!: (value: null) => void;
       f.get.mockImplementation(() => new Promise(resolve => { release = resolve; }));
       const env = { DECISION_RING: { idFromName: (name: string) => name, get: () => ({ fetch: () => f.request('/recent') }) } } as unknown as Env;
       const read = readRing(env, 'coach', 'v1');
-      await vi.advanceTimersByTimeAsync(60);
+      await vi.advanceTimersByTimeAsync(ringBudget + RING_TIMER_MARGIN_MS); // R10 (amendment 6 / P62, R-P112(3)): past the ring budget in force, RING_READ_BUDGET_MS (today's 60 ms default until P62 exports it), by one fake-clock tick
       expect(await read).toBeNull(); expect(f.get).toHaveBeenCalledTimes(1); expect(f.put).not.toHaveBeenCalled();
       release(null); await vi.advanceTimersByTimeAsync(0);
     } finally { vi.useRealTimers(); }
