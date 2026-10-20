@@ -53,7 +53,7 @@
 //     1980), so every `kit 0x :line` reference elsewhere keeps landing; P62's override semantics
 //     are unchanged (`learningReadBudgets` admits a whole number of ms in (0, 5000) given as text
 //     or number, refuses anything else naming it, and keeps the default); the kit-reading tests
-//     (every test file that reads `docs/kit/`: at this head 101 files, among them the units of
+//     (every test file that reads `docs/kit/`: at 8d07696f 106 files under src/, among them the units of
 //     P33, P42, P58, P61-P66 and src/content/*.test.ts) and every unit of amendments 5-7 unchanged:
 //     their own commands, in the gate.
 //
