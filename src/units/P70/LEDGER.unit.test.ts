@@ -108,7 +108,8 @@
 // R10 (expectations a build of P70 changes), applied in this batch under the lead's ruling R-P195 (the object's single
 // alarm is shared; its handler does everything that is due when it fires; a publication is due PUBLISH_DELAY_MS after the
 // write, or the republication, it publishes, never earlier): src/units/_parity9.ts `firePublicationAlarm` (beside
-// `fireAlarm`, unchanged) and `republish` firing it; P63 NR1-NR3, P62 LW3 (and P61 LO1 through `republish`), P42 PW2's
+// `fireAlarm`, unchanged) and `republish` firing it; P63 NR1-NR3, P62 LW2's step (:328-330; LW3 and P61 LO1 change
+// only through `republish`), P42 PW2's
 // alarm leg fire the publication alarm; src/learn/learn.test.ts (W27.01, W10.01, the counts test),
 // src/learn/priorsAbsent.test.ts (E2) and src/units/W27/LEDGER.unit.test.ts (W27.R4) run their alarms at the
 // publication's due time or expect the earlier of the previous due time and the heartbeat (read loosely). MEASURED on
@@ -116,7 +117,7 @@
 // read or fire an alarm or the lift world: today's product fails exactly what it failed without them (scratch-environment
 // tests only); under a sketch of the heartbeat two more fail, outside this round's files:
 //   · src/units/W27/B1.unit.test.ts W27.M1.01 (:646, `rearmed >= startedAt + 30_000`): the guarded failure re-arm keeps
-//     the earlier heartbeat (R-P195; W27 R4's own rule), so the lower bound is an R10 for the lead's grant;
+//     the earlier heartbeat (R-P195; W27 R4's own rule); its lower bound was updated under R-P196 (08fb6959);
 //   · src/units/P68 KT1's alarm-publication citations (kit 02 :1171, kit 03 :1474-1488 cite LearnStats.ts lines): any
 //     edit of that file moves them, and the build re-points them (kit 02/03 are in P70's allowed paths).
 //

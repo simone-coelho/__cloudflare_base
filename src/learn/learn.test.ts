@@ -43,8 +43,16 @@ const warmHeartbeatMs = (): number => {
   const value = (learnStatsModule as unknown as Record<string, unknown>).WARM_HEARTBEAT_MS;
   return typeof value === 'number' ? value : Number.POSITIVE_INFINITY;
 };
-/** The alarm a write or a failed publication at `armedAt` leaves for a time `due`: the earlier of it and the heartbeat. */
-const sharedAlarm = (armedAt: number, due: number): number => Math.min(due, armedAt + warmHeartbeatMs());
+/**
+ * The alarm a write or a failed publication at `armedAt` leaves for a time `due`: exactly `due` without a heartbeat; with
+ * P70's heartbeat (R-P196, read loosely as P70.WB1 reads it: due within the heartbeat), any time after `armedAt` and no
+ * later than the earlier of `due` and `armedAt + WARM_HEARTBEAT_MS`. Named when it holds, else described.
+ */
+const sharedAlarm = (alarm: number | null, armedAt: number, due: number): string => {
+  const heartbeat = warmHeartbeatMs(), latest = Math.min(due, armedAt + heartbeat);
+  const holds = heartbeat === Number.POSITIVE_INFINITY ? alarm === due : alarm !== null && alarm > armedAt && alarm <= latest;
+  return holds ? 'the shared alarm' : `alarm ${String(alarm)} (armed at ${armedAt}, due ${due}, no later than ${latest})`;
+};
 /** Runs `work` (an alarm) at the publication's due time: the clock held PUBLISH_DELAY_MS after now, then restored. */
 async function atPublicationDue<T>(work: () => Promise<T>): Promise<T> {
   const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + PUBLISH_DELAY_MS);
@@ -498,7 +506,7 @@ it('W27.01 archives immutable candidates before live publication and keeps every
       expect(response.status, mode).toBe(503);
       expect(await response.json()).toEqual({ ok: false, error: 'statistics acknowledgement unavailable' });
       expect(x.cache.store.get(key)).toBe('"previous-live"'); expect(x.storage.map.get('learn')).toEqual(before);
-      expect(x.storage.alarm).toBe(sharedAlarm(T0, T0 + 30_000));
+      expect(sharedAlarm(x.storage.alarm, T0, T0 + 30_000)).toBe('the shared alarm');
       expect(x.archive.put).toHaveBeenCalledTimes(mode === 'missing' ? 0 : mode === 'collision' ? 8 : 1);
       if (mode === 'committed-throw') expect(x.archives.size).toBe(1);
     }
@@ -508,7 +516,7 @@ it('W27.01 archives immutable candidates before live publication and keeps every
       });
       const response = await x.request('/publish', {});
       expect(response.status).toBe(503); expect(await response.json()).not.toHaveProperty('applied');
-      expect(x.archives.size).toBe(1); expect(x.storage.alarm).toBe(sharedAlarm(T0, T0 + 30_000));
+      expect(x.archives.size).toBe(1); expect(sharedAlarm(x.storage.alarm, T0, T0 + 30_000)).toBe('the shared alarm');
       expect(x.cache.store.get(key)).toBe(committed ? [...x.archives.values()][0] : '"previous-live"');
     }
     const partial = await ready(); expect((await partial.post([{ item: 'B', cell, ts: T0 }])).status).toBe(200);
@@ -522,7 +530,7 @@ it('W27.01 archives immutable candidates before live publication and keeps every
     // R10 (S18, R-P195): the alarm runs at the publication's due time, PUBLISH_DELAY_MS after ready()'s write at T0, and
     // the next one at the failed publication's retry, PUBLISH_DELAY_MS after it; the clock is then back at T0.
     vi.setSystemTime(T0 + PUBLISH_DELAY_MS);
-    await expect(alarm.object.alarm()).rejects.toThrow(); expect(alarm.storage.alarm).toBe(sharedAlarm(T0 + PUBLISH_DELAY_MS, T0 + 2 * PUBLISH_DELAY_MS));
+    await expect(alarm.object.alarm()).rejects.toThrow(); expect(sharedAlarm(alarm.storage.alarm, T0 + PUBLISH_DELAY_MS, T0 + 2 * PUBLISH_DELAY_MS)).toBe('the shared alarm');
     vi.spyOn(alarm.storage, 'setAlarm').mockRejectedValue(new Error('private alarm failure'));
     vi.setSystemTime(T0 + 2 * PUBLISH_DELAY_MS);
     await expect(alarm.object.alarm()).rejects.toThrow(); expect(alarm.cache.store.get(key)).toBe('"previous-live"');
