@@ -16,7 +16,7 @@ import { recordEvidenceLoss } from '@/ledger/delivery';
 import { DEFAULT_POLICY, type AttributionPolicy } from './policy';
 import { DEFAULT_STATS, type AttributionContract } from './stats';
 import { fanOutcome, reportLearningIncomplete, type SlotLearnConfig } from './fan';
-import { admitOwnedRecovery } from '@/identity/sessionAuthority';
+import { admitOwnedRecovery, afterOwnerAnswer, ownerOperationActive } from '@/identity/sessionAuthority';
 
 /**
  * P33 (decision D1, freeze item 11): slot → its own attribution policy, for the
@@ -137,6 +137,12 @@ export function slotConfigsOf(learn: LearnConfig): Record<string, SlotLearnConfi
  * its admission failing fails the action itself (the owner's drain rethrows it), a
  * refusal of the owner's authority or recovery configuration there is a refusal,
  * not a lost row, and an effect after the admission is the alarm's to complete.
+ * R-P125: the count adds nothing before the answer. Inside the shopper's owner it
+ * runs once the owner has answered and outside it (`afterOwnerAnswer`, R-P115:
+ * kept alive by the owner's waitUntil, never retained work the owner drains before
+ * it answers, never queued in its serializer), with the operator cache alone; an
+ * owner that refuses it, or an operation that did not answer, counts nothing;
+ * outside an owner operation it is counted here, as P61's learning reads are.
  *
  * P64 (R-P125): `onAdmitted` is told, once, that the outcome's durable admission
  * completed (`admitOwnedRecovery` resolved: its admission committed, or an earlier
@@ -170,6 +176,7 @@ export async function outcomeToLearning(env: Env, scope: string, outcome: Outcom
     reportLearningIncomplete('outcome', result);
   } catch {
     reportLearningIncomplete('outcome', null);
-    if (preparing) await recordEvidenceLoss(env, scope, 'producerFailed', 1);
+    if (preparing && ownerOperationActive(env)) void afterOwnerAnswer(operator => recordEvidenceLoss(operator, scope, 'producerFailed', 1)).catch(() => undefined);
+    else if (preparing) await recordEvidenceLoss(env, scope, 'producerFailed', 1);
   }
 }
