@@ -424,6 +424,8 @@ export class LearnStats {
   /** P62: moved by every assignment of the state this object holds (`data`), which a cached witness verdict names. */
   private epoch = 0;
   private verdict: HeldVerdict | null = null;
+  /** P62: the verdict being established for an epoch, so concurrent first calls of an evicted object read its state once. */
+  private establishing: { epoch: number; verdict: Promise<HeldVerdict> } | null = null;
   private get data(): Stored | null { return this.held; }
   private set data(value: Stored | null) { this.held = value; this.epoch++; }
   /**
@@ -1676,6 +1678,15 @@ export class LearnStats {
   private async heldVerdict(): Promise<HeldVerdict> {
     const epoch = this.epoch;
     if (this.verdict?.epoch === epoch) return this.verdict;
+    let establishing = this.establishing;
+    if (establishing?.epoch !== epoch) {
+      const started = { epoch, verdict: this.establishVerdict(epoch) };
+      this.establishing = establishing = started;
+      void started.verdict.catch(() => undefined).finally(() => { if (this.establishing === started) this.establishing = null; });
+    }
+    return establishing.verdict;
+  }
+  private async establishVerdict(epoch: number): Promise<HeldVerdict> {
     const raw: unknown = this.data ?? await this.state.storage.get('learn');
     let verdict: HeldVerdict = { epoch, anchor: Number.NEGATIVE_INFINITY };
     if (raw !== undefined && (!object(raw) || bytes(raw) > LEARN_LIMITS.repairBytes)) verdict = { epoch, refused: true, anchor: Number.NEGATIVE_INFINITY };
