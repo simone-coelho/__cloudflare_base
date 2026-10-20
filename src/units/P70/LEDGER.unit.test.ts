@@ -105,28 +105,20 @@
 // turns WB1's tail leg RED; one arming only on writes turns WB1's witness leg RED; one whose heartbeat
 // replaces the publication alarm instead of sharing it turns WB2's 30 s publication lock RED.
 //
-// R10 (expectations a build of P70 changes; measured on scratch copies of 53de8f2b under the heartbeat
-// sketch, _evidence/parity-step3/S18/specifier/logs/s18/: r10-base.json and r10-fix.json over the 154
-// test files that read or fire an alarm or the lift world; fix2.json, fixr10-2.json). 51 tests turn RED,
-// none of them P70's, and none of them a "no alarm after X" assertion (learn.test.ts :506, :519 stay
-// green). Two causes, both inherent to the ruled behaviour (a write's alarm is now the heartbeat, due
-// within 5 s; an alarm that fires before the publication is due publishes nothing):
-//   · an exact due time: src/learn/learn.test.ts W27.01 (`T0 + 30_000` after a failed publication, :480,
-//     :490, :501) and "the statistics object counts, arms one alarm, and publishes a versioned snapshot to KV";
-//     src/units/W27/LEDGER.unit.test.ts W27.R4 (:591, :602: the alarm after the write `toBe(consentUntil)`,
-//     now the earlier heartbeat). Test-only: the expected due becomes the minimum with the heartbeat.
-//   · an alarm fired right after new evidence, expected to publish (the harness's `fireAlarm` read as
-//     the publication alarm): src/units/P63 NR1-NR3 (28 tests), P62 LW3 (12), P61 LO1 (2), P42 PW2 (2),
-//     src/learn/learn.test.ts W10.01, src/learn/priorsAbsent.test.ts E2 (2). Test-only shape measured:
-//     src/units/_parity9.ts `fireAlarm` firing with the clock moved PUBLISH_DELAY_MS ahead turns 34 of the
-//     lift-world 44 green again; 10 stay RED under the sketch, and depend on which alarms a build lets
-//     publish: P63 NR2's republished learn document with no write, NR3's W27 R4 retry (the moved clock is
-//     not cumulative), NR3's two S16 F3 skip-check legs (×2 hosts), P42 PW2 (×2). The learn and
-//     priorsAbsent tests fire the alarm on their own fakes: each needs its clock at the publication's
-//     due time. _parity9.ts is a pinned harness: its edit is the lead's ruling.
-//   · Not test-only: src/units/P68 KT1's alarm-publication citations (kit 02 :1171, kit 03 :1474-1488
-//     cite src/durable-objects/LearnStats.ts lines): any edit of that file moves them, and the build
-//     re-points them (kit 02/03 are in P70's allowed paths).
+// R10 (expectations a build of P70 changes), applied in this batch under the lead's ruling R-P195 (the object's single
+// alarm is shared; its handler does everything that is due when it fires; a publication is due PUBLISH_DELAY_MS after the
+// write, or the republication, it publishes, never earlier): src/units/_parity9.ts `firePublicationAlarm` (beside
+// `fireAlarm`, unchanged) and `republish` firing it; P63 NR1-NR3, P62 LW3 (and P61 LO1 through `republish`), P42 PW2's
+// alarm leg fire the publication alarm; src/learn/learn.test.ts (W27.01, W10.01, the counts test),
+// src/learn/priorsAbsent.test.ts (E2) and src/units/W27/LEDGER.unit.test.ts (W27.R4) run their alarms at the
+// publication's due time or expect the earlier of the previous due time and the heartbeat (read loosely). MEASURED on
+// scratch copies of 53de8f2b carrying them (_evidence/parity-step3/S18/specifier/logs/r10d/), over the 154 test files that
+// read or fire an alarm or the lift world: today's product fails exactly what it failed without them (scratch-environment
+// tests only); under a sketch of the heartbeat two more fail, outside this round's files:
+//   · src/units/W27/B1.unit.test.ts W27.M1.01 (:646, `rearmed >= startedAt + 30_000`): the guarded failure re-arm keeps
+//     the earlier heartbeat (R-P195; W27 R4's own rule), so the lower bound is an R10 for the lead's grant;
+//   · src/units/P68 KT1's alarm-publication citations (kit 02 :1171, kit 03 :1474-1488 cite LearnStats.ts lines): any
+//     edit of that file moves them, and the build re-points them (kit 02/03 are in P70's allowed paths).
 //
 // No new export is imported statically; `WARM_HEARTBEAT_MS` and `WARM_TAIL_MS` are read loosely.
 //
