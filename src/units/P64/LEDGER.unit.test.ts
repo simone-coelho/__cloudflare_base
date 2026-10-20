@@ -90,7 +90,22 @@
 //       the session host STORAGE.get 1, CACHE.get 11, SESSIONS.put 2; the object host
 //       STORAGE.get 1, for both events, every run);
 //       the units P56-P60 unchanged: their own acceptance commands, run beside this one
-//       (a unit file is never imported into another).
+//       (a unit file is never imported into another);
+//       R-P129 (4), R-P125(1): on the failure path (OT3's lever) the answer waits for no remote call
+//       beyond the success path's base: the remote calls COMPLETED before the answer, each made to
+//       wait FAILURE_PATH_MS (500 ms), per binding and method, within the base counts above. RED on
+//       the P64 build's step 1 ffb8d1e2 (the count's CACHE.get and CACHE.put run as retained work
+//       before the answer), GREEN on its step 2 03300b44 (the count through P61's `afterOwnerAnswer`);
+//       R-P137 (the P64 delivery review's surviving mutants M7-M9), measured on the integration head
+//       f7ec68f5 (GREEN) and on each mutant of it (RED, both hosts;
+//       _evidence/parity-step3/S13/specifier/logs/r137-*.log):
+//         OT3, M7: an admission `admitOwnedRecovery` itself refuses (before the store) names no outcome
+//         and stores none; the next, admitted, add to bag names its own (R-P125(3));
+//         OT3, M9: without durable recovery the outcome is named only when the producer accepted it; a
+//         queue refusing once leaves it unnamed and counts once (R-P128);
+//         OT4, M8: the loss count holds up neither the refused add to bag's answer nor the shopper's next
+//         page view (R-P115), read with only the tenant's lost-evidence store made slow (the reason is
+//         at the leg).
 //
 // R10 (expectations a build of P64 changes): NONE MEASURED. The whole suite under a sketch of
 // P64 on a scratch copy (_evidence/parity-step3/S13/specifier/sketches/sketch-p64.py: `emitOutcome`
@@ -124,13 +139,18 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
+import * as authority from '@/identity/sessionAuthority';
+import { SessionAccessError } from '@/identity/sessionCapability';
+import { evidenceLossKey } from '@/ledger/delivery';
 import { outcomeFromAction, ts36 } from '@/ledger/records';
 import { recoveryDigest } from '@/ledger/recovery';
 
-import { HOSTS, LAYOUT, PAGE_VIEW, readTree, slotPositionOf, storedOutcomes, TENANT, type Host, type Shopper, type Snapshot } from '../_parity';
-import { actionWire, admissionsOf, remoteLatency, type Identity, type Wire } from '../_parity8';
 import {
-  BUY_BOX, evidenceLoss, failLearnReadOnce, outcomeRead, outcomeWorld, settleAll, timeOfRecordId, UNKNOWN_ADD,
+  expectPublished, HOSTS, LAYOUT, mount, PAGE_VIEW, PAID_SOCIAL_ENTRY, readTree, shopperOn, slotPositionOf, storedOutcomes, TENANT, type Host, type Shopper, type Snapshot,
+} from '../_parity';
+import { actionWire, admissionsOf, remoteLatency, workerApp, type Identity, type Wire } from '../_parity8';
+import {
+  BUY_BOX, evidenceLoss, failLearnReadOnce, OUTCOME_LEARN, OUTCOME_PIECES, OUTCOME_SLOTS, outcomeRead, outcomeWorld, settleAll, timeOfRecordId, UNKNOWN_ADD,
 } from '../_parity10';
 
 const show = (value: unknown) => JSON.stringify(value)?.slice(0, 400);
@@ -242,6 +262,28 @@ describe('unit:P64.OT2', () => {
 // unit:P64.OT3 — a failure before the outcome's durable admission counts once, and is logged
 // ===========================================================================
 
+/** `admitOwnedRecovery` (src/identity/sessionAuthority.ts) refuses the next outcome admission once, before the recovery store, as the P64 delivery review's probe refused it (a SessionAccessError). */
+function refuseOutcomeAdmissionOnce(): { readonly refused: number; restore: () => void } {
+  let refused = 0;
+  const original = authority.admitOwnedRecovery;
+  const spy = vi.spyOn(authority, 'admitOwnedRecovery').mockImplementation(((input, options) => {
+    if (input.kind === 'outcome' && !refused) { refused++; return Promise.reject(new SessionAccessError()); }
+    return original(input, options);
+  }) as typeof original);
+  return { get refused() { return refused; }, restore: () => spy.mockRestore() };
+}
+
+/** The event queue refuses its next send (`send` or `sendBatch`) once; every other send goes through. */
+function refuseQueueOnce(m: Parameters<typeof storedOutcomes>[0]): { readonly refused: number; restore: () => void } {
+  const queue = m.env.EVENT_QUEUE as unknown as Record<'send' | 'sendBatch', (...args: unknown[]) => Promise<void>>;
+  const saved = { send: queue.send, sendBatch: queue.sendBatch };
+  let refused = 0;
+  for (const method of ['send', 'sendBatch'] as const) {
+    queue[method] = (...args: unknown[]) => { if (!refused) { refused++; return Promise.reject(new Error('injected: queue send refused')); } return saved[method].apply(queue, args); };
+  }
+  return { get refused() { return refused; }, restore: () => { queue.send = saved.send; queue.sendBatch = saved.sendBatch; } };
+}
+
 describe('unit:P64.OT3', () => {
   for (const host of HOSTS) {
     it(`host (${host}): when the outcome's learning preparation fails to read the learn document, before the outcome's durable admission, the add to bag still answers 200 with its behaviour capture durable, the tenant's producerFailed lost-evidence counter (read as the monitor reads it) is exactly one higher, also after a following successful add to bag, and learning_incomplete is logged`, async () => {
@@ -303,6 +345,68 @@ describe('unit:P64.OT3', () => {
     }, 60_000);
   }
 
+  // R-P137 (M7 of the P64 delivery review): the answer names the outcome only once its durable admission completed (R-P125(3)),
+  // so an admission that `admitOwnedRecovery` itself refuses, before the recovery store (the review's probe: a SessionAccessError
+  // for the outcome's input; answered 200, no member, nothing stored, on both hosts, at dd2a6340 and bb605dff alike), names none.
+  // A lock, green on the P64 build; RED under a build that reports the admission before `admitOwnedRecovery` resolves.
+  // NOT PINNED HERE: whether that refusal is counted (R-P125(2) rules admission refusals uncounted; the review's finding 4 leaves
+  // open whether production reaches this one): this leg reads no counter.
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (R-P125(3), R-P137 M7) — an outcome whose admission admitOwnedRecovery itself refuses is not named: the add to bag answers 200 with its behaviour capture durable and NO outcome member, and no outcome row is stored; CONTROL: the next add to bag, admitted, names its outcome record`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p64-ot3-m7');
+      const refusal = refuseOutcomeAdmissionOnce();
+      const eventId = crypto.randomUUID();
+      let refused: Wire;
+      try {
+        refused = await actionWire(app, s, BUY_BOX, { eventId, timestamp: Date.now() - 1 });
+        await settleAll(m, app);
+      } finally { refusal.restore(); }
+      await m.drainLedger();
+      expect([refusal.refused, refused.status, behaviorOf(refused)?.status], `${host}: PRECONDITION — admitOwnedRecovery refused the outcome's admission once and the add to bag was accepted (${show(refused.body)})`)
+        .toEqual([1, 200, 'durable']);
+      expect.soft(noOutcomeMember(refused), `${host}: P64.OT3 (R-P137 M7) — an outcome whose admission was refused is not named`).toBe('no outcome member');
+      expect.soft(rowsOfEvent(m, s, eventId).length, `${host}: P64.OT3 (R-P137 M7) — and no outcome row of it is stored`).toBe(0);
+      const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      const admitted = await actionWire(app, s, BUY_BOX, identity);
+      await settleAll(m, app);
+      expect.soft(memberOf(admitted, 'outcome'), `${host}: P64.OT3 (R-P137 M7) CONTROL — the next add to bag, admitted, names its outcome record`)
+        .toEqual({ recordId: outcomeIdAt(s, BUY_BOX, identity.eventId, identity.timestamp) });
+    }, 60_000);
+  }
+
+  // R-P137 (M9 of the P64 delivery review): without durable recovery (LEDGER_RECOVERY_ENABLED off) the outcome is handed to
+  // the producer (`enqueueOutcome`) and the answer names it only when the producer's receipt is `accepted` (R-P128); a queue that
+  // refuses the send leaves the outcome unnamed, and the producer counts its own failure once in producerFailed
+  // (src/ledger/enqueue.ts). The review's probe: plain, the member named; the queue refusing once, no member and +1, both hosts.
+  // RED under a build that reports every hand-off as admitted.
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (R-P128, R-P137 M9) — without durable recovery the answer names the outcome only when the producer accepted it: a plain add to bag names the id the engine builds; with the event queue refusing once, no outcome member and producerFailed exactly one higher`, async () => {
+      const m = await mount(host, { pieces: OUTCOME_PIECES, slots: OUTCOME_SLOTS, learn: OUTCOME_LEARN }, { recovery: false });
+      expectPublished(m, 'P64.OT3 (R-P137 M9) — P33 K3\'s documents publish without durable recovery');
+      const s = await shopperOn(m);
+      expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the shopper's page view is accepted`).toBe(200);
+      await m.drainLedger();
+      const app = workerApp(m);
+      const plain = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      const accepted = await actionWire(app, s, BUY_BOX, plain);
+      await settleAll(m, app);
+      await m.drainLedger();
+      expect(accepted.status, `${host}: PRECONDITION — the plain add to bag is accepted (${show(accepted.body)})`).toBe(200);
+      expect.soft(memberOf(accepted, 'outcome'), `${host}: P64.OT3 (R-P137 M9) — the producer accepted the outcome: the answer names it`)
+        .toEqual({ recordId: outcomeIdAt(s, BUY_BOX, plain.eventId, plain.timestamp) });
+      const before = (await evidenceLoss(m)).producerFailed;
+      const refusal = refuseQueueOnce(m);
+      let refused: Wire;
+      try {
+        refused = await actionWire(app, s, BUY_BOX, { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 });
+        await settleAll(m, app);
+      } finally { refusal.restore(); }
+      expect([refusal.refused, refused.status], `${host}: PRECONDITION — the event queue refused the outcome's send once and the add to bag was accepted (${show(refused.body)})`).toEqual([1, 200]);
+      expect.soft(noOutcomeMember(refused), `${host}: P64.OT3 (R-P137 M9) — the producer did not accept the outcome: the answer names none`).toBe('no outcome member');
+      expect.soft((await evidenceLoss(m)).producerFailed - before, `${host}: P64.OT3 (R-P137 M9) — and the producer's failure counts once`).toBe(1);
+    }, 60_000);
+  }
+
   it('CONTROL: the lever refuses only the first learn read; without it a successful add to bag counts nothing and its outcome is stored', async () => {
     const { m, app, s } = await outcomeWorld('do', 'p64-ot3-control');
     const before = await evidenceLoss(m);
@@ -332,10 +436,31 @@ const BASE_CALLS_BEFORE_ANSWER: Record<Host, Record<string, number>> = {
   session: { 'STORAGE.get': 1, 'CACHE.get': 11, 'SESSIONS.put': 2 },
   do: { 'STORAGE.get': 1 },
 };
+/** The latency each remote call waits in the failure-path leg (R-P125(1)): long enough that a call the answer did not wait for cannot end before it. */
+const FAILURE_PATH_MS = 500;
+/** The calls the answer waited for: those that ended before it arrived (each waits FAILURE_PATH_MS after it starts). */
+const waitedFor = (calls: Array<{ binding: string; method: string; at: number }>, answeredAt: number): string[] =>
+  calls.filter(call => call.at + FAILURE_PATH_MS <= answeredAt).map(call => `${call.binding}.${call.method}`);
 const countsOf = (calls: string[]) => calls.reduce<Record<string, number>>((out, call) => ({ ...out, [call]: (out[call] ?? 0) + 1 }), {});
 /** The calls made beyond the base's, per binding and method; empty when none is new. */
 const beyondBase = (host: Host, calls: string[]) => Object.entries(countsOf(calls))
   .filter(([call, count]) => count > (BASE_CALLS_BEFORE_ANSWER[host][call] ?? 0)).map(([call, count]) => `${call} ×${count} (base ${BASE_CALLS_BEFORE_ANSWER[host][call] ?? 0})`);
+
+/** How late the tenant's lost-evidence store answers in the next-request leg (R-P115): far longer than an in-process request takes. */
+const COUNTER_STORE_MS = 3_000;
+/** The tenant's lost-evidence store (`evidence-loss:v1:<tenant>` in CACHE) answers every get and put `ms` late until restored; every other key as before. */
+function slowCounterStore(m: Parameters<typeof storedOutcomes>[0], ms: number): { readonly calls: number; restore: () => void } {
+  const cache = m.cache as unknown as Record<'get' | 'put', (key: string, ...rest: unknown[]) => Promise<unknown>>;
+  const saved = { get: cache.get, put: cache.put }, key = evidenceLossKey(TENANT);
+  let calls = 0, slow = true;
+  for (const method of ['get', 'put'] as const) {
+    cache[method] = async (k: string, ...rest: unknown[]) => {
+      if (slow && k === key) { calls++; await new Promise(resolve => setTimeout(resolve, ms)); }
+      return saved[method].call(m.cache, k, ...rest);
+    };
+  }
+  return { get calls() { return calls; }, restore: () => { slow = false; cache.get = saved.get; cache.put = saved.put; } };
+}
 
 describe('unit:P64.OT4', () => {
   for (const host of HOSTS) {
@@ -384,7 +509,73 @@ describe('unit:P64.OT4', () => {
       }
       expect.soft(beyond, `${host}: P64.OT4 — no remote call before the answer beyond the base's (amendment 5's answer-at-admission, no new wait)`).toEqual([['add to bag', []], ['click', []]]);
     }, 60_000);
+
+    // R-P129 (4), R-P125(1): the failure path's loss count adds nothing the answer waits for (it runs once the owner has
+    // answered: P61's `afterOwnerAnswer`). Read as R-P115 read P61's own counter (a call starting in the answer's own
+    // millisecond is after the answer) and as the lead's note on this leg rules it ("no call that the answer WAITS for is
+    // added; a call that starts after the owner's operation ended is after the answer"): the calls the answer waited for are
+    // the calls that ENDED before it arrived. Each waits FAILURE_PATH_MS (500 ms), so a call the answer waits for ends that
+    // long after it started and before the answer, while one started once the owner's operation ended (while the worker is
+    // still passing the answer on) ends after it. The started-before reading of the leg above sees such a call on the
+    // conforming build 03300b44 (_evidence/parity-step3/S13/specifier/logs/r129-b2-d1.log: one CACHE.get, the count's read);
+    // this reading still catches the count run as retained work before the answer (ffb8d1e2: its CACHE.get and CACHE.put
+    // both end before it).
+    it(`host (${host}): LOCK (R-P125(1)) — on the failure path the answer waits for no remote call beyond the success path's: with the outcome's learning preparation failing (OT3's lever) and ${FAILURE_PATH_MS} ms added to every remote binding call, the remote calls completed before the add to bag's answer are, per binding and method, no more than the base's success path makes`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p64-ot4-failure-latency');
+      const lever = remoteLatency(m);
+      const fault = failLearnReadOnce();
+      const first = lever.calls.length;
+      lever.set(FAILURE_PATH_MS);
+      let answer: Wire;
+      try { answer = await actionWire(app, s, BUY_BOX, { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 }); } finally { lever.set(0); fault.restore(); }
+      const before = waitedFor(lever.calls.slice(first), answer.answeredAt);
+      await settleAll(m, app);
+      expect([fault.failed, answer.status], `${host}: PRECONDITION — the learn read failed once and the add to bag was accepted (${show(answer.body)})`).toEqual([1, 200]);
+      expect.soft(beyondBase(host, before), `${host}: P64.OT4 (R-P125(1)) — on the failure path the answer waits for no remote call beyond the success path's`).toEqual([]);
+    }, 60_000);
   }
+
+  // R-P137 (M8 of the P64 delivery review), R-P115: the shopper's NEXT request does not wait on the loss count. The count may
+  // run only outside the shopper's serializer (P61's `afterOwnerAnswer`), never queued in it (`continueAfterOwnerAnswer`), where
+  // every later request of the shopper would wait for it. The review measured it with 500 ms on every remote call (+1000 ms on
+  // the next page view under the serialized count, both hosts). That uniform lever is not used here: at 500 ms a request outlives
+  // the publication cache's 30 s lifetime (src/config/versionedStore.ts CACHE_TTL_MS), so the same page view takes 6 s or 30 s
+  // on the object host depending on when the caches expire (_evidence/parity-step3/S13/specifier/logs/r137-probe-next-int.log),
+  // a spread larger than what it measures. Instead only the tenant's lost-evidence store (`evidence-loss:v1:<tenant>` in CACHE,
+  // src/ledger/delivery.ts `evidenceLossKey`) answers COUNTER_STORE_MS late; every other call is as fast as ever. A next request
+  // that waited on the count would take at least that long; one that did not answers as the next request after a successful
+  // add to bag does. The refused add to bag's own answer is read the same way (R-P125(1)).
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (R-P115, R-P137 M8) — the loss count holds up no answer: with the tenant's lost-evidence store answering ${COUNTER_STORE_MS} ms late, a refused add to bag and the shopper's next page view each answer within ${COUNTER_STORE_MS / 2} ms of the same pair without the refusal; the count still lands, once`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p64-ot4-next-request');
+      const before = (await evidenceLoss(m)).producerFailed;
+      const store = slowCounterStore(m, COUNTER_STORE_MS);
+      const pair = async (refuse: boolean) => {
+        const fault = refuse ? failLearnReadOnce() : null;
+        try {
+          const first = await actionWire(app, s, BUY_BOX, { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 });
+          const next = await actionWire(app, s, PAGE_VIEW);
+          return { first, next, failed: fault?.failed ?? 0 };
+        } finally { fault?.restore(); await settleAll(m, app); }
+      };
+      const success = await pair(false), refused = await pair(true);
+      store.restore();
+      const ms = (wire: Wire) => Math.round(wire.answeredAt - wire.sentAt);
+      expect([refused.failed, refused.first.status, refused.next.status, success.first.status, success.next.status],
+        `${host}: PRECONDITION — the refused add to bag (learn read failed once), the successful one and both next page views are accepted`).toEqual([1, 200, 200, 200, 200]);
+      expect([store.calls > 0, (await evidenceLoss(m)).producerFailed - before], `${host}: PRECONDITION P64 — the loss count reached the tenant's lost-evidence store (${store.calls} calls) and landed once`)
+        .toEqual([true, 1]);
+      expect.soft([ms(refused.first) - ms(success.first) < COUNTER_STORE_MS / 2, ms(refused.next) - ms(success.next) < COUNTER_STORE_MS / 2],
+        `${host}: P64.OT4 (R-P115, R-P137 M8) — neither the refused add to bag nor the next page view waits on the count (refused ${ms(refused.first)} ms then ${ms(refused.next)} ms; without the refusal ${ms(success.first)} ms then ${ms(success.next)} ms)`)
+        .toEqual([true, true]);
+    }, 90_000);
+  }
+
+  it('CONTROL (R-P125(1)): a call that ended before the answer is one the answer waited for; a call started alongside the answer, ending after it, is not', () => {
+    const calls = [{ binding: 'STORAGE', method: 'get', at: 0 }, { binding: 'CACHE', method: 'get', at: 1_000 - FAILURE_PATH_MS }, { binding: 'CACHE', method: 'put', at: 999 }];
+    expect(waitedFor(calls, 1_000), 'CONTROL — the call ending at the answer counts; the one starting a millisecond before it does not').toEqual(['STORAGE.get', 'CACHE.get']);
+    expect(beyondBase('do', waitedFor(calls, 1_000)), 'CONTROL — and one waited-for call beyond the base is named').toEqual(['CACHE.get ×1 (base 0)']);
+  });
 
   it('CONTROL: a new remote call before the answer is caught', () => {
     expect(beyondBase('do', ['STORAGE.get', 'CACHE.get']), 'CONTROL — one more call than the base is named').toEqual(['CACHE.get ×1 (base 0)']);

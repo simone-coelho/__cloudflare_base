@@ -439,6 +439,25 @@ export async function admitOwnedRecovery(input: RecoveryInput, options?: Recover
   return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!), options?.answerAtAdmission && held.continuation
     ? { answerAtAdmission: true, ...(options.afterEffects ? { afterEffects: options.afterEffects } : {}) } : undefined));
 }
+/**
+ * P65 (amendment 7, R-P124): withdraws the outcome a behaviour capture's durable
+ * admission carried (src/ledger/recovery.ts `CarriedOutcome`, `withdrawCarried`),
+ * once the engine has answered that the event records none, through the owner's
+ * own recovery for its one admitted principal, as `admitOwnedRecovery` admits.
+ * Awaited, never retained (as `readOwnedAdmission` reads), fenced before and
+ * after: its failure is the caller's and never the answer's, and an outcome it
+ * leaves carried is settled by the alarm, which re-decides the event's drop.
+ */
+export async function withdrawOwnedCarry(input: Extract<RecoveryInput, { kind: 'behavior' }>): Promise<void> {
+  const held = invocation.getStore();
+  if (!held?.active || !held.recovery) throw new SessionAccessError();
+  if (!durableRecoveryEnabled(held.env)) throw new RecoveryUnavailableError();
+  recheckOwnerInvocation(held.owner);
+  const principals = [...held.principals.values()].filter(p => p.tenant === input.tenant && p.subject === input.subject);
+  if (principals.length !== 1) throw new SessionAccessError();
+  await held.recovery(input, structuredClone(principals[0]!), { withdrawCarried: true });
+  recheckOwnerInvocation(held.owner);
+}
 export function pinRecoveryDeadline(deadline: number): void {
   if (!Number.isSafeInteger(deadline) || deadline <= Date.now()) throw new SessionAccessError();
   const held = invocation.getStore();
