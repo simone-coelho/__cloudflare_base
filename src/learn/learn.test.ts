@@ -45,7 +45,7 @@ const warmHeartbeatMs = (): number => {
 };
 /**
  * The alarm a write or a failed publication at `armedAt` leaves for a time `due`: exactly `due` without a heartbeat; with
- * P70's heartbeat (R-P196, read loosely as P70.WB1 reads it: due within the heartbeat), any time after `armedAt` and no
+ * P70's heartbeat (R-P200, read loosely as P70.WB1 reads it: due within the heartbeat), any time after `armedAt` and no
  * later than the earlier of `due` and `armedAt + WARM_HEARTBEAT_MS`. Named when it holds, else described.
  */
 const sharedAlarm = (alarm: number | null, armedAt: number, due: number): string => {

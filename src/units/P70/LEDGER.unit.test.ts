@@ -99,11 +99,14 @@
 // each arm one alarm 30 s ahead; WB2 GREEN on both hosts.
 //
 // NEGATIVE CONTROLS (scratch copies, never committed; _evidence/parity-step3/S18/specifier/sketches/):
-// a sketch of the heartbeat (the touch recorded; the shared alarm at the minimum of the heartbeat,
-// the publication due and the next marker expiry; a heartbeat that only re-arms) turns every P70 unit
-// GREEN; one whose heartbeat publishes turns WB1 RED (and P63.NR1); one that never stops re-arming
-// turns WB1's tail leg RED; one arming only on writes turns WB1's witness leg RED; one whose heartbeat
-// replaces the publication alarm instead of sharing it turns WB2's 30 s publication lock RED.
+// a sketch of the heartbeat that gates the alarm's publication on a pending one (R-P200: the reviewer's
+// `pending2`, the specifier's sketches/s18rv-variants*.py on top of sketches/p70.py; and
+// sketches/pendingstore.py, the pending publication kept in the object's storage) turns every P70 unit
+// GREEN; the time-based sketch (sketches/p70.py alone: every alarm from 30 s after the last write runs
+// the skip check) turns WB1's read assertion RED (R-P201); one whose heartbeat publishes turns WB1 RED
+// (and P63.NR1); one that never stops re-arming turns WB1's tail leg RED; one arming only on writes
+// turns WB1's witness leg RED; one whose heartbeat replaces the publication alarm instead of sharing it
+// turns WB2's 30 s publication lock RED.
 //
 // R10 (expectations a build of P70 changes), applied in this batch under the lead's ruling R-P195 (the object's single
 // alarm is shared; its handler does everything that is due when it fires; a publication is due PUBLISH_DELAY_MS after the
@@ -120,6 +123,16 @@
 //     the earlier heartbeat (R-P195; W27 R4's own rule); its lower bound was updated under R-P196 (08fb6959);
 //   · src/units/P68 KT1's alarm-publication citations (kit 02 :1171, kit 03 :1474-1488 cite LearnStats.ts lines): any
 //     edit of that file moves them, and the build re-points them (kit 02/03 are in P70's allowed paths).
+// R-P200 (a heartbeat does nothing but re-arm and perform what is due; a publication is due only 30 s after a write, a
+// republication or a failed publication's retry; an alarm with nothing due runs no skip check, builds no snapshot and
+// reads no key-value entry), enforced under R-P201 in WB1's drives with this exact bound: an alarm of a drive may read a
+// key-value entry or the object's `learnPublished` only if it is the first alarm at or after a write + PUBLISH_DELAY_MS (the
+// publication due at it: after the credit write, :282's drive) or the first alarm the object runs after it started (a
+// fresh instance cannot know from memory whether a publication is pending); every other alarm in the tail reads neither
+// (the witness drive, :256, has no write: only its first alarm may read). Measured (logs/r201/): under the time-based
+// sketch 179 of the witness drive's 180 alarms and 114 of the 120 after the credit write read them; under pending2 (whose
+// first alarm after a start reads them: the reviewer's probe, S18/reviewer/logs/d200/probe-cost-d-pending2.log) and
+// pendingstore no other alarm does.
 //
 // No new export is imported statically; `WARM_HEARTBEAT_MS` and `WARM_TAIL_MS` are read loosely.
 //
@@ -138,7 +151,7 @@ import { LIFT_WITNESS_BUDGET_MS, learningReadBudgets, ringName, RING_READ_BUDGET
 
 import { BRAND, HOSTS, pageInstanceOf, TENANT, type Mounted, type Snapshot } from '../_parity';
 import { ackWire, clickWire, remoteLatency, settle, workerApp, type WorkerApp } from '../_parity8';
-import { decide, later, liftWorld, PDP_MODULES, placementOf, restartObject, sourcesMember, type StorageLog } from '../_parity9';
+import { decide, kvReadLog, later, liftWorld, PDP_MODULES, placementOf, restartObject, sourcesMember, type StorageLog } from '../_parity9';
 
 /** LearnStats.ts `const PUBLISH_DELAY_MS = 30_000` (not exported): a write's publication is due 30 s after it. */
 const PUBLISH_DELAY_MS = 30_000;
@@ -201,26 +214,32 @@ function publishedOf(m: Mounted): string {
     archived: [...m.storage.objects.keys()].filter(key => key.startsWith(`lift/${TENANT}/${BRAND}/${PDP_MODULES}/`) && /\/\d+\.json$/.test(key)).sort() });
 }
 
-/** One alarm fired by the driver: when it was due, when it ended (the moved clock), what it published and wrote, and the alarm it left. */
-interface Fired { at: number; ended: number; published: boolean; writes: string[]; next: number | null }
+/**
+ * One alarm fired by the driver: when it was due, when it ended (the moved clock), what it published and wrote, the keys of
+ * the object's storage it read and the key-value entries it read (R-P201), and the alarm it left.
+ */
+interface Fired { at: number; ended: number; published: boolean; writes: string[]; reads: string[]; kv: string[]; next: number | null }
 /**
  * The platform's alarm driver: the alarm the object holds fired at its due time (the clock moved there), again and again,
  * until no alarm is due (none armed, or the one held already fired) or the next is due after `horizon`.
  */
 async function drive(m: Mounted, log: StorageLog, horizon: number, limit = 400): Promise<{ fired: Fired[]; next: number | null }> {
-  const fired: Fired[] = [];
+  const fired: Fired[] = [], kv = kvReadLog(m);
   let last = Number.NEGATIVE_INFINITY;
-  for (let round = 0; round < limit; round++) {
-    const due = await alarmOf(m);
-    if (due === null || due <= last) return { fired, next: null };
-    if (due > horizon) return { fired, next: due };
-    const before = publishedOf(m), from = log.writes.length;
-    let ended = due;
-    await later(due - Date.now(), async () => { await runAlarm(m); ended = Date.now(); });
-    last = due;
-    fired.push({ at: due, ended, published: publishedOf(m) !== before, writes: log.writes.slice(from), next: await alarmOf(m) });
-  }
-  return { fired, next: await alarmOf(m) };
+  try {
+    for (let round = 0; round < limit; round++) {
+      const due = await alarmOf(m);
+      if (due === null || due <= last) return { fired, next: null };
+      if (due > horizon) return { fired, next: due };
+      const before = publishedOf(m), from = log.writes.length, read = log.reads.length, kvFrom = kv.keys.length;
+      let ended = due;
+      await later(due - Date.now(), async () => { await runAlarm(m); ended = Date.now(); });
+      last = due;
+      fired.push({ at: due, ended, published: publishedOf(m) !== before, writes: log.writes.slice(from), reads: log.reads.slice(read),
+        kv: kv.keys.slice(kvFrom), next: await alarmOf(m) });
+    }
+    return { fired, next: await alarmOf(m) };
+  } finally { kv.restore(); }
 }
 /** "Due within the heartbeat": later than `from` and at most `heartbeat` after `until`; else what it is. */
 const within = (due: number | null, from: number, until: number, heartbeat: number): string =>
@@ -229,6 +248,16 @@ const within = (due: number | null, from: number, until: number, heartbeat: numb
 function chain(fired: Fired[], heartbeat: number): string {
   const broken = fired.findIndex(alarm => within(alarm.next, alarm.at, alarm.ended, heartbeat) !== 'due within WARM_HEARTBEAT_MS');
   return broken < 0 ? 'unbroken' : `broken at alarm ${broken + 1} of ${fired.length}: ${within(fired[broken]!.next, fired[broken]!.at, fired[broken]!.ended, heartbeat)}`;
+}
+/**
+ * R-P200/R-P201: an alarm reads the publication state (a key-value entry, or the object's `learnPublished`) only when a
+ * publication is due at it. `mayRead` names the alarms of a drive allowed to read it (by their index); the answer is a
+ * sentence: that no other alarm did, or which did and what they read.
+ */
+function publicationReads(fired: Fired[], mayRead: (index: number) => boolean, from: number): string {
+  const read = fired.map((alarm, index) => ({ alarm, index })).filter(({ alarm, index }) => !mayRead(index) && (alarm.kv.length > 0 || alarm.reads.includes('learnPublished')));
+  return read.length === 0 ? 'no alarm with nothing due read the publication state'
+    : `${read.length} of ${fired.length} alarms with nothing due read it, the first ${read[0]!.alarm.at - from} ms after the touch (key-value ${JSON.stringify(read[0]!.alarm.kv)}, storage ${JSON.stringify([...new Set(read[0]!.alarm.reads)])})`;
 }
 /** Across the alarms of a drive: what any of them published or wrote. */
 const effectsOf = (fired: Fired[]) => ({ published: fired.filter(alarm => alarm.published).map(alarm => alarm.at), written: [...new Set(fired.flatMap(alarm => alarm.writes))] });
@@ -277,10 +306,15 @@ describe('unit:P70.WB1', () => {
       `${host}: P70.WB1 — the heartbeats keep re-arming until WARM_TAIL_MS (${tail} ms) after the last touch, then stop`).toEqual(['unbroken', 'the last heartbeat at the end of the tail', 'then the ordinary alarm']);
       expect.soft(effectsOf([...half.fired, ...rest.fired]), `${host}: P70.WB1 — no heartbeat publishes (no version, archive, recent entry or learnPublished change) or writes a key`)
         .toEqual({ published: [], written: [] });
+      // R-P201: nothing in this drive is written, so no publication is due at any alarm; only the first alarm after the
+      // object started (it cannot know from memory whether one is pending) may read the publication state.
+      expect.soft(publicationReads([...half.fired, ...rest.fired], index => index === 0, t0),
+        `${host}: P70.WB1 — R-P200: an alarm with nothing due reads no key-value entry and not learnPublished (no skip check, no snapshot)`)
+        .toBe('no alarm with nothing due read the publication state');
     }, 120_000);
 
-    it(`host (${host}): after an exposure write (the decision's render acknowledgement) and after a credit write (a click on it), the statistics object holds an alarm due within WARM_HEARTBEAT_MS (today a write arms it ${PUBLISH_DELAY_MS / 1000} s ahead)`, async () => {
-      const { heartbeat } = await warm();
+    it(`host (${host}): after an exposure write (the decision's render acknowledgement) and after a credit write (a click on it), the statistics object holds an alarm due within WARM_HEARTBEAT_MS (today a write arms it ${PUBLISH_DELAY_MS / 1000} s ahead); through the tail after the credit write, only the alarm at which its publication is due reads the publication state`, async () => {
+      const { heartbeat, tail } = await warm();
       const { m } = await liftWorld(host);
       const decided = await decide(m, 'pdp', { ack: false });
       expect(decided.decision?.renderOffer, `${host}: PRECONDITION — the pooled module is offered for acknowledgement`).toMatch(/^ro1\./);
@@ -289,7 +323,7 @@ describe('unit:P70.WB1', () => {
       const ack = await decided.shopper.ack(decided.snapshot, decided.decision!);
       await m.drainLedger();
       const ackDue = await alarmOf(m), taEnd = Date.now();
-      restartObject(m);
+      const clickLog = restartObject(m);
       const tc = Date.now();
       const click = await decided.shopper.click(decided.snapshot, decided.decision!);
       await m.drainLedger();
@@ -297,7 +331,14 @@ describe('unit:P70.WB1', () => {
       expect([ack.status, click.status], `${host}: PRECONDITION — the acknowledgement and the click are accepted`).toEqual([200, 200]);
       expect.soft({ exposure: within(ackDue, ta, taEnd, heartbeat), credit: within(clickDue, tc, tcEnd, heartbeat) },
         `${host}: P70.WB1 — after each write the object holds an alarm due within WARM_HEARTBEAT_MS (${heartbeat} ms)`).toEqual({ exposure: 'due within WARM_HEARTBEAT_MS', credit: 'due within WARM_HEARTBEAT_MS' });
-    }, 60_000);
+      // R-P201: the alarms through the tail after the credit write; its publication is due at the first alarm at or after
+      // the write + PUBLISH_DELAY_MS, and only that alarm (or the first after the object started) may read the publication state.
+      const run = await drive(m, clickLog, tcEnd + PUBLISH_DELAY_MS + tail + 2 * heartbeat);
+      const dueAt = run.fired.findIndex(alarm => alarm.at >= tc + PUBLISH_DELAY_MS);
+      expect.soft(publicationReads(run.fired, index => index === dueAt || index === 0, tc),
+        `${host}: P70.WB1 — R-P200: after the credit write, an alarm reads a key-value entry or learnPublished only when its publication is due at it`)
+        .toBe('no alarm with nothing due read the publication state');
+    }, 120_000);
   }
 });
 
@@ -395,7 +436,11 @@ describe('unit:P70.WB2', () => {
     expect([run.fired.length, run.fired[0]?.at, run.fired[0]!.ended >= due], 'CONTROL — the driver fired it once, at its due time, and stopped at its horizon').toEqual([1, due, true]);
     expect([within(null, 0, 0, 5_000), within(40_000, 0, 1_000, 5_000), within(3_000, 0, 1_000, 5_000)], 'CONTROL — the readings name a missing, a late and a timely alarm')
       .toEqual(['no alarm armed', 'due 39000 ms after (now 1000)', 'due within WARM_HEARTBEAT_MS']);
-    expect(chain([{ at: 0, ended: 10, published: false, writes: [], next: 30_010 }], 5_000), 'CONTROL — a chain broken by a late alarm is named').toMatch(/^broken at alarm 1 of 1/);
+    expect(chain([{ at: 0, ended: 10, published: false, writes: [], reads: [], kv: [], next: 30_010 }], 5_000), 'CONTROL — a chain broken by a late alarm is named').toMatch(/^broken at alarm 1 of 1/);
+    const reader = { at: 5_000, ended: 5_010, published: false, writes: [], reads: ['learnPublished'], kv: ['lift-stale:x'], next: 10_000 };
+    expect([publicationReads([reader], () => false, 0), publicationReads([reader], index => index === 0, 0)],
+      'CONTROL (R-P201) — an alarm with nothing due that reads the publication state is named; one a publication is due at may read it')
+      .toEqual([expect.stringMatching(/^1 of 1 alarms with nothing due read it, the first 5000 ms after the touch/), 'no alarm with nothing due read the publication state']);
   }, 60_000);
 });
 
