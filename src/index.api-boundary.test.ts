@@ -281,7 +281,7 @@ export class LearnStats extends NativeLearnStats {
     const path = new URL(request.url).pathname;
     const monitoring = await w12NativeFixture(this, request); if (monitoring) return monitoring;
     if (path === '/__learning_fixture') return learningFixture(this, request);
-    if (path === '/health' && this.fault.mode === 'hold-health') await new Promise(resolve => setTimeout(resolve, 500));
+    if (['/health', '/witness'].includes(path) && this.fault.mode === 'hold-health') await new Promise(resolve => setTimeout(resolve, 500)); // R10 (amendment 6 / P62, R-P112(3)): the fault holds the witness door the decision path calls since P62 too
     return super.fetch(request);
   }
 }
