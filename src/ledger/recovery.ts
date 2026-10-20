@@ -47,11 +47,26 @@ export async function learningEffectId(kind: 'exposures' | 'credits', destinatio
   return recoveryDigest({ version: 1, kind, destination, decision, ...(outcome ? { outcome } : {}) });
 }
 
+/** An outcome's durable admission input: the record, with the learning policy and configurations its scope's learn document named. */
+export type OutcomeRecoveryInput = { kind: 'outcome'; tenant: string; subject: string; brand: string; outcome: OutcomeRecord;
+  policy: AttributionPolicy; configs: Record<string, SlotLearnConfig>; defaultConfig: SlotLearnConfig };
+/**
+ * P65 (amendment 7, R-P124): the outcome a tracked action's behaviour capture
+ * carries in its own durable admission. The action route prepares the outcome's
+ * admission input (its learn document read included) BEFORE that admission, and
+ * the admission commits it with the behaviour record, in the same transaction,
+ * under the behaviour's operation: a reset between the two admissions leaves the
+ * alarm both (`settleCarriedOutcome`). It enters no digest: W06's source
+ * commitment is the behaviour record's alone (`sourceOf`), so the operation's id,
+ * digest and replay are exactly the behaviour capture's. `buffered` and `surface`
+ * are what the engine's drop of the event is decided by beyond the behaviour
+ * record: the door it came through, and the catalogue it named.
+ */
+export interface CarriedOutcome { input: OutcomeRecoveryInput; buffered?: true; surface?: string }
 export type RecoveryInput = { kind: 'decisions'; tenant: string; subject: string; brand: string;
   records: DecisionRecord[]; configs: Record<string, SlotLearnConfig>; firstAdmissionUntil?: number }
-  | { kind: 'outcome'; tenant: string; subject: string; brand: string; outcome: OutcomeRecord;
-    policy: AttributionPolicy; configs: Record<string, SlotLearnConfig>; defaultConfig: SlotLearnConfig }
-  | { kind: 'behavior'; tenant: string; subject: string; brand: string; record: BehaviorRecord }
+  | OutcomeRecoveryInput
+  | { kind: 'behavior'; tenant: string; subject: string; brand: string; record: BehaviorRecord; carried?: CarriedOutcome }
   | { kind: 'product-sort'; tenant: string; subject: string; brand: string; record: ProductSortRecord };
 export interface RecoveryReceipt {
   version: 1; operation: string; durable: true;
@@ -71,6 +86,8 @@ export interface OwnerRecovery {
   principal: SessionCapability; consentUntil: number; retention: RetentionStamp; expiresAt: number;
   tenant: string; subject: string; records: number; occurredAt: number; destinations: string[];
   receipt: RecoveryReceipt; cleanup?: 'erased' | 'expired' | 'retired'; learning?: boolean;
+  /** P65: the W06 operation id of the outcome this behaviour operation still carries (`CarriedOutcome`), until it is settled. */
+  carries?: string;
 }
 const rowsOf = (input: RecoveryInput): CapturedRecord[] => input.kind === 'decisions' ? input.records : input.kind === 'outcome' ? [input.outcome] : [input.record];
 const learningInput = (input: RecoveryInput): input is Extract<RecoveryInput, { kind: 'decisions' | 'outcome' }> => input.kind === 'decisions' || input.kind === 'outcome';
@@ -140,6 +157,16 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
     || (learningInput(input) && (!('brand' in row) || row.brand !== input.brand)) || !isCapturedMessage({ kind: 'ledger', type: stream, record: row })
     || logicalIdentity(row as unknown as Record<string, unknown>, stream) !== 'stable')) throw new Error('Recovery input unavailable');
   if (principal.tenant !== input.tenant || principal.subject !== input.subject) throw new Error('Recovery owner unavailable');
+  // P65: a carried outcome is the behaviour record's own event's, for the same owner, and a record the ledger takes.
+  const carried = input.kind === 'behavior' ? input.carried : undefined;
+  if (carried !== undefined && input.kind === 'behavior') {
+    const outcome = carried.input?.outcome;
+    if (carried.input?.kind !== 'outcome' || carried.input.tenant !== input.tenant || carried.input.subject !== input.subject
+      || !outcome || outcome.tenant !== input.tenant || outcome.visitor_id !== input.subject || outcome.brand !== carried.input.brand
+      || outcome.event_id !== input.record.event_id || !isCapturedMessage({ kind: 'ledger', type: 'outcome', record: outcome })
+      || logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable'
+      || (carried.buffered !== undefined && carried.buffered !== true) || (carried.surface !== undefined && typeof carried.surface !== 'string')) throw new Error('Recovery input unavailable');
+  }
   const firstAdmissionUntil = input.kind === 'decisions' ? input.firstAdmissionUntil : undefined;
   if (input.kind === 'decisions' && (input.records.some(row => row.measurementBasis === 'rendered-v1') && firstAdmissionUntil === undefined
     || firstAdmissionUntil !== undefined && (!Number.isSafeInteger(firstAdmissionUntil) || firstAdmissionUntil <= 0
@@ -148,6 +175,12 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
   const ids = rows.map(row => 'outcome_id' in row ? row.outcome_id : 'decision_id' in row ? row.decision_id : row.record_id);
   const id = await recoveryDigest({ kind: input.kind, tenant: input.tenant, subject: input.subject, ids }), digest = await recoveryDigest(sourceOf(input));
   let meta = await storage.get<OwnerRecovery>(metaKey(id));
+  if (options?.withdrawCarried) {
+    // P65: only an admitted behaviour operation of this record is settled; nothing is admitted here.
+    if (input.kind !== 'behavior' || !meta || meta.digest !== digest) throw new Error('Recovery state unavailable');
+    await withdrawCarriedOutcome(storage, id);
+    return meta.receipt;
+  }
   if (meta) {
     if (meta.digest !== digest) throw new Error('Recovery logical conflict');
     return options?.answerAtAdmission && effectsPending(meta) ? answerAtAdmission(storage, meta, guard, true, options.afterEffects) : resumeOwnerRecovery(storage, env, meta, guard);
@@ -171,7 +204,8 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
     retention, expiresAt: Math.min(retention.expiresAt, consentUntil, principal.exp * 1000,
       ...rows.flatMap(row => categoriesOf(input).map(category => row.retention![category]!.expiresAt))),
     tenant: input.tenant, subject: input.subject, records: rows.length, occurredAt, destinations: [], learning: learningInput(input),
-    receipt: { version: 1, operation: id, durable: true, source: { expected: rows.length, state: 'pending' } } };
+    receipt: { version: 1, operation: id, durable: true, source: { expected: rows.length, state: 'pending' } },
+    ...(carried ? { carries: await recoveryDigest({ kind: 'outcome', tenant: input.tenant, subject: input.subject, ids: [carried.input.outcome.outcome_id] }) } : {}) };
   if (meta.expiresAt <= Date.now()) throw new Error('Recovery authority expired');
   // Durable admission precedes queue, R2, ring counters or credit effects.
   await savePayload(storage, meta, payload, await Promise.all(ids.map(value => recoveryDigest({ stream, id: value }))), firstAdmissionUntil);
@@ -203,8 +237,13 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
  * called when nothing was left to run (an alarm that resumed the operation first
  * ran them), nor for an answer whose effects ran before it (the caller holds that
  * receipt). It reports; it decides nothing, and its failure is ignored.
+ *
+ * P65 (amendment 7): `withdrawCarried`, with a behaviour capture's input, admits
+ * nothing: it withdraws the outcome that capture's admitted operation carries
+ * (`withdrawCarriedOutcome`), once the engine has answered that the event records
+ * none, and answers that operation's receipt. An operation not admitted refuses.
  */
-export interface RecoveryOptions { answerAtAdmission?: boolean; afterEffects?: (receipt: RecoveryReceipt | undefined) => void }
+export interface RecoveryOptions { answerAtAdmission?: boolean; afterEffects?: (receipt: RecoveryReceipt | undefined) => void; withdrawCarried?: boolean }
 /** An admitted operation whose effects have not completed; a recovered, expired or cleaned one replays as it always has. */
 const effectsPending = (meta: OwnerRecovery): boolean => !meta.cleanup && meta.expiresAt > Date.now() && meta.receipt.source.state === 'pending';
 /**
@@ -288,6 +327,65 @@ export async function resumeOwnerRecovery(storage: DurableObjectStorage, env: En
   await storage.put(metaKey(meta.id), meta);
   await armRecovery(storage, meta.expiresAt);
   return meta.receipt;
+}
+
+/**
+ * P65 (amendment 7): settles the outcome a behaviour operation carries by
+ * withdrawing it: the operation's body is written again without it, and the
+ * operation names it no longer, in one transaction (`savePayload`); its digests
+ * are unchanged, since the carried outcome enters none. Idempotent: an operation
+ * that carries none, or whose body was cleaned up, is left exactly as it is.
+ */
+export async function withdrawCarriedOutcome(storage: DurableObjectStorage, id: string): Promise<void> {
+  const meta = await storage.get<OwnerRecovery>(metaKey(id));
+  if (!meta || meta.cleanup || meta.carries === undefined) return;
+  const payload = await payloadOf(storage, meta);
+  if (payload.input.kind !== 'behavior') throw new Error('Recovery state unavailable');
+  const { carried: _settled, ...input } = payload.input;
+  void _settled;
+  delete meta.carries;
+  await savePayload(storage, meta, { ...payload, input });
+}
+
+/**
+ * P65 (amendment 7, R-P124): the alarm's settlement of the outcome a behaviour
+ * operation still carries, once that operation's own resume has run. The outcome
+ * is settled exactly once, by the first of:
+ *  - its own durable admission (the action route admitted it, or the same event
+ *    re-sent did): the carried copy is withdrawn and nothing else happens;
+ *  - the engine's drop of its event, re-decided now from the carried behaviour
+ *    record by the owner (`dropped`, held to the operation's stored principal and
+ *    consent first): a dropped event gets no outcome record (fail-closed), and the
+ *    carried copy is withdrawn;
+ *  - otherwise its durable admission here, from the input the action route
+ *    prepared before the behaviour capture's admission, under the same
+ *    principal and consent deadline that admission held, its effects run at once
+ *    (`runOwnerRecovery`, which holds it to that principal's grant and consent
+ *    now): the learn document is not read again, and nothing is counted lost;
+ *    then the carried copy is withdrawn.
+ * A failure leaves what is durable as it is (the carried copy, or the outcome's
+ * own admitted operation) for the next alarm. Answers the outcome's receipt when
+ * it was admitted here.
+ */
+export async function settleCarriedOutcome(storage: DurableObjectStorage, env: Env, id: string,
+  guard: (principal: SessionCapability, until: number) => Promise<void>,
+  dropped: (record: BehaviorRecord, carried: CarriedOutcome, principal: SessionCapability) => Promise<boolean>): Promise<RecoveryReceipt | null> {
+  const meta = await storage.get<OwnerRecovery>(metaKey(id));
+  if (!meta || meta.cleanup || meta.carries === undefined || meta.expiresAt <= Date.now()) return null;
+  if (await storage.get(metaKey(meta.carries)) || await storage.get('recoveryTerminal:' + meta.carries)) {
+    await withdrawCarriedOutcome(storage, id);
+    return null;
+  }
+  const { input } = await payloadOf(storage, meta);
+  if (input.kind !== 'behavior' || !input.carried) throw new Error('Recovery state unavailable');
+  await guard(meta.principal, meta.consentUntil);
+  if (await dropped(input.record, input.carried, meta.principal)) {
+    await withdrawCarriedOutcome(storage, id);
+    return null;
+  }
+  const receipt = await runOwnerRecovery(storage, env, input.carried.input, meta.principal, meta.consentUntil, guard);
+  await withdrawCarriedOutcome(storage, id);
+  return receipt;
 }
 
 /** Transactional owner erasure keeps this minimal continuation, not raw work. */
