@@ -154,6 +154,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `γ` (`gamma`) | The trust dial per slot, 0 to 1: how much the lift moves the score |
 | `prior` | `{ p, n }` when an imported prior was in force for the item |
 | `evidenceFloor` | `{ floor, lacking, n, page }`, keys sorted, when the page's evidence floor shrank the estimate: `p_hat` is then the estimate shrunk toward `p0` by `lacking`, F − n, exposures at the baseline rate, and `lift` follows from it ([evidence floors](#evidence-floors-evidencefloors)) |
+| `asOf` | `{ latest, publishedAt, version }`, keys sorted, on a decision record whose lift was read from a snapshot that was no longer the statistics object's latest publication but one of its recent publications, recognised under the same witness within `LIFT_RECENT_WINDOW_MS` (ten minutes) of its own publication: that snapshot's `version` (the record's `versions.lift`) and `publishedAt`, and the `latest` version published. Absent when the snapshot was the latest; compared by value in replay |
 
 On a layout slot that opts into the layout blend the lift block is kept beside `explain.blend`: its
 `gamma` is the slot's dial, which the blend does not apply, and `applied` is `p × Q`, what the learned
@@ -1475,7 +1476,9 @@ snapshot only when its `tauLearnMs`, `reward`, `objective`, `measurementBasis` a
 ones the tenant's published learn document names. `witness` is a digest of the statistics object's
 committed identity — tenant, brand, slot, configuration, generation fence and projection — which the
 serving path checks against the object itself, together with the published digest, before it trusts a
-cached snapshot: a snapshot the object does not confirm as its current, healthy publication serves no lift.
+cached snapshot: a snapshot the object does not confirm, healthy and under its current witness, as its latest
+publication or one of its recent ones (within ten minutes of that snapshot's `publishedAt`; the record then
+carries `explain.lift.asOf`) serves no lift.
 The decision record of such a refusal carries `explain.lift: null` and `versions.lift: 0` and does not say
 why; the decision's answer does, per learning slot, in `sources.lift` (`served`, `none`, `incompatible`,
 `late`, `superseded`, `unrecognized`, `unhealthy` or `failed`, with its milliseconds), and the monitor
