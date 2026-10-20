@@ -7,7 +7,7 @@
 
 import { composeContentDetailed, compositionOrder, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust, type SettleHook, type SlotBand } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, LiftAsOf, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
   ConversionTable, SuccessEvent, SuccessEventApplied,
 } from './types';
 import { OFF_LIMITS_ITEM } from '@/ledger/records';
@@ -99,6 +99,14 @@ export interface DecideInput {
      * Absent: no floor, and every slot decides exactly as before.
      */
     evidenceFloor?: number;
+    /**
+     * P62 (amendment 6, R-P110 decision 2), per slot: the copy in `snapshots`
+     * is not the statistics object's latest publication but a recent one of
+     * the same witness, and this names it (`LiftAsOf`); it is carried onto the
+     * slot's records' `explain.lift`. Absent for a slot whose copy is the
+     * latest, which decides and records exactly as before.
+     */
+    asOf?: Record<string, LiftAsOf>;
   } | null;
   /** Doc 22 §9: their model's answer for this page, or why there is none. Null when no model is configured. */
   external?: ExternalTerm | null;
@@ -1945,7 +1953,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const regional = regionalOf(d);
     const contextItem = contextPriorOf(d);
     const key = `${d.slot}:${d.contentId}`;
-    const lift = liftOf.get(key) ?? null;
+    // P62: a lift read from a recent copy that is not the latest says so (`asOf`); any other is as before.
+    const itemised = liftOf.get(key) ?? null, asOf = itemised && d.strategy !== 'tenant-pinned' ? learning?.asOf?.[d.slot] : undefined;
+    const lift = itemised && asOf ? { ...itemised, asOf: { latest: asOf.latest, publishedAt: asOf.publishedAt, version: asOf.version } } : itemised;
     const scoreBase = baseOf.get(key) ?? d.score;
     const pick = explored.get(d.slot);
     const pinned = d.strategy === 'tenant-pinned';

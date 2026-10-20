@@ -754,7 +754,7 @@ describe('CW31 consent on the content service', () => {
     const storage = new Storage(), state = { storage } as unknown as DurableObjectState;
     let target = new LearnStats(state, env), health = 0, held = false;
     env.LEARN_STATS = { idFromName: (n: string) => n, get: () => ({ fetch: (url: string, init?: RequestInit) => {
-      if (url.endsWith('/health')) {
+      if (url.endsWith('/witness')) { // R10 (amendment 6 / P62, R-P112(3)): the decision path's witness calls POST /witness since P62; its calls are counted and held here.
         health++;
         if (held) return new Promise<Response>((_resolve, reject) => {
           const fail = () => reject(new DOMException('Synthetic transport aborted', 'AbortError'));
@@ -811,7 +811,7 @@ describe('CW31 consent on the content service', () => {
       snap.witness = 'a'.repeat(64);
       const statsWriter = env.LEARN_STATS;
       env.LEARN_STATS = { idFromName: (name: string) => name, get: (name: string) => ({ fetch: (url: string, init?: RequestInit) =>
-        url.endsWith('/health') ? recoveryDigest(snap).then(digest => Response.json({ ok: true, state: 'healthy', tenant: 'coach', brand: 'coach', slot: 'hero', witness: snap.witness,
+        url.endsWith('/witness') ? recoveryDigest(snap).then(digest => Response.json({ ok: true, state: 'healthy', tenant: 'coach', brand: 'coach', slot: 'hero', witness: snap.witness, // R10 (amendment 6 / P62, R-P112(3)): the witness door the decision path calls since P62
           publication: { witness: snap.witness, digest, version: snap.version } }))
           : statsWriter.get(statsWriter.idFromName(name)).fetch(url, init) }) } as unknown as DurableObjectNamespace;
       const cache = env.CACHE as unknown as FakeKV, key = liftKey('coach', 'coach', 'hero');

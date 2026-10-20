@@ -190,6 +190,11 @@ TREND_ROLLUP_TENANTS = "coach"
 # W34: the external-model policy (src/learn/external.ts). `off` is the only implemented and the
 # only deployed state; absent or any other value is also off. No value enables a model.
 EXTERNAL_MODEL_POLICY = "off"
+# P62: the lift witness and ring read budgets in ms (src/learn/fan.ts `learningReadBudgets`), unset here and in
+# every env below, so the code defaults (200 and 200) apply. A whole number above 0 and below 5000, as text,
+# overrides one; any other value is refused, the default stays and the answer's sources.budgets.refused names it.
+# LIFT_WITNESS_BUDGET_MS = "200"
+# RING_READ_BUDGET_MS = "200"
 
 # Static assets configuration
 [assets]

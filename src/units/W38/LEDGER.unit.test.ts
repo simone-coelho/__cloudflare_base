@@ -513,10 +513,10 @@ describe('unit:W38.B4', () => {
       RETENTION: JSON.stringify({ version: 1, tenants: { [A]: { ...data, configuration: CONFIGURATION }, [B]: data } }),
       EVENT_QUEUE: { send: async (body: unknown) => { queued.push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const m of messages) queued.push(m.body); } },
       DECISION_RING: { idFromName: (name: string) => name, get: () => ({ fetch: async () => Response.json({ ok: true, ring: [] }) }) },
-      // The statistics owner: its health answer names the snapshot it last published (src/durable-objects/LearnStats.ts:1024).
+      // The statistics owner: its health answer names the snapshot it last published (src/durable-objects/LearnStats.ts:1024). R10 (amendment 6 / P62, R-P112(3)): it answers the witness door the decision path calls since P62, POST /witness, exactly as it answers /health.
       LEARN_STATS: { idFromName: (name: string) => name, get: (name: string) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
         const request = new Request(input, init), path = new URL(request.url).pathname;
-        if (path !== '/health') return Response.json({ ok: true });
+        if (path !== '/health' && path !== '/witness') return Response.json({ ok: true });
         const body = await request.json() as { tenant: string; brand: string; slot: string }, published = health.get(name);
         return Response.json({ ok: true, tenant: body.tenant, brand: body.brand, slot: body.slot, state: published ? 'healthy' : 'empty', generation: 0,
           digest: 'd'.repeat(64), bytes: 0, publication: published ?? null, witness: published?.witness ?? null });
@@ -771,7 +771,7 @@ describe('unit:W38.B5', () => {
 
 // ===========================================================================
 // unit:W38.B7 — a large lift snapshot is served: its health witness does not
-// re-digest the whole snapshot inside its 50 ms budget
+// re-digest the whole snapshot inside its budget (the 50 ms literal; LIFT_WITNESS_BUDGET_MS from amendment 6 / P62)
 // ===========================================================================
 
 describe('unit:W38.B7', () => {
@@ -813,11 +813,11 @@ describe('unit:W38.B7', () => {
   };
   /**
    * One serving read during which every SHA-256 over at least 64 KiB — the whole
-   * snapshot — stays pending until the 50 ms budget has expired. Timers are the
+   * snapshot — stays pending until the witness budget in force has expired. Timers are the
    * only thing faked; the read, the statistics answer and the digest are real.
    */
   async function readWhileTheWholeSnapshotDigestOutlastsTheBudget(read: (now: number) => Promise<LiftSnapshot | null>, now: number) {
-    const subtle = crypto.subtle, digest = subtle.digest.bind(subtle), held: Array<() => void> = [];
+    const budget = await witnessBudgetInForce(), subtle = crypto.subtle, digest = subtle.digest.bind(subtle), held: Array<() => void> = [];
     const spy = vi.spyOn(subtle, 'digest').mockImplementation(async (algorithm, data) => {
       if ((data as ArrayBufferView | ArrayBuffer).byteLength >= 64 * 1024) await new Promise<void>(release => held.push(release));
       return digest(algorithm, data);
@@ -828,20 +828,20 @@ describe('unit:W38.B7', () => {
       const reading = read(now).finally(() => { settled = true; });
       for (let i = 0; i < 500 && !held.length && !settled; i++) await new Promise(resolve => setImmediate(resolve));
       const digestWasPending = held.length > 0;
-      vi.advanceTimersByTime(60);
+      vi.advanceTimersByTime(budget + 10); // R10 (amendment 6 / P62, R-P112(3)): 10 ms past the budget in force (60 at today's 50 ms literal), so a whole-snapshot digest inside the budget is still caught at P62's default.
       while (held.length) held.shift()!();
       return { served: (await reading)?.version ?? null, digestWasPending };
     } finally { vi.useRealTimers(); spy.mockRestore(); }
   }
 
-  it('B7: a snapshot at the statistics object\'s own caps (256 items, 4096 counters) is served by the serving read, cold and from the isolate cache, even while its whole digest outlasts the 50 ms budget', async () => {
+  it('B7: a snapshot at the statistics object\'s own caps (256 items, 4096 counters) is served by the serving read, cold and from the isolate cache, even while its whole digest outlasts the witness budget', async () => {
     const large = await published(ITEMS, CELLS);
     expect({ counters: large.counters, underServingLimit: large.bytes < 2 * MiB }, 'the fixture is the largest snapshot the object publishes within its counter cap').toEqual({ counters: 4096, underServingLimit: true });
     const read = serving(large.raw, large.publication);
     const cold = await readWhileTheWholeSnapshotDigestOutlastsTheBudget(read, 1_000);
     const warm = await readWhileTheWholeSnapshotDigestOutlastsTheBudget(read, 1_001);
     expect({ cold: cold.served, warm: warm.served },
-      `W38.B7 — the ${large.bytes}-byte snapshot is served on a cold read and on a cached read: the health witness does not re-digest the whole snapshot inside its 50 ms budget (src/learn/fan.ts:25; a whole-snapshot digest was pending when the budget expired: cold ${cold.digestWasPending}, cached ${warm.digestWasPending})`)
+      `W38.B7 — the ${large.bytes}-byte snapshot is served on a cold read and on a cached read: the health witness does not re-digest the whole snapshot inside its budget (src/learn/fan.ts:25; a whole-snapshot digest was pending when the budget expired: cold ${cold.digestWasPending}, cached ${warm.digestWasPending})`)
       .toEqual({ cold: large.publication.version, warm: large.publication.version });
   }, 60_000);
 
@@ -854,14 +854,31 @@ describe('unit:W38.B7', () => {
     }
   }, 60_000);
 
-  it('B7: the witness still verifies — a large snapshot whose digest the statistics object does not recognize is not served, and a health answer after the 50 ms budget serves nothing', async () => {
+  /**
+   * R10 (amendment 6, ticket P62; R-P110 decision 1, which raises the witness budget
+   * for the edge): this lock keeps its property with its literal replaced. It read "a
+   * health answer 200 ms late serves nothing" against the 50 ms literal of
+   * `currentLiftWitness` (src/learn/fan.ts:43): the budget plus a margin of 150 ms.
+   * The answer is now the budget in force plus that same margin late: the budget is
+   * `LIFT_WITNESS_BUDGET_MS`, which P62 exports from src/learn/fan.ts, and until it is
+   * exported the 50 ms literal, so the delay is today's 200 ms. Read loosely, so the
+   * constant is no type error before it exists.
+   */
+  const LATE_MARGIN_MS = 150;
+  const witnessBudgetInForce = async (): Promise<number> => {
+    const fan = await import('@/learn/fan') as unknown as Record<string, unknown>;
+    return typeof fan.LIFT_WITNESS_BUDGET_MS === 'number' ? fan.LIFT_WITNESS_BUDGET_MS : 50;
+  };
+
+  it('B7: the witness still verifies — a large snapshot whose digest the statistics object does not recognize is not served, and a health answer later than the budget plus the margin serves nothing', async () => {
     const large = await published(ITEMS, CELLS);
     const forged = serving(large.raw, { ...large.publication, digest: 'f'.repeat(64) });
     expect({ cold: (await forged(1_000))?.version ?? null, warm: (await forged(1_001))?.version ?? null },
       'W38.B7 — the digest comparison is kept: a snapshot the object did not publish is refused, cold and cached').toEqual({ cold: null, warm: null });
     invalidateLiftCache();
     const small = await published(ITEMS.slice(0, 4), CELLS.slice(0, 1));
-    const late = serving(small.raw, small.publication, 200);
-    expect((await late(1_000))?.version ?? null, 'W38.B7 — the 50 ms budget is kept: a health answer 200 ms late serves nothing').toBeNull();
+    const budget = await witnessBudgetInForce();
+    const late = serving(small.raw, small.publication, budget + LATE_MARGIN_MS);
+    expect((await late(1_000))?.version ?? null, `W38.B7 — the witness budget is kept: a health answer ${budget + LATE_MARGIN_MS} ms late (the ${budget} ms budget plus the ${LATE_MARGIN_MS} ms margin) serves nothing`).toBeNull();
   }, 60_000);
 });

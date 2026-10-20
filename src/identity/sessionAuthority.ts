@@ -42,6 +42,8 @@ interface Invocation {
   continuation?: OwnerContinuation;
   /** P57: this owner's read of the render its stored admission of one decision acknowledged (`readOwnedAdmission`). */
   admission?: (tenant: string, subject: string, decisionId: string) => Promise<AdmittedRender | undefined>;
+  /** R-P115: work registered by `afterOwnerAnswer`, started once this operation has ended (with whether it answered). */
+  afterAnswer?: Array<(answered: boolean) => void>;
 }
 // Async descendants share a lifetime, not an ambient reusable authorization bit.
 const invocation = new AsyncLocalStorage<Invocation>();
@@ -565,6 +567,7 @@ export async function runOwnerOperation<T>(owner: object, env: Env, work: () => 
     // are not replaced by an untyped 500. An authority refusal still refuses, and
     // a retained rejection still fails any other answer, as before.
     const answeredFailure = failure === undefined && (value as unknown) instanceof Response && (value as unknown as Response).status >= 400;
+    let answered = false;
     try {
       // Includes descendants registered while previously registered work settles.
       while (held.pending.length) {
@@ -576,8 +579,13 @@ export async function runOwnerOperation<T>(owner: object, env: Env, work: () => 
       }
       if (failure !== undefined) throw failure;
       recheckOwnerInvocation(owner);
+      answered = true;
       return value as T;
-    } finally { held.active = false; }
+    } finally {
+      held.active = false;
+      // R-P115: work registered to follow this answer starts now, outside this operation.
+      for (const start of held.afterAnswer?.splice(0) ?? []) start(answered);
+    }
   });
 }
 /**
@@ -853,6 +861,34 @@ export function continueAfterOwnerAnswer<T>(work: (env: Env) => Promise<T>): Pro
   if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
   try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
   const task = reenterOwner(first, work);
+  first.continuation.waitUntil(task.then(() => undefined, () => undefined));
+  return task;
+}
+/**
+ * R-P115 (amendment 6, P61): tenant-level work that follows the owner's answer
+ * WITHOUT the owner: the sibling of `continueAfterOwnerAnswer` for work that
+ * reads and writes no shopper state and so needs no shopper ordering (the
+ * tenant's learning-read counters).
+ *
+ * It registers only inside an ACTIVE owner operation whose owner supplies its
+ * continuation, fenced at that moment as every owner effect is
+ * (`recheckOwnerInvocation`); otherwise nothing is registered and it refuses
+ * with SessionAccessError. The work starts once that operation has ended, and
+ * only if it answered (an operation that failed starts nothing). It is never
+ * retained (the owner's drain before its answer does not wait on it) and never
+ * serialized (the owner's next request does not queue behind it); it is kept
+ * alive by the owner's own waitUntil alone, and runs outside every owner
+ * operation. It is handed the operator cache (`CACHE`) and nothing else, so no
+ * binding that reaches a shopper's state is reachable from it. Its failure is
+ * the caller's to handle; it never reaches the answer.
+ */
+export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE'>) => Promise<unknown>): Promise<void> {
+  const first = invocation.getStore();
+  if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
+  try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
+  const operator = { CACHE: first.env.CACHE };
+  const task = new Promise<boolean>(resolve => { (first.afterAnswer ??= []).push(resolve); })
+    .then(answered => (answered ? invocation.exit(() => work(operator)) : undefined)).then(() => undefined);
   first.continuation.waitUntil(task.then(() => undefined, () => undefined));
   return task;
 }

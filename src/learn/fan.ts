@@ -8,42 +8,160 @@ import type { Env } from '@/types/env';
 import type { LiftSnapshot, NotAdopted, NotAdoptedChange, Republished, RepublishedChange, StaleMarker } from './stats';
 
 /**
+ * P62 (amendment 6, R-P110 decision 1): the lift witness's budget, sized for the
+ * edge. It is the round trip to the statistics object and nothing else (W38 B7,
+ * below): one edge round trip to a Durable Object at the top of the measured
+ * per-call estimate (180 ms) plus the object's own measured work per witness at
+ * the acceptance pair's scale (13 ms), rounded up to the next 10 ms. A
+ * deployment may set another through `LIFT_WITNESS_BUDGET_MS`
+ * (`learningReadBudgets`).
+ */
+export const LIFT_WITNESS_BUDGET_MS = 200;
+/**
+ * P62 (R-P110 decision 1): the visitor ring read's budget, the same shape (one
+ * hop to the visitor's `DecisionRing`, whose own bounded read is far below the
+ * statistics object's): 200 ms. A deployment may set another through
+ * `RING_READ_BUDGET_MS`.
+ */
+export const RING_READ_BUDGET_MS = 200;
+/**
+ * P62 (R-P110 decision 2, R-P112(6)): how long after its PUBLICATION a copy that
+ * is no longer the statistics object's latest is still served, when the object
+ * recognises it (its version and digest among its recent publications) under the
+ * same witness, healthy. At least an isolate's hold of a copy (`LIFT_TTL_MS`,
+ * 60 s) plus the store's largest observed propagation (55.8 s); ten minutes, the
+ * analysis's own bound, so a copy published shortly before a quiet spell ends
+ * is still recognised after the next publication supersedes it.
+ */
+export const LIFT_RECENT_WINDOW_MS = 600_000;
+/** P62: at most this many recent publications are kept by one statistics object, however many it makes inside the window. */
+export const LIFT_RECENT_PUBLICATIONS = 32;
+/**
+ * P62: an override is admitted below the SDK's deadline (`ACK_DEADLINE_MS`,
+ * src/sdk/core.ts: 5 000 ms), which cuts every request the SDK makes, the
+ * decision included: a budget of that or more would let one read outlast the
+ * request waiting on it.
+ */
+export const LEARNING_READ_BUDGET_CEILING_MS = 5_000;
+const BUDGET_NAMES = ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'] as const;
+/**
+ * P62 (R-P110 decision 1): the two budgets in force for a decision. A deployment
+ * value under the constant's own name is admitted when it is a whole number of
+ * milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`, given as
+ * its decimal text (or as that number); any other value is refused, the code
+ * default stays in force and the refusal is named (`refused`, sorted). An unset
+ * value is the default and names nothing.
+ */
+export function learningReadBudgets(env: object): LearningReadBudgets {
+  const vars = env as Partial<Record<(typeof BUDGET_NAMES)[number], unknown>>, refused: string[] = [];
+  const admitted = (name: (typeof BUDGET_NAMES)[number], fallback: number): number => {
+    const value = vars[name];
+    if (value === undefined || value === null) return fallback;
+    const ms = typeof value === 'number' ? value : typeof value === 'string' && /^[0-9]+$/.test(value) ? Number(value) : Number.NaN;
+    if (Number.isSafeInteger(ms) && ms > 0 && ms < LEARNING_READ_BUDGET_CEILING_MS) return ms;
+    refused.push(name);
+    return fallback;
+  };
+  const lift = admitted('LIFT_WITNESS_BUDGET_MS', LIFT_WITNESS_BUDGET_MS), ring = admitted('RING_READ_BUDGET_MS', RING_READ_BUDGET_MS);
+  return { lift, ring, ...(refused.length ? { refused: refused.sort() } : {}) };
+}
+
+/**
  * Live authority is never satisfied by an eventually-consistent KV/cache hit.
  *
- * W38 B7 (amendment A36): the 50 ms budget is the round trip to the statistics
+ * W38 B7 (amendment A36): the witness budget is the round trip to the statistics
  * object, and nothing else. The snapshot's own digest — the reader's work, which
  * grows with the snapshot (a snapshot at the object's counter caps is about
  * 680 KB) — is settled BEFORE the budget starts, so a large snapshot is never
- * refused because digesting it and the round trip together outlasted 50 ms. A
+ * refused because digesting it and the round trip together outlasted the budget. A
  * caller that holds the snapshot across reads passes its memoized digest
  * (`digest`, asked for only once the witness will be checked), so a cached read
  * never digests the snapshot again. The comparison itself is
  * unchanged: a digest the object did not publish, or an answer after the budget,
  * serves nothing, and a digest that cannot be computed is a failed witness.
+ *
+ * P61 (amendment 6, R-P110): today's callers keep this boolean; it is `true`
+ * exactly when `liftWitnessOutcome` below answers `served`.
  */
 export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
   digest?: () => Promise<string>): Promise<boolean> {
-  if (!env.LEARN_STATS || typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return false;
+  return await liftWitnessOutcome(env, tenant, brand, slot, snapshot, page, digest) === 'served';
+}
+/** P61: what the witness can say of a copy that is present and compatible (`none` and `incompatible` are the reader's). */
+export type LiftWitnessOutcome = Exclude<LiftReadOutcome, 'none' | 'incompatible'>;
+/** P62: the witness's outcome and, for a copy served that is not the object's latest publication, what it is (`explain.lift.asOf`). */
+export interface LiftWitnessVerdict { outcome: LiftWitnessOutcome; asOf?: LiftAsOf }
+/** P62 (R-P110): the statistics object's light witness door (LearnStats `/witness`); `/health` stays the operators'. */
+export const LIFT_WITNESS_DOOR = 'https://learn/witness';
+/** P61: `liftWitnessVerdict`'s outcome alone. */
+export async function liftWitnessOutcome(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
+  digest?: () => Promise<string>, budgetMs?: number): Promise<LiftWitnessOutcome> {
+  return (await liftWitnessVerdict(env, tenant, brand, slot, snapshot, page, digest, budgetMs)).outcome;
+}
+/**
+ * P61 (amendment 6, R-P110): the witness of `currentLiftWitness`, returning its
+ * reason instead of a boolean, the first of these that applies:
+ *   · `failed`: no statistics binding, a digest that cannot be computed, a call
+ *     that errored, or an answer that is not this placement's witness answer
+ *     (not OK, not JSON, another tenant, brand, slot or page);
+ *   · `late`: no answer within the budget (the call is aborted, as before);
+ *   · `unhealthy`: the object answered a state other than `healthy`;
+ *   · `served`: the object's current witness, its latest publication's witness,
+ *     version and digest all match the copy; or (P62) the copy is one of the
+ *     object's recent publications, recognised by version and digest inside
+ *     `LIFT_RECENT_WINDOW_MS` from its publication, and the object's current
+ *     witness (configuration, fence, projection) is the copy's: then `asOf`
+ *     names the copy's version and publication time and the latest version;
+ *   · `superseded`: a copy the object no longer accepts because it has moved on
+ *     since: one of its recent publications under another witness, or a copy
+ *     outside the window whose later version the object has published (named
+ *     by its version alone: the object keeps no older publication);
+ *   · `unrecognized`: any other copy, a version or a digest the object never
+ *     published (a forged or damaged copy, or one without a witness); a version
+ *     it published inside the window under another digest (P62); and (R-P113)
+ *     the object's latest publication when the object's witness has changed
+ *     since (a reset or a transition moved the fence), so the witness the
+ *     object now confirms is not that copy's.
+ * P62: it asks the object's light witness door, under the budget in force
+ * (`learningReadBudgets`, or `budgetMs` when the caller holds it).
+ */
+export async function liftWitnessVerdict(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
+  digest?: () => Promise<string>, budgetMs: number = learningReadBudgets(env).lift): Promise<LiftWitnessVerdict> {
+  if (!env.LEARN_STATS) return { outcome: 'failed' };
+  if (typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return { outcome: 'unrecognized' };
   const namespace = env.LEARN_STATS;
   let expected: string;
-  try { expected = await (digest ? digest() : recoveryDigest(snapshot)); } catch { return false; }
+  try { expected = await (digest ? digest() : recoveryDigest(snapshot)); } catch { return { outcome: 'failed' }; }
   const abort = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
-  const probe = async () => { try {
+  const probe = async (): Promise<LiftWitnessVerdict> => { try {
     // W26 R2: a page-scoped placement is witnessed by its own page's object,
     // which answers for that page and no other.
-    const response = await namespace.get(namespace.idFromName(statsName(tenant, brand, slot, page))).fetch('https://learn/health', {
+    const response = await namespace.get(namespace.idFromName(statsName(tenant, brand, slot, page))).fetch(LIFT_WITNESS_DOOR, {
       method: 'POST', body: JSON.stringify({ tenant, brand, slot, ...(page ? { page } : {}) }), signal: abort.signal,
     });
     const value = await response.json() as Record<string, unknown>;
     const publication = value.publication as { witness?: string; digest?: string; version?: number } | null;
-    return response.ok && value.ok === true && value.state === 'healthy' && value.tenant === tenant && value.brand === brand
-      && value.slot === slot && (value.page ?? undefined) === page && value.witness === snapshot.witness && !!publication && publication.witness === snapshot.witness
-      && publication.version === snapshot.version && publication.digest === expected;
-  } catch { return false; } };
-  try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
+    if (!response.ok || value.ok !== true || value.tenant !== tenant || value.brand !== brand || value.slot !== slot || (value.page ?? undefined) !== page) return { outcome: 'failed' };
+    if (value.state !== 'healthy') return { outcome: 'unhealthy' };
+    const published = !!publication && publication.witness === snapshot.witness && publication.version === snapshot.version && publication.digest === expected;
+    if (published) return { outcome: value.witness === snapshot.witness ? 'served' : 'unrecognized' };
+    // P62: the object's recent publications, inside the window it answers for.
+    const recent = (Array.isArray(value.recent) ? value.recent as Array<Record<string, unknown>> : [])
+      .find(entry => entry !== null && typeof entry === 'object' && entry.version === snapshot.version);
+    if (recent && recent.digest === expected && typeof recent.publishedAt === 'number' && Number.isFinite(recent.publishedAt)) {
+      if (value.witness === snapshot.witness && publication && typeof publication.version === 'number')
+        return { outcome: 'served', asOf: { latest: publication.version, publishedAt: recent.publishedAt, version: snapshot.version } };
+      return { outcome: 'superseded' };
+    }
+    if (recent) return { outcome: 'unrecognized' };
+    return { outcome: publication && typeof publication.version === 'number' && typeof snapshot.version === 'number' && publication.version > snapshot.version ? 'superseded' : 'unrecognized' };
+  } catch { return { outcome: 'failed' }; } };
+  try { return await Promise.race([probe(), new Promise<LiftWitnessVerdict>(resolve => { timer = setTimeout(() => { abort.abort(); resolve({ outcome: 'late' }); }, budgetMs); })]); }
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
-import type { ContentPiece, DecisionRecord, SlotAttribution, SlotCatalog } from '@/content/types';
+/** P61: whole milliseconds since `started` (a `performance.now()` reading), never negative. */
+export const elapsedMs = (started: number): number => Math.max(0, Math.round(performance.now() - started));
+import type { ContentPiece, DecisionRecord, LearningRead, LearningReadBudgets, LiftAsOf, LiftReadOutcome, RingReadOutcome, SlotAttribution, SlotCatalog } from '@/content/types';
 import { isOffLimitsLayoutRecord, isRewardType, type OutcomeRecord } from '@/ledger/records';
 import { attribute, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
@@ -855,20 +973,40 @@ export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: 
  * CW30: the visitor's ring, read on the decision path under a time budget so
  * the fatigue term can never extend a decision by more than `timeoutMs`. Null
  * when the ring is unbound, slow or failing: no penalty, never an error.
+ * P62 (R-P110 decision 1, R-P112(1)): the budget is `RING_READ_BUDGET_MS`
+ * unless the caller holds another, and the ring call is aborted when it runs
+ * out, as the lift witness's is, so nothing that waits for the calls a
+ * decision started (the shopper's owner drains them before it answers) waits
+ * on the ring past it.
  */
-export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = 60): Promise<RingEntry[] | null> {
+export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = RING_READ_BUDGET_MS): Promise<RingEntry[] | null> {
+  return (await readRingWithOutcome(env, tenant, visitorId, timeoutMs)).ring;
+}
+/**
+ * P61 (amendment 6, R-P110): `readRing`, telling how the read ended, with its
+ * whole milliseconds from its start to its outcome: `read` (the ring answered
+ * within the budget, an empty ring included), `late` (it did not), `failed`
+ * (no ring binding, a call that errored, or an answer that is not a ring
+ * answer). The read, its budget and what it serves are `readRing`'s, unchanged.
+ */
+export async function readRingWithOutcome(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = RING_READ_BUDGET_MS):
+  Promise<{ ring: RingEntry[] | null; read: LearningRead<RingReadOutcome> }> {
+  const started = performance.now();
+  const told = (ring: RingEntry[] | null, outcome: RingReadOutcome) => ({ ring, read: { ms: elapsedMs(started), outcome } });
   const ns = env.DECISION_RING;
-  if (!ns) return null;
+  if (!ns) return told(null, 'failed');
+  const abort = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const read = ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent').then(async (res) => {
+    const read = ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent', { signal: abort.signal }).then(async (res) => {
       // The ring keeps the full served records; attribution and the fatigue term read them as entries.
       const body = (await res.json()) as { ok?: boolean; ring?: Array<DecisionRecord | RingEntry> };
       return body.ok && Array.isArray(body.ring) ? body.ring.map((r) => ('decision_id' in r ? ringEntryOf(r) : r)) : null;
     });
-    const late = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); });
-    return await Promise.race([read, late]);
-  } catch { return null; } finally { if (timer !== undefined) clearTimeout(timer); }
+    const late = new Promise<'late'>((resolve) => { timer = setTimeout(() => { abort.abort(); resolve('late'); }, timeoutMs); });
+    const ring = await Promise.race([read, late]);
+    return ring === 'late' ? told(null, 'late') : told(ring, ring ? 'read' : 'failed');
+  } catch { return told(null, 'failed'); } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
 /**
@@ -1285,4 +1423,89 @@ export function foldRetainedDay(input: {
     if (credited) outcomes++;
   }
   return { stats, decisions, outcomes };
+}
+
+// ── P61 (amendment 6, R-P110): every learning read, counted per tenant ───────
+//
+// The decision path names how each lift read and the ring read ended on its
+// answer (`sources.lift`, `sources.ring`); these counters keep the same outcomes
+// for the tenant, where the monitor reads them (`learningReads` on its result).
+// They follow the W20 G2 slot-governance counters (src/learn/slotGovernance.ts)
+// rule for rule: one small document per tenant in the operator cache (`CACHE`),
+// so no binding or store is added; written after the answer, never before it
+// (inside the shopper's owner once it has answered and outside it, never in its
+// serializer, R-P115; outside an owner as after-response work), under the
+// three conditions those counters are written under (the shopper's tracking
+// consent, no synthetic operation, no self-check), so the
+// monitor's own probe decisions and a shopper who withheld tracking are never
+// counted; never read on a decision path, and never able to fail one; holding
+// outcome words and counts only, nothing of the shopper; a floor, never an
+// overcount (the read-modify-write is last-write-wins, so concurrent decisions
+// may collapse into one increment); counted since a stated horizon, after which
+// the counts restart.
+
+/** P61: the lift read's outcomes, in the vocabulary `sources.lift` names them in. */
+export const LIFT_READ_OUTCOMES: readonly LiftReadOutcome[] = ['served', 'none', 'incompatible', 'late', 'superseded', 'unrecognized', 'unhealthy', 'failed'];
+/** P61: the ring read's outcomes, in the vocabulary `sources.ring` names them in. */
+export const RING_READ_OUTCOMES: readonly RingReadOutcome[] = ['read', 'late', 'failed', 'skipped'];
+/** P61: the one scope these counts are kept at, stated on every answer and never read from the store: the tenant's, across its brands. */
+export const LEARNING_READS_SCOPE = 'tenant';
+/** P61: the window the counts are measured over, the slot-governance counters' own; they restart when it lapses. */
+export const LEARNING_READS_HORIZON_MS = 30 * 86_400_000;
+export const learningReadsKey = (tenant: string): string => `learning-reads:v1:${tenant}`;
+
+/** P61: the tenant's counts of every outcome since `since`, zero reported as zero. */
+export interface LearningReads {
+  since: number;
+  scope: typeof LEARNING_READS_SCOPE;
+  lift: Record<LiftReadOutcome, number>;
+  ring: Record<RingReadOutcome, number>;
+}
+interface StoredLearningReads { version: 1; since: number; lift: Record<LiftReadOutcome, number>; ring: Record<RingReadOutcome, number> }
+
+const wholeCount = (value: unknown): number => (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0);
+/** Every outcome of the vocabulary with its stored count; anything stored that is not a whole, non-negative number reads as zero, and nothing outside the vocabulary is copied. */
+function outcomeCounts<O extends string>(names: readonly O[], block: unknown): Record<O, number> {
+  const held = block && typeof block === 'object' && !Array.isArray(block) ? block : null;
+  return Object.fromEntries(names.map(name => [name, wholeCount(held ? Object.getOwnPropertyDescriptor(held, name)?.value : undefined)])) as Record<O, number>;
+}
+/** The stored document, read back defensively: one written in another shape, or past its horizon, is none. */
+function learningReadsDocument(raw: unknown, now: number): StoredLearningReads | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const value = raw as { version?: unknown; since?: unknown; lift?: unknown; ring?: unknown };
+  const since = value.since;
+  if (value.version !== 1 || typeof since !== 'number' || !Number.isSafeInteger(since) || since < 0 || since > now
+    || now - since >= LEARNING_READS_HORIZON_MS) return null;
+  return { version: 1, since, lift: outcomeCounts(LIFT_READ_OUTCOMES, value.lift), ring: outcomeCounts(RING_READ_OUTCOMES, value.ring) };
+}
+
+/**
+ * P61: what the monitor reports for the tenant: every outcome counted since the
+ * horizon, zeros at a horizon of now when nothing was counted yet, or
+ * `undefined` when the store could not be read, so no result states a zero it
+ * did not observe. Never throws.
+ */
+export async function observeLearningReads(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<LearningReads | undefined> {
+  try {
+    const stored = learningReadsDocument(await env.CACHE.get(learningReadsKey(tenant), 'json'), now);
+    return { since: stored?.since ?? now, scope: LEARNING_READS_SCOPE,
+      lift: stored?.lift ?? outcomeCounts(LIFT_READ_OUTCOMES, null), ring: stored?.ring ?? outcomeCounts(RING_READ_OUTCOMES, null) };
+  } catch { return undefined; }
+}
+
+/**
+ * P61: one decision's outcomes added to the tenant's counts: each slot's lift
+ * read and the ring read. Called after the decision is answered (the decision
+ * path hands it to `afterOwnerAnswer`, with the operator cache alone); it
+ * resolves whatever happens, so no failure of this diagnostic can reach a
+ * shopper's decision.
+ */
+export async function recordLearningReads(env: Pick<Env, 'CACHE'>, tenant: string, reads: { lift: readonly LiftReadOutcome[]; ring: RingReadOutcome }, now: number): Promise<void> {
+  try {
+    const document: StoredLearningReads = learningReadsDocument(await env.CACHE.get(learningReadsKey(tenant), 'json'), now)
+      ?? { version: 1, since: now, lift: outcomeCounts(LIFT_READ_OUTCOMES, null), ring: outcomeCounts(RING_READ_OUTCOMES, null) };
+    for (const outcome of reads.lift) if (LIFT_READ_OUTCOMES.includes(outcome)) document.lift[outcome] = Math.min(document.lift[outcome] + 1, Number.MAX_SAFE_INTEGER);
+    if (RING_READ_OUTCOMES.includes(reads.ring)) document.ring[reads.ring] = Math.min(document.ring[reads.ring] + 1, Number.MAX_SAFE_INTEGER);
+    await env.CACHE.put(learningReadsKey(tenant), JSON.stringify(document), { expirationTtl: Math.floor(LEARNING_READS_HORIZON_MS / 1000) });
+  } catch { /* a diagnostic counter never fails a decision, and never retries on the shopper's time */ }
 }
