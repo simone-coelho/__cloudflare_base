@@ -366,10 +366,21 @@ export async function withdrawCarriedOutcome(storage: DurableObjectStorage, id: 
  * A failure leaves what is durable as it is (the carried copy, or the outcome's
  * own admitted operation) for the next alarm. Answers the outcome's receipt when
  * it was admitted here.
+ *
+ * P67 (amendment 8): before that admission the owner records what the engine's
+ * own path records for the event before the action route admits its outcome
+ * (`remember`): the order a purchase names, on the state this host keeps (P40,
+ * R-P48), so a later purchase of the same order under another event id is dropped
+ * as `duplicate_order`, exactly as after an outcome the route admitted. A failure
+ * of either leaves the carried copy for the next alarm, whose re-decision never
+ * takes the order recorded under this same event for a duplicate
+ * (`isDuplicateOrder`). The outcome admitted is the one the route prepared,
+ * unchanged: nothing of the recording enters its row or any digest.
  */
 export async function settleCarriedOutcome(storage: DurableObjectStorage, env: Env, id: string,
   guard: (principal: SessionCapability, until: number) => Promise<void>,
-  dropped: (record: BehaviorRecord, carried: CarriedOutcome, principal: SessionCapability) => Promise<boolean>): Promise<RecoveryReceipt | null> {
+  dropped: (record: BehaviorRecord, carried: CarriedOutcome, principal: SessionCapability) => Promise<boolean>,
+  remember: (record: BehaviorRecord, carried: CarriedOutcome, principal: SessionCapability) => Promise<void>): Promise<RecoveryReceipt | null> {
   const meta = await storage.get<OwnerRecovery>(metaKey(id));
   if (!meta || meta.cleanup || meta.carries === undefined || meta.expiresAt <= Date.now()) return null;
   if (await storage.get(metaKey(meta.carries)) || await storage.get('recoveryTerminal:' + meta.carries)) {
@@ -383,6 +394,7 @@ export async function settleCarriedOutcome(storage: DurableObjectStorage, env: E
     await withdrawCarriedOutcome(storage, id);
     return null;
   }
+  await remember(input.record, input.carried, meta.principal);
   const receipt = await runOwnerRecovery(storage, env, input.carried.input, meta.principal, meta.consentUntil, guard);
   await withdrawCarriedOutcome(storage, id);
   return receipt;
