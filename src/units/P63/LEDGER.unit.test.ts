@@ -65,8 +65,14 @@
 //   · The publish order: the object records the publication (`learnPublished`) before
 //     the store's put of the copy, made once.
 //   · The skip is the alarm's alone: the object's own `/publish` door (the operator's
-//     publish) publishes as today; P42.PW3 already locks it (two publications with
-//     nothing between them, both `published: true`).
+//     publish) publishes as today; src/learn/priorsAbsent.test.ts:87-88 already locks it
+//     (the door, right after the alarm's publication with nothing between them, answers
+//     `published: true`).
+//   · A change of either kind is pinned here (R-P138): a credit alone (a click on an
+//     acknowledged decision moves no event count, src/learn/stats.ts `recordSuccess`,
+//     :236-245, yet changes the state) and a republished learn document alone (one
+//     P49 does not refuse: the product slot's γ, the case of src/units/P49 LR2) each make
+//     the next alarm publish; the prior-document half is W10.01's (below).
 //   · NOT RULED: a sibling placement's pooled counters as a change; an alarm that only
 //     removes expired learning-effect markers.
 //   · P62's DOOR, LOCKED HERE (R-P129: the P62 delivery review's findings F1 and F3,
@@ -89,7 +95,10 @@
 // alarm attempts the publication and refuses it, 413): that test, src/learn/priorsAbsent.test.ts
 // (:112, :120: a removed or unreadable prior document fails the alarm) and
 // src/learn/learn.test.ts:499-503 (a failed publication keeps the previous copy, re-arms the
-// alarm, and the next alarm attempts it again) are existing locks the build keeps, not R10s.
+// alarm, and the next alarm attempts it again) and src/units/P62/LEDGER.unit.test.ts:641
+// (P62.LW4: every write a publication makes in the object precedes the store's put of the
+// copy; with :240 below it asks a build to record what it published before the copy and
+// to check the store's copy before skipping) are existing locks the build keeps, not R10s.
 //
 // FIXTURE. P61's and P62's lift world (src/units/_parity9.ts `liftWorld`): P08's
 // pooled world as P42.PW3 drives it, the product page's slot carrying P10's fatigue
@@ -110,8 +119,8 @@ import { invalidateLiftCache } from '@/content/service';
 import type { DecisionRecord } from '@/content/types';
 import { liftKey } from '@/learn/fan';
 
-import { BRAND, HOSTS, putDocument, TENANT, type Mounted } from '../_parity';
-import { dials, failPooledDoor, LIFT_MEMBERS, learnOf, liftOf, objectPublish, ROWS_MEMBERS, rowsOf, visit } from '../_parity6';
+import { BRAND, HOSTS, PAID_SOCIAL_ENTRY, pageInstanceOf, putDocument, shopperOn, TENANT, VIEW_TABBY_26, type Mounted } from '../_parity';
+import { dials, failPooledDoor, LIFT_MEMBERS, learnOf, liftOf, objectPublish, POOLED, ROWS_MEMBERS, rowsOf, SHARED, visit } from '../_parity6';
 import {
   copyOf, decide, fireAlarm, HOME_MODULES, liftOnRecord, liftReadOf, liftWorld, objectDoor, PDP_MODULES, placementOf, republish, restartObject, type Copy,
 } from '../_parity9';
@@ -187,6 +196,43 @@ describe('unit:P63.NR2', () => {
       expect({ record: record?.version, archived: published(m).archived.includes(`lift/${TENANT}/${BRAND}/${PDP_MODULES}/${now.version}.json`), events: copyEvents(now) },
         `${host}: P63.NR2 — LOCKED: recorded, archived, and built from every event counted`).toEqual({ record: now.version, archived: true, events: counted });
     }, 120_000);
+
+    it(`host (${host}): LOCK (R-P138) — a credit alone is new evidence: after an alarm publication holding a decision's exposures, a click on that acknowledged decision (a credit, no new event) and the next alarm publishes a later version holding the credit`, async () => {
+      const { m } = await liftWorld(host);
+      await republish(m);
+      const shopper = await shopperOn(m);
+      expect((await shopper.action(VIEW_TABBY_26, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the shopper's view is accepted`).toBe(200);
+      const page = await shopper.snapshot('pdp', { pageInstance: pageInstanceOf('p63-credit') });
+      for (const d of page.decisions) expect((await shopper.ack(page, d)).status, `${host}: PRECONDITION — ${d.contentId} acknowledged`).toBe(200);
+      await m.drainLedger();
+      await fireAlarm(m);
+      const before = copyOf(m)!, eventsBefore = heldEvents(m);
+      const clicked = page.decisions.find(d => [POOLED, SHARED].includes(d.contentId)) ?? page.decisions[0]!;
+      const stateBefore = JSON.stringify(placementOf(m).data.get('learn'));
+      expect((await shopper.click(page, clicked)).status, `${host}: PRECONDITION — the click on ${clicked.contentId} is accepted`).toBe(200);
+      await m.drainLedger();
+      expect({ events: heldEvents(m), stateChanged: JSON.stringify(placementOf(m).data.get('learn')) !== stateBefore },
+        `${host}: PRECONDITION — the click is a credit the placement counted, and no new event (stats.ts \`recordSuccess\`)`).toEqual({ events: eventsBefore, stateChanged: true });
+      await fireAlarm(m);
+      const after = copyOf(m)!;
+      const credits = (copy: Copy) => (JSON.parse(copy.raw) as { items?: Record<string, Record<string, { s?: number }>> }).items?.[clicked.contentId]?.['*']?.s ?? 0;
+      expect({ later: after.version > before.version, credited: credits(after) > credits(before) },
+        `${host}: P63.NR2 — LOCKED: the credit alone makes the next alarm publish (${before.version} → ${after.version}), holding it (credits of ${clicked.contentId}: ${credits(before)} → ${credits(after)})`)
+        .toEqual({ later: true, credited: true });
+    }, 120_000);
+
+    it(`host (${host}): LOCK (R-P138) — a republished learn document alone is a change: after an alarm publication, the learn document republished with the product slot's γ changed (a change P49 does not refuse) and nothing else, the next alarm publishes a later version`, async () => {
+      const { m } = await liftWorld(host);
+      const latest = await republish(m);
+      const events = heldEvents(m), state = JSON.stringify(placementOf(m).data.get('learn'));
+      const changed = await putDocument(m, 'learn', learnOf({ [PDP_MODULES]: dials('click', { gamma: 0.5 }), [HOME_MODULES]: dials() }), 'p63-gamma');
+      expect(changed.status, `${host}: PRECONDITION — the learn document republishes with the product slot's γ 0.5`).toBe(200);
+      expect({ events: heldEvents(m), state: JSON.stringify(placementOf(m).data.get('learn')) === state }, `${host}: PRECONDITION — nothing else changed: the placement's state is as the alarm published it`)
+        .toEqual({ events, state: true });
+      await fireAlarm(m);
+      const after = copyOf(m)!;
+      expect(after.version > latest.version, `${host}: P63.NR2 — LOCKED: the republished learn document makes the next alarm publish (${latest.version} → ${after.version})`).toBe(true);
+    }, 120_000);
   }
 });
 
@@ -197,20 +243,22 @@ describe('unit:P63.NR2', () => {
 
 describe('unit:P63.NR3', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): LOCK (P42 PW2) — with P42's stale marker in force and nothing changed since the last publication (the home page's /pooled door failing under the product placement's own /publish), the next alarm publication succeeds and clears it: a later version, and both lift reads answer today's members only`, async () => {
-      const { m, v1 } = await liftWorld(host);
+    it(`host (${host}): LOCK (P42 PW2) — with P42's stale marker in force and nothing changed since the last publication, itself an alarm publication (the home page's /pooled door failing under the product placement's own /publish), the next alarm publication succeeds and clears it: a later version, and both lift reads answer today's members only`, async () => {
+      const { m } = await liftWorld(host);
+      const v1 = await republish(m);
       const restore = failPooledDoor(m, HOME_MODULES);
       const refused = await (async () => { try { return await objectPublish(m, PDP_MODULES); } finally { restore(); } })();
       expect([refused.status, Object.hasOwn(refused.body, 'stale')], `${host}: PRECONDITION (P42.PW1) — the publication is refused with the stale marker (${JSON.stringify(refused.body).slice(0, 160)})`).toEqual([503, true]);
       expect(Object.hasOwn((await liftOf(m, PDP_MODULES)).body, 'stale'), `${host}: PRECONDITION (P42.PW2) — GET lift carries the marker`).toBe(true);
       await fireAlarm(m);
       const after = copyOf(m)!;
-      expect(after.version > v1!.version, `${host}: P63.NR3 — LOCKED (P42.PW2): the next alarm publication succeeds with the marker in force (${v1!.version} → ${after.version})`).toBe(true);
+      expect(after.version > v1.version, `${host}: P63.NR3 — LOCKED (P42.PW2): the next alarm publication succeeds with the marker in force (${v1.version} → ${after.version})`).toBe(true);
       expect(await membersOf(m), `${host}: P63.NR3 — LOCKED (P42.PW2): and clears it: GET lift and GET lift/rows answer today's members only`).toEqual([LIFT_MEMBERS, ROWS_MEMBERS]);
     }, 120_000);
 
-    it(`host (${host}): LOCK (P49) — with P49's republished marker in force (the product slot's reward republished as add_to_bag and refused at the object's /publish) and the learn document then republished with its old reward, nothing changed in the placement since the last publication: the next alarm publication succeeds and clears it`, async () => {
-      const { m, v1 } = await liftWorld(host);
+    it(`host (${host}): LOCK (P49) — with P49's republished marker in force (the product slot's reward republished as add_to_bag and refused at the object's /publish) and the learn document then republished with its old reward, nothing changed in the placement since the last publication, itself an alarm publication: the next alarm publication succeeds and clears it`, async () => {
+      const { m } = await liftWorld(host);
+      const v1 = await republish(m);
       const changed = await putDocument(m, 'learn', learnOf({ [PDP_MODULES]: dials('add_to_bag'), [HOME_MODULES]: dials() }), 'p63-republish');
       expect(changed.status, `${host}: PRECONDITION — the learn document republishes with reward add_to_bag`).toBe(200);
       const refused = await objectPublish(m, PDP_MODULES);
@@ -220,7 +268,7 @@ describe('unit:P63.NR3', () => {
       expect(Object.hasOwn((await liftOf(m, PDP_MODULES)).body, 'republished'), `${host}: PRECONDITION (P49.LR1) — GET lift carries the member until a publication succeeds`).toBe(true);
       await fireAlarm(m);
       const after = copyOf(m)!;
-      expect(after.version > v1!.version, `${host}: P63.NR3 — LOCKED (P49): the next alarm publication succeeds with the member in force (${v1!.version} → ${after.version})`).toBe(true);
+      expect(after.version > v1.version, `${host}: P63.NR3 — LOCKED (P49): the next alarm publication succeeds with the member in force (${v1.version} → ${after.version})`).toBe(true);
       expect(await membersOf(m), `${host}: P63.NR3 — LOCKED (P49): and clears it: GET lift and GET lift/rows answer today's members only`).toEqual([LIFT_MEMBERS, ROWS_MEMBERS]);
     }, 120_000);
 
