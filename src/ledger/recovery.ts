@@ -150,7 +150,7 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
   let meta = await storage.get<OwnerRecovery>(metaKey(id));
   if (meta) {
     if (meta.digest !== digest) throw new Error('Recovery logical conflict');
-    return options?.answerAtAdmission && effectsPending(meta) ? answerAtAdmission(storage, meta, guard, true) : resumeOwnerRecovery(storage, env, meta, guard);
+    return options?.answerAtAdmission && effectsPending(meta) ? answerAtAdmission(storage, meta, guard, true, options.afterEffects) : resumeOwnerRecovery(storage, env, meta, guard);
   }
   if (await storage.get('recoveryTerminal:' + id)) throw new Error('Original recovery operation is terminal');
   const all = await storage.list<OwnerRecovery>({ prefix: 'recoveryOperation:', limit: RECOVERY_LIMITS.operations + 1 });
@@ -176,7 +176,7 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
   // Durable admission precedes queue, R2, ring counters or credit effects.
   await savePayload(storage, meta, payload, await Promise.all(ids.map(value => recoveryDigest({ stream, id: value }))), firstAdmissionUntil);
   await armRecovery(storage, meta.expiresAt);
-  if (options?.answerAtAdmission) return answerAtAdmission(storage, meta, guard, false);
+  if (options?.answerAtAdmission) return answerAtAdmission(storage, meta, guard, false, options.afterEffects);
   try { return await resumeOwnerRecovery(storage, env, meta, guard); }
   catch (error) {
     if (learningInput(input)) throw error;
@@ -196,8 +196,15 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
  * answer, as they always have. The admission, its logical keys and deadline, its
  * digests and its replay are the same either way, and an admission that fails
  * still fails the caller.
+ *
+ * P59 (amendment 5): `afterEffects`, with `answerAtAdmission` only, is told once
+ * how the effects that continued after the answer ended: the receipt they left,
+ * or undefined when they failed (they stay pending for the alarm). It is not
+ * called when nothing was left to run (an alarm that resumed the operation first
+ * ran them), nor for an answer whose effects ran before it (the caller holds that
+ * receipt). It reports; it decides nothing, and its failure is ignored.
  */
-export interface RecoveryOptions { answerAtAdmission?: boolean }
+export interface RecoveryOptions { answerAtAdmission?: boolean; afterEffects?: (receipt: RecoveryReceipt | undefined) => void }
 /** An admitted operation whose effects have not completed; a recovered, expired or cleaned one replays as it always has. */
 const effectsPending = (meta: OwnerRecovery): boolean => !meta.cleanup && meta.expiresAt > Date.now() && meta.receipt.source.state === 'pending';
 /**
@@ -211,13 +218,13 @@ const effectsPending = (meta: OwnerRecovery): boolean => !meta.cleanup && meta.e
  * resume would hold it. The answer is the admission's receipt.
  */
 async function answerAtAdmission(storage: DurableObjectStorage, meta: OwnerRecovery,
-  guard: (principal: SessionCapability, until: number) => Promise<void>, replay: boolean): Promise<RecoveryReceipt> {
+  guard: (principal: SessionCapability, until: number) => Promise<void>, replay: boolean, afterEffects?: RecoveryOptions['afterEffects']): Promise<RecoveryReceipt> {
   if (replay) await guard(meta.principal, meta.consentUntil);
   const id = meta.id;
   void continueAfterOwnerAnswer(async env => {
     const current = await storage.get<OwnerRecovery>(metaKey(id));
-    if (current && effectsPending(current)) await resumeOwnerRecovery(storage, env, current, guard);
-  }).catch(() => undefined);
+    return current && effectsPending(current) ? resumeOwnerRecovery(storage, env, current, guard) : null;
+  }).then(receipt => { if (receipt) afterEffects?.(receipt); }, () => afterEffects?.(undefined)).catch(() => undefined);
   return meta.receipt;
 }
 

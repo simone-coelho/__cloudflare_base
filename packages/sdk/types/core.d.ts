@@ -133,7 +133,10 @@ export interface Core {
         send: Core['send'];
         release(): void;
     };
-    /** Retry this exact consent-approved render envelope; success is not an engine update. */
+    /**
+     * Send (or retry) this exact consent-approved render envelope; success is not an engine update. A request
+     * the SDK cuts at ACK_DEADLINE_MS is sent once more by itself, the same body; an answered one never is.
+     */
     sendRender(envelope: ActionEnvelope): Promise<RenderAcknowledgment | null>;
     matchesSessionWitness(witness: string): Promise<boolean>;
     url(path: string, query?: Record<string, string | undefined>): string;

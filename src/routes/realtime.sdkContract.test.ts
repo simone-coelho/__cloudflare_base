@@ -601,7 +601,7 @@ it('W09.09 both actual hosts durably admit before effects, drain held queue I/O 
       const gate = new Promise<void>(resolve => { release = resolve; }), started = new Promise<void>(resolve => { entered = resolve; });
       f.env.EVENT_QUEUE = { send: async (body: unknown) => {
         const metas = [...owner.data].filter(([key]) => key.startsWith('recoveryOperation:'));
-        expect(metas).toHaveLength(wires.length+1); expect([...owner.data.keys()].some(key => key.startsWith('recoveryBody:'))).toBe(true);
+        const sending = (body as { recovery_id?: string }).recovery_id, admitted = new Map(metas as Array<[string, OwnerRecovery]>); expect(admitted.has('recoveryOperation:' + sending)).toBe(true); expect([...owner.data.keys()].some(key => key.startsWith('recoveryBody:' + sending + ':'))).toBe(true); // R10 (amendment 5, P59; R-P111(2)): each sent operation is admitted with its body: durable admission precedes its effects (src/ledger/recovery.ts runOwnerRecovery, "Durable admission precedes queue, R2, ring counters or credit effects"). P58's order no longer holds (its outcome's effects ran before the answer and sent first): the purchase's behaviour capture and its outcome are both admitted before the answer and both continue after it in the shopper's serializer (recovery.ts answerAtAdmission), the behaviour capture's continuation registered first; no witness orders the two sends
         expect([...raw.keys()].filter(key=>key.includes('-managed-'))).toHaveLength(wires.length); wires.push(structuredClone(body)); entered(); await gate;
         throw new Error('synthetic lost queue acknowledgement');
       } } as unknown as Queue;
@@ -609,7 +609,7 @@ it('W09.09 both actual hosts durably admit before effects, drain held queue I/O 
         eventId: 'w0909-one', source: 'sdk', data: { orderId: 'synthetic-order', value: 1 } };
       let returned = false;
       const pending = f.call('/realtime/action', grant.capability, action).then(result => { returned = true; return result; });
-      await started; await new Promise(resolve => setTimeout(resolve, 10)); expect(returned).toBe(false);
+      await started; await new Promise(resolve => setTimeout(resolve, 10)); expect(returned).toBe(true); // R10 (amendment 5, P59; R-P111(2)): the purchase is answered at its admissions, before its effects' held send; the held queue I/O is drained after the answer (f.drain below)
       release(); expect((await pending).status).toBe(200); await f.drain();
       const operations = [...owner.data].filter(([key]) => key.startsWith('recoveryOperation:')).map(([,value])=>value as OwnerRecovery);
       const saved = operations.find(value=>value.learning)!;
@@ -3527,7 +3527,7 @@ describe('W14.05 typed source snapshots', () => {
         }
         const d = await newAnonymousSession(f.env, 'meridian'); await warm(f, d);
         expect((await f.post(Array.from({ length: 7 }, (_, n) => ({ ...row(d, 'extra' + n), fields: {}, audiences: {} })))).status).toBe(200);
-        const beforeOversized = structuredClone(noBehavior(f,true)); clear(f); expect((await link(f, d, 'w1405-person')).status).toBe(500); expect(noBehavior(f,true)).toEqual(beforeOversized); expect(item(f,d).data.get('identityTransfer')).toMatchObject({status:'prepared'}); expect(item(f,d).data.get('forwardTo')).toBeUndefined();
+        const beforeOversized = structuredClone(noBehavior(f,true)); clear(f); const oversized = await link(f, d, 'w1405-person'), oversizedText = await oversized.text(); expect([oversized.status, oversizedText.startsWith('{') ? (JSON.parse(oversizedText) as { error?: unknown }).error : oversizedText]).toEqual([400, 'Validation error']); expect(noBehavior(f,true)).toEqual(beforeOversized); expect(item(f,d).data.get('identityTransfer')).toMatchObject({status:'prepared'}); expect(item(f,d).data.get('forwardTo')).toBeUndefined(); // R10 (amendment 5 addendum §4, P58-D): the route's own answer to the oversized merge, the owner app's 400 Validation error for the profile's "at most8 sources" (src/identity/profileEnrichment.ts:18; src/middleware/error.ts:19-27), reaches the shopper; a retained rejection after it no longer replaces it with an untyped 500 (src/identity/sessionAuthority.ts runOwnerOperation)
         if (host === 'session') {
           // Retain the trusted legacy session-repoint contract. It never
           // transfers the previous person's enrichment to the new person.

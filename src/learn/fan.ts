@@ -1433,10 +1433,10 @@ export function foldRetainedDay(input: {
 // They follow the W20 G2 slot-governance counters (src/learn/slotGovernance.ts)
 // rule for rule: one small document per tenant in the operator cache (`CACHE`),
 // so no binding or store is added; written after the answer, never before it
-// (inside the shopper's owner as a continuation past its answer, R-P114(1);
-// outside an owner as after-response work), under the three conditions those
-// counters are written under (the
-// shopper's tracking consent, no synthetic operation, no self-check), so the
+// (inside the shopper's owner once it has answered and outside it, never in its
+// serializer, R-P115; outside an owner as after-response work), under the
+// three conditions those counters are written under (the shopper's tracking
+// consent, no synthetic operation, no self-check), so the
 // monitor's own probe decisions and a shopper who withheld tracking are never
 // counted; never read on a decision path, and never able to fail one; holding
 // outcome words and counts only, nothing of the shopper; a floor, never an
@@ -1496,7 +1496,7 @@ export async function observeLearningReads(env: Pick<Env, 'CACHE'>, tenant: stri
 /**
  * P61: one decision's outcomes added to the tenant's counts: each slot's lift
  * read and the ring read. Called after the decision is answered (the decision
- * path hands it to the shopper's owner as a continuation past its answer); it
+ * path hands it to `afterOwnerAnswer`, with the operator cache alone); it
  * resolves whatever happens, so no failure of this diagnostic can reach a
  * shopper's decision.
  */

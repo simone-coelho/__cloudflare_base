@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { shopperObject, shopperObjectName } from '@/tenancy/objects';
 import { tenantMiddleware } from '@/tenancy/middleware';
@@ -41,6 +42,8 @@ interface Invocation {
   continuation?: OwnerContinuation;
   /** P57: this owner's read of the render its stored admission of one decision acknowledged (`readOwnedAdmission`). */
   admission?: (tenant: string, subject: string, decisionId: string) => Promise<AdmittedRender | undefined>;
+  /** R-P115: work registered by `afterOwnerAnswer`, started once this operation has ended (with whether it answered). */
+  afterAnswer?: Array<(answered: boolean) => void>;
 }
 // Async descendants share a lifetime, not an ambient reusable authorization bit.
 const invocation = new AsyncLocalStorage<Invocation>();
@@ -383,6 +386,32 @@ export class AcknowledgementConflictError extends Error {
   constructor(message = 'Render acknowledgement conflict: this decision was already acknowledged with another event id') { super(message); this.name = 'AcknowledgementConflictError'; }
 }
 /**
+ * P58 (amendment 5 addendum §4, P58-D; R-P106): a validation refusal that crosses
+ * an object boundary typed. An exception raised in one object reaches its caller in
+ * another as an untyped Error (workerd), so a refusal by validation inside the
+ * shopper object that owns a merge (src/durable-objects/ShopperReflex.ts, the
+ * transfer door) is answered as `400 { ok: false, refusal: 'validation', issues }`,
+ * carried as that answer by every object it passes through, and raised again as the
+ * validation error it is (a `z.ZodRealError` with the same issues, an Error as a
+ * parse raises it) by the route-side code that called the object
+ * (src/identity/link.ts), so the route answers its own `400 Validation error` with
+ * the same details on every runtime. Only a refusal of this exact shape is read as
+ * one; every other answer keeps its caller's own handling.
+ */
+const validationRefusalSchema = z.object({ ok: z.literal(false), refusal: z.literal('validation'),
+  issues: z.array(z.object({ code: z.string().min(1).max(64), path: z.array(z.union([z.string().max(256), z.number()])).max(32), message: z.string().max(1024) }).passthrough()).min(1).max(64),
+}).strict();
+/** The typed answer of a validation refusal, for the object that refuses and every object it passes through. */
+export function validationRefusal(issues: z.ZodError['issues']): Response {
+  return new Response(JSON.stringify({ ok: false, refusal: 'validation', issues }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+}
+/** The validation error an object's answer carries typed (status 400 and the exact refusal shape), or undefined for any other answer. */
+export function validationRefusalOf(status: number, body: unknown): z.ZodError | undefined {
+  if (status !== 400) return undefined;
+  const read = validationRefusalSchema.safeParse(body);
+  return read.success ? new z.ZodRealError(read.data.issues as z.ZodError['issues']) : undefined;
+}
+/**
  * P57: the render the shopper's own owner holds acknowledged for one decision
  * (`storedRenderOf`, src/ledger/recovery.ts), read inside the active owner
  * operation for its one admitted principal, as `currentOwnerConsent` reads the
@@ -398,7 +427,8 @@ export async function readOwnedAdmission(tenant: string, subject: string, decisi
   recheckOwnerInvocation(held.owner);
   return stored;
 }
-/** No token crosses this boundary or enters durable recovery storage. P56: an answer at admission only where the owner continues past its answer. */
+/** No token crosses this boundary or enters durable recovery storage. P56: an answer at admission only where the owner continues past its answer
+ * (P59: with the caller's report of how those continued effects ended, `RecoveryOptions.afterEffects`). */
 export async function admitOwnedRecovery(input: RecoveryInput, options?: RecoveryOptions): Promise<RecoveryReceipt> {
   const held = invocation.getStore();
   if (!held?.recovery) throw new SessionAccessError();
@@ -406,7 +436,8 @@ export async function admitOwnedRecovery(input: RecoveryInput, options?: Recover
   recheckOwnerInvocation(held.owner);
   const principals = [...held.principals.values()].filter(p => p.tenant === input.tenant && p.subject === input.subject);
   if (principals.length !== 1) throw new SessionAccessError();
-  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!), options?.answerAtAdmission && held.continuation ? { answerAtAdmission: true } : undefined));
+  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!), options?.answerAtAdmission && held.continuation
+    ? { answerAtAdmission: true, ...(options.afterEffects ? { afterEffects: options.afterEffects } : {}) } : undefined));
 }
 export function pinRecoveryDeadline(deadline: number): void {
   if (!Number.isSafeInteger(deadline) || deadline <= Date.now()) throw new SessionAccessError();
@@ -528,13 +559,15 @@ export async function runOwnerOperation<T>(owner: object, env: Env, work: () => 
   return invocation.run(held, async () => {
     let failure: unknown, value: T | undefined;
     try { value = await work(); } catch (error) { failure = error; }
-    // P57 (amendment 5): once the work has answered a server failure of its own
-    // (an HTTP answer of 500 or more), a retained rejection is logged and that
-    // answer stands: it already tells the caller the operation failed, so nothing
-    // is claimed complete, and its words are not replaced by an untyped 500. An
-    // authority refusal still refuses, and a retained rejection still fails any
-    // other answer, as before.
-    const answeredFailure = failure === undefined && (value as unknown) instanceof Response && (value as unknown as Response).status >= 500;
+    // P57 (amendment 5), widened by P58 (addendum §4, P58-D): once the work has
+    // answered a failure of its own, a client error or a server failure (an HTTP
+    // answer of 400 or more, such as the route's own `400 Validation error`), a
+    // retained rejection is logged and that answer stands: it already tells the
+    // caller the operation failed, so nothing is claimed complete, and its words
+    // are not replaced by an untyped 500. An authority refusal still refuses, and
+    // a retained rejection still fails any other answer, as before.
+    const answeredFailure = failure === undefined && (value as unknown) instanceof Response && (value as unknown as Response).status >= 400;
+    let answered = false;
     try {
       // Includes descendants registered while previously registered work settles.
       while (held.pending.length) {
@@ -546,8 +579,13 @@ export async function runOwnerOperation<T>(owner: object, env: Env, work: () => 
       }
       if (failure !== undefined) throw failure;
       recheckOwnerInvocation(owner);
+      answered = true;
       return value as T;
-    } finally { held.active = false; }
+    } finally {
+      held.active = false;
+      // R-P115: work registered to follow this answer starts now, outside this operation.
+      for (const start of held.afterAnswer?.splice(0) ?? []) start(answered);
+    }
   });
 }
 /**
@@ -823,6 +861,34 @@ export function continueAfterOwnerAnswer<T>(work: (env: Env) => Promise<T>): Pro
   if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
   try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
   const task = reenterOwner(first, work);
+  first.continuation.waitUntil(task.then(() => undefined, () => undefined));
+  return task;
+}
+/**
+ * R-P115 (amendment 6, P61): tenant-level work that follows the owner's answer
+ * WITHOUT the owner: the sibling of `continueAfterOwnerAnswer` for work that
+ * reads and writes no shopper state and so needs no shopper ordering (the
+ * tenant's learning-read counters).
+ *
+ * It registers only inside an ACTIVE owner operation whose owner supplies its
+ * continuation, fenced at that moment as every owner effect is
+ * (`recheckOwnerInvocation`); otherwise nothing is registered and it refuses
+ * with SessionAccessError. The work starts once that operation has ended, and
+ * only if it answered (an operation that failed starts nothing). It is never
+ * retained (the owner's drain before its answer does not wait on it) and never
+ * serialized (the owner's next request does not queue behind it); it is kept
+ * alive by the owner's own waitUntil alone, and runs outside every owner
+ * operation. It is handed the operator cache (`CACHE`) and nothing else, so no
+ * binding that reaches a shopper's state is reachable from it. Its failure is
+ * the caller's to handle; it never reaches the answer.
+ */
+export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE'>) => Promise<unknown>): Promise<void> {
+  const first = invocation.getStore();
+  if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
+  try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
+  const operator = { CACHE: first.env.CACHE };
+  const task = new Promise<boolean>(resolve => { (first.afterAnswer ??= []).push(resolve); })
+    .then(answered => (answered ? invocation.exit(() => work(operator)) : undefined)).then(() => undefined);
   first.continuation.waitUntil(task.then(() => undefined, () => undefined));
   return task;
 }

@@ -26,6 +26,10 @@
 //     own storage refusing the transaction of a recovery admission (`refuseAdmission`).
 //   · READERS of what the shopper object holds (its recovery operations with their
 //     payloads, its alarm) and of the behaviour rows the ledger stored.
+// The S10 ticket (P58, amendment 5) adds, beside them: a tracked action on the wire
+// without a drain (`actionWire`), a read of the shopper object's storage that fails
+// once after an admission (`failReadOnceAfterAdmission`), and a log of the session
+// KV namespace's writes (`sessionKvWrites`).
 // Documents are read from the tree this file lives in, never the working directory.
 
 import { Hono } from 'hono';
@@ -114,6 +118,16 @@ export function clickWire(app: WorkerApp, s: Shopper, snap: Snapshot, d: Decisio
   return send(app, s, { type: 'content_click', source: 'sdk', userId: s.grant.subject, sessionId: s.grant.sessionId,
     timestamp: Date.now(), eventId: crypto.randomUUID(),
     data: { contentId: d.contentId, slot: d.slot, decisionId: d.decisionId, page: snap.page, position: d.order, slotPosition: slotPositionOf(snap, d) } });
+}
+
+/**
+ * A tracked action (any event type) in the body src/units/_parity.ts `action` sends
+ * (:468-469: the event, `source: 'sdk'`, the shopper's ids, an event id and time),
+ * carrying `identity` (a fresh event id and the present time unless given). Started, not drained.
+ */
+export function actionWire(app: WorkerApp, s: Shopper, event: { type: string; data: Record<string, unknown> },
+  identity: Identity = { eventId: crypto.randomUUID(), timestamp: Date.now() }): Promise<Wire & { identity: Identity }> {
+  return send(app, s, { ...event, source: 'sdk', userId: s.grant.subject, sessionId: s.grant.sessionId, ...identity }).then(wire => ({ ...wire, identity }));
 }
 
 export const UNANSWERED = 'no answer' as const;
@@ -269,6 +283,49 @@ export function refuseAdmission(m: Mounted, subject: string, message: string): (
     };
   } })));
   return () => { storage.transaction = original; };
+}
+
+export interface ReadFault {
+  /** How many reads the fault has failed (at most one). */
+  readonly failed: number;
+  /** Stops watching; the storage reads and writes as before. */
+  restore: () => void;
+}
+/**
+ * The shopper object's storage fails, once, the first read of `key` made after a
+ * transaction that wrote `key` (for a recovery operation's `recoveryOperation:<id>`:
+ * the first read after its durable admission, src/ledger/recovery.ts savePayload
+ * :100-124), with `message`; every other read and write is as before. The P56
+ * delivery review's probe (S9/reviewer-p56/review-stack.test.ts.txt, `throwOnce`)
+ * failed the same read to leave an admitted operation's effects pending.
+ */
+export function failReadOnceAfterAdmission(m: Mounted, subject: string, key: string, message: string): ReadFault {
+  const storage = shopperStorage(m, subject) as unknown as { transaction: Transaction; get: (...args: unknown[]) => Promise<unknown> };
+  const transaction = storage.transaction, get = storage.get;
+  let armed = false, failed = 0;
+  storage.transaction = run => transaction(tx => run(new Proxy(tx, { get: (target, property) => {
+    const value = Reflect.get(target, property, target) as unknown;
+    if (property !== 'put' || typeof value !== 'function') return value;
+    return async (written: unknown, ...rest: unknown[]) => {
+      const result = await (value as (...args: unknown[]) => unknown).call(target, written, ...rest);
+      if (written === key && !failed) armed = true;
+      return result;
+    };
+  } })));
+  storage.get = (...args: unknown[]) => {
+    if (armed && args[0] === key) { armed = false; failed++; return Promise.reject(new Error(message)); }
+    return get(...args);
+  };
+  return { get failed() { return failed; }, restore: () => { storage.transaction = transaction; storage.get = get; } };
+}
+
+export interface KvWrite { key: string; value: string; at: number }
+/** Every `put` to the shopper's session KV namespace (`SESSIONS`) from now on, with its value and when it was made (`performance.now()`). */
+export function sessionKvWrites(m: Mounted): KvWrite[] {
+  const target = m.env.SESSIONS as unknown as { put: (key: string, value: string, ...rest: unknown[]) => Promise<unknown> };
+  const put = target.put.bind(target), writes: KvWrite[] = [];
+  target.put = (key: string, value: string, ...rest: unknown[]) => { writes.push({ key, value, at: performance.now() }); return put(key, value, ...rest); };
+  return writes;
 }
 
 // ---------------------------------------------------------------------------
