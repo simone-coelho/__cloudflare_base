@@ -342,11 +342,11 @@ by `explain.lift.asOf` (below), and the record's replay is unchanged.
 objective or estimator dials differ), `failed` (the lift could not be read, or the statistics object could
 not be asked or did not answer as itself), `late` (the statistics object did not confirm the lift within the
 witness's budget), `unhealthy` (the statistics object's state is not healthy), `served` (the lift was
-applied: the record names its `versions.lift`), `superseded` (the statistics object has moved on since that
-lift was published: it has published a later version since, and the lift is outside the recent-publication
-window below or was published under another configuration or generation) and `unrecognized` (any other lift:
-a version or a content the statistics object never published, and its latest publication once its
-configuration or generation has changed since, by a reset or a generation transition). A lift that is no longer
+applied: the record names its `versions.lift`), `superseded` (the statistics object has published a later
+version since that lift, and the lift is outside the recent-publication window below, or is one of its recent
+publications under a configuration or generation it no longer holds) and `unrecognized` (any other lift: a
+version or a content the statistics object never published, and its latest publication once its configuration
+or generation has changed since, by a reset or a generation transition). A lift that is no longer
 the statistics object's latest publication is still applied when the object recognises it among its recent
 publications: the same version and content, published no more than `LIFT_RECENT_WINDOW_MS` (ten minutes,
 src/learn/fan.ts) before the decision reads it, counted from its own publication, under the configuration,
