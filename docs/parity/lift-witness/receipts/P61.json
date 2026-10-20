@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P61",
+  "workOrderHash": "sha256:205206cc67f774fc48df35f45cf1b109d0c6d1e130c419f259fc8bfb0d2966ad",
+  "artifact": {
+    "revision": "f591009ecd1a1fa2d9f8cdbb3c237ff3b3700c5f",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/a6-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p61-build at 88c5ad52 (c5325c0c: liftWitnessOutcome with the eight outcomes and currentLiftWitness kept boolean, readRingWithOutcome, readLiftWithOutcome, sources.lift[slot] and sources.ring on the answer and nothing on the record, the per-tenant learning-reads counter on the W20 G2 governance-counter pattern, MonitorResult.learningReads; ae93ed70 kit 02/03; 1b77f5f8 the count moved off the answer path; 88c5ad52 the count outside the shopper's serializer through afterOwnerAnswer in sessionAuthority.ts so neither the answer nor the shopper's next request waits on it: snapshot 1513/1514 ms and the following acknowledgement 2516/1518 ms as at base under 500 ms per remote call), joined with the S11 specification through d692b269; P61 34/34 on both hosts; locks 236/236; consent/learn/api-boundary 147/147.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P61/implementer/REPORT.md",
+      "git commits on rem/a6-joined up to f591009e"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P61 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/reviewer-p61/logs/p61-r1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P61/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T06:02:11.872Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -2,6 +2,14 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-20, 02:40: amendment 6 round 1 closed (P61, P62 merged and deployed); P63 active; the pair's third release carries the lift re-walk
+
+- **Score (derived, amendment 6 round-1 official gate at f591009e, GATE_OK):** `Tests 3617 passed (3617)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 6 `tapestry-parity-lift-witness`: Local done 2/3** (P61 P62 receipts at f591009e; merged at 6933be65; P63 ACTIVE, specifying as S14). Amendment 5 Local done 5/5. LIVE1 31 of 45.
+- **Deploy-11** (stamps at 03acf1ba): staging 7b0c98c4, production c8ce3dd8; smoke 7/7 on both and on the Tapestry tenant; verify-origin 9 PASS + connectivity; render acknowledgements 1.7–2.7 s.
+- **Acceptance pair, third release** at 03acf1ba: session 05be36aa, do 8054102e, recovery settings equal the first release (R-P121); lane L9 walking the eleven lift-blocked rows and P42 under fresh brands (R-P123).
+- **Amendment 7 `tapestry-parity-outcome-telling`:** P64 specification gate PASS at c3d8d64f (build in its R-P125 fix round: outcome named only when admitted; failure-path count after the answer); P65's gate waits for the S13 fix round (RS3 locks).
+- **Owner's items (told, not asked):** merge PR #1; hand the account team the staging host, tenant and site-key path; Tapestry's H1–H5 and W3; the lift probe's console step; worktree cleanup.
+
 ## 2026-10-20, small hours: amendment 5 LOCALLY COMPLETE and deployed; the acceptance pair redeployed for the re-walk
 
 - **Score (derived, amendment 5 round-3 official gate at d201c149, GATE_OK):** `Tests 3518 passed (3518)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 5 `tapestry-parity-acknowledgement`: Local done 5/5** (P56 P57 at 9fadd50e, P58 at d1e7a33e, P59 P60 at d201c149), Final 0/5 (the five LIVE1 rows follow the re-walk on the redeployed pair and the January LIVE2).

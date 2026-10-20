@@ -20,7 +20,7 @@
     {
       "id": "P64",
       "title": "The action answer names its outcome record and a pre-admission failure counts in the monitor (**amendment 7, 2026-10-20**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-7/BTI-Parity-Amendment-2026-10-20.md (amendment 7, committed beside the program)",
@@ -99,13 +99,15 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S13 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "c3d8d64f6fb98b6883f49ab76b9fd8ab97b2dd24",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S13 records the reviewed revision and the RED/HONEST evidence here"
+          "_evidence/parity-step3/S13/specifier/REPORT.md (rem-specifier; S13 at b586e520, the R-P125 OT3 leg at c3d8d64f)",
+          "_evidence/parity-step3/S13/reviewer-spec/REPORT.md (rem-reviewer: P64 OT1-OT4 PASS at the reviewed revision c3d8d64f; RED for the right reason on both hosts; the R-P125 leg honest)",
+          "_evidence/parity-step3/S13/reviewer-spec/REPORT.md Report 2: the additive OT4 R-P125(1) leg (c0d4177b, P64:408-427) reviewed PASS at 8c791fe3 (RED on the step-1 build ffb8d1e2, GREEN on 03300b44); it lands with P65's round"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "_evidence/parity-step3/S13/reviewer/logs/ (reviewer mutants R1-R12 on light scratch trees: R1 client-clock id, R2 member on every answer, R3 double count, R5 admitted outcomes counted, R6 extra call before the answer, R7 P59 reverted each caught by a named P64 test; R4 no-recovery count uncaught = R-P124(2) out of scope)"
         ]
       },
       "doneWhen": [
@@ -119,7 +121,7 @@
     {
       "id": "P65",
       "title": "The outcome survives a reset between the behaviour capture's admission and its own (**amendment 7, 2026-10-20**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-7/BTI-Parity-Amendment-2026-10-20.md (amendment 7, committed beside the program)",
@@ -192,13 +194,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S13 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "8c791fe310433099c33cc1d9d58ce46f6916416d",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S13 records the reviewed revision and the RED/HONEST evidence here"
+          "_evidence/parity-step3/S13/specifier/REPORT.md (rem-specifier; S13 at b586e520, the R-P129 fix round at 8c791fe3: RS3 behaviour-first, fail-closed for every engine drop, a carried outcome never counted lost, _parity10 killBeforeCommitOf)",
+          "_evidence/parity-step3/S13/reviewer-spec/REPORT.md (rem-reviewer: FAIL on RS3 at c3d8d64f (two missing locks), PASS at the reviewed revision 8c791fe3; RS1 RED for the right reason on both hosts ×3)"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "_evidence/parity-step3/S13/reviewer/rejudge-8c791fe3/logs/ (RS3 behaviour-first RED on design A; duplicate-order RED on a conforming-B tree re-deciding unknown_product only; carried-outcome RED under count-carried; the reviewer's awaited-count mutant RED on P64 OT4; a sessionProjection-skipping mutant survived, noted)"
         ]
       },
       "doneWhen": [
