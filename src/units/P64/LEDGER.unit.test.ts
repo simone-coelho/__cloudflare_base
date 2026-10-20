@@ -407,6 +407,27 @@ describe('unit:P64.OT3', () => {
     }, 60_000);
   }
 
+  // S16 additive lock (amendment 8, finding (b); the P65 delivery review, finding 2, mutant M8): after a failed preparation
+  // nothing is carried, so the alarm that follows writes no outcome; the loss stays counted once. A build that carries the
+  // outcome anyway (its preparation after the behaviour capture's admission) has the alarm write it while it is counted lost.
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (S16, P65 review F2) — after the outcome's preparation failed (the learn read refused once), the shopper object's alarm writes no outcome for the event, and the loss stays counted once`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p64-ot3-alarm-after-failed-preparation');
+      const before = (await evidenceLoss(m)).producerFailed;
+      const fault = failLearnReadOnce();
+      const eventId = crypto.randomUUID();
+      let answered: Wire;
+      try { answered = await actionWire(app, s, BUY_BOX, { eventId, timestamp: Date.now() - 1 }); await settleAll(m, app); } finally { fault.restore(); }
+      const object = [...m.shoppers.entries()].find(([name]) => name.includes(s.subject))?.[1].object as unknown as { alarm(): Promise<void> } | undefined;
+      expect([fault.failed, answered.status, object ? 'object' : 'none'], `${host}: PRECONDITION — the learn read failed once, the add to bag was accepted, and the shopper's object exists`).toEqual([1, 200, 'object']);
+      let alarm = 'ran';
+      try { await object!.alarm(); } catch (error) { alarm = `threw ${(error as Error).message}`; }
+      await settleAll(m, app);
+      await m.drainLedger();
+      expect.soft([rowsOfEvent(m, s, eventId).length, (await evidenceLoss(m)).producerFailed - before], `${host}: P64.OT3 (S16) — after the alarm (${alarm}): no outcome row, the loss counted once`).toEqual([0, 1]);
+    }, 60_000);
+  }
+
   it('CONTROL: the lever refuses only the first learn read; without it a successful add to bag counts nothing and its outcome is stored', async () => {
     const { m, app, s } = await outcomeWorld('do', 'p64-ot3-control');
     const before = await evidenceLoss(m);
