@@ -69,7 +69,8 @@
       ],
       "remainingWork": [
         "Internal witness reason; sources.lift and sources.ring members; monitor counters per tenant.",
-        "Records untouched."
+        "Records untouched.",
+        "The learning-reads count runs after the answer and outside the shopper's serializer (tenant-level state), so the shopper's next request never waits on it (R-P115)."
       ],
       "decisions": [
         {
@@ -93,19 +94,20 @@
         "src/content/types.ts",
         "src/ops/monitor.ts",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md"
+        "docs/kit/03-payload-schemas.md",
+        "src/identity/sessionAuthority.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P61 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S11 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "d692b269 on rem/spec-lift (batch S11, amendment 6; P61 units 98645a01 with src/units/_parity9.ts and the wording fix 0a78f82d / header d692b269; P62 units 7a1ba463 with the fix round ee516a67 (R-P112(5)/(6) tests, RING_BOUND_SLACK_MS 300, R-P113 reset case); the W38 B7 late-answer R10 10a4083e)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S11 (P61, P62) records the reviewed revision and the RED/HONEST evidence here"
+          "Specification review (SPEC mode) at 10a4083e then the re-judge at d692b269: P61 LO1-LO4 RED 28 / GREEN 6 three runs with every first failure naming the missing sources.lift / sources.ring / learningReads member and LO4 locks with controls; P62 LW1-LW4 RED 31 / GREEN 24 three runs (constants absent, the edge default and overrides not applied, POST /witness 404, the decision path on /health, the same-generation V1 copy not applied, the window constant absent, the ring unbounded, the evicted-object door and the window-origin tests RED); the 200 ms / 115 800 ms derivations judged honest; sketch P61 34/34 and P62 55/55 three runs; locks 103/103 with the harness present; the window test timing-proof (frozen clock); 300 ms slack derived from a 15-run probe; evidence under _evidence/parity-step3/S11/reviewer/ and S11/specifier/"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "Mutants of the sketch each caught by a named test on both hosts: m1 late witness reported served (LO1, LO3), m2/m2b counting on the default arm or without consent (LO3), m3 superseded copy of another generation accepted (LW3), m4 /witness still digests the whole state (LW2), m5/m5b override accepted out of range (LW1), m6 asOf on the latest copy (LO4, LW3, LW4), m7a ring aborted 1 s late (LW4, after the fix round), m7b/m7c ring aborted 3 s late or never (LW4), m8 window counted from supersession (LW3, after the fix round), m11 evicted object's first /witness digests the whole state (LW2, after the fix round); lock controls for compatible(), the forged digest, the generation and fence binding, the unhealthy state, P42 stale / P49 republished, the default arm, the page-scoped witness, the publish order, records without asOf"
         ]
       },
       "doneWhen": [
@@ -169,7 +171,8 @@
       "remainingWork": [
         "Constants and env override; the W38 B7 R10 (budget plus margin).",
         "The witness door on LearnStats with a cached verdict; the decision path's witness uses it.",
-        "The recent-publication window on the object; the same-generation acceptance; explain.lift.asOf only when not latest."
+        "The recent-publication window on the object; the same-generation acceptance; explain.lift.asOf only when not latest.",
+        "The ring call is aborted at its budget so the owner never waits past it (the lock's property made true, R-P112); the asOf member carried through replay.ts."
       ],
       "decisions": [
         {
@@ -204,19 +207,24 @@
         "wrangler.toml",
         "src/units/W38/LEDGER.unit.test.ts (R10 of the late-answer lock only, by the specifier)",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md"
+        "docs/kit/03-payload-schemas.md",
+        "src/learn/replay.ts",
+        "src/units/W38/LEDGER.unit.test.ts (R10 of :519 B4 stub and :831 B7 main test, budget-derived, by the specifier; R-P112)",
+        "src/content/consent.test.ts (R10 of W10.03 :757-794 and W24.01 :813-816 witness-door stubs only, by the specifier)",
+        "src/index.api-boundary.test.ts (R10 of the hold-health fault :284, :1724-1726 only, by the specifier)",
+        "src/learn/learn.test.ts (R10 of W06.06 :1771 timer advance derived from the ring budget, by the specifier)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P62 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S11 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "d692b269 on rem/spec-lift (batch S11, amendment 6; P61 units 98645a01 with src/units/_parity9.ts and the wording fix 0a78f82d / header d692b269; P62 units 7a1ba463 with the fix round ee516a67 (R-P112(5)/(6) tests, RING_BOUND_SLACK_MS 300, R-P113 reset case); the W38 B7 late-answer R10 10a4083e)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S11 (P61, P62) records the reviewed revision and the RED/HONEST evidence here"
+          "Specification review (SPEC mode) at 10a4083e then the re-judge at d692b269: P61 LO1-LO4 RED 28 / GREEN 6 three runs with every first failure naming the missing sources.lift / sources.ring / learningReads member and LO4 locks with controls; P62 LW1-LW4 RED 31 / GREEN 24 three runs (constants absent, the edge default and overrides not applied, POST /witness 404, the decision path on /health, the same-generation V1 copy not applied, the window constant absent, the ring unbounded, the evicted-object door and the window-origin tests RED); the 200 ms / 115 800 ms derivations judged honest; sketch P61 34/34 and P62 55/55 three runs; locks 103/103 with the harness present; the window test timing-proof (frozen clock); 300 ms slack derived from a 15-run probe; evidence under _evidence/parity-step3/S11/reviewer/ and S11/specifier/"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "Mutants of the sketch each caught by a named test on both hosts: m1 late witness reported served (LO1, LO3), m2/m2b counting on the default arm or without consent (LO3), m3 superseded copy of another generation accepted (LW3), m4 /witness still digests the whole state (LW2), m5/m5b override accepted out of range (LW1), m6 asOf on the latest copy (LO4, LW3, LW4), m7a ring aborted 1 s late (LW4, after the fix round), m7b/m7c ring aborted 3 s late or never (LW4), m8 window counted from supersession (LW3, after the fix round), m11 evicted object's first /witness digests the whole state (LW2, after the fix round); lock controls for compatible(), the forged digest, the generation and fence binding, the unhealthy state, P42 stale / P49 republished, the default arm, the page-scoped witness, the publish order, records without asOf"
         ]
       },
       "doneWhen": [

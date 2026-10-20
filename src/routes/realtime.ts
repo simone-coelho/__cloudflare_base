@@ -236,9 +236,16 @@ realtimeRoutes.post('/action', async (c) => {
     // The ciphertext is an admission capability, never behavior, demo capture,
     // pipeline input or provider data. Remove it before any ordinary handler.
     if (hasOffer) { const { renderOffer: _offer, ...data } = actionEvent.data; void _offer; actionEvent.data = data; }
+    // P58 (amendment 5): every tracked action's behaviour capture answers at its
+    // durable admission, whatever its type and whether or not it acknowledges a
+    // render (P56's mechanism, src/ledger/recovery.ts `answerAtAdmission`): its
+    // queue send and ledger write continue right after the answer in the
+    // shopper's own serializer, the alarm armed at admission the backstop. The
+    // record, its id and the projection are behavior.ts's as before; an
+    // admission that fails still fails the action.
     const behavior = await captureBehavior(c.env, shopperPrincipal(c.req.raw), captureConsent,
       { type: actionEvent.type, eventId: actionEvent.eventId!, eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
-        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null, hasOffer ? { answerAtAdmission: true } : undefined);
+        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null, { answerAtAdmission: true });
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
     // The outcome's session must be the session the decision record carries, or session-scope
     // attribution compares two id spaces and credits nothing (found 2026-09-04). Both now prefer the
@@ -281,8 +288,15 @@ realtimeRoutes.post('/action', async (c) => {
           try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent)); }
           catch { experiment = null; }
           if (experiment) outcome.experiment = experiment;
+          // P59 (amendment 5): the outcome recovery answers at its durable admission
+          // (P56's mechanism, src/learn/route.ts `outcomeToLearning`): the owner's
+          // drain of this work holds the click's answer for the outcome's admission
+          // and its armed alarm only; its attribution, queue send, ledger write and
+          // credits continue right after the answer in the shopper's own serializer,
+          // after the behaviour capture's (P58), the alarm the backstop. The record,
+          // its experiment block and retention are the same as before.
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
-            ? outcomeToLearning(c.env, c.get('tenant'), outcome)
+            ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true })
             : Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]);
         })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }
