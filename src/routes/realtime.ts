@@ -11,7 +11,7 @@ import { getConnectors } from '@/connectors';
 import { snapshot as reflexSnapshot, type ReflexConfig } from '@/reflex/core';
 import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
 import { forwardEventToOdp, odpRestorationOf, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
-import { isCarriedCustomerId, isDecisionReference, outcomeFromAction } from '@/ledger/records';
+import { isCarriedCustomerId, isDecisionReference, outcomeFromAction, type OutcomeRecord } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { outcomeEnrollment } from '@/content/holdout';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
@@ -20,7 +20,7 @@ import { validBufferedAction } from '@/reflex/bufferedAction';
 import { projectVisit, validEntry, visitArrival, type ChannelSignals } from '@/services/visit';
 import { deviceOf } from '@/services/platform';
 import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, persistedStageOf, readTimeStageChange } from '@/services/JourneyStage';
-import { outcomeToLearning } from '@/learn/route';
+import { admitPreparedOutcome, outcomePreparationFailed, outcomeToLearning, prepareOutcomeAdmission } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
 export { demoEventCaptureEnabled } from '@/services/demoEventCapture';
@@ -31,7 +31,8 @@ import { capabilityToken } from '@/identity/sessionCapability';
 import { SessionManager } from '@/services/SessionManager';
 import { AcknowledgementConflictError, assertShopperSelectors, carryOwnerCustomerId, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
 import { captureRetention, RetentionUnavailable } from '@/retention';
-import { captureBehavior } from '@/ledger/behavior';
+import { captureBehaviorCarrying } from '@/ledger/behavior';
+import { recoveryJSON, type OutcomeRecoveryInput } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import { redeemRenderOffer } from '@/content/renderOffer';
 import { admitLayoutExposure, layoutExposureBeaconOf } from '@/content/service';
@@ -144,6 +145,8 @@ export const actionEventSchema = z.object({
 });
 
 realtimeRoutes.post('/action', async (c) => {
+  // P65: settles the outcome the behaviour capture's admission carried, once it is captured (below).
+  let withdrawCarried = async (): Promise<void> => { /* nothing captured yet, so nothing carried */ };
   try {
     const body = await c.req.json();
     assertSessionTarget(shopperPrincipal(c.req.raw), body?.userId, body?.sessionId);
@@ -236,16 +239,78 @@ realtimeRoutes.post('/action', async (c) => {
     // The ciphertext is an admission capability, never behavior, demo capture,
     // pipeline input or provider data. Remove it before any ordinary handler.
     if (hasOffer) { const { renderOffer: _offer, ...data } = actionEvent.data; void _offer; actionEvent.data = data; }
+    // P65 (amendment 7, R-P124): with durable recovery on, the outcome a tracked
+    // action emits is prepared HERE, before the behaviour capture's durable
+    // admission, and that admission carries it (src/ledger/recovery.ts
+    // `CarriedOutcome`): the record `emitOutcome` below builds (the same event,
+    // identity, admitted time, session and carried identifier), its retention, the
+    // visitor's experiment block under the consent the capture holds, and its
+    // learning preparation (src/learn/route.ts `prepareOutcomeAdmission`, the learn
+    // document read). So the read that can fail decides whether anything is
+    // carried: one that fails carries nothing, and the outcome the engine then
+    // emits is counted lost once after the answer (R-P124(4)); a record that cannot
+    // be built here is built after the engine as before, its failure answered as
+    // before. An emitted outcome made these reads before the answer already (no new
+    // remote call); a reward event the engine then drops now makes them too.
+    // A reset between the behaviour capture's admission and the outcome's own then
+    // leaves the alarm both, and it writes both unless it decides again that the
+    // engine drops the event (src/durable-objects/ShopperReflex.ts
+    // `carriedEventDropped`, src/ledger/recovery.ts `settleCarriedOutcome`).
+    const buffered = actionEvent.processing === 'buffered';
+    /** The outcome record this event emits (records.ts `outcomeFromAction`), the server's session where the client names none. */
+    const outcomeOf = (serverSessionId?: string): OutcomeRecord | null => outcomeFromAction({ ...actionEvent, sessionId: buffered ? sessionId : sessionId ?? serverSessionId,
+      eventId: actionEvent.eventId ?? crypto.randomUUID(),
+      eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
+      // P13: under tracking consent only, beside the visitor's own identifier.
+      ...(carriedCustomerId !== undefined ? { customerId: carriedCustomerId } : {}),
+    }, c.get('tenant'));
+    const prepared = await (async (): Promise<{ input: OutcomeRecoveryInput; personalizing: boolean } | { failed: true } | undefined> => {
+      if (!captureConsent.tracking || c.env.LEDGER_RECOVERY_ENABLED !== 'true' || (!buffered && sessionId == null)) return undefined;
+      let outcome: OutcomeRecord | null;
+      try {
+        outcome = outcomeOf();
+        if (outcome) outcome.retention = captureRetention(c.env, c.get('tenant'), outcome.ts);
+      } catch { return undefined; }
+      if (!outcome) return undefined;
+      const personalizing = personalizes(captureConsent);
+      // W21 E1.06 (NR1): a failed annotation leaves the block off (as below).
+      let experiment: Awaited<ReturnType<typeof outcomeEnrollment>> = null;
+      try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizing); }
+      catch { experiment = null; }
+      if (experiment) outcome.experiment = experiment;
+      try { return { input: await prepareOutcomeAdmission(c.env, c.get('tenant'), outcome), personalizing }; }
+      catch { return { failed: true }; }
+    })();
+    const ready = prepared && 'input' in prepared ? prepared : undefined;
     // P58 (amendment 5): every tracked action's behaviour capture answers at its
     // durable admission, whatever its type and whether or not it acknowledges a
     // render (P56's mechanism, src/ledger/recovery.ts `answerAtAdmission`): its
     // queue send and ledger write continue right after the answer in the
     // shopper's own serializer, the alarm armed at admission the backstop. The
     // record, its id and the projection are behavior.ts's as before; an
-    // admission that fails still fails the action.
-    const behavior = await captureBehavior(c.env, shopperPrincipal(c.req.raw), captureConsent,
+    // admission that fails still fails the action. P65: its admission carries
+    // the outcome prepared above, with what the event's drop is decided by
+    // beyond the behaviour record (the door it came through, the surface it named).
+    const surface = validatedEvent.surface ?? (typeof actionEvent.data.surface === 'string' ? actionEvent.data.surface : undefined);
+    const capture = await captureBehaviorCarrying(c.env, shopperPrincipal(c.req.raw), captureConsent,
       { type: actionEvent.type, eventId: actionEvent.eventId!, eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
-        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null, { answerAtAdmission: true });
+        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null, { answerAtAdmission: true },
+      ready ? { input: ready.input, ...(buffered ? { buffered: true as const } : {}), ...(surface !== undefined ? { surface } : {}) } : undefined);
+    const behavior = capture.persistence;
+    // P65: the carried outcome is settled once, before the answer: by its own
+    // admission under its id (`emitOutcome`), or withdrawn when the engine answered
+    // that the event records none, or failed (after a failed preparation, whatever
+    // an earlier delivery of the same event left carried is withdrawn, since this
+    // one is counted lost). A withdrawal that cannot be made (the object reset)
+    // leaves it carried, for the alarm.
+    let carriedSettled = !(capture.carrying || (prepared !== undefined && 'failed' in prepared && behavior.status === 'durable'));
+    withdrawCarried = async () => {
+      if (carriedSettled) return;
+      carriedSettled = true;
+      try { await capture.withdraw(); } catch { /* left carried: the alarm settles it */ }
+    };
+    /** The record without its processing stamps and experiment block, in the engine's canonical form. */
+    const recordOf = (record: OutcomeRecord) => recoveryJSON(Object.fromEntries(Object.entries(record).filter(([key]) => !['retention', 'externalRetention', 'experiment'].includes(key))));
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
     // The outcome's session must be the session the decision record carries, or session-scope
     // attribution compares two id spaces and credits nothing (found 2026-09-04). Both now prefer the
@@ -259,7 +324,7 @@ realtimeRoutes.post('/action', async (c) => {
     // event at, the time the behaviour record's id carries), with whether that outcome
     // was durably admitted: with durable recovery on, its own admission
     // (`outcomeToLearning`'s `onAdmitted`); without it, the producer's hand-off to the
-    // queue or the canonical store. The answer names `outcome: { recordId }` beside
+    // queue, accepted. The answer names `outcome: { recordId }` beside
     // `behavior` only for an admitted outcome (`told` below). The owner already holds
     // the answer for this work (P59), so the route's waiting for it there adds no
     // remote call and no wait. No outcome (refused tracking, no reward): nothing.
@@ -271,14 +336,19 @@ realtimeRoutes.post('/action', async (c) => {
         try { c.executionCtx.waitUntil(capture); } catch { void capture; }
       }
       const server = typeof serverSessionId === 'string' && serverSessionId ? serverSessionId : undefined;
-      const outcome = outcomeFromAction({ ...actionEvent, sessionId: actionEvent.processing === 'buffered' ? sessionId : sessionId ?? server,
-        eventId: actionEvent.eventId ?? crypto.randomUUID(),
-        eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
-        // P13: under tracking consent only (above), beside the visitor's own identifier.
-        ...(carriedCustomerId !== undefined ? { customerId: carriedCustomerId } : {}),
-      }, c.get('tenant'));
+      const outcome = outcomeOf(server);
       if (outcome) {
         outcome.retention = captureRetention(c.env, c.get('tenant'), outcome.ts);
+        // P65 (R-P124(4)): its learning preparation failed before the behaviour
+        // capture's admission, so nothing carries it and it is admitted nowhere:
+        // lost, logged and counted once after the answer, and named nowhere (P64).
+        if (prepared && 'failed' in prepared) {
+          const lost = outcomePreparationFailed(c.env, c.get('tenant'));
+          try { c.executionCtx.waitUntil(lost); } catch { void lost; }
+          return undefined;
+        }
+        // P65: prepared and carried under this id, its own admission below settles the carried copy.
+        if (ready && ready.input.outcome.outcome_id === outcome.outcome_id) carriedSettled = true;
         // W21 E1.02/E1.03 (R118(1)): the outcome carries the experimental
         // assignment of the visitor who produced it, resolved HERE — where her
         // consent at this moment is known and the read is an ordinary serving
@@ -295,10 +365,18 @@ realtimeRoutes.post('/action', async (c) => {
           // action answered 500 and the outcome was never enqueued. A failed
           // annotation leaves the block off; it never guesses one, never delays
           // the record and never costs it.
+          // P65: the outcome prepared before the behaviour capture's admission, when it is this one under the
+          // engine's consent, is admitted from that input (no second learn read); a refusal of that admission
+          // names nothing (R-P125(3)) and leaves the carried copy to the alarm, never counted lost.
+          if (ready && ready.personalizing === personalizes(consent) && recordOf(ready.input.outcome) === recordOf(outcome)) {
+            return admitPreparedOutcome(ready.input, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
+          }
           let experiment: Awaited<ReturnType<typeof outcomeEnrollment>> = null;
           try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent)); }
           catch { experiment = null; }
           if (experiment) outcome.experiment = experiment;
+          // P65: built again from the engine's answer, on the same learning preparation.
+          if (ready) return admitPreparedOutcome({ ...ready.input, brand: outcome.brand, outcome }, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
           // P59 (amendment 5): the outcome recovery answers at its durable admission
           // (P56's mechanism, src/learn/route.ts `outcomeToLearning`): the owner's
           // drain of this work holds the click's answer for the outcome's admission
@@ -308,7 +386,7 @@ realtimeRoutes.post('/action', async (c) => {
           // its experiment block and retention are the same as before.
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
             ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } })
-            : Promise.all([enqueueOutcome(c.env, outcome).then(receipt => { admitted = receipt.code === 'accepted' || receipt.capture?.ok === true; }),
+            : Promise.all([enqueueOutcome(c.env, outcome).then(receipt => { admitted = receipt.code === 'accepted'; }),
               outcomeToLearning(c.env, c.get('tenant'), outcome)]);
         })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }
@@ -348,6 +426,7 @@ realtimeRoutes.post('/action', async (c) => {
         if (!out.consent) throw new Error('Consent state unavailable');
         emitted = emitOutcome(out.sessionId, storedConsent(out.consent));
       }
+      await withdrawCarried();
       if (doRes.ok && out.success === true && out.consent) await carry(() => storedConsent(out.consent));
       return c.json({ ...out, behavior, ...(await told(emitted)), ...(render ? { render } : {}) }, doRes.status as 200);
     }
@@ -364,6 +443,7 @@ realtimeRoutes.post('/action', async (c) => {
     // Where the time went: the engine's own work on the session host, for whoever is measuring.
     c.header('Server-Timing', `engine;dur=${Math.round(performance.now() - tEngine)}`);
     const emitted = result.dropped ? undefined : emitOutcome(result.sessionId, consent);
+    await withdrawCarried();
     await carry(() => consent);
     if (actionEvent.processing === 'buffered') return c.json({ success: true, processing: 'buffered',
       interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
@@ -457,6 +537,8 @@ realtimeRoutes.post('/action', async (c) => {
     }
 
   } catch (error) {
+    // P65: a failed action records no outcome, as before; an outcome it cannot withdraw (the object reset) is the alarm's.
+    await withdrawCarried();
       if (error instanceof SessionAccessError || error instanceof AcknowledgementConflictError) throw error;
     console.error('Error processing action event');
     

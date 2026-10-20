@@ -62,7 +62,7 @@ import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincip
 import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwardLedgerOperation, LEDGER_OPERATION_HARD_BYTES, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
-import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, stripExpiredOwnerRecovery, storedRenderOf, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
+import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, settleCarriedOutcome, stripExpiredOwnerRecovery, storedRenderOf, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type CarriedOutcome, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
@@ -101,7 +101,7 @@ import {
   type ReflexResult,
   type ReflexState,
 } from '@/reflex/core';
-import { isCarriedCustomerId, orderKeyOf } from '@/ledger/records';
+import { isCarriedCustomerId, orderKeyOf, type BehaviorRecord } from '@/ledger/records';
 import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import { getConnectors, type Connectors } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
@@ -1927,7 +1927,14 @@ export class ShopperReflex {
         if (key !== 'recoveryOperation:' + operation.id || !this.isActualObject(operation.tenant, operation.subject)) throw new SessionAccessError();
         try {
           if (operation.cleanup || operation.expiresAt <= Date.now()) await disposeOwnerRecovery(this.state.storage, this.env, operation, operation.cleanup === 'erased');
-          else await resumeOwnerRecovery(this.state.storage, this.env, operation, (principal, until) => this.recoveryGuard(principal, until));
+          else {
+            await resumeOwnerRecovery(this.state.storage, this.env, operation, (principal, until) => this.recoveryGuard(principal, until));
+            // P65 (amendment 7, R-P124): the outcome a behaviour capture's admission
+            // still carries (a reset fell before its own admission), after the
+            // behaviour record: written unless the engine drops its event.
+            if (operation.carries !== undefined) await settleCarriedOutcome(this.state.storage, this.env, operation.id, (principal, until) => this.recoveryGuard(principal, until),
+              async (record, carried, principal) => await this.carriedEventDropped(record, carried, principal) !== null);
+          }
         } catch {
           // Retained work stays pending; failed checks never imply recovery.
           await this.scheduleProjectionAlarm(operation.expiresAt > Date.now() ? Math.min(operation.expiresAt, Date.now() + 30_000) : Date.now() + 30_000);
@@ -3949,6 +3956,63 @@ export class ShopperReflex {
       () => undefined
     );
     return run;
+  }
+
+  /**
+   * P65 (amendment 7, R-P124(3)): the drop the engine decides for the event whose
+   * behaviour capture's admission carried an outcome, decided again at the alarm
+   * from the carried behaviour record (its type, its typed projection of the
+   * event's data, its event id and source) before the alarm writes that outcome:
+   * the reason, or null when the engine emits it. Every drop either door decides
+   * is decided by that door's own rule and building blocks, against the state and
+   * documents in force now:
+   *  - P40 (R-P48) `duplicate_order`, on every door: a purchase naming an order the
+   *    shopper's state recorded under another event (`isDuplicateOrder` over the
+   *    state this host keeps: this object's own record on the object host, the
+   *    shopper's session record on the session host);
+   *  - W35 A1 `unknown_product`, on the live doors (the buffered doors place no
+   *    unknown product): a product the tenant's catalogue does not hold whose every
+   *    value its vocabulary refuses (`ingest` below; RealtimeSegmentEngine
+   *    `processAction`, which decides it with Reflex on only);
+   *  - `profile_missing`, on the buffered doors: no profile (this object's record
+   *    on the object host) or no session record (the session host) to apply it to.
+   * Tracking consent and erasure are held by the outcome's own admission and
+   * resume (`recoveryGuard`, the erasure tombstone), and a rate limit or an
+   * authority refusal fails the event at its door, where the action route then
+   * withdraws the carried outcome. The projection names no more of the event's
+   * values than the event did, so a value only the event named can make this rule
+   * drop where the engine placed (no outcome: fail-closed), never the reverse.
+   */
+  private async carriedEventDropped(record: BehaviorRecord, carried: CarriedOutcome, principal: SessionCapability): Promise<string | null> {
+    const tenant = principal.tenant as TenantId, onObject = (this.env.REFLEX_HOST ?? 'session') === 'do';
+    const event = { type: record.event, data: record.data as Record<string, unknown> };
+    let held: ReflexState | undefined;
+    if (onObject) {
+      await this.load();
+      if (carried.buffered && (this.affinity === undefined || this.pipeline === undefined)) return 'profile_missing';
+      held = this.affinity?.reflex;
+    } else {
+      const session = await new SessionManager(this.env, { tenant, principal }).readRaw(principal.sessionId, true);
+      if (carried.buffered && !session) return 'profile_missing';
+      held = session?.reflex;
+    }
+    if (isDuplicateOrder(held, await orderKeyOf(event), record.event_id)) return 'duplicate_order';
+    if (carried.buffered) return null;
+    const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
+    const data = event.data, pid = data.productId ?? data.product_id ?? data.sku;
+    if ((!onObject && !reflexOn) || pid == null) return null;
+    const surface = resolveSurface({ source: record.source, surface: carried.surface ?? null });
+    const catalog = await resolveTenantCatalog(tenant, surface);
+    if (catalog?.getProduct(String(pid))) return null;
+    const cfg = await resolveTenantReflexConfig(this.env, tenant, surface);
+    const contentEvent = isContentAction(actionOf(event));
+    const governed = reflexOn && (contentEvent || needsCatalogVocabulary(data, undefined, cfg)) ? await tenantVocabularyInEffect(this.env, tenant) : null;
+    const placing = governed ? governedEventData(data, cfg, governed).data : data;
+    const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, undefined, cfg))
+      ? await tenantCatalogVocabulary(this.env, tenant, cfg, catalog as unknown as CatalogVocabularySource | null) : EMPTY_VOCABULARY;
+    const placed = placeEvent(placing, undefined, cfg, vocabulary);
+    const touches = cfg.eventAttributes === 'event-when-unknown' ? (governed ? governedTouches(placed.touches, governed, cfg) : placed.touches) : [];
+    return touches.length === 0 ? 'unknown_product' : null;
   }
 
   private async recoveryGuard(principal: SessionCapability, until: number): Promise<void> {
