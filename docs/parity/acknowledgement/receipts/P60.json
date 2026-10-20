@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P60",
+  "workOrderHash": "sha256:288d753d75d5d001bb81aabc8fd4f6acd79b5ea1d9064147ee15a0673903f556",
+  "artifact": {
+    "revision": "d201c1499d5cf124fc9d9d2749bb3d638d47c772",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p60-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p60-build at d9c7e259 (src/sdk/core.ts: a module-private RequestDeadline error from boundedJSON's cut at ACK_DEADLINE_MS; sendRender re-sends the one body string once, only when the failure was the SDK's own deadline and the request is still admissible (admissible() before the first request and before the retry), never after an answered status (pending, 409 included) and never a third time; the retry's answer goes through the existing receipt checks that accept pending; src/sdk/listen.ts comment only: the placement's pending acknowledgement covers the retry so a retry answered pending or recovered arms dwell, viewable and engagements, a retry cut too leaves nothing armed; one envelope per placement and the three page-driven attempts unchanged; bundles and types regenerated with build-sdk.mjs, ESM 104275 of 107520 bytes and IIFE 109514 of 112640; kit 02:869 rewritten in place), joined onto the integration head at 628820bb; P60 14/14 on the source entry and the shipped bundle; P56-P59 green; the src/sdk tests 82/82.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P60/implementer/REPORT.md",
+      "git commits on rem/p60-build up to d201c149"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P60 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/reviewer-p60/logs/p60-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/gate-r3/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P60/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T01:14:52.642Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

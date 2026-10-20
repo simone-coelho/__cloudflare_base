@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P59",
+  "workOrderHash": "sha256:8853c0d32b00101fa80fa5354add06a984eb8080d486c909decd75a1ae667453",
+  "artifact": {
+    "revision": "d201c1499d5cf124fc9d9d2749bb3d638d47c772",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p59-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p59-build at c0379ad9 (5c9ffc16: emitOutcome calls outcomeToLearning with answerAtAdmission when recovery is on; outcomeToLearning admits the click's outcome with P56's answer-at-admission option and an afterEffects report hook (RecoveryOptions.afterEffects, reported from the post-answer continuation, never deciding); admitOwnedRecovery passes it only when the owner has a continuation; the admission (savePayload, armRecovery) completes inside the owner's drain before the shopper's 200, and the prepare, queue send, ledger write and credit effects run in the shopper's serializer after it; the recovery-off path unchanged; c0379ad9 merges the S12 fix round 146a5071: CO1 strengthened to require the outcome's pending admission at the answer, the W09.09 R10), joined onto the integration head at e01f917c; P59 13/13 on both hosts; click answer-path remote calls 26 -> 3 (session, 1517 ms at 500 ms per call) and 24 -> 1 (object, 513 ms).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P59/implementer/REPORT.md",
+      "git commits on rem/p59-build up to d201c149"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P59 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/reviewer-p59/logs/p59-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/gate-r3/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P59/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T01:14:52.613Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

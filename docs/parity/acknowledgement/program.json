@@ -342,7 +342,7 @@
     {
       "id": "P59",
       "title": "The click's outcome recovery leaves the answer path (**amendment 5, 2026-10-19**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-5/BTI-Parity-Amendment-2026-10-19.md (amendment 5, committed beside the program)",
