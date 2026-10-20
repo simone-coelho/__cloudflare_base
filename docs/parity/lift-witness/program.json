@@ -20,7 +20,7 @@
     {
       "id": "P61",
       "title": "Every lift and ring outcome is told in sources and counted in the monitor (**amendment 6, 2026-10-19**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-6/BTI-Parity-Amendment-2026-10-19b.md (amendment 6, committed beside the program)",
@@ -239,7 +239,7 @@
     {
       "id": "P63",
       "title": "The statistics object does not republish an unchanged state (**amendment 6, 2026-10-19**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-6/BTI-Parity-Amendment-2026-10-19b.md (amendment 6, committed beside the program)",

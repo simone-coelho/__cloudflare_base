@@ -11,8 +11,8 @@
     "actor": "rem-implementer",
     "evidence": [
       "rem/p59-build at c0379ad9 (5c9ffc16: emitOutcome calls outcomeToLearning with answerAtAdmission when recovery is on; outcomeToLearning admits the click's outcome with P56's answer-at-admission option and an afterEffects report hook (RecoveryOptions.afterEffects, reported from the post-answer continuation, never deciding); admitOwnedRecovery passes it only when the owner has a continuation; the admission (savePayload, armRecovery) completes inside the owner's drain before the shopper's 200, and the prepare, queue send, ledger write and credit effects run in the shopper's serializer after it; the recovery-off path unchanged; c0379ad9 merges the S12 fix round 146a5071: CO1 strengthened to require the outcome's pending admission at the answer, the W09.09 R10), joined onto the integration head at e01f917c; P59 13/13 on both hosts; click answer-path remote calls 26 -> 3 (session, 1517 ms at 500 ms per call) and 24 -> 1 (object, 513 ms).",
-      "/home/simonecoelho/rem/_evidence/parity-step3/S11/specifier/REPORT.md",
-      "/home/simonecoelho/rem/_evidence/parity-step3/S11/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S12/reviewer-spec/REPORT.md",
       "/home/simonecoelho/rem/_evidence/parity-step3/P59/implementer/REPORT.md",
       "git commits on rem/p59-build up to d201c149"
     ]
