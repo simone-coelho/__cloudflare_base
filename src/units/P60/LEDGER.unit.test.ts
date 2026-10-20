@@ -59,6 +59,16 @@
 //     but the visibility port's reports and one engagement: the viewable impression after one
 //     second in view, the dwell on leaving view after one and a half seconds, and the click,
 //     each sent once for that placement and carrying its decision.
+//   · R-P116 (the P60 delivery review): the retry follows the SDK's OWN cut only (core.ts: the
+//     bounded read rejects with its private `RequestDeadline` when its own deadline aborts it), never
+//     a network error or an AbortError the SDK did not raise; driven through the SDK's own timer
+//     against a fetch double that rejects with a TypeError, or a DOMException named AbortError,
+//     at 100 ms. And the retry is admitted again before it is sent (consent still granted, the
+//     session and the activity epoch unchanged): the shopper withdraws tracking consent through
+//     the SDK's own preference call (`core.postJson('/realtime/session/preferences', …)`,
+//     src/sdk/README.md "immediate local withdrawal") while the first request waits, and no
+//     retry follows. Each lock carries its contrast (an own cut with nothing changed is
+//     re-sent), so neither holds for an SDK that never retries.
 //   · "Within their byte budgets and `build-sdk.mjs --check` an exact match": the check exits
 //     0 on this tree, and every exported bundle is at most its recorded budget, read from the
 //     script's own report (verifyPackage); the script's teeth: a build whose output differs by
@@ -103,7 +113,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ACK_DEADLINE_MS, createCore } from '@/sdk/core';
 import { createListen } from '@/sdk/listen';
-import { offeredSet, renderAck, testHost } from '@/sdk/testHost';
+import { offeredSet, preferenceAck, renderAck, testHost } from '@/sdk/testHost';
 import type { DecisionSet, DomLike, ElementLike, Host, RequestInitLike, ResponseLike } from '@/sdk/types';
 
 /** The checkout this file lives in, whatever the working directory (the 2026-09-20 W29-B1 lesson). */
@@ -120,7 +130,8 @@ const GRID = 'module.PDP.grid.1', RECO = 'module.PDP.reco.1';
 const receiptOf = (order: number, id: string) => `original-${SLOT}-${order}-${id}`;
 const show = (value: unknown) => JSON.stringify(value)?.slice(0, 400);
 
-type AckAnswer = 'cut' | 'pending' | 'recovered' | 'conflict' | 'unknown-source';
+/** R-P116: 'network-error' rejects the request with a TypeError at 100 ms, 'outside-abort' with an AbortError the SDK did not raise, at 100 ms. */
+type AckAnswer = 'cut' | 'pending' | 'recovered' | 'conflict' | 'unknown-source' | 'network-error' | 'outside-abort';
 interface Posted { type: string; eventId?: string; data: Record<string, unknown> }
 
 interface ClientLike {
@@ -128,6 +139,10 @@ interface ClientLike {
   apply: (set: DecisionSet) => void;
   rendered: (slot: string, contentId: string, el?: ElementLike) => Promise<unknown>;
   outcome: (type: 'content_click', contentId: string, slot: string) => Promise<unknown>;
+  /** R-P116: the shopper withdraws tracking (and personalization) through the SDK's own preference call (src/sdk/README.md, "immediate local withdrawal"). */
+  withdraw: () => Promise<unknown>;
+  /** Whether the SDK allows tracking now (Core `trackingAllowed`). */
+  tracking: () => boolean;
 }
 
 /**
@@ -158,6 +173,7 @@ function sdkPage(answers: AckAnswer[]) {
   const original = f.host.fetch;
   const posted: Posted[] = [], impressions: Array<{ body: string; answer: AckAnswer; signal?: AbortSignal }> = [];
   f.host.fetch = async (url: string, init?: RequestInitLike): Promise<ResponseLike> => {
+    if (url.endsWith('/realtime/session/preferences')) return { ok: true, status: 200, json: async () => preferenceAck(f.host, init, JSON.parse(init?.body ?? '{}') as Record<string, unknown>) };
     if (!url.endsWith('/action')) return original(url, init);
     const body = JSON.parse(init?.body ?? '{}') as Posted;
     posted.push(body);
@@ -166,6 +182,9 @@ function sdkPage(answers: AckAnswer[]) {
     impressions.push({ body: init?.body ?? '', answer, ...(init?.signal ? { signal: init.signal } : {}) });
     if (answer === 'cut') return new Promise<ResponseLike>((_, reject) => {
       init?.signal?.addEventListener('abort', () => reject(new Error('The SDK aborted the request')), { once: true });
+    });
+    if (answer === 'network-error' || answer === 'outside-abort') return new Promise<ResponseLike>((_, reject) => {
+      setTimeout(() => reject(answer === 'network-error' ? new TypeError('Failed to fetch') : new DOMException('The operation was aborted.', 'AbortError')), 100);
     });
     if (answer === 'conflict') return { ok: false, status: 409, json: async () => ({ ok: false, error: 'Render acknowledgement conflict: this decision was already acknowledged with another event id' }) };
     const render = (renderAck(init) as { render: Record<string, unknown> }).render;
@@ -184,7 +203,8 @@ function sdkPage(answers: AckAnswer[]) {
 function sourceClient(host: Host): ClientLike {
   const core = createCore({ tenant: TENANT, source: 'p60-pdp' }, host), listen = createListen(core);
   return { ready: () => core.ready(), apply: set => listen.apply(set), rendered: (slot, id, el) => listen.rendered(slot, id, el),
-    outcome: (type, id, slot) => listen.outcome(type, id, slot) };
+    outcome: (type, id, slot) => listen.outcome(type, id, slot),
+    withdraw: () => core.postJson('/realtime/session/preferences', { trackingConsent: false, personalizationEnabled: false }), tracking: () => core.trackingAllowed };
 }
 
 /** The shipped ESM bundle, run as src/units/W26/B1.unit.test.ts runs it, with this realm's (fake) timers. */
@@ -196,10 +216,11 @@ function bundleClient(host: Host): ClientLike {
     setTimeout, clearTimeout, setInterval, clearInterval,
   });
   const { createClient } = module.exports as unknown as { createClient: (config: unknown, host: unknown) => {
-    core: { ready: () => Promise<boolean> }; listen: { apply: (set: unknown) => void; rendered: ClientLike['rendered']; outcome: ClientLike['outcome'] } } };
+    core: { ready: () => Promise<boolean>; postJson: (path: string, body: unknown) => Promise<unknown>; readonly trackingAllowed: boolean }; listen: { apply: (set: unknown) => void; rendered: ClientLike['rendered']; outcome: ClientLike['outcome'] } } };
   const client = createClient({ tenant: TENANT, source: 'p60-pdp' }, host);
   return { ready: () => client.core.ready(), apply: set => client.listen.apply(set), rendered: (slot, id, el) => client.listen.rendered(slot, id, el),
-    outcome: (type, id, slot) => client.listen.outcome(type, id, slot) };
+    outcome: (type, id, slot) => client.listen.outcome(type, id, slot),
+    withdraw: () => client.core.postJson('/realtime/session/preferences', { trackingConsent: false, personalizationEnabled: false }), tracking: () => client.core.trackingAllowed };
 }
 
 /**
@@ -230,6 +251,34 @@ async function paintAndEngage(entry: (host: Host) => ClientLike, answers: AckAns
   await clicked; await rendered;
   p.close();
   return { p, first, acknowledged };
+}
+
+/**
+ * R-P116: how many times the SDK sends one placement's acknowledgement, the page calling
+ * `rendered` once, when its first request ends as `first` (a later one answered pending);
+ * with `withdraw`, the shopper withdraws tracking consent through the SDK's own preference
+ * call while that first request waits. Two deadlines pass after the first request.
+ */
+async function acknowledgementsSent(entry: (host: Host) => ClientLike, first: AckAnswer, withdraw = false): Promise<number> {
+  const p = sdkPage([first, 'pending']);
+  const client = entry(p.f.host);
+  const ready = client.ready();
+  await p.settle();
+  expect(await ready, 'PRECONDITION: the client is ready').toBe(true);
+  client.apply(p.set);
+  const rendered = client.rendered(SLOT, GRID, p.el('m0'));
+  await p.settle();
+  expect(p.impressions.length, 'PRECONDITION: the placement\'s acknowledgement is sent and waits for its answer').toBe(1);
+  if (withdraw) {
+    const withdrawn = client.withdraw();
+    await p.settle(); await withdrawn;
+    expect(client.tracking(), 'PRECONDITION: the withdrawal is in force while the first request waits').toBe(false);
+  }
+  await p.hold(ACK_DEADLINE_MS); await p.settle();
+  await p.hold(ACK_DEADLINE_MS); await p.settle();
+  await rendered;
+  p.close();
+  return p.impressions.length;
 }
 
 // ===========================================================================
@@ -396,6 +445,29 @@ describe('unit:P60.SD2', () => {
       p.close();
     } finally { vi.useRealTimers(); }
   });
+
+  for (const [entryName, entry] of [['source entry', sourceClient], ['shipped bundle', bundleClient]] as const) {
+    it(`sdk (${entryName}): LOCK (R-P116) — only the SDK's own cut is retried: an acknowledgement cut at ACK_DEADLINE_MS is sent twice, one that fails at 100 ms with a network error (TypeError) or with an AbortError the SDK did not raise is sent once`, async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+      try {
+        const sent: Array<[string, number]> = [];
+        for (const [name, first] of [['the SDK\'s own cut at ACK_DEADLINE_MS', 'cut'], ['a network error (TypeError) at 100 ms', 'network-error'],
+          ['an AbortError the SDK did not raise, at 100 ms', 'outside-abort']] as const) sent.push([name, await acknowledgementsSent(entry, first)]);
+        expect(sent, `${entryName}: P60.SD2 (R-P116) — the retry follows the SDK's own cut only (core.ts sendRender, the bounded read's own deadline), never another failure; requests sent: ${sent.map(([name, count]) => `${name} ${count}`).join('; ')}`)
+          .toEqual([['the SDK\'s own cut at ACK_DEADLINE_MS', 2], ['a network error (TypeError) at 100 ms', 1], ['an AbortError the SDK did not raise, at 100 ms', 1]]);
+      } finally { vi.useRealTimers(); }
+    });
+
+    it(`sdk (${entryName}): LOCK (R-P116) — the retry is admitted again before it is sent: a cut acknowledgement is re-sent when nothing changed, and not when the shopper withdrew tracking consent through the SDK's own preference call while the first request waited`, async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+      try {
+        const sent: Array<[string, number]> = [['nothing changed', await acknowledgementsSent(entry, 'cut')],
+          ['tracking consent withdrawn while the first request waited', await acknowledgementsSent(entry, 'cut', true)]];
+        expect(sent, `${entryName}: P60.SD2 (R-P116) — a withdrawal while the first request waits leaves no retry; requests sent: ${sent.map(([name, count]) => `${name} ${count}`).join('; ')}`)
+          .toEqual([['nothing changed', 2], ['tracking consent withdrawn while the first request waited', 1]]);
+      } finally { vi.useRealTimers(); }
+    });
+  }
 });
 
 // ===========================================================================
