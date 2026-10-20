@@ -101,7 +101,21 @@
 //       fail-closed (D1): an add to bag the engine drops (W35 A1, "no outcome": realtime.ts, the
 //       drop answer) whose object resets right after its behaviour capture's admission leaves,
 //       after the alarm, its behaviour record and NO outcome record, whatever mechanism carried
-//       the outcome;
+//       the outcome; and so, R-P129 (2), for every drop the engine decides: a second purchase of
+//       an order (P40, R-P48: `duplicate_order`, decided on the shopper's stored order memory,
+//       `isDuplicateOrder`), after a first purchase of it and a second answered `duplicate_order`;
+//       R-P129 (1), R-P124(1), behaviour first (the action route's comment at the behaviour capture,
+//       realtime.ts `captureBehavior`: "Actual accepted action source is admitted durably BEFORE
+//       profile, queue, learning or external side effects; a downstream refusal cannot erase the
+//       original event identity"): an add to bag whose engine fails once (the session host's
+//       segment engine, the object host's `/ingest` door, as the specification review's probe
+//       fails it) keeps its one behaviour record;
+//       R-P129 (5), R-P126: a carried outcome is never counted lost: the tenant's `producerFailed`
+//       (P64's counter) is unchanged after RS1's reset and the alarm, and after a reset inside the
+//       outcome's own admission transaction (OUT-K3 case b1's placement: src/units/_parity10.ts
+//       `resettable`, `killBeforeCommitOf`) and the alarm. Written in RS3 and not RS1: RS1's
+//       observable is the two records after the alarm; this is a lock on P64's counter that P65's
+//       mechanism must leave as it is, green today, as RS3's other locks are;
 //       the units P56-P60 and P64 unchanged: their own acceptance commands, run beside this one.
 //
 // PRECONDITIONS: none on P64. RS2 accepts a 2xx only when it names the outcome (P64's member);
@@ -122,7 +136,16 @@
 //   since a reset before the engine has decided the drop leaves an outcome record for a dropped
 //   event. Its answer to the reset: the typed 401.
 //   So the units accept the one-transaction admission, and a carried outcome only where the drop
-//   is decided before it is carried or again at the alarm. Mutants the units catch
+//   is decided before it is carried or again at the alarm.
+//   R-P124 rules design B with the drop re-decided before the alarm writes the carried outcome. The
+//   R-P129 legs, measured (_evidence/parity-step3/S13/specifier/logs/r129-*.log; sketch-p65cb.py on the
+//   P64 build 03300b44, which re-decides W35 A1's unknown product and P40's duplicate order at the alarm
+//   and counts a failed preparation once through P61's `afterOwnerAnswer`): conforming B GREEN on every
+//   P64 and P65 unit; behaviour first RED under A (no behaviour row after the engine's failure); the
+//   duplicate order RED under B re-deciding the unknown product alone (the review's sketch, and
+//   sketch-p65cb.py `unknown-only`: one outcome row); the uncounted carry RED under B counting a carried
+//   outcome whose own admission failed (sketch-p65cb.py `count-carried`: producerFailed +1 after the
+//   reset inside that admission). Mutants the units catch
 //   (logs/mutant-*.log): sketch B without the alarm's admission (RS1), the alarm admitting the
 //   carried outcome at its own time under another id (RS1, RS3's replay).
 //
@@ -145,19 +168,21 @@
 // HARNESS: src/units/_parity.ts, src/units/_parity8.ts and src/units/_parity10.ts. Imports from
 // src/units/: ../_parity, ../_parity8, ../_parity10.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { personalizes, storedConsent } from '@/content/consent';
 import { outcomeEnrollment } from '@/content/holdout';
+import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { outcomeFromAction, ts36 } from '@/ledger/records';
 import { recoveryDigest, recoveryJSON } from '@/ledger/recovery';
+import { RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';
 import type { TenantId } from '@/tenancy/tenant';
 
-import { HOSTS, LAYOUT, slotPositionOf, storedOutcomes, TENANT, type Host, type Mounted, type Shopper, type Snapshot } from '../_parity';
+import { BRAND, HOSTS, LAYOUT, slotPositionOf, storedOutcomes, TENANT, type Host, type Mounted, type Shopper, type Snapshot } from '../_parity';
 import {
-  actionWire, admissionsOf, holdQueue, remoteLatency, shopperHeld, shopperStorage, storedBehavior, UNANSWERED, within, type Identity, type Wire,
+  actionWire, admissionsOf, clearShopperAlarm, holdQueue, remoteLatency, shopperHeld, shopperStorage, storedBehavior, UNANSWERED, within, type Identity, type Wire,
 } from '../_parity8';
-import { BUY_BOX, outcomeWorld, RESET_MESSAGE, resettable, settleAll, UNKNOWN_ADD, type OutcomeWorld } from '../_parity10';
+import { BAG, BUY_BOX, evidenceLoss, outcomeWorld, RESET_MESSAGE, resettable, settleAll, UNKNOWN_ADD, type OutcomeWorld } from '../_parity10';
 
 const show = (value: unknown) => JSON.stringify(value)?.slice(0, 400);
 type Event = { type: string; data: Record<string, unknown> };
@@ -175,6 +200,29 @@ const eventOf = (kind: Kind, page: Snapshot): Event => (kind === 'add to bag' ? 
 const BEHAVIOR_FIELDS = ['productId', 'product_id', 'sku', 'contentId', 'content_id', 'decisionId', 'slot', 'pageType', 'event',
   'ms', 'dwellMs', 'value', 'price', 'margin', 'currency', 'quantity', 'orderId', 'line', 'category', 'occasion', 'color', 'silhouette', 'priceBand'];
 const projectionOf = (event: Event): Record<string, unknown> => Object.fromEntries(BEHAVIOR_FIELDS.filter(key => Object.hasOwn(event.data, key)).map(key => [key, event.data[key]]));
+
+/** The kit's purchase payload (docs/kit/03-payload-schemas.md; P40's `kitPurchase`) for the quilted Tabby, naming its order. */
+const purchaseOf = (orderId: string): Event => ({ type: 'purchase', data: { orderId, value: 575, currency: 'USD', items: [{ productId: BAG, quantity: 1, price: 575 }], brand: BRAND } });
+
+/**
+ * The engine fails once on the next action, as the specification review's probe failed it
+ * (_evidence/parity-step3/S13/reviewer/probes/BEHAVIOUR-FIRST.probe.test.ts): on the session host the segment engine's
+ * `processActionEventWithSession`, on the object host the shopper object's own `/ingest` door the route calls.
+ */
+function engineFailsOnce(host: Host): { readonly failed: number; restore: () => void } {
+  let failed = 0;
+  const failure = () => { failed++; return Promise.reject(new Error('injected: engine failure')); };
+  if (host === 'session') {
+    const spy = vi.spyOn(RealtimeSegmentEngine.prototype, 'processActionEventWithSession').mockImplementationOnce(failure);
+    return { get failed() { return failed; }, restore: () => spy.mockRestore() };
+  }
+  const original = ShopperReflex.prototype.fetch;
+  const spy = vi.spyOn(ShopperReflex.prototype, 'fetch').mockImplementation(function (this: ShopperReflex, request: Request) {
+    if (!failed && new URL(request.url).pathname === '/ingest') return failure() as Promise<Response>;
+    return original.call(this, request);
+  });
+  return { get failed() { return failed; }, restore: () => spy.mockRestore() };
+}
 
 const without = (row: Record<string, unknown>, keys: string[]) => Object.fromEntries(Object.entries(row).filter(([key]) => !keys.includes(key)));
 const PROCESSING = ['retention', 'externalRetention', '_ledger_delivery'];
@@ -215,9 +263,13 @@ interface ResetRun extends OutcomeWorld { event: Event; identity: Identity; answ
  */
 async function resetRun(host: Host, label: string, kind: Kind): Promise<ResetRun> {
   const world = await outcomeWorld(host, label);
-  const { m, app, s, page } = world;
-  const event = eventOf(kind, page), identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
-  const reset = resettable(m, s.subject, identity.eventId);
+  return resetRunOn(world, eventOf(kind, world.page));
+}
+/** The same reset on a world already built, for one event; `killBeforeCommitOf` places it inside that key's transaction instead. */
+async function resetRunOn(world: OutcomeWorld, event: Event, identity: Identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 },
+  options: { killBeforeCommitOf?: string } = {}): Promise<ResetRun> {
+  const { m, app, s } = world;
+  const reset = resettable(m, s.subject, identity.eventId, options);
   const answer = await within(actionWire(app, s, event, identity), 20_000);
   await settleAll(m, app);
   const killedAt = reset.state.killedAt, alarm = await reset.alarmAt();
@@ -427,9 +479,79 @@ describe('unit:P65.RS3', () => {
     }, 60_000);
   }
 
+  // R-P129 (1), R-P124(1): behaviour first. The action route's own comment at the behaviour capture (realtime.ts
+  // `captureBehavior`): "Actual accepted action source is admitted durably BEFORE profile, queue, learning or external side
+  // effects; a downstream refusal cannot erase the original event identity". Measured by the specification review
+  // (_evidence/parity-step3/S13/reviewer/logs/probe-behaviour-first-*.log): one behaviour row today and under the carried
+  // outcome, none under the one-transaction admission that waits for the engine.
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK — behaviour first (R-P124(1)): an add to bag whose engine fails once keeps its behaviour record, admitted before the engine ran`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p65-rs3-behaviour-first');
+      const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      const fault = engineFailsOnce(host);
+      let answer: Wire;
+      try {
+        answer = await actionWire(app, s, BUY_BOX, identity);
+        await settleAll(m, app);
+      } finally { fault.restore(); }
+      await m.drainLedger();
+      expect(fault.failed, `${host}: PRECONDITION — the engine failed once on the add to bag (answered ${answer.status} ${show(answer.body)})`).toBe(1);
+      expect.soft(behaviourRows(m, s, identity.eventId).map(behaviourContent), `${host}: P65.RS3 — behaviour first: the add to bag whose engine failed keeps its behaviour record`)
+        .toEqual([expectedBehaviour(s, BUY_BOX, identity)]);
+    }, 60_000);
+  }
+
+  // R-P129 (2): fail-closed for every drop the engine decides (unknown_product above, duplicate_order here: P40, R-P48, the
+  // engine's own `isDuplicateOrder` on the shopper's stored order memory, on both hosts), not only the one decided from the catalogue.
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK — fail-closed for every drop the engine decides: a second purchase of an order (dropped, P40: duplicate_order) whose shopper object resets right after its behaviour capture's durable admission leaves, after the alarm, its behaviour record and no outcome record`, async () => {
+      const world = await outcomeWorld(host, 'p65-rs3-duplicate');
+      const { m, app, s } = world;
+      const order = `p65-order-${crypto.randomUUID()}`;
+      const first = { eventId: crypto.randomUUID(), timestamp: Date.now() - 3 }, again = { eventId: crypto.randomUUID(), timestamp: Date.now() - 2 };
+      const firstAnswer = await actionWire(app, s, purchaseOf(order), first);
+      await settleAll(m, app);
+      const againAnswer = await actionWire(app, s, purchaseOf(order), again);
+      await settleAll(m, app);
+      await m.drainLedger();
+      expect([firstAnswer.status, firstAnswer.body.dropped ?? null, outcomeRows(m, s, first.eventId).length, againAnswer.status, againAnswer.body.dropped ?? null, outcomeRows(m, s, again.eventId).length],
+        `${host}: PRECONDITION — the order's first purchase is accepted with its outcome; a second purchase of it is dropped as duplicate_order (P40) with none (${show(againAnswer.body)})`)
+        .toEqual([200, null, 1, 200, 'duplicate_order', 0]);
+      await clearShopperAlarm(m, s.subject);
+      const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      const run = await resetRunOn(world, purchaseOf(order), identity);
+      preconditions(host, run);
+      expect.soft([behaviourRows(m, s, identity.eventId).map(row => [row.record_id, row.event, row.ts, (row.data as { orderId?: unknown } | undefined)?.orderId]), outcomeRows(m, s, identity.eventId).length],
+        `${host}: P65.RS3 — a duplicate order's reset leaves its behaviour record and no outcome record, whatever carried it`)
+        .toEqual([[[`${TENANT}:${ts36(identity.timestamp)}:${s.subject}:behavior:${identity.eventId}`, 'purchase', identity.timestamp, order]], 0]);
+    }, 90_000);
+  }
+
+  // R-P129 (5), R-P126: a carried outcome is never counted lost. A lock on P64's lost-evidence counter across P65's mechanism,
+  // which RS1's observable (the records after the alarm) does not include: written here, beside the other locks P65 keeps.
+  // Two placements of the reset: RS1's (right after the behaviour capture's admission) and the analyst's own (inside the
+  // outcome's own admission transaction, before it commits: OUT-K3 case b1), where a carried outcome's own admission fails.
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK — a carried outcome is never counted lost (R-P126): after a reset right after the add to bag's behaviour capture admission, and after a reset inside its outcome's own admission transaction, and the alarm, the tenant's producerFailed counter is unchanged`, async () => {
+      const after = await outcomeWorld(host, 'p65-rs3-uncounted-after');
+      const beforeAfter = (await evidenceLoss(after.m)).producerFailed;
+      const runAfter = await resetRunOn(after, BUY_BOX);
+      preconditions(host, runAfter);
+      const inside = await outcomeWorld(host, 'p65-rs3-uncounted-inside');
+      const beforeInside = (await evidenceLoss(inside.m)).producerFailed;
+      const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      const outcomeId = outcomeFromAction({ ...BUY_BOX, userId: inside.s.subject, sessionId: inside.s.grant.sessionId, eventId: identity.eventId, eventIdSource: 'provided', timestamp: identity.timestamp }, TENANT)!.outcome_id;
+      const operation = await recoveryDigest({ kind: 'outcome', tenant: TENANT, subject: inside.s.subject, ids: [outcomeId] });
+      const runInside = await resetRunOn(inside, BUY_BOX, identity, { killBeforeCommitOf: `recoveryOperation:${operation}` });
+      expect(runInside.fired, `${host}: PRECONDITION — the outcome's own admission was attempted and the reset fell inside it (answered ${runInside.answer === UNANSWERED ? UNANSWERED : runInside.answer.status})`).toBe(true);
+      expect.soft([(await evidenceLoss(after.m)).producerFailed - beforeAfter, (await evidenceLoss(inside.m)).producerFailed - beforeInside],
+        `${host}: P65.RS3 — producerFailed unchanged after either reset and the alarm (the outcome after the behaviour's reset; after the reset inside its own admission)`).toEqual([0, 0]);
+    }, 90_000);
+  }
+
   it('CONTROL: W06\'s digest of a row changes with its content; the held queue answers nothing until released', async () => {
     const s = { subject: 'vis-control' } as Shopper;
-    const row = { record_id: 'coach:0:vis-control:behavior:x', brand: TENANT, event: 'add_to_cart', retention: { a: 1 } };
+    const row = { record_id: `${TENANT}:0:vis-control:behavior:x`, brand: TENANT, event: 'add_to_cart', retention: { a: 1 } };
     const [a, b, c] = await Promise.all([w06Of(s, 'behavior', row), w06Of(s, 'behavior', { ...row, retention: { a: 2 } }), w06Of(s, 'behavior', { ...row, event: 'purchase' })]);
     expect([a.digest === b.digest, a.digest === c.digest], 'CONTROL — processing stamps are left out of the digest; content is not').toEqual([true, false]);
     const { m } = await outcomeWorld('session', 'p65-rs3-control');

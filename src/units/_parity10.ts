@@ -142,8 +142,13 @@ export interface Reset {
  * call on, every storage call of the object and every remote effect (R2 `put` and `delete`,
  * the event queue, the ring and statistics objects) fails with RESET_MESSAGE, until `revive`.
  * Whatever else the same transaction writes (an outcome admitted with it) is committed with it.
+ *
+ * With `killBeforeCommitOf` (the analyst's own placement, repro :41-52, keyed by a storage key
+ * instead of a body's text): the reset falls INSIDE the first transaction that writes that key
+ * (an operation's `recoveryOperation:<id>`), before it commits, so nothing of that transaction is
+ * kept; `fired` then says that transaction was attempted, and `committed` lists what it tried to write.
  */
-export function resettable(m: Mounted, subject: string, eventId: string): Reset {
+export function resettable(m: Mounted, subject: string, eventId: string, options: { killBeforeCommitOf?: string } = {}): Reset {
   const name = shopperObjectName(TENANT as TenantId, subject);
   const item = m.shoppers.get(name);
   expect(item ? 'held' : 'absent', `PRECONDITION (${m.host}): the shopper's own object exists`).toBe('held');
@@ -163,6 +168,24 @@ export function resettable(m: Mounted, subject: string, eventId: string): Reset 
       if (state.dead) return die(`storage.${method}`);
       if (state.admitted && !['getAlarm', 'setAlarm', 'deleteAlarm'].includes(method)) return die(`storage.${method}`);
       if (method !== 'transaction' || !state.armed) return original(...args);
+      if (options.killBeforeCommitOf !== undefined) {
+        const target = options.killBeforeCommitOf, attempted: string[] = [];
+        const body = args[0] as (tx: DurableObjectTransaction) => Promise<unknown>;
+        return original((tx: DurableObjectTransaction) => body(new Proxy(tx, { get: (t, property) => {
+          const value = Reflect.get(t, property, t) as unknown;
+          if (property !== 'put' || typeof value !== 'function') return value;
+          return (key: unknown, stored?: unknown, ...rest: unknown[]) => {
+            const keys = typeof key === 'string' ? [key] : Object.keys((key ?? {}) as Record<string, unknown>);
+            attempted.push(...keys);
+            if (keys.includes(target)) {
+              state.fired = true; state.committed = attempted; state.armed = false;
+              state.dead = true; state.killedAt = `the transaction writing ${target} (before commit)`;
+              throw new Error(RESET_MESSAGE);
+            }
+            return (value as (...a: unknown[]) => unknown).call(t, key, stored, ...rest);
+          };
+        } })));
+      }
       // The admission's transaction: committed whole; the reset comes right after it.
       let carries = false;
       const written: string[] = [];

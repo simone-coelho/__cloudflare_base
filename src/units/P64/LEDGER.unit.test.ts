@@ -90,7 +90,12 @@
 //       the session host STORAGE.get 1, CACHE.get 11, SESSIONS.put 2; the object host
 //       STORAGE.get 1, for both events, every run);
 //       the units P56-P60 unchanged: their own acceptance commands, run beside this one
-//       (a unit file is never imported into another).
+//       (a unit file is never imported into another);
+//       R-P129 (4), R-P125(1): on the failure path (OT3's lever) the answer waits for no remote call
+//       beyond the success path's base: the remote calls COMPLETED before the answer, each made to
+//       wait FAILURE_PATH_MS (500 ms), per binding and method, within the base counts above. RED on
+//       the P64 build's step 1 ffb8d1e2 (the count's CACHE.get and CACHE.put run as retained work
+//       before the answer), GREEN on its step 2 03300b44 (the count through P61's `afterOwnerAnswer`).
 //
 // R10 (expectations a build of P64 changes): NONE MEASURED. The whole suite under a sketch of
 // P64 on a scratch copy (_evidence/parity-step3/S13/specifier/sketches/sketch-p64.py: `emitOutcome`
@@ -332,6 +337,11 @@ const BASE_CALLS_BEFORE_ANSWER: Record<Host, Record<string, number>> = {
   session: { 'STORAGE.get': 1, 'CACHE.get': 11, 'SESSIONS.put': 2 },
   do: { 'STORAGE.get': 1 },
 };
+/** The latency each remote call waits in the failure-path leg (R-P125(1)): long enough that a call the answer did not wait for cannot end before it. */
+const FAILURE_PATH_MS = 500;
+/** The calls the answer waited for: those that ended before it arrived (each waits FAILURE_PATH_MS after it starts). */
+const waitedFor = (calls: Array<{ binding: string; method: string; at: number }>, answeredAt: number): string[] =>
+  calls.filter(call => call.at + FAILURE_PATH_MS <= answeredAt).map(call => `${call.binding}.${call.method}`);
 const countsOf = (calls: string[]) => calls.reduce<Record<string, number>>((out, call) => ({ ...out, [call]: (out[call] ?? 0) + 1 }), {});
 /** The calls made beyond the base's, per binding and method; empty when none is new. */
 const beyondBase = (host: Host, calls: string[]) => Object.entries(countsOf(calls))
@@ -384,7 +394,37 @@ describe('unit:P64.OT4', () => {
       }
       expect.soft(beyond, `${host}: P64.OT4 — no remote call before the answer beyond the base's (amendment 5's answer-at-admission, no new wait)`).toEqual([['add to bag', []], ['click', []]]);
     }, 60_000);
+
+    // R-P129 (4), R-P125(1): the failure path's loss count adds nothing the answer waits for (it runs once the owner has
+    // answered: P61's `afterOwnerAnswer`). Read as R-P115 read P61's own counter (a call starting in the answer's own
+    // millisecond is after the answer) and as the lead's note on this leg rules it ("no call that the answer WAITS for is
+    // added; a call that starts after the owner's operation ended is after the answer"): the calls the answer waited for are
+    // the calls that ENDED before it arrived. Each waits FAILURE_PATH_MS (500 ms), so a call the answer waits for ends that
+    // long after it started and before the answer, while one started once the owner's operation ended (while the worker is
+    // still passing the answer on) ends after it. The started-before reading of the leg above sees such a call on the
+    // conforming build 03300b44 (_evidence/parity-step3/S13/specifier/logs/r129-b2-d1.log: one CACHE.get, the count's read);
+    // this reading still catches the count run as retained work before the answer (ffb8d1e2: its CACHE.get and CACHE.put
+    // both end before it).
+    it(`host (${host}): LOCK (R-P125(1)) — on the failure path the answer waits for no remote call beyond the success path's: with the outcome's learning preparation failing (OT3's lever) and ${FAILURE_PATH_MS} ms added to every remote binding call, the remote calls completed before the add to bag's answer are, per binding and method, no more than the base's success path makes`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p64-ot4-failure-latency');
+      const lever = remoteLatency(m);
+      const fault = failLearnReadOnce();
+      const first = lever.calls.length;
+      lever.set(FAILURE_PATH_MS);
+      let answer: Wire;
+      try { answer = await actionWire(app, s, BUY_BOX, { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 }); } finally { lever.set(0); fault.restore(); }
+      const before = waitedFor(lever.calls.slice(first), answer.answeredAt);
+      await settleAll(m, app);
+      expect([fault.failed, answer.status], `${host}: PRECONDITION — the learn read failed once and the add to bag was accepted (${show(answer.body)})`).toEqual([1, 200]);
+      expect.soft(beyondBase(host, before), `${host}: P64.OT4 (R-P125(1)) — on the failure path the answer waits for no remote call beyond the success path's`).toEqual([]);
+    }, 60_000);
   }
+
+  it('CONTROL (R-P125(1)): a call that ended before the answer is one the answer waited for; a call started alongside the answer, ending after it, is not', () => {
+    const calls = [{ binding: 'STORAGE', method: 'get', at: 0 }, { binding: 'CACHE', method: 'get', at: 1_000 - FAILURE_PATH_MS }, { binding: 'CACHE', method: 'put', at: 999 }];
+    expect(waitedFor(calls, 1_000), 'CONTROL — the call ending at the answer counts; the one starting a millisecond before it does not').toEqual(['STORAGE.get', 'CACHE.get']);
+    expect(beyondBase('do', waitedFor(calls, 1_000)), 'CONTROL — and one waited-for call beyond the base is named').toEqual(['CACHE.get ×1 (base 0)']);
+  });
 
   it('CONTROL: a new remote call before the answer is caught', () => {
     expect(beyondBase('do', ['STORAGE.get', 'CACHE.get']), 'CONTROL — one more call than the base is named').toEqual(['CACHE.get ×1 (base 0)']);
