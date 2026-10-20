@@ -24,7 +24,7 @@
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-7/BTI-Parity-Amendment-2026-10-20.md (amendment 7, committed beside the program)",
-        "locator": "P64 · section 2 of amendment 7; OUT-K3 §4 'optional product unit' and §5",
+        "locator": "P64 \u00b7 section 2 of amendment 7; OUT-K3 \u00a74 'optional product unit' and \u00a75",
         "requirement": "see amendment 7 section 2, ticket P64 (copied verbatim in the specification)"
       },
       "outcome": "A storefront developer or an operator can see, from the action's own answer, which outcome record an accepted event produced, and the monitor shows when an accepted event produced none.",
@@ -50,7 +50,7 @@
         {
           "id": "OT4",
           "kind": "LOCAL",
-          "observable": "Locks: the clamp, the outcome_id format, the behavior member, the status codes, amendment 5's answer-at-admission (no new remote call before the answer under the latency lever) and the units P56–P60 unchanged.",
+          "observable": "Locks: the clamp, the outcome_id format, the behavior member, the status codes, amendment 5's answer-at-admission (no new remote call before the answer under the latency lever) and the units P56\u2013P60 unchanged.",
           "proof": "The P64 acceptance command runs the tests named unit:P64.OT4 in src/units/P64 and they pass."
         },
         {
@@ -68,7 +68,7 @@
         }
       ],
       "remainingWork": [
-        "emitOutcome returns the outcome id it built; the answer adds outcome: { recordId }; recordEvidenceLoss(…, 'producerFailed', 1) in outcomeToLearning's catch.",
+        "emitOutcome returns the outcome id it built; the answer adds outcome: { recordId }; recordEvidenceLoss(\u2026, 'producerFailed', 1) in outcomeToLearning's catch.",
         "Kit 02 and 03 state the member."
       ],
       "decisions": [
@@ -99,13 +99,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S13 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "c3d8d64f6fb98b6883f49ab76b9fd8ab97b2dd24",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S13 records the reviewed revision and the RED/HONEST evidence here"
+          "_evidence/parity-step3/S13/specifier/REPORT.md (rem-specifier; S13 at b586e520, the R-P125 OT3 leg at c3d8d64f)",
+          "_evidence/parity-step3/S13/reviewer-spec/REPORT.md (rem-reviewer: P64 OT1-OT4 PASS at the reviewed revision c3d8d64f; RED for the right reason on both hosts; the R-P125 leg honest)"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "_evidence/parity-step3/S13/reviewer/logs/ (reviewer mutants R1-R12 on light scratch trees: R1 client-clock id, R2 member on every answer, R3 double count, R5 admitted outcomes counted, R6 extra call before the answer, R7 P59 reverted each caught by a named P64 test; R4 no-recovery count uncaught = R-P124(2) out of scope)"
         ]
       },
       "doneWhen": [
@@ -123,7 +124,7 @@
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-7/BTI-Parity-Amendment-2026-10-20.md (amendment 7, committed beside the program)",
-        "locator": "P65 · section 2 of amendment 7; OUT-K3 §2 case b1 and §4 'gap b1'",
+        "locator": "P65 \u00b7 section 2 of amendment 7; OUT-K3 \u00a72 case b1 and \u00a74 'gap b1'",
         "requirement": "see amendment 7 section 2, ticket P65 (copied verbatim in the specification)"
       },
       "outcome": "An accepted tracked action never ends with a behaviour record and no outcome record because the shopper's object reset at the wrong moment.",
@@ -143,7 +144,7 @@
         {
           "id": "RS3",
           "kind": "LOCAL",
-          "observable": "Locks: W06's digests, the idempotent replay, amendment 5's answer-at-admission and the P56–P60, P64 units unchanged; no new remote call before the answer under the latency lever.",
+          "observable": "Locks: W06's digests, the idempotent replay, amendment 5's answer-at-admission and the P56\u2013P60, P64 units unchanged; no new remote call before the answer under the latency lever.",
           "proof": "The P65 acceptance command runs the tests named unit:P65.RS3 in src/units/P65 and they pass."
         },
         {
@@ -216,7 +217,7 @@
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-7/BTI-Parity-Amendment-2026-10-20.md (amendment 7, committed beside the program)",
-        "locator": "P66 · section 2 of amendment 7; the P58 delivery review finding 2",
+        "locator": "P66 \u00b7 section 2 of amendment 7; the P58 delivery review finding 2",
         "requirement": "see amendment 7 section 2, ticket P66 (copied verbatim in the specification)"
       },
       "outcome": "A client error in any identity merge reaches the shopper as the route's own 400 with its details on the deployed runtime, never an untyped 500.",
