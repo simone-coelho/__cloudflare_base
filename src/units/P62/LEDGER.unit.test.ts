@@ -82,26 +82,35 @@
 //     that has committed or published since it started, it reads no `learn` entry (no
 //     `get`, no listing) and digests no input the size of its state. `/health` keeps
 //     today's members and its whole-state `digest` for operators.
-//     NOT RULED: the first door call of an object started since its last commit or
-//     publication (an evicted object), which may establish its verdict once from its
-//     stored state; a stored state damaged as W23 H1.01 damages it is then not healthy.
+//     R-P112(5): the FIRST door call of an object started since its last commit or
+//     publication (an evicted object) may read its stored state once, to establish its
+//     verdict, and never digests it (no input of the state's size); a second call reads
+//     none; a stored state damaged as W23 H1.01 damages it makes that first answer report
+//     the state /health reports, `recovery-required`, never `healthy`.
 //   · A served copy that is not the object's latest publication, recognised inside the
 //     window, is applied and its record's `explain.lift` carries
 //     `asOf: { latest, publishedAt, version }` (keys sorted): `version` and `publishedAt`
 //     the copy's own, `latest` the version of the object's latest publication. A copy
 //     that is the latest carries no `asOf`. The record names the copy it decided with
 //     (`versions.lift`), and replays equal.
-//     The window: the units read a copy seconds after its supersession (inside) and
-//     `LIFT_RECENT_WINDOW_MS + 60 s` after both its publication and its supersession
-//     (outside); whether the window runs from a copy's publication or from its
-//     supersession is the builder's, and a bound on the count of publications kept is
-//     allowed beside it (two or three publications here).
+//     The window (R-P112(6)): it runs from the copy's PUBLICATION (its `publishedAt`).
+//     A copy published at T is accepted at T + LIFT_RECENT_WINDOW_MS − 1 ms and refused
+//     at T + LIFT_RECENT_WINDOW_MS + 1 ms, whenever it was superseded (seconds after T,
+//     or half a window after T); the units read those two instants on a clock held still
+//     for the read (`frozenAt`), so a decision's own run cannot move it across the edge.
+//     A bound on the count of publications kept is allowed beside it (two or three
+//     publications here).
+//   · R-P113: a copy that is still the object's latest publication but whose witness
+//     changed after a reset (an explicit reset and new evidence: the fence moved) is
+//     not applied, and the answer names the outcome `unrecognized` (the publication the
+//     object now confirms is not that copy's), never `superseded`.
 //
 // RULED MEMBERS AND EXPORTS THAT DO NOT EXIST YET (read loosely, so no new type error):
 // the three constants (src/learn/fan.ts, read through src/units/_parity9.ts
 // `fanExports`); `sources.budgets`; the `/witness` door; `explain.lift.asOf`.
 //
-// BOUNDARY FINDING (for the lead): a record served with `asOf` cannot replay equal
+// BOUNDARY (R-P112(2): src/learn/replay.ts joins P62's allowed paths for the carry; the
+// replay test stays): a record served with `asOf` cannot replay equal
 // unless the replay carries the served record's `asOf` (src/learn/replay.ts
 // `replayDecision`, beside the `measurementBasis`/`objective` carry at :577-580; the
 // replay recomputes `explain.lift` from the archived copy, which holds no `asOf`, and
@@ -110,20 +119,20 @@
 // carry in replay.ts and RED without it (`diff` on explain.lift;
 // _evidence/parity-step3/S11/specifier/logs/sketch-noreplay-p62.log).
 //
-// FINDING (for the lead): the ring's "never extends a decision by more than its
-// budget" is not true on the request path today. `readRing` stops waiting at its budget
+// THE RING'S BOUND (R-P112(1): made true by P62, not restated): the ring's "never
+// extends a decision by more than its budget" is not true on the request path today. `readRing` stops waiting at its budget
 // (src/learn/fan.ts:859-872) but leaves the ring call running, and the shopper's owner
 // drains every call started inside it before it answers
 // (src/identity/sessionAuthority.ts `runOwnerOperation`, :538-546), so the answer waits
 // for the ring: measured on both hosts, a ring answering 1 000 ms late holds the answer
 // about 1 000 ms (_evidence/parity-step3/S11/specifier/logs/probe-h.log), and a ring that
-// never answers holds it past 1.5 s (LW4's leg, RED today). The witness does not have
+// never answers holds it past the budget plus RING_BOUND_SLACK_MS (LW4's leg, RED today). The witness does not have
 // this defect: it aborts its call at its budget (fan.ts:30-43). A sketch that aborts the
 // ring call at its budget the same way (src/learn/fan.ts, inside P62's allowed paths)
 // turns the leg GREEN.
 //
-// R10 (expectations that lock present behaviour, listed for the lead). R10'd in this
-// batch, in its own commit: the W38 B7 late-answer lock
+// R10 (expectations that lock present behaviour; R-P112(3): the updates below are the
+// specifier's, joined with the build). R10'd in this batch, in its own commit: the W38 B7 late-answer lock
 // (src/units/W38/LEDGER.unit.test.ts:857-866, "budget plus margin"). Measured RED under
 // a sketch of P61 and P62 (the whole suite on a scratch copy of this tree,
 // _evidence/parity-step3/S11/specifier/logs/sketch2-full.*, against the same copy
@@ -159,7 +168,7 @@
 // HARNESS: src/units/_parity.ts, _parity3.ts, _parity6.ts, _parity9.ts. Imports from
 // src/units/: ../_parity, ../_parity3, ../_parity6, ../_parity9.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { invalidateLiftCache } from '@/content/service';
 import type { DecisionRecord } from '@/content/types';
@@ -172,13 +181,33 @@ import { publishStats } from '../_parity3';
 import { dials, failPooledDoor, learnOf, liftOf, objectPublish, P08_PIECES, visit } from '../_parity6';
 import {
   copyLever, copyOf, damageAndRestart, decide, digestLog, fanExports, fatigued, fireAlarm, forged, HOME_MODULES, inForce, kvReadLog, later,
-  liftOnRecord, liftWorld, objectDoor, PDP_MODULES, placementOf, republish, restartObject, ringLever, sourcesMember, witnessLever, type Copy, type StorageLog,
+  liftOnRecord, liftReadOf, liftWorld, objectDoor, PDP_MODULES, placementOf, republish, restartObject, ringLever, sourcesMember, witnessLever, type Copy,
+  type StorageLog,
 } from '../_parity9';
 
 /** The derived defaults (header). */
 const LIFT_DEFAULT_MS = 200, RING_DEFAULT_MS = 200;
 /** The window's derived floor (header): LIFT_TTL_MS plus the largest observed store propagation. */
 const WINDOW_FLOOR_MS = 60_000 + 55_800;
+/**
+ * LW4's ring bound (R-P113): how far past the ring budget a decision whose ring call
+ * is abandoned at the budget may answer in this harness — the harness's own scheduling
+ * slack, not the product's. Measured on the S11 sketch at a machine load of 11
+ * (_evidence/parity-step3/S11/specifier/logs/fix1-slack-probe.log, 15 decisions per
+ * host): with the ring held, the decision answers 13-19 ms after the ring budget; with
+ * the ring answering at once, it takes 13-19 ms. 300 ms is about fifteen times the
+ * largest, room for a loaded machine, and under a third of the 1 000 ms that a ring
+ * call aborted one second late would add (the reviewer's mutant m7a).
+ */
+const RING_BOUND_SLACK_MS = 300;
+/**
+ * R-P112(6): runs `work` with `Date.now()` held at `time` (timers and `performance.now()`
+ * stay real), so a read happens at that instant however long the decision takes.
+ */
+async function frozenAt<T>(time: number, work: () => Promise<T>): Promise<T> {
+  const spy = vi.spyOn(Date, 'now').mockReturnValue(time);
+  try { return await work(); } finally { spy.mockRestore(); }
+}
 
 const UNSERVED = { version: 0, lift: null };
 const servedFrom = (version: number) => ({ version, lift: expect.objectContaining({ lift: expect.any(Number), n: expect.any(Number) }) });
@@ -213,7 +242,7 @@ describe('unit:P62.LW1 (R-P110 decision 1)', () => {
   });
 
   for (const host of HOSTS) {
-    it(`host (${host}): with no override, a witness answering in 100 ms (twice today's 50 ms literal, inside the edge's served laps) is applied and one answering 10 ms after LIFT_WITNESS_BUDGET_MS is not; the ring answering in 100 ms fatigues and 10 ms after RING_READ_BUDGET_MS does not; sources.budgets names the defaults`, async () => {
+    it(`host (${host}): with no override, a witness answering in 100 ms (twice today's 50 ms literal, above the largest witness lap the edge showed on a served decision, 96 ms) is applied and one answering 10 ms after LIFT_WITNESS_BUDGET_MS is not; the ring answering in 100 ms fatigues and 10 ms after RING_READ_BUDGET_MS does not; sources.budgets names the defaults`, async () => {
       const { m, v1 } = await liftWorld(host);
       const witness = witnessLever(m), ring = ringLever(m);
       witness.delay(LIFT_DEFAULT_MS / 2); ring.delay(RING_DEFAULT_MS / 2);
@@ -319,6 +348,28 @@ describe('unit:P62.LW2 (R-P110)', () => {
         `${host}: P62.LW2 — the decision path's witness uses the light door`).toEqual(['/witness']);
     }, 120_000);
 
+    it(`host (${host}): R-P112(5) — an evicted statistics object (started again over its stored state) answers its FIRST POST /witness with /health's verdict, reading its stored learn state at most once and digesting no input of the state's size; its second call reads none; with the stored state damaged as W23 H1.01 damages it, the first answer reports the state /health reports (recovery-required), again digesting nothing of the state's size`, async () => {
+      const { m } = await liftWorld(host);
+      const log = restartObject(m);
+      const first = await doorCost(m, '/witness', log);
+      expect(first.answer.status, `${host}: P62.LW2 — the evicted object answers its first POST /witness (${JSON.stringify(first.answer.body).slice(0, 160)})`).toBe(200);
+      const health = await objectDoor(m, '/health');
+      expect(verdict(first.answer.body), `${host}: P62.LW2 — its first verdict is the one /health gives for the same state`).toEqual(verdict(health.body));
+      expect({ learnReads: first.wholeStateReads.length <= 1, digests: first.wholeStateDigests },
+        `${host}: P62.LW2 — R-P112(5): the first call reads the stored state at most once (${JSON.stringify(first.wholeStateReads)}) and digests no input of the state's size (${stateBytes(m)} bytes)`)
+        .toEqual({ learnReads: true, digests: [] });
+      const second = await doorCost(m, '/witness', log);
+      expect({ reads: second.wholeStateReads, digests: second.wholeStateDigests }, `${host}: P62.LW2 — R-P112(5): the second call reads and digests nothing of the state`).toEqual({ reads: [], digests: [] });
+
+      const damagedLog = damageAndRestart(m);
+      const damaged = await doorCost(m, '/witness', damagedLog);
+      const damagedHealth = await objectDoor(m, '/health');
+      expect(damagedHealth.body.state, `${host}: PRECONDITION (W23 H1.01) — /health reports the damaged state`).toBe('recovery-required');
+      expect({ state: damaged.answer.body.state, digests: damaged.wholeStateDigests },
+        `${host}: P62.LW2 — R-P112(5): the evicted object's first answer over a damaged state is not healthy, as /health says, and digests nothing of the state's size`)
+        .toEqual({ state: 'recovery-required', digests: [] });
+    }, 120_000);
+
     it(`host (${host}): LOCK — /health stays for operators: today's members, and its digest is the whole-state digest an operator's repair names (recoveryDigest of the stored state and fence), before and after new evidence; CONTROL: the digest moves with the state`, async () => {
       const { m } = await liftWorld(host);
       const wholeState = async () => recoveryDigest({ raw: placementOf(m).data.get('learn') ?? null, fence: placementOf(m).data.get('learnFence') ?? { whole: 0, items: {} } });
@@ -388,6 +439,43 @@ describe('unit:P62.LW3 (R-P110 decision 2)', () => {
       const outside = await later(window + 60_000, () => decide(m, 'pdp'));
       undo();
       expect(liftOnRecord(outside.record), `${host}: P62.LW3 — outside the window, V1 is not applied`).toEqual(UNSERVED);
+    }, 120_000);
+
+    it(`host (${host}): R-P112(6) — the window runs from the copy's publication: V1, published at T and superseded seconds later or half a window later, is applied (asOf) when read at T + LIFT_RECENT_WINDOW_MS − 1 ms and not at T + LIFT_RECENT_WINDOW_MS + 1 ms`, async () => {
+      const window = await named('LIFT_RECENT_WINDOW_MS', 'the recent-publication window');
+      const outcomes: Record<string, unknown> = {}, expected: Record<string, unknown> = {};
+      for (const [label, after] of [['superseded seconds after T', 0], ['superseded half a window after T', Math.floor(window / 2)]] as const) {
+        const { m, v1 } = await liftWorld(host);
+        const published = v1!.publishedAt;
+        const v2 = after === 0 ? await republish(m) : await frozenAt(published + after, () => republish(m));
+        expect(v2.publishedAt - published >= after, `${host}: PRECONDITION — V2 supersedes V1 ${after} ms or more after V1's publication (${v2.publishedAt - published} ms)`).toBe(true);
+        const readAt = async (time: number) => {
+          invalidateLiftCache();
+          const undo = copyLever(m, v1!.raw);
+          try { return liftOnRecord((await frozenAt(time, () => decide(m, 'pdp'))).record); } finally { undo(); }
+        };
+        // The later instant last: what the reads write under the held clock is read by nothing after them.
+        const inside = await readAt(published + window - 1), outside = await readAt(published + window + 1);
+        outcomes[label] = { inside, outside };
+        expected[label] = { inside: servedFrom(v1!.version), outside: UNSERVED };
+      }
+      expect(outcomes, `${host}: P62.LW3 — R-P112(6): accepted 1 ms before the window ends counted from V1's publication, refused 1 ms after, whenever V1 was superseded`).toEqual(expected);
+    }, 180_000);
+
+    it(`host (${host}): R-P113 — after an explicit reset (the object's /recovery and /recover doors) and new evidence, the copy that is still the object's latest publication (its witness changed with the reset's fence) is not applied and the answer names the outcome 'unrecognized'`, async () => {
+      const { m, v1 } = await liftWorld(host);
+      const status = await objectDoor(m, '/recovery');
+      const reset = await objectDoor(m, '/recover', { tenant: TENANT, brand: BRAND, slot: PDP_MODULES, intent: 'reset', operationId: 'd'.repeat(32), digest: status.body.digest, generation: status.body.generation });
+      expect([status.status, reset.status, reset.body.reset], `${host}: PRECONDITION — the explicit reset is applied (${JSON.stringify(reset.body).slice(0, 160)})`).toEqual([200, 200, true]);
+      await visit(m, 'pdp');
+      invalidateLiftCache();
+      const refused = await decide(m, 'pdp');
+      const witnessAfter = (await objectDoor(m, '/health')).body.witness, copy = JSON.parse(v1!.raw) as { witness: string };
+      expect([copyOf(m)?.version, witnessAfter === copy.witness], `${host}: PRECONDITION — the store still answers V1, the object's latest publication, and the object's witness has moved`).toEqual([v1!.version, false]);
+      expect(liftOnRecord(refused.record), `${host}: P62.LW3 — LOCKED: that copy is not applied`).toEqual(UNSERVED);
+      const read = liftReadOf(refused.snapshot);
+      expect(typeof read === 'object' && read !== null ? 'named' : read, `${host}: PRECONDITION (P61.LO1) — the answer names sources.lift['${PDP_MODULES}']`).toBe('named');
+      expect((read as { outcome?: unknown }).outcome, `${host}: P62.LW3 — R-P113: the latest publication whose witness changed after a reset is 'unrecognized'`).toBe('unrecognized');
     }, 120_000);
 
     it(`host (${host}): LOCK — forged copies are not applied, of V1 (superseded) or of V2 (the latest); CONTROL: V2 as published is`, async () => {
@@ -529,7 +617,7 @@ describe('unit:P62.LW4 (R-P7)', () => {
       expect(copyField('pdp', 'witness') === copyField('home', 'witness'), `${host}: CONTROL — the two pages' copies are two placements' publications (each page's witness binds its page)`).toBe(false);
     }, 120_000);
 
-    it(`host (${host}): the ring never extends a decision by more than its budget: with the ring's door answering only after 30 s (an abort of the call ends the wait, as a real fetch's does), the product page is answered within the ring budget in force plus 1.5 s, without the fatigue term; CONTROL: with the ring answering, it fatigues`, async () => {
+    it(`host (${host}): the ring never extends a decision by more than its budget: with the ring's door answering only after 30 s (an abort of the call ends the wait, as a real fetch's does), the product page is answered within the ring budget in force plus RING_BOUND_SLACK_MS (300 ms), without the fatigue term; CONTROL: with the ring answering, it fatigues`, async () => {
       const { ringBudget } = await inForce();
       const { m } = await liftWorld(host);
       const first = await decide(m, 'pdp');
@@ -538,14 +626,14 @@ describe('unit:P62.LW4 (R-P7)', () => {
       const started = performance.now();
       let timer: ReturnType<typeof setTimeout> | undefined;
       const deciding = decide(m, 'pdp', { shopper: first.shopper, ack: false });
-      const answered = await Promise.race([deciding, new Promise<'unanswered'>(resolve => { timer = setTimeout(() => resolve('unanswered'), ringBudget + 1_500); })]);
+      const answered = await Promise.race([deciding, new Promise<'unanswered'>(resolve => { timer = setTimeout(() => resolve('unanswered'), ringBudget + RING_BOUND_SLACK_MS); })]);
       clearTimeout(timer);
       const elapsed = performance.now() - started, calls = lever.calls.length;
       lever.restore();
       await deciding;
       expect(calls, `${host}: PRECONDITION — the decision called the ring`).toBeGreaterThan(0);
       expect(answered === 'unanswered' ? `unanswered after ${Math.round(elapsed)} ms (the answer waits for the ring call the budget abandoned)` : fatigued(answered.snapshot),
-        `${host}: P62.LW4 — the authority's unchanged property (src/learn/fan.ts:854-858): answered within ${ringBudget} ms + 1.5 s, without the fatigue term`).toBe(false);
+        `${host}: P62.LW4 — the authority's unchanged property (src/learn/fan.ts:854-858): answered within ${ringBudget} ms + ${RING_BOUND_SLACK_MS} ms, without the fatigue term`).toBe(false);
       const control = await decide(m, 'pdp', { shopper: first.shopper, ack: false });
       expect(fatigued(control.snapshot), `${host}: CONTROL — with the ring answering, the module served before is fatigued`).toBe(true);
     }, 120_000);
