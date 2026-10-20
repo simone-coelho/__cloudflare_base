@@ -7,7 +7,7 @@ import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import { accumulationGeneration, ADOPTED_MEMBERS, anchoredAfter, boundStats, latestAnchor, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type NotAdopted, type NotAdoptedChange, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, LIFT_RECENT_PUBLICATIONS, LIFT_RECENT_WINDOW_MS, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedIn, republishedOf, republishedRecordOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, supersededRecordOf, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { foldRetainedDay, isPlacementSlot, LIFT_RECENT_PUBLICATIONS, LIFT_RECENT_WINDOW_MS, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedIn, republishedOf, republishedRecordOf, republishedRefusalOf, staleMarkerIn, staleMarkerOf, staleRefusalOf, statsName, supersededRecordOf, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, publicationVersion, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
@@ -125,8 +125,12 @@ interface AccumulationTransition {
  * `LIFT_RECENT_PUBLICATIONS` of them, so that the witness door recognises a copy
  * a later publication superseded while the edge still serves it. Written with
  * each publication, before the copy reaches the serving key; its own storage
- * key, charged against the object's total bound. Best effort: a list that
- * cannot be written or read recognises the latest publication alone, as before.
+ * key, charged against the object's total bound. Best effort: a publication that
+ * cannot read, bound or write the list leaves it as it was, so it may lack that
+ * publication (the publication record, `learnPublished`, still names it as the
+ * latest) and still hold earlier ones, each this object's own publication, still
+ * held to the window and the witness; a stored value that is not a list
+ * recognises nothing (`recentPublicationsOf`).
  */
 const RECENT_KEY = 'learnRecent';
 interface RecentPublication { version: number; digest: string; publishedAt: number }
@@ -137,6 +141,26 @@ function recentPublicationsOf(value: unknown): RecentPublication[] {
     && Number.isSafeInteger(entry.version) && (entry.version as number) > 0 && typeof entry.digest === 'string' && /^[a-f0-9]{64}$/.test(entry.digest)
     && time(entry.publishedAt)).slice(-LIFT_RECENT_PUBLICATIONS).map(entry => ({ version: entry.version, digest: entry.digest, publishedAt: entry.publishedAt }));
 }
+/**
+ * P63 (amendment 6, R-P110: ANALYSIS §5 F2b): what one publication is built from
+ * apart from the clock, digested into its `basis`, which the publication record
+ * (`learnPublished`) keeps beside its version, digest and witness:
+ *   · the object's own state as the snapshot reads it (identity, configuration,
+ *     counters, position evidence), without the learning-effect markers
+ *     (`effects`, `retiredEffects`), which no snapshot carries;
+ *   · the tenant's documents the publication reads (`PUBLICATION_DOCUMENTS`), each
+ *     by its revision and digest in the publication set in force, read before the
+ *     snapshot reads them, so a document published meanwhile reads as a change;
+ *   · what the snapshot read beside them (`PublicationInputs`): the pooled counters
+ *     of the module's other placements (P08), the generation fence, the authorized
+ *     accumulation transition and the repair basis on record.
+ * The alarm's routine publication publishes nothing while its basis is the last
+ * successful publication's (`unchangedSince`).
+ */
+interface PublicationInputs { pooled?: PooledCounters; fence?: GenerationFence; restarted?: AccumulationTransition; rebuilt?: RebuildBasis }
+/** P63: a document a publication reads, by kind name: its revision and digest in the publication set in force, or null where the set has none. */
+type PublicationDocuments = Record<string, { revision: number; digest: string } | null>;
+const PUBLICATION_DOCUMENTS = [LEARN_KIND, PRIORS_KIND, CONTENT_KIND, SLOTS_KIND] as const;
 /** P62: what a state's witness is computed from beside the fence: its identity (W26 R2: its page), its configuration and its projection. */
 interface WitnessBasis { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; projection: { depth: number; closed: boolean } | null }
 /**
@@ -663,7 +687,8 @@ export class LearnStats {
       for (const [id, marker] of Object.entries(candidate.retiredEffects ?? {})) if (marker.expiresAt <= Date.now()) delete candidate.retiredEffects![id];
       await this.commit(candidate);
     }
-    try { await this.publish(); }
+    // P63: the routine publication, skipped when nothing changed since the last one (`unchangedSince`).
+    try { await this.publish(false, true); }
     finally {
       const expiry = [...Object.values(this.data?.effects ?? {}), ...Object.values(this.data?.retiredEffects ?? {})].map(marker => marker.expiresAt).filter(at => at > Date.now());
       if (expiry.length) {
@@ -1061,7 +1086,8 @@ export class LearnStats {
     return value as unknown as AccumulationTransition;
   }
 
-  private async snapshot(d: Stored): Promise<LiftSnapshot> {
+  /** `inputs` (P63): filled, once the snapshot is built, with what it read beside the state and the documents (`PublicationInputs`). */
+  private async snapshot(d: Stored, inputs?: PublicationInputs): Promise<LiftSnapshot> {
     const priors = await this.priorsFor(d);
     // W22 A1.01: the online path has the tenant's published policy in scope
     // here — `priorsFor` has just read the same learn document against which
@@ -1100,11 +1126,13 @@ export class LearnStats {
     // P05 (decision D1): each position's effect from the slot's adjacent swaps, only where it has swapped.
     const effects = positionEffectsOf(d.positions);
     if (effects) snap.positionEffects = effects;
-    snap.witness = await this.witness(d, await this.fence());
+    const fence = await this.fence();
+    snap.witness = await this.witness(d, fence);
     // W23 H1.01: only an object that was actually repaired names a basis.
     const basis = await this.rebuiltFrom();
     if (basis) snap.rebuiltFrom = basis;
     if (bytes(snap) > LEARN_LIMITS.snapshotBytes) throw capacity();
+    if (inputs) Object.assign(inputs, { pooled, fence, restarted, rebuilt: basis });
     return snap;
   }
 
@@ -1187,17 +1215,26 @@ export class LearnStats {
    * nothing learned yet is exactly what the serving path should read, and
    * `liftFor` answers "nothing learned" from it as it always has. It is the only
    * caller that passes it, and it never bypasses W25's gate for anyone else.
+   *
+   * `routine` (P63, amendment 6): the alarm's own publication, which publishes
+   * nothing when nothing changed since the last successful publication
+   * (`unchangedSince`). It is built and refused exactly as any other until then,
+   * so every refusal stays what it was; every other caller (the `/publish` door,
+   * the resets, the transition) publishes as before. Every publication records
+   * what it was built from (`PublicationInputs`) as its `basis`.
    */
-  private async publish(force = false): Promise<LiftSnapshot | null> {
+  private async publish(force = false, routine = false): Promise<LiftSnapshot | null> {
     const d = await this.loadIfAny() ?? await this.priorOnlyIdentity();
     if (!d) return null;
+    // P63: the documents in force, read before the snapshot reads them.
+    const documents = await this.publicationDocuments(d.tenant), inputs: PublicationInputs = {};
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     // P42 (R-P78, D1): the pooled cause alone is refused by name, through every
     // caller of this publication alike (the /publish door, the alarm and the rest).
     // P49 (R-P78, D1): and so is a learn republish that changed the slot's
     // accumulation tuple, which the configuration check meets first.
-    const frozen = await this.snapshot(d).catch(async (error: unknown) => {
+    const frozen = await this.snapshot(d, inputs).catch(async (error: unknown) => {
       throw error instanceof PooledFault ? await this.staleRefusal(d, error)
         : error instanceof RepublishFault ? await this.republishRefusal(d, error) : error;
     });
@@ -1220,13 +1257,16 @@ export class LearnStats {
     // snapshot rather than of the event counter: a slot with nothing at all to
     // publish still publishes nothing.
     if (!force && d.stats.events === 0 && Object.keys(frozen.items).length === 0) return null;
+    // P63: nothing is allocated, archived or written when the alarm finds nothing changed.
+    const basis = await this.publicationBasis(d, documents, inputs);
+    if (routine && basis && await this.unchangedSince(d, basis)) return null;
     let version = Math.max(frozen.version, this.lastAllocated + 1);
     try {
       for (let attempt = 0; attempt < 8; attempt++, version++) {
         if (!Number.isSafeInteger(version) || version <= 0) throw new Error('Snapshot version unavailable');
         const snap = { ...frozen, version }, body = JSON.stringify(snap), size = utf8.encode(body).length;
         if (size > LEARN_LIMITS.snapshotBytes) throw capacity();
-        const publication = { witness: snap.witness, digest: await recoveryDigest(snap), version };
+        const publication = { witness: snap.witness, digest: await recoveryDigest(snap), version, ...(basis ? { basis } : {}) };
         await this.totalBound(d, undefined, publication);
         this.lastAllocated = version;
         const key = liftArchiveKey(d.tenant, d.brand, d.slot, version, d.page);
@@ -1262,6 +1302,57 @@ export class LearnStats {
       await this.state.storage.setAlarm(Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(d)));
       throw new Error('Snapshot publication unavailable');
     }
+  }
+
+  /**
+   * P63: the documents a publication reads (`PUBLICATION_DOCUMENTS`), as the
+   * publication set in force names them; null where that cannot be told — a set
+   * that cannot be pinned, or one naming no learn document, which every
+   * publication requires — and then no publication is taken for unchanged.
+   */
+  private async publicationDocuments(tenant: string): Promise<PublicationDocuments | null> {
+    try {
+      const pin = await pinPublication(this.env, tenant, true), documents: PublicationDocuments = {};
+      for (const kind of PUBLICATION_DOCUMENTS) {
+        const member = `${kind.name}:${tenant}`, ref = Object.hasOwn(pin.refs, member) ? pin.refs[member] : undefined;
+        documents[kind.name] = ref ? { revision: ref.revision, digest: ref.digest } : null;
+      }
+      return documents[LEARN_KIND.name] ? documents : null;
+    } catch { return null; }
+  }
+
+  /** P63: the digest of what a publication of `d` is built from apart from the clock (`PublicationInputs`); null where that cannot be told. */
+  private async publicationBasis(d: Stored, documents: PublicationDocuments | null, inputs: PublicationInputs): Promise<string | null> {
+    if (!documents || !inputs.fence) return null;
+    const state: Partial<Stored> = { ...d };
+    delete state.effects; delete state.retiredEffects;
+    try {
+      return await recoveryDigest({ documents, fence: inputs.fence, pooled: inputs.pooled ?? null, rebuilt: inputs.rebuilt ?? null,
+        restarted: inputs.restarted ?? null, state });
+    } catch { return null; }
+  }
+
+  /**
+   * P63 (amendment 6; P42 PW2; W27 R4): whether the alarm's routine publication
+   * would publish nothing new, which it then does not make. True only when the
+   * last successful publication was built from the same `basis` (its record,
+   * `learnPublished`, names it); the copy the store serves is that publication,
+   * by version and digest (a publication whose copy write failed is not one, so
+   * the next alarm makes it); and no marker is in force for that copy — P42's
+   * `stale`, P49's `republished`, each read as the lift reads read it — so the
+   * next alarm publication still succeeds and clears it. Anything that cannot be
+   * read answers false, and the alarm then publishes as before.
+   */
+  private async unchangedSince(d: Stored, basis: string): Promise<boolean> {
+    try {
+      const recorded: unknown = await this.state.storage.get('learnPublished');
+      if (!object(recorded) || recorded.basis !== basis || typeof recorded.digest !== 'string' || !Number.isSafeInteger(recorded.version)) return false;
+      const head: unknown = await this.env.CACHE.get(liftKey(d.tenant, d.brand, d.slot, d.page), 'json');
+      if (!object(head) || head.version !== recorded.version || await recoveryDigest(head) !== recorded.digest) return false;
+      const [stale, republished] = await Promise.all([this.env.CACHE.get(liftStaleKey(d.tenant, d.brand, d.slot, d.page), 'json'),
+        this.env.CACHE.get(liftRepublishedKey(d.tenant, d.brand, d.slot, d.page), 'json')]);
+      return !staleMarkerIn(staleMarkerOf(stale), head) && !republishedIn(republishedRecordOf(republished), head);
+    } catch { return false; }
   }
 
   /**
@@ -1652,8 +1743,12 @@ export class LearnStats {
    * P62 (amendment 6, R-P110 decision 2): the publication just made joins the
    * recent ones (`RECENT_KEY`), those older than the window from their own
    * publication dropped, at most `LIFT_RECENT_PUBLICATIONS` kept. Never refuses
-   * the publication: where the list cannot be read, bounded or written, only
-   * the latest publication is recognised, which is fail-closed.
+   * the publication: where the list cannot be read, bounded or written, it is
+   * left as it was (P62 review F5). It may then lack this publication, which the
+   * publication record (`learnPublished`) names as the latest all the same, and
+   * still hold earlier entries, each this object's own publication, which the
+   * witness still holds to the window and to the object's witness. A stored value
+   * that is not a list is replaced by this publication alone.
    */
   private async rememberPublication(d: Stored, publication: { witness?: string; digest: string; version: number }, publishedAt: number): Promise<void> {
     try {
@@ -1663,7 +1758,7 @@ export class LearnStats {
       const recent = [...kept, { version: publication.version, digest: publication.digest, publishedAt }].slice(-LIFT_RECENT_PUBLICATIONS);
       await this.totalBound(d, undefined, publication, undefined, undefined, undefined, recent);
       await this.state.storage.put(RECENT_KEY, recent);
-    } catch { /* fail closed: the latest publication alone is recognised */ }
+    } catch { /* the list stays as it was; the publication record still names this publication as the latest */ }
   }
 
   /**
