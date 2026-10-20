@@ -183,6 +183,11 @@ import {
   actionWire, admissionsOf, clearShopperAlarm, holdQueue, remoteLatency, shopperHeld, shopperStorage, storedBehavior, UNANSWERED, within, type Identity, type Wire,
 } from '../_parity8';
 import { BAG, BUY_BOX, evidenceLoss, outcomeWorld, RESET_MESSAGE, resettable, settleAll, UNKNOWN_ADD, type OutcomeWorld } from '../_parity10';
+// S16 additive locks (amendment 8, finding (b)): the levers they use.
+import * as versionedStore from '@/config/versionedStore';
+import { LEARN_KIND } from '@/content/kinds';
+import * as authority from '@/identity/sessionAuthority';
+import { SessionAccessError } from '@/identity/sessionCapability';
 
 const show = (value: unknown) => JSON.stringify(value)?.slice(0, 400);
 type Event = { type: string; data: Record<string, unknown> };
@@ -385,6 +390,50 @@ const BASE_CALLS_BEFORE_ANSWER: Record<Host, Record<string, number>> = {
 const beyondBase = (host: Host, calls: string[]) => Object.entries(calls.reduce<Record<string, number>>((out, call) => ({ ...out, [call]: (out[call] ?? 0) + 1 }), {}))
   .filter(([call, count]) => count > (BASE_CALLS_BEFORE_ANSWER[host][call] ?? 0)).map(([call, count]) => `${call} ×${count} (base ${BASE_CALLS_BEFORE_ANSWER[host][call] ?? 0})`);
 
+// S16 additive locks (amendment 8, finding (b); the P65 delivery review, findings 3 to 5): their levers.
+/** Every read of the tenant's learn document through `readRevision` (the outcome's learning preparation), counted and answered as before. */
+function countLearnReads(): { readonly reads: number; restore: () => void } {
+  let reads = 0;
+  const original = versionedStore.readRevision;
+  const spy = vi.spyOn(versionedStore, 'readRevision').mockImplementation(((env: Parameters<typeof original>[0], kind: Parameters<typeof original>[1], scope: string, now?: number) => {
+    if (kind.name === LEARN_KIND.name && scope === TENANT) reads++;
+    return original(env, kind, scope, now);
+  }) as typeof original);
+  return { get reads() { return reads; }, restore: () => spy.mockRestore() };
+}
+/** `admitOwnedRecovery` (src/identity/sessionAuthority.ts) refuses the next OUTCOME admission once, before the store (the P65 review's probe, a SessionAccessError). */
+function refuseOutcomeAdmissionOnce(): { readonly refused: number; restore: () => void } {
+  let refused = 0;
+  const original = authority.admitOwnedRecovery;
+  const spy = vi.spyOn(authority, 'admitOwnedRecovery').mockImplementation(((input, options) => {
+    if (input.kind === 'outcome' && !refused) { refused++; return Promise.reject(new SessionAccessError()); }
+    return original(input, options);
+  }) as typeof original);
+  return { get refused() { return refused; }, restore: () => spy.mockRestore() };
+}
+/**
+ * The shopper object's storage refuses, once, the transaction that withdraws the outcome a behaviour operation carries: the
+ * first transaction writing that operation's record (`recoveryOperation:<operation>`) with no `carries` member
+ * (src/ledger/recovery.ts `withdrawCarriedOutcome`: the body written again without it, the record naming it no longer).
+ */
+function failWithdrawalOnce(m: Mounted, subject: string, operation: string): { readonly failed: number; restore: () => void } {
+  type Transaction = (run: (tx: DurableObjectTransaction) => Promise<unknown>) => Promise<unknown>;
+  const storage = shopperStorage(m, subject) as unknown as { transaction: Transaction };
+  const original = storage.transaction;
+  let failed = 0;
+  storage.transaction = run => original(tx => run(new Proxy(tx, { get: (target, property) => {
+    const value = Reflect.get(target, property, target) as unknown;
+    if (property !== 'put' || typeof value !== 'function') return value;
+    return (key: unknown, stored?: unknown, ...rest: unknown[]) => {
+      if (!failed && key === `recoveryOperation:${operation}` && stored && typeof stored === 'object' && !Object.hasOwn(stored, 'carries')) {
+        failed++; throw new Error('lever: the withdrawal of the carried outcome failed');
+      }
+      return (value as (...args: unknown[]) => unknown).call(target, key, stored, ...rest);
+    };
+  } })));
+  return { get failed() { return failed; }, restore: () => { storage.transaction = original; } };
+}
+
 describe('unit:P65.RS3', () => {
   for (const host of HOSTS) {
     it(`host (${host}): LOCK — W06's digests: an ordinary add to bag's behaviour and outcome operations are held under W06's ids, each with the source digest of the row the ledger stored, recovered`, async () => {
@@ -547,6 +596,80 @@ describe('unit:P65.RS3', () => {
       expect.soft([(await evidenceLoss(after.m)).producerFailed - beforeAfter, (await evidenceLoss(inside.m)).producerFailed - beforeInside],
         `${host}: P65.RS3 — producerFailed unchanged after either reset and the alarm (the outcome after the behaviour's reset; after the reset inside its own admission)`).toEqual([0, 0]);
     }, 90_000);
+  }
+
+  // S16 additive lock (the P65 review, finding 3, mutant M5c): an outcome whose OWN admission is refused (before the store)
+  // after the behaviour capture carried it is written by the alarm and never counted lost (R-P126).
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (S16, P65 review F3, R-P126) — when admitOwnedRecovery refuses the outcome's own admission, the carried outcome is written by the alarm and nothing is counted lost: one outcome row after the alarm, producerFailed unchanged`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p65-rs3-refused-own-admission');
+      const before = (await evidenceLoss(m)).producerFailed;
+      const refusal = refuseOutcomeAdmissionOnce();
+      const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      let answered: Wire;
+      try { answered = await actionWire(app, s, BUY_BOX, identity); await settleAll(m, app); } finally { refusal.restore(); }
+      expect([refusal.refused, answered.status], `${host}: PRECONDITION — the outcome's own admission was refused once and the add to bag answered (${show(answered.body)})`).toEqual([1, 200]);
+      const object = m.shoppers.get([...m.shoppers.keys()].find(name => name.includes(s.subject))!)!.object as unknown as ShopperReflex;
+      await object.alarm();
+      await settleAll(m, app);
+      await m.drainLedger();
+      expect.soft([outcomeRows(m, s, identity.eventId).length, (await evidenceLoss(m)).producerFailed - before], `${host}: P65.RS3 (S16) — the alarm wrote the carried outcome; nothing counted lost`).toEqual([1, 0]);
+    }, 60_000);
+  }
+
+  // S16 additive lock (the P65 review, finding 4, mutants M2a and M12): the learn document is read once for an outcome, by
+  // the route's preparation: an ordinary add to bag reads it exactly once through its effects, and the alarm that writes a
+  // carried outcome reads it never (it admits the input the route prepared).
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (S16, P65 review F4) — the learn document is read once per outcome: an ordinary add to bag reads it exactly once through its effects, and the alarm that writes a carried outcome reads it never`, async () => {
+      const counter = countLearnReads();
+      try {
+        const ordinary = await outcomeWorld(host, 'p65-rs3-learn-reads');
+        const start = counter.reads;
+        const answered = await actionWire(ordinary.app, ordinary.s, BUY_BOX, { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 });
+        await settleAll(ordinary.m, ordinary.app);
+        const routeReads = counter.reads - start;
+        expect(answered.status, `${host}: PRECONDITION — the ordinary add to bag is accepted`).toBe(200);
+        const world = await outcomeWorld(host, 'p65-rs3-learn-reads-alarm');
+        const { m, app, s } = world;
+        const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+        const reset = resettable(m, s.subject, identity.eventId);
+        await within(actionWire(app, s, BUY_BOX, identity), 20_000);
+        await settleAll(m, app);
+        const rebuilt = reset.revive();
+        const beforeAlarm = counter.reads;
+        await rebuilt.alarm();
+        await settleAll(m, app);
+        const alarmReads = counter.reads - beforeAlarm;
+        await m.drainLedger();
+        expect(outcomeRows(m, s, identity.eventId).length, `${host}: PRECONDITION (P65.RS1) — the alarm wrote the carried outcome`).toBe(1);
+        expect.soft({ routeReads, alarmReads }, `${host}: P65.RS3 (S16) — one learn read by the route, none by the alarm`).toEqual({ routeReads: 1, alarmReads: 0 });
+      } finally { counter.restore(); }
+    }, 90_000);
+  }
+
+  // S16 additive lock (the P65 review, finding 5, mutant M6a): the withdrawal of a carried outcome is AWAITED by the route,
+  // never retained work of the owner: when it fails (the object's storage refusing it once), the route keeps its answer (the
+  // drop answered as today) and leaves the carried copy to the alarm, which re-decides the drop; a retained withdrawal's
+  // rejection would fail that answer instead (src/identity/sessionAuthority.ts runOwnerOperation: a retained rejection fails a
+  // 2xx answer).
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (S16, P65 review F5) — the withdrawal of a dropped event's carried outcome is awaited, not retained: when it fails once, the add to bag is still answered 200 dropped as unknown_product, and after the alarm no outcome is written`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p65-rs3-withdrawal-awaited');
+      const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      const recordId = `${TENANT}:${ts36(identity.timestamp)}:${s.subject}:behavior:${identity.eventId}`;
+      const operation = await recoveryDigest({ kind: 'behavior', tenant: TENANT, subject: s.subject, ids: [recordId] });
+      const lever = failWithdrawalOnce(m, s.subject, operation);
+      let answered: Wire;
+      try { answered = await actionWire(app, s, UNKNOWN_ADD, identity); await settleAll(m, app); } finally { lever.restore(); }
+      expect(lever.failed, `${host}: PRECONDITION — the withdrawal of the carried outcome was attempted and failed once`).toBe(1);
+      expect.soft([answered.status, answered.body.dropped ?? null], `${host}: P65.RS3 (S16) — the route keeps its answer (${show(answered.body)})`).toEqual([200, 'unknown_product']);
+      const object = m.shoppers.get([...m.shoppers.keys()].find(name => name.includes(s.subject))!)!.object as unknown as ShopperReflex;
+      await object.alarm();
+      await settleAll(m, app);
+      await m.drainLedger();
+      expect.soft(outcomeRows(m, s, identity.eventId).length, `${host}: P65.RS3 (S16) — the alarm re-decides the drop: no outcome`).toBe(0);
+    }, 60_000);
   }
 
   it('CONTROL: W06\'s digest of a row changes with its content; the held queue answers nothing until released', async () => {
