@@ -26,24 +26,49 @@
 //     them, with the construct the passage's own words name for it. The constructs are HAND-WRITTEN
 //     per citation (the tables `OUTCOME_ANSWER`, `RENDER_ACK`, `ALARM_PUBLICATION_02`,
 //     `ALARM_PUBLICATION_03`, each entry naming the words it is read from): an identifier, a class, a
-//     member, a message or a constant the sentence carrying the citation names, as patterns; they are
-//     not derived from the kit at run time. A citation `path:line` or `path:from-to` (or `:line`
-//     continuing the last path named) lands when its range spans AT MOST 20 LINES (the widest honest
-//     landing in these passages is 19) and the cited lines of that file at the artifact contain every
-//     pattern of its construct. Hand-written patterns are honest enough with that cap: a pattern can
-//     occur on several lines of a file (`answerAtAdmission: true`, `withdrawCarried(`), but a citation
-//     can only land on a span of at most 20 lines that holds it, so a range widened to swallow the file
-//     (the specification review's façade, `ShopperReflex.ts:1-2400`) is refused, and each pattern is
-//     the construct's own name or text, not a word any line carries. The passages are found by their
-//     opening words, not by their line numbers, so a corrected passage is read where it then stands.
+//     member, a message or a constant the sentence carrying the citation names, as patterns, and for
+//     two the top-level function the cited line sits in (`within`); they are not derived from the kit at
+//     run time. Kit 02 :99's table holds 23 constructs, two of them OPTIONAL: P67's sentence (the alarm
+//     records a carried purchase's order before it writes the outcome: `await remember(` in
+//     `settleCarriedOutcome`, src/ledger/recovery.ts, and the object's `rememberCarriedOrder`
+//     declaration, src/durable-objects/ShopperReflex.ts; positions 17-18) is on :99 from P67's build
+//     (dc8c46fc) and not before it, so :99 pairs by position with 21 citations without that sentence
+//     and with 23 with it; the PRECONDITION checks that :99 carries one of those two counts and :933 its
+//     26 (R-P166). A citation `path:line` or `path:from-to` (or `:line` continuing the last path named)
+//     lands when its range spans AT MOST 20 LINES (the widest honest landing in these passages is 19)
+//     and the CODE of its cited lines at the artifact contains every pattern of its construct (and, for
+//     a `within` construct, the nearest top-level `function` declared at or above the cited line is the
+//     one named). The code is a line with its comments taken out: an import declaration's lines, a
+//     comment-only line (`//`, a block or doc comment and its `*` lines) and a comment's tail carry no
+//     code, so a citation re-pointed at an import or a comment that names the construct is refused
+//     (R-P166, the re-judge's check 2). Where a construct's name recurs in code, a second token of the
+//     sentence or the function tells the cited line from the others: `onAdmitted?.()` (the admission
+//     telling it), not the option's declaration; `.eventId !==` (another eventId), not the page-instance
+//     conflict on the next line; `instanceof RequestDeadline` (the cut request sent once more), not the
+//     class; `{ answerAtAdmission: true }` alone (the behaviour capture's), not an outcome admission's
+//     with `onAdmitted`; `recoverDecisions(` (the render's own admission); `this.unchangedSince(` (the
+//     alarm's check), not its declaration; the report inside `admitPreparedOutcome`, not the same line
+//     in `outcomePreparationFailed` or `outcomeToLearning`; `await remember(` inside
+//     `settleCarriedOutcome`; `async rememberCarriedOrder(`, not its call. With the cap a range widened
+//     to swallow the file (the specification review's façade, `ShopperReflex.ts:1-2400`) is refused.
+//     What a pattern still admits is another occurrence of the same construct in code the sentence
+//     equally names (measured at dc8c46fc, _evidence/parity-step3/S16/specifier/probes/alts.cjs): the
+//     three durable outcome admissions carrying `onAdmitted` (realtime.ts :372, :379, :388), the three
+//     `withdrawCarried()` calls (:429, :446, :541), the alarm's call of `carriedEventDropped` beside
+//     its declaration, and the two reads `paint.ack ?? await paint.pending` (listen.ts :466, :500). The
+//     passages are found by their opening words, not by their line numbers, so a corrected passage is
+//     read where it then stands.
 //     MEASURED at 800ff090 (code 8d07696f; _evidence/parity-step3/S16/specifier/logs/): ONE citation
 //     drifts, `src/durable-objects/ShopperReflex.ts:537` in :933 (the object's typed 409 for a
-//     conflicting acknowledgement, at :553 there); of the twelve the P63 build reported drifted, nine
-//     were corrected by P65's kit edit and the rest never drifted on a construct reading (the
-//     specification review, finding 2). At the integration head with P66 (f7cbf331) two drift: :933's
-//     `ShopperReflex.ts:554` (the 409 is at :570) and :99's second `ShopperReflex.ts:1935` (the
-//     alarm's `settleCarriedOutcome` is at :1952; the P66 delivery review, finding 1). Every citation
-//     of kit 02 :1171 and kit 03 :1474-1488 lands at both.
+//     conflicting acknowledgement, at :553 there). Of the fourteen entries of the P63 build's drift
+//     list, nine were corrected by P65's kit edit, four never drifted on a construct reading
+//     (`src/sdk/core.ts:958`, `:984-995`, `src/sdk/listen.ts:466-467`, `:500`) and one still drifts
+//     (`:537`) (the specification review, finding 2; its re-judge, statement 6). At the integration
+//     head with P66 (f7cbf331) two drift: :933's `ShopperReflex.ts:554` (the 409 is at :570) and :99's
+//     last `ShopperReflex.ts:1935` (the alarm's `settleCarriedOutcome(` is at :1952; the P66 delivery
+//     review, finding 1). At P67's build (dc8c46fc, 23 citations on :99) the same two drift (the 409 at
+//     :570, `settleCarriedOutcome(` at :1953) and P67's own two land. Every citation of kit 02 :1171 and
+//     kit 03 :1474-1488 lands at all three.
 //   · KT1, "kit 02 :1171 says what a skipped alarm still writes": the passage says a skipped
 //     alarm "allocates, archives and writes nothing", where it still writes the placement's
 //     `learn` state when learning-effect markers expire (the P63 delivery review, finding 4); the
@@ -68,10 +93,12 @@
 //     commands, in the gate. The kit's line counts are STATED, not locked (program.json at 946c999a,
 //     R-P162): kit 02 2358 lines and kit 03 1980 at 8d07696f; kit 02 2371 at f7cbf331 (P66).
 //
-// SKETCH (a scratch copy of 8d07696f, never committed; _evidence/parity-step3/S16/specifier/sketches/sketch-p68.py):
-// the drifted citation corrected (:537 → :553), kit 02 :1171 saying the skipped alarm "still writes only its `learn`
-// state when learning-effect markers expire", the two members declared in src/types/env.ts with their doc comments:
-// every P68 unit GREEN, the kit's line counts unchanged.
+// SKETCH (scratch copies, never committed; _evidence/parity-step3/S16/specifier/sketches/): on 8d07696f
+// (sketch-p68.py) the drifted citation corrected (:537 → :553), kit 02 :1171 saying the skipped alarm "still writes
+// only its `learn` state when learning-effect markers expire", the two members declared in src/types/env.ts with
+// their doc comments; on f7cbf331 (sketch-p68-int.py) and on P67's build dc8c46fc (sketch-p68-p67.py) the same with
+// :933's `:554` → `:570` and :99's last `:1935` → `:1952` (f7cbf331) or `:1953` (dc8c46fc): every P68 unit GREEN,
+// the kit's line counts unchanged.
 //
 // No new export is imported; every member read exists at this head (`Env` is read as a type by
 // the compiler, never imported at run time).
@@ -91,7 +118,12 @@ import { readTree } from '../_parity';
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 /** R-P162: the widest span a citation may land on (the widest honest landing in these passages is 19 lines). */
 const MAX_SPAN = 20;
-type Construct = { says: string; patterns: RegExp[] };
+/**
+ * A construct a citation must land on: the patterns its cited code must contain; `within`, the top-level function the cited
+ * line must sit in where the same code recurs elsewhere in the file; `optional`, the ticket whose sentence carries it where
+ * the passage may or may not hold that sentence (R-P166).
+ */
+type Construct = { says: string; patterns: RegExp[]; within?: RegExp; optional?: string };
 
 /** Kit 02's outcome paragraph (:99 today: the action answer's `outcome` member, P64 and P65), its citations in order. */
 const OUTCOME_ANSWER: Construct[] = [
@@ -99,22 +131,24 @@ const OUTCOME_ANSWER: Construct[] = [
   { says: 'the answer names the outcome\'s `outcome_id`', patterns: [/recordId: outcome\.outcome_id/] },
   { says: 'the answer names `outcome: { recordId }`', patterns: [/outcome: \{ recordId/] },
   { says: '`{tenant}:{time in base 36}:{visitor}:{event}:n1:{eventId}`', patterns: [/outcome_id: `\$\{tenant\}:\$\{ts36\(ts\)\}/, /:n1:/] },
-  { says: 'only once the outcome is durably admitted (its own admission)', patterns: [/onAdmitted/] },
-  { says: 'with durable recovery on, its own admission, completed before the answer', patterns: [/onAdmitted/, /answerAtAdmission: true/] },
+  { says: 'only once the outcome is durably admitted (its own admission tells `onAdmitted`)', patterns: [/onAdmitted\?\.\(\)/] },
+  { says: 'with durable recovery on, its own admission, completed before the answer', patterns: [/onAdmitted: \(\) =>/, /answerAtAdmission: true/] },
   { says: 'without it, the producer\'s hand-off to the queue', patterns: [/receipt\.code === 'accepted'/] },
-  { says: 'counted once in producerFailed, a count made after the owner has answered', patterns: [/afterOwnerAnswer/, /producerFailed/] },
-  { says: 'an outcome whose learning preparation fails is not recorded and is counted', patterns: [/outcomePreparationFailed/] },
+  { says: 'counted once in producerFailed, a count made after the owner has answered', patterns: [/afterOwnerAnswer\(/, /'producerFailed'/] },
+  { says: 'an outcome whose learning preparation fails is not recorded and is counted', patterns: [/outcomePreparationFailed\(/] },
   { says: 'the outcome\'s admission is prepared before the behaviour capture is admitted', patterns: [/const prepared = /] },
   { says: 'the behaviour capture\'s admission carries it in the same transaction', patterns: [/captureBehaviorCarrying\(/] },
   { says: 'the carried outcome', patterns: [/interface CarriedOutcome/] },
-  { says: 'leaving the behaviour operation\'s id, digests and replay as they were (the record names what it carries)', patterns: [/carries:/] },
+  { says: 'leaving the behaviour operation\'s id, digests and replay as they were (the record names what it carries)', patterns: [/carries: await recoveryDigest\(/] },
   { says: 'the alarm writes the behaviour record and then the outcome record', patterns: [/settleCarriedOutcome\(/] },
   { says: 'unless it decides again that the engine drops the event', patterns: [/carriedEventDropped\(/] },
   { says: 'the alarm\'s settlement of the carried outcome', patterns: [/function settleCarriedOutcome/] },
-  { says: 'the carried outcome is withdrawn before the answer (dropped)', patterns: [/withdrawCarried\(/] },
-  { says: 'the carried outcome is withdrawn before the answer (tracking refused)', patterns: [/withdrawCarried\(/] },
-  { says: 'the carried outcome is withdrawn before the answer (a failed action)', patterns: [/withdrawCarried\(/] },
-  { says: 'a refusal of the outcome\'s own admission is never counted lost (reported only)', patterns: [/reportLearningIncomplete\('outcome', null\)/] },
+  { says: 'before it writes a purchase\'s outcome, the alarm records the purchase\'s order as purchased (P67)', patterns: [/await remember\(/], within: /function settleCarriedOutcome\b/, optional: 'P67' },
+  { says: 'exactly as the engine records the order of a purchase it processes, on the state the host keeps (P67)', patterns: [/async rememberCarriedOrder\(/], optional: 'P67' },
+  { says: 'the carried outcome is withdrawn before the answer (the object host\'s answer)', patterns: [/withdrawCarried\(/] },
+  { says: 'the carried outcome is withdrawn before the answer (the session host\'s answer)', patterns: [/withdrawCarried\(/] },
+  { says: 'the carried outcome is withdrawn before the answer (a failed action\'s answer)', patterns: [/withdrawCarried\(/] },
+  { says: 'a refusal of the outcome\'s own admission is never counted lost (reported only, in that admission)', patterns: [/reportLearningIncomplete\('outcome', null\)/], within: /function admitPreparedOutcome\b/ },
   { says: 'and leaves the carried outcome for the alarm to write', patterns: [/settleCarriedOutcome\(/] },
 ];
 /**
@@ -122,10 +156,10 @@ const OUTCOME_ANSWER: Construct[] = [
  * carrying it names (`says`: the passage's own words), as the patterns the cited lines must contain.
  */
 const RENDER_ACK: Construct[] = [
-  { says: 'answers at durable admission: the render\'s source admission committed and the recovery alarm armed', patterns: [/armRecovery/, /answerAtAdmission/] },
-  { says: 'the render acknowledgement\'s own admission answers at admission', patterns: [/answerAtAdmission: true/] },
-  { says: 'the same request\'s behaviour capture answers at admission (`behavior.receipt.source.state` pending)', patterns: [/answerAtAdmission: true/] },
-  { says: 'the queue send, ledger write and fan-out follow right after the answer, inside the shopper\'s own serializer', patterns: [/continueAfterOwnerAnswer/] },
+  { says: 'answers at durable admission: the render\'s source admission committed and the recovery alarm armed', patterns: [/armRecovery\(/, /answerAtAdmission/] },
+  { says: 'the render acknowledgement\'s own admission answers at admission', patterns: [/recoverDecisions\(/, /answerAtAdmission: true/] },
+  { says: 'the same request\'s behaviour capture answers at admission (`behavior.receipt.source.state` pending; its option alone, not an outcome\'s with `onAdmitted`)', patterns: [/\{ answerAtAdmission: true \}/] },
+  { says: 'the queue send, ledger write and fan-out follow right after the answer, inside the shopper\'s own serializer', patterns: [/continueAfterOwnerAnswer\(/] },
   { says: 'ahead of any later request from the same shopper (the owner\'s continuation)', patterns: [/function continueAfterOwnerAnswer/] },
   { says: 'the alarm armed at admission resumes them at most 30 seconds later', patterns: [/30_000/, /setAlarm/] },
   { says: 'the alarm resumes them', patterns: [/resumeOwnerRecovery\(/] },
@@ -133,7 +167,7 @@ const RENDER_ACK: Construct[] = [
   { says: 'read from the decision\'s stored admission in the shopper\'s own object', patterns: [/function storedRenderOf/] },
   { says: 'the re-send is admitted at the time its first delivery was admitted at', patterns: [/admittedRender\(/, /admitted\.at/] },
   { says: 'the re-send\'s behaviour record is the first delivery\'s (the admitted time carried)', patterns: [/redeemed\.at/] },
-  { says: 'an acknowledgement under another eventId is a conflict', patterns: [/AcknowledgementConflictError/] },
+  { says: 'an acknowledgement under another eventId is a conflict', patterns: [/\.eventId !== /, /AcknowledgementConflictError\(/] },
   { says: 'the conflict\'s answer: `Render acknowledgement conflict: … another event id`', patterns: [/class AcknowledgementConflictError/, /another event id/] },
   { says: 'answers HTTP 409 (the owner\'s typed refusal)', patterns: [/AcknowledgementConflictError/, /409/] },
   { says: 'answers HTTP 409 (the shopper object\'s typed refusal)', patterns: [/AcknowledgementConflictError/, /409/] },
@@ -141,7 +175,7 @@ const RENDER_ACK: Construct[] = [
   { says: 'which the owner does not replace with another error once the route has answered', patterns: [/answeredFailure/] },
   { says: 'the SDK waits `ACK_DEADLINE_MS` (5 s)', patterns: [/ACK_DEADLINE_MS = 5000/] },
   { says: 'and cuts the request there', patterns: [/ACK_DEADLINE_MS/, /abort/] },
-  { says: 'an acknowledgement it cut, it sends once more by itself; an answered one is not re-sent', patterns: [/RequestDeadline/] },
+  { says: 'an acknowledgement it cut, it sends once more by itself; an answered one is not re-sent', patterns: [/instanceof RequestDeadline/] },
   { says: 'a later `rendered()` sends that same envelope again', patterns: [/envelope\(/] },
   { says: 'at most three such attempts per placement', patterns: [/attempts < 3/] },
   { says: 'a retry answered pending or recovered arms the placement as a first answer does', patterns: [/\.ack = ack/] },
@@ -151,14 +185,14 @@ const RENDER_ACK: Construct[] = [
 ];
 /** Kit 02's alarm-publication sentences (:1171 today). */
 const ALARM_PUBLICATION_02: Construct[] = [
-  { says: 'the object\'s own alarm publishes only a change', patterns: [/unchangedSince/] },
+  { says: 'the object\'s own alarm publishes only a change', patterns: [/this\.unchangedSince\(/] },
   { says: 'what the last successful publication was built from (documents, fence, pooled counters)', patterns: [/publicationBasis/, /pooled/] },
   { says: 'the serving key holds that publication\'s copy, and no stale or republished member is in force', patterns: [/function unchangedSince|private async unchangedSince/, /recoveryDigest\(head\)/] },
 ];
 /** Kit 03's alarm-publication passage (:1474-1488 today). */
 const ALARM_PUBLICATION_03: Construct[] = [
   { says: 'within 30 seconds of new evidence (its alarm)', patterns: [/publish\(false, true\)/] },
-  { says: 'an alarm that finds nothing changed publishes nothing', patterns: [/unchangedSince/] },
+  { says: 'an alarm that finds nothing changed publishes nothing', patterns: [/this\.unchangedSince\(/] },
   { says: 'what that publication was built from (documents, fence, pooled counters)', patterns: [/publicationBasis/, /pooled/] },
   { says: 'recorded with the publication before its copy is written', patterns: [/learnPublished/, /CACHE\.put/] },
   { says: 'when the copy the serving key holds is not the last publication', patterns: [/unchangedSince/, /recoveryDigest\(head\)/] },
@@ -180,16 +214,61 @@ function passage(file: string, opening: string, through?: string): { line: numbe
   }
   return { line: start + 1, text, citations };
 }
-/** The citations whose cited lines do not contain every pattern of the construct they are paired with. */
+/**
+ * R-P166: a source file's code, line by line, the only text a citation lands on: the lines of an import declaration (or a
+ * one-line re-export) are blank, and so is every comment (a `//` line or tail, a block or doc comment, its `*` lines), so a
+ * citation re-pointed at an import or a comment that names the construct does not land. Strings are kept as written.
+ */
+function codeOf(source: string): string[] {
+  let comment = false, declaration = false;
+  return source.split('\n').map(line => {
+    let code = '', quote = '';
+    for (let at = 0; at < line.length; at++) {
+      const char = line[at]!, pair = line.slice(at, at + 2);
+      if (comment) { if (pair === '*/') { comment = false; at++; } continue; }
+      if (quote) {
+        code += char;
+        if (char === '\\') code += line[++at] ?? '';
+        else if (char === quote) quote = '';
+        continue;
+      }
+      if (pair === '//') break;
+      if (pair === '/*') { comment = true; at++; continue; }
+      if (char === "'" || char === '"' || char === '`') quote = char;
+      code += char;
+    }
+    if (!declaration && /^\s*import[\s{*]/.test(code)) declaration = true;
+    if (!declaration) return /^\s*export\s*(?:type\s*)?[{*].*\bfrom\s*['"]/.test(code) ? '' : code;
+    if (/\bfrom\s*['"]|^\s*import\s*['"]|;\s*$/.test(code)) declaration = false;
+    return '';
+  });
+}
+/** The top-level function a line of a source file sits in: the nearest `function` declared at column 0 at or above it. */
+function enclosingFunction(source: string, line: number): string {
+  const lines = source.split('\n').slice(0, line).reverse();
+  return lines.find(text => /^(?:export\s+)?(?:async\s+)?function\s*\*?\s*\w+/.test(text)) ?? '';
+}
+/**
+ * The constructs a passage's citations pair with, by position: the whole table, or the table without its optional entries
+ * when the passage carries exactly that many citations fewer (R-P166: kit 02 :99 with or without P67's sentence); else none.
+ */
+function pairing(count: number, constructs: Construct[]): Construct[] | undefined {
+  const required = constructs.filter(construct => !construct.optional);
+  return count === constructs.length ? constructs : count === required.length ? required : undefined;
+}
+/** The citations whose cited code does not contain every pattern of the construct they are paired with (or sits outside its function). */
 function drifted(citations: ReturnType<typeof passage>['citations'], constructs: Construct[]): string[] {
   return citations.map((citation, index) => {
     const construct = constructs[index];
     if (!construct) return `${citation.cited}: no construct named for it`;
     const span = citation.to - citation.from + 1;
     if (span < 1 || span > MAX_SPAN) return `${citation.cited} spans ${span} lines (a citation lands on at most ${MAX_SPAN})`;
-    const cited = readFileSync(`${ROOT}${citation.path}`, 'utf8').split('\n').slice(citation.from - 1, citation.to).join('\n');
+    const source = readFileSync(`${ROOT}${citation.path}`, 'utf8');
+    const cited = codeOf(source).slice(citation.from - 1, citation.to).join('\n');
     const missing = construct.patterns.filter(pattern => !pattern.test(cited));
-    return missing.length ? `${citation.cited} does not land on "${construct.says}" (missing ${missing.map(String).join(', ')})` : '';
+    if (missing.length) return `${citation.cited} does not land on "${construct.says}" (its code lacks ${missing.map(String).join(', ')})`;
+    const enclosing = enclosingFunction(source, citation.from);
+    return construct.within && !construct.within.test(enclosing) ? `${citation.cited} does not land on "${construct.says}" (it sits in "${enclosing.trim().slice(0, 80)}", not ${String(construct.within)})` : '';
   }).filter(Boolean);
 }
 
@@ -214,9 +293,11 @@ describe('unit:P68.KT1', () => {
   it('logic: every citation of kit 02\'s outcome paragraph (:99) and render-acknowledgement paragraph (:933) lands, on a span of at most 20 lines, on the construct its sentence names', () => {
     const outcome = passage('docs/kit/02-api-reference.md', 'A tracked action whose outcome is recorded');
     const found = passage('docs/kit/02-api-reference.md', 'With explicit `rendered-v1` slot measurement');
-    expect([outcome.citations.length, found.citations.length], `PRECONDITION — the paragraphs (kit 02 :${outcome.line}, :${found.line}) carry the citations the tables pair`)
-      .toEqual([OUTCOME_ANSWER.length, RENDER_ACK.length]);
-    expect.soft([...drifted(outcome.citations, OUTCOME_ANSWER), ...drifted(found.citations, RENDER_ACK)], `P68.KT1 — kit 02 :${outcome.line} and :${found.line}: every citation lands on its construct`).toEqual([]);
+    const paired = pairing(outcome.citations.length, OUTCOME_ANSWER), without = OUTCOME_ANSWER.filter(construct => !construct.optional).length;
+    expect([paired ? 'paired' : outcome.citations.length, found.citations.length],
+      `PRECONDITION — kit 02 :${outcome.line} carries the ${without} citations OUTCOME_ANSWER pairs without P67's sentence, or ${OUTCOME_ANSWER.length} with that sentence's two (the alarm records a carried purchase's order), and :${found.line} the ${RENDER_ACK.length} RENDER_ACK pairs`)
+      .toEqual(['paired', RENDER_ACK.length]);
+    expect.soft([...drifted(outcome.citations, paired ?? []), ...drifted(found.citations, RENDER_ACK)], `P68.KT1 — kit 02 :${outcome.line} and :${found.line}: every citation lands on its construct`).toEqual([]);
   });
 
   it('logic: every citation of kit 02\'s alarm-publication sentences and of kit 03\'s alarm-publication passage lands on the construct it names', () => {
@@ -244,6 +325,19 @@ describe('unit:P68.KT1', () => {
     expect(drifted([cited('src/sdk/core.ts', line)], [{ says: 'the deadline', patterns: [/ACK_DEADLINE_MS = 5000/] }]), 'CONTROL — a citation on its construct lands').toEqual([]);
     const found = passage('docs/kit/02-api-reference.md', 'With explicit `rendered-v1` slot measurement');
     expect(found.citations.filter(c => c.cited.startsWith('src/sdk/listen.ts')).length, 'CONTROL — continuation citations carry the last path named').toBeGreaterThan(2);
+    expect(codeOf("import { a,\n  b } from 'x';\n/** b\n * b */\nconst c = b(); // b\nconst d = 'http://b'; /* b */ e(b);\nexport { b } from 'x';"),
+      'CONTROL (R-P166) — an import\'s lines, comments and comment tails carry no code; strings are kept').toEqual(['', '', '', '', 'const c = b(); ', "const d = 'http://b';  e(b);", '']);
+    const self = 'src/units/P68/LEDGER.unit.test.ts', own = readFileSync(`${ROOT}${self}`, 'utf8').split('\n');
+    const at = (pattern: RegExp) => own.findIndex(text => pattern.test(text)) + 1;
+    const named: Construct[] = [{ says: 'P62\'s override semantics', patterns: [/learningReadBudgets/] }];
+    const [imported, commented, called, inside] = [at(/^import \{ learningReadBudgets \}/), at(/^\/\/ .*`learningReadBudgets`/), at(/^\s+expect\.soft\(learningReadBudgets\(\{\}\)/), at(/^function drifted\(/) + 2];
+    expect([[imported, commented, called, inside].every(line => line > 2), drifted([cited(self, imported)], named).length, drifted([cited(self, commented)], named).length, drifted([cited(self, called)], named)],
+      'CONTROL (R-P166) — a citation on an import or a comment naming the construct is refused; one on its code lands').toEqual([true, 1, 1, []]);
+    expect([drifted([cited(self, inside)], [{ says: 'the reading', patterns: [/const construct = /], within: /function codeOf\b/ }]).length,
+      drifted([cited(self, inside)], [{ says: 'the reading', patterns: [/const construct = /], within: /function drifted\b/ }])],
+    'CONTROL (R-P166) — a construct `within` a function lands only on a line inside that function').toEqual([1, []]);
+    expect([pairing(21, OUTCOME_ANSWER)?.length, pairing(23, OUTCOME_ANSWER)?.length, pairing(22, OUTCOME_ANSWER)],
+      'CONTROL (R-P166) — kit 02 :99 pairs with 21 citations (without P67\'s sentence) or 23 (with it), never another count').toEqual([21, 23, undefined]);
   });
 });
 
