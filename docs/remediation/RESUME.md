@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-20, 15:25: amendments 5, 6 and 7 LOCALLY COMPLETE and deployed (deploy-14); amendment 8 building; the lift re-walk still on the pair's third release
+
+- **Score (derived, amendment 7 round-3 official gate at 4f356541, GATE_OK):** `Tests 3709 passed (3709)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 7 `tapestry-parity-outcome-telling`: Local done 3/3** (P64 at bb605dff, P65 at 81713505, P66 at 4f356541; merged at da4d55b6, receipt f7cbf331). **Amendment 6: 3/3. Amendment 5: 5/5.** **Amendment 8 `tapestry-parity-order-memory`: 0/2** (P67 ACTIVE, specification gate PASS at 800ff090, building; P68 specification in a fix round). LIVE1 31 of 45.
+- **Deploy-14** (stamps at a90b5e8e, P66 in): staging cb3b0d21, production 508eadbc; smoke 7/7 on production, staging and the Tapestry tenant; verify-origin 9 PASS + connectivity; render acknowledgements 1.4–2.0 s.
+- **Acceptance pair** on its third release 03acf1ba while lane L9 walks the lift-blocked rows; its fourth release (P63–P66) and the batched LIVE1 for P61–P66 follow L9.
+- **Owner's items (told, not asked):** merge PR #1; hand the account team the staging host, tenant and site-key path; Tapestry's H1–H5 and W3; the lift probe's console step; worktree cleanup. Advisories on the amendment list: a purchase reset at the wrong moment credited twice until P67 lands; a sign-in whose account-change merge is refused (more than 8 profile sources) cannot complete with that statement.
+
 ## 2026-10-20, 13:35: amendment 7 at 2/3 (P65 merged and deployed), P66 building; amendment 8 opened (the order remembered); the lift re-walk still on the pair's third release
 
 - **Score (derived, amendment 7 round-2 official gate at 81713505, GATE_OK):** `Tests 3692 passed (3692)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 7 `tapestry-parity-outcome-telling`: Local done 2/3** (P64 at bb605dff, P65 at 81713505; P66 ACTIVE, specification gate PASS at 67614df5, build in progress). **Amendment 6: Local done 3/3.** **Amendment 8 `tapestry-parity-order-memory` opened: 0/2** (P67 ACTIVE, specifying). Amendment 5 5/5. LIVE1 31 of 45.
