@@ -25,6 +25,26 @@ export interface Env {
   DECISION_RING?: DurableObjectNamespace;
   /** Phase 1 — one object per tenant, brand and slot: decayed counts, published as lift snapshots. */
   LEARN_STATS?: DurableObjectNamespace;
+  /**
+   * P62 (amendment 6, R-P110 decision 1): an override of the lift witness's budget, the round trip to
+   * the slot's statistics object, read per decision by `learningReadBudgets` (src/learn/fan.ts). It is
+   * admitted when it is a whole number of milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`
+   * (5 000 ms, the SDK's request deadline), written as its decimal text; any other value is refused, the
+   * code default (`LIFT_WITNESS_BUDGET_MS`, 200 ms) stays in force and the refusal is named in the
+   * decision answer's `sources.budgets.refused`. Absent, the default applies and nothing is named. The
+   * budget in force is reported in `sources.budgets.lift`.
+   */
+  LIFT_WITNESS_BUDGET_MS?: string;
+  /**
+   * P62 (amendment 6, R-P110 decision 1): an override of the visitor ring read's budget, the hop to the
+   * visitor's `DecisionRing`, read per decision by `learningReadBudgets` (src/learn/fan.ts). It is
+   * admitted when it is a whole number of milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`
+   * (5 000 ms, the SDK's request deadline), written as its decimal text; any other value is refused, the
+   * code default (`RING_READ_BUDGET_MS`, 200 ms) stays in force and the refusal is named in the decision
+   * answer's `sources.budgets.refused`. Absent, the default applies and nothing is named. The budget in
+   * force is reported in `sources.budgets.ring`.
+   */
+  RING_READ_BUDGET_MS?: string;
   /** Phase 3 (doc 22 §9) — Workers AI, for the `workers_ai` model kind. Absent on this stamp; the kind reports unavailable. */
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
   /**
