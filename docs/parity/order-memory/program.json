@@ -107,7 +107,7 @@
     {
       "id": "P68",
       "title": "The kit's citations land and the override variables are typed (**amendment 8, 2026-10-20**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-8/BTI-Parity-Amendment-2026-10-20b.md (amendment 8, committed beside the program)",
