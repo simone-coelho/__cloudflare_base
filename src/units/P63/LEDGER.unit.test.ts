@@ -115,8 +115,10 @@
 // after the last write, never earlier, accumulating after a failed publication), since P70 shares the object's single
 // alarm with a keep-warm heartbeat that publishes nothing and an alarm publishes nothing before its due time. Each leg's
 // meaning is unchanged: a republished document is a change whose publication is due PUBLISH_DELAY_MS after the
-// republication (NR2); W27 R4's retry is due PUBLISH_DELAY_MS after the failed publication (NR3); the skip-check legs
-// fire the publication alarm twice with nothing changed in between (NR3, S16); a marker in force is cleared by the next
+// republication (NR2); W27 R4's retry is due PUBLISH_DELAY_MS after the failed publication (NR3); the S16 skip-check legs
+// reach the skip check through a publication that is due (R-P200: a heartbeat with nothing due runs no skip check):
+// after a write that counts nothing and leaves the basis as it was (`writeNothing`), the due publication skips, and the
+// same with the marker read throwing, or with the store's copy altered, publishes (NR3, S16); a marker in force is cleared by the next
 // publication alarm (NR3, P42 PW2 and P49). Measured green on today's product and under a sketch of P70's heartbeat
 // (_evidence/parity-step3/S18/specifier/logs/).
 //
@@ -153,6 +155,34 @@ const heldEvents = (m: Mounted): unknown => (placementOf(m).data.get('learn') as
 const verdictOf = (answer: { status: number; body: Record<string, unknown> }) => ({ status: answer.status, state: answer.body.state, publication: answer.body.publication, witness: answer.body.witness });
 /** The members a lift read answers, in order (P42's LIFT_MEMBERS / ROWS_MEMBERS: today's). */
 const membersOf = async (m: Mounted) => [Object.keys((await liftOf(m, PDP_MODULES)).body), Object.keys((await rowsOf(m, PDP_MODULES)).body)];
+/**
+ * R10 (S18, amendment 9 P70; the lead's rulings R-P195 and R-P200): a write that leaves the publication's basis as it was.
+ * The placement's own write door (`/exposures`, the door the learning fan-out writes through), given one row it skips
+ * (src/durable-objects/LearnStats.ts `rowsOf`: "Retain the old handler's ineligible/null-row skipped contract") under the
+ * placement's stored configuration: the object counts nothing and arms its publication, so a publication is due
+ * PUBLISH_DELAY_MS after it (R-P200: due only after a write, a republication or a failed publication's retry) while its
+ * state, its fence and the documents it publishes from are as they were.
+ */
+async function writeNothing(m: Mounted): Promise<void> {
+  const data = placementOf(m).data, state = JSON.stringify(data.get('learn')), fence = JSON.stringify(data.get('learnFence'));
+  const config = (data.get('learn') as { config?: unknown } | undefined)?.config;
+  const answer = await objectDoor(m, '/exposures', { tenant: TENANT, brand: BRAND, slot: PDP_MODULES, config, exposures: [{}] });
+  const receipt = answer.body.receipt as { processed?: unknown; skipped?: unknown } | undefined;
+  expect([answer.status, receipt?.processed, receipt?.skipped, JSON.stringify(data.get('learn')) === state, JSON.stringify(data.get('learnFence')) === fence],
+    `PRECONDITION (${m.host}): the write counts nothing and leaves the state and the fence as they were (${JSON.stringify(answer.body).slice(0, 200)})`)
+    .toEqual([200, 0, 1, true, true]);
+}
+/**
+ * R10 (S18, R-P200): the publication alarm due after `writeNothing` skips: the store's copy is not written and its version
+ * does not move (the P63 skip check ran and found the basis unchanged). Returns what it saw.
+ */
+async function dueAlarmWithNothingChanged(m: Mounted): Promise<{ version: number | undefined; same: boolean; copyPuts: number }> {
+  const settled = copyOf(m)!, key = liftKey(TENANT, BRAND, PDP_MODULES), put = m.cache.put;
+  let copyPuts = 0;
+  m.cache.put = (async (k: string, ...rest: unknown[]) => { if (k === key) copyPuts++; return (put as (...args: unknown[]) => Promise<unknown>).call(m.cache, k, ...rest); }) as typeof m.cache.put;
+  try { await writeNothing(m); await firePublicationAlarm(m); } finally { m.cache.put = put; }
+  return { version: copyOf(m)?.version, same: copyOf(m)?.raw === settled.raw, copyPuts };
+}
 
 // ===========================================================================
 // unit:P63.NR1 — two alarms with no new evidence leave the publication as it was
@@ -400,8 +430,12 @@ describe('unit:P63.NR3', () => {
 
     it(`host (${host}): LOCK (S16, P63 review F3) — a read of the skip check that throws publishes: after an alarm publication and nothing changed, an alarm whose read of the republished marker throws once publishes a later version`, async () => {
       const { m } = await liftWorld(host);
-      await republish(m);
-      await firePublicationAlarm(m);
+      const settled = await republish(m);
+      // R10 (S18, R-P200): the skip check is reached through a publication that is due (after a write that changed
+      // nothing); with nothing changed it skips, and the same publication with the marker read throwing publishes.
+      expect.soft(await dueAlarmWithNothingChanged(m), `${host}: P63.NR3 (S16) — the publication due with nothing changed skips: no copy write, no version move (the skip check runs)`)
+        .toEqual({ version: settled.version, same: true, copyPuts: 0 });
+      await writeNothing(m);
       const before = copyOf(m)!, key = liftRepublishedKey(TENANT, BRAND, PDP_MODULES), get = m.cache.get;
       let thrown = 0;
       m.cache.get = (async (k: string, ...rest: unknown[]) => {
@@ -416,12 +450,16 @@ describe('unit:P63.NR3', () => {
 
     it(`host (${host}): LOCK (S16, P63 review F3) — the store's copy is compared by version AND digest: after an alarm publication and nothing changed, a copy in the store under the same version but other content has the next alarm publish a later version`, async () => {
       const { m } = await liftWorld(host);
-      await republish(m);
-      await firePublicationAlarm(m);
+      const settled = await republish(m);
+      // R10 (S18, R-P200): the comparison is reached through a publication that is due (after a write that changed
+      // nothing); with the copy as published it skips, and with the copy altered the same publication publishes.
+      expect.soft(await dueAlarmWithNothingChanged(m), `${host}: P63.NR3 (S16) — the publication due with nothing changed skips: no copy write, no version move (the skip check runs)`)
+        .toEqual({ version: settled.version, same: true, copyPuts: 0 });
       const before = copyOf(m)!, key = liftKey(TENANT, BRAND, PDP_MODULES);
       const altered = { ...(JSON.parse(before.raw) as Record<string, unknown>), p63AlteredCopy: true };
       await m.cache.put(key, JSON.stringify(altered));
       expect(copyOf(m)?.version, `${host}: PRECONDITION — the store holds the same version with other content`).toBe(before.version);
+      await writeNothing(m);
       await firePublicationAlarm(m);
       const after = copyOf(m)!;
       expect.soft({ later: after.version > before.version, altered: Object.hasOwn(JSON.parse(after.raw) as object, 'p63AlteredCopy') },
