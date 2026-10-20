@@ -229,13 +229,13 @@
         {
           "id": "TC1",
           "kind": "LOCAL",
-          "observable": "On both hosts, in process and natively, a validation refusal raised in the account object during the account-change merge reaches the shopper as the route's own 400 Validation error with the same issues (today natively: an untyped 500).",
+          "observable": "On both hosts, in process and natively, a validation refusal raised in the account object during the account-change merge reaches the shopper as the route's own 400 Validation error with the same issues (today natively: an untyped 500). In process the route already answers its own 400 (the error crosses as the exception itself): the in-process leg is a lock; the native leg is the change (R-P153).",
           "proof": "The P66 acceptance command runs the tests named unit:P66.TC1 in src/units/P66 and they pass."
         },
         {
           "id": "TC2",
           "kind": "LOCAL",
-          "observable": "The same for the absorb merge.",
+          "observable": "On both hosts, in process and natively, the absorb door (handleAbsorb) answers a validation refusal raised by its merge as the typed refusal (status 400, the exact shape validationRefusalOf reads, the same issues), never a thrown or untyped failure (today: the door throws). No route reaches the door at 81713505: the session host's absorb is SessionManager.absorbIntoShopper in the worker's own process; the typed door is pinned so that any future caller crosses typed (R-P153).",
           "proof": "The P66 acceptance command runs the tests named unit:P66.TC2 in src/units/P66 and they pass."
         },
         {
@@ -259,7 +259,7 @@
         }
       ],
       "remainingWork": [
-        "Type the refusal at handleAccountChange / handleAbsorb as P58 did at the transfer door; applyAccountChange and the absorb caller in link.ts read the typed answer."
+        "Type the refusal at handleAccountChange and handleAbsorb as P58 did at the transfer door; applyAccountChange in link.ts reads the typed answer (the absorb door has no product caller at 81713505; its typed answer is pinned at the door, R-P153)."
       ],
       "decisions": [],
       "deferredLiveAcceptance": [
@@ -280,10 +280,10 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S13 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "pending the batch S15 specification review (filled by the lead at the review's PASS)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S13 records the reviewed revision and the RED/HONEST evidence here"
+          "pending: the specification review of batch S15 records the reviewed revision and the RED/HONEST evidence here"
         ],
         "negativeControlEvidence": [
           "pending: named at the specification review"
