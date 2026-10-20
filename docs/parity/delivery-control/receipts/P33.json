@@ -43,8 +43,12 @@
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
-      "status": "PENDING",
-      "evidence": []
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L2/records/P33.lead-addendum-k3.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L2/records/P33.md",
+        "/home/simonecoelho/rem/_evidence/baseline-52/outcome-k3/logs/lead-hosted-reread.log"
+      ]
     },
     {
       "id": "LIVE2",
