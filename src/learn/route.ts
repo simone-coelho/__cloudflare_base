@@ -137,8 +137,15 @@ export function slotConfigsOf(learn: LearnConfig): Record<string, SlotLearnConfi
  * its admission failing fails the action itself (the owner's drain rethrows it), a
  * refusal of the owner's authority or recovery configuration there is a refusal,
  * not a lost row, and an effect after the admission is the alarm's to complete.
+ *
+ * P64 (R-P125): `onAdmitted` is told, once, that the outcome's durable admission
+ * completed (`admitOwnedRecovery` resolved: its admission committed, or an earlier
+ * one of the same outcome replayed), so the action route names the outcome on its
+ * answer only then. It reports and decides nothing; its failure is ignored, and the
+ * function still resolves to nothing.
  */
-export async function outcomeToLearning(env: Env, scope: string, outcome: OutcomeRecord, options?: Pick<RecoveryOptions, 'answerAtAdmission'>): Promise<void> {
+export async function outcomeToLearning(env: Env, scope: string, outcome: OutcomeRecord,
+  options?: Pick<RecoveryOptions, 'answerAtAdmission'> & { onAdmitted?: () => void }): Promise<void> {
   let preparing = false;
   try {
     preparing = env.LEDGER_RECOVERY_ENABLED === 'true';
@@ -150,6 +157,7 @@ export async function outcomeToLearning(env: Env, scope: string, outcome: Outcom
         policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } };
       preparing = false;
       const result = await admitOwnedRecovery(input, options?.answerAtAdmission ? { answerAtAdmission: true, afterEffects: report } : undefined);
+      try { options?.onAdmitted?.(); } catch { /* a report only: the admission stands */ }
       // Answered at admission: no effect has run yet; they are reported when they end (`afterEffects`).
       if (options?.answerAtAdmission && result.source.state === 'pending' && result.learning === undefined) return;
       report(result);

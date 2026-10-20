@@ -178,7 +178,7 @@ One per reward-bearing event, written after the response.
 
 | Field | Meaning |
 |---|---|
-| `outcome_id` | `{tenant}:{time in base 36}:{visitor}:{event}`, then `:n1:{eventId}` when the event carried its nonce, as every outcome the action route records does (`src/ledger/records.ts:411`); the time is the one the engine admitted the event at, the time in the id of the event's behaviour record. The answer to the action that recorded the outcome names this id as `outcome.recordId`, beside `behavior`, on both hosts; it is named on the answer and never added to the record (`src/routes/realtime.ts:308`, `:313`) |
+| `outcome_id` | `{tenant}:{time in base 36}:{visitor}:{event}`, then `:n1:{eventId}` when the event carried its nonce, as every outcome the action route records does (`src/ledger/records.ts:411`); the time is the one the engine admitted the event at, the time in the id of the event's behaviour record. The answer to the action that recorded the outcome names this id as `outcome.recordId`, beside `behavior`, on both hosts, once the outcome is durably admitted; it is named on the answer and never added to the record (`src/routes/realtime.ts:315`, `:320`) |
 | `type` | The reward type the event maps to |
 | `event` | The wire event name, so a custom reward keeps its own |
 | `item_id`, `slot` | The content id and slot the event named, when it did |
