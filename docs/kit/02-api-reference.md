@@ -96,7 +96,7 @@ Response:
 `update` is absent when nothing changed. `400` with `error: "Invalid action event format"` and
 `details` names the offending field. When the registry document declares product-type weights
 (`productTypeWeights`, below), `update.data.affinity.applied` itemises the action, the product type and the
-weight the event applied: `{ "action": "add_to_cart", "dimension": "category", "productType": "Handbags", "weight": 8 }`.
+weight the event applied: `{ "action": "add_to_cart", "dimension": "category", "productType": "Handbags", "weight": 8 }`. A tracked action that records an outcome (a reward-bearing event such as an `add_to_cart` or a `content_click`, under tracking consent) answers, on both hosts, `outcome: { recordId }` beside `behavior`: `recordId` is the `outcome_id` of the [outcome record](./03-payload-schemas.md#the-outcome-record), `{tenant}:{time in base 36}:{visitor}:{event}:n1:{eventId}`, built from the time the engine admitted the event at, which is the time the id in `behavior.recordId` carries, so an event sent with a client time ahead of the engine's clock is named at the engine's present, never at the client's (`src/routes/realtime.ts:183-184`, `:308`, `:313`, `src/ledger/records.ts:411`). The id is known when the outcome is emitted, so naming it adds no read and no wait to the answer; the operator reads the record under it (`GET /v1/{tenant}/ledger/{recordId}?stream=outcome`) once its effects, which run after the answer, have written it. A dropped event, an event whose tracking is refused and an event that carries no reward (a `page_view`, for one) record no outcome, and their answers carry no `outcome` member. With durable recovery on, an outcome whose learning preparation fails before its durable admission (its learn document could not be read, for one) is not recorded: the answer is unchanged, `200` with `behavior` and the `outcome` member it was emitted with, and the failure is logged as `learning_incomplete` and counted once in the tenant's `evidenceLoss.producerFailed` (below; `src/learn/route.ts:165`).
 
 `signals` is the input diagnostic, on both hosts, and it is measured against the catalogue your tenant
 publishes: the values your published content catalogue tags carry, dimension by dimension, plus the
@@ -766,7 +766,7 @@ The snapshot answer is the shopper's surface and names one page load. What a ten
 read on the scheduled run and never on a decision path.
 
 `evidenceLoss` is `{ since, producerFailed, consumerSkipped, fanOutRejected, retriesExhausted }`: the
-four ways a row of evidence is lost, in one vocabulary — the producer could not hand it to the queue,
+four ways a row of evidence is lost, in one vocabulary — the producer could not hand it to the queue (with durable recovery on, an outcome whose learning preparation failed before its durable admission: [the action answer](#post-realtimeaction)),
 the consumer could not place it, its fan-out post to a statistics object was attempted and refused, or
 its retries were exhausted and it was captured to the dead-letter quarantine. `since` is the horizon
 the counts start at (30 days, after which they restart). A tenant that lost nothing reads zero on
