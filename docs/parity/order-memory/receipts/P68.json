@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P68",
+  "workOrderHash": "sha256:e166d0d32534ddbb7fb4992449c3af91312ad6add5f3f2d8c4a915aacb5e663c",
+  "artifact": {
+    "revision": "435bc992edb77688a903ccf686f848f32b98680d",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p68-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p68-build at 74661cbb (45c3b752 the specification 0b439d5a re-added (modify/delete kept the spec's file); 51a1b35f integration 229ba5c0; 16c75ed9 kit 02: the two drifted citations corrected (:99 ShopperReflex.ts:1935 → :1953 the settleCarriedOutcome call; :933 :554 → :570 the 409 class) and :1171 rewritten (the alarm publishes nothing and still writes its learn state whenever the slot has recorded learning-effect markers, removing those past their expiry); 74661cbb src/types/env.ts declares LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS as optional strings with the bounded-override semantics); P68 8/8 ×4; all 57 citations on kit 02 :99/:933/:1171 and kit 03 :1474-1488 land on code within 20 lines; kit-reading tests 1392/1392; P62–P67 green; kit 02 2371 (in place), kit 03 1980, env.ts 178 → 198; no served behaviour change.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P68/implementer/REPORT.md",
+      "git commits on rem/p68-joined up to 435bc992"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P68 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/reviewer-p68/p68-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P68/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T16:50:29.830Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
