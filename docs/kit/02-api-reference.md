@@ -856,8 +856,8 @@ the shopper's tracking consent, outside the platform's synthetic operations and 
 compose, so the monitor's probe decisions are never among the counts and a shopper who withheld tracking is
 never counted. `scope` always reads `"tenant"`: one counter document per tenant, across all of its brands.
 `since` is the horizon the counts start at (30 days, after which they restart). The counts are written after
-each counted decision is answered, never before: for a shopper's decision, by the shopper's own object as
-a continuation once it has answered, so the answer never waits on them. They are never read on a decision
+each counted decision is answered, never before: for a shopper's decision, once the shopper's own object
+has answered and outside it, so neither the answer nor the shopper's next request waits on them. They are never read on a decision
 path, and a write that fails changes nothing served; they are a floor, never an overcount: concurrent decisions may collapse
 into one increment. The member is absent on a record
 written before it existed and on a run whose counter store could not be read, so no result states a zero it

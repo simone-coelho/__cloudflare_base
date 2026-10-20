@@ -5,7 +5,7 @@
 // persisted here. Owned state failures are terminal, never consenting defaults.
 
 import type { Env } from '@/types/env';
-import { assertOwnerScope, continueAfterOwnerAnswer, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
+import { afterOwnerAnswer, assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
 import { carriedSaltVersion, PublicationError, pinPublication, publicationScope, readOptionalPinnedPublication, readPinnedPublication, readPublication } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
@@ -1155,17 +1155,17 @@ export async function serveContentDecisions(
   // counters above, so the monitor's own probe decisions and a shopper who
   // withheld tracking are never counted. Its failures are swallowed inside
   // `recordLearningReads`; no count is ever read to decide, and nothing about
-  // the shopper is written. R-P114(1): the count never holds the answer. Inside
-  // the shopper's owner it runs after the owner's answer (P56's
-  // `continueAfterOwnerAnswer`: a new operation of that owner, through its own
-  // serializer and kept alive by its own waitUntil, never work the owner
-  // retains and drains before it answers), and a continuation the owner refuses
-  // counts nothing; outside an owner operation it is after-response work, as
-  // `afterResponse` already is.
+  // the shopper is written. R-P114(1), R-P115: the count never holds the answer
+  // and never the shopper's next request. Inside the shopper's owner it runs
+  // once the owner has answered and outside it (`afterOwnerAnswer`: kept alive
+  // by the owner's waitUntil, never retained work the owner drains before it
+  // answers, never queued in its serializer), with the operator cache alone,
+  // and an owner that refuses it counts nothing; outside an owner operation it
+  // is after-response work, as `afterResponse` already is.
   const lift = Object.fromEntries([...liftReads.keys()].sort().map(slot => [slot, liftReads.get(slot)!] as const));
   const reads = { lift: Object.values(lift).map(read => read.outcome), ring: ringRead.outcome };
   const counting = consent.tracking && !synthetic && !r.selfCheck, owned = ownerOperationActive(env);
-  if (counting && owned) void continueAfterOwnerAnswer(continued => recordLearningReads(continued, scope, reads, now)).catch(() => undefined);
+  if (counting && owned) void afterOwnerAnswer(operator => recordLearningReads(operator, scope, reads, now)).catch(() => undefined);
   const readsCounted = counting && !owned ? recordLearningReads(env, scope, reads, now) : Promise.resolve();
   const afterResponse = Promise.all([captured, counted, anchorCounted, offLimitsWritten, readsCounted]).then(() => undefined);
   const ownerDrain = fanOutAfterRead ? Promise.all([counted, anchorCounted, offLimitsWritten, readsCounted]).then(() => undefined) : afterResponse;
