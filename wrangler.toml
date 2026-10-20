@@ -195,6 +195,11 @@ EXTERNAL_MODEL_POLICY = "off"
 # overrides one; any other value is refused, the default stays and the answer's sources.budgets.refused names it.
 # LIFT_WITNESS_BUDGET_MS = "200"
 # RING_READ_BUDGET_MS = "200"
+# P70: the statistics object (LEARN_STATS) keeps itself warm for the witness read: code constants, not variables
+# (src/durable-objects/LearnStats.ts WARM_HEARTBEAT_MS = 5000 and WARM_TAIL_MS = 600000). After a witness call,
+# an exposure write or a credit write its one alarm is due at most 5 s ahead until 10 minutes after the last of
+# them: up to 720 alarm invocations per object-hour inside the tail, the object resident for the tail. The
+# visitor's ring (DECISION_RING) is not kept warm.
 
 # Static assets configuration
 [assets]
