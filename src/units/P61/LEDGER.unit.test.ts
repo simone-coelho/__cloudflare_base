@@ -58,7 +58,9 @@
 //                       the same generation inside its window, which is 'served';
 //                       outside it, or of another generation, it stays 'superseded');
 //       'unrecognized'  any other copy: a version or a digest the object never
-//                       published (a forged or damaged copy).
+//                       published (a forged or damaged copy), and (R-P113) a copy
+//                       that is still the object's latest publication when a reset
+//                       has since changed the object's witness (P62.LW3 tests it).
 //     `ms`: the slot's lift read, from its start to its outcome, in whole
 //     milliseconds; for 'late' at least the budget in force. The units allow 1 ms
 //     below the budget for the timer's granularity (libuv fires a timer by its
