@@ -176,13 +176,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S16 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "0b439d5ae6ebed06ad9c37549ffe833b1265feb4",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S16 records the reviewed revision and the RED/HONEST evidence here"
+          "_evidence/parity-step3/S16/specifier/REPORT.md (rem-specifier; S16 at 800ff090, fix rounds 91867aba and 0b439d5a: span cap, :99 and :933 tables with P67's two optional entries, code-only landings, within-function checks, strict wording rule, line counts stated)",
+          "_evidence/parity-step3/S16/reviewer-spec/REPORT.md (rem-reviewer: PASS at 800ff090 for P67 and the locks; P68 FAIL at 91867aba (the :99 count vs P67's build), PASS at the reviewed revision 0b439d5a on the head, the integration head f7cbf331 and P67's build)"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "_evidence/parity-step3/S16/reviewer/rejudge-0b439d5a/logs/ (fa\u00e7ades RED on both bases; wrong-line variants RED, all named; the span cap, within and pairing each caught by their CONTROL when removed; conforming sketches 8/8 on the head, f7cbf331 and the P67 build)"
         ]
       },
       "doneWhen": [
