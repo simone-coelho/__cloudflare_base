@@ -272,6 +272,35 @@ describe('unit:P64.OT3', () => {
       expect(next.status, `${host}: PRECONDITION — the following add to bag is accepted`).toBe(200);
       expect.soft((await evidenceLoss(m)).producerFailed - before.producerFailed, `${host}: P64.OT3 — exactly once: a following successful add to bag adds nothing`).toBe(1);
     }, 60_000);
+
+    // R-P125 (the lead, on the P64 build c60542be): the answer names `outcome.recordId` ONLY when the outcome was durably
+    // admitted; under P59 that admission completes before the answer, so the route knows. A preparation that failed admits
+    // nothing, and no record will ever be stored under the id it built.
+    it(`host (${host}): R-P125 — when the outcome's learning preparation fails before its durable admission, the 200 carries NO outcome member while its behavior member stays, the loss counted once and logged; CONTROL: the same add to bag without the failure names its outcome record`, async () => {
+      const { m, app, s } = await outcomeWorld(host, 'p64-ot3-r-p125');
+      const before = await evidenceLoss(m);
+      const warn = vi.spyOn(console, 'warn');
+      const fault = failLearnReadOnce();
+      const eventId = crypto.randomUUID();
+      let refused: Wire;
+      try {
+        refused = await actionWire(app, s, BUY_BOX, { eventId, timestamp: Date.now() - 1 });
+        await settleAll(m, app);
+      } finally { fault.restore(); }
+      const logged = warn.mock.calls.filter(args => args[0] === 'learning_incomplete').length;
+      warn.mockRestore();
+      await m.drainLedger();
+      expect([fault.failed, refused.status, rowsOfEvent(m, s, eventId).length], `${host}: PRECONDITION — the learn read failed once, the add to bag was accepted, and no outcome of it is stored`).toEqual([1, 200, 0]);
+      expect.soft(noOutcomeMember(refused), `${host}: P64.OT3 (R-P125) — the answer names no outcome record the engine did not admit`).toBe('no outcome member');
+      expect.soft([behaviorOf(refused)?.status, typeof behaviorOf(refused)?.recordId], `${host}: P64.OT3 (R-P125) — its behavior member stays`).toEqual(['durable', 'string']);
+      expect.soft([(await evidenceLoss(m)).producerFailed - before.producerFailed, logged >= 1], `${host}: P64.OT3 (R-P125) — the loss counted once and logged`).toEqual([1, true]);
+      // CONTROL: the same add to bag without the refusal names its outcome record (OT1's member), so the absence above is the refusal's.
+      const identity = { eventId: crypto.randomUUID(), timestamp: Date.now() - 1 };
+      const told = await actionWire(app, s, BUY_BOX, identity);
+      await settleAll(m, app);
+      expect.soft(memberOf(told, 'outcome'), `${host}: P64.OT3 (R-P125) CONTROL — without the refusal the same add to bag names its outcome record`)
+        .toEqual({ recordId: outcomeIdAt(s, BUY_BOX, identity.eventId, identity.timestamp) });
+    }, 60_000);
   }
 
   it('CONTROL: the lever refuses only the first learn read; without it a successful add to bag counts nothing and its outcome is stored', async () => {
