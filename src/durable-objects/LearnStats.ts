@@ -148,9 +148,10 @@ function recentPublicationsOf(value: unknown): RecentPublication[] {
  *   · the object's own state as the snapshot reads it (identity, configuration,
  *     counters, position evidence), without the learning-effect markers
  *     (`effects`, `retiredEffects`), which no snapshot carries;
- *   · the tenant's documents the publication reads (`PUBLICATION_DOCUMENTS`), each
- *     by its revision and digest in the publication set in force, read before the
- *     snapshot reads them, so a document published meanwhile reads as a change;
+ *   · the tenant's published documents the publication reads (its learn, prior,
+ *     catalogue and slots documents among them), as the publication set in force
+ *     names them, by that set's revision and digest, read before the snapshot reads
+ *     them, so a document published meanwhile, even unchanged, reads as a change;
  *   · what the snapshot read beside them (`PublicationInputs`): the pooled counters
  *     of the module's other placements (P08), the generation fence, the authorized
  *     accumulation transition and the repair basis on record.
@@ -158,9 +159,8 @@ function recentPublicationsOf(value: unknown): RecentPublication[] {
  * successful publication's (`unchangedSince`).
  */
 interface PublicationInputs { pooled?: PooledCounters; fence?: GenerationFence; restarted?: AccumulationTransition; rebuilt?: RebuildBasis }
-/** P63: a document a publication reads, by kind name: its revision and digest in the publication set in force, or null where the set has none. */
-type PublicationDocuments = Record<string, { revision: number; digest: string } | null>;
-const PUBLICATION_DOCUMENTS = [LEARN_KIND, PRIORS_KIND, CONTENT_KIND, SLOTS_KIND] as const;
+/** P63: the publication set in force for the tenant, by its committed revision and digest. */
+interface PublicationSet { revision: number; digest: string }
 /** P62: what a state's witness is computed from beside the fence: its identity (W26 R2: its page), its configuration and its projection. */
 interface WitnessBasis { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; projection: { depth: number; closed: boolean } | null }
 /**
@@ -1227,7 +1227,7 @@ export class LearnStats {
     const d = await this.loadIfAny() ?? await this.priorOnlyIdentity();
     if (!d) return null;
     // P63: the documents in force, read before the snapshot reads them.
-    const documents = await this.publicationDocuments(d.tenant), inputs: PublicationInputs = {};
+    const documents = await this.publicationSet(d.tenant), inputs: PublicationInputs = {};
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     // P42 (R-P78, D1): the pooled cause alone is refused by name, through every
@@ -1305,24 +1305,20 @@ export class LearnStats {
   }
 
   /**
-   * P63: the documents a publication reads (`PUBLICATION_DOCUMENTS`), as the
-   * publication set in force names them; null where that cannot be told — a set
-   * that cannot be pinned, or one naming no learn document, which every
-   * publication requires — and then no publication is taken for unchanged.
+   * P63: the publication set in force for the tenant, the one the snapshot's own
+   * reads pin (`pinPublication`, served from the same cache), by its committed
+   * revision and digest; null where it cannot be pinned, and then no publication
+   * is taken for unchanged.
    */
-  private async publicationDocuments(tenant: string): Promise<PublicationDocuments | null> {
+  private async publicationSet(tenant: string): Promise<PublicationSet | null> {
     try {
-      const pin = await pinPublication(this.env, tenant, true), documents: PublicationDocuments = {};
-      for (const kind of PUBLICATION_DOCUMENTS) {
-        const member = `${kind.name}:${tenant}`, ref = Object.hasOwn(pin.refs, member) ? pin.refs[member] : undefined;
-        documents[kind.name] = ref ? { revision: ref.revision, digest: ref.digest } : null;
-      }
-      return documents[LEARN_KIND.name] ? documents : null;
+      const pin = await pinPublication(this.env, tenant, true);
+      return Number.isSafeInteger(pin.revision) && typeof pin.digest === 'string' ? { revision: pin.revision, digest: pin.digest } : null;
     } catch { return null; }
   }
 
   /** P63: the digest of what a publication of `d` is built from apart from the clock (`PublicationInputs`); null where that cannot be told. */
-  private async publicationBasis(d: Stored, documents: PublicationDocuments | null, inputs: PublicationInputs): Promise<string | null> {
+  private async publicationBasis(d: Stored, documents: PublicationSet | null, inputs: PublicationInputs): Promise<string | null> {
     if (!documents || !inputs.fence) return null;
     const state: Partial<Stored> = { ...d };
     delete state.effects; delete state.retiredEffects;

@@ -1477,14 +1477,15 @@ publication publishes nothing: the snapshot, its `version` and `publishedAt`, it
 record of it stay exactly as that publication left them, so a copy an edge location holds stays the latest
 (`src/durable-objects/LearnStats.ts:691`, `:1261-1262`). Nothing changed means that the slot's own counted
 evidence (an exposure or a credit), its configuration, generation fence and repair basis, the tenant's
-published learn, prior, catalogue and slots documents (each by its revision: a document republished unchanged
-is still a change) and the pooled counters the slot reads from a pooled module's other placements are what
-that publication was built from (`:1325-1333`), recorded with the publication before its copy is written
-(`:1288-1290`); the counts decaying with time alone is not a change, so a snapshot keeps its counts as of its
-`publishedAt` until something changes. The alarm still publishes with nothing changed while the stale marker
-or the republish member below is in force, and that publication clears it as before, and when the copy the
-serving key holds is not the last publication, as after a publication whose write of the copy failed
-(`:1346-1356`). Removing expired learning-effect markers changes no snapshot and is not a change.
+published documents (its learn, prior, catalogue and slots documents among them, taken as the tenant's
+publication set in force, by its revision: any document republished, even unchanged, is a change) and the
+pooled counters the slot reads from a pooled module's other placements are what that publication was built
+from (`:1313-1329`), recorded with the publication before its copy is written (`:1288-1290`); the counts
+decaying with time alone is not a change, so a snapshot keeps its counts as of its `publishedAt` until
+something changes. The alarm still publishes with nothing changed while the stale marker or the republish
+member below is in force, and that publication clears it as before, and when the copy the serving key holds
+is not the last publication, as after a publication whose write of the copy failed (`:1342-1352`). Removing
+expired learning-effect markers changes no snapshot and is not a change.
 `tauLearnMs` is the decay horizon, in milliseconds, the counts were decayed with; the serving path uses a
 snapshot only when its `tauLearnMs`, `reward`, `objective`, `measurementBasis` and estimator dials are the
 ones the tenant's published learn document names. `witness` is a digest of the statistics object's
