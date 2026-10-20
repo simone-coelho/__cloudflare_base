@@ -99,7 +99,7 @@ export async function redeemRenderOffer(env: Env, principal: SessionCapability, 
   if (recoveryJSON(value.principal) !== recoveryJSON(principal) || value.pageInstance !== event.data.pageInstance
     || value.record.decision_id !== event.data.decisionId || value.record.item_id !== event.data.contentId
     || value.record.slot !== event.data.slot || value.record.page !== event.data.page
-    || !placedAt(value.record.position, event.data) || event.timestamp! < value.record.ts || event.timestamp! > Date.now()) throw new SessionAccessError();
+    || !placedAt(value.record.position, event.data) || event.timestamp! > Date.now()) throw new SessionAccessError();
   const pin = await pinPublication(env, principal.tenant);
   const current = await currentOwnerConsent();
   if (pin.digest !== value.publication || !current?.tracking || !consent.tracking || current.instruction?.revision !== value.consentRevision
@@ -107,15 +107,15 @@ export async function redeemRenderOffer(env: Env, principal: SessionCapability, 
   requireConsentPurpose(current, value.record.arm !== 'default' ? 'personalization' : 'tracking');
   // P57 (amendment 5): this decision's stored admission, read in the shopper's own
   // owner. The same event id on the same page instance is the same render: it is
-  // admitted at the time its first delivery was (W23's clamp may have set that
-  // time to the engine's present then), so its digest is the stored one and the
-  // replay answers the original receipt. Another event id is a conflict, refused
-  // before anything is admitted or captured.
+  // admitted at the time its first delivery was, so its digest is the stored one and
+  // the replay answers the original receipt; another event id is a conflict, refused
+  // before anything is admitted or captured. P69 (amendment 9): a first delivery is
+  // admitted no earlier than the decision's time, as W23's clamp admits it no later than the present.
   const admitted = await admittedRender(principal.tenant, principal.subject, value.record.decision_id);
   if (admitted && admitted.eventId !== event.eventId) throw new AcknowledgementConflictError();
   if (admitted && admitted.pageInstance !== value.pageInstance) throw new AcknowledgementConflictError('Render acknowledgement conflict: this decision was already acknowledged on another page instance');
   lifetime(env, value, Date.now());
-  const at = admitted ? admitted.at : event.timestamp!;
+  const at = admitted ? admitted.at : Math.max(event.timestamp!, value.record.ts);
   const record: DecisionRecord = { ...value.record, rendered: { version: 1, eventId: event.eventId!, at, pageInstance: value.pageInstance } };
   const receipt = await recoverDecisions(env, { tenant: principal.tenant, brand: record.brand, visitor_id: principal.subject, records: [record] }, () => value.config, value.until, { answerAtAdmission: true });
   if (!receipt.durable || !['pending', 'recovered'].includes(receipt.source.state)) throw new SessionAccessError();
