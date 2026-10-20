@@ -20,7 +20,7 @@
     {
       "id": "P64",
       "title": "The action answer names its outcome record and a pre-admission failure counts in the monitor (**amendment 7, 2026-10-20**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-7/BTI-Parity-Amendment-2026-10-20.md (amendment 7, committed beside the program)",
@@ -104,7 +104,8 @@
         "evidence": [
           "_evidence/parity-step3/S13/specifier/REPORT.md (rem-specifier; S13 at b586e520, the R-P125 OT3 leg at c3d8d64f)",
           "_evidence/parity-step3/S13/reviewer-spec/REPORT.md (rem-reviewer: P64 OT1-OT4 PASS at the reviewed revision c3d8d64f; RED for the right reason on both hosts; the R-P125 leg honest)",
-          "_evidence/parity-step3/S13/reviewer-spec/REPORT.md Report 2: the additive OT4 R-P125(1) leg (c0d4177b, P64:408-427) reviewed PASS at 8c791fe3 (RED on the step-1 build ffb8d1e2, GREEN on 03300b44); it lands with P65's round"
+          "_evidence/parity-step3/S13/reviewer-spec/REPORT.md Report 2: the additive OT4 R-P125(1) leg (c0d4177b, P64:408-427) reviewed PASS at 8c791fe3 (RED on the step-1 build ffb8d1e2, GREEN on 03300b44); it lands with P65's round",
+          "_evidence/parity-step3/S13/reviewer-spec/REPORT.md Report 3: three additive P64 legs (adfd147b: a refused admission never named, OT3:355-374; no-recovery path named only on an accepted receipt, OT3:383-407; the loss count holds up no answer, OT4:549-571) reviewed PASS; they land with P65's build"
         ],
         "negativeControlEvidence": [
           "_evidence/parity-step3/S13/reviewer/logs/ (reviewer mutants R1-R12 on light scratch trees: R1 client-clock id, R2 member on every answer, R3 double count, R5 admitted outcomes counted, R6 extra call before the answer, R7 P59 reverted each caught by a named P64 test; R4 no-recovery count uncaught = R-P124(2) out of scope)"
@@ -121,7 +122,7 @@
     {
       "id": "P65",
       "title": "The outcome survives a reset between the behaviour capture's admission and its own (**amendment 7, 2026-10-20**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-7/BTI-Parity-Amendment-2026-10-20.md (amendment 7, committed beside the program)",
