@@ -24,7 +24,7 @@
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
-        "locator": "P69 · section 2 of amendment 9; ACK-401 §0, §8",
+        "locator": "P69 \u00b7 section 2 of amendment 9; ACK-401 \u00a70, \u00a78",
         "requirement": "see amendment 9 section 2, ticket P69 (copied verbatim in the specification)"
       },
       "outcome": "A shopper whose device clock lags the engine's keeps every viewable impression, dwell and click credit: the acknowledgement is admitted at the decision's time instead of being refused.",
@@ -83,13 +83,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S17 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "db84b2768b0b0468a80099e20d8f4744b876091f",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S17 records the reviewed revision and the RED/HONEST evidence here"
+          "_evidence/parity-step3/S17/specifier/REPORT.md (rem-specifier; S17 at db84b276: P69 AK1/AK2, the P56 AA4 R10 de83175a, P71 BR1/BR2)",
+          "_evidence/parity-step3/S17/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision db84b276; P69 AK1 RED for the 401 on both hosts \u00d73, P71 BR1 RED on the object host \u00d73, the R10 correct; both fixes green together with P67 and the P65 additive legs, 153/153)"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "_evidence/parity-step3/S17/reviewer/logs/controls/ (twelve sketches: the fix 13/13; the clause dropped without the max \u2192 500 and the rendered.at lock RED; the record at the client's time; the engine's present; an extra call; W23's min removed; a re-send shifted; the window/id checks removed; P71 null-as-no-profile 27/27; drop-all \u2192 BR2 RED; the session re-decision removed \u2192 BR1 session lock RED)"
         ]
       },
       "doneWhen": [
@@ -107,7 +108,7 @@
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
-        "locator": "P70 · section 2 of amendment 9; lanes L9/L10",
+        "locator": "P70 \u00b7 section 2 of amendment 9; lanes L9/L10",
         "requirement": "see amendment 9 section 2, ticket P70 (copied verbatim in the specification)"
       },
       "outcome": "A learned lift confirmed on the statistics object is served on the deployed hosts on a cold read, because the default witness and ring budgets are sized from the hosted measurement, not the in-process one.",
@@ -134,7 +135,7 @@
       ],
       "existingEvidence": [
         {
-          "ref": "lanes/L9/REPORT.md (cold reads 202–467 ms, 0/18); lanes/L10 (the 600 ms override); _evidence/baseline-52/lift-budget/ANALYSIS.md",
+          "ref": "lanes/L9/REPORT.md (cold reads 202\u2013467 ms, 0/18); lanes/L10 (the 600 ms override); _evidence/baseline-52/lift-budget/ANALYSIS.md",
           "description": "The 200 ms default misses cold hosted reads; the override at 600 ms is the fourth release's setting."
         }
       ],
@@ -191,7 +192,7 @@
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
-        "locator": "P71 · section 2 of amendment 9; R-P170",
+        "locator": "P71 \u00b7 section 2 of amendment 9; R-P170",
         "requirement": "see amendment 9 section 2, ticket P71 (copied verbatim in the specification)"
       },
       "outcome": "A buffered-door event with no profile that resets between its two admissions gets no outcome the engine would have dropped, on the object host as on the session host.",
@@ -205,7 +206,7 @@
         {
           "id": "BR2",
           "kind": "LOCAL",
-          "observable": "Locks: P65 RS1–RS3 and the additive legs unchanged; P67 unchanged; a buffered-door event WITH a profile, reset the same way, keeps its outcome after the alarm.",
+          "observable": "Locks: P65 RS1\u2013RS3 and the additive legs unchanged; P67 unchanged; a buffered-door event WITH a profile, reset the same way, keeps its outcome after the alarm.",
           "proof": "The P71 acceptance command runs the tests named unit:P71.BR2 in src/units/P71 and they pass."
         },
         {
@@ -249,13 +250,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S17 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "db84b2768b0b0468a80099e20d8f4744b876091f",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S17 records the reviewed revision and the RED/HONEST evidence here"
+          "_evidence/parity-step3/S17/specifier/REPORT.md (rem-specifier; S17 at db84b276: P69 AK1/AK2, the P56 AA4 R10 de83175a, P71 BR1/BR2)",
+          "_evidence/parity-step3/S17/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision db84b276; P69 AK1 RED for the 401 on both hosts \u00d73, P71 BR1 RED on the object host \u00d73, the R10 correct; both fixes green together with P67 and the P65 additive legs, 153/153)"
         ],
         "negativeControlEvidence": [
-          "pending: named at the specification review"
+          "_evidence/parity-step3/S17/reviewer/logs/controls/ (twelve sketches: the fix 13/13; the clause dropped without the max \u2192 500 and the rendered.at lock RED; the record at the client's time; the engine's present; an extra call; W23's min removed; a re-send shifted; the window/id checks removed; P71 null-as-no-profile 27/27; drop-all \u2192 BR2 RED; the session re-decision removed \u2192 BR1 session lock RED)"
         ]
       },
       "doneWhen": [
