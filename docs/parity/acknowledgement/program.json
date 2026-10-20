@@ -408,13 +408,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "146a5071 on rem/spec-ack-p5960 (batch S12, amendment 5; P59 units 81c95c13 with the fix round 67af3454 (CO1 admission-before-answer) and the W09.09 R10 146a5071; P60 units ff393f13)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+          "Specification review (SPEC mode) at 146a5071: P59 CO1 RED at :270 (no answer while the send is held) with the :275 admission clause separating admit-then-defer from defer-only on both hosts, CO2 RED at :325 (10 calls by the deadline from ACK_DEADLINE_MS), CO3 green locks with controls; P60 SD1 green at spec locked by the literal scan (:271) and four timing checks (:326), SD2 RED on the source entry and the shipped bundle (:347-:365), SD3 green locks (one envelope, budgets, build-sdk --check, SDK typecheck); three runs each; sketches: admit-then-defer 13/13 and P60 14/14 three runs; W09.09 R10 honest (RED at base only at :612, green on both sketches); harness unchanged; P56-P58 56/56; evidence under _evidence/parity-step3/S12/reviewer/ and S12/specifier/"
         ],
         "negativeControlEvidence": [
-          "pending: named at the batch S9 specification review"
+          "Mutants each caught on both hosts (or both SDK entries): outcome admitted after the answer (CO1 :275), effects through retainOwnerWork (CO1, CO2), a second outcome under a new event id (CO1 :284/:286, CO3), effects never continued (CO1, CO3), continuation beside the serializer (CO3 :421), experiment block dropped (CO3 :382), SDK retry with a new event id (SD2), a third retry (SD2 :365), the retry's pending answer refused (SD2), placement left suppressed after a recovered retry (SD2), a 5000 literal reintroduced (SD1 :271), session mint cut at 4000 ms (SD1 :326), a 409 retried (SD2 :377), stale bundles (SD2, SD3 :439, P34 :452, W40 :414/:478)"
         ]
       },
       "doneWhen": [
@@ -504,13 +504,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S9 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "146a5071 on rem/spec-ack-p5960 (batch S12, amendment 5; P59 units 81c95c13 with the fix round 67af3454 (CO1 admission-before-answer) and the W09.09 R10 146a5071; P60 units ff393f13)",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S9 (P56, P57) records the reviewed revision and the RED/HONEST evidence here"
+          "Specification review (SPEC mode) at 146a5071: P59 CO1 RED at :270 (no answer while the send is held) with the :275 admission clause separating admit-then-defer from defer-only on both hosts, CO2 RED at :325 (10 calls by the deadline from ACK_DEADLINE_MS), CO3 green locks with controls; P60 SD1 green at spec locked by the literal scan (:271) and four timing checks (:326), SD2 RED on the source entry and the shipped bundle (:347-:365), SD3 green locks (one envelope, budgets, build-sdk --check, SDK typecheck); three runs each; sketches: admit-then-defer 13/13 and P60 14/14 three runs; W09.09 R10 honest (RED at base only at :612, green on both sketches); harness unchanged; P56-P58 56/56; evidence under _evidence/parity-step3/S12/reviewer/ and S12/specifier/"
         ],
         "negativeControlEvidence": [
-          "pending: named at the batch S9 specification review"
+          "Mutants each caught on both hosts (or both SDK entries): outcome admitted after the answer (CO1 :275), effects through retainOwnerWork (CO1, CO2), a second outcome under a new event id (CO1 :284/:286, CO3), effects never continued (CO1, CO3), continuation beside the serializer (CO3 :421), experiment block dropped (CO3 :382), SDK retry with a new event id (SD2), a third retry (SD2 :365), the retry's pending answer refused (SD2), placement left suppressed after a recovered retry (SD2), a 5000 literal reintroduced (SD1 :271), session mint cut at 4000 ms (SD1 :326), a 409 retried (SD2 :377), stale bundles (SD2, SD3 :439, P34 :452, W40 :414/:478)"
         ]
       },
       "doneWhen": [
