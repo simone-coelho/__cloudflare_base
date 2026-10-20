@@ -577,6 +577,8 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     if (replayed.explain.lift && served.explain.lift) {
       if (served.explain.lift.measurementBasis === undefined) delete replayed.explain.lift.measurementBasis;
       if (served.explain.lift.objective === undefined) delete replayed.explain.lift.objective;
+      // P62 (R-P112(2)): a lift served from a recent copy that was not the latest names it; the archived copy the replay reads cannot.
+      if (served.explain.lift.asOf) replayed.explain.lift.asOf = { latest: served.explain.lift.asOf.latest, publishedAt: served.explain.lift.asOf.publishedAt, version: served.explain.lift.asOf.version };
     }
   }
   if (replayed) replayed.retention = structuredClone(served.retention);

@@ -845,7 +845,19 @@ export interface LiftApplied {
    * catalogue does not declare pooled.
    */
   pooled?: true;
+  /**
+   * P62 (amendment 6, R-P110 decision 2): the copy this lift was read from is
+   * not the statistics object's latest publication but one of its recent
+   * publications of the same witness, recognised inside the recent-publication
+   * window (`LIFT_RECENT_WINDOW_MS`, src/learn/fan.ts): its `version` (the
+   * record's `versions.lift`) and `publishedAt`, and the `latest` version the
+   * object had published. Absent when the copy is the latest, so such a record
+   * is exactly as before.
+   */
+  asOf?: LiftAsOf;
 }
+/** P62: the copy a lift was read from and the latest publication beside it, keys sorted. */
+export interface LiftAsOf { latest: number; publishedAt: number; version: number }
 
 /** What the population contributed to a decision set, so a reader can see the prior. */
 export interface RegionalBlend {
@@ -1417,3 +1429,10 @@ export type LiftReadOutcome = 'served' | 'none' | 'incompatible' | 'late' | 'sup
 export type RingReadOutcome = 'read' | 'late' | 'failed' | 'skipped';
 /** P61: one read as the answer's `sources` names it: its outcome and its whole milliseconds, from its start to its outcome (`0` when skipped). */
 export interface LearningRead<O extends string> { ms: number; outcome: O }
+/**
+ * P62 (amendment 6, R-P110 decision 1): the budgets a decision's lift witness
+ * and ring read ran under, in milliseconds (`learningReadBudgets`,
+ * src/learn/fan.ts), and `refused`, the names of the deployment overrides
+ * refused (sorted), present only when one was refused.
+ */
+export interface LearningReadBudgets { lift: number; ring: number; refused?: string[] }

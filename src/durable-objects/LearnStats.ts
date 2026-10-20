@@ -6,8 +6,8 @@ import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
-import { accumulationGeneration, ADOPTED_MEMBERS, anchoredAfter, boundStats, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type NotAdopted, type NotAdoptedChange, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
-import { foldRetainedDay, isPlacementSlot, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedIn, republishedOf, republishedRecordOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, supersededRecordOf, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
+import { accumulationGeneration, ADOPTED_MEMBERS, anchoredAfter, boundStats, latestAnchor, coarsenStats, depth, buildSnapshot, emptyStats, isPooledKey, levelKeys, nextPositionHistory, parentKey, positionEffectsOf, positionHistoryOf, positionWeightAt, recordExposure, recordSuccess, unpagedKey, type AttributionContract, type Counter, type PairCounts, type PooledCounters, type NotAdopted, type NotAdoptedChange, type PositionPolicy, type RebuildBasis, type Republished, type RepublishedChange, type StaleMarker, type StatsState, type LiftSnapshot, type Level } from '@/learn/stats';
+import { foldRetainedDay, isPlacementSlot, LIFT_RECENT_PUBLICATIONS, LIFT_RECENT_WINDOW_MS, liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedOf, notAdoptedRefusalOf, ONLINE_RING_REACH_MS, pooledPlacementsOf, positionHistoryKey, republishedIn, republishedOf, republishedRecordOf, republishedRefusalOf, staleMarkerOf, staleRefusalOf, statsName, supersededRecordOf, type SlotLearnConfig, type StatsWriteReceipt } from '@/learn/fan';
 import { loadDay, REPORT_LIMITS } from '@/learn/report';
 import type { DecisionRecord, MeasurementBasis } from '@/content/types';
 import { committedPublication, pinPublication, publicationVersion, readOptionalPinnedPublication, readPinnedPublication } from '@/config/publication';
@@ -118,6 +118,55 @@ interface AccumulationTransition {
   /** W24 T1.02: the retained day this generation was folded from, when it was. */
   rebuiltFrom?: { date: string; decisions: number; outcomes: number };
 }
+/**
+ * P62 (amendment 6, R-P110 decision 2): this object's recent publications,
+ * `{ version, digest, publishedAt }` each, oldest first, kept inside
+ * `LIFT_RECENT_WINDOW_MS` from each one's publication and at most
+ * `LIFT_RECENT_PUBLICATIONS` of them, so that the witness door recognises a copy
+ * a later publication superseded while the edge still serves it. Written with
+ * each publication, before the copy reaches the serving key; its own storage
+ * key, charged against the object's total bound. Best effort: a list that
+ * cannot be written or read recognises the latest publication alone, as before.
+ */
+const RECENT_KEY = 'learnRecent';
+interface RecentPublication { version: number; digest: string; publishedAt: number }
+/** P62: the well-formed entries of a stored list, the most recent `LIFT_RECENT_PUBLICATIONS`; anything else recognises nothing. */
+function recentPublicationsOf(value: unknown): RecentPublication[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry: unknown): entry is RecentPublication => fields(entry, ['version', 'digest', 'publishedAt'])
+    && Number.isSafeInteger(entry.version) && (entry.version as number) > 0 && typeof entry.digest === 'string' && /^[a-f0-9]{64}$/.test(entry.digest)
+    && time(entry.publishedAt)).slice(-LIFT_RECENT_PUBLICATIONS).map(entry => ({ version: entry.version, digest: entry.digest, publishedAt: entry.publishedAt }));
+}
+/** P62: what a state's witness is computed from beside the fence: its identity (W26 R2: its page), its configuration and its projection. */
+interface WitnessBasis { tenant: string; brand: string; slot: string; page?: string; config: SlotLearnConfig; projection: { depth: number; closed: boolean } | null }
+/**
+ * P62 (amendment 6, R-P110; R-P112(5)): the verdict the witness door answers
+ * from, of the state this object held at `epoch` (every assignment of the state
+ * it holds moves the epoch, so a verdict never outlives its state): cached when
+ * the state is committed, or established once from storage by an object that
+ * holds none (an evicted object's first call), never by digesting the state.
+ */
+interface HeldVerdict {
+  epoch: number;
+  /** As `/health` refuses it: a stored state that is not one, or is past the repair bound. */
+  refused?: true;
+  /** The state's identity; absent when the object holds no state (`empty`). */
+  identity?: { tenant: unknown; brand: unknown; slot: unknown; page?: unknown };
+  /** Present only when the state validates and fits the object's total bound. */
+  basis?: WitnessBasis;
+  /** `latestAnchor` of the state: it is healthy while this is not after the object's clock (W23 H1.01). */
+  anchor: number;
+  /** The state's witness under the fence it was last asked for. */
+  witness?: { fence: string; value: Promise<string> };
+}
+const witnessBasisOf = (d: Stored): WitnessBasis => ({ tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}), config: d.config,
+  projection: d.stats.bounded ? { depth: d.stats.bounded.depth, closed: d.stats.bounded.closed === true } : null });
+// W26 R2: a page-scoped object's witness binds its page; a page-less one is unchanged.
+const witnessOf = (basis: WitnessBasis, fence: GenerationFence): Promise<string> => recoveryDigest({ tenant: basis.tenant, brand: basis.brand, slot: basis.slot,
+  ...(basis.page ? { page: basis.page } : {}), config: basis.config, fence, projection: basis.projection });
+/** P62: the verdict of a state this object has just committed, which `fit` and `totalBound` have accepted. */
+const committedVerdict = (d: Stored, epoch: number): HeldVerdict => ({ epoch, identity: { tenant: d.tenant, brand: d.brand, slot: d.slot, page: d.page },
+  basis: witnessBasisOf(d), anchor: latestAnchor(d.stats) });
 const SEEN_MAX_BYTES = 32 * 1024;
 const SEEN_MAX_ROWS = 512;
 interface SeenExposure { id: string; digest: string; ts: number }
@@ -371,7 +420,12 @@ function rowsOf(rows: unknown[], kind: StatsWriteReceipt['kind']): Row[] {
 }
 
 export class LearnStats {
-  private data: Stored | null = null;
+  private held: Stored | null = null;
+  /** P62: moved by every assignment of the state this object holds (`data`), which a cached witness verdict names. */
+  private epoch = 0;
+  private verdict: HeldVerdict | null = null;
+  private get data(): Stored | null { return this.held; }
+  private set data(value: Stored | null) { this.held = value; this.epoch++; }
   /**
    * P05: this placement's published position-policy history, as last read from
    * or written to its one copy in storage (`positionHistoryKey`); null until
@@ -428,6 +482,14 @@ export class LearnStats {
         // A read-only committed-state health query must not queue behind an
         // unrelated archive/KV publication wait.
         return await (path === '/health' ? this.recoveryControl(b, path) : this.serialize(() => this.recoveryControl(b, path)));
+      }
+      if (path === '/witness') {
+        // P62 (amendment 6, R-P110): the decision path's light witness door,
+        // answered from the verdict held for the committed state (never queued,
+        // as `/health` is not); `/health` stays as it is for operators.
+        const b = await input(request);
+        if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page)) throw invalid();
+        return await this.witnessDoor(b);
       }
       if (path === '/generation') {
         const b = await input(request);
@@ -652,6 +714,7 @@ export class LearnStats {
     try { await this.state.storage.put('learn', candidate); }
     catch (error) { this.data = null; throw error; }
     this.data = candidate;
+    this.verdict = committedVerdict(candidate, this.epoch);
   }
 
   private writeRows(kind: StatsWriteReceipt['kind'], received: number, tenant: string, brand: string, slot: string,
@@ -760,6 +823,7 @@ export class LearnStats {
         }); }
         catch (error) { this.data = null; throw error; }
         this.data = candidate;
+        this.verdict = committedVerdict(candidate, this.epoch);
       } else await this.commit(candidate);
       if (journal && added.length) await this.rememberExposures([...journal, ...added]);
       let alarm: StatsWriteReceipt['alarm'] = 'scheduled';
@@ -1180,6 +1244,7 @@ export class LearnStats {
         if (!archived || archived.key !== key || typeof archived.etag !== 'string' || !archived.etag.trim()
           || archived.etag.length > 256 || archived.size !== size) throw new Error('Archive acknowledgement unavailable');
         await this.state.storage.put('learnPublished', publication);
+        await this.rememberPublication(d, publication, snap.publishedAt);
         await this.env.CACHE.put(liftKey(d.tenant, d.brand, d.slot, d.page), body);
         return snap;
       }
@@ -1474,16 +1539,19 @@ export class LearnStats {
       }
     }
   }
-  private async totalBound(candidate: Stored | null, fence?: GenerationFence, publication?: unknown, reset?: unknown, seen?: unknown, generation?: unknown): Promise<void> {
+  private async totalBound(candidate: Stored | null, fence?: GenerationFence, publication?: unknown, reset?: unknown, seen?: unknown, generation?: unknown,
+    recent?: unknown): Promise<void> {
     // Fixed key inventory: learn, fence, publication identity, one repair
     // receipt, the bounded exposure journal (W22 D1.02), the rebuild basis
-    // (W23 H1.01) and the accumulation transition on record (W24 G1.02).
+    // (W23 H1.01), the accumulation transition on record (W24 G1.02) and the
+    // recent publications (P62).
     if (bytes(candidate) + bytes(fence ?? await this.fence()) + bytes(await this.state.storage.get('learnRepair') ?? null)
       + bytes(publication ?? await this.state.storage.get('learnPublished') ?? null)
       + bytes(reset ?? await this.state.storage.get('learnReset') ?? null)
       + bytes(seen ?? await this.state.storage.get(SEEN_KEY) ?? null)
       + bytes(generation ?? await this.state.storage.get(GENERATION_KEY) ?? null)
-      + bytes(await this.state.storage.get(REBUILT_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
+      + bytes(await this.state.storage.get(REBUILT_KEY) ?? null)
+      + bytes(recent ?? await this.state.storage.get(RECENT_KEY) ?? null) > LEARN_LIMITS.totalBytes) throw capacity();
   }
   private async publishedReset(b: Record<string, unknown>): Promise<Response> {
     if (!component(b.tenant) || !component(b.brand) || !slotName(b.slot) || !pageValid(b.page) || !itemName(b.item) || typeof b.operationId !== 'string'
@@ -1575,9 +1643,83 @@ export class LearnStats {
   }
 
   private witness(d: Stored, fence: GenerationFence): Promise<string> {
-    // W26 R2: a page-scoped object's witness binds its page; a page-less one is unchanged.
-    return recoveryDigest({ tenant: d.tenant, brand: d.brand, slot: d.slot, ...(d.page ? { page: d.page } : {}), config: d.config, fence,
-      projection: d.stats.bounded ? { depth: d.stats.bounded.depth, closed: d.stats.bounded.closed === true } : null });
+    return witnessOf(witnessBasisOf(d), fence);
+  }
+
+  /**
+   * P62 (amendment 6, R-P110 decision 2): the publication just made joins the
+   * recent ones (`RECENT_KEY`), those older than the window from their own
+   * publication dropped, at most `LIFT_RECENT_PUBLICATIONS` kept. Never refuses
+   * the publication: where the list cannot be read, bounded or written, only
+   * the latest publication is recognised, which is fail-closed.
+   */
+  private async rememberPublication(d: Stored, publication: { witness?: string; digest: string; version: number }, publishedAt: number): Promise<void> {
+    try {
+      const now = Date.now();
+      const kept = recentPublicationsOf(await this.state.storage.get(RECENT_KEY))
+        .filter(entry => entry.version !== publication.version && now - entry.publishedAt <= LIFT_RECENT_WINDOW_MS);
+      const recent = [...kept, { version: publication.version, digest: publication.digest, publishedAt }].slice(-LIFT_RECENT_PUBLICATIONS);
+      await this.totalBound(d, undefined, publication, undefined, undefined, undefined, recent);
+      await this.state.storage.put(RECENT_KEY, recent);
+    } catch { /* fail closed: the latest publication alone is recognised */ }
+  }
+
+  /**
+   * P62 (amendment 6, R-P110; R-P112(5)): the verdict of the state this object
+   * holds, as `/health` would give it, without the whole-state digest `/health`
+   * gives operators. Cached when the state is committed; for a state loaded and
+   * not yet verified, or for an object that holds none (an evicted object's first
+   * call), established once — reading the stored state at most once — and cached
+   * under the epoch it was read at, so a state replaced meanwhile is never
+   * described by it.
+   */
+  private async heldVerdict(): Promise<HeldVerdict> {
+    const epoch = this.epoch;
+    if (this.verdict?.epoch === epoch) return this.verdict;
+    const raw: unknown = this.data ?? await this.state.storage.get('learn');
+    let verdict: HeldVerdict = { epoch, anchor: Number.NEGATIVE_INFINITY };
+    if (raw !== undefined && (!object(raw) || bytes(raw) > LEARN_LIMITS.repairBytes)) verdict = { epoch, refused: true, anchor: Number.NEGATIVE_INFINITY };
+    else if (raw !== undefined) {
+      const identity = { tenant: raw.tenant, brand: raw.brand, slot: raw.slot, page: raw.page };
+      let valid = true;
+      try { stateValid(raw); await this.totalBound(raw); } catch { valid = false; }
+      verdict = valid ? { epoch, identity, basis: witnessBasisOf(raw as unknown as Stored), anchor: latestAnchor((raw as unknown as Stored).stats) }
+        : { epoch, identity, anchor: Number.NEGATIVE_INFINITY };
+    }
+    if (this.epoch === epoch) this.verdict = verdict;
+    return verdict;
+  }
+
+  /**
+   * P62 (amendment 6, R-P110): `POST /witness`. The verdict `/health` gives for
+   * the committed state — `state`, the latest `publication` and the current
+   * `witness`, each exactly as `/health` answers it — read from the verdict held
+   * for that state (`heldVerdict`), never by re-reading or digesting the whole
+   * state; and `recent`, this object's recent publications inside
+   * `LIFT_RECENT_WINDOW_MS` from their own publication (R-P112(6)). A state
+   * `/health` refuses, or another placement's, is refused the same way.
+   */
+  private async witnessDoor(b: Record<string, unknown>): Promise<Response> {
+    const fence = await this.fence(), verdict = await this.heldVerdict(), identity = verdict.identity;
+    if (verdict.refused || (identity && (identity.tenant !== b.tenant || identity.brand !== b.brand || identity.slot !== b.slot || !samePage(identity, b.page)))) throw recovery();
+    const now = Date.now(), healthy = !!verdict.basis && !(verdict.anchor > now);
+    const publication = await this.state.storage.get<{ digest: string; witness: string; version: number }>('learnPublished');
+    const recent = recentPublicationsOf(await this.state.storage.get(RECENT_KEY)).filter(entry => now - entry.publishedAt <= LIFT_RECENT_WINDOW_MS);
+    let witness: string | null = null;
+    if (healthy) {
+      const key = JSON.stringify(fence);
+      if (verdict.witness?.fence !== key) {
+        const value = witnessOf(verdict.basis!, fence);
+        verdict.witness = { fence: key, value };
+        void value.catch(() => { if (verdict.witness?.value === value) delete verdict.witness; });
+      }
+      witness = await verdict.witness!.value;
+    }
+    return json({ ok: true, tenant: b.tenant, brand: b.brand, slot: b.slot, ...(b.page ? { page: b.page } : {}),
+      state: !identity ? 'empty' : healthy ? 'healthy' : 'recovery-required',
+      publication: publication && /^[a-f0-9]{64}$/.test(publication.digest) && /^[a-f0-9]{64}$/.test(publication.witness) && Number.isSafeInteger(publication.version)
+        ? { digest: publication.digest, witness: publication.witness, version: publication.version } : null,
+      witness, recent });
   }
   private async recoveryControl(b: Record<string, unknown>, path: string): Promise<Response> {
     const raw: unknown = await this.state.storage.get('learn'), fence = await this.fence();
