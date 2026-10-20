@@ -93,6 +93,25 @@
 // `sources.lift`, `sources.ring` on the answer; `learningReads` on the monitor's
 // result. No new export is imported.
 //
+//   · R-P120 (the P61 delivery review's findings F2-F4, pinned on the build at 949e695b):
+//       F3 — a read answered from the isolate's cache entry that a failed store read
+//       filled is `failed` too, with its ms, as the read that filled it;
+//       F2 (R-P115) — the count never waits on the shopper: under the AA2 latency lever
+//       (500 ms on every remote call, customer profile, cold lift cache) the counted
+//       snapshot and the render acknowledgement sent right after it answer with the
+//       same own remote calls as when the count's own store calls cost nothing, and
+//       within LATENCY_MARGIN_MS (half a call's latency) of those times; the count's
+//       store calls are the ones naming its document (`learningReadsKey`, src/learn/fan.ts
+//       in the build);
+//       F4 — the count's work is handed the operator cache alone (no other binding is
+//       reachable from it); it is never invoked for a synthetic operation (the
+//       internal synthetic monitor's served decision, armed as W26.R2.synthetic arms
+//       it); and it starts only when the shopper's owner operation answered (an
+//       operation refused for authority mid-way, `SessionAccessError` from a binding
+//       call, counts nothing). The count's hand-over is observed by a pass-through of
+//       its after-answer hook (`afterOwnerAnswer`, the module mock at the end of this
+//       file: it records each registration, whether its work started and the bindings
+//       reachable from the environment the work was handed, and forwards all of it).
 //   · NOT RULED: `learningReads` on a kept result (`GET /v1/:tenant/monitor`,
 //     `readMonitor` → `projectMonitor`, which rebuilds a kept result member by member);
 //     the counters' behaviour under concurrent decisions.
@@ -121,19 +140,19 @@
 // lift world, the levers, the readers). Imports from src/units/: ../_parity,
 // ../_parity3, ../_parity6, ../_parity9.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { invalidateLiftCache } from '@/content/service';
 import type { DecisionRecord } from '@/content/types';
-import { currentLiftWitness } from '@/learn/fan';
+import { currentLiftWitness, liftKey } from '@/learn/fan';
 import type { LiftSnapshot } from '@/learn/stats';
 
-import { BRAND, HOSTS, putDocument, replayOf, shopperOn, TENANT, type Snapshot } from '../_parity';
+import { BRAND, HOSTS, PAID_SOCIAL_ENTRY, pageInstanceOf, putDocument, replayOf, shopperOn, TENANT, VIEW_TABBY_26, type Decision, type Mounted, type Snapshot } from '../_parity';
 import { publishStats } from '../_parity3';
 import { dials, learnOf } from '../_parity6';
 import {
-  copyLever, copyOf, damageAndRestart, decide, fatigued, forged, HOME_MODULES, inForce, later, liftOnRecord, liftReadOf, liftWorld, monitorRun, PDP_MODULES,
-  republish, ringLever, ringReadOf, sourcesMember, witnessLever,
+  copyLever, copyOf, damageAndRestart, decide, fanExports, fatigued, forged, HOME_MODULES, inForce, later, liftOnRecord, liftReadOf, liftWorld, monitorRun, PDP_MODULES,
+  POOLED, republish, ringLever, ringReadOf, sourcesMember, witnessLever,
 } from '../_parity9';
 
 const LIFT_OUTCOMES = ['served', 'none', 'incompatible', 'late', 'superseded', 'unrecognized', 'unhealthy', 'failed'] as const;
@@ -278,6 +297,19 @@ describe('unit:P61.LO1 (R-P110, D1)', () => {
       expect(refused.snapshot.body.arm, `${host}: PRECONDITION — the shopper's decision is the default arm`).toBe('default');
       expect(sourcesMember(refused.snapshot, 'lift'), `${host}: P61.LO1 — the default arm reads no lift and names none: sources.lift is {}`).toEqual({});
     }, 120_000);
+
+    it(`host (${host}): failed (R-P120 F3) — a lift store read that throws is 'failed' with its ms, and so is the read answered from the cache entry it filled; CONTROL: the store answering and the cache dropped, 'served'`, async () => {
+      const { m } = await liftWorld(host);
+      const restore = failingStoreRead(m);
+      const cold = await decide(m, 'pdp', { ack: false });
+      restore();
+      const cached = await decide(m, 'pdp', { ack: false });
+      invalidateLiftCache();
+      const fresh = await decide(m, 'pdp', { ack: false });
+      expectRead(liftReadOf(cold.snapshot), 'failed', `${host}: P61.LO1 — a lift store read that throws`);
+      expectRead(liftReadOf(cached.snapshot), 'failed', `${host}: P61.LO1 — R-P120 F3: the read answered from the cache entry that failed read filled`);
+      expectRead(liftReadOf(fresh.snapshot), 'served', `${host}: P61.LO1 CONTROL — the store answering, a fresh read`);
+    }, 120_000);
   }
 });
 
@@ -418,6 +450,65 @@ describe('unit:P61.LO3 (R-P110, D1)', () => {
       const third = countsOf(learningReadsOf(await monitorRun(m)) as Record<string, unknown>);
       expect(delta(third, second), `${host}: P61.LO3 CONTROL — a run with no decision between counts nothing more (its own probe decisions are not the tenant's)`).toEqual(zeros());
     }, 180_000);
+
+    it(`host (${host}): R-P115 (R-P120 F2) — under the AA2 latency lever (500 ms on every remote call, customer profile, cold lift cache), the counted snapshot and the render acknowledgement sent right after it answer with the same own remote calls as when the count's own store calls cost nothing, and within LATENCY_MARGIN_MS of those times`, async () => {
+      const { m } = await liftWorld(host);
+      const run = await countLatency(m);
+      const free = await run(true), counted = await run(false);
+      expect({ free: free.countCalls > 0, counted: counted.countCalls > 0 }, `${host}: PRECONDITION — the count ran after both snapshots (its store calls: ${free.countCalls} free, ${counted.countCalls} at ${PER_CALL_MS} ms)`).toEqual({ free: true, counted: true });
+      expect({ snapshot: counted.snapshot.own, ack: counted.ack.own }, `${host}: P61.LO3 — R-P115: with the count's calls at ${PER_CALL_MS} ms, each answer makes the same own remote calls as when they cost nothing`)
+        .toEqual({ snapshot: free.snapshot.own, ack: free.ack.own });
+      expect({ snapshot: counted.snapshot.ms <= free.snapshot.ms + LATENCY_MARGIN_MS, ack: counted.ack.ms <= free.ack.ms + LATENCY_MARGIN_MS },
+        `${host}: P61.LO3 — R-P115: the snapshot answers in ${counted.snapshot.ms} ms (${free.snapshot.ms} ms with the count free) and the acknowledgement right after it in ${counted.ack.ms} ms (${free.ack.ms} ms), each within ${LATENCY_MARGIN_MS} ms`)
+        .toEqual({ snapshot: true, ack: true });
+    }, 180_000);
+
+    it(`host (${host}): R-P120 F4 — a served synthetic decision (the internal synthetic monitor's first run in this world, armed as W26.R2.synthetic arms it) is never counted: the count is never handed over for it; CONTROL: a consenting shopper's decision hands it over once`, async () => {
+      const { m } = await liftWorld(host);
+      const settleSynthetic = await armSyntheticMonitor(m);
+      countCalls.length = 0;
+      const { runSynthetic } = await import('@/ops/synthetic');
+      const result = await runSynthetic(m.env, TENANT, host);
+      await settleSynthetic();
+      const synthetic = countCalls.length;
+      await decide(m, 'pdp', { ack: false });
+      await m.drain();
+      expect(result.decision, `${host}: PRECONDITION — the synthetic monitor's decision is served, personalized, on the ${host} host (${JSON.stringify(result).slice(0, 200)})`).toBe(true);
+      expect({ synthetic, consenting: countCalls.length - synthetic }, `${host}: P61.LO3 — R-P120 F4: the count is never handed over for a synthetic operation, once for a consenting shopper`).toEqual({ synthetic: 0, consenting: 1 });
+    }, 180_000);
+
+    it(`host (${host}): R-P120 F4 — the count's work is handed the operator cache alone: no binding but CACHE is reachable from the environment it is called with`, async () => {
+      const { m } = await liftWorld(host);
+      countCalls.length = 0;
+      await decide(m, 'pdp', { ack: false });
+      await m.drain();
+      expect(countCalls.map(call => ({ started: call.started, bindings: call.bindings })), `${host}: P61.LO3 — R-P120 F4: one count, started, its environment reaching CACHE alone`).toEqual([{ started: true, bindings: ['CACHE'] }]);
+    }, 120_000);
+
+    it(`host (${host}): R-P120 F4 — the count starts only if the owner operation answered: a snapshot whose operation is refused for authority mid-way (a binding call refused with SessionAccessError) counts nothing; CONTROL: the same snapshot answered counts once`, async () => {
+      const { m } = await liftWorld(host);
+      const first = learningReadsOf(await monitorRun(m));
+      expect(first, `${host}: P61.LO3 — the monitor counts the tenant's lift and ring outcomes`).toMatchObject({ scope: 'tenant', since: expect.any(Number) });
+      const before = countsOf(first as Record<string, unknown>);
+      countCalls.length = 0;
+      const shopper = await shopperOn(m);
+      expect((await shopper.action(VIEW_TABBY_26, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the shopper's view is accepted`).toBe(200);
+      const restore = await refuseWitnessForAuthority(m);
+      const refused = await snapshotAnswer(m, shopper);
+      restore();
+      await m.drain();
+      const failedStarts = countCalls.filter(call => call.started).length;
+      const afterFailed = countsOf(learningReadsOf(await monitorRun(m)) as Record<string, unknown>);
+      await decide(m, 'pdp', { ack: false });
+      await m.drain();
+      const afterAnswered = countsOf(learningReadsOf(await monitorRun(m)) as Record<string, unknown>);
+      const once = zeros();
+      Object.assign(once.lift, { served: 1 });
+      Object.assign(once.ring, { read: 1 });
+      expect(refused.status, `${host}: PRECONDITION — the operation is refused, not answered (${JSON.stringify(refused.body).slice(0, 160)})`).toBe(401);
+      expect({ started: failedStarts, moved: delta(afterFailed, before) }, `${host}: P61.LO3 — R-P120 F4: an operation that did not answer starts no count and counts nothing`).toEqual({ started: 0, moved: zeros() });
+      expect(delta(afterAnswered, afterFailed), `${host}: P61.LO3 CONTROL — the same snapshot answered is counted once`).toEqual(once);
+    }, 180_000);
   }
 });
 
@@ -528,3 +619,155 @@ describe('unit:P61.LO4 (R-P7)', () => {
     }, 120_000);
   }
 });
+
+// ===========================================================================
+// R-P120: the levers and the observation the R-P120 tests above use
+// ===========================================================================
+
+/** The AA2 lever's latency per remote call (src/units/P56/LEDGER.unit.test.ts, AA2: the SDK's deadline over ten). */
+const PER_CALL_MS = 500;
+/**
+ * R-P115's margin: half a remote call. A count on an answer's path adds at least one
+ * whole call (the reviewer measured +550 ms on the snapshot with the count retained by
+ * the owner, +1 000 ms on the acknowledgement with it queued in the owner's
+ * serializer); the same requests with the count's calls free differ by tens of
+ * milliseconds (1513 / 1514 ms and 2526 / 2519 ms, base and build, P61 review §3).
+ */
+const LATENCY_MARGIN_MS = PER_CALL_MS / 2;
+
+/**
+ * The count's hand-over to the shopper's owner (`afterOwnerAnswer`,
+ * src/identity/sessionAuthority.ts in the build; the count is its only caller,
+ * src/content/service.ts:1168): every registration since the list was emptied, and
+ * for each, whether its work started and the bindings reachable from the
+ * environment the work was handed. Filled by a pass-through of the hook (the module
+ * mock below), which forwards every call and every work unchanged.
+ */
+const countCalls = vi.hoisted(() => [] as Array<{ started: boolean; bindings: string[] }>);
+vi.mock('@/identity/sessionAuthority', async importOriginal => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  const hook = actual.afterOwnerAnswer as ((work: (env: Record<string, unknown>) => Promise<unknown>) => Promise<void>) | undefined;
+  const names = ['CACHE', 'SESSIONS', 'STORAGE', 'LEARN_STATS', 'DECISION_RING', 'SHOPPER_REFLEX', 'EVENT_QUEUE', 'DB', 'PERSONALIZATION_WEBSOCKET', 'REGION_TREND'];
+  return { ...actual, ...(typeof hook === 'function' ? { afterOwnerAnswer: (work: (env: Record<string, unknown>) => Promise<unknown>) => {
+    const call = { started: false, bindings: [] as string[] };
+    countCalls.push(call);
+    return hook(env => { call.started = true; call.bindings = names.filter(name => env[name] !== undefined); return work(env); });
+  } } : {}) };
+});
+
+/** The product page's lift store read throws (a store that cannot be read); returns the restore. */
+function failingStoreRead(m: Mounted): () => void {
+  const key = liftKey(TENANT, BRAND, PDP_MODULES), original = m.cache.get;
+  m.cache.get = async (k: string, type?: string) => { if (k === key) throw new Error('lever: the lift store read failed'); return original.call(m.cache, k, type); };
+  return () => { m.cache.get = original; };
+}
+
+/** The statistics objects' witness doors refuse for authority (`SessionAccessError`), the refusal an owner operation fails on; returns the restore. */
+async function refuseWitnessForAuthority(m: Mounted): Promise<() => void> {
+  const { SessionAccessError } = await import('@/identity/sessionCapability');
+  const namespace = m.env.LEARN_STATS as unknown as { get: (id: unknown) => { fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> } };
+  const original = namespace.get;
+  namespace.get = (id: unknown) => {
+    const stub = original.call(namespace, id);
+    return { fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(input instanceof Request ? input.url : String(input)).pathname;
+      if (path === '/health' || path === '/witness') throw new SessionAccessError();
+      return stub.fetch(input, init);
+    } };
+  };
+  return () => { namespace.get = original; };
+}
+
+/** `POST /v1/:tenant/decisions/snapshot` for the product page, answered as the shopper is answered (status and body), without the harness's checks. */
+async function snapshotAnswer(m: Mounted, shopper: Awaited<ReturnType<typeof shopperOn>>): Promise<{ status: number; body: Record<string, unknown> }> {
+  const { SHOPPER_HEADER } = await import('@/identity/sessionCapability');
+  const response = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
+    headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: shopper.grant.capability, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance: pageInstanceOf('p61-lo3-refused') }) }));
+  return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+}
+
+/**
+ * R-P115 under the AA2 lever (src/units/_parity8.ts `remoteLatency`, `workerApp`,
+ * `ackWire`, `settle`; the reviewer's measurement, P61 review §3): the customer
+ * profile, every remote binding call 500 ms late, the count's own store calls (the
+ * key `learningReadsKey(tenant)` names) optionally free. Each run: a new shopper's
+ * Tabby view, the lift cache dropped, the product-page snapshot, the pooled
+ * module's render acknowledgement sent right after its answer without draining;
+ * each answer's time and its own remote calls (the count's left out).
+ */
+async function countLatency(m: Mounted) {
+  const { ackWire, remoteLatency, settle, workerApp } = await import('../_parity8');
+  const { SHOPPER_HEADER } = await import('@/identity/sessionCapability');
+  const keyOf = (await fanExports()).learningReadsKey as ((tenant: string) => string) | undefined;
+  const countKey = typeof keyOf === 'function' ? keyOf(TENANT) : null;
+  (m.env as unknown as Record<string, unknown>).DEPLOYMENT_PROFILE = 'customer';
+  const latency = remoteLatency(m), app = workerApp(m), counted = new Set<number>();
+  let free = false, countCallsMade = 0;
+  for (const method of ['get', 'put'] as const) {
+    const store = m.cache as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+    const levered = store[method]!, unlevered = Object.getPrototypeOf(m.cache)[method] as (...args: unknown[]) => Promise<unknown>;
+    Object.defineProperty(m.cache, method, { configurable: true, writable: true, value: (...args: unknown[]) => {
+      if (countKey === null || args[0] !== countKey) return levered.apply(m.cache, args);
+      countCallsMade++;
+      if (free) return unlevered.apply(m.cache, args);
+      counted.add(latency.calls.length);
+      return levered.apply(m.cache, args);
+    } });
+  }
+  const own = (from: number, until: number) => latency.calls.filter((call, index) => index >= from && call.at <= until && !counted.has(index)).length;
+  return async (countFree: boolean) => {
+    free = countFree;
+    const callsBefore = countCallsMade;
+    const shopper = await shopperOn(m);
+    expect((await shopper.action(VIEW_TABBY_26, PAID_SOCIAL_ENTRY)).status, `${m.host}: PRECONDITION — the shopper's view is accepted`).toBe(200);
+    invalidateLiftCache();
+    const pageInstance = pageInstanceOf('p61-lo3-latency'), first = latency.calls.length;
+    latency.set(PER_CALL_MS);
+    const sentAt = performance.now();
+    const response = await app.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
+      headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: shopper.grant.capability, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance }) }));
+    const answeredAt = performance.now();
+    const body = await response.json() as Record<string, unknown>;
+    const page: Snapshot = { status: response.status, body, page: 'pdp', pageInstance, decisions: (body.decisions ?? []) as Decision[] };
+    const pooled = page.decisions.find(d => d.contentId === POOLED && d.renderOffer);
+    const ackFirst = latency.calls.length;
+    const ack = pooled ? await ackWire(app, shopper, page, pooled) : null;
+    latency.set(0);
+    await settle(m, app);
+    expect([response.status, ack?.status], `${m.host}: PRECONDITION — the snapshot and the pooled module's acknowledgement answer 200`).toEqual([200, 200]);
+    return { snapshot: { ms: Math.round(answeredAt - sentAt), own: own(first, answeredAt) },
+      ack: { ms: Math.round(ack!.answeredAt - ack!.sentAt), own: own(ackFirst, ack!.answeredAt) }, countCalls: countCallsMade - callsBefore };
+  };
+}
+
+/**
+ * The tenant's internal synthetic monitor armed over this harness as
+ * src/units/W26/LEDGER.unit.test.ts `armSyntheticMonitor` arms it (its telemetry
+ * descriptor with the isolated destinations, their retention, the recovery queues,
+ * a region-trend binding, and the source queue delivering each synthetic envelope
+ * to the worker's own synthetic consumer in its own invocation). Returns the settle.
+ */
+async function armSyntheticMonitor(m: Mounted): Promise<() => Promise<void>> {
+  const [{ configuredOperationalDestinations, SYNTHETIC_BINDINGS }, { consumeSynthetic, SYNTHETIC_KIND }, { AsyncResource }] =
+    await Promise.all([import('@/connectors/config'), import('@/ops/synthetic'), import('node:async_hooks')]);
+  const env = m.env as unknown as Record<string, unknown>;
+  const destinations = SYNTHETIC_BINDINGS.map(binding => ({ binding, purpose: 'isolated-synthetic-monitor', namespace: 'ops-synthetic-v1', accessPolicy: 'p61-local-only' }));
+  env.TENANT_CONNECTORS = JSON.stringify({ version: 1, tenants: { [TENANT]: { telemetry: { environment: 'test', schema: 'ops-v1', synthetic: {
+    version: 1, enabled: true, lifetimeMs: 120_000, stageMs: 10_000, decisionMs: 200, eventMs: 300, thresholdSource: 'document-32-server-diagnostics', destinations } } } } });
+  const retention = JSON.parse(m.env.RETENTION as string) as { tenants: Record<string, Record<string, unknown>> };
+  for (const destination of await configuredOperationalDestinations(m.env, TENANT)) retention.tenants[TENANT]![destination.category] =
+    { id: 'p61-synthetic', revision: 1, durationMs: 120_000, basis: 'occurred', renewal: 'new-record-only' };
+  env.RETENTION = JSON.stringify(retention);
+  env.LEDGER_RECOVERY_CONFIG = JSON.stringify({ version: 1, sourceQueue: 'p61-source', deadLetterQueue: 'p61-dlq' });
+  env.REGION_TREND = { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ ok: true }) }) };
+  const deliver = AsyncResource.bind((body: unknown) => consumeSynthetic(m.env, 'p61-source', body));
+  const deliveries: Promise<unknown>[] = [], queue = m.env.EVENT_QUEUE!;
+  const send = async (body: unknown) => {
+    await queue.send(body);
+    if ((body as { kind?: unknown } | null)?.kind === SYNTHETIC_KIND) deliveries.push(new Promise(resolve => setTimeout(resolve, 0)).then(() => deliver(body)).catch(() => undefined));
+  };
+  env.EVENT_QUEUE = { send, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) await send(message.body); } };
+  return async () => { while (deliveries.length) await Promise.all(deliveries.splice(0)); await m.drain(); };
+}
