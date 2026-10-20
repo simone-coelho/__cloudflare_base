@@ -250,8 +250,8 @@ realtimeRoutes.post('/action', async (c) => {
     // carried: one that fails carries nothing, and the outcome the engine then
     // emits is counted lost once after the answer (R-P124(4)); a record that cannot
     // be built here is built after the engine as before, its failure answered as
-    // before. These are the reads the outcome made after the engine before the
-    // answer until now, made earlier, so the answer waits for no new remote call.
+    // before. An emitted outcome made these reads before the answer already (no new
+    // remote call); a reward event the engine then drops now makes them too.
     // A reset between the behaviour capture's admission and the outcome's own then
     // leaves the alarm both, and it writes both unless it decides again that the
     // engine drops the event (src/durable-objects/ShopperReflex.ts
