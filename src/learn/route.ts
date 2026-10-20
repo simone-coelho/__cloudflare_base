@@ -138,15 +138,14 @@ export async function prepareOutcomeAdmission(env: Env, scope: string, outcome: 
  * `outcomeToLearning` admits it with durable recovery on: P59's answer at its
  * admission when asked, P64's `onAdmitted` told once that admission completed (it
  * committed, or an earlier admission of the same outcome replayed), an incomplete
- * end reported as `learning_incomplete`. A failure of the admission itself is
- * reported, never counted (R-P125(2)): it is no lost row. With
- * `refusalFailsAction` (the action route, whose behaviour capture carries this
- * outcome) it is thrown too, so a refusal raised before the store fails the action
- * with a typed answer, as one raised inside it does through the owner's drain,
- * and the carried copy is left for the alarm to write; otherwise it never throws.
+ * end reported as `learning_incomplete`. Never throws. A failure of the admission
+ * itself is reported, never counted (R-P125(2)): one raised inside the store fails
+ * the action through the owner's drain, one `admitOwnedRecovery` raises before it
+ * names nothing (R-P125(3)), and either way a copy the behaviour capture carried is
+ * the alarm's to write, so no row is lost.
  */
 export async function admitPreparedOutcome(input: OutcomeRecoveryInput,
-  options?: Pick<RecoveryOptions, 'answerAtAdmission'> & { onAdmitted?: () => void; refusalFailsAction?: boolean }): Promise<void> {
+  options?: Pick<RecoveryOptions, 'answerAtAdmission'> & { onAdmitted?: () => void }): Promise<void> {
   try {
     const report = (receipt: RecoveryReceipt | undefined) => { if (receipt?.source.state !== 'recovered') reportLearningIncomplete('outcome', receipt?.learning ?? null); };
     const result = await admitOwnedRecovery(input, options?.answerAtAdmission ? { answerAtAdmission: true, afterEffects: report } : undefined);
@@ -154,9 +153,8 @@ export async function admitPreparedOutcome(input: OutcomeRecoveryInput,
     // Answered at admission: no effect has run yet; they are reported when they end (`afterEffects`).
     if (options?.answerAtAdmission && result.source.state === 'pending' && result.learning === undefined) return;
     report(result);
-  } catch (error) {
+  } catch {
     reportLearningIncomplete('outcome', null);
-    if (options?.refusalFailsAction) throw error;
   }
 }
 

@@ -367,16 +367,16 @@ realtimeRoutes.post('/action', async (c) => {
           // the record and never costs it.
           // P65: the outcome prepared before the behaviour capture's admission, when it is this one under the
           // engine's consent, is admitted from that input (no second learn read); a refusal of that admission
-          // fails the action with a typed answer and leaves the carried copy to the alarm, never counted lost.
+          // names nothing (R-P125(3)) and leaves the carried copy to the alarm, never counted lost.
           if (ready && ready.personalizing === personalizes(consent) && recordOf(ready.input.outcome) === recordOf(outcome)) {
-            return admitPreparedOutcome(ready.input, { answerAtAdmission: true, refusalFailsAction: true, onAdmitted: () => { admitted = true; } });
+            return admitPreparedOutcome(ready.input, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
           }
           let experiment: Awaited<ReturnType<typeof outcomeEnrollment>> = null;
           try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent)); }
           catch { experiment = null; }
           if (experiment) outcome.experiment = experiment;
           // P65: built again from the engine's answer, on the same learning preparation.
-          if (ready) return admitPreparedOutcome({ ...ready.input, brand: outcome.brand, outcome }, { answerAtAdmission: true, refusalFailsAction: true, onAdmitted: () => { admitted = true; } });
+          if (ready) return admitPreparedOutcome({ ...ready.input, brand: outcome.brand, outcome }, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
           // P59 (amendment 5): the outcome recovery answers at its durable admission
           // (P56's mechanism, src/learn/route.ts `outcomeToLearning`): the owner's
           // drain of this work holds the click's answer for the outcome's admission
