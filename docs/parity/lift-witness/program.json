@@ -69,7 +69,8 @@
       ],
       "remainingWork": [
         "Internal witness reason; sources.lift and sources.ring members; monitor counters per tenant.",
-        "Records untouched."
+        "Records untouched.",
+        "The learning-reads count runs after the answer and outside the shopper's serializer (tenant-level state), so the shopper's next request never waits on it (R-P115)."
       ],
       "decisions": [
         {
@@ -93,7 +94,8 @@
         "src/content/types.ts",
         "src/ops/monitor.ts",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md"
+        "docs/kit/03-payload-schemas.md",
+        "src/identity/sessionAuthority.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P61 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
