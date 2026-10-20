@@ -27,7 +27,7 @@
         "locator": "P69 \u00b7 section 2 of amendment 9; ACK-401 \u00a70, \u00a78",
         "requirement": "see amendment 9 section 2, ticket P69 (copied verbatim in the specification)"
       },
-      "outcome": "A shopper whose device clock lags the engine's keeps every viewable impression, dwell and click credit: the acknowledgement is admitted at the decision's time instead of being refused.",
+      "outcome": "A shopper whose device clock lags the engine's keeps every viewable impression: the acknowledgement is admitted at the decision's time instead of being refused. A click or dwell stamped by a device lagging more than the decision-to-engagement time still earns no credit (the engagement's own time is bounded only from above; the learning policy credits an engagement only at or after its exposure): that residual is on the amendment list (R-P188).",
       "criteria": [
         {
           "id": "AK1",
