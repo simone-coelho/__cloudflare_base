@@ -460,6 +460,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         return ack;
       }).finally(() => { selectedPaint.pending = undefined; });
     }
+    // P60: `pending` spans the acknowledgement's one retry after a cut (core.ts `sendRender`), so a
+    // retry answered `pending` or `recovered` arms the placement here (its dwell), in `view` (its
+    // viewable second) and in `outcome` (its engagements); only a retry cut too leaves it unarmed.
     const ack = paint.ack ?? await paint.pending ?? null;
     if (!ack || !active()) return null;
     // One observation per element per client: when the declarative scan already

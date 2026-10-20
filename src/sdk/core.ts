@@ -20,6 +20,9 @@ import type {
  */
 export const ACK_DEADLINE_MS = 5000;
 
+/** The SDK's own cut of a request at ACK_DEADLINE_MS, told apart from every other failure (P60). */
+class RequestDeadline extends Error { constructor() { super('Request deadline'); } }
+
 export const DEFAULT_PATHS: Paths = {
   identitySession: '/v1/{tenant}/identity/session',
   action: '/realtime/action',
@@ -229,7 +232,10 @@ export interface Core {
   send(type: SdkEventType, data?: Record<string, unknown> | (() => Record<string, unknown>), opts?: SendOptions): Promise<EngineUpdate | null>;
   /** Internal listen wiring: legacy core.send content paths use the same ACK gate. */
   bindContent(handler: (type: SdkEventType, data: Record<string, unknown>) => Promise<EngineUpdate | null>): { send: Core['send']; release(): void };
-  /** Retry this exact consent-approved render envelope; success is not an engine update. */
+  /**
+   * Send (or retry) this exact consent-approved render envelope; success is not an engine update. A request
+   * the SDK cuts at ACK_DEADLINE_MS is sent once more by itself, the same body; an answered one never is.
+   */
   sendRender(envelope: ActionEnvelope): Promise<RenderAcknowledgment | null>;
   matchesSessionWitness(witness: string): Promise<boolean>;
   url(path: string, query?: Record<string, string | undefined>): string;
@@ -951,14 +957,14 @@ export function createCore(config: ClientConfig, host: Host): Core {
     const controller = new AbortController(); let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     const timer = host.setTimeout(() => controller.abort(), ACK_DEADLINE_MS);
     let abort!: () => void;
-    const stopped = new Promise<never>((_, reject) => { abort = () => { void reader?.cancel().catch(() => undefined); reject(new Error('Request deadline')); }; controller.signal.addEventListener('abort', abort, { once: true }); });
+    const stopped = new Promise<never>((_, reject) => { abort = () => { void reader?.cancel().catch(() => undefined); reject(new RequestDeadline()); }; controller.signal.addEventListener('abort', abort, { once: true }); });
     const work = (async () => {
       const response = await host.fetch(path, { ...init, signal: controller.signal });
-      if (controller.signal.aborted) { void response.body?.cancel().catch(() => undefined); throw new Error('Request deadline'); }
+      if (controller.signal.aborted) { void response.body?.cancel().catch(() => undefined); throw new RequestDeadline(); }
       if (!response.body) return { ok: response.ok, status: response.status, json: await response.json() };
       reader = response.body.getReader(); const chunks: Uint8Array[] = []; let size = 0;
       for (;;) {
-        const part = await reader.read(); if (controller.signal.aborted) throw new Error('Request deadline');
+        const part = await reader.read(); if (controller.signal.aborted) throw new RequestDeadline();
         if (part.done) break;
         size += part.value.byteLength; if (size > maxBytes) throw new Error('Response bound'); chunks.push(part.value);
       }
@@ -972,12 +978,21 @@ export function createCore(config: ClientConfig, host: Host): Core {
 
   async function sendRender(env: ActionEnvelope): Promise<RenderAcknowledgment | null> {
     const g = generation, epoch = activityEpoch;
-    if (transitioning || !isCurrent(g) || !trackingAllowed() || env.type !== 'content_impression'
-      || !isEventNonce(env.eventId) || !isEventTimestamp(env.timestamp) || env.userId !== visitorId || env.sessionId !== sessionId
-      || typeof env.data.renderOffer !== 'string') return null;
+    const admissible = () => !transitioning && isCurrent(g) && epoch === activityEpoch && trackingAllowed() && env.type === 'content_impression'
+      && isEventNonce(env.eventId) && isEventTimestamp(env.timestamp) && env.userId === visitorId && env.sessionId === sessionId
+      && typeof env.data.renderOffer === 'string';
+    if (!admissible()) return null;
     try {
       const body = JSON.stringify(env);
-      const res = await boundedJSON(url(cfg.paths.action), { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), credentials: 'include', body });
+      const post = () => boundedJSON(url(cfg.paths.action), { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), credentials: 'include', body });
+      // P60: an acknowledgement the SDK cut at its own deadline is sent once more, the same body (its event id,
+      // time, offer and page instance), which the engine admits as the same render (amendment 5, P57); the
+      // retry's answer is read as the first's would be. An answered one, whatever its status, is not re-sent;
+      // nor is a retry, whatever became of it.
+      const res = await post().catch((error: unknown) => {
+        if (error instanceof RequestDeadline && admissible()) return post();
+        throw error;
+      });
       const json = res.json as { render?: RenderAcknowledgment; consent?: unknown } | null;
       if (!res.ok || !isCurrent(g) || epoch !== activityEpoch) return null;
       acknowledge(json?.consent);

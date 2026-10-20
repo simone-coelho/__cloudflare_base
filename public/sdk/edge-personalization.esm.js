@@ -168,6 +168,11 @@ var isEventTimestamp = (value) => typeof value === "number" && Number.isSafeInte
 
 // src/sdk/core.ts
 var ACK_DEADLINE_MS = 5e3;
+var RequestDeadline = class extends Error {
+  constructor() {
+    super("Request deadline");
+  }
+};
 var DEFAULT_PATHS = {
   identitySession: "/v1/{tenant}/identity/session",
   action: "/realtime/action",
@@ -1063,7 +1068,7 @@ function createCore(config, host) {
     const stopped = new Promise((_, reject) => {
       abort = () => {
         void reader?.cancel().catch(() => void 0);
-        reject(new Error("Request deadline"));
+        reject(new RequestDeadline());
       };
       controller.signal.addEventListener("abort", abort, { once: true });
     });
@@ -1071,7 +1076,7 @@ function createCore(config, host) {
       const response = await host.fetch(path, { ...init, signal: controller.signal });
       if (controller.signal.aborted) {
         void response.body?.cancel().catch(() => void 0);
-        throw new Error("Request deadline");
+        throw new RequestDeadline();
       }
       if (!response.body) return { ok: response.ok, status: response.status, json: await response.json() };
       reader = response.body.getReader();
@@ -1079,7 +1084,7 @@ function createCore(config, host) {
       let size = 0;
       for (; ; ) {
         const part = await reader.read();
-        if (controller.signal.aborted) throw new Error("Request deadline");
+        if (controller.signal.aborted) throw new RequestDeadline();
         if (part.done) break;
         size += part.value.byteLength;
         if (size > maxBytes) throw new Error("Response bound");
@@ -1104,10 +1109,15 @@ function createCore(config, host) {
   }
   async function sendRender(env) {
     const g = generation, epoch = activityEpoch;
-    if (transitioning || !isCurrent(g) || !trackingAllowed() || env.type !== "content_impression" || !isEventNonce(env.eventId) || !isEventTimestamp(env.timestamp) || env.userId !== visitorId || env.sessionId !== sessionId || typeof env.data.renderOffer !== "string") return null;
+    const admissible = () => !transitioning && isCurrent(g) && epoch === activityEpoch && trackingAllowed() && env.type === "content_impression" && isEventNonce(env.eventId) && isEventTimestamp(env.timestamp) && env.userId === visitorId && env.sessionId === sessionId && typeof env.data.renderOffer === "string";
+    if (!admissible()) return null;
     try {
       const body = JSON.stringify(env);
-      const res = await boundedJSON(url(cfg.paths.action), { method: "POST", headers: headers({ "Content-Type": "application/json" }), credentials: "include", body });
+      const post = () => boundedJSON(url(cfg.paths.action), { method: "POST", headers: headers({ "Content-Type": "application/json" }), credentials: "include", body });
+      const res = await post().catch((error) => {
+        if (error instanceof RequestDeadline && admissible()) return post();
+        throw error;
+      });
       const json = res.json;
       if (!res.ok || !isCurrent(g) || epoch !== activityEpoch) return null;
       acknowledge(json?.consent);
