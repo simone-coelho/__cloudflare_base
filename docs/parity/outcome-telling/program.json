@@ -189,7 +189,8 @@
         "src/ledger/behavior.ts",
         "src/durable-objects/ShopperReflex.ts",
         "src/identity/sessionAuthority.ts",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P65 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
