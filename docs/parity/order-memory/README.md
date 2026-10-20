@@ -1,4 +1,4 @@
-# Tapestry parity, the outcome told and kept (amendment 8), 3 tickets
+# Tapestry parity, the order remembered and the kit true (amendment 8), 2 tickets
 
 This instance was created by Closure Ledger. Replace every `TBD` value in `program.json`, then run:
 
