@@ -324,7 +324,7 @@ realtimeRoutes.post('/action', async (c) => {
     // event at, the time the behaviour record's id carries), with whether that outcome
     // was durably admitted: with durable recovery on, its own admission
     // (`outcomeToLearning`'s `onAdmitted`); without it, the producer's hand-off to the
-    // queue or the canonical store. The answer names `outcome: { recordId }` beside
+    // queue, accepted. The answer names `outcome: { recordId }` beside
     // `behavior` only for an admitted outcome (`told` below). The owner already holds
     // the answer for this work (P59), so the route's waiting for it there adds no
     // remote call and no wait. No outcome (refused tracking, no reward): nothing.
@@ -365,18 +365,18 @@ realtimeRoutes.post('/action', async (c) => {
           // action answered 500 and the outcome was never enqueued. A failed
           // annotation leaves the block off; it never guesses one, never delays
           // the record and never costs it.
-          // P65: the outcome prepared before the behaviour capture's admission, when
-          // it is this one under the consent the engine answered with, is admitted
-          // from that input: the learn document is not read again for it.
+          // P65: the outcome prepared before the behaviour capture's admission, when it is this one under the
+          // engine's consent, is admitted from that input (no second learn read); a refusal of that admission
+          // fails the action with a typed answer and leaves the carried copy to the alarm, never counted lost.
           if (ready && ready.personalizing === personalizes(consent) && recordOf(ready.input.outcome) === recordOf(outcome)) {
-            return admitPreparedOutcome(ready.input, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
+            return admitPreparedOutcome(ready.input, { answerAtAdmission: true, refusalFailsAction: true, onAdmitted: () => { admitted = true; } });
           }
           let experiment: Awaited<ReturnType<typeof outcomeEnrollment>> = null;
           try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent)); }
           catch { experiment = null; }
           if (experiment) outcome.experiment = experiment;
           // P65: built again from the engine's answer, on the same learning preparation.
-          if (ready) return admitPreparedOutcome({ ...ready.input, brand: outcome.brand, outcome }, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
+          if (ready) return admitPreparedOutcome({ ...ready.input, brand: outcome.brand, outcome }, { answerAtAdmission: true, refusalFailsAction: true, onAdmitted: () => { admitted = true; } });
           // P59 (amendment 5): the outcome recovery answers at its durable admission
           // (P56's mechanism, src/learn/route.ts `outcomeToLearning`): the owner's
           // drain of this work holds the click's answer for the outcome's admission
@@ -386,7 +386,7 @@ realtimeRoutes.post('/action', async (c) => {
           // its experiment block and retention are the same as before.
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
             ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } })
-            : Promise.all([enqueueOutcome(c.env, outcome).then(receipt => { admitted = receipt.code === 'accepted' || receipt.capture?.ok === true; }),
+            : Promise.all([enqueueOutcome(c.env, outcome).then(receipt => { admitted = receipt.code === 'accepted'; }),
               outcomeToLearning(c.env, c.get('tenant'), outcome)]);
         })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }
