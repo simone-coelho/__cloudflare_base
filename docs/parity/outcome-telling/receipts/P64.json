@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "DELIVERY",
   "ticketId": "P64",
-  "workOrderHash": "sha256:b9170a03a7fce598fa495c8fcb4b775ff960be32496a850c0e3b27387e1edcbe",
+  "workOrderHash": "sha256:af5caa2883434546d027d4a496a8aafc566b58d66f400d71736be4a2ddba0f8c",
   "artifact": {
     "revision": "bb605dffd3d9bb3377a4418a15bd3c05a719f671",
     "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p64-joined merged into rem/integration, local and not pushed"
@@ -38,7 +38,7 @@
       "/home/simonecoelho/rem/_evidence/parity-step3/P64/reviewer/REPORT.md"
     ]
   },
-  "completedAt": "2026-10-20T10:13:08.594Z",
+  "completedAt": "2026-10-20T10:38:28.042Z",
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
