@@ -19,11 +19,11 @@
     {
       "id": "P67",
       "title": "The alarm's carried purchase records its order (**amendment 8, 2026-10-20**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-8/BTI-Parity-Amendment-2026-10-20b.md (amendment 8, committed beside the program)",
-        "locator": "P67 \u00b7 section 2 of amendment 8; P65 delivery review finding 1",
+        "locator": "P67 · section 2 of amendment 8; P65 delivery review finding 1",
         "requirement": "see amendment 8 section 2, ticket P67 (copied verbatim in the specification)"
       },
       "outcome": "A purchase whose object reset at the wrong moment is credited once: the alarm that writes its outcome also remembers the order, so the same order re-sent later is dropped as a duplicate on both hosts.",
@@ -37,7 +37,7 @@
         {
           "id": "OM2",
           "kind": "LOCAL",
-          "observable": "Locks: the ordinary path's one-purchase-per-order rule (P40) unchanged; P65 RS1\u2013RS3 and P64 unchanged; W06's digests and the idempotent replay unchanged (the record the alarm writes carries no stamp into any digest); no new remote call before any answer under the latency lever.",
+          "observable": "Locks: the ordinary path's one-purchase-per-order rule (P40) unchanged; P65 RS1–RS3 and P64 unchanged; W06's digests and the idempotent replay unchanged (the record the alarm writes carries no stamp into any digest); no new remote call before any answer under the latency lever.",
           "proof": "The P67 acceptance command runs the tests named unit:P67.OM2 in src/units/P67 and they pass."
         },
         {
@@ -51,7 +51,7 @@
       "existingEvidence": [
         {
           "ref": "_evidence/parity-step3/P65/reviewer/REPORT.md finding 1 (reproduced on both hosts at 81713505)",
-          "description": "Reset during a purchase, alarm writes the outcome, re-send under a new id \u2192 two outcome records; controls: no reset \u2192 one; re-send before the alarm \u2192 one."
+          "description": "Reset during a purchase, alarm writes the outcome, re-send under a new id → two outcome records; controls: no reset → one; re-send before the alarm → one."
         }
       ],
       "remainingWork": [
@@ -90,10 +90,10 @@
         "verdict": "PASS",
         "evidence": [
           "_evidence/parity-step3/S16/specifier/REPORT.md (rem-specifier; S16 at 800ff090: P67 OM1 RED on both hosts, OM2 locks; the additive locks for P63/P64/P65)",
-          "_evidence/parity-step3/S16/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision 800ff090; OM1 RED for the missing order record \u00d73; the additive locks each RED under their mutant)"
+          "_evidence/parity-step3/S16/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision 800ff090; OM1 RED for the missing order record ×3; the additive locks each RED under their mutant)"
         ],
         "negativeControlEvidence": [
-          "_evidence/parity-step3/S16/reviewer/logs/ (P67 conforming sketch 11/11; object-host-only recording \u2192 OM1 RED on the session host; a stamp in the outcome row and a wrong-id recording \u2192 OM2 RED; whole suite under both conforming sketches 3728/3728 on a hard-linked tree)"
+          "_evidence/parity-step3/S16/reviewer/logs/ (P67 conforming sketch 11/11; object-host-only recording → OM1 RED on the session host; a stamp in the outcome row and a wrong-id recording → OM2 RED; whole suite under both conforming sketches 3728/3728 on a hard-linked tree)"
         ]
       },
       "doneWhen": [
@@ -107,11 +107,11 @@
     {
       "id": "P68",
       "title": "The kit's citations land and the override variables are typed (**amendment 8, 2026-10-20**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-8/BTI-Parity-Amendment-2026-10-20b.md (amendment 8, committed beside the program)",
-        "locator": "P68 \u00b7 section 2 of amendment 8; P63 and P62 delivery reviews",
+        "locator": "P68 · section 2 of amendment 8; P63 and P62 delivery reviews",
         "requirement": "see amendment 8 section 2, ticket P68 (copied verbatim in the specification)"
       },
       "outcome": "An operator or a developer following the kit's citations lands on the construct named, and the learning-read override variables are part of the typed environment.",
@@ -119,7 +119,7 @@
         {
           "id": "KT1",
           "kind": "LOCAL",
-          "observable": "Every citation in kit 02's render-acknowledgement paragraph (:933) and in the alarm-publication sentences (kit 02 :1171, kit 03 :1474-1488) names a line or range whose content is the construct the sentence describes at the artifact (a unit reads the kit and the source; RED today for the one citation still drifted at 8d07696f (ShopperReflex.ts:537 \u2192 :553; nine of the P63 report's fourteen were corrected by P65's kit commit, four never drifted on a construct reading)); kit 02 :1171 says what a skipped alarm still writes.",
+          "observable": "Every citation in kit 02's render-acknowledgement paragraph (:933) and in the alarm-publication sentences (kit 02 :1171, kit 03 :1474-1488) names a line or range whose content is the construct the sentence describes at the artifact (a unit reads the kit and the source; RED today for the one citation still drifted at 8d07696f (ShopperReflex.ts:537 → :553; nine of the P63 report's fourteen were corrected by P65's kit commit, four never drifted on a construct reading)); kit 02 :1171 says what a skipped alarm still writes.",
           "proof": "The P68 acceptance command runs the tests named unit:P68.KT1 in src/units/P68 and they pass."
         },
         {
@@ -131,7 +131,7 @@
         {
           "id": "KT3",
           "kind": "LOCAL",
-          "observable": "Locks: the kit-reading tests and every unit of amendments 5\u20137 unchanged; P62's override semantics unchanged; the kit line counts are STATED in the build and delivery reports, not locked by a unit (R-P162: P66 and P67 move kit 02 before P68 builds).",
+          "observable": "Locks: the kit-reading tests and every unit of amendments 5–7 unchanged; P62's override semantics unchanged; the kit line counts are STATED in the build and delivery reports, not locked by a unit (R-P162: P66 and P67 move kit 02 before P68 builds).",
           "proof": "The P68 acceptance command runs the tests named unit:P68.KT3 in src/units/P68 and they pass."
         },
         {
@@ -145,7 +145,7 @@
       "existingEvidence": [
         {
           "ref": "_evidence/parity-step3/P63/implementer/REPORT.md (cite-check list); P63 delivery review finding 4; P62 delivery review F5",
-          "description": "The twelve drifted citations listed old \u2192 current; the :1171 overstatement; the untyped override variables."
+          "description": "The twelve drifted citations listed old → current; the :1171 overstatement; the untyped override variables."
         }
       ],
       "remainingWork": [
@@ -183,7 +183,7 @@
           "_evidence/parity-step3/S16/reviewer-spec/REPORT.md (rem-reviewer: PASS at 800ff090 for P67 and the locks; P68 FAIL at 91867aba (the :99 count vs P67's build), PASS at the reviewed revision 0b439d5a on the head, the integration head f7cbf331 and P67's build)"
         ],
         "negativeControlEvidence": [
-          "_evidence/parity-step3/S16/reviewer/rejudge-0b439d5a/logs/ (fa\u00e7ades RED on both bases; wrong-line variants RED, all named; the span cap, within and pairing each caught by their CONTROL when removed; conforming sketches 8/8 on the head, f7cbf331 and the P67 build)"
+          "_evidence/parity-step3/S16/reviewer/rejudge-0b439d5a/logs/ (façades RED on both bases; wrong-line variants RED, all named; the span cap, within and pairing each caught by their CONTROL when removed; conforming sketches 8/8 on the head, f7cbf331 and the P67 build)"
         ]
       },
       "doneWhen": [
