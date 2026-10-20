@@ -2,6 +2,14 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-20, small hours: amendment 5 LOCALLY COMPLETE and deployed; the acceptance pair redeployed for the re-walk
+
+- **Score (derived, amendment 5 round-3 official gate at d201c149, GATE_OK):** `Tests 3518 passed (3518)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 5 `tapestry-parity-acknowledgement`: Local done 5/5** (P56 P57 at 9fadd50e, P58 at d1e7a33e, P59 P60 at d201c149), Final 0/5 (the five LIVE1 rows follow the re-walk on the redeployed pair and the January LIVE2).
+- **Deploy-10** (stamps at amendment 5's head): staging 014b5fbe, production 5497d5e5; smoke 7/7 on both and on the Tapestry tenant; verify-origin PASS; render acknowledgements 1.6–3.1 s (were 5.1–6.0 s before amendment 5).
+- **Live acceptance:** LIVE1 29 of 45 after all five API lanes and the headless lane's three batches; the acceptance pair redeployed at 23fc892c (session b005d914, do 3718f9cd) and lane L8 re-walking the two acknowledgement rows (P02 A3, P03 E2); the eleven lift-blocked rows wait for amendment 6's P62 and a fresh tenant pair; P35 waits for an ODP destination.
+- **Amendment 6:** P61 built (34/34; its outcome counter runs after the answer and outside the shopper's serializer) and in delivery review; P62 building on it with the S11 fix round (d692b269) and the five test updates (ccc9294c); one official gate for P61+P62, then receipts and deploy-11.
+- **Findings told, not asked, listed for amendment 7:** the action answer should name its outcome record and the monitor count failures before the outcome's admission; a reset between the behaviour capture's admission and the outcome's admission loses the outcome (analysis OUT-K3).
+
 ## 2026-10-19, night: amendment 5 round 2 closed (P58); amendment 6 opened on the unserved learned lift
 
 - **Score (derived, round-2 official gate at d1e7a33e, GATE_OK):** `Tests 3487 passed (3487)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. P58 merged on its exact-sha review (dad5821c) and receipted at d1e7a33e (d920e40d): every tracked action answers at admission; a client error the route answered itself reaches the shopper as that error, in process and natively (the account object's validation refusal crosses typed). Amendment 5: P56 P57 P58 DONE_LOCAL, P59 ACTIVE (specifying with P60, batch S12).
