@@ -8,7 +8,7 @@
 - **Deploy-10** (stamps at amendment 5's head): staging 014b5fbe, production 5497d5e5; smoke 7/7 on both and on the Tapestry tenant; verify-origin PASS; render acknowledgements 1.6–3.1 s (were 5.1–6.0 s before amendment 5).
 - **Live acceptance:** LIVE1 29 of 45 after all five API lanes and the headless lane's three batches; the acceptance pair redeployed at 23fc892c (session b005d914, do 3718f9cd) and lane L8 re-walking the two acknowledgement rows (P02 A3, P03 E2); the eleven lift-blocked rows wait for amendment 6's P62 and a fresh tenant pair; P35 waits for an ODP destination.
 - **Amendment 6:** P61 built (34/34; its outcome counter runs after the answer and outside the shopper's serializer) and in delivery review; P62 building on it with the S11 fix round (d692b269) and the five test updates (ccc9294c); one official gate for P61+P62, then receipts and deploy-11.
-- **Findings told, not asked, listed for amendment 7:** the action answer should name its outcome record and the monitor count failures before the outcome's admission; a reset between the behaviour capture's admission and the outcome's admission loses the outcome (analysis OUT-K3).
+- **Amendment 7 opened (2ce8ffa6):** `tapestry-parity-outcome-telling` P64 (the action answer names its outcome record; pre-admission failures counted in the monitor), P65 (the outcome survives a reset between the behaviour capture's admission and its own), P66 (the account-change and absorb merges' refusals cross typed natively); batch S13 (P64, P65) specifying. Findings from analysis OUT-K3 and the P58 review, told not asked.
 
 ## 2026-10-19, night: amendment 5 round 2 closed (P58); amendment 6 opened on the unserved learned lift
 
