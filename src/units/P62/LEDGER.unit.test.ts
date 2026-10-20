@@ -180,7 +180,7 @@ import { asOperator, BRAND, expectPublished, HOSTS, mount, putDocument, replayOf
 import { publishStats } from '../_parity3';
 import { dials, failPooledDoor, learnOf, liftOf, objectPublish, P08_PIECES, visit } from '../_parity6';
 import {
-  copyLever, copyOf, damageAndRestart, decide, digestLog, fanExports, fatigued, fireAlarm, forged, HOME_MODULES, inForce, kvReadLog, later,
+  copyLever, copyOf, damageAndRestart, decide, digestLog, fanExports, fatigued, firePublicationAlarm, forged, HOME_MODULES, inForce, kvReadLog, later,
   liftOnRecord, liftReadOf, liftWorld, objectDoor, PDP_MODULES, placementOf, republish, restartObject, ringLever, sourcesMember, witnessLever, type Copy,
   type StorageLog,
 } from '../_parity9';
@@ -325,7 +325,8 @@ describe('unit:P62.LW2 (R-P110)', () => {
       const steps: Array<[string, () => Promise<void>]> = [
         ['after a publication', async () => undefined],
         ['after new evidence (a commit)', async () => { await visit(m, 'pdp'); }],
-        ['after the next publication (the alarm)', async () => { await fireAlarm(m); }],
+        // R10 (S18, R-P195): the next publication is the placement's publication alarm, at its due time (_parity9.ts `firePublicationAlarm`).
+        ['after the next publication (the alarm)', async () => { await firePublicationAlarm(m); }],
       ];
       for (const [when, step] of steps) {
         await step();

@@ -40,6 +40,7 @@ import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { decideContent } from '@/content/decide';
 import { invalidateLiftCache } from '@/content/service';
 import type { ContentPiece, DecisionRecord, SlotCatalog, SlotStrategy } from '@/content/types';
+import * as learnStatsModule from '@/durable-objects/LearnStats';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { consumeLedger } from '@/ledger/consume';
@@ -568,7 +569,19 @@ describe('unit:W27.R3', () => {
 // verbatim keeps that earlier alarm and reds :628. This unit demands only the
 // effect-expiry ordering, which an implementation can meet together with :628
 // as it stands.
+//
+// R10 (S18, amendment 9 P70; the lead's ruling R-P195), test-only: P70's keep-warm heartbeat shares the object's
+// single alarm, so the guarded path keeps the EARLIEST of the publication retry, the live learning-effect expiries and,
+// while the object is inside its tail after a write, the heartbeat (`WARM_HEARTBEAT_MS` after the write, read loosely
+// from src/durable-objects/LearnStats.ts: no heartbeat until the engine exports it, and then exactly `consentUntil` as
+// before). The write's moment is bounded by the clock read before and after it.
 // ===========================================================================
+
+/** P70's `WARM_HEARTBEAT_MS` as the engine exports it, or no heartbeat (an infinite delay) while it does not. */
+const warmHeartbeatMs = (): number => {
+  const value = (learnStatsModule as unknown as Record<string, unknown>).WARM_HEARTBEAT_MS;
+  return typeof value === 'number' ? value : Number.POSITIVE_INFINITY;
+};
 
 describe('unit:W27.R4', () => {
   it('host-internal: a failed publication leaves a pending effect-expiry alarm where it is, and the retry is still due within 30 seconds', async () => {
@@ -584,11 +597,18 @@ describe('unit:W27.R4', () => {
       tenant: TENANT, subject: VISITOR, generation: { whole: 0, item: 0 },
       retention: retentionBirth(w.env, TENANT, 'online', NOW), consentUntil,
     };
+    const writtenFrom = Date.now();
     const written = await w.learn('chero', '/exposures', { version: 2, tenant: TENANT, brand: BRAND, slot: 'chero', config: SLOT_CONFIG,
       exposures: [{ item: 'cnt-charms-slg', cell: CELL, ts: NOW, effect }] });
+    const writtenTo = Date.now();
     expect(written.status, await written.clone().text()).toBe(200);
+    // R10 (S18, R-P195): the earlier of the effect expiry and the heartbeat after the write (exactly the expiry without a heartbeat).
+    const heartbeat = warmHeartbeatMs();
+    const guarded = (armed: number | null | undefined) => typeof armed === 'number' && armed >= Math.min(consentUntil, writtenFrom + heartbeat)
+      && armed <= Math.min(consentUntil, writtenTo + heartbeat) ? 'the earlier of the effect expiry and the heartbeat' : `alarm ${String(armed)}`;
     // Control (the guarded path, `arm()`): the effect's expiry is the alarm.
-    expect(w.alarms.get(name), 'the guarded path armed the effect expiry, which is earlier than the publication delay').toBe(consentUntil);
+    expect(guarded(w.alarms.get(name)), `the guarded path armed the effect expiry, which is earlier than the publication delay (or the heartbeat, earlier still: expiry ${consentUntil})`)
+      .toBe('the earlier of the effect expiry and the heartbeat');
 
     // A publication whose archive write fails (W27.M1.01's failure).
     w.storage.failPut = key => key.startsWith('lift/');
@@ -598,9 +618,9 @@ describe('unit:W27.R4', () => {
     expect(failed.status, 'an unarchivable snapshot is not a publication').toBe(503);
 
     const after = w.alarms.get(name);
-    expect(after,
+    expect(guarded(after),
       `W27.R4 / R161 — the failure re-arm must go through the guarded path: the effect-expiry alarm at ${consentUntil} was moved to ${String(after)} (${typeof after === 'number' ? after - consentUntil : '?'} ms later)`)
-      .toBe(consentUntil);
+      .toBe('the earlier of the effect expiry and the heartbeat');
     expect(after!, 'kit 02:312 — the publication retry is still due no later than 30 seconds out').toBeLessThanOrEqual(finishedAt + 30_000);
   });
 });

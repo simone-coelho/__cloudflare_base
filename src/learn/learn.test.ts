@@ -8,6 +8,7 @@ import type { Env } from '@/types/env';
 import { attribute, DEFAULT_POLICY, type RingEntry } from './policy';
 import { DEFAULT_STATS, buildSnapshot, emptyStats, levelKeys, liftFor, parentKey, recordExposure, recordSuccess } from './stats';
 import { DecisionRing, RING_LIMITS } from '@/durable-objects/DecisionRing';
+import * as learnStatsModule from '@/durable-objects/LearnStats';
 import { LearnStats, LEARN_LIMITS } from '@/durable-objects/LearnStats';
 import { deliverStats, FAN_LIMITS, fanDecisions, fanOutcome, liftArchiveKey, liftKey, readRing, reportLearningIncomplete, ringEntryOf, servedCounts, type OutcomeReceipt, type StatsWriteReceipt } from './fan';
 import { invalidateCache } from '@/config/versionedStore';
@@ -29,6 +30,26 @@ const onlineFixtureEnv = { TENANTS: JSON.stringify({ provisioned: ['coach', 'mer
   tenants: Object.fromEntries(['coach', 'meridian', 'harbor'].map(tenant => [tenant, { online: { id: 'synthetic-online', revision: 1, durationMs: 365 * 86400_000, basis: 'admitted', renewal: 'new-record-only' } }])) }) } as RetentionEnv;
 
 const T0 = 1_725_000_000_000;
+/**
+ * R10 (S18, amendment 9 P70; the lead's ruling R-P195), test-only. src/durable-objects/LearnStats.ts
+ * `const PUBLISH_DELAY_MS = 30_000` (not exported): a publication is due 30 seconds after the write, or the
+ * republication, it publishes (a failed publication's retry 30 seconds after the failure), and never earlier, so the
+ * alarm that publishes runs at that time. P70's keep-warm heartbeat shares the object's single alarm: while the object
+ * is inside its tail, an alarm armed for a time D is due at the earlier of D and the heartbeat after the moment it was
+ * armed (`WARM_HEARTBEAT_MS`, read loosely: no heartbeat until the engine exports it).
+ */
+const PUBLISH_DELAY_MS = 30_000;
+const warmHeartbeatMs = (): number => {
+  const value = (learnStatsModule as unknown as Record<string, unknown>).WARM_HEARTBEAT_MS;
+  return typeof value === 'number' ? value : Number.POSITIVE_INFINITY;
+};
+/** The alarm a write or a failed publication at `armedAt` leaves for a time `due`: the earlier of it and the heartbeat. */
+const sharedAlarm = (armedAt: number, due: number): number => Math.min(due, armedAt + warmHeartbeatMs());
+/** Runs `work` (an alarm) at the publication's due time: the clock held PUBLISH_DELAY_MS after now, then restored. */
+async function atPublicationDue<T>(work: () => Promise<T>): Promise<T> {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + PUBLISH_DELAY_MS);
+  try { return await work(); } finally { clock.mockRestore(); }
+}
 const cell: Cell = { channel: 'paid_social', visit_bucket: '1', region: 'US-NY', affinity: 'occasion:evening' };
 const entry = (id: string, slot: string, item: string, ts: number, session = 's1'): RingEntry => ({ id, ts, page: 'home', slot, item, session_id: session, arm: 'personalized', cell });
 const outcome = (type: OutcomeRecord['type'], item: string | null, ts: number, session = 's1'): OutcomeRecord =>
@@ -477,7 +498,7 @@ it('W27.01 archives immutable candidates before live publication and keeps every
       expect(response.status, mode).toBe(503);
       expect(await response.json()).toEqual({ ok: false, error: 'statistics acknowledgement unavailable' });
       expect(x.cache.store.get(key)).toBe('"previous-live"'); expect(x.storage.map.get('learn')).toEqual(before);
-      expect(x.storage.alarm).toBe(T0 + 30_000);
+      expect(x.storage.alarm).toBe(sharedAlarm(T0, T0 + 30_000));
       expect(x.archive.put).toHaveBeenCalledTimes(mode === 'missing' ? 0 : mode === 'collision' ? 8 : 1);
       if (mode === 'committed-throw') expect(x.archives.size).toBe(1);
     }
@@ -487,7 +508,7 @@ it('W27.01 archives immutable candidates before live publication and keeps every
       });
       const response = await x.request('/publish', {});
       expect(response.status).toBe(503); expect(await response.json()).not.toHaveProperty('applied');
-      expect(x.archives.size).toBe(1); expect(x.storage.alarm).toBe(T0 + 30_000);
+      expect(x.archives.size).toBe(1); expect(x.storage.alarm).toBe(sharedAlarm(T0, T0 + 30_000));
       expect(x.cache.store.get(key)).toBe(committed ? [...x.archives.values()][0] : '"previous-live"');
     }
     const partial = await ready(); expect((await partial.post([{ item: 'B', cell, ts: T0 }])).status).toBe(200);
@@ -498,9 +519,14 @@ it('W27.01 archives immutable candidates before live publication and keeps every
     expect(partial.cache.store.get(key)).toBe('"previous-live"');
     const alarm = await ready(); alarm.archive.put.mockRejectedValue(new Error('private archive failure'));
     alarm.storage.alarm = null;
-    await expect(alarm.object.alarm()).rejects.toThrow(); expect(alarm.storage.alarm).toBe(T0 + 30_000);
+    // R10 (S18, R-P195): the alarm runs at the publication's due time, PUBLISH_DELAY_MS after ready()'s write at T0, and
+    // the next one at the failed publication's retry, PUBLISH_DELAY_MS after it; the clock is then back at T0.
+    vi.setSystemTime(T0 + PUBLISH_DELAY_MS);
+    await expect(alarm.object.alarm()).rejects.toThrow(); expect(alarm.storage.alarm).toBe(sharedAlarm(T0 + PUBLISH_DELAY_MS, T0 + 2 * PUBLISH_DELAY_MS));
     vi.spyOn(alarm.storage, 'setAlarm').mockRejectedValue(new Error('private alarm failure'));
+    vi.setSystemTime(T0 + 2 * PUBLISH_DELAY_MS);
     await expect(alarm.object.alarm()).rejects.toThrow(); expect(alarm.cache.store.get(key)).toBe('"previous-live"');
+    vi.setSystemTime(T0);
     const malformed = boundedStats(null);
     expect((await malformed.request('/publish', {})).status).toBe(503);
     expect(malformed.archive.put).not.toHaveBeenCalled(); expect(malformed.storage.alarm).toBeNull();
@@ -873,7 +899,8 @@ describe('W10.01 application learning budgets', () => {
     for (const rows of priorCases) {
       f.prior(rows); const before = [...f.cache.store], publications = f.published.length;
       expect((await f.request('/snapshot')).status).toBe(413); expect((await f.request('/publish', {})).status).toBe(413);
-      await expect(f.object.alarm()).rejects.toThrow();
+      // R10 (S18, R-P195): the republished prior document's publication is due PUBLISH_DELAY_MS after the republication.
+      await expect(atPublicationDue(() => f.object.alarm())).rejects.toThrow();
       expect([...f.cache.store]).toEqual(before); expect(f.published).toHaveLength(publications);
     }
     // After deleting A, B plus 256 distinct real prior items still exceed the union budget.
@@ -1802,7 +1829,8 @@ describe('the objects', () => {
     await obj.fetch(new Request('https://learn/exposures', { method: 'POST', body: JSON.stringify({ tenant: 'coach', brand: 'coach', slot: 'hero', config: cfg, exposures: Array.from({ length: 10 }, () => ({ item: 'A', cell, ts: NOW })) }) }));
     await obj.fetch(new Request('https://learn/credits', { method: 'POST', body: JSON.stringify({ tenant: 'coach', brand: 'coach', slot: 'hero', config: cfg, credits: [{ decision_id: 'd', slot: 'hero', item: 'A', cell, reward: 'click', event: 'click', ts: NOW, weight: 1 }] }) }));
     expect(storage.alarm).not.toBeNull(); expect(kv.store.size).toBe(0);
-    await obj.alarm();
+    // R10 (S18, R-P195): the alarm that publishes runs at the publication's due time, PUBLISH_DELAY_MS after the writes.
+    await atPublicationDue(() => obj.alarm());
     const snap = JSON.parse(kv.store.get(liftKey('coach', 'coach', 'hero'))!);
     expect(snap.reward).toBe('click'); expect(snap.events).toBe(10);
     expect(snap.items.A['*'].n).toBeCloseTo(10, 1); expect(snap.items.A['*'].s).toBeCloseTo(1, 1);
