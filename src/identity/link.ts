@@ -176,7 +176,11 @@ export async function linkVisitor(
 // both histories. Nothing of the browser's link is redone. The answer carries
 // the merged memberships and, on the session host, the merged record's cookies;
 // a change that merges nothing (already merged, nothing to share) leaves the
-// link's answer exactly as it was.
+// link's answer exactly as it was. A merged profile the account's validation
+// refuses (P66, R-P153) merges and remembers nothing; the door answers that
+// refusal typed, as the transfer door does for the link itself (P58), and it is
+// raised here as the validation error it is, so the route answers its own
+// `400 Validation error` with the same details on every runtime.
 
 const stringList = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === 'string');
 
@@ -189,6 +193,12 @@ async function applyAccountChange(env: Env, tenant: TenantId, shopperId: string,
   });
   const body = await response.json() as { ok?: unknown; merged?: unknown; audiences?: unknown; cookieHeaders?: unknown;
     changes?: { entered?: unknown; exited?: unknown; explain?: unknown } };
+  // P66 (R-P153): the account's own object refused the merged profile by validation and
+  // answered it typed (src/identity/sessionAuthority.ts `validationRefusal`); raised as the
+  // validation error it is, with the same issues. Any other answer that is not the change's
+  // receipt is refused as before.
+  const refused = validationRefusalOf(response.status, body);
+  if (refused) throw refused;
   if (!response.ok || body.ok !== true || typeof body.merged !== 'boolean') throw new SessionAccessError();
   if (!body.merged) return linked;
   const changes = body.changes;

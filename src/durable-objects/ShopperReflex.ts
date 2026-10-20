@@ -310,9 +310,26 @@ const identityResultSchema = z.object({
  * the same details on every runtime. Nothing else changes: the person's object
  * commits nothing of the refused link, and the browser's prepared transfer stays as
  * it was.
+ *
+ * P66 (amendment 7 §2; R-P153): the same holds for every door of this object whose
+ * operation merges another profile into this one: the transfer, the account change
+ * (`handleAccountChange`, whose answer src/identity/link.ts `applyAccountChange`
+ * reads the same way) and the absorb (`handleAbsorb`). Each door turns its merge's
+ * own validation error into this refusal (`asMergeRefusal`) and, once its operation
+ * has failed as before, answers it typed (`typedMergeRefusal`); any other failure of
+ * the operation, a validation error outside the merge included, is thrown as before.
  */
 class MergeValidationRefusal extends Error {
   constructor(readonly issues: z.ZodError['issues']) { super('Merged profile refused by validation'); this.name = 'MergeValidationRefusal'; }
+}
+/** A merge's failure as its door raises it: its own validation error as the refusal, every other failure unchanged. */
+function asMergeRefusal(error: unknown): never {
+  throw error instanceof z.ZodError ? new MergeValidationRefusal(error.issues) : error;
+}
+/** A merging door's answer to its failed operation: the merge's refusal typed (400, `validationRefusal`), every other failure thrown unchanged. */
+function typedMergeRefusal(error: unknown): Response {
+  if (error instanceof MergeValidationRefusal) return validationRefusal(error.issues);
+  throw error;
 }
 const preparedTransferSchema = z.object({ transfer: transferSchema, status: z.enum(['prepared', 'complete']), scrubbed: z.literal(true).optional() }).strict()
   .refine(value => !value.scrubbed || value.status === 'complete' && value.transfer.affinity === null && value.transfer.pipeline === null);
@@ -3203,7 +3220,7 @@ export class ShopperReflex {
         const cfg = !personalizes(consent) ? undefined : await resolveTenantReflexConfig(this.env, context.tenant, this.surface());
         // P58 (R-P106): the merge's own validation refusal is answered by this door as a typed refusal (below), never thrown across the boundary.
         const candidate = personalizes(consent) ? await this.mergedIdentity(context.tenant, context.subject, from, fromPipe, now, cfg!)
-          .catch((error: unknown) => { throw error instanceof z.ZodError ? new MergeValidationRefusal(error.issues) : error; }) : retained;
+          .catch(asMergeRefusal) : retained;
         const sessionId = candidate?.pipeline.sessionId ?? await this.retainedCanonicalSid(authority) ?? crypto.randomUUID();
         const merged = candidate?.merged ?? { state: { audiences: [] }, changes: { entered: [], exited: [], explain: [] } };
         const issuedAt = Math.floor(now / 1000);
@@ -3241,11 +3258,8 @@ export class ShopperReflex {
       const cookieHeaders = session && personalizes(allowed) ? manager.createCookieHeaders(manager.generateSessionCookies(session, this.pipeline!.sessionId))
         : manager.generateConsentCookieHeaders({ trackingConsent: allowed.tracking, personalizationEnabled: allowed.personalization }, allowed);
       return json({ ok: true, result: { ...receipt.result, ...(!personalizes(allowed) ? { audiences: [], changes: { entered: [], exited: [], explain: [] } } : {}), cookieHeaders, consent: allowed } });
-    }).catch(error => {
-      // P58 (R-P106): the operation failed as before and committed nothing of the link; only its answer is typed.
-      if (error instanceof MergeValidationRefusal) return validationRefusal(error.issues);
-      throw error;
-    });
+    // P58 (R-P106): the operation failed as before and committed nothing of the link; only its answer is typed.
+    }).catch(typedMergeRefusal);
   }
 
   private async forwardTarget(): Promise<string | null> {
@@ -3350,6 +3364,13 @@ export class ShopperReflex {
    * merged and nothing remembered when this person's consent does not cover
    * personalization, when the earlier account holds no profile it may share,
    * or when the earlier account already holds this one (a change back).
+   *
+   * P66 (R-P153): a merged profile this person's validation refuses (for
+   * example more enrichment sources than one profile holds) commits nothing and
+   * remembers nothing; the door answers that refusal typed
+   * (`typedMergeRefusal`), which src/identity/link.ts raises again as the
+   * validation error it is, so the route answers its own `400 Validation error`
+   * with the same details on every runtime.
    */
   private async handleAccountChange(request: Request, context: InternalContext): Promise<Response> {
     const body = z.object({ from: z.string().refine(isShopperId) }).strict().parse(await request.json());
@@ -3380,7 +3401,9 @@ export class ShopperReflex {
       const retention = pinRetention(this.env, members.retention, context.tenant, 'identity');
       const now = Date.now();
       const cfg = await resolveTenantReflexConfig(this.env, context.tenant, this.surface());
-      const { affinity, pipeline, merged } = await this.mergedIdentity(context.tenant, context.subject, source.affinity, source.pipeline, now, cfg);
+      // P66 (R-P153): the merge's own validation refusal is answered by this door typed (below), never thrown across the boundary.
+      const { affinity, pipeline, merged } = await this.mergedIdentity(context.tenant, context.subject, source.affinity, source.pipeline, now, cfg)
+        .catch(asMergeRefusal);
       const next: ShopperRecord = keptIdentifierLast({ ...members,
         mergedAccounts: [...new Set([...held, ...source.mergedAccounts, body.from])].filter(id => id !== context.subject).slice(-MAX_MERGED_ACCOUNTS) });
       await this.persistAudienceState(affinity, pipeline, null, true, { identityMembers: next });
@@ -3394,7 +3417,8 @@ export class ShopperReflex {
       const cookieHeaders = session && personalizes(allowed) ? manager.createCookieHeaders(manager.generateSessionCookies(session, this.pipeline!.sessionId))
         : manager.generateConsentCookieHeaders({ trackingConsent: allowed.tracking, personalizationEnabled: allowed.personalization }, allowed);
       return json({ ok: true, merged: true, audiences: merged.state.audiences, changes: merged.changes, cookieHeaders });
-    });
+    // P66 (R-P153): the operation failed as before and committed nothing of the change; only its answer is typed.
+    }).catch(typedMergeRefusal);
   }
 
   /**
@@ -3567,6 +3591,14 @@ export class ShopperReflex {
     return { affinity, pipeline, merged };
   }
 
+  /**
+   * The absorb door: another object's exported profile folded into this one
+   * (`mergedIdentity`). P66 (R-P153): a merged profile this object's validation
+   * refuses is answered typed (`typedMergeRefusal`: 400 and the exact shape
+   * src/identity/sessionAuthority.ts `validationRefusalOf` reads, the same
+   * issues), never thrown across the object boundary, so any caller in another
+   * object or the Worker reads the refusal as P58's link does.
+   */
   private async handleAbsorb(request: Request, context: InternalContext | SessionCapability): Promise<Response> {
     let body: { shopperId?: unknown; affinity?: AffinityRecord | null; pipeline?: PipelineRecord | null; now?: unknown; consent?: unknown } = {};
     try { body = await request.json(); } catch { return json({ ok: false, error: 'invalid JSON body' }, 400); }
@@ -3592,11 +3624,14 @@ export class ShopperReflex {
       const cfg = await resolveTenantReflexConfig(this.env, context.tenant, this.surface());
       const from = body.affinity ?? null;
       const fromPipe = body.pipeline ?? null;
-      const { affinity, pipeline, merged } = await this.mergedIdentity(context.tenant, shopperId, from, fromPipe, now, cfg);
+      // P66 (R-P153): the merge's own validation refusal is answered by this door typed (below), never thrown across the boundary.
+      const { affinity, pipeline, merged } = await this.mergedIdentity(context.tenant, shopperId, from, fromPipe, now, cfg)
+        .catch(asMergeRefusal);
       await this.persistAudienceState(affinity, pipeline, null);
       await this.scheduleNextCrossing(now, cfg);
       return json({ ok: true, shopperId, sessionId: pipeline.sessionId, audiences: merged.state.audiences, changes: merged.changes, ...(body.consent !== undefined ? { consent: await this.consentNow() } : {}) });
-    });
+    // P66 (R-P153): the operation failed as before and committed nothing of the merge; only its answer is typed.
+    }).catch(typedMergeRefusal);
   }
 
   /**
