@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-20, 13:35: amendment 7 at 2/3 (P65 merged and deployed), P66 building; amendment 8 opened (the order remembered); the lift re-walk still on the pair's third release
+
+- **Score (derived, amendment 7 round-2 official gate at 81713505, GATE_OK):** `Tests 3692 passed (3692)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 7 `tapestry-parity-outcome-telling`: Local done 2/3** (P64 at bb605dff, P65 at 81713505; P66 ACTIVE, specification gate PASS at 67614df5, build in progress). **Amendment 6: Local done 3/3.** **Amendment 8 `tapestry-parity-order-memory` opened: 0/2** (P67 ACTIVE, specifying). Amendment 5 5/5. LIVE1 31 of 45.
+- **Deploy-13** (stamps at 785f101d, P63 + P65 in): staging 8cf86ef3, production 110e0fa3; smoke 7/7 on production, the Tapestry tenant and staging on re-run (the first staging run met P65's typed reset answer once, at the version switch); verify-origin 9 PASS + connectivity; render acknowledgements 1.6–2.0 s.
+- **Acceptance pair** on its third release 03acf1ba while lane L9 walks the lift-blocked rows; its fourth release (P63–P65) and the batched LIVE1 for P61–P65 follow L9.
+- **Owner's items (told, not asked):** merge PR #1; hand the account team the staging host, tenant and site-key path; Tapestry's H1–H5 and W3; the lift probe's console step; worktree cleanup. New advisory (amendment 8, P67): a purchase reset at the wrong moment could be credited twice until P67 lands.
+
 ## 2026-10-20, 11:00: amendment 6 LOCALLY COMPLETE (P63 merged); P65 built and waiting to join; the lift re-walk still on the pair's third release
 
 - **Score (derived, amendment 6 round-2 official gate at f1073dad, GATE_OK):** `Tests 3660 passed (3660)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 6 `tapestry-parity-lift-witness`: Local done 3/3** (P61 P62 at f591009e, P63 at f1073dad; merged at 13c8fb21), Final 0/3. **Amendment 7: Local done 1/3** (P64 at bb605dff; P65 built at 55134d35 + kit fix 7db47488, joining after it merges the integration head; P66 next). Amendment 5 5/5. LIVE1 31 of 45.
