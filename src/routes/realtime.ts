@@ -169,16 +169,16 @@ realtimeRoutes.post('/action', async (c) => {
     // W23 T1.01 (doc 16 §4 :104 "The engine clock is authoritative. Events are
     // stamped on arrival; client timestamps are advisory only — a forged or
     // skewed clock cannot inflate affinity"). The engine's own stamp BOUNDS the
-    // admitted event time, and bounds it only from above:
+    // admitted event time from above (a render acknowledgement's also from below):
     //   · a client time after the engine's present is admitted AT the present.
     //     The event is still counted, still durable, still visible — the clock
     //     it claimed is what is refused, not the event (F18 §2 F: ten crafted
     //     future-dated events destroyed 81.8 % of an item's purchase evidence,
     //     slot-wide, from one self-served visitor id).
-    //   · a client time at or before it is admitted EXACTLY as given. An old
-    //     delivery is admitted as old — the settled buffered/late-history
-    //     decisions (HANDOFF-2026-09-18 §7 :353, :354) — never restamped as
-    //     fresh activity and never rejected for its age.
+    //   · a client time at or before it is admitted as given: an old delivery as
+    //     old (the settled decisions, HANDOFF-2026-09-18 §7 :353, :354), never
+    //     restamped as fresh activity nor rejected for its age; but a render
+    //     acknowledgement's time before its decision's is admitted AT the decision's (P69).
     // Malformed times (non-integer, out of calendar, non-numeric) are refused
     // before this point by `isEventTimestamp` on the schema, and the buffered
     // door's own `value.timestamp <= now` (`src/reflex/bufferedAction.ts:30`)
@@ -234,7 +234,7 @@ realtimeRoutes.post('/action', async (c) => {
     if (hasOffer && actionEvent.type !== 'content_impression') throw new SessionAccessError();
     const redeemed = hasOffer ? await redeemRenderOffer(c.env, shopperPrincipal(c.req.raw), captureConsent, actionEvent) : undefined;
     const render = redeemed?.acknowledgment;
-    // P57: a re-send of an acknowledged render carries the time that render was admitted at, so its behaviour record is the same record.
+    // P57, P69: the behaviour record carries the time the render is admitted at (a re-send's, its first delivery's; never before its decision's time).
     if (redeemed) actionEvent.timestamp = redeemed.at;
     // The ciphertext is an admission capability, never behavior, demo capture,
     // pipeline input or provider data. Remove it before any ordinary handler.

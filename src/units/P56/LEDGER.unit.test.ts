@@ -422,7 +422,7 @@ describe('unit:P56.AA4', () => {
       expect(JSON.stringify(admissionsOf(m, s.subject)) === before, `${host}: CONTROL — a second decision's acknowledgement changes the recovery state`).toBe(false);
     }, 60_000);
 
-    it(`host (${host}): LOCK — the redemption checks: an acknowledgement naming another module, another page instance, another slot, a time before the decision, a tampered offer, or an offer past its window is refused 401 as today and admits nothing; the untampered acknowledgement is then admitted`, async () => {
+    it(`host (${host}): LOCK — the redemption checks: an acknowledgement naming another module, another page instance, another slot, a tampered offer, or an offer past its window is refused 401 as today and admits nothing; one stamped before the decision is admitted at the decision's time (R10, amendment 9 P69); the untampered acknowledgement is then admitted`, async () => {
       const { m, app, s, page, layout } = await world(host, 'p56-aa4-redeem');
       const [d, next] = [layout[0]!, layout[1]!];
       const refusal = { status: 401, body: { ok: false, error: 'Shopper session unavailable' } };
@@ -431,7 +431,6 @@ describe('unit:P56.AA4', () => {
         ['another module', () => ackWire(app, s, page, { ...d, contentId: next.contentId })],
         ['another page instance', () => ackWire(app, s, { ...page, pageInstance: pageInstanceOf('p56-aa4-other') }, d)],
         ['another slot', () => ackWire(app, s, page, { ...d, slot: 'pdp-recent' })],
-        ['a time before the decision', () => ackWire(app, s, page, d, { eventId: crypto.randomUUID(), timestamp: parseId(d.decisionId!)!.ts - 1 })],
         ['a tampered offer', () => ackWire(app, s, page, { ...d, renderOffer: tampered })],
       ];
       for (const [name, send] of variants) {
@@ -448,6 +447,16 @@ describe('unit:P56.AA4', () => {
       expect.soft({ status: expired.status, body: expired.body }, `${host}: P56.AA4 — an offer past its window is refused as today`).toEqual(refusal);
       expect.soft([decisionAdmissionOf(m, s.subject, d.decisionId!) ? 'admitted' : 'nothing admitted', rowsOf(storedDecisions(m, s.subject), d.decisionId).length],
         `${host}: P56.AA4 — no refused acknowledgement admitted or wrote anything`).toEqual(['nothing admitted', 0]);
+      // R10 (amendment 9, P69; R-P171; _evidence/baseline-52/ack-401/ANALYSIS.md §8.5): "a time before the decision" moved out
+      // of the refused list above. An acknowledgement whose client time is before the decision's engine time is no longer
+      // refused: it is admitted at the decision's time (the lower bound matching W23's upper bound, realtime.ts:186-187).
+      // Sent for the next module, so the checks on the first one above stand; src/units/P69 holds the rest (P69.AK1).
+      const early = { eventId: crypto.randomUUID(), timestamp: parseId(next.decisionId!)!.ts - 1 };
+      const before = await ackWire(app, s, page, next, early);
+      await settle(m, app);
+      const admittedAt = (decisionAdmissionOf(m, s.subject, next.decisionId!)?.payload?.input as Extract<RecoveryInput, { kind: 'decisions' }> | undefined)?.records[0]?.rendered?.at;
+      expect.soft([before.status, (before.body.render as { status?: unknown } | undefined)?.status, admittedAt ?? 'nothing admitted'],
+        `${host}: P56.AA4 (R10, amendment 9 P69) — a time before the decision is admitted at the decision's time (${show(before.body)})`).toEqual([200, 'durable', parseId(next.decisionId!)!.ts]);
       // CONTROL: the refusals were the tampering's, not the fixture's.
       const honest = await ackWire(app, s, page, d);
       await settle(m, app);
