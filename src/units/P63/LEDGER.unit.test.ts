@@ -124,6 +124,8 @@ import { dials, failPooledDoor, LIFT_MEMBERS, learnOf, liftOf, objectPublish, PO
 import {
   copyOf, decide, fireAlarm, HOME_MODULES, liftOnRecord, liftReadOf, liftWorld, objectDoor, PDP_MODULES, placementOf, republish, restartObject, type Copy,
 } from '../_parity9';
+// S16 additive locks (amendment 8, finding (b)): the marker key one of them makes unreadable.
+import { liftRepublishedKey } from '@/learn/fan';
 
 /** What the product placement has published, as the engine holds it: the store's copy, the object's publication record, the archived versions. */
 function published(m: Mounted): { copy: string | null; record: unknown; archived: string[] } {
@@ -232,6 +234,34 @@ describe('unit:P63.NR2', () => {
       await fireAlarm(m);
       const after = copyOf(m)!;
       expect(after.version > latest.version, `${host}: P63.NR2 — LOCKED: the republished learn document makes the next alarm publish (${latest.version} → ${after.version})`).toBe(true);
+    }, 120_000);
+  }
+
+  // S16 additive lock (amendment 8, finding (b); the P63 delivery review, finding 1, mutant M2): the credit-only leg above
+  // clicks the first of the pooled and shared modules served, the pooled one; a build comparing only its own event count
+  // while keeping the pooled counters would pass it. This leg clicks the SHARED module (not pooled).
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (S16, P63 review F1) — a credit alone on the shared module (not pooled) is new evidence: after an alarm publication holding its exposure, a click on that acknowledged decision and the next alarm publish a later version holding the credit`, async () => {
+      const { m } = await liftWorld(host);
+      await republish(m);
+      const shopper = await shopperOn(m);
+      expect((await shopper.action(VIEW_TABBY_26, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the shopper's view is accepted`).toBe(200);
+      const page = await shopper.snapshot('pdp', { pageInstance: pageInstanceOf('p63-credit-shared') });
+      for (const d of page.decisions) expect((await shopper.ack(page, d)).status, `${host}: PRECONDITION — ${d.contentId} acknowledged`).toBe(200);
+      await m.drainLedger();
+      await fireAlarm(m);
+      const before = copyOf(m)!, eventsBefore = heldEvents(m);
+      const clicked = page.decisions.find(d => d.contentId === SHARED);
+      expect(clicked?.contentId, `${host}: PRECONDITION — the shared module is served on the page (${page.decisions.map(d => d.contentId).join(', ')})`).toBe(SHARED);
+      expect((await shopper.click(page, clicked!)).status, `${host}: PRECONDITION — the click on the shared module is accepted`).toBe(200);
+      await m.drainLedger();
+      expect(heldEvents(m), `${host}: PRECONDITION — the click is a credit, no new event`).toEqual(eventsBefore);
+      await fireAlarm(m);
+      const after = copyOf(m)!;
+      const credits = (copy: Copy) => (JSON.parse(copy.raw) as { items?: Record<string, Record<string, { s?: number }>> }).items?.[SHARED]?.['*']?.s ?? 0;
+      expect.soft({ later: after.version > before.version, credited: credits(after) > credits(before) },
+        `${host}: P63.NR2 (S16) — the credit alone on the shared module makes the next alarm publish (${before.version} → ${after.version}; credits ${credits(before)} → ${credits(after)})`)
+        .toEqual({ later: true, credited: true });
     }, 120_000);
   }
 });
@@ -343,6 +373,49 @@ describe('unit:P63.NR3', () => {
       expect(health.state, `${host}: PRECONDITION — /health names the state healthy`).toBe('healthy');
       expect({ learnReads, verdicts: answers.map(verdictOf) }, `${host}: P63.NR3 — LOCKED (P62.LW2, R-P112(5), R-P129 F3): one read of the stored state for the three calls, each answering /health's verdict`)
         .toEqual({ learnReads: 1, verdicts: [health, health, health] });
+    }, 120_000);
+  }
+
+  // S16 additive locks (amendment 8, finding (b); the P63 delivery review, finding 3, mutants M7b, M10, M11).
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (S16, P63 review F3) — both statistics doors, /witness and /health, answer the publication by its digest, witness and version only (never the publication's basis)`, async () => {
+      const { m } = await liftWorld(host);
+      await republish(m);
+      await fireAlarm(m);
+      const doors = [await objectDoor(m, '/witness'), await objectDoor(m, '/health')];
+      expect(doors.map(door => door.status), `${host}: PRECONDITION — both doors answer`).toEqual([200, 200]);
+      expect.soft(doors.map(door => Object.keys((door.body.publication ?? {}) as object).sort()), `${host}: P63.NR3 (S16) — each door's publication member names digest, version and witness only`)
+        .toEqual([['digest', 'version', 'witness'], ['digest', 'version', 'witness']]);
+    }, 120_000);
+
+    it(`host (${host}): LOCK (S16, P63 review F3) — a read of the skip check that throws publishes: after an alarm publication and nothing changed, an alarm whose read of the republished marker throws once publishes a later version`, async () => {
+      const { m } = await liftWorld(host);
+      await republish(m);
+      await fireAlarm(m);
+      const before = copyOf(m)!, key = liftRepublishedKey(TENANT, BRAND, PDP_MODULES), get = m.cache.get;
+      let thrown = 0;
+      m.cache.get = (async (k: string, ...rest: unknown[]) => {
+        if (k === key && !thrown) { thrown++; throw new Error('lever: the marker read failed'); }
+        return (get as (...args: unknown[]) => Promise<unknown>).call(m.cache, k, ...rest);
+      }) as typeof m.cache.get;
+      try { await fireAlarm(m); } finally { m.cache.get = get; }
+      const after = copyOf(m)!;
+      expect(thrown, `${host}: PRECONDITION — the republished marker's read threw once inside the alarm`).toBe(1);
+      expect.soft(after.version > before.version, `${host}: P63.NR3 (S16) — the alarm whose read threw publishes (${before.version} → ${after.version})`).toBe(true);
+    }, 120_000);
+
+    it(`host (${host}): LOCK (S16, P63 review F3) — the store's copy is compared by version AND digest: after an alarm publication and nothing changed, a copy in the store under the same version but other content has the next alarm publish a later version`, async () => {
+      const { m } = await liftWorld(host);
+      await republish(m);
+      await fireAlarm(m);
+      const before = copyOf(m)!, key = liftKey(TENANT, BRAND, PDP_MODULES);
+      const altered = { ...(JSON.parse(before.raw) as Record<string, unknown>), p63AlteredCopy: true };
+      await m.cache.put(key, JSON.stringify(altered));
+      expect(copyOf(m)?.version, `${host}: PRECONDITION — the store holds the same version with other content`).toBe(before.version);
+      await fireAlarm(m);
+      const after = copyOf(m)!;
+      expect.soft({ later: after.version > before.version, altered: Object.hasOwn(JSON.parse(after.raw) as object, 'p63AlteredCopy') },
+        `${host}: P63.NR3 (S16) — a copy whose digest is not the publication's has the next alarm publish (${before.version} → ${after.version})`).toEqual({ later: true, altered: false });
     }, 120_000);
   }
 });

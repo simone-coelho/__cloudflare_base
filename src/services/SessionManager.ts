@@ -565,12 +565,21 @@ export class SessionManager {
   }
 
   /** Buffered actions require an existing exact signed record, never a pointer or cold profile. */
-  async readBufferedSession(): Promise<SessionData> {
+  async readBufferedSession(): Promise<SessionData>;
+  /**
+   * P67 (amendment 8): the same exact read, for a narrow write of the record
+   * (`writeBufferedSession`) only when one is stored: no stored record answers
+   * null, the cold state it is (W35 A1); any other record it refuses exactly as
+   * above. The shopper's owner records a carried purchase's order this way.
+   */
+  async readBufferedSession(orAbsent: true): Promise<SessionData | null>;
+  async readBufferedSession(orAbsent = false): Promise<SessionData | null> {
     if (!this.principal) throw new SessionAccessError();
     const sessionId = this.principal.sessionId;
     assertSessionTarget(this.principal, undefined, sessionId);
     try {
       const text = await this.kv.get(`session:${sessionId}`);
+      if (text === null && orAbsent) return null;
       if (typeof text !== 'string') throw new SessionAccessError();
       const data = JSON.parse(text) as SessionData;
       this.checkedSnapshot(sessionId, { sessionId, data });

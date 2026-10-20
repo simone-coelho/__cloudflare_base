@@ -1948,9 +1948,11 @@ export class ShopperReflex {
             await resumeOwnerRecovery(this.state.storage, this.env, operation, (principal, until) => this.recoveryGuard(principal, until));
             // P65 (amendment 7, R-P124): the outcome a behaviour capture's admission
             // still carries (a reset fell before its own admission), after the
-            // behaviour record: written unless the engine drops its event.
+            // behaviour record: written unless the engine drops its event, and
+            // P67: its order recorded first, as the engine's own path records it.
             if (operation.carries !== undefined) await settleCarriedOutcome(this.state.storage, this.env, operation.id, (principal, until) => this.recoveryGuard(principal, until),
-              async (record, carried, principal) => await this.carriedEventDropped(record, carried, principal) !== null);
+              async (record, carried, principal) => await this.carriedEventDropped(record, carried, principal) !== null,
+              (record, carried, principal) => this.rememberCarriedOrder(record, carried, principal));
           }
         } catch {
           // Retained work stays pending; failed checks never imply recovery.
@@ -4048,6 +4050,47 @@ export class ShopperReflex {
     const placed = placeEvent(placing, undefined, cfg, vocabulary);
     const touches = cfg.eventAttributes === 'event-when-unknown' ? (governed ? governedTouches(placed.touches, governed, cfg) : placed.touches) : [];
     return touches.length === 0 ? 'unknown_product' : null;
+  }
+
+  /**
+   * P67 (amendment 8): what the engine's own path records for an event before the
+   * action route admits its outcome, recorded by the alarm before it admits the
+   * outcome the event's behaviour capture carried (src/ledger/recovery.ts
+   * `settleCarriedOutcome`): the order a purchase names, beside its event id (P40,
+   * R-P48: `orderKeyOf`, `withOrder`), on the state this host keeps — this
+   * object's own record on the object host, the shopper's session record on the
+   * session host — so a later purchase of the same order under another event id
+   * is dropped as `duplicate_order` by every door, and the same event delivered
+   * again is still not one. It is remembered as the buffered door remembers the
+   * order of a purchase that applies no interest (R-P58): in the state already
+   * held, and nothing else changes (no lifetime, owner, visit, count or
+   * audience); on the session host the tenant's configuration is read only for a
+   * record that holds no reflex state, under the surface that door reads, and the
+   * write is the buffered door's narrow write of the exact record. With no record
+   * to hold it (no profile on the object host, no session record on the session
+   * host) nothing is recorded, as that door records nothing then. An event that
+   * names no order reads and writes nothing. Held, like the re-decision before it,
+   * to the operation's stored principal, which the alarm's guard has admitted; a
+   * failure leaves the outcome carried for the next alarm.
+   */
+  private async rememberCarriedOrder(record: BehaviorRecord, carried: CarriedOutcome, principal: SessionCapability): Promise<void> {
+    const order = await orderKeyOf({ type: record.event, data: record.data as Record<string, unknown> });
+    if (order === null) return;
+    if ((this.env.REFLEX_HOST ?? 'session') === 'do') {
+      await this.load();
+      const affinity = this.affinity, pipeline = this.pipeline;
+      if (!affinity || !pipeline) return;
+      const remembered = withOrder(affinity.reflex, order, record.event_id);
+      if (remembered !== affinity.reflex) await this.persistAudienceState({ ...affinity, reflex: remembered }, pipeline, this.audienceOwner, false);
+      return;
+    }
+    const tenant = principal.tenant as TenantId, sessions = new SessionManager(this.env, { tenant, principal });
+    const current = await sessions.readBufferedSession(true);
+    if (current === null) return;
+    const surface = resolveSurface(carried.buffered ? { surface: current.surface } : { source: record.source, surface: carried.surface ?? null });
+    const remembered = withOrder(current.reflex, order, record.event_id,
+      current.reflex?.v === 1 ? undefined : await resolveTenantReflexConfig(this.env, tenant, surface));
+    if (remembered !== current.reflex) await sessions.writeBufferedSession(current, { preferences: current.preferences, reflex: remembered });
   }
 
   private async recoveryGuard(principal: SessionCapability, until: number): Promise<void> {
