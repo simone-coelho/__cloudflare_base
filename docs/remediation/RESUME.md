@@ -2,6 +2,13 @@
 
 **The law:** `AGENTS.md` on this branch, `tools/closure-ledger/BOOTSTRAP-MEMO.md`, then `check`, `status`, `next`. This file stays a few lines; earlier checkpoints are in its git history.
 
+## 2026-10-20, 11:00: amendment 6 LOCALLY COMPLETE (P63 merged); P65 built and waiting to join; the lift re-walk still on the pair's third release
+
+- **Score (derived, amendment 6 round-2 official gate at f1073dad, GATE_OK):** `Tests 3660 passed (3660)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 6 `tapestry-parity-lift-witness`: Local done 3/3** (P61 P62 at f591009e, P63 at f1073dad; merged at 13c8fb21), Final 0/3. **Amendment 7: Local done 1/3** (P64 at bb605dff; P65 built at 55134d35 + kit fix 7db47488, joining after it merges the integration head; P66 next). Amendment 5 5/5. LIVE1 31 of 45.
+- **Stamps** at deploy-12 (f7ec68f5): staging 35ad69b3, production ccc61511. Deploy-13 follows P65's round (P63 and P65 together).
+- **Acceptance pair** on its third release 03acf1ba while lane L9 walks the eleven lift-blocked rows and P42 under fresh brands (L1, L2 rows and P42 walked; L3 rows in progress); the LIVE1 rows of P61–P65 join the batched walk after L9.
+- **Owner's items (told, not asked):** merge PR #1; hand the account team the staging host, tenant and site-key path; Tapestry's H1–H5 and W3; the lift probe's console step; worktree cleanup.
+
 ## 2026-10-20, 07:10: amendment 7 round 1 closed (P64 merged and deployed); P65 and P63 building; the lift re-walk on the pair's third release
 
 - **Score (derived, amendment 7 round-1 official gate at bb605dff, GATE_OK):** `Tests 3634 passed (3634)`, `Ratchet: 0 failing tests, 0 outside the baseline of 0`; typecheck and bundles green. **Amendment 7 `tapestry-parity-outcome-telling`: Local done 1/3** (P64 at bb605dff; P65 ACTIVE, building on the reviewed specification 8c791fe3). **Amendment 6: Local done 2/3** (P63 building; its specification in a fix round after the S14 review). Amendment 5 5/5. LIVE1 31 of 45.
