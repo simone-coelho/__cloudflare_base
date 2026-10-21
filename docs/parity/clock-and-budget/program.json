@@ -189,7 +189,7 @@
     {
       "id": "P71",
       "title": "The object host's buffered re-decision fires (**amendment 9, 2026-10-20**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
