@@ -24,7 +24,9 @@
 //       - a key-value read log;
 //       - the clock lever: `Date.now()` moved ahead by N ms for the work it runs
 //         (timers stay real);
-//       - the object's alarm, fired as the platform fires it;
+//       - the object's alarm, fired as the platform fires it; and its PUBLICATION alarm
+//         (`firePublicationAlarm`, S18 R10, R-P195): fired at the pending publication's due
+//         time, the clock moved there for that run only;
 //       - an object restart: a fresh `LearnStats` over the same stored state, as an
 //         evicted object starts again, its storage recording every key read and
 //         written;
@@ -98,11 +100,14 @@ export async function liftWorld(host: Host, opts: { publish?: boolean } = {}): P
   return { m, v1 };
 }
 
-/** New evidence on the product page (one more visit, acknowledged and clicked) and then the placement's alarm, which publishes. */
+/**
+ * New evidence on the product page (one more visit, acknowledged and clicked) and then the placement's alarm, which
+ * publishes: its publication alarm, fired at the publication's due time (`firePublicationAlarm`; S18 R10, R-P195).
+ */
 export async function republish(m: Mounted, slot: string = PDP_MODULES): Promise<Copy> {
   const before = copyOf(m, slot);
   await visit(m, slot === HOME_MODULES ? 'home' : 'pdp');
-  await fireAlarm(m, slot);
+  await firePublicationAlarm(m, slot);
   const after = copyOf(m, slot);
   expect(after && before && after.version !== before.version ? 'republished' : `not republished (${before?.version} → ${after?.version})`,
     `PRECONDITION (${m.host}): new evidence and the placement's alarm publish a new version`).toBe('republished');
@@ -308,6 +313,37 @@ export function placementOf(m: Mounted, slot: string = PDP_MODULES, page?: strin
 export async function fireAlarm(m: Mounted, slot: string = PDP_MODULES): Promise<void> {
   await (placementOf(m, slot).object as unknown as { alarm: () => Promise<void> }).alarm();
   await m.drain();
+}
+
+/**
+ * src/durable-objects/LearnStats.ts `const PUBLISH_DELAY_MS = 30_000` (not exported): a write's publication is due
+ * 30 seconds after it, and a failed publication's retry 30 seconds after the failure (W27 R4, kit 02: "Publication failure
+ * schedules another attempt in 30 seconds").
+ */
+const PUBLISH_DELAY_MS = 30_000;
+/** Per placement: the moment, on the clock it ran under, the last publication alarm this harness fired for it ended. */
+const publicationAlarmEnded = new WeakMap<Registry, number>();
+
+/**
+ * The placement's PUBLICATION alarm (S18 R10, the lead's ruling R-P195: the object's single alarm is shared and its
+ * handler does everything that is due when it fires; a publication is due PUBLISH_DELAY_MS after the write, or the
+ * republication, it publishes, and never earlier). The clock is moved to the pending publication's due time —
+ * PUBLISH_DELAY_MS after now (every write and republication a unit makes before calling this is done by now), and never
+ * less than PUBLISH_DELAY_MS after the end of the last publication alarm fired here for the placement (the retry of a
+ * failed publication is due PUBLISH_DELAY_MS after the failure: the clock accumulates) — and `LearnStats.alarm()` is run
+ * there, the pending work drained under the same clock, which is then restored (composing with a clock a unit already
+ * moved or holds). An alarm the object holds later than that is not the publication's (a pending publication's alarm is
+ * due at most PUBLISH_DELAY_MS after its write or failure; a later one is a marker's expiry) and is not fired here.
+ * `fireAlarm` is unchanged: the alarm run now, as armed.
+ */
+export async function firePublicationAlarm(m: Mounted, slot: string = PDP_MODULES): Promise<void> {
+  const placement = placementOf(m, slot), previous = Date.now;
+  const at = Math.max(previous(), publicationAlarmEnded.get(placement) ?? Number.NEGATIVE_INFINITY) + PUBLISH_DELAY_MS, offset = at - previous();
+  Date.now = () => previous() + offset;
+  try {
+    await (placement.object as unknown as { alarm: () => Promise<void> }).alarm().finally(() => { publicationAlarmEnded.set(placement, Date.now()); });
+    await m.drain();
+  } finally { Date.now = previous; }
 }
 
 export interface StorageLog {
