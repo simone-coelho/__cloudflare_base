@@ -723,10 +723,15 @@ export class LearnStats {
    * routine publication only when a publication is due (`publicationIsDue`), and re-arms at the earliest of the
    * heartbeat inside the tail, the scheduled pending publication and the next marker expiry (`rearm`). An alarm with
    * nothing due — a heartbeat — runs no skip check, builds no snapshot, reads no key-value entry and writes no key.
+   * P70 fix1 (R-P221): an object started again inside a tail (the platform keeps its alarm, not its memory) resumes the
+   * heartbeat at its first alarm: with no touch seen since it started and no marker expiry due at this alarm, the alarm
+   * is a heartbeat or a pending publication, so it counts as a touch now (a pending publication no touch made, such as a
+   * failed publication's retry, then starts a tail too).
    */
   private async alarmScoped(): Promise<void> { await this.serialize(async () => {
-    const current = await this.loadIfAny(), now = Date.now();
-    if (effectExpiries(current).some(expiry => expiry <= now)) {
+    const current = await this.loadIfAny(), now = Date.now(), expiryDue = effectExpiries(current).some(expiry => expiry <= now);
+    if (this.lastTouch === Number.NEGATIVE_INFINITY && !expiryDue) this.lastTouch = now;
+    if (expiryDue) {
       const candidate = structuredClone(current!);
       for (const [id, marker] of Object.entries(candidate.effects ?? {})) if (marker.expiresAt <= now) delete candidate.effects![id];
       for (const [id, marker] of Object.entries(candidate.retiredEffects ?? {})) if (marker.expiresAt <= now) delete candidate.retiredEffects![id];
