@@ -1475,17 +1475,29 @@ The slot's statistics object publishes a new version within 30 seconds of new ev
 on `POST /v1/{tenant}/learn/publish`. An alarm that finds nothing changed since the slot's last successful
 publication publishes nothing: the snapshot, its `version` and `publishedAt`, its archive and the object's
 record of it stay exactly as that publication left them, so a copy an edge location holds stays the latest
-(`src/durable-objects/LearnStats.ts:691`, `:1261-1262`). Nothing changed means that the slot's own counted
+(`src/durable-objects/LearnStats.ts:736`, `:1360-1361`). Nothing changed means that the slot's own counted
 evidence (an exposure or a credit), its configuration, generation fence and repair basis, the tenant's
 published documents (its learn, prior, catalogue and slots documents among them, taken as the tenant's
 publication set in force, by its revision: any document republished, even unchanged, is a change) and the
 pooled counters the slot reads from a pooled module's other placements are what that publication was built
-from (`:1313-1329`), recorded with the publication before its copy is written (`:1288-1290`); the counts
+from (`:1415-1431`), recorded with the publication before its copy is written (`:1387-1389`); the counts
 decaying with time alone is not a change, so a snapshot keeps its counts as of its `publishedAt` until
 something changes. The alarm still publishes with nothing changed while the stale marker or the republish
 member below is in force, and that publication clears it as before, and when the copy the serving key holds
-is not the last publication, as after a publication whose write of the copy failed (`:1342-1352`). Removing
+is not the last publication, as after a publication whose write of the copy failed (`:1444-1454`). Removing
 expired learning-effect markers changes no snapshot and is not a change.
+The same alarm keeps the statistics object warm for the decisions that read it: after a witness call it answers,
+an exposure write or a credit write, the alarm is due at most 5 seconds ahead (`WARM_HEARTBEAT_MS`) and each
+alarm re-arms it so until 10 minutes after the last of them (`WARM_TAIL_MS`). A heartbeat re-arms and performs
+nothing else unless a publication is due: no snapshot, no publication check, no key-value read, no publication
+and no key written. A publication is due only 30 seconds after new evidence, a republication of the tenant's
+documents (which a heartbeat with nothing else pending sees in the publication head the configuration cache
+holds, reading the head and its set at most once every 30 seconds) or a refused or failed publication (its
+retry), never earlier, and that alarm publishes only a change, as above. It costs up to 720 alarm invocations per
+object-hour inside the tail, and the object stays resident for the tail; after it the heartbeats stop and the
+alarm left is the next marker's expiry, if any. An object started again knows neither its last touch nor a
+pending change's age: it keeps no heartbeat until its next touch, and its first alarm runs the routine
+publication once, which publishes only a change.
 `tauLearnMs` is the decay horizon, in milliseconds, the counts were decayed with; the serving path uses a
 snapshot only when its `tauLearnMs`, `reward`, `objective`, `measurementBasis` and estimator dials are the
 ones the tenant's published learn document names. `witness` is a digest of the statistics object's

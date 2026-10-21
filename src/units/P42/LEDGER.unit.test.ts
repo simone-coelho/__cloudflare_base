@@ -98,7 +98,8 @@
 //
 // HARNESS: src/units/_parity.ts (the mounted routes over the real Durable Object
 // classes, both shopper hosts), src/units/_parity3.ts (publication through every
-// object's own door; the kit). Imports from src/units/: ../_parity, ../_parity3.
+// object's own door; the kit), src/units/_parity9.ts (the placement's publication alarm,
+// S18 R10). Imports from src/units/: ../_parity, ../_parity3, ../_parity9.
 
 import { describe, expect, it } from 'vitest';
 
@@ -111,6 +112,7 @@ import {
   VIEW_TABBY_26, type Answer, type Host, type Mounted,
 } from '../_parity';
 import { missingStatements, publishStats } from '../_parity3';
+import { firePublicationAlarm } from '../_parity9';
 
 const PDP_MODULES = 'pdp-modules', HOME_MODULES = 'home-modules', CART_MODULES = 'cart-modules';
 const POOLED = 'module.complete-the-look.1', POOLED2 = 'module.style-it.1', SHARED = 'module.reviews.1', PDP_ONLY = 'module.size-guide.1', HOME_ONLY = 'module.category-grid.1';
@@ -308,7 +310,11 @@ describe('unit:P42.PW2 (R-P78, D1)', () => {
       // The placement's own object in the harness's registry: its alarm calls LearnStats.publish() directly, never the /publish door.
       const placement = m.stats.get(statsName(TENANT, BRAND, PDP_MODULES));
       expect(placement, `${host}: PRECONDITION — the product placement's statistics object exists`).toBeTruthy();
-      const alarm = () => (placement!.object as unknown as { alarm: () => Promise<void> }).alarm()
+      // R10 (S18, amendment 9 P70; the lead's ruling R-P195), test-only: the alarm is the placement's PUBLICATION alarm, fired
+      // at the publication's due time (src/units/_parity9.ts `firePublicationAlarm`: PUBLISH_DELAY_MS after the visit's
+      // writes, and the next one PUBLISH_DELAY_MS after the refused one), since P70 shares the object's single alarm with a
+      // keep-warm heartbeat and no alarm publishes before its due time. It still runs LearnStats.alarm(), never the door.
+      const alarm = () => firePublicationAlarm(m, PDP_MODULES)
         .then(() => 'published', (error: Error) => `refused: ${String(error?.message ?? error).slice(0, 120)}`);
       const restore = failPooledDoor(m, HOME_MODULES);
       const refused = await (async () => { try { return await alarm(); } finally { restore(); } })();

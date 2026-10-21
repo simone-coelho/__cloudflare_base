@@ -86,6 +86,7 @@ import { decideContent } from '@/content/decide';
 import { invalidateLiftCache } from '@/content/service';
 import type { ContentPiece, DecisionRecord, LearnConfig, SlotCatalog, SlotStrategy } from '@/content/types';
 import { HISTORICAL_CONTENT_TYPES } from '@/content/typeAffinity';
+import * as learnStatsModule from '@/durable-objects/LearnStats';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { issueSessionCapability, SHOPPER_HEADER } from '@/identity/sessionCapability';
@@ -104,6 +105,16 @@ import { decisionRoutes } from '@/routes/decisions';
 import realtimeRoutes from '@/routes/realtime';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import type { Env } from '@/types/env';
+
+/**
+ * R10 (S18, amendment 9 P70; the lead's rulings R-P195 and R-P196): P70's `WARM_HEARTBEAT_MS` as the engine exports it
+ * (src/durable-objects/LearnStats.ts, read loosely, as src/units/W27/LEDGER.unit.test.ts W27.R4 reads it), or no
+ * heartbeat (an infinite delay) while it does not.
+ */
+const warmHeartbeatMs = (): number => {
+  const value = (learnStatsModule as unknown as Record<string, unknown>).WARM_HEARTBEAT_MS;
+  return typeof value === 'number' ? value : Number.POSITIVE_INFINITY;
+};
 
 // ===========================================================================
 // The customer's fixture (docs/architecture/tapestry_requirements.txt A.3.6 and
@@ -609,6 +620,8 @@ describe('unit:W27.M1.01', () => {
   it('host-internal: the real statistics object archives before it publishes, and an archive failure publishes nothing and re-arms the alarm', async () => {
     // R19: no public route exposes the ORDER of the two durable writes or the
     // alarm the failure path leaves behind; the residual on the row names it.
+    // R10 (S18, R-P196): the moment before this test's first touch of the object (no alarm of it fires in this test).
+    const touchedFrom = Date.now();
     const w = await world();
     const name = statsName(TENANT, BRAND, 'chero');
     await observe(w, 'chero', [{ item: 'cnt-charms-slg', exposures: 100, clicks: 90 }, { item: 'cnt-tabby-evening', exposures: 100, clicks: 1 }]);
@@ -643,7 +656,13 @@ describe('unit:W27.M1.01', () => {
     // retries the publication without waiting for another event.
     const rearmed = w.alarms.get(name);
     expect(typeof rearmed, 'the failure path leaves an alarm behind').toBe('number');
-    expect(rearmed!).toBeGreaterThanOrEqual(startedAt + 30_000);
+    // R10 (S18, amendment 9 P70; R-P195, R-P196), test-only: P70's keep-warm heartbeat shares the object's single alarm,
+    // and the failure re-arm keeps the EARLIEST of the heartbeat, the pending retry and the marker expiries (R-P195; W27 R4's
+    // guarded path). The evidence observed in this test touched the object, so it is in its warm tail, and no alarm of
+    // it fires here: the alarm left may be the heartbeat armed by the first of those touches (an earlier pending alarm is
+    // never pushed later), so the lower bound is the earlier of the retry's 30 s after the failure and WARM_HEARTBEAT_MS
+    // after the moment before this test's first touch (exactly `startedAt + 30_000`, as before, without a heartbeat).
+    expect(rearmed!).toBeGreaterThanOrEqual(Math.min(startedAt + 30_000, touchedFrom + warmHeartbeatMs()));
     expect(rearmed!).toBeLessThanOrEqual(finishedAt + 30_000);
 
     // The retry publishes a NEW version, and the retained archive is untouched
