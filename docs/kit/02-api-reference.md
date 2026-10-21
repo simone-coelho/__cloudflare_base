@@ -382,7 +382,7 @@ write or a credit write) its one alarm is due no more than `WARM_HEARTBEAT_MS` (
 alarm re-arms it so, until `WARM_TAIL_MS` (10 minutes) after the last touch (src/durable-objects/LearnStats.ts).
 A heartbeat re-arms the alarm and performs nothing else unless a publication is due: it builds no snapshot,
 runs no publication check, reads no key-value entry, publishes nothing and writes no key. A publication is due
-only 30 seconds after an exposure or credit write, a republication of the tenant's documents, or a refused or
+only 30 seconds after an exposure or credit write, a clean-up of a shopper's learning effects that retires their markers, a stats repair (`coarsen` or the explicit `reset`, a repeat of one included), a republication of the tenant's documents, or a refused or
 failed publication (its retry); to see a republication, a heartbeat with nothing else pending looks at the
 tenant's publication head as the configuration cache holds it, which reads the head and its set from the
 configuration store at most once every 30 seconds. The same alarm removes each learning-effect marker at its

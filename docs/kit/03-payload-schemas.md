@@ -1490,10 +1490,10 @@ The same alarm keeps the statistics object warm for the decisions that read it: 
 an exposure write or a credit write, the alarm is due at most 5 seconds ahead (`WARM_HEARTBEAT_MS`) and each
 alarm re-arms it so until 10 minutes after the last of them (`WARM_TAIL_MS`). A heartbeat re-arms and performs
 nothing else unless a publication is due: no snapshot, no publication check, no key-value read, no publication
-and no key written. A publication is due only 30 seconds after new evidence, a republication of the tenant's
+and no key written. A publication is due only 30 seconds after new evidence, a clean-up of a shopper's learning effects that retires their markers, a stats repair (`coarsen` or the explicit `reset`, a repeat of one included), a republication of the tenant's
 documents (which a heartbeat with nothing else pending sees in the publication head the configuration cache
 holds, reading the head and its set at most once every 30 seconds) or a refused or failed publication (its
-retry), never earlier, and that alarm publishes only a change, as above. It costs up to 720 alarm invocations per
+retry), never earlier while the object keeps running, and that alarm publishes only a change, as above (across a restart, a write still pending is published by the restarted object's first alarm, below, up to 30 seconds before it was due and never lost: 14 seconds after the write where measured). It costs up to 720 alarm invocations per
 object-hour inside the tail, and the object stays resident for the tail; after it the heartbeats stop and the
 alarm left is the next marker's expiry, if any. An object started again knows neither its last touch nor a
 pending change's age: it keeps no heartbeat until its next touch, and its first alarm runs the routine
