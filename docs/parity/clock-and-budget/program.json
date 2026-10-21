@@ -104,7 +104,7 @@
     {
       "id": "P70",
       "title": "The statistics object stays warm for the witness (**amendment 9, 2026-10-20; re-scoped by R-P191**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
@@ -189,7 +189,7 @@
     {
       "id": "P71",
       "title": "The object host's buffered re-decision fires (**amendment 9, 2026-10-20**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
