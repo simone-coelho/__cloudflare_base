@@ -149,6 +149,24 @@
 // Measured (logs/r203b/): RED under the time-based sketch, snapshotalways and pending2 (quoted in the S18 report); green
 // on today's product (the new legs), pendingstore, psexact, psnoclear and the builder's 375639ed.
 //
+// R-P221 (P70 fix round 1; lane L13 on the hosted pair: the object host's statistics objects start again inside the tail,
+// and an object that keeps its last touch in memory only then arms no heartbeat and is evicted:
+// _evidence/baseline-52/lift-edge-do/ANALYSIS.md §3, §5(A)) reverses R-P202(2): an object started again inside a tail
+// resumes its heartbeat at its first alarm. Ruled fix: when no touch has been seen since the instance started and no
+// learning-effect marker expiry was due at that alarm, the alarm takes now as the last touch before re-arming (no key
+// written; the tail may extend by up to WARM_TAIL_MS after each restart). WB1's R-P221 legs (both hosts): after a touch
+// and a few heartbeats, the object started again with its held alarm kept (the P70 delivery reviewer's probe B), that
+// first alarm arms the next heartbeat within WARM_HEARTBEAT_MS and the heartbeats run on to between WARM_TAIL_MS after the
+// touch (less a heartbeat) and WARM_TAIL_MS after that first alarm (plus a heartbeat), then the ordinary alarm; with
+// nothing pending they publish nothing and write no key, and only the first alarm after the start may read the
+// publication state (R-P201); with a write pending across the restart that first alarm publishes it (R-P202(2) keeps
+// that) and the heartbeats after it publish nothing more. The lock: a restarted object whose held alarm is a marker's
+// expiry (outside any tail) removes the marker, publishes nothing and leaves the next marker's expiry, no heartbeat; and
+// without a restart the tail still ends WARM_TAIL_MS after the last touch. Measured (S18/fix1/specifier/logs/): RED on the
+// integration head 84ad6630 (the built P70) at the two resume legs, green under the ruled fix, under a fix that keeps the
+// tail's end in a stored key (written by touches, never by a heartbeat), and the lock RED under a fix that resumes on
+// every first alarm, a marker's expiry included.
+//
 // No new export is imported statically; `WARM_HEARTBEAT_MS` and `WARM_TAIL_MS` are read loosely.
 //
 // FIXTURE. P61's and P62's lift world (src/units/_parity9.ts `liftWorld`): P08's pooled world as
@@ -308,6 +326,34 @@ async function witnessTouch(m: Mounted, log: StorageLog, shopper?: Awaited<Retur
   return decided;
 }
 
+/**
+ * R-P221 (lane L13; _evidence/baseline-52/lift-edge-do/ANALYSIS.md §3, §5(A)): the object's heartbeats driven a little way
+ * into the tail after a touch at `t0` (to `t0` + 12 s), then the object started again over its stored state with the alarm
+ * it held kept — the platform keeps an object's alarm across a restart; the harness's fresh storage does not, so the held
+ * alarm is set again on it, as the P70 delivery reviewer's probe B does (S18/reviewer-p70/probes/p70edge.unit.test.ts
+ * :58-74) — then its alarms driven from that held alarm to WARM_TAIL_MS plus two heartbeats after it.
+ */
+async function restartInsideTail(m: Mounted, log: StorageLog, t0: number, heartbeat: number, tail: number) {
+  const before = await drive(m, log, t0 + 12_000);
+  const held = await alarmOf(m);
+  expect([before.fired.length > 0 ? 'heartbeats before the restart' : 'no heartbeat before the restart', held !== null && held > t0 && held <= t0 + 12_000 + heartbeat ? 'a heartbeat held' : `held ${String(held)}`],
+    `PRECONDITION (${m.host}): before the restart the object keeps its heartbeat inside the tail`).toEqual(['heartbeats before the restart', 'a heartbeat held']);
+  const fresh = restartObject(m);
+  await (placementOf(m).object as unknown as { state: DurableObjectState }).state.storage.setAlarm(held!);
+  const after = await drive(m, fresh, held! + tail + 2 * heartbeat);
+  expect(after.fired[0]?.at, `PRECONDITION (${m.host}): the held alarm is the restarted object's first`).toBe(held);
+  return { held: held!, after };
+}
+/** R-P221: after a restart inside the tail, the heartbeats run on to about WARM_TAIL_MS after the touch or the restart's first alarm (read loosely, as WB1 reads its tail), then the ordinary alarm. */
+function resumed(m: Mounted, after: { fired: Fired[]; next: number | null }, t0: number, heartbeat: number, tail: number): string[] {
+  const first = after.fired[0], last = after.fired.at(-1)?.at ?? null;
+  return [first ? within(first.next, first.at, first.ended, heartbeat) : 'no alarm fired', chain(after.fired.slice(0, -1), heartbeat),
+    last !== null && first !== undefined && last >= t0 + tail - heartbeat && last <= first.at + tail + heartbeat ? 'on to the tail\'s end'
+      : `last heartbeat ${last === null ? 'none' : `${last - t0} ms after the touch`}`,
+    after.next === ordinaryAfter(m, last ?? t0) ? 'then the ordinary alarm' : `then ${after.next === null ? 'no alarm' : `an alarm ${after.next - (last ?? t0)} ms later`} (the ordinary one ${String(ordinaryAfter(m, last ?? t0))})`];
+}
+const RESUMED = ['due within WARM_HEARTBEAT_MS', 'unbroken', 'on to the tail\'s end', 'then the ordinary alarm'];
+
 // ===========================================================================
 // unit:P70.WB1 — a touch keeps the statistics object's alarm within the heartbeat for the tail; a heartbeat does nothing else
 // ===========================================================================
@@ -382,6 +428,74 @@ describe('unit:P70.WB1', () => {
         `${host}: P70.WB1 — R-P200: after the writes, an alarm reads the publication state only when their publication is due at it`)
         .toBe('one reading alarm inside the window, the one publication');
     }, 120_000);
+
+    it(`host (${host}): R-P221 — an object restarted inside the tail resumes its heartbeat at its first alarm: after a witness touch and a few heartbeats, the object started again with its alarm held, that alarm arms the next heartbeat within WARM_HEARTBEAT_MS and the heartbeats run on to about WARM_TAIL_MS after the touch or that alarm, then the ordinary alarm; with nothing pending they publish nothing, write no key and, but the first after the start, read no publication state`, async () => {
+      const { heartbeat, tail } = await warm();
+      const { m } = await liftWorld(host);
+      const log = restartObject(m);
+      const t0 = Date.now() + PUBLISH_DELAY_MS;
+      await later(t0 - Date.now(), async () => { await witnessTouch(m, log); });
+      const { held, after } = await restartInsideTail(m, log, t0, heartbeat, tail);
+      expect.soft(resumed(m, after, t0, heartbeat, tail),
+        `${host}: P70.WB1 (R-P221) — the restarted object's first alarm inside the tail arms the next heartbeat within WARM_HEARTBEAT_MS and the heartbeats continue (no heartbeat after the restart leaves the object to be evicted)`)
+        .toEqual(RESUMED);
+      expect.soft(effectsOf(after.fired), `${host}: P70.WB1 (R-P221) — with nothing pending, the resumed heartbeats publish nothing and write no key`).toEqual({ published: [], written: [] });
+      expect.soft(publicationReads(after.fired, index => index === 0, held),
+        `${host}: P70.WB1 (R-P221, R-P201) — the resumed heartbeats read no publication state (the first alarm after the start may)`)
+        .toBe('no alarm with nothing due read the publication state');
+    }, 120_000);
+
+    it(`host (${host}): R-P221 — with a write pending across the restart, the restarted object's first alarm publishes it (R-P202(2)) and arms the next heartbeat within WARM_HEARTBEAT_MS, and the heartbeats continue to about WARM_TAIL_MS after the touch or that alarm, publishing nothing more, writing no key and reading no publication state`, async () => {
+      const { heartbeat, tail } = await warm();
+      const { m } = await liftWorld(host);
+      const log = restartObject(m);
+      const t0 = Date.now() + PUBLISH_DELAY_MS;
+      await later(t0 - Date.now(), async () => { await witnessTouch(m, log); });
+      const config = (placementOf(m).data.get('learn') as { config?: unknown } | undefined)?.config;
+      const written = await later(t0 + 1_000 - Date.now(), () => objectDoor(m, '/exposures', { tenant: TENANT, brand: BRAND, slot: PDP_MODULES, config,
+        exposures: [{ item: POOLED, cell: { channel: 'direct', visit_bucket: '1', region: 'US-NY', affinity: 'occasion:evening' } }] }));
+      expect(written.status, `${host}: PRECONDITION — the write is accepted (${show(written.body)})`).toBe(200);
+      const { held, after } = await restartInsideTail(m, log, t0, heartbeat, tail);
+      expect.soft([after.fired[0]?.published ? 'the first alarm published the pending write' : 'the first alarm published nothing', ...resumed(m, after, t0, heartbeat, tail)],
+        `${host}: P70.WB1 (R-P221) — the restarted object's first alarm publishes the pending write and arms the next heartbeat within WARM_HEARTBEAT_MS, and the heartbeats continue`)
+        .toEqual(['the first alarm published the pending write', ...RESUMED]);
+      expect.soft(effectsOf(after.fired.slice(1)), `${host}: P70.WB1 (R-P221) — the heartbeats after it publish nothing and write no key`).toEqual({ published: [], written: [] });
+      expect.soft(publicationReads(after.fired.slice(1), () => false, held),
+        `${host}: P70.WB1 (R-P221, R-P201) — the heartbeats after it read no publication state`).toBe('no alarm with nothing due read the publication state');
+    }, 120_000);
+
+    it(`host (${host}): LOCK (R-P221) — a restarted object whose held alarm is a learning-effect marker's expiry (no heartbeat and no publication due at it, outside any tail) removes the expired markers, publishes nothing and resumes no heartbeat: the alarm it leaves is the next marker's expiry; and without a restart the tail still ends WARM_TAIL_MS after the last touch`, async () => {
+      const { heartbeat, tail } = await warm();
+      const { m } = await liftWorld(host);
+      const expiry = ordinaryAfter(m, Date.now());
+      expect(expiry, `${host}: PRECONDITION — the state holds learning-effect markers that expire later`).toEqual(expect.any(Number));
+      const markers = () => {
+        const learn = placementOf(m).data.get('learn') as { effects?: Record<string, { expiresAt: number }>; retiredEffects?: Record<string, { expiresAt: number }> };
+        return [...Object.values(learn.effects ?? {}), ...Object.values(learn.retiredEffects ?? {})].map(marker => marker.expiresAt);
+      };
+      const before = markers().length;
+      const log = restartObject(m);
+      await (placementOf(m).object as unknown as { state: DurableObjectState }).state.storage.setAlarm(expiry!);
+      const run = await drive(m, log, expiry!);
+      expect(run.fired[0]?.at, `${host}: PRECONDITION — the held marker expiry is the restarted object's first alarm`).toBe(expiry);
+      const held = markers();
+      expect.soft([held.length < before && held.every(at => at > expiry!) ? 'the expired markers removed' : `${held.length} of ${before} markers held`,
+        run.fired[0]?.published ? 'published' : 'published nothing',
+        run.next === ordinaryAfter(m, expiry!) ? 'the next marker expiry left' : `alarm left ${run.next === null ? 'none' : `${run.next - expiry!} ms after it`} (next expiry ${String(ordinaryAfter(m, expiry!))})`],
+      `${host}: P70.WB1 (R-P221) — a marker's expiry on a restarted object outside any tail resumes no heartbeat`)
+        .toEqual(['the expired markers removed', 'published nothing', 'the next marker expiry left']);
+
+      const { m: other } = await liftWorld(host);
+      const otherLog = restartObject(other);
+      const t0 = Date.now() + PUBLISH_DELAY_MS;
+      await later(t0 - Date.now(), async () => { await witnessTouch(other, otherLog); });
+      const tailRun = await drive(other, otherLog, t0 + tail + 2 * heartbeat);
+      const last = tailRun.fired.at(-1)?.at ?? null;
+      expect.soft([last !== null && last >= t0 + tail - heartbeat && last <= t0 + tail + heartbeat ? 'the last heartbeat at the end of the tail' : `last heartbeat ${last === null ? 'none' : `${last - t0} ms after the touch`}`,
+        tailRun.next === ordinaryAfter(other, last ?? t0) ? 'then the ordinary alarm' : `then ${tailRun.next === null ? 'no alarm' : `an alarm ${tailRun.next - (last ?? t0)} ms later`}`],
+      `${host}: P70.WB1 (R-P221) — without a restart the heartbeats stop WARM_TAIL_MS after the last touch, as before`)
+        .toEqual(['the last heartbeat at the end of the tail', 'then the ordinary alarm']);
+    }, 180_000);
   }
 });
 
