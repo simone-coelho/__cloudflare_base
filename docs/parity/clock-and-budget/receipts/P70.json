@@ -4,41 +4,42 @@
   "ticketId": "P70",
   "workOrderHash": "sha256:7e1fdf2cfd73ea03df374da09f41472785af3494d21ebcd68618528bdc4e2e75",
   "artifact": {
-    "revision": "13827e1ea6f065e2a83c66fd4d1afc46edf283c1",
-    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p70-joined-r2 merged into rem/integration, local and not pushed"
+    "revision": "ff97e1cc9652a0e20b9e6155e8b9520a245ae594",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p70-fix1-joined merged into rem/integration, local and not pushed"
   },
   "implementation": {
     "actor": "rem-implementer",
     "evidence": [
-      "rem/p70-build at ef8e2c30 (e916646c the mechanism: LearnStats.ts exports WARM_HEARTBEAT_MS 5000 and WARM_TAIL_MS 600000; a touch (an answered /witness call, an exposure write or a credit write) records its time in memory and re-arms the one shared alarm to the earliest of the marker expiry, the pending publication and the heartbeat, never moving an earlier alarm later; a publication is pending by recorded state in memory (a write: 30 s after the first unpublished write, scheduled; a failed publication: 30 s later; a refused publication: pending, unscheduled, performed by the next alarm; a republished document, seen at the tenant's publication head through the configuration cache at most once per 30 s); an alarm with nothing due builds no snapshot, runs no skip check, reads no key-value entry nor learnPublished and writes no key; a restarted object's first alarm runs the routine once; a write that counts nothing still arms the publication; pending state never in learn or learnFence; kit 02 :383/:1191 and kit 03 :1489-1498 say so, P68's citations re-pointed; wrangler.toml names the constants; fan.ts unchanged, budgets 200/200, the ring untouched; 46f50a32 was the superseded time-based first build; merges of the spec rounds 6aa6df02, 0f5d4813 and 83780896, test-only); P70 14/14 ×3 on both hosts at ef8e2c30; locks P61 44, P62 55, P63 34, P42 11, W27 LEDGER 4, W27 B1 12, learn.test.ts 44, priorsAbsent.test.ts 3, P68 8 (215/215); tsc app and SDK 0; both bundle checks exact; the builder's probe: 120 heartbeats per ten-minute tail, 0 publications and 0 keys written with nothing due, the single publication 30.04 s after a credit write, the latency lever unchanged before and after.",
+      "rem/p70-build at ef8e2c30 (e916646c the mechanism: LearnStats.ts exports WARM_HEARTBEAT_MS 5000 and WARM_TAIL_MS 600000; a touch (an answered /witness call, an exposure write or a credit write) records its time in memory and re-arms the one shared alarm to the earliest of the marker expiry, the pending publication and the heartbeat, never moving an earlier alarm later; a publication is pending by recorded state in memory (a write: 30 s after the first unpublished write, scheduled; a failed publication: 30 s later; a refused publication: pending, unscheduled, performed by the next alarm; a republished document, seen at the tenant's publication head through the configuration cache at most once per 30 s); an alarm with nothing due builds no snapshot, runs no skip check, reads no key-value entry nor learnPublished and writes no key; a restarted object's first alarm runs the routine once; a write that counts nothing still arms the publication; pending state never in learn or learnFence; kit 02 :383/:1191 and kit 03 :1489-1498 say so, P68's citations re-pointed; wrangler.toml names the constants; fan.ts unchanged, budgets 200/200, the ring untouched; 46f50a32 was the superseded time-based first build; merges of the spec rounds 6aa6df02, 0f5d4813 and 83780896, test-only); P70 14/14 ×3 on both hosts at ef8e2c30; locks P61 44, P62 55, P63 34, P42 11, W27 LEDGER 4, W27 B1 12, learn.test.ts 44, priorsAbsent.test.ts 3, P68 8 (215/215); tsc app and SDK 0; both bundle checks exact; the builder's probe: 120 heartbeats per ten-minute tail, 0 publications and 0 keys written with nothing due, the single publication 30.04 s after a credit write, the latency lever unchanged before and after.\n\nFIX ROUND 1 (R-P221, R-P222): rem/p70-fix1 at f7a2c64d (09bc1667 the merge of the fix-round spec 006afe3d: legs :432 nothing pending and :448 a write pending across a restart, RED for the missing heartbeat, and the lock :467 a marker-expiry alarm on a restarted object resumes nothing; f7a2c64d the mechanism: alarmScoped computes the learning-effect marker expiries once and, when no touch has been seen since the instance started and none is due at this alarm, sets the last touch to now before publishing and re-arming, so an object restarted inside its warm tail resumes its heartbeat at its first alarm; no key written; the early publication of a pending write after a restart kept; kit 02 :391–399 and kit 03 :1497–1502 rewritten with the cost \"resident for the tail after each touch or restart\"; P68's citations re-pointed by +5 lines); P70 20/20 ×3 on both hosts; the nine locks 215/215; tsc app and SDK 0; both bundle checks exact; eslint 0; the restart probe: on the base the restarted object's first alarm publishes the pending write and leaves only the marker expiry about 86,353 s ahead, on the head it leaves the next heartbeat 5.003 s later and 121 heartbeats follow to 600.03 s after the first alarm, nothing written but the one publication; a marker-expiry first alarm resumes nothing on head and base. Cause on the hosted pair: the object host's statistics objects restart inside the tail (baseline-52/lift-edge-do/ANALYSIS.md).",
       "/home/simonecoelho/rem/_evidence/parity-step3/S18/specifier/REPORT.md",
       "/home/simonecoelho/rem/_evidence/parity-step3/S18/reviewer-spec/REPORT.md",
       "/home/simonecoelho/rem/_evidence/parity-step3/P70/implementer/REPORT.md",
-      "git commits on rem/p70-joined-r2 up to 13827e1e"
+      "git commits on rem/p70-fix1-joined up to ff97e1cc"
     ]
   },
   "acceptance": {
     "command": "node node_modules/vitest/vitest.mjs run src/units/P70 --minWorkers=1 --maxWorkers=1",
     "result": "PASS",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/parity-step3/S18/reviewer-p70/logs/head-P70-run1.log"
+      "/home/simonecoelho/rem/_evidence/parity-step3/S18/fix1/reviewer/logs/head-P70-run1.log"
     ]
   },
   "integration": {
     "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
     "result": "PASS",
     "evidence": [
-      "/home/simonecoelho/rem/_evidence/parity-step3/S18/gate-r2/gate.log"
+      "/home/simonecoelho/rem/_evidence/parity-step3/S18/fix1/gate-r2/gate.log"
     ]
   },
   "verification": {
     "verdict": "PASS",
     "verifier": "rem-reviewer",
     "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P70/fix1/reviewer/REPORT.md",
       "/home/simonecoelho/rem/_evidence/parity-step3/P70/reviewer/REPORT.md"
     ]
   },
-  "completedAt": "2026-10-21T01:13:00.519Z",
+  "completedAt": "2026-10-21T16:49:04.694Z",
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
