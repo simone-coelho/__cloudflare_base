@@ -22,6 +22,18 @@ import { channelIn } from '@/services/visit';
 import { contextTermsOf, TODAY_TERMS, type ContextTerms } from '@/content/cell';
 
 const PUBLISH_DELAY_MS = 30_000;
+/**
+ * P70 (amendment 9, R-P191, R-P195): the keep-warm heartbeat. After a touch — an answered witness call, an exposure
+ * write or a credit write — the object keeps its one alarm due at most `WARM_HEARTBEAT_MS` ahead, re-armed by every
+ * alarm, until `WARM_TAIL_MS` after the last touch, so the platform does not evict it between a placement's decisions
+ * (it was evicted after about 13-17 s idle, and the wake on the next witness call outlasted the witness budget). A
+ * heartbeat publishes nothing and writes no key: the alarm publishes only when a publication is due
+ * (`publicationIsDue`) and writes the state only when a learning-effect marker has expired. Its cost: at most one alarm
+ * invocation per `WARM_HEARTBEAT_MS` inside the tail (720 per object-hour), and the object resident for the tail after
+ * each touch. After the tail the heartbeats stop and only the ordinary alarms remain.
+ */
+export const WARM_HEARTBEAT_MS = 5_000;
+export const WARM_TAIL_MS = 600_000;
 /** Conservative application budgets, not a measurement of a provider limit. */
 export const LEARN_LIMITS = { requestBytes: 256 * 1024, rows: 1000, stateBytes: 512 * 1024,
   items: 256, counters: 4096, component: 256, keyBytes: 2048,
@@ -460,9 +472,35 @@ export class LearnStats {
   private positionPolicies: { key: string; policies: PositionPolicy[] } | null = null;
   private chain: Promise<unknown> = Promise.resolve();
   private lastAllocated = 0;
+  /** P70: the last touch (an answered witness call, an exposure or a credit write); the keep-warm tail runs from it. */
+  private lastTouch = Number.NEGATIVE_INFINITY;
+  /**
+   * P70 (R-P195, R-P200): the pending publication's due time, recorded by what made it pending — a write
+   * (`PUBLISH_DELAY_MS` after the first write it will publish, `arm`), a failed or refused publication (its retry,
+   * `PUBLISH_DELAY_MS` after it) or a republication of the tenant's documents an alarm saw (`PUBLISH_DELAY_MS` after the
+   * republication) — or null when none is pending. Held in memory only.
+   */
+  private publicationDue: number | null = null;
+  /**
+   * P70: whether the alarm is scheduled for the pending publication: a write's, a failed publication's retry (W27 R4) and
+   * a republication's are; a refused publication's retry is performed by the next alarm due anyway, as before (a refusal
+   * schedules nothing of its own).
+   */
+  private publicationArmed = false;
+  /**
+   * P70 (R-P200): the tenant's documents (its publication set's revision and digest) the last publication attempt was
+   * built from, which is how an alarm with nothing else pending sees a republication; null when that attempt had nothing
+   * to compare; undefined when this object has attempted none since it started, so what was pending before is unknown and
+   * its first alarm runs the routine publication.
+   */
+  private documentsSeen: { tenant: string; identity: string } | null | undefined = undefined;
   private synthetic: SyntheticObjectBoundary;
   constructor(private state: DurableObjectState, private env: Env) {
-    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => { this.data = null; this.lastAllocated = 0; this.positionPolicies = null; });
+    this.synthetic = new SyntheticObjectBoundary(state, env, 'LEARN_STATS', () => {
+      this.data = null; this.lastAllocated = 0; this.positionPolicies = null;
+      // P70: what the publication schedule knew of the state it described; the next alarm publishes as a restarted object's does.
+      this.publicationDue = null; this.publicationArmed = false; this.documentsSeen = undefined;
+    });
     this.state = this.synthetic.state; this.env = this.synthetic.env;
   }
 
@@ -679,24 +717,69 @@ export class LearnStats {
   }
 
   async alarm(): Promise<void> { return this.synthetic.run(undefined, () => this.alarmScoped()); }
+  /**
+   * P70 (R-P195, R-P200): the object's one alarm performs what is due when it fires, and nothing else: it removes the
+   * learning-effect markers past their expiry (the only state it writes, and only when one has expired), runs the
+   * routine publication only when a publication is due (`publicationIsDue`), and re-arms at the earliest of the
+   * heartbeat inside the tail, the scheduled pending publication and the next marker expiry (`rearm`). An alarm with
+   * nothing due — a heartbeat — runs no skip check, builds no snapshot, reads no key-value entry and writes no key.
+   */
   private async alarmScoped(): Promise<void> { await this.serialize(async () => {
-    const current = await this.loadIfAny();
-    if (current?.effects || current?.retiredEffects) {
-      const candidate = structuredClone(current);
-      for (const [id, marker] of Object.entries(candidate.effects ?? {})) if (marker.expiresAt <= Date.now()) delete candidate.effects![id];
-      for (const [id, marker] of Object.entries(candidate.retiredEffects ?? {})) if (marker.expiresAt <= Date.now()) delete candidate.retiredEffects![id];
+    const current = await this.loadIfAny(), now = Date.now();
+    if (effectExpiries(current).some(expiry => expiry <= now)) {
+      const candidate = structuredClone(current!);
+      for (const [id, marker] of Object.entries(candidate.effects ?? {})) if (marker.expiresAt <= now) delete candidate.effects![id];
+      for (const [id, marker] of Object.entries(candidate.retiredEffects ?? {})) if (marker.expiresAt <= now) delete candidate.retiredEffects![id];
       await this.commit(candidate);
     }
-    // P63: the routine publication, skipped when nothing changed since the last one (`unchangedSince`).
-    try { await this.publish(false, true); }
-    finally {
-      const expiry = [...Object.values(this.data?.effects ?? {}), ...Object.values(this.data?.retiredEffects ?? {})].map(marker => marker.expiresAt).filter(at => at > Date.now());
-      if (expiry.length) {
-        const next = Math.min(...expiry), currentAlarm = await this.state.storage.getAlarm();
-        if (currentAlarm === null || currentAlarm <= Date.now() || currentAlarm > next) await this.state.storage.setAlarm(next);
-      }
-    }
+    // P63: the routine publication, skipped when nothing changed since the last one (`unchangedSince`), when it is due.
+    try { if (await this.publicationIsDue()) await this.publish(false, true); }
+    finally { await this.rearm(true); }
   }); }
+
+  /**
+   * P70 (R-P200): whether a publication is due now, judged by what was recorded: the pending publication's due time when
+   * one is pending (a write's, a failed or refused publication's retry, a republication's); with none, a republication
+   * of the tenant's documents since the last attempt, seen through the tenant's publication head as the serving cache
+   * holds it (`pinPublication`: no key-value read, nothing built), due `PUBLISH_DELAY_MS` after that republication and
+   * scheduled when it is not yet due. An object that has attempted no publication since it started does not know what
+   * was pending before it, and its first alarm runs the routine publication, which publishes nothing when nothing changed.
+   */
+  private async publicationIsDue(): Promise<boolean> {
+    const now = Date.now();
+    if (this.publicationDue !== null) return now >= this.publicationDue;
+    if (this.documentsSeen === undefined) return true;
+    if (this.documentsSeen === null) return false;
+    let pin: Awaited<ReturnType<typeof pinPublication>>;
+    try { pin = await pinPublication(this.env, this.documentsSeen.tenant, true); } catch { return false; }
+    if (`${pin.revision}:${pin.digest}` === this.documentsSeen.identity) return false;
+    const due = Number.isSafeInteger(pin.operation?.at) ? pin.operation.at + PUBLISH_DELAY_MS : now;
+    if (now >= due) return true;
+    this.publicationDue = due; this.publicationArmed = true;
+    return false;
+  }
+
+  /**
+   * P70 (R-P195): the one alarm, set to the earliest of the learning-effect markers' expiries, the scheduled pending
+   * publication and, inside the tail (`WARM_TAIL_MS` after the last touch), the heartbeat `WARM_HEARTBEAT_MS` from now.
+   * Guarded as every re-arm here is (W27 R4): an alarm already set earlier and still ahead is never pushed later. `fired`
+   * is the alarm handler's own re-arm, which replaces the alarm that just fired and arms no expiry already past; any other
+   * caller leaves an alarm whose time has passed to fire. Writes no key.
+   */
+  private async rearm(fired = false): Promise<void> {
+    const now = Date.now(), due = effectExpiries(this.data).filter(expiry => !fired || expiry > now);
+    if (this.publicationDue !== null && this.publicationArmed) due.push(this.publicationDue);
+    if (now - this.lastTouch < WARM_TAIL_MS) due.push(now + WARM_HEARTBEAT_MS);
+    if (!due.length) return;
+    const next = Math.min(...due), previous = await this.state.storage.getAlarm();
+    if (previous === null || (fired && previous <= now) || previous > next) await this.state.storage.setAlarm(next);
+  }
+
+  /** P70: a touch, the object's own work: it keeps the object warm for the next decision and never fails the call that made it. */
+  private async touched(): Promise<void> {
+    this.lastTouch = Date.now();
+    try { await this.rearm(); } catch { /* a re-arm that fails here is made again by the next touch or alarm */ }
+  }
 
   private async fence(): Promise<GenerationFence> {
     const value = await this.state.storage.get<GenerationFence>('learnFence') ?? { whole: 0, items: {} };
@@ -854,7 +937,7 @@ export class LearnStats {
       } else await this.commit(candidate);
       if (journal && added.length) await this.rememberExposures([...journal, ...added]);
       let alarm: StatsWriteReceipt['alarm'] = 'scheduled';
-      try { await this.arm(); } catch { alarm = 'unknown'; }
+      try { await this.arm(true); } catch { alarm = 'unknown'; }
       const receipt: StatsWriteReceipt = { version: managed ? 2 : 1, kind, received, processed: rows.length, skipped: received - rows.length, alarm,
         ...(managed ? { newlyApplied, alreadyApplied, suppressed } : {}) };
       return json({ ok: true, receipt });
@@ -889,11 +972,18 @@ export class LearnStats {
     } catch { /* a repeat this object cannot remember is applied again, never refused */ }
   }
 
-  private async arm(): Promise<void> {
+  /**
+   * A committed change's publication, due `PUBLISH_DELAY_MS` from now unless one is already pending earlier (which then
+   * publishes this change too), and the alarm re-armed for it (`rearm`). P70: `touch` records an exposure or a credit
+   * write as a touch, which starts or extends the keep-warm tail.
+   */
+  private async arm(touch = false): Promise<void> {
     await this.loadIfAny();
-    const next = Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(this.data));
-    const previous = await this.state.storage.getAlarm();
-    if (previous === null || previous > next) await this.state.storage.setAlarm(next);
+    const now = Date.now();
+    if (touch) this.lastTouch = now;
+    this.publicationDue = Math.min(this.publicationDue ?? Number.POSITIVE_INFINITY, now + PUBLISH_DELAY_MS);
+    this.publicationArmed = true;
+    await this.rearm();
   }
 
   /**
@@ -1224,10 +1314,19 @@ export class LearnStats {
    * what it was built from (`PublicationInputs`) as its `basis`.
    */
   private async publish(force = false, routine = false): Promise<LiftSnapshot | null> {
+    // P70 (R-P200): an attempt by any caller publishes what is pending; one refused or failed leaves its retry pending,
+    // due PUBLISH_DELAY_MS after it (a failure's is scheduled below, W27 R4; a refusal's waits for the next alarm due).
+    this.publicationDue = null; this.publicationArmed = false;
+    try { return await this.publishOnce(force, routine); }
+    catch (error) { if (this.publicationDue === null) this.publicationDue = Date.now() + PUBLISH_DELAY_MS; throw error; }
+  }
+  private async publishOnce(force: boolean, routine: boolean): Promise<LiftSnapshot | null> {
     const d = await this.loadIfAny() ?? await this.priorOnlyIdentity();
-    if (!d) return null;
+    if (!d) { this.documentsSeen = null; return null; }
     // P63: the documents in force, read before the snapshot reads them.
     const documents = await this.publicationSet(d.tenant), inputs: PublicationInputs = {};
+    // P70 (R-P200): what this attempt is built from, against which an alarm with nothing pending sees a republication.
+    this.documentsSeen = documents ? { tenant: d.tenant, identity: `${documents.revision}:${documents.digest}` } : null;
     // State/prior/snapshot refusals retain their existing semantics. Freeze the
     // estimates and publication time once; allocation never recomputes them.
     // P42 (R-P78, D1): the pooled cause alone is refused by name, through every
@@ -1298,8 +1397,11 @@ export class LearnStats {
       // W27 R4 (amendment A19, LANE-LOG R161): the retry is due 30 seconds out,
       // but the alarm is also what removes a learning-effect marker at its
       // expiry, so it is set to the EARLIER of the two and a pending expiry is
-      // never pushed later than it is due.
-      await this.state.storage.setAlarm(Math.min(Date.now() + PUBLISH_DELAY_MS, ...effectExpiries(d)));
+      // never pushed later than it is due. P70 (R-P195): the retry is the pending
+      // publication, scheduled, and the guarded re-arm keeps the alarm at the
+      // earliest of it, the markers' expiries and the heartbeat inside the tail.
+      this.publicationDue = Date.now() + PUBLISH_DELAY_MS; this.publicationArmed = true;
+      await this.rearm();
       throw new Error('Snapshot publication unavailable');
     }
   }
@@ -1804,6 +1906,8 @@ export class LearnStats {
   private async witnessDoor(b: Record<string, unknown>): Promise<Response> {
     const fence = await this.fence(), verdict = await this.heldVerdict(), identity = verdict.identity;
     if (verdict.refused || (identity && (identity.tenant !== b.tenant || identity.brand !== b.brand || identity.slot !== b.slot || !samePage(identity, b.page)))) throw recovery();
+    // P70: an answered witness call is a touch; its re-arm (the object's own storage, no remote call) runs beside the reads below.
+    const warm = this.touched();
     const now = Date.now(), healthy = !!verdict.basis && !(verdict.anchor > now);
     const publication = await this.state.storage.get<{ digest: string; witness: string; version: number }>('learnPublished');
     const recent = recentPublicationsOf(await this.state.storage.get(RECENT_KEY)).filter(entry => now - entry.publishedAt <= LIFT_RECENT_WINDOW_MS);
@@ -1817,6 +1921,7 @@ export class LearnStats {
       }
       witness = await verdict.witness!.value;
     }
+    await warm;
     return json({ ok: true, tenant: b.tenant, brand: b.brand, slot: b.slot, ...(b.page ? { page: b.page } : {}),
       state: !identity ? 'empty' : healthy ? 'healthy' : 'recovery-required',
       publication: publication && /^[a-f0-9]{64}$/.test(publication.digest) && /^[a-f0-9]{64}$/.test(publication.witness) && Number.isSafeInteger(publication.version)

@@ -34,6 +34,17 @@ const cell: Cell = { channel: 'direct', visit_bucket: '1', region: 'US-NC', affi
 const learn = { ...DEFAULT_LEARN, stats: DEFAULT_STATS, slots: { hero: { reward: 'click' as const } } };
 const row = (kind: DocumentKind<unknown>, value: unknown): PublicationBaseline => ({ kind, scope: TENANT, revision: { revision: 1, value, actor: 'fixture', note: '', at: 1 } });
 const priorKey = 'config-publication/v1/' + TENANT + '/prior/rev/1.json';
+/**
+ * R10 (S18, amendment 9 P70; the lead's ruling R-P195), test-only. src/durable-objects/LearnStats.ts
+ * `const PUBLISH_DELAY_MS = 30_000` (not exported): a publication is due 30 seconds after the write it publishes and
+ * never earlier (P70's keep-warm heartbeat shares the object's single alarm), so the alarm that publishes runs then.
+ */
+const PUBLISH_DELAY_MS = 30_000;
+/** Runs `work` (an alarm) at the publication's due time: the clock held PUBLISH_DELAY_MS after now, then restored. */
+async function atPublicationDue<T>(work: () => Promise<T>): Promise<T> {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + PUBLISH_DELAY_MS);
+  try { return await work(); } finally { clock.mockRestore(); }
+}
 
 /** One statistics object over an R2 authority holding the demo bootstrap's four members, and a prior document when given. */
 async function rig(priors?: unknown) {
@@ -82,7 +93,7 @@ describe('E2 a tenant with no imported priors', () => {
     expect(snapshot).toMatchObject({ tenant: TENANT, slot: 'hero', events: 12, priorVersion: 0 });
     expect(Object.keys(snapshot.items).sort()).toEqual(['DLEX6500W', 'WM6500HWA']);
     expect(f.storage.alarm).not.toBeNull();
-    await expect(f.object.alarm()).resolves.toBeUndefined();
+    await expect(atPublicationDue(() => f.object.alarm())).resolves.toBeUndefined();
     const published = JSON.parse(f.cache.store.get(liftKey(TENANT, TENANT, 'hero'))!) as LiftSnapshot;
     expect(published).toMatchObject({ events: 12, priorVersion: 0 });
     const forced = await (await f.call('/publish', {})).json() as { published: boolean; snapshot: LiftSnapshot };
@@ -109,7 +120,7 @@ describe('E2 a tenant with no imported priors', () => {
     invalidatePublicationCache();
     const refused = await gone.call('/snapshot');
     expect(refused.status).toBe(503);
-    await expect(gone.object.alarm()).rejects.toThrow();
+    await expect(atPublicationDue(() => gone.object.alarm())).rejects.toThrow();
     expect(gone.cache.store.has(liftKey(TENANT, TENANT, 'hero'))).toBe(false);
 
     const outage = await rig();
@@ -117,7 +128,7 @@ describe('E2 a tenant with no imported priors', () => {
     outage.outage(true);
     invalidatePublicationCache();
     expect((await outage.call('/snapshot')).status).toBe(503);
-    await expect(outage.object.alarm()).rejects.toThrow();
+    await expect(atPublicationDue(() => outage.object.alarm())).rejects.toThrow();
     expect(outage.cache.store.has(liftKey(TENANT, TENANT, 'hero'))).toBe(false);
   });
 });

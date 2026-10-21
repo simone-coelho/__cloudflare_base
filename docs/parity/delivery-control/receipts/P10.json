@@ -44,8 +44,15 @@
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
-      "status": "PENDING",
-      "evidence": []
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-2026-10-20b/P10.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L11/records/P10.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L3/records/P10.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L9/records/P10.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L10/records/P10.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-2026-10-20b/REPORT.md"
+      ]
     },
     {
       "id": "LIVE2",
