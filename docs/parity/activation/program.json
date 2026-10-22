@@ -115,7 +115,9 @@
         "docs/kit/01-integration-guide.md",
         "docs/kit/02-api-reference.md",
         "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js"
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P79 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -230,7 +232,9 @@
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js"
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P80 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -354,7 +358,9 @@
         "docs/kit/03-payload-schemas.md",
         "src/units/P34/** (R10 of T5's refresh count only, by the specifier)",
         "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js"
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P81 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -751,7 +757,9 @@
         "src/sdk/listen.ts",
         "src/units/P34/** (R10 of T5's socket open only, by the specifier)",
         "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js"
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P74 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -1200,7 +1208,9 @@
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js"
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P84 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -1305,7 +1315,9 @@
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js"
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P85 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -1815,7 +1827,9 @@
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js"
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P89 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
