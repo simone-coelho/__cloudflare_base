@@ -77,9 +77,7 @@
           "id": "LIVE1",
           "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
           "owner": "deployment owner with the customer acceptance owner",
-          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion.",
-          "status": "PENDING",
-          "evidence": []
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
         }
       ],
       "allowedPaths": [
