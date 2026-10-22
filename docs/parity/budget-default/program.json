@@ -61,7 +61,7 @@
       ],
       "remainingWork": [
         "Raise the exported defaults LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS in src/learn/fan.ts from 200 to 600, the override's admission and refusal unchanged (closed by unit:P72.BD1 and unit:P72.BD2).",
-        "Read P62's, P68.KT3's, P70.WB2's and W10.03's (src/index.api-boundary.test.ts:284/:1726, a 500 ms hold expected refused within 400 ms) locks that pin the number 200 as the exported defaults, test-only, in the form of R-P195 (closed by unit:P72.BD2 and those locks green at the artifact).",
+        "Read P62's, P68.KT3's, P70.WB2's and the W10.03 fixture locks in src/index.api-boundary.test.ts and src/content/consent.test.ts (a 500 ms hold expected refused within 400 ms), and any other test fixture the sweep finds, as the exported defaults, test-only, in the form of R-P195 (closed by unit:P72.BD2 and those locks green at the artifact).",
         "State 600 ms and the reason in kit 02 (:369, the heartbeat/cost paragraph and the :328 sample answer), in kit 03 (one new sentence beside its sources description: the two budgets, their default and the bounded override), in src/types/env.ts's two doc comments and in the commented wrangler.toml lines (closed by unit:P72.BD3)."
       ],
       "decisions": [
@@ -89,7 +89,8 @@
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "wrangler.toml",
-        "src/index.api-boundary.test.ts"
+        "src/index.api-boundary.test.ts",
+        "src/content/consent.test.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P72 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
