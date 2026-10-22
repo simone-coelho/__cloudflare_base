@@ -1513,6 +1513,11 @@ why; the decision's answer does, per learning slot, in `sources.lift` (`served`,
 `late`, `superseded`, `unrecognized`, `unhealthy` or `failed`, with its milliseconds), and the monitor
 counts each outcome for the tenant as `learningReads` (the API reference, the snapshot answer and the
 monitor).
+The witness read and the shopper's ring read each wait at most their budget, reported in `sources.budgets`:
+600 ms each by default (`LIFT_WITNESS_BUDGET_MS`, `RING_READ_BUDGET_MS`), one edge round trip to a warm
+statistics object, measured on the platform at up to 378 ms inside a warm tail, with a buffer, since the budget
+bounds the wait, not the read; a deployment may override either with a whole number of milliseconds below 5 000,
+and any other value is refused, the 600 ms default kept and the variable named in `sources.budgets.refused`.
 A slot name the tenant's catalogue carries on more than one page has one snapshot per page, read with
 `page=` (see the API reference); its `slot` member is still the slot name, the answer around it names the
 `page`, and the page is part of the committed identity its `witness` digests.

@@ -325,7 +325,7 @@ Every slot's offered decision for the page, in page order; private records are n
   "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 }, "journey": { "version": "reflex-demo-v1+r15", "revision": 15, "reason": null }, "external": null, "state": "session",
     "consent": { "tracking": true, "personalization": true, "instruction": { "version": 1, "tenant": "<tenant>", "subject": "<subject>", "revision": "<choice id>", "operation": { "id": "<choice id>", "grant": "{\"grantId\":\"<grant id>\",\"authorityEpoch\":\"<authority epoch>\",\"iat\":1788541300,\"exp\":1788544900}", "expected": null, "tracking": true, "personalization": true },
       "tracking": { "value": true, "chosenAt": 1788541310000, "expiresAt": 1791133310000 }, "personalization": { "value": true, "chosenAt": 1788541310000, "expiresAt": 1791133310000 } }, "personalized": true }, "timings": { "documents": 4, "shopper": 6, "trend": 0, "lift": 3, "decide": 2 },
-    "lift": { "chero": { "ms": 3, "outcome": "served" } }, "ring": { "ms": 2, "outcome": "read" }, "budgets": { "lift": 200, "ring": 200 } }
+    "lift": { "chero": { "ms": 3, "outcome": "served" } }, "ring": { "ms": 2, "outcome": "read" }, "budgets": { "lift": 600, "ring": 600 } }
 }
 ```
 
@@ -366,8 +366,10 @@ applied), `failed` (it could not be read, and no fatigue term applied) or `skipp
 decision read none: no slot of the page applies a fatigue dial, or the arm is the default's). `ms` is the
 read's own time, in whole milliseconds, from its start to its outcome; a `late` read reports at least the
 budget it waited. `sources.budgets` is `{ lift, ring }`, those budgets in milliseconds: by default
-`LIFT_WITNESS_BUDGET_MS` and `RING_READ_BUDGET_MS`, 200 ms each (src/learn/fan.ts), one edge round trip to a
-Durable Object plus the statistics object's own measured work. A deployment may set either as an environment
+`LIFT_WITNESS_BUDGET_MS` and `RING_READ_BUDGET_MS`, 600 ms each (src/learn/fan.ts): one edge round trip to a
+warm Durable Object, which for the statistics object was measured on the platform at up to 378 ms inside a warm
+tail, with a buffer; the budget bounds the wait for the read, not the read, so a read inside it answers as soon
+as it is done. A deployment may set either as an environment
 variable of the same name: the decimal text of a whole number of milliseconds above 0 and below 5 000 (the
 SDK's own deadline) is admitted; any other value is refused, the default stays in force, and
 `sources.budgets.refused` names the refused variables, sorted (absent when none was refused). Either read is
@@ -397,7 +399,7 @@ publishes only a change, and, unless that alarm is a learning-effect marker's ex
 as a touch would, so the tail may extend by up to 600 seconds after each restart and an object that keeps
 restarting less than ten minutes apart stays warm; a reader arriving after the object was evicted and before
 its next alarm still finds it asleep. The shopper's ring object is not kept warm, so a cold ring read stays `late` in
-`sources.ring`. The budgets are unchanged by it: 200 ms each by default.
+`sources.ring`. The heartbeat leaves the budgets as they are: 600 ms each by default.
 
 **A declared layout slot.** A slot the slot document declares with `layout: true` (under
 `governanceVersion: 4`, at most one per page) is the page's layout: its `decisions` are up to `take`
