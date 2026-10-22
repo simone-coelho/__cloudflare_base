@@ -37,24 +37,27 @@
 //     that opens "`sources.budgets` is `{ lift, ring }`": its sentence naming the two defaults states 600 ms (and no
 //     200 ms), and the paragraph states the reason — 378 ms, the warm round trip measured, and that the budget bounds
 //     the wait. In kit 02's heartbeat/cost paragraph ("**The statistics object stays warm.**"): its sentence on the
-//     budgets states 600 ms (and no 200 ms). In kit 03: every sentence that names the witness or ring budget, or
-//     `sources.budgets`, states 600 ms and none 200 ms (at f28e4e56 kit 03 holds no such sentence: see the report). In
-//     wrangler.toml: the commented P62 lines state the defaults as 600 (both commented assignments "600"), no 200, and
+//     budgets states 600 ms (and no 200 ms). Kit 02's sample answer (:328, `"budgets": { "lift": …, "ring": … }`) shows
+//     600 and 600. In kit 03 (R-P239(2)): one sentence beside its `sources` description (the paragraph that says the
+//     decision's answer reports each read "in `sources.lift`") names both budgets (`LIFT_WITNESS_BUDGET_MS` and
+//     `RING_READ_BUDGET_MS`), states their default of 600 ms (and no 200 ms), the bounded override (below 5 000 ms) and
+//     the reason (378 ms); kit 03 holds no budget statement today, so the leg is RED, not vacuous. src/types/env.ts
+//     (R-P239(4)): the doc comments of the two `Env` members, read as P68.KT2 reads them, state 600 ms (and no 200 ms).
+//     In wrangler.toml: the commented P62 lines state the defaults as 600 (both commented assignments "600"), no 200, and
 //     the reason (378 ms).
 //
-// MEASURED at f28e4e56 (_evidence/parity-step3/S19/specifier/logs/): BD1 RED on both hosts and in logic (200 where 600
-// is expected); BD2 GREEN on both hosts; BD3 RED at kit 02's two sentences and wrangler.toml (200), kit 03 GREEN (no
-// sentence states a budget).
+// MEASURED at f88bebeb (71e10fe8 merged; _evidence/parity-step3/S19/specifier/logs/r239/): BD1 RED on both hosts and in logic (200 where
+// 600 is expected); BD2 GREEN on both hosts; BD3 RED at kit 02's two sentences and its sample answer, kit 03 (no budget
+// sentence), env.ts's two doc comments and wrangler.toml (200).
 //
 // NEGATIVE CONTROLS (scratch copies, never committed; _evidence/parity-step3/S19/specifier/sketches/): the fix (fan.ts's
-// two defaults at 600, the kit 02 sentences and the wrangler.toml lines stating 600 and why) turns every P72 unit GREEN;
+// two defaults at 600; kit 02's two sentences and its sample answer, kit 03's new sentence, env.ts's two doc comments and
+// the wrangler.toml lines stating 600 and why) turns every P72 unit GREEN, and P62, P68 and P70 stay green under it;
 // a fix that raises only the lift budget turns BD1 RED on the ring; a fix that admits 5000 turns BD2 RED.
 //
-// R10 (expectations a build of P72 changes): src/units/P62/LEDGER.unit.test.ts (P62.LW1's 200 pins, read as the
-// exported defaults in this batch, test-only, R-P195's form); outside P72's allowed paths, listed for the lead:
-// src/units/P68/LEDGER.unit.test.ts P68.KT3 (:399, :402, :404: `learningReadBudgets` with no override, and the refused
-// cases' defaults, pinned at 200) and src/units/P70/LEDGER.unit.test.ts P70.WB2 (the remote-call lock's
-// `DEFAULT_BUDGET_MS = 200`: "the default budgets stay 200 ms"); both RED under the fix sketch.
+// R10 (expectations a build of P72 changes), applied in this batch, test-only, R-P195's form (read the exported defaults
+// instead of 200): src/units/P62/LEDGER.unit.test.ts (P62.LW1), src/units/P68/LEDGER.unit.test.ts (P68.KT3) and
+// src/units/P70/LEDGER.unit.test.ts (P70.WB2's remote-call lock), the last two granted under R-P239(1).
 //
 // No new export is imported; every member read exists at this head.
 //
@@ -163,11 +166,41 @@ describe('unit:P72.BD3', () => {
     expect.soft(statesDefault(budgets), `P72.BD3 — kit 02 :${line}'s budget sentence states 600 ms`).toBe('states 600 ms');
   });
 
-  it('logic: every sentence of kit 03 that states the witness or ring budget, or sources.budgets, states 600 ms and none 200 ms', () => {
-    const said = sentences(readTree('docs/kit/03-payload-schemas.md').split('\n').join(' '))
-      .filter(sentence => /sources\.budgets|LIFT_WITNESS_BUDGET_MS|RING_READ_BUDGET_MS|(witness|ring)[^.]{0,40}\bbudget/i.test(sentence));
-    expect.soft(said.map(statesDefault).filter(state => state !== 'states 600 ms'), 'P72.BD3 — no kit 03 sentence states a budget other than 600 ms')
-      .toEqual([]);
+  it('logic: kit 03 carries, in the paragraph of its sources description, one sentence naming both budgets (LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS) that states their default of 600 ms, the bounded override (below 5 000 ms) and the reason (378 ms), and no kit 03 sentence states 200 ms for them', () => {
+    const { text, line } = paragraph('docs/kit/03-payload-schemas.md', 'in `sources.lift` (`served`');
+    // One sentence, read up to its full stop (a semicolon inside it does not end it).
+    const both = text.split(/(?<=\.)\s+(?=[A-Z`*(])/).map(sentence => sentence.trim())
+      .filter(sentence => sentence.includes('LIFT_WITNESS_BUDGET_MS') && sentence.includes('RING_READ_BUDGET_MS'));
+    const states = (sentence: string) => [statesDefault(sentence), /overrid/i.test(sentence) && /\b5[\s,]?000\b/.test(sentence) ? 'the bounded override' : 'no bounded override',
+      WARM_ROUND_TRIP.test(sentence) ? 'the reason' : 'no reason (378 ms)'];
+    const found = both.find(sentence => states(sentence).join() === 'states 600 ms,the bounded override,the reason') ?? both[0];
+    expect.soft(found === undefined ? ['no sentence names both budgets beside the sources description'] : states(found),
+      `P72.BD3 — kit 03 :${line}'s sources paragraph states the budgets' 600 ms default, the bounded override and why (R-P239)`)
+      .toEqual(['states 600 ms', 'the bounded override', 'the reason']);
+    const anywhere = sentences(readTree('docs/kit/03-payload-schemas.md').split('\n').join(' '))
+      .filter(sentence => /sources\.budgets|LIFT_WITNESS_BUDGET_MS|RING_READ_BUDGET_MS/.test(sentence) && /\b200\s?ms\b/.test(sentence));
+    expect.soft(anywhere.map(sentence => sentence.slice(0, 160)), 'P72.BD3 — no kit 03 sentence states a 200 ms budget').toEqual([]);
+  });
+
+  it('logic: kit 02\'s sample decision answer (:328) shows sources.budgets as { "lift": 600, "ring": 600 }', () => {
+    const samples = readTree('docs/kit/02-api-reference.md').split('\n').map((text, index) => ({ text, line: index + 1 })).filter(({ text }) => text.includes('"budgets": {'));
+    expect(samples.length, 'PRECONDITION — kit 02 carries a sample answer with sources.budgets').toBeGreaterThan(0);
+    expect.soft(samples.map(({ text, line }) => {
+      const budgets = /"budgets": \{ "lift": (\d+), "ring": (\d+)/.exec(text);
+      return budgets ? { line, lift: Number(budgets[1]), ring: Number(budgets[2]) } : { line, lift: 'unread', ring: 'unread' };
+    }), 'P72.BD3 — the sample answer shows the 600 ms defaults (R-P239(3))').toEqual(samples.map(({ line }) => ({ line, lift: DEFAULT_MS, ring: DEFAULT_MS })));
+  });
+
+  it('logic: src/types/env.ts\'s doc comments of LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS (read as P68.KT2 reads them) state the code default as 600 ms', () => {
+    const env = readTree('src/types/env.ts');
+    const docOf = (name: string): string | undefined => {
+      const at = env.search(new RegExp(`\\n\\s*${name}\\?\\s*:`));
+      if (at < 0) return undefined;
+      const before = env.slice(0, at), open = before.lastIndexOf('/**'), close = before.lastIndexOf('*/');
+      return open >= 0 && close > open && before.slice(close + 2).trim() === '' ? before.slice(open, close + 2).replace(/\s*\n\s*\*\s?/g, ' ') : undefined;
+    };
+    expect.soft(BOTH.map(name => [name, statesDefault(docOf(name))]), 'P72.BD3 — env.ts states the 600 ms code defaults (R-P239(4))')
+      .toEqual(BOTH.map(name => [name, 'states 600 ms']));
   });
 
   it('logic: the commented wrangler.toml lines of P62\'s budgets state the defaults as 600 (both commented assignments "600") and the reason, and no 200', () => {
