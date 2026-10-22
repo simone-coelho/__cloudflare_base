@@ -4,7 +4,7 @@
 **Milestone:** M3, "Integration kit in your hands", Kickoff + 45 (mid October). This is the line that protects your November freeze.
 **Status:** built against the platform as it runs today; every request and response in these pages was executed against the code before it was written down.
 
-The kit is four documents and two scripts.
+The kit is four documents, two scripts and the SDK package.
 
 | Document | Who reads it | What it gives you |
 |---|---|---|
@@ -15,7 +15,8 @@ The kit is four documents and two scripts.
 
 | Script | Purpose |
 |---|---|
-| `public/sdk/edge-personalization.js` (and `.esm.js`) | The client. One file, no dependencies, served by the platform host |
+| `public/sdk/edge-personalization.js` (and `.esm.js`) | The client. One file, no dependencies, served by the platform host, and under `/sdk/<version>/` for a page that pins a release |
+| `packages/sdk` | The same client as the package `edge-personalization` for your own build: the ES module, the script-tag build and TypeScript declarations. Not on a registry yet: install it from this directory ([integration guide, section 2](./01-integration-guide.md#2-install)) |
 | `scripts/verify-origin.sh` | The connection check: health, cross-origin permission, the site key, a decision, an event, the live channel |
 
 ## What we need from you before M3 closes

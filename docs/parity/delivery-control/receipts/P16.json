@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P16",
+  "workOrderHash": "sha256:d1c97ad1c209b97ff75219ec5945112cbb2fdcd446bac2627e9531bcb9036eb1",
+  "artifact": {
+    "revision": "34f1c074a01b9060f086ea0e459c71385e77a912",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p16-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P16 built on rem/p16-build in one round. 01179424 merges rem/integration 73c8bd47 (P02 to P13, P34, P30, P33, P32, P09, P11, P14, P35, P08 and P15 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P16 (b465a0b3, the S4 specification revision b435cc2b reviewed PASS, R-P4); RED baseline eight failed and two passed on P16's own reasons (the declaration and the table dropped by the validators, the add-to-bag story not credited, no record member, the kit silent), OB4's lock green on both hosts, no PRECONDITION; 96400f81 the mechanism (src/content/types.ts, src/content/kinds.ts, src/content/service.ts, src/content/decide.ts, src/ledger/records.ts, src/learn/policy.ts, src/learn/fan.ts, src/learn/hourly.ts, src/learn/receipts.ts, src/durable-objects/DecisionRing.ts; src/learn/stats.ts unchanged): a catalogue piece declaring one success event from the reward list and any other value refused naming the piece's member; a slot publishing a conversion table of rewards to finite values above zero on its learn dials and any other table refused naming the slot's member, an empty table included; one credit rule in policy.ts, the table's value for the event times the objective's weight, kept under the slot's own reward counter, applied online by the decision ring and offline by the retained-day fold and the hourly fold alike, the position effect multiplying afterwards in both; a decision whose record names a success event matched only by an outcome of that event, before the credit rule's pick within the slot; a declared event the table does not value crediting nothing; an undeclared piece credited the table's value for the slot's reward; the value read from the record at credit time so a later change of declaration or table leaves the decision's credit as recorded; every record of a slot with a table carrying explain.successEvent with sorted keys and its receipt successEvent with no new why sentence, both absent without a table; a slot without a table byte-identical to the base in decisions, records, receipts, replays, credits, statistics and ring storage, ledger keys, manifests and the hourly fold; 34f1c074 the kit (docs/kit/02-api-reference.md, docs/kit/03-payload-schemas.md: the success event absent by default, the conversion table into the slot's currency, an unvalued success event crediting nothing, the readings, the new rows and section); no bundle changed, build-meridian and build-sdk --check exact; acceptance ten of ten on both hosts at 34f1c074 with P33 12/12, P05 18/18, P14 10/10, P40 16/16, P08 14/14, P11 12/12, P30 25/25, P32 11/11, P13, P29, P39, P15 20/20, P01, P02, P03, P04, P06, P07, P09, P10, P12, P28, P31, P34, P35, P36 to P38, W19, W24, W21, W36, W25, W26, W28, W40, W35, W16, W30, W31, W37, src/ledger and src/services whole green, src/learn, src/content, src/reflex and src/routes failing on baseline entries only; both typechecks exit 0; eslint 0 new; twenty-eight probes on both hosts in temporary test files removed before the gate (the readings on the slot's reward for a declaring piece, a declaration without a table, an undeclared piece under a table, a table omitting the slot's reward, an empty table, the revenue and margin objectives, the custom reward; a declared purchase valued twenty; module-tied attribution with a table; the hourly fold equal to online; the position policy with a table; a direct publication's advisory; a table on a slot no page carries; the R-P7 comparison with a fixed clock and deterministic identifiers); the gate at 34f1c074 GATE_OK on its first run (implementer/logs/gate.log: 3237 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P16/implementer/REPORT.md",
+      "git commits on rem/p16-build up to 34f1c074"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P16 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P16/reviewer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P16/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P16/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P16/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-16T05:49:19.421Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-2026-10-20/P16.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L11/records/P16.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L9/records/P16.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L2/records/P16.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

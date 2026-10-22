@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P44",
+  "workOrderHash": "sha256:3eed075c875dec3af66d1f92cb76c76cef4cdacf99f732858cc8b97bb56bbe3b",
+  "artifact": {
+    "revision": "da7e7f31636d3f645c4f11388b4518d67268598f",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p44-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p44-build at da7e7f31636d3f645c4f11388b4518d67268598f (6098b57a merges rem/integration 0cc1afa3 into rem/tkt/P44 f86b01e3; 3cd44620 src/content/kinds.ts, PIECE_FIELDS the old 20 fields plus pooled and successEvent, 22, still a literal set the demo kit's scaffold reads, and src/content/import.ts copying both members on the feed after eligibleWhen with the pooled cell through the JSON-cell parse and CSV_COLUMNS listing both; da7e7f31 kit 02 and 03). Acceptance 6/6 on both hosts; the builder's gate GATE_OK at da7e7f31 (3295 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 67d2f46d…); both typechecks exit 0; both bundle checks exact (Meridian 82903, SDK 103933 and 109150, untouched); the R-P7 dumps for a catalogue without the members byte-identical at base and head on both hosts (sha256 12969173…); W19 29/29 with its corrected lock in head, minus and base, P08 14/14 and P16 10/10 in every tree; the demo kit's scaffold reader reads 22 fields at the head. Delivery review PASS (P44/reviewer/REPORT.md): PF1 to PF3 PASS, six mutants caught by the units, the reward-word check caught by P16.OB1 and the feed's refusal of a bogus value shown by probe only. Named for the operator under R-P78 and stated in the kit: a feed whose pooled column holds false, or whose successEvent is not a reward word, is now refused 422 naming the field where it used to import with an advisory; CSV header case variants of the two columns are refused as for every listed column. Residuals: W19's host leg still skips silently a later member missing from DOCUMENTED_VALUES (S6 observation b); the console has no control for either member; kit 02 says \"any other value is refused\" while a padded true cell is accepted; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P44/implementer/REPORT.md",
+      "git commits on rem/p44-build up to da7e7f31"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P44 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P44/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P44/implementer/logs/acceptance-P44.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P44/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P44/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P44/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T05:21:51.184Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L7/records/P44.md"
+      ]
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 import type { Env } from '@/types/env';
 import type { Consent } from '@/content/consent';
 import type { SessionCapability } from '@/identity/sessionCapability';
-import { admitOwnedRecovery, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { admitOwnedRecovery, requireConsentPurpose, withdrawOwnedCarry } from '@/identity/sessionAuthority';
 import { captureRetention, externalRetentionBirths } from '@/retention';
 import { behaviorItemSchema, isBehaviorRecord, ts36, type BehaviorRecord } from './records';
-import type { RecoveryReceipt } from './recovery';
+import type { CarriedOutcome, RecoveryInput, RecoveryOptions, RecoveryReceipt } from './recovery';
 
 /** Deliberate typed event projection, not arbitrary raw data, query, URL, IP,
  * cookies, credentials, geography or private affinity. Actual event identity
@@ -13,12 +13,33 @@ const fields = ['productId', 'product_id', 'sku', 'contentId', 'content_id', 'de
   'ms', 'dwellMs', 'value', 'price', 'margin', 'currency', 'quantity', 'orderId', 'line', 'category', 'occasion', 'color', 'silhouette', 'priceBand'] as const;
 export type BehaviorPersistence = { status: 'not_captured'; reason: 'tracking_refused' | 'legacy_demo' }
   | { status: 'durable'; recordId: string; receipt: RecoveryReceipt };
-export async function captureBehavior(env: Env, principal: SessionCapability, consent: Consent,
-  event: { type: string; eventId: string; eventIdSource: 'provided' | 'request'; timestamp: number; source: string; data: Record<string, unknown> },
-  sessionId: string | null): Promise<BehaviorPersistence> {
-  if (!consent.tracking) return { status: 'not_captured', reason: 'tracking_refused' };
+type BehaviorEvent = { type: string; eventId: string; eventIdSource: 'provided' | 'request'; timestamp: number; source: string; data: Record<string, unknown> };
+export async function captureBehavior(env: Env, principal: SessionCapability, consent: Consent, event: BehaviorEvent,
+  sessionId: string | null, options?: RecoveryOptions): Promise<BehaviorPersistence> {
+  return (await captureBehaviorCarrying(env, principal, consent, event, sessionId, options)).persistence;
+}
+
+/**
+ * P65 (amendment 7, R-P124): a behaviour capture, and the outcome its durable
+ * admission carries. `persistence` is exactly what `captureBehavior` answers.
+ * `carrying` says this admission was handed an outcome to carry; `withdraw`
+ * withdraws whatever outcome the captured operation carries (none: nothing),
+ * awaited and never retained by the owner (`withdrawOwnedCarry`), so its failure
+ * is the caller's and the outcome it leaves carried is the alarm's to settle.
+ */
+export interface BehaviorCapture { persistence: BehaviorPersistence; carrying: boolean; withdraw: () => Promise<void> }
+const NOTHING_CARRIED = async (): Promise<void> => { /* not captured: nothing was admitted, so nothing is carried */ };
+/**
+ * P65: `captureBehavior` whose durable admission carries `carried`, the outcome
+ * the action route prepared for the same event before this admission (one
+ * transaction: src/ledger/recovery.ts `CarriedOutcome`). The record, its id, its
+ * projection, the operation and its receipt are the same with or without it.
+ */
+export async function captureBehaviorCarrying(env: Env, principal: SessionCapability, consent: Consent, event: BehaviorEvent,
+  sessionId: string | null, options?: RecoveryOptions, carried?: CarriedOutcome): Promise<BehaviorCapture> {
+  if (!consent.tracking) return { persistence: { status: 'not_captured', reason: 'tracking_refused' }, carrying: false, withdraw: NOTHING_CARRIED };
   requireConsentPurpose(consent, 'tracking');
-  if (env.LEDGER_RECOVERY_ENABLED !== 'true' && env.DEPLOYMENT_PROFILE === 'demo') return { status: 'not_captured', reason: 'legacy_demo' };
+  if (env.LEDGER_RECOVERY_ENABLED !== 'true' && env.DEPLOYMENT_PROFILE === 'demo') return { persistence: { status: 'not_captured', reason: 'legacy_demo' }, carrying: false, withdraw: NOTHING_CARRIED };
   const data: BehaviorRecord['data'] = {};
   for (const key of fields) if (Object.hasOwn(event.data, key)) {
     const value = event.data[key];
@@ -40,6 +61,9 @@ export async function captureBehavior(env: Env, principal: SessionCapability, co
     event_id: event.eventId, event_id_source: event.eventIdSource, event: event.type, source: event.source, ts: event.timestamp, data,
     retention: captureRetention(env, principal.tenant, event.timestamp), externalRetention: externalRetentionBirths(env, principal.tenant, event.timestamp) };
   if (!isBehaviorRecord(record)) throw new Error('Behavior record unavailable');
-  const receipt = await admitOwnedRecovery({ kind: 'behavior', tenant: principal.tenant, subject: principal.subject, brand: principal.tenant, record });
-  return { status: 'durable', recordId: record.record_id, receipt };
+  const input: Extract<RecoveryInput, { kind: 'behavior' }> = { kind: 'behavior', tenant: principal.tenant, subject: principal.subject, brand: principal.tenant, record,
+    ...(carried ? { carried } : {}) };
+  const receipt = await admitOwnedRecovery(input, options);
+  return { persistence: { status: 'durable', recordId: record.record_id, receipt }, carrying: carried !== undefined,
+    withdraw: () => withdrawOwnedCarry({ kind: 'behavior', tenant: input.tenant, subject: input.subject, brand: input.brand, record }) };
 }

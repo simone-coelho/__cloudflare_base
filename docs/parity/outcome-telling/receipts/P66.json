@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P66",
+  "workOrderHash": "sha256:e601611f3af0706eaf8cd12b76c1be740deb52592c24cd20eede810dc3c6d396",
+  "artifact": {
+    "revision": "4f3565415549b9c06aad3806acf0f3f5c935b08c",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p66-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p66-build at 7665b46c (059bd0c1 the mechanism: two helpers in ShopperReflex.ts turn a ZodError from mergedIdentity into P58's MergeValidationRefusal and answer it with validationRefusal(issues), rethrowing everything else; handleAccountChange and handleAbsorb wrap only their merge and their operation, committing nothing on a refusal; handleTransfer (P58) shares the helpers unchanged; link.ts applyAccountChange reads the door's answer with validationRefusalOf and throws the route's own validation error; nothing parses a message or workerd's remote flag; 368fb71e kit 02 'A refused merge.' bullet and four shifted citations; 7665b46c integration 785f101d merged, product tree unchanged); P66 17/17 ×3 on both hosts, in process and natively (workerd: 500 ZodError before → 400 Validation error with the same issue after); P58 22/22, P12 12/12, sdkContract 120/120; builder's whole suite 3709/3709.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S15/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S15/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P66/implementer/REPORT.md",
+      "git commits on rem/p66-joined up to 4f356541"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P66 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S15/reviewer-p66/logs/accept-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S15/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P66/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T14:22:13.087Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P66.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P66.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

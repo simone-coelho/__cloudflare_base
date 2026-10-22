@@ -13,9 +13,10 @@ import { retentionBirth, externalRetentionBirths, requireRetention, mergeRetenti
 import { pinProfileRetention } from '@/identity/sessionAuthority';
 
 import {
-  liveVisit, mergeVisits, validEntry,
-  type ChannelSignals, type EntryChannel,
+  entryChannelOf, isContextId, liveVisit, mergeVisits, RECENCY_BUCKETS, validEntry, visitArrival, visitContextMembers,
+  type ChannelSignals, type RecencyBucket, type VisitInputs,
 } from '@/services/visit';
+import { DEVICE_CLASSES, type DeviceClass } from '@/services/platform';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 
 export interface SessionData {
@@ -81,8 +82,22 @@ export interface SessionData {
     visitCount?: number;
     /** When the current visit began. */
     lastVisitAt?: number;
-    /** How this visit was entered. Classified once per visit, then carried. */
-    entryChannel?: EntryChannel;
+    /**
+     * How this visit was entered. Classified once per visit, then carried. One of
+     * the six channel words; P36: one of the tenant's channel ids when the visit
+     * was classified under its published vocabulary (`vocabularyRevision`).
+     */
+    entryChannel?: string;
+    /** P36: the source platform the visit's arrival names under the tenant's vocabulary, when it names one. */
+    sourcePlatform?: string;
+    /** P36: the landing-page type of the visit's first event naming one of the tenant's types. */
+    landingPageType?: string;
+    /** P36: the learn revision whose published vocabulary classified this visit; present only then. */
+    vocabularyRevision?: number;
+    /** P37: the device class the request that opened this visit reported; present only when it reported one. */
+    device?: DeviceClass;
+    /** P37: this visit's recency from the stored last visit; absent on a first visit. */
+    recency?: RecencyBucket;
     engagementScore: number;
     lastSegmentUpdate: number;
     journeyStage?: 'early' | 'mid' | 'late';
@@ -115,6 +130,26 @@ export interface SessionCookies {
   lastUpdate: string;
   trackingConsent: string;
   personalizationEnabled: string;
+}
+
+/**
+ * P36: the stored visit's channel and context attributes as the session record
+ * keeps them. One of the six channel words is always kept; a channel id, a
+ * source platform or a landing-page type outside them only on a visit marked
+ * with the vocabulary revision that classified it; anything else degrades to
+ * undefined, as an unrecognised channel always has. Nothing is added: a record
+ * without the new members parses to exactly what it parsed to before.
+ */
+function visitMetadata<M extends { entryChannel?: string; sourcePlatform?: string; landingPageType?: string; vocabularyRevision?: number; device?: string; recency?: string }>(m: M): M {
+  const marked = m.vocabularyRevision !== undefined;
+  const out = { ...m };
+  if (out.entryChannel !== undefined && entryChannelOf(out.entryChannel) !== out.entryChannel && !(marked && isContextId(out.entryChannel))) out.entryChannel = undefined;
+  if (out.sourcePlatform !== undefined && !(marked && isContextId(out.sourcePlatform))) delete out.sourcePlatform;
+  if (out.landingPageType !== undefined && !(marked && isContextId(out.landingPageType))) delete out.landingPageType;
+  if (marked && !(out.entryChannel !== undefined && entryChannelOf(out.entryChannel) !== out.entryChannel) && out.sourcePlatform === undefined && out.landingPageType === undefined) delete out.vocabularyRevision;
+  // P37: as the other context attributes, a key is kept only with a value.
+  for (const key of ['sourcePlatform', 'landingPageType', 'vocabularyRevision', 'device', 'recency'] as const) if (Object.hasOwn(out, key) && out[key] === undefined) delete out[key];
+  return out;
 }
 
 export const sessionDataSchema = z.object({
@@ -154,17 +189,24 @@ export const sessionDataSchema = z.object({
     // getSession() turns a parse failure into null.
     visitCount: z.number().optional(),
     lastVisitAt: z.number().optional(),
-    // An enum, so the parsed type matches the interface, with .catch so an
-    // unrecognised stored value degrades to undefined instead of failing the
-    // parse and taking the whole session with it.
-    entryChannel: z
-      .enum(['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'])
-      .optional()
-      .catch(undefined),
+    // With .catch so an unrecognised stored value degrades to undefined instead
+    // of failing the parse and taking the whole session with it. P36: a value
+    // outside the six channel words is kept only on a visit marked with the
+    // vocabulary revision that classified it (see `visitMetadata` below), so an
+    // unmarked unrecognised value still degrades to undefined.
+    entryChannel: z.string().optional().catch(undefined),
+    sourcePlatform: z.string().optional().catch(undefined),
+    landingPageType: z.string().optional().catch(undefined),
+    vocabularyRevision: z.number().int().positive().optional().catch(undefined),
+    // P37: the visit's device and recency. Declared or .parse() silently STRIPS
+    // them, and with .catch so an unrecognised stored value degrades to absent
+    // (unknown stays unknown) instead of failing the parse.
+    device: z.enum(DEVICE_CLASSES as [DeviceClass, ...DeviceClass[]]).optional().catch(undefined),
+    recency: z.enum(RECENCY_BUCKETS as [RecencyBucket, ...RecencyBucket[]]).optional().catch(undefined),
     engagementScore: z.number(),
     lastSegmentUpdate: z.number(),
     journeyStage: z.enum(['early', 'mid', 'late']).optional()
-  }),
+  }).transform(visitMetadata),
   preferences: z.object({
     trackingConsent: z.boolean(),
     personalizationEnabled: z.boolean(),
@@ -244,6 +286,22 @@ export class SessionManager {
     defer?: (p: Promise<unknown>) => void,
     ownedSnapshot?: { sessionId: string; data: SessionData | null },
     observedLive = true,
+    /**
+     * W36 (F14 R8). The visitor an id the CLIENT sent must belong to, passed when
+     * this call creates under that id. Its read of `sessionId` is then bound to
+     * `owner` (resolveRecord): a record there that is someone else's is treated
+     * as absent and nothing is written -- the empty answer a refused request
+     * gets. An earlier read of the id that failed or missed cannot let another
+     * visitor's record in here.
+     */
+    owner?: string,
+    /**
+     * P36: the tenant's published context vocabulary and the event's own page
+     * type, for a call that opens or continues a visit: the arrival is then
+     * classified by the published rules, and the visit records its source
+     * platform and landing-page type. Optional: absent, today's six words.
+     */
+    inputs?: VisitInputs,
   ): Promise<SessionData> {
     if (!validEntry(entry)) throw new SessionAccessError();
     if (this.principal) {
@@ -254,11 +312,12 @@ export class SessionManager {
       // CW25. A browser that was linked to a person writes to the person's
       // session; the id on the cookie stays what it was, the record it names
       // forwards. Resolved once here, for the read below and the write at the end.
-      const target = ownedSnapshot
+      const target: { id: string; data: SessionData | null; foreign?: true } = ownedSnapshot
         ? { id: sessionId, data: this.checkedSnapshot(sessionId, ownedSnapshot) }
-        : await this.resolveRecord(sessionId);
+        : await this.resolveRecord(sessionId, owner);
+      const foreign = target.foreign === true;
       sessionId = target.id;
-      const existingSession = target.data;
+      const existingSession = foreign ? null : target.data;
       // A person's session keeps the person's id whatever browser is writing.
       if (existingSession?.identity && existingSession.userId !== userId) userId = existingSession.userId;
 
@@ -269,9 +328,12 @@ export class SessionManager {
       // otherwise close the gap it is being measured against, and every event
       // would look like a new visit.
       const priorLastSeen = existingSession?.metadata.lastSeen;
-      const visit = observedLive ? liveVisit(existingSession?.metadata, priorLastSeen, now, entry) : {
+      // P37: beside it, the visit's device and recency (`visitArrival`): written by
+      // the event that opens the visit and carried for the visit, each only when there is one.
+      const visit = observedLive ? { ...liveVisit(existingSession?.metadata, priorLastSeen, now, entry, inputs),
+        ...visitArrival(existingSession?.metadata, priorLastSeen, now, inputs?.device) } : {
         visitCount: existingSession?.metadata.visitCount, lastVisitAt: existingSession?.metadata.lastVisitAt,
-        entryChannel: existingSession?.metadata.entryChannel,
+        entryChannel: existingSession?.metadata.entryChannel, ...visitContextMembers(existingSession?.metadata),
       };
       // A record written before visitCount existed resolves to visit 1. That
       // under-counts a returning shopper once, which is honest; seeding from
@@ -294,7 +356,12 @@ export class SessionManager {
         odpSeed: data.odpSeed ?? existingSession?.odpSeed,
         odpSeedAt: data.odpSeedAt ?? existingSession?.odpSeedAt,
         odpRecentEvents: data.odpRecentEvents ?? existingSession?.odpRecentEvents,
-        identity: data.identity ?? existingSession?.identity,
+        // W35 A1: the first record a recognized grant creates is the person's
+        // own, anchored to her id exactly as a link publishes one
+        // (ShopperReflex.publishCurrentSession), so every later owned read of it
+        // recognizes it as hers.
+        identity: data.identity ?? existingSession?.identity
+          ?? (this.principal?.kind === 'recognized' && !existingSession ? { shopperId: userId, linkedAt: now } : undefined),
         journey: data.journey ?? existingSession?.journey,
         metadata: {
           firstSeen: existingSession?.metadata.firstSeen || now,
@@ -338,9 +405,11 @@ export class SessionManager {
       //
       // Necessary explicit instructions are separate owner records. Neither a
       // missing instruction nor an old profile preference enables behavior.
-      if (!validatedData.preferences.trackingConsent) {
+      if (!validatedData.preferences.trackingConsent || foreign) {
         // Necessary choice authority lives separately on the owner. A refused
         // request neither creates nor refreshes a behavioral profile or pointer.
+        // Nor does one whose id names someone else's record (W36): that record is
+        // neither served nor written over, and no pointer is set to its id.
         return withConsent(existingSession ?? { ...validatedData, segments: [], attributes: {},
           metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now } }, resolvedConsent);
       }
@@ -390,9 +459,14 @@ export class SessionManager {
     }
     if (this.principal) {
       assertSessionTarget(this.principal);
-      if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo
-        || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)
-        : this.principal.kind === 'recognized') throw new SessionAccessError();
+      // W35 A1: a recognized grant may have no record YET — a sign-in whose
+      // shopper consented to tracking only carries no profile to the person, and
+      // the person's own object then creates nothing until her first tracked
+      // event (ShopperReflex.handleTransfer / ingest). The grant itself is the
+      // person's object's own receipt, checked by that owner before this read,
+      // so an absent record is her cold state, never a reason to refuse her.
+      if (raw && (raw.userId !== this.principal.subject || !!raw.forwardTo
+        || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject))) throw new SessionAccessError();
     }
     if (raw) {
       const consent = await currentOwnerConsent();
@@ -435,10 +509,19 @@ export class SessionManager {
    * The session a request for `sessionId` actually lands on: the record itself,
    * or the person's session it forwards to. One hop. If the target has expired
    * the browser's own record is returned, which is what it had before the link.
+   *
+   * W36 (F14 R8). `owner` is for an id the CLIENT sent rather than the cookie:
+   * the record stored at that id must be `owner`'s own (a linked browser's
+   * record still carries the browser's id and forwards as above). When it is
+   * someone else's, nothing of it is returned and `foreign` says so. A read
+   * that misses or fails returns no record and cannot say whose the id is, so
+   * a caller that goes on to create under that id passes the same `owner` to
+   * createOrUpdateSession, whose own read of the id is bound the same way.
    */
-  async resolveRecord(sessionId: string): Promise<{ id: string; data: SessionData | null }> {
+  async resolveRecord(sessionId: string, owner?: string): Promise<{ id: string; data: SessionData | null; foreign?: true }> {
     const raw = await this.readRaw(sessionId);
     if (this.principal) return { id: sessionId, data: raw };
+    if (owner !== undefined && raw && raw.userId !== owner) return { id: sessionId, data: null, foreign: true };
     if (raw?.forwardTo && raw.forwardTo !== sessionId) {
       const target = await this.readRaw(raw.forwardTo);
       if (target) {
@@ -482,12 +565,21 @@ export class SessionManager {
   }
 
   /** Buffered actions require an existing exact signed record, never a pointer or cold profile. */
-  async readBufferedSession(): Promise<SessionData> {
+  async readBufferedSession(): Promise<SessionData>;
+  /**
+   * P67 (amendment 8): the same exact read, for a narrow write of the record
+   * (`writeBufferedSession`) only when one is stored: no stored record answers
+   * null, the cold state it is (W35 A1); any other record it refuses exactly as
+   * above. The shopper's owner records a carried purchase's order this way.
+   */
+  async readBufferedSession(orAbsent: true): Promise<SessionData | null>;
+  async readBufferedSession(orAbsent = false): Promise<SessionData | null> {
     if (!this.principal) throw new SessionAccessError();
     const sessionId = this.principal.sessionId;
     assertSessionTarget(this.principal, undefined, sessionId);
     try {
       const text = await this.kv.get(`session:${sessionId}`);
+      if (text === null && orAbsent) return null;
       if (typeof text !== 'string') throw new SessionAccessError();
       const data = JSON.parse(text) as SessionData;
       this.checkedSnapshot(sessionId, { sessionId, data });
@@ -564,9 +656,9 @@ export class SessionManager {
     if (!this.principal || snapshot.sessionId !== sessionId) throw new SessionAccessError();
     assertSessionTarget(this.principal, undefined, sessionId);
     const raw = snapshot.data === null ? null : withConsent(sessionDataSchema.parse(snapshot.data), consentOf(snapshot.data));
-    if (raw ? raw.userId !== this.principal.subject || !!raw.forwardTo
-      || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject)
-      : this.principal.kind === 'recognized') throw new SessionAccessError();
+    // W35 A1: as readRaw — a recognized grant's absent record is her cold state.
+    if (raw && (raw.userId !== this.principal.subject || !!raw.forwardTo
+      || (this.principal.kind === 'anonymous' ? !!raw.identity : raw.identity?.shopperId !== this.principal.subject))) throw new SessionAccessError();
     return raw;
   }
 

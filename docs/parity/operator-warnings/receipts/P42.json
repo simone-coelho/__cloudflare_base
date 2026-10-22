@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P42",
+  "workOrderHash": "sha256:30eb311a99800c4a4f88db845d0b8906d747f91f85a4539fe71bce908f77edaf",
+  "artifact": {
+    "revision": "c7f74bebaedb97073c26c45a6993d806fee84d5f",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p42-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p42-build at c7f74bebaedb97073c26c45a6993d806fee84d5f (d27d20fb merges rem/integration bd5040a7 into rem/tkt/P42 ae2b68ac; 1366ee4a the mechanism in src/durable-objects/LearnStats.ts, src/learn/fan.ts, src/learn/stats.ts and src/routes/decisions.ts: a pooled publication refused because a sibling placement's /pooled door failed answers 503 { ok: false, error, stale } naming the faulty page, slot and the pooled modules read from it, the marker stored under its own KV key lift-stale:TENANT:BRAND:PLACEMENT (the tenant, brand and placement names) beside the snapshot and applied by GET lift and GET lift/rows only while the snapshot in force is the one it names, lapsing on the next successful publication without a new call; 0063a284 kit 02 and 03; c7f74beb the generation route named by its full path so W24.G1.03's first-mention reader keeps the route row). Acceptance 11/11 on both hosts; the builder's gate GATE_OK at c7f74beb (3271 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 32a4c613…); both typechecks and both bundle checks exact; the R-P7 dump byte-identical at head, a second head run, the minus tree and the base (485099 bytes per host); every healthy publication's KV calls identical to the base. Delivery review PASS (P42/reviewer/REPORT.md): PW1 to PW4 PASS, nine mutants caught by the units, two caught by probes only (the marker written into the cached snapshot; the route echoing extra members), no regression in the head and minus trees. Ruling R-P81: the one extra KV get of the marker key on the two operator lift reads is admitted; the api-boundary call-list pins (src/index.api-boundary.test.ts:2865, :2873) are a named residual. Named residuals: the console's lift grid does not render the marker (the next warning ticket under R-P78); the marker key is never physically removed; only the first faulty sibling is named; the alarm is not re-armed after a pooled refusal, as today; LV1 deferred (KV eventual consistency may delay the marker on a deployed host).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P42/implementer/REPORT.md",
+      "git commits on rem/p42-build up to c7f74beb"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P42 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "_evidence/parity-step3/P42/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P42/implementer/logs/acceptance-kit.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "_evidence/parity-step3/P42/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P42/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P42/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T01:40:01.206Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L15/P42.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L15/records/P42.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L15/REPORT.md"
+      ]
+    }
+  ]
+}

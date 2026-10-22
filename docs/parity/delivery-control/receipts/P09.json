@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P09",
+  "workOrderHash": "sha256:a5308d3f542a1195a9539059af0b2ca2cd3a4369b122b64769708b162134261c",
+  "artifact": {
+    "revision": "3498bb076df635ca6eac8b4d5a463a5fc2e3610f",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p09-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P09 built on rem/p09-build in one round. f490c733 merges rem/integration cc6cce26 (P02 to P13, P34, P30, P33 and P32 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P09 (78d55f48, the S4 specification revision b435cc2b reviewed PASS); RED baseline 11 of 11 on P09's own reasons (no percentage control on the dials screen, no percentage in the slots row, six kit statements missing), no PRECONDITION P02 or P28; b8397ebc the console (public/console/views.js): the dials screen reading and editing each slot's performance percentage, a number from 0 to 100 derived in the console only from the stored dial it equals (the blend weight p on a layout slot whose learn dials carry the blend opt-in, else γ) and mapped back on save as γ = P / 100 or blend.p = P / 100 with the blend's other member and γ kept, through the existing draft and the existing learn PUT so the learn document gains no member (D1, item 39); the control placed directly after the γ control with the existing dials, labels and render locks unchanged (S4-C16); a value outside 0 to 100 or not a number held on screen with an error and the save blocked, nothing sent; decimals read as decimals and round-tripped; a slot with no learn entry shown as 0 with nothing saved until edited; the slots screen gaining a performance column printing each slot's percentage with its source and a dash until the learn document is read; no null, undefined or NaN printed; the decision path untouched so 0 percent reproduces today's decisions term for term with replay equal and a content slot saved at P deciding as γ P / 100 published, the opted-in layout slot at p = P / 100 keeping its γ, on both hosts; 3498bb07 the kit (docs/kit/02-api-reference.md \"The performance percentage\", docs/kit/03-payload-schemas.md \"The performance percentage\": the two mappings, decimals, the refusal on screen, the unchanged document, 0 percent as today); no src change, no bundle change, build-sdk and build-meridian --check exact; acceptance 11/11 at 3498bb07 with the host legs on both hosts and console.render.test.ts 49/49, W20 34/34, W18 16/16, W28 18/18, P01 33/33, P05 18/18, P36 48/48, P28 29/29, P06 30/30, P02, P03, P30 25/25, P33 12/12, P32 11/11, W21, W22, W26, W29, W30, W16, W19, W25, W31, W37, W35 and W40 green, src/content and src/routes failing on baseline entries only; both typechecks exit 0; eslint on the console file the same single pre-existing warning at base and head; eight probes on both hosts in temporary test files removed before the commits (a layout slot without the opt-in mapping onto γ, 100 and 0 percent, decimals, a stored dial kept byte-identical when another dial is saved, exploration saved on the blend slot leaving γ and the blend byte-identical, a slot without a learn entry, five malformed inputs each held with the save disabled, an engine refusal leaving the draft and errors as a γ edit's); the gate at 3498bb07 GATE_OK on its first run (implementer/logs/gate.log: 3160 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P09/implementer/REPORT.md",
+      "git commits on rem/p09-build up to 3498bb07"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P09 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P09/reviewer/logs/02-acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P09/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P09/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P09/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-14T18:07:01.481Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L2/records/P09.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L56/records/P09.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -7,7 +7,8 @@ import { connectorConfiguration, connectorDigest, configuredOperationalDestinati
 import { readSigningConfig } from '@/auth/signingConfig.mjs';
 import { RETENTION_CATEGORIES, retentionBirth, requireRetention, type RetentionStamp } from '@/retention';
 import { pinPublication, readPinnedPublication } from '@/config/publication';
-import { SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
+import { SLOTS_KIND, LEARN_KIND, pageScopedSlotNames } from '@/content/kinds';
+import { statsName } from '@/learn/fan';
 import { armFor } from '@/content/holdout';
 import { shopperObjectName } from '@/tenancy/objects';
 import { issueSessionCapability, type SessionCapability } from '@/identity/sessionCapability';
@@ -19,12 +20,22 @@ export const SYNTHETIC_HEADER = 'X-Internal-Monitor';
 export const SYNTHETIC_KIND = 'ops-synthetic-v1';
 const MARKER = '__monitor_authority_v1';
 const LIMITS = { slots: 8, keys: 256, bytes: 8 * 1024 * 1024, body: 120000, objects: 12 };
+/** The page the monitor composes, renders and learns on. */
+const MONITOR_PAGE = 'home';
 type Host = 'session' | 'do';
 type Binding = typeof SYNTHETIC_BINDINGS[number];
 type NativeBinding = Extract<Binding, 'SHOPPER_REFLEX' | 'DECISION_RING' | 'LEARN_STATS' | 'REGION_TREND' | 'PERSONALIZATION_WEBSOCKET'>;
 interface Scope {
   version: 1; tenant: string; host: Host; operation: string; bornAt: number; expiresAt: number;
   configuration: string; policy: string; subject: string; sessionId: string; slots: string[];
+  /**
+   * W26 R2 (amendment A49): the monitor page's slots whose name the pinned
+   * catalogue carries on more than one page, so their statistics objects carry
+   * the page in their identity (`statsName`, src/learn/fan.ts). Signed with the
+   * rest of the scope, and absent when there are none, so every scope signed
+   * before it, and every tenant without such a name, reads exactly as it did.
+   */
+  pageScoped?: string[];
   retention: Record<string, RetentionStamp>;
 }
 interface Signed<T> { value: T; signature: string }
@@ -33,6 +44,17 @@ interface Marker { call: Signed<NativeCall>; terminal?: boolean }
 const held = new AsyncLocalStorage<{ raw: Env; env: Env; scope: Scope; until: number }>();
 const bytes = new TextEncoder();
 export class SyntheticUnavailable extends Error { constructor() { super('Synthetic monitor unavailable'); } }
+/**
+ * Baseline 52 (G10). The object's own storage rejected the boundary's read of
+ * its authority marker while admitting a request. That read precedes every
+ * write the boundary makes and decides whether the request is ordinary or held
+ * by a monitor operation, so the work never ran and the host can answer its
+ * typed refusal instead of an untyped failure. Raised only for that read's own
+ * rejection on a request: its deadline stays SyntheticUnavailable, an alarm or
+ * initialization rethrows the storage error itself, and nothing the work throws
+ * is ever this.
+ */
+export class BoundaryStorageUnavailable extends Error { constructor(readonly failure: unknown) { super('Synthetic boundary storage unavailable'); } }
 function deny(): never { throw new SyntheticUnavailable(); }
 const hash = (v: unknown) => connectorDigest(v);
 const base = (scope: Pick<Scope, 'tenant' | 'host'>) => `${SYNTHETIC_KIND}/${scope.tenant}/${scope.host}/`;
@@ -71,6 +93,8 @@ async function validateScope(env: Env, signed: Signed<Scope>, allowExpired = fal
     || scope.bornAt > now || scope.expiresAt <= scope.bornAt || scope.expiresAt - scope.bornAt > 300000
     || (!allowExpired && scope.expiresAt <= now) || !Array.isArray(scope.slots) || !scope.slots.length || scope.slots.length > LIMITS.slots
     || new Set(scope.slots).size !== scope.slots.length || scope.slots.some(slot => typeof slot !== 'string' || slot.length > 128)
+    || (scope.pageScoped !== undefined && (!Array.isArray(scope.pageScoped) || !scope.pageScoped.length
+      || new Set(scope.pageScoped).size !== scope.pageScoped.length || scope.pageScoped.some(slot => !scope.slots.includes(slot))))
     || !/^vis-[a-f0-9-]{36}$/.test(scope.subject) || !/^s-[a-f0-9-]{36}$/.test(scope.sessionId)) deny();
   const current = await policy(env, scope.tenant, now);
   if (current.digest !== scope.policy || scope.expiresAt !== Math.min(scope.bornAt + current.descriptor.lifetimeMs,
@@ -82,10 +106,15 @@ async function validateScope(env: Env, signed: Signed<Scope>, allowExpired = fal
   if (!allowExpired && (await pinPublication(env, scope.tenant)).digest !== scope.configuration) deny();
   return { scope, descriptor: current.descriptor };
 }
+const monitorStatsName = (scope: Scope, slot: string) =>
+  statsName(scope.tenant, scope.tenant, slot, scope.pageScoped?.includes(slot) ? MONITOR_PAGE : undefined);
 function names(scope: Scope, binding: NativeBinding): string[] {
   if (binding === 'SHOPPER_REFLEX' || binding === 'PERSONALIZATION_WEBSOCKET') return [shopperObjectName(scope.tenant, scope.subject)];
   if (binding === 'DECISION_RING') return [`${scope.tenant}:${scope.subject}`];
-  if (binding === 'LEARN_STATS') return scope.slots.map(slot => `${scope.tenant}:${scope.tenant}:${slot}`);
+  // W26 R2 (A49): each slot's statistics object under the identity the fan-ins
+  // write it with — page-separated where the pinned catalogue says so — and
+  // nothing else, so the fence admits exactly the monitor's own placements.
+  if (binding === 'LEARN_STATS') return scope.slots.map(slot => monitorStatsName(scope, slot));
   return [`trend:v2:${scope.tenant}:US-NY`];
 }
 function physical(scope: Scope, binding: NativeBinding, name: string): string {
@@ -308,7 +337,7 @@ export class SyntheticObjectBoundary {
   }
   async run<T>(request: Request | undefined, work: () => Promise<T>): Promise<T> {
     const nested = held.getStore(); if (nested?.raw === this.rawEnv) return work();
-    const marker = await deadline(() => this.rawState.storage.get<Marker>(MARKER), 5000);
+    const marker = await deadline(() => this.markerRead(request), 5000);
     if (!request?.headers.has(SYNTHETIC_HEADER) && marker === undefined && !this.isolated) {
       this.ordinary++; try { return await work(); } finally { this.ordinary--; }
     }
@@ -340,8 +369,13 @@ export class SyntheticObjectBoundary {
       }), 5000);
     }
   }
+  /** The boundary's read of its own marker; see BoundaryStorageUnavailable. */
+  private async markerRead(request: Request | undefined): Promise<Marker | undefined> {
+    try { return await this.rawState.storage.get<Marker>(MARKER); }
+    catch (error) { if (!request || error instanceof SyntheticUnavailable) throw error; throw new BoundaryStorageUnavailable(error); }
+  }
   private async runScoped<T>(request: Request | undefined, work: () => Promise<T>): Promise<T> {
-    const header = request?.headers.get(SYNTHETIC_HEADER), stored = await this.rawState.storage.get<Marker>(MARKER);
+    const header = request?.headers.get(SYNTHETIC_HEADER), stored = await this.markerRead(request);
     if (!header && !stored) return work();
     let call: Signed<NativeCall>;
     try { call = header ? JSON.parse(header) : stored!.call; } catch { return deny(); }
@@ -445,7 +479,7 @@ export class SyntheticObjectBoundary {
   }
 }
 
-export interface SyntheticResult { state: 'held' | 'pending' | 'complete' | 'failed'; decision: boolean; event: boolean; producer: boolean; consumer: boolean; ledger: boolean; learning: boolean; dlq: boolean; decisionMs: number; eventMs: number; latencyExceeded?: boolean; failedStage?: 'admission' | 'consent' | 'decision' | 'event' | 'observation'; responseStatus?: number; responseFailure?: 'boundary' | 'request' }
+export interface SyntheticResult { state: 'held' | 'pending' | 'complete' | 'failed'; decision: boolean; event: boolean; producer: boolean; consumer: boolean; ledger: boolean; learning: boolean; dlq: boolean; decisionMs: number; eventMs: number; latencyExceeded?: boolean; failedStage?: 'admission' | 'consent' | 'decision' | 'event' | 'observation'; responseStatus?: number; responseFailure?: 'boundary' | 'storage' | 'request' }
 const initial = (): SyntheticResult => ({ state: 'held', decision: false, event: false, producer: false, consumer: false, ledger: false, learning: false, dlq: false, decisionMs: 0, eventMs: 0 });
 interface Control { scope: Signed<Scope>; result: SyntheticResult; phase: 'preparing' | 'started' | 'cleaning' | 'closed'; cleanupUntil?: number }
 async function clearData(raw: Env, scope: Scope) {
@@ -529,7 +563,10 @@ async function executeSynthetic(raw: Env, tenant: string, host: Host, runUntil: 
     }
     const approval = await policy(raw, tenant, now);
     guard();
-    const publication = await pinPublication(raw, tenant), slots = (await readPinnedPublication(raw, SLOTS_KIND, tenant, publication)).value.pages.home?.filter(s => !s.offLimits).map(s => s.slot) ?? [];
+    const publication = await pinPublication(raw, tenant), catalog = (await readPinnedPublication(raw, SLOTS_KIND, tenant, publication)).value;
+    const slots = catalog.pages[MONITOR_PAGE]?.filter(s => !s.offLimits).map(s => s.slot) ?? [];
+    // W26 R2 (A49): from the same pinned catalogue the monitor's decision is made with.
+    const pageScoped = pageScopedSlotNames(catalog).filter(slot => slots.includes(slot));
     const learn = (await readPinnedPublication(raw, LEARN_KIND, tenant, publication)).value;
     if (!slots.length || slots.length > LIMITS.slots || new Set(slots).size !== slots.length || raw.LEDGER_RECOVERY_ENABLED !== 'true') deny();
     recoveryConfiguration(raw);
@@ -539,7 +576,8 @@ async function executeSynthetic(raw: Env, tenant: string, host: Host, runUntil: 
     if (!subject) deny();
     const scope: Scope = { version: 1, tenant, host, operation, bornAt: now,
       expiresAt: Math.min(now + approval.descriptor.lifetimeMs, ...Object.values(approval.retention).map(s => s.expiresAt)),
-      configuration: publication.digest, policy: approval.digest, subject: subject!, sessionId: `s-${operation}`, slots, retention: approval.retention };
+      configuration: publication.digest, policy: approval.digest, subject: subject!, sessionId: `s-${operation}`, slots,
+      ...(pageScoped.length ? { pageScoped } : {}), retention: approval.retention };
     signed = await seal(raw, 'scope', scope);
     guard();
     const claim = await raw.STORAGE.put(controlKey(tenant, host), canonical({ scope: signed, result, phase: 'preparing' }),
@@ -554,7 +592,7 @@ async function executeSynthetic(raw: Env, tenant: string, host: Host, runUntil: 
       const incoming = new Request('https://monitor.internal' + path, { method: body === undefined ? 'GET' : 'POST', headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
       Object.defineProperty(incoming, 'cf', { value: { country: 'US', regionCode: 'NY' } });
       guard(); const response = await forwardShopperRequest(env, incoming, principal as SessionCapability); guard();
-      if (!response.ok) { result.responseStatus = response.status; result.responseFailure = response.headers.get('X-Monitor-Refusal') === 'boundary' ? 'boundary' : 'request'; deny(); } return response.json<{ ok?: boolean; success?: boolean; dropped?: unknown;
+      if (!response.ok) { result.responseStatus = response.status; const refusal = response.headers.get('X-Monitor-Refusal'); result.responseFailure = refusal === 'boundary' || refusal === 'storage' ? refusal : 'request'; deny(); } return response.json<{ ok?: boolean; success?: boolean; dropped?: unknown;
         render?: { version: number; eventId: string; decisionId: string; pageInstance: string; status: string };
         decisions?: Array<{ contentId: string; slot: string; order: number; decisionId?: string; renderOffer?: string }>;
         records?: Array<{ arm: string; item_id: string; slot: string; decision_id: string }>; sources?: { state?: string; consent?: { personalized?: boolean } } }>();
@@ -563,7 +601,7 @@ async function executeSynthetic(raw: Env, tenant: string, host: Host, runUntil: 
     await request('/realtime/session/preferences', { trackingConsent: true, personalizationEnabled: true,
       choice: { id: operation, expectedRevision: null, grantId: principal.grantId, iat: principal.iat, exp: principal.exp } });
     currentStage = 'decision'; let started = Date.now();
-    const decision = await request(`/v1/${tenant}/decisions/snapshot`, { page: 'home', pageInstance: operation });
+    const decision = await request(`/v1/${tenant}/decisions/snapshot`, { page: MONITOR_PAGE, pageInstance: operation });
     result.decisionMs = Date.now() - started;
     result.decision = decision.ok === true && Array.isArray(decision.records) && decision.records.length > 0
       && decision.records.every((r: { arm?: string }) => r.arm === 'personalized') && decision.sources?.state === host && decision.sources?.consent?.personalized === true;
@@ -573,7 +611,7 @@ async function executeSynthetic(raw: Env, tenant: string, host: Host, runUntil: 
       const eventId = `${operation}-render-${index}`;
       const rendered = await request('/realtime/action', { type: 'content_impression', source: 'internal-monitor', userId: scope.subject,
         sessionId: scope.sessionId, eventId, timestamp: Date.now(), data: { contentId: piece.contentId, slot: piece.slot,
-          position: piece.order, page: 'home', pageInstance: operation, decisionId: piece.decisionId, renderOffer: piece.renderOffer } });
+          position: piece.order, page: MONITOR_PAGE, pageInstance: operation, decisionId: piece.decisionId, renderOffer: piece.renderOffer } });
       if (rendered.render?.version !== 1 || rendered.render.status !== 'durable' || rendered.render.eventId !== eventId
         || rendered.render.decisionId !== piece.decisionId || rendered.render.pageInstance !== operation) deny();
     }
@@ -620,7 +658,7 @@ async function observe(env: Env, scope: Scope, result: SyntheticResult) {
   for (const slot of scope.slots) {
     const effects = decisions.filter(row => row.slot === slot).map(row => ({ kind: 'exposures', decision: row.id, item: row.item }));
     if (correlated && outcome.slot === slot) effects.push({ kind: 'credits', decision: outcome.decision!, item: outcome.item, outcome: outcome.id } as typeof effects[number]);
-    const response = await env.LEARN_STATS!.get(env.LEARN_STATS!.idFromName(`${scope.tenant}:${scope.tenant}:${slot}`)).fetch('https://learn/monitor-effects', { method: 'POST', body: canonical({ effects }) });
+    const response = await env.LEARN_STATS!.get(env.LEARN_STATS!.idFromName(monitorStatsName(scope, slot))).fetch('https://learn/monitor-effects', { method: 'POST', body: canonical({ effects }) });
     const body = await response.json<{ complete?: boolean }>(); result.learning &&= response.ok && body.complete === true;
   }
   result.state = result.latencyExceeded ? 'failed' : result.decision && result.event && result.producer && result.consumer && result.ledger && result.learning && !result.dlq ? 'complete'

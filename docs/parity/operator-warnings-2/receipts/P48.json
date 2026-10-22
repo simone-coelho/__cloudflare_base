@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P48",
+  "workOrderHash": "sha256:4dda6fd9b8cdb0782f349ecb7fb3e8e86ea9c56a2372bb0b9aa525a15e2a5e3f",
+  "artifact": {
+    "revision": "594df0d51c5df34bbaa8422fa33b49b5ca53e54a",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p48-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p48-build at 594df0d51c5df34bbaa8422fa33b49b5ca53e54a (1decb7e1 merges rem/integration 65ddecbd into rem/tkt/P48 aed97c36; bd49a27e src/config/publication.ts, the capability completePublicationSet admitting only prior and proposals as their compiled empties into a committed set that lacks them, 503 publication_uninitialized on a scope with no set, 409 on an unrelated pending publication, the new words for the two members at the read, the version and the publish refusal with today's status and code, and src/routes/demoBootstrap.ts seeding the two compiled empties beside the four supplied members, 422 for a body carrying them, the path POST /ops/demo-bootstrap/complete behind a guard middleware before the router's credential middleware; e677576c scripts/demo-kit/lib/host.mjs's seed step through the runner with the token in the child's environment, and kit 02; 594df0d5 a restored space). Acceptance 11/11 on both hosts; the demo-kit node tests 162 pass, 0 fail, 1 skipped at the head; the builder's gate GATE_OK on its rerun at 594df0d5 after a first run that failed on two native intermittents (sdkContract :306 named; api-boundary :1180, a 401 \"Shopper session unavailable\"), and the reviewer's own gate at the same sha with the 52 baseline entries plus W40.P4's symlink artifact only, both W15 tests green in it and in four alone-reruns (3323 tests); both typechecks exit 0; both bundle checks exact; a six-member tenant's 28 answers and stored keys byte-identical to the base on both hosts. Delivery review PASS (P48/reviewer/REPORT.md): BP1 to BP3 PASS, nine mutants caught by the units, two head-validation backup checks uncovered (MU5c, MU5d: only a forged head reaches them). Residuals: a customer-profile four-member tenant, producible only through a W38 retained adoption, is told the words but has no path there (named for the lead under R-P78); the hosted seed stops before the redeploy on a path failure and says so; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P48/implementer/REPORT.md",
+      "git commits on rem/p48-build up to 594df0d5"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P48 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P48/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P48/implementer/logs/acceptance-final.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P48/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P48/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P48/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T21:18:30.892Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L7/records/P48.md"
+      ]
+    }
+  ]
+}

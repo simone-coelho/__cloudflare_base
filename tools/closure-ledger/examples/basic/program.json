@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "example-remediation",
+    "title": "Example Three-Ticket Remediation",
+    "ticketIds": [
+      "T01",
+      "T02",
+      "T03"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "node --test ./test/integration.test.mjs",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "T01",
+      "title": "Carry the validated session identity through the public API",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "architecture/requirements.md",
+        "locator": "section 2, identity row",
+        "requirement": "The public API carries the validated session identity and refuses a conflicting identity before any state mutation."
+      },
+      "outcome": "Both public entry points use the validated session identity and reject conflicts before writing state.",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "A matching identity reaches both entry points and produces the same persisted subject identifier.",
+          "proof": "The T01 acceptance test drives both mounted entry points against the local persistence adapter."
+        },
+        {
+          "id": "A2",
+          "kind": "LOCAL",
+          "observable": "A conflicting identity is refused and the before-and-after state snapshots are identical.",
+          "proof": "The T01 negative case records the state snapshot before and after the refused request."
+        },
+        {
+          "id": "A3",
+          "kind": "DECISION",
+          "observable": "The selected identity precedence is the ratified server-validated-session rule.",
+          "proof": "Decision D1 names the ratified authority and its implementation effect.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "A4",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The production browser presents the validated session identity through both deployed hosts.",
+          "proof": "The deployment owner records the two-host browser walkthrough against the released artifact.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "evidence/T01/baseline.json",
+          "description": "The baseline reproduces the conflicting-identity write on the second entry point."
+        }
+      ],
+      "remainingWork": [
+        "Route both entry points through the validated session identity boundary.",
+        "Add the state-preservation assertion for a refused conflicting identity."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "ADR-004 section 3",
+          "effect": "The server-validated session identity takes precedence and conflicting client identity input is refused."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Run the released browser flow through both deployed hosts.",
+          "owner": "deployment owner",
+          "proof": "A release-stamped walkthrough records the subject identifier and refusal result from both hosts."
+        }
+      ],
+      "allowedPaths": [
+        "src/session/**",
+        "src/routes/public-session.mjs",
+        "test/T01.acceptance.test.mjs"
+      ],
+      "acceptanceCommand": "node --test ./test/T01.acceptance.test.mjs",
+      "specificationGate": {
+        "specifier": "specifier-agent",
+        "reviewer": "reviewer-agent",
+        "reviewedRevision": "test-contract-t01-r1",
+        "verdict": "PASS",
+        "evidence": [
+          "evidence/T01/specification-review.json"
+        ],
+        "negativeControlEvidence": [
+          "evidence/T01/negative-control.tap"
+        ]
+      },
+      "doneWhen": [
+        "The frozen T01 acceptance command returns PASS at the recorded artifact revision.",
+        "The program integration gate returns PASS once at the same artifact revision.",
+        "A verifier distinct from the implementation actor records PASS."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "T02",
+      "title": "Make event ingestion idempotent before applying the cap",
+      "state": "READY",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "architecture/requirements.md",
+        "locator": "section 3, event row",
+        "requirement": "Logical event identity is deduplicated before any cap, and a retry cannot consume capacity twice."
+      },
+      "outcome": "The ingestion path deduplicates logical event identity before capacity accounting on original and retry requests.",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "An original event and its retry consume one capacity position and produce one durable record.",
+          "proof": "The T02 acceptance test submits both requests through the mounted ingestion route and reads the durable record count."
+        },
+        {
+          "id": "A2",
+          "kind": "LOCAL",
+          "observable": "Two different event identities consume two capacity positions.",
+          "proof": "The T02 positive control changes only the logical identity and observes two durable records."
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "Move logical-identity deduplication ahead of capacity accounting.",
+        "Prove retry and distinct-identity behavior through the mounted ingestion route."
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "src/events/ingest.mjs",
+        "test/T02.acceptance.test.mjs"
+      ],
+      "acceptanceCommand": "node --test ./test/T02.acceptance.test.mjs",
+      "specificationGate": {
+        "specifier": "specifier-agent",
+        "reviewer": "reviewer-agent",
+        "reviewedRevision": "test-contract-t02-r1",
+        "verdict": "PASS",
+        "evidence": [
+          "evidence/T02/specification-review.json"
+        ],
+        "negativeControlEvidence": [
+          "evidence/T02/negative-control.tap"
+        ]
+      },
+      "doneWhen": [
+        "The frozen T02 acceptance command returns PASS at the recorded artifact revision.",
+        "The program integration gate returns PASS once at the same artifact revision.",
+        "A verifier distinct from the implementation actor records PASS."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "T03",
+      "title": "Keep custom overlays separate from canonical reports",
+      "state": "NOT_STARTED",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "architecture/requirements.md",
+        "locator": "section 4, reporting row",
+        "requirement": "A custom overlay never overwrites the canonical report, including during concurrent writes."
+      },
+      "outcome": "Custom overlay evaluation cannot alter the canonical report or its revision under sequential or concurrent execution.",
+      "criteria": [
+        {
+          "id": "A1",
+          "kind": "LOCAL",
+          "observable": "Canonical report bytes and revision are unchanged after custom overlay evaluation.",
+          "proof": "The T03 acceptance test compares canonical reads before and after overlay evaluation."
+        },
+        {
+          "id": "A2",
+          "kind": "LOCAL",
+          "observable": "Concurrent canonical publication and overlay evaluation preserve the canonical publication result.",
+          "proof": "The T03 concurrency case controls both operations and reads the winning canonical revision."
+        }
+      ],
+      "existingEvidence": [],
+      "remainingWork": [
+        "Separate overlay result identity from canonical report identity.",
+        "Add the controlled concurrent-publication acceptance case."
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [],
+      "allowedPaths": [
+        "src/reports/overlay.mjs",
+        "test/T03.acceptance.test.mjs"
+      ],
+      "acceptanceCommand": "node --test ./test/T03.acceptance.test.mjs",
+      "specificationGate": {
+        "specifier": "specifier-agent",
+        "reviewer": "reviewer-agent",
+        "reviewedRevision": "test-contract-t03-r1",
+        "verdict": "PASS",
+        "evidence": [
+          "evidence/T03/specification-review.json"
+        ],
+        "negativeControlEvidence": [
+          "evidence/T03/negative-control.tap"
+        ]
+      },
+      "doneWhen": [
+        "The frozen T03 acceptance command returns PASS at the recorded artifact revision.",
+        "The program integration gate returns PASS once at the same artifact revision.",
+        "A verifier distinct from the implementation actor records PASS."
+      ],
+      "blockers": []
+    }
+  ]
+}

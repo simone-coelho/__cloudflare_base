@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P69",
+  "workOrderHash": "sha256:049015263fc65c591794266a95169e2f1bb90f27e572020ea060ee66e8d1ed57",
+  "artifact": {
+    "revision": "371bfca889cb1430aea12ae07d1b97585725b826",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p69-joined-r2 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p69-build at 391b25d7 (8f9c9196 the mechanism: renderOffer.ts:102 no longer refuses a client time before the decision's time; a first delivery is admitted at max(client time, decision time) at :118; a re-send keeps admitted.at (P57); the behaviour record takes redeemed.at (realtime.ts:238); W23's upper clamp untouched; one in-process max, no remote call; kit 02 :73 and :933 sentences and the W23 comments; 391b25d7 kit 02 :73 names the buffered door's refusal of a time ahead); P69 13/13 ×3 on both hosts; 20 shoppers 150 ms behind: 0/80 refused with rendered.at = ts (was 80/80 refused, no rows); ahead: clamped; P56 (R10) 17/17, P57 17/17, the 24 renderOffer-naming files 505/505, kit-02 acknowledgement readers 877/877; kit 02 2371 unchanged, no citation shifted.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P69/implementer/REPORT.md",
+      "git commits on rem/p69-joined-r2 up to 371bfca8"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P69 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/reviewer-p69/rejudge-371bfca8/P69-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P69/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T18:37:31.358Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P69.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P69.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

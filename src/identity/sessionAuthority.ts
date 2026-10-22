@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { shopperObject, shopperObjectName } from '@/tenancy/objects';
 import { tenantMiddleware } from '@/tenancy/middleware';
@@ -13,7 +14,8 @@ import type { Delivery, DeliveryCaptureReceipt } from '@/ledger/delivery';
 import { MANAGED_BYTES, deliveryClaimSubset, validDeliveryCaptureReceipt } from '@/ledger/delivery';
 import { isShopperId } from './shopperId';
 import { requireRetention, readRetention, mergeExternalRetention, type ExternalRetention, type RetentionStamp, type RetentionCategory, type RetentionEnv } from '@/retention';
-import type { RecoveryInput, RecoveryReceipt } from '@/ledger/recovery';
+import type { AdmittedRender, RecoveryInput, RecoveryOptions, RecoveryReceipt } from '@/ledger/recovery';
+import { nameServingStorage } from '@/config/publication';
 
 interface Invocation {
   owner: object;
@@ -32,8 +34,16 @@ interface Invocation {
   retentionGuards?: Array<{ env: RetentionEnv; stamp: RetentionStamp }>;
   externalRetention?: ExternalRetention;
   eventRetention?: (id: string, digest: string, occurredAt: number) => Promise<ExternalRetention>;
-  recovery?: (input: RecoveryInput, principal: SessionCapability) => Promise<RecoveryReceipt>;
+  recovery?: (input: RecoveryInput, principal: SessionCapability, options?: RecoveryOptions) => Promise<RecoveryReceipt>;
   recoveryDeadlines?: number[];
+  /** P13 (R-P66 item 2): the owner keeps the customer's identifier the shopper's request carried. */
+  carry?: (customerId: string) => Promise<void>;
+  /** G16: how this owner continues work past its answer (`continueAfterOwnerRead`). */
+  continuation?: OwnerContinuation;
+  /** P57: this owner's read of the render its stored admission of one decision acknowledged (`readOwnedAdmission`). */
+  admission?: (tenant: string, subject: string, decisionId: string) => Promise<AdmittedRender | undefined>;
+  /** R-P115: work registered by `afterOwnerAnswer`, started once this operation has ended (with whether it answered). */
+  afterAnswer?: Array<(answered: boolean) => void>;
 }
 // Async descendants share a lifetime, not an ambient reusable authorization bit.
 const invocation = new AsyncLocalStorage<Invocation>();
@@ -364,15 +374,89 @@ export class RecoveryUnavailableError extends Error {
 export function durableRecoveryEnabled(env: Pick<Env, 'LEDGER_RECOVERY_ENABLED'>): boolean {
   return env.LEDGER_RECOVERY_ENABLED === 'true';
 }
-/** No token crosses this boundary or enters durable recovery storage. */
-export async function admitOwnedRecovery(input: RecoveryInput): Promise<RecoveryReceipt> {
+/**
+ * P57 (amendment 5): a render acknowledgement for a decision the shopper's owner
+ * already holds acknowledged under another event id (or on another page
+ * instance) is a conflict, refused by name before any admission or capture of
+ * it. The owner answers it 409 `{ ok: false, error }`, as it answers its other
+ * typed refusals. A re-send of the same render is no conflict: it is that
+ * render, answered with its original receipt.
+ */
+export class AcknowledgementConflictError extends Error {
+  constructor(message = 'Render acknowledgement conflict: this decision was already acknowledged with another event id') { super(message); this.name = 'AcknowledgementConflictError'; }
+}
+/**
+ * P58 (amendment 5 addendum §4, P58-D; R-P106): a validation refusal that crosses
+ * an object boundary typed. An exception raised in one object reaches its caller in
+ * another as an untyped Error (workerd), so a refusal by validation inside the
+ * shopper object that owns a merge (src/durable-objects/ShopperReflex.ts, the
+ * transfer door) is answered as `400 { ok: false, refusal: 'validation', issues }`,
+ * carried as that answer by every object it passes through, and raised again as the
+ * validation error it is (a `z.ZodRealError` with the same issues, an Error as a
+ * parse raises it) by the route-side code that called the object
+ * (src/identity/link.ts), so the route answers its own `400 Validation error` with
+ * the same details on every runtime. Only a refusal of this exact shape is read as
+ * one; every other answer keeps its caller's own handling.
+ */
+const validationRefusalSchema = z.object({ ok: z.literal(false), refusal: z.literal('validation'),
+  issues: z.array(z.object({ code: z.string().min(1).max(64), path: z.array(z.union([z.string().max(256), z.number()])).max(32), message: z.string().max(1024) }).passthrough()).min(1).max(64),
+}).strict();
+/** The typed answer of a validation refusal, for the object that refuses and every object it passes through. */
+export function validationRefusal(issues: z.ZodError['issues']): Response {
+  return new Response(JSON.stringify({ ok: false, refusal: 'validation', issues }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+}
+/** The validation error an object's answer carries typed (status 400 and the exact refusal shape), or undefined for any other answer. */
+export function validationRefusalOf(status: number, body: unknown): z.ZodError | undefined {
+  if (status !== 400) return undefined;
+  const read = validationRefusalSchema.safeParse(body);
+  return read.success ? new z.ZodRealError(read.data.issues as z.ZodError['issues']) : undefined;
+}
+/**
+ * P57: the render the shopper's own owner holds acknowledged for one decision
+ * (`storedRenderOf`, src/ledger/recovery.ts), read inside the active owner
+ * operation for its one admitted principal, as `currentOwnerConsent` reads the
+ * consent in force: awaited, never retained, fenced before and after. Absent
+ * when nothing is stored; a failure is the caller's to answer.
+ */
+export async function readOwnedAdmission(tenant: string, subject: string, decisionId: string): Promise<AdmittedRender | undefined> {
+  const held = invocation.getStore();
+  if (!held?.active || !held.admission) throw new SessionAccessError();
+  recheckOwnerInvocation(held.owner);
+  if ([...held.principals.values()].filter(p => p.tenant === tenant && p.subject === subject).length !== 1) throw new SessionAccessError();
+  const stored = await held.admission(tenant, subject, decisionId);
+  recheckOwnerInvocation(held.owner);
+  return stored;
+}
+/** No token crosses this boundary or enters durable recovery storage. P56: an answer at admission only where the owner continues past its answer
+ * (P59: with the caller's report of how those continued effects ended, `RecoveryOptions.afterEffects`). */
+export async function admitOwnedRecovery(input: RecoveryInput, options?: RecoveryOptions): Promise<RecoveryReceipt> {
   const held = invocation.getStore();
   if (!held?.recovery) throw new SessionAccessError();
   if (!durableRecoveryEnabled(held.env)) throw new RecoveryUnavailableError();
   recheckOwnerInvocation(held.owner);
   const principals = [...held.principals.values()].filter(p => p.tenant === input.tenant && p.subject === input.subject);
   if (principals.length !== 1) throw new SessionAccessError();
-  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!)));
+  return trackedIO(() => held.recovery!(input, structuredClone(principals[0]!), options?.answerAtAdmission && held.continuation
+    ? { answerAtAdmission: true, ...(options.afterEffects ? { afterEffects: options.afterEffects } : {}) } : undefined));
+}
+/**
+ * P65 (amendment 7, R-P124): withdraws the outcome a behaviour capture's durable
+ * admission carried (src/ledger/recovery.ts `CarriedOutcome`, `withdrawCarried`),
+ * once the engine has answered that the event records none, through the owner's
+ * own recovery for its one admitted principal, as `admitOwnedRecovery` admits.
+ * Awaited, never retained (as `readOwnedAdmission` reads), fenced before and
+ * after: its failure is the caller's and never the answer's, and an outcome it
+ * leaves carried is settled by the alarm, which re-decides the event's drop.
+ */
+export async function withdrawOwnedCarry(input: Extract<RecoveryInput, { kind: 'behavior' }>): Promise<void> {
+  const held = invocation.getStore();
+  if (!held?.active || !held.recovery) throw new SessionAccessError();
+  if (!durableRecoveryEnabled(held.env)) throw new RecoveryUnavailableError();
+  recheckOwnerInvocation(held.owner);
+  const principals = [...held.principals.values()].filter(p => p.tenant === input.tenant && p.subject === input.subject);
+  if (principals.length !== 1) throw new SessionAccessError();
+  await held.recovery(input, structuredClone(principals[0]!), { withdrawCarried: true });
+  recheckOwnerInvocation(held.owner);
 }
 export function pinRecoveryDeadline(deadline: number): void {
   if (!Number.isSafeInteger(deadline) || deadline <= Date.now()) throw new SessionAccessError();
@@ -415,6 +499,26 @@ export async function restrictOwnerConsent(hints: Consent): Promise<Consent | un
   if (!held) return undefined;
   recheckOwnerInvocation(held.owner);
   return held.restrictConsent ? trackedIO(() => held.restrictConsent!(hints)) : undefined;
+}
+/**
+ * P13 (R-P66 item 2): hand the customer's identifier an anonymous shopper's
+ * accepted request carried, under tracking consent, to the shopper's own object,
+ * which keeps it as one member of its existing grant record when it is new or
+ * changed. Carried, never proof: nothing is selected, linked or merged by it.
+ * The caller decides the consent; a recognised principal hands over nothing.
+ * The write is awaited inside the owner operation but never retained as owner
+ * work, so its failure cannot fail the request that carried it; it is answered
+ * as false and the value is carried again on the next request.
+ */
+export async function carryOwnerCustomerId(env: Env, principal: SessionCapability, customerId: string): Promise<boolean> {
+  try {
+    assertOwnerScope(env, principal);
+    const held = invocation.getStore();
+    if (!held?.carry || principal.kind !== 'anonymous') return false;
+    recheckOwnerInvocation(held.owner);
+    await held.carry(customerId);
+    return true;
+  } catch { return false; }
 }
 export function assertOwnerScope(env: Env, principal: SessionCapability): void {
   assertSessionTarget(principal);
@@ -469,22 +573,109 @@ export function ownerRelay(env: Env, operation: 'broadcast' | 'connections', ten
   if (!held?.active || held.env.SESSIONS !== env.SESSIONS || !held.relay) throw new SessionAccessError();
   return trackedIO(() => held.relay!(operation, subject, tenant, body));
 }
-export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery']): Promise<T> {
-  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [] };
+export async function runOwnerOperation<T>(owner: object, env: Env, work: () => Promise<T>, sessions?: KVLike, relay?: Invocation['relay'], consent?: Invocation['consent'], restrictConsent?: Invocation['restrictConsent'], eventRetention?: Invocation['eventRetention'], recovery?: Invocation['recovery'], carry?: Invocation['carry'], continuation?: OwnerContinuation, admission?: Invocation['admission']): Promise<T> {
+  const held: Invocation = { owner, env, active: true, pending: [], requests: new WeakMap(), principals: new Map(), sessions, relay, consent, restrictConsent, eventRetention, recovery, consentGuards: [], carry, continuation, admission };
   return invocation.run(held, async () => {
     let failure: unknown, value: T | undefined;
     try { value = await work(); } catch (error) { failure = error; }
+    // P57 (amendment 5), widened by P58 (addendum §4, P58-D): once the work has
+    // answered a failure of its own, a client error or a server failure (an HTTP
+    // answer of 400 or more, such as the route's own `400 Validation error`), a
+    // retained rejection is logged and that answer stands: it already tells the
+    // caller the operation failed, so nothing is claimed complete, and its words
+    // are not replaced by an untyped 500. An authority refusal still refuses, and
+    // a retained rejection still fails any other answer, as before.
+    const answeredFailure = failure === undefined && (value as unknown) instanceof Response && (value as unknown as Response).status >= 400;
+    let answered = false;
     try {
       // Includes descendants registered while previously registered work settles.
       while (held.pending.length) {
         const settled = await Promise.allSettled(held.pending.splice(0));
-        for (const result of settled) if (result.status === 'rejected') failure ??= result.reason;
+        for (const result of settled) if (result.status === 'rejected') {
+          if (answeredFailure && !(result.reason instanceof SessionAccessError)) { console.error('Owner work failed after a failure answer'); continue; }
+          failure ??= result.reason;
+        }
       }
       if (failure !== undefined) throw failure;
       recheckOwnerInvocation(owner);
+      answered = true;
       return value as T;
-    } finally { held.active = false; }
+    } finally {
+      held.active = false;
+      // R-P115: work registered to follow this answer starts now, outside this operation.
+      for (const start of held.afterAnswer?.splice(0) ?? []) start(answered);
+    }
   });
+}
+/**
+ * G16 (W06.05 under the W09 owner rule): how an owner continues work past its
+ * answer. The shopper's object supplies it from its serializer
+ * (ShopperReflex.serialize); an owner without one has its continued operation
+ * run directly, with the same hooks.
+ */
+export interface OwnerContinuation {
+  /** The owner's own serializer: a continued operation is ordered with the owner's other operations, never beside them. */
+  serialize<T>(work: () => Promise<T>): Promise<T>;
+  /** The owner's own admission, against its grant authority now, of a principal an earlier operation admitted. */
+  admit(principal: SessionCapability): Promise<void>;
+  /** The platform's waitUntil, so work continued past the answer is not ended by the reply. */
+  waitUntil(task: Promise<unknown>): void;
+}
+/**
+ * G16 (W06.05 under the W09 owner rule): owner work that first waits on one read
+ * of private state, without that read holding the owner's answer, and without the
+ * work ever running outside an owner operation.
+ *
+ * It starts only inside an ACTIVE owner operation; otherwise nothing starts and
+ * it refuses with SessionAccessError. `read` starts at once, under that owner and
+ * fenced at its start as every owner effect is (`recheckOwnerInvocation`: the
+ * admitted grants, the pinned consent purposes, the retention guards); the owner
+ * does not retain its drain, so the answer is not held by it, and its result
+ * decides nothing (`work` reads again under its own operation). Whatever it
+ * settles to, `work` then runs inside the same owner:
+ *  - inline and retained while that operation is still active, so the owner
+ *    drains it before it answers, as it drains any other retained work;
+ *  - otherwise as a new operation of that owner, entered through the owner's own
+ *    serializer after any operation queued meanwhile, in which every principal
+ *    the first operation admitted is admitted again by the owner, the first
+ *    operation's consent, retention and recovery guards are pinned again, the
+ *    shopper's consent in force is read again and must still grant every purpose
+ *    the first operation pinned, and `work` is handed a fresh owner environment.
+ * The whole continuation is registered with the platform's waitUntil the owner
+ * supplies, so the reply does not end it.
+ */
+export function continueAfterOwnerRead<T>(env: Env, read: () => Promise<unknown>, work: (env: Env) => Promise<T>): Promise<T> {
+  const first = invocation.getStore();
+  if (!first?.active) return Promise.reject(new SessionAccessError());
+  let gate: Promise<unknown>;
+  try { recheckOwnerInvocation(first.owner); gate = read(); } catch (error) { gate = Promise.reject(error); }
+  const task = gate.then(() => undefined, () => undefined).then(() => {
+    if (first.active) { const inline = work(env); retainOwnerWork(inline); return inline; }
+    return reenterOwner(first, work);
+  });
+  first.continuation?.waitUntil(task.then(() => undefined, () => undefined));
+  return task;
+}
+function reenterOwner<T>(first: Invocation, work: (env: Env) => Promise<T>): Promise<T> {
+  const continued = async (): Promise<T> => {
+    for (const principal of first.principals.values()) {
+      if (first.continuation) await first.continuation.admit(principal); else admitOwnerPrincipal(first.owner, principal);
+    }
+    const held = invocation.getStore();
+    if (!held?.active || held === first || held.owner !== first.owner) throw new SessionAccessError();
+    held.consentGuards.push(...first.consentGuards);
+    if (first.retentionGuards?.length) (held.retentionGuards ??= []).push(...first.retentionGuards);
+    if (first.recoveryDeadlines?.length) (held.recoveryDeadlines ??= []).push(...first.recoveryDeadlines);
+    const consent = await currentOwnerConsent();
+    if (consent) for (const { purpose } of first.consentGuards) requireConsentPurpose(consent, purpose);
+    recheckOwnerInvocation(first.owner);
+    return work(ownerEnvironment(first.owner, first.env));
+  };
+  // Entered as any new request of the owner enters, from outside the answered
+  // operation's lifetime: the serializer then starts a new operation, and nothing
+  // of the answered one (inactive, so it refuses every effect) is carried into it.
+  return invocation.exit(() => first.continuation ? first.continuation.serialize(continued)
+    : runOwnerOperation(first.owner, first.env, continued, first.sessions, first.relay, first.consent, first.restrictConsent, first.eventRetention, first.recovery, first.carry, undefined, first.admission));
 }
 export function shopperRequestHeld(request: Request, principal: SessionCapability): boolean {
   const held = invocation.getStore(), admitted = held?.requests.get(request);
@@ -503,10 +694,18 @@ export function ownedRequestPath(request: Request): boolean {
     || /^\/sort\/?$/.test(path) || path === '/sort/intent' || path === '/search'
     || /^\/track\/(?:event|batch)$/.test(path) || /^\/optimizely\/(?:decisions|track)$/.test(path);
 }
-/** Reject ambiguous selectors before requireShopper can adopt/forward an owner. */
-export function assertShopperSelectors(request: Request): void {
+/**
+ * Reject ambiguous selectors before requireShopper can adopt/forward an owner.
+ * `consentHints: 'route'` is for the decision request alone, at the edge and in
+ * its route: there the two consent hints are request data the route validates
+ * itself, answering an admitted caller's malformed or repeated hint with its own
+ * 400 before any read or write. Every other caller, and the owner's check of a
+ * forwarded request, still refuses a malformed or repeated hint here.
+ */
+export function assertShopperSelectors(request: Request, options?: { consentHints?: 'route' }): void {
   const query = new URL(request.url).searchParams;
-  for (const name of ['tenant', 'userId', 'visitorId', 'sessionId', 'sdkKey', 'page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled']) {
+  for (const name of ['tenant', 'userId', 'visitorId', 'sessionId', 'sdkKey', 'page', 'brand', 'channel', 'entry', 'browsingSessionId',
+    ...(options?.consentHints === 'route' ? [] : ['trackingConsent', 'personalizationEnabled'])]) {
     const values = query.getAll(name);
     if (values.length > 1 || (values.length && (!values[0] || values[0] !== values[0].trim()))) throw new SessionAccessError();
     if (values.length && ['userId', 'visitorId', 'sessionId'].includes(name) && !/^[A-Za-z0-9_.-]{1,200}$/.test(values[0]!)) throw new SessionAccessError();
@@ -538,14 +737,21 @@ export function coarseRequestCF(value: unknown): { country?: string; regionCode?
   return { ...(typeof cf?.country === 'string' && /^[A-Za-z]{2}$/.test(cf.country) ? { country: cf.country } : {}),
     ...(typeof cf?.regionCode === 'string' && /^[A-Za-z0-9-]{1,16}$/.test(cf.regionCode) ? { regionCode: cf.regionCode } : {}) };
 }
-export async function forwardShopperRequest(env: Env, request: Request, principal: SessionCapability): Promise<Response> {
+/**
+ * `cf` is the platform's request metadata of the request as it arrived; it is
+ * read off `request` unless the caller re-built the request it forwards (P13: a
+ * new visitor's first decision request, re-entered under the session it was
+ * just issued) and hands over the original's.
+ */
+export async function forwardShopperRequest(env: Env, request: Request, principal: SessionCapability,
+  cf: unknown = (request as Request & { cf?: unknown }).cf): Promise<Response> {
   if (!ownedRequestPath(request)) throw new SessionAccessError();
   const headers = new Headers(request.headers);
   headers.set('X-Owner-Request-URL', request.url);
   headers.set('X-Tenant', principal.tenant);
   // Always replace public input; only the platform's coarse request metadata
   // enters this binding-only hop. Never forward city/IP/coordinates/body geo.
-  headers.set('X-Owner-Coarse-CF', JSON.stringify(coarseRequestCF((request as Request & { cf?: unknown }).cf)));
+  headers.set('X-Owner-Coarse-CF', JSON.stringify(coarseRequestCF(cf)));
   return shopperObject(env.SHOPPER_REFLEX, principal.subject, principal.tenant).fetch(new Request('https://shopper-reflex/authority/request', {
     method: request.method, headers, ...(request.body ? { body: request.body, duplex: 'half' } : {}),
   } as RequestInit));
@@ -558,7 +764,9 @@ async function shopperRoutes() {
     ]);
     const app = new Hono<{ Bindings: Env }>();
     app.use('*', tenantMiddleware()); app.onError((error, c) => error instanceof SessionAccessError
-      ? c.json({ ok: false, error: 'Shopper session unavailable' }, 401) : errorHandler(error, c));
+      ? c.json({ ok: false, error: 'Shopper session unavailable' }, 401)
+      // P57: a conflicting render acknowledgement is a typed refusal of the owner, never an untyped 500.
+      : error instanceof AcknowledgementConflictError ? c.json({ ok: false, error: error.message }, 409) : errorHandler(error, c));
     app.route('/realtime', realtime); app.route('/v1', identityRoutes); app.route('/v1', decisionRoutes);
     app.route('/sort', sortRoutes); app.route('/search', searchRoutes); app.route('/track', trackingRoutes); app.route('/optimizely', optimizelyRoutes);
     return app;
@@ -597,8 +805,15 @@ export function ownerEnvironment(owner: object, env: Env): Env {
     'REGION_TREND', 'DECISION_RING', 'LEARN_STATS', 'MERIDIAN_REFLEX', 'SHOPPER_REFLEX'] as const) {
     Object.defineProperty(scoped, key, { get: () => {
       const binding = env[key];
-      return binding ? guardBinding(binding,
-        ['RATE_LIMITER', 'PERSONALIZATION_WEBSOCKET', 'REGION_TREND', 'DECISION_RING', 'LEARN_STATS', 'MERIDIAN_REFLEX', 'SHOPPER_REFLEX'].includes(key) ? 'namespace' : 'binding') : binding;
+      if (!binding) return binding;
+      const guarded = guardBinding(binding,
+        ['RATE_LIMITER', 'PERSONALIZATION_WEBSOCKET', 'REGION_TREND', 'DECISION_RING', 'LEARN_STATS', 'MERIDIAN_REFLEX', 'SHOPPER_REFLEX'].includes(key) ? 'namespace' : 'binding');
+      // W19 LG1 (R74(b)): this proxy is a fence around the SAME bucket, not a
+      // different one, so the publication serving cache keys on the bucket and
+      // a shopper's next event is served what her last one already read. Every
+      // storage call through the proxy is still fenced; a cache hit makes none.
+      if (key === 'STORAGE') nameServingStorage(guarded, binding);
+      return guarded;
     } });
   }
   Object.defineProperty(scoped, 'ANALYTICS', { get: () => env.ANALYTICS ? {
@@ -641,4 +856,58 @@ export async function dispatchOwnedRequest(owner: object, env: Env, request: Req
   }) });
   const context = { waitUntil: retainOwnerWork, passThroughOnException() {} } as ExecutionContext;
   return (await shopperRoutes()).fetch(request, scoped, context);
+}
+/**
+ * P56 (amendment 5): owner work that runs right after the owner's answer, never
+ * before it and never beside the owner's other operations.
+ *
+ * It starts only inside an ACTIVE owner operation whose owner supplies its own
+ * serializer (`OwnerContinuation`); otherwise nothing starts and it refuses with
+ * SessionAccessError. The owner does not retain it, so its drain before the
+ * answer does not wait on it. It is entered at once through the owner's own
+ * serializer, as `continueAfterOwnerRead` re-enters the owner once its operation
+ * has answered: a new operation of that owner, queued after the answering one and
+ * ahead of every request that reaches the owner later, in which every principal
+ * the answering operation admitted is admitted again, its consent, retention and
+ * recovery guards are pinned again, the shopper's consent in force must still
+ * grant every purpose it pinned, and `work` is handed a fresh owner environment.
+ * It is registered with the platform's waitUntil the owner supplies, so the reply
+ * does not end it. Its failure is the caller's to handle; it never reaches the
+ * answer.
+ */
+export function continueAfterOwnerAnswer<T>(work: (env: Env) => Promise<T>): Promise<T> {
+  const first = invocation.getStore();
+  if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
+  try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
+  const task = reenterOwner(first, work);
+  first.continuation.waitUntil(task.then(() => undefined, () => undefined));
+  return task;
+}
+/**
+ * R-P115 (amendment 6, P61): tenant-level work that follows the owner's answer
+ * WITHOUT the owner: the sibling of `continueAfterOwnerAnswer` for work that
+ * reads and writes no shopper state and so needs no shopper ordering (the
+ * tenant's learning-read counters).
+ *
+ * It registers only inside an ACTIVE owner operation whose owner supplies its
+ * continuation, fenced at that moment as every owner effect is
+ * (`recheckOwnerInvocation`); otherwise nothing is registered and it refuses
+ * with SessionAccessError. The work starts once that operation has ended, and
+ * only if it answered (an operation that failed starts nothing). It is never
+ * retained (the owner's drain before its answer does not wait on it) and never
+ * serialized (the owner's next request does not queue behind it); it is kept
+ * alive by the owner's own waitUntil alone, and runs outside every owner
+ * operation. It is handed the operator cache (`CACHE`) and nothing else, so no
+ * binding that reaches a shopper's state is reachable from it. Its failure is
+ * the caller's to handle; it never reaches the answer.
+ */
+export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE'>) => Promise<unknown>): Promise<void> {
+  const first = invocation.getStore();
+  if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
+  try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
+  const operator = { CACHE: first.env.CACHE };
+  const task = new Promise<boolean>(resolve => { (first.afterAnswer ??= []).push(resolve); })
+    .then(answered => (answered ? invocation.exit(() => work(operator)) : undefined)).then(() => undefined);
+  first.continuation.waitUntil(task.then(() => undefined, () => undefined));
+  return task;
 }

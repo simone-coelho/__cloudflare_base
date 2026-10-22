@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P14",
+  "workOrderHash": "sha256:78d57533760a2b24de34dccc369e66af2e72fb36b246f383daf9db811b7cf021",
+  "artifact": {
+    "revision": "0a108b82f9bb0cd01a3fef78b9db5c87ab8b7240",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p14-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P14 built on rem/p14-build in one round. 9daab2cc merges rem/integration fe95cb60 (P02 to P13, P34, P30, P33, P32, P09 and P11 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P14 (53fa7100, the S3 specification revision 4b82e0de reviewed PASS); RED baseline 8 failed and 2 passed on P14's own reasons (the J3 LOCK legs green on both hosts; the own weight applied to the purse and the trinket, no applied member, the validator admitting a weight above 1000, a negative, a text and an undeclared dimension, no product-type control, nine kit statements missing), no PRECONDITION; 9b725509 the engine (src/reflex/core.ts, src/reflex/configStore.ts, src/services/RealtimeSegmentEngine.ts, src/durable-objects/ShopperReflex.ts, public/meridian/engine.bundle.js regenerated): product-type weights per action on one tenant-declared dimension in the reflex document, the weight read from the document each host already resolves with no new read, an event's product type the raw value it carries on the dimension's source field, the product-type weight accumulated in place of the action's own on every interest the event touches while the P32 module touches keep their own gate, the signal floor reading only the action's own weight and the population trend's frame keeping it (R-P33, item 49), the interest update on both hosts and the socket frame itemising the action, the product type and the weight applied only while the registry declares the weights and only on an event's update, the validator refusing by name a weight outside 0 to 1000 or not a number, an undeclared or derived dimension and malformed blocks and keys, a registry without the member answering, pushing and storing exactly what it did before on both hosts (D1, D2, R-P7); 0245e138 the console (public/console/views-config.js): the interests screen reading the reflex document, one weight control per declared action and value with its focus key, the block written whole through the existing conditional patch after a dry run on the validate route, a cleared weight removed on save, in force for the next event without a deployment; 0a108b82 the kit (docs/kit/02-api-reference.md, docs/kit/03-payload-schemas.md: the setting, its refusals, the substitution, the itemised update, the trend and the signal floor keeping the action's own weight, the buffered door and the history import counting the action's own weight); the Meridian bundle 74282 to 75350 bytes with --check exact, the SDK bundles untouched and exact; acceptance 10/10 on both hosts at 0a108b82 with src/reflex, src/services, the SDK contract file, P10, P32, P07, P37, P36, P39, P02, P03, P30, P33, P09, P11, P05, P01, P12, P13, P34, P38, P40, W20, W19, W27, W16, W18, W21, W35, W40, the kit readers, src/console, src/content, src/routes and src/learn green outside the baseline; both typechecks exit 0; eslint identical at head and base; probes on both hosts in temporary test files removed before the commits (a product-type weight of 0 on a weighted action, a weight on a zero-weight and on an unweighted action, a module click carrying a weighted value with the P32 teaching, a lower-case value, an array, a dimension with another source field, the console saving, clearing and refusing before saving, a text weight refused by the API, and a seven-event sequence byte-identical to the base for a registry without the member in every update, frame, hydrate and store); the gate at 0a108b82: run 1 GATE_FAIL on W12.02 alone, a native 401 on the synthetic decision request outside the diff that passed in the file alone, ruled a named intermittent under R-P74 as amended, the one rerun GATE_OK (implementer/logs/gate.log: 3182 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P14/implementer/REPORT.md",
+      "git commits on rem/p14-build up to 0a108b82"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P14 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P14/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P14/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P14/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P14/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-14T23:32:50.103Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L4/records/P14.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L56/records/P14.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

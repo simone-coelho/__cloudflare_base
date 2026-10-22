@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P26",
+  "workOrderHash": "sha256:809b704445978933a290e3fe8abee6d6c933ab05b1c6ec35c955185f9788a33a",
+  "artifact": {
+    "revision": "5a69dacc3bcb39c853664b422ccfe60e52ba5a4e",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p26-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P26 built on rem/p26-build in one round. e3eaab0a merges rem/integration 4465f8b1 (P02 to P13, P34, P30, P33, P32, P09, P11, P14, P35, P08, P15 and P16 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P26 (5dca4cea, the S3-fix specification revision eb456472 reviewed PASS, R-P4); RED baseline twelve of fourteen on P26's own reasons (the inner slots decided in document order with no within member, the user-generated module's inner slot decided and recorded, inner dropped by the validator and the route answering 200, nine kit statements missing), NC4's lock green on both hosts, no PRECONDITION; 6f1330b1 the type and the validator (src/content/types.ts, src/content/kinds.ts): the declared layout slot carrying inner, a map of module id to the name of an ordinary content slot of the same page, refused by name on a slot that is not the declared layout slot, for a value naming no slot of the page, for a value naming a layout slot, the slot itself included, and for one inner slot named for two modules, refused in a document marked governance 1, 2 or 3; ca72773d the decision path (src/reflex/contentCompose.ts, src/content/decide.ts, public/meridian/engine.bundle.js regenerated): the page's slots in document order with each inner slot decided directly after its layout slot in the order the layout returned its modules and only for a returned module, an undecided inner slot writing no decision, no record, no manifest row and no diagnostics, one set of used and reserved pieces across the layout, the inner slots and the page's other slots, the layout's served order fixed by pins, withholding, the configured order, the blend, the bands, an exploration pick and the adjacent swap applied in the composer's settle hook before any inner slot reads it, never by the shadow, every inner decision carrying within with the layout slot and the module under sorted keys; 016cd249 the receipt set and replay (src/learn/receipts.ts, src/learn/replay.ts): one composition, one ts and one inputs object on every record, the manifest naming every slot decided, the replay ranking through the end of the inner block and comparing within, the receipt carrying within as a member with no new why sentence; 33829021 the slots route (src/routes/content.ts): an inner key naming a module the published catalogue does not define as a candidate of the layout slot refused by name at the slots PUT and validate, R-P24; 6fa35902, 1ebc1734 and 5a69dacc the kit (docs/kit/01-integration-guide.md, 02-api-reference.md, 03-payload-schemas.md: the inner map, the one page decision, the undecided inner slot, page-wide de-duplication, the within member); src/content/service.ts and src/routes/decisions.ts unchanged, the snapshot answer spreading each composed decision already; the Meridian bundle 79302 to 81763 bytes fed by src/reflex/contentCompose.ts alone, build-meridian and build-sdk --check exact; acceptance fourteen of fourteen on both hosts at 5a69dacc with P02 15/15, P01 33/33, P04 13/13, P29 20/20, P31 37/37, P05 18/18, P06 30/30, P15 20/20, P28 29/29, P30 25/25, P32 11/11, P11 12/12, P08 14/14, P34 9/9, P13 13/13, P39 28/28, P03, P07, P09, P10, P12, P14, P16 10/10, P33, P35, P36 to P38, P40, W19, W21, W36, W28, W40, W35, W24, W26, W16, W25, W30, W31, W37, src/services and src/sdk whole green, src/reflex, src/content, src/learn and src/routes failing on baseline entries only; both typechecks exit 0; eslint 0 new; the probes in temporary test files removed before the gate (an R-P7 dump over nineteen plain worlds, three affinities, six visitors and three hours byte-identical at base and head, twenty-five host legs on both hosts covering the readings on pinned, held, configured, explored and swapped modules, an inner slot's own pins, exclusions, bands, floor and conversion table, nothing eligible, a withheld module, a retained document without inner, the snapshot answer and the SDK, acknowledgements and clicks on an inner decision, a layout returning every module and none, competing inner slots, an inner slot listed before the layout, every refusal through PUT and validate, replay after a different nesting is republished, the Meridian engine on a nested page); the gate at 5a69dacc GATE_OK on its first run (implementer/logs/gate.log: 3251 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P26/implementer/REPORT.md",
+      "git commits on rem/p26-build up to 5a69dacc"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P26 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P26/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P26/implementer/logs/acceptance-final.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P26/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P26/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P26/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-16T08:20:58.922Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L1/records/P26.md"
+      ]
+    }
+  ]
+}

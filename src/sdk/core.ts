@@ -5,13 +5,23 @@
 // the socket URL, the welcome frame, the reconnect delay, the action envelope
 // and the POST-versus-push dedupe are its behavior, verbatim.
 
-import { currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, writeVisitorId, rotateBrowsingSession } from './identity';
+import { currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, writeVisitorId, rotateBrowsingSession, type CONTINUITY_OPERATION_HEADER } from './identity';
 import { toWire } from './wire';
 import { isEventNonce, isEventTimestamp } from '../events/actionTypes';
 import type {
   ActionEnvelope, ClientConfig, CoreEvents, DecisionSet, DomLike, ElementLike, EngineUpdate, EntrySignals, Host, Paths,
   SdkEventType, SocketLike, SocketStatus, ConsentInstruction, RenderAcknowledgment,
 } from './types';
+
+/**
+ * The deadline, in milliseconds, past which the SDK cuts a request it makes to
+ * the engine: the render acknowledgement first among them (amendment 5, P56),
+ * and every other request that shares the same bounded read.
+ */
+export const ACK_DEADLINE_MS = 5000;
+
+/** The SDK's own cut of a request at ACK_DEADLINE_MS, told apart from every other failure (P60). */
+class RequestDeadline extends Error { constructor() { super('Request deadline'); } }
 
 export const DEFAULT_PATHS: Paths = {
   identitySession: '/v1/{tenant}/identity/session',
@@ -75,7 +85,18 @@ export interface SendOptions {
 
 export function contentInteraction(type: SdkEventType, data: Record<string, unknown>): SdkEventType | undefined {
   return [data.action, data.eventName, data.event, type].map(name => typeof name === 'string' ? name.trim() : '')
-    .find(name => ['content_impression', 'content_click', 'content_dwell', 'video_complete'].includes(name)) as SdkEventType | undefined;
+    .find(name => ['content_impression', 'content_click', 'content_dwell', 'video_complete', 'content_viewable', 'video_view'].includes(name)) as SdkEventType | undefined;
+}
+
+/**
+ * P40: the dwell minimum of a slot — the one a page configured for that slot
+ * (`dwellMinMsBySlot`, a number of milliseconds from 0), else the minimum every
+ * other slot keeps (`dwellMinMs`, one second unless configured). Only a number
+ * is a minimum, so nothing an object inherits can stand for one.
+ */
+export function dwellMinFor(slot: string, fallback: number, bySlot?: Record<string, number>): number {
+  const ms: unknown = bySlot?.[slot];
+  return typeof ms === 'number' && ms >= 0 ? ms : fallback;
 }
 /**
  * What one client owns on the page it was given, so it can hand all of it
@@ -101,6 +122,19 @@ export interface PageBindings {
 /** The operation id a recognition consume is keyed by: one v4 UUID, as the
  * engine's own route requires (`OPERATION_ID`, src/routes/identity.ts). */
 const CONTINUITY_OPERATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** P13: the carried customer identifier's shape, as the engine admits it (`CUSTOMER_ID_PATTERN`, src/ledger/records.ts). */
+const CUSTOMER_ID = /^[A-Za-z0-9_+/=.-]{1,128}$/;
+
+/**
+ * P13 (H4): the decision request `listen.hydrate` hands `ready()`. When the
+ * browser holds no capability of its own and no recognition proof (direct mode
+ * only: a first-party broker owns the session), the bootstrap sends this request
+ * with no session and adopts the session its answer issues: one call, then
+ * `answered` is set and `answer` is the decision set (null when its consent
+ * forbids it). Otherwise `answered` stays unset and the session is taken from
+ * the session route as before, also when the answer carries no session.
+ */
+export interface FirstRequest { body: Record<string, string>; answered?: boolean; answer?: unknown }
 
 function createPageBindings(): PageBindings {
   const listeners = new Set<() => void>();
@@ -151,7 +185,24 @@ export interface Core {
   onConsentChange(fn: () => void): () => void;
   /** Collect only after owned readiness, dropping work crossed by withdrawal or identity change. */
   capture(fn: () => void): void;
-  ready(transition?: boolean): Promise<boolean>;
+  /** `first`: P13, the decision request a new visitor's session is issued with (listen.hydrate only). */
+  ready(transition?: boolean, first?: FirstRequest): Promise<boolean>;
+  /**
+   * P13 (decision D1): `callback` runs once when this client has loaded (its
+   * first readiness), or once at the next turn when registered after that. A
+   * callback that throws changes nothing of the client.
+   */
+  onLoaded(callback: () => void): void;
+  /**
+   * P13 (decision D1): the customer's own identifier for this shopper (a hashed
+   * identifier, 1 to 128 of letters, digits and `_ + / = . -`), passed before
+   * recognition. While tracking is allowed every action envelope and decision
+   * request carries it as `customerId`, beside the engine's own visitor
+   * identifier; it is never proof of identity: it links, merges and selects
+   * nothing, and a sign-in still needs identify() with the backend's signature.
+   * Any other value clears it, as does a logout. True when it is carried.
+   */
+  setCustomerId(id: string | null | undefined): boolean;
   beginTransition(): number;
   finishTransition(generation: number): void;
   forgetSession(generation: number): void;
@@ -181,7 +232,10 @@ export interface Core {
   send(type: SdkEventType, data?: Record<string, unknown> | (() => Record<string, unknown>), opts?: SendOptions): Promise<EngineUpdate | null>;
   /** Internal listen wiring: legacy core.send content paths use the same ACK gate. */
   bindContent(handler: (type: SdkEventType, data: Record<string, unknown>) => Promise<EngineUpdate | null>): { send: Core['send']; release(): void };
-  /** Retry this exact consent-approved render envelope; success is not an engine update. */
+  /**
+   * Send (or retry) this exact consent-approved render envelope; success is not an engine update. A request
+   * the SDK cuts at ACK_DEADLINE_MS is sent once more by itself, the same body; an answered one never is.
+   */
   sendRender(envelope: ActionEnvelope): Promise<RenderAcknowledgment | null>;
   matchesSessionWitness(witness: string): Promise<boolean>;
   url(path: string, query?: Record<string, string | undefined>): string;
@@ -201,6 +255,17 @@ export function createCore(config: ClientConfig, host: Host): Core {
   const cfg = resolveConfig(config, host);
   const bindings = createPageBindings();
   let visitorId = '', sessionId = '', anonId = '';
+  // P13: the carried customer identifier (memory only, never stored) and the loaded hooks.
+  let customerId: string | undefined;
+  let loaded = false;
+  const loadedHooks: Array<() => void> = [];
+  const runHook = (fn: () => void) => { void Promise.resolve().then(() => { try { fn(); } catch { /* the page's own hook never changes the client */ } }); };
+  const markLoaded = () => { if (!loaded) { loaded = true; for (const fn of loadedHooks.splice(0)) runHook(fn); } };
+  function onLoaded(fn: () => void): void { if (typeof fn === 'function') { if (loaded) runHook(fn); else loadedHooks.push(fn); } }
+  function setCustomerId(id: string | null | undefined): boolean {
+    customerId = typeof id === 'string' && CUSTOMER_ID.test(id) ? id : undefined;
+    return customerId !== undefined;
+  }
   let generation = 0;
   let eventSequence = 0;
   let transitioning = false;
@@ -212,12 +277,18 @@ export function createCore(config: ClientConfig, host: Host): Core {
   // long proof, the browser keeps it in its own tenant-scoped store, and
   // presents it on a cold start when it holds no capability of its own. In
   // BROKER mode the proof belongs to the first-party broker and never to this
-  // script: nothing is kept and nothing is sent, even if a broker answers with
+  // script: no proof is kept and none is sent, even if a broker answers with
   // one. The operation id is minted beside the proof and kept until the consume
   // is answered, so a lost response is retried as the SAME consume rather than
-  // burning a second generation of her chain.
+  // burning a second generation of her chain. In broker mode (W16 R4) the
+  // script keeps only that the broker was handed a descriptor — never the proof,
+  // which is an HttpOnly first-party cookie — and, while a return is in flight,
+  // the operation id, which it sends to the broker in a header.
   const continuityKey = `opt_shopper_continuity:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const continuityOperationKey = `${continuityKey}:operation`;
+  const continuityBrokerKey = `${continuityKey}:broker`;
+  /** The header the broker reads the operation id from; its type pins it to the one exported name. */
+  const continuityOperationHeader: typeof CONTINUITY_OPERATION_HEADER = 'X-Continuity-Operation';
   const refusalKey = `opt_shopper_refusal:${encodeURIComponent(cfg.endpoint)}:${encodeURIComponent(cfg.tenant)}`;
   const refusalCookie = encodeURIComponent(refusalKey);
   const lifetime = 30 * 86400 * 1000;
@@ -515,7 +586,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
   function forgetSession(g: number): void {
     if (g !== generation) return;
     rememberUnknownConsent();
-    capability = ''; expiresAt = 0; visitorId = ''; sessionId = ''; anonId = '';
+    capability = ''; expiresAt = 0; visitorId = ''; sessionId = ''; anonId = ''; customerId = undefined;
     if (lease?.generation === g && sharedCurrent()) {
       try { host.storage.set(capabilityKey, ''); } catch { /* storage unavailable */ }
       writeVisitorId(host, cfg.visitorIdKey, '');
@@ -540,6 +611,8 @@ export function createCore(config: ClientConfig, host: Host): Core {
     if (g !== generation) return false;
     const previous = visitorId;
     if (previous && previous !== v.subject && consent().tracking) rotateBrowsingSession(host);
+    // P13: a logout leaves the identifier the page carried for the previous visitor behind.
+    if (reason === 'logout' && previous && previous !== v.subject) customerId = undefined;
     visitorId = v.subject; sessionId = v.sessionId; capability = v.capability; expiresAt = v.exp;
     anonId = v.kind === 'anonymous' ? v.subject : '';
     const retained = { ...active, ...recovery, ...pendingRefusal };
@@ -564,18 +637,18 @@ export function createCore(config: ClientConfig, host: Host): Core {
     return true;
   }
   /** The recognition proof this browser holds, with the operation id its
-   * consume is keyed by. Absent in broker mode, by construction. */
-  function presentContinuity(): { proof: string; operationId: string } | null {
-    if (cfg.sessionBroker) return null;
+   * consume is keyed by. In broker mode the proof is the broker's, so only the
+   * operation id is presented (W16 R4). */
+  function presentContinuity(): { proof?: string; operationId: string } | null {
     try {
-      const proof = host.storage.get(continuityKey) ?? '';
-      if (!proof) return null;
+      const proof = cfg.sessionBroker ? '' : host.storage.get(continuityKey) ?? '';
+      if (cfg.sessionBroker ? !brokerHoldsProof() : !proof) return null;
       let operationId = host.storage.get(continuityOperationKey) ?? '';
       if (!CONTINUITY_OPERATION_ID.test(operationId)) {
         operationId = host.uuid();
         host.storage.set(continuityOperationKey, operationId);
       }
-      return { proof, operationId };
+      return cfg.sessionBroker ? { operationId } : { proof, operationId };
     } catch { return null; }
   }
   /**
@@ -592,13 +665,36 @@ export function createCore(config: ClientConfig, host: Host): Core {
    * operation id cleared) or decides about her (both cleared); only an outage
    * leaves the pair in place.
    */
-  function pendingContinuity(): { proof: string; operationId: string } | null {
-    if (cfg.sessionBroker) return null;
+  function pendingContinuity(): { proof?: string; operationId: string } | null {
     try {
-      const proof = host.storage.get(continuityKey) ?? '';
       const operationId = host.storage.get(continuityOperationKey) ?? '';
+      if (cfg.sessionBroker) return brokerHoldsProof() && CONTINUITY_OPERATION_ID.test(operationId) ? { operationId } : null;
+      const proof = host.storage.get(continuityKey) ?? '';
       return proof && CONTINUITY_OPERATION_ID.test(operationId) ? { proof, operationId } : null;
     } catch { return null; }
+  }
+  /**
+   * A return consume this browser started and never saw answered: the
+   * operation id it was keyed by (with, in direct mode, the proof; in broker
+   * mode, the broker's descriptor) is still kept. Either the browser held no
+   * capability of its own (a cold return), or it held the PROVISIONAL one an
+   * outage served it and presented the pending consume beside it (W16.C6.13) —
+   * but never across an interrupted transition, which still revives nothing.
+   */
+  function returnInFlight(interruptedTransition: boolean): boolean {
+    try {
+      if (!CONTINUITY_OPERATION_ID.test(host.storage.get(continuityOperationKey) ?? '')) return false;
+      if (!(cfg.sessionBroker ? brokerHoldsProof() : !!host.storage.get(continuityKey))) return false;
+      return !host.storage.get(capabilityKey) || !interruptedTransition;
+    } catch { return false; }
+  }
+  /** P13 (S4-C18): this browser holds no capability, no recognition proof and no consume in flight. */
+  function freshBrowser(): boolean {
+    try { return !host.storage.get(capabilityKey) && !host.storage.get(continuityKey) && !host.storage.get(continuityOperationKey); } catch { return false; }
+  }
+  /** Broker mode: the engine issued a descriptor the broker now keeps for this browser. */
+  function brokerHoldsProof(): boolean {
+    try { return host.storage.get(continuityBrokerKey) === '1'; } catch { return false; }
   }
   /**
    * What the engine's own answer says to keep. A disabled answer that is a
@@ -615,10 +711,17 @@ export function createCore(config: ClientConfig, host: Host): Core {
    * leave a long-lived credential lying in her browser.
    */
   function keepContinuity(value: unknown): void {
-    if (cfg.sessionBroker) return;
     const report = value as { enabled?: unknown; mode?: unknown; proof?: unknown; reason?: unknown } | null | undefined;
     try {
-      if (report?.enabled === true && report.mode === 'direct' && typeof report.proof === 'string' && report.proof) {
+      if (cfg.sessionBroker) {
+        // W16 R4: the broker keeps the proof. This browser remembers only that it
+        // holds one, and keeps the operation id only while the engine could not
+        // finish the call it was minted for.
+        if (report?.enabled === false && report.reason === 'unavailable') return;
+        if (report?.enabled === true && report.mode === 'broker') host.storage.set(continuityBrokerKey, '1');
+        else if (report?.enabled === false) host.storage.set(continuityBrokerKey, '');
+        host.storage.set(continuityOperationKey, '');
+      } else if (report?.enabled === true && report.mode === 'direct' && typeof report.proof === 'string' && report.proof) {
         host.storage.set(continuityKey, report.proof);
         host.storage.set(continuityOperationKey, '');
       } else if (report?.enabled === false && report.reason !== 'unavailable') {
@@ -627,10 +730,10 @@ export function createCore(config: ClientConfig, host: Host): Core {
       }
     } catch { /* storage unavailable; the engine still decided */ }
   }
-  function ready(transition = false): Promise<boolean> {
+  function ready(transition = false, first?: FirstRequest): Promise<boolean> {
     consent();
     if (transitioning && !transition) return Promise.resolve(false);
-    if (isCurrent(generation) && (!transition || lease?.generation === generation)) return Promise.resolve(true);
+    if (isCurrent(generation) && (!transition || lease?.generation === generation)) { markLoaded(); return Promise.resolve(true); }
     if (bootstrapping) return bootstrapping;
     if (capability && !transition) {
       const g = beginTransition();
@@ -677,7 +780,16 @@ export function createCore(config: ClientConfig, host: Host): Core {
           let saved: { persisted?: unknown; pending?: unknown } | undefined;
           try { saved = previous ? JSON.parse(previous) : undefined; } catch { return false; }
           // An interrupted transition or failed capability write never revives the old account.
-          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length) rememberUnknownConsent();
+          // W16 R4: a RETURN whose answer never arrived is neither. The next
+          // request presents the very same consume (beside the provisional
+          // capability, when an outage had served one) and claims no consent at
+          // all: the engine answers it once from its one receipt with the
+          // consent HER OWN object holds as a current explicit choice (no such
+          // choice, no recognition), or as a cold shopper with none. Treating it
+          // as unknown consent would send a refusal she never made and turn her
+          // own return away. An explicit refusal she did make is restored from
+          // its own marker above and still turns the return away.
+          if (saved && (saved.persisted !== true || saved.pending === true) && !Object.keys(recovery).length && !returnInFlight(saved.pending === true)) rememberUnknownConsent();
         }
         let persisted = '';
         try { persisted = host.storage.get(capabilityKey) ?? ''; } catch { /* storage unavailable */ }
@@ -687,10 +799,42 @@ export function createCore(config: ClientConfig, host: Host): Core {
           // that already has a capability only retries a consume the engine
           // never answered (W16 C6.13).
           const returning = persisted ? pendingContinuity() : presentContinuity();
+          // Broker mode: the operation id rides a header, and the broker's
+          // body contract stays `{ consent? }` (W16 R4).
+          const brokered: Record<string, string> = cfg.sessionBroker && returning ? { [continuityOperationHeader]: returning.operationId } : {};
           return boundedJSON(cfg.sessionBroker ?? url(cfg.paths.identitySession), { method: 'POST', credentials: 'include',
-            headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}) },
-            body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning ? { continuity: returning } : {}) }) }, 16384);
+            headers: { ...headers({ 'Content-Type': 'application/json' }), ...(persisted ? { 'X-Shopper-Session': persisted } : {}), ...brokered },
+            body: JSON.stringify({ ...(Object.keys(active).length ? { consent: active } : {}), ...(returning && !cfg.sessionBroker ? { continuity: returning } : {}) }) }, 16384);
         };
+        // P13 (H4, S4-C18): a new visitor's first decision request issues its
+        // session, so the first decision set arrives on the first call. Only a
+        // browser holding neither a capability nor a recognition proof (nor a
+        // consume in flight), in direct mode, outside a transition; it claims
+        // only the refusals this browser holds, as the session route's body
+        // would. An answer without a session, a refusal or a failure falls back
+        // to the session route below, exactly as before.
+        if (first && !transition && !cfg.sessionBroker && !capability && freshBrowser()) {
+          try {
+            const res = await boundedJSON(url(cfg.paths.snapshot), { method: 'POST', credentials: 'include', headers: headers({ 'Content-Type': 'application/json' }),
+              body: JSON.stringify({ ...first.body, ...(active.tracking === false ? { trackingConsent: 'false' } : {}),
+                ...(active.personalization === false ? { personalizationEnabled: 'false' } : {}) }) });
+            const answer = res.json as { ok?: unknown; session?: unknown; arm?: string; decisions?: DecisionSet['decisions']; sources?: { consent?: unknown } } | null;
+            if (g !== generation) return false;
+            if (res.ok && answer?.ok === true && answer.session !== undefined && adoptSession(answer.session, g, 'logout')) {
+              // The decision set is admitted as a decision request's answer is (getJson).
+              let admitted: unknown = answer;
+              if (Array.isArray(answer.decisions)) {
+                acknowledge(answer.sources?.consent);
+                const acknowledgedEpoch = consentEpoch;
+                await saveRefusal();
+                if (decisionRequiresConsent({ arm: answer.arm, decisions: answer.decisions }) && (!personalizationAllowed() || acknowledgedEpoch !== consentEpoch)) admitted = null;
+              } else restrict(answer.sources?.consent);
+              first.answered = true; first.answer = admitted;
+              return true;
+            }
+          } catch { /* the session route below */ }
+          if (g !== generation) return false;
+        }
         let res = await request();
         if (res.status === 401 && persisted && g === generation && !cfg.sessionBroker) {
           rememberUnknownConsent();
@@ -721,14 +865,28 @@ export function createCore(config: ClientConfig, host: Host): Core {
     })();
     bootstrapping = operation;
     void operation.finally(() => { if (bootstrapping === operation) bootstrapping = null; });
+    void operation.then(ok => { if (ok) markLoaded(); });
     return operation;
   }
 
   function envelope(type: SdkEventType, data: Record<string, unknown> = {}): ActionEnvelope {
     const tracking = trackingAllowed();
     const w = toWire(type, tracking ? data : {});
+    // W26 R3 (kit 03 "`data.brand` … the brand the shopper's page was served
+    // under — the same value the decision request carried"; LANE-LOG R198):
+    // `brand` is the SDK's own member of every action's data. A client
+    // configured for a brand sends that brand on every action, whatever the
+    // type, so the outcome is measured in the statistics the exposure was
+    // counted in; a client configured for none sends none, and the platform
+    // measures the tenant's own brand. A `brand` a page or a tag layer put on
+    // the event is never sent under that name: it is not the brand the
+    // decision request carried (a product's brand label travels as
+    // `productBrand`, emit.ts), and the platform would read it as one.
+    const { brand: _supplied, ...own } = w.data;
+    void _supplied;
     const timestamp = host.now();
     let eventId: string | undefined;
+    // P13: the envelope carries the customer's identifier the page passed (`customerId`) beside the visitor's own, while tracking is allowed.
     if (tracking && isCurrent(generation)) {
       if (!isEventTimestamp(timestamp) || eventSequence >= Number.MAX_SAFE_INTEGER) throw new Error('Event identity unavailable');
       const token = host.uuid();
@@ -742,11 +900,12 @@ export function createCore(config: ClientConfig, host: Host): Core {
       anonymousId: anonId,
       sessionId,
       browsingSessionId: session(),
-      data: w.data,
+      data: tracking && cfg.brand ? { ...own, brand: cfg.brand } : own,
       source: cfg.source,
       ...(cfg.surface ? { surface: cfg.surface } : {}),
       entry: entryOf(),
       timestamp,
+      ...(tracking && customerId ? { customerId } : {}),
     };
   }
 
@@ -796,16 +955,16 @@ export function createCore(config: ClientConfig, host: Host): Core {
 
   async function boundedJSON(path: string, init: import('./types').RequestInitLike, maxBytes = 2 * 1024 * 1024): Promise<{ ok: boolean; status: number; json: unknown }> {
     const controller = new AbortController(); let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-    const timer = host.setTimeout(() => controller.abort(), 5000);
+    const timer = host.setTimeout(() => controller.abort(), ACK_DEADLINE_MS);
     let abort!: () => void;
-    const stopped = new Promise<never>((_, reject) => { abort = () => { void reader?.cancel().catch(() => undefined); reject(new Error('Request deadline')); }; controller.signal.addEventListener('abort', abort, { once: true }); });
+    const stopped = new Promise<never>((_, reject) => { abort = () => { void reader?.cancel().catch(() => undefined); reject(new RequestDeadline()); }; controller.signal.addEventListener('abort', abort, { once: true }); });
     const work = (async () => {
       const response = await host.fetch(path, { ...init, signal: controller.signal });
-      if (controller.signal.aborted) { void response.body?.cancel().catch(() => undefined); throw new Error('Request deadline'); }
+      if (controller.signal.aborted) { void response.body?.cancel().catch(() => undefined); throw new RequestDeadline(); }
       if (!response.body) return { ok: response.ok, status: response.status, json: await response.json() };
       reader = response.body.getReader(); const chunks: Uint8Array[] = []; let size = 0;
       for (;;) {
-        const part = await reader.read(); if (controller.signal.aborted) throw new Error('Request deadline');
+        const part = await reader.read(); if (controller.signal.aborted) throw new RequestDeadline();
         if (part.done) break;
         size += part.value.byteLength; if (size > maxBytes) throw new Error('Response bound'); chunks.push(part.value);
       }
@@ -819,12 +978,21 @@ export function createCore(config: ClientConfig, host: Host): Core {
 
   async function sendRender(env: ActionEnvelope): Promise<RenderAcknowledgment | null> {
     const g = generation, epoch = activityEpoch;
-    if (transitioning || !isCurrent(g) || !trackingAllowed() || env.type !== 'content_impression'
-      || !isEventNonce(env.eventId) || !isEventTimestamp(env.timestamp) || env.userId !== visitorId || env.sessionId !== sessionId
-      || typeof env.data.renderOffer !== 'string') return null;
+    const admissible = () => !transitioning && isCurrent(g) && epoch === activityEpoch && trackingAllowed() && env.type === 'content_impression'
+      && isEventNonce(env.eventId) && isEventTimestamp(env.timestamp) && env.userId === visitorId && env.sessionId === sessionId
+      && typeof env.data.renderOffer === 'string';
+    if (!admissible()) return null;
     try {
       const body = JSON.stringify(env);
-      const res = await boundedJSON(url(cfg.paths.action), { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), credentials: 'include', body });
+      const post = () => boundedJSON(url(cfg.paths.action), { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), credentials: 'include', body });
+      // P60: an acknowledgement the SDK cut at its own deadline is sent once more, the same body (its event id,
+      // time, offer and page instance), which the engine admits as the same render (amendment 5, P57); the
+      // retry's answer is read as the first's would be. An answered one, whatever its status, is not re-sent;
+      // nor is a retry, whatever became of it.
+      const res = await post().catch((error: unknown) => {
+        if (error instanceof RequestDeadline && admissible()) return post();
+        throw error;
+      });
       const json = res.json as { render?: RenderAcknowledgment; consent?: unknown } | null;
       if (!res.ok || !isCurrent(g) || epoch !== activityEpoch) return null;
       acknowledge(json?.consent);
@@ -862,7 +1030,9 @@ export function createCore(config: ClientConfig, host: Host): Core {
       // Keep the snapshot acknowledgment/epoch protocol below, but keep context
       // and identity out of request URLs. The verified bearer owns both IDs.
       const context = snapshotRequest ? { ...query } : undefined;
-      if (context) { delete context.visitorId; delete context.userId; delete context.sessionId; }
+      if (context) { delete context.visitorId; delete context.userId; delete context.sessionId; delete context.customerId; }
+      // P13: every decision request carries the identifier the page passed, while tracking is allowed.
+      if (context && customerId && consent().tracking) context.customerId = customerId;
       const res = await boundedJSON(url(path, snapshotRequest ? undefined : query), snapshotRequest
         ? { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), credentials: 'include', body: JSON.stringify(context ?? {}) }
         : { method: 'GET', headers: headers(), credentials: 'include' });
@@ -984,6 +1154,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
     if (g !== generation) return;
     rememberUnknownConsent();
     capability = ''; expiresAt = 0; sessionId = ''; anonId = '';
+    if (reason === 'logout') customerId = undefined;
     if (trackingAllowed()) rotateBrowsingSession(host);
     visitorId = id;
     // This compatibility setter has no asynchronous exclusive lease. It may
@@ -1103,7 +1274,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
     get consent() { return consent(); }, get trackingAllowed() { return trackingAllowed(); }, onConsentChange, capture,
     get anonId() { return anonId; },
     get generation() { return generation; },
-    ready, beginTransition, finishTransition, forgetSession, isCurrent, adoptSession,
+    ready, onLoaded, setCustomerId, beginTransition, finishTransition, forgetSession, isCurrent, adoptSession,
     get visitorId() { return visitorId; },
     get sessionId() { return session(); },
     /** Read only: naming the session never rolls one over or recomputes the entry. */

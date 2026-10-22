@@ -6,8 +6,13 @@ import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import { outcomeFromAction, ts36 } from '@/ledger/records';
+import { hourPrefix, outcomeFromAction, ts36, type LedgerStream } from '@/ledger/records';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
+import { REFLEX_KIND } from '@/reflex/configStore';
+import { publicationScope } from '@/config/publication';
+import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
+import { liftKey, liftStaleKey, liftRepublishedKey, liftArchiveKey } from '@/learn/fan';
+import { slotGovernanceKey } from '@/learn/slotGovernance';
 import { CUSTOMER_ASSETS, CUSTOMER_OMITTED_BINDINGS, CUSTOMER_ROUTES, customerRequest } from '@/customerBoundary';
 import { captureRetention, type RetentionEnv } from '@/retention';
 import { shopperObjectName } from '@/tenancy/objects';
@@ -85,6 +90,9 @@ type Probe = {
   recoveryUnknownPolicy?: boolean;
   recoveryOwner?: boolean;
   recoveryRole?: 'admin' | 'operator' | 'none';
+  explicitChoice?: boolean;
+  reflexPublication?: string;
+  pinnedPreconditions?: boolean; ledgerBatches?: Array<[string, string]>;
 };
 type Result = {
   status: number;
@@ -273,7 +281,7 @@ export class LearnStats extends NativeLearnStats {
     const path = new URL(request.url).pathname;
     const monitoring = await w12NativeFixture(this, request); if (monitoring) return monitoring;
     if (path === '/__learning_fixture') return learningFixture(this, request);
-    if (path === '/health' && this.fault.mode === 'hold-health') await new Promise(resolve => setTimeout(resolve, 500));
+    if (['/health', '/witness'].includes(path) && this.fault.mode === 'hold-health') await new Promise(resolve => setTimeout(resolve, 500)); // R10 (amendment 6 / P62, R-P112(3)): the fault holds the witness door the decision path calls since P62 too
     return super.fetch(request);
   }
 }
@@ -284,7 +292,7 @@ export class DecisionRing extends NativeDecisionRing {
 import { issueSessionCapability, verifySessionCapability, newAnonymousSession } from './src/identity/sessionCapability.ts';
 import { admitOwnerPrincipal, dispatchOwnedRequest, runOwnerOperation, ownerEnvironment } from './src/identity/sessionAuthority.ts';
 import { currentLiftWitness } from './src/learn/fan.ts';
-import { storedConsent, CONSENT_LIFETIME_MS } from './src/content/consent.ts';
+import { storedConsent, intersectConsent, refusalHints, CONSENT_LIFETIME_MS } from './src/content/consent.ts';
 import { signAssertion } from './src/identity/assertion.ts';
 import { shopperObjectName } from './src/tenancy/objects.ts';
 import { invalidateTrendCache } from './src/reflex/regionTrend.ts';
@@ -296,9 +304,10 @@ import { memoryStore } from './src/auth/store.ts';
 import { memoryAuthority } from './src/auth/authority.ts';
 import { tokenHash } from './src/auth/accounts.ts';
 import { decodeJwt } from 'jose';
-import { initializePublication, initializePublicationSet, pinPublication, invalidatePublicationCache } from './src/config/publication.ts';
+import { initializePublication, initializePublicationSet, pinPublication, invalidatePublicationCache, publicationScope } from './src/config/publication.ts';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND, DEFAULT_LEARN } from './src/content/kinds.ts';
-import { PRIORS_KIND } from './src/learn/priors.ts';
+import { PRIORS_KIND, EMPTY_PRIORS } from './src/learn/priors.ts';
+import { PROPOSALS_KIND, EMPTY_PROPOSALS } from './src/learn/cycle.ts';
 import { ensureAudiencesSeeded } from './src/services/RealtimeSegmentEngine.ts';
 import { eraseVisitorLedger, rewriteTenantErasures, writeTombstone } from './src/ledger/erasure.ts';
 import { eraseSubject } from './src/identity/erase.ts';
@@ -515,7 +524,7 @@ export default {
     const sessions = new Map([['session:private', ${JSON.stringify(PRIVATE)}]]);
     if (input.seedAudiences || input.authoredAudience) cache.set('audience:authored', JSON.stringify({ key: 'authored', name: 'Customer authored', status: 'published', conditions: ['fixture', 'eq', true] }));
     const storage = new Map([[${JSON.stringify(STORAGE_KEY)}, ${JSON.stringify(PRIVATE)}],
-      ['acme/2026-09-06/13/decisions/private.ndjson', 'ACME_PRIVATE_VALUE']]);
+      ['acme/2026-09-06/13/decisions/private.ndjson', 'ACME_PRIVATE_VALUE'], ...(input.ledgerBatches ?? [])]);
     const publicationEtags = new Map(); let publicationVersion = 0;
     if (input.operatorDiagnostics) {
       for (const tenant of ['acme', 'globex']) {
@@ -548,6 +557,10 @@ export default {
         storage.set(tenant + '/' + day + '/00/decisions/erasure.ndjson', JSON.stringify({ visitor_id: 'same-subject', ts: erased - 1 }) + '\\n');
         storage.set('erasures/' + tenant + '/pending/same-subject.json', JSON.stringify({ tenant, visitor_id: 'same-subject', erased_at: erased,
           actor: 'synthetic', rows_removed: 0, objects_rewritten: 0, objects_deleted: 0 }));
+        // W37 step-3 STALE arrangement: real R2 answers every stored object with an
+        // etag, and the erasure rewrite's conditional state requires one on each
+        // read (src/ledger/erasure.ts:75, :179, :405). The seeded objects carry one.
+        for (const key of [tenant + '/' + day + '/00/decisions/erasure.ndjson', 'erasures/' + tenant + '/pending/same-subject.json']) publicationEtags.set(key, 'seeded-' + tenant);
       }
     }
     if (input.cachedScene) storage.set('scene/live/w0701-subject__w0701-scene.jpg', 'synthetic-image');
@@ -576,13 +589,23 @@ export default {
       async list() { note('STATE.storage.list'); return new Map(state); },
     };
     const queueOwners = new Map();
+    // Baseline-52 #23: with explicitChoice the synthetic owner holds the shopper's
+    // explicit choice for the whole probe and records a refusal in it, as the
+    // real owner does (ShopperReflex consentNow/setConsent,
+    // src/durable-objects/ShopperReflex.ts:2122-2148); SESSIONS is no consent store.
+    let ownerConsent;
     const namespace = (name) => ({
       idFromName(key) { note(name + '.idFromName', key); return key; },
       get(key) {
         note(name + '.get', key);
         return { async fetch(request, init) {
           note(name + '.fetch', key);
-          if (name === 'SHOPPER_REFLEX' && input.queue) {
+          // Baseline-52 #30: a subject's ledger operation executes in that
+          // subject's owner (ledgerUnderOwners -> forwardLedgerOperation,
+          // src/identity/sessionAuthority.ts:181-248), so the subject-operation
+          // fixture routes exactly that owner call to the actual owner below.
+          if (name === 'SHOPPER_REFLEX' && (input.queue || (input.subjectOperations
+            && new URL(request instanceof Request ? request.url : String(request)).pathname === '/identity/ledger'))) {
             // Actual owner ordering and consumer, with this probe's synthetic
             // observed R2 binding. Never substitute a successful ACK receipt.
             if (!queueOwners.has(key)) {
@@ -603,9 +626,10 @@ export default {
               // synthetic admission, retaining intercepted local destinations.
               // Actual durable admission/socket proof is the native group.
               const principal = await verifySessionCapability(bindings, incoming.headers.get('X-Shopper-Session'), input.shopperCapability.tenant);
-              const owner = {}, now = Date.now(), consent = input.authoredAudience ? storedConsent({ version: 1, tenant: principal.tenant, subject: principal.subject,
+              const owner = {}, now = Date.now(), explicit = () => storedConsent({ version: 1, tenant: principal.tenant, subject: principal.subject,
                 revision: 'explicit-boundary-choice', tracking: { value: true, chosenAt: now, expiresAt: now + CONSENT_LIFETIME_MS },
-                personalization: { value: true, chosenAt: now, expiresAt: now + CONSENT_LIFETIME_MS } }) : { tracking: false, personalization: false };
+                personalization: { value: true, chosenAt: now, expiresAt: now + CONSENT_LIFETIME_MS } });
+              const consent = input.explicitChoice ? (ownerConsent ??= explicit()) : input.authoredAudience ? explicit() : { tracking: false, personalization: false };
               const routed = new Request(incoming.headers.get('X-Owner-Request-URL'), incoming);
               return runOwnerOperation(owner, bindings, async () => {
                 admitOwnerPrincipal(owner, principal);
@@ -616,7 +640,9 @@ export default {
                   }
                   return Response.json({ ok: true, destination: key, value: state.get(key) ?? null, consent });
                 });
-              }, bindings.SESSIONS, async () => bindings.PERSONALIZATION_WEBSOCKET.get(bindings.PERSONALIZATION_WEBSOCKET.idFromName(key)).fetch('https://relay/connections'), async () => consent);
+              }, bindings.SESSIONS, async () => bindings.PERSONALIZATION_WEBSOCKET.get(bindings.PERSONALIZATION_WEBSOCKET.idFromName(key)).fetch('https://relay/connections'),
+              async () => input.explicitChoice ? ownerConsent : consent,
+              input.explicitChoice ? async hints => (ownerConsent = intersectConsent(ownerConsent, refusalHints(hints))) : undefined);
             }
             if (new URL(incoming.url).pathname === '/ingest') {
               const event = await incoming.json();
@@ -664,7 +690,7 @@ export default {
         async get(key) {
           note('STORAGE.get', key); const value = storage.get(key);
           return value === undefined ? null : { body: new Response(value).body,
-            ...(input.publicationTenant || input.operatorDiagnostics || input.recovery || input.scheduled || input.shopperHost ? { key, etag: publicationEtags.get(key), size: new TextEncoder().encode(value).length,
+            ...(input.publicationTenant || input.reflexPublication || input.operatorDiagnostics || input.recovery || input.scheduled || input.shopperHost ? { key, etag: publicationEtags.get(key), size: new TextEncoder().encode(value).length,
               async text() { return value; } } : {}),
             ...(input.operatorDiagnostics ? { async json() { return JSON.parse(value); } } : {}),
             ...(input.scheduled || input.subjectOperations ? { async text() { return value; } } : {}),
@@ -675,7 +701,7 @@ export default {
           if (input.failStoragePut) throw new Error('W0701_PRIVATE_FAILURE');
           // The shopper-host case reads and writes the configuration publication,
           // which requires the full put/get contract (src/config/publication.ts:225-237, :293-295).
-          if (input.publicationTenant || input.operatorDiagnostics || input.recovery || input.scheduled || input.shopperHost) {
+          if (input.publicationTenant || input.reflexPublication || input.operatorDiagnostics || input.recovery || input.scheduled || input.shopperHost) {
             const condition = options?.onlyIf;
             if (condition instanceof Headers ? storage.has(key) : condition && condition.etagMatches !== publicationEtags.get(key)) return null;
             const text = await new Response(value).text(), etag = 'publication-' + (++publicationVersion);
@@ -757,6 +783,25 @@ export default {
         { revision: 1, at: 1, actor: 'synthetic-baseline', note: '', value: { pieces: [] } }, '0:' + crypto.randomUUID());
       calls.length = 0;
     }
+    if (input.reflexPublication) {
+      // Baseline-52 #25/#29: the publication is the only configuration authority
+      // (R10, LANE-LOG.md:40), so an authored Reflex write needs this tenant's
+      // published baseline, exactly as publicationTenant gives the catalog one.
+      invalidatePublicationCache();
+      await initializePublication(bindings, REFLEX_KIND, reflexScopeForTenant(input.reflexPublication),
+        { revision: 1, at: 1, actor: 'synthetic-baseline', note: '', value: DEFAULT_REFLEX_CONFIG }, '0:' + crypto.randomUUID());
+      calls.length = 0;
+    }
+    if (input.pinnedPreconditions) {
+      // Baseline-52 #25/#29: every authored write carries If-Match and
+      // Idempotency-Key (src/config/publication.ts:163-174), derived from the
+      // pinned publication in the fixtureMeta idiom
+      // (src/routes/realtime.sdkContract.test.ts:125-129) for the written member.
+      const [kind, scope] = input.reflexPublication ? [REFLEX_KIND, reflexScopeForTenant(input.reflexPublication)] : [CONTENT_KIND, input.publicationTenant];
+      const pin = await pinPublication(bindings, publicationScope(kind, scope)), revision = pin.refs[kind.name + ':' + scope].revision;
+      input.headers = { ...input.headers, 'If-Match': '"' + revision + '/' + pin.revision + '/' + pin.digest + '"', 'Idempotency-Key': revision + ':' + crypto.randomUUID() };
+      calls.length = 0;
+    }
     if (input.scheduled) {
       // W11 serving admission requires one coherent R2 baseline; legacy KV
       // fixture documents alone cannot exercise the retained scheduled jobs.
@@ -773,8 +818,23 @@ export default {
     if (input.operatorDiagnostics) {
       // Current content reads require conditional R2 authority; legacy KV
       // catalog copies deliberately cannot supply the diagnostic's product data.
-      for (const tenant of ['acme', 'globex']) await initializePublication(bindings, CONTENT_KIND, tenant,
-        JSON.parse(cache.get('content:config:' + tenant + ':current')), '0:' + crypto.randomUUID());
+      // Baseline-52 #27/#28: every diagnostic reads its configuration from one
+      // coherent publication set, so the seed publishes the whole six-member set
+      // (the members of src/routes/content.ts:1047-1057) in the fixturePublication
+      // idiom (src/routes/realtime.sdkContract.test.ts:107-122): this tenant's
+      // catalog, slots and learn documents above, compiled Reflex, priors and proposals.
+      for (const tenant of ['acme', 'globex']) {
+        const documented = name => JSON.parse(cache.get(name + ':config:' + tenant + ':current'));
+        const compiled = value => ({ revision: 1, value, actor: 'synthetic', note: '', at: 1 });
+        await initializePublicationSet(bindings, [
+          { kind: CONTENT_KIND, scope: tenant, revision: documented('content') },
+          { kind: SLOTS_KIND, scope: tenant, revision: documented('slots') },
+          { kind: LEARN_KIND, scope: tenant, revision: documented('learn') },
+          { kind: REFLEX_KIND, scope: reflexScopeForTenant(tenant), revision: compiled(DEFAULT_REFLEX_CONFIG) },
+          { kind: PRIORS_KIND, scope: tenant, revision: compiled(EMPTY_PRIORS) },
+          { kind: PROPOSALS_KIND, scope: tenant, revision: compiled(EMPTY_PROPOSALS) },
+        ], '0:' + crypto.randomUUID());
+      }
       calls.length = 0;
     }
     const env = new Proxy(bindings, {
@@ -1174,13 +1234,13 @@ it('W15 native read-only polls, durable rendered sinks, exact retries and transa
           ...(host === 'session' ? { processing: 'buffered', browsingSessionId: g.sessionId } : {}),
           data: { ...piece, slot: 'hero', position: 0, page: 'home', pageInstance } };
         const rendered = await call('/realtime/action', event); expect(rendered.status, JSON.stringify(rendered.body)).toBe(200);
-        expect(rendered.body.render).toMatchObject({ status: 'durable', eventId: event.eventId, decisionId: piece.decisionId, pageInstance });
+        expect(rendered.body.render).toMatchObject({ status: 'durable', eventId: event.eventId, decisionId: piece.decisionId, pageInstance }); expect((await call('/realtime/reflex', undefined)).status).toBe(200); // R10 (amendment 5, P56; R-P100(3)): the effects run after the answer in the shopper object's serializer (src/ledger/recovery.ts:179, :213-221); a later request of the same shopper (here a read of its projection) is answered only after them, so the ring and the statistics below are read once they ran
         const ring = new Map(await state('DECISION_RING')).get('ring') as { ring: Array<Record<string, unknown>> };
         expect(ring.ring).toHaveLength(1); expect(ring.ring[0]).toMatchObject({ decision_id: piece.decisionId, measurementBasis: 'rendered-v1',
           rendered: { at: event.timestamp, eventId: event.eventId, pageInstance } });
         const learned = await state('LEARN_STATS'); expect(new Map(learned).get('learn')).toMatchObject({ config: { measurementBasis: 'rendered-v1' },
           stats: { events: 1, items: { 'native-render': { '*': { n: { s: 1, t: event.timestamp } } } } } });
-        const retained = await recovery(); expect((await call('/realtime/action', event)).body.render).toEqual(rendered.body.render);
+        const retained = await recovery(), answered = rendered.body.render as Record<string, unknown>; expect([answered.source, (await call('/realtime/action', event)).body.render]).toEqual(['pending', { ...answered, source: 'recovered' }]); // R10 (amendment 5, P56; R-P100(3)): the first answer is the admission's receipt, source 'pending' (src/ledger/recovery.ts:174, :179, :221; src/content/renderOffer.ts:111); the exact retry after the effects replays the stored receipt, 'recovered' (recovery.ts:240, :280); every other member is the first answer's
         expect(await recovery()).toEqual(retained); expect(await state('LEARN_STATS')).toEqual(learned);
         if (host === 'do' && tenant === 'globex') {
           const nextPage = crypto.randomUUID(), next = await call(`/v1/${tenant}/decisions/snapshot`, { page: 'home', pageInstance: nextPage });
@@ -1575,7 +1635,7 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     expect(observed.some(batch => batch.queue === 'w1202-source')).toBe(true);
     expect(external).toBe(0);
   } finally { await native.dispose(); }
-}, 135000); // Existing 90s native work plus the explicit 30s stalled-consumer boundary.
+}, 300000); // Existing 90s native work plus the explicit 30s stalled-consumer boundary; A50: 300s so a loaded machine cannot time it out (104-123s alone).
 
 it('W10.03 native SQLite bounded waves, exact repair, ambiguous writes and persisted process restart', async () => {
   const directory = mkdtempSync(resolve(tmpdir(), 'w1003-native-'));
@@ -2030,27 +2090,35 @@ it('W01.04 retains open/unset unconfigured delivery errors while stored refusal 
     for (const tenant of ['acme', 'globex']) {
       for (const kind of ['event', 'batch']) {
         const path = '/track/' + kind, body = JSON.stringify(kind === 'batch' ? { events: [event] } : event);
+        // R10 witness (baseline-52 #23, G4): absence grants nothing (src/content/consent.ts:139-152), so the
+        // shopper first holds an explicit tracking choice; only then is an unconfigured delivery the outcome.
         const input: Probe = { path, method: 'POST', body, mode, requestHost: tenant + '.example', reflexHost: 'session',
-          shopperCapability: { tenant, subject, sessionId: 'w0104-session' } };
+          shopperCapability: { tenant, subject, sessionId: 'w0104-session' }, explicitChoice: true };
         const accepted = await probe(input);
         expect(accepted.status).toBe(503);
         const failure = { error: 'Event delivery not confirmed', delivery: { status: 'unconfigured', attempted: 0, acknowledged: 0 } };
         expect(JSON.parse(accepted.body)).toEqual(kind === 'batch'
           ? { success: false, processed: 1, results: [{ eventId: event.eventId, status: 'error', ...failure }] }
           : { success: false, eventId: event.eventId, timestamp: event.timestamp, ...failure });
-        expect(accepted.calls).toEqual([['SESSIONS.get', 't:' + tenant + ':session:w0104-session']]);
+        // R10 witness (baseline-52 #23): every shopper call is dispatched to its owner first (requireShopper ->
+        // forwardShopperRequest, src/identity/sessionCapability.ts:288, src/identity/sessionAuthority.ts:570-582).
+        const owned = ['SHOPPER_REFLEX.idFromName', 'SHOPPER_REFLEX.get', 'SHOPPER_REFLEX.fetch', 'SHOPPER_REFLEX.idFromName']
+          .map(op => [op, shopperObjectName(tenant, subject)]);
+        expect(accepted.calls).toEqual([...owned, ['SESSIONS.get', 't:' + tenant + ':session:w0104-session']]);
         expect((accepted.after as { queued: unknown[] }).queued).toEqual([]);
         const refused = await probe({ ...input, headers: { Cookie: 'opt_tracking_consent=false; opt_personalization_enabled=false' },
           readBack: path, readBackBody: body, readBackCookie: 'opt_tracking_consent=true; opt_personalization_enabled=true' });
         expect(refused.status).toBe(200);
+        // R10 witness (baseline-52 #23): the refusal is stored by the owner (SessionManager.restrictConsent ->
+        // restrictOwnerConsent, src/services/SessionManager.ts:610-615), so the read-back answers with the owner's
+        // stored refused choice, and nothing is written to SESSIONS.
         expect(JSON.parse(refused.body)).toMatchObject({ write: { dispatched: false, reason: 'tracking_refused' }, readStatus: 200,
-          read: { dispatched: false, reason: 'tracking_refused', consent: { tracking: false, personalization: false } } });
-        expect(refused.calls).toEqual([['SESSIONS.get', 't:' + tenant + ':session:w0104-session'],
-          ['SESSIONS.put', 't:' + tenant + ':session:w0104-session'], ['SESSIONS.get', 't:' + tenant + ':session:w0104-session']]);
+          read: { dispatched: false, reason: 'tracking_refused', consent: { tracking: false, personalization: false,
+            instruction: { tenant, subject, tracking: { value: false }, personalization: { value: false } } } } });
+        expect(refused.calls).toEqual([...owned, ['SESSIONS.get', 't:' + tenant + ':session:w0104-session'],
+          ...owned, ['SESSIONS.get', 't:' + tenant + ':session:w0104-session']]);
         const after = refused.after as { sessions: [string, string][]; queued: unknown[] };
         expect(after.queued).toEqual([]);
-        expect(JSON.parse(after.sessions.find(([key]) => key === 't:' + tenant + ':session:w0104-session')![1])).toMatchObject({
-          userId: subject, preferences: { trackingConsent: false, personalizationEnabled: false }, metadata: { sessionCount: 0 } });
         expect(refused.logs).toEqual([]);
       }
       for (const route of ['optimizely', 'segment', 'custom']) {
@@ -2349,8 +2417,16 @@ it('W01.08 classifies actual mounted methods and refuses every unadmitted method
   const response = await runtime.dispatchFetch('http://w0102.local/probe', { method: 'POST', body: JSON.stringify({ mountedRoutes: true }) });
   expect(response.status).toBe(200);
   const mounted = await response.json() as { path: string; method: string }[];
+  // R10 witness (baseline-52 #24, ruled test-only): the manifest admits literal operations
+  // (src/customerBoundary.ts:49-50) that the router serves through a parameterised pattern
+  // (src/routes/ledgerRecovery.ts:36 `/:id/:action`); a manifest path is mounted when a mounted
+  // pattern routes a request to it: every segment equal, or the mounted segment a parameter.
+  const routesTo = (pattern: string, path: string) => {
+    const want = path.split('/'), have = pattern.split('/');
+    return have.length === want.length && have.every((segment, i) => segment === want[i] || segment.startsWith(':'));
+  };
   for (const route of CUSTOMER_ROUTES) for (const method of route.methods) {
-    expect(mounted.some(actual => actual.path === route.path && actual.method === (method === 'HEAD' ? 'GET' : method)),
+    expect(mounted.some(actual => routesTo(actual.path, route.path) && actual.method === (method === 'HEAD' ? 'GET' : method)),
       method + ' ' + route.path).toBe(true);
   }
   const subject = 'vis-00000000-0000-4000-8000-000000000108';
@@ -2450,10 +2526,15 @@ it('W01.08 preserves customer scoped reads and mutations, Coach audiences and re
   for (const tenant of ['acme', 'globex']) {
     const headers = { 'X-Tenant': tenant, Authorization: 'Bearer ' + tokens[tenant === 'acme' ? 'admin' : 'globex'], 'Content-Type': 'application/json' };
     const common = { profile: 'customer', requestHost: 'shared.example', headers };
-    const write = await probe({ ...common, path: '/config/reflex', method: 'PUT',
+    // R10 witness (baseline-52 #25, G1; LANE-LOG.md:555): an authored write names the published base it read
+    // (If-Match + Idempotency-Key, src/config/publication.ts:150, :163-174), sent from the pinned publication.
+    const write = await probe({ ...common, path: '/config/reflex', method: 'PUT', reflexPublication: tenant, pinnedPreconditions: true,
       body: JSON.stringify({ config: { ...DEFAULT_REFLEX_CONFIG, version: 'w0108', K: 7 } }), readBack: '/config/reflex' });
     expect(write.status).toBe(200); expect(JSON.parse(write.body).read).toMatchObject({ scope: tenant, config: { K: 7 } });
-    expect(write.calls.every(call => call[0].startsWith('CACHE.') && call[1]!.startsWith('reflex:config:' + tenant + ':'))).toBe(true);
+    // R10 witness (baseline-52 #25; LANE-LOG.md:40, no KV fallback): the write and its read-back touch only this
+    // tenant's publication keys (the set root and the member's revisions, src/config/publication.ts:126-131).
+    const authority = ['config-publication/v2/' + publicationScope(REFLEX_KIND, tenant) + '/', 'config-publication/v1/' + tenant + '/' + REFLEX_KIND.name + '/'];
+    expect(write.calls.every(call => call[0].startsWith('STORAGE.') && authority.some(root => call[1]!.startsWith(root)))).toBe(true);
     const report = await probe({ ...common, operatorDiagnostics: true, path: '/v1/' + tenant + '/learn/report?date=2026-09-06' });
     expect(report.status).toBe(200); expect(report.calls).toContainEqual(['STORAGE.get', 'reports/' + tenant + '/' + tenant + '/2026-09-06.json']);
     const wrong = await probe({ ...common, path: '/config/reflex?scope=foreign' });
@@ -2485,7 +2566,9 @@ it('W01.08 preserves customer scoped reads and mutations, Coach audiences and re
   const sharedHelper = await probe({ path: '/', profile: 'customer', seedAudiences: true });
   expect(sharedHelper.calls).toEqual([]); expect(sharedHelper.envAccess).toEqual(['get:DEPLOYMENT_PROFILE']);
   expect(sharedHelper.after).toEqual(sharedHelper.before); expect(sharedHelper.logs).toEqual([]);
-  const demoHelper = await probe({ path: '/', profile: 'demo', seedAudiences: true });
+  // Baseline-52 #25 fixture: demo seeding generates from the coach Reflex configuration (src/services/RealtimeSegmentEngine.ts:348-350),
+  // which only the publication holds (src/config/versionedStore.ts:92-95; no KV or compiled fallback), so coach has its baseline.
+  const demoHelper = await probe({ path: '/', profile: 'demo', seedAudiences: true, reflexPublication: 'coach' });
   expect(demoHelper.calls).toContainEqual(['catalog.getAllProducts']);
   expect(demoHelper.calls.some(call => call[0] === 'CACHE.put' && call[1]!.startsWith('audience:'))).toBe(true);
   const authoredRecord = (value: unknown) => (value as { cache: [string, string][] }).cache.find(([key]) => key === 'audience:authored');
@@ -2589,12 +2672,22 @@ it('W07.01 does not log raw path, query or caller request-ID on actual entry req
 
 it('W07.01 keeps default queue ack and catch retry while logging no bodies or exception detail', async () => {
   const body = { type: 'event', event: { userId: 'W0701_SUBJECT', email: 'w0701@example.invalid', private: 'W0701_PRIVATE_FAILURE' } };
-  const ok = await probe({ path: '/', queue: [body] });
-  expect(ok.calls).toEqual([['queue.ack']]);
+  // R10 witness (baseline-52 #26, G13): an unknown kind is retried, never acknowledged ("Only explicit
+  // per-envelope completion acknowledges", src/index.ts:359-364, :404-406; document 35:399 W09·G1).
+  const unknown = await probe({ path: '/', queue: [body] });
+  expect(unknown.calls).toEqual([['queue.retry']]);
+  expect(unknown.logs).toEqual([]);
+  expect(unknown.after).toEqual(unknown.before);
+  // R10 witness (baseline-52 #26): the acknowledgement and its catch-retry are driven through a kind the
+  // consumer acknowledges, an open-mode cached scene (src/index.ts:396-403; catch :407-409), with the same private fields.
+  const scene = { kind: 'scene', productId: 'W0701_SUBJECT', sceneId: 'W0701_SCENE', sceneContext: 'W0701_PRIVATE_CONTEXT', event: body.event };
+  const head = ['STORAGE.head', 'scene/live/w0701-subject__w0701-scene.jpg'];
+  const ok = await probe({ path: '/', mode: 'open', queue: [scene], cachedScene: true });
+  expect(ok.calls).toEqual([head, ['queue.ack']]);
   expect(ok.logs).toEqual([]);
   expect(ok.after).toEqual(ok.before);
-  const failure = await probe({ path: '/', queue: [body], failAck: true });
-  expect(failure.calls).toEqual([['queue.ack'], ['queue.retry']]);
+  const failure = await probe({ path: '/', mode: 'open', queue: [scene], cachedScene: true, failAck: true });
+  expect(failure.calls).toEqual([head, ['queue.ack'], ['queue.retry']]);
   expect(failure.logs).toEqual(['Error processing message']);
   expect(failure.after).toEqual(failure.before);
 });
@@ -2852,24 +2945,36 @@ it('retains SDK-authorized non-default tenant reads at the intended destination'
 
 function diagnosticReads(tenant: string) {
   const item = `W0106_PRIVATE_${tenant}`, n = tenant === 'acme' ? 3 : 9;
-  const lift = ['CACHE.get', `lift:${tenant}:${tenant}:hero`];
-  const contentHead = ['STORAGE.get', `config-publication/v1/${tenant}/content/head.json`];
-  const contentRevision = ['STORAGE.get', `config-publication/v1/${tenant}/content/rev/1.json`];
-  const learn = ['CACHE.get', `learn:config:${tenant}:current`];
+  const lift = ['CACHE.get', liftKey(tenant, tenant, 'hero')];
+  // R10 witness (baseline-52 #27/#28, G2; LANE-LOG.md:40): a read pins this tenant's one coherent publication set
+  // once (its head and committed set, config-publication/v2/<tenant>/, src/config/publication.ts:126-131; the
+  // request pin, src/routes/decisions.ts:68-72) and reads each member it names at its revision
+  // (config-publication/v1/<tenant>/<kind>/rev/1.json), never the legacy catalog head or a KV copy.
+  const pinned = [['STORAGE.get', `config-publication/v2/${tenant}/head.json`], ['STORAGE.get', `config-publication/v2/${tenant}/set/1.json`]];
+  const member = (kind: { name: string }) => ['STORAGE.get', `config-publication/v1/${tenant}/${kind.name}/rev/1.json`];
+  // W26 R2: every read below first reads the published slots (the placement, src/routes/decisions.ts:113-119;
+  // learn/slots its catalogue, :574).
+  const slots = [...pinned, member(SLOTS_KIND)];
+  const contentRevision = member(CONTENT_KIND), learn = member(LEARN_KIND);
+  // R-P81 (P42 stale marker) and R-P82 (6) (P49 republish record): a read of the lift in force also reads both
+  // marks beside it (liftMarksFor, src/routes/decisions.ts:441-460).
+  const marks = [['CACHE.get', liftStaleKey(tenant, tenant, 'hero')], ['CACHE.get', liftRepublishedKey(tenant, tenant, 'hero')]];
   const report = ['STORAGE.get', `reports/${tenant}/${tenant}/2026-09-06.json`];
   return [
-    { suffix: 'lift/rows?slot=hero', calls: [lift, contentHead, learn, contentRevision], body: { tenant, published: true, total: 1,
+    { suffix: 'lift/rows?slot=hero', calls: [...slots, lift, ...marks, contentRevision, learn], body: { tenant, published: true, total: 1,
       rows: [{ item, title: item, n, control: 'freeze' }] } },
     { suffix: 'brands', calls: [], body: { tenant, brands: [{ id: tenant, default: tenant === 'acme' }] } },
-    { suffix: 'learn/slots?evidence=1', calls: [['CACHE.get', `slots:config:${tenant}:current`], contentHead, learn, contentRevision, lift],
+    // W20 G2: the evidence block reads the tenant's slot-governance record (src/routes/decisions.ts:584).
+    { suffix: 'learn/slots?evidence=1', calls: [...slots, contentRevision, learn, ['CACHE.get', slotGovernanceKey(tenant)], lift],
       body: { tenant, total: 1, pages: [{ page: 'home', slots: [{ slot: 'hero', pieces: 1, gamma: 0.2, controls: 1,
         exploration: 'rotation', evidence: { items: 1, events: n, publishedAt: 7 } }] }] } },
-    { suffix: 'learn/exploring?slot=hero', calls: [lift, contentHead, learn, contentRevision], body: { tenant, published: true,
+    { suffix: 'learn/exploring?slot=hero', calls: [...slots, lift, contentRevision, learn], body: { tenant, published: true,
       total: 1, mode: 'rotation', rows: [{ item, title: item, n, to_floor: 30 - n }] } },
-    { suffix: 'lift?slot=hero', calls: [lift], body: { tenant, snapshot: { tenant, events: n, version: 7, items: { [item]: { '*': { n } } } } } },
-    { suffix: 'lift?slot=hero&version=7', calls: [['STORAGE.get', `lift/${tenant}/${tenant}/hero/7.json`]],
+    // P11: the page's evidence floor reads the learn member (src/routes/decisions.ts:799); marks only for the lift in force (:800).
+    { suffix: 'lift?slot=hero', calls: [...slots, lift, learn, ...marks], body: { tenant, snapshot: { tenant, events: n, version: 7, items: { [item]: { '*': { n } } } } } },
+    { suffix: 'lift?slot=hero&version=7', calls: [...slots, ['STORAGE.get', liftArchiveKey(tenant, tenant, 'hero', 7)], learn],
       body: { tenant, snapshot: { tenant, events: n, version: 7, items: { [item]: { '*': { n } } } } } },
-    { suffix: 'lift/history?slot=hero', calls: [['STORAGE.list', `lift/${tenant}/${tenant}/hero/`]], body: { tenant, versions: [{ version: 7 }] } },
+    { suffix: 'lift/history?slot=hero', calls: [...slots, ['STORAGE.list', `lift/${tenant}/${tenant}/hero/`]], body: { tenant, versions: [{ version: 7 }] } },
     { suffix: 'learn/report/window?from=2026-09-06&to=2026-09-06', calls: [report], body: { report: { tenant,
       days: ['2026-09-06'], missing: [], incomplete: [{ date: '2026-09-06', truncated: false, missingHours: [1] }],
       measurement: { kind: 'attribution_diagnostic', inference: 'unavailable' },
@@ -3040,33 +3145,30 @@ it('W03.02 retains granted exact destinations and document revisions, rejecting 
       const body = kind === 'config' ? { config: { ...DEFAULT_REFLEX_CONFIG, version: 'w0302-synthetic', K: 7 } }
         : { document: { pieces: [{ id: 'w0302', customerContentId: 'synthetic', type: 'editorial', title: 'Scoped', tags: {}, slotTypes: ['hero'] }] } };
       const publication = kind === 'content';
-      const result = await probe({ ...common, path, method: 'PUT', body: JSON.stringify(body), readBack: path,
-        ...(publication ? { publicationTenant: tenant, headers: { ...headers, 'If-Match': '"1"', 'Idempotency-Key': '1:' + crypto.randomUUID() } } : {}) });
+      // R10 witness (baseline-52 #29, G1; LANE-LOG.md:555): both documents are members of the tenant's publication,
+      // and every authored write names the published base it read (If-Match + Idempotency-Key from the pinned
+      // publication, src/config/publication.ts:150, :163-174), so each publishes revision 2 over its baseline 1.
+      const result = await probe({ ...common, path, method: 'PUT', body: JSON.stringify(body), readBack: path, pinnedPreconditions: true,
+        ...(publication ? { publicationTenant: tenant } : { reflexPublication: tenant }) });
       expect(result.status).toBe(200); expect(result.headers['cache-control']).toBe('no-store');
       const proof = JSON.parse(result.body);
-      expect(proof.write).toMatchObject({ ok: true, revision: publication ? 2 : 1 });
-      expect(proof.readStatus).toBe(200); expect(proof.read).toMatchObject({ scope, revision: publication ? 2 : 1, actor: subject, source: 'stored' });
+      expect(proof.write).toMatchObject({ ok: true, revision: 2 });
+      expect(proof.readStatus).toBe(200); expect(proof.read).toMatchObject({ scope, revision: 2, actor: subject, source: 'stored' });
       if (kind === 'config') expect(proof.read.config.K).toBe(7);
       else expect(proof.read.document.pieces[0].id).toBe('w0302');
-      const prefix = `${kind === 'config' ? 'reflex' : 'content'}:config:${scope}:`;
-      if (publication) {
-        const authority = `config-publication/v1/${tenant}/content/`;
-        expect(result.calls.filter(([op]) => op === 'STORAGE.put')).toEqual([
-          ['STORAGE.put', authority + 'head.json'], ['STORAGE.put', authority + 'rev/2.json'], ['STORAGE.put', authority + 'head.json'],
-        ]);
-        expect(result.calls.filter(([op]) => op.startsWith('STORAGE.')).every(([, key]) => key!.startsWith(authority))).toBe(true);
-        // The retained catalog registry advisory reads only this tenant's
-        // Reflex document on both write and readback; it is not an R2 write.
-        const registryScope = tenant === 'brighthour' ? 'tenant:brighthour' : tenant;
-        expect(result.calls.filter(([op]) => !op.startsWith('STORAGE.'))).toEqual([
-          ['CACHE.get', `reflex:config:${registryScope}:current`], ['CACHE.get', `reflex:config:${registryScope}:current`],
-        ]);
-      } else {
-        expect(result.calls.filter(([op]) => op === 'CACHE.put')).toEqual([
-          ['CACHE.put', prefix + 'rev:1'], ['CACHE.put', prefix + 'current'], ['CACHE.put', prefix + 'index'],
-        ]);
-        expect(result.calls.every(([op, key]) => op.startsWith('CACHE.') && key!.startsWith(prefix))).toBe(true);
-      }
+      // R10 witness (baseline-52 #29; LANE-LOG.md:40, no KV fallback): the write reserves the set head, writes the
+      // member's revision and the next set, then commits the head (src/config/publication.ts:642-690), all under this
+      // tenant's set root and the member's revisions (src/config/publication.ts:126-131).
+      const written = publication ? CONTENT_KIND : REFLEX_KIND;
+      const set = `config-publication/v2/${publicationScope(written, scope)}/`, revisions = `config-publication/v1/${scope}/${written.name}/`;
+      expect(result.calls.filter(([op]) => op === 'STORAGE.put')).toEqual([
+        ['STORAGE.put', set + 'head.json'], ['STORAGE.put', revisions + 'rev/2.json'], ['STORAGE.put', set + 'set/2.json'], ['STORAGE.put', set + 'head.json'],
+      ]);
+      expect(result.calls.filter(([op]) => op.startsWith('STORAGE.')).every(([, key]) => key!.startsWith(set) || key!.startsWith(revisions))).toBe(true);
+      // R10 witness (baseline-52 #29; LANE-LOG.md:40): no call leaves the publication. The retained catalog registry
+      // advisory reads this tenant's Reflex document through it (readRevisionForMutation,
+      // src/content/catalogDiagnostics.ts:178-181), never a KV copy; it is not an R2 write.
+      expect(result.calls.every(([op]) => op.startsWith('STORAGE.'))).toBe(true);
       const other = tenant === 'acme' ? 'globex' : 'acme';
       for (const query of [`scope=${other}`, `tenant=${other}`, 'scope=', `scope=${scope}&scope=${scope}`,
         `tenant=${tenant}&tenant=${tenant}`, `tenant=${tenant}&scope=${other}`,
@@ -3084,11 +3186,30 @@ it('W03.02 retains granted exact destinations and document revisions, rejecting 
     expect(JSON.parse(published.body)).toMatchObject({ write: { success: true, notifiedUsers: 0 }, readStatus: 200,
       read: { success: true, audiences: [{ key: 'w0302', status: 'published' }] } });
     expect(published.calls).toEqual([['CACHE.put', `t:${tenant}:audience:w0302`], ['CACHE.list', `t:${tenant}:audience:`], ['CACHE.get', `t:${tenant}:audience:w0302`]]);
-    const exportRead = await probe({ ...common, path: `/v1/${tenant}/ledger/batches?date=2026-09-06` });
+    // R10 witness (baseline-52 #29, G17): the export lists ledger batch objects only, keys
+    // `<tenant>/<yyyy-mm-dd>/<hh>/<decision|outcome>/...` (isLearningKey, src/ledger/records.ts:15, applied at
+    // src/routes/decisions.ts:1254), named as the writer names a batch (src/ledger/writer.ts:85-86, one JSON row per
+    // line). Each tenant's day holds one decision batch whose row the reader admits (rowShape,
+    // src/learn/report.ts:151-165), beside the shared non-ledger `decisions/` object every probe seeds.
+    const hour = Date.UTC(2026, 8, 6, 13), stream: LedgerStream = 'decision';
+    const batchKey = (owner: string) => `${hourPrefix(owner, hour)}/${stream}/${ts36(hour)}-${ts36(hour)}-w0302.ndjson`;
+    const ledgerBatches = ['acme', 'globex'].map((owner): [string, string] => [batchKey(owner), JSON.stringify({
+      decision_id: `${owner}:${ts36(hour)}:w0302-visitor:home:hero:0`, tenant: owner, brand: owner, visitor_id: 'w0302-visitor',
+      session_id: 'w0302-session', ts: hour, page: 'home', slot: 'hero', position: 0, item_id: 'w0302', cell: {},
+      arm: 'personalized', explored: false }) + '\n']);
+    // The listed object is { key, date, size, uploaded } (src/routes/decisions.ts:1255); this fixture's listing states
+    // no size or upload time, so `size` is absent from the JSON and `uploaded` echoes 'undefined'.
+    const exportRead = await probe({ ...common, path: `/v1/${tenant}/ledger/batches?date=2026-09-06`, ledgerBatches });
     expect(exportRead.status).toBe(200);
-    expect(JSON.parse(exportRead.body).objects).toEqual([{ key: `${tenant}/2026-09-06/13/decisions/private.ndjson`, uploaded: 'undefined' }]);
-    expect(exportRead.calls).toEqual([['ACCOUNTS.audit', 'admitted'], ['STORAGE.list', `${tenant}/2026-09-06/`],
-      ['STORAGE.list', `erasures/${tenant}/pending/`], ['ACCOUNTS.audit', 'result']]);
+    expect(JSON.parse(exportRead.body).objects).toEqual([{ key: batchKey(tenant), date: '2026-09-06', uploaded: 'undefined' }]);
+    // R10 witness (baseline-52 #29, G17): every storage call names this tenant's own keys, between the audit's admitted
+    // and result rows (src/auth/subjectAudit.ts:121, :131): the pending erasures first (loadTombstones,
+    // src/routes/decisions.ts:1195; src/ledger/erasure.ts:68, :176), then the day (src/routes/decisions.ts:1251), then the
+    // W22 R1.05 reconciliation of a whole-day listing (src/routes/decisions.ts:1269-1271), which opens the batch it just
+    // listed (src/learn/report.ts:1674) and reads the day report by its own key (src/learn/report.ts:1695, :588, :1600).
+    expect(exportRead.calls).toEqual([['ACCOUNTS.audit', 'admitted'], ['STORAGE.list', `erasures/${tenant}/pending/`],
+      ['STORAGE.list', `${tenant}/2026-09-06/`], ['STORAGE.get', batchKey(tenant)],
+      ['STORAGE.get', `reports/${tenant}/${tenant}/2026-09-06.json`], ['ACCOUNTS.audit', 'result']]);
     const identityRead = await probe({ ...common, path: `/v1/${tenant}/identity/visitor/fixture` });
     expect(identityRead.status).toBe(200); expect(identityRead.calls).toEqual([['ACCOUNTS.auditOperations', 'admitted', '1'],
       ['SESSIONS.get', `t:${tenant}:identity:visitor:fixture`], ['ACCOUNTS.auditOperations', 'result', '1']]);
@@ -3257,7 +3378,12 @@ it('W37.09 refuses wildcard grants before tenant effects while retaining explici
           expect(result.after).toEqual(result.before); expect(result.pending).toBe(0);
         } else {
           expect(JSON.parse(result.body)).toMatchObject({ destination });
-          expect(result.calls).toEqual([['SHOPPER_REFLEX.idFromName', destination], ['SHOPPER_REFLEX.get', destination], ['SHOPPER_REFLEX.fetch', destination]]);
+          // W37 step-3 STALE expectation: the owned router names the actual object twice
+          // more, the owner's identity (src/identity/sessionAuthority.ts:628) and the
+          // redispatched route's own address, whose get is served locally (:630-636);
+          // identity computations with no effect, the same list W37.08 asserts for this probe.
+          expect(result.calls).toEqual([['SHOPPER_REFLEX.idFromName', destination], ['SHOPPER_REFLEX.get', destination], ['SHOPPER_REFLEX.fetch', destination],
+            ['SHOPPER_REFLEX.idFromName', destination], ['SHOPPER_REFLEX.idFromName', destination]]);
           if (kind === 'write') expect((result.after as { state: unknown[] }).state).toContainEqual([destination, { subject: shopperCapability.subject, eventType: 'page_view' }]);
           else expect(result.after).toEqual(result.before);
         }
@@ -3346,11 +3472,15 @@ it('W37.07 preserves pending ledger erasure through registry denial then resumes
 });
 
 it('W07.04 keeps actual scheduled jobs/waitUntil and numeric summaries without tenant/error/cron payloads', async () => {
-  const cases = [
-    { cron: '*/5 * * * *', pending: 4 },
-    { cron: '0 3 * * *', pending: 4 },
-    { cron: '0 * * * *', pending: 2 },
-  ];
+  // R10 witness (baseline-52 #31, G13): each run schedules its shared jobs plus its per-tenant jobs for every
+  // provisioned tenant (the probe's manifest provisions acme and globex). */5 without a recovery configuration
+  // (the quarantine scan, src/index.ts:270, needs one): one warehouse slice (:279), then a monitor (:284) and an
+  // hourly fold (:293) per tenant; 0 3: a day report (:323) and an erasure rewrite (:334) per tenant; 0 *: a trend
+  // rollup per tenant (:344).
+  const tenants = ['acme', 'globex'];
+  const jobs = (shared: number, perTenant: number) => shared + tenants.length * perTenant;
+  const scheduledJobs: Record<string, number> = { '*/5 * * * *': jobs(1, 2), '0 3 * * *': jobs(0, 2), '0 * * * *': jobs(0, 1) };
+  const cases = Object.entries(scheduledJobs).map(([cron, pending]) => ({ cron, pending }));
   for (const { cron, pending } of cases) {
     const r = await probe({ path: '/', scheduled: cron });
     expect(r.status).toBe(200); expect(r.pending).toBe(pending);
@@ -3394,7 +3524,8 @@ it('W07.04 keeps actual scheduled jobs/waitUntil and numeric summaries without t
     }
   }
   const malformed = await probe({ path: '/', scheduled: '0 3 * * *', malformedAggregate: true });
-  expect(malformed.status).toBe(200); expect(malformed.pending).toBe(4);
+  // R10 witness (baseline-52 #31): the same per-cron schedule as above (scheduledJobs).
+  expect(malformed.status).toBe(200); expect(malformed.pending).toBe(scheduledJobs['0 3 * * *']);
   const before = (malformed.before as { storage: [string, string][] }).storage;
   const after = (malformed.after as { storage: [string, string][] }).storage;
   const originalHour = before.find(([key]) => key.startsWith('aggregates/acme/'))!;
@@ -3408,7 +3539,8 @@ it('W07.04 keeps actual scheduled jobs/waitUntil and numeric summaries without t
   expect(malformed.logs).toContain('day report failed');
   expect(malformed.logs.join(' ')).not.toMatch(/W0704_PRIVATE|acme|globex|coach/);
   const failed = await probe({ path: '/', scheduled: '*/5 * * * *', failScheduled: true });
-  expect(failed.status).toBe(200); expect(failed.pending).toBe(4);
+  // R10 witness (baseline-52 #31): a failing run still schedules every job of its cron (scheduledJobs above).
+  expect(failed.status).toBe(200); expect(failed.pending).toBe(scheduledJobs['*/5 * * * *']);
   expect(failed.logs.filter(line => line === 'hourly fold failed')).toHaveLength(2);
   expect(failed.logs.join(' ')).not.toMatch(/W0704_PRIVATE_FAILURE|acme|globex|coach/);
   const unknown = await probe({ path: '/', scheduled: 'W0704_PRIVATE_CRON' });

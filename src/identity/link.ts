@@ -32,8 +32,10 @@ import { IdentityStore, type LinkSource } from '@/identity/store';
 import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import type { Assurance } from '@/identity/assertion';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
+import { validationRefusalOf } from '@/identity/sessionAuthority';
 import { consentOf, type Consent } from '@/content/consent';
 import { mergeEnrichment } from '@/identity/profileEnrichment';
+import { odpSecondIdentifier } from '@/connectors/config';
 
 export type LinkOutcome = 'linked' | 'already' | 'relinked';
 
@@ -69,9 +71,17 @@ export async function linkVisitor(
     principal?: SessionCapability;
     capability?: string;
     cookieHeader?: string | null;
+    /**
+     * P12 (decision D1): a VERIFIED identifier change (src/identity/assertion.ts,
+     * verifyAccountChange, on the route): the earlier account identifier whose
+     * profile merges into this account's once the browser is linked. Public link
+     * ingress only.
+     */
+    accountChange?: { from: string };
   },
 ): Promise<LinkResult> {
   const now = input.now ?? Date.now();
+  if (input.accountChange && !input.principal) throw new SessionAccessError();
   if (input.principal || (env.REFLEX_HOST ?? 'session') === 'do') {
     if (input.principal) {
       assertSessionTarget(input.principal, input.visitorId);
@@ -86,11 +96,23 @@ export async function linkVisitor(
       body: JSON.stringify({ shopperId, now, assurance: input.assurance, source: input.source, salted: isSalted(env) }),
     });
     const body = await response.json() as { ok?: unknown; result?: LinkResult };
+    // P58 (amendment 5 addendum §4, P58-D; R-P106): the person's object refused the merged
+    // profile by validation, and the browser's object carried that typed answer here
+    // (src/identity/sessionAuthority.ts `validationRefusal`). It is raised as the validation
+    // error it is, with the same issues, so the route answers its own `400 Validation error`
+    // with the same details on every runtime; any other answer that is not the link's
+    // receipt is refused as before.
+    const refused = validationRefusalOf(response.status, body);
+    if (refused) throw refused;
     if (!response.ok || body.ok !== true || !body.result || body.result.shopperId !== shopperId
       || body.result.visitorId !== input.visitorId || typeof body.result.sessionId !== 'string' || !body.result.sessionId
       || !body.result.grant || body.result.grant.subject !== shopperId || body.result.grant.sessionId !== body.result.sessionId
       || body.result.grant.tenant !== tenant || body.result.grant.kind !== 'recognized') throw new SessionAccessError();
-    return body.result;
+    const linked = input.accountChange ? await applyAccountChange(env, tenant, shopperId, input.accountChange.from, body.result) : body.result;
+    // P35 (decision D1): a verified link of a tenant whose ODP connector names a second
+    // identifier leaves the link's own account identifier on the person's record.
+    if (input.principal) await keepOdpIdentifier(env, tenant, shopperId, input.accountId);
+    return linked;
   }
   const shopperId = await shopperIdFor(env, tenant, input.accountId);
   const store = new IdentityStore(env.SESSIONS as never, tenant);
@@ -143,6 +165,84 @@ export async function linkVisitor(
   // points at it; the link remembers it so an erasure can reach it.
   if (r.ownSessionId) await store.noteOwnSession(input.visitorId, r.ownSessionId);
   return { ...base, sessionId: r.sessionId, changes: r.changes, audiences: r.audiences, cookieHeaders: r.cookieHeaders, consent: r.consent };
+}
+
+// ── P12: an identifier change (decision D1) ──────────────────────────────────
+//
+// Once the browser is linked to the account, a verified identifier change
+// merges the EARLIER account's profile into this one, in this account's own
+// object and once (ShopperReflex, the account-change door): merge, never
+// override, the decayed evidence of both added so recent behaviour outranks
+// both histories. Nothing of the browser's link is redone. The answer carries
+// the merged memberships and, on the session host, the merged record's cookies;
+// a change that merges nothing (already merged, nothing to share) leaves the
+// link's answer exactly as it was. A merged profile the account's validation
+// refuses (P66, R-P153) merges and remembers nothing; the door answers that
+// refusal typed, as the transfer door does for the link itself (P58), and it is
+// raised here as the validation error it is, so the route answers its own
+// `400 Validation error` with the same details on every runtime.
+
+const stringList = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+async function applyAccountChange(env: Env, tenant: TenantId, shopperId: string, from: string, linked: LinkResult): Promise<LinkResult> {
+  const earlier = await shopperIdFor(env, tenant, from);
+  if (earlier === shopperId) return linked;
+  const response = await shopperObject(env.SHOPPER_REFLEX, shopperId, tenant).fetch('https://shopper-reflex/identity/account-change', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': shopperId },
+    body: JSON.stringify({ from: earlier }),
+  });
+  const body = await response.json() as { ok?: unknown; merged?: unknown; audiences?: unknown; cookieHeaders?: unknown;
+    changes?: { entered?: unknown; exited?: unknown; explain?: unknown } };
+  // P66 (R-P153): the account's own object refused the merged profile by validation and
+  // answered it typed (src/identity/sessionAuthority.ts `validationRefusal`); raised as the
+  // validation error it is, with the same issues. Any other answer that is not the change's
+  // receipt is refused as before.
+  const refused = validationRefusalOf(response.status, body);
+  if (refused) throw refused;
+  if (!response.ok || body.ok !== true || typeof body.merged !== 'boolean') throw new SessionAccessError();
+  if (!body.merged) return linked;
+  const changes = body.changes;
+  if (!stringList(body.audiences) || !stringList(body.cookieHeaders) || !changes || !stringList(changes.entered)
+    || !stringList(changes.exited) || !Array.isArray(changes.explain)) throw new SessionAccessError();
+  const entered = changes.entered, exited = changes.exited;
+  return {
+    ...linked,
+    audiences: body.audiences,
+    changes: {
+      entered: [...new Set([...linked.changes.entered.filter((key) => !exited.includes(key)), ...entered])].sort(),
+      exited: [...new Set([...linked.changes.exited.filter((key) => !entered.includes(key)), ...exited])].sort(),
+      explain: [...linked.changes.explain, ...(changes.explain as ReflexChanges['explain'])],
+    },
+    cookieHeaders: body.cookieHeaders,
+  };
+}
+
+// ── P35: the account identifier for the tenant's second ODP identifier ───────
+//
+// Only while the tenant's ODP connector names `secondIdentifier` at link time,
+// and only for a verified link (the public link, the site's backend having
+// signed the account identifier), the person's own object keeps the link's own
+// account identifier on the person's record (ShopperReflex,
+// `/identity/odp-identifier`): never an earlier account an identifier change
+// names, never the identifier a page carried before recognition. The object
+// keeps it only under the person's tracking consent and refuses any identifier
+// that does not name this person. For every other tenant nothing is asked and
+// nothing is kept, so the link's calls, stores and answer are exactly as before.
+// The link stands whatever this answers: a refusal keeps nothing, and the
+// person's ODP writes then carry the vuid alone, as before.
+
+async function keepOdpIdentifier(env: Env, tenant: TenantId, shopperId: string, accountId: string): Promise<void> {
+  if (odpSecondIdentifier(env, tenant) === null) return;
+  try {
+    const response = await shopperObject(env.SHOPPER_REFLEX, shopperId, tenant).fetch('https://shopper-reflex/identity/odp-identifier', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Reflex-Tenant': tenant, 'X-Reflex-Subject': shopperId },
+      body: JSON.stringify({ accountId }),
+    });
+    const body = await response.json() as { ok?: unknown };
+    if (!response.ok || body.ok !== true) console.warn('[identity] second ODP identifier not kept');
+  } catch {
+    console.warn('[identity] second ODP identifier not kept');
+  }
 }
 
 // ── The session host ─────────────────────────────────────────────────────────

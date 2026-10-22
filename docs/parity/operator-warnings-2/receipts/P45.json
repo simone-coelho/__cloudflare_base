@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P45",
+  "workOrderHash": "sha256:810553634641d4c71401c388e5030be78c1ea5fa518f96eff8dd343dd7fc2a39",
+  "artifact": {
+    "revision": "5aed3f8358dfdfff8e2b35b06b3784a2e9de5b7b",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p45-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p45-build at 5aed3f8358dfdfff8e2b35b06b3784a2e9de5b7b (85b233c1 merges rem/integration e7bdf133 into rem/tkt/P45 96989752; da4f2474 public/console/views.js draws one data-lift-stale note inside the slot's card above the table from the lift/rows answer's stale marker, naming the faulty placement's page and slot, the pooled modules and the last successful publication's version and time, and nothing without the marker; 3c4fa16f kit 02 and 03; 5aed3f83 the guard that draws the mark only from the slot on screen). Acceptance 5/5 on both hosts; the builder's gate GATE_OK at 5aed3f83 (3300 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 8df49204…); both typechecks exit 0; both bundle checks exact; the unmarked screens and request lists byte-identical to the base console's. Delivery review PASS (P45/reviewer/REPORT.md): LG1 to LG3 PASS, nine mutants caught by the units, two caught by probes only (page and slot swapped; the guard removed). Residuals: the null-lastPublished mark probe-only; an open screen keeps the mark until the operator's next read; kit 03:1504 says \"above the grid's table\" while the null case sits beside the empty message; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P45/implementer/REPORT.md",
+      "git commits on rem/p45-build up to 5aed3f83"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P45 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P45/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P45/implementer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P45/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P45/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P45/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T14:37:55.212Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L7/records/P45.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L56/records/P45.md"
+      ]
+    }
+  ]
+}

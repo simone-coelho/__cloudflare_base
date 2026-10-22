@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P33",
+  "workOrderHash": "sha256:e6938dcc3947013779ced2dc1dd115f293345fc1a5ac5862c5a7c8cc0f8c681b",
+  "artifact": {
+    "revision": "27fcd54e0f5c15d71a11bf58b54e01b504479031",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p33-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P33 built on rem/p33-build in one round. 93c16f8d merges rem/integration e0c950c5 (P02 to P13, P34 and P30 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P33 (44818679, the S4-fix specification revision fa247eb5 reviewed PASS, R-P35 and R-P39 applied); RED baseline 10 failed and 2 passed on P33's own reasons (the K1 LOCK legs green on both hosts; K2 at :184, K3 at :203, K4 at :233, K5 at :249, :272 and :289), no PRECONDITION P02 or P03; de871365 the mechanism (src/content/kinds.ts, src/content/types.ts, src/durable-objects/DecisionRing.ts, src/learn/fan.ts, src/learn/policy.ts, src/learn/route.ts): a slot's own attribution policy, module-tied only and absent by default (D1), admitted by publication and refused by name for any other value with the revision unchanged; module-tied replacing only the match axis for that slot's decisions, so a correlated outcome credits its one decision after the existing tenant, visitor, exact-match, brand and carrier-time checks, any other outcome must name the module's identifier as the item and not among its products (never a featured-product match, never a product-derived identifier), the slot if named must be the decision's slot, exposure counted at renderedAt under rendered-v1 inside the reward window, one decision per slot per outcome, a purchase under the same rule; a buy-box conversion crediting no layout decision while content slots on the page keep their brand-wide policy; the itemisation written inside the ring's outcome handling on the managed and unmanaged paths as the credit receipt's attribution list of slot, policy and credited decision identifiers (empty when none), for every outcome including one crediting nothing, present only when some slot names module-tied, the stored outcome record and the ledger message byte-identical to the base for a tenant without the setting (R-P35, R-P7); the policy reaching the ring through the slot configuration only, the ring admitting the key only as module-tied and stripping it from the batch configuration sent to the statistics object, which receives exactly reward, stats, objective and measurementBasis (S4F-C6), and reaching the offline recomputation through the learn policy's per-slot attribution so the retained day folds under the same rule and online and offline credit agree on the decision-identifier, module-identifier, buy-box and mixed cases on both hosts; 30b147c9 and 27fcd54e the kit (docs/kit/02-api-reference.md, docs/kit/03-payload-schemas.md: the per-slot policy, the itemisation on the attribution record, the publication refusal, the offline recomputation; the second commit rewording one kit 02 sentence that W24.G1.03 read ahead of the route's own table row); src/learn/hourly.ts, src/learn/report.ts, src/ledger/records.ts and src/content/service.ts unchanged; no bundle in the boundary, build-sdk and build-meridian --check exact with the sizes unchanged; acceptance 12/12 on both hosts at 27fcd54e with P02, P03, P05, P28, P29, P31, P10, P01, P12, P13, P30, P34, P36 to P40, W21, W23, W24, W26, W28, W36, W40, W35 and the kit readers green, src/learn, src/content, src/reflex and src/routes failing on baseline entries only, src/ledger and src/services whole green; both typechecks exit 0; eslint 0 at head and base; nine probes on both hosts in a temporary test file removed before the gate (a purchase under module-tied, forged and foreign decision identifiers crediting nothing, the same events under direct, any and module-tied side by side, a learn document without the setting byte-identical to the base on both paths, the mixed page, publication's refusals, where the itemisation is readable); the gate at 27fcd54e GATE_OK on its first run (implementer/logs/gate.log: 3138 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P33/implementer/REPORT.md",
+      "git commits on rem/p33-build up to 27fcd54e"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P33 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P33/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P33/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P33/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P33/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-14T13:22:49.946Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L2/records/P33.lead-addendum-k3.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L2/records/P33.md",
+        "/home/simonecoelho/rem/_evidence/baseline-52/outcome-k3/logs/lead-hosted-reread.log"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

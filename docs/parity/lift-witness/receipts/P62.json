@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P62",
+  "workOrderHash": "sha256:641587b758124c7395fcf4368e8611baea77038c794d6ef4b86999315c913141",
+  "artifact": {
+    "revision": "f591009ecd1a1fa2d9f8cdbb3c237ff3b3700c5f",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/a6-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p62-build at 0401ac4a (3657e892 the mechanism: LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS 200 ms with a validated bounded override named in sources.budgets.refused, LIFT_RECENT_WINDOW_MS 600000 with at most 32 recent publications, the POST /witness door answering a verdict cached at commit/publish (an evicted object reads its stored state once, never digests it; concurrent first calls share one verdict), the same-generation window served with explain.lift.asOf only when the copy is not the latest, carried through replay.ts, the ring call aborted at its budget, a latest copy whose witness changed answering unrecognized; 0df682c9 kit 02/03 and wrangler.toml's commented override names; db4317ca the S11 R10s ccc9294c; df769b31 P61's 36dfd68b; 0401ac4a kit 02's reset-case sentence), joined onto the integration head with the P61 test additions 4ddf539a at f591009e; P62 55/55 and P61 34/34 on both hosts; the answer path's single statistics call is the witness door in place of /health (5 calls as before, 1509 ms under 500 ms per call).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P62/implementer/REPORT.md",
+      "git commits on rem/a6-joined up to f591009e"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P62 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/reviewer-p62/units-p62-r1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S11/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P62/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T06:02:11.906Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P62.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P62.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

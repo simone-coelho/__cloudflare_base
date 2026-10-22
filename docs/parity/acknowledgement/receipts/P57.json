@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P57",
+  "workOrderHash": "sha256:150b53f41ac591e9ab853a90056fe733257db1c3c2043f608f9f0d4cc22715e1",
+  "artifact": {
+    "revision": "9fadd50e5650805f95d4a1808ffc953457d64f9a",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p57-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p57-build at 0c49ed5a (f1a5fc6b the mechanism: storedRenderOf/admittedRender read the decision's stored render admission under the owner (recovery.ts:358-379); redeemRenderOffer reuses the stored rendered.at for a same-eventId, same-pageInstance re-send so the replay answers the original receipt, and throws AcknowledgementConflictError for a different event id, mapped to 409 {ok:false, error} at the owner app's onError and ShopperReflex's boundary; realtime.ts stamps the behaviour record with the same time; runOwnerOperation lets the route's own 5xx answer stand over a retained rejection; 8c0a7b79 kit 02; 0c49ed5a the drain rule at 5xx, R-P105), joined onto integration da48e65a at 9fadd50e; P57 17/17 and P56 17/17 on both hosts; the round's official gate GATE_OK at 9fadd50e (3465/3465).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P57/implementer/REPORT.md",
+      "git commits on rem/p57-build up to 9fadd50e"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P57 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/reviewer-p57/logs/p57-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S9/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P57/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-19T20:52:38.322Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P57.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P57.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

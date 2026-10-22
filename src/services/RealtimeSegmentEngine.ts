@@ -17,13 +17,14 @@
 // (`new RealtimeSegmentEngine(env)`) keep working while the spec's two-arg form
 // (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
 
-import { actionOf, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
+import { actionOf, moduleEngagementTouches, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { ReflexConfig } from '@/reflex/core';
-import { projectVisit, validEntry, visitBucket, type ChannelSignals } from '@/services/visit';
+import { liveVisit, projectVisit, validEntry, visitBucket, type ChannelSignals, type VisitInputs } from '@/services/visit';
+import type { DeviceClass } from '@/services/platform';
 import type { Env } from '@/types/env';
 import { assertOwnerScope, ownerRelay, retainOwnerWork, sessionAuthorityKV, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { externalRetentionBirths, retentionBirth } from '@/retention';
@@ -34,7 +35,7 @@ import { enrichmentInputs } from '@/identity/profileEnrichment';
 import { consentOf, consentFromCookies, intersectConsent, refusalHints, personalizes, withConsent, type Consent } from '@/content/consent';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
 import { priceBandOf, type CatalogService, type Product } from './CatalogService';
-import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, storedJourneyStage } from './JourneyStage';
+import { advanceVisitJourney, FIRST_JOURNEY_STAGE, journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, PERSISTED_STAGE, storedJourneyStage, type JourneyWord } from './JourneyStage';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import {
   getConnectors,
@@ -51,19 +52,25 @@ import {
   extractTouches,
   needsCatalogVocabulary,
   placeEvent,
+  productTypeOf,
   snapshot as reflexSnapshot,
   tick as tickReflex,
+  isDuplicateOrder,
+  neverWeighed,
+  weightOf,
+  withOrder,
   EMPTY_VOCABULARY,
   type RecognitionSignals,
   type ReflexResult,
 } from '@/reflex/core';
-import { tenantCatalogVocabulary, type CatalogVocabularySource } from '@/content/service';
+import { orderKeyOf } from '@/ledger/records';
+import { governedEventData, governedTouches, recordVocabularyRejections, tenantCatalogVocabulary, tenantContextVocabulary, tenantVocabularyInEffect, type CatalogVocabularySource } from '@/content/service';
 import {
   DEFAULT_GENERATOR_CONFIG,
   generateAffinityAudiences,
   regenerateCatalogAudiences,
 } from '@/reflex/audienceGenerator';
-import { projectOdpState, projectedOdpSegments, odpEnabled, refreshOdpSeedIfDue, updateOdpRing } from '@/services/odpLoop';
+import { carryOdpRestoration, projectOdpState, projectedOdpSegments, odpEnabled, refreshOdpSeedIfDue, restoreOdpInterests, updateOdpRing } from '@/services/odpLoop';
 import {
   DEFAULT_SURFACE,
   audgenMarkerFor,
@@ -94,7 +101,11 @@ export interface ActionEvent {
     | 'content_impression'
     | 'content_click'
     | 'content_dwell'
-    | 'video_complete';
+    | 'video_complete'
+    // P40: the viewable impression, the video view and the product dwell
+    | 'content_viewable'
+    | 'video_view'
+    | 'product_dwell';
   userId: string;
   anonymousId?: string;
   data: Record<string, any>;
@@ -115,6 +126,12 @@ export interface ActionEvent {
   entry?: ChannelSignals;
   /** Coarse request geolocation, set by the route from request.cf. Population aggregates only (CW6). */
   geo?: { country?: string | null; regionCode?: string | null };
+  /**
+   * P37: the device class the event's own request reported (client hint, else
+   * user agent), set by the route and never by the client. Read only when the
+   * event opens a visit, which records it; the user agent itself is never kept.
+   */
+  device?: DeviceClass;
 }
 
 export interface UserProfile {
@@ -444,10 +461,16 @@ export class RealtimeSegmentEngine {
       // Cold owned actions cannot import a cookie/profile mirror. Resolve before
       // any behavioral creation; the one necessary refusal record is separate.
       const profile = !stored && !this.principal ? await this.getUserProfile(event.userId) : null;
+      // W35 A1: a cold OWNED record starts where the shopper's own object starts
+      // a new pipeline (ShopperReflex.ingest): no memberships and the floor of
+      // the journey, so the first event of a new shopper is judged against the
+      // same prior state on both hosts and neither pushes a change that is only
+      // the absence of a record. Unsigned legacy callers keep their profile seed.
       let sessionData: SessionData = stored ?? {
         userId: event.userId, anonymousId: event.anonymousId,
-        segments: profile?.segments ?? ['new_user'], attributes: profile?.attributes ?? {},
-        metadata: { firstSeen: profile?.metadata.firstSeen ?? now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
+        segments: profile?.segments ?? (this.principal ? [] : ['new_user']), attributes: profile?.attributes ?? {},
+        metadata: { firstSeen: profile?.metadata.firstSeen ?? now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now,
+          ...(this.principal ? { journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE] } : {}) },
         preferences: { trackingConsent: consent.tracking, personalizationEnabled: consent.personalization, cookieConsent: true },
       };
       if (!consent.tracking || !consent.personalization) {
@@ -457,6 +480,17 @@ export class RealtimeSegmentEngine {
         }
         sessionData = { ...sessionData, preferences: { ...sessionData.preferences, trackingConsent: consent.tracking, personalizationEnabled: consent.personalization } };
       }
+      // P36: the tenant's published context vocabulary classifies the arrival
+      // and names the visit's source platform and landing-page type. Read once,
+      // only for an event that carries an arrival or a page type; it cannot fail
+      // the event (unreadable or absent: today's six-word tables).
+      let contextInputs: Promise<VisitInputs> | undefined;
+      const visitInputs = (): Promise<VisitInputs> => (contextInputs ??= (async () => {
+        const pageType = (event.data as Record<string, unknown> | undefined)?.pageType;
+        const arrives = (event.entry && Object.values(event.entry).some(v => typeof v === 'string')) || typeof pageType === 'string';
+        // P37: the device the event's own request reported, for the visit it opens; no read.
+        return { vocabulary: arrives ? await tenantContextVocabulary(this.env, this.tenant) : null, pageType, device: event.device ?? null };
+      })());
       // W16 C8.03: what the engine could and could not place in THIS event. Set
       // where the touches are built below, so the answer and the taste can never
       // tell two different stories about the same input.
@@ -468,6 +502,15 @@ export class RealtimeSegmentEngine {
       if (!consent.tracking) return answer(null);
       requireConsentPurpose(consent, 'tracking');
       if (personalizes(consent)) requireConsentPurpose(consent, 'personalization');
+      // P40 (R-P48): a purchase is unique per order for the shopper. A second
+      // purchase naming an order this shopper's state recorded under another
+      // event is dropped here, by the rule and at the point the shopper's own
+      // object drops it (ShopperReflex.ingest): after admission, inside the
+      // owner, before any counter, visit, taste, region count, provider forward,
+      // outcome or stored write. The recording event delivered again is not a
+      // second purchase, and a purchase naming no order is never one.
+      const order = await orderKeyOf(event);
+      if (isDuplicateOrder(sessionData.reflex, order, event.eventId)) return { ...answer(null), dropped: 'duplicate_order' };
       // With tracking ON every step below is a behavioral effect, and each one is
       // governed by THIS tenant's configured runtime. Resolve that authority first
       // so an absent, invalid or unreadable configuration publication refuses
@@ -501,11 +544,50 @@ export class RealtimeSegmentEngine {
       // its own attributes into the registry exactly as a product event does, so
       // it answers to the same vocabulary; the read is skipped only when there is
       // nothing for the vocabulary to answer about.
-      const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(eventData, heldProduct, reflexConfig))
+      // P38 (VA3, decision D2, DI-9): with an approved vocabulary in effect, the
+      // event's governed values are mapped before any door below places them — a
+      // synonym to its id, an id to itself — and a value that maps to nothing is
+      // removed, builds no interest and is counted in the tenant's rejection
+      // report, by the rule and the table the shopper's own object uses
+      // (ShopperReflex.ingest); the event is otherwise processed as before. No
+      // approval in effect (or one the authority cannot answer): nothing here
+      // changes. Read only for an event with something to place, as the catalogue
+      // vocabulary below is (or a held product).
+      const governed = reflexOn && (contentEvent || heldProduct !== undefined || needsCatalogVocabulary(eventData, heldProduct, reflexConfig))
+        ? await tenantVocabularyInEffect(this.env, this.tenant) : null;
+      const governing = governed ? governedEventData(eventData, reflexConfig, governed) : null;
+      const placing = governing ? governing.data : eventData;
+      if (governed && governing?.rejected.length && (contentEvent || (!heldProduct && reflexConfig.eventAttributes === 'event-when-unknown'))) {
+        (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(
+          recordVocabularyRejections(this.env, this.tenant, governed.revision, governing.rejected, now));
+      }
+      const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, heldProduct, reflexConfig))
         ? await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null)
         : EMPTY_VOCABULARY;
-      const contentEventTouches = reflexOn && contentEvent
-        ? await resolvedContentTouches(this.env, this.tenant, eventData, reflexConfig, vocabulary) : null;
+      // W35 A1 (doc 16 §12 trust & abuse; kit 02): an event naming a product this
+      // tenant does not hold, whose every value the catalogue refuses, is dropped
+      // and counted, never scored — by the rule and at the point the shopper's
+      // own object drops it (ShopperReflex.ingest): after placement, before any
+      // counter, visit, taste, region count, provider forward or stored write.
+      // The answer names the product in the same `signals` the object host sends.
+      const placed = reflexOn ? placeEvent(placing, heldProduct, reflexConfig, vocabulary) : null;
+      // P38: on a governed attribute the vocabulary decides (DI-9), so an event whose value maps is never dropped here.
+      const governedPlacement = placed && governed ? governedTouches(placed.touches, governed, reflexConfig) : null;
+      const placedTouches = placed && governedPlacement ? { touches: governedPlacement, signals: { ...placed.signals, recognized: governedPlacement.length > 0 } } : placed;
+      const unknownTouches = placedTouches && !heldProduct && reflexConfig.eventAttributes === 'event-when-unknown' ? placedTouches.touches : [];
+      if (placedTouches && eventProductId != null && !heldProduct && unknownTouches.length === 0) {
+        signals = placedTouches.signals;
+        return { ...answer(null), dropped: 'unknown_product' };
+      }
+      const resolvedTouches = reflexOn && contentEvent
+        ? await resolvedContentTouches(this.env, this.tenant, placing, reflexConfig, vocabulary) : null;
+      // P38 (DI-9): a content piece's own tags on a governed attribute answer to the same table.
+      const contentEventTouches = resolvedTouches && governed ? governedTouches(resolvedTouches, governed, reflexConfig) : resolvedTouches;
+      // P32 (decision D2): a module engagement's own tags, at the registry's
+      // module-engagement weight, governed by the same table; none at weight 0
+      // (the shipped state), which reads nothing, so the event applies as before.
+      const moduleTaught = reflexOn && contentEvent ? await moduleEngagementTouches(this.env, this.tenant, actionOf(event), placing, reflexConfig) : null;
+      const moduleTouches = moduleTaught && governed ? { weight: moduleTaught.weight, touches: governedTouches(moduleTaught.touches, governed, reflexConfig) } : moduleTaught;
       await this.ensureSeeded(surface);
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
@@ -539,40 +621,70 @@ export class RealtimeSegmentEngine {
         // names every product reference the engine could not place. A content
         // event is placed by the content catalogue above, against the same
         // vocabulary, so its diagnostic comes from those touches.
-        const placed = placeEvent(eventData, heldProduct, reflexConfig, vocabulary);
         signals = contentEventTouches
-          ? { recognized: contentEventTouches.length > 0, unrecognized: [] }
-          : placed.signals;
+          ? { recognized: contentEventTouches.length > 0 || Boolean(moduleTouches?.touches.length), unrecognized: [] }
+          : placedTouches!.signals;
         // Reuse precisely the personal scorer's touches for population counts.
-        const touches = contentEventTouches ?? placed.touches;
+        // P38 (DI-9): a held product's attributes on a governed attribute answer to the same table.
+        const touches = contentEventTouches ?? placedTouches!.touches;
+        // W41: once per sign-in, a recognized shopper's interests are restored
+        // from her tenant's ODP profile at her first event after it, merged
+        // into what she holds and BEFORE the event is applied, exactly as her
+        // own object does (ShopperReflex.ingest). Null when no attempt is due:
+        // the event is then applied to her stored state as it always was.
+        const prior = await restoreOdpInterests(this.env, this.tenant, {
+          principal: this.principal, consent, prior: sessionData.reflex, config: reflexConfig, now: nowMs,
+          visit: liveVisit(sessionData.metadata, stored?.metadata.lastSeen, now).lastVisitAt ?? now,
+          vocabulary: () => tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null),
+        }) ?? sessionData.reflex;
+        // P14 (decision D1): the product type the event itself carries, only when
+        // the registry declares product-type weights; no read.
+        const productType = productTypeOf(reflexConfig, eventData);
         reflex = applyReflex(
-          sessionData.reflex,
+          prior,
           {
             action,
             // A held product's attributes, or, where the scope allows it, the
             // event's own (CW24): a customer's site scores against their catalog.
             touches,
+            // P32: the module's own tags, for the shopper's interest alone (never the population counts below).
+            ...(moduleTouches?.touches.length ? { module: moduleTouches } : {}),
+            // P14: its product-type weight, for the shopper's interest alone (the population counts below keep the action's own).
+            ...(productType !== undefined ? { productType } : {}),
           },
           nowMs,
           reflexConfig
         );
+        // The restoration's provenance stays with the state it produced.
+        reflex = { ...reflex, state: carryOdpRestoration(reflex.state, prior) };
         // CW6: the same touches, fanned into the shopper's region as a population count.
         // Unsigned legacy traffic and the default tenant's BrightHour demo have
         // no tenant population reader. A real BrightHour tenant owns its counts.
         if (this.principal && !(this.principal.tenant === DEFAULT_TENANT && surface !== DEFAULT_SURFACE)) {
+          // P07: and into the population of the visit's arrival context — the
+          // entry channel and visit bucket of the visit this event belongs to,
+          // derived exactly as the stored visit is (SessionManager), under the
+          // tenant's published vocabulary from the one read the stored visit
+          // uses (visitInputs, R-P55). An unknown channel counts nothing there
+          // (R-P9), and neither does a channel outside the six words.
+          const arrival = liveVisit(stored?.metadata, stored?.metadata.lastSeen, now, event.entry, await visitInputs());
           (this.keepAlive ?? (this.principal ? retainOwnerWork : (p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
             tenant: this.principal.tenant, geo: event.geo, now: nowMs, touches,
-            w: reflexConfig.weights[action] ?? 0,
+            w: weightOf(reflexConfig, action),
+            context: { channel: arrival.entryChannel ?? null, visitBucket: visitBucket(arrival.visitCount) },
           }));
         }
       }
 
+      // P40 (R-P48): the state this event leaves, with the order a purchase names
+      // recorded beside its event id (written only when a purchase names one).
+      const reflexState = withOrder(reflex ? reflex.state : sessionData.reflex, order, event.eventId, reflexConfig);
       if (!personalizes(consent)) {
         sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
           ...sessionData, attributes: newAttributes, surface, journey: newJourney,
-          reflex: reflex ? reflex.state : sessionData.reflex,
+          reflex: reflexState,
           metadata: { ...sessionData.metadata, engagementScore: newEngagementScore },
-        }, event.entry, undefined, ownedSnapshot);
+        }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
         return answer(null);
       }
 
@@ -648,14 +760,18 @@ export class RealtimeSegmentEngine {
       // attribute, or the reported journey word the SDK paints (W16 C4).
       const stageChanged = sessionData.metadata.journeyStage !== journeyStage || priorWord !== journeyWord;
 
-      if (!segmentsChanged && !stageChanged) {
+      // W35 A1: the personalized event that creates her record always answers
+      // her initial state, on both hosts by one rule (ShopperReflex.ingest), so a
+      // new shopper's page learns its first decisions from the event that
+      // started her profile; afterwards only a change is pushed.
+      if (!segmentsChanged && !stageChanged && stored) {
         // No personalization change — persist the accrued attributes/activity and stop.
         sessionData = await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
           ...sessionData,
           attributes: newAttributes,
           surface,
           journey: newJourney,
-          reflex: reflex ? reflex.state : sessionData.reflex,
+          reflex: reflexState,
           odpContext: odp.odpContext,
           odpSeed,
           odpSeedAt,
@@ -666,7 +782,7 @@ export class RealtimeSegmentEngine {
             engagementScore: newEngagementScore,
             journeyStage
           }
-        }, event.entry, undefined, ownedSnapshot);
+        }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
         return answer(null);
       }
 
@@ -676,7 +792,7 @@ export class RealtimeSegmentEngine {
         attributes: newAttributes,
         surface,
         journey: newJourney,
-        reflex: reflex ? reflex.state : sessionData.reflex,
+        reflex: reflexState,
         odpContext: odp.odpContext,
         odpSeed,
         odpSeedAt,
@@ -689,10 +805,10 @@ export class RealtimeSegmentEngine {
           lastSegmentUpdate: Date.now(),
           journeyStage
         }
-      }, event.entry, undefined, ownedSnapshot);
+      }, event.entry, undefined, ownedSnapshot, true, undefined, await visitInputs());
 
       // 6. Decide the storefront modules through the Optimizely FX seam.
-      const personalizationConfig = await this.getPersonalizationConfig(sessionData, currentSessionId, reflexConfig);
+      const personalizationConfig = await this.getPersonalizationConfig(sessionData, currentSessionId, reflexConfig, journeyWord);
 
       // 7. Create the personalization update with retail payloads.
       const update: PersonalizationUpdate = {
@@ -710,10 +826,15 @@ export class RealtimeSegmentEngine {
           // Live affinity payload for the Affinity Instrument (dims use original
           // catalog value names; changed = this event's explain records).
           affinity: reflex
-            ? { ...reflexSnapshot(reflex.state, nowMs, reflexConfig), changed: reflex.changes.explain, odpConfirmed: odpSeed }
+            ? { ...reflexSnapshot(reflex.state, nowMs, reflexConfig), changed: reflex.changes.explain, odpConfirmed: odpSeed,
+              // P14 (decision D2): the action, the product type and the weight this event applied, when the registry declares product-type weights.
+              ...(reflex.applied ? { applied: reflex.applied } : {}) }
             : undefined,
-          cookies: personalizationConfig.cookieUpdates,
-          cookieHeaders: personalizationConfig.cookieHeaders,
+          // W35 A1: the documented personalization_update carries no cookie
+          // member (kit 03). Cookies travel only as the action answer's own
+          // Set-Cookie headers; the update is page-visible data, and the session
+          // cookie is HttpOnly, so no cookie value or header is ever put in it —
+          // the shopper's own object sends none either (ShopperReflex.buildUpdate).
           sessionId: currentSessionId,
           engagementScore: newEngagementScore,
           timestamp: Date.now(),
@@ -808,11 +929,13 @@ export class RealtimeSegmentEngine {
   // lifted verbatim to exported module functions (applyEventToAttributes, …) so
   // the ShopperReflex DO runs the identical pipeline — see the P2 seam block above.
 
-  private async getPersonalizationConfig(sessionData: SessionData, sessionId: string, selectedConfig?: ReflexConfig): Promise<PersonalizationConfig> {
+  private async getPersonalizationConfig(sessionData: SessionData, sessionId: string, selectedConfig?: ReflexConfig,
+    /** W16 C4: the word THIS event's own decision is made in, from processAction's live-visit advance. Absent on a read. */
+    eventWord?: JourneyWord): Promise<PersonalizationConfig> {
     if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
     if (this.principal && !personalizes(consentOf(sessionData))) return {
       decisions: {}, featureFlags: {}, experiments: {}, featureVariables: {}, enhancedFeatureVariables: {},
-      cookieUpdates: {}, cookieHeaders: [], segments: [], recommendations: [], sortOrder: [], journeyStage: 'early', sessionData,
+      cookieUpdates: {}, cookieHeaders: [], segments: [], recommendations: [], sortOrder: [], journeyStage: PERSISTED_STAGE[FIRST_JOURNEY_STAGE], sessionData,
     };
     if (this.principal) requireConsentPurpose(consentOf(sessionData), 'personalization');
     // The session remembers which demo it belongs to (absent ⇒ coach), so the
@@ -849,13 +972,25 @@ export class RealtimeSegmentEngine {
       visit_number: visitNumber,
       visit_bucket: visitNumber === null ? 'unknown' : visitBucket(visitNumber),
       entry_channel: visit.entryChannel ?? 'unknown',
-      journey_stage: sessionData.metadata.journeyStage,
+      // W16 C5.09 (R85(b)): the decision is made in the one derivation's stage,
+      // never the stored token, which time alone does not move and a stale write
+      // can pin. An event's own decision names the word that event reached (the
+      // live-visit advance in processAction, which a purchase moves before it
+      // closes the journey); a read projects this visit at read time from the
+      // stored counters, exactly as the hydrate, the enriched segments and the
+      // cell read it, through the one mapping point (R32(2)).
+      journey_stage: eventWord === undefined
+        ? storedJourneyStage(sessionData.journey, sessionData.metadata.lastSeen, Date.now(), cfg)
+        : PERSISTED_STAGE[eventWord],
       days_since_first_seen: Math.floor((Date.now() - sessionData.metadata.firstSeen) / (24 * 60 * 60 * 1000)),
       tracking_consent: sessionData.preferences.trackingConsent,
       personalization_enabled: sessionData.preferences.personalizationEnabled
     };
 
-    const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? 'early';
+    // The floor of the journey through the one mapping point (R32(2)): a session
+    // born this visit, and a legacy record written before the stored stage
+    // existed, carry none (docs/kit/02-api-reference.md).
+    const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? PERSISTED_STAGE[FIRST_JOURNEY_STAGE];
 
     // Decide the full storefront module set through the Optimizely FX seam.
     if (this.principal) assertSessionTarget(this.principal, sessionData.userId, sessionId);
@@ -1007,17 +1142,56 @@ export class RealtimeSegmentEngine {
     if (!consent.tracking) return answer(current, false, 'tracking_refused');
     requireConsentPurpose(consent, 'tracking');
     if (!await bufferedEventAllowed(this.env, this.tenant, event.userId, event.timestamp)) return answer(current, false, 'erased');
+    // P40 (R-P48): a buffered purchase of an order this shopper's state recorded
+    // under another event is the same order again, dropped as the live door drops
+    // it (processAction); its own event delivered again is not.
+    const order = await orderKeyOf(event);
+    if (isDuplicateOrder(current.reflex, order, event.eventId)) return answer(current, false, 'duplicate_order');
     if (!consent.personalization) return answer(current);
     requireConsentPurpose(consent, 'personalization');
-    const interest = await bufferedInterest(this.env, this.tenant, event,
+    // P38 (VA3, decision D2): a buffered delivery is placed by its own door
+    // (bufferedInterest), so its governed values are mapped before it is handed
+    // over, by the rule and the table the live door uses, and what maps to nothing
+    // is counted in the tenant's rejection report, exactly as the shopper's own
+    // object does (ShopperReflex.ingestBuffered). No approval in effect: the
+    // delivery is handed over exactly as sent.
+    const governed = (this.env.REFLEX_ENABLED ?? 'true') !== 'false' ? await tenantVocabularyInEffect(this.env, this.tenant) : null;
+    let delivered = event;
+    if (governed) {
+      const surface = resolveSurface({ surface: current.surface }), data = (event.data ?? {}) as Record<string, unknown>;
+      const cfg = await resolveTenantReflexConfig(this.env, this.tenant, surface), governing = governedEventData(data, cfg, governed);
+      const pid = data.productId ?? data.product_id ?? data.sku;
+      const held = pid ? (await resolveTenantCatalog(this.tenant, surface))?.getProduct(String(pid)) : undefined;
+      if (governing.rejected.length && (isContentAction(actionOf(event)) || (!held && cfg.eventAttributes === 'event-when-unknown'))) {
+        (this.keepAlive ?? retainOwnerWork)(recordVocabularyRejections(this.env, this.tenant, governed.revision, governing.rejected, now));
+      }
+      delivered = { ...event, data: governing.data };
+    }
+    // P40 (decision D1): a buffered viewable impression builds nothing either,
+    // whatever the registry weighs it (answered as a weight-0 delivery is).
+    if (neverWeighed(actionOf(event))) return answer(current);
+    const interest = await bufferedInterest(this.env, this.tenant, delivered,
       { ...current, attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...current.attributes },
         // W16 C5.09 (R85(b)): a buffered delivery is never an interaction of the
         // visit it arrives in, so it qualifies against the stage already stored.
         journeyStage: current.metadata.journeyStage },
       this.connectors.segments, now);
-    if (!interest.applied) return answer(current, false, undefined, interest.signals);
-    await this.sessionManager.writeBufferedSession(current, { preferences, reflex: interest.reflex, segments: interest.segments });
-    return answer({ ...current, reflex: interest.reflex, segments: interest.segments }, true, undefined, interest.signals);
+    if (!interest.applied) {
+      // P40 (R-P58): a purchase that applies no interest (it places no value)
+      // still uses its order: the order is remembered in the session's own
+      // reflex state, as the shopper's object remembers it, and nothing else
+      // changes. Only a session holding no reflex state reads the configuration
+      // its empty state is built under.
+      const remembered = order === null ? current.reflex : withOrder(current.reflex, order, event.eventId,
+        current.reflex?.v === 1 ? undefined : await resolveTenantReflexConfig(this.env, this.tenant, resolveSurface({ surface: current.surface })));
+      if (remembered === current.reflex) return answer(current, false, undefined, interest.signals);
+      await this.sessionManager.writeBufferedSession(current, { preferences, reflex: remembered });
+      return answer({ ...current, reflex: remembered }, false, undefined, interest.signals);
+    }
+    const reflex = interest.reflex && withOrder(carryOdpRestoration(interest.reflex, current.reflex), order, event.eventId, interest.config!);
+    await this.sessionManager.writeBufferedSession(current, { preferences, reflex, segments: interest.segments });
+    // P39 (R-P60): a suppressing action at weight 0 wrote its suppressions and applied no interest.
+    return answer({ ...current, reflex, segments: interest.segments }, !interest.suppressionOnly, undefined, interest.signals);
   }
 
   /** Read-time qualification avoids stale derived membership after replacement. */
@@ -1131,6 +1305,17 @@ export class RealtimeSegmentEngine {
      * session of their own and one visit was counted as two. Used when the
      * cookie says nothing, which on the decision route is always: that route
      * sets no cookie.
+     *
+     * W36 (F14 R8). It is tried BEFORE the `user:` pointer, so a pointer read
+     * that misses cannot move her onto a new, empty session while her client
+     * holds her own. It is hers only when the record stored at it names this
+     * `userId`, and a record that belongs to someone else is never served or
+     * written: when this read finds one, the lookup continues as if no id were
+     * sent; when this read misses or fails, the id may still name the session
+     * created for her (CW39), and that create's own read of it is bound to
+     * `userId` too, so someone else's record found there is treated as absent
+     * and nothing is written. Under a signed capability it must equal the
+     * capability's session.
      */
     clientSessionId?: string,
   ): Promise<{
@@ -1178,13 +1363,17 @@ export class RealtimeSegmentEngine {
       assertSessionTarget(this.principal, userId, sessionId);
       return { sessionId, sessionData: withConsent(sessionData, consent), isNewSession: true, reflexConfig };
     }
-    let sessionId = cookies.sessionId || (clientSessionId || '').trim();
+    // The cookie is the older claim; the client's id is bound to `userId` (W36).
+    const claimed = cookies.sessionId ? '' : (clientSessionId || '').trim();
+    let sessionId = cookies.sessionId || claimed;
     let sessionData: SessionData | null = null;
     let isNewSession = false;
 
     // Try to get existing session
     if (sessionId) {
-      sessionData = await this.sessionManager.getSession(sessionId);
+      const found = await this.sessionManager.resolveRecord(sessionId, claimed ? userId : undefined);
+      if (found.foreign) sessionId = '';
+      else sessionData = found.data;
     }
 
     // Fallback: resolve by stable userId (anon vuid) when the cookie is absent/blocked.
@@ -1237,7 +1426,9 @@ export class RealtimeSegmentEngine {
           personalizationEnabled: cookies.personalizationEnabled !== 'false',
           cookieConsent: true
         }
-      }, undefined, defer);
+      }, undefined, defer, undefined, true,
+      // W36: a session created under the client's id is bound to its owner.
+      claimed && sessionId === claimed ? userId : undefined);
     }
 
     return {
@@ -1325,6 +1516,10 @@ export class RealtimeSegmentEngine {
     const result = await this.processAction(event, sessionId, cookieHeader);
     if (event.processing === 'buffered') return { update: null, sessionId, cookieHeaders: [], consent: result.consent,
       interestApplied: result.interestApplied, ...(result.dropped ? { dropped: result.dropped } : {}),
+      ...(result.signals ? { signals: result.signals } : {}) };
+    // W35 A1: a dropped event changed nothing, so it refreshes no cookie either,
+    // exactly as the shopper's own object answers it (`cookiesUpdated: false`).
+    if (result.dropped) return { update: null, sessionId, cookieHeaders: [], consent: result.consent, dropped: result.dropped,
       ...(result.signals ? { signals: result.signals } : {}) };
     const cookieHeaders = personalizes(result.consent)
       ? this.sessionManager.createCookieHeaders(this.sessionManager.generateSessionCookies(result.sessionData, sessionId))

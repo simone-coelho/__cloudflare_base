@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P03",
+  "workOrderHash": "sha256:3c2b562b069b2fc84d45c5cc63b883905c635f2731ecacfd131df2d1272a306d",
+  "artifact": {
+    "revision": "536951ac681c6cef8e06c64dca81ca1979d7eb42",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p03-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P03 built on rem/p03-build: 5072545f merges rem/integration 2d17b874 (P02, P01, P28 and the landing of the product branch) into the per-ticket branch rem/tkt/P03 (6bebf719, specification reviewed PASS at 6477d82c); RED baseline with P02 present 7 failed / 1 lock, no PRECONDITION; c1119ab2 the mechanism (src/content/renderOffer.ts, service.ts, types.ts, src/ledger/records.ts, src/sdk/emit.ts, listen.ts, types.ts: slotPosition on the decision payload, the render acknowledgement (the impression, D1, once per module per page instance on first visibility) and the engagement (a click inside the marked container or a declared data-op-engage interaction, D2), render admission on the position within the slot with the page-wide position accepted beside it (R-P2, R-P7), the outcome record carrying the module identifier, the slot, the position within the slot and the decision identifier); 8fbc6ad6 the kit (docs/kit/01, 02, 03); 536951ac the SDK revision after an R10 collision with the W17 exact payload locks (the SDK carries slotPosition exactly as the decision names it and adds no page-wide position to an engagement, ruling R-P44), the kit text corrected, the SDK bundles rebuilt by scripts/build-sdk.mjs (packages/sdk, public/sdk); src/ops/synthetic.ts, src/routes/realtime.ts, src/sdk/core.ts and src/reflex/contentTelemetry.ts unchanged; acceptance 8/8 on both hosts at 536951ac; gate GATE_OK once with ratchet 52/0 outside 52.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S1/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S1/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P03/implementer/REPORT.md",
+      "git commits on rem/p03-build up to 536951ac"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P03 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P03/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P03/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P03/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-09T20:00:22.963Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L8/records/P03.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L8/records/P03.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L4/records/P03.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L56/records/P03.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P64",
+  "workOrderHash": "sha256:af5caa2883434546d027d4a496a8aafc566b58d66f400d71736be4a2ddba0f8c",
+  "artifact": {
+    "revision": "bb605dffd3d9bb3377a4418a15bd3c05a719f671",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p64-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p64-build at 03300b44 (c60542be the mechanism: the action answer carries outcome: { recordId } built from the engine's time code, producerFailed counted once for a pre-admission failure, logged once; ffb8d1e2 R-P125 step 1: outcomeToLearning reports the committed admission through onAdmitted and still resolves undefined, emitOutcome returns { recordId, admitted } and the route names the member only when admitted, awaited inside each answer literal; 03300b44 step 2: the failure-path count runs through P61's afterOwnerAnswer hook after the answer, inline outside an owner; kit 02/03 sentences and citations), merged with rem/integration 6933be65 and joined onto dd2a6340 at bb605dff without P65's unbuilt units (R-P132); P64 17/17 on both hosts; the refused path's answer time equals the success path's (7031–7036 vs 7038–7040 ms session, 511–513 vs 512–523 ms object at 500 ms per call).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P64/implementer/REPORT.md",
+      "git commits on rem/p64-joined up to bb605dff"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P64 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/reviewer-p64/logs/accept-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S13/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P64/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T10:38:28.042Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P64.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P64.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

@@ -3,10 +3,10 @@ import type { DecisionRecord } from './types';
 import type { Consent } from './consent';
 import { consentDeadline, personalizes } from './consent';
 import { readSigningConfig } from '@/auth/signingConfig.mjs';
-import { assertOwnerScope, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
+import { AcknowledgementConflictError, assertOwnerScope, currentOwnerConsent, requireConsentPurpose } from '@/identity/sessionAuthority';
 import { SessionAccessError, type SessionCapability } from '@/identity/sessionCapability';
 import { pinPublication } from '@/config/publication';
-import { recoverDecisions, recoveryJSON } from '@/ledger/recovery';
+import { admittedRender, recoverDecisions, recoveryJSON } from '@/ledger/recovery';
 import type { SlotLearnConfig } from '@/learn/fan';
 import { requireRetention } from '@/retention';
 import { parseId } from '@/ledger/records';
@@ -24,6 +24,8 @@ export interface RenderAcknowledgment {
   version: 1; decisionId: string; eventId: string; pageInstance: string;
   status: 'durable'; source: 'pending' | 'recovered';
 }
+/** P57: the acknowledgement, and the time its render is admitted at (the stored first delivery's, for a re-send of the same render). */
+export interface RedeemedRender { acknowledgment: RenderAcknowledgment; at: number }
 const encode = (v: Uint8Array) => {
   let raw = ''; for (let i = 0; i < v.length; i += 8192) raw += String.fromCharCode(...v.subarray(i, i + 8192));
   return btoa(raw).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -69,9 +71,19 @@ export async function createRenderOffer(env: Env, principal: SessionCapability, 
   lifetime(env, value, Date.now());
   return `ro1.${encode(iv)}.${encode(new Uint8Array(sealed))}`;
 }
+/**
+ * P03 decision D3: the record's `position` is the module's position within its
+ * slot. An acknowledgement that names it as `slotPosition` is held to it, and its
+ * `position` is then the page-wide `order` the page drew it at, accepted beside
+ * it (a page whose slot is not its first numbers the two differently). An
+ * acknowledgement without `slotPosition` — an earlier client, the platform's own
+ * synthetic monitor — is held to its `position`, exactly as before.
+ */
+const placedAt = (position: number, data: Record<string, unknown>): boolean =>
+  Object.hasOwn(data, 'slotPosition') ? data.slotPosition === position : data.position === position;
 /** Fresh owner admission plus the original sealed grant/config/lifetime. Retries never recapture a birth. */
 export async function redeemRenderOffer(env: Env, principal: SessionCapability, consent: Consent,
-  event: { eventId?: string; timestamp?: number; data: Record<string, unknown> }): Promise<RenderAcknowledgment> {
+  event: { eventId?: string; timestamp?: number; data: Record<string, unknown> }): Promise<RedeemedRender> {
   assertOwnerScope(env, principal);
   const token = event.data.renderOffer;
   if (typeof token !== 'string' || token.length > Math.ceil((MAX_BYTES + 16) * 4 / 3) + 32
@@ -87,16 +99,26 @@ export async function redeemRenderOffer(env: Env, principal: SessionCapability, 
   if (recoveryJSON(value.principal) !== recoveryJSON(principal) || value.pageInstance !== event.data.pageInstance
     || value.record.decision_id !== event.data.decisionId || value.record.item_id !== event.data.contentId
     || value.record.slot !== event.data.slot || value.record.page !== event.data.page
-    || value.record.position !== event.data.position || event.timestamp! < value.record.ts || event.timestamp! > Date.now()) throw new SessionAccessError();
+    || !placedAt(value.record.position, event.data) || event.timestamp! > Date.now()) throw new SessionAccessError();
   const pin = await pinPublication(env, principal.tenant);
   const current = await currentOwnerConsent();
   if (pin.digest !== value.publication || !current?.tracking || !consent.tracking || current.instruction?.revision !== value.consentRevision
     || consent.instruction?.revision !== value.consentRevision || value.record.arm !== 'default' && (!personalizes(current) || !personalizes(consent))) throw new SessionAccessError();
   requireConsentPurpose(current, value.record.arm !== 'default' ? 'personalization' : 'tracking');
+  // P57 (amendment 5): this decision's stored admission, read in the shopper's own
+  // owner. The same event id on the same page instance is the same render: it is
+  // admitted at the time its first delivery was, so its digest is the stored one and
+  // the replay answers the original receipt; another event id is a conflict, refused
+  // before anything is admitted or captured. P69 (amendment 9): a first delivery is
+  // admitted no earlier than the decision's time, as W23's clamp admits it no later than the present.
+  const admitted = await admittedRender(principal.tenant, principal.subject, value.record.decision_id);
+  if (admitted && admitted.eventId !== event.eventId) throw new AcknowledgementConflictError();
+  if (admitted && admitted.pageInstance !== value.pageInstance) throw new AcknowledgementConflictError('Render acknowledgement conflict: this decision was already acknowledged on another page instance');
   lifetime(env, value, Date.now());
-  const record: DecisionRecord = { ...value.record, rendered: { version: 1, eventId: event.eventId!, at: event.timestamp!, pageInstance: value.pageInstance } };
-  const receipt = await recoverDecisions(env, { tenant: principal.tenant, brand: record.brand, visitor_id: principal.subject, records: [record] }, () => value.config, value.until);
+  const at = admitted ? admitted.at : Math.max(event.timestamp!, value.record.ts);
+  const record: DecisionRecord = { ...value.record, rendered: { version: 1, eventId: event.eventId!, at, pageInstance: value.pageInstance } };
+  const receipt = await recoverDecisions(env, { tenant: principal.tenant, brand: record.brand, visitor_id: principal.subject, records: [record] }, () => value.config, value.until, { answerAtAdmission: true });
   if (!receipt.durable || !['pending', 'recovered'].includes(receipt.source.state)) throw new SessionAccessError();
-  return { version: 1, decisionId: record.decision_id, eventId: event.eventId!, pageInstance: value.pageInstance,
-    status: 'durable', source: receipt.source.state as 'pending' | 'recovered' };
+  return { acknowledgment: { version: 1, decisionId: record.decision_id, eventId: event.eventId!, pageInstance: value.pageInstance,
+    status: 'durable', source: receipt.source.state as 'pending' | 'recovered' }, at };
 }

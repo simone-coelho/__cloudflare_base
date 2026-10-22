@@ -1,0 +1,21 @@
+# BTI parity amendment 8 — the alarm's carried purchase records its order; the kit's citations and the override types (2026-10-20)
+
+Opened by the remediation lead under the owner's standing rule of 2026-10-16 (R-P78) on the P65 delivery review (`_evidence/parity-step3/P65/reviewer/REPORT.md`, finding 1, reproduced on both hosts), the P63 delivery review (`P63/reviewer/REPORT.md`, findings 1, 3, 4) and the P64/P65 reviews' lock gaps (R-P150, R-P155). Two tickets, P67–P68, in strict order; an independent programme beside amendments 5, 6 and 7.
+
+## 1. The findings
+
+(a) **Order memory after a reset.** Amendment 7's P65 carries a tracked action's outcome in the behaviour capture's admission, so a purchase whose object reset between the two admissions is written by the alarm. The alarm writes the outcome but does not record the order as purchased, because the engine never ran for it; a later purchase of the same order under a new event id (a confirmation-page reload, a late retry after the 401/500: the SDK gives every envelope a new id) is then not dropped as `duplicate_order`. The visitor sees nothing; the operator sees two purchase outcomes for one order in the ledger and the purchase credited twice in learning, with nothing counted lost. Reachable narrowly in production (the reset must fall in that window during a purchase and the same order be re-sent within the alarm's horizon).
+
+(b) **Lock gaps named by the delivery reviews, the build correct in each case:** P63's credit-only leg clicks the pooled module only (a build comparing its own event count while keeping the pooled counters would pass); nothing pins that both statistics doors answer only digest, witness and version, that a throwing read publishes, or that the store's copy is compared by version AND digest; P64/P65: no unit fires the alarm after a failed preparation (a build carrying the outcome anyway would write it and count it lost), a refused own admission counted after the answer passes, the rule against a second learn read is unpinned, a retained (rather than awaited) withdrawal is unpinned.
+
+(c) **Documentation and types.** Kit 02's render-acknowledgement paragraph (:933) carries twelve citations that no longer land on their constructs; kit 02 :1171 says a skipped alarm "writes nothing" where it still writes `learn` when markers exist; the learning-read override variables (`LIFT_WITNESS_BUDGET_MS`, `RING_READ_BUDGET_MS`) are untyped in `src/types/env.ts`.
+
+## 2. The tickets
+
+**P67 — the alarm's carried purchase records its order.** On both hosts, when the alarm writes a carried purchase outcome it records the order as purchased exactly as the engine's own path does (the object host through its own order memory, the session host through the session record), so a later purchase of the same order under a new event id is dropped as `duplicate_order`; the ordinary path's one-purchase-per-order rule (P40), P65's answers (RS1–RS3), W06's digests and replay are unchanged; no new remote call before any answer; the record the alarm writes carries no stamp into any digest. The specification batch S16 also adds the additive locks of finding (b) to the P63, P64 and P65 unit files (test-only, reviewed honest, landing with P67's build).
+
+**P68 — the kit's citations and the override types.** Every citation in kit 02's render-acknowledgement paragraph (:933) and in the alarm-publication sentences (kit 02 :1171, kit 03 :1474-1488) lands on the construct it names at the artifact, checked by a unit that reads the kit and the source (RED today for the drifted ones); kit 02 :1171 says what a skipped alarm still writes; the override variables are declared in `src/types/env.ts` with the bounded-override semantics P62 gave them (a type-level unit); no served behaviour changes (the kit-reading tests and every unit of amendments 5–7 unchanged).
+
+## 3. Acceptance
+
+Each ticket: RED units on both hosts in `src/units/P6x/LEDGER.unit.test.ts` (P67 from the P65 review's reproduction; P68 a kit/source citation check and a type-level check), reviewed honest; the build reviewed on its exact sha; one official gate per round; the stamps redeployed; the live rows follow the parity programmes' rule (P68 has no live row beyond the kit being served).

@@ -20,7 +20,7 @@ Two warnings before you trust anything you find:
 
 | Layer | What it is | Where it lives |
 |---|---|---|
-| **PROMISED** | The capability set committed to design-partner customers — the semantics your mirror MUST reproduce | `docs/content-personalization-design-tapesrty.html` (the "Solution & Algorithm" document — yes, the filename has a typo; it is the canonical spec of the promise) + `docs/architecture/18-content-affinity-engine.md` |
+| **PROMISED** | The capability set committed to design-partner customers — the semantics your mirror MUST reproduce | `docs/content-personalization-design-tapestry.html` (the "Solution & Algorithm" document; it is the canonical spec of the promise) + `docs/architecture/18-content-affinity-engine.md` |
 | **BUILT** | Code verified live: the reflex engine, audience generator, ODP loop, product recs, DO host | `src/` — map in §5; audit with file:line evidence in `docs/architecture/19-tapestry-delivery-ledger.md` §3 |
 | **DIVERGENT** | Places the POC knowingly lags or contradicts the design (defects, debts, demo shortcuts) | §6 of this file — implement the design, not the defect |
 
@@ -28,7 +28,7 @@ Two warnings before you trust anything you find:
 
 1. **`docs/architecture/16-edge-affinity-reflex.md`** — the engine: math, config model, audience generator, the ShopperReflex Durable Object spec, hardening. The heart of everything.
 2. **`docs/architecture/18-content-affinity-engine.md`** — the content-recommendations architecture (the "final architecture" you were told about): content catalog, telemetry, two-level scoring, delivery contract, learning ladder, locked decisions D-1…D-6.
-3. **`docs/content-personalization-design-tapesrty.html`** — open in a browser. The customer-facing Solution & Algorithm document: the 8-dimension registry (incl. location/regional trending), the model math, strategies, the four learning layers, control/DS-injection surfaces, the delivery contract JSON, the acceptance bar. **This is the promise, written for external data scientists to pressure-test — your mirror is measured against it.**
+3. **`docs/content-personalization-design-tapestry.html`** — open in a browser. The customer-facing Solution & Algorithm document: the 8-dimension registry (incl. location/regional trending), the model math, strategies, the four learning layers, control/DS-injection surfaces, the delivery contract JSON, the acceptance bar. **This is the promise, written for external data scientists to pressure-test — your mirror is measured against it.**
 4. **`docs/architecture/19-tapestry-delivery-ledger.md`** — INTERNAL. Requirement-by-requirement built-vs-gap audit (R1–R15 with file:line evidence), the workstream plan (CW0–CW14), the regional-trending design sketch, risks. This is your built-vs-designed truth table.
 5. **`docs/Coach-ODP-Wiring-Spec.md`** + **`docs/ODP-Recent-Events-Reference.md`** — the CDP ("durable memory") connector as-built: event forwarding, profile upsert, instant segment seeding, the gotchas.
 6. **`docs/Edge-Affinity-Reflex-Technical-Design.md`** — the standalone technical explainer of the engine (gentler than doc 16; good cross-check).
@@ -146,10 +146,10 @@ Stable, device-scoped, first-party visitor ID (`opt_visitor_id`: localStorage + 
 | `src/services/cmab.ts`, `optimizelyFx.ts`, `experimentFx.ts` | Experimentation integration (optional instrument) | BUILT |
 | `src/services/sceneGen.ts` + queue consumer in `src/index.ts` | Async LLM job plumbing (the pattern for design-time enrichment) | BUILT (for another feature; reuse the shape) |
 | `public/storefront.js` | Demo client — contains the SDK-to-be (~300 lines of connect/emit/listen buried in 4,192 demo lines) | BUILT-IN-MONOLITH |
-| `migrations/` (0001–0005) | D1 schema: events capture, geo census, dimension enrichment views | BUILT |
-| `wrangler.toml` | Bindings truth (note: `[env.staging]`/`[env.production]` are name-only shells — dev bindings are top-level) | — |
+| `migrations/product/` and `migrations/` | D1 schema: the product migrations (operator accounts and authority) apply by default; the demo chain (events capture, geo census, dimension enrichment views) and `migrations/seed/` only on an explicit local request (`docs/10-d1-schema.md`) | BUILT |
+| `wrangler.toml` | Bindings truth: the top-level declarations are the local worker's; `[env.staging]`/`[env.production]` are complete customer declarations used only by the customer-stamp workflow | — |
 
-Tests: `src/reflex/*.test.ts` — **56 real test cases** (an older doc claims 112 — wrong). The harness in this checkout is broken (missing `vitest-environment-miniflare`); fix before trusting a green/red signal.
+Tests: `npm test` runs the Vitest suites under `src/` (native legs run the real Worker in workerd through Miniflare); `src/reflex/*.test.ts` hold the engine's own cases.
 
 ## 6. Known divergences — implement the DESIGN, not these
 
@@ -201,13 +201,13 @@ The **capabilities** mirror; the **context** does not. None of the following may
 - Vendor-specific integrations as *dependencies*: ODP/Opal/Feature Experimentation appear here as connectors behind seams. In the mirror, keep the seams (`CDP connector`, `assistant layer`, `experimentation adapter`) pluggable; include vendor implementations only if that project explicitly chooses to.
 - Demo assets (product images, brand copy, synthetic schemas named after brands) and demo-only routes (`/__shot`).
 
-Working-agreement gotchas if you operate inside THIS repo: never run `npm ci` (use `npm install`); do not restore `.npmrc.bak`; no `@optimizely/*` private packages; deploy only via `npm run deploy` (`--env production|staging` ships binding-less workers today); commit/push only when explicitly asked.
+Working-agreement gotchas if you operate inside THIS repo: never run `npm ci` (use `npm install`); do not restore `.npmrc.bak` (tracked backups and their dispositions are listed in `docs/deployment/01-deploy.md`); no `@optimizely/*` private packages; local setup is the README "Quick Start" (`node scripts/init-local.mjs --scope <tenant>`, then `npm run dev`, then seeds that name their tenant); deployment exists only as the guarded customer-stamp workflow (`docs/deployment/01-deploy.md`), never a plain `wrangler deploy`; commit/push only when explicitly asked.
 
 ## 10. Your first hour
 
 1. Read §§1–9 above, then docs in the §3 order (1–5 minimum).
-2. Open `docs/content-personalization-design-tapesrty.html` in a browser and click through the persona and ordering widgets — they encode the product intent better than any prose.
-3. `npm install` (never `ci`), then skim `src/reflex/core.ts` end to end (~400 lines) — the whole engine's semantics live there.
+2. Open `docs/content-personalization-design-tapestry.html` in a browser and click through the persona and ordering widgets — they encode the product intent better than any prose.
+3. `npm install` (never `ci`), bring up a local worker as README.md "Quick Start" describes, then skim `src/reflex/core.ts` end to end (~400 lines) — the whole engine's semantics live there.
 4. Trace one event's life: `public/storefront.js` (emit) → `src/routes/realtime.ts` (ingest/capture) → host (`RealtimeSegmentEngine`/`ShopperReflex`) → `core.ts` (score) → push/audiences → `odpLoop.ts` (forward/seed).
 5. Diff your understanding against ledger §3 (built-vs-gap) and §6 here (divergences). Anything you'd port from code, check it isn't on the divergence list first.
 6. Write your mirror's plan against §7's checklist — that checklist is the definition of "loyal."

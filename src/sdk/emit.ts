@@ -5,7 +5,7 @@
 // sites that already have a tag layer, and the automatic path, which lives on
 // the listen module because the SDK knows what it delivered.
 
-import { contentInteraction, type Core } from './core';
+import { contentInteraction, dwellMinFor, type Core } from './core';
 import type { Listen } from './listen';
 import type { DomLike, ElementLike, EngineUpdate, SdkEventType } from './types';
 import { WIRE } from './wire';
@@ -21,7 +21,13 @@ export interface PurchaseInput {
 export type DataLayerMapper = (entry: Record<string, unknown>) => { type: SdkEventType; data: Record<string, unknown> } | null;
 export type DataLayerMapping = Record<string, DataLayerMapper>;
 
-export interface DeclarativeOptions { dom?: DomLike; dwellMinMs?: number }
+export interface DeclarativeOptions {
+  dom?: DomLike;
+  /** The shortest on-screen time a dwell is sent for; one second unless configured. */
+  dwellMinMs?: number;
+  /** P40: a slot's own dwell minimum, by slot (`{ editorial: 30000 }`); every other slot keeps `dwellMinMs`. */
+  dwellMinMsBySlot?: Record<string, number>;
+}
 export interface DataLayerOptions { layer?: unknown[]; mapping?: DataLayerMapping; replay?: boolean }
 
 export interface Emit {
@@ -36,8 +42,18 @@ export interface Emit {
   contentClick(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   contentDwell(contentId: string, slot: string, ms: number, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   videoComplete(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
+  /** P40: the painted video watched for three seconds (`video_view`), through the same receipt gate as `videoComplete`. */
+  videoView(contentId: string, slot: string, attrs?: Record<string, unknown>): Promise<EngineUpdate | null>;
   custom(name: string, data?: Record<string, unknown>): Promise<EngineUpdate | null>;
-  /** Scan `[data-op-content]` and `[data-op-track]` elements. Returns a detach function. */
+  /**
+   * Scan `[data-op-content]` and `[data-op-track]` elements. Returns a detach
+   * function. A `[data-op-content]` container (a module's, or any piece's) sends
+   * its render acknowledgement once when first shown, a click inside it as an
+   * engagement, and each interaction it declares in `data-op-engage` (DOM event
+   * types, space separated) as an engagement too (P03 decisions D1, D2). P40:
+   * held at least half in view for one second without interruption after its
+   * acknowledgement, it sends its one viewable impression for the page instance.
+   */
   declarative(opts?: DeclarativeOptions): () => void;
   /** Wrap a dataLayer's push. Returns a detach function that restores it. */
   dataLayer(opts?: DataLayerOptions): () => void;
@@ -50,6 +66,29 @@ export interface Emit {
   rendered: Listen['rendered'];
 }
 
+/** One declared interaction: a DOM event type, as a page names it. */
+const ENGAGE_TOKEN = /^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/;
+/** At most this many declared interactions per container are bound. */
+const MAX_DECLARED_INTERACTIONS = 16;
+
+/**
+ * P03 decision D2: the interactions a container declares, `data-op-engage="<DOM
+ * event types, space separated>"`, each named once and in the page's order.
+ * `click` is not among them: a click inside the container is already its
+ * engagement, and one click is one engagement. A token that is not an event type
+ * is skipped, never guessed at; the list is the page's to name and nothing in it
+ * is tenant-, customer- or taxonomy-specific.
+ */
+function declaredInteractions(el: ElementLike): string[] {
+  const out: string[] = [];
+  for (const token of (el.getAttribute('data-op-engage') ?? '').split(/\s+/)) {
+    if (!ENGAGE_TOKEN.test(token) || token === 'click' || out.includes(token)) continue;
+    out.push(token);
+    if (out.length === MAX_DECLARED_INTERACTIONS) break;
+  }
+  return out;
+}
+
 const first = (v: unknown): Record<string, unknown> => (Array.isArray(v) && v[0] && typeof v[0] === 'object' ? (v[0] as Record<string, unknown>) : {});
 const eco = (e: Record<string, unknown>): Record<string, unknown> => (e.ecommerce && typeof e.ecommerce === 'object' ? (e.ecommerce as Record<string, unknown>) : e);
 
@@ -60,7 +99,10 @@ function ga4Item(e: Record<string, unknown>): Record<string, unknown> {
     ...(it.item_name !== undefined ? { name: it.item_name } : {}),
     ...(it.price !== undefined ? { price: it.price } : {}),
     ...(it.item_category !== undefined ? { category: it.item_category } : {}),
-    ...(it.item_brand !== undefined ? { brand: it.item_brand } : {}),
+    // W26 R3 (review D1): a product's brand label is the PRODUCT's, sent as
+    // `productBrand`. `data.brand` is the brand the page was served under,
+    // which only the client's configuration names (`envelope`, core.ts).
+    ...(it.item_brand !== undefined ? { productBrand: it.item_brand } : {}),
     ...(it.item_variant !== undefined ? { variant: it.item_variant } : {}),
   };
 }
@@ -164,7 +206,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
     if (content) type = content;
     if (type === 'content_impression') return listen.rendered(String(data.slot ?? ''), String(data.contentId ?? ''), undefined,
       typeof data.decisionId === 'string' ? data.decisionId : undefined).then(() => null);
-    if (['content_click', 'content_dwell', 'video_complete'].includes(type)) return listen.outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data);
+    if (content) return listen.outcome(type, String(data.contentId ?? ''), String(data.slot ?? ''), data);
     return core.send(type, data);
   };
   const withItem = (type: SdkEventType) => (productId: string, attrs: Record<string, unknown> = {}) => core.send(type, () => ({ productId, ...attrs }));
@@ -180,7 +222,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
    */
   const scans = new Map<DomLike, { refs: number; detach(): void }>();
 
-  function scan(dom: DomLike, dwellMinMs: number): { refs: number; detach(): void } {
+  function scan(dom: DomLike, dwellMinMs: number, bySlot?: Record<string, number>): { refs: number; detach(): void } {
     const holds: Array<() => void> = [];
     const seen = new Set<string>();
     let detached = false, installed = false, binding = 0;
@@ -208,26 +250,44 @@ export function createEmit(core: Core, listen: Listen): Emit {
             ...(decisionId !== null ? { decisionId } : {}), ...(contentType ? { contentType } : {}) };
         };
         let shownAt: number | null = null;
+        // P40: the piece this container told the SDK is in view, until it leaves
+        // view or the capture stops (a detach, a consent refusal, a new generation).
+        let viewing: Record<string, unknown> | null = null;
+        const report = (inView: boolean) => listen.visible(String(viewing!.slot), String(viewing!.contentId), inView, viewing!.decisionId as string | undefined);
+        const unview = () => { if (viewing) report(false); viewing = null; };
         const off = core.bindings.addObserver(dom, el, (visible) => {
           const attrs = shown();
-          if (!permitted() || !attrs) { shownAt = null; return; }
+          if (!permitted() || !attrs) { shownAt = null; unview(); return; }
           if (visible) {
             if (shownAt === null) shownAt = host.now();
             const key = `${String(attrs.slot)}:${String(attrs.contentId)}`;
             if (!seen.has(key)) { seen.add(key); void track('content_impression', attrs); }
+            if (!viewing) { viewing = attrs; report(true); }
             return;
           }
+          unview();
           if (shownAt === null) return;
           const ms = host.now() - shownAt;
           shownAt = null;
-          if (ms >= dwellMinMs) void track('content_dwell', { ...attrs, ms });
+          if (ms >= dwellMinFor(String(attrs.slot), dwellMinMs, bySlot)) void track('content_dwell', { ...attrs, ms });
         });
         if (!permitted()) { off?.(); return; }
-        if (off) holds.push(off);
+        if (off) holds.push(off, unview);
         holds.push(core.bindings.addListener(el, 'click', () => {
           const attrs = permitted() ? shown() : null;
           if (attrs) void track('content_click', attrs);
         }));
+        // P03 decision D2: each interaction the page declares on the container
+        // is one engagement of the piece it shows, credited as the slot's click
+        // reward through the same painted-receipt gate as a click, and naming
+        // the interaction. The declaration is read again when the shopper acts,
+        // so an interaction the container no longer declares sends nothing.
+        for (const interaction of declaredInteractions(el)) {
+          holds.push(core.bindings.addListener(el, interaction, () => {
+            const attrs = permitted() && declaredInteractions(el).includes(interaction) ? shown() : null;
+            if (attrs) void track('content_click', { ...attrs, interaction });
+          }));
+        }
       }
 
       for (const el of dom.querySelectorAll('[data-op-track]')) {
@@ -257,7 +317,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
     if (core.config.listenOnly) return () => {};
     const dom = opts.dom ?? host.dom;
     if (!dom) return () => {};
-    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1_000);
+    const attachment = scans.get(dom) ?? scan(dom, opts.dwellMinMs ?? 1_000, opts.dwellMinMsBySlot);
     scans.set(dom, attachment);
     attachment.refs++;
     let released = false;
@@ -361,6 +421,7 @@ export function createEmit(core: Core, listen: Listen): Emit {
     contentClick: withContent('content_click'),
     contentDwell: (contentId, slot, ms, attrs = {}) => track('content_dwell', () => ({ contentId, slot, ms, ...attrs })),
     videoComplete: withContent('video_complete'),
+    videoView: withContent('video_view'),
     custom: (name, data = {}) => track('custom', () => ({ event: name, ...data })),
     declarative,
     dataLayer,

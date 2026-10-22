@@ -10,16 +10,17 @@ import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegm
 import { getConnectors } from '@/connectors';
 import { snapshot as reflexSnapshot, type ReflexConfig } from '@/reflex/core';
 import { resolveTenantReflexConfig, resolveSurface } from '@/demos/registry';
-import { forwardEventToOdp, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
-import { isDecisionReference, outcomeFromAction } from '@/ledger/records';
+import { forwardEventToOdp, odpRestorationOf, projectOdpState, mapActionToOdp, odpEnabled, stageOnlyOdpProjection, upsertOdpProfile, warnStageProjectionSkipped } from '@/services/odpLoop';
+import { isCarriedCustomerId, isDecisionReference, outcomeFromAction, type OutcomeRecord } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { outcomeEnrollment } from '@/content/holdout';
 import { storedConsent, consentOf, personalizes, type Consent } from '@/content/consent';
 import { ACTION_EVENT_TYPES, isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { validBufferedAction } from '@/reflex/bufferedAction';
-import { projectVisit, validEntry, type ChannelSignals } from '@/services/visit';
+import { projectVisit, validEntry, visitArrival, type ChannelSignals } from '@/services/visit';
+import { deviceOf } from '@/services/platform';
 import { journeyCountersNow, journeyStageFrom, journeyThresholdsInForce, persistedStageOf, readTimeStageChange } from '@/services/JourneyStage';
-import { outcomeToLearning } from '@/learn/route';
+import { admitPreparedOutcome, outcomePreparationFailed, outcomeToLearning, prepareOutcomeAdmission } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { demoEventCaptureEnabled } from '@/services/demoEventCapture';
 export { demoEventCaptureEnabled } from '@/services/demoEventCapture';
@@ -28,11 +29,13 @@ import { requireShopper, shopperPrincipal, assertSessionTarget, privateShopperHe
 import { anonymousWithConsent, ownedConsent, rotateObjectSession } from '@/identity/consentContinuity';
 import { capabilityToken } from '@/identity/sessionCapability';
 import { SessionManager } from '@/services/SessionManager';
-import { assertShopperSelectors, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
+import { AcknowledgementConflictError, assertShopperSelectors, carryOwnerCustomerId, parseShopperContext, currentOwnerConsent, ownerRelay, pinProfileRetention } from '@/identity/sessionAuthority';
 import { captureRetention, RetentionUnavailable } from '@/retention';
-import { captureBehavior } from '@/ledger/behavior';
+import { captureBehaviorCarrying } from '@/ledger/behavior';
+import { recoveryJSON, type OutcomeRecoveryInput } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import { redeemRenderOffer } from '@/content/renderOffer';
+import { admitLayoutExposure, layoutExposureBeaconOf } from '@/content/service';
 
 const realtimeRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 for (const path of ['/ws', '/action', '/personalization/:userId', '/reflex', '/session/reset', '/session/preferences', '/session/:sessionId/preferences', '/session/:sessionId/analytics', '/segments/:userId', '/connections/:userId']) {
@@ -122,7 +125,13 @@ export const actionEventSchema = z.object({
   // will be the one that opens a new visit. Optional, so every existing client
   // is unaffected; omitted/unobserved entry stays unknown.
   entry: z.custom<ChannelSignals>(value => value !== undefined && validEntry(value)).optional(),
-  timestamp: z.number().refine(isEventTimestamp).optional()
+  timestamp: z.number().refine(isEventTimestamp).optional(),
+  // P13 (decision D1): the customer's identifier the page passed before
+  // recognition (`setCustomerId`). Carried beside the visitor's own identifier
+  // onto the outcome this event records under tracking consent, and never
+  // proof: it is taken off the event before the shopper's state, the ODP loop
+  // or any other consumer sees it, so it links, merges and selects nothing.
+  customerId: z.string().refine(isCarriedCustomerId).optional(),
 }).superRefine((event, ctx) => {
   if (Object.prototype.hasOwnProperty.call(event.data, 'decisionId') && !isDecisionReference(event.data.decisionId)) {
     ctx.addIssue({ code: 'custom', path: ['data', 'decisionId'], message: 'Invalid decision reference' });
@@ -136,10 +145,13 @@ export const actionEventSchema = z.object({
 });
 
 realtimeRoutes.post('/action', async (c) => {
+  // P65: settles the outcome the behaviour capture's admission carried, once it is captured (below).
+  let withdrawCarried = async (): Promise<void> => { /* nothing captured yet, so nothing carried */ };
   try {
     const body = await c.req.json();
     assertSessionTarget(shopperPrincipal(c.req.raw), body?.userId, body?.sessionId);
-    const validatedEvent = actionEventSchema.parse(body);
+    // P13: the carried identifier is held apart from the event itself; only the outcome record names it.
+    const { customerId: carriedCustomerId, ...validatedEvent } = actionEventSchema.parse(body);
     // Render retries carry their first wire identity/time. Generic legacy
     // synthesis would turn a lost acknowledgement into a different render.
     if (Object.hasOwn(validatedEvent.data, 'renderOffer') && (validatedEvent.type !== 'content_impression'
@@ -157,22 +169,26 @@ realtimeRoutes.post('/action', async (c) => {
     // W23 T1.01 (doc 16 §4 :104 "The engine clock is authoritative. Events are
     // stamped on arrival; client timestamps are advisory only — a forged or
     // skewed clock cannot inflate affinity"). The engine's own stamp BOUNDS the
-    // admitted event time, and bounds it only from above:
+    // admitted event time from above (a render acknowledgement's also from below):
     //   · a client time after the engine's present is admitted AT the present.
     //     The event is still counted, still durable, still visible — the clock
     //     it claimed is what is refused, not the event (F18 §2 F: ten crafted
     //     future-dated events destroyed 81.8 % of an item's purchase evidence,
     //     slot-wide, from one self-served visitor id).
-    //   · a client time at or before it is admitted EXACTLY as given. An old
-    //     delivery is admitted as old — the settled buffered/late-history
-    //     decisions (HANDOFF-2026-09-18 §7 :353, :354) — never restamped as
-    //     fresh activity and never rejected for its age.
+    //   · a client time at or before it is admitted as given: an old delivery as
+    //     old (the settled decisions, HANDOFF-2026-09-18 §7 :353, :354), never
+    //     restamped as fresh activity nor rejected for its age; but a render
+    //     acknowledgement's time before its decision's is admitted AT the decision's (P69).
     // Malformed times (non-integer, out of calendar, non-numeric) are refused
     // before this point by `isEventTimestamp` on the schema, and the buffered
     // door's own `value.timestamp <= now` (`src/reflex/bufferedAction.ts:30`)
     // still applies to a buffered delivery's original time, unchanged.
     const engineNow = Date.now();
     const admittedTimestamp = Math.min(validatedEvent.timestamp ?? engineNow, engineNow);
+    // P37: the device class this request reports (client hint, else user agent),
+    // read here at the edge and never taken from the body; the visit the event
+    // opens records it. A request reporting neither carries none.
+    const device = deviceOf(c.req.raw.headers);
     const actionEvent = {
       ...validatedEvent,
       eventId: validatedEvent.eventId,
@@ -181,6 +197,7 @@ realtimeRoutes.post('/action', async (c) => {
       // CW6: coarse request geolocation rides the event so the scoring host can
       // fan the touches into the shopper's region. Aggregates only, never stored per person.
       ...(cfGeo?.country ? { geo: { country: cfGeo.country, regionCode: cfGeo.regionCode ?? null } } : {}),
+      ...(device ? { device } : {}),
     } as ActionEvent;
 
     // Browsing attribution is separate from the signed profile session. Capture
@@ -194,16 +211,106 @@ realtimeRoutes.post('/action', async (c) => {
     const priorConsent = await currentOwnerConsent();
     if (!priorConsent) throw new SessionAccessError();
     const captureConsent = intersectConsent(priorConsent, consentFromCookies(c.req.header('Cookie')), refusalHints(actionEvent.data.consent));
+    // P30 (decision D2): the per-view beacon of a cached layout, answered here
+    // before any host. It is no behaviour of the shopper's: it reaches neither
+    // the shopper's state (no interest, journey counter, visit or signal), nor
+    // the ledger, the outcome path or any provider. Under the tracking consent
+    // just resolved, it only counts the drawn modules' exposures in the learning
+    // of the context its key names (src/content/service.ts `admitLayoutExposure`),
+    // after the answer; without it, or with a key the engine did not issue,
+    // nothing at all. The brand is the action's own, as an outcome's is.
+    if (validatedEvent.type === 'layout_exposure') {
+      const beacon = layoutExposureBeaconOf(actionEvent.data);
+      if (!beacon) return c.json({ error: 'Invalid layout exposure' }, 400);
+      const named = actionEvent.data.brand;
+      const brand = typeof named === 'string' && named.trim() ? named.trim() : c.get('tenant');
+      const { answer, work } = await admitLayoutExposure(c.env, { tenant: c.get('tenant'), brand, subject: shopperPrincipal(c.req.raw).subject,
+        tracking: captureConsent.tracking, beacon, now: engineNow });
+      if (work) { try { c.executionCtx.waitUntil(work); } catch { void work; } }
+      return c.json({ success: true, ...answer });
+    }
     if (captureConsent.tracking && !actionEvent.eventId) actionEvent.eventId = crypto.randomUUID();
     const hasOffer = Object.hasOwn(actionEvent.data, 'renderOffer');
     if (hasOffer && actionEvent.type !== 'content_impression') throw new SessionAccessError();
-    const render = hasOffer ? await redeemRenderOffer(c.env, shopperPrincipal(c.req.raw), captureConsent, actionEvent) : undefined;
+    const redeemed = hasOffer ? await redeemRenderOffer(c.env, shopperPrincipal(c.req.raw), captureConsent, actionEvent) : undefined;
+    const render = redeemed?.acknowledgment;
+    // P57, P69: the behaviour record carries the time the render is admitted at (a re-send's, its first delivery's; never before its decision's time).
+    if (redeemed) actionEvent.timestamp = redeemed.at;
     // The ciphertext is an admission capability, never behavior, demo capture,
     // pipeline input or provider data. Remove it before any ordinary handler.
     if (hasOffer) { const { renderOffer: _offer, ...data } = actionEvent.data; void _offer; actionEvent.data = data; }
-    const behavior = await captureBehavior(c.env, shopperPrincipal(c.req.raw), captureConsent,
+    // P65 (amendment 7, R-P124): with durable recovery on, the outcome a tracked
+    // action emits is prepared HERE, before the behaviour capture's durable
+    // admission, and that admission carries it (src/ledger/recovery.ts
+    // `CarriedOutcome`): the record `emitOutcome` below builds (the same event,
+    // identity, admitted time, session and carried identifier), its retention, the
+    // visitor's experiment block under the consent the capture holds, and its
+    // learning preparation (src/learn/route.ts `prepareOutcomeAdmission`, the learn
+    // document read). So the read that can fail decides whether anything is
+    // carried: one that fails carries nothing, and the outcome the engine then
+    // emits is counted lost once after the answer (R-P124(4)); a record that cannot
+    // be built here is built after the engine as before, its failure answered as
+    // before. An emitted outcome made these reads before the answer already (no new
+    // remote call); a reward event the engine then drops now makes them too.
+    // A reset between the behaviour capture's admission and the outcome's own then
+    // leaves the alarm both, and it writes both unless it decides again that the
+    // engine drops the event (src/durable-objects/ShopperReflex.ts
+    // `carriedEventDropped`, src/ledger/recovery.ts `settleCarriedOutcome`).
+    const buffered = actionEvent.processing === 'buffered';
+    /** The outcome record this event emits (records.ts `outcomeFromAction`), the server's session where the client names none. */
+    const outcomeOf = (serverSessionId?: string): OutcomeRecord | null => outcomeFromAction({ ...actionEvent, sessionId: buffered ? sessionId : sessionId ?? serverSessionId,
+      eventId: actionEvent.eventId ?? crypto.randomUUID(),
+      eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
+      // P13: under tracking consent only, beside the visitor's own identifier.
+      ...(carriedCustomerId !== undefined ? { customerId: carriedCustomerId } : {}),
+    }, c.get('tenant'));
+    const prepared = await (async (): Promise<{ input: OutcomeRecoveryInput; personalizing: boolean } | { failed: true } | undefined> => {
+      if (!captureConsent.tracking || c.env.LEDGER_RECOVERY_ENABLED !== 'true' || (!buffered && sessionId == null)) return undefined;
+      let outcome: OutcomeRecord | null;
+      try {
+        outcome = outcomeOf();
+        if (outcome) outcome.retention = captureRetention(c.env, c.get('tenant'), outcome.ts);
+      } catch { return undefined; }
+      if (!outcome) return undefined;
+      const personalizing = personalizes(captureConsent);
+      // W21 E1.06 (NR1): a failed annotation leaves the block off (as below).
+      let experiment: Awaited<ReturnType<typeof outcomeEnrollment>> = null;
+      try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizing); }
+      catch { experiment = null; }
+      if (experiment) outcome.experiment = experiment;
+      try { return { input: await prepareOutcomeAdmission(c.env, c.get('tenant'), outcome), personalizing }; }
+      catch { return { failed: true }; }
+    })();
+    const ready = prepared && 'input' in prepared ? prepared : undefined;
+    // P58 (amendment 5): every tracked action's behaviour capture answers at its
+    // durable admission, whatever its type and whether or not it acknowledges a
+    // render (P56's mechanism, src/ledger/recovery.ts `answerAtAdmission`): its
+    // queue send and ledger write continue right after the answer in the
+    // shopper's own serializer, the alarm armed at admission the backstop. The
+    // record, its id and the projection are behavior.ts's as before; an
+    // admission that fails still fails the action. P65: its admission carries
+    // the outcome prepared above, with what the event's drop is decided by
+    // beyond the behaviour record (the door it came through, the surface it named).
+    const surface = validatedEvent.surface ?? (typeof actionEvent.data.surface === 'string' ? actionEvent.data.surface : undefined);
+    const capture = await captureBehaviorCarrying(c.env, shopperPrincipal(c.req.raw), captureConsent,
       { type: actionEvent.type, eventId: actionEvent.eventId!, eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
-        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null);
+        timestamp: actionEvent.timestamp!, source: actionEvent.source, data: actionEvent.data }, sessionId ?? null, { answerAtAdmission: true },
+      ready ? { input: ready.input, ...(buffered ? { buffered: true as const } : {}), ...(surface !== undefined ? { surface } : {}) } : undefined);
+    const behavior = capture.persistence;
+    // P65: the carried outcome is settled once, before the answer: by its own
+    // admission under its id (`emitOutcome`), or withdrawn when the engine answered
+    // that the event records none, or failed (after a failed preparation, whatever
+    // an earlier delivery of the same event left carried is withdrawn, since this
+    // one is counted lost). A withdrawal that cannot be made (the object reset)
+    // leaves it carried, for the alarm.
+    let carriedSettled = !(capture.carrying || (prepared !== undefined && 'failed' in prepared && behavior.status === 'durable'));
+    withdrawCarried = async () => {
+      if (carriedSettled) return;
+      carriedSettled = true;
+      try { await capture.withdraw(); } catch { /* left carried: the alarm settles it */ }
+    };
+    /** The record without its processing stamps and experiment block, in the engine's canonical form. */
+    const recordOf = (record: OutcomeRecord) => recoveryJSON(Object.fromEntries(Object.entries(record).filter(([key]) => !['retention', 'externalRetention', 'experiment'].includes(key))));
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
     // The outcome's session must be the session the decision record carries, or session-scope
     // attribution compares two id spaces and credits nothing (found 2026-09-04). Both now prefer the
@@ -212,25 +319,43 @@ realtimeRoutes.post('/action', async (c) => {
     // has answered, so the server's session is known.
     // Both hosts return the strict stored/hint intersection; cookie mirrors are
     // not independent authority for capture or outcome processing.
-    const emitOutcome = (serverSessionId: unknown, consent: Consent) => {
-      if (!consent.tracking) return;
+    // P64 (amendment 7, R-P125): it returns the outcome it emitted as the answer names
+    // it, records.ts's own `outcome_id` (built from the time the engine admitted the
+    // event at, the time the behaviour record's id carries), with whether that outcome
+    // was durably admitted: with durable recovery on, its own admission
+    // (`outcomeToLearning`'s `onAdmitted`); without it, the producer's hand-off to the
+    // queue, accepted. The answer names `outcome: { recordId }` beside
+    // `behavior` only for an admitted outcome (`told` below). The owner already holds
+    // the answer for this work (P59), so the route's waiting for it there adds no
+    // remote call and no wait. No outcome (refused tracking, no reward): nothing.
+    type EmittedOutcome = { recordId: string; admitted: Promise<boolean> };
+    const emitOutcome =(serverSessionId: unknown, consent: Consent): EmittedOutcome | undefined => {
+      if (!consent.tracking) return undefined;
       if (actionEvent.processing !== 'buffered') {
         const capture = captureDemoEvent(c.env, c.get('tenant'), actionEvent, sessionId);
         try { c.executionCtx.waitUntil(capture); } catch { void capture; }
       }
       const server = typeof serverSessionId === 'string' && serverSessionId ? serverSessionId : undefined;
-      const outcome = outcomeFromAction({ ...actionEvent, sessionId: actionEvent.processing === 'buffered' ? sessionId : sessionId ?? server,
-        eventId: actionEvent.eventId ?? crypto.randomUUID(),
-        eventIdSource: validatedEvent.eventId === undefined ? 'request' : 'provided',
-      }, c.get('tenant'));
+      const outcome = outcomeOf(server);
       if (outcome) {
         outcome.retention = captureRetention(c.env, c.get('tenant'), outcome.ts);
+        // P65 (R-P124(4)): its learning preparation failed before the behaviour
+        // capture's admission, so nothing carries it and it is admitted nowhere:
+        // lost, logged and counted once after the answer, and named nowhere (P64).
+        if (prepared && 'failed' in prepared) {
+          const lost = outcomePreparationFailed(c.env, c.get('tenant'));
+          try { c.executionCtx.waitUntil(lost); } catch { void lost; }
+          return undefined;
+        }
+        // P65: prepared and carried under this id, its own admission below settles the carried copy.
+        if (ready && ready.input.outcome.outcome_id === outcome.outcome_id) carriedSettled = true;
         // W21 E1.02/E1.03 (R118(1)): the outcome carries the experimental
         // assignment of the visitor who produced it, resolved HERE — where her
         // consent at this moment is known and the read is an ordinary serving
         // read — and then stored and exported unchanged. An ineligible shopper's
         // outcome says `ineligible`; a failure to resolve leaves the block off
         // and never delays or drops the record.
+        let admitted = false;
         const p = (async () => {
           // W21 E1.06 (NR1): the annotation is CONTAINED here, at the producer,
           // and not only inside the resolver. The resolver's own guard cannot
@@ -240,16 +365,44 @@ realtimeRoutes.post('/action', async (c) => {
           // action answered 500 and the outcome was never enqueued. A failed
           // annotation leaves the block off; it never guesses one, never delays
           // the record and never costs it.
+          // P65: the outcome prepared before the behaviour capture's admission, when it is this one under the
+          // engine's consent, is admitted from that input (no second learn read); a refusal of that admission
+          // names nothing (R-P125(3)) and leaves the carried copy to the alarm, never counted lost.
+          if (ready && ready.personalizing === personalizes(consent) && recordOf(ready.input.outcome) === recordOf(outcome)) {
+            return admitPreparedOutcome(ready.input, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
+          }
           let experiment: Awaited<ReturnType<typeof outcomeEnrollment>> = null;
           try { experiment = await outcomeEnrollment(c.env, c.get('tenant'), outcome.brand, outcome.visitor_id, personalizes(consent)); }
           catch { experiment = null; }
           if (experiment) outcome.experiment = experiment;
+          // P65: built again from the engine's answer, on the same learning preparation.
+          if (ready) return admitPreparedOutcome({ ...ready.input, brand: outcome.brand, outcome }, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } });
+          // P59 (amendment 5): the outcome recovery answers at its durable admission
+          // (P56's mechanism, src/learn/route.ts `outcomeToLearning`): the owner's
+          // drain of this work holds the click's answer for the outcome's admission
+          // and its armed alarm only; its attribution, queue send, ledger write and
+          // credits continue right after the answer in the shopper's own serializer,
+          // after the behaviour capture's (P58), the alarm the backstop. The record,
+          // its experiment block and retention are the same as before.
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
-            ? outcomeToLearning(c.env, c.get('tenant'), outcome)
-            : Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]);
+            ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } })
+            : Promise.all([enqueueOutcome(c.env, outcome).then(receipt => { admitted = receipt.code === 'accepted'; }),
+              outcomeToLearning(c.env, c.get('tenant'), outcome)]);
         })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }
+        return { recordId: outcome.outcome_id, admitted: p.then(() => admitted, () => false) };
       }
+      return undefined;
+    };
+    /** P64 (R-P125): the answer's `outcome` member, only for an outcome emitted and durably admitted. */
+    const told = async (emitted: EmittedOutcome | undefined) => (emitted && await emitted.admitted ? { outcome: { recordId: emitted.recordId } } : {});
+
+    // P13 (R-P66 item 2): an accepted event's carried identifier is handed to the
+    // shopper's own object under the tracking consent the host answered, kept
+    // there for the browser's link answer; its failure never fails the event.
+    const carry = async (consent: () => Consent) => {
+      if (carriedCustomerId === undefined) return;
+      try { if (consent().tracking) await carryOwnerCustomerId(c.env, shopperPrincipal(c.req.raw), carriedCustomerId); } catch { /* carried again on the next event */ }
     };
 
     // ── Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' forwards to the
@@ -268,11 +421,14 @@ realtimeRoutes.post('/action', async (c) => {
       });
       const out = (await doRes.json()) as Record<string, unknown>;
       c.header('Server-Timing', `object;dur=${Math.round(performance.now() - tEngine)}`);
+      let emitted: EmittedOutcome | undefined;
       if (doRes.ok && out.success === true && !out.dropped) {
         if (!out.consent) throw new Error('Consent state unavailable');
-        emitOutcome(out.sessionId, storedConsent(out.consent));
+        emitted = emitOutcome(out.sessionId, storedConsent(out.consent));
       }
-      return c.json({ ...out, behavior, ...(render ? { render } : {}) }, doRes.status as 200);
+      await withdrawCarried();
+      if (doRes.ok && out.success === true && out.consent) await carry(() => storedConsent(out.consent));
+      return c.json({ ...out, behavior, ...(await told(emitted)), ...(render ? { render } : {}) }, doRes.status as 200);
     }
 
     // Get cookie header for session management
@@ -286,11 +442,21 @@ realtimeRoutes.post('/action', async (c) => {
     const consent = result.consent;
     // Where the time went: the engine's own work on the session host, for whoever is measuring.
     c.header('Server-Timing', `engine;dur=${Math.round(performance.now() - tEngine)}`);
-    if (!result.dropped) emitOutcome(result.sessionId, consent);
+    const emitted = result.dropped ? undefined : emitOutcome(result.sessionId, consent);
+    await withdrawCarried();
+    await carry(() => consent);
     if (actionEvent.processing === 'buffered') return c.json({ success: true, processing: 'buffered',
       interestApplied: result.interestApplied === true, ...(result.dropped ? { dropped: result.dropped } : {}),
       ...(result.signals ? { signals: result.signals } : {}),
-      sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(render ? { render } : {}) });
+      sessionId: result.sessionId, cookiesUpdated: false, consent, behavior, ...(await told(emitted)), ...(render ? { render } : {}) });
+    // W35 A1: the drop is answered as the shopper's own object answers it
+    // (ShopperReflex.ingest): named, with the signals that name the product, no
+    // outcome, no provider forward and no cookie refresh. P40 (R-P48): a second
+    // purchase of the same order is dropped the same way, named as a duplicate.
+    if (result.dropped) return c.json({ success: true,
+      message: result.dropped === 'duplicate_order' ? 'Action ignored: duplicate order' : 'Action ignored: unknown productId', dropped: result.dropped,
+      ...(result.signals ? { signals: result.signals } : {}), sessionId: result.sessionId, cookiesUpdated: false,
+      consent, behavior, ...(render ? { render } : {}) });
 
     // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
     // path — the shopper never waits on the memory; ODP down = zero impact.
@@ -351,6 +517,7 @@ realtimeRoutes.post('/action', async (c) => {
         cookiesUpdated: result.cookieHeaders.length > 0,
         odp: odpReceipt,
         behavior,
+        ...(await told(emitted)),
         ...(render ? { render } : {}),
         consent,
       });
@@ -364,12 +531,15 @@ realtimeRoutes.post('/action', async (c) => {
         cookiesUpdated: result.cookieHeaders.length > 0,
         odp: odpReceipt,
         behavior,
+        ...(await told(emitted)),
         consent,
       });
     }
 
   } catch (error) {
-      if (error instanceof SessionAccessError) throw error;
+    // P65: a failed action records no outcome, as before; an outcome it cannot withdraw (the object reset) is the alarm's.
+    await withdrawCarried();
+      if (error instanceof SessionAccessError || error instanceof AcknowledgementConflictError) throw error;
     console.error('Error processing action event');
     
     if (error instanceof z.ZodError) {
@@ -497,7 +667,7 @@ realtimeRoutes.get('/reflex', async (c) => {
       const cold = await resolveTenantReflexConfig(c.env, shopperPrincipal(c.req.raw).tenant,
         resolveSurface({ surface: c.req.query('surface') }));
       return c.json({ ok: true, now: Date.now(), config: reflexConfigView(cold),
-        affinity: null, journeyStage: null, visit: null, consent: await currentOwnerConsent() ?? storedConsent(undefined) });
+        affinity: null, journeyStage: null, visit: null, arrival: null, consent: await currentOwnerConsent() ?? storedConsent(undefined) });
     }
     const { sessionId, sessionData, reflexConfig } = owned;
     const consent = consentOf(sessionData);
@@ -545,12 +715,15 @@ realtimeRoutes.get('/reflex', async (c) => {
       }
     }
 
+    // W41: the provenance of this session's ODP restoration, when one was
+    // attempted — the same member the object host answers (handleSnapshot).
+    const restoration = odpRestorationOf(sessionData.reflex);
     return c.json({
       ok: true,
       now,
       config: reflexConfigView(cfg),
       affinity: live
-        ? { ...live, odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed }
+        ? { ...live, odpConfirmed: (await projectOdpState(c.env, c.get('tenant'), sessionData)).odpSeed, ...(restoration ? { restoration } : {}) }
         : null,
       // W16 C4 / R29: the SDK-visible journey stage, in the shared vocabulary,
       // derived from THIS VISIT's counters against the tenant's published
@@ -565,6 +738,10 @@ realtimeRoutes.get('/reflex', async (c) => {
       // on both hosts (the DO host answers from ShopperReflex.handleSnapshot).
       // The object's internal `projection=content` shape stays internal.
       visit: personalizes(consent) ? projectVisit(sessionData.metadata, sessionData.metadata.lastSeen, now) : null,
+      // P37: the visit's arrival context beside it — the device and the recency
+      // the visit recorded, each only when there is one — always present and null
+      // exactly where `visit` is, identically on the object host.
+      arrival: personalizes(consent) ? visitArrival(sessionData.metadata, sessionData.metadata.lastSeen, now) : null,
       consent,
     });
   } catch (error) {
@@ -673,6 +850,17 @@ realtimeRoutes.get('/session/:sessionId/analytics', async (c) => {
     const analytics = await segmentEngine.getSessionAnalytics(sessionId);
 
     if (!analytics) {
+      // W05.BASE.03 (host parity): a session that keeps no profile publishes no record on
+      // this host (nothing is stored without consent), yet the grant reading it is one its
+      // owner admitted on the way here. The owner answers it as the object host does, with
+      // its zeros; it answers nothing for a session holding a profile, and any refusal or
+      // failure of that read keeps this host's 404.
+      try {
+        const owned = await shopperObject(c.env.SHOPPER_REFLEX, shopperPrincipal(c.req.raw).subject, c.get('tenant')).fetch('https://shopper-reflex/analytics', { headers: privateShopperHeaders(c.req.raw) });
+        if (owned.ok) return new Response(owned.body, owned);
+      } catch {
+        // The owner's answer is unavailable: this host's own answer stands.
+      }
       return c.json({ error: 'Session not found' }, 404);
     }
 

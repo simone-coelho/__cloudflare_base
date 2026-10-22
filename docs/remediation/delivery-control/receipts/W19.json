@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W19",
+  "workOrderHash": "sha256:4e00062c235276f03019ec210211a934e1f127eb180fee9fccdfd28786d34fde",
+  "artifact": {
+    "revision": "edac82642724ce3b648deec2545e752e948ca0e5",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/landing (the landing merge of the product branch feature/real-time-personalization 2ffd1a70 into rem/integration, freeze sheet item 33) merged into rem/integration, local and not pushed; supersedes the W19 receipt at artifact b57a4feaf12b319493ad7f83d76549d6711086ca (completed 2026-09-25T18:49:21.000Z)"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "W19 receipt superseded at the landing: the merged contract documents twenty piece fields (the product's eligibleWhen and complements added; rulings L-R9 and R-B1 in _evidence/step3/AMENDMENTS.md), so src/units/W19/B3.unit.test.ts (KIT_03_FIELDS, KIT_PIECE) and B1.unit.test.ts (KIT_PIECE, KIT_PIECE_TWO, CSV header and row builder) were corrected under R10 on rem/spec-landing (e8c9f31b, specification review PASS), the kit table docs/kit/03-payload-schemas.md gained the two rows with their CSV cell formats, and src/content/import.ts carries eligibleWhen losslessly on the JSON, pull and CSV paths; built in the landing (rem/landing, phase A 524c80ee and phase C), delivery review PASS at the landing head",
+      "/home/simonecoelho/rem/_evidence/landing/spec/REPORT-fix.md",
+      "/home/simonecoelho/rem/_evidence/landing/spec-review/REPORT-re.md",
+      "/home/simonecoelho/rem/_evidence/landing/build/REPORT-phaseA.md",
+      "/home/simonecoelho/rem/_evidence/landing/build/REPORT-phaseC.md",
+      "git branch rem/landing at edac8264"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W19 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/content/consent.test.ts src/content/import.test.ts src/reflex/contentTelemetry.test.ts src/routes/content.test.ts src/routes/realtime.sdkContract.test.ts -t \"W19[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/landing/review/logs/w19-acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/landing/build/logs/gate-2.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/landing/review/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-09T12:18:42.104Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

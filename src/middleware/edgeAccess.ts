@@ -129,7 +129,11 @@ export function verifySdkKey(key: string, tenant: string | null, env: Pick<Env, 
  */
 export function sdkKey(): MiddlewareHandler<{ Bindings: Env; Variables: TenantVariables }> {
   return createMiddleware<{ Bindings: Env; Variables: TenantVariables }>(async (c, next) => {
-    if (/\/(?:decisions\/snapshot|realtime\/(?:ws|session\/(?:[^/]+\/)?preferences))$/.test(new URL(c.req.url).pathname)) assertShopperSelectors(c.req.raw);
+    const path = new URL(c.req.url).pathname;
+    // The decision request's route validates its own consent hints (its 400).
+    if (/\/(?:decisions\/snapshot|realtime\/(?:ws|session\/(?:[^/]+\/)?preferences))$/.test(path)) {
+      assertShopperSelectors(c.req.raw, /^\/v1\/[^/]+\/decisions\/snapshot$/.test(path) ? { consentHints: 'route' } : undefined);
+    }
     let key: string;
     try { key = sdkRequestKey(c.req.raw); } catch {
       c.header('Cache-Control', 'no-store');

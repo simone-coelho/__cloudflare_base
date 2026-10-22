@@ -1,6 +1,6 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteTenantErasures } from '@/ledger/erasure';
-import { catchUp, runDayReport } from '@/learn/hourly';
+import { catchUp, countedStorage, foldOpenHours, runBrandDayReports, RUN_BUDGET } from '@/learn/hourly';
 import { runMonitor } from '@/ops/monitor';
 import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
@@ -49,6 +49,10 @@ import { signalRoutes } from '@/routes/signals'; // Signal-Led Moment DETECT lay
 import { liveRoutes } from '@/routes/live'; // The Bright Hour storefront API (docs/qvc)
 import { liveOpsRoutes } from '@/routes/liveOps'; // The Bright Hour Offer Desk (Beat 2)
 import { topOffersRoutes } from '@/routes/topOffers'; // Lantern & Lane merchandiser half (docs/qvc)
+import { vantageRoutes } from '@/routes/vantage'; // Vantage carrier demo: beats and receipts (docs/verizon)
+import { vantageColdStartRoutes } from '@/routes/vantageColdStart'; // Vantage cold-start panel (docs/verizon)
+import { ohRoutes, ohColdStartRoutes } from '@/routes/oh'; // OH demo: beats, receipts and the cold-start panel (docs/oh)
+import { demoRootResponse } from '@/demos/kit/root'; // a demo worker's "/" is its demo (docs/demo-kit, K6)
 
 import { routeAgentRequest } from 'agents';
 
@@ -78,9 +82,20 @@ app.use(
   })
 );
 
-// Preflights carry header names, not the tenant selector's value. CORS answers
-// that metadata first; actual requests resolve one tenant before route work.
-app.use('*', tenantMiddleware());
+// Of the requests this app receives, two kinds resolve no tenant; every other one
+// resolves exactly one here, before route work, or is refused. Every OPTIONS request,
+// each CORS preflight among them: the `cors` middleware above answers it 204 without
+// calling `next` (hono/cors), so it never reaches this one; a preflight carries header
+// names, not the tenant selector's value. And the two health probes (H3-1): a load
+// balancer's or an operator's readiness check names no brand, and the routes read none
+// (src/routes/health.ts: the signing configuration, the identity material against the
+// stamp's registry, the recovery prerequisites). Left behind the middleware, they answered
+// a healthy customer stamp `403 Tenant unavailable`, which reads as an outage. The path is
+// matched as Hono routes it (`getPath`, decoded) and only for the reads the customer boundary admits for them.
+const tenantRequired = tenantMiddleware();
+const tenantFreeProbe = (req: Request): boolean =>
+  (req.method === 'GET' || req.method === 'HEAD') && ['/health/ready', '/health/live'].includes(getPath(req));
+app.use('*', (c, next) => tenantFreeProbe(c.req.raw) ? next() : tenantRequired(c, next));
 
 // CW10 — the access gates. All three are pass-through while AUTH_MODE is
 // 'open' (the default), so the shared demo worker is unchanged; the staging
@@ -148,6 +163,12 @@ app.route('/live/ops-api', liveOpsRoutes);
 // short-lived operator token so the page never holds a credential; mounted
 // only where DEPLOYMENT_PROFILE is 'demo' (the route refuses otherwise).
 app.route('/top-offers/api', topOffersRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
+// The Vantage demo's beats and receipts, the same pattern; and its cold-start
+// panel. Both answer 404 unless DEPLOYMENT_PROFILE is 'demo'.
+app.route('/vantage/api', vantageRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
+app.route('/vantage/api/coldstart', vantageColdStartRoutes);
+app.route('/oh/api', ohRoutes(async (request, env, ctx) => app.fetch(request, env, ctx)));
+app.route('/oh/api/coldstart', ohColdStartRoutes);
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {
@@ -242,6 +263,7 @@ export default {
       const agentResponse = await routeAgentRequest(request, env);
       if (agentResponse) return agentResponse;
     }
+    const demoRoot = demoRootResponse(request, env, app.routes); if (demoRoot) return demoRoot;
     return app.fetch(request, env, ctx);
   },
   scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
@@ -276,26 +298,46 @@ export default {
           ));
         }
         // Doc 31 §3: the closed hours the ledger holds, folded into their aggregates, oldest first, two per run;
-        // Then retry missing/stale day publications within the bounded aggregate-backed lookback.
+        // Then retry missing/stale day publications within the bounded aggregate-backed lookback,
+        // then fold the open hour into its working aggregate (lane E6).
         for (const tenant of tenants) {
           ctx.waitUntil((async () => {
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
-            const r = await catchUp(env.STORAGE as unknown as Parameters<typeof catchUp>[0], tenant, learn, Date.now(), {}, env);
-            if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);
-            if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);
-            if (r.reports.published.length || r.reports.failed.length || r.reports.deferred.length) console.log('hourly day reports; published/failed/deferred', r.reports.published.length, r.reports.failed.length, r.reports.deferred.length);
+            // Lane E6: the run's storage calls are counted against one budget, the catch-up's
+            // RUN_BUDGET: what the catch-up spends, the open hour's folds may not. Each call is
+            // passed through whole, so the catch-up's range reads stay range reads.
+            const counted = countedStorage(env.STORAGE as unknown as Parameters<typeof catchUp>[0]);
+            try {
+              const r = await catchUp(counted.storage, tenant, learn, Date.now(), {}, env);
+              if (r.built.length) console.log('hourly fold completed; hours/objects/decisions/outcomes/truncated/pending', r.built.length, r.built.reduce((n, b) => n + b.objects, 0), r.built.reduce((n, b) => n + b.decisions, 0), r.built.reduce((n, b) => n + b.outcomes, 0), r.built.filter((b) => b.truncated).length, r.pending);
+              if (r.failed.length) console.error('hourly fold hours failed and skipped', r.failed.length);
+              if (r.reports.published.length || r.reports.failed.length || r.reports.deferred.length) console.log('hourly day reports; published/failed/deferred', r.reports.published.length, r.reports.failed.length, r.reports.deferred.length);
+            } catch { console.error('hourly fold failed'); }
+            // Lane E6: then the hour that is still open, into its working aggregate, so a day report
+            // reads one aggregate per hour and only the minutes of raw the queue has written since.
+            // It runs whether or not the catch-up got through: it applies the erasures to the open
+            // hour's ledger copy first, on every run, and folds only what the budget left covers.
+            const open = await foldOpenHours(env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], tenant, learn, Date.now(),
+              { start: true, publish: true, budget: Math.max(0, RUN_BUDGET - counted.calls()) }, env)
+              .catch(() => { console.error('open hour fold failed'); return null; });
+            if (open && (open.folded.length || open.failed.length || open.deferred.length || open.removed || open.pruned)) console.log('open hour fold; hours/objects/copied/unchanged/deferred/failed/published/removed/pruned/calls', open.folded.length, open.folded.reduce((n, h) => n + h.read, 0), open.folded.reduce((n, h) => n + h.copied, 0), open.unchanged.length, open.deferred.length, open.failed.length, open.published.length, open.removed, open.pruned, counted.calls() + open.calls);
           })().catch((e) => console.error('hourly fold failed')));
         }
         break;
       }
       case '0 3 * * *': {
-        // Doc 31: yesterday's day report, built once by the platform and read by the console with GET.
+        // Doc 31: yesterday's day reports, built once by the platform and read by the console with GET.
+        // W37 T2: one per brand the tenant's own records carry (a tenant may serve more than one
+        // brand; there is no brand registry), each inside the tenant's one job.
         const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
         for (const tenant of tenants) {
           ctx.waitUntil((async () => {
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
-            const r = await runDayReport(env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand: tenant, date: yesterday }, learn, null, Date.now(), {}, env);
-            console.log('day report; decisions/outcomes/unfolded/truncated', Number.isFinite(r.counts.decisions) ? r.counts.decisions : -1, Number.isFinite(r.counts.outcomes) ? r.counts.outcomes : -1, r.hours?.missing.length ?? 0, r.counts.truncated ? 1 : 0);
+            const days = await runBrandDayReports(env.STORAGE as unknown as Parameters<typeof runBrandDayReports>[0], tenant, yesterday, learn, Date.now(), env);
+            for (const { report: r } of days) {
+              if (!r) { console.error('day report failed'); continue; }
+              console.log('day report; decisions/outcomes/unfolded/truncated', Number.isFinite(r.counts.decisions) ? r.counts.decisions : -1, Number.isFinite(r.counts.outcomes) ? r.counts.outcomes : -1, r.hours?.missing.length ?? 0, r.counts.truncated ? 1 : 0);
+            }
           })().catch((e) => console.error('day report failed')));
         }
         // CW28 (doc 22 §15): the erasure rewrite. Newest day first over the retention window, capped per run, resumes tomorrow.

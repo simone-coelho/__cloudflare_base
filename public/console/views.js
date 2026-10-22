@@ -10,6 +10,7 @@
 //   Dials      the learn document for this slot, and for the brand
 //   Proposals  historical records, read-only and unverified
 //   Erasures   the tombstones the ledger honours, and the rewrite
+//   Vocabulary P38: the attribute vocabulary, its approval and what it refused
 //
 // The two rules that shape every table here: cells are a DRILL-DOWN and never
 // rows (doc 28 §3.4), and nothing renders as "null", "undefined" or "NaN".
@@ -24,6 +25,32 @@
   const DEFAULT_WINDOWS = { click: 30 * MIN, dwell: 30 * MIN, video_complete: 30 * MIN, wishlist: 6 * HOUR, add_to_bag: 6 * HOUR, purchase: 7 * DAY, custom: 30 * MIN };
   const copy = (v) => JSON.parse(JSON.stringify(v));
   const words = (s) => String(s || '').replace(/_/g, ' ');
+  // W28.R5: a retained exploration setting the engine does not run, named in the
+  // words the Dials editor below already uses for it, so every surface says the same.
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
+  /** The retained mode a slots row names (`configuredMode` with `unsupported`; `configuredExploration` from an older server), or null. */
+  const retainedModeOf = (s) => (s.unsupported && s.configuredMode) || s.configuredExploration || null;
+  // P09 (decision D1; freeze items 23 and 39): the performance percentage P, from 0
+  // to 100, is the tuning screen's form of a dial the learn document already
+  // stores, never a second stored value. On a slot whose learn dials opt into the
+  // layout blend (P28's `blend`) it is the blend weight p × 100; on every other
+  // slot, content slots and layout slots that do not opt in alike, it is γ × 100.
+  // A dial the document does not name reads 0, as the decision reads it.
+  /** The slot's blend opt-in as the decision reads one: an object whose `p` is absent or a number from 0 to 1; otherwise none. */
+  function blendOptIn(d) {
+    const b = d ? d.blend : undefined;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return null;
+    return b.p === undefined || (typeof b.p === 'number' && Number.isFinite(b.p) && b.p >= 0 && b.p <= 1) ? b : null;
+  }
+  /** The stored dial, 0 to 1, the slot's percentage is the form of: `blend.p` on a slot in the blend, `gamma` on every other. */
+  function percentDial(d) {
+    const v = blendOptIn(d) ? blendOptIn(d).p : d ? d.gamma : undefined;
+    return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+  }
+  /** A dial from 0 to 1 as its percentage, read as decimals: γ 0.35 shows as 35 and 0.333 as 33.3, never 33.300000000000004. */
+  const asPercent = (v) => String(Number((v * 100).toPrecision(15)));
+  /** A percentage from 0 to 100 as the dial it stands for, P / 100 read as decimals: 33.3 saves 0.333, never 0.33299999999999996. */
+  const fromPercent = (P) => Number((P / 100).toPrecision(15));
   function humanMs(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     if (ms % DAY === 0) return plural(ms / DAY, 'day');
@@ -103,6 +130,8 @@
     const item = S.params.item || '';
     const res = await C.v1('/lift/rows', {
       slot: S.slot,
+      // W26 R2: the placement's page, where the catalogue carries this slot name on more than one page.
+      page: S.params.page || undefined,
       level: item ? 'cells' : 'pooled',
       item: item || undefined,
       q: lift.q || undefined,
@@ -124,6 +153,9 @@
         : res.status === 404
           ? 'This platform does not have the paged grid route yet (GET /v1/{brand}/lift/rows). Nothing is broken; the screen has nothing to page.'
           : res.data.error || 'Could not read the grid.';
+      // W26 R2 (review D4): a slot name on more than one page is one placement
+      // per page; the route names the pages, and the operator picks one.
+      st.pages = res.status === 400 && Array.isArray(res.data.pages) ? res.data.pages : null;
       st.data = null; C.render(); return;
     }
     st.error = '';
@@ -151,7 +183,7 @@
 
   async function resetItem(item, name) {
     if (!window.confirm(`Discard the evidence for ${name} in ${S.slot} and start again from the prior?`)) return;
-    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand }, lift.authored);
+    const res = await C.write(`/v1/${encodeURIComponent(S.scope)}/learn/items/reset`, 'POST', { slot: S.slot, item, brand: S.brand, ...(S.params.page ? { page: S.params.page } : {}) }, lift.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     C.flash(res.data.had
       ? `Evidence for ${name} discarded; snapshot publication status is reported separately, recorded as revision ${fmt(res.data.revision)}.`
@@ -184,7 +216,7 @@
 
       const toolbar = h('div', { class: 'toolbar' },
         item
-          ? h('button', { class: 'small', onclick: () => C.go('lift', { item: '' }) }, '← Every piece')
+          ? h('button', { class: 'small', onclick: () => C.go('lift', { item: '', page: S.params.page }) }, '← Every piece')
           : h('input', {
               class: 'small', id: 'lift-q', 'data-focus-key': 'lift-q', placeholder: 'Find a piece by id, your id or title',
               value: lift.q, style: 'width:280px',
@@ -202,9 +234,17 @@
         h('button', { class: 'small', disabled: !rows.length, onclick: () => downloadPage(rows, item) }, 'Download this page'),
       );
 
-      if (st.error) { host.append(toolbar, h('div', { class: 'msg err' }, st.error)); return; }
+      if (st.error) {
+        host.append(toolbar, h('div', { class: 'msg err' }, st.error,
+          st.pages ? h('div', { style: 'margin-top:6px' }, ...st.pages.map((page) => h('button', { class: 'small', onclick: () => C.go('lift', { page, item: '' }) }, `The ${page} page's ${S.slot}`))) : null));
+        return;
+      }
+      // P45 (R-P78): the stale marker of the answer this screen holds, or null (nothing drawn).
+      const stale = staleMark(meta);
       if (!meta || meta.published === false) {
-        host.append(toolbar, h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
+        // P51 (R-P78): P49's republish cause, right after P45's mark, beside the message as P45's mark is.
+        const republished = republishedMark(meta, false);
+        host.append(toolbar, ...(stale ? [stale] : []), ...(republished ? [republished] : []), h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes about thirty seconds after the first decision it serves.'));
         return;
       }
 
@@ -227,6 +267,9 @@
         { key: 'p0', label: 'Slot credit / exposure', sym: 'p₀', num: true, sortable: true, title: 'What this slot achieves in the same context, whatever it shows' },
         { key: 'lift', label: 'Lift', sym: 'p̂ / p₀', num: true, sortable: true, title: 'The rate over the slot’s rate, clamped. Above 1 is better than the slot’s average' },
         { key: 'evidence', label: 'Evidence', sym: 'n / (n + n₀)', num: true, sortable: true, title: 'How much of the rate is live observation rather than the prior' },
+        // W26 R5 (F21 §8 "report the lift table as a diagnostic that is not corrected for position or placement"):
+        // what each row's lift corrects for, from the row's own `correction`. Nothing, today.
+        { key: 'correction', label: 'Correction', title: 'What this lift is corrected for. uncorrected-v1: neither the position a piece was shown at nor the placement it was shown in, so it is a diagnostic, not incremental lift' },
         { key: 'act', label: 'Held by a person' },
       ];
 
@@ -239,7 +282,7 @@
           }))]),
           h('td', {},
             item ? h('div', { class: 'itemname' }, name)
-                 : h('button', { class: 'link', title: 'Show the contexts this piece was shown in', onclick: () => C.go('lift', { item: r.item }) }, name),
+                 : h('button', { class: 'link', title: 'Show the contexts this piece was shown in', onclick: () => C.go('lift', { item: r.item, page: S.params.page }) }, name),
             h('div', { class: 'itemid' }, r.item)),
           ...(item ? [h('td', {}, h('div', {}, r.level_words || 'everyone'), r.key === '*' ? null : h('div', { class: 'cellkey' }, r.key))] : []),
           h('td', { class: 'num' }, dec(r.n)),
@@ -248,6 +291,7 @@
           h('td', { class: 'num' }, dec(r.p0)),
           h('td', { class: 'num' }, h('strong', {}, dec(r.lift))),
           h('td', { class: 'num' }, pct(r.evidence)),
+          h('td', { title: 'not corrected for position or placement' }, correctionOf(r)),
           h('td', {},
             r.control ? h('span', { class: `chip ${r.control}` }, r.control === 'freeze' ? 'frozen' : 'rejected') : null,
             r.prior ? h('span', { class: 'chip prior', title: `an imported prior: rate ${dec(r.prior.p)} worth ${fmt(r.prior.n)} observations` }, 'prior') : null,
@@ -265,11 +309,85 @@
         toolbar,
         h('div', { class: 'body', style: 'padding-top:8px;padding-bottom:0' }, h('div', { class: 'sub' },
           item ? `Every context ${item} was shown in. A context is who the shopper was and where they came from; the coarser ones answer until the finer ones have enough evidence.` : line)),
+        stale,
+        republishedMark(meta, true),
         rows.length ? C.table(cols, body, { sort: lift.sort, onSort: sortBy }) : empty,
         C.pager(st, item ? 'context' : 'piece', loadLift),
       ));
     },
   });
+
+  /**
+   * P45 (R-P78; P42's marker): when the lift/rows answer the screen holds carries `stale`, ONE element
+   * beside the numbers it qualifies, worded from the marker's members alone: the faulty placement's
+   * page and slot, the pooled modules this slot reads from it (as P42's refusal names them), and the
+   * last successful publication, its version and time, or that the slot has none yet. It is drawn
+   * from the answer `loadLift` already keeps, so it asks for nothing, and every later read replaces
+   * that answer: once a publication succeeds the next read carries no marker and nothing is drawn,
+   * which leaves the screen exactly as it was before P45.
+   */
+  function staleMark(meta) {
+    const s = meta && meta.stale;
+    // An answer for another slot (the screen redraws while the next slot's read is in flight) marks nothing here.
+    if (!s || typeof s !== 'object' || (typeof meta.slot === 'string' && meta.slot !== S.slot)) return null;
+    const p = s.placement || {};
+    const modules = Array.isArray(s.modules) ? s.modules.filter((m) => typeof m === 'string' && m) : [];
+    const last = s.lastPublished && Number.isFinite(s.lastPublished.version) ? s.lastPublished : null;
+    const at = last ? when(last.publishedAt) : '';
+    const cause = `a publication of this slot was refused because the statistics of page ${p.page || 'unnamed'}, slot ${p.slot || 'unnamed'} could not be read`
+      + (modules.length ? ` for the pooled module${modules.length > 1 ? 's' : ''} ${modules.join(', ')}` : '');
+    const held = last
+      ? `these numbers stay those of version ${last.version}${at ? `, published ${at}` : ''}, the slot's last successful publication, until a publication succeeds`
+      : 'the slot has no successful publication yet and stays unpublished until a publication succeeds';
+    return h('div', { class: 'msg note', 'data-lift-stale': true, style: 'margin:8px 14px' }, `${last ? 'Stale' : 'Unpublished'}: ${cause}; ${held}.`);
+  }
+
+  /**
+   * P51 (R-P78; P49's member): when the lift/rows answer the screen holds carries `republished`, ONE element
+   * right after P45's mark (in its place when only this one applies), worded from the member's members alone:
+   * the slot, with its page on a page-scoped placement; each entry of `changed`, in the order served, with its
+   * old and new values; and what ends it under P50's rule (R-P84): a new generation adopts a changed reward or
+   * objective only when its body names the new value and takes a changed `stats.*` value from the document,
+   * no generation moves a changed measurementBasis, which only a learn republish with the old basis restores,
+   * and a republish with every old value ends it outright. `published` says which screen holds it: the grid
+   * (the numbers stay those of the last successful publication) or the "Nothing published" message (the slot
+   * stays unpublished). Like P45's mark it is drawn from the answer `loadLift` already keeps, so it asks for
+   * nothing, and an answer without the member draws nothing, which leaves the screen exactly as before P51.
+   */
+  function republishedMark(meta, published) {
+    const r = meta && meta.republished;
+    // An answer for another slot (the screen redraws while the next slot's read is in flight) marks nothing here.
+    if (!r || typeof r !== 'object' || (typeof meta.slot === 'string' && meta.slot !== S.slot)) return null;
+    const changed = Array.isArray(r.changed) ? r.changed.filter((c) => c && typeof c.member === 'string' && c.member) : [];
+    const said = (v) => (v === null || v === undefined || v === '' ? 'none' : String(v));
+    const and = (parts) => (parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0] || '');
+    const slot = typeof r.slot === 'string' && r.slot ? r.slot : 'unnamed';
+    const page = typeof r.page === 'string' && r.page ? r.page : '';
+    const basis = changed.filter((c) => c.member === 'measurementBasis');
+    const others = changed.filter((c) => c.member !== 'measurementBasis');
+    const restored = (list) => and(list.map((c) => `${c.member} ${said(c.old)}`)) || 'the old values';
+    const adopted = others.filter((c) => c.member === 'reward' || c.member === 'objective').map((c) => `${c.member} ${said(c.new)}`);
+    // The route takes a transition whose body names a reward, an objective or a rebuild day; a `stats.*` change
+    // alone is taken from the document by one that names the slot's own reward.
+    const own = published && typeof meta.reward === 'string' && meta.reward ? `reward ${meta.reward}` : 'the slot\'s own reward';
+    const body = and([`slot ${slot}`, ...(page ? [`page ${page}`] : []), ...(adopted.length ? adopted : [own])]);
+    const generation = `an operator starts the new generation with POST /v1/${S.scope}/learn/generation, its body naming ${body}`;
+    const cause = `publications of ${page ? `page ${page}, slot ${slot}` : `slot ${slot}`} are refused because the learn document was republished with `
+      + (changed.length ? and(changed.map((c) => `${c.member} changed from ${said(c.old)} to ${said(c.new)}`)) : 'a change to what the slot\'s statistics accumulate under');
+    const held = published
+      ? 'these numbers stay those of the slot\'s last successful publication until a publication succeeds'
+      : 'the slot has no successful publication yet and stays unpublished until a publication succeeds';
+    const ends = basis.length
+      ? `; no generation transition moves the measurement basis, so a publication succeeds only once the learn document is republished with ${restored(changed)}`
+        + (others.length ? `, or with ${restored(basis)} and then ${generation}` : '')
+      : `, which happens once ${generation}, or once the learn document is republished with ${restored(changed)}`;
+    return h('div', { class: 'msg note', 'data-lift-republished': true, style: 'margin:8px 14px' }, `Republished: ${cause}; ${held}${ends}.`);
+  }
+
+  /** W26 R5: the row's own correction; a row from a server that sends none is the uncorrected diagnostic it always was. */
+  function correctionOf(r) {
+    return typeof r.correction === 'string' && r.correction ? r.correction : 'uncorrected-v1';
+  }
 
   function downloadPage(rows, item) {
     // W26 X1.01: `correction` is the LAST column, after every existing one, so a
@@ -282,17 +400,89 @@
   }
 
   // ══════════════════════════════════════════════════════════ Slots ══════════
+  /** The day a horizon starts: the counts run over days, so the time of day adds nothing. */
+  const day = (ms) => (Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '');
+  /**
+   * W20 R2: the slot's `governance` block from the operator slots page — what the
+   * decision path refused for it since the horizon the block states. The pins
+   * refused, how often and why (the runtime reason word), and, for a pinned slot,
+   * the times it fell short of its take with the positions left empty. A block
+   * whose counter store could not be read says so and shows no count; a slot
+   * that refused nothing says that, rather than an empty cell.
+   */
+  function governanceCell(g) {
+    if (g === undefined || g === null) return 'not asked';
+    if (g.status === 'unavailable') return h('span', { class: 'sub' }, 'counts unavailable: the counter store could not be read');
+    const refused = Number.isFinite(g.refusedPinCount) ? g.refusedPinCount : 0;
+    const short = Number.isFinite(g.shortTakeCount) ? g.shortTakeCount : 0;
+    const pins = Array.isArray(g.refusedPins) ? g.refusedPins : [];
+    const named = pins.reduce((n, p) => n + (Number.isFinite(p.count) ? p.count : 0), 0);
+    return h('div', {},
+      h('div', {}, refused ? `${plural(refused, 'pin refusal')}` : 'no pin refused'),
+      ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, ${words(p.reason)}`)),
+      refused > named ? h('div', { class: 'itemid' }, `${plural(refused - named, 'more refusal')} not named`) : null,
+      ...unreturnedLines(g),
+      h('div', {}, short ? `${plural(short, 'short take')}, ${plural(g.shortTakePositions, 'position')} left empty` : 'no short take'),
+      day(g.since) ? h('div', { class: 'itemid' }, `since ${day(g.since)}`) : null);
+  }
+
+  /**
+   * P47 (R-P78): the pins of this slot left reserved and unserved because the
+   * layout did not return their module (the block's `unreturnedPinCount` and
+   * `unreturnedPins`) refuse nothing, so they are never called refusals: one
+   * line in their own words, then one per named pin with how often, the module
+   * and the layout slot. A block without any draws nothing more, exactly as before.
+   */
+  function unreturnedLines(g) {
+    const n = Number.isFinite(g.unreturnedPinCount) ? g.unreturnedPinCount : 0;
+    if (n <= 0) return [];
+    const pins = Array.isArray(g.unreturnedPins) ? g.unreturnedPins : [];
+    // P53 (R-P78): past the names the block carries (bounded as refusedPins is), one line says how many
+    // more it does not name, computed as the refusals' line is; a block whose names cover the count draws none.
+    const named = pins.reduce((k, p) => k + (Number.isFinite(p.count) ? p.count : 0), 0);
+    return [
+      h('div', {}, `${plural(n, 'pin')} reserved, unserved: the module was not returned`),
+      ...pins.map((p) => h('div', { class: 'itemid' }, `${p.pinnedPieceId}: ${plural(p.count, 'time')}, reserved, unserved: `
+        + (p.within && p.within.module ? `${p.within.module} was not returned${p.within.slot ? ` by ${p.within.slot}` : ''}` : 'the module was not returned'))),
+      ...(n > named ? [h('div', { class: 'itemid' }, `${plural(n - named, 'more pin')} reserved, unserved, not named`)] : []),
+    ];
+  }
+
+  /**
+   * P09: the learn document the Slots screen reads each slot's performance
+   * percentage from. The slots index answers γ but not the blend, so the screen
+   * reads the document in force itself; until it has, or where it cannot, the
+   * column says so with a dash rather than a percentage that might be the wrong dial's.
+   */
+  const slotsLearn = { scope: '', document: null };
+  function percentCell(slot) {
+    const doc = slotsLearn.scope === S.scope ? slotsLearn.document : null;
+    if (!doc) return h('td', { class: 'num', title: 'The learn document has not been read, so no percentage is shown.' }, '—');
+    const all = doc.slots && typeof doc.slots === 'object' ? doc.slots : {};
+    const d = Object.prototype.hasOwnProperty.call(all, slot) ? all[slot] : {};
+    // The leading space separates this cell's text from the trust cell's in the row's text; it is not drawn.
+    return h('td', { class: 'num' }, ' ', `${asPercent(percentDial(d))}%`, h('div', { class: 'itemid' }, blendOptIn(d) ? 'from the blend p' : 'from γ'));
+  }
+
   C.view({
     id: 'slots', group: 'This brand', title: 'Slots', heading: 'Every slot, and what is set on it',
     hint: 'A slot is one place on one page. This is what each is configured to do and what it has learned so far. The box in the rail narrows this list on the server.',
     badge: () => C.slotList().length || null,
+    async enter() {
+      const scope = S.scope;
+      const res = await C.content('/learn');
+      if (scope !== S.scope) return;
+      slotsLearn.scope = scope;
+      slotsLearn.document = res.ok && res.data && res.data.document && typeof res.data.document === 'object' ? res.data.document : null;
+    },
     render(host) {
       if (S.slots.error) { host.append(h('div', { class: 'msg err' }, S.slots.error)); return; }
       if (!S.slots.pages.length) { host.append(h('div', { class: 'empty' }, 'No slots configured for this brand. A slot document names the places on each page the engine decides for.')); return; }
       for (const page of S.slots.pages) {
         const body = page.slots.map((s) => h('tr', {},
           h('td', {},
-            h('button', { class: 'link', onclick: () => C.go('lift', { slot: s.slot }) }, s.slot),
+            // W26 R2: a slot name the catalogue carries on more than one page is one placement per page.
+            h('button', { class: 'link', onclick: () => C.go('lift', { slot: s.slot, page: s.pageScoped ? s.page : undefined }) }, s.slot),
             s.pinnedPieceIds?.length ? h('div', { class: 'itemid' }, `Pinned first: ${JSON.stringify(s.pinnedPieceIds)}; ${s.rankedCapacity} ranked positions`) : s.pinned ? h('div', { class: 'itemid' }, `pinned to ${s.pinned}`) : null),
           h('td', { class: 'num' }, fmt(s.take)),
           h('td', { class: 'num' }, fmt(s.pieces)),
@@ -300,11 +490,14 @@
           h('td', {}, s.rules && s.rules.length ? s.rules.join(', ') : 'none'),
           h('td', {}, words(s.reward), s.objective && s.objective !== 'unit' ? h('div', { class: 'itemid' }, `weighed by ${s.objective}`) : null),
           h('td', { class: 'num' }, dec(s.gamma)),
-          h('td', {}, words(s.exploration)),
+          percentCell(s.slot),
+          h('td', {}, words(s.exploration),
+            retainedModeOf(s) ? h('div', { class: 'itemid' }, `${storedModeWords(retainedModeOf(s))}; explores nothing`) : null),
           h('td', {}, `unavailable · stored ${words(s.autonomy) || 'configured'} (dormant)`),
           h('td', { class: 'num' }, s.controls ? fmt(s.controls) : '—'),
           h('td', {}, s.evidence === undefined ? 'not asked' : s.evidence === null ? 'nothing yet'
             : `${plural(s.evidence.items, 'piece')}, ${plural(Math.round(s.evidence.events), 'event')}`),
+          h('td', {}, governanceCell(s.governance)),
         ));
         host.append(card(`${page.page} · ${plural(page.slots.length, 'slot')}`, null,
           C.table([
@@ -315,17 +508,21 @@
             { key: 'rules', label: 'Rules' },
             { key: 'reward', label: 'Learns against' },
             { key: 'gamma', label: 'Trust', sym: 'γ', num: true, title: 'How much of the learned lift is applied: 0 shows it and changes nothing' },
+            { key: 'performance', label: 'Performance', sym: '%', num: true, title: 'The performance percentage the Dials screen edits, 0 to 100: γ × 100 on a slot outside the layout blend, the blend weight p × 100 on a layout slot that opts into it. Nothing else is stored' },
             { key: 'exploration', label: 'Exploring' },
             { key: 'autonomy', label: 'Autonomy (unavailable)' },
             { key: 'controls', label: 'Held', num: true },
             { key: 'evidence', label: 'Learned so far' },
+            { key: 'governance', label: 'Refused or short', title: 'Pins the decision path refused for this slot, and the times a pinned slot served fewer pieces than it shows, since the date given. Counted once for the whole tenant, across every brand of it; a floor, never an overcount' },
           ], body)));
       }
     },
   });
 
   // ══════════════════════════════════════════════════════════ Dials ══════════
-  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null };
+  const dl = { doc: null, draft: null, revision: 0, source: 'loading', errors: [], checking: false, timer: null, vocabularyText: null, vocabularyError: '', percent: null, advisory: null };
+  /** P09: a percentage the screen refused, held as typed for the slot it was typed on, or null. */
+  const heldPercent = () => (dl.percent && dl.percent.slot === S.slot ? dl.percent : null);
   const dialsFor = () => { dl.draft.slots = dl.draft.slots || {}; return (dl.draft.slots[S.slot] = dl.draft.slots[S.slot] || {}); };
   function diffPaths(a, b, path = '') {
     const out = [];
@@ -340,10 +537,15 @@
   function scheduleCheck() {
     clearTimeout(dl.timer);
     dl.checking = true;
+    // P46: an advisory stands only while the draft it advised is the draft on screen.
+    if (dl.advisory && dl.advisory.draft !== JSON.stringify(dl.draft)) dl.advisory = null;
     dl.timer = setTimeout(async () => {
       if (!changes().length) { dl.errors = []; dl.checking = false; C.render(); return; }
+      const checked = JSON.stringify(dl.draft);
       const r = await C.call(`/content/learn/validate${C.query({ scope: S.scope })}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document: dl.draft }) });
       dl.errors = r.data.valid ? [] : r.data.errors || ['The dials as drafted were refused.'];
+      // P46: the check's advisory, from this answer alone, unless the draft changed while it was asked.
+      if (JSON.stringify(dl.draft) === checked) dl.advisory = learnAdvisoryOf(r, 'check', checked);
       dl.checking = false;
       C.render();
     }, 350);
@@ -363,15 +565,67 @@
     dl.revision = data.revision || 0;
     dl.source = data.source || 'compiled-default';
     dl.errors = [];
+    dl.vocabularyText = null; dl.vocabularyError = '';
+    dl.percent = null;
+    // P52 (R-P78): the read's own advisory, when the learn document in force carries one, kept for the
+    // draft read on entering; P46's rules then drop or replace it as they do the check's and the save's.
+    dl.advisory = data.document ? learnAdvisoryOf(res, 'read', JSON.stringify(dl.draft)) : null;
   }
   async function saveDials(note) {
     const res = await C.write(`/content/learn${C.query({ scope: S.scope })}`, 'PUT', { document: dl.draft, note }, dl.authored);
     if (!res.ok || res.data.ok === false) { C.render(); return; }
     dl.authored = C.authored(res.data);
     dl.doc = res.data.document; dl.draft = copy(dl.doc); dl.revision = res.data.revision; dl.source = 'stored';
+    dl.vocabularyText = null; dl.vocabularyError = '';
+    dl.percent = null;
+    dl.advisory = learnAdvisoryOf(res, 'save', JSON.stringify(dl.draft));
     document.getElementById('note').value = '';
     C.flash(`Saved as learn revision ${fmt(res.data.revision)}. Published; serving refreshes within the documented 30-second read bound.`);
     await C.loadSlots();
+  }
+
+  /**
+   * P46 (R-P78; P41's advisory): the learn publication's `diagnostics`, kept from the answer of the
+   * screen's check (`check`, the validate door) or of its save (`save`, the PUT), and (P52) of the read
+   * the screen makes on entering (`read`, `GET /content/learn`), when, and only when, that answer
+   * carries the member, with the draft it advised. Nothing here asks the platform for anything, and an
+   * answer without the member keeps nothing, so the screen is drawn as before.
+   */
+  function learnAdvisoryOf(res, label, draft) {
+    const d = res && res.ok && res.data ? res.data.diagnostics : undefined;
+    return d && typeof d === 'object' && !Array.isArray(d) ? { label, diagnostics: d, draft } : null;
+  }
+  const LEARN_CONSEQUENCES = { undeclared_pieces_earn_nothing: 'undeclared pieces on this slot earn nothing' };
+  /**
+   * The kept advisory as ONE note (`data-learn-advisory` = read | check | save), drawn where the screen lists a
+   * refused draft's errors: one line per warning the answer lists, naming the slot, the slot's reward
+   * its conversion table omits and the consequence. It is kept only while the draft it advised is on
+   * screen: every edit runs `scheduleCheck`, which drops it, and entering the screen or discarding the
+   * draft clears it (entering then draws the read's anew when the read carries one).
+   */
+  function learnAdvisory() {
+    const a = dl.advisory;
+    if (!a) return null;
+    const d = a.diagnostics;
+    const listed = (Array.isArray(d.warnings) ? d.warnings : []).filter((w) => w && typeof w === 'object');
+    const omitted = Number.isSafeInteger(d.omittedWarningCount) && d.omittedWarningCount > 0 ? d.omittedWarningCount : 0;
+    const line = (w) => {
+      const slot = typeof w.slot === 'string' && w.slot ? w.slot : 'unnamed';
+      const reward = typeof w.reward === 'string' && w.reward ? words(w.reward) : 'not named';
+      const what = w.code === 'conversions_omit_slot_reward' || w.code === undefined
+        ? `its conversion table does not name the slot's reward, ${reward}` : `${words(w.code)} (the slot's reward, ${reward})`;
+      const consequence = LEARN_CONSEQUENCES[w.consequence] || (typeof w.consequence === 'string' ? words(w.consequence) : '');
+      return h('li', {}, `Slot ${slot}: ${what}${consequence ? `; ${consequence}` : ''}.`);
+    };
+    return h('div', { class: 'msg note', 'data-learn-advisory': a.label },
+      h('strong', {}, a.label === 'save' ? 'Saved with a conversion warning: '
+        : a.label === 'read' ? 'The stored learn document has a conversion warning: ' : 'This draft has a conversion warning: '),
+      a.label === 'save' ? 'the document was published as written, and on the slots below a piece that declares no success event of its own is credited nothing.'
+        : a.label === 'read' ? 'it is in force as written, and on the slots below a piece that declares no success event of its own is credited nothing.'
+          : 'it is valid and would publish as written, and on the slots below a piece that declares no success event of its own would be credited nothing.',
+      listed.length ? h('ul', {}, ...listed.map(line)) : null,
+      omitted ? h('div', { class: 'help' }, `${plural(omitted, 'more warning')} not shown.`) : null,
+      h('div', { class: 'help' }, 'Advice only: nothing was refused. This screen does not edit conversion tables; to credit those pieces, name the slot\u2019s reward in its conversions table and publish the learn document.'));
   }
 
   const put = (host, ...items) => host.append(...items.flat().filter((x) => x !== null && x !== undefined && x !== false));
@@ -398,14 +652,47 @@
     return el;
   }
 
+  /**
+   * P09 (decision D1; freeze items 23 and 39): the slot's performance percentage,
+   * 0 to 100, beside γ. It is read from the stored dial on every paint, so on a
+   * slot outside the blend it and the γ control show each other's change at once.
+   * A percentage typed here writes the one dial it stands for and nothing else: γ,
+   * or on a slot in the layout blend `blend.p`, the blend's other members kept. A
+   * percentage outside 0 to 100, or text that is not a number, writes nothing: it
+   * stays on screen as typed and holds the save until it is corrected.
+   */
+  function percentControl(d, base) {
+    const held = heldPercent();
+    const el = h('input', { class: `num${changed(`${base}.${blendOptIn(d) ? 'blend.p' : 'gamma'}`)}`, 'data-focus-key': `${base}.performancePercent`,
+      type: 'number', step: 'any', min: 0, max: 100, disabled: !C.canEdit() || null });
+    el.value = held ? held.text : asPercent(percentDial(d));
+    el.addEventListener('input', () => {
+      const text = el.value.trim(), P = text === '' ? NaN : Number(text);
+      if (!Number.isFinite(P) || P < 0 || P > 100) { dl.percent = { slot: S.slot, text: el.value }; C.render(); return; }
+      dl.percent = null;
+      const blend = blendOptIn(d);
+      if (blend) d.blend = { ...blend, p: fromPercent(P) }; else d.gamma = fromPercent(P);
+      scheduleCheck();
+    });
+    return el;
+  }
+
   function slotDials(host) {
     const d = dialsFor();
     const base = `slots.${S.slot}`;
     const gamma = Number.isFinite(d.gamma) ? d.gamma : 0;
+    const inBlend = Boolean(blendOptIn(d));
     put(host,
       dial('Trust in what was learned', 'How much the learned lift moves a piece’s score: the final score is the base score times the lift raised to this. At 0 the lift is computed and shown on every receipt and changes nothing that is served; at 1 it applies in full.',
         num(d.gamma, (v) => { if (v === undefined) delete d.gamma; else d.gamma = v; scheduleCheck(); }, `${base}.gamma`, { min: 0, max: 1, step: 0.05 }),
         gamma === 0 ? 'Shadow: learning is visible and inert.' : `A lift of 1.4 becomes ×${dec(Math.pow(1.4, gamma))} on the score.`),
+      dial('Performance percentage', inBlend
+        ? 'This layout slot opts into the layout blend, so its percentage is the blend weight p: the percentage divided by 100 is p, the weight of learned performance against the behaviour score in R + (1 − p) × B + p × Q. Trust above is a separate dial and stays as it is. At 0 the slot decides as it does with p at 0.'
+        : 'The trust dial above as a percentage from 0 to 100: the percentage divided by 100 is γ, so 35 saves γ 0.35. At 0 the slot decides exactly as it does with γ at 0, as every slot does by default.',
+        percentControl(d, base),
+        heldPercent()
+          ? h('span', { class: 'err' }, 'The percentage must be a number from 0 to 100; nothing is saved until it is.')
+          : inBlend ? `That is the blend weight p ${String(percentDial(d))}.` : `That is γ ${String(percentDial(d))}.`),
       dial('What counts as paying off', 'The outcome this slot learns against. One per slot; the others still land in the ledger and can be reported on.',
         sel(d.reward || 'click', REWARDS.map((r) => [r, words(r)]), (v) => { d.reward = v; scheduleCheck(); }, `${base}.reward`)),
       dial('What a success is worth', 'Unit counts each one the same. Revenue weighs it by the order value, margin by the feed margin, falling back to value when absent. Revenue and margin need a reward that carries a value: a purchase, or an add to bag.',
@@ -413,8 +700,8 @@
       dial('Measurement basis', 'Absent means legacy served-v1. Rendered-v1 counts authenticated client render acknowledgments, not polls or proof of human visibility. Changing a populated basis requires the existing reviewed reset/publication flow; counters and priors never merge.',
         sel(d.measurementBasis || 'served-v1', [['served-v1', 'legacy served'], ['rendered-v1', 'client-reported rendered']], (v) => { d.measurementBasis = v; scheduleCheck(); }, `${base}.measurementBasis`)),
       h('div', { class: 'subhead' }, 'Trying things it has not tried'),
-      dial('How it explores', 'Exploration is off by default. Rotation shows the least-observed piece on a hashed share; epsilon picks uniformly. Thompson is unsupported and stored settings are dormant.',
-        sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon']], (v) => {
+      dial('How it explores', 'Exploration is off by default. Rotation shows the least-observed piece on a hashed share; epsilon picks uniformly. Adjacent swap, on the page\u2019s declared layout slot only, swaps two neighbouring modules on that share \u2014 never a pinned or off-limits one \u2014 so the engine can estimate what each position is worth. Thompson is unsupported and stored settings are dormant.',
+        sel(d.exploration?.mode === 'thompson' ? '' : d.exploration?.mode || 'off', [...(d.exploration?.mode === 'thompson' ? [['', 'Stored Thompson — inactive; choose a replacement', true]] : []), ['off', 'off'], ['rotation', 'rotation'], ['epsilon', 'epsilon'], ['adjacent-swap', 'adjacent swap (layout slot)']], (v) => {
           if (v === 'off') delete d.exploration;
           else d.exploration = { mode: v, share: (d.exploration || {}).share ?? 0.1, floor: (d.exploration || {}).floor ?? 50 };
           scheduleCheck();
@@ -423,8 +710,14 @@
       d.exploration && d.exploration.mode !== 'thompson' ? dial('How often', 'The configured share used by the existing rule; not a measured exposure guarantee.',
         num(d.exploration.share, (v) => { d.exploration.share = v ?? 0; scheduleCheck(); }, `${base}.exploration.share`, { min: 0, max: 1, step: 0.01 }),
         `${pct(d.exploration.share)} configured share`) : null,
-      d.exploration && d.exploration.mode !== 'thompson' ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
+      d.exploration && d.exploration.mode !== 'thompson' && d.exploration.mode !== 'adjacent-swap' ? dial('Until it has seen', 'Observations below which a piece counts as under-observed and is worth showing again.',
         num(d.exploration.floor, (v) => { d.exploration.floor = v ?? 0; scheduleCheck(); }, `${base}.exploration.floor`, { min: 0, step: 1 })) : null,
+      // P05 (decision D2): the position-normalisation switch, beside the swaps it reads; written only when an operator sets it.
+      d.exploration?.mode === 'adjacent-swap' || d.positionNormalization !== undefined ? dial('Credit by position', 'Off by default. On, a click at a position is credited divided by that position\u2019s effect as the swaps estimate it (a click ratio, read as positionEffects on the slot\u2019s learning read), live and in the hourly recomputation alike. Turn it on only once the data science has confirmed the estimate.',
+        sel(d.positionNormalization === true ? 'true' : 'false', [['false', 'off: credit as counted'], ['true', 'on: divided by the position\u2019s effect']], (v) => {
+          if (v === 'true') d.positionNormalization = true; else delete d.positionNormalization;
+          scheduleCheck();
+        }, `${base}.positionNormalization`)) : null,
       h('div', { class: 'subhead' }, 'Autonomy unavailable'),
       h('div', { class: 'msg note' }, 'Stored settings are dormant. Cycles and proposal changes are disabled.'),
       h('pre', { class: 'dormant-autonomy' }, JSON.stringify(d.autonomy || { mode: 'configured' }, null, 2)),
@@ -433,6 +726,32 @@
         num((d.external || {}).weight, (v) => { if (v === undefined || v === 0) delete d.external; else d.external = { weight: v }; scheduleCheck(); }, `${base}.external.weight`, { min: 0, max: 1, step: 0.05 }),
         dl.draft.external ? `${dl.draft.external.kind} · ${dl.draft.external.ref}` : 'No model configured for this brand.'),
     );
+  }
+
+  // P36: the brand's context vocabulary — its channel values with the rules that
+  // classify an arrival into them, its source platforms, its landing-page types,
+  // and optionally its visit-bucket cut and ladder depth — edited as the JSON it
+  // is published as, inside the learn document. Malformed text cannot be saved;
+  // the platform validates the draft as it does every other dial.
+  function vocabularyEditor(D) {
+    const path = 'contextVocabulary';
+    const el = h('textarea', { class: `txt${changed(path)}`, rows: 14, spellcheck: 'false', 'data-focus-key': path, disabled: !C.canEdit() || null });
+    el.value = dl.vocabularyText !== null ? dl.vocabularyText : (D.contextVocabulary ? JSON.stringify(D.contextVocabulary, null, 2) : '');
+    el.addEventListener('input', () => {
+      dl.vocabularyText = el.value;
+      const text = el.value.trim();
+      if (!text) { delete D.contextVocabulary; dl.vocabularyError = ''; scheduleCheck(); return; }
+      try {
+        const value = JSON.parse(text);
+        if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('not an object');
+        D.contextVocabulary = value; dl.vocabularyError = '';
+        scheduleCheck();
+      } catch {
+        dl.vocabularyError = 'contextVocabulary: the vocabulary must be a valid JSON object of channels, rules, sourcePlatforms and landingPageTypes (visitBuckets and ladder optional). Empty removes it; malformed text cannot be saved.';
+        C.render();
+      }
+    });
+    return el;
   }
 
   function brandDials(host) {
@@ -477,6 +796,9 @@
         num(reg.kBlend, (v) => { D.regional = { ...reg, kBlend: v ?? 1 }; scheduleCheck(); }, 'regional.kBlend', { min: 0.01, max: 100, step: 0.1 })) : null,
       reg && reg.enabled ? dial('Before a region counts', 'Events a region needs before its trend is used; below it the country answers, then everyone.',
         num(reg.minEvents, (v) => { D.regional = { ...reg, minEvents: v ?? 30 }; scheduleCheck(); }, 'regional.minEvents', { min: 1, step: 1 })) : null,
+      h('div', { class: 'subhead' }, 'How arrivals are read: the context vocabulary'),
+      dial('Channels, sources and landing pages', 'The brand\u2019s own channel values and the published rules that classify an arrival into them, read in order, the first that holds deciding; an arrival no rule names records as unknown, never a guess. Source platforms name the networks they own; landing-page types are the page types the page reports. Optionally the visit-bucket cut (whole numbers ascending from 1) and the ladder depth (1 to 5, order c, v, s, r, a). A change to the channel values, the cut or the depth changes the cell grammar: a priors file exported before it is refused and must be re-exported. Empty means the six built-in channel words.',
+        vocabularyEditor(D), dl.vocabularyError ? h('span', { class: 'err' }, dl.vocabularyError) : (D.contextVocabulary ? `${(D.contextVocabulary.channels || []).length} channel values, ${(D.contextVocabulary.rules || []).length} rules` : 'Not published: the six built-in channel words.')),
       h('div', { class: 'subhead' }, 'Their own model, for every slot'),
       dial('Where it lives', 'Service: a worker they own behind a binding, or an https address. Table: a scoring table they publish. Workers AI: a hosted model that answers in the agreed shape.',
         sel(ext ? ext.kind : 'none', [['none', 'none'], ['service', 'service'], ['table', 'table'], ['workers_ai', 'workers AI']], (v) => {
@@ -502,11 +824,13 @@
       C.dirty({
         count: n,
         checking: dl.checking,
-        blocked: dl.errors.length > 0,
+        blocked: dl.errors.length > 0 || dl.vocabularyError !== '' || heldPercent() !== null,
         save: saveDials,
-        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; C.render(); },
+        discard: () => { dl.draft = copy(dl.doc); dl.errors = []; dl.vocabularyText = null; dl.vocabularyError = ''; dl.percent = null; dl.advisory = null; C.render(); },
       });
       if (dl.errors.length) host.append(h('div', { class: 'msg err' }, 'The dials as drafted were refused:', h('ul', {}, ...dl.errors.map((e) => h('li', {}, String(e))))));
+      const advisory = learnAdvisory();
+      if (advisory) host.append(advisory);
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
         dl.source === 'stored' ? `Reading revision ${fmt(dl.revision)} of the learn document.` : 'Nothing stored for this brand yet: these are the settings the engine shipped with.'));
       const slotCard = card(S.slot ? `This slot: ${S.slot}` : 'This slot', 'What the engine may do in this one place.', h('div', { class: 'body' }));
@@ -587,4 +911,76 @@
     er.pending = again.ok ? again.data.pending || [] : er.pending;
     C.render();
   }
+
+  // ═════════════════════════════════════════════════════ Vocabulary ══════════
+  // P38: the brand's attribute vocabulary. A stored revision governs nothing
+  // until the brand's operator approves it here; the screen always says which
+  // revision is in effect, read from the platform's effectiveRevision, never
+  // from the latest stored revision.
+  const vc = { data: null, report: null, error: '', busy: false };
+  async function loadVocabulary() {
+    const [res, rejections] = await Promise.all([C.content('/vocabulary'), C.content('/vocabulary/rejections')]);
+    vc.data = res.ok ? res.data : null;
+    vc.report = rejections.ok ? rejections.data : null;
+    vc.error = res.ok ? '' : (res.status === 401 || res.status === 403 ? 'Sign in to read the vocabulary.' : res.data.error || 'Could not read the vocabulary.');
+  }
+  async function approveLatest() {
+    const d = vc.data, latest = d && Number.isSafeInteger(d.revision) ? d.revision : 0;
+    if (!latest || vc.busy) return;
+    if (!confirm(`Approve revision ${fmt(latest)} of the vocabulary? From then on the catalogue and every event are held to it: a value it does not list is refused.`)) return;
+    vc.busy = true; C.render();
+    const res = await C.write(`/content/vocabulary/approve/${latest}?scope=${encodeURIComponent(S.scope)}`, 'POST', {}, C.authored(d));
+    vc.busy = false;
+    if (!res.ok || res.data.ok === false) { C.render(); return; }
+    await loadVocabulary();
+    C.flash(`Approved revision ${fmt(res.data.effectiveRevision)} of the vocabulary.`);
+  }
+  const VALUES_SHOWN = 50;
+  C.view({
+    id: 'vocabulary', group: 'This brand', title: 'Vocabulary', heading: 'The values an attribute may take',
+    hint: 'Each attribute lists its values: the id every store and every interest carries, the display name in your wording, the words your source systems send for it, and for a product type its category. A revision takes effect only when it is approved here.',
+    async enter() { await loadVocabulary(); },
+    render(host) {
+      if (vc.error) { host.append(h('div', { class: 'msg note' }, vc.error)); return; }
+      const d = vc.data;
+      if (!d) { host.append(h('div', { class: 'empty' }, 'Reading the vocabulary.')); return; }
+      const effective = Number.isSafeInteger(d.effectiveRevision) ? d.effectiveRevision : 0;
+      const latest = Number.isSafeInteger(d.revision) ? d.revision : 0;
+      const approval = d.approval && d.approval.revision === effective ? d.approval : null;
+      host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
+        effective > 0
+          ? `Revision ${fmt(effective)} in effect${approval && approval.actor ? `, approved by ${approval.actor}` : ''}${approval && when(approval.at) ? ` on ${when(approval.at)}` : ''}.`
+          : 'No revision is approved yet: the vocabulary governs nothing, and every attribute value is kept as it is sent.'));
+      const pending = latest > 0 && latest !== effective;
+      host.append(card('Approval', 'Approving puts the latest stored revision in effect for this brand. A later revision changes nothing until it is approved in turn.',
+        h('div', { class: 'body' },
+          h('div', { class: 'toolbar' },
+            h('span', { class: 'sub' }, latest === 0 ? 'No vocabulary is stored for this brand.'
+              : pending ? `The latest stored revision, ${fmt(latest)}, is waiting for approval.` : `The latest stored revision, ${fmt(latest)}, is the approved one.`),
+            h('span', { class: 'spacer' }),
+            h('button', { class: 'small', 'data-focus-key': 'vocabulary.approve', disabled: !C.canEdit() || !pending || vc.busy, onclick: approveLatest },
+              latest > 0 ? `Approve revision ${fmt(latest)}` : 'Approve')))));
+      const stored = d.document && typeof d.document === 'object' && d.document.attributes && typeof d.document.attributes === 'object' ? d.document : null;
+      if (stored) {
+        for (const [key, attribute] of Object.entries(stored.attributes)) {
+          const values = Array.isArray(attribute && attribute.values) ? attribute.values : [];
+          const rows = values.slice(0, VALUES_SHOWN).map((v) => h('tr', {},
+            h('td', {}, h('div', { class: 'itemid' }, String(v.id))),
+            h('td', {}, String(v.name)),
+            h('td', {}, Array.isArray(v.synonyms) ? v.synonyms.join(', ') : ''),
+            h('td', {}, typeof v.parent === 'string' ? v.parent : '')));
+          host.append(card(`${key}`, `${plural(values.length, 'value')} in revision ${fmt(latest)}${values.length > VALUES_SHOWN ? `, the first ${fmt(VALUES_SHOWN)} shown` : ''}.`,
+            C.table([{ key: 'id', label: 'Id' }, { key: 'name', label: 'Display name' }, { key: 'synonyms', label: 'Synonyms' }, { key: 'parent', label: 'Parent' }], rows)));
+        }
+      }
+      const refused = vc.report && vc.report.rejections && typeof vc.report.rejections === 'object' ? Object.entries(vc.report.rejections) : [];
+      if (effective > 0) {
+        const rows = refused.flatMap(([attribute, counts]) => Object.entries(counts || {}).map(([value, n]) => h('tr', {},
+          h('td', {}, attribute), h('td', {}, h('div', { class: 'itemid' }, value)), h('td', { class: 'num' }, fmt(n)))));
+        host.append(card('Refused at ingest', 'Values events carried on a governed attribute that the approved vocabulary does not list: they built no interest. Add them as synonyms, or fix the source.',
+          rows.length ? C.table([{ key: 'attribute', label: 'Attribute' }, { key: 'value', label: 'Value' }, { key: 'n', label: 'Events', num: true }], rows)
+            : h('div', { class: 'empty' }, 'Nothing refused since this revision was approved.')));
+      }
+    },
+  });
 })();

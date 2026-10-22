@@ -5,29 +5,165 @@
 // which attributes it and forwards the credits itself.
 
 import type { Env } from '@/types/env';
-import type { LiftSnapshot } from './stats';
+import type { LiftSnapshot, NotAdopted, NotAdoptedChange, Republished, RepublishedChange, StaleMarker } from './stats';
 
-/** Live authority is never satisfied by an eventually-consistent KV/cache hit. */
-export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot): Promise<boolean> {
-  if (!env.LEARN_STATS || typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return false;
+/**
+ * P62 (amendment 6, R-P110 decision 1): the lift witness's budget, sized for the
+ * edge. It is the round trip to the statistics object and nothing else (W38 B7,
+ * below): one edge round trip to a Durable Object at the top of the measured
+ * per-call estimate (180 ms) plus the object's own measured work per witness at
+ * the acceptance pair's scale (13 ms), rounded up to the next 10 ms. A
+ * deployment may set another through `LIFT_WITNESS_BUDGET_MS`
+ * (`learningReadBudgets`).
+ */
+export const LIFT_WITNESS_BUDGET_MS = 200;
+/**
+ * P62 (R-P110 decision 1): the visitor ring read's budget, the same shape (one
+ * hop to the visitor's `DecisionRing`, whose own bounded read is far below the
+ * statistics object's): 200 ms. A deployment may set another through
+ * `RING_READ_BUDGET_MS`.
+ */
+export const RING_READ_BUDGET_MS = 200;
+/**
+ * P62 (R-P110 decision 2, R-P112(6)): how long after its PUBLICATION a copy that
+ * is no longer the statistics object's latest is still served, when the object
+ * recognises it (its version and digest among its recent publications) under the
+ * same witness, healthy. At least an isolate's hold of a copy (`LIFT_TTL_MS`,
+ * 60 s) plus the store's largest observed propagation (55.8 s); ten minutes, the
+ * analysis's own bound, so a copy published shortly before a quiet spell ends
+ * is still recognised after the next publication supersedes it.
+ */
+export const LIFT_RECENT_WINDOW_MS = 600_000;
+/** P62: at most this many recent publications are kept by one statistics object, however many it makes inside the window. */
+export const LIFT_RECENT_PUBLICATIONS = 32;
+/**
+ * P62: an override is admitted below the SDK's deadline (`ACK_DEADLINE_MS`,
+ * src/sdk/core.ts: 5 000 ms), which cuts every request the SDK makes, the
+ * decision included: a budget of that or more would let one read outlast the
+ * request waiting on it.
+ */
+export const LEARNING_READ_BUDGET_CEILING_MS = 5_000;
+const BUDGET_NAMES = ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'] as const;
+/**
+ * P62 (R-P110 decision 1): the two budgets in force for a decision. A deployment
+ * value under the constant's own name is admitted when it is a whole number of
+ * milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`, given as
+ * its decimal text (or as that number); any other value is refused, the code
+ * default stays in force and the refusal is named (`refused`, sorted). An unset
+ * value is the default and names nothing.
+ */
+export function learningReadBudgets(env: object): LearningReadBudgets {
+  const vars = env as Partial<Record<(typeof BUDGET_NAMES)[number], unknown>>, refused: string[] = [];
+  const admitted = (name: (typeof BUDGET_NAMES)[number], fallback: number): number => {
+    const value = vars[name];
+    if (value === undefined || value === null) return fallback;
+    const ms = typeof value === 'number' ? value : typeof value === 'string' && /^[0-9]+$/.test(value) ? Number(value) : Number.NaN;
+    if (Number.isSafeInteger(ms) && ms > 0 && ms < LEARNING_READ_BUDGET_CEILING_MS) return ms;
+    refused.push(name);
+    return fallback;
+  };
+  const lift = admitted('LIFT_WITNESS_BUDGET_MS', LIFT_WITNESS_BUDGET_MS), ring = admitted('RING_READ_BUDGET_MS', RING_READ_BUDGET_MS);
+  return { lift, ring, ...(refused.length ? { refused: refused.sort() } : {}) };
+}
+
+/**
+ * Live authority is never satisfied by an eventually-consistent KV/cache hit.
+ *
+ * W38 B7 (amendment A36): the witness budget is the round trip to the statistics
+ * object, and nothing else. The snapshot's own digest — the reader's work, which
+ * grows with the snapshot (a snapshot at the object's counter caps is about
+ * 680 KB) — is settled BEFORE the budget starts, so a large snapshot is never
+ * refused because digesting it and the round trip together outlasted the budget. A
+ * caller that holds the snapshot across reads passes its memoized digest
+ * (`digest`, asked for only once the witness will be checked), so a cached read
+ * never digests the snapshot again. The comparison itself is
+ * unchanged: a digest the object did not publish, or an answer after the budget,
+ * serves nothing, and a digest that cannot be computed is a failed witness.
+ *
+ * P61 (amendment 6, R-P110): today's callers keep this boolean; it is `true`
+ * exactly when `liftWitnessOutcome` below answers `served`.
+ */
+export async function currentLiftWitness(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
+  digest?: () => Promise<string>): Promise<boolean> {
+  return await liftWitnessOutcome(env, tenant, brand, slot, snapshot, page, digest) === 'served';
+}
+/** P61: what the witness can say of a copy that is present and compatible (`none` and `incompatible` are the reader's). */
+export type LiftWitnessOutcome = Exclude<LiftReadOutcome, 'none' | 'incompatible'>;
+/** P62: the witness's outcome and, for a copy served that is not the object's latest publication, what it is (`explain.lift.asOf`). */
+export interface LiftWitnessVerdict { outcome: LiftWitnessOutcome; asOf?: LiftAsOf }
+/** P62 (R-P110): the statistics object's light witness door (LearnStats `/witness`); `/health` stays the operators'. */
+export const LIFT_WITNESS_DOOR = 'https://learn/witness';
+/** P61: `liftWitnessVerdict`'s outcome alone. */
+export async function liftWitnessOutcome(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
+  digest?: () => Promise<string>, budgetMs?: number): Promise<LiftWitnessOutcome> {
+  return (await liftWitnessVerdict(env, tenant, brand, slot, snapshot, page, digest, budgetMs)).outcome;
+}
+/**
+ * P61 (amendment 6, R-P110): the witness of `currentLiftWitness`, returning its
+ * reason instead of a boolean, the first of these that applies:
+ *   · `failed`: no statistics binding, a digest that cannot be computed, a call
+ *     that errored, or an answer that is not this placement's witness answer
+ *     (not OK, not JSON, another tenant, brand, slot or page);
+ *   · `late`: no answer within the budget (the call is aborted, as before);
+ *   · `unhealthy`: the object answered a state other than `healthy`;
+ *   · `served`: the object's current witness, its latest publication's witness,
+ *     version and digest all match the copy; or (P62) the copy is one of the
+ *     object's recent publications, recognised by version and digest inside
+ *     `LIFT_RECENT_WINDOW_MS` from its publication, and the object's current
+ *     witness (configuration, fence, projection) is the copy's: then `asOf`
+ *     names the copy's version and publication time and the latest version;
+ *   · `superseded`: a copy the object no longer accepts because it has moved on
+ *     since: one of its recent publications under another witness, or a copy
+ *     outside the window whose later version the object has published (named
+ *     by its version alone: the object keeps no older publication);
+ *   · `unrecognized`: any other copy, a version or a digest the object never
+ *     published (a forged or damaged copy, or one without a witness); a version
+ *     it published inside the window under another digest (P62); and (R-P113)
+ *     the object's latest publication when the object's witness has changed
+ *     since (a reset or a transition moved the fence), so the witness the
+ *     object now confirms is not that copy's.
+ * P62: it asks the object's light witness door, under the budget in force
+ * (`learningReadBudgets`, or `budgetMs` when the caller holds it).
+ */
+export async function liftWitnessVerdict(env: Pick<Env, 'LEARN_STATS'>, tenant: string, brand: string, slot: string, snapshot: LiftSnapshot, page?: string,
+  digest?: () => Promise<string>, budgetMs: number = learningReadBudgets(env).lift): Promise<LiftWitnessVerdict> {
+  if (!env.LEARN_STATS) return { outcome: 'failed' };
+  if (typeof snapshot.witness !== 'string' || !/^[a-f0-9]{64}$/.test(snapshot.witness)) return { outcome: 'unrecognized' };
   const namespace = env.LEARN_STATS;
+  let expected: string;
+  try { expected = await (digest ? digest() : recoveryDigest(snapshot)); } catch { return { outcome: 'failed' }; }
   const abort = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
-  const probe = async () => { try {
-    const response = await namespace.get(namespace.idFromName(statsName(tenant, brand, slot))).fetch('https://learn/health', {
-      method: 'POST', body: JSON.stringify({ tenant, brand, slot }), signal: abort.signal,
+  const probe = async (): Promise<LiftWitnessVerdict> => { try {
+    // W26 R2: a page-scoped placement is witnessed by its own page's object,
+    // which answers for that page and no other.
+    const response = await namespace.get(namespace.idFromName(statsName(tenant, brand, slot, page))).fetch(LIFT_WITNESS_DOOR, {
+      method: 'POST', body: JSON.stringify({ tenant, brand, slot, ...(page ? { page } : {}) }), signal: abort.signal,
     });
     const value = await response.json() as Record<string, unknown>;
     const publication = value.publication as { witness?: string; digest?: string; version?: number } | null;
-    return response.ok && value.ok === true && value.state === 'healthy' && value.tenant === tenant && value.brand === brand
-      && value.slot === slot && value.witness === snapshot.witness && !!publication && publication.witness === snapshot.witness
-      && publication.version === snapshot.version && publication.digest === await recoveryDigest(snapshot);
-  } catch { return false; } };
-  try { return await Promise.race([probe(), new Promise<false>(resolve => { timer = setTimeout(() => { abort.abort(); resolve(false); }, 50); })]); }
+    if (!response.ok || value.ok !== true || value.tenant !== tenant || value.brand !== brand || value.slot !== slot || (value.page ?? undefined) !== page) return { outcome: 'failed' };
+    if (value.state !== 'healthy') return { outcome: 'unhealthy' };
+    const published = !!publication && publication.witness === snapshot.witness && publication.version === snapshot.version && publication.digest === expected;
+    if (published) return { outcome: value.witness === snapshot.witness ? 'served' : 'unrecognized' };
+    // P62: the object's recent publications, inside the window it answers for.
+    const recent = (Array.isArray(value.recent) ? value.recent as Array<Record<string, unknown>> : [])
+      .find(entry => entry !== null && typeof entry === 'object' && entry.version === snapshot.version);
+    if (recent && recent.digest === expected && typeof recent.publishedAt === 'number' && Number.isFinite(recent.publishedAt)) {
+      if (value.witness === snapshot.witness && publication && typeof publication.version === 'number')
+        return { outcome: 'served', asOf: { latest: publication.version, publishedAt: recent.publishedAt, version: snapshot.version } };
+      return { outcome: 'superseded' };
+    }
+    if (recent) return { outcome: 'unrecognized' };
+    return { outcome: publication && typeof publication.version === 'number' && typeof snapshot.version === 'number' && publication.version > snapshot.version ? 'superseded' : 'unrecognized' };
+  } catch { return { outcome: 'failed' }; } };
+  try { return await Promise.race([probe(), new Promise<LiftWitnessVerdict>(resolve => { timer = setTimeout(() => { abort.abort(); resolve({ outcome: 'late' }); }, budgetMs); })]); }
   finally { if (timer !== undefined) clearTimeout(timer); }
 }
-import type { DecisionRecord } from '@/content/types';
-import type { OutcomeRecord } from '@/ledger/records';
-import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from './policy';
+/** P61: whole milliseconds since `started` (a `performance.now()` reading), never negative. */
+export const elapsedMs = (started: number): number => Math.max(0, Math.round(performance.now() - started));
+import type { ContentPiece, DecisionRecord, LearningRead, LearningReadBudgets, LiftAsOf, LiftReadOutcome, RingReadOutcome, SlotAttribution, SlotCatalog } from '@/content/types';
+import { isOffLimitsLayoutRecord, isRewardType, type OutcomeRecord } from '@/ledger/records';
+import { attribute, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
 // `@/durable-objects/DecisionRing` re-exports under the same name. It is read
 // from there and NOT from the ring itself because the ring imports this module:
@@ -36,7 +172,7 @@ import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from 
 // ring is the first of the two to load (src/learn/learn.test.ts imports it at
 // line 10, this module at line 12), which silently emptied the statistics
 // object's applied-delivery journal.
-import { emptyStats, recordExposure, recordSuccess, RING_MAX_AGE_MS, type StatsConfig, type StatsState } from './stats';
+import { ADOPTED_MEMBERS, emptyStats, recordExposure, recordSuccess, REPUBLISHED_MEMBERS, RING_MAX_AGE_MS, type StatsConfig, type StatsState } from './stats';
 import type { RewardType } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
@@ -44,6 +180,8 @@ import { byteLength, equalLogicalRows, logicalIdentity, MANAGED_BYTES, recordEvi
 import { requireRetention, type RetentionEnv } from '@/retention';
 import { pinRetention } from '@/identity/sessionAuthority';
 import { recoveryDigest, learningEffectId, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
+import { PublicationError, pinPublication, publicationScope, readPinnedPublication } from '@/config/publication';
+import { isCatalogueName, slotPagesOf, SLOTS_KIND } from '@/content/kinds';
 
 /** Physical input/comparison budgets, not retained-history or provider limits. */
 export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_000 } as const;
@@ -68,10 +206,385 @@ export const FAN_LIMITS = { rows: 1000, recordBytes: MANAGED_BYTES, work: 1_000_
 export const ONLINE_RING_REACH_MS = RING_MAX_AGE_MS;
 
 export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visitorId}`;
-export const statsName = (tenant: string, brand: string, slot: string) => `${tenant}:${brand}:${slot}`;
-export const liftKey = (tenant: string, brand: string, slot: string) => `lift:${tenant}:${brand}:${slot}`;
+/**
+ * W26 R2 (F21 §6(b), §8 "Page in `statsName`/`liftKey`"; LANE-LOG R198): the
+ * storage identity of one placement.
+ *
+ * A slot name the tenant's catalogue carries on ONE page keeps the page-less
+ * identity it has always had — `tenant:brand:slot`, `lift:tenant:brand:slot`,
+ * `lift/tenant/brand/slot/` — and with it every statistic already learned under
+ * it. A name a RETAINED catalogue carries on more than one page
+ * (`pageScopedSlotNames`, `src/content/kinds.ts`) is qualified by the page, as
+ * `slot@page`, so `home/hero` and `pdp/hero` are two statistics objects, two
+ * snapshots and two archives, and neither is ever read for the other. `page` is
+ * passed ONLY for a page-scoped name; every caller resolves that through
+ * `identityPage`.
+ *
+ * A qualified name can never be another placement's plain name, and nothing can
+ * address or create one except by its slot and its page (review D3): a page is
+ * always a catalogue page name (`isCatalogueName`: no `:`, `@` or `/`), and no
+ * slot name ever carries `@` — a catalogue slot is a slug, and these three
+ * functions, every statistics object, every fan-in and every operator route
+ * refuse one that does (`isPlacementSlot`). They THROW rather than build a name
+ * from anything else, so a caller that skipped its own check still cannot reach
+ * a page-separated object under another name.
+ */
+export const isPlacementSlot = (slot: unknown): slot is string => typeof slot === 'string' && slot.length > 0 && !slot.includes('@');
+export const placementSlot = (slot: string, page?: string) => {
+  if (!isPlacementSlot(slot) || (page !== undefined && page !== '' && !isCatalogueName(page))) throw new Error('Learning placement unavailable');
+  return page ? `${slot}@${page}` : slot;
+};
+export const statsName = (tenant: string, brand: string, slot: string, page?: string) => `${tenant}:${brand}:${placementSlot(slot, page)}`;
+export const liftKey = (tenant: string, brand: string, slot: string, page?: string) => `lift:${tenant}:${brand}:${placementSlot(slot, page)}`;
 /** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
-export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number) => `lift/${tenant}/${brand}/${slot}/${version}.json`;
+export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/${version}.json`;
+/**
+ * P05 (decision D2): where a placement's statistics object publishes its
+ * position-policy history (`positionHistoryOf`, src/learn/stats.ts), beside the
+ * snapshot archive and named so no archive reading takes it for a version. The
+ * object writes it; the online credit and the hourly fold both read it.
+ */
+export const positionHistoryKey = (tenant: string, brand: string, slot: string, page?: string) => `lift/${tenant}/${brand}/${placementSlot(slot, page)}/positions.json`;
+/**
+ * P42 (R-P78, decision D1): where a placement's statistics object records the
+ * marker of a publication refused for the pooled cause (`StaleMarker`): its own
+ * key, beside the snapshot's and never inside it, so the snapshot at `liftKey`,
+ * its archive and its witness stay exactly what was published and the serving
+ * path reads nothing new. Only that refusal writes it; a placement that has
+ * never been refused so has no such key, and no publication of any placement
+ * reads or writes it. A later successful publication supersedes it without a
+ * call of its own: the marker applies only while the snapshot in force is the
+ * one it names (`staleMarkerIn`). `lift-stale:` is a prefix no `liftKey` starts with.
+ */
+export const liftStaleKey = (tenant: string, brand: string, slot: string, page?: string) => `lift-stale:${tenant}:${brand}:${placementSlot(slot, page)}`;
+/** P42: a module named by a marker, bounded as the statistics object bounds an item name. */
+const staleModule = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 256
+  && ![...v].some(char => char.charCodeAt(0) < 32) && !Object.prototype.hasOwnProperty.call(Object.prototype, v);
+const plainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+const exactly = (v: Record<string, unknown>, keys: readonly string[]) => Object.keys(v).length === keys.length && keys.every(key => Object.hasOwn(v, key));
+/**
+ * P42: the marker, when `value` is one exactly as the statistics object writes
+ * it — keys `lastPublished`, `modules` and `placement` and no other; a published
+ * version and time, or null; one to 256 module names, sorted and distinct; a
+ * catalogue page and slot — rebuilt with its keys sorted (R-P3). Anything else
+ * is no marker (null), so nothing that is not one is ever answered as one.
+ */
+export function staleMarkerOf(value: unknown): StaleMarker | null {
+  if (!plainObject(value) || !exactly(value, ['lastPublished', 'modules', 'placement'])) return null;
+  const { lastPublished: last, modules, placement } = value;
+  if (last !== null && (!plainObject(last) || !exactly(last, ['publishedAt', 'version'])
+    || !Number.isSafeInteger(last.version) || (last.version as number) <= 0
+    || typeof last.publishedAt !== 'number' || !Number.isFinite(new Date(last.publishedAt).getTime()))) return null;
+  if (!Array.isArray(modules) || modules.length === 0 || modules.length > 256 || !modules.every(staleModule)
+    || modules.some((module, i) => i > 0 && !((modules[i - 1] as string) < module))) return null;
+  if (!plainObject(placement) || !exactly(placement, ['page', 'slot']) || !isCatalogueName(placement.page) || !isCatalogueName(placement.slot)) return null;
+  return { lastPublished: last === null ? null : { publishedAt: last.publishedAt as number, version: last.version as number },
+    modules: [...modules as string[]], placement: { page: placement.page, slot: placement.slot } };
+}
+/**
+ * P42: the marker while it still applies — while the snapshot in force is the one
+ * it names (its version and publication time), or, for a placement that has never
+ * published, while there is still no snapshot in force. Once a publication
+ * succeeds the snapshot in force is another one, and the marker no longer applies.
+ */
+export function staleMarkerIn(marker: StaleMarker | null, inForce: unknown): StaleMarker | null {
+  if (!marker) return null;
+  if (marker.lastPublished === null) return inForce === null || inForce === undefined ? marker : null;
+  return plainObject(inForce) && inForce.version === marker.lastPublished.version && inForce.publishedAt === marker.lastPublished.publishedAt ? marker : null;
+}
+/**
+ * P42: the refusal's sentence, composed from the marker alone, so the statistics
+ * object and the operator's publish route say the same words: the faulty page,
+ * its slot, every pooled module the refused placement reads from it, and the
+ * version its snapshot stays at (or that it stays unpublished). It begins with
+ * today's `statistics recovery required`, which every other recovery refusal
+ * keeps unchanged.
+ */
+export function staleRefusalOf(marker: StaleMarker): string {
+  const { page, slot } = marker.placement;
+  return `statistics recovery required: this pooled publication was refused because the statistics of page ${page}, slot ${slot} could not be read`
+    + ` for the pooled module${marker.modules.length > 1 ? 's' : ''} ${marker.modules.join(', ')}; `
+    + (marker.lastPublished
+      ? `the slot's snapshot stays at version ${marker.lastPublished.version}, its last successful publication, until a publication succeeds`
+      : 'the slot has no successful publication yet and stays unpublished until a publication succeeds');
+}
+/**
+ * P42: the marker of a statistics object's answer that is exactly the pooled
+ * refusal — `{ ok: false, error, stale }`, no other member, a well-formed marker
+ * and the object's own sentence for it — or null for any other answer.
+ */
+export function staleRefusalIn(body: unknown): StaleMarker | null {
+  if (!plainObject(body) || !exactly(body, ['ok', 'error', 'stale']) || body.ok !== false) return null;
+  const marker = staleMarkerOf(body.stale);
+  return marker && body.error === staleRefusalOf(marker) ? marker : null;
+}
+/**
+ * P49 (R-P78, decision D1): where a placement's statistics object records what a
+ * publication refused after a learn republish names (`Republished`), with the
+ * snapshot in force it left in force: its own key, beside the snapshot's and
+ * never inside it, as P42's marker is (`liftStaleKey`). Only that refusal writes
+ * it; no publication of any placement reads or writes it, and a later successful
+ * publication supersedes it without a call of its own: it applies only while the
+ * snapshot in force is the one it names (`republishedIn`). `lift-republished:` is a
+ * prefix no `liftKey` and no `liftStaleKey` starts with. P55: a generation
+ * transition whose own publication does not succeed supersedes it with one put
+ * under this same key (`supersededRecordOf`).
+ */
+export const liftRepublishedKey = (tenant: string, brand: string, slot: string, page?: string) => `lift-republished:${tenant}:${brand}:${placementSlot(slot, page)}`;
+/** P49: the snapshot in force a refusal leaves in force, its version and publication time, or null where there is none. */
+type InForce = { publishedAt: number; version: number } | null;
+const inForceOf = (value: unknown): InForce | undefined => {
+  if (value === null) return null;
+  if (!plainObject(value) || !exactly(value, ['publishedAt', 'version']) || !Number.isSafeInteger(value.version) || (value.version as number) <= 0
+    || typeof value.publishedAt !== 'number' || !Number.isFinite(new Date(value.publishedAt).getTime())) return undefined;
+  return { publishedAt: value.publishedAt, version: value.version as number };
+};
+/** P49: a value a changed member may name, by member: the closed words of the slot's dials, or a finite number of the `stats` block. */
+const republishedValue = (member: RepublishedChange['member'], v: unknown): v is string | number => {
+  if (member === 'reward') return isRewardType(v);
+  if (member === 'objective') return v === 'unit' || v === 'revenue' || v === 'margin';
+  if (member === 'measurementBasis') return v === 'served-v1' || v === 'rendered-v1';
+  return typeof v === 'number' && Number.isFinite(v);
+};
+/**
+ * P49: the member, when `value` is one exactly as the statistics object writes
+ * it — keys `changed`, `endedBy` and `slot`, with `page` for a page-scoped
+ * placement, and no other; one to eight changes, each exactly `member`, `new` and
+ * `old`, a member of the tuple (`REPUBLISHED_MEMBERS`), sorted and distinct, both
+ * values of that member's kind and different; `endedBy` the generation
+ * transition; a catalogue slot and page — rebuilt with its keys sorted (R-P3).
+ * Anything else is no member (null), so nothing that is not one is ever
+ * answered as one.
+ */
+export function republishedOf(value: unknown): Republished | null {
+  if (!plainObject(value)) return null;
+  const scoped = Object.hasOwn(value, 'page');
+  if (!exactly(value, scoped ? ['changed', 'endedBy', 'page', 'slot'] : ['changed', 'endedBy', 'slot'])
+    || value.endedBy !== 'generation_transition' || !isCatalogueName(value.slot) || (scoped && !isCatalogueName(value.page))) return null;
+  const changed = value.changed;
+  if (!Array.isArray(changed) || changed.length === 0 || changed.length > REPUBLISHED_MEMBERS.length) return null;
+  const out: RepublishedChange[] = [];
+  for (const entry of changed as unknown[]) {
+    if (!plainObject(entry) || !exactly(entry, ['member', 'new', 'old'])) return null;
+    const member = REPUBLISHED_MEMBERS.find(name => name === entry.member);
+    if (!member || (out.length > 0 && !(out[out.length - 1]!.member < member))) return null;
+    if (!republishedValue(member, entry.new) || !republishedValue(member, entry.old) || entry.new === entry.old) return null;
+    out.push({ member, new: entry.new, old: entry.old });
+  }
+  return { changed: out, endedBy: 'generation_transition', ...(scoped ? { page: value.page as string } : {}), slot: value.slot as string };
+}
+/**
+ * P49: what a statistics object records under `liftRepublishedKey` — `{ lastPublished, republished }`
+ * exactly, the snapshot in force the refusal left in force (or null) and the member — or null for
+ * anything else.
+ */
+export function republishedRecordOf(value: unknown): { lastPublished: InForce; republished: Republished } | null {
+  if (!plainObject(value) || !exactly(value, ['lastPublished', 'republished'])) return null;
+  const lastPublished = inForceOf(value.lastPublished), republished = republishedOf(value.republished);
+  return lastPublished === undefined || !republished ? null : { lastPublished, republished };
+}
+/**
+ * P49: the member while it still applies — while the snapshot in force is the one
+ * the refusal left in force (its version and publication time), or, for a
+ * placement that had never published, while there is still none. Once a
+ * publication succeeds (the generation transition publishes one) the snapshot in
+ * force is another one, and the member no longer applies.
+ */
+export function republishedIn(record: { lastPublished: InForce; republished: Republished } | null, inForce: unknown): Republished | null {
+  if (!record) return null;
+  if (record.lastPublished === null) return inForce === null || inForce === undefined ? record.republished : null;
+  return plainObject(inForce) && inForce.version === record.lastPublished.version && inForce.publishedAt === record.lastPublished.publishedAt
+    ? record.republished : null;
+}
+/**
+ * P55 (R-P78, decision D1): what a generation transition whose own publication did
+ * not succeed leaves under `liftRepublishedKey` in place of P49's record it
+ * supersedes: the record in its own form, the snapshot in force it named kept,
+ * with no change left outstanding (`changed: []`), because the transition adopted
+ * every changed member (P50 refuses one that does not). A record naming no change
+ * is no record (`republishedRecordOf`, since `republishedOf` requires one change or
+ * more), so neither lift read carries `republished` for the placement any longer;
+ * what still holds the slot then is the cause that failed the transition's
+ * publication, which P42's `stale` names when it is the pooled fault.
+ */
+export function supersededRecordOf(record: { lastPublished: InForce; republished: Republished }): { lastPublished: InForce; republished: Republished } {
+  return { lastPublished: record.lastPublished, republished: { ...record.republished, changed: [] } };
+}
+/**
+ * P49: the refusal's sentence, composed from the member, the tenant and the
+ * version of the snapshot in force alone, so the statistics object and the
+ * operator's publish route say the same words: the slot (and its page), each
+ * changed member with its old and new values, the version the slot's statistics
+ * stay at (or that the slot stays unpublished), and what ends it, with the route.
+ * It begins with today's `statistics recovery required`, which every other
+ * recovery refusal keeps unchanged.
+ */
+export function republishedRefusalOf(republished: Republished, tenant: string, version: number | null): string {
+  const changes = republished.changed.map(c => `${c.member} from ${c.old} to ${c.new}`);
+  const list = changes.length > 1 ? `${changes.slice(0, -1).join(', ')} and ${changes[changes.length - 1]}` : changes[0];
+  return `statistics recovery required: the learn document republished for slot ${republished.slot}${republished.page ? ` on page ${republished.page}` : ''}`
+    + ` changed ${list}; `
+    + (version === null ? 'the slot has no successful publication yet and stays unpublished' : `the slot's statistics stay at version ${version}`)
+    + ` until an operator starts the new generation with POST /v1/${tenant}/learn/generation`
+    + ` (or the document is republished with the old value${changes.length > 1 ? 's' : ''})`;
+}
+/**
+ * P49: the member and the version of a statistics object's answer that is exactly
+ * the refusal after a learn republish — `{ ok: false, error, republished }`, no
+ * other member, a well-formed member and the object's own sentence for it, for
+ * this tenant and a version that is a safe whole number — or null for any other
+ * answer.
+ */
+export function republishedRefusalIn(body: unknown, tenant: string): { republished: Republished; version: number | null } | null {
+  if (!plainObject(body) || !exactly(body, ['ok', 'error', 'republished']) || body.ok !== false || typeof body.error !== 'string') return null;
+  const republished = republishedOf(body.republished);
+  if (!republished) return null;
+  const at = /; the slot's statistics stay at version ([1-9][0-9]{0,15}) until /.exec(body.error);
+  const version = at ? Number(at[1]) : null;
+  if (version !== null && !Number.isSafeInteger(version)) return null;
+  return body.error === republishedRefusalOf(republished, tenant, version) ? { republished, version } : null;
+}
+/**
+ * P50 (R-P78, decision D1): the member, when `value` is one exactly as the
+ * statistics object writes it — keys `changed` and `slot`, with `page` for a
+ * page-scoped placement, and no other; one to three changes, each exactly
+ * `member`, `new` and `old`, a member an operator adopts (`ADOPTED_MEMBERS`),
+ * sorted and distinct, both values words of that member and different; a
+ * catalogue slot and page — rebuilt with its keys sorted (R-P3). Anything else
+ * is no member (null), so nothing that is not one is ever answered as one.
+ */
+export function notAdoptedOf(value: unknown): NotAdopted | null {
+  if (!plainObject(value)) return null;
+  const scoped = Object.hasOwn(value, 'page');
+  if (!exactly(value, scoped ? ['changed', 'page', 'slot'] : ['changed', 'slot'])
+    || !isCatalogueName(value.slot) || (scoped && !isCatalogueName(value.page))) return null;
+  const changed = value.changed;
+  if (!Array.isArray(changed) || changed.length === 0 || changed.length > ADOPTED_MEMBERS.length) return null;
+  const out: NotAdoptedChange[] = [];
+  for (const entry of changed as unknown[]) {
+    if (!plainObject(entry) || !exactly(entry, ['member', 'new', 'old'])) return null;
+    const member = ADOPTED_MEMBERS.find(name => name === entry.member);
+    if (!member || (out.length > 0 && !(out[out.length - 1]!.member < member))) return null;
+    if (!republishedValue(member, entry.new) || !republishedValue(member, entry.old) || entry.new === entry.old) return null;
+    out.push({ member, new: entry.new as string, old: entry.old as string });
+  }
+  return { changed: out, ...(scoped ? { page: value.page as string } : {}), slot: value.slot as string };
+}
+/**
+ * P50: the refusal's sentence, composed from the member and the tenant alone, so
+ * the statistics object and the operator's transition route say the same words:
+ * the slot (and its page), each member not adopted with its old and new values,
+ * that the slot would count no exposure, and how to adopt each: a `reward` or an
+ * `objective` by naming its new value in the body of the transition (or by a
+ * republish restoring the old value), the `measurementBasis`, which no
+ * transition moves, only by a republish restoring the old basis.
+ */
+export function notAdoptedRefusalOf(notAdopted: NotAdopted, tenant: string): string {
+  const and = (parts: string[]) => (parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0] ?? '');
+  const named = notAdopted.changed.filter(c => c.member !== 'measurementBasis');
+  const basis = notAdopted.changed.find(c => c.member === 'measurementBasis');
+  const how = [
+    ...(named.length ? [`name ${and(named.map(c => `${c.member} ${c.new}`))} in the body of POST /v1/${tenant}/learn/generation`
+      + ` (or republish the learn document with ${and(named.map(c => `${c.member} ${c.old}`))})`] : []),
+    ...(basis ? [`republish the learn document with measurementBasis ${basis.old}, since no generation transition moves the measurement basis`] : []),
+  ];
+  return `generation transition refused: the learn document republished for slot ${notAdopted.slot}${notAdopted.page ? ` on page ${notAdopted.page}` : ''}`
+    + ` changed ${and(notAdopted.changed.map(c => `${c.member} from ${c.old} to ${c.new}`))}`
+    + ` and this transition does not adopt ${notAdopted.changed.length > 1 ? 'them' : 'it'}, so the slot would count no exposure; ${how.join('; and ')}`;
+}
+/**
+ * P50: the member of a statistics object's answer that is exactly the
+ * transition's refusal of a member it does not adopt — `{ ok: false, error,
+ * notAdopted }`, no other member, a well-formed member and the object's own
+ * sentence for it, for this tenant — or null for any other answer.
+ */
+export function notAdoptedRefusalIn(body: unknown, tenant: string): NotAdopted | null {
+  if (!plainObject(body) || !exactly(body, ['ok', 'error', 'notAdopted']) || body.ok !== false || typeof body.error !== 'string') return null;
+  const notAdopted = notAdoptedOf(body.notAdopted);
+  return notAdopted && body.error === notAdoptedRefusalOf(notAdopted, tenant) ? notAdopted : null;
+}
+/** W26 R2: the page that enters a placement's identity — its own page for a page-scoped slot name, none for any other. */
+export const identityPage = (scoped: ReadonlySet<string>, slot: string, page: string | undefined): string | undefined =>
+  scoped.has(slot) ? page : undefined;
+/** W26 R2: a placement's slot is a placement slot, and a page-scoped one names a catalogue page; anything else could address another object. */
+const placementValid = (scoped: ReadonlySet<string>, slot: string, page: unknown): boolean => isPlacementSlot(slot) && (!scoped.has(slot) || isCatalogueName(page));
+
+/**
+ * W26 R2 (review D2): the slot names of the tenant's PUBLISHED catalogue whose
+ * identity carries the page, for a caller that has not already read the
+ * catalogue.
+ *
+ * A tenant that publishes no catalogue has no cross-page name, and its answer
+ * is the empty set: no publication authority bound at all, a publication that
+ * was never initialized, or a committed set without a slot catalogue in it.
+ * ANYTHING ELSE that stops the catalogue being read — a transient storage
+ * outage, a damaged set — THROWS. The placement of a cross-page name cannot be
+ * known then, and answering with the page-less name would pool both pages'
+ * evidence, silently, into an object nothing serves. Every caller turns the
+ * throw into a refusal it names: a fan-in's receipt is `config` and nothing is
+ * sent, and the owner's recovery leaves the operation unprepared so its own
+ * retry resolves the catalogue again. A typed owner or consent refusal raised
+ * inside the read propagates unchanged.
+ */
+export async function pageScopedSlotsOf(env: Partial<Pick<Env, 'STORAGE'>>, tenant: string): Promise<ReadonlySet<string>> {
+  return new Set([...await publishedSlotPagesOf(env, tenant)].filter(([, pages]) => pages.length > 1).map(([slot]) => slot));
+}
+/** W26 R2: the pages each slot name of the tenant's published catalogue is carried on, under `pageScopedSlotsOf`'s rules. */
+export async function publishedSlotPagesOf(env: Partial<Pick<Env, 'STORAGE'>>, tenant: string): Promise<Map<string, string[]>> {
+  const storage = env.STORAGE as { get?: unknown; put?: unknown } | undefined;
+  if (!storage || typeof storage.get !== 'function' || typeof storage.put !== 'function') return new Map();
+  const scope = publicationScope(SLOTS_KIND, tenant);
+  let pin: Awaited<ReturnType<typeof pinPublication>>;
+  try { pin = await pinPublication(env as Env, scope, true); }
+  catch (error) {
+    if (error instanceof PublicationError && error.code === 'publication_uninitialized') return new Map();
+    throw error;
+  }
+  if (!Object.values(pin.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === scope)) return new Map();
+  return slotPagesOf((await readPinnedPublication(env as Env, SLOTS_KIND, tenant, pin)).value);
+}
+/** W26 R2: a `pageScoped` member on the wire — sorted catalogue slot names, or null when malformed. */
+export function pageScopedOf(value: unknown): ReadonlySet<string> | null {
+  if (value === undefined) return new Set();
+  if (!Array.isArray(value) || value.length > FAN_LIMITS.rows || value.some(name => !isCatalogueName(name))) return null;
+  return new Set(value as string[]);
+}
+/** W26 R2: the wire form of a set of page-scoped names — absent when empty, so an unscoped body is byte-identical to before. */
+export const pageScopedWire = (scoped: ReadonlySet<string>): { pageScoped?: string[] } => scoped.size ? { pageScoped: [...scoped].sort() } : {};
+
+/**
+ * P08 (decision D1, freeze item 27): one placement a module the catalogue
+ * declares pooled is served in — a slot it names (`slotTypes`) on a page the
+ * slots document carries that slot on. `identity` is the page in the
+ * placement's own storage identity, present only for a page-scoped slot name
+ * (W26 R2, `identityPage`), so the placement is the very object its decisions
+ * are fanned to and its credits forwarded to, untouched.
+ */
+export interface PooledPlacement { slot: string; page: string; identity?: string }
+/**
+ * P08 (decisions D1, D2): every placement of every module the catalogue
+ * declares pooled, by module. A pooled module's exposures and credits keep
+ * landing where they always have — each placement's own statistics object,
+ * page-scoped where W26 R2 says so — and every placement's publication reads
+ * them all into the module's ONE record, the page as its level after everyone
+ * (`LearnStats`, `buildSnapshot`). An undeclared module has no entry: it is
+ * never read outside its own placement, exactly as before. Pure.
+ */
+export function pooledPlacementsOf(pieces: ReadonlyArray<Pick<ContentPiece, 'id' | 'slotTypes' | 'pooled'>>, slots: Pick<SlotCatalog, 'pages'> | null | undefined): Map<string, PooledPlacement[]> {
+  const pages = slotPagesOf(slots);
+  const scoped = new Set([...pages].filter(([, on]) => on.length > 1).map(([slot]) => slot));
+  const out = new Map<string, PooledPlacement[]>();
+  for (const piece of pieces) {
+    if (piece.pooled !== true || out.has(piece.id)) continue;
+    const placements: PooledPlacement[] = [];
+    for (const slot of new Set(piece.slotTypes)) for (const page of pages.get(slot) ?? []) {
+      if (!isPlacementSlot(slot) || !isCatalogueName(page)) continue;
+      placements.push({ slot, page, ...(scoped.has(slot) ? { identity: page } : {}) });
+    }
+    if (placements.length) out.set(piece.id, placements);
+  }
+  return out;
+}
 
 type NS = DurableObjectNamespace | undefined;
 export interface StatsWriteReceipt {
@@ -206,7 +719,22 @@ export interface OutcomeReceipt {
    * `DecisionRing` always sets it.
    */
   brandMismatched?: number;
+  /**
+   * P33 (decision D1, freeze item 11; R-P35, S4F-C5): the itemisation of how
+   * the outcome was credited, on the attribution record the visitor's ring
+   * derives when it credits the outcome — this receipt, kept on the ring's
+   * credit plan. One entry per slot whose learn dials name their own
+   * attribution policy, sorted by slot: `policy` is that policy and `credited`
+   * the decision identifiers it credited, `[]` when none, the same decisions
+   * the plan's credit effects carry. Written for every outcome, one that
+   * credits nothing included, and ABSENT when no slot names a policy of its
+   * own, so such a receipt is exactly what it was. The stored outcome record
+   * is the admitted source and never carries it.
+   */
+  attribution?: SlotAttributionEntry[];
 }
+/** P33: one slot's line of the itemisation. */
+export interface SlotAttributionEntry { slot: string; policy: SlotAttribution; credited: string[] }
 export interface LearningReceipt {
   version: 1; kind: 'decisions' | 'outcome'; ok: boolean;
   code: 'complete' | 'invalid' | 'barrier' | 'config' | 'incomplete'; received: number; cutoffSkipped: number;
@@ -317,6 +845,26 @@ function refusalsBySlot(value: unknown): Record<string, 'reward' | 'money'> | nu
   if (!entries.length || entries.some(([slot, reason]) => !slot || (reason !== 'reward' && reason !== 'money'))) return null;
   return Object.fromEntries(entries) as Record<string, 'reward' | 'money'>;
 }
+/**
+ * P33: the itemisation on a ring reply, read back: entries of exactly
+ * `{ slot, policy, credited }`, one per slot, `policy` the module-tied policy
+ * and `credited` decision identifiers, never more credited decisions than the
+ * receipt credited. Null when malformed: an itemisation the caller cannot read
+ * is a malformed reply, never a silent credit.
+ */
+function attributionReply(value: unknown, eligible: unknown): SlotAttributionEntry[] | null {
+  if (!Array.isArray(value) || !value.length || value.length > FAN_LIMITS.rows || !count(eligible)) return null;
+  const out: SlotAttributionEntry[] = [], seen = new Set<string>();
+  let credited = 0;
+  for (const entry of value as unknown[]) {
+    if (!object(entry) || Object.keys(entry).some(key => key !== 'slot' && key !== 'policy' && key !== 'credited')
+      || typeof entry.slot !== 'string' || !entry.slot || seen.has(entry.slot) || entry.policy !== 'module-tied'
+      || !Array.isArray(entry.credited) || entry.credited.some(id => typeof id !== 'string' || !id)) return null;
+    seen.add(entry.slot); credited += entry.credited.length;
+    out.push({ slot: entry.slot, policy: 'module-tied', credited: [...entry.credited as string[]] });
+  }
+  return credited <= eligible ? out : null;
+}
 /** W24 R1.02: the money refusal on a ring reply, read back; null when malformed. */
 function moneyReply(value: unknown): MoneyRefusal | null {
   if (!object(value) || value.reason !== 'money_policy_unset'
@@ -329,9 +877,18 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
   const r = value.receipt;
   // W24 R1.03: the refusal members, present or absent, never malformed — and
   // `refused` IS the number of entries in `refusedBySlot`, so a reply cannot
-  // claim a count its own named refusals do not carry.
+  // claim a count its own named refusals do not carry. W24 R4 (LANE-LOG R203;
+  // W24-B2 build review finding 1): the two travel TOGETHER or not at all, the
+  // way the ring emits them (`DecisionRing.outcome()`). A `refused` with no
+  // `refusedBySlot` beside it — what a partially deployed or faulty ring would
+  // send — is a count nobody named, refused as malformed exactly as every other
+  // member that does not account for itself: `ring.unknown`, no outcome
+  // receipt, the learning receipt not ok. Never admitted as a refusal the
+  // receipt cannot name, and never read as a credit.
   const refusedBySlot = r.refusedBySlot === undefined ? undefined : refusalsBySlot(r.refusedBySlot);
   const money = r.money === undefined ? undefined : moneyReply(r.money);
+  // P33: present or absent, never malformed.
+  const attribution = r.attribution === undefined ? undefined : attributionReply(r.attribution, r.eligible);
   if (r.version !== 1 || r.kind !== 'outcome' || r.received !== 1 || !count(r.cutoffSkipped) || r.cutoffSkipped > 1
     || !count(r.attributed) || !count(r.eligible) || !count(r.weightSkipped) || !total(r.attributed, r.eligible, r.weightSkipped)
     || value.credits !== r.attributed || !isStatsDelivery(r.credits) || r.credits.received !== r.eligible
@@ -339,9 +896,8 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     // W23 T1.01, W26 C1.01: present or absent, never malformed.
     || (r.outsideWindow !== undefined && !count(r.outsideWindow))
     || (r.brandMismatched !== undefined && !count(r.brandMismatched))
-    || refusedBySlot === null || money === null
-    || (r.refused !== undefined && !count(r.refused))
-    || (refusedBySlot !== undefined && r.refused !== Object.keys(refusedBySlot).length)
+    || refusedBySlot === null || money === null || attribution === null
+    || (refusedBySlot === undefined ? r.refused !== undefined : r.refused !== Object.keys(refusedBySlot).length)
     // "No slot learns from this" is a statement about an outcome nothing took.
     || (r.notCredited !== undefined && (!['reward', 'money'].includes(r.notCredited as string) || r.attributed !== 0))) return null;
   const credits: StatsDelivery = { ...r.credits };
@@ -351,7 +907,8 @@ function outcomeReply(value: unknown): OutcomeReceipt | null {
     ...(refusedBySlot !== undefined ? { refusedBySlot } : {}),
     ...(r.refused !== undefined ? { refused: r.refused as number } : {}),
     ...(money !== undefined ? { money } : {}),
-    ...(r.notCredited !== undefined ? { notCredited: r.notCredited as 'reward' | 'money' } : {}) };
+    ...(r.notCredited !== undefined ? { notCredited: r.notCredited as 'reward' | 'money' } : {}),
+    ...(attribution !== undefined ? { attribution } : {}) };
 }
 /**
  * W22 R1.01: rows whose fan-out post was ATTEMPTED and not accepted — the
@@ -377,11 +934,24 @@ function finish(out: LearningReceipt): LearningReceipt {
   if (!out.ok && out.code === 'complete') out.code = 'incomplete';
   return out;
 }
-/** Only current background wrappers report: one fixed numeric summary, never raw identifiers or errors. */
+/**
+ * Only current background wrappers report: one fixed numeric summary, never raw
+ * identifiers or errors.
+ *
+ * W24 R3 (LANE-LOG R203; W24-B2 build review finding 3): the line shows what
+ * the outcome receipt says was REFUSED beside what it says was attributed —
+ * `refused`, a count like every other member (zero when nothing was refused or
+ * no receipt came back), and `refusedBySlot`, the receipt's own map of the
+ * configured slot names to the rule that refused each (`reward` or `money`),
+ * present only when the receipt carries one. Slot names are the tenant's
+ * published slot catalogue, not a visitor, content or error identifier; a
+ * line with nothing refused stays wholly numeric.
+ */
 export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: LearningReceipt | null): void {
   if (result?.ok) return;
   try {
     const credits = result?.outcome?.credits;
+    const refusedBySlot = result?.outcome?.refusedBySlot;
     console.warn('learning_incomplete', {
       version: 1, kind: kind === 'decisions' ? 0 : 1, code: result ? ['complete', 'invalid', 'barrier', 'config', 'incomplete'].indexOf(result.code) : 3,
       received: result?.received ?? 1, cutoffSkipped: result?.cutoffSkipped ?? 0,
@@ -391,8 +961,10 @@ export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: 
       exposureUnknown: result?.exposures.rowsUnknown ?? 0, exposureNotAttempted: result?.exposures.rowsNotAttempted ?? 0,
       creditPlanKnown: Number(result?.outcome !== null && result?.outcome !== undefined), attributed: result?.outcome?.attributed ?? 0,
       eligible: result?.outcome?.eligible ?? 0, weightSkipped: result?.outcome?.weightSkipped ?? 0,
+      refused: result?.outcome?.refused ?? 0,
       creditProcessed: credits?.processed ?? 0, creditSkipped: credits?.skipped ?? 0, creditUnknown: credits?.rowsUnknown ?? 0, creditNotAttempted: credits?.rowsNotAttempted ?? 0,
       alarmsUnknown: (result?.exposures.alarmsUnknown ?? 0) + (credits?.alarmsUnknown ?? 0),
+      ...(refusedBySlot ? { refusedBySlot: Object.fromEntries(Object.entries(refusedBySlot)) } : {}),
     });
   } catch { /* Diagnostics must not throw or cause a retry. */ }
 }
@@ -401,20 +973,40 @@ export function reportLearningIncomplete(kind: LearningReceipt['kind'], result: 
  * CW30: the visitor's ring, read on the decision path under a time budget so
  * the fatigue term can never extend a decision by more than `timeoutMs`. Null
  * when the ring is unbound, slow or failing: no penalty, never an error.
+ * P62 (R-P110 decision 1, R-P112(1)): the budget is `RING_READ_BUDGET_MS`
+ * unless the caller holds another, and the ring call is aborted when it runs
+ * out, as the lift witness's is, so nothing that waits for the calls a
+ * decision started (the shopper's owner drains them before it answers) waits
+ * on the ring past it.
  */
-export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = 60): Promise<RingEntry[] | null> {
+export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = RING_READ_BUDGET_MS): Promise<RingEntry[] | null> {
+  return (await readRingWithOutcome(env, tenant, visitorId, timeoutMs)).ring;
+}
+/**
+ * P61 (amendment 6, R-P110): `readRing`, telling how the read ended, with its
+ * whole milliseconds from its start to its outcome: `read` (the ring answered
+ * within the budget, an empty ring included), `late` (it did not), `failed`
+ * (no ring binding, a call that errored, or an answer that is not a ring
+ * answer). The read, its budget and what it serves are `readRing`'s, unchanged.
+ */
+export async function readRingWithOutcome(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = RING_READ_BUDGET_MS):
+  Promise<{ ring: RingEntry[] | null; read: LearningRead<RingReadOutcome> }> {
+  const started = performance.now();
+  const told = (ring: RingEntry[] | null, outcome: RingReadOutcome) => ({ ring, read: { ms: elapsedMs(started), outcome } });
   const ns = env.DECISION_RING;
-  if (!ns) return null;
+  if (!ns) return told(null, 'failed');
+  const abort = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const read = ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent').then(async (res) => {
+    const read = ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent', { signal: abort.signal }).then(async (res) => {
       // The ring keeps the full served records; attribution and the fatigue term read them as entries.
       const body = (await res.json()) as { ok?: boolean; ring?: Array<DecisionRecord | RingEntry> };
       return body.ok && Array.isArray(body.ring) ? body.ring.map((r) => ('decision_id' in r ? ringEntryOf(r) : r)) : null;
     });
-    const late = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); });
-    return await Promise.race([read, late]);
-  } catch { return null; } finally { if (timer !== undefined) clearTimeout(timer); }
+    const late = new Promise<'late'>((resolve) => { timer = setTimeout(() => { abort.abort(); resolve('late'); }, timeoutMs); });
+    const ring = await Promise.race([read, late]);
+    return ring === 'late' ? told(null, 'late') : told(ring, ring ? 'read' : 'failed');
+  } catch { return told(null, 'failed'); } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
 /**
@@ -449,13 +1041,57 @@ export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ 
   return out;
 }
 
+/**
+ * P05: what a decision tells the statistics object about its position — the
+ * position counted from 1 within its slot, for a module of a page's declared
+ * layout slot (a record carrying the layout reason, P29), the only slot a
+ * position estimate and its normalisation exist for; and, on each of the two
+ * modules an adjacent swap exchanged, the pair it exchanged. `swapOnly` keeps
+ * only the latter. Empty for any other record, so its row is exactly as before.
+ */
+export function positionRowOf(r: DecisionRecord | undefined, swapOnly = false): { position?: number; swap?: [number, number] } {
+  if (!r || !Number.isSafeInteger(r.position) || r.position < 0 || r.position >= 64) return {};
+  const x = r.explain?.exploration;
+  if (x?.mode === 'adjacent-swap' && Array.isArray(x.positions) && x.positions.length === 2 && Number.isSafeInteger(x.positions[0])
+    && x.positions[1] === x.positions[0] + 1 && (r.position + 1 === x.positions[0] || r.position + 1 === x.positions[1])) {
+    return { position: r.position + 1, swap: [x.positions[0], x.positions[1]] };
+  }
+  return !swapOnly && r.explain?.layoutReason !== undefined ? { position: r.position + 1 } : {};
+}
+
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, tenant: r.tenant, visitor_id: r.visitor_id, brand: r.brand, ts: r.ts, page: r.page, slot: r.slot, position: r.position,
     measurementBasis: r.measurementBasis ?? 'served-v1', ...(r.rendered ? { renderedAt: r.rendered.at } : {}),
-    item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell, ...(r.retention ? { retention: r.retention } : {}), ...(r.featured_product_ids?.length ? { products: [...r.featured_product_ids] } : {}) });
+    item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell, ...(r.retention ? { retention: r.retention } : {}), ...(r.featured_product_ids?.length ? { products: [...r.featured_product_ids] } : {}),
+    ...successEntryOf(r) });
 
-/** The slot's configuration the statistics object publishes against. */
-export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; measurementBasis?: import('@/content/types').MeasurementBasis; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin' }
+/**
+ * P16 (decision D1, freeze items 14 and 43): the success event a decision's
+ * record names (`explain.successEvent`), as attribution and the credit read it
+ * off the ring entry: the event and the table's value, exactly as recorded. A
+ * member that is present and not one this platform writes — an event outside
+ * the reward list, a value that is neither null nor a finite number above zero,
+ * another member — is kept as an event no outcome carries, so the decision is
+ * credited nothing rather than credited by a guess. Absent on a record that
+ * names none, so its entry is exactly as before.
+ */
+function successEntryOf(r: DecisionRecord): Pick<RingEntry, 'successEvent'> {
+  const named: unknown = (r.explain as { successEvent?: unknown } | undefined)?.successEvent;
+  if (named === undefined) return {};
+  const read = object(named) && Object.keys(named).sort().join(',') === 'event,value' && isRewardType(named.event)
+    && (named.value === null || (typeof named.value === 'number' && Number.isFinite(named.value) && named.value > 0));
+  return { successEvent: read ? { event: named.event as string, value: named.value as number | null } : { event: '', value: null } };
+}
+
+/**
+ * The slot's configuration the statistics object publishes against. P33
+ * (R-P39, S4F-C6): `attribution`, the slot's own attribution policy, rides it
+ * only to the visitor's ring (`slotConfigsOf`), which credits by it and never
+ * forwards it: the configuration a statistics object receives is exactly
+ * reward, stats, objective and measurement basis.
+ */
+export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; measurementBasis?: import('@/content/types').MeasurementBasis; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin';
+  attribution?: SlotAttribution }
 
 export async function learningGenerations(ns: NS, name: string, items: string[]): Promise<Record<string, LearningGeneration>> {
   if (!ns) throw new Error('Learning generation unavailable');
@@ -467,10 +1103,26 @@ export async function learningGenerations(ns: NS, name: string, items: string[])
   return Object.fromEntries(items.map(item => [item, { whole: value.whole as number, item: Number((value.items as Record<string, unknown>)[item]) }]));
 }
 
-export async function prepareExposureEffects(env: Env, records: DecisionRecord[], consentUntil: number): Promise<Record<string, LearningEffect>> {
+/**
+ * W26 R2: every statistics object a set of personalized records lands in, by
+ * name — the managed path prepares its effects against these and the recovery
+ * record names them for cleanup, so both follow the page-separated object.
+ */
+export function exposureDestinations(records: readonly DecisionRecord[], scoped: ReadonlySet<string>): string[] {
+  const names = new Set<string>();
+  // P29 (decision D2): an off-limits layout slot's record is no exposure, so it lands in no statistics object.
+  for (const row of records) if (row.arm === 'personalized' && !isOffLimitsLayoutRecord(row)) {
+    if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
+    names.add(statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)));
+  }
+  return [...names];
+}
+
+export async function prepareExposureEffects(env: Env, records: DecisionRecord[], consentUntil: number, scoped: ReadonlySet<string> = new Set()): Promise<Record<string, LearningEffect>> {
   const result: Record<string, LearningEffect> = {}, groups = new Map<string, DecisionRecord[]>();
-  for (const row of records) if (row.arm === 'personalized') {
-    const name = statsName(row.tenant, row.brand, row.slot); groups.set(name, [...(groups.get(name) ?? []), row]);
+  for (const row of records) if (row.arm === 'personalized' && !isOffLimitsLayoutRecord(row)) {
+    if (!placementValid(scoped, row.slot, row.page)) throw new Error('Learning placement unavailable');
+    const name = statsName(row.tenant, row.brand, row.slot, identityPage(scoped, row.slot, row.page)); groups.set(name, [...(groups.get(name) ?? []), row]);
   }
   for (const [name, rows] of groups) {
     const generations = await learningGenerations(env.LEARN_STATS, name, rows.map(row => row.item_id));
@@ -482,8 +1134,17 @@ export async function prepareExposureEffects(env: Env, records: DecisionRecord[]
   return result;
 }
 
-/** After a decision set is served: the ring gets the full records, each slot's object gets its exposures. */
-export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }): Promise<LearningReceipt> {
+/**
+ * After a decision set is served: the ring gets the full records, each
+ * placement's object gets its exposures.
+ *
+ * W26 R2: `pageScoped` is the set of slot names whose identity carries the page
+ * (`pageScopedSlotNames`), as the caller already holds it — the serving path
+ * from the catalogue it decided with, the managed path from what its recovery
+ * record prepared. A caller that holds none has it read here, once, before
+ * either destination starts (`pageScopedSlotsOf`).
+ */
+export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig, managed?: { effects: Record<string, LearningEffect> }, pageScoped?: ReadonlySet<string>): Promise<LearningReceipt> {
   const out = receipt('decisions', Array.isArray(set.records) ? set.records.length : 0);
   try {
     const { tenant, brand, visitor_id: visitorId, records: input } = set, budget = admission();
@@ -503,6 +1164,10 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     const detached: DecisionRecord[] = [];
     for (const row of members) {
       if (!object(row) || !owned(row)) return finish(out);
+      // P29 (decision D2): an off-limits layout slot's record goes to the ledger
+      // only: never to the shopper's ring, which receipts and attribution read,
+      // and never to the statistics as an exposure.
+      if (isOffLimitsLayoutRecord(row)) continue;
       const copy = budget.detach(row, 'decision');
       if (!owned(copy)) return finish(out);
       detached.push(copy);
@@ -526,14 +1191,37 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     for (const row of records) pinRetention(env as RetentionEnv, row.retention?.online, tenant, 'online');
     out.code = 'complete';
     if (!records.length) return out;
-    const bySlot = new Map<string, DecisionRecord[]>();
-    // Holdout decisions remain in the ring, never the personalized statistics.
-    for (const r of records) if (r.arm === 'personalized') bySlot.set(r.slot, [...(bySlot.get(r.slot) ?? []), r]);
     out.code = 'config';
-    if (records.some(row => (row.measurementBasis ?? 'served-v1') !== (slotConfig(row.slot).measurementBasis ?? 'served-v1'))) return finish(out);
-    out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
-    out.exposures = { ...emptyStatsDelivery(), destinations: bySlot.size, notAttempted: bySlot.size,
-      received: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0), rowsNotAttempted: [...bySlot.values()].reduce((n, rows) => n + rows.length, 0) };
+    // W26 R2: one destination per PLACEMENT — the slot, and its page where the
+    // catalogue carries the slot name on more than one page. Only a set that
+    // reaches the statistics at all needs the catalogue.
+    let scoped: ReadonlySet<string>;
+    try { scoped = pageScoped ?? (records.some(r => r.arm === 'personalized') ? await pageScopedSlotsOf(env, tenant) : new Set<string>()); }
+    catch {
+      // Review D2: the catalogue could not be read, so no placement's identity
+      // is known. Refused as `config`, naming both destinations not attempted.
+      out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
+      return finish(out);
+    }
+    const bySlot = new Map<string, { slot: string; page?: string; rows: DecisionRecord[] }>();
+    // Holdout decisions remain in the ring, never the personalized statistics.
+    for (const r of records) if (r.arm === 'personalized') {
+      if (!placementValid(scoped, r.slot, r.page)) { out.code = 'invalid'; return finish(out); }
+      const page = identityPage(scoped, r.slot, r.page), name = statsName(tenant, brand, r.slot, page);
+      const group = bySlot.get(name) ?? { slot: r.slot, ...(page ? { page } : {}), rows: [] };
+      group.rows.push(r); bySlot.set(name, group);
+    }
+    const rowCount = [...bySlot.values()].reduce((n, g) => n + g.rows.length, 0);
+    const markNotAttempted = (): void => {
+      out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
+      out.exposures = { ...emptyStatsDelivery(), destinations: bySlot.size, notAttempted: bySlot.size, received: rowCount, rowsNotAttempted: rowCount };
+    };
+    // G9 (W09.BASE.03): a configuration read that throws still leaves through the
+    // catch below as `config`, now naming the ring and every placement's rows it
+    // did not attempt, as the catalogue refusal above names its destination.
+    try { if (records.some(row => (row.measurementBasis ?? 'served-v1') !== (slotConfig(row.slot).measurementBasis ?? 'served-v1'))) return finish(out); }
+    catch (error) { markNotAttempted(); throw error; }
+    markNotAttempted();
     // W22 D1.02 (F16 §7): "put `decision_id` back into the `/exposures` payload
     // so `LearnStats` can do the same". A decision is served once, so its
     // logical id is what makes a redelivered exposure recognizable — and the
@@ -542,9 +1230,11 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     // payload alone cannot tell them apart. The managed path carries neither:
     // its effect marker already proves the same thing, and adding fields to its
     // row would change the digest every stored marker was written under.
-    const exposures = await Promise.all([...bySlot].map(async ([slot, rows]) => ({ slot, body: {
-      tenant, brand, slot, config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
+    const exposures = await Promise.all([...bySlot].map(async ([name, { slot, page, rows }]) => ({ name, body: {
+      tenant, brand, slot, ...(page ? { page } : {}), config: slotConfig(slot), ...(managed ? { version: 2 } : {}),
       exposures: await Promise.all(rows.map(async r => ({ item: r.item_id, cell: r.cell, ts: r.rendered?.at ?? r.ts,
+        // P05: a module an adjacent swap exchanged carries its position and the pair, so the object counts the swap.
+        ...positionRowOf(r, true),
         ...(managed ? { effect: managed.effects[r.decision_id] } : { decision: r.decision_id, digest: await recoveryDigest(r) }) }))),
     } })));
     // All validation/barrier/config reads precede starting either destination.
@@ -555,7 +1245,7 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     out.exposures.rowsUnknown = out.exposures.received; out.exposures.rowsNotAttempted = 0;
     const [ring, stats] = await Promise.all([
       post(env.DECISION_RING, ringName(tenant, visitorId), '/append', { tenant, visitorId, records, ...(managed ? { version: 2 } : {}) }, b => appendReply(b, records.length)),
-      Promise.all(exposures.map(({ slot, body }) => deliverStats(env.LEARN_STATS, statsName(tenant, brand, slot), 'exposures', body, body.exposures.length))),
+      Promise.all(exposures.map(({ name, body }) => deliverStats(env.LEARN_STATS, name, 'exposures', body, body.exposures.length))),
     ]);
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.append = ring.receipt;
@@ -564,8 +1254,44 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
   return reportFanOutLoss(env, set.tenant, finish(out));
 }
 
+/** P30: the purpose a cached layout's exposure identity is drawn under, so it can never be another row's. */
+const LAYOUT_EXPOSURE_PURPOSE = 'layout-exposure/v1';
+
+/**
+ * P30 (decision D2): the exposures of a CACHED layout, counted from its per-view
+ * beacon (`layout_exposure`): one exposure per drawn module, in the slot's own
+ * statistics object, in the cell of the context the key named — its channel and
+ * visit bucket, nothing of the shopper's (stage unknown, no region, no interest)
+ * — so they land at level 2 (channel and visit bucket) and the coarser levels,
+ * whatever the device. The caller admitted the beacon (src/content/service.ts
+ * `admitLayoutExposure`). Each row's identity is the page view's own — the
+ * shopper, the page, the slot, the position drawn and the page instance — with
+ * no module or key in it, so the object's applied-delivery journal (W22 D1.02)
+ * recognises any repeat for the same page view and counts it once; the subject
+ * stands where every journal identity carries it, so erasure removes it as it
+ * removes a decision's. The holdout's arms are never counted (the caller refuses
+ * their keys) and nothing reaches the shopper's ring: no decision of the
+ * shopper's stands behind a cached layout. Never throws; a delivery the object
+ * did not acknowledge is counted as lost evidence, like any fan-out's.
+ */
+export async function fanLayoutExposure(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'CACHE'>>, input: {
+  tenant: string; brand: string; slot: string; /** W26 R2: the page of a page-scoped slot name only. */ page?: string; viewPage: string;
+  config: SlotLearnConfig; subject: string; pageInstance: string; modules: readonly string[]; cell: DecisionRecord['cell']; at: number;
+}): Promise<StatsDelivery> {
+  try {
+    const { tenant, brand, slot, page, config } = input;
+    const exposures = await Promise.all(input.modules.map(async (item, position) => ({ item, cell: input.cell, ts: input.at,
+      decision: `${tenant}:view:${input.subject}:${input.viewPage}:${slot}:${position}:${input.pageInstance}`,
+      digest: await recoveryDigest([LAYOUT_EXPOSURE_PURPOSE, tenant, brand, input.subject, input.viewPage, slot, position, input.pageInstance]) })));
+    const delivery = await deliverStats(env.LEARN_STATS, statsName(tenant, brand, slot, page), 'exposures',
+      { tenant, brand, slot, ...(page ? { page } : {}), config, exposures }, exposures.length);
+    await recordEvidenceLoss(env, tenant, 'fanOutRejected', delivery.rowsUnknown);
+    return delivery;
+  } catch { return emptyStatsDelivery(); }
+}
+
 /** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
-export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null): Promise<LearningReceipt> {
+export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null, pageScoped?: ReadonlySet<string>): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);
   try {
     out.code = 'invalid';
@@ -604,9 +1330,20 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
      * slot is known — and the statistics object's own guard remains a
      * compatibility check on the accumulation tuple, never a reward filter.
      */
-    out.ring.destinations = 1; out.ring.unknown = 1;
+    /**
+     * W26 R2: which slot names carry the page in their identity, resolved here
+     * at the producer and carried to the ring, which knows the page of every
+     * decision it credits and routes each credit to its own page's object.
+     * Review D2: a catalogue that cannot be read refuses the outcome here, as
+     * `config`, with the ring not attempted — never a guessed identity.
+     */
+    out.code = 'config';
+    out.ring = { destinations: 1, acknowledged: 0, unknown: 0, notAttempted: 1 };
+    const scoped = pageScoped ?? await pageScopedSlotsOf(env, tenant);
+    out.code = 'complete';
+    out.ring.notAttempted = 0; out.ring.unknown = 1;
     const ring = await post(env.DECISION_RING, ringName(tenant, outcome.visitor_id), '/outcome', { tenant, brand, outcome, policy, slotConfig, defaultSlotConfig,
-      ...(money === undefined || money === null ? {} : { money }),
+      ...(money === undefined || money === null ? {} : { money }), ...pageScopedWire(scoped),
       ...(managed ? { version: 2, consentUntil: managed.consentUntil } : {}) }, outcomeReply);
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.outcome = ring.receipt;
@@ -631,20 +1368,38 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
  * rebuild starts a generation now out of what the platform still holds: it is
  * not a reconstruction of the decay an object that had been counting all along
  * would show, and the snapshot says so through `rebuiltFrom` and `restartedAt`.
+ *
+ * P33 (decision D1, freeze item 11): `policy` is the tenant's learning policy
+ * as `policyOf` reads it, each slot's own attribution policy included
+ * (`slotAttribution`), so a module-tied slot is folded by the rule the
+ * visitor's ring credited it by, and a slot without one exactly as before.
+ *
+ * P16 (decision D1, freeze items 14 and 43): a decision whose record names its
+ * success event (a slot with a conversion table) is folded by the rule the
+ * ring credited it by (`successCreditOf`): an outcome of that event, at the
+ * value the record names in the slot's currency; a record that names none,
+ * exactly as before.
  */
 export function foldRetainedDay(input: {
   tenant: string; brand: string; slot: string; config: SlotLearnConfig; policy: AttributionPolicy;
   decisions: readonly DecisionRecord[]; outcomes: readonly OutcomeRecord[]; at: number;
+  /** W26 R2: the page of a page-scoped placement; only that page's decisions and credits are folded. */
+  page?: string;
 }): { stats: StatsState; decisions: number; outcomes: number } {
   const stats = emptyStats();
   const basis = input.config.measurementBasis ?? 'served-v1';
-  const rings = new Map<string, RingEntry[]>(), seen = new Set<string>();
+  const rings = new Map<string, RingEntry[]>(), seen = new Set<string>(), pageOf = new Map<string, string>();
+  const placed = (page: string | undefined) => input.page === undefined || page === input.page;
   let decisions = 0, outcomes = 0;
   for (const d of input.decisions) {
     if (!object(d) || d.tenant !== input.tenant || d.brand !== input.brand || seen.has(d.decision_id)) continue;
-    seen.add(d.decision_id);
+    // P29 (decision D2): an off-limits layout slot's record never entered the
+    // shopper's ring, so a rebuilt ring holds it no more than the live one did:
+    // it is neither an exposure nor a decision any outcome can be credited to.
+    if (isOffLimitsLayoutRecord(d)) continue;
+    seen.add(d.decision_id); pageOf.set(d.decision_id, d.page);
     rings.set(d.visitor_id, [...(rings.get(d.visitor_id) ?? []), ringEntryOf(d)]);
-    if (d.slot !== input.slot || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;
+    if (d.slot !== input.slot || !placed(d.page) || d.arm !== 'personalized' || (d.measurementBasis ?? 'served-v1') !== basis) continue;
     recordExposure(stats, d.item_id, d.cell, input.at, input.config.stats, input.at);
     decisions++;
   }
@@ -654,13 +1409,103 @@ export function foldRetainedDay(input: {
     if (!ring) continue;
     let credited = false;
     for (const c of attribute(o, ring, input.policy)) {
-      if (c.slot !== input.slot || c.reward !== input.config.reward) continue;  // the slot learns against one reward
-      const weight = creditWeight(input.config.objective, o);
+      if (c.slot !== input.slot || !placed(pageOf.get(c.decision_id))) continue;
+      // The slot learns against one reward — or, P16, the decision against the
+      // success event its record names, at its value in the slot's currency —
+      // by the one rule the visitor's ring credits by (`successCreditOf`).
+      const success = successCreditOf(ring.find((e) => e.id === c.decision_id)?.successEvent, input.config, o);
+      if (success === null) continue;
+      const weight = success.weight;
       if (weight <= 0) continue;
-      recordSuccess(stats, c.item, c.cell, c.reward, input.at, weight, input.config.stats, input.at);
+      recordSuccess(stats, c.item, c.cell, success.reward, input.at, weight, input.config.stats, input.at);
       credited = true;
     }
     if (credited) outcomes++;
   }
   return { stats, decisions, outcomes };
+}
+
+// ── P61 (amendment 6, R-P110): every learning read, counted per tenant ───────
+//
+// The decision path names how each lift read and the ring read ended on its
+// answer (`sources.lift`, `sources.ring`); these counters keep the same outcomes
+// for the tenant, where the monitor reads them (`learningReads` on its result).
+// They follow the W20 G2 slot-governance counters (src/learn/slotGovernance.ts)
+// rule for rule: one small document per tenant in the operator cache (`CACHE`),
+// so no binding or store is added; written after the answer, never before it
+// (inside the shopper's owner once it has answered and outside it, never in its
+// serializer, R-P115; outside an owner as after-response work), under the
+// three conditions those counters are written under (the shopper's tracking
+// consent, no synthetic operation, no self-check), so the
+// monitor's own probe decisions and a shopper who withheld tracking are never
+// counted; never read on a decision path, and never able to fail one; holding
+// outcome words and counts only, nothing of the shopper; a floor, never an
+// overcount (the read-modify-write is last-write-wins, so concurrent decisions
+// may collapse into one increment); counted since a stated horizon, after which
+// the counts restart.
+
+/** P61: the lift read's outcomes, in the vocabulary `sources.lift` names them in. */
+export const LIFT_READ_OUTCOMES: readonly LiftReadOutcome[] = ['served', 'none', 'incompatible', 'late', 'superseded', 'unrecognized', 'unhealthy', 'failed'];
+/** P61: the ring read's outcomes, in the vocabulary `sources.ring` names them in. */
+export const RING_READ_OUTCOMES: readonly RingReadOutcome[] = ['read', 'late', 'failed', 'skipped'];
+/** P61: the one scope these counts are kept at, stated on every answer and never read from the store: the tenant's, across its brands. */
+export const LEARNING_READS_SCOPE = 'tenant';
+/** P61: the window the counts are measured over, the slot-governance counters' own; they restart when it lapses. */
+export const LEARNING_READS_HORIZON_MS = 30 * 86_400_000;
+export const learningReadsKey = (tenant: string): string => `learning-reads:v1:${tenant}`;
+
+/** P61: the tenant's counts of every outcome since `since`, zero reported as zero. */
+export interface LearningReads {
+  since: number;
+  scope: typeof LEARNING_READS_SCOPE;
+  lift: Record<LiftReadOutcome, number>;
+  ring: Record<RingReadOutcome, number>;
+}
+interface StoredLearningReads { version: 1; since: number; lift: Record<LiftReadOutcome, number>; ring: Record<RingReadOutcome, number> }
+
+const wholeCount = (value: unknown): number => (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0);
+/** Every outcome of the vocabulary with its stored count; anything stored that is not a whole, non-negative number reads as zero, and nothing outside the vocabulary is copied. */
+function outcomeCounts<O extends string>(names: readonly O[], block: unknown): Record<O, number> {
+  const held = block && typeof block === 'object' && !Array.isArray(block) ? block : null;
+  return Object.fromEntries(names.map(name => [name, wholeCount(held ? Object.getOwnPropertyDescriptor(held, name)?.value : undefined)])) as Record<O, number>;
+}
+/** The stored document, read back defensively: one written in another shape, or past its horizon, is none. */
+function learningReadsDocument(raw: unknown, now: number): StoredLearningReads | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const value = raw as { version?: unknown; since?: unknown; lift?: unknown; ring?: unknown };
+  const since = value.since;
+  if (value.version !== 1 || typeof since !== 'number' || !Number.isSafeInteger(since) || since < 0 || since > now
+    || now - since >= LEARNING_READS_HORIZON_MS) return null;
+  return { version: 1, since, lift: outcomeCounts(LIFT_READ_OUTCOMES, value.lift), ring: outcomeCounts(RING_READ_OUTCOMES, value.ring) };
+}
+
+/**
+ * P61: what the monitor reports for the tenant: every outcome counted since the
+ * horizon, zeros at a horizon of now when nothing was counted yet, or
+ * `undefined` when the store could not be read, so no result states a zero it
+ * did not observe. Never throws.
+ */
+export async function observeLearningReads(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<LearningReads | undefined> {
+  try {
+    const stored = learningReadsDocument(await env.CACHE.get(learningReadsKey(tenant), 'json'), now);
+    return { since: stored?.since ?? now, scope: LEARNING_READS_SCOPE,
+      lift: stored?.lift ?? outcomeCounts(LIFT_READ_OUTCOMES, null), ring: stored?.ring ?? outcomeCounts(RING_READ_OUTCOMES, null) };
+  } catch { return undefined; }
+}
+
+/**
+ * P61: one decision's outcomes added to the tenant's counts: each slot's lift
+ * read and the ring read. Called after the decision is answered (the decision
+ * path hands it to `afterOwnerAnswer`, with the operator cache alone); it
+ * resolves whatever happens, so no failure of this diagnostic can reach a
+ * shopper's decision.
+ */
+export async function recordLearningReads(env: Pick<Env, 'CACHE'>, tenant: string, reads: { lift: readonly LiftReadOutcome[]; ring: RingReadOutcome }, now: number): Promise<void> {
+  try {
+    const document: StoredLearningReads = learningReadsDocument(await env.CACHE.get(learningReadsKey(tenant), 'json'), now)
+      ?? { version: 1, since: now, lift: outcomeCounts(LIFT_READ_OUTCOMES, null), ring: outcomeCounts(RING_READ_OUTCOMES, null) };
+    for (const outcome of reads.lift) if (LIFT_READ_OUTCOMES.includes(outcome)) document.lift[outcome] = Math.min(document.lift[outcome] + 1, Number.MAX_SAFE_INTEGER);
+    if (RING_READ_OUTCOMES.includes(reads.ring)) document.ring[reads.ring] = Math.min(document.ring[reads.ring] + 1, Number.MAX_SAFE_INTEGER);
+    await env.CACHE.put(learningReadsKey(tenant), JSON.stringify(document), { expirationTtl: Math.floor(LEARNING_READS_HORIZON_MS / 1000) });
+  } catch { /* a diagnostic counter never fails a decision, and never retries on the shopper's time */ }
 }

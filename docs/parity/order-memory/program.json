@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-order-memory",
+    "title": "Tapestry parity, the order remembered and the kit true (amendment 8), 2 tickets",
+    "ticketIds": [
+      "P67",
+      "P68"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P67",
+      "title": "The alarm's carried purchase records its order (**amendment 8, 2026-10-20**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-8/BTI-Parity-Amendment-2026-10-20b.md (amendment 8, committed beside the program)",
+        "locator": "P67 · section 2 of amendment 8; P65 delivery review finding 1",
+        "requirement": "see amendment 8 section 2, ticket P67 (copied verbatim in the specification)"
+      },
+      "outcome": "A purchase whose object reset at the wrong moment is credited once: the alarm that writes its outcome also remembers the order, so the same order re-sent later is dropped as a duplicate on both hosts.",
+      "criteria": [
+        {
+          "id": "OM1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a purchase of order X reset between the behaviour capture's admission and the outcome's, written by the alarm, leaves the order recorded as purchased: a later purchase of X under a new event id is dropped as duplicate_order and the ledger holds one outcome record for X (today: two).",
+          "proof": "The P67 acceptance command runs the tests named unit:P67.OM1 in src/units/P67 and they pass."
+        },
+        {
+          "id": "OM2",
+          "kind": "LOCAL",
+          "observable": "Locks: the ordinary path's one-purchase-per-order rule (P40) unchanged; P65 RS1–RS3 and P64 unchanged; W06's digests and the idempotent replay unchanged (the record the alarm writes carries no stamp into any digest); no new remote call before any answer under the latency lever.",
+          "proof": "The P67 acceptance command runs the tests named unit:P67.OM2 in src/units/P67 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/P65/reviewer/REPORT.md finding 1 (reproduced on both hosts at 81713505)",
+          "description": "Reset during a purchase, alarm writes the outcome, re-send under a new id → two outcome records; controls: no reset → one; re-send before the alarm → one."
+        }
+      ],
+      "remainingWork": [
+        "When the alarm admits a carried purchase outcome, record the order as the engine's own path does: the object host through its order memory (withOrder, src/reflex/core.ts), the session host through a write of the session record from the alarm via SessionManager (a new grant).",
+        "Kit 02 :99 states it."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P155 under the owner's standing rule R-P78 (told, not asked)",
+          "effect": "An advisory ticket: the fix records the order at the alarm on both hosts; the session host's write is granted here."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/durable-objects/ShopperReflex.ts",
+        "src/identity/sessionAuthority.ts",
+        "src/ledger/recovery.ts",
+        "src/reflex/core.ts",
+        "src/services/SessionManager.ts",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P67 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "800ff09062d04068f1fcca60b91e3049107f0af1",
+        "verdict": "PASS",
+        "evidence": [
+          "_evidence/parity-step3/S16/specifier/REPORT.md (rem-specifier; S16 at 800ff090: P67 OM1 RED on both hosts, OM2 locks; the additive locks for P63/P64/P65)",
+          "_evidence/parity-step3/S16/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision 800ff090; OM1 RED for the missing order record ×3; the additive locks each RED under their mutant)"
+        ],
+        "negativeControlEvidence": [
+          "_evidence/parity-step3/S16/reviewer/logs/ (P67 conforming sketch 11/11; object-host-only recording → OM1 RED on the session host; a stamp in the outcome row and a wrong-id recording → OM2 RED; whole suite under both conforming sketches 3728/3728 on a hard-linked tree)"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P68",
+      "title": "The kit's citations land and the override variables are typed (**amendment 8, 2026-10-20**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-8/BTI-Parity-Amendment-2026-10-20b.md (amendment 8, committed beside the program)",
+        "locator": "P68 · section 2 of amendment 8; P63 and P62 delivery reviews",
+        "requirement": "see amendment 8 section 2, ticket P68 (copied verbatim in the specification)"
+      },
+      "outcome": "An operator or a developer following the kit's citations lands on the construct named, and the learning-read override variables are part of the typed environment.",
+      "criteria": [
+        {
+          "id": "KT1",
+          "kind": "LOCAL",
+          "observable": "Every citation in kit 02's render-acknowledgement paragraph (:933) and in the alarm-publication sentences (kit 02 :1171, kit 03 :1474-1488) names a line or range whose content is the construct the sentence describes at the artifact (a unit reads the kit and the source; RED today for the one citation still drifted at 8d07696f (ShopperReflex.ts:537 → :553; nine of the P63 report's fourteen were corrected by P65's kit commit, four never drifted on a construct reading)); kit 02 :1171 says what a skipped alarm still writes.",
+          "proof": "The P68 acceptance command runs the tests named unit:P68.KT1 in src/units/P68 and they pass."
+        },
+        {
+          "id": "KT2",
+          "kind": "LOCAL",
+          "observable": "The override variables LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS are declared in src/types/env.ts with their bounded-override semantics (a type-level unit); no served behaviour changes.",
+          "proof": "The P68 acceptance command runs the tests named unit:P68.KT2 in src/units/P68 and they pass."
+        },
+        {
+          "id": "KT3",
+          "kind": "LOCAL",
+          "observable": "Locks: the kit-reading tests and every unit of amendments 5–7 unchanged; P62's override semantics unchanged; the kit line counts are STATED in the build and delivery reports, not locked by a unit (R-P162: P66 and P67 move kit 02 before P68 builds).",
+          "proof": "The P68 acceptance command runs the tests named unit:P68.KT3 in src/units/P68 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/P63/implementer/REPORT.md (cite-check list); P63 delivery review finding 4; P62 delivery review F5",
+          "description": "The twelve drifted citations listed old → current; the :1171 overstatement; the untyped override variables."
+        }
+      ],
+      "remainingWork": [
+        "Correct the twelve drifted citations and the :1171 sentence; declare the two override variables in src/types/env.ts."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P150 and R-P155",
+          "effect": "A documentation-and-types ticket with no behaviour change; its live row is the served kit."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "src/types/env.ts"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P68 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "0b439d5ae6ebed06ad9c37549ffe833b1265feb4",
+        "verdict": "PASS",
+        "evidence": [
+          "_evidence/parity-step3/S16/specifier/REPORT.md (rem-specifier; S16 at 800ff090, fix rounds 91867aba and 0b439d5a: span cap, :99 and :933 tables with P67's two optional entries, code-only landings, within-function checks, strict wording rule, line counts stated)",
+          "_evidence/parity-step3/S16/reviewer-spec/REPORT.md (rem-reviewer: PASS at 800ff090 for P67 and the locks; P68 FAIL at 91867aba (the :99 count vs P67's build), PASS at the reviewed revision 0b439d5a on the head, the integration head f7cbf331 and P67's build)"
+        ],
+        "negativeControlEvidence": [
+          "_evidence/parity-step3/S16/reviewer/rejudge-0b439d5a/logs/ (façades RED on both bases; wrong-line variants RED, all named; the span cap, within and pairing each caught by their CONTROL when removed; conforming sketches 8/8 on the head, f7cbf331 and the P67 build)"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

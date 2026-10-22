@@ -19,6 +19,9 @@
   const card = (title, why, ...body) => h('section', { class: 'card' },
     title ? h('h2', {}, title) : null, why ? h('div', { class: 'why' }, why) : null, ...body);
   const needSlot = () => h('div', { class: 'empty' }, 'Choose a slot in the rail on the left.');
+  // W28.R5: a retained exploration setting the engine does not run, named in the
+  // words the Dials editor already uses for it, so every surface says the same.
+  const storedModeWords = (mode) => `Stored ${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)} — inactive`;
 
   // ══════════════════════════════════════════════════════ Exploring ══════════
   const ex = { st: C.pageState(), meta: null };
@@ -54,6 +57,21 @@
         : `Exploring by ${m.mode}, ${Math.round((m.share || 0) * 100)}% of this slot’s impressions, until a piece reaches ${fmt(m.floor || 0)} observations.`;
       host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
         m.published === false ? 'No snapshot published for this slot yet, so nothing has been observed.' : words));
+      // P11 (kit 02, evidence floors): where the slot's page has a configured
+      // evidence floor, the answer names it (`evidenceFloor`) and each row its
+      // exposures to it (`to_evidence_floor`); a page without one shows neither.
+      const evidenceFloor = m.evidenceFloor && Number.isFinite(m.evidenceFloor.floor) ? m.evidenceFloor : null;
+      if (evidenceFloor) {
+        host.append(h('div', { class: 'sub', style: 'margin-bottom:10px' },
+          `Evidence floor on the ${evidenceFloor.page} page: ${fmt(evidenceFloor.floor)} exposures. Below it, a piece’s learned estimate is pulled toward the slot’s rate by the exposures it lacks and still applied, never ignored.`));
+      }
+      // W28.R5 (kit 02): the answer reports the mode the engine runs and, where the
+      // learn document keeps a mode the engine will not run, names that retained
+      // setting (`configuredMode`, `unsupported`) — it is dormant, not a live policy.
+      if (m.unsupported && m.configuredMode) {
+        host.append(h('div', { class: 'msg note' },
+          `${storedModeWords(m.configuredMode)}: this slot’s learn document keeps a ${m.configuredMode} setting the engine does not run, so it spends no share of impressions. Choose a supported mode in Dials to replace it.`));
+      }
 
       if (!d) { host.append(h('div', { class: 'empty' }, ex.st.loading ? 'Reading…' : 'Nothing to show yet.')); return; }
       if (!d.rows || !d.rows.length) {
@@ -65,12 +83,16 @@
         h('td', {}, h('div', { class: 'itemname' }, r.title || r.item), h('div', { class: 'itemid' }, r.customer_item_id || r.item)),
         h('td', { class: 'num' }, dec(r.n, 1)),
         h('td', { class: 'num' }, dec(r.to_floor, 1)),
+        // The whitespace around this cell is what markup written by hand carries: no
+        // box is drawn for it, and the row's text reads this count apart from its neighbours.
+        evidenceFloor ? [' ', h('td', { class: 'num' }, Number.isFinite(r.to_evidence_floor) ? dec(r.to_evidence_floor, 1) : ''), ' '] : null,
       ));
       host.append(card(null, null,
         C.table([
           { key: 'piece', label: 'Piece' },
           { key: 'n', label: 'Observed', sym: 'n', num: true, title: 'Decayed observations at the pooled level' },
           { key: 'to', label: 'Short of the floor', num: true, title: 'How many more observations before the engine will judge it' },
+          ...(evidenceFloor ? [{ key: 'toEvidence', label: 'Short of the evidence floor', num: true, title: `How many more exposures before its learned estimate is applied without being pulled toward the slot’s rate (the ${evidenceFloor.page} page’s floor of ${fmt(evidenceFloor.floor)})` }] : []),
         ], rows),
         C.pager(ex.st, 'piece', loadExploring)));
     },

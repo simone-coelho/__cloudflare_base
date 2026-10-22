@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W28",
+  "workOrderHash": "sha256:1eb673681d1c884c3dacce90d709a5a769efc1253aeaf18639cc420902665244",
+  "artifact": {
+    "revision": "2ec3b08f8a27c0b771e1ffe27d8c1f4188a1ba05",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p05-build merged into rem/integration, local and not pushed; supersedes the W28 receipt at artifact 556d6953eeb8332795c71229306258b6b57240fd (completed 2026-09-27T13:55:05.000Z)"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P05 (position-bias correction) adds the exploration mode adjacent-swap to the supported-mode list that W28/B1.unit.test.ts:490, :493, :571 pinned as a closed set (R-P11); under R-P22 the REMAINING list at :571 gains adjacent-swap on the P05 specification (rem/spec-parity-b, S2 fix round, reviewed PASS at 8ecb223b), the Thompson refusal sentence unchanged, carried by the P05 per-ticket branch; the W28 contract (the pick modes, the share gate, the refusal) otherwise unchanged and green at the P05 artifact 2ec3b08f",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/reviewer/REPORT.md",
+      "git commits on rem/p05-build up to 2ec3b08f"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W28 --minWorkers=1 --maxWorkers=1 && node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts src/console/learning.render.test.ts src/content/consent.test.ts src/learn/phase2.test.ts src/learn/phase3.test.ts src/routes/content.test.ts -t \"W28[.]\" --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/fix1/reviewer/logs/w28-acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/reviewer/logs/w28-acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/fix1/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/fix1/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P05/fix1/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-13T08:27:35.247Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

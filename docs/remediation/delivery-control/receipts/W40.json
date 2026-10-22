@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "W40",
+  "workOrderHash": "sha256:38c9fbe34dbb79b2e1b35cbf63aa17f6525ba916ebf9fe125c2f15fefe9c38e6",
+  "artifact": {
+    "revision": "ccff40f21c630d3084eb7f4c8b651ceb22fe2b80",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W40-delivery/implementer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/W40-delivery/implementer/logs/fast-suite-head-ccff40f.ratchet.log",
+      "git commits e7377f0 9a8ba6b ebbde78 34e4157 9983d0a 8e50e75 ccff40f on rem/w40-build"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/W40 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W40-delivery/reviewer/logs/acceptance-ccff40f.log",
+      "/home/simonecoelho/rem/_evidence/W40-delivery/implementer/logs/acceptance-head-ccff40f.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W40-delivery/reviewer/logs/integration-gate-ccff40f.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/W40-delivery/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-01T18:23:58.000Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

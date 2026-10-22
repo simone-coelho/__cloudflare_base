@@ -255,12 +255,22 @@ interface AffinityRead {
  *
  * `cookieHeader` is never passed: identity here is the Bright Hour visitorId,
  * so the coach session cookie can neither be read nor written on this path.
+ *
+ * W36 (F14 R8). `clientSessionId` is the session the page's client sent. On the
+ * session host it is looked up before the visitor's `user:` pointer, so a
+ * pointer read that misses composes their page from their own session instead of
+ * a new, empty one. It is used only when the record it names is this
+ * visitor's own: another visitor's record is never served or written, even
+ * when the first read of the id misses or fails (the engine binds its reread
+ * to this visitor), and an id that names none serves what no id serves. The
+ * object host needs none: the visitor's own object is the identity there.
  */
 async function readAffinity(
   env: Env, visitorId: string, realNowMs: number,
   // Named rather than defaulted silently: an invisible default is the exact
   // hazard @/tenancy is written against.
   tenant: TenantId = DEFAULT_TENANT,
+  clientSessionId?: string,
 ): Promise<AffinityRead> {
   if ((env.REFLEX_HOST ?? 'session') === 'do') {
     const stub = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);
@@ -273,8 +283,9 @@ async function readAffinity(
     };
   }
 
-  const engine = new RealtimeSegmentEngine(env, getConnectors(env));
-  const { sessionId, sessionData } = await engine.getOrCreateSessionFromCookies(null, visitorId);
+  // The request's tenant, as the object host above already uses it.
+  const engine = new RealtimeSegmentEngine(env, getConnectors(env, tenant), { tenant });
+  const { sessionId, sessionData } = await engine.getOrCreateSessionFromCookies(null, visitorId, undefined, clientSessionId);
   if (!sessionData.reflex) return { sessionId, dims: {}, memberships: [] };
 
   const cfg = await resolveReflexConfig(env, SURFACE);
@@ -392,7 +403,7 @@ liveRoutes.post('/page', async (c) => {
     // has already had accepted, so drain their queue (bounded) before reading.
     await settleVisitor(input.visitorId);
 
-    const affinity = await readAffinity(c.env, input.visitorId, realNowMs, c.get('tenant'));
+    const affinity = await readAffinity(c.env, input.visitorId, realNowMs, c.get('tenant'), input.sessionId);
     const sessionId = input.sessionId ?? affinity.sessionId;
 
     const page = composePage({
@@ -567,13 +578,25 @@ function actionPayloadOf(input: EventInput): Record<string, unknown> {
   };
 }
 
+/** The pipeline's answer to a signal it did not accept: its status and its own error text. */
+interface Refusal {
+  status: number;
+  error: string;
+}
+
 /**
  * Push one signal through the shared pipeline.
  *
  * ONE ingestion path for both demos. No Cookie header goes in, and no Set-Cookie
  * comes back out — the surfaces share a pipeline, never an identity.
+ *
+ * The answer is read, never just drained: anything but the pipeline's own
+ * acceptance (a 2xx with `success: true`) is a refusal, returned with the
+ * pipeline's status and error text so the door can report it as one. Today's
+ * pipeline admits a shopper only on a signed shopper session, which this
+ * surface does not hold, so a refusal is what it answers.
  */
-async function ingestOne(env: Env, ctx: ExecutionContext, input: EventInput): Promise<void> {
+async function ingestOne(env: Env, ctx: ExecutionContext, input: EventInput): Promise<Refusal | null> {
   const res = await realtimeRoutes.fetch(
     new Request('https://brighthour.internal/action', {
       method: 'POST',
@@ -583,8 +606,12 @@ async function ingestOne(env: Env, ctx: ExecutionContext, input: EventInput): Pr
     env,
     ctx
   );
-  // Drain the body so the sub-response is never left dangling.
-  await res.json().catch(() => undefined);
+  const body = (await res.json().catch(() => undefined)) as { success?: unknown; error?: unknown } | undefined;
+  if (res.ok && body?.success === true) return null;
+  return {
+    status: res.status,
+    error: typeof body?.error === 'string' ? body.error : `the pipeline answered ${res.status} without accepting the event`,
+  };
 }
 
 /**
@@ -629,24 +656,39 @@ function isBhOfferClick(input: EventInput): boolean {
   return input.data?.slot_id === BH_EXPERIMENT_SLOT;
 }
 
-function acceptEvents(env: Env, inputs: EventInput[]): Promise<void> {
+/**
+ * Queue every signal on its visitor's chain, in order. `answers` holds each
+ * signal's pipeline answer (null = accepted, else its refusal) as soon as its own
+ * pass has answered; `settled` is everything after that — the conversion
+ * forward, the breath between passes and the background work the passes
+ * registered — which stays off the response path.
+ */
+function acceptEvents(env: Env, inputs: EventInput[]): { answers: Promise<Array<Refusal | null>>; settled: Promise<void> } {
   const { ctx, settled } = collectingCtx();
-  let last: Promise<unknown> = Promise.resolve();
-  for (const input of inputs) {
-    last = serialByVisitor(input.visitorId, async () => {
+  const answered: Array<Promise<Refusal | null>> = [];
+  const jobs = inputs.map((input) => {
+    let answer: (refusal: Refusal | null) => void = () => undefined;
+    answered.push(new Promise<Refusal | null>((resolve) => {
+      answer = resolve;
+    }));
+    return serialByVisitor(input.visitorId, async () => {
+      let refusal: Refusal | null;
       try {
-        await ingestOne(env, ctx, input);
+        refusal = await ingestOne(env, ctx, input);
       } catch (error) {
-        // A single bad signal must never break the queue behind it.
-        console.error('Bright Hour ingestion failed (non-fatal)');
+        // A single bad signal must never break the queue behind it, and one
+        // that never reached an answer is not an accepted one.
+        refusal = { status: 500, error: 'the pipeline could not be reached' };
       }
+      answer(refusal);
+      if (refusal) console.error('Bright Hour ingestion refused');
 
-      // Beat 13: the same click, forwarded to Optimizely as the experiment's
-      // conversion, attributed to the arm this visitor was bucketed into. A
-      // no-op until the experiment is launched AND published, and its failure
-      // is never allowed to matter — measurement rides behind ingestion, not
-      // in front of it.
-      if (isBhOfferClick(input)) {
+      // Beat 13: the same click, once the pipeline accepted it, forwarded to
+      // Optimizely as the experiment's conversion, attributed to the arm this
+      // visitor was bucketed into. A no-op until the experiment is launched AND
+      // published, and its failure is never allowed to matter — measurement
+      // rides behind ingestion, not in front of it.
+      if (!refusal && isBhOfferClick(input)) {
         try {
           const assignment = await getAssignment(env, input.visitorId);
           await trackBhOfferClick(env, input.visitorId, assignment, {
@@ -664,20 +706,23 @@ function acceptEvents(env: Env, inputs: EventInput[]): Promise<void> {
         await new Promise((resolve) => setTimeout(resolve, DRAIN_YIELD_MS));
       }
     });
-  }
-  return last.then(() => settled());
+  });
+  return { answers: Promise.all(answered), settled: Promise.allSettled(jobs).then(() => settled()) };
 }
 
 /**
  * POST /live/api/event — one signal.
  *
- * Answers 202 as soon as the signal is ACCEPTED, with the pipeline work queued
- * behind this visitor's other events and drained off the response path. An
- * impression is passive telemetry: nothing on the page reads this response body
- * (public/live/live.js checks `r.ok` and discards the rest), and the affinity it
- * produces is read back through /live/api/page and /live/api/reflex — both of
- * which settle this visitor's queue first, so the numbers a presenter sees are
- * never behind the events they just generated.
+ * Answers 202 once the pipeline has ACCEPTED the signal, which it does on this
+ * visitor's queue behind her other events; the capture, provider and conversion
+ * legs that pass registers stay deferred, off the response path. Nothing on the
+ * page reads this response body (public/live/live.js checks `r.ok` and discards
+ * the rest), and the affinity it produces is read back through /live/api/page
+ * and /live/api/reflex — both of which settle this visitor's queue first, so the
+ * numbers a presenter sees are never behind the events they just generated.
+ *
+ * A signal the pipeline refused is answered 502 with the pipeline's status and
+ * error text — never 202, never `success: true`.
  *
  * `success: true` and the `surface` stamp are kept in the body: they are the
  * fields this surface's contract has always carried.
@@ -687,7 +732,12 @@ liveRoutes.post('/event', async (c) => {
     const body = await c.req.json();
     const input = eventSchema.parse(body);
 
-    background(c, acceptEvents(c.env, [input]));
+    const { answers, settled } = acceptEvents(c.env, [input]);
+    background(c, settled);
+    const [refusal] = await answers;
+    if (refusal) {
+      return c.json({ ok: false, success: false, stage: 'event', status: refusal.status, error: refusal.error }, 502);
+    }
 
     return c.json(
       { ok: true, success: true, accepted: 1, deferred: true, surface: SURFACE },
@@ -745,7 +795,18 @@ liveRoutes.post('/events', async (c) => {
       inputs.push({ ...member, visitorId });
     }
 
-    background(c, acceptEvents(c.env, inputs));
+    const { answers, settled } = acceptEvents(c.env, inputs);
+    background(c, settled);
+    // Every member the pipeline refused is named, with its status and error
+    // text; the members it accepted are counted as before.
+    const refused = (await answers).flatMap((refusal, index) =>
+      refusal ? [{ index, status: refusal.status, error: refusal.error }] : []);
+    if (refused.length > 0) {
+      return c.json(
+        { ok: false, success: false, stage: 'event', accepted: inputs.length - refused.length, refused, surface: SURFACE },
+        502
+      );
+    }
 
     return c.json(
       {
@@ -783,6 +844,9 @@ liveRoutes.get('/reflex', async (c) => {
   await settleVisitor(visitorId);
   const url = `https://brighthour.internal/reflex?userId=${encodeURIComponent(visitorId)}&surface=${SURFACE}`;
   const res = await realtimeRoutes.fetch(new Request(url), c.env, execCtxOf(c));
+  // The pipeline's refusal is passed through as it answered it: its status and
+  // its own body, nothing added that could read as a snapshot.
+  if (!res.ok) return new Response(res.body, { status: res.status, headers: res.headers });
   const out = (await res.json()) as Record<string, unknown>;
   return c.json({ ...out, surface: SURFACE, visitorId }, res.status as 200);
 });

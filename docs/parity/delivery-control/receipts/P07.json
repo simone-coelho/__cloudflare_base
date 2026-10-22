@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P07",
+  "workOrderHash": "sha256:cad94617f967b95d37e324c858f4e7e22c426bb9ad0686d0b1a6f60aaef70b2c",
+  "artifact": {
+    "revision": "30c296238fc0d6c484de7cd4d3f9af9679d42631",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p07-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P07 built on rem/p07-build: abc7413a merges rem/integration 25a89de9 (P02, P01, P28, P03, P10 and the landing of the product branch) into the per-ticket branch rem/tkt/P07 (d94732bb, specification reviewed PASS at 21bb132e on rem/spec-parity-b); RED baseline 13 failed of 13 on P07's own reasons, no PRECONDITION; 31e485f7 the mechanism (src/reflex/regionTrend.ts, src/services/RealtimeSegmentEngine.ts, src/durable-objects/ShopperReflex.ts, src/content/service.ts, src/content/decide.ts, src/content/types.ts, src/content/kinds.ts, src/learn/receipts.ts, src/learn/replay.ts: the learn-document block contextPrior {enabled, kBlend, minEvents} beside regional, D1; population shares per tenant, entry channel and visit bucket kept in the existing REGION_TREND namespace under trend:v2:TENANT:ctx:CHANNEL:BUCKET with the channel rollup trend:v2:TENANT:ctx:CHANNEL, no visitor identifier and no new binding, the context scopes excluded from the regional rollup; the fan-in beside the regional frame under the same consent and principal gates, an unknown channel or bucket skipped, R-P9; the decision blending the pair's shares when the pair has at least minEvents events, else the channel's, never everyone's, with its own λ = kBlend / (kBlend + Σ personal affinity), applied beside the regional prior as ã = (1−λr)(1−λc)·a + λr·s_r + λc·s_c, off when the block is absent or disabled, never on the default arm or without consent, at full weight below P10's floor and inside B on an opted-in blend slot, a configured order served exactly; explain.contextPrior {channel, contribution, events, lambda, level, version, visitBucket} and inputs.context_share with sorted keys, R-P7, written only when the prior applied; the receipt sentence \"Population prior, CHANNEL, VISIT: …\" with the \"every visit\" variant at the channel level; a retained record without the shares replaying as before); f14184e4 the kit (docs/kit/02, 03: the block, its fallback and the receipt line); 2b119290 the replay building the recorded block without an unused binding; src/durable-objects/RegionTrend.ts and the Meridian bundle unchanged; acceptance 13/13 on both hosts at 2b119290; gate GATE_OK once at 2b119290 (started at load 8.6; 2822 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact); 30c29623 the fast-forward of the fix-round-1 specification rem/spec-p07-fix1 (R-P53: the enablement, minimum and rollup lock legs with the mutant controls ME, MP, the off-by-one and MR; no product change; the delivery review at 2b119290 had passed every unit and the product and failed Done-when bullet 4 for the missing locks), acceptance 19/19 on both hosts at 30c29623 and the gate GATE_OK once at 30c29623 (fix1/implementer/logs/gate.log: 2828 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S2/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S2/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P07/implementer/REPORT.md",
+      "git commits on rem/p07-build up to 30c29623"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P07 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/implementer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P07/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P07/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-12T10:28:01.607Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-2026-10-20/P07.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L11/records/P07.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L9/records/P07.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L3/records/P07.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

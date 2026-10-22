@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P39",
+  "workOrderHash": "sha256:d72d5e922c02ce2fc0809212d9ee4b4b7925358145d7d78123b23da135cca590",
+  "artifact": {
+    "revision": "40a8c93a36421f9ab3240db2c3d7969714359f77",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p39-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P39 built on rem/p39-build: f4f4195a merges rem/integration 3608232b (the first programme's closed tickets P02, P01, P28, P03, P10, P07, P04 and P29, P36, P37, P38 and P40 of this programme, the landing of the product branch and the governance files) into the per-ticket branch rem/tkt/P39 (c0fc018c, specification reviewed PASS at e06c860c on rem/spec-parity-e, batch S5 after one fix round); RED baseline 10 failed / 4 passed on P39's own reasons (the windows admitted, no suppression, no member, the kit statements), the NP2 signal-count legs and NP5 green with P10 landed, no PRECONDITION; 67e5e309 the settings, the validator, the shared reflex step and the link merge (src/reflex/core.ts, configStore.ts, identityMerge.ts, src/durable-objects/ShopperReflex.ts: the suppression member of the tenant registry with each action's window and the purchase window, a window that is not a positive whole number of days refused by name, the weights still bounded 0 to 1000, D1 and D2; remove_from_cart at weight 0 recording a suppression per registry value it carries with its expiry, the purchase strengthening every value at the purchase weight and suppressing the bought productType for the purchase window, a P40 duplicate doing neither twice; the suppressions inside the existing reflex state written only when used, R-P7; a link keeping the later expiry with its action and the linked shopper's own on equal expiries); bcb42902 the decision path (src/content/types.ts, decide.ts, service.ts: a suppressed value contributing no interest term while the stored interest, the piece's eligibility, seeds, the complements preference and orders are unchanged; the lapse at the expiry); ac08cb4f the receipt and replay (src/learn/receipts.ts, replay.ts: explain.suppressions sorted on the record and the receipt with its why sentence, compared in replay with no new marker, R-P23 C11); f1733d74 the Meridian bundle regenerated; 56acc5ce the kit (docs/kit/02 and 03); d6aac08b a comment move; the SDK unchanged (--check exact); acceptance 14/14 on both hosts at d6aac08b; gate GATE_OK on the one rerun allowed by the standing flake rule at d6aac08b (the first run failing only on a native socket test's own wall-clock wait in src/index.api-boundary.test.ts, passing alone; 2968 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact); then fix round 1 (R-P60, the delivery review at d6aac08b having passed NP1, NP2, NP4, NP5 and NP6 and failed NP3 on the buffered door strengthening the bought product type and suppressing nothing; P39's boundary widened with src/reflex/bufferedAction.ts at integration 553229c9): the specification 2b8532ee fast-forwarded in (the buffered purchase, history-import and buffered removal legs per host with their locks and controls), rem/integration 496b1da1 (P31 landed) merged as 5fda7589 with three import and kit hunks resolved by keeping both sides and no earlier leg turning red, 14ef5e4a the purchase rule on the buffered door and the history import counted from the event's own time (an event older than the window suppressing nothing) and a buffered remove_from_cart recording its suppressions at weight 0 while any other weight-0 action is dropped as today (src/reflex/core.ts, identityMerge.ts, bufferedAction.ts, src/durable-objects/ShopperReflex.ts, src/services/RealtimeSegmentEngine.ts), 40a8c93a the kit (docs/kit/02 and 03, with where explain.suppressions is present); the Meridian bundle unchanged (--check exact); acceptance 28/28 on both hosts at 40a8c93a with P10 14/14, P40 16/16, P31 37/37 and the W22.07 consent tests on the merged tree; the gate GATE_OK once at 40a8c93a (fix1/implementer/logs/gate.log: 3019 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S5/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S5/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P39/implementer/REPORT.md",
+      "git commits on rem/p39-build up to 40a8c93a"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P39 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P39/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P39/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-13T05:54:26.809Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L4/records/P39.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

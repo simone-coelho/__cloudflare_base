@@ -25,8 +25,36 @@ export interface Env {
   DECISION_RING?: DurableObjectNamespace;
   /** Phase 1 — one object per tenant, brand and slot: decayed counts, published as lift snapshots. */
   LEARN_STATS?: DurableObjectNamespace;
+  /**
+   * P62 (amendment 6, R-P110 decision 1): an override of the lift witness's budget, the round trip to
+   * the slot's statistics object, read per decision by `learningReadBudgets` (src/learn/fan.ts). It is
+   * admitted when it is a whole number of milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`
+   * (5 000 ms, the SDK's request deadline), written as its decimal text; any other value is refused, the
+   * code default (`LIFT_WITNESS_BUDGET_MS`, 200 ms) stays in force and the refusal is named in the
+   * decision answer's `sources.budgets.refused`. Absent, the default applies and nothing is named. The
+   * budget in force is reported in `sources.budgets.lift`.
+   */
+  LIFT_WITNESS_BUDGET_MS?: string;
+  /**
+   * P62 (amendment 6, R-P110 decision 1): an override of the visitor ring read's budget, the hop to the
+   * visitor's `DecisionRing`, read per decision by `learningReadBudgets` (src/learn/fan.ts). It is
+   * admitted when it is a whole number of milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`
+   * (5 000 ms, the SDK's request deadline), written as its decimal text; any other value is refused, the
+   * code default (`RING_READ_BUDGET_MS`, 200 ms) stays in force and the refusal is named in the decision
+   * answer's `sources.budgets.refused`. Absent, the default applies and nothing is named. The budget in
+   * force is reported in `sources.budgets.ring`.
+   */
+  RING_READ_BUDGET_MS?: string;
   /** Phase 3 (doc 22 §9) — Workers AI, for the `workers_ai` model kind. Absent on this stamp; the kind reports unavailable. */
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
+  /**
+   * W34 (document 35 §5 row W34, F30) — the deployment's external-model policy, read by the decision
+   * path (src/learn/external.ts `externalModelPolicy`). `off` is the only policy this build implements
+   * and the only deployed state: wrangler.toml sets it in every environment, and a customer stamp,
+   * whose variables are a fixed set, deploys it absent. Absent, empty, mis-cased or any other value is
+   * `off`; no value enables a runtime model, a service, Workers AI or a table, and no stored document can.
+   */
+  EXTERNAL_MODEL_POLICY?: string;
   /** CW6 — tenants the hourly cron rolls region snapshots up for, comma-separated. */
   TREND_ROLLUP_TENANTS?: string;
   /**
@@ -72,6 +100,8 @@ export interface Env {
   /** Explicit per-tenant/per-category approved lifetimes. No implicit defaults. */
   // Explicit per-category policy; telemetry.* is separate from behavioral
   // external.*. Local descriptors/access references do not attest deployment.
+  // The optional `configuration` category (W38 B4, decision D3) is the purge
+  // setting for configuration revisions: absent, no revision is ever purged.
   RETENTION?: string;
   /** Exact source/DLQ identities and explicit unknown-owner policy; no defaults. */
   LEDGER_RECOVERY_CONFIG?: string;

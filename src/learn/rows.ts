@@ -9,8 +9,10 @@
 import type { ItemControl, SlotCatalog, ContentCatalog, LearnConfig } from '@/content/types';
 import { isEligibleAt } from '@/content/lifecycle';
 import { slotPins, rankedCapacity } from '@/content/slotConstraints';
+import { pageScopedSlotNames } from '@/content/kinds';
 import { LEVEL_WORDS, liftReferenceOf, type LiftReference, type LiftSnapshot, type Level } from './stats';
 import type { SlotGovernance } from './slotGovernance';
+import { effectiveExploration, type ExploreMode } from './explore';
 
 /**
  * W26 X1.01 (F21 §8): what this estimate has been corrected for, by name.
@@ -74,6 +76,59 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
 
 export type Names = ReadonlyMap<string, { customerContentId?: string; title?: string }>;
 
+/** Nothing joined: every row keeps its id and answers `null` for both names. */
+export const NO_NAMES: Names = new Map();
+
+/**
+ * W32 S1.01 (F32 §1.2, §4 item 5): the names for the ids an answer will really
+ * name, and for no others.
+ *
+ * Every operator route that shows a page of rows used to build
+ * `new Map(catalog.pieces.map(...))` — one entry for every piece of the whole
+ * catalogue — to put `customerContentId`/`title` on at most `limit` rows. At the
+ * launch corpus that is invisible; at the corpus sizes F32 §2.6 measured it is a
+ * second full-catalogue structure allocated per operator request, on top of the
+ * catalogue the request already parsed. This answers the asked-for ids only, so
+ * what it allocates is bounded by the PAGE and never by the catalogue.
+ *
+ * The catalogue's own piece list is read once per catalogue object rather than
+ * once per call: the paged surfaces ask twice (the page's rows, then the ids a
+ * second page needs), and a document that is read again for each of them is the
+ * cost this is removing. The cache is keyed on the catalogue object itself and
+ * holds only that object's own array, so it retains nothing the caller has not
+ * already got in hand and dies with the revision it belongs to.
+ *
+ * It is a name JOIN and never a membership test: an id the catalogue does not
+ * carry is simply absent from the result, and a caller that needs to know which
+ * ids the catalogue carries (W25 V1.01, `exploringRows`' `catalogue` set) must
+ * ask the catalogue, not this map. A page-bounded join used as membership would
+ * silently drop every row outside the page.
+ */
+const pieceLists = new WeakMap<object, readonly { id: string; customerContentId?: string; title?: string }[]>();
+export function catalogNames(catalog: { pieces: readonly { id: string; customerContentId?: string; title?: string }[] }, ids: Iterable<string>): Names {
+  const want = new Set(ids), out = new Map<string, { customerContentId?: string; title?: string }>();
+  if (want.size === 0) return out;
+  let pieces = typeof catalog === 'object' && catalog !== null ? pieceLists.get(catalog) : undefined;
+  if (pieces === undefined) {
+    pieces = catalog.pieces;
+    if (typeof catalog === 'object' && catalog !== null && Array.isArray(pieces)) pieceLists.set(catalog, pieces);
+  }
+  for (const piece of pieces) {
+    if (!want.has(piece.id) || out.has(piece.id)) continue;
+    out.set(piece.id, { customerContentId: piece.customerContentId, title: piece.title });
+    if (out.size === want.size) break;
+  }
+  return out;
+}
+
+/** The same rows with the page's names joined on; nothing else about them changes. */
+export function namedRows<T extends { item: string; customer_item_id: string | null; title: string | null }>(rows: readonly T[], names: Names): T[] {
+  return rows.map((row) => {
+    const nm = names.get(row.item);
+    return nm ? { ...row, customer_item_id: nm.customerContentId ?? null, title: nm.title ?? null } : row;
+  });
+}
+
 /** Every row of the snapshot at the level asked, names and controls joined on. */
 export function rowsOf(snap: LiftSnapshot, names: Names, controls: Record<string, ItemControl> | undefined, level: RowLevel, item?: string): LiftRow[] {
   const out: LiftRow[] = [];
@@ -120,8 +175,12 @@ export function pageRows(rows: readonly LiftRow[], q: RowsQuery): { total: numbe
   return { total: matched.length, offset, limit, rows: page, next: offset + limit < matched.length ? offset + limit : null };
 }
 
-/** The cursor names the snapshot version and the query it belongs to, so a page never straddles two snapshots. */
-export interface Cursor { v: number; o: number; level: RowLevel; item?: string; q?: string; sort?: SortKey; dir?: 'asc' | 'desc'; limit?: number }
+/**
+ * The cursor names the snapshot version and the query it belongs to, so a page never straddles two snapshots.
+ * W26 R2: `p` is the page of a page-scoped placement the cursor was cut for — absent for a page-less one — so
+ * the next page is read from the same page's table and never from another's.
+ */
+export interface Cursor { v: number; o: number; level: RowLevel; item?: string; q?: string; sort?: SortKey; dir?: 'asc' | 'desc'; limit?: number; p?: string }
 const b64 = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64 = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4))));
 export const encodeCursor = (c: Cursor): string => b64(JSON.stringify(c));
@@ -129,13 +188,19 @@ export function decodeCursor(s: string | undefined | null): Cursor | null {
   if (!s) return null;
   try {
     const c = JSON.parse(unb64(s)) as Cursor;
-    return c && typeof c.v === 'number' && typeof c.o === 'number' && (c.level === 'pooled' || c.level === 'cells' || c.level === 'exploring') ? c : null;
+    return c && typeof c.v === 'number' && typeof c.o === 'number' && (c.level === 'pooled' || c.level === 'cells' || c.level === 'exploring')
+      && (c.p === undefined || (typeof c.p === 'string' && /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(c.p))) ? c : null;
   } catch { return null; }
 }
 
 // ── What is exploring ────────────────────────────────────────────────────────
 
-export interface ExploringRow { item: string; customer_item_id: string | null; title: string | null; n: number; to_floor: number }
+/** P11: the exposures n still lacks of the evidence floor F, never below 0. */
+const toEvidenceFloor = (floor: number, n: number): number => r3(Math.max(0, floor - n));
+
+export interface ExploringRow { item: string; customer_item_id: string | null; title: string | null; n: number; to_floor: number;
+  /** P11: the exposures this piece still lacks of its page's configured evidence floor, never below 0; only where the page has one. */
+  to_evidence_floor?: number }
 
 /**
  * The items under the slot's observation floor, least observed first: what
@@ -151,16 +216,37 @@ export interface ExploringRow { item: string; customer_item_id: string | null; t
  * Absent (a caller that has no catalogue in hand), nothing is filtered and the
  * list is exactly what it was.
  */
-export function exploringRows(snap: LiftSnapshot, names: Names, floor: number, catalogue?: ReadonlySet<string>): ExploringRow[] {
+export function exploringRows(snap: LiftSnapshot, names: Names, floor: number, catalogue?: ReadonlySet<string>, evidenceFloor?: number | null): ExploringRow[] {
   const out: ExploringRow[] = [];
   for (const [id, byKey] of Object.entries(snap.items)) {
     if (catalogue && !catalogue.has(id)) continue;
     const n = byKey['*']?.n ?? 0;
     if (n >= floor) continue;
     const nm = names.get(id);
-    out.push({ item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null, n: r3(n), to_floor: r3(floor - n) });
+    out.push({ item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null, n: r3(n), to_floor: r3(floor - n),
+      // P11: against the page's configured evidence floor, where the page has one; the row is otherwise exactly as before.
+      ...(typeof evidenceFloor === 'number' ? { to_evidence_floor: toEvidenceFloor(evidenceFloor, n) } : {}) });
   }
   return out.sort((a, b) => a.n - b.n || a.item.localeCompare(b.item));
+}
+
+/**
+ * P11 (decisions D1, D2): each piece's exposures-to-floor against its page's
+ * configured evidence floor F — F − n at level everyone, never below 0 — for
+ * every item of the snapshot, keys sorted. The operator's lift route answers it
+ * beside the floor (`toEvidenceFloor`). It reports; it changes no estimate. Pure.
+ */
+export function toEvidenceFloorOf(snap: unknown, floor: number): Record<string, number> {
+  const items = snap !== null && typeof snap === 'object' ? (snap as { items?: unknown }).items : undefined;
+  if (items === null || typeof items !== 'object' || Array.isArray(items)) return {};
+  const out: Record<string, number> = {};
+  for (const id of Object.keys(items).sort()) {
+    const byKey = (items as Record<string, unknown>)[id];
+    const root = byKey !== null && typeof byKey === 'object' ? (byKey as Record<string, { n?: unknown } | undefined>)['*'] : undefined;
+    const n = typeof root?.n === 'number' && Number.isFinite(root.n) && root.n > 0 ? root.n : 0;
+    out[id] = toEvidenceFloor(floor, n);
+  }
+  return out;
 }
 
 /** A plain page of any list, with the next offset. */
@@ -191,21 +277,39 @@ export interface SlotIndexEntry {
   /** Legacy index inputs omit this and mean served-v1; current writers emit it. */
   measurementBasis?: 'served-v1' | 'rendered-v1';
   gamma: number;
+  /** The mode the engine runs on this slot (`effectiveExploration`): `off` where nothing can run. */
   exploration: string;
-  /** Retained unsupported configuration, not an active exploration policy. */
-  configuredExploration?: 'thompson';
+  /**
+   * W28.R3 (kit 02, "Exploration"): where the learn document keeps a mode the
+   * engine will not run, the retained setting in the canonical words every other
+   * exploration surface uses — `GET learn/exploring`, the day report's row —
+   * from the one helper, `effectiveExploration`. Absent otherwise.
+   */
+  configuredMode?: ExploreMode;
+  /** Set with `configuredMode`: the stored policy is retained, not offered. */
+  unsupported?: true;
+  /** The same retained setting under this row's earlier name, kept for readers of it; always equal to `configuredMode`. */
+  configuredExploration?: ExploreMode;
   autonomy: string;
   controls: number;
   /** Filled by the route when asked: what the slot has learned so far. */
   evidence?: { items: number; events: number; publishedAt: number } | null;
   /**
    * W20 G2 (R83, R86(a)): filled by the route beside `evidence`, under the same
-   * flag and the same budget — what the decision path REFUSED for this slot
-   * since the horizon the block states: the dead pins, with the reason the
-   * composer recorded, and the times the pinned slot could not fill its `take`.
-   * Zero is reported as zero; it reports configuration, never shopper state.
+   * flag — what the decision path REFUSED for this slot since the horizon the
+   * block states: the dead pins, with the reason the composer recorded, and the
+   * times the pinned slot could not fill its `take`. Zero is reported as zero;
+   * it reports configuration, never shopper state. Since W20 R3 the block is
+   * joined onto EVERY row from the one counter read the route makes, before and
+   * outside the 200-slot budget, which bounds only the per-slot `evidence` reads.
    */
   governance?: SlotGovernance;
+  /**
+   * W26 R2: present, and true, only where the catalogue carries this slot name
+   * on more than one page. This row's placement is then its own statistics
+   * object, and its lift is read with `page=` set to this row's `page`.
+   */
+  pageScoped?: true;
 }
 
 /**
@@ -229,6 +333,8 @@ export function slotEvidence(snap: LiftSnapshot | null, catalogue: ReadonlySet<s
 export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: LearnConfig, nowMs: number, q?: string): { total: number; pages: Array<{ page: string; slots: SlotIndexEntry[] }> } {
   const needle = (q ?? '').trim().toLowerCase();
   const live = catalog.pieces.filter((p) => isEligibleAt(p, nowMs));
+  // W26 R2: from the WHOLE catalogue, never the rows `q` keeps.
+  const scoped = new Set(pageScopedSlotNames(slots));
   const pages: Array<{ page: string; slots: SlotIndexEntry[] }> = [];
   let total = 0;
   for (const [page, list] of Object.entries(slots.pages)) {
@@ -236,6 +342,8 @@ export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: L
     for (const s of list) {
       if (needle && !s.slot.toLowerCase().includes(needle) && !page.toLowerCase().includes(needle)) continue;
       const d = learn.slots?.[s.slot] ?? {};
+      // W28.R3: one statement of the slot's dial, by the helper the other surfaces use.
+      const exploration = effectiveExploration(d.exploration);
       const rules: string[] = [];
       if (s.merchandising && Object.values(s.merchandising).some((v) => v)) rules.push('merchandising');
       if (s.stage) rules.push('stage');
@@ -249,10 +357,12 @@ export function slotsIndex(slots: SlotCatalog, catalog: ContentCatalog, learn: L
         rules, pieces: live.filter((p) => p.slotTypes.includes(s.slot)).length,
         reward: d.reward ?? 'click', objective: d.objective ?? 'unit', gamma: d.gamma ?? 0,
         measurementBasis: d.measurementBasis ?? 'served-v1',
-        exploration: d.exploration?.mode === 'thompson' ? 'off' : d.exploration?.mode ?? 'off',
-        ...(d.exploration?.mode === 'thompson' ? { configuredExploration: 'thompson' as const } : {}),
+        exploration: exploration.mode ?? 'off',
+        ...(exploration.unsupported && exploration.configuredMode
+          ? { configuredMode: exploration.configuredMode, unsupported: true as const, configuredExploration: exploration.configuredMode } : {}),
         autonomy: d.autonomy?.mode ?? 'configured',
         controls: Object.keys(d.items ?? {}).length,
+        ...(scoped.has(s.slot) ? { pageScoped: true as const } : {}),
       });
       total++;
     }

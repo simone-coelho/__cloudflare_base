@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P41",
+  "workOrderHash": "sha256:be62b9d08658bb8219e22332a1c4de6ca379cce19a0866d0bf6d986de499d999",
+  "artifact": {
+    "revision": "b6335a24ab555f4cb6136a89bea9f57011e5a286",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p41-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P41 built on rem/p41-build in one round. a1ce2492 merges rem/integration 1e5b97d8 (every receipted ticket of the first two programmes, amendment 2's ledger with its four gates recorded at 20590bd8, the governance files) into the per-ticket branch rem/tkt/P41 (66c24ca0, the S6 specification revision reviewed PASS, R-P4); RED baseline three failed and six passed on P41's own reasons (no diagnostics member on either success answer, eight kit statements missing), CW2's three lock legs green on both hosts, no PRECONDITION; 6e67050d the mechanism (src/content/kinds.ts, src/routes/content.ts): a pure function of the validated or published learn document naming every slot whose conversions table holds no finite value above zero for the slot's own reward, the advisory envelope with sorted keys and at most fifty warnings with the omitted count, added only to the success answer of the validate door and of the learn PUT, never to a read, a refusal, another document kind, the lift reads or any shopper path, nothing refused for an omission, the validators unchanged; 6c6d4660 the kit (docs/kit/02-api-reference.md, docs/kit/03-payload-schemas.md: the advisory, its shape and when it is given, the rollback and related-member limits); b6335a24 the warnings listed in slot-name order on both doors, the published document's order; src/content/catalogDiagnostics.ts, src/content/slotDiagnostics.ts and public/console/views.js unchanged; no bundle changed, build-meridian and build-sdk --check exact; acceptance nine of nine on both hosts at b6335a24 with P16 10/10, P08 14/14, P26 14/14, P36 48/48, P09, P11, P14, P28, P30, P33, W19 29/29, W24, W25, W21, W36, W16, W30, W31, W37, the forty-six other kit readers and src/services whole green, src/content, src/routes and src/learn failing on baseline entries only; both typechecks exit 0; eslint 0 new; ten probes on both hosts in a temporary test file removed before the commits (a purchase slot omitting purchase, a custom slot, several omitting slots in slot-name order, the fifty-warning cap, a table on a slot no page carries, a retained omitting document carrying no advisory on any read, the console dials screen's requests and text unchanged) and an R-P7 dump byte-identical at head and base over five documents, a refused validation, the history, a rollback, the lift read and the console screen; the gate at b6335a24 GATE_OK on its first run (implementer/logs/gate.log: 3260 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P41/implementer/REPORT.md",
+      "git commits on rem/p41-build up to b6335a24"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P41 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P41/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P41/implementer/logs/acceptance-order.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P41/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P41/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P41/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-16T21:01:28.512Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L7/records/P41.md"
+      ]
+    }
+  ]
+}

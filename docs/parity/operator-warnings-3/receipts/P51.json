@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P51",
+  "workOrderHash": "sha256:b9c22964a76db28e71799326e2a852fb1b361f25d01cadc9ca1e3e0de4c77e5c",
+  "artifact": {
+    "revision": "6340d7d039bf700acfcf0dee8822dafc0123d2ed",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p51-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p51-build at 6340d7d039bf700acfcf0dee8822dafc0123d2ed (e676999c merges rem/integration dffccb07 into rem/tkt/P51 ccaa49b5; be2eacb0 public/console/views.js draws one data-lift-republished note right after P45's stale note or in its place, from the lift/rows answer's republished member, naming the slot and page, each changed member with its old and new values in the order served, and what ends it: the transition's body naming the slot and each changed reward or objective with its new value, or the republish with the old values, a changed basis only by the republish, the two-step path when the basis and another member changed; 219ebc10 kit 02 and 03; 6340d7d0 the stats-only case naming the slot's own reward). Acceptance 7/7 on both hosts; the builder's gate GATE_OK on its one named rerun at 6340d7d0 (3356 tests, 52 failing, 0 outside the baseline of 52) after a first run that failed on the named W14.07 intermittent at src/index.api-boundary.test.ts:1118 alone, verified by the reviewer from the JSON (sha256 9cf83715…); the reviewer's own gate at the same sha failing only on W40.P4's symlink artifact and the named first-consent intermittent at realtime.sdkContract.test.ts:306, which passed its one rerun; both typechecks exit 0; both bundle checks exact; the unmarked screens and request lists byte-identical to the base console's. Delivery review PASS (P51/reviewer/REPORT.md): RG1 to RG3 PASS, seven mutants caught by the units, three by probes only (a change clause omitting the old value; a basis-only change offering a transition; P45's guard removed); every transition the words offer answers 200 against the engine and ends the mark. Named for later under R-P78: the transition body in the words, and in P49's and P50's engine sentences, never names the brand, so on a non-default brand's screen the operator is sent to the tenant's own brand (fan.ts:291-295, :353; views.js:373-374); no console transition control; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S8/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P51/implementer/REPORT.md",
+      "git commits on rem/p51-build up to 6340d7d0"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P51 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P51/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P51/implementer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P51/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P51/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P51/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-18T16:02:13.437Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L7/records/P51.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L56/records/P51.md"
+      ]
+    }
+  ]
+}

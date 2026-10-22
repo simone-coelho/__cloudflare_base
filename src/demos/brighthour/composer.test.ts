@@ -26,7 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { initializePublicationSet } from '@/config/publication';
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
@@ -1030,37 +1030,148 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
     expect(body.ok).toBe(false);
   });
 
+  // ── W37.BASE.02, narrowed: a refused event is answered as refused ───────────
+  //
+  // WITNESS for the six tests below (R10 corrections in the R-P75 form):
+  //   · ruling R-P89 D1 and its addendum "D1 NARROWED" (2026-10-19,
+  //     _evidence/parity-step3/AMENDMENTS.md), baseline-52 unit D1, W37.BASE.02;
+  //   · today's engine admits a shopper call only under a signed shopper session
+  //     (src/identity/sessionCapability.ts requireShopper, :254) and refuses one
+  //     without it with the class SessionAccessError (:26-28: 401 and its own
+  //     body). This harness (routeEnv above) holds no session and binds no
+  //     shopper object, and the Bright Hour page has no consent door, so no
+  //     genuine authority exists here: no visitor of this surface can be scored
+  //     on today's engine, and none may be by fabricating a session or consent;
+  //   · the intentional boundary: the Bright Hour demo runs on the shared
+  //     legacy worker, never on today's engine (AGENTS.md, "The two demo
+  //     workers");
+  //   · what W37.BASE.02 closes is the HONESTY half: /live/api/event and
+  //     /live/api/events read the pipeline's answer (src/routes/live.ts
+  //     ingestOne, acceptEvents) and answer a refusal 502 {ok:false,
+  //     success:false, stage:'event', status, error} with the pipeline's own
+  //     status and error text, the batch naming every refused member in
+  //     refused[] as {index, status, error}; /live/api/reflex passes the
+  //     pipeline's refusal through; nothing is minted and nothing is scored;
+  //   · OWED, not built: scoring on today's engine's /live needs a consent door
+  //     in the page and a session mint (the measured shape is rem/base52-d1
+  //     482710d6). When that door is built these tests are corrected again.
+  //
+  // Each of the six used to expect 202 "accepted" and a scored affinity from a
+  // visitor who holds no session and never made a consent choice. Every expected
+  // answer below is derived from SessionAccessError, never retyped.
+
+  /** The pipeline's refusal of a session-less shopper call, and the route's ruled answers to it. */
+  async function pipelineRefusal() {
+    const { SessionAccessError } = await import('@/identity/sessionCapability');
+    const refusal = new SessionAccessError();
+    const answer = (await refusal.getResponse().json()) as { ok: boolean; error: string };
+    return {
+      status: refusal.status,
+      /** The pipeline's own answer, which /live/api/reflex passes through. */
+      answer,
+      /** A refused single event. */
+      event: { ok: false, success: false, stage: 'event', status: refusal.status, error: answer.error },
+      /** One refused member of a batch. */
+      member: (index: number) => ({ index, status: refusal.status, error: answer.error }),
+    };
+  }
+
+  /**
+   * The pipeline door, watched on the path the route runs: every signal the
+   * route sends reaches realtimeRoutes.fetch as POST /action (live.ts
+   * ingestOne). Each call is passed through unchanged after a 1 ms window a
+   * racer could enter. The watcher records what the route sent and how many
+   * passes are in flight at once, per visitor (what the route's own lock,
+   * live.ts serialByVisitor, bounds to one) and overall. It replaces the
+   * SESSIONS.put counter, which a refused signal never reaches: no session
+   * record is written for a visitor the pipeline refuses.
+   */
+  async function watchPipelineDoor() {
+    const realtime = (await import('@/routes/realtime')).default;
+    const inner = realtime.fetch;
+    const door = {
+      sent: [] as Array<{ userId: string; surface: unknown; action: unknown }>,
+      inFlight: new Map<string, number>(),
+      maxInFlight: new Map<string, number>(),
+      overall: 0,
+      maxOverall: 0,
+    };
+    const spy = vi.spyOn(realtime, 'fetch').mockImplementation(async (...args: Parameters<typeof inner>) => {
+      const [request] = args;
+      if (request.method !== 'POST' || new URL(request.url).pathname !== '/action') return inner(...args);
+      const body = (await request.clone().json()) as { userId: string; surface?: unknown; data?: { action?: unknown } };
+      door.sent.push({ userId: body.userId, surface: body.surface, action: body.data?.action });
+      const depth = (door.inFlight.get(body.userId) ?? 0) + 1;
+      door.inFlight.set(body.userId, depth);
+      door.maxInFlight.set(body.userId, Math.max(door.maxInFlight.get(body.userId) ?? 0, depth));
+      door.overall += 1;
+      door.maxOverall = Math.max(door.maxOverall, door.overall);
+      try {
+        await new Promise((r) => setTimeout(r, 1)); // widen the window a racer could enter
+        return await inner(...args);
+      } finally {
+        door.inFlight.set(body.userId, (door.inFlight.get(body.userId) ?? 1) - 1);
+        door.overall -= 1;
+      }
+    });
+    const sentBy = (visitorId: string) => door.sent.filter((s) => s.userId === visitorId);
+    return { door, sentBy, restore: () => spy.mockRestore() };
+  }
+
+  /**
+   * Wait for every ingestion chain to drain, by awaiting the chains themselves
+   * (live.ts __drainIngestChainsForTests): the same question as a quiet period
+   * on a wall clock, asked deterministically.
+   */
+  async function drainIngestion() {
+    const { __drainIngestChainsForTests } = await import('@/routes/live');
+    await __drainIngestChainsForTests();
+  }
+
+  /** What "nothing scored" reads as: the composed page of a visitor who never sent a signal, in the same env. */
+  async function coldAffinity(env: Record<string, unknown>, visitorId: string) {
+    const { body } = await post('/page', { visitorId }, env);
+    return body.affinitySnapshot;
+  }
+
   it('proxies an event into the shared pipeline with the surface stamped server-side', async () => {
+    // WITNESS: R-P89 D1 (narrowed), W37.BASE.02; the boundary of AGENTS.md "The
+    // two demo workers"; owed: the consent door and session mint. The event still
+    // enters the shared pipeline with the surface stamped server-side (observed
+    // at the pipeline door); the pipeline refuses a visitor with no session, and
+    // the route says so instead of 202. The Bright Hour τ/θ snapshot this test
+    // used to read cannot exist for a visitor nothing was scored for: the reflex
+    // read is now the pipeline's own refusal, passed through.
     const env = await publishedRouteEnv();
     const { liveRoutes } = await import('@/routes/live');
-
-    // Three brisk views of the same Kitchen item — Beat 1's arithmetic.
-    for (let i = 0; i < 3; i++) {
-      const { status, body } = await post(
-        '/event',
-        { visitorId: 'route-visitor-4', action: 'product_view', itemId: 'B412907' },
-        env
+    const refusal = await pipelineRefusal();
+    const { door, restore } = await watchPipelineDoor();
+    try {
+      // Three brisk views of the same Kitchen item — Beat 1's arithmetic.
+      for (let i = 0; i < 3; i++) {
+        const { status, body } = await post(
+          '/event',
+          { visitorId: 'route-visitor-4', action: 'product_view', itemId: 'B412907' },
+          env
+        );
+        // 502: the pipeline REFUSED the signal, with its own status and error text.
+        expect({ status, body }).toEqual({ status: 502, body: refusal.event });
+      }
+      // Each signal reached the shared pipeline with the surface stamped here.
+      expect(door.sent.map((s) => [s.userId, s.surface])).toEqual(
+        Array.from({ length: 3 }, () => ['route-visitor-4', 'brighthour'])
       );
-      // 202: the signal is ACCEPTED here and scored on the visitor's queue.
-      expect(status).toBe(202);
-      expect(body.surface).toBe('brighthour');
-      expect(body.success).toBe(true);
+
+      // The reflex read is the pipeline's refusal, passed through as it answered.
+      const res = await liveRoutes.request('/reflex?visitorId=route-visitor-4', {}, env);
+      expect({ status: res.status, body: await res.json() }).toEqual({ status: refusal.status, body: refusal.answer });
+    } finally {
+      restore();
     }
 
-    // …and the snapshot comes back through the now surface-aware /realtime/reflex,
-    // reading the Bright Hour τ/θ rather than the coach defaults.
-    const res = await liveRoutes.request('/reflex?visitorId=route-visitor-4', {}, env);
-    const snap = (await res.json()) as any;
-    expect(res.status).toBe(200);
-    expect(snap.ok).toBe(true);
-    expect(snap.surface).toBe('brighthour');
-    expect(snap.config.tauMs).toBe(BRIGHTHOUR_REFLEX_CONFIG.tauMs);
-    expect(snap.config.dims.sessionMission.thetaIn).toBe(0.7); // a Bright Hour axis
-    expect(snap.affinity.dims.category['Kitchen & Table']).toBeGreaterThan(0);
-
-    // The composed page then reflects it — one pipeline, one visitor, one surface.
+    // Nothing was scored: the composed page carries a never-seen visitor's affinity.
     const { body: page } = await post('/page', { visitorId: 'route-visitor-4' }, env);
-    expect(page.affinitySnapshot.dims.category['Kitchen & Table']).toBeGreaterThan(0);
+    expect(page.affinitySnapshot).toEqual(await coldAffinity(env, 'route-visitor-4-cold'));
   });
 
   /**
@@ -1076,155 +1187,249 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
    * so a burst becomes a queue rather than a stampede.
    */
   describe('burst ingestion', () => {
-    /**
-     * Instrument SESSIONS.put to observe how many pipeline passes overlap.
-     * `lastAt` lets the test wait for the drain WITHOUT issuing another request —
-     * a competing read would write sessions of its own and be miscounted as a
-     * second ingestion.
-     */
-    function watchOverlap(env: Record<string, unknown>) {
-      const kv = env.SESSIONS as { put: (k: string, v: string) => Promise<void> };
-      const inner = kv.put.bind(kv);
-      const seen = { depth: 0, max: 0, lastAt: Date.now() };
-      kv.put = async (key: string, value: string) => {
-        // Count the SESSION RECORD only. One pipeline pass writes exactly one
-        // `session:<id>`, so overlapping ones are overlapping passes, which is
-        // the property this describe block exists to hold. Counting every put
-        // stopped measuring that in CW37, when the record and the `user:` pointer
-        // that finds it started going together instead of one after the other:
-        // a single pass then shows as a depth of two and the proxy reads a
-        // stampede that is not there.
-        const counted = key.startsWith('session:');
-        if (counted) {
-          seen.depth += 1;
-          seen.max = Math.max(seen.max, seen.depth);
-        }
-        seen.lastAt = Date.now();
-        await new Promise((r) => setTimeout(r, 1)); // widen the window a racer could enter
-        try {
-          return await inner(key, value);
-        } finally {
-          if (counted) seen.depth -= 1;
-          seen.lastAt = Date.now();
-        }
-      };
-      return seen;
-    }
-
-    /**
-     * Wait for every ingestion chain to drain. This used to poll a wall clock for
-     * a quiet period, which flaked under load: the quiet arrived before the last
-     * write did. Now it awaits the chains themselves, which is the same question
-     * asked deterministically. `seen` is kept so the overlap counter still reads
-     * what happened while the chains ran.
-     */
-    async function drainQuietly(_seen: { lastAt: number }) {
-      const { __drainIngestChainsForTests } = await import('@/routes/live');
-      await __drainIngestChainsForTests();
-    }
-
     it('serializes a same-visitor burst — never two ingestions in flight at once', async () => {
+      // WITNESS: R-P89 D1 (narrowed), W37.BASE.02; the boundary of AGENTS.md "The
+      // two demo workers"; owed: the consent door and session mint. The route's
+      // own lock (live.ts serialByVisitor) still holds for refused signals: each
+      // of the twelve reaches the pipeline, one pass at a time, and each is
+      // answered with the pipeline's refusal, none with 202.
       const env = await publishedRouteEnv();
-      const seen = watchOverlap(env);
+      const refusal = await pipelineRefusal();
+      const { door, sentBy, restore } = await watchPipelineDoor();
+      try {
+        const burst = await Promise.all(
+          Array.from({ length: 12 }, () =>
+            post('/event', { visitorId: 'burst-1', action: 'product_view', itemId: 'B412907' }, env)
+          )
+        );
+        // Let the queue drain on its own, issuing nothing that could be miscounted.
+        await drainIngestion();
 
-      const burst = await Promise.all(
-        Array.from({ length: 12 }, () =>
-          post('/event', { visitorId: 'burst-1', action: 'product_view', itemId: 'B412907' }, env)
-        )
-      );
-      expect(burst.every((r) => r.status === 202)).toBe(true);
+        // Every member is answered, each with the pipeline's refusal.
+        expect(burst).toEqual(Array.from({ length: 12 }, () => ({ status: 502, body: refusal.event })));
+        // Every member reached the pipeline…
+        expect(sentBy('burst-1').length).toBe(12);
+        // …and the whole point: never two pipeline passes at once.
+        expect(door.maxInFlight.get('burst-1')).toBe(1);
+      } finally {
+        restore();
+      }
 
-      // Let the queue drain on its own, issuing nothing that could be miscounted.
-      await drainQuietly(seen);
-
-      // The whole point: twelve events, never two pipeline passes at once.
-      expect(seen.max).toBe(1);
+      // Nothing was scored.
+      const { body: page } = await post('/page', { visitorId: 'burst-1' }, env);
+      expect(page.affinitySnapshot).toEqual(await coldAffinity(env, 'burst-1-cold'));
     });
 
-    it('applies EVERY event in a parallel burst — the lost-update bug is gone', async () => {
+    it('answers EVERY event in a parallel burst — none is lost, and a refused one is never applied', async () => {
+      // WITNESS: R-P89 D1 (narrowed), W37.BASE.02; the boundary of AGENTS.md "The
+      // two demo workers"; owed: the consent door and session mint. This test
+      // used to measure scoring alone (the parallel burst kept as much affinity
+      // as the sequence), which cannot survive the narrowing: on today's engine
+      // nothing is applied for a visitor with no session. In its place: every
+      // event of the burst and of the sequence still reaches the pipeline and is
+      // answered (none lost), each with the pipeline's refusal, and neither
+      // visitor is scored.
       const env = await publishedRouteEnv();
       const item = 'B412907';
       const N = 8;
+      const refusal = await pipelineRefusal();
+      const { sentBy, restore } = await watchPipelineDoor();
+      try {
+        // Same N events, one visitor in parallel and one strictly sequential.
+        const parallelAnswers = await Promise.all(
+          Array.from({ length: N }, () =>
+            post('/event', { visitorId: 'burst-parallel', action: 'product_view', itemId: item }, env)
+          )
+        );
+        const serialAnswers: Array<{ status: number; body: unknown }> = [];
+        for (let i = 0; i < N; i++) {
+          serialAnswers.push(await post('/event', { visitorId: 'burst-serial', action: 'product_view', itemId: item }, env));
+        }
 
-      // Same N events, one visitor in parallel and one strictly sequential.
-      await Promise.all(
-        Array.from({ length: N }, () =>
-          post('/event', { visitorId: 'burst-parallel', action: 'product_view', itemId: item }, env)
-        )
-      );
-      for (let i = 0; i < N; i++) {
-        await post('/event', { visitorId: 'burst-serial', action: 'product_view', itemId: item }, env);
+        const refusedAnswers = Array.from({ length: N }, () => ({ status: 502, body: refusal.event }));
+        expect(parallelAnswers).toEqual(refusedAnswers);
+        expect(serialAnswers).toEqual(refusedAnswers);
+        // The parallel burst reached the pipeline as often as the sequence did: none lost.
+        expect(sentBy('burst-parallel').length).toBe(N);
+        expect(sentBy('burst-serial').length).toBe(N);
+      } finally {
+        restore();
       }
 
+      // Nothing was applied for either visitor.
       const { body: parallel } = await post('/page', { visitorId: 'burst-parallel' }, env);
       const { body: serial } = await post('/page', { visitorId: 'burst-serial' }, env);
-
-      const scoreOf = (p: any) => p.affinitySnapshot.dims.category['Kitchen & Table'] ?? 0;
-      expect(scoreOf(serial)).toBeGreaterThan(0);
-      // Before the fix the parallel visitor kept ONE of the eight views.
-      expect(scoreOf(parallel)).toBeGreaterThan(scoreOf(serial) * 0.9);
+      const cold = await coldAffinity(env, 'burst-cold');
+      expect(parallel.affinitySnapshot).toEqual(cold);
+      expect(serial.affinitySnapshot).toEqual(cold);
     });
 
     it('does not serialize DIFFERENT visitors against each other', async () => {
+      // WITNESS: R-P89 D1 (narrowed), W37.BASE.02; the boundary of AGENTS.md "The
+      // two demo workers"; owed: the consent door and session mint. The lock is
+      // per visitor (live.ts serialByVisitor): two visitors' refused signals are
+      // in the pipeline at once, each is answered with the refusal, and neither
+      // visitor is scored.
       const env = await publishedRouteEnv();
       // Prime the shared one-time work (audience seeding, catalog) so the
       // measurement below is about queueing, not cold start.
       await post('/event', { visitorId: 'warm', action: 'product_view', itemId: 'B412907' }, env);
       await post('/page', { visitorId: 'warm' }, env);
+      const refusal = await pipelineRefusal();
+      const { door, sentBy, restore } = await watchPipelineDoor();
+      try {
+        // Two visitors, one event each, issued together: each lands on its OWN
+        // queue, so neither waits behind the other's pipeline work.
+        const [a, b] = await Promise.all([
+          post('/event', { visitorId: 'solo-a', action: 'product_view', itemId: 'B412907' }, env),
+          post('/event', { visitorId: 'solo-b', action: 'product_view', itemId: 'B412907' }, env),
+        ]);
+        expect(a).toEqual({ status: 502, body: refusal.event });
+        expect(b).toEqual({ status: 502, body: refusal.event });
+        expect([sentBy('solo-a').length, sentBy('solo-b').length]).toEqual([1, 1]);
+        // Both passes were in flight together: neither queued behind the other.
+        expect(door.maxOverall).toBe(2);
+      } finally {
+        restore();
+      }
 
-      // Two visitors, one event each, issued together: each lands on its OWN
-      // queue, so neither waits behind the other's pipeline work.
-      const [a, b] = await Promise.all([
-        post('/event', { visitorId: 'solo-a', action: 'product_view', itemId: 'B412907' }, env),
-        post('/event', { visitorId: 'solo-b', action: 'product_view', itemId: 'B412907' }, env),
-      ]);
-      expect(a.status).toBe(202);
-      expect(b.status).toBe(202);
-
+      // Nothing was scored for either visitor.
       const { body: pa } = await post('/page', { visitorId: 'solo-a' }, env);
       const { body: pb } = await post('/page', { visitorId: 'solo-b' }, env);
-      expect(pa.affinitySnapshot.dims.category['Kitchen & Table']).toBeGreaterThan(0);
-      expect(pb.affinitySnapshot.dims.category['Kitchen & Table']).toBeGreaterThan(0);
+      const cold = await coldAffinity(env, 'solo-cold');
+      expect(pa.affinitySnapshot).toEqual(cold);
+      expect(pb.affinitySnapshot).toEqual(cold);
     });
   });
 
   describe('POST /live/api/events (batch)', () => {
-    it('accepts an array and scores every member, in order', async () => {
+    it('answers an array member by member, in order — every refused member is named and none is scored', async () => {
+      // WITNESS: R-P89 D1 (narrowed), W37.BASE.02; the boundary of AGENTS.md "The
+      // two demo workers"; owed: the consent door and session mint. This test
+      // used to measure acceptance and scoring, which cannot survive the
+      // narrowing. In its place: the batch is answered 502 with one refused[]
+      // entry per member, carrying the pipeline's status and error text, and
+      // accepted counts none of them; the members still reach the pipeline in
+      // the order the visitor produced them; nothing is scored. The cart-add is
+      // made on the slot under test with the experiment launched (Beat 13), so
+      // the conversion leg is reachable: a click the pipeline refused is never
+      // forwarded to the experiment as its conversion (live.ts acceptEvents).
       const env = await publishedRouteEnv();
-      const { status, body } = await post(
-        '/events',
-        {
-          visitorId: 'batch-1',
-          events: [
-            { action: 'product_view', itemId: 'B412907' },
-            { action: 'product_view', itemId: 'B412907' },
-            { action: 'add_to_cart', itemId: 'B412907' },
+      const refusal = await pipelineRefusal();
+      const experiment = await import('./experiment');
+      // SYNTHETIC launched-experiment ids (the shape of experiment.ts
+      // BhExperimentIds), never a real project's.
+      const launched = {
+        flagKey: experiment.BH_FLAG_KEY,
+        ruleKey: experiment.BH_RULE_KEY,
+        datafile: {
+          experimentId: '990001',
+          campaignId: '990002',
+          variationIds: { time_language: '990011', value_language: '990012' },
+          trafficAllocation: [
+            { entityId: '990011', endOfRange: 5000 },
+            { entityId: '990012', endOfRange: 10000 },
           ],
+          eventEntityId: '990021',
+          accountId: '990031',
+          revision: '1',
+          readAt: 1,
         },
-        env
-      );
+      } as unknown as Parameters<typeof experiment.saveBhExperimentIds>[1];
+      // Every outbound call is answered here and never leaves the process; the
+      // experiment's conversions (its event key in the payload) are recorded.
+      const conversions: unknown[] = [];
+      vi.stubGlobal('fetch', vi.fn(async (_input: unknown, init?: { body?: unknown }) => {
+        try {
+          const sent = JSON.parse(String(init?.body ?? '{}')) as {
+            visitors?: Array<{ visitor_id?: unknown; snapshots?: Array<{ events?: Array<{ key?: unknown }> }> }>;
+          };
+          for (const v of sent.visitors ?? []) for (const s of v.snapshots ?? []) for (const e of s.events ?? []) {
+            if (e.key === experiment.BH_EVENT_KEY) conversions.push({ visitor: v.visitor_id, key: e.key });
+          }
+        } catch {
+          // not a JSON payload, so not a conversion
+        }
+        return new Response('{}', { status: 404 });
+      }));
+      const { sentBy, restore } = await watchPipelineDoor();
+      try {
+        await experiment.saveBhExperimentIds(env as never, launched);
+        const { status, body } = await post(
+          '/events',
+          {
+            visitorId: 'batch-1',
+            events: [
+              { action: 'product_view', itemId: 'B412907' },
+              { action: 'product_view', itemId: 'B412907' },
+              { action: 'add_to_cart', itemId: 'B412907', data: { slot_id: experiment.BH_EXPERIMENT_SLOT } },
+            ],
+          },
+          env
+        );
+        await drainIngestion();
 
-      expect(status).toBe(202);
-      expect(body.ok).toBe(true);
-      expect(body.accepted).toBe(3);
-      expect(body.surface).toBe('brighthour');
+        expect(status).toBe(502);
+        expect(body).toMatchObject({
+          ok: false,
+          success: false,
+          stage: 'event',
+          accepted: 0,
+          refused: [0, 1, 2].map((index) => refusal.member(index)),
+        });
+        // In order: the members reached the pipeline in the sequence produced.
+        expect(sentBy('batch-1').map((s) => s.action)).toEqual(['product_view', 'product_view', 'add_to_cart']);
+        // The refused cart-add on the slot under test was not forwarded as a conversion.
+        expect(conversions).toEqual([]);
 
-      const { body: page } = await post('/page', { visitorId: 'batch-1' }, env);
-      expect(page.affinitySnapshot.dims.category['Kitchen & Table']).toBeGreaterThan(0);
+        // Nothing was scored.
+        const { body: page } = await post('/page', { visitorId: 'batch-1' }, env);
+        expect(page.affinitySnapshot).toEqual(await coldAffinity(env, 'batch-1-cold'));
+      } finally {
+        restore();
+        vi.unstubAllGlobals();
+        experiment.clearBhExperimentMemo();
+        experiment.clearBhSdkMemo();
+      }
     });
 
     it('takes a bare array, with each member carrying its own visitorId', async () => {
+      // WITNESS: R-P89 D1 (narrowed), W37.BASE.02; the boundary of AGENTS.md "The
+      // two demo workers"; owed: the consent door and session mint. The 202 this
+      // test pinned was the defect itself: two events no session can carry,
+      // reported accepted. The bare array is still taken, each member sent under
+      // its own visitorId, and each refused member is named.
       const env = routeEnv();
-      const { status, body } = await post(
-        '/events',
-        [
-          { visitorId: 'batch-2', action: 'product_view', itemId: 'B412907' },
-          { visitorId: 'batch-2', action: 'clip_play', itemId: 'B412907' },
-        ],
-        env
-      );
-      expect(status).toBe(202);
-      expect(body.accepted).toBe(2);
+      const refusal = await pipelineRefusal();
+      const { door, restore } = await watchPipelineDoor();
+      try {
+        const { status, body } = await post(
+          '/events',
+          [
+            { visitorId: 'batch-2', action: 'product_view', itemId: 'B412907' },
+            { visitorId: 'batch-2', action: 'clip_play', itemId: 'B412907' },
+          ],
+          env
+        );
+        expect(status).toBe(502);
+        expect(body).toMatchObject({
+          ok: false,
+          success: false,
+          stage: 'event',
+          accepted: 0,
+          refused: [0, 1].map((index) => refusal.member(index)),
+        });
+        // Each member was sent under its own visitorId: there is no top-level one.
+        expect(door.sent.map((s) => s.userId)).toEqual(['batch-2', 'batch-2']);
+      } finally {
+        restore();
+      }
+
+      // Nothing was scored: no session record holds anything for anyone. (This
+      // env has no published configuration, so no page can be composed to read
+      // it, and the decision export is written by page composition only.)
+      await drainIngestion();
+      expect([...(env.SESSIONS as unknown as FakeKV).store.keys()]).toEqual([]);
     });
 
     it('rejects a member with no visitorId anywhere to inherit one from', async () => {

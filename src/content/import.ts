@@ -145,11 +145,25 @@ export function normalizePiece(raw: unknown): Record<string, unknown> | null {
   copy('journeyStageFit', list);
   copy('freshnessDate');
   copy('featuredProductIds', list);
+  copy('complements', list);
   copy('inStock', v => stockOf(v) ?? v);
-  copy('merchandising', v => {
+  // A structured field travels in one CSV cell as JSON; anywhere else it is taken as given.
+  const jsonCell = (v: unknown) => {
     if (csv && typeof v === 'string') { try { return JSON.parse(v); } catch { return v; } }
     return v;
-  });
+  };
+  copy('merchandising', jsonCell);
+  // Ruling R-B1 (W19's lossless import of the documented piece): the targeting
+  // rule is carried on every import path exactly as the direct publication
+  // carries it — a JSON cell in a CSV row, like `merchandising` — and the
+  // validator, never this reshaping, decides whether it is well formed.
+  copy('eligibleWhen', jsonCell);
+  // P44 (R-P78): the module's declarations travel on every import path as the
+  // direct publication carries them, and the validator decides them: a CSV
+  // `pooled` cell `true` is the declaration (JSON's `true`), any other value is
+  // refused by name; a `successEvent` cell is the reward word.
+  copy('pooled', jsonCell);
+  copy('successEvent');
   // An explicitly supplied canonical field always wins, even when invalid.
   if (supplied('lifecycle')) out.lifecycle = raw.lifecycle;
   else if (supplied('status')) out.lifecycle = { status: trimmed(raw.status) };
@@ -256,7 +270,7 @@ export function parseCsv(text: string): Record<string, string>[] {
 
 export const CSV_COLUMNS = [
   'id', 'customerContentId', 'type', 'title', 'subtitle', 'tags', 'slotTypes', 'status', 'art', 'renderUrl', 'excerpt', 'runtime', 'windowFrom', 'windowTo',
-  'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'inStock', 'merchandising',
+  'eligibleWhen', 'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'complements', 'inStock', 'merchandising', 'pooled', 'successEvent',
 ] as const;
 
 // ── Assembly ────────────────────────────────────────────────────────────────

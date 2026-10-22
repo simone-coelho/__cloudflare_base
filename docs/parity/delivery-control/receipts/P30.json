@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P30",
+  "workOrderHash": "sha256:fba24099cdaf80ecec833f4d52a2ee8d2edb37e03cf5b26cef0d77df88df2a63",
+  "artifact": {
+    "revision": "2619f5bbcbe52283f5ff627b4716f1e5c0ee2eb9",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p30-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P30 built on rem/p30-build in one round after a boundary ruling. 42eb8e21 merges rem/integration 1519d1de (P02 to P13 and P34 of this programme, P36 to P40 of the second, the governance files) into the staged lane 31d6ef5b (rem/tkt/P30 ea49a5cf, the S4-fix specification revision, with the re-specification under owner item 57 rem/spec-p30-amend eac23ada merged: the device in the context key, R-P70, reviewed PASS, the gate re-recorded at eac23ada); RED baseline 23 failed and 2 passed on P30's own reasons (the X5 LOCK legs green on both hosts), no PRECONDITION P02 or P37; b30f1fe6 the engine (src/content/cell.ts, decide.ts, kinds.ts, service.ts, types.ts, src/events/actionTypes.ts, src/learn/explore.ts, fan.ts, replay.ts, src/reflex/contentCompose.ts, src/routes/decisions.ts, realtime.ts, public/meridian/engine.bundle.js regenerated, the SDK bundles regenerated for the action list): the page's declared layout slot switched by contextOnly enabled, off by default, scored on its context view only (the P07 context prior, the regional prior only when region is admitted, S4-C21), reading seed rules on entry channel and device only, the P01 order for the context with its device, the learned ladder at levels 0 to 2, pins, exclusions, freshness and merchandising, never interests, stage, fatigue, memberships, suppressions or the anchor preference, so two shoppers with different histories in one context receive the identical order; eligibility read on the context cell with a failing module withheld from that slot alone; exploration hashed on the readable context key (page, channel, visit bucket, device and region where admitted), the slot and the hour instead of the visitor, a slot without the switch keeping the visitor hash and replaying as before; the X-Context-Key response header built from the page, the channel, the visit bucket, the device where read under tracking consent and the region where admitted, sealed by an HMAC under a key derived from the signing configuration, never from a visitor, session or decision identifier or a user agent, every decision response still no-store, the one-call first request answered with the key, the holdout's default arm and the shopper without consent receiving the default variant under its own default key; the layout_exposure action on POST /realtime/action admitted only under tracking consent with a seal that verifies for the tenant and brand on the personalized arm for the switched slot measured on rendered-v1 with catalogue modules no more than take, adding one exposure per drawn module to that context's learning at level 2 whatever the device, a repeat for the same page view counted once by the row identity, a forged, tampered, other-page or default key, a missing consent or an unknown module adding nothing, writing no shopper state, ring, ledger or outcome; records of a context-only decision carrying the device and the region under inputs.context_only so an explored decision replays equal on both hosts; publication refusing the switch on any slot but the page's declared layout slot with an error naming the slot's contextOnly, writing no revision; 01c5c3d4 the kit (docs/kit/01-integration-guide.md, 02-api-reference.md, 03-payload-schemas.md: the switch, the key and the beacon); c622393a merges rem/integration 3d7a8316 (R-P71: src/sdk/wire.ts in the boundary for one WIRE row); 2619f5bb the SDK (src/sdk/listen.ts, src/sdk/types.ts, src/sdk/wire.ts, both bundle pairs with the 0.2.0 copies, packages/sdk/types/listen.d.ts and types.d.ts): listen.layoutExposure sending the beacon with the context key, the page, the slot, the modules in drawn order and the page view's instance once per page view and slot under tracking consent only, nothing in listenOnly or on malformed input, asking for no decisions because of it; no existing request member, snapshot member, payload key set or shopper storage key changed; the ESM bundle 102594 to 103933 of 107520 and the IIFE 107773 to 109150 of 112640, no budget crossed under R-P63; acceptance 25/25 on both hosts at 2619f5bb with src/sdk 82/82, W17 13/13, W20 34/34, W40 9/9, P34 9/9, P13 13/13, P40 16/16 at head and P02, P01, P05, P10, P28, P29, P31, P07, P04, P03, P12, P36 to P39, W27, W28, W21, W35, the kit readers, actionTypes.test.ts, src/services and edgeAccess green on the engine head, src/learn, src/content, src/reflex and src/routes failing on baseline entries only; both typechecks exit 0, build-sdk and build-meridian --check exact; eslint 0 new; engine and SDK probes on both hosts in temporary test files removed before the commits; the gate at 2619f5bb: run 1 GATE_FAIL on the W01.08 asset-routing timeout alone (src/index.api-boundary.test.ts:2531, outside the diff, passing alone in 25.3 s), the one named rerun GATE_OK (implementer/logs/gate.log: 3126 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside), and the reviewer's own gate at the same sha GATE_OK with the same numbers (reviewer/logs/gate.log).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S4/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P30/implementer/REPORT.md",
+      "git commits on rem/p30-build up to 2619f5bb"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P30 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P30/reviewer/logs/acceptance.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P30/implementer/logs/acceptance-01c5c3d4.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P30/reviewer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P30/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P30/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-14T11:01:53.176Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L15/P30.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L15/records/P30.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L15/REPORT.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

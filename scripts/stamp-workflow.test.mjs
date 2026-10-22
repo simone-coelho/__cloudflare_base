@@ -153,11 +153,11 @@ test('W09.09 explicit recovery config preserves default off and validates all th
   const off=clone(d);off.vars.LEDGER_RECOVERY_ENABLED='false';const config=JSON.parse(off.vars.LEDGER_RECOVERY_CONFIG);delete config.unknown;off.vars.LEDGER_RECOVERY_CONFIG=JSON.stringify(config);validateDesired(off);
   assert.throws(()=>validateTransition('upload',d,desired()));assert.throws(()=>validateTransition('rotate',{...d,secrets:{...d.secrets,JWT_SECRET:d.secrets.JWT_SECRET+'9'}},desired(),['JWT_SECRET']));
   const manifest=parseToml(await readFile(new URL('../wrangler.toml',import.meta.url),'utf8'));
-  for(const target of [manifest,manifest.env.staging,manifest.env.production]){
-    assert.equal(target.vars.LEDGER_RECOVERY_ENABLED,'false');assert.equal(target.queues.consumers.length,2);
+  const THIRTY_DAYS_MS=30*24*60*60*1000,PILOT_UNKNOWN={id:'pilot-unknown-v1',revision:1,durationMs:2592000000,basis:'admitted',renewal:'new-record-only',disposal:'delete-on-expiry'};for(const [target,pilot] of [[manifest,false],[manifest.env.staging,true],[manifest.env.production,true]]){
+    // Witness (owner direction 2026-10-17; commits aa103c6e staging, 1c3e6ad6 production): the pilot stamps run durable recovery ON because a render acknowledgement is redeemed only through recoverDecisions (src/content/renderOffer.ts:108), refused while LEDGER_RECOVERY_ENABLED is not 'true' (src/ledger/recovery.ts:313); their unknown-owner policy is named and bounded at 30 days; the default target stays off with none.
+    assert.equal(target.vars.LEDGER_RECOVERY_ENABLED,pilot?'true':'false');assert.equal(target.queues.consumers.length,2);const config=JSON.parse(target.vars.LEDGER_RECOVERY_CONFIG);
     const source=target.queues.consumers.find(q=>q.dead_letter_queue);assert.ok(source);assert.ok(target.queues.consumers.some(q=>q.queue===source.dead_letter_queue&&!q.dead_letter_queue));
-    assert.equal(JSON.parse(target.vars.LEDGER_RECOVERY_CONFIG).unknown,undefined);
-  }
+    if(pilot){assert.deepEqual(config,{version:1,sourceQueue:source.queue,deadLetterQueue:source.dead_letter_queue,unknown:PILOT_UNKNOWN});assert.ok(config.unknown.durationMs<=THIRTY_DAYS_MS);}else{assert.deepEqual(config,{version:1,sourceQueue:source.queue,deadLetterQueue:source.dead_letter_queue});assert.equal(config.unknown,undefined);}}
   for(const path of ['src/ledger/recovery.ts','src/ledger/quarantine.ts','src/routes/ledgerRecovery.ts'])assert.ok(SECURITY_ROOTS.includes(path));
 });
 
@@ -514,7 +514,8 @@ test('Offline actual Worker/SDK/customer-assets package is pinned once; not a cl
   for(const [path,proof]of barriers){assert.equal(sources.get(path).sha256,proof.sha256);if(path!=='src/index.ts')for(const imported of sources.get(path).imports)assert.ok(barriers.has(imported),'effective enforcement dependency '+imported);}
   console.log('Actual enforcement closure '+barriers.size+' pins; every customer-bound DO and background root plus transitive imports verified');
   assert.equal(config.env.staging.d1_databases[0].migrations_dir,'migrations/product');assert.equal(config.env.production.d1_databases[0].migrations_dir,'migrations/product');
-  assert.equal(config.vars.JWT_SECRET,undefined);assert.equal(config.d1_databases[0].migrations_dir,'migrations');
+  // W39 H2 (src/units/W39/LEDGER.unit.test.ts): the default local database applies product migrations only; the demo chain is an explicit request.
+  assert.equal(config.vars.JWT_SECRET,undefined);assert.equal(config.d1_databases[0].migrations_dir,'migrations/product');
   for(const mutate of [a=>delete a.verification,a=>a.verification={evidence:'claimed',sha256:'d'.repeat(64)},
     a=>a.verification.checks[0].exitCode=1,a=>a.verification.checks[1].command='true',
     a=>a.verification.checks[0].completedAt='invalid',a=>a.sourcePins.push(clone(a.sourcePins[0])),
@@ -705,20 +706,20 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
         if(!snapshot){docs.catalog.pieces.push({id:'concurrent-legitimate',title:'Keep concurrent content'});docs.slots.pages.concurrent=[];docs.learn.slots.concurrent={reward:'purchase'};revision++;}snapshot=true;
         if(scenario==='owned-edit')docs.catalog.pieces.find(p=>p.id!=='acc-pre-existing'&&p.id!=='concurrent-legitimate').title='Concurrent owned edit';
         if(success){
-          assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views===2,refused=issued===2;
-          if(refused){assert.match(init.headers.Cookie,/opt_tracking_consent=false/);return reply({ok:true,arm:'default',write:false,sources:{consent:{tracking:false}},decisions:[]});}
+          assert.equal(body.page,ownedPage);const prefix=ownedSlots.find(s=>s.endsWith('-hero')).slice(0,-4),id=name=>prefix+name,mid=views>=3,refused=issued===2;
+          if(refused){assert.match(init.headers.Cookie,/opt_tracking_consent=false/);return reply({ok:true,arm:'default',pageInstance:body.pageInstance,sources:{consent:{tracking:false,personalization:false,personalized:false}},decisions:[{slot:id('hero'),contentId:id('h-explore'),order:0,slotPosition:0}]});}
           const entries=[['hero',mid?'h-consider':'h-explore'],['fresh','f-new'],['fresh','f-old'],['rail','r-d1'],['rail','r-t1'],['rail','r-d2'],['story','s-featured']];
-          const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',
+          const records=entries.map(([slot,item],i)=>({slot:id(slot),item_id:id(item),position:i,decision_id:'synthetic-owned-'+views+'-'+i,measurementBasis:'rendered-v1',cell:{stage:mid?'mid':'early'},
             candidates:[{contentId:id(item)}],featured_product_ids:slot==='story'?['ACC-P-'+ownedPage.slice('acceptance-'.length)]:[],
             inputs:slot==='rail'&&mid?{served:{[id('rail')]:{[id('r-d1')]:1}}}:{},
-            explain:{...(slot==='hero'&&mid?{stage:{visitor:'considering',applied:0.2}}:{}),
+            explain:{...(slot==='hero'?{stage:{visitor:mid?'considering':'exploring',applied:0.2}}:{}),
               ...(item==='f-new'?{freshness:{applied:0.181}}:item==='f-old'?{freshness:{applied:0.004}}:{}),
               ...(item==='r-t1'?{diversity:{skipped:[id('r-d2')]}}:item==='r-d2'?{diversity:{relaxed:true}}:{}),
               ...(slot==='rail'&&mid?{fatigue:{served:1,applied:-0.1}}:{})}}));
           if(!heroDecision)heroDecision=records[0].decision_id;
           for(const record of records)offers.set(record.decision_id,{record,pageInstance:body.pageInstance});
           assert.equal(rendered.size,mid?7:0); // Fetching a choice did not capture it.
-          return reply({ok:true,arm:'personalized',write:false,pageInstance:body.pageInstance,sources:{state:'synthetic-protocol-fixture',consent:{personalized:true}},cell:{stage:mid?'mid':'unknown'},
+          return reply({ok:true,arm:'personalized',pageInstance:body.pageInstance,sources:{state:'synthetic-protocol-fixture',consent:{tracking:true,personalization:true,personalized:true}},
             decisions:entries.map(([slot,item],i)=>({slot:id(slot),contentId:id(item),order:i,decisionId:records[i].decision_id,renderOffer:'synthetic-offer-'+records[i].decision_id}))});
         }
         return reply({ok:false},503); // Stop before measurement assertions: protocol/cleanup fixture, not fabricated business success.
@@ -736,7 +737,7 @@ test('W14 customer-kit executes signed request flow, reconciles lost publication
           return reply({success:true,render:{version:1,decisionId:row.decision_id,eventId:body.eventId,pageInstance:body.data.pageInstance,status:'durable',source:'recovered'}});
         }
         if(body.type==='content_click'&&issued===1){assert.equal(rendered.size,14);const row=rendered.get(body.data.decisionId);assert.ok(row);assert.equal(row.item_id,body.data.contentId);assert.equal(row.slot,body.data.slot);assert.equal(row.position,body.data.position);}
-        if(body.type==='product_view')views++;if(body.type==='purchase')credited=true;return reply({success:true});
+        if(body.type==='product_view'){const held=new Set(),product=body.data?.productId??body.data?.product_id??body.data?.sku;if(product!=null&&!held.has(String(product)))return reply({success:true,dropped:'unknown_product'});views++;}if(body.type==='purchase')credited=true;return reply({success:true}); // as the engine: no product catalogue a run can publish (src/demos/registry.ts:223), and a view naming an unheld product is dropped before the journey counter (src/services/RealtimeSegmentEngine.ts:538-539, :578-581)
       }
       if(success&&u.pathname.endsWith('/learn/publish')){const slot=body.slot;assert.ok(ownedSlots.includes(slot));const hero=slot.endsWith('-hero'),item=slot.slice(0,slot.lastIndexOf('-')+1)+(hero?'h-consider':'s-featured');
         return reply({ok:true,snapshot:{measurementBasis:'rendered-v1',objective:hero?'unit':'revenue',items:{[item]:{'*':{s:credited?(hero?1:250):0}}}}});}
@@ -777,7 +778,7 @@ test('W14 customer-kit origin probe executes browser-compatible subprotocols and
     if(u.pathname.endsWith('/identity/session'))return Response.json({session:{capability:'signed-capability',subject:'subject',sessionId:'session',grantId:'grant',iat:1,exp:9999999999}});
     const headers=init.headers,body=JSON.parse(init.body);assert.equal(headers['X-Shopper-Session'],'signed-capability');
     if(u.pathname.endsWith('/preferences')){assert.equal(body.trackingConsent,false);assert.equal(body.personalizationEnabled,false);return Response.json({consent:{tracking:false,personalization:false}});}
-    if(u.pathname.endsWith('/snapshot')){assert.equal(init.method,'POST');return headers['X-SDK-Key']==='site-key'?Response.json({decisions:[],write:false}):Response.json({ok:false},{status:401});}
+    if(u.pathname.endsWith('/snapshot')){assert.equal(init.method,'POST');return headers['X-SDK-Key']==='site-key'?Response.json({ok:true,arm:'default',decisions:[{contentId:'piece-1',slot:'hero',order:0,slotPosition:0}],sources:{consent:{tracking:false,personalization:false,personalized:false}}}):Response.json({ok:false},{status:401});}
     if(u.pathname==='/realtime/action')return Response.json({success:true});throw Error('Unexpected probe');
   };
   const http={request:(url,{headers})=>{

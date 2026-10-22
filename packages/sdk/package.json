@@ -1,0 +1,34 @@
+{
+  "name": "edge-personalization",
+  "version": "0.2.0",
+  "description": "edge-personalization SDK: the browser client that sends events, receives content decisions and carries the first-party shopper session.",
+  "private": true,
+  "type": "module",
+  "main": "./edge-personalization.esm.js",
+  "module": "./edge-personalization.esm.js",
+  "types": "./types/index.d.ts",
+  "unpkg": "./edge-personalization.js",
+  "jsdelivr": "./edge-personalization.js",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./edge-personalization.esm.js",
+      "default": "./edge-personalization.esm.js"
+    },
+    "./iife": {
+      "types": "./types/browser.d.ts",
+      "default": "./edge-personalization.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "edge-personalization.esm.js",
+    "edge-personalization.js",
+    "types",
+    "README.md"
+  ],
+  "sizeBudget": {
+    "./edge-personalization.esm.js": 107520,
+    "./edge-personalization.js": 112640
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P47",
+  "workOrderHash": "sha256:cfba775aebfdcd8a40c0eb1d82815373a215a91756859a31ec2a2e5ef5d36b8d",
+  "artifact": {
+    "revision": "eb7ddbb81b205c8daecd46a42415245f86fea991",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p47-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p47-build at eb7ddbb81b205c8daecd46a42415245f86fea991 (4d416b7e merges rem/integration bab8da90 into rem/tkt/P47 2fcd4b0e; 9ae59eca the count in src/learn/slotGovernance.ts, src/content/service.ts, src/routes/decisions.ts and src/ops/monitor.ts: module_not_returned entries counted into the existing governance record as unreturnedPinCount and unreturnedPins, zero reported as zero on the slots page block, the monitor's governance carrying the tenant total once the record has counted one, refusedPinCount and refusedPins counting refusals only; 40209c4e public/console/views.js, the Slots cell's lines; eb7ddbb8 kit 02 and 03). Acceptance 7/7 on both hosts; the builder's gate GATE_OK at eb7ddbb8 (3312 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 45434107…); both typechecks exit 0; both bundle checks exact; the refusals-only page's record bytes, storage keys, monitor object, Slots screen and request list byte-identical to the base on both hosts; the answer's pinDiagnostics, refusedCount and omittedCount identical. Delivery review PASS (P47/reviewer/REPORT.md): UP1 to UP3 PASS, five mutants caught by the units, two caught by probes only (the members written for a refusals-only slot; a second storage key). Residuals: no \"more not named\" line past the 10-name cap for unreturned pins (the count line gives the total; a candidate warning ticket); LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P47/implementer/REPORT.md",
+      "git commits on rem/p47-build up to eb7ddbb8"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P47 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P47/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P47/implementer/logs/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P47/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P47/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P47/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T18:11:37.957Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L7/records/P47.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L56/records/P47.md"
+      ]
+    }
+  ]
+}

@@ -173,7 +173,7 @@ const servedIn = (set, slot) => set.decisions.filter((d) => d.slot === slot).map
 // This CLI reports a synthetic renderer signal, not browser paint or visibility.
 // Private receipts are read separately with operator authority, never from a poll.
 async function admitRendered(visitor, set) {
-  check('snapshot is read-only and has no private receipts', set.write === false && !Object.hasOwn(set, 'records'));
+  check('snapshot is read-only and has no private receipts', typeof set.pageInstance === 'string' && !Object.hasOwn(set, 'records')); // No `write` member is sent (src/routes/decisions.ts:1132-1154). An echoed pageInstance (:1154) means the request carried one, which sends it down the render-offer path (:1091), on which nothing is captured at serve time (src/content/service.ts:1038, :1040, :1135); `records` only for the platform's own synthetic operation (decisions.ts:1153).
   const s = await shopper(visitor), expected = new Map();
   for (const choice of set.decisions) {
     check('renderable choice has an authenticated original offer', typeof choice.decisionId === 'string' && typeof choice.renderOffer === 'string' && !!set.pageInstance);
@@ -223,12 +223,12 @@ async function run() {
   check('a personalized shopper', Boolean(first), 'eight ids in a row landed in a holdout arm');
   log(`      signed shopper selected, state ${first.sources.state}`);
 
-  // 1. The first snapshot: no events yet, so the stage is unknown and the stage rule is off.
-  eq('first snapshot: read-only, consenting', [first.write, first.sources.consent.personalized], [false, true]);
+  // 1. The first snapshot: no events yet, so the visit's counters are zero and the stage is the first one, exploring (stored as `early`); the hero's stage rule favours the exploring piece.
+  eq('first snapshot: read-only, consenting', [typeof first.pageInstance, first.sources.consent.tracking, first.sources.consent.personalization, first.sources.consent.personalized], ['string', true, true, true]); // read-only as in admitRendered; `sources.consent` is src/content/service.ts:1146 (`personalized` :737).
   first = await admitRendered(V, first);
-  eq('first snapshot: stage unknown before any event', first.cell.stage, 'unknown');
-  eq('acc-hero: catalogue order while the stage is unknown', servedIn(first, fixtureId('hero')), [fixtureId('h-explore')]);
-  check('acc-hero: no stage block while the stage is unknown', rec(first, fixtureId('hero')).explain.stage === undefined);
+  eq('first snapshot: stage early before any event', [...new Set(first.records.map(row => row.cell?.stage))], ['early']); // The answer carries no stage (src/routes/decisions.ts:1132-1154; `experiment` is the enrollment, src/content/types.ts:578-606, without one); it rides each record's `cell` (src/content/service.ts:762-775, src/content/decide.ts:1974), read off the operator receipts admitRendered fetched (decisions.ts:238, :254, :813). Witness: zero counters derive the first stage, exploring (src/services/JourneyStage.ts:139-140, :350-360, via src/content/service.ts:339-341), stored as `early` (JourneyStage.ts:147-148 through service.ts:774).
+  eq('acc-hero: the exploring piece while the stage is exploring', servedIn(first, fixtureId('hero')), [fixtureId('h-explore')]);
+  eq('acc-hero: the receipt itemises the stage rule for an exploring shopper', [rec(first, fixtureId('hero')).explain.stage?.visitor, rec(first, fixtureId('hero')).explain.stage?.applied], ['exploring', 0.2]); // `early` reads as exploring (src/services/JourneyStage.ts:33-34 via src/content/decide.ts:930); h-explore fits it, so the slot's inStage 0.2 (acceptance-run.mjs:84) is added and itemised (decide.ts:1036-1040, :1986).
   eq('acc-fresh: newest first, the undated one last, the out-of-stock one absent', servedIn(first, fixtureId('fresh')), [fixtureId('f-new'), fixtureId('f-old')]);
   check('acc-fresh: the out-of-stock piece is not even a candidate', !rec(first, fixtureId('fresh')).candidates.some((c) => c.contentId === fixtureId('f-oos')));
   near('acc-fresh: a day-old piece gets 0.2 × 2^(−1/7)', rec(first, fixtureId('fresh'), fixtureId('f-new')).explain.freshness?.applied, 0.181, 0.005);
@@ -241,18 +241,18 @@ async function run() {
   eq('seven records, one per position', first.records.length, 7);
   const heroDecisionId = rec(first, fixtureId('hero')).decision_id;
 
-  // 2. Two product views move the stage to considering. The session host derives it per event.
-  for (let i = 0; i < 2; i++) {
-    const r = await event(V, S, 'product_view', { productId: `ACC-P-${runId}`, product_id: `ACC-P-${runId}`, name: 'Acceptance bag', price: 250 });
-    check(`product view ${i + 1} accepted`, r.status === 200 && r.json?.success !== false, `status ${r.status} ${r.text.slice(0, 160)}`);
+  // 2. Three product views move the stage to considering: a scope initialized through the door carries the compiled default reflex document (src/routes/content.ts:1052), whose thresholds move the stage on the visit's third interaction (src/services/JourneyStage.ts:193-198, :480-481), and each counted view is one (:335-336). The views name no product. A view naming a product the tenant does not hold is answered `dropped: "unknown_product"` before the journey counter (src/services/RealtimeSegmentEngine.ts:538-539, :578-581, before :603; docs/kit/02-api-reference.md:122-127); the engine holds no product catalogue for a tenant other than the default one and only its bundled one for that tenant (src/demos/registry.ts:223; src/services/CatalogService.ts:94), and the customer profile has no door that publishes one (src/customerBoundary.ts:55-76 admits reflex config and the content kinds, which are catalog, slots, learn, priors and vocabulary, src/routes/content.ts:84-91). The session host derives the stage per event.
+  for (let i = 0; i < 3; i++) {
+    const r = await event(V, S, 'product_view', { name: 'Acceptance bag', price: 250 });
+    check(`product view ${i + 1} accepted and counted`, r.status === 200 && r.json?.success !== false && r.json?.dropped === undefined, `status ${r.status} ${r.text.slice(0, 160)}`);
   }
   // Polls create no exposures. Only the selected second set is acknowledged.
   let second = await until('second snapshot sees the acknowledged interactions', async () => {
     const r = await snapshot(V, S);
-    return r.status === 200 && r.json?.cell?.stage === 'mid' ? r.json : null;
+    return r.status === 200 && Array.isArray(r.json?.decisions) && servedIn(r.json, fixtureId('hero'))[0] === fixtureId('h-consider') ? r.json : null; // No member of the answer carries the stage (src/routes/decisions.ts:1132-1154); acc-hero is decided by its stage rule alone (acceptance-run.mjs:68, :84), so its pick is the answer's own sign that the stage moved. The stage itself is checked on the receipts below.
   }, { tries: 5, everyMs: 800 });
   second = await admitRendered(V, second);
-  eq('second snapshot: the stage is considering', second.cell.stage, 'mid');
+  eq('second snapshot: the stage is considering', [...new Set(second.records.map(row => row.cell?.stage))], ['mid']); // three interactions meet the compiled default's thinking rule (src/services/JourneyStage.ts:195, :350-360), stored as `mid` (:149 through src/content/service.ts:774), read off the receipts' `cell` as for the first snapshot.
   eq('acc-hero: the piece made for a considering shopper now wins', servedIn(second, fixtureId('hero')), [fixtureId('h-consider')]);
   eq('acc-hero: the receipt itemises the stage rule', [rec(second, fixtureId('hero')).explain.stage?.visitor, rec(second, fixtureId('hero')).explain.stage?.applied], ['considering', 0.2]);
   const railSecond = rec(second, fixtureId('rail'), fixtureId('r-d1'));
@@ -329,7 +329,7 @@ async function run() {
   // 7. A shopper who withheld tracking consent: the defaults, nothing written, no ring.
   const W = `acc-w-${runId}`, cookie = 'opt_tracking_consent=false; opt_personalization_enabled=true';
   const withheld = await snapshot(W, `acc-ws-${runId}`, cookie);
-  eq('consent withheld: the default arm and nothing written', [withheld.json?.arm, withheld.json?.write, withheld.json?.sources?.consent?.tracking], ['default', false, false]);
+  eq('consent withheld: the default arm and nothing written', [withheld.json?.arm, withheld.json?.sources?.consent?.tracking, withheld.json?.sources?.consent?.personalization], ['default', false, false]); // `arm`: src/content/service.ts:807, src/content/consent.ts:176, :186. Without tracking consent nothing is written (service.ts:1052, :1135; src/routes/decisions.ts:1121); no `write` member is sent (decisions.ts:1132-1154); no render offer (service.ts:1120) is the next check.
   check('consent withheld: no private receipt or render authority', !Object.hasOwn(withheld.json, 'records')
     && Array.isArray(withheld.json.decisions) && withheld.json.decisions.every(choice => !choice.renderOffer && !choice.decisionId));
   const wClick = await event(W, `acc-ws-${runId}`, 'content_click', { contentId: fixtureId('h-explore'), slot: fixtureId('hero') }, cookie);

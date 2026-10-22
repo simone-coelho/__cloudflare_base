@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P49",
+  "workOrderHash": "sha256:445dc4814176eb4e73b09935ee9893abdaffffb0a57de91cf6d86a2211253fa8",
+  "artifact": {
+    "revision": "14b8e5a8b48c10520043f7f66ebbd1711056bbc4",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p49-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p49-build at 14b8e5a8b48c10520043f7f66ebbd1711056bbc4 (7181d839 merges rem/integration b04de94b into rem/tkt/P49 e3988c46; e8d95116 the mechanism in src/durable-objects/LearnStats.ts, src/learn/stats.ts, src/learn/fan.ts and src/routes/decisions.ts: the configuration check raises a republish fault that publish() alone turns into the named 503 with the member republished, keys sorted, changed sorted by member, the words keeping today's prefix and naming the slot, each change and what ends it; the member stored under its own KV key beside the snapshot, written only by the refusal, applying while the snapshot in force is the one it names and lapsing on the next successful publication; the route's pass-through only for the exact well-formed body naming this placement; the two lift reads carrying it last, after stale; 14b8e5a8 kit 02 and 03). Acceptance 11/11 on both hosts with P42 11/11 under its corrected control; the builder's gate GATE_OK at 14b8e5a8 (3334 tests, 52 failing, 0 outside the baseline of 52) verified by the reviewer from the JSON (sha256 8021a990…); both typechecks exit 0; both bundle checks exact; the R-P7 dump byte-identical at head and base on both hosts but for 8 gets of the new key from lift reads, no put and no new key for healthy slots. Delivery review PASS (P49/reviewer/REPORT.md): LR1 to LR3 PASS, seven mutants caught by the units, two by probes only (changed unsorted; the route passing an extra member). Residuals and R-P78 items for the lead: the console's lift grid renders neither stale (P45 shows it) nor republished; after a transition whose own publication failed on the pooled cause the reads keep republished until the next success; a transition that does not adopt the changed member (a basis change, or a reward change whose body omits reward) ends the refusal while the slot's exposures stop being counted, identical at the base and a surprise to the operator; the R-P81 call-list pins; LV1 deferred.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S7/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P49/implementer/REPORT.md",
+      "git commits on rem/p49-build up to 14b8e5a8"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P49 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P49/reviewer/logs/acceptance-head.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P49/implementer/logs/acceptance-kit.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P49/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P49/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P49/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-17T23:21:59.586Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L7/records/P49.md"
+      ]
+    }
+  ]
+}

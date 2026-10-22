@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-operator-warnings",
+    "title": "Tapestry parity, operator warnings (amendment 2), 4 tickets",
+    "ticketIds": [
+      "P41",
+      "P42",
+      "P43",
+      "P44"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P41",
+      "title": "A conversion table that omits the slot's own reward says so (**amendment 2, 2026-10-16**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",
+        "locator": "P41 · section 2 of amendment 2; P16's closure line, reading (d); the P16 delivery review section 10 (d)",
+        "requirement": "on both hosts, publishing or validating a learn document whose slot carries a `conversions` table that does not name the slot's own reward still succeeds, and the answer carries an advisory in the publication's existing advisory shape that names the slot, the omitted reward and the consequence (undeclared pieces on that slot earn nothing); a table that names the slot's reward carries no such advisory; the console shows the advisory where it shows publication advisories today, if such a surface exists for the learn document, else nothing; credits, records, receipts, replay and every P16 unit are unchanged; kit 02 and 03 state the advisory."
+      },
+      "outcome": "An operator who publishes a conversion table without the slot's own reward is told, on the publication answer and on both hosts, which slot and reward were omitted and that undeclared pieces on that slot earn nothing, while the publication, the credits and every record stay exactly as P16 built them.",
+      "criteria": [
+        {
+          "id": "CW1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, the learn-document PUT and the validate door answer success for a slot whose conversions table omits the slot's own reward, and the answer carries an advisory in the publication's existing advisory shape naming the slot, the omitted reward and the consequence; a table that names the slot's reward carries no such advisory; a document without a table carries none.",
+          "proof": "The P41 acceptance command runs the tests named unit:P41.CW1 in src/units/P41 and they pass."
+        },
+        {
+          "id": "CW2",
+          "kind": "LOCAL",
+          "observable": "With the advisory present, the credits online and in the offline recomputation, every record and receipt member, and every replay are unchanged from P16's receipted behaviour on both hosts, and a learn document without a table is byte for byte today's on its publication answer.",
+          "proof": "The P41 acceptance command runs the tests named unit:P41.CW2 in src/units/P41 and they pass."
+        },
+        {
+          "id": "CW3",
+          "kind": "LOCAL",
+          "observable": "docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md state the advisory, its shape and when it is given; where the console shows publication advisories for the learn document, it shows this one.",
+          "proof": "The P41 acceptance command runs the tests named unit:P41.CW3 in src/units/P41 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "A table that omits the slot's own reward is still published and the publication tells the operator, in the existing advisory shape (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/content/kinds.ts:1633–1637 and :1703–1714 at 34f1c074",
+          "description": "The conversions table is validated by shape only; a table omitting the slot's reward is accepted without a word."
+        },
+        {
+          "ref": "src/routes/content.ts:434–460 at 34f1c074",
+          "description": "The advisory channels of a publication, built beside the answer."
+        },
+        {
+          "ref": "src/content/catalogDiagnostics.ts:20 at 34f1c074",
+          "description": "The advisory record shape (code, recordIndex, field) the catalogue publication uses."
+        },
+        {
+          "ref": "P16/reviewer/REPORT.md section 10 (d)",
+          "description": "The measured consequence: records {click, null} and zero credit for every undeclared piece."
+        }
+      ],
+      "remainingWork": [
+        "Advisory: detect a conversions table that omits the slot's own reward at publication and validation and name the slot, the reward and the consequence on the answer's advisory channel, in the existing shape.",
+        "Continuity: the publication, the credits, the records, the receipts and replay unchanged; a document without a table unchanged byte for byte.",
+        "Kit and console: document the advisory in kit 02 and 03; show it where the console shows publication advisories for the learn document, if that surface exists."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "The owner's standing rule of 2026-10-16 (R-P78, _evidence/parity-step3/AMENDMENTS.md; LANE-LOG.md Authority): when a behaviour would surprise the visitor or the operator, the product tells them",
+          "effect": "A table that omits the slot's own reward is still published (OB1 of P16 accepts any table of rewards to positive values) and the publication tells the operator; the advisory's fields are the specifier's to rule in the existing advisory shape."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/kinds.ts",
+        "src/routes/content.ts",
+        "src/content/catalogDiagnostics.ts",
+        "src/content/slotDiagnostics.ts",
+        "public/console/views.js",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P41 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/head-P41.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p41-advisory-everywhere.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p41-refuse-omitting.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/all4-P41.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/acceptance-P41.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/nc-p41-sketch.log"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P42",
+      "title": "A pooled publication that fails closed names the faulty page, and the stale slot says it is stale (**amendment 2, 2026-10-16**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",
+        "locator": "P42 · section 2 of amendment 2; P08's closure line, reading (1) and probe R7; the P08 delivery review section 9 (R7) and 10 (1)",
+        "requirement": "on both hosts, when a pooled publication fails because a sibling placement's statistics cannot be read, the publication's refusal names the faulty page and slot and the pooled modules it carries, and says the slot's snapshot stays at its last successful version; the slot's operator read surfaces (GET /v1/:tenant/lift and /lift/rows) report the snapshot as stale, naming the failing placement and the last successful publish, until a later publish succeeds, after which the marker is gone; a slot whose publications succeed reads and publishes byte for byte as today; the recovery refusal of every other cause keeps today's text; kit 02 and 03 state it."
+      },
+      "outcome": "An operator whose pooled slot stops updating because one page's statistics object is faulty is told which page and slot are at fault on the refusal and sees the slot marked stale on the lift reads until a publication succeeds again, while every healthy slot behaves byte for byte as today.",
+      "criteria": [
+        {
+          "id": "PW1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, when a placement's publication is refused because a sibling placement's /pooled door fails, the refusal names the faulty page and slot and the pooled modules affected and says the slot's snapshot stays at its last successful version; a recovery refusal of any other cause keeps today's text.",
+          "proof": "The P42 acceptance command runs the tests named unit:P42.PW1 in src/units/P42 and they pass."
+        },
+        {
+          "id": "PW2",
+          "kind": "LOCAL",
+          "observable": "After such a refusal, GET /v1/:tenant/lift and /lift/rows for that slot carry a stale marker naming the failing placement and the last successful publish; after a later publication succeeds the marker is absent; a slot that never failed carries no marker.",
+          "proof": "The P42 acceptance command runs the tests named unit:P42.PW2 in src/units/P42 and they pass."
+        },
+        {
+          "id": "PW3",
+          "kind": "LOCAL",
+          "observable": "A slot whose publications succeed reads and publishes byte for byte as today on both hosts (its snapshot, its lift answers, its records); every P08 unit is unchanged.",
+          "proof": "The P42 acceptance command runs the tests named unit:P42.PW3 in src/units/P42 and they pass."
+        },
+        {
+          "id": "PW4",
+          "kind": "LOCAL",
+          "observable": "docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md state the named refusal and the stale marker.",
+          "proof": "The P42 acceptance command runs the tests named unit:P42.PW4 in src/units/P42 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "Fail-closed stays; the refusal names the faulty placement and the lift reads mark the slot stale until a publication succeeds (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/durable-objects/LearnStats.ts:129 at cde6f02a",
+          "description": "The recovery refusal, 503 \"statistics recovery required\", one text for every cause."
+        },
+        {
+          "ref": "src/durable-objects/LearnStats.ts:1146–1163 at cde6f02a",
+          "description": "The pooled record assembled at publication through each sibling placement's /pooled door; any failure throws recovery()."
+        },
+        {
+          "ref": "src/routes/decisions.ts:444 and :741 at 5a69dacc",
+          "description": "The lift grid and the lift read, operator surfaces of the slot's snapshot."
+        },
+        {
+          "ref": "P08/reviewer/REPORT.md section 9 (R7)",
+          "description": "Measured: with home's door answering 500, pdp's publish answers 503 and the snapshot stays stale for every module."
+        }
+      ],
+      "remainingWork": [
+        "Refusal: name the faulty page, slot and pooled modules on the pooled publication's recovery refusal and say the snapshot stays at its last version.",
+        "Stale marker: record the failed publication's placement and the last successful publish on the slot and carry it on the lift read surfaces until a publication succeeds.",
+        "Continuity: healthy slots byte for byte as today; other recovery refusals unchanged.",
+        "Kit: state the refusal and the marker in kit 02 and 03."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "The owner's standing rule of 2026-10-16 (R-P78, _evidence/parity-step3/AMENDMENTS.md; LANE-LOG.md Authority): when a behaviour would surprise the visitor or the operator, the product tells them",
+          "effect": "Fail-closed stays (no partial pooled record is ever published); the refusal and the read surfaces tell the operator; the marker's members are the specifier's to rule, added only to a slot that has failed, so a healthy slot's snapshot is unchanged (R-P7)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/durable-objects/LearnStats.ts",
+        "src/learn/stats.ts",
+        "src/learn/fan.ts",
+        "src/learn/rows.ts",
+        "src/routes/decisions.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P42 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT-fix1.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-head-P42.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-p42-door-only.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-p42-sketch-guarded.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/fix1-p42-clear-door-only.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p42-lift-marked.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p42-recovery-text.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p42-snapshot-marked.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/fix-P42-head.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/fix-nc-p42-door-only.log"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P43",
+      "title": "A pin inside an unshown module's inner slot is reported (**amendment 2, 2026-10-16**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",
+        "locator": "P43 · section 2 of amendment 2; P26's closure line, further reading 3; the P26 delivery review section 10",
+        "requirement": "on both hosts, when a layout does not return a module whose inner slot carries a pin, the page's pin diagnostics (the existing pinDiagnostics shape) carry an entry naming the inner slot, its module, the layout slot and the piece, with a reason that says the pin stayed reserved and unserved because the module was not returned; the served decisions, records, receipts, replay and the reservation itself are unchanged (the piece stays reserved, as ruled); a page without `inner` and a page whose every module is returned carry no such entry; kit 02 and 03 state it."
+      },
+      "outcome": "An operator who pins a piece inside a module's inner slot and then sees the piece nowhere on a page view where that module was not shown finds the reason in the page's pin diagnostics on both hosts, naming the slot, the module and the piece, while the decision itself is exactly what P26 built.",
+      "criteria": [
+        {
+          "id": "RP1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, with a piece pinned in an inner slot whose module the layout does not return, the decision answer's pin diagnostics carry an entry naming the inner slot, its module, the layout slot and the piece, with a reason that the pin stayed reserved and unserved because the module was not returned.",
+          "proof": "The P43 acceptance command runs the tests named unit:P43.RP1 in src/units/P43 and they pass."
+        },
+        {
+          "id": "RP2",
+          "kind": "LOCAL",
+          "observable": "With that entry present, the served decisions, records, receipts and replay of the page are unchanged from P26's receipted behaviour and the piece stays reserved page-wide; every P26 and P04 unit is unchanged.",
+          "proof": "The P43 acceptance command runs the tests named unit:P43.RP2 in src/units/P43 and they pass."
+        },
+        {
+          "id": "RP3",
+          "kind": "LOCAL",
+          "observable": "A page without `inner`, and a nested page whose every module is returned, carry no such entry and their decisions are byte for byte today's on both hosts; docs/kit/02-api-reference.md and docs/kit/03-payload-schemas.md state the entry.",
+          "proof": "The P43 acceptance command runs the tests named unit:P43.RP3 in src/units/P43 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "The reservation stays as P26 ruled it and the page's pin diagnostics report the pin as reserved and unserved, naming the slot, the module and the piece (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/reflex/contentCompose.ts:403–470 at 5a69dacc",
+          "description": "Every valid pin reserved page-wide before any slot ranks; off-limits and excluded pins reserve nothing."
+        },
+        {
+          "ref": "src/reflex/contentCompose.ts:823–881 at 5a69dacc",
+          "description": "An inner slot whose module is not returned is never entered, so its pin produces no diagnostic."
+        },
+        {
+          "ref": "src/content/decide.ts:407 and :1258 at 5a69dacc",
+          "description": "pinDiagnostics, the diagnostics the decision answer carries."
+        },
+        {
+          "ref": "P26/reviewer/REPORT.md section 10, further reading 3",
+          "description": "Judged inside the ruling and owner-visible: the piece is served nowhere on that page view and its pin is not reported."
+        }
+      ],
+      "remainingWork": [
+        "Diagnostic: when an inner slot is left undecided and carries a pin, add an entry to the page's pin diagnostics naming the inner slot, its module, the layout slot and the piece, with the reason.",
+        "Continuity: decisions, records, receipts, replay and the reservation unchanged; a page without inner and a fully returned layout unchanged byte for byte; the Meridian bundle regenerated if the composer changes.",
+        "Kit: state the entry in kit 02 and 03."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "The owner's standing rule of 2026-10-16 (R-P78, _evidence/parity-step3/AMENDMENTS.md; LANE-LOG.md Authority): when a behaviour would surprise the visitor or the operator, the product tells them",
+          "effect": "The reservation stays as P26 ruled it (the piece is served nowhere on that page view); the page tells the operator through the existing pin diagnostics; the entry's reason word is the specifier's to rule."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/reflex/contentCompose.ts",
+        "src/content/decide.ts",
+        "src/content/types.ts",
+        "public/meridian/engine.bundle.js",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P43 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/head-P43.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p43-release-inner-pin.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p43-entry-every-pin.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p43-entry-every-inner-pin.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/all4-P43.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/acceptance-P43.log"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P44",
+      "title": "No false \"ignored field\" for `pooled` and `successEvent`; the W19 field-list lock derives (**amendment 2, 2026-10-16**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-2/BTI-Parity-Amendment-2026-10-16.md (amendment 2, committed beside the program)",
+        "locator": "P44 · section 2 of amendment 2; P08's and P16's closure lines (the W19 PIECE_FIELDS residual); the P16 delivery review section 8 (M16) and 11 (1, 2)",
+        "requirement": "on both hosts, a direct publication declaring `pooled` or `successEvent` answers 200 with no `ignored_field` advisory for those members, an unknown field still gets the advisory (W19's contract kept), and a feed import or pull keeps both members on the piece; kit 03's piece table lists both; the W19 lock is corrected under R10 by the specifier, in the same form as R-P75 (derived from the validator's field list, so the contract keeps its meaning under any later ruled member), with every other W19 assertion unchanged."
+      },
+      "outcome": "An operator who publishes a piece with `pooled` or `successEvent` directly, or through a feed, keeps both members and gets no false warning, while W19's pieces contract keeps refusing to swallow an unknown field silently.",
+      "criteria": [
+        {
+          "id": "PF1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a direct catalogue publication declaring `pooled: true` or a `successEvent` answers 200 with no ignored_field advisory for those members and the piece keeps them; a publication carrying an unknown field still answers with the ignored_field advisory naming it.",
+          "proof": "The P44 acceptance command runs the tests named unit:P44.PF1 in src/units/P44 and they pass."
+        },
+        {
+          "id": "PF2",
+          "kind": "LOCAL",
+          "observable": "A feed import and a pull keep `pooled` and `successEvent` on the imported piece on both hosts, and drop an unknown column as today.",
+          "proof": "The P44 acceptance command runs the tests named unit:P44.PF2 in src/units/P44 and they pass."
+        },
+        {
+          "id": "PF3",
+          "kind": "LOCAL",
+          "observable": "docs/kit/03-payload-schemas.md's piece table lists both members with their meaning and kit 02 states that a direct publication keeps them; the W19 pieces-contract units are green with their field-list lock derived from the validator's list (the specifier's R10 correction, R-P75 form), every other W19 assertion unchanged.",
+          "proof": "The P44 acceptance command runs the tests named unit:P44.PF3 in src/units/P44 and they pass."
+        },
+        {
+          "id": "DC1",
+          "kind": "DECISION",
+          "observable": "The validator's field list grows by pooled and successEvent and the W19 lock derives from it, a test-only correction under R10 in the R-P75 form (the owner's rule, R-P78).",
+          "proof": "Decision D1.",
+          "decisionId": "D1"
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "src/content/kinds.ts:48–50 and :263–273 at 34f1c074",
+          "description": "PIECE_FIELDS, the frozen field list, and the advisory that names any member outside it as ignored; the validators keep pooled and successEvent without listing them."
+        },
+        {
+          "ref": "src/content/import.ts:79 at 34f1c074",
+          "description": "FEED_FIELDS derives from PIECE_FIELDS, so a feed import or pull drops both members."
+        },
+        {
+          "ref": "src/units/W19/B3.unit.test.ts:461–462",
+          "description": "The lock that pins PIECE_FIELDS to a literal (W19.F3.04); extending the list turns :473 and :486 RED (P16 review, M16)."
+        },
+        {
+          "ref": "P08/reviewer/REPORT.md section 11; P16/reviewer/REPORT.md section 11 items 1 and 2",
+          "description": "The residual recorded at both closes, owed at W19's next touch."
+        }
+      ],
+      "remainingWork": [
+        "Field list: add pooled and successEvent to the validator's piece field list so a direct publication keeps them with no advisory, the unknown-field advisory kept.",
+        "Feed: FEED_FIELDS follows, so an import or pull keeps both members.",
+        "Lock: the specifier corrects the W19 lock under R10 to derive from the validator's list (R-P75 form) in the specification batch; the builder never edits a test.",
+        "Kit: list both members in kit 03's piece table and state the direct publication in kit 02."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "The owner's standing rule of 2026-10-16 (R-P78, _evidence/parity-step3/AMENDMENTS.md; LANE-LOG.md Authority): when a behaviour would surprise the visitor or the operator, the product tells them",
+          "effect": "The field list grows by the two ruled members and the W19 lock derives from it (test-only correction under R10, as R-P75); W19's receipt stands."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes. P44 has no customer-facing surface; its LIVE1 is the kit reader's check of a direct publication and a feed import on the deployed host.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/kinds.ts",
+        "src/content/import.ts",
+        "src/units/W19/B3.unit.test.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P44 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "20590bd8d016dad5f26d6f5966496a57db9f8935 on rem/spec-parity-f (batch S6, amendment 2; P41 acf8fbed, P42 deb68abe then 20590bd8 after fix round 1, P43 fbdc2966, P44 8ac2d489 then 5d8ad263, the W19 field-list lock corrected test-only at 78eeb83c in the R-P75 form; every harness file byte-identical to 663eddeb; reviewed PASS: every unit HONEST, RED on both hosts on its own reason or a lock with a control, satisfiable on one product by the sketch grafts, P42's alarm-path leg added in fix round 1 and re-reviewed PASS; per-ticket branches cut from this revision with _evidence/parity-step3/make-ticket-spec-branch.sh)",
+        "verdict": "PASS",
+        "evidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/REPORT.md",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/REPORT.md"
+        ],
+        "negativeControlEvidence": [
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/head-P44.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p44-fields-P44.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/nc-p44-fields-W19.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/reviewer-spec/logs/all4-W19.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/acceptance-P44.log",
+          "/home/simonecoelho/rem/_evidence/parity-step3/S6/specifier/logs/W19-corrected-head.log"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

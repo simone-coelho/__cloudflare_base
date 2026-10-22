@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P71",
+  "workOrderHash": "sha256:d3954ff2ae3447e66c6c50c83753492b2fb929177522fdfa955f1048e378666a",
+  "artifact": {
+    "revision": "7756dcf1de3ece38f5812cd3152d4e79d53473ce",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p71-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p71-build at 45cd797d (dc38fc44 the mechanism: ShopperReflex.ts:4029 in carriedEventDropped reads a loaded null profile or pipeline as \"no profile\" (`!this.affinity || !this.pipeline` where `=== undefined` had let a null through), so a buffered-door event whose profile resets between its two admissions gets no outcome the engine would have dropped, on the object host as on the session host; kit 02 :99 names the case in the alarm re-decision sentence, no citation added; 821789c7 the merge of rem/integration 9800cdd6 (P70 in) under R-P207 with src/units/P71/LEDGER.unit.test.ts restored as the reviewed blob 10121c3c, which the merge would otherwise drop; 45cd797d the R-P208 kit corrections for P70, wording only: kit 02 :386 and kit 03 :1493 name every path that makes a statistics publication due 30 s later, kit 03 :1496 the restart's early publication); P71 4/4 ×3 on both hosts at 45cd797d; P68 8/8 after the kit edit; P69 13/13; P70 14/14; the 24 kit-reading test files 407/407; tsc app and SDK 0; both bundle checks exact.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P71/implementer/REPORT.md",
+      "git commits on rem/p71-joined up to 7756dcf1"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P71 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/reviewer-p71/logs/head-P71-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S17/gate-r3/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P71/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-21T01:59:54.960Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P71.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P71.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

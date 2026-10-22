@@ -5,21 +5,26 @@
 // the same input yields the same output, which is what makes replay (doc 22
 // §12.3) a proof rather than a hope.
 
-import { composeContentDetailed, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
+import { composeContentDetailed, compositionOrder, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust, type SettleHook, type SlotBand } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, LiftAsOf, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
+  ConversionTable, SuccessEvent, SuccessEventApplied,
 } from './types';
-import { validateSeedRules } from './kinds';
-import { arrivedFromNetwork, type ChannelSignals } from '@/services/visit';
-import { isEligibleAt, type EligibilityContext } from './lifecycle';
-import { liftFor, type LiftSnapshot } from '@/learn/stats';
-import { explorationPick, HISTORICAL_EXPLORATION, type ExploreConfig, type ExplorePick } from '@/learn/explore';
+import { OFF_LIMITS_ITEM } from '@/ledger/records';
+import { contextSpecificity, validateSeedRules } from './kinds';
+import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, type RecencyBucket } from '@/services/visit';
+import { contextCellOf, contextKeyOf, defaultContextKeyOf, TODAY_TERMS, type ContextTerms } from './cell';
+import type { DeviceClass, PlatformWord } from '@/services/platform';
+import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
+import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, type EligibilityContext } from './lifecycle';
+import { DEFAULT_STATS, levelKeys, liftFor, pooledLevelKeys, underEvidenceFloor, type LiftSnapshot } from '@/learn/stats';
+import { ADJACENT_SWAP, EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
 import { STAGE_WORDS } from '@/services/JourneyStage';
 import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
-import { HISTORICAL_CONTENT_TYPES, withContentTypeAffinity } from './typeAffinity';
-import { compileSlotConstraints, rankedCapacity } from './slotConstraints';
+import { HISTORICAL_CONTENT_TYPES, TYPE_FALLBACK_RETIRED, typeFallbackReaches, withContentTypeAffinity, type TypeFallbackMarker } from './typeAffinity';
+import { compileSlotConstraints, rankedCapacity, type SlotConstraintRefusal } from './slotConstraints';
 
 export interface DecideInput {
   tenant: string;
@@ -44,12 +49,22 @@ export interface DecideInput {
   regional?: (RegionalBlend & { share: Readonly<Record<string, Readonly<Record<string, number>>>> }) | null;
   cell: Cell;
   /**
-   * Where and under what conditions this request is happening, for the pieces
-   * that carry an `eligibleWhen` rule (Garrett's "snowing in the Pacific
-   * Northwest"). Absent means no rule can pass, which leaves every catalog
-   * without rules behaving exactly as before.
+   * The conditions the caller asserts for this request (`ctx.<name>` on the
+   * snapshot), read only by the anchor preference (`ANCHOR_SIGNAL`). P31: no
+   * eligibility rule reads them — a module's `eligibleWhen` rule is evaluated
+   * on the decision's cell as the engine derived it (`cellEligibility`), never
+   * on a value the page sends.
    */
   eligibility?: EligibilityContext;
+  /**
+   * P31: the page's report of the modules that have nothing to show for this
+   * page view, by identifier. Each is withheld before ranking: neither
+   * returned, nor recorded, nor counted as an exposure, and the slot fills its
+   * take from the remaining ranking. The report can only withhold: an
+   * identifier naming no eligible module changes nothing. The replay passes
+   * the report the record carries (`inputs.nothing_to_show`). Absent: no report.
+   */
+  nothingToShow?: readonly string[] | null;
   arm: Arm;
   versions: DecisionVersions;
   configLabel: string;
@@ -67,7 +82,31 @@ export interface DecideInput {
     /** Doc 22 §12.2, per slot: a merchandiser's control over an item's learned lift. */
     controlOf?: (slot: string, item: string) => ItemControl | null;
     /** Pinned slot authority, including when a compatible lift is unavailable. */
-    metadataOf?: (slot: string) => { reward: import('@/ledger/records').RewardType; objective?: 'unit' | 'revenue' | 'margin'; measurementBasis?: import('./types').MeasurementBasis };
+    metadataOf?: (slot: string) => { reward: import('@/ledger/records').RewardType; objective?: 'unit' | 'revenue' | 'margin'; measurementBasis?: import('./types').MeasurementBasis;
+      /** P29: the slot's statistics constants, of which the layout reason reads nMin where no snapshot is in force. */
+      stats?: { nMin: number } };
+    /**
+     * P28 (decision D1), per slot: the layout blend the slot's learn dials opt
+     * into, or null (`layoutBlendOf`). Read only for the page's declared layout
+     * slot; absent means no slot blends.
+     */
+    blendOf?: (slot: string) => LayoutBlend | null;
+    /**
+     * P11 (decisions D1, D2): the evidence floor of the decision's page, the
+     * learn document's `evidenceFloors[page]` (`evidenceFloorOf`), a whole
+     * number of 1 or more. Below it an answering estimate is shrunk toward the
+     * slot's rate by the exposures it lacks and applied (`underEvidenceFloor`).
+     * Absent: no floor, and every slot decides exactly as before.
+     */
+    evidenceFloor?: number;
+    /**
+     * P62 (amendment 6, R-P110 decision 2), per slot: the copy in `snapshots`
+     * is not the statistics object's latest publication but a recent one of
+     * the same witness, and this names it (`LiftAsOf`); it is carried onto the
+     * slot's records' `explain.lift`. Absent for a slot whose copy is the
+     * latest, which decides and records exactly as before.
+     */
+    asOf?: Record<string, LiftAsOf>;
   } | null;
   /** Doc 22 §9: their model's answer for this page, or why there is none. Null when no model is configured. */
   external?: ExternalTerm | null;
@@ -77,12 +116,165 @@ export interface DecideInput {
    * W16 C3: the arrival this page load reports, for the contextual seed rules
    * that read the campaign term and the referrer network. The entry-channel
    * signal is read from the cell, which already carries the established owned
-   * channel (R13). Observed context only: it is never stored by this decision.
+   * channel (R13). Observed context: the arrival is read from the request; a
+   * fired seed (its signal and value) is recorded on the receipt as a driver;
+   * nothing else of it is kept by this decision.
    */
   entry?: ChannelSignals;
+  /**
+   * The OS family the request itself reports, for seed rules that read
+   * `platform` (src/services/platform.ts). Observed context, like `entry`: the
+   * OS family is read from the request; the fired seed (ios or android) is
+   * recorded on the receipt as a driver; nothing finer is read or kept.
+   */
+  platform?: PlatformWord | null;
+  /**
+   * P37: the device class the request itself reports (`mobile` or `desktop`;
+   * src/services/platform.ts), for seed rules that read `device` and for a
+   * configured order whose context names a device. Observed context, like
+   * `platform`: a fired seed (its signal and value) is recorded on the receipt as
+   * a driver, and an order placed for it carries the context as published.
+   * Absent: no device, so no device rule fires and no device context matches.
+   */
+  device?: DeviceClass | null;
+  /**
+   * P30: the region that enters the context of a context-only layout slot whose
+   * switch admits it (`region: true`): the region the regional prior is read
+   * for, as the serving path resolves it, which the context key names. The
+   * replay passes the one the record carries (`inputs.context_only.region`).
+   * Absent: none, so such a key names the region as none.
+   */
+  contextRegion?: string | null;
+  /**
+   * P32 (decision D3): `'retired'` when the catalogue the pieces come from
+   * retires the free-text type fallback (`typeFallback: 'retired'` on the
+   * catalogue document): no piece then takes a content format from its `type`,
+   * neither in ranking nor in a slot's `contentType` exclusion, and a record
+   * the fallback could have changed states the replay marker. The replay passes
+   * it for a record that states the marker. Absent: the fallback as before.
+   */
+  typeFallback?: TypeFallbackMarker | null;
+  /**
+   * P37: the recency bucket of the shopper's visit, from the stored last visit
+   * (the visit in progress records it; a visit about to open derives it), for
+   * seed rules that read `recency`. Absent: a first visit or none known, so no
+   * recency rule fires.
+   */
+  recency?: RecencyBucket | null;
+  /**
+   * The shopper's OWN current audience memberships, for a seed rule's
+   * `dampen`. Never the regional prior and never asserted context. Absent
+   * means she holds none.
+   */
+  audiences?: readonly string[];
+  /**
+   * P36 (R-P46, R-P51, R-P52): the tenant's context terms from its published
+   * vocabulary — the channel ids and the source platforms and landing-page
+   * types a seed rule may name, and the ladder depth the learned lift is read
+   * to. Absent: today's six words and the full ladder, exactly as before.
+   */
+  contextTerms?: ContextTerms;
+  /**
+   * P36: the source platform and the landing-page type recorded on the
+   * shopper's visit, for seed rules that read them. Observed context, like
+   * `entry`: a fired seed is recorded on the receipt as a driver.
+   */
+  visitContext?: { sourcePlatform?: string; landingPageType?: string } | null;
+  /**
+   * P10 (decisions D1, D2): the tenant's signal floor — the slots document's
+   * `signalFloor`, 0 when it publishes none — and the shopper's count of
+   * signals, read off the shopper's persisted state. A slot's own `signalFloor`
+   * overrides the tenant's. A slot whose floor holds the shopper below it is
+   * decided on context alone (`contextOnlySlots`). Absent: no floor is in
+   * force and every slot decides exactly as before.
+   */
+  signalFloor?: { floor: number; signals: number } | null;
+  /**
+   * P10: the population prior's shares a context-only slot is scored on at
+   * full weight (λ = 1). Absent, the shares of `regional` are used; the replay
+   * passes the shares the record carries (`inputs.regional_share`), which its
+   * own `regional` may not when the replayed position took nothing from them.
+   */
+  contextPrior?: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  /**
+   * P07: the context prior — the population of the shopper's entry channel and
+   * visit bucket — already blended into `affinity` by the service beside the
+   * regional prior, with the shares it used, so each decision can itemise what
+   * the context contributed (`explain.contextPrior`). Null when it did not apply.
+   */
+  contextBlend?: (ContextPriorBlend & { share: Readonly<Record<string, Readonly<Record<string, number>>>> }) | null;
+  /**
+   * P07 with P10: the context prior's shares a context-only slot adds at full
+   * weight beside the regional prior's. Absent, those of `contextBlend`; the
+   * replay passes the shares the record carries (`inputs.context_share`).
+   */
+  contextBlendShare?: Readonly<Record<string, Readonly<Record<string, number>>>> | null;
+  /**
+   * P29: the population priors a replayed page was blended with, as its record
+   * carries them (`inputs.prior_lambda` beside `inputs.regional_share` and
+   * `inputs.context_share`), for the layout reason's itemisation of what a
+   * prior moved where the replayed record itself itemises no prior. Read only
+   * by the layout reason; the serving path passes none, its blends carrying λ.
+   */
+  layoutPriors?: { regional?: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> };
+    context?: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } } | null;
+  /**
+   * P39 (decisions D1, D2): the suppressions in force on the shopper. The
+   * caller has already left each suppressed value's interest out of `affinity`
+   * (the shopper's own term only, before any population prior is blended in),
+   * so here they are only itemised: on every record of a slot that read the
+   * shopper's interests (`explain.suppressions`), never on the holdout's
+   * default arm and never on a slot decided below the signal floor. The replay
+   * passes the ones the record carries. Absent: none, exactly as before.
+   */
+  suppressions?: readonly Suppression[] | null;
+  /**
+   * P16 (decision D1, freeze items 14 and 43), per slot: the conversion table
+   * the slot's learn dials publish and the slot's own reward, or null when the
+   * dials publish none (`slotConversionsOf`). Every record of a slot with a
+   * table names its module's success event and the table's value for it
+   * (`explain.successEvent`, every arm); it is what the slot's credit reads, and
+   * it changes no score. Absent: no slot has a table, and every record is
+   * exactly as before.
+   */
+  slotConversions?: (slot: string) => SlotConversions | null;
+}
+
+/** P16: a slot's conversion table with the reward an undeclared module is credited for. */
+export interface SlotConversions { reward: SuccessEvent; conversions: ConversionTable }
+
+/**
+ * P16 (decision D1): the slot's conversion table and reward from the learn
+ * document the caller already holds — no read of its own — or null when the
+ * slot's dials publish no table.
+ */
+export function slotConversionsOf(learn: Pick<LearnConfig, 'slots'>, slot: string): SlotConversions | null {
+  const dials = learn.slots && Object.hasOwn(learn.slots, slot) ? learn.slots[slot] : undefined;
+  return dials?.conversions ? { reward: dials.reward ?? 'click', conversions: dials.conversions } : null;
+}
+
+/**
+ * P16 (decision D1, freeze items 14 and 43): the success event a record of a
+ * slot with a conversion table names — the module's own declaration, else the
+ * slot's reward — and the table's value for it in the slot's currency, `null`
+ * when the table does not value it (an outcome of it then credits nothing).
+ * Keys sorted (R-P3).
+ */
+export function successEventOf(piece: Pick<ContentPiece, 'successEvent'> | undefined, slot: SlotConversions): SuccessEventApplied {
+  const event = piece?.successEvent ?? slot.reward;
+  const value = Object.hasOwn(slot.conversions, event) ? slot.conversions[event] : undefined;
+  return { event, value: typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null };
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
+
+/**
+ * The request context signal that names the anchor product, the product the
+ * page is about (`ctx.anchor=<product id>` on the snapshot), for the slots
+ * that prefer the pieces completing it. It is the signal the request contract
+ * already carries for this; there is no separate viewed-product member.
+ */
+export const ANCHOR_SIGNAL = 'anchor';
 
 /** The sample bound both existing advisory channels carry; the count stays whole. */
 const CONSTRAINT_WARNING_SAMPLE = 50;
@@ -116,6 +308,17 @@ function constraintDiagnosticsFor(eligible: readonly ContentPiece[], specs: read
   if (historicalGovernance === HISTORICAL_GOVERNANCE) return null;
   const warnings: ConstraintDiagnostic[] = [];
   let warningCount = 0;
+  forEachConstraintRefusal(eligible, specs, ranks, historicalGovernance, (slot, piece, refusal) => {
+    warningCount++;
+    if (warnings.length < CONSTRAINT_WARNING_SAMPLE) warnings.push(constraintWarning(slot, piece, refusal));
+  });
+  return warningCount ? { warningCount, omittedWarningCount: warningCount - warnings.length, warnings } : null;
+}
+
+/** The one walk both channels share: every ranked slot's refusal of an otherwise eligible piece, slot order then catalogue order. */
+function forEachConstraintRefusal(eligible: readonly ContentPiece[], specs: readonly ContentSlotSpec[],
+  ranks: (spec: ContentSlotSpec) => boolean, historicalGovernance: HistoricalGovernance | undefined,
+  visit: (slot: string, piece: ContentPiece, refusal: SlotConstraintRefusal) => void): void {
   for (const spec of specs) {
     if (!ranks(spec)) continue;
     const gate = compileSlotConstraints(spec, historicalGovernance !== HISTORICAL_GOVERNANCE_V1);
@@ -123,52 +326,589 @@ function constraintDiagnosticsFor(eligible: readonly ContentPiece[], specs: read
     for (const piece of eligible) {
       if (!piece.slotTypes.includes(spec.slot)) continue;
       const refusal = gate.refusal(piece);
-      if (!refusal) continue;
-      warningCount++;
-      if (warnings.length < CONSTRAINT_WARNING_SAMPLE) {
-        warnings.push({ slot: spec.slot, contentId: piece.id, reason: refusal.reason,
-          ...(refusal.dimension === undefined ? {} : { dimension: refusal.dimension }),
-          ...(refusal.value === undefined ? {} : { value: refusal.value }) });
-      }
+      if (refusal) visit(spec.slot, piece, refusal);
     }
   }
-  return warningCount ? { warningCount, omittedWarningCount: warningCount - warnings.length, warnings } : null;
 }
 
-/** Three decimals, the grain every itemised delta on a receipt is recorded at. */
-const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; return v === 0 ? 0 : v; };
+const constraintWarning = (slot: string, piece: ContentPiece, refusal: SlotConstraintRefusal): ConstraintDiagnostic => ({
+  slot, contentId: piece.id, reason: refusal.reason,
+  ...(refusal.dimension === undefined ? {} : { dimension: refusal.dimension }),
+  ...(refusal.value === undefined ? {} : { value: refusal.value }) });
 
-const authorityOf = (strategy: string): Authority =>
-  strategy === 'tenant-pinned' ? 'pin' : strategy === 'default' ? 'default' : 'engine';
+/**
+ * The slots a pin refused whole: a prefix pin names its `pinIndex` and (P04) a
+ * position pin its `position`; a refused scalar pin names neither, its slot
+ * ranking nothing in any case.
+ */
+const refusedSlotsOf = (diagnostics: readonly { slot: string; pinIndex?: number; position?: number }[] | undefined): Set<string> =>
+  new Set((diagnostics ?? []).filter((d) => d.pinIndex !== undefined || d.position !== undefined).map((d) => d.slot));
 
-export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXPLORATION, historicalPins?: HistoricalPins,
-  historicalContentTypes?: typeof HISTORICAL_CONTENT_TYPES, historicalGovernance?: HistoricalGovernance): ContentDecisionSet {
-  const hasNonce = Object.prototype.hasOwnProperty.call(i, 'requestId');
-  if (hasNonce && (!isEventNonce(i.requestId) || !isEventTimestamp(i.nowMs))) throw new Error('Invalid decision identity');
-  // The `default` arm is the site's own defaults: no personalization, so the
-  // composer sees no signal. Pins still apply — they are merchandising
-  // authority, not personalization, and the holdout must not remove them.
-  const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
-  const specs: ContentSlotSpec[] = i.slots.map((s) => ({
+/**
+ * P32: a slot spec as the decision compiles it: the composer's view, with the
+ * catalogue's retired type fallback for the slot's gates (`compileSlotConstraints`).
+ */
+type DecisionSlotSpec = ContentSlotSpec & { typeFallback?: TypeFallbackMarker };
+
+/**
+ * P15: a slot as the type-fallback marker reads it (`typeFallbackReaches`): a
+ * slot whose position bands weight the content format reads the format in
+ * those positions, whatever its own weights say. A slot without bands, or
+ * whose own weights already read the format, is passed as it is.
+ */
+function formatReadsOf(slot: SlotStrategy): SlotStrategy {
+  const band = slot.bands?.find((b) => typeof b.weights.contentType === 'number' && b.weights.contentType !== 0);
+  return band && !slot.weights.contentType ? { ...slot, weights: { ...slot.weights, contentType: band.weights.contentType! } } : slot;
+}
+
+/** The composer's view of the page's slot strategies, as the decision builds it. */
+function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins, typeFallback?: TypeFallbackMarker): DecisionSlotSpec[] {
+  return slots.map((s) => ({
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
     ...(!historicalPins && s.pinnedPieceIds ? { pinnedPieceIds: [...s.pinnedPieceIds] } : {}),
+    // P04: position pins and off-limits marks, under the current pin policy only (the composer reads them there alone).
+    ...(!historicalPins && s.positionPins?.length ? { positionPins: s.positionPins.map((pin) => ({ pieceId: pin.pieceId, position: pin.position })) } : {}),
+    ...(!historicalPins && s.offLimitsPieceIds?.length ? { offLimitsPieceIds: [...s.offLimitsPieceIds] } : {}),
     ...(s.offLimits !== undefined ? { offLimits: s.offLimits } : {}),
     ...(s.excludedPieceIds ? { excludedPieceIds: s.excludedPieceIds } : {}),
     ...(s.excludedTags ? { excludedTags: s.excludedTags } : {}),
     ...(s.allowedTypes ? { allowedTypes: s.allowedTypes } : {}),
     // CW33: the slot's diversity rule, applied by the composer at the take.
     ...(s.diversity ? { diversity: s.diversity } : {}),
+    // P32: the catalogue retired the type fallback, so the slot's gates match the own contentType tag alone.
+    ...(typeFallback ? { typeFallback } : {}),
+    // P15: the slot's position bands, each ranking its positions with its own weights.
+    ...(s.bands?.length ? { bands: s.bands.map((band) => ({ from: band.from, to: band.to, weights: band.weights })) } : {}),
+    // P26: the inner content slots of the page's declared layout slot, under the current pin policy only.
+    ...(!historicalPins && s.layout === true && s.inner && Object.keys(s.inner).length ? { inner: { ...s.inner } } : {}),
   }));
+}
+
+/**
+ * W20 R1 (R77(b), R82(c)): the refusals `constraintDiagnostics` names on a
+ * decision set, for an operator reading a whole published slot document
+ * (`GET /content/slots`) instead of a shopper loading one page.
+ *
+ * Each page is decided on its own, as the serving path decides it: the same
+ * slot specs, the same eligibility at `nowMs` (live, inside its window, in
+ * stock), the same page-wide pin reservation — a slot whose pinned prefix the
+ * composer refuses ranks nothing, so it refuses nobody — and the same compiled
+ * gates, run through the same walk. The reservation is the composer's own,
+ * called with an empty ranking set, so no ranking runs and no shopper input is
+ * read; a hard control refuses a piece on every arm alike, so there is no arm
+ * to choose. Every refused eligible piece is counted; at most
+ * `CONSTRAINT_WARNING_SAMPLE` are named across the whole document, in page
+ * order, then slot order, then catalogue order, each with its page. Pure and
+ * advisory: nothing here serves, ranks or stores anything. P32: `typeFallback`
+ * is the catalogue's marker; under it the gates match a piece's own
+ * `contentType` tag alone, as the decision's gates do.
+ */
+export function slotDocumentConstraintDiagnostics(pieces: readonly ContentPiece[],
+  pages: Readonly<Record<string, readonly SlotStrategy[]>>, nowMs: number, typeFallback?: TypeFallbackMarker | null): DocumentConstraintDiagnostics {
+  const eligible = pieces.filter((piece) => isEligibleAt(piece, nowMs));
+  const warnings: PageConstraintDiagnostic[] = [];
+  let warningCount = 0;
+  const retired = typeFallback === TYPE_FALLBACK_RETIRED ? TYPE_FALLBACK_RETIRED : undefined;
+  for (const [page, slots] of Object.entries(pages)) {
+    const specs = slotSpecs(slots, undefined, retired);
+    const { pinDiagnostics } = composeContentDetailed(eligible, NO_SIGNAL, specs, 0, undefined, undefined, undefined, undefined, new Set());
+    const refusedPrefixes = refusedSlotsOf(pinDiagnostics);
+    forEachConstraintRefusal(eligible, specs, (spec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot), undefined,
+      (slot, piece, refusal) => {
+        warningCount++;
+        if (warnings.length < CONSTRAINT_WARNING_SAMPLE) warnings.push({ page, ...constraintWarning(slot, piece, refusal) });
+      });
+  }
+  return { warningCount, omittedWarningCount: warningCount - warnings.length, warnings };
+}
+
+/** Three decimals, the grain every itemised delta on a receipt is recorded at. */
+const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; return v === 0 ? 0 : v; };
+
+/** P29: half that grain — a score term smaller than this moved nothing a receipt could show. */
+const LAYOUT_TERM_GRAIN = 0.0005;
+
+/** P29: a ranked module's score itemised term by term, in the engine's fixed order (`scoreTerms` in `decideContent`). */
+type ScoreTerms = ReadonlyArray<readonly [LayoutMoveTerm, number]>;
+
+/** P29: the term that contributed most to a score — its largest positive term (`sign` 1) or its largest negative one (−1) — or null when no term reaches the grain. */
+function largestTerm(terms: ScoreTerms, sign: 1 | -1): LayoutMoveTerm | null {
+  let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
+  for (const [term, value] of terms) if (sign * value > size) { best = term; size = sign * value; }
+  return best;
+}
+
+/**
+ * R-P56: the term by which a moved module differs most from the modules it passed
+ * (`sign` 1) or that passed it (`sign` −1), those modules taken together: each
+ * term's difference averaged over them, read at a billionth so that the same
+ * value reached along two floating-point paths is one value, the largest in the
+ * direction it moved named, an exact tie going to the earlier term of the fixed
+ * order. Null when there is no module to compare or no term separates it from
+ * them by more than the grain.
+ */
+function differingTerm(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): LayoutMoveTerm | null {
+  if (!others.length) return null;
+  let best: LayoutMoveTerm | null = null, size = LAYOUT_TERM_GRAIN;
+  for (const [term, mean] of termDifferences(own, others, sign)) if (mean > size) { best = term; size = mean; }
+  return best;
+}
+
+/**
+ * R-P56's aggregate reading, term by term: each term's difference between a
+ * moved module and the modules it passed (`sign` 1) or that passed it (−1),
+ * averaged over them and read at a billionth, in the engine's fixed order.
+ */
+function termDifferences(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): Array<readonly [LayoutMoveTerm, number]> {
+  return own.map(([term, value], j) => {
+    let total = 0;
+    for (const other of others) total += sign * (value - (other[j]?.[1] ?? 0));
+    return [term, Math.round((total / others.length) * 1e9) / 1e9] as const;
+  });
+}
+
+/**
+ * P06: every term by which a moved module differs from the modules it passed
+ * (`sign` 1) or that passed it (−1), in the direction it moved, by more than the
+ * grain — R-P56's aggregate reading (`differingTerm` names the largest of them)
+ * — in the engine's fixed order. Empty when there is no module to compare or
+ * no term separates it from them.
+ */
+function differingTerms(own: ScoreTerms, others: readonly ScoreTerms[], sign: 1 | -1): LayoutMoveTerm[] {
+  return others.length ? termDifferences(own, others, sign).filter(([, mean]) => mean > LAYOUT_TERM_GRAIN).map(([term]) => term) : [];
+}
+
+/**
+ * P29 (and P06): a declared layout slot's baseline along an order of the slot —
+ * its fixed modules (prefix pins, position pins, off-limits modules) where that
+ * order placed them, the baseline sequence on every other position — and each
+ * module's place in it counted from 1, a module of the sequence the order did
+ * not reach keeping its place after it.
+ */
+function baselineAlong(order: ReadonlyArray<{ contentId: string; strategy: string }>, sequence: readonly string[]): { baseline: Array<string | undefined>; fromOf: Map<string, number> } {
+  let next = 0;
+  const baseline = order.map((d) => (d.strategy === 'tenant-pinned' ? d.contentId : sequence[next++]));
+  const fromOf = new Map<string, number>();
+  baseline.forEach((id, k) => { if (id !== undefined && !fromOf.has(id)) fromOf.set(id, k + 1); });
+  let beyond = order.length;
+  for (const id of sequence.slice(next)) if (!fromOf.has(id)) fromOf.set(id, ++beyond);
+  return { baseline, fromOf };
+}
+
+const authorityOf = (strategy: string): Authority =>
+  strategy === 'tenant-pinned' ? 'pin' : strategy === 'default' ? 'default' : 'engine';
+
+/**
+ * P02: the page-manifest marker a page with a declared layout slot is decided
+ * under (`inputs.replay.layout`). Written only when the page declares one, so a
+ * page without a declaration carries exactly the markers it carried before; a
+ * replay of a record that states none decides the page without the declaration.
+ */
+export const LAYOUT_RULES = 'declared-slot-v1' as const;
+
+/**
+ * P01: the page-manifest marker of a decision on which a slot of the page
+ * served its configured per-context order (`inputs.replay.orders`). Written
+ * only on such a decision (C11), so every other decision carries exactly the
+ * markers it carried before; a replay of a record that states none decides the
+ * page without its orders, which is what that decision served.
+ */
+export const ORDER_RULES = 'configured-order-v1' as const;
+
+/**
+ * P28: the page-manifest marker of a decision on which a slot of the page ranked
+ * its modules by the layout blend (`inputs.replay.blend`). Written only on such
+ * a decision (C11), so every other decision carries exactly the markers it
+ * carried before; a replay of a record that states none decides the page
+ * without the blend, which is what that decision did.
+ */
+export const BLEND_RULES = 'layout-blend-v1' as const;
+
+/**
+ * P28 (decision D1): the layout blend one slot opted into — its published p
+ * (0 when the dial names none) and the lift clamps of the learn document in
+ * force, which Q is clamped to. Null when the slot's dials carry no blend, or
+ * one this build cannot read, so the slot decides exactly as before. Pure and
+ * total: it reads only the learn document the caller already holds.
+ */
+export interface LayoutBlend { p: number; liftMin: number; liftMax: number;
+  /**
+   * P06 (decision D2): the p the slot's shadow order is ranked at — the dial's
+   * `shadowP`, `DEFAULT_SHADOW_P` when it names none — or null when the dial's
+   * shadow p cannot be read (publication refuses one), which leaves the served
+   * blend exactly as it is and the slot without a shadow.
+   */
+  shadowP: number | null }
+/** P06 (decision D2): the shadow order's p on a slot opted into the layout blend whose dial publishes none. */
+export const DEFAULT_SHADOW_P = 0.1;
+/**
+ * P11 (decision D1): the evidence floor a learn document publishes for one page
+ * key of the slots document, or null where it publishes none for that page (or
+ * none at all). Total: it reads only the learn document the caller already
+ * holds, and a value that is not a whole number of 1 or more is no floor.
+ */
+export function evidenceFloorOf(learn: Pick<LearnConfig, 'evidenceFloors'>, page: string): number | null {
+  const floors = learn.evidenceFloors;
+  if (!floors || typeof floors !== 'object' || !Object.hasOwn(floors, page)) return null;
+  const floor = floors[page];
+  return typeof floor === 'number' && Number.isSafeInteger(floor) && floor >= 1 ? floor : null;
+}
+
+export function layoutBlendOf(learn: Pick<LearnConfig, 'slots' | 'stats'>, slot: string): LayoutBlend | null {
+  const dials = learn.slots && Object.hasOwn(learn.slots, slot) ? learn.slots[slot] : undefined;
+  const dial = dials?.blend;
+  if (!dial || typeof dial !== 'object') return null;
+  const p = dial.p ?? 0;
+  const { liftMin, liftMax } = learn.stats ?? DEFAULT_STATS;
+  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0 || p > 1) return null;
+  if (!Number.isFinite(liftMin) || !Number.isFinite(liftMax) || liftMin <= 0 || liftMin > 1 || liftMax < 1) return null;
+  const shadowP = dial.shadowP ?? DEFAULT_SHADOW_P;
+  return { p, liftMin, liftMax, shadowP: typeof shadowP === 'number' && Number.isFinite(shadowP) && shadowP >= 0 && shadowP <= 1 ? shadowP : null };
+}
+
+/**
+ * P10: the page-manifest marker of a decision on which a slot of the page was
+ * decided on context alone because the shopper was below its signal floor
+ * (`inputs.replay.signalFloor`), with the count it was decided with beside the
+ * manifest (`inputs.signals`). Written only on such a decision (C11), so every
+ * other decision carries exactly the markers it carried before; a replay of a
+ * record that states none decides the page with no floor, which is what that
+ * decision did.
+ */
+export const SIGNAL_FLOOR_RULES = 'signal-floor-v1' as const;
+
+/**
+ * P04: the page-manifest marker of a decision on which a position pin or an
+ * off-limits mark of the page's layout slot decided something
+ * (`inputs.replay.moduleRules`): a module pinned at a position placed, a slot
+ * refused for one, or an off-limits module the slot could have ranked held or
+ * withheld. Written only on such a decision (C11), so every other decision
+ * carries exactly the markers it carried before; a replay of a record that
+ * states none decides the page without its position pins and off-limits marks,
+ * which is what that decision did.
+ */
+export const MODULE_RULES = 'module-rules-v1' as const;
+
+/**
+ * P32: the page-manifest marker of a decision made under a catalogue that
+ * retires the free-text type fallback (`inputs.replay.typeFallback`), written
+ * only where the fallback could have changed something — a piece whose format
+ * only the fallback supplies names a slot of the page that reads the content
+ * format (C11) — so every other decision carries exactly the markers it carried
+ * before; a replay of a record that states none decides the page with the
+ * fallback, which is what that decision did or what it made no difference to.
+ */
+export const TYPE_FALLBACK_RULES = 'type-fallback-retired-v1' as const;
+
+const wholeCount = (v: unknown): number => (typeof v === 'number' && Number.isSafeInteger(v) && v > 0 ? v : 0);
+
+/**
+ * P10 (decisions D1, D2): the slots of a page decided on CONTEXT ALONE for this
+ * shopper, each with the floor in force: the slot's own `signalFloor`, else the
+ * tenant's. A slot is below its floor while the shopper's count of signals is
+ * at most the floor, so the response to the (N + 1)th signal is its first
+ * personalized one; a floor of 0 is off. `never` holds the page's declared
+ * layout slot below for every shopper (on any other slot, which publication
+ * refuses, it reads as no floor of the slot's own). Never on the holdout's
+ * default arm — no personalization runs there to withhold — and never for an
+ * off-limits slot, which serves nothing. Pure and total.
+ */
+export function contextOnlySlots(slots: readonly Pick<SlotStrategy, 'slot' | 'layout' | 'offLimits' | 'signalFloor'>[],
+  signalFloor: DecideInput['signalFloor'], arm: Arm): Map<string, SignalFloor> {
+  const below = new Map<string, SignalFloor>();
+  if (!signalFloor || arm === 'default') return below;
+  const tenant = wholeCount(signalFloor.floor), signals = wholeCount(signalFloor.signals);
+  for (const s of slots) {
+    if (s.offLimits) continue;
+    const own = s.signalFloor === 'never' ? (s.layout === true ? 'never' as const : undefined)
+      : typeof s.signalFloor === 'number' && Number.isSafeInteger(s.signalFloor) && s.signalFloor >= 0 ? s.signalFloor : undefined;
+    const floor = own ?? tenant;
+    if (floor === 'never' || (floor > 0 && signals <= floor)) below.set(s.slot, floor);
+  }
+  return below;
+}
+
+/**
+ * P30 (decision D1): the page's declared layout slot switched to context-only
+ * (`contextOnly: { enabled: true }`), and whether its switch admits the region;
+ * null on a page without one. Only a declared layout slot that serves (not
+ * off-limits) can be switched; publication refuses the switch anywhere else.
+ * Pure and total: it reads only the page's slots.
+ */
+export function contextOnlyLayoutSlot(slots: readonly Pick<SlotStrategy, 'slot' | 'layout' | 'offLimits' | 'contextOnly'>[]): { slot: string; region: boolean } | null {
+  for (const s of slots) if (s.layout === true && !s.offLimits && s.contextOnly?.enabled === true) return { slot: s.slot, region: s.contextOnly.region === true };
+  return null;
+}
+
+/**
+ * P30: the seed signals a context-only layout slot reads — the ones its context
+ * names (the entry channel, and the device class the request reports). A rule on
+ * any other signal (campaign term, referrer network, platform, visit context,
+ * recency) is outside the context, so it never fires there.
+ */
+const CONTEXT_SEED_SIGNALS: ReadonlySet<string> = new Set(['entry_channel', 'device']);
+
+/**
+ * P10 (decision D2): the population prior at full weight, as the regional blend
+ * gives it to a shopper with no evidence of their own (λ = 1: the share, to three
+ * decimals, where it is above zero). Nothing in it reads the individual shopper.
+ */
+function priorAtFullWeight(share: Readonly<Record<string, Readonly<Record<string, number>>>>): AffinityViewLike {
+  const dims: Record<string, Record<string, number>> = {};
+  for (const [dim, values] of Object.entries(share)) {
+    const out: Record<string, number> = {};
+    for (const [value, a] of Object.entries(values)) { const v = Math.round(a * 1000) / 1000; if (v > 0) out[value] = v; }
+    if (Object.keys(out).length) dims[dim] = out;
+  }
+  return { dims };
+}
+
+/**
+ * P07: two population priors' shares at full weight, beside each other: the sum
+ * per dimension value, as the blend gives a shopper with no evidence of their own
+ * (`blendPriors` at λ 1 for both). Neither erases the other.
+ */
+function sharesBeside(a: Readonly<Record<string, Readonly<Record<string, number>>>> | null,
+  b: Readonly<Record<string, Readonly<Record<string, number>>>>): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
+  for (const share of a ? [a, b] : [b]) {
+    for (const [dim, values] of Object.entries(share)) {
+      const into = (out[dim] ??= {});
+      for (const [value, x] of Object.entries(values)) into[value] = (into[value] ?? 0) + x;
+    }
+  }
+  return out;
+}
+
+/**
+ * P07: the context prior's itemisation as a record carries it, keys sorted
+ * (R-P7): the shopper's channel and visit bucket, the level read, λ, the
+ * snapshot's version and events, and what it contributed.
+ */
+const contextPriorRecord = (c: ContextPriorBlend, lambda: number, contribution: number): ContextPriorBlend & { contribution: number } => ({
+  channel: c.channel, contribution, events: c.events, lambda, level: c.level, version: c.version, visitBucket: c.visitBucket,
+});
+
+/** P07: shares with their keys sorted, dimension by dimension, as the record carries them (R-P7). */
+const sortedShares = (share: Readonly<Record<string, Readonly<Record<string, number>>>>): Record<string, Record<string, number>> =>
+  Object.fromEntries(Object.keys(share).sort().map((dim) => [dim, Object.fromEntries(Object.keys(share[dim]!).sort().map((value) => [value, share[dim]![value]!]))]));
+
+/** P10 (decision D2): the learned ladder's context levels, 0 to 2 (everyone, channel, channel and visit bucket). */
+const CONTEXT_LADDER_LEVELS = 3;
+
+/**
+ * The visit buckets a context can match; `unknown` matches none. P36 (R-P46):
+ * a cell carries a channel and a bucket only from the tenant's own terms (cellFor
+ * records anything else as unknown), and an order names only them (refused at
+ * publication otherwise), so here a channel is any channel id and a bucket any
+ * bucket name — never `unknown`, which matches no context, not even `any`.
+ */
+const KNOWN_BUCKET = /^(?:[1-9][0-9]{0,4}|[1-9][0-9]{0,4}-[1-9][0-9]{0,4}|[1-9][0-9]{0,4}\+)$/;
+
+/**
+ * P01 decision D1: the configured order a shopper in `cell` is served on this
+ * slot, or null. Only the page's declared layout slot carries orders. A context
+ * matches when its channel is the shopper's or `any` and its visit buckets hold
+ * the shopper's or are `any`; an unknown channel or visit bucket matches no
+ * context, not even one that names `any`. P37: a context that names a device
+ * matches only a request reporting that device, and one that names none matches
+ * every device, so a receipted order keeps its meaning. The most specific match wins; a tie at
+ * the top, which publication refuses, decides nothing and leaves the slot its
+ * own decision. Pure, total and cheap: it reads only the slot and the cell the
+ * decision already holds, and nothing in it can throw on a validated document.
+ * P28 reads the same function: on a slot that does not opt into the layout
+ * blend the order is served exactly as it is; on one that opts in (R-P41) the
+ * order supplies the blend's rank base and its listed modules are ranked by
+ * the blend, an unlisted module staying hidden.
+ */
+export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>, cell: Pick<Cell, 'channel' | 'visit_bucket'>, device?: DeviceClass | null): ConfiguredOrder | null {
+  if (slot.layout !== true || !Array.isArray(slot.orders) || slot.orders.length === 0) return null;
+  const channel = cell.channel, bucket = cell.visit_bucket;
+  if ((entryChannelOf(channel) !== channel && !isContextId(channel)) || typeof bucket !== 'string' || !KNOWN_BUCKET.test(bucket)) return null;
+  let best: ConfiguredOrder | null = null, bestSpecificity = -1, tied = false;
+  for (const order of slot.orders) {
+    const context = order?.context;
+    if (!context || (context.channel !== 'any' && context.channel !== channel)) continue;
+    if (context.visitBuckets !== 'any' && !(Array.isArray(context.visitBuckets) && context.visitBuckets.includes(bucket))) continue;
+    if (context.device !== undefined && context.device !== device) continue;
+    const specificity = contextSpecificity(context);
+    if (specificity > bestSpecificity) { best = order; bestSpecificity = specificity; tied = false; }
+    else if (specificity === bestSpecificity) tied = true;
+  }
+  return best && !tied && Array.isArray(best.modules) ? best : null;
+}
+
+/** P28: the blend's terms as a record and a receipt carry them: R, B and Q at three decimals, p as published, keys sorted. */
+const blendRecord = (terms: LayoutBlendTerms): LayoutBlendTerms => ({ B: r3(terms.B), Q: r3(terms.Q), R: r3(terms.R), p: terms.p });
+
+/** The configured order as a record and a receipt carry it: the context as published (P37: its device only when named) and the whole order, keys sorted. */
+const configuredOrderRecord = (order: ConfiguredOrder): ConfiguredOrder => ({
+  context: { channel: order.context.channel, ...(order.context.device !== undefined ? { device: order.context.device } : {}),
+    visitBuckets: order.context.visitBuckets === 'any' ? 'any' : [...order.context.visitBuckets] },
+  modules: [...order.modules],
+});
+
+export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXPLORATION, historicalPins?: HistoricalPins,
+  historicalContentTypes?: typeof HISTORICAL_CONTENT_TYPES, historicalGovernance?: HistoricalGovernance,
+  historicalRules?: typeof HISTORICAL_EXPLORATION_RULES): ContentDecisionSet {
+  const hasNonce = Object.prototype.hasOwnProperty.call(i, 'requestId');
+  if (hasNonce && (!isEventNonce(i.requestId) || !isEventTimestamp(i.nowMs))) throw new Error('Invalid decision identity');
+  // The `default` arm is the site's own defaults: no personalization, so the
+  // composer sees no signal. Pins still apply — they are merchandising
+  // authority, not personalization, and the holdout must not remove them.
+  const affinity = i.arm === 'default' ? NO_SIGNAL : (i.affinity ?? NO_SIGNAL);
+  // P10 (decisions D1, D2): the slots this shopper is below the signal floor of
+  // are decided on context alone — the seed rules, the configured order, the
+  // population prior at full weight, the learned ladder at levels 0 to 2, and
+  // the slot's own pins, exclusions, eligibility, freshness and merchandising —
+  // and on no term that reads the individual shopper: not the shopper's
+  // interests, journey stage, fatigue or own memberships, ladder levels 3 to 5 or
+  // visitor-hashed exploration. Every other slot decides exactly as before.
+  // P30 (decision D1): the page's declared layout slot switched to context-only.
+  // On an arm that personalizes it is decided for its CONTEXT alone — the page,
+  // the channel and visit bucket, the device the request reports and, where its
+  // switch admits it, the region — on the population priors of that context at
+  // full weight, the seed rules on a signal of the context, the configured order
+  // (P01), the learned ladder at levels 0 to 2, exploration hashed on the
+  // context and the hour, and the slot's own pins, exclusions, eligibility,
+  // freshness and merchandising; never on the shopper's interests, journey
+  // stage, fatigue, memberships, ladder levels 3 to 5 or a seed rule outside
+  // its context, so every shopper of one context is served the identical order.
+  // On the holdout's default arm the slot is the default variant, as every slot
+  // there is. Absent: every slot decides exactly as before.
+  const layoutSwitch = contextOnlyLayoutSlot(i.slots);
+  const contextual = new Map<string, { region: boolean }>(layoutSwitch && i.arm !== 'default' ? [[layoutSwitch.slot, { region: layoutSwitch.region }]] : []);
+  // P10's signal floor never holds a switched slot: the switch decides it. Every other slot as before.
+  const below = contextOnlySlots(contextual.size ? i.slots.filter((s) => !contextual.has(s.slot)) : i.slots, i.signalFloor, i.arm);
+  // P30 (decision D2): the context the switched slot is decided in, as its key
+  // names it (src/content/cell.ts), on an arm that personalizes; on the
+  // holdout's default arm the page's default variant. Built only from the page,
+  // the cell's channel and visit bucket, the request's device class and the
+  // admitted region — never from a visitor, session or decision identifier.
+  const layoutContext = layoutSwitch && contextual.size ? contextKeyOf({ page: i.page, channel: i.cell.channel, visitBucket: i.cell.visit_bucket,
+    device: i.device ?? null, admitsRegion: layoutSwitch.region, region: i.contextRegion ?? null, arm: i.arm }) : null;
+  const contextKey = layoutSwitch ? layoutContext ?? defaultContextKeyOf(i.page) : null;
+  const signalCount = wholeCount(i.signalFloor?.signals);
+  // P39: the suppressions in force at this decision's time, well formed and sorted
+  // (keys sorted, by dimension then value); none on the default arm, which reads
+  // no interest of the shopper's.
+  const suppressions = i.arm === 'default' ? [] : suppressionsInForce(i.suppressions, i.nowMs);
+  const contextPrior = i.contextPrior ?? i.regional?.share ?? null;
+  // P07: below the floor the context prior is a context term too, at full weight
+  // beside the region's (each prior's λ is 1 there); without it, exactly as before.
+  const contextShare = i.arm === 'default' ? null : i.contextBlendShare ?? i.contextBlend?.share ?? null;
+  const fullWeight = contextShare ? sharesBeside(contextPrior, contextShare) : contextPrior;
+  const contextView: AffinityViewLike = below.size && fullWeight ? priorAtFullWeight(fullWeight) : NO_SIGNAL;
+  // P30 (S4-C21): a context-only layout slot is scored on the population priors
+  // of its context at full weight, as for a shopper with no interest: the context
+  // prior of its channel and visit bucket (P07), and the regional prior only where
+  // its switch admits the region (R-P38). Nothing in it reads the shopper.
+  const layoutShare = layoutSwitch?.region ? fullWeight : contextShare;
+  const layoutView: AffinityViewLike = contextual.size && layoutShare ? priorAtFullWeight(layoutShare) : NO_SIGNAL;
+  // P30: the modules the context-only slot withholds although the page admits
+  // them (their eligibility rule read on the context, below); filled before ranking.
+  const contextWithheld = new Set<string>();
+  // The slots that prefer what completes the anchor product the request names,
+  // through the composer's `prefer` hook. The anchor is context the page asserts,
+  // never evidence about the shopper and never kept beyond the receipt's driver.
+  // FAIL CLOSED: a request that names no anchor prefers nothing, and a slot rule
+  // that is not a finite weight in (0, 1] is ignored rather than guessed at.
+  // Personalization, so never on the holdout's default arm.
+  const anchorSignal = i.eligibility?.signals?.[ANCHOR_SIGNAL];
+  const anchor = typeof anchorSignal === 'string' ? anchorSignal.trim() : '';
+  const completesAnchor = (p: ContentPieceLike): boolean => anchor !== '' && ((p as ContentPiece).complements ?? []).includes(anchor);
+  // P30: never on a context-only layout slot, whose context does not name the anchor the page asserts.
+  const complementsOf = new Map<string, number>(i.arm === 'default' || anchor === '' ? [] : i.slots.flatMap((s) => {
+    const w = s.complements?.weight;
+    return !contextual.has(s.slot) && typeof w === 'number' && Number.isFinite(w) && w > 0 && w <= 1 ? [[s.slot, w] as const] : [];
+  }));
+  // P01 decision D2: a configured per-context order is personalization by
+  // context, so it is resolved only on an arm that personalizes — never on the
+  // holdout's default arm, which is also the arm of a shopper without
+  // personalization consent and of one whose record could not be read. The
+  // composer then serves it unless the slot's exploration picks on this decision.
+  const configured = new Map<string, ConfiguredOrder>();
+  if (i.arm !== 'default') for (const s of i.slots) {
+    const order = configuredOrderFor(s, i.cell, i.device);
+    if (order) configured.set(s.slot, order);
+  }
+  // P28 (decision D1): the page's declared layout slot whose learn dials opt
+  // into the behaviour-and-performance blend. Part of the learning layer, so
+  // never on the holdout's default arm (no learning runs there, and the arm
+  // serves the site's own defaults); a dial on any other slot is ignored, so
+  // that slot decides exactly as before. Reads only the learn document the
+  // caller already holds: nothing here can fail or wait.
+  const blendSource = i.arm === 'default' ? null : i.learning ?? null;
+  const blends = new Map<string, LayoutBlend>();
+  if (blendSource?.blendOf) for (const s of i.slots) {
+    if (s.layout !== true || s.offLimits) continue;
+    const blend = blendSource.blendOf(s.slot);
+    if (blend) blends.set(s.slot, blend);
+  }
+  // The decision's slot specs are the ones the advisory diagnostics read
+  // (`slotSpecs`), with the decision's own per-request additions on top: the
+  // configured order (P01), the anchor preference and the layout blend (P28),
+  // none of which refuses any piece, so the diagnostics' view of what a slot
+  // refuses is unchanged.
+  // P32 (decision D3): the catalogue's marker, read off the input the caller holds; nothing here can fail.
+  const retiredFallback = i.typeFallback === TYPE_FALLBACK_RETIRED;
+  const specs: DecisionSlotSpec[] = slotSpecs(i.slots, historicalPins, retiredFallback ? TYPE_FALLBACK_RETIRED : undefined)
+    .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec)
+    .map((spec) => complementsOf.has(spec.slot) ? { ...spec, prefer: { test: completesAnchor, bonus: complementsOf.get(spec.slot)!, label: anchor } } : spec)
+    .map((spec) => blends.has(spec.slot) ? { ...spec, blend: true as const } : spec)
+    // P10: a slot below the floor is scored on the context view, never on the shopper's interests.
+    .map((spec) => below.has(spec.slot) ? { ...spec, affinity: contextView }
+      // P30: a context-only layout slot is scored on its context's view, and withholds what its context does not admit.
+      : contextual.has(spec.slot) ? { ...spec, affinity: layoutView, withheld: contextWithheld } : spec);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
+  // P31: nor does a module whose own eligibility rule the decision's cell does
+  // not satisfy — read off the cell as the engine derived it (`cellEligibility`),
+  // never off a value the page sends, an unknown value satisfying no rule — nor
+  // one the page reports has nothing to show for this page view. Each is
+  // withheld before ranking on every arm, as the window and the stock flag are:
+  // never returned, recorded or counted, the take filled from the remaining
+  // ranking. The rule is read first, so the report can only withhold a module
+  // that was eligible; it adds nothing and changes nothing else. A pin of a
+  // withheld module is a pin of an ineligible one, and an off-limits mark of it
+  // holds nothing (P04). Each rule's verdict, for every live module of the page
+  // that carries one, and the report ride the records' inputs (page-level, C20).
   // Keep the site's default diversity/order unchanged as well as its zero scores.
-  const projectTypes = i.arm !== 'default' && historicalContentTypes !== HISTORICAL_CONTENT_TYPES;
+  // P32: never under a catalogue that retires the type fallback: a piece's format is its own tag alone.
+  const projectTypes = i.arm !== 'default' && historicalContentTypes !== HISTORICAL_CONTENT_TYPES && !retiredFallback;
   const eligible: ContentPiece[] = [], byId = new Map<string, ContentPiece>();
+  // P31 (R-P23 C7): the modules eligible before the withholding — live, inside
+  // their window and in stock — from which the layout reason's baseline is drawn.
+  const admitted: ContentPiece[] = [];
+  const ruleContext = cellEligibility(i.cell);
+  const report = [...new Set((i.nothingToShow ?? []).filter((id): id is string => typeof id === 'string' && id.length > 0))].sort();
+  const reported = new Set(report), pageSlots = new Set(i.slots.map((s) => s.slot));
+  const verdicts = new Map<string, boolean>(), withheldBy = new Map<string, LayoutWithheldCause>();
+  const pageWithheldBy = withheldBy;
+  // P30: the context-only layout slot reads a module's eligibility rule on its
+  // context alone — the channel and the visit bucket, the region only where its
+  // switch admits it, never the shopper's journey stage (src/content/cell.ts).
+  const contextRule = layoutSwitch && contextual.size ? cellEligibility(contextCellOf(i.cell, layoutSwitch.region)) : null;
   for (const original of i.pieces) {
     const piece = projectTypes ? withContentTypeAffinity(original) : original;
     byId.set(piece.id, piece);
-    if (isEligibleAt(piece, i.nowMs, i.eligibility)) eligible.push(piece);
+    if (!isLiveAt(piece, i.nowMs) || piece.inStock === false) continue;
+    admitted.push(piece);
+    if (piece.eligibleWhen) {
+      const verdict = matchesEligibility(piece.eligibleWhen, ruleContext);
+      if (piece.slotTypes.some((slot) => pageSlots.has(slot))) verdicts.set(piece.id, verdict);
+      if (!verdict) { withheldBy.set(piece.id, 'eligibility_rule'); continue; }
+    }
+    if (reported.has(piece.id)) { withheldBy.set(piece.id, 'nothing_to_show'); continue; }
+    eligible.push(piece);
+    // P30: a module the page admits whose rule the context does not satisfy is
+    // withheld from the context-only slot alone, so a rule can never make two
+    // shoppers of one context differ; every other slot is untouched. A rule holds
+    // on the context only where it holds on the shopper's own cell, which reads
+    // the same channel, bucket and region and more.
+    if (contextRule && layoutSwitch && piece.eligibleWhen && piece.slotTypes.includes(layoutSwitch.slot)
+      && !matchesEligibility(piece.eligibleWhen, contextRule)) contextWithheld.add(piece.id);
   }
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
@@ -196,7 +936,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // inside it gets the bonus. Personalization, so never on the default arm, and off when the stage is
   // unknown: an unknown stage is recorded as such, never guessed, and a guess would demote by accident.
   const visitorStage: StageWord | null = i.arm !== 'default' && i.cell.stage && i.cell.stage !== 'unknown' ? STAGE_WORDS[i.cell.stage] : null;
-  const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
+  // P10: never on a slot decided below the signal floor, whose decision reads no journey stage of the shopper's.
+  // P30: nor on a context-only layout slot, whose decision reads no journey stage of the shopper's.
+  const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (!below.has(s.slot) && !contextual.has(s.slot) && s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
   const hasStage = visitorStage !== null && stageRules.size > 0;
   const stageOf = new Map<string, { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }>();
   // CW30 (BTIE D2): freshness and fatigue. Recent content gets a bonus that halves every `halfLifeDays`
@@ -204,7 +946,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // with the count in the ring up to `cap`. The engine's judgment, so not on the default arm; both
   // itemised as the delta they caused. The served counts travel on the record's inputs for the replay.
   const freshRules = new Map(i.slots.flatMap((s) => (s.freshness && s.freshness.weight > 0 ? [[s.slot, s.freshness] as const] : [])));
-  const fatigueRules = new Map(i.slots.flatMap((s) => (s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
+  // P10: fatigue reads the shopper's own history, so never on a slot decided below the signal floor.
+  // P30: nor on a context-only layout slot.
+  const fatigueRules = new Map(i.slots.flatMap((s) => (!below.has(s.slot) && !contextual.has(s.slot) && s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
   const hasFresh = i.arm !== 'default' && freshRules.size > 0;
   const hasFatigue = i.arm !== 'default' && fatigueRules.size > 0 && Boolean(i.served);
   const freshOf = new Map<string, { ageDays: number; decay: number; applied: number }>();
@@ -225,7 +969,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const seedDiagnostics: SeedDiagnostic[] = [];
   if (i.arm !== 'default') for (const s of i.slots) {
     if (s.seeds === undefined) continue;
-    const checked = validateSeedRules(s.seeds, s.weights);
+    const checked = validateSeedRules(s.seeds, s.weights, i.contextTerms ?? TODAY_TERMS);
     if (!checked.ok) { seedDiagnostics.push({ slot: s.slot, reason: 'invalid_rule_set' }); continue; }
     // An empty rule set is the same as none: nothing to seed and nothing to claim.
     if (checked.value.length) seedRules.set(s.slot, checked.value);
@@ -235,20 +979,41 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const fires = (rule: SeedRule): boolean =>
     rule.signal === 'entry_channel' ? i.cell.channel === rule.value
       : rule.signal === 'campaign_term' ? arrivalTerm !== '' && arrivalTerm === term(rule.value)
-        : arrivedFromNetwork(i.entry, rule.value);
+        : rule.signal === 'platform' ? i.platform != null && i.platform === rule.value
+          // P36: the visit's recorded context attributes.
+          : rule.signal === 'source_platform' ? i.visitContext?.sourcePlatform === rule.value
+            : rule.signal === 'landing_page_type' ? i.visitContext?.landingPageType === rule.value
+              // P37: the request's own device class and the visit's recency bucket.
+              : rule.signal === 'device' ? i.device != null && i.device === rule.value
+                : rule.signal === 'recency' ? i.recency != null && i.recency === rule.value
+                  : arrivedFromNetwork(i.entry, rule.value);
+  // Her own memberships, for a rule's dampen: an interest she has shown, never one the region lent her.
+  const held = new Set(i.audiences ?? []);
   const weightsOf = new Map(i.slots.map((s) => [s.slot, s.weights]));
-  /** The rules this arrival fired for this candidate, each at `rule.weight × the slot's weight for the tag's dimension`. */
-  const seedDriversFor = (p: ContentPieceLike, slot: string): SeedDriver[] => {
-    const rules = seedRules.get(slot), weights = weightsOf.get(slot);
+  /**
+   * The rules this arrival fired for this candidate, each at `rule.weight × the slot's weight for the tag's dimension`.
+   * P15 (S3F-C4): ranked in a position band, the band's weight for the dimension in place of the slot's, so a rule
+   * whose dimension the band does not weight adds nothing there; the rule's own weight is unchanged.
+   */
+  const seedDriversFor = (p: ContentPieceLike, slot: string, bandWeights?: Readonly<Record<string, number>>): SeedDriver[] => {
+    const rules = seedRules.get(slot), weights = bandWeights ?? weightsOf.get(slot);
     if (!rules || !weights) return [];
     const piece = byId.get(p.id) ?? (p as ContentPiece);
     const drivers: SeedDriver[] = [];
     for (const rule of rules) {
       if (!fires(rule)) continue;
+      // P30: a context-only layout slot fires only the rules on a signal its context names.
+      if (contextual.has(slot) && !CONTEXT_SEED_SIGNALS.has(rule.signal)) continue;
+      // Each interest her own evidence holds multiplies the rule down; the receipt names every one.
+      // P10: below the signal floor the rule fires at its published weight, the shopper's memberships unread.
+      // P30: and so on a context-only layout slot.
+      const damped = below.has(slot) || contextual.has(slot) ? [] : (rule.dampen ?? []).filter((d) => held.has(audienceKey(d.dimension, d.value)));
+      const weight = damped.reduce((w, d) => w * d.factor, rule.weight);
       for (const tag of rule.tags) {
         const w = weights[tag.dimension] ?? 0;
         if (!w || !(piece.tags[tag.dimension] ?? []).includes(tag.value)) continue;
-        drivers.push({ signal: rule.signal, value: rule.value, dimension: tag.dimension, tag: tag.value, weight: rule.weight, contribution: r3(rule.weight * w) });
+        drivers.push({ signal: rule.signal, value: rule.value, dimension: tag.dimension, tag: tag.value, weight: rule.weight, contribution: r3(weight * w),
+          ...(damped.length ? { dampened: damped.map((d) => ({ dimension: d.dimension, value: d.value, factor: d.factor })) } : {}) });
       }
     }
     return drivers;
@@ -263,6 +1028,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
    */
   const preLift = (p: ContentPieceLike, slot: string, base0: number, record: boolean): number => {
     const key = `${slot}:${p.id}`;
+    // P15 (R-P76): a recording scoring starts from no itemised term, so a
+    // candidate scored again (on a slot with position bands, once per band run)
+    // keeps only the terms of its last scoring, the one that ranked it, never a
+    // block an earlier scoring wrote. A candidate scored once is unaffected.
+    if (record) { extOf.delete(key); stageOf.delete(key); freshOf.delete(key); fatigueOf.delete(key); merchOf.delete(key); }
     let base = base0;
     if (ext && ext.status === 'ok') {
       const w = ext.weightOf(slot), s = ext.scores[p.id];
@@ -305,12 +1075,80 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     }
     return base;
   };
-  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue || seedRules.size ? (p, slot, base0) => {
+  // P28 (decision D1): the layout blend's score for one candidate of an opted-in
+  // slot, R + (1 − p) × B + p × Q, in place of base × lift^γ. R is the rank base
+  // the composer handed over; B is the pre-lift behaviour score, exactly the base
+  // the multiplicative path would have lifted; Q is the learned lift at the
+  // finest answering level — or the lift a merchandiser froze — clamped to the
+  // learn document's clamps, minus one, and 0 where no level answers, where a
+  // merchandiser rejected the learned lift, and on the no-learning arm, which
+  // holds the learned term at zero. γ is not applied: the learned term enters
+  // through p alone. `explain.lift` still itemises the lift, its `applied` being
+  // p × Q, what the lift caused here.
+  // P10 (decision D2): below the signal floor the learned ladder answers from its
+  // context levels only (0 to 2), by its own rule — the finest of them with
+  // enough evidence — and never from the stage, region or interest levels.
+  // P36 (R-P46): a published ladder depth stops the lookup there, never reading
+  // a finer level; below the floor the context levels bound it as well.
+  const ladderDepth = i.contextTerms?.depth ?? 5;
+  // P08 (decisions D1, D2): a module the catalogue declares pooled reads its ONE
+  // record on the pooled ladder of this page — everyone, the page, then the page
+  // with today's levels (`pooledLevelKeys`) — from the catalogue this decision
+  // already holds; no read is added. The page is context, so below the signal
+  // floor and on a context-only slot its context levels keep the page level
+  // between everyone and the channel. Every other module: exactly as before.
+  const pooledIds = new Set(i.pieces.filter((p) => p.pooled === true).map((p) => p.id));
+  const pooledPage = (item: string): string | undefined => (pooledIds.has(item) ? i.page : undefined);
+  const contextLadder = (cell: Cell, page?: string) => new Set(page === undefined
+    ? levelKeys(cell).slice(0, Math.min(CONTEXT_LADDER_LEVELS, ladderDepth + 1))
+    : pooledLevelKeys(cell, page).slice(0, Math.min(CONTEXT_LADDER_LEVELS, ladderDepth + 1) + 1));
+  const liftAt = (slot: string, item: string) => {
+    const snap = learning?.snapshots[slot], page = pooledPage(item);
+    // P30: a context-only layout slot answers from the same context levels, whatever its switch admits.
+    if ((!below.has(slot) && !contextual.has(slot)) || !snap) return liftFor(snap, item, i.cell, ladderDepth, page);
+    const keys = contextLadder(i.cell, page), byKey = snap.items[item];
+    return byKey ? liftFor({ ...snap, items: { [item]: Object.fromEntries(Object.entries(byKey).filter(([key]) => keys.has(key))) } }, item, i.cell, 5, page) : null;
+  };
+  // P11 (decisions D1, D2; freeze items 25 and 40): the page's evidence floor,
+  // read off the learn document the caller already holds. The level that
+  // answers is the ladder's own (above, untouched); where it holds fewer
+  // exposures than the floor its estimate is shrunk toward the slot's rate by
+  // the exposures it lacks and the lift that follows is applied, clamped by the
+  // snapshot as today. A piece with no level reaching nMin still has no lift. A
+  // lift a merchandiser froze is an instruction, not an estimate, so it is read
+  // without the floor (`liftAt`); no floor: exactly `liftAt`.
+  const evidenceFloor = learning?.evidenceFloor !== undefined && Number.isSafeInteger(learning.evidenceFloor) && learning.evidenceFloor >= 1
+    ? { page: i.page, floor: learning.evidenceFloor } : null;
+  const flooredAt = (slot: string, item: string) => {
+    const look = liftAt(slot, item), snap = learning?.snapshots[slot];
+    return look && evidenceFloor && snap ? underEvidenceFloor(look, evidenceFloor, snap) : look;
+  };
+  const blendTerms = new Map<string, LayoutBlendTerms>();
+  const blendedSlots = new Set<string>();
+  const blended = (p: ContentPieceLike, slot: string, key: string, B: number, R: number, blend: LayoutBlend, control: ItemControl | null): number => {
+    const learn = learning!;
+    const look = control?.mode === 'reject' ? null : control?.mode === 'freeze' ? liftAt(slot, p.id) : flooredAt(slot, p.id);
+    const lift = control?.mode === 'freeze' ? control.lift ?? 1 : look?.lift ?? null;
+    const Q = lift === null || i.arm === 'no_learning' ? 0 : Math.min(blend.liftMax, Math.max(blend.liftMin, lift)) - 1;
+    const gamma = learn.gammaOf(slot), applied = r3(blend.p * Q);
+    if (control?.mode === 'freeze') {
+      const metadata = learn.metadataOf?.(slot) ?? learn.snapshots[slot];
+      liftOf.set(key, { reward: metadata?.reward ?? 'click', objective: metadata?.objective ?? 'unit', measurementBasis: metadata?.measurementBasis ?? 'served-v1', level: look?.level ?? 0, level_words: 'frozen by a merchandiser', n: look?.n ?? 0, s: look?.s ?? 0, p0: look?.p0 ?? 0, n0: look?.n0 ?? 0, p_hat: look?.p_hat ?? 0, lift: control.lift ?? 1, gamma, applied });
+    } else if (look) {
+      liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied, ...(look.prior ? { prior: look.prior } : {}),
+        ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}), ...(look.pooled ? { pooled: true as const } : {}) });
+    }
+    blendTerms.set(key, { B, Q, R, p: blend.p });
+    blendedSlots.add(slot);
+    return R + (1 - blend.p) * B + blend.p * Q;
+  };
+  const adjustScore: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue || seedRules.size ? (p, slot, base0, rank, band) => {
     const key = `${slot}:${p.id}`;
     // The seeds enter where the slot's own tag sum lands, before merchandising,
     // because a seed supplies the missing interest for a canonical tag this
     // arrival is evidence for; they are never a global floor.
-    const drivers = seedDriversFor(p, slot);
+    // P15: in a position band, scaled by the band's weights; every later term exactly as without it.
+    const drivers = seedDriversFor(p, slot, band?.weights);
     let seeded = 0;
     for (const d of drivers) seeded += d.contribution;
     const base = preLift(p, slot, base0 + seeded, true);
@@ -325,8 +1163,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     if (!learning) return base;
     const control = learning.controlOf?.(slot, p.id) ?? null;
     if (control) controlOf.set(key, control.mode);
+    const blend = rank ? blends.get(slot) : undefined;
+    if (blend && rank) return blended(p, slot, key, base, rank.R, blend, control);
     if (control?.mode === 'reject') return base;                       // learned lift ignored for this item
-    const look = liftFor(learning.snapshots[slot], p.id, i.cell);
+    const look = control?.mode === 'freeze' ? liftAt(slot, p.id) : flooredAt(slot, p.id);
     const gamma = learning.gammaOf(slot);
     if (control?.mode === 'freeze') {                                   // held at the value a person chose
       const metadata = learning.metadataOf?.(slot) ?? learning.snapshots[slot];
@@ -339,15 +1179,39 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // exactly zero base a multiplicative term causes nothing, and the receipt
     // must be able to say so instead of claiming an influence there was not.
     const lifted = base * Math.pow(look.lift, gamma);
-    liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied: r3(lifted - base), ...(look.prior ? { prior: look.prior } : {}) });
+    liftOf.set(key, { reward: look.reward, objective: look.objective, measurementBasis: look.measurementBasis, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, applied: r3(lifted - base), ...(look.prior ? { prior: look.prior } : {}),
+      ...(look.evidenceFloor ? { evidenceFloor: look.evidenceFloor } : {}), ...(look.pooled ? { pooled: true as const } : {}) });
     return lifted;
+  } : undefined;
+  // P29: per candidate, the score the composer handed over (the tag sum and any
+  // anchor bonus) and the score it ranked by, and per slot the candidates it
+  // scored, so the layout reason reads the ranking the composer actually ran.
+  // Recording only: the adjusted score is returned unchanged.
+  const tagOf = new Map<string, number>(), finalOf = new Map<string, number>(), scoredIn = new Map<string, Set<string>>();
+  // P15: per candidate, the band its last scoring ranked it in (null: the slot's own weights), so every term itemised
+  // from the weights reads the ones its score was computed with. Recording only.
+  const rankedBand = new Map<string, SlotBand | null>();
+  const adjust: ScoreAdjust | undefined = adjustScore ? (p, slot, base0, rank, band) => {
+    const value = band ? adjustScore(p, slot, base0, rank, band) : adjustScore(p, slot, base0, rank), key = `${slot}:${p.id}`;
+    rankedBand.set(key, band ?? null);
+    tagOf.set(key, base0);
+    // The composer ranks by the adjusted score where it takes it, else by the tag sum (`composeContentDetailed`).
+    finalOf.set(key, Number.isFinite(value) && (value >= 0 || rank !== undefined) ? value : base0);
+    let scored = scoredIn.get(slot);
+    if (!scored) { scored = new Set<string>(); scoredIn.set(slot, scored); }
+    scored.add(p.id);
+    return value;
   } : undefined;
   const controlOf = new Map<string, 'reject' | 'freeze'>();
   // Exploration (doc 22 §7): decided per slot from the ranked candidates, deterministic in its inputs.
   const explored = new Map<string, ExplorePick>();
   const explore = learning?.exploreOf ? (slot: string, ranked: ReadonlyArray<{ id: string; score: number }>) => {
+    // P10 (decision D2): exploration is hashed on the visitor, so never below the signal floor.
+    if (below.has(slot)) return null;
     const cfg = learning.exploreOf!(slot);
-    if (!cfg) return null;
+    // P05: the adjacent swap picks no module to serve first: it exchanges two
+    // adjacent positions of what the slot serves, after the composer placed it (below).
+    if (!cfg || cfg.mode === ADJACENT_SWAP) return null;
     // W28.M1.01 (F23 §4.3): the merchandiser's item controls belong to the
     // caller, which already holds them, and they govern exploration as well as
     // scoring — an item whose learned treatment a person took control of is out
@@ -355,21 +1219,115 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // already holding: no I/O, nothing that can fail or change the ranking.
     const controlled = new Set<string>();
     if (learning.controlOf) for (const r of ranked) if (learning.controlOf(slot, r.id)) controlled.add(r.id);
-    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical);
+    // P30 (decision D1): a context-only layout slot is hashed on its context and the hour, never on the visitor.
+    const pick = explorationPick({ visitorId: i.visitorId, ...(contextual.has(slot) && layoutContext ? { context: layoutContext } : {}),
+      slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg, controlled }, historical, historicalRules);
     if (!pick) return null;
     explored.set(slot, pick);
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
-  const { decisions, candidates, pinDiagnostics } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots);
-  const refusedPrefixes = new Set(pinDiagnostics?.filter(d => d.pinIndex !== undefined).map(d => d.slot));
+  // P05 (decision D1): the adjacent swap. On a page's declared layout slot whose
+  // exploration dial is `adjacent-swap`, a decision whose bucket (visitor, slot
+  // and hour) falls under the share exchanges the modules of ONE pair of
+  // adjacent positions of the slot's RANKED order, the pair chosen from that same
+  // bucket among the pairs neither of whose positions a rule fixed (a prefix pin,
+  // a position pin or an off-limits module, P04, all served as `tenant-pinned`),
+  // a pair touching a module under a merchandiser's control left out as well.
+  // R-P62 (3): a decision on which the slot served the configured order for the
+  // shopper's context (P01, blended or not) is served that order exactly and is
+  // never swapped, so it carries no exploration member and its reason is the
+  // order's. Outside the share, at share 0, and where no such pair exists, the
+  // slot is served exactly as composed. Part of the learning layer, so never on
+  // the holdout's `default` or `no_learning` arm, and hashed on the visitor, so
+  // never below the signal floor (P10). Pure: it reads what this decision
+  // already computed, so a replay swaps the same pair. P26: the composer asks
+  // for it as the slot settles (`settle`), once the slot has served and before
+  // any slot after it is decided, so the inner content slots of the layout
+  // follow the order it really served; the pair is the one it always was.
+  const swapped = new Map<string, ExplorePick & { positions: [number, number] }>();
+  const strategyOf = new Map<string, SlotStrategy>();
+  for (const s of i.slots) if (!strategyOf.has(s.slot)) strategyOf.set(s.slot, s);
+  const settle: SettleHook | undefined = learning?.exploreOf ? (slot, served, servedOrder) => {
+    const s = strategyOf.get(slot);
+    if (!s || s.layout !== true || s.offLimits || below.has(s.slot) || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot)) || servedOrder) return null;
+    const cfg = learning.exploreOf!(s.slot);
+    if (cfg?.mode !== ADJACENT_SWAP) return null;
+    const pairs = served.slice(1).flatMap((d, k) => (d.strategy !== 'tenant-pinned' && served[k]!.strategy !== 'tenant-pinned' ? [k + 1] : []));
+    const controlled = new Set<string>();
+    if (learning.controlOf) for (const d of served) if (learning.controlOf(s.slot, d.contentId)) controlled.add(d.contentId);
+    // P30: on a context-only layout slot the swap's bucket is hashed on the context and the hour, as its exploration is.
+    const pick = explorationPick({ visitorId: i.visitorId, ...(contextual.has(s.slot) && layoutContext ? { context: layoutContext } : {}),
+      slot: s.slot, nowMs: i.nowMs, ranked: served.map((d) => ({ id: d.contentId, score: d.score })),
+      snapshot: learning.snapshots[s.slot], cfg, controlled, pairs }, historical, historicalRules);
+    if (!pick?.positions) return null;
+    swapped.set(s.slot, { ...pick, positions: pick.positions });
+    return pick.positions;
+  } : undefined;
+  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands, undecided: undecidedSlots, unreturnedPins } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots, settle);
+  // P26 (decision D1): the inner content slots the layout did not return the module of. Not decided:
+  // no record, no manifest row, no diagnostic and no page-level input is written for any of them,
+  // except (P43, R-P78) the `module_not_returned` pin entry naming each pin such a slot kept reserved.
+  const undecided = new Set(undecidedSlots ?? []);
+  // P26: each slot's place in the order the page is decided in: document order, an inner content slot directly after
+  // its layout slot (all of them there: which of them was decided, and in what order, nothing before the layout reads).
+  const compositionRank: ReadonlyMap<string, number> = new Map(compositionOrder(specs).map((slot, k) => [slot, k] as const));
+  // P15 (decision D1): the band each served module of a banded slot was ranked in, as the composer ranked it.
+  const bandOf = new Map<string, { from: number; to: number }>((rankedInBands ?? []).map((placed) => [`${placed.slot}:${placed.contentId}`, placed]));
+  /**
+   * P15: the dimension weights a candidate's scores were computed with — the
+   * band it was ranked in on a slot with position bands, else the slot's own —
+   * for every term itemised from the weights (the population priors' shares and
+   * P29's terms). A slot without bands reads its own weights exactly as before.
+   */
+  const weightsAt = (slot: string, id: string, spec: ContentSlotSpec): Readonly<Record<string, number>> => {
+    const key = `${slot}:${id}`;
+    if (rankedBand.has(key)) return rankedBand.get(key)?.weights ?? spec.weights;
+    const placed = bandOf.get(key);
+    return (placed && spec.bands?.find((band) => band.from === placed.from && band.to === placed.to)?.weights) || spec.weights;
+  };
+  // P01: the slots whose configured order this decision served.
+  const orderedSlots = new Set(ordered ?? []);
+  // P04: the rule and the position that placed each module a position pin or an
+  // off-limits mark placed, and whether the decision used them at all (C11). A
+  // configured order that supplied an off-limits module's baseline was used too,
+  // on a decision on which exploration picked and the order was not served.
+  const ruleOf = new Map<string, NonNullable<typeof moduleRules>[number]>((moduleRules ?? []).map((placed) => [`${placed.slot}:${placed.contentId}`, placed]));
+  const ordersUsed = orderedSlots.size > 0 || (orderBaseline?.length ?? 0) > 0;
+  // P28: a position the layout blend ranked says what placed it. Where neither
+  // the shopper's behaviour nor learned performance moved its score (B 0 and
+  // p × Q 0), the rank base alone placed it — the catalogue's order or the
+  // configured one — so it is the slot's default, as an unblended zero score
+  // is; otherwise the engine's blend placed it. A pinned position keeps its pin.
+  for (const d of decisions) {
+    if (d.strategy === 'tenant-pinned' || !blendedSlots.has(d.slot)) continue;
+    const terms = blendTerms.get(`${d.slot}:${d.contentId}`);
+    if (terms) d.strategy = terms.B === 0 && terms.p * terms.Q === 0 ? 'default' : 'affinity';
+  }
+  const refusedPrefixes = refusedSlotsOf(pinDiagnostics);
   // The slots the composer ran a ranking for, by its own conditions: capacity
   // left after off-limits and pins (`rankedCapacity`, the composer's `:227` and
   // `:237-250`), a pinned prefix it did not refuse, and — on a replay — the
-  // bounded set of slots that re-executed.
+  // bounded set of slots that re-executed; never (P26) an inner content slot
+  // that was not decided.
   const ranks = (spec: ContentSlotSpec) => rankedCapacity(spec) > 0 && !refusedPrefixes.has(spec.slot)
-    && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot));
+    && (!i.replayRankingSlots || i.replayRankingSlots.has(spec.slot)) && !undecided.has(spec.slot);
   const constraintDiagnostics = constraintDiagnosticsFor(eligible, specs, ranks, historicalGovernance);
   const specOf = new Map(specs.map((s) => [s.slot, s]));
+  /**
+   * W28.R2: the support a record states. The composer records the top
+   * candidates by score before an exploration moved its piece to the front,
+   * with that piece beside them (W28.C1.01(b)): at most `candidateLimit + 1`
+   * entries, the explored piece first. The rules before recorded the first
+   * `candidateLimit` of the moved ranking instead, and that is exactly the
+   * first `candidateLimit` of this support — the explored piece, then the
+   * ranking without it — so a record written under them is reproduced by the
+   * cut, whatever the pick and the limit. Where nothing moved, both are the
+   * ranking's first `candidateLimit` and the cut changes nothing.
+   */
+  const supportOf = (slot: string) => {
+    const support = candidates[slot] ?? [];
+    return historicalRules === HISTORICAL_EXPLORATION_RULES ? support.slice(0, Math.max(0, i.candidateLimit ?? 10)) : support;
+  };
   // W20 G2 (R86(b), R86(c)): a PINNED slot that served and still could not fill
   // its `take`. Measured from what the composer actually served
   // against the take the document publishes, so it can never disagree with the
@@ -383,8 +1341,11 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const servedIn = new Map<string, number>();
     for (const d of decisions) servedIn.set(d.slot, (servedIn.get(d.slot) ?? 0) + 1);
     for (const spec of specs) {
-      const pins = (spec.pinnedPieceIds?.length ?? 0) + (spec.pinnedPieceId ? 1 : 0);
-      if (!pins || spec.offLimits || refusedSlots.has(spec.slot)) continue;
+      const pins = (spec.pinnedPieceIds?.length ?? 0) + (spec.pinnedPieceId ? 1 : 0) + (spec.positionPins?.length ?? 0);
+      // P01: a slot that served its configured order filled the positions the
+      // order sets, by the merchandiser's choice; the order, not the take, says how many.
+      // P26: an inner content slot the layout did not return the module of was never decided, so it is never short.
+      if (!pins || spec.offLimits || refusedSlots.has(spec.slot) || orderedSlots.has(spec.slot) || undecided.has(spec.slot)) continue;
       if (i.replayRankingSlots && !i.replayRankingSlots.has(spec.slot)) continue;
       const take = spec.take, served = servedIn.get(spec.slot) ?? 0;
       if (!Number.isSafeInteger(take) || take <= 0 || served >= take) continue;
@@ -400,16 +1361,51 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const reg = i.regional; if (!reg || i.arm === 'default') return null;
     const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
     if (!piece || !spec) return null;
+    // P30: a context-only layout slot whose switch does not admit the region takes nothing from it.
+    const context = contextual.get(d.slot);
+    if (context && !context.region) return null;
+    // P10: below the signal floor the prior is at full weight, the shopper's own evidence not weighing it down.
+    // P30: and so on a context-only layout slot that admits the region, as for a shopper with no interest.
+    const lambda = below.has(d.slot) || context ? 1 : reg.lambda;
+    // P15: the weights this module was ranked with (its band's on a banded slot).
+    const weights = weightsAt(d.slot, d.contentId, spec);
     let contribution = 0;
     for (const [dim, values] of Object.entries(piece.tags)) {
-      const w = spec.weights[dim] ?? 0; if (!w) continue;
-      for (const v of values) contribution += reg.lambda * (reg.share[dim]?.[v] ?? 0) * w;
+      const w = weights[dim] ?? 0; if (!w) continue;
+      for (const v of values) contribution += lambda * (reg.share[dim]?.[v] ?? 0) * w;
     }
     if (contribution <= 0) return null;
     const { share: _share, ...summary } = reg;
-    return { ...summary, contribution: Math.round(contribution * 1000) / 1000 };
+    return { ...summary, lambda, contribution: Math.round(contribution * 1000) / 1000 };
+  };
+  // P07: what the context prior contributed, in the regional form: Σ over the piece's tags of λ·share·w.
+  const contextPriorOf = (d: { contentId: string; slot: string; strategy?: string }): (ContextPriorBlend & { contribution: number }) | null => {
+    if (!historicalPins && d.strategy === 'tenant-pinned') return null;
+    const ctx = i.contextBlend; if (!ctx || i.arm === 'default') return null;
+    const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
+    if (!piece || !spec) return null;
+    // Below the signal floor the prior is a context term at full weight, as the region's is (P10), and so on a context-only layout slot (P30).
+    const lambda = below.has(d.slot) || contextual.has(d.slot) ? 1 : ctx.lambda;
+    // P15: the weights this module was ranked with (its band's on a banded slot).
+    const weights = weightsAt(d.slot, d.contentId, spec);
+    let contribution = 0;
+    for (const [dim, values] of Object.entries(piece.tags)) {
+      const w = weights[dim] ?? 0; if (!w) continue;
+      for (const v of values) contribution += lambda * (ctx.share[dim]?.[v] ?? 0) * w;
+    }
+    if (contribution <= 0) return null;
+    return contextPriorRecord(ctx, lambda, Math.round(contribution * 1000) / 1000);
   };
   for (const d of decisions) {
+    // The composer keeps a served piece's four strongest drivers, so a `completes`
+    // bonus smaller than four interest terms would leave the receipt without the
+    // reason it was preferred. It is itemised whenever it applied, never claimed
+    // where it did not: only a ranked piece that completes the anchor in a slot
+    // whose rule was in force.
+    if (complementsOf.has(d.slot) && d.strategy !== 'tenant-pinned' && !d.explain.drivers.some((x) => x.dim === 'completes')) {
+      const piece = byId.get(d.contentId);
+      if (piece && completesAnchor(piece)) d.explain.drivers.push({ dim: 'completes', value: anchor, a: 1, weight: complementsOf.get(d.slot)! });
+    }
     const r = regionalOf(d);
     if (r) d.explain.drivers.push({ dim: 'regional', value: r.region, a: r.lambda, weight: Math.round((r.contribution / (r.lambda || 1)) * 1000) / 1000 });
     if (ext?.status === 'ok') {
@@ -444,53 +1440,555 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   };
   // Doc 22 §12.3: what this set was computed from, so a replay is exact.
   const plain = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
-  const inputs: DecisionInputs = {
-    affinity: plain(affinity.dims) as DecisionInputs['affinity'],
+  // W28.R2 (amendment A20): the exploration rules this set was decided under,
+  // stated BESIDE the page manifest, never inside it (`EXPLORATION_RULES`,
+  // src/learn/explore.ts). Written wherever the learning layer ran; without it
+  // no exploration rule runs, both rule sets decide identically, and there is
+  // nothing to state. A replay of the rules before writes none.
+  const rules: { explorationRules?: ExplorationRules } = learning !== null && historicalRules !== HISTORICAL_EXPLORATION_RULES
+    ? { explorationRules: EXPLORATION_RULES } : {};
+  // P10: the interest vector the page was scored on. Where every slot that serves
+  // was decided below the signal floor, that is the context view alone; where
+  // any slot personalized, it is the shopper's vector as before, and the context view is
+  // derived again from the recorded prior shares.
+  // P30: and where every such slot is context-only, below the floor or by its switch, the context's own view.
+  // P26: an inner content slot that was not decided serves nothing, so it is not one of them, below the floor or not.
+  const belowDecided = undecided.size ? [...below.keys()].some((slot) => !undecided.has(slot)) : below.size > 0;
+  const contextOnlyPage = (belowDecided || contextual.size > 0) && i.slots.every((slot) => slot.offLimits || below.has(slot.slot) || contextual.has(slot.slot) || undecided.has(slot.slot));
+  // P29: the population priors the layout reason itemises — each one's λ and
+  // shares — from the blends on the serving path and, on a replay, from what the
+  // record carries (`layoutPriors`). A page whose declared layout slot ranks
+  // above the signal floor while a prior applied states each prior's λ on its
+  // records (`inputs.prior_lambda`, keys sorted), so the reason replays exactly
+  // whichever record is replayed; below the floor each prior is at λ 1, which
+  // the record already implies.
+  const regionalPrior = i.arm === 'default' ? null : i.layoutPriors?.regional ?? (i.regional ? { lambda: i.regional.lambda, share: i.regional.share } : null);
+  const contextPriorTerm = i.arm === 'default' ? null : i.layoutPriors?.context ?? (i.contextBlend ? { lambda: i.contextBlend.lambda, share: i.contextBlend.share } : null);
+  // P30: a context-only layout slot takes its priors at λ 1, as below the floor, which the record already implies.
+  const layoutRanksAbove = i.slots.some((slot) => slot.layout === true && !slot.offLimits && !below.has(slot.slot) && !contextual.has(slot.slot));
+  // P31 (R-P59 (1)): an off-limits mark applies on the page whenever it names a
+  // module the declared layout slot could have ranked but for the withholding —
+  // the composer counts a mark only for an eligible module — so the page states
+  // the module-rules marker then too, and the replay keeps the marks that the
+  // reason's pre-withholding baseline holds the module by. Nothing withheld,
+  // or no mark naming a withheld module: exactly the marker as before (C11).
+  const marksWithheld = !historicalPins && withheldBy.size > 0 && i.slots.some((s) => s.layout === true && !s.offLimits
+    && (s.offLimitsPieceIds ?? []).some((id) => {
+      const piece = byId.get(id), spec = specOf.get(s.slot);
+      if (!piece || !spec || !withheldBy.has(id) || !piece.slotTypes.includes(s.slot)) return false;
+      const gate = compileSlotConstraints(spec, historicalGovernance !== HISTORICAL_GOVERNANCE_V1);
+      return !(gate.active && gate.reason(piece));
+    }));
+  const priorLambda = layoutRanksAbove && (regionalPrior || contextPriorTerm)
+    ? { ...(contextPriorTerm ? { context: contextPriorTerm.lambda } : {}), ...(regionalPrior ? { regional: regionalPrior.lambda } : {}) } : null;
+  // P26 (decision D1): what the page records is what it decided. An inner
+  // content slot the layout did not return the module of has no manifest row
+  // and adds no marker, and none of its own served counts or rule verdicts are
+  // kept; a page without one records exactly as before.
+  const decidedSlots = undecided.size ? i.slots.filter((slot) => !undecided.has(slot.slot)) : i.slots;
+  const servedRecorded = !hasFatigue || !i.served ? null : !undecided.size ? i.served
+    : [...fatigueRules.keys()].some((slot) => !undecided.has(slot)) ? Object.fromEntries(Object.entries(i.served).filter(([slot]) => !undecided.has(slot))) : null;
+  const verdictsRecorded = [...verdicts].filter(([id]) => !undecided.size || (byId.get(id)?.slotTypes ?? []).some((slot) => pageSlots.has(slot) && !undecided.has(slot)));
+  const inputs: DecisionInputs & { explorationRules?: ExplorationRules } = {
+    affinity: plain((contextOnlyPage ? (belowDecided ? contextView : layoutView) : affinity).dims) as DecisionInputs['affinity'],
     replay: {
       version: 1, learning: learning !== null, candidateLimit: i.candidateLimit ?? 10,
       ...(historical === HISTORICAL_EXPLORATION ? {} : { exploration: 'supported-only' as const }),
       ...(historicalPins === HISTORICAL_PINS ? {} : { pins: historicalPins ? 'reserved-eligible-v1' as const : 'prefix-reserved-v2' as const }),
       ...(historicalContentTypes === HISTORICAL_CONTENT_TYPES ? {} : { contentTypes: 'catalog-tags-v1' as const }),
       ...(historicalGovernance === HISTORICAL_GOVERNANCE ? {} : { governance: historicalGovernance === HISTORICAL_GOVERNANCE_V1 ? 'slot-gates-v1' as const : 'slot-gates-v2' as const }),
-      slots: i.slots.map((slot) => {
+      ...(i.slots.some((slot) => slot.layout === true) ? { layout: LAYOUT_RULES } : {}),
+      ...(ordersUsed ? { orders: ORDER_RULES } : {}),
+      ...(blendedSlots.size ? { blend: BLEND_RULES } : {}),
+      ...(belowDecided ? { signalFloor: SIGNAL_FLOOR_RULES } : {}),
+      ...(ruled?.length || marksWithheld ? { moduleRules: MODULE_RULES } : {}),
+      ...(retiredFallback && typeFallbackReaches(i.pieces, decidedSlots.map(formatReadsOf)) ? { typeFallback: TYPE_FALLBACK_RULES } : {}),
+      // P26: one row per slot decided, in document order; an inner content slot that was not decided has none.
+      slots: decidedSlots.map((slot) => {
         // Pins bypass scoring and exploration; current pins reserve page ownership.
         const snapshot = slot.pinnedPieceId || (!historicalPins && (refusedPrefixes.has(slot.slot) || rankedCapacity({ ...slot, offLimits: false }) === 0)) || (historicalGovernance !== HISTORICAL_GOVERNANCE && slot.offLimits) ? null : learning?.snapshots[slot.slot];
         return { slot: slot.slot, lift: snapshot?.version ?? 0, prior: snapshot?.priorVersion ?? 0 };
       }),
     },
     ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
+    // P07: the context prior's shares, written only when it applied (keys sorted).
+    ...(i.contextBlend && i.arm !== 'default' ? { context_share: sortedShares(i.contextBlend.share) } : {}),
+    ...(priorLambda ? { prior_lambda: priorLambda } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
-    ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
+    ...(servedRecorded ? { served: plain(servedRecorded) } : {}),
+    ...(belowDecided ? { signals: signalCount } : {}),
+    // P31: the page's report as the decision accepted it, and each rule's
+    // verdict on the cell (keys sorted), page-level and only when there is one.
+    ...(report.length ? { nothing_to_show: [...report] } : {}),
+    ...(verdictsRecorded.length ? { eligibility_verdicts: Object.fromEntries(verdictsRecorded.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) } : {}),
+    // P30: the context a switched slot was decided in beyond the record's page and
+    // cell — the device, and the region where admitted — written only when one was (C11, keys sorted).
+    ...(layoutSwitch && contextual.size ? { context_only: {
+      ...(i.device === 'mobile' || i.device === 'desktop' ? { device: i.device } : {}),
+      ...(layoutSwitch.region && typeof i.contextRegion === 'string' && i.contextRegion ? { region: i.contextRegion } : {}) } } : {}),
+    ...rules,
   };
 
+  // ── P29 (decisions D1, D2): the layout reason of each declared layout slot ──
+  //
+  // The served order is compared with the slot's BASELINE: the merchandiser's
+  // fixed positions — prefix pins, modules pinned at a position and off-limits
+  // modules held at their place (P04) — where their rules put them, and on every
+  // other position the configured order this decision resolved for the
+  // shopper's context (P01), else the slot's eligible modules in catalogue order
+  // (R-P23 C7: after lifecycle eligibility, the slot's own exclusions and gates,
+  // and what the page served or reserved before it). Where they agree the
+  // layout is unchanged, with one cause: the first that holds in the ticket's
+  // own order. Where they differ it changed, and each module served away from
+  // its baseline position names the term that moved it. Read only from what
+  // this decision already computed, so it can neither fail nor change what is
+  // served; only under the current pin and governance policies, which every
+  // declared layout slot is decided under, and never for a slot a bounded
+  // replay did not re-execute.
+  const layoutReasons = new Map<string, LayoutReason>();
+  // P06: per declared layout slot, the baseline its records carry (`explain.baselineOrder`) and the sequence it is drawn from, as the reason computes them.
+  const layoutBaselines = new Map<string, { order: string[]; sequence: readonly string[] }>();
+  // P31 (R-P59 (2)): a slot whose every refused pin names a module the withholding removed, refused as missing or ineligible.
+  const refusedByWithholding = (slot: string) => (pinDiagnostics ?? []).filter((d) => d.slot === slot)
+    .every((d) => d.reason === 'missing_or_ineligible' && withheldBy.has(d.pinnedPieceId));
+  if (!historicalPins && historicalGovernance === undefined) {
+    // P26: what the page served before the layout slot is read in the order the page was decided in, so an
+    // inner content slot, decided after its layout wherever the document lists it, is never before it.
+    const slotIndex = compositionRank;
+    const live = eligible.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
+    // P31 (R-P23 C7): and the same before the withholding; the same list when nothing was withheld.
+    // P30: and so where the context-only slot withheld a module its context does not admit.
+    const admittedLive = withheldBy.size || contextWithheld.size ? admitted.filter((p) => (p.lifecycle?.status ?? 'live') === 'live') : live;
+    const pinRefused = new Set((pinDiagnostics ?? []).map((d) => d.slot));
+    for (const [index, s] of i.slots.entries()) {
+      if (s.layout !== true || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot))) continue;
+      // An off-limits layout slot serves nothing: its record (below) is all it writes.
+      if (s.offLimits) { layoutReasons.set(s.slot, { cause: 'off_limits', slot: s.slot, status: 'unchanged' }); continue; }
+      const served = decisions.filter((d) => d.slot === s.slot);
+      // P04's whole-slot refusal: a refused pin left the slot serving nothing and writing no record, so there is no reason to give.
+      if (!served.length && pinRefused.has(s.slot)) continue;
+      const reason = layoutReasonOf(s, slotIndex.get(s.slot) ?? index, served, slotIndex, live, admittedLive, pinRefused);
+      layoutReasons.set(s.slot, reason);
+    }
+  }
+  // ── P06 (decisions D1, D2): the baseline and the shadow of each declared layout slot ──
+  //
+  // Every record of a declared layout slot decided on an arm that personalizes
+  // carries, beside what was served, the slot's BASELINE (`baselineOrder`: P29's,
+  // the one `layoutReason` compares with) and its SHADOW (`shadowOrder`): the
+  // order the slot would have served with every term applied and the learned
+  // term at full trust (γ 1), or on a slot opted into the layout blend at the
+  // blend's shadow p (`shadowP`, 0.1 when the dial names none). It is ranked as
+  // the served order is: the same composer over the same slot specs and the
+  // same modules, what the page served before the slot removed as the served
+  // ranking had it removed, so prefix pins, position pins and off-limits modules
+  // stay where their rules put them, a withheld module stays absent and a
+  // configured order the slot does not blend is served as it is, with no
+  // exploration pick and no swap (R-P34). `shadowTerms` names, for each module
+  // whose shadow place differs from its baseline place, every term that would
+  // have moved it, in P29's words and by R-P56's aggregate reading. Recording
+  // only: the second ranking reads what this decision already holds and writes
+  // into nothing the served ranking, its records or its receipts read, and a
+  // failure of it leaves the records without the members, so what is served,
+  // counted and credited is exactly as without it. Never on the holdout's
+  // default arm, which reads no interest and no learned lift (it is also the
+  // arm of a shopper without personalization consent).
+  const shadows = new Map<string, { baselineOrder: string[]; shadowOrder: string[]; shadowTerms: Record<string, LayoutMoveTerm[]> }>();
+  if (i.arm !== 'default' && layoutBaselines.size) for (const [index, s] of i.slots.entries()) {
+    const drawn = layoutBaselines.get(s.slot);
+    if (!drawn || !decisions.some((d) => d.slot === s.slot)) continue;
+    try {
+      const shadow = shadowOf(s, compositionRank.get(s.slot) ?? index, drawn);
+      if (shadow) shadows.set(s.slot, shadow);
+    } catch { /* recording only: the slot's records carry no shadow */ }
+  }
+  /** P06: one declared layout slot's shadow, as the comment above defines it; null on a blended slot whose shadow p cannot be read. */
+  function shadowOf(s: SlotStrategy, index: number, drawn: { order: string[]; sequence: readonly string[] }) {
+    const blend = blends.get(s.slot), shadowP = blend ? blend.shadowP : null;
+    if (blend && shadowP === null) return null;
+    // The learned term at full trust — the lift at γ 1, a merchandiser's frozen
+    // lift applied like a learned one, a rejected lift not at all — or on a
+    // blended slot R + (1 − shadowP) × B + shadowP × Q with Q the clamped lift
+    // minus one; each module's own learned term kept for its itemisation.
+    const liftAtOne = new Map<string, number>(), blendAt = new Map<string, { p: number; Q: number }>();
+    // P15 (R-P34): the shadow ranks with the same bands, a seed scaled by the band's weights as the served ranking scales it.
+    const shadowAdjust: ScoreAdjust = (p, slot, base0, rank, band) => {
+      const key = `${slot}:${p.id}`;
+      let seeded = 0;
+      for (const d of seedDriversFor(p, slot, band?.weights)) seeded += d.contribution;
+      const base = preLift(p, slot, base0 + seeded, false);
+      if (!learning) return base;
+      const control = learning.controlOf?.(slot, p.id) ?? null;
+      // P11: the learned term is the one the served ranking applies, under the page's evidence floor.
+      const look = control?.mode === 'reject' ? null : flooredAt(slot, p.id);
+      const lift = control?.mode === 'freeze' ? control.lift ?? 1 : look?.lift ?? null;
+      if (blend && rank && shadowP !== null) {
+        const Q = lift === null ? 0 : Math.min(blend.liftMax, Math.max(blend.liftMin, lift)) - 1;
+        blendAt.set(key, { p: shadowP, Q });
+        return rank.R + (1 - shadowP) * base + shadowP * Q;
+      }
+      if (lift === null) return base;
+      const lifted = base * lift;
+      liftAtOne.set(key, r3(lifted - base));
+      return lifted;
+    };
+    const slotIndex = compositionRank;
+    const before = new Set(decisions.filter((d) => (slotIndex.get(d.slot) ?? Number.POSITIVE_INFINITY) < index).map((d) => d.contentId));
+    const composed = composeContentDetailed(eligible.filter((p) => !before.has(p.id)), affinity, specs, i.candidateLimit ?? 10, shadowAdjust, undefined,
+      historicalPins, historicalGovernance, new Set([s.slot]));
+    const order = composed.decisions.filter((d) => d.slot === s.slot);
+    const fixed = (d: (typeof order)[number]) => d.strategy === 'tenant-pinned';
+    // Compared, as P29's moves are, with the baseline less any withheld module, along the shadow order's fixed positions.
+    const { baseline: along, fromOf } = baselineAlong(order, drawn.sequence);
+    const moves = order.flatMap((d, k) => {
+      const from = fromOf.get(d.contentId) ?? null;
+      return fixed(d) || from === k + 1 ? [] : [{ module: d.contentId, from, to: k + 1 }];
+    });
+    // R-P64: a module of the baseline take that the shadow pushes out of its take
+    // moved too — down, past the take's last position — so it is a move beside the
+    // modules the shadow brings in, compared with the modules of the shadow take
+    // that passed it. A module outside both takes is no move (R-P57's limit).
+    const inShadow = new Set(order.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
+    for (const id of along) if (id !== undefined && !inShadow.has(id)) moves.push({ module: id, from: fromOf.get(id) ?? null, to: order.length + 1 });
+    const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
+      (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
+    const yielded = new Set(order.flatMap((d) => (d.explain.diversity ? [...d.explain.diversity.skipped, ...(d.explain.diversity.relaxed ? [d.contentId] : [])] : [])));
+    const support = new Map((composed.candidates[s.slot] ?? []).map((c) => [c.contentId, c.score] as const));
+    const learned = { lift: liftAtOne, blend: blendAt };
+    const termsMemo = new Map<string, ScoreTerms | null>();
+    const termsFor = (id: string, score: number | undefined): ScoreTerms | null => {
+      if (!termsMemo.has(id)) termsMemo.set(id, scoreTerms(id, s.slot, score, learned));
+      return termsMemo.get(id) ?? null;
+    };
+    // R-P56 and R-P57, every term: a module the diversity rule itself made yield
+    // or placed by relaxing it names `diversity`; any other moved module names
+    // every term by which it differs from the modules it passed (moved up) or
+    // that passed it (moved down), taken together, in the direction it moved —
+    // for a module moved up, the modules the baseline placed ahead of it that the
+    // shadow does not serve included. A module the shadow pushed out of its take
+    // (R-P64) is attributed the same way, its own terms read from the shadow's
+    // ranking of it. Where no term separates it, the rule that placed or
+    // displaced one of them, else its own largest term in that direction, else
+    // the terms of the first module that passed it or it passed.
+    const termsOf = new Map<string, LayoutMoveTerm[]>();
+    for (const move of moves) {
+      const id = move.module, inTake = move.to <= order.length ? order[move.to - 1] : undefined;
+      if (yielded.has(id)) { termsOf.set(id, ['diversity']); continue; }
+      const up = move.from === null || move.to < move.from;
+      const others: ScoreTerms[] = [];
+      let ruled = false;
+      const compare = (other: string, score: number | undefined) => {
+        if (yielded.has(other)) ruled = true;
+        const terms = termsFor(other, score);
+        if (terms) others.push(terms);
+      };
+      for (const [k, o] of order.entries()) {
+        if (o.contentId === id || fixed(o)) continue;
+        const at = { from: fromOf.get(o.contentId) ?? null, to: k + 1 };
+        if (up ? passed(move, at) : passed(at, move)) compare(o.contentId, o.score);
+      }
+      if (up) for (const other of drawn.sequence) {
+        if (inShadow.has(other) || !((fromOf.get(other) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
+        if (scoredHere ? scoredHere.has(other) : support.has(other)) compare(other, support.get(other));
+        else if (yielded.has(other)) ruled = true;
+      }
+      const own = termsFor(id, inTake ? inTake.score : support.get(id)), sign = up ? 1 : -1;
+      const named = own ? differingTerms(own, others, sign) : [];
+      const single: LayoutMoveTerm | null = named.length ? null : ruled ? 'diversity' : own ? largestTerm(own, sign) : null;
+      if (named.length) termsOf.set(id, named);
+      else if (single) termsOf.set(id, [single]);
+    }
+    const fallback: LayoutMoveTerm[] = moves.map((m) => termsOf.get(m.module)).find((t) => t !== undefined) ?? ['affinity'];
+    const shadowTerms: Record<string, LayoutMoveTerm[]> = {};
+    for (const m of [...moves].sort((a, b) => (a.module < b.module ? -1 : a.module > b.module ? 1 : 0))) {
+      const own = termsOf.get(m.module), up = m.from === null || m.to < m.from;
+      const other = own ? undefined : moves.filter((o) => o.module !== m.module && termsOf.has(o.module) && (up ? passed(m, o) : passed(o, m))).sort((a, b) => a.to - b.to)[0];
+      shadowTerms[m.module] = [...(own ?? (other ? termsOf.get(other.module)! : fallback))];
+    }
+    return { baselineOrder: [...drawn.order], shadowOrder: order.map((d) => d.contentId), shadowTerms };
+  }
+  /** P29: one declared layout slot's reason, as the comment above defines it. */
+  function layoutReasonOf(s: SlotStrategy, index: number, served: typeof decisions, slotIndex: ReadonlyMap<string, number>,
+    pageLive: readonly ContentPiece[], admittedLive: readonly ContentPiece[], pinRefused: ReadonlySet<string>): LayoutReason {
+    const spec = specOf.get(s.slot)!, keyOf = (id: string) => `${s.slot}:${id}`;
+    // P30: on the context-only layout slot, a module its context does not admit
+    // is withheld by its eligibility rule for this slot, as a page-wide one is
+    // (P31); every other slot reads the page's own lists exactly as before.
+    const ownWithheld = contextual.has(s.slot) && contextWithheld.size ? contextWithheld : null;
+    const live = ownWithheld ? pageLive.filter((p) => !ownWithheld.has(p.id)) : pageLive;
+    const withheldBy = ownWithheld ? new Map<string, LayoutWithheldCause>([...pageWithheldBy, ...[...ownWithheld].map((id) => [id, 'eligibility_rule'] as const)]) : pageWithheldBy;
+    const fixed = (d: (typeof decisions)[number]) => d.strategy === 'tenant-pinned';
+    // What the slot could fill around its fixed positions, pooled as the composer pools it.
+    const gate = compileSlotConstraints(spec, true);
+    const before = new Set(decisions.filter((d) => (slotIndex.get(d.slot) ?? Number.POSITIVE_INFINITY) < index).map((d) => d.contentId));
+    const reserved = new Set<string>();
+    for (const other of i.slots) {
+      if (other.slot === s.slot || other.offLimits || pinRefused.has(other.slot)) continue;
+      for (const id of other.pinnedPieceIds ?? []) reserved.add(id);
+      for (const pin of other.positionPins ?? []) reserved.add(pin.pieceId);
+      if (other.pinnedPieceId) reserved.add(other.pinnedPieceId);
+    }
+    const own = new Set(served.filter(fixed).map((d) => d.contentId)), marks = new Set(spec.offLimitsPieceIds ?? []);
+    const pooled = (p: ContentPiece) => p.slotTypes.includes(s.slot) && !(gate.active && gate.reason(p)) && !before.has(p.id) && !reserved.has(p.id)
+      && !own.has(p.id) && !marks.has(p.id);
+    const pool = live.filter(pooled).map((p) => p.id);
+    const order = configured.get(s.slot), inPool = new Set(pool);
+    const sequence = order ? [...new Set(order.modules)].filter((id) => inPool.has(id)) : pool;
+    // P31 (R-P23 C7, R-P59): the baseline is drawn before the withholding — the
+    // same construction on the modules eligible before it — so a module it would
+    // have served on one of its positions that the page's report or the module's
+    // rule withheld is a change against it, named with its cause in baseline
+    // order. Before the withholding an off-limits mark holds its module at its
+    // place among the modules the slot could serve (P04), whether or not the
+    // module is withheld, and a pin of another slot refused only because the
+    // withholding removed its module still reserves it. The moves then compare
+    // the served order with the baseline less the withheld modules, so a module
+    // that only took a withheld module's place is not called moved by a term.
+    // Nothing withheld: exactly as before.
+    const withheld: LayoutWithheld[] = [];
+    // P06: that baseline position by position, as drawn before the withholding.
+    const drawn: Array<string | undefined> = [];
+    if (withheldBy.size) {
+      const reservedBefore = new Set(reserved);
+      for (const other of i.slots) {
+        if (other.slot === s.slot || other.offLimits || !pinRefused.has(other.slot) || !refusedByWithholding(other.slot)) continue;
+        for (const id of other.pinnedPieceIds ?? []) reservedBefore.add(id);
+        for (const pin of other.positionPins ?? []) reservedBefore.add(pin.pieceId);
+        if (other.pinnedPieceId) reservedBefore.add(other.pinnedPieceId);
+      }
+      const prefixIds = s.pinnedPieceIds ?? (s.pinnedPieceId ? [s.pinnedPieceId] : []), positionPins = s.positionPins ?? [];
+      const ownPins = new Set([...prefixIds, ...positionPins.map((pin) => pin.pieceId)]);
+      const admits = (p: ContentPiece) => p.slotTypes.includes(s.slot) && !(gate.active && gate.reason(p));
+      const inOrder = (ids: string[]) => { const held = new Set(ids); return order ? [...new Set(order.modules)].filter((id) => held.has(id)) : ids; };
+      // Where each off-limits mark holds its module before the withholding (P04): its place among the modules the slot could serve, its own pins included.
+      const markBase = inOrder(admittedLive.filter((p) => admits(p) && (ownPins.has(p.id) || (!before.has(p.id) && !reservedBefore.has(p.id)))).map((p) => p.id));
+      const heldAt = new Map<number, string>();
+      for (const id of marks) {
+        const position = markBase.indexOf(id) + 1;
+        if (ownPins.has(id) || position < 1 || position > s.take || position <= prefixIds.length || positionPins.some((pin) => pin.position === position)) continue;
+        heldAt.set(position, id);
+      }
+      const fullSequence = inOrder(admittedLive.filter((p) => admits(p) && !before.has(p.id) && !reservedBefore.has(p.id) && !ownPins.has(p.id) && !marks.has(p.id)).map((p) => p.id));
+      let filled = 0;
+      for (let position = 1; position <= s.take; position++) {
+        const id = position <= prefixIds.length ? prefixIds[position - 1]
+          : positionPins.find((pin) => pin.position === position)?.pieceId ?? heldAt.get(position) ?? fullSequence[filled++];
+        const cause = id === undefined ? undefined : withheldBy.get(id);
+        drawn.push(id);
+        if (cause) withheld.push({ cause, module: id! });
+      }
+    }
+    // The baseline, position by position: a fixed module where the composer placed
+    // it (the same positions, ranking and baseline filling the same number of
+    // free positions), the baseline sequence on every other position.
+    const { baseline, fromOf } = baselineAlong(served, sequence);
+    // P06: the baseline the slot's records carry, cut at the take: the one the
+    // moves compare with or, where a module of it was withheld, the same baseline
+    // as drawn before the withholding (R-P23 C7), the withheld module at its place.
+    layoutBaselines.set(s.slot, { order: (withheld.length ? drawn : baseline).filter((id): id is string => id !== undefined).slice(0, s.take), sequence });
+    const scored = [...(scoredIn.get(s.slot) ?? pool)];
+    const support = new Map((candidates[s.slot] ?? []).map((c) => [c.contentId, c.score] as const));
+    if (!withheld.length && baseline.every((id, k) => id === served[k]!.contentId)) {
+      // Unchanged: the first cause that holds, in the ticket's own order (decision D1).
+      const fixedAll = served.length > 0 && served.length === s.take && served.every(fixed);
+      const blend = blends.get(s.slot);
+      const answered = scored.some((id) => liftOf.has(keyOf(id)));
+      const scoreOf = (id: string) => finalOf.get(keyOf(id)) ?? support.get(id);
+      const ranked = served.filter((d) => !fixed(d));
+      let cause: LayoutReasonCause, ladder: { n: number; nMin: number } | null = null;
+      if (fixedAll) cause = served.some((d) => ruleOf.get(keyOf(d.contentId))?.rule !== 'off_limits') ? 'pinned' : 'off_limits';
+      else if (i.arm === 'default') cause = 'holdout_or_consent';
+      else if (below.has(s.slot)) cause = 'below_signal_floor';
+      // The learned term is held at zero: the blend's p at 0 (or the no-learning
+      // arm, whose Q is 0); a configured order served exactly, which nothing but
+      // the blend could move (freeze sheet items 8 and 17); or a trust dial γ at 0.
+      else if (blend ? blend.p === 0 || i.arm === 'no_learning' : orderedSlots.has(s.slot) || !learning || learning.gammaOf(s.slot) <= 0) cause = 'blend_or_trust_zero';
+      else if (scored.length && !answered) {
+        cause = 'no_level_reached_nmin';
+        // The n the ladder has — the most evidence any candidate holds at any level of the shopper's cell — and the nMin it needs.
+        // P30: a context-only layout slot's ladder is its context levels, the only ones it reads.
+        // P08: a pooled module's ladder is its pooled record's, on this page.
+        const snapshot = learning?.snapshots[s.slot] ?? null;
+        const levelsOf = (id: string) => { const page = pooledPage(id);
+          return contextual.has(s.slot) ? [...contextLadder(i.cell, page)] : page === undefined ? levelKeys(i.cell) : pooledLevelKeys(i.cell, page); };
+        let n = 0;
+        for (const id of scored) for (const level of levelsOf(id)) { const held = snapshot?.items[id]?.[level]?.n; if (typeof held === 'number' && Number.isFinite(held) && held > n) n = held; }
+        ladder = { n: r3(n), nMin: snapshot?.nMin ?? learning?.metadataOf?.(s.slot)?.stats?.nMin ?? DEFAULT_STATS.nMin };
+      } else if (scored.length && scored.every((id) => (baseOf.get(keyOf(id)) ?? support.get(id) ?? 0) === 0)) cause = 'zero_base';
+      else if (ranked.some((d) => scored.some((id) => id !== d.contentId && scoreOf(id) !== undefined && scoreOf(id) === scoreOf(d.contentId)))) cause = 'catalogue_order_ties';
+      // The slot could rank at most one module, or — the vocabulary naming no
+      // other — its ranking placed every module exactly where the baseline does.
+      else cause = 'nothing_else_eligible';
+      return ladder ? { cause, n: ladder.n, nMin: ladder.nMin, slot: s.slot, status: 'unchanged' } : { cause, slot: s.slot, status: 'unchanged' };
+    }
+    // Changed: each module served away from its baseline position, and the term that moved it.
+    const pick = explored.get(s.slot), firstRanked = served.find((d) => !fixed(d));
+    const exploredIds = new Set<string>(pick?.ranking ? served.filter((d) => !fixed(d)).map((d) => d.contentId)
+      : pick && firstRanked?.contentId === pick.pieceId ? [pick.pieceId] : []);
+    // P05: the two modules an adjacent swap exchanged were placed by exploration, each named `exploration` where it moved.
+    const swap = swapped.get(s.slot);
+    if (swap) for (const position of swap.positions) { const d = served[position - 1]; if (d) exploredIds.add(d.contentId); }
+    const yielded = new Set(served.flatMap((d) => (d.explain.diversity ? [...d.explain.diversity.skipped, ...(d.explain.diversity.relaxed ? [d.contentId] : [])] : [])));
+    const moves = served.flatMap((d, k) => {
+      const from = fromOf.get(d.contentId) ?? null;
+      return from === k + 1 ? [] : [{ module: d.contentId, from, to: k + 1 }];
+    });
+    // R-P56 and R-P57: a moved module names the term that changed its place. A
+    // module that exploration itself placed names `exploration`, one the
+    // diversity rule itself made yield or placed by relaxing it `diversity`. Any
+    // other moved module is compared with the modules it passed (moved up) or
+    // that passed it (moved down): the slot's ranked modules other than a fixed
+    // position — a module exploration or the diversity rule placed or displaced
+    // compared like any other — served, or, for a module moved up, placed ahead
+    // of it by the baseline and not served. Each score is itemised term by term
+    // (`scoreTerms`), each term's difference is taken together over those
+    // modules (averaged), and the term by which the module differs most in the
+    // direction it moved is named, an exact tie going to the earlier term of the
+    // fixed order (`differingTerm`). Only where no term separates it from them by
+    // the grain, or there are none, does a rule name it: the rule that placed or
+    // displaced the first of them whose place a rule set, else its own largest
+    // term in that direction.
+    const passed = (a: { from: number | null; to: number }, b: { from: number | null; to: number }) =>
+      (a.from ?? Number.POSITIVE_INFINITY) > (b.from ?? Number.POSITIVE_INFINITY) && a.to < b.to;
+    const servedIds = new Set(served.map((d) => d.contentId)), scoredHere = scoredIn.get(s.slot);
+    const placedByRule = (id: string) => exploredIds.has(id) || yielded.has(id);
+    const termsMemo = new Map<string, ScoreTerms | null>();
+    const termsFor = (id: string, score: number | undefined): ScoreTerms | null => {
+      if (!termsMemo.has(id)) termsMemo.set(id, scoreTerms(id, s.slot, score));
+      return termsMemo.get(id) ?? null;
+    };
+    const termOf = new Map<string, LayoutMoveTerm>();
+    for (const move of moves) {
+      const d = served[move.to - 1]!;
+      const up = move.from === null || move.to < move.from;
+      let term: LayoutMoveTerm | null = exploredIds.has(d.contentId) ? 'exploration' : yielded.has(d.contentId) ? 'diversity' : null;
+      if (!term) {
+        const others: ScoreTerms[] = [];
+        // The rule that placed or displaced the first module it passed, or that
+        // passed it, whose place a rule set: its term only when no term separates.
+        let ruled: LayoutMoveTerm | null = null;
+        const compare = (id: string, score: number | undefined) => {
+          if (placedByRule(id)) ruled ??= exploredIds.has(id) ? 'exploration' : 'diversity';
+          const terms = termsFor(id, score);
+          if (terms) others.push(terms);
+        };
+        for (const [k, o] of served.entries()) {
+          if (o === d || fixed(o)) continue;
+          const at = { from: fromOf.get(o.contentId) ?? null, to: k + 1 };
+          if (up ? passed(move, at) : passed(at, move)) compare(o.contentId, o.score);
+        }
+        // A module moved up also passed every module the baseline placed ahead of it that is no longer served.
+        if (up) for (const id of sequence) {
+          if (servedIds.has(id) || !((fromOf.get(id) ?? Number.POSITIVE_INFINITY) < (move.from ?? Number.POSITIVE_INFINITY))) continue;
+          if (scoredHere ? scoredHere.has(id) : support.has(id)) compare(id, support.get(id));
+          else if (placedByRule(id)) ruled ??= exploredIds.has(id) ? 'exploration' : 'diversity';
+        }
+        const own = termsFor(d.contentId, d.score), sign = up ? 1 : -1;
+        term = (own ? differingTerm(own, others, sign) : null) ?? ruled ?? (own ? largestTerm(own, sign) : null);
+      }
+      if (term) termOf.set(d.contentId, term);
+    }
+    // A module with no term of its own moved because another did: a module moved
+    // down names the term of the first module that passed it, one moved up the
+    // term of the first module it passed.
+    const fallback = moves.map((m) => termOf.get(m.module)).find((t) => t !== undefined) ?? 'affinity';
+    return { moves: moves.map((m): LayoutMove => {
+      const own = termOf.get(m.module), up = m.from === null || m.to < m.from;
+      const other = own ? undefined : moves.filter((o) => o.module !== m.module && termOf.has(o.module) && (up ? passed(m, o) : passed(o, m))).sort((a, b) => a.to - b.to)[0];
+      return { from: m.from, module: m.module, term: own ?? (other ? termOf.get(other.module)! : fallback), to: m.to };
+    }), slot: s.slot, status: 'changed', ...(withheld.length ? { withheld } : {}) };
+  }
+  /**
+   * P29: a ranked module's score itemised term by term, in the engine's fixed
+   * order (R-P56 resolves an exact tie to the earlier term): the shopper's own
+   * interests, each population prior, the anchor bonus, the seed rules, their
+   * model, the stage, freshness, fatigue, merchandising, and the learned lift
+   * (or, under the layout blend, the behaviour terms at 1 − p and the blend's
+   * learned term p × Q). Null when the module's score is unknown.
+   */
+  function scoreTerms(id: string, slot: string, score: number | undefined,
+    learned?: { lift: ReadonlyMap<string, number>; blend: ReadonlyMap<string, { p: number; Q: number }> }): ScoreTerms | null {
+    const key = `${slot}:${id}`, piece = byId.get(id), spec = specOf.get(slot);
+    const tag = tagOf.get(key) ?? score;
+    if (tag === undefined) return null;
+    // P06: the shadow's learned term (`learned`) in place of the served one; every other term is the served ranking's own.
+    const blendOf = learned ? learned.blend.get(key) : blendTerms.get(key), scale = blendOf ? 1 - blendOf.p : 1;
+    // P30: a context-only layout slot is scored on its context's priors at λ 1 too, the region's only where admitted.
+    const layout = contextual.get(slot);
+    const full = below.has(slot) || layout !== undefined;
+    const share = (prior: { lambda: number; share: Readonly<Record<string, Readonly<Record<string, number>>>> } | null, own: Readonly<Record<string, Readonly<Record<string, number>>>> | null) => {
+      const shares = full ? own : prior?.share ?? null, lambda = full ? 1 : prior?.lambda ?? 0;
+      if (!shares || !piece || !spec || !lambda) return 0;
+      // P15: the weights the module was ranked with (its band's on a banded slot).
+      const weights = weightsAt(slot, id, spec);
+      let total = 0;
+      for (const [dim, values] of Object.entries(piece.tags)) {
+        const w = weights[dim] ?? 0; if (!w) continue;
+        for (const v of values) total += lambda * (shares[dim]?.[v] ?? 0) * w;
+      }
+      return total;
+    };
+    // Below the signal floor the slot is scored on the context view, the priors at λ 1.
+    const regional = share(regionalPrior, full && (!layout || layout.region) ? i.contextPrior ?? i.regional?.share ?? null : null);
+    const context = share(contextPriorTerm, full ? i.contextBlendShare ?? i.contextBlend?.share ?? null : null);
+    const completes = complementsOf.has(slot) && piece && completesAnchor(piece) ? complementsOf.get(slot)! : 0;
+    const base = baseOf.get(key), merch = merchOf.get(key);
+    return [
+      ['affinity', scale * (tag - completes - regional - context)], ['regional_prior', scale * regional], ['context_prior', scale * context],
+      ['completes', scale * completes], ['seed', scale * (seedOf.get(key)?.applied ?? 0)], ['external', scale * (extOf.get(key)?.contribution ?? 0)],
+      ['stage', scale * (stageOf.get(key)?.applied ?? 0)], ['freshness', scale * (freshOf.get(key)?.applied ?? 0)], ['fatigue', scale * (fatigueOf.get(key)?.applied ?? 0)],
+      ['merchandising', scale * (merch && base !== undefined ? merch.scoreFinal - base : 0)],
+      ['lift', blendOf ? 0 : learned ? learned.lift.get(key) ?? 0 : liftOf.get(key)?.applied ?? 0], ['blend', blendOf ? blendOf.p * blendOf.Q : 0],
+    ];
+  }
+
   const positionIn = new Map<string, number>();
+  // The ordinal of a ranked position among its slot's ranked positions: after the
+  // prefix pins, and (P04) not counting a module pinned at a position or held
+  // off-limits, which were never ranked.
+  const rankedIn = new Map<string, number>();
   const records: DecisionRecord[] = decisions.map((d) => {
     const position = positionIn.get(d.slot) ?? 0;
     positionIn.set(d.slot, position + 1);
     const regional = regionalOf(d);
+    const contextItem = contextPriorOf(d);
     const key = `${d.slot}:${d.contentId}`;
-    const lift = liftOf.get(key) ?? null;
+    // P62: a lift read from a recent copy that is not the latest says so (`asOf`); any other is as before.
+    const itemised = liftOf.get(key) ?? null, asOf = itemised && d.strategy !== 'tenant-pinned' ? learning?.asOf?.[d.slot] : undefined;
+    const lift = itemised && asOf ? { ...itemised, asOf: { latest: asOf.latest, publishedAt: asOf.publishedAt, version: asOf.version } } : itemised;
     const scoreBase = baseOf.get(key) ?? d.score;
     const pick = explored.get(d.slot);
     const pinned = d.strategy === 'tenant-pinned';
-    const rankingPosition = position - (specOf.get(d.slot)?.pinnedPieceIds?.length ?? 0);
-    const wasExplored = Boolean(pick && (!historicalPins ? !pinned && rankingPosition === 0 : position === 0) && (pick.ranking ? pick.ranking[0] === d.contentId : pick.pieceId === d.contentId));
+    const rankingPosition = rankedIn.get(d.slot) ?? 0;
+    if (!pinned) rankedIn.set(d.slot, rankingPosition + 1);
+    const moduleRule = ruleOf.get(key);
+    // P05: each of the two modules an adjacent swap exchanged is an exploration placement, named with both positions and the bucket.
+    const swap = swapped.get(d.slot);
+    const inSwap = swap !== undefined && (position + 1 === swap.positions[0] || position + 1 === swap.positions[1]);
+    const wasExplored = inSwap || Boolean(pick && (!historicalPins ? !pinned && rankingPosition === 0 : position === 0) && (pick.ranking ? pick.ranking[0] === d.contentId : pick.pieceId === d.contentId));
     const control = controlOf.get(key);
+    // P16: the slot's conversion table, where its learn dials publish one.
+    const conversions = i.slotConversions?.(d.slot) ?? null;
     return {
       // Tenant first, then time: the R2 partition (brand and hour) is derivable from the id alone,
       // so a support paste resolves without anyone having to remember which brand it came from.
       decision_id: `${i.tenant}:${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${d.slot}:${position}${hasNonce ? `:n1:${i.requestId}` : ''}`,
       ...(hasNonce ? { request_id: i.requestId } : {}),
       tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
-      page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
+      page: i.page, slot: d.slot,
+      // P26 (decision D1): an inner content slot's decision names the layout slot and the module it sits in, keys sorted.
+      ...(d.within ? { within: { module: d.within.module, slot: d.within.slot } } : {}),
+      position, item_id: d.contentId, customer_item_id: d.customerContentId,
       ...(!historicalPins && !pinned ? { ranking_position: rankingPosition } : {}),
-      candidates: !historicalPins && pinned ? [{ contentId: d.contentId, score: 0 }] : candidates[d.slot] ?? [],
+      candidates: !historicalPins && pinned ? [{ contentId: d.contentId, score: 0 }] : supportOf(d.slot),
       cell: i.cell, arm: i.arm, explored: wasExplored, authority: authorityOf(d.strategy),
       versions: { ...i.versions, lift: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.version ?? 0, prior: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.priorVersion ?? 0 }, config_label: i.configLabel,
       ...(byId.get(d.contentId)?.featuredProductIds?.length ? { featured_product_ids: [...byId.get(d.contentId)!.featuredProductIds!] } : {}),
       explain: {
-        drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}), lift, score_final: d.score,
-        ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
+        drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}),
+        ...(contextItem ? { contextPrior: contextItem } : {}), lift, score_final: d.score,
+        ...(inSwap && swap ? { exploration: { bucket: swap.bucket, mode: swap.mode, positions: [swap.positions[0], swap.positions[1]] as [number, number], reason: swap.reason } }
+          : wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
         ...(control ? { control } : {}),
         ...(!historicalPins && pinned ? {} : externalOf(d.slot, key)),
         ...(seedOf.has(key) ? { contextual: seedOf.get(key)! } : {}),
@@ -501,18 +1999,92 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(d.explain.diversity ? { diversity: d.explain.diversity } : {}),
         // W20 G2: the slot fell short of its take, on every record it did write.
         ...(shortTakeOf.has(d.slot) ? { shortTake: { ...shortTakeOf.get(d.slot)! } } : {}),
+        // P01: a position the configured order set (a pinned one keeps its pin authority).
+        // P28 (R-P42): on a blended slot the order supplied R, and the member stays beside the blend.
+        ...(!pinned && orderedSlots.has(d.slot) && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
+        // P28: what the layout blend computed, keys sorted (a pinned position was never ranked and carries none).
+        ...(!pinned && blendTerms.has(key) ? { blend: blendRecord(blendTerms.get(key)!) } : {}),
+        // P15: the position band this module was ranked in, keys sorted (a pinned or held position, and one a configured order set, carry none).
+        ...(!pinned && bandOf.has(key) ? { band: { from: bandOf.get(key)!.from, to: bandOf.get(key)!.to } } : {}),
+        // P10: the slot was decided on context alone: the floor in force and the shopper's count of signals, keys sorted.
+        ...(below.has(d.slot) ? { signalFloor: { floor: below.get(d.slot)!, signals: signalCount } } : {}),
+        // P04: the rule that placed this module and the position it set, keys sorted. An off-limits
+        // module held at its place in the configured order for the shopper's context carries that order.
+        ...(moduleRule ? { moduleRule: { position: moduleRule.position, rule: moduleRule.rule } } : {}),
+        ...(moduleRule?.baseline === 'order' && configured.has(d.slot) ? { configuredOrder: configuredOrderRecord(configured.get(d.slot)!) } : {}),
+        // P29: the layout reason of the declared layout slot, the same on every record of the slot, keys sorted.
+        ...(layoutReasons.has(d.slot) ? { layoutReason: layoutReasonRecord(layoutReasons.get(d.slot)!) } : {}),
+        // P06: the slot's baseline and shadow orders, cut at the take, and the terms that would have moved each module, the same on every record of the slot (keys sorted).
+        ...(shadows.has(d.slot) ? shadowRecord(shadows.get(d.slot)!) : {}),
+        // P39: the suppressions in force, on every record of a slot that read the shopper's interests (keys sorted).
+        // P30: never on a context-only layout slot, which reads none of the shopper's interests either.
+        ...(suppressions.length && !below.has(d.slot) && !contextual.has(d.slot) ? { suppressions: suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
+        // P16: the module's success event and the conversion value applied, on every record of a slot with a table (keys sorted).
+        ...(conversions ? { successEvent: successEventOf(byId.get(d.contentId), conversions) } : {}),
       },
       inputs,
     };
   });
+  // P29 (decision D2): the record of each off-limits declared layout slot,
+  // naming the off-limits cause. Kept apart from `records`, which are what the
+  // shopper's decision ring receives, so it carries no exposure, no receipt
+  // reads it and no outcome is credited to it; the decision path writes it to
+  // the ledger. It names no module and no candidate, and the site's own default
+  // has the slot (`authority` default), on the decision's own arm and cell.
+  const offLimitsRecords: DecisionRecord[] = [];
+  for (const s of i.slots) {
+    const reason = layoutReasons.get(s.slot);
+    if (s.offLimits !== true || !reason) continue;
+    offLimitsRecords.push({
+      decision_id: `${i.tenant}:${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${s.slot}:0${hasNonce ? `:n1:${i.requestId}` : ''}`,
+      ...(hasNonce ? { request_id: i.requestId } : {}),
+      tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
+      page: i.page, slot: s.slot, position: 0, item_id: OFF_LIMITS_ITEM, customer_item_id: '', candidates: [],
+      cell: i.cell, arm: i.arm, explored: false, authority: 'default', versions: { ...i.versions, lift: 0, prior: 0 }, config_label: i.configLabel,
+      explain: { drivers: [], note: OFF_LIMITS_LAYOUT_NOTE, score_base: 0, lift: null, score_final: 0, layoutReason: layoutReasonRecord(reason) },
+      inputs,
+    });
+  }
+  const pageReason = i.slots.map((s) => layoutReasons.get(s.slot)).find((reason) => reason !== undefined);
+  // P26: the set names no refused pin and no ignored seed rule set of an inner content slot that was not decided:
+  // nothing of it was served, ranked or refused on this page view. A page without one: exactly as before.
+  // P43 (R-P78): but each pin such a slot reserved is named after the refusals, reason `module_not_returned`,
+  // with its module and layout slot (`within`): the piece stayed reserved and is served nowhere on this page view.
+  const pinsKept = undecided.size && pinDiagnostics ? pinDiagnostics.filter((d) => !undecided.has(d.slot)) : null;
+  const pinDiagnosticsOut = unreturnedPins?.length ? [...(pinsKept ?? pinDiagnostics ?? []), ...unreturnedPins]
+    : pinsKept ? (pinsKept.length ? pinsKept : undefined) : pinDiagnostics;
+  const seedDiagnosticsOut = undecided.size ? seedDiagnostics.filter((d) => !undecided.has(d.slot)) : seedDiagnostics;
 
   return {
     tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
     regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
-    decisions, records, ...(pinDiagnostics ? { pinDiagnostics } : {}),
+    decisions, records, ...(pinDiagnosticsOut ? { pinDiagnostics: pinDiagnosticsOut } : {}),
     ...(shortTakes.length ? { shortTakes } : {}),
-    ...(seedDiagnostics.length ? { seedDiagnostics } : {}),
+    ...(seedDiagnosticsOut.length ? { seedDiagnostics: seedDiagnosticsOut } : {}),
     ...(constraintDiagnostics ? { constraintDiagnostics } : {}),
+    ...(pageReason ? { layoutReason: layoutReasonRecord(pageReason) } : {}),
+    ...(offLimitsRecords.length ? { offLimitsRecords } : {}),
+    // P30 (decision D2): the page's context key, readable, on a page whose declared layout slot is switched to context-only.
+    ...(contextKey ? { contextKey } : {}),
   };
+}
+
+/** P06: the baseline, the shadow and the shadow terms as a record carries them: copies, the terms keyed by module with the keys sorted (R-P7). */
+function shadowRecord(shadow: { baselineOrder: readonly string[]; shadowOrder: readonly string[]; shadowTerms: Readonly<Record<string, readonly LayoutMoveTerm[]>> }):
+  { baselineOrder: string[]; shadowOrder: string[]; shadowTerms: Record<string, LayoutMoveTerm[]> } {
+  return { baselineOrder: [...shadow.baselineOrder], shadowOrder: [...shadow.shadowOrder],
+    shadowTerms: Object.fromEntries(Object.keys(shadow.shadowTerms).sort().map((id) => [id, [...shadow.shadowTerms[id]!]])) };
+}
+
+/** P29: what the record of an off-limits declared layout slot says in words. */
+export const OFF_LIMITS_LAYOUT_NOTE = 'off-limits layout slot — it served nothing and the site’s own default has it; this record names why, for the ledger and the export only';
+
+/** P29: a layout reason as the set, a record and a receipt carry it: keys sorted, the moves (and P31's withheld modules) copied. */
+export function layoutReasonRecord(reason: LayoutReason): LayoutReason {
+  return reason.status === 'changed'
+    ? { moves: reason.moves.map((m) => ({ from: m.from, module: m.module, term: m.term, to: m.to })), slot: reason.slot, status: 'changed',
+      // P31: the withheld modules, each with its cause, keys sorted.
+      ...(reason.withheld?.length ? { withheld: reason.withheld.map((w) => ({ cause: w.cause, module: w.module })) } : {}) }
+    : { cause: reason.cause, ...(reason.n !== undefined ? { n: reason.n } : {}), ...(reason.nMin !== undefined ? { nMin: reason.nMin } : {}), slot: reason.slot, status: 'unchanged' };
 }

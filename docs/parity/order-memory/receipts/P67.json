@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P67",
+  "workOrderHash": "sha256:6a322ea5d887e40990b0b3f15cf49510a42df6e32a7e118924e3411ebda16907",
+  "artifact": {
+    "revision": "c96aef546229309ea186b13ac922821b521b4ea6",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p67-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p67-build at 57db4035 (278ebcdc the mechanism: settleCarriedOutcome gets a remember callback that runs after the guard and the drop re-decision and before the outcome is admitted; the object host records the order with withOrder on its own record through persistAudienceState (the buffered door's call and write), the session host through SessionManager.readBufferedSession(true) + withOrder + writeBufferedSession; an event naming no order or a shopper with no record records nothing; a failure leaves the outcome carried; dc8c46fc kit 02 :99 in place (21 → 23 citations) and shifted citations re-pointed; 57db4035 integration f7cbf331 merged, product tree unchanged); P67 11/11 ×3 on both hosts; the reset purchase re-sent under a new id is dropped as duplicate_order with one outcome record (was two); P63–P66 with the additive legs 108/108, P40 16/16, P56–P62 186/186, W06 51/51, src/ledger+learn+reflex 488/488; no new remote call before any answer.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P67/implementer/REPORT.md",
+      "git commits on rem/p67-joined up to c96aef54"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P67 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/reviewer-p67/logs/p67-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S16/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P67/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T15:42:41.783Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P67.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P67.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

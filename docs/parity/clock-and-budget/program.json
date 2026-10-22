@@ -1,0 +1,273 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-clock-and-budget",
+    "title": "Tapestry parity, the acknowledgement admitted and the witness sized for the edge (amendment 9), 3 tickets",
+    "ticketIds": [
+      "P69",
+      "P70",
+      "P71"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P69",
+      "title": "The acknowledgement is admitted at the decision's time (**amendment 9, 2026-10-20**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
+        "locator": "P69 · section 2 of amendment 9; ACK-401 §0, §8",
+        "requirement": "see amendment 9 section 2, ticket P69 (copied verbatim in the specification)"
+      },
+      "outcome": "A shopper whose device clock lags the engine's keeps every viewable impression: the acknowledgement is admitted at the decision's time instead of being refused. A click or dwell stamped by a device lagging more than the decision-to-engagement time still earns no credit (the engagement's own time is bounded only from above; the learning policy credits an engagement only at or after its exposure): that residual is on the amendment list (R-P188).",
+      "criteria": [
+        {
+          "id": "AK1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a render acknowledgement whose client timestamp is earlier than the decision's engine time (150 ms behind, sent the moment the snapshot answers) is admitted (200, source durable or pending) with admitted.at and the behaviour record's time equal to the decision's time; today: 401 Shopper session unavailable, no row.",
+          "proof": "The P69 acceptance command runs the tests named unit:P69.AK1 in src/units/P69 and they pass."
+        },
+        {
+          "id": "AK2",
+          "kind": "LOCAL",
+          "observable": "Locks: a client clock ahead is clamped to the engine's present (W23); a same-id re-send answers recovered with one row and one exposure (P57); rendered.at >= ts on every ledger row; the other P56 AA4 refusals (unknown decision, another shopper's decision, outside the window) unchanged; no new remote call before the answer under the latency lever.",
+          "proof": "The P69 acceptance command runs the tests named unit:P69.AK2 in src/units/P69 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/ack-401/ANALYSIS.md (track-analyst at f7cbf331); lanes/L9/REPORT.md",
+          "description": "Reproduced locally at five shas (20/20 refused with the client 150 ms behind); hosted refusals follow the walker clock's lag hour by hour; the fix sketched (0 refusals, rendered.at = ts, P57 17/17, AA2 green, AA4 :434 RED as the expected R10)."
+        }
+      ],
+      "remainingWork": [
+        "Drop the client-before-decision refusal at renderOffer.ts:102; admit a first delivery at max(event.timestamp, record.ts) at :118; kit 02 :933 sentence; the specification updates P56 AA4's :434 variant (R10, test-only)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P171 under the owner's standing rule R-P78 (told, not asked)",
+          "effect": "The clamp (the lower bound matching W23's upper bound) is the fix; no SDK-only fix because old bundles stay in use."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/renderOffer.ts",
+        "src/routes/realtime.ts",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P69 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "db84b2768b0b0468a80099e20d8f4744b876091f",
+        "verdict": "PASS",
+        "evidence": [
+          "_evidence/parity-step3/S17/specifier/REPORT.md (rem-specifier; S17 at db84b276: P69 AK1/AK2, the P56 AA4 R10 de83175a, P71 BR1/BR2)",
+          "_evidence/parity-step3/S17/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision db84b276; P69 AK1 RED for the 401 on both hosts ×3, P71 BR1 RED on the object host ×3, the R10 correct; both fixes green together with P67 and the P65 additive legs, 153/153)"
+        ],
+        "negativeControlEvidence": [
+          "_evidence/parity-step3/S17/reviewer/logs/controls/ (twelve sketches: the fix 13/13; the clause dropped without the max → 500 and the rendered.at lock RED; the record at the client's time; the engine's present; an extra call; W23's min removed; a re-send shifted; the window/id checks removed; P71 null-as-no-profile 27/27; drop-all → BR2 RED; the session re-decision removed → BR1 session lock RED)"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P70",
+      "title": "The statistics object stays warm for the witness (**amendment 9, 2026-10-20; re-scoped by R-P191**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
+        "locator": "P70 · section 2 of amendment 9 (re-scoped by R-P191); LIFT-EDGE §2, §5(v)",
+        "requirement": "see amendment 9 section 2, ticket P70 (copied verbatim in the specification)"
+      },
+      "outcome": "A learned lift confirmed on the statistics object is served on the deployed hosts on the decisions that follow within ten minutes of the placement's last touch, because the object keeps itself warm with a bounded heartbeat instead of being woken by the shopper's decision; the first decision after a longer quiet spell is still late and says so.",
+      "criteria": [
+        {
+          "id": "WB1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, after a witness call, an exposure write or a credit write, the statistics object holds an alarm due within WARM_HEARTBEAT_MS (about 5 s) and keeps re-arming it until WARM_TAIL_MS (about 10 minutes) after the last touch; a heartbeat alarm publishes nothing and writes no key; after the tail the heartbeats stop (today: the alarm is armed only 30 s ahead by a write and the object is idle between).",
+          "proof": "The P70 acceptance command runs the tests named unit:P70.WB1 in src/units/P70 and they pass."
+        },
+        {
+          "id": "WB2",
+          "kind": "LOCAL",
+          "observable": "Locks: the single alarm is shared (next due = min of the heartbeat, the publication due at PUBLISH_DELAY_MS, the effect expiry): the 30 s publication timing and the effect-expiry order unchanged; P63 NR1–NR3, P42 PW2, W27 R4, P62 LW1–LW4 and W38 B7 unchanged; the default budgets stay 200 ms and sources.budgets reports them; no new remote call before any answer; the kit states the heartbeat, its bounds and its cost.",
+          "proof": "The P70 acceptance command runs the tests named unit:P70.WB2 in src/units/P70 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts: the §2 probe at 75 s and at 300 s spacing serves the lift on every reader inside the tail.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/lift-edge/ANALYSIS.md (track-analyst at 371bfca8); lanes/L9 and L10 reports and probes",
+          "description": "Eviction after about 13–17 s of idleness; served 40/41 under 13 s idle, 0/51 at 17 s or more; the object's own first-call work small; the budget route cannot be computed (every cold read censored) and costs every cold answer; keep-warm ranked first (no authority change)."
+        }
+      ],
+      "remainingWork": [
+        "Record the touch and arm the shared alarm within WARM_HEARTBEAT_MS for WARM_TAIL_MS (LearnStats.ts: arm, alarmScoped, the witness door); the heartbeat branch publishes nothing; kit 02/03; the pair's 600 ms override removed at the next release."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P191 under the owner's standing rule R-P78 (told, not asked)",
+          "effect": "The keep-warm heartbeat is the fix; its cost (up to 720 alarm invocations per object-hour inside the tail, the object resident for the tail) is told to the owner; the KV witness record stays listed as the long-quiet-spell shape pending an authority ruling."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/durable-objects/LearnStats.ts",
+        "src/learn/fan.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "wrangler.toml"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P70 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S18 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S18 records the reviewed revision and the RED/HONEST evidence here"
+        ],
+        "negativeControlEvidence": [
+          "pending: named at the specification review"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P71",
+      "title": "The object host's buffered re-decision fires (**amendment 9, 2026-10-20**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-9/BTI-Parity-Amendment-2026-10-20c.md (amendment 9, committed beside the program)",
+        "locator": "P71 · section 2 of amendment 9; R-P170",
+        "requirement": "see amendment 9 section 2, ticket P71 (copied verbatim in the specification)"
+      },
+      "outcome": "A buffered-door event with no profile that resets between its two admissions gets no outcome the engine would have dropped, on the object host as on the session host.",
+      "criteria": [
+        {
+          "id": "BR1",
+          "kind": "LOCAL",
+          "observable": "On the object host, a buffered-door event with no profile, reset between the behaviour capture's admission and the outcome's, has NO outcome record after the alarm (today: one, because the re-decision tests undefined while the loaded state is null); the session host unchanged.",
+          "proof": "The P71 acceptance command runs the tests named unit:P71.BR1 in src/units/P71 and they pass."
+        },
+        {
+          "id": "BR2",
+          "kind": "LOCAL",
+          "observable": "Locks: P65 RS1–RS3 and the additive legs unchanged; P67 unchanged; a buffered-door event WITH a profile, reset the same way, keeps its outcome after the alarm.",
+          "proof": "The P71 acceptance command runs the tests named unit:P71.BR2 in src/units/P71 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/P67/implementer/REPORT.md (\"P65 gap I found\"); the P67 delivery review",
+          "description": "`this.affinity === undefined` at :4029 against `load()` setting null at :3852-3853."
+        }
+      ],
+      "remainingWork": [
+        "ShopperReflex.ts:4029: treat the loaded null as \"no profile\" in the buffered re-decision."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P170 under R-P78",
+          "effect": "A one-line fail-closed correction with RED units on the object host."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/durable-objects/ShopperReflex.ts",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P71 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "db84b2768b0b0468a80099e20d8f4744b876091f",
+        "verdict": "PASS",
+        "evidence": [
+          "_evidence/parity-step3/S17/specifier/REPORT.md (rem-specifier; S17 at db84b276: P69 AK1/AK2, the P56 AA4 R10 de83175a, P71 BR1/BR2)",
+          "_evidence/parity-step3/S17/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision db84b276; P69 AK1 RED for the 401 on both hosts ×3, P71 BR1 RED on the object host ×3, the R10 correct; both fixes green together with P67 and the P65 additive legs, 153/153)"
+        ],
+        "negativeControlEvidence": [
+          "_evidence/parity-step3/S17/reviewer/logs/controls/ (twelve sketches: the fix 13/13; the clause dropped without the max → 500 and the rendered.at lock RED; the record at the client's time; the engine's present; an extra call; W23's min removed; a re-send shifted; the window/id checks removed; P71 null-as-no-profile 27/27; drop-all → BR2 RED; the session re-decision removed → BR1 session lock RED)"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

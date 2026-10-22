@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-lift-witness",
+    "title": "Tapestry parity, the learned lift on the edge (amendment 6), 3 tickets",
+    "ticketIds": [
+      "P61",
+      "P62",
+      "P63"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P61",
+      "title": "Every lift and ring outcome is told in sources and counted in the monitor (**amendment 6, 2026-10-19**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-6/BTI-Parity-Amendment-2026-10-19b.md (amendment 6, committed beside the program)",
+        "locator": "P61 · section 2 of amendment 6; ANALYSIS.md §1 and §5 F1",
+        "requirement": "see amendment 6 section 2, ticket P61 (copied verbatim in the specification)"
+      },
+      "outcome": "An operator reading a decision's sources sees why a learned lift or a fatigue term was or was not applied, per slot and with the milliseconds, and the monitor counts each outcome per tenant, instead of a silent null.",
+      "criteria": [
+        {
+          "id": "LO1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a decision answered with the lift served names sources.lift[slot].outcome 'served' with its milliseconds; with the witness delayed past its budget, 'late' with ms at or above the budget; with a copy the object never published, 'unrecognized'; with an incompatible copy, 'incompatible'; with no copy, 'none'; with an unhealthy object, 'unhealthy'; with a superseded copy, 'superseded'; with a failed call, 'failed'.",
+          "proof": "The P61 acceptance command runs the tests named unit:P61.LO1 in src/units/P61 and they pass."
+        },
+        {
+          "id": "LO2",
+          "kind": "LOCAL",
+          "observable": "On both hosts, sources.ring.outcome names 'read' when the ring answered within its budget, 'late' when it did not, 'failed' on an error and 'skipped' when no slot has a fatigue dial, each with milliseconds.",
+          "proof": "The P61 acceptance command runs the tests named unit:P61.LO2 in src/units/P61 and they pass."
+        },
+        {
+          "id": "LO3",
+          "kind": "LOCAL",
+          "observable": "The monitor counts each lift and ring outcome per tenant and the counts equal what the decisions reported.",
+          "proof": "The P61 acceptance command runs the tests named unit:P61.LO3 in src/units/P61 and they pass."
+        },
+        {
+          "id": "LO4",
+          "kind": "LOCAL",
+          "observable": "Locks: the ledger record, the replay equality and the shopper's decisions[] members are byte for byte as today; P07 C4's term-for-term comparison, P42 PW3, P49 and P50 units unchanged; the witness's boolean shape kept for its callers.",
+          "proof": "The P61 acceptance command runs the tests named unit:P61.LO4 in src/units/P61 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/lift-budget/ANALYSIS.md (track-analyst at 452d2c38)",
+          "description": "Both mechanisms traced and reproduced locally (E0–E5); the hosted laps and KV lags from lanes L1, L3, L7."
+        }
+      ],
+      "remainingWork": [
+        "Internal witness reason; sources.lift and sources.ring members; monitor counters per tenant.",
+        "Records untouched.",
+        "The learning-reads count runs after the answer and outside the shopper's serializer (tenant-level state), so the shopper's next request never waits on it (R-P115)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P110 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "Outcomes are named on the answer's sources, never on the record, so every record lock stays."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/learn/fan.ts",
+        "src/content/service.ts",
+        "src/content/types.ts",
+        "src/ops/monitor.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "src/identity/sessionAuthority.ts"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P61 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "4ddf539a on rem/spec-lift (batch S11, amendment 6; P61 units 98645a01 with src/units/_parity9.ts, the wording fix 0a78f82d, the header d692b269 and the R-P120 additions 4ddf539a (F2 the R-P115 latency leg, F3 the failed store read, F4 the synthetic/environment/answered legs); P62 units 7a1ba463 with the fix round ee516a67; the W38 B7 late-answer R10 10a4083e; the five R10 updates ccc9294c)",
+        "verdict": "PASS",
+        "evidence": [
+          "Specification review (SPEC mode) at 10a4083e then the re-judge at d692b269: P61 LO1-LO4 RED 28 / GREEN 6 three runs with every first failure naming the missing sources.lift / sources.ring / learningReads member and LO4 locks with controls; P62 LW1-LW4 RED 31 / GREEN 24 three runs (constants absent, the edge default and overrides not applied, POST /witness 404, the decision path on /health, the same-generation V1 copy not applied, the window constant absent, the ring unbounded, the evicted-object door and the window-origin tests RED); the 200 ms / 115 800 ms derivations judged honest; sketch P61 34/34 and P62 55/55 three runs; locks 103/103 with the harness present; the window test timing-proof (frozen clock); 300 ms slack derived from a 15-run probe; evidence under _evidence/parity-step3/S11/reviewer/ and S11/specifier/",
+          "Re-judge at 4ddf539a: the ten added tests RED at the spec head for the right reason and 44/44 on the P61 build three runs; m5, m5b, m6, m7, m8b, m9, m10 each caught 3/3 on both hosts; the vi.mock a pass-through (the 34 existing tests' results and timings unchanged); the 250 ms margin ~7× the observed jitter and under both mutants' effects; the synthetic arming is W26.R2's real path"
+        ],
+        "negativeControlEvidence": [
+          "Mutants of the sketch each caught by a named test on both hosts: m1 late witness reported served (LO1, LO3), m2/m2b counting on the default arm or without consent (LO3), m3 superseded copy of another generation accepted (LW3), m4 /witness still digests the whole state (LW2), m5/m5b override accepted out of range (LW1), m6 asOf on the latest copy (LO4, LW3, LW4), m7a ring aborted 1 s late (LW4, after the fix round), m7b/m7c ring aborted 3 s late or never (LW4), m8 window counted from supersession (LW3, after the fix round), m11 evicted object's first /witness digests the whole state (LW2, after the fix round); lock controls for compatible(), the forged digest, the generation and fence binding, the unhealthy state, P42 stale / P49 republished, the default arm, the page-scoped witness, the publish order, records without asOf"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P62",
+      "title": "The lift witness tolerates the edge: named, configurable budgets with an edge-sized default, a light witness door, and a same-generation superseded copy served with asOf (**amendment 6, 2026-10-19**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-6/BTI-Parity-Amendment-2026-10-19b.md (amendment 6, committed beside the program)",
+        "locator": "P62 · section 2 of amendment 6; ANALYSIS.md §4 and §5 F2, F3",
+        "requirement": "see amendment 6 section 2, ticket P62 (copied verbatim in the specification)"
+      },
+      "outcome": "A published and confirmed learned lift is served to the shopper on the deployed workers, not withheld by a budget sized for an in-process object or by a copy a routine republication superseded seconds earlier.",
+      "criteria": [
+        {
+          "id": "LW1",
+          "kind": "LOCAL",
+          "observable": "The lift witness budget and the ring read budget are exported named constants with a validated, bounded environment override; the code defaults are derived in the specification from the engine's measured object cost and a per-call round trip and are above the edge's observed witness laps; W38 B7's late-answer lock holds as 'budget plus margin' (R10).",
+          "proof": "The P62 acceptance command runs the tests named unit:P62.LW1 in src/units/P62 and they pass."
+        },
+        {
+          "id": "LW2",
+          "kind": "LOCAL",
+          "observable": "On both hosts, the statistics object answers a witness door from a verdict cached at commit or publish without reading or digesting its whole state (a spy proves no storage.get('learn') and no whole-state digest on the door), and the decision path uses it; the health door is unchanged for operators.",
+          "proof": "The P62 acceptance command runs the tests named unit:P62.LW2 in src/units/P62 and they pass."
+        },
+        {
+          "id": "LW3",
+          "kind": "LOCAL",
+          "observable": "On both hosts, after V1 is published and decided and the object republishes V2, a decision holding the V1 copy within the isolate cache, and one served from a KV copy still answering V1, are both served with explain.lift.asOf.version V1 and latest V2; a copy outside the bounded window, a forged digest, a different witness (configuration, fence or projection), an unhealthy object, and a copy after an explicit reset or generation transition are not served.",
+          "proof": "The P62 acceptance command runs the tests named unit:P62.LW3 in src/units/P62 and they pass."
+        },
+        {
+          "id": "LW4",
+          "kind": "LOCAL",
+          "observable": "Locks: compatible(), the refusal of an unpublished digest, the generation and fence binding, state healthy, the P42 stale and P49 republished members, no lift read on the default arm, the page-scoped witness, the ring's bound, the publish order; P42, P49, P50, P55, W26 R2, W23 H1 units unchanged; records without asOf byte for byte as today.",
+          "proof": "The P62 acceptance command runs the tests named unit:P62.LW4 in src/units/P62 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/lift-budget/ANALYSIS.md (track-analyst at 452d2c38)",
+          "description": "Both mechanisms traced and reproduced locally (E0–E5); the hosted laps and KV lags from lanes L1, L3, L7."
+        }
+      ],
+      "remainingWork": [
+        "Constants and env override; the W38 B7 R10 (budget plus margin).",
+        "The witness door on LearnStats with a cached verdict; the decision path's witness uses it.",
+        "The recent-publication window on the object; the same-generation acceptance; explain.lift.asOf only when not latest.",
+        "The ring call is aborted at its budget so the owner never waits past it (the lock's property made true, R-P112); the asOf member carried through replay.ts."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "R-P110 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "The code default is raised and sized for the edge; W38 B7 keeps its property with the literal replaced (R-P110 decision 1)."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "R-P110 (_evidence/parity-step3/AMENDMENTS.md, 2026-10-19) under the owner's standing rule R-P78",
+          "effect": "A superseded copy of the same generation is served within a bounded window, marked asOf (R-P110 decision 2)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/learn/fan.ts",
+        "src/learn/stats.ts",
+        "src/content/service.ts",
+        "src/content/types.ts",
+        "src/content/decide.ts",
+        "src/durable-objects/LearnStats.ts",
+        "src/index.ts",
+        "wrangler.toml",
+        "src/units/W38/LEDGER.unit.test.ts (R10 of the late-answer lock only, by the specifier)",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "src/learn/replay.ts",
+        "src/units/W38/LEDGER.unit.test.ts (R10 of :519 B4 stub and :831 B7 main test, budget-derived, by the specifier; R-P112)",
+        "src/content/consent.test.ts (R10 of W10.03 :757-794 and W24.01 :813-816 witness-door stubs only, by the specifier)",
+        "src/index.api-boundary.test.ts (R10 of the hold-health fault :284, :1724-1726 only, by the specifier)",
+        "src/learn/learn.test.ts (R10 of W06.06 :1771 timer advance derived from the ring budget, by the specifier)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P62 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "4ddf539a on rem/spec-lift (batch S11, amendment 6; P61 units 98645a01 with src/units/_parity9.ts, the wording fix 0a78f82d, the header d692b269 and the R-P120 additions 4ddf539a (F2 the R-P115 latency leg, F3 the failed store read, F4 the synthetic/environment/answered legs); P62 units 7a1ba463 with the fix round ee516a67; the W38 B7 late-answer R10 10a4083e; the five R10 updates ccc9294c)",
+        "verdict": "PASS",
+        "evidence": [
+          "Specification review (SPEC mode) at 10a4083e then the re-judge at d692b269: P61 LO1-LO4 RED 28 / GREEN 6 three runs with every first failure naming the missing sources.lift / sources.ring / learningReads member and LO4 locks with controls; P62 LW1-LW4 RED 31 / GREEN 24 three runs (constants absent, the edge default and overrides not applied, POST /witness 404, the decision path on /health, the same-generation V1 copy not applied, the window constant absent, the ring unbounded, the evicted-object door and the window-origin tests RED); the 200 ms / 115 800 ms derivations judged honest; sketch P61 34/34 and P62 55/55 three runs; locks 103/103 with the harness present; the window test timing-proof (frozen clock); 300 ms slack derived from a 15-run probe; evidence under _evidence/parity-step3/S11/reviewer/ and S11/specifier/"
+        ],
+        "negativeControlEvidence": [
+          "Mutants of the sketch each caught by a named test on both hosts: m1 late witness reported served (LO1, LO3), m2/m2b counting on the default arm or without consent (LO3), m3 superseded copy of another generation accepted (LW3), m4 /witness still digests the whole state (LW2), m5/m5b override accepted out of range (LW1), m6 asOf on the latest copy (LO4, LW3, LW4), m7a ring aborted 1 s late (LW4, after the fix round), m7b/m7c ring aborted 3 s late or never (LW4), m8 window counted from supersession (LW3, after the fix round), m11 evicted object's first /witness digests the whole state (LW2, after the fix round); lock controls for compatible(), the forged digest, the generation and fence binding, the unhealthy state, P42 stale / P49 republished, the default arm, the page-scoped witness, the publish order, records without asOf"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P63",
+      "title": "The statistics object does not republish an unchanged state (**amendment 6, 2026-10-19**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-6/BTI-Parity-Amendment-2026-10-19b.md (amendment 6, committed beside the program)",
+        "locator": "P63 · section 2 of amendment 6; ANALYSIS.md §5 F2b, E5",
+        "requirement": "see amendment 6 section 2, ticket P63 (copied verbatim in the specification)"
+      },
+      "outcome": "Routine alarms stop moving the published version when nothing changed, so copies are superseded only by real evidence, while a stale or republished marker is still cleared by the next alarm publication as P42 PW2 promises.",
+      "criteria": [
+        {
+          "id": "NR1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, two alarms with no new evidence between them leave the published version unchanged (today it moves: E5).",
+          "proof": "The P63 acceptance command runs the tests named unit:P63.NR1 in src/units/P63 and they pass."
+        },
+        {
+          "id": "NR2",
+          "kind": "LOCAL",
+          "observable": "On both hosts, an alarm after new evidence publishes a new version as today.",
+          "proof": "The P63 acceptance command runs the tests named unit:P63.NR2 in src/units/P63 and they pass."
+        },
+        {
+          "id": "NR3",
+          "kind": "LOCAL",
+          "observable": "Locks: with a stale or republished marker in force the next alarm publication succeeds and clears it (P42 PW2, P49 units unchanged); the publish order unchanged.",
+          "proof": "The P63 acceptance command runs the tests named unit:P63.NR3 in src/units/P63 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/baseline-52/lift-budget/ANALYSIS.md (track-analyst at 452d2c38)",
+          "description": "Both mechanisms traced and reproduced locally (E0–E5); the hosted laps and KV lags from lanes L1, L3, L7."
+        }
+      ],
+      "remainingWork": [
+        "Skip the alarm publication when the state digest equals the last published digest and no marker is in force.",
+        "Kit 02 line ~933: the citation src/identity/sessionAuthority.ts:382-384 shifted by P61 lands on the comment above AcknowledgementConflictError (the class is at :385-386); corrected by the P63 builder (P62 delivery review F2, R-P129). The comment at LearnStats.ts:1666 (\"latest alone\") overstates a failed recent-list write; corrected by the P63 builder (F5)."
+      ],
+      "decisions": [],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/durable-objects/LearnStats.ts",
+        "src/learn/stats.ts",
+        "docs/kit/03-payload-schemas.md",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P63 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "0b1aa93cf28cfa086bc098fa24507e7077d69d39",
+        "verdict": "PASS",
+        "evidence": [
+          "_evidence/parity-step3/S14/specifier/REPORT.md (rem-specifier; S14 at 41a8dba4, the R-P138 fix round at 0b1aa93c: NR2 credit-alone and learn-document-alone legs, NR3 marker legs from an alarm publication)",
+          "_evidence/parity-step3/S14/reviewer-spec/REPORT.md (rem-reviewer: FAIL on NR2/NR3 at 41a8dba4, PASS at the reviewed revision 0b1aa93c; NR1 RED for the right reason (E5) on both hosts ×3)"
+        ],
+        "negativeControlEvidence": [
+          "_evidence/parity-step3/S14/reviewer/rejudge-0b1aa93c/logs/ (sketches A2 26/26; B2 RED :255; G RED :221/:234; E RED :234; C RED :303; D 6/26; door mutants M1 RED :333, M2 RED :345)"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

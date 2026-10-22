@@ -12,7 +12,7 @@ import { parseId, type OutcomeRecord } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
 import { logicalIdentity, LOGICAL_EXCLUDED_FIELDS } from '@/ledger/delivery';
-import { attributeWindowed, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+import { attributeWindowed, successCreditOf, uncorrelatedBrandMismatches, type AttributionPolicy, type RingEntry } from '@/learn/policy';
 /**
  * How far back this ring reaches. Exported because it is not this object's
  * private business: the online fan-out declares it as the horizon it actually
@@ -29,7 +29,8 @@ import { attributeWindowed, creditWeight, type AttributionPolicy, type RingEntry
  */
 import { RING_MAX_AGE_MS } from '@/learn/stats';
 export { RING_MAX_AGE_MS };
-import { deliverStats, emptyStatsDelivery, learningGenerations, moneyRefusal, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import { deliverStats, emptyStatsDelivery, identityPage, learningGenerations, moneyRefusal, pageScopedOf, positionRowOf, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import { isCatalogueName } from '@/content/kinds';
 import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
 import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
 
@@ -120,6 +121,12 @@ async function bodyOf(request: Request): Promise<unknown> {
  * one event and is credited once. An entry stored before this (id only) still
  * suppresses every repeat of its id: it can lose a credit it cannot tell apart,
  * never grant one twice, and it ages out within the ring's horizon.
+ *
+ * W22 R2 (R143): when the digest cannot be computed the journal falls back to
+ * that same id-only rule, in both directions — a credited record whose digest
+ * fails is remembered as an id-only entry, and a delivery whose digest fails
+ * is a repeat of any entry of its id — so a digest failure never credits a
+ * redelivery again.
  */
 const CREDITED_KEY = 'credited';
 const CREDITED_MAX_BYTES = 256 * 1024;
@@ -132,7 +139,14 @@ interface CreditPlan { receipt: OutcomeReceipt; batches: Array<{ name: string; b
 interface ManagedOutcome { tenant: string; brand?: string; outcome: OutcomeRecord; policy: AttributionPolicy;
   slotConfig?: Record<string, SlotLearnConfig>; defaultSlotConfig?: SlotLearnConfig; version?: number; consentUntil?: number;
   /** W24 R1.04: the tenant's published money policy, resolved by the producer and decided here, per slot. */
-  money?: MoneyPolicy | null }
+  money?: MoneyPolicy | null;
+  /**
+   * W26 R2: the slot names whose storage identity carries the page, resolved by
+   * the producer from the tenant's catalogue. The ring knows the page of every
+   * decision it credits, so it is here that a credit is routed to its own
+   * page's statistics object. Absent means none.
+   */
+  pageScoped?: string[] }
 
 /**
  * W24 R1.04: the money policy as this object will use it, or null.
@@ -150,6 +164,37 @@ function moneyPolicyOf(value: unknown): MoneyPolicy | null {
     && Object.keys(value).every(key => key === 'currency' || key === 'nonpositive')
     ? { currency, nonpositive } : null;
 }
+/**
+ * P33 (decision D1, freeze item 11; R-P39, S4F-C6): the slots whose OWN slot
+ * configuration names their own attribution policy, sorted, read before
+ * anything is attributed. `module-tied` is the only one; any other value, or
+ * one on the document default (which is no slot's own), refuses the whole
+ * plan before anything is sent, as every other malformed configuration does.
+ */
+function moduleTiedSlotsOf(slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig): string[] {
+  if (object(defaultSlotConfig) && Object.hasOwn(defaultSlotConfig, 'attribution')) throw new Error('Credit configuration unavailable');
+  if (!object(slotConfig)) return [];
+  const out: string[] = [];
+  for (const [slot, config] of Object.entries(slotConfig)) {
+    if (!object(config) || !Object.hasOwn(config, 'attribution')) continue;
+    if (config.attribution !== 'module-tied') throw new Error('Credit configuration unavailable');
+    out.push(slot);
+  }
+  return out.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+/**
+ * P33: the policy this ring credits by. The brand-wide policy the producer
+ * sent, with each slot's own attribution policy taken from the slot
+ * configuration alone (its one carrier into the ring), so a member the body's
+ * policy carried itself is never read; with no such slot, the policy as sent.
+ */
+function ringPolicyOf(policy: AttributionPolicy, tied: readonly string[]): AttributionPolicy {
+  const { slotAttribution: _carried, ...brand } = policy;
+  void _carried;
+  if (!tied.length) return Object.hasOwn(policy, 'slotAttribution') ? brand : policy;
+  return { ...brand, slotAttribution: Object.fromEntries(tied.map(slot => [slot, 'module-tied' as const])) };
+}
+
 interface SavedPlan { version: 1; digest: string; generation: number; tenant: string; subject: string; ts: number;
   retention: RetentionStamp; consentUntil: number; plan: CreditPlan; completed: Record<string, StatsDelivery>; cleanup?: true; retired?: true }
 
@@ -229,6 +274,8 @@ export class DecisionRing {
       case '/outcome': {
         const body = await bodyOf(request) as ManagedOutcome | null;
         if (!object(body) || !body.outcome || !body.policy || !body.tenant) return json({ ok: false, error: 'outcome and policy required' }, 400);
+        const scoped = pageScopedOf(body.pageScoped);
+        if (!scoped) return json({ ok: false, error: 'pageScoped must be catalogue slot names' }, 400);
         if (body.version === 2) {
           const saved = await this.managedPlan(body), key = 'creditPlan:' + await recoveryDigest(body.outcome.outcome_id);
           if (url.pathname === '/outcome/prepare') return json({ ok: true, digest: saved.digest, destinations: saved.plan.batches.map(batch => batch.name) });
@@ -256,7 +303,7 @@ export class DecisionRing {
         // sent, so a redelivered outcome leaves every online counter exactly
         // where one delivery left it.
         const repeat = await this.serialize(() => this.alreadyCredited(body.outcome!));
-        const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig, false, moneyPolicyOf(body.money)));
+        const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig, false, moneyPolicyOf(body.money), scoped));
         if (repeat) {
           // The receipt says what this outcome attributes to and that those
           // credits are applied in the statistics — which they are, by the
@@ -482,7 +529,7 @@ export class DecisionRing {
     return receipt;
   }
 
-  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false, money?: MoneyPolicy | null): Promise<CreditPlan> {
+  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false, money?: MoneyPolicy | null, scoped: ReadonlySet<string> = new Set()): Promise<CreditPlan> {
     const subject = recordSubject(outcome, 'outcome');
     if (tenant !== subject.tenant || brand !== outcome.brand) throw new Error('Ring scope unavailable');
     const { data: d, cutoff } = await this.current(subject);
@@ -493,15 +540,26 @@ export class DecisionRing {
     // silent about a correlated credit refused for a brand disagreement.
     const plan: CreditPlan = { receipt: { version: 1, kind: 'outcome', received: 1, cutoffSkipped: 0,
       attributed: 0, eligible: 0, weightSkipped: 0, outsideWindow: 0, brandMismatched: 0, credits: emptyStatsDelivery() }, batches: [] };
+    // P33 (R-P35, S4F-C5): the itemisation of how this outcome was credited,
+    // written here, on the attribution record this ring derives — the credit
+    // plan's receipt, on the managed and the unmanaged path alike — for every
+    // outcome, one that credits nothing included, and only when a slot names
+    // its own attribution policy. Each entry's `credited` is filled from the
+    // credit effects below; an outcome that returns before them credited none.
+    const tied = moduleTiedSlotsOf(slotConfig, defaultSlotConfig), credited = new Map<string, string[]>();
+    const attributing = ringPolicyOf(policy, tied);
+    if (tied.length) plan.receipt.attribution = tied.map(slot => ({ slot, policy: 'module-tied' as const, credited: [] }));
     if (managed) plan.retention = requireRetention(this.env, outcome.retention?.online, tenant, 'online');
     if (cutoff !== undefined && outcome.ts <= cutoff) { plan.receipt.cutoffSkipped = 1; return plan; }
     requireRetention(this.env, outcome.retention?.online, tenant, 'online');
     // Explicit references check ambiguity before arm filtering. Doc 22 §10
     // still forbids forwarding any holdout credit to online statistics.
     const all: RingEntry[] = d.ring.map(ringEntryOf), correlated = Object.hasOwn(outcome, 'decision_id');
+    const recordOf = new Map(d.ring.map(row => [row.decision_id, row] as const));
+    const pageOfDecision = new Map(all.map(e => [e.id, e.page]));
     const ring = correlated ? all : all.filter((e) => e.arm === 'personalized' && e.brand === outcome.brand);
     const compatible = ring.filter(e => (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1'));
-    const attribution = attributeWindowed(outcome, compatible, policy);
+    const attribution = attributeWindowed(outcome, compatible, attributing);
     const credits = attribution.credits.filter(c => !correlated
       || all.some(e => e.id === c.decision_id && e.arm === 'personalized'));
     // What the reward's own window refused, counted over the same candidates
@@ -512,10 +570,27 @@ export class DecisionRing {
     // decision this outcome named but was served under another brand. Counted
     // over the same candidates attribution considered, so it reports a refusal
     // that happened and never a decision this outcome never named.
-    plan.receipt.brandMismatched = attribution.brandMismatched;
+    // W26 R4 (LANE-LOG R198): an outcome that names NO decision is counted as
+    // well — the placements of another brand it would have been credited to,
+    // under the same policy, in a slot its own brand credited nothing. Counted
+    // over the same personalized, basis-compatible entries attribution reads;
+    // an entry that carries no brand cannot establish a disagreement and is
+    // never counted.
+    plan.receipt.brandMismatched = correlated ? attribution.brandMismatched
+      : uncorrelatedBrandMismatches(outcome, all.filter(e => e.arm === 'personalized' && typeof e.brand === 'string' && e.brand !== outcome.brand
+        && (e.measurementBasis ?? 'served-v1') === ((slotConfig[e.slot] ?? defaultSlotConfig)?.measurementBasis ?? 'served-v1')), attributing, attribution.credits);
     // Prepare every destination before sending, preserving the existing per-slot objective arithmetic.
     const bySlot = new Map<string, typeof credits>();
     for (const c of credits) bySlot.set(c.slot, [...(bySlot.get(c.slot) ?? []), c]);
+    // P16 (decision D1, freeze item 14): the entry each credit was attributed
+    // from, whose record names the decision's success event where its slot
+    // publishes a conversion table; and the slots whose only matching
+    // decisions named another success event, refused below for their reward
+    // exactly as a slot learning another reward is (holdout decisions are
+    // never credited, so never named).
+    const entryOf = new Map(all.map(e => [e.id, e] as const));
+    const unsuccessful = new Set((attribution.unsuccessful ?? []).map(id => entryOf.get(id))
+      .filter((e): e is RingEntry => e !== undefined && e.arm === 'personalized').map(e => e.slot));
     /**
      * W24 R1.03/R1.04 (build review findings 1 and 2): what each slot refused,
      * decided HERE — per credited slot, with that slot's own configuration —
@@ -533,7 +608,8 @@ export class DecisionRing {
       if (!object(config) || !['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'].includes(config.reward)
         || (config.objective !== undefined && !['unit', 'revenue', 'margin'].includes(config.objective)) || !object(config.stats)) throw new Error('Credit configuration unavailable');
       const s = config.stats;
-      if (!Object.keys(config).every(k => ['reward', 'stats', 'objective', 'measurementBasis'].includes(k))
+      if (!Object.keys(config).every(k => ['reward', 'stats', 'objective', 'measurementBasis', 'attribution'].includes(k))
+        || config.attribution !== undefined && config.attribution !== 'module-tied'
         || config.measurementBasis !== undefined && config.measurementBasis !== 'served-v1' && config.measurementBasis !== 'rendered-v1'
         || !Object.keys(s).every(k => ['n0', 'tauLearnMs', 'nMin', 'liftMin', 'liftMax'].includes(k))
         || ![s.n0, s.tauLearnMs, s.nMin, s.liftMin, s.liftMax].every(v => typeof v === 'number' && Number.isFinite(v))
@@ -556,10 +632,17 @@ export class DecisionRing {
        * learns from purchases; the click-learning slot takes nothing from it
        * and says so by name.
        */
-      if (config.reward !== outcome.type) { refusedBySlot.set(slot, 'reward'); continue; }
-      plan.receipt.attributed += list.length;
+      //
+      // P16 (decision D1, freeze items 14 and 43): or, for a decision whose
+      // record names its success event, against that event, at the value the
+      // record names in the slot's currency, kept under the slot's own reward
+      // counter (`successCreditOf`, the one rule every offline fold reads too).
+      const priced = list.map(c => ({ c, success: successCreditOf(entryOf.get(c.decision_id)?.successEvent, config, outcome) }));
+      const taken = priced.filter((p): p is { c: typeof p.c; success: NonNullable<typeof p.success> } => p.success !== null);
+      if (!taken.length) { refusedBySlot.set(slot, 'reward'); continue; }
+      plan.receipt.attributed += taken.length;
       // CW27: the credit is worth what the slot's objective says; a worthless credit is not sent.
-      const weighed = list.map((c) => ({ ...c, weight: creditWeight(config.objective, outcome) })).filter((c) => c.weight > 0);
+      const weighed = taken.map(({ c, success }) => ({ ...c, reward: success.reward, weight: success.weight })).filter((c) => c.weight > 0);
       if (managed) for (const credit of weighed) {
         const selected = d.ring.filter(row => row.decision_id === credit.decision_id);
         if (selected.length !== 1) throw new Collision();
@@ -568,10 +651,45 @@ export class DecisionRing {
         const original = requireRetention(this.env, selected[0]!.retention?.online, tenant, 'online');
         plan.retention = mergeRetention(plan.retention, original, tenant, 'online');
       }
-      plan.receipt.eligible += weighed.length; plan.receipt.weightSkipped += list.length - weighed.length;
-      if (weighed.length) plan.batches.push({ name: statsName(tenant, brand, slot), received: weighed.length,
-        body: { tenant, brand, slot, config, credits: weighed } });
+      plan.receipt.eligible += weighed.length; plan.receipt.weightSkipped += taken.length - weighed.length;
+      // W26 R2: each credit goes to the statistics object of the PLACEMENT its
+      // decision was served in — the slot, and the page where the tenant's
+      // catalogue carries this slot name on more than one page — read off the
+      // ring entry that earned it, never inferred from the outcome.
+      if (tied.includes(slot)) credited.set(slot, weighed.map(credit => credit.decision_id));
+      // P33 (S4F-C6): the statistics object is sent the slot's configuration
+      // without the slot's own attribution policy, so the configuration it
+      // receives is exactly reward, stats, objective and measurement basis.
+      const sent: SlotLearnConfig = Object.hasOwn(config, 'attribution')
+        ? Object.fromEntries(Object.entries(config).filter(([key]) => key !== 'attribution')) as unknown as SlotLearnConfig : config;
+      const placements = new Map<string, { page?: string; credits: typeof weighed }>();
+      for (const credit of weighed) {
+        const page = identityPage(scoped, slot, pageOfDecision.get(credit.decision_id));
+        if (scoped.has(slot) && !isCatalogueName(page)) throw new Error('Credit placement unavailable');
+        const name = statsName(tenant, brand, slot, page);
+        const group = placements.get(name) ?? { ...(page ? { page } : {}), credits: [] };
+        group.credits.push(credit); placements.set(name, group);
+      }
+      // P05: each credit names the position its decision was served at on a
+      // declared layout slot, and the pair an adjacent swap exchanged there, read
+      // off the record this ring holds, so the statistics object can count the
+      // swap's clicks and weigh the credit by the position policy in force.
+      // P16: a credit kept under the slot's reward for another event (an add to
+      // bag in a click slot's currency) is not a click of the adjacent swap's
+      // estimate, which counts clicks; its position still weighs it.
+      for (const [name, group] of placements) plan.batches.push({ name, received: group.credits.length,
+        body: { tenant, brand, slot, ...(group.page ? { page: group.page } : {}), config: sent,
+          credits: group.credits.map(credit => {
+            const place = positionRowOf(recordOf.get(credit.decision_id));
+            if (credit.reward === outcome.type || place.swap === undefined) return { ...credit, ...place };
+            const { swap: _swap, ...kept } = place; void _swap;
+            return { ...credit, ...kept };
+          }) } });
     }
+    // P16: a slot whose matching decisions all named another success event
+    // took nothing from this outcome for its reward, and says so by name.
+    for (const slot of unsuccessful) if (!bySlot.has(slot) && !refusedBySlot.has(slot)) refusedBySlot.set(slot, 'reward');
+    if (plan.receipt.attribution) for (const entry of plan.receipt.attribution) entry.credited = credited.get(entry.slot) ?? [];
     if (refusedBySlot.size) {
       plan.receipt.refusedBySlot = Object.fromEntries(refusedBySlot);
       plan.receipt.refused = refusedBySlot.size;
@@ -626,25 +744,32 @@ export class DecisionRing {
     const id = outcome.outcome_id;
     if (typeof id !== 'string' || !id) return false;
     const digest = await this.creditedDigest(outcome);
-    // A digest this object cannot compute recognizes nothing new: the entry
-    // written without one still stops a repeat of its id.
+    // W22 R2 (R143): a digest this object cannot compute is told apart by the
+    // id alone, the journal's own contract for an entry it cannot tell apart:
+    // every entry of this id stops the repeat, so a redelivery met by a digest
+    // failure can lose a credit it cannot tell apart, never grant one twice.
+    // An entry written without a digest likewise stops every repeat of its id.
     return (await this.creditedOutcomes()).some(entry => entry.id === id
-      && (entry.digest === undefined || entry.digest === digest));
+      && (digest === null || entry.digest === undefined || entry.digest === digest));
   }
   private async rememberCredited(outcome: OutcomeRecord, tenant: string): Promise<void> {
     try {
       if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return;
       const id = outcome.outcome_id;
       if (typeof id !== 'string' || !id || bytes(id) > RING_LIMITS.idBytes) return;
+      // W22 R2 (R143): a record whose digest cannot be computed is remembered
+      // by its id alone — the id-only shape this journal already reads, which
+      // stops every repeat of that id — never as nothing, which would credit
+      // its redelivery again.
       const digest = await this.creditedDigest(outcome);
-      if (digest === null) return;            // unrecordable is remembered as nothing, never as this id
       // The journal never outlives the online retention of the event it records.
       const expiresAt = readRetention(outcome.retention?.online, tenant, 'online').expiresAt;
       const now = Date.now();
-      // Only this exact record's own entry is replaced. An id-only entry from
-      // before the digest is kept: it is what still recognizes ITS repeat.
-      let kept = [...(await this.creditedOutcomes()).filter(entry => !(entry.id === id && entry.digest === digest)),
-        { id, ts: outcome.ts, expiresAt, digest }]
+      // Only this record's own entry is replaced (for an id-only entry, the
+      // id-only entry of this id). An id-only entry from before the digest is
+      // kept: it is what still recognizes ITS repeat.
+      const entry: CreditedOutcome = digest === null ? { id, ts: outcome.ts, expiresAt } : { id, ts: outcome.ts, expiresAt, digest };
+      let kept = [...(await this.creditedOutcomes()).filter(prior => !(prior.id === id && prior.digest === entry.digest)), entry]
         .sort((a, b) => a.ts - b.ts);
       if (kept.length > CREDITED_MAX_ROWS) kept = kept.slice(-CREDITED_MAX_ROWS);
       while (kept.length && bytes(JSON.stringify(kept)) > CREDITED_MAX_BYTES) kept = kept.slice(1);
@@ -680,7 +805,7 @@ export class DecisionRing {
       const generation = await this.state.storage.get<number>('creditGeneration') ?? 0;
       if (!Number.isSafeInteger(generation) || generation < 0) throw new Collision();
       await this.state.storage.put('creditGeneration', generation);
-      const plan = await this.outcome(body.tenant, body.brand ?? body.tenant, body.outcome, body.policy, body.slotConfig ?? {}, body.defaultSlotConfig, true, moneyPolicyOf(body.money));
+      const plan = await this.outcome(body.tenant, body.brand ?? body.tenant, body.outcome, body.policy, body.slotConfig ?? {}, body.defaultSlotConfig, true, moneyPolicyOf(body.money), pageScopedOf(body.pageScoped) ?? new Set());
       return { plan, generation };
     });
     if (first.existing) return first.existing;

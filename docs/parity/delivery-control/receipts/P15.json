@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P15",
+  "workOrderHash": "sha256:7cba317f0e74705c14316d9abe1d82597688cee68e70c1c1d06128a45c49f8a1",
+  "artifact": {
+    "revision": "f5ff0b27e6b86b282e307d20f2a01397d67674c5",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p15-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P15 built on rem/p15-build in three rounds with two specification fix rounds. b6a0f845 merges rem/integration c3437027 (P02 to P13, P34, P30, P33, P32, P09, P11, P14, P35 and P08 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P15 (6bd255fc, the S3-fix specification revision eb456472 reviewed PASS, R-P4); RED baseline twelve of twelve on P15's own reasons, no PRECONDITION; c5d7c411 the mechanism (src/content/types.ts, src/content/kinds.ts, src/content/decide.ts, src/reflex/contentCompose.ts, src/learn/receipts.ts, src/learn/replay.ts, public/meridian/engine.bundle.js regenerated): a slot strategy carrying bands of from, to and weights, contiguous, non-overlapping, together covering positions 1 to take, listed from position 1, refused by name otherwise under the slot's bands member; the pinned prefix, position pins and held off-limits modules keeping their positions and the other positions grouped into runs per covering band, each run ranked with its band's weights over the modules still in the pool after exclusions, gates, lifecycle, withholding, the page's reservations and the modules already served, one de-duplicated result; the band's weights replacing the slot's in the tag sum, the seed scale, the itemised prior contributions and the term split, with the seed rule's own weight and its validation against the slot's weights, freshness, fatigue, merchandising, the lift, the floor, the pooled ladder, the blend's R, Q and p, the baseline, the context switch and the eligibility rule untouched; a configured order served exactly without bands, the blend ranking with bands on B only, exploration and the adjacent swap acting on the banded ranking, a pinned position the pin's, the shadow composing with the same bands (R-P34, S3F-C4); each ranked position's record carrying explain.band and its receipt band with sorted keys and no new why sentence, absent on pinned and held positions, on a configured order and on every slot without bands; replay deciding again under the slots revision the record names and comparing explain.band; bdeebdc0 the kit; c0bc5939 the overlap refusal reworded; the round-1 delivery review at c0bc5939 PASS on M1, M2, M3 and M5 and FAIL on M4 (X1: the per-candidate merchandising block never cleared, so a module scored in an earlier band's run kept the block when a later band ranked it at a zero base) with the diversity reading sent to the lead and ruled R-P76; fix round 1 specified on rem/spec-p15-fix1 at e01acbbe (two header sentences and two legs RED at c0bc5939 on both hosts, the M1 diversity-yield leg and the M4 stale-merchandising leg, reviewed PASS, the gate re-recorded); 317a22f3 merges rem/integration 9a935d35 and 42dd6939 the specification, RED baseline four failed and twelve passed on the ruled reasons; cc6fdd81 decide.ts, a recording scoring clearing the candidate's five itemised blocks before it may set one so a record and receipt carry only the terms of the scoring that ranked the position, P29's itemisation measured over three hundred declared-layout worlds with no order or layout reason changed; 86e0607e contentCompose.ts and the bundle, the diversity rule on a banded slot applied position by position, a yield filled by the next still-eligible module under the band covering the position, the yielding module re-ranked in the next run under that band's weights, relaxed only when every module left is over the limit, a decision with an exploration pick keeping today's take loop over the explored banded ranking, the unbanded branch unchanged; 6050045d kinds.ts, the out-of-order refusal naming what is true; 9de2447b kit 02 and 03 stating the position-by-position rule and the explained-terms rule; the round-2 delivery review at 9de2447b PASS on M2 to M5 and FAIL on M1 (L1: a rotation or epsilon draw landing on the banded ranking's leader moves nothing yet was served by today's loop over the precomputed banded ranking), ruled R-P77; fix round 2 specified on rem/spec-p15-fix2 at 5c2103f1 (the leader-draw leg RED at 9de2447b and the MD3 lock green, both hosts, reviewed PASS, the gate re-recorded); 465b0d4f merges rem/integration 030d29ad and 715c5d99 the specification, RED baseline two failed and eighteen passed on the ruled reason; f5ff0b27 contentCompose.ts and the bundle, a moved flag set only when the pick replaces the ranking or moves a module below the leader to the front, the per-position fill running whenever nothing moved, the leader keeping its explored mark, the kit confirmed unchanged; the Meridian bundle 75350 to 77999 to 79234 to 79302 bytes fed by src/reflex/contentCompose.ts alone, build-meridian and build-sdk --check exact; acceptance twenty of twenty on both hosts at f5ff0b27 with P01 33/33, P28 29/29, P05 18/18, P06 30/30, P04 13/13, P29 20/20, P31 37/37, P30 25/25, P32 11/11, P11 12/12, P08 14/14, P10, P02, P03, P07, P12, P13, P34, P09, P14, P35, P36 to P40, W19, W21, W36, W28, W40, W35, W16, W25, W30, W31, W37 and src/services whole green, src/reflex, src/content, src/learn and src/routes failing on baseline entries only; both typechecks exit 0; eslint 0 new; forty-six probes on the pure path and both hosts in temporary test files removed before the commits (the round-1 and fix-round-1 sets again; the leader draw by epsilon in fifty-four of three hundred pure decisions and on both hosts, and by rotation, each the no-draw per-position order with only the leader explored; the R-P7 dumps byte-identical at head and base for unbanded worlds on the pure path and both hosts; the diversity yield, a yield at the last position of a band, a configured order with diversity on a banded slot served exactly, exploration with diversity on a banded slot over eighty decisions equal to today's take loop over the explored banded ranking, the adjacent swap with diversity); the gate at f5ff0b27 GATE_OK on its first run (implementer/logs/gate.log: 3227 tests, 52 failing, ratchet 52 with 0 outside the baseline of 52; both typechecks and both bundle checks inside).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P15/implementer/REPORT.md",
+      "git commits on rem/p15-build up to f5ff0b27"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P15 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P15/reviewer/logs/r3/acceptance-head.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P15/implementer/logs/gate.log",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P15/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P15/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-16T02:22:26.208Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P15.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P15.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P11",
+  "workOrderHash": "sha256:f5fcf285ff1a8b9f755f47befd066aeafe9ba05cac1adf75433dc91618f109e5",
+  "artifact": {
+    "revision": "074680906fce6f0bfe99f16162d6e946b8b3f5dc",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p11-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P11 built on rem/p11-build in one round. ab63ccb4 merges rem/integration 802a4b21 (P02 to P13, P34, P30, P33, P32 and P09 of this programme, P36 to P40 of the second, the governance files) into the per-ticket branch rem/tkt/P11 (9de83586, the S3-fix specification revision eb456472 reviewed PASS, R-P38 applied); RED baseline 10 failed and 2 passed on P11's own reasons (the U5 LOCK legs green on both hosts; floors dropped and malformed floors admitted, no shrinkage, no members, no report, the kit silent), no PRECONDITION; 0a434afd the types and the validator (src/content/types.ts, src/content/kinds.ts): evidence floors per page key in the learn document, a whole number of 1 or more, refused by name otherwise, an empty map kept, the retained reader dropping the member on an invalid floor and a floorless retained document reading back unchanged (D1, S3F-C5); 9429b079 the decision path (src/learn/stats.ts, src/content/decide.ts, src/content/service.ts): the floor read from the learn document the serving path already holds with no new read, the shrinkage applied to the lift lookup the ladder answers with, using that level's own exposures and estimate and that row's own baseline rate, the estimate pulled toward the baseline by the exposures it lacks and the lift clamped as today and applied rather than skipped, the lookup unchanged at or above the floor, a page without a floor and a piece with no level reaching nMin exactly as today, no lift on the holdout's default arm or under refused personalization, a frozen lift untouched, the blend's and the shadow's terms taking the floored lift (D2, item 40); 01937373 the receipt and the replay (src/learn/receipts.ts, src/learn/replay.ts): the record's and the receipt's evidenceFloor block with the floor, n, the lacking count and the page, keys sorted and absent where no floor applied, the receipt's sentences unchanged, replay re-deciding under the floor of the revision the record names so a floored decision replays equal with no manifest marker (R-P3, R-P7); aa97ee37 the reporting (src/learn/rows.ts, src/routes/decisions.ts, public/console/views-explore.js): the exploring route answering the page's floor and each row's distance to it and the lift route answering the floor and each item's distance at level everyone, both only where the page has a floor with today's members and row keys otherwise, the exploration floor's own member untouched, the console's exploring screen showing the floor line and a distance column only with a floor; 21075c15 the kit (docs/kit/02-api-reference.md, docs/kit/03-payload-schemas.md); 07468090 the lift route reading the learn document only for a slot on a page and only when the publication set lists it; no bundle, test, fixture, harness or script changed, build-meridian and build-sdk --check exact; acceptance 12/12 on both hosts at 07468090 with W25, W28, W24, W21, W26, W36, P10, P28, P29, P31, P30, P32, P05, P01, P02, P03, P04, P07, P12, P13, P33, P34, P09, P36 to P40, W40, W35 and the kit readers green, src/learn, src/content and src/routes failing on baseline entries only, src/console and src/services whole green; both typechecks exit 0; eslint equal at head and base; probes on both hosts in temporary test files removed before the commits (the floor equal to, below and far above the exposures, the clamp, the answering level above everyone, no level reaching nMin, two pages with different floors, a floorless document with today's keys on records, receipts, replays, routes and rows, the offline folds untouched, the holdout arm, refused personalization, a frozen lift, the layout blend, a republished document, the validator's cases); the builder's two gate runs at 07468090 each GATE_FAIL on a different known native intermittent outside the baseline that passed in the other run and alone (W14.07, then the W04.03 socket timeout), every baseline entry failing in both, ruled R-P74; the gate the receipt names is the reviewer's own run at the same sha, GATE_OK (reviewer/logs/gate.log).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P11/implementer/REPORT.md",
+      "git commits on rem/p11-build up to 07468090"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P11 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P11/reviewer/logs/01-acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P11/reviewer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P11/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-14T20:53:13.673Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-2026-10-20/P11.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L11/records/P11.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L10/records/P11.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L9/records/P11.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L2/records/P11.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -3,8 +3,23 @@ import { tenantConfig } from '@/tenancy/middleware';
 import { isValidTenantId } from '@/tenancy/tenant';
 
 export const RETENTION_CATEGORIES = ['profile', 'identity', 'ledger', 'online', 'hourly', 'recovery', 'quarantine'] as const;
-export type RetentionCategory = typeof RETENTION_CATEGORIES[number] | `external.${'odp' | 'fx' | 'tracking' | 'model' | 'catalog' | 'warehouse'}.${string}` | `telemetry.${'analytics' | 'monitor' | 'alert'}.${string}`;
-const categoryValid = (value: string): value is RetentionCategory => (RETENTION_CATEGORIES as readonly string[]).includes(value)
+/**
+ * W38 B4 (decision D3, amendment A35): the per-category retention setting for a
+ * tenant's CONFIGURATION REVISIONS — its catalog, slots, learning, Reflex, prior
+ * and proposal documents — in this same registry and in the same policy form as
+ * every other category (the settled D06-W06 retention decision).
+ *
+ * It is OPTIONAL, and deliberately not a member of `RETENTION_CATEGORIES`, which
+ * names the categories every tenant must configure before capture (monitor
+ * readiness requires each of them). A registry without it is valid and purges
+ * nothing: existing revisions are never deleted automatically (decision D2).
+ * Where it is set, a configuration publication purges only the revisions older
+ * than it that are neither current, previous nor named by a stored replay
+ * manifest (src/config/publication.ts).
+ */
+export const CONFIGURATION_RETENTION = 'configuration' as const;
+export type RetentionCategory = typeof RETENTION_CATEGORIES[number] | typeof CONFIGURATION_RETENTION | `external.${'odp' | 'fx' | 'tracking' | 'model' | 'catalog' | 'warehouse'}.${string}` | `telemetry.${'analytics' | 'monitor' | 'alert'}.${string}`;
+const categoryValid = (value: string): value is RetentionCategory => (RETENTION_CATEGORIES as readonly string[]).includes(value) || value === CONFIGURATION_RETENTION
   || /^external\.(odp|fx|tracking|model|catalog|warehouse)\.[a-f0-9]{64}$/.test(value) || /^telemetry\.(analytics|monitor|alert)\.[a-f0-9]{64}$/.test(value);
 /** Every configured destination gets its own policy key. Only non-secret,
  * canonical destination/mapping descriptors belong in this commitment. */
@@ -70,6 +85,15 @@ export function retentionConfiguration(env: RetentionEnv): Record<string, Partia
     }
     return result;
   } catch { throw new RetentionUnavailable(); }
+}
+/**
+ * W38 B4: the tenant's configuration-revision setting, or `null` — for a
+ * registry that does not set it AND for one that cannot be read. Either way the
+ * caller purges nothing: an unreadable registry is never read as permission to
+ * delete, and this never throws.
+ */
+export function configurationRetention(env: RetentionEnv, tenant: string): RetentionPolicy | null {
+  try { return retentionConfiguration(env)[tenant]?.[CONFIGURATION_RETENTION] ?? null; } catch { return null; }
 }
 export function retentionPolicy(env: RetentionEnv, tenant: string, category: RetentionCategory): RetentionPolicy {
   const policy = retentionConfiguration(env)[tenant]?.[category];

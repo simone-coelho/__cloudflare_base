@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P63",
+  "workOrderHash": "sha256:45a5bd29d6d24edb439c8f815a7593d5ffcfd1bbb83399052d9fbe38f134a945",
+  "artifact": {
+    "revision": "f1073dadca4e86be321766f6fa785b6700c67db4",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p63-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p63-build at 14951ff0 (24f8c9f6 the mechanism: every publication records a basis digest (object state without effect markers, the tenant's publication set by revision and digest, the fence, the pooled counters, generation and repair basis the snapshot read) as a member of learnPublished written before the copy's single store write; the alarm's publish skips only when the recorded basis is equal, the store's copy has the record's version and digest, and neither a stale nor a republished marker is in force; a credit, any republished document, a failed copy write, a marker in force or a read that throws makes the next alarm publish; the /publish door, item resets and the transition always publish; b8696623 kit 02/03 and the F2 citation; 6c91cc38 the whole publication set by revision; 14951ff0 the S14 fix round 0b1aa93c; the F5 comment at LearnStats.ts corrected); P63 26/26 ×3 on both hosts; P61 44/44, P62 55/55, P42 11/11, P49 11/11, W27 20/20, W10 47/47; builder's whole suite 3643/3643.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S14/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S14/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P63/implementer/REPORT.md",
+      "git commits on rem/p63-joined up to f1073dad"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P63 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S14/reviewer-p63/logs/acc-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S14/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P63/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-20T12:25:45.050Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/P63.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L12/records/P63.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md"
+      ]
+    }
+  ]
+}

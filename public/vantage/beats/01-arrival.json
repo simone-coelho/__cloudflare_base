@@ -1,0 +1,39 @@
+{
+ "name": "01-arrival",
+ "beat": 1,
+ "act": 1,
+ "actName": "The arrival",
+ "press": "A stranger lands from the paid-social ad",
+ "kind": "context",
+ "visitor": {
+  "id": "shopper-1",
+  "fresh": true,
+  "consent": {
+   "tracking": true,
+   "personalization": true
+  }
+ },
+ "landing": "/vantage/?utm_source=tiktok&utm_medium=paid-social&utm_campaign=iphone-18-pro-launch&utm_term=iphone-18-pro",
+ "entry": {
+  "utmSource": "tiktok",
+  "utmMedium": "paid-social",
+  "utmTerm": "iphone-18-pro"
+ },
+ "snapshot": {
+  "page": "home",
+  "slots": [
+   "hero",
+   "deals"
+  ],
+  "ctx": {
+   "intent": "new"
+  },
+  "entry": {
+   "utmSource": "tiktok",
+   "utmMedium": "paid-social",
+   "utmTerm": "iphone-18-pro"
+  }
+ },
+ "engine": "The entry sets the paid-social channel and fires the campaign_term seed on utm_term; the regional prior blends the seeded sales of the region the edge located into an empty vector, with nothing asserted (?region= is the rehearsal override, labelled, never the default); the page asserts ctx.intent=new (a signed-out visitor).",
+ "sees": "The hero and the deals module answer the ad (the iPhone 18 Pro launch) and her real region; the cold-start panel names that region, from the request, with its grain, census figure and lean."
+}

@@ -9,41 +9,47 @@
 // only; never cached; SDK-key authentication arrives with CW10.
 
 import { Hono } from 'hono';
-import { assertShopperSelectors, parseShopperContext } from '@/identity/sessionAuthority';
+import { createMiddleware } from 'hono/factory';
+import { assertShopperSelectors, carryOwnerCustomerId, forwardShopperRequest, parseShopperContext } from '@/identity/sessionAuthority';
+import { anonymousWithConsent } from '@/identity/consentContinuity';
+import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import type { Env } from '@/types/env';
 import { syntheticOperation } from '@/ops/synthetic';
-import { serveContentDecisions } from '@/content/service';
+import { sealContextKey, serveContentDecisions } from '@/content/service';
 import { requireRetention, type RetentionStamp } from '@/retention';
 import { ENTRY_QUERY_LIMIT, validEntry, type ChannelSignals } from '@/services/visit';
+import { deviceOf, platformOf } from '@/services/platform';
 import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
 import { tenantConfig } from '@/tenancy/middleware';
 import { enqueueDecisions } from '@/ledger/enqueue';
 import { findById, isLedgerMessage, type R2Like } from '@/ledger/writer';
 import { eraseVisitorLedger, hidden, loadTombstones, retentionDays, rewriteTenantErasures, type R2Erasable } from '@/ledger/erasure';
 import type { DecisionRecord } from '@/content/types';
-import { isLearningKey, parseId, type CapturedRecord, type LedgerStream } from '@/ledger/records';
+import { isCarriedCustomerId, isLearningKey, parseId, type CapturedRecord, type LedgerStream } from '@/ledger/records';
 import { validCarrier, DELIVERY_FIELD } from '@/ledger/delivery';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
-import { liftArchiveKey, liftKey, ringName, statsName } from '@/learn/fan';
+import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedRefusalIn, notAdoptedRefusalOf, placementSlot, republishedIn, republishedRecordOf, republishedRefusalIn, republishedRefusalOf, ringName, staleMarkerIn, staleMarkerOf, staleRefusalIn, staleRefusalOf, statsName } from '@/learn/fan';
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
 import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
-import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy } from '@/learn/report';
+import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, reportPriors, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy, type ReportPriors } from '@/learn/report';
+import { PRIORS_KIND } from '@/learn/priors';
 import { captureReadConflict, readConflictFiled } from '@/ledger/quarantine';
 /** W22 D1.03: conflicts one read may file before it answers with the last of them. */
 const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
-import { LEARN_KIND, CONTENT_KIND, SLOTS_KIND } from '@/content/kinds';
-import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
+import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, toEvidenceFloorOf, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
+import { evidenceFloorOf } from '@/content/decide';
 import { receiptOf } from '@/learn/receipts';
-import { emptySlotGovernance, readSlotGovernance } from '@/learn/slotGovernance';
+import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
 import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
-import type { LiftSnapshot } from '@/learn/stats';
+import type { LiftSnapshot, Republished, StaleMarker } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
 import { readEnrollmentHealth } from '@/content/holdout';
 import type { LearnConfig } from '@/content/types';
@@ -51,7 +57,7 @@ import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
 import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { operatorWrites } from '@/middleware/edgeAccess';
-import { requireShopper, shopperPrincipal, capabilityToken, SessionAccessError } from '@/identity/sessionCapability';
+import { boundedShopperBody, requireShopper, shopperPrincipal, shopperTenant, capabilityToken, verifySessionCapability, SessionAccessError, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { auditedLearningRecovery, auditedSubjectRead, auditedSubjectOperation } from '@/auth/subjectAudit';
 import { storeFor } from '@/auth/accounts';
 
@@ -80,6 +86,100 @@ async function publishedProposals(c: { env: Env }, tenant: string): Promise<Prop
   const published = Object.values(set.refs).some(ref => ref.kind === PROPOSALS_KIND.name && ref.scope === tenant);
   return published ? readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant) : { proposals: [] };
 }
+/**
+ * W25 R4 (LANE-LOG R183): the tenant's published prior document, from the same
+ * pin as the learn document the report is built under, as the priors input of
+ * the day report (`reportPriors`). Absence and unreadability are kept apart the
+ * way `publishedProposals` keeps them: only the set's own statement that the
+ * tenant publishes no prior document answers "no priors", and the report then
+ * builds its grids prior-free and declares `applied: false`. A storage or
+ * authority failure refuses the build, exactly as the learn read beside it does,
+ * so no report is ever built prior-free because a read failed.
+ */
+async function publishedReportPriors(c: { env: Env }, tenant: string, learn: LearnConfig): Promise<ReportPriors | null> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  if (!Object.values(set.refs).some(ref => ref.kind === PRIORS_KIND.name && ref.scope === tenant)) return null;
+  const revision = await readPinnedPublication(c.env, PRIORS_KIND, tenant, set);
+  return reportPriors(revision.value, revision.revision, learn);
+}
+/**
+ * W26 R2 (F21 §6(b), §8; LANE-LOG R198): the tenant's catalogue as the learning
+ * identity reads it — the pages each slot name is carried on — from the same
+ * request pin as every other document the route reads. A tenant whose
+ * publication carries no catalogue has none, and every name is page-less.
+ */
+async function publishedSlotPages(c: { env: Env }, tenant: string): Promise<Map<string, string[]>> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  if (!Object.values(set.refs).some(ref => ref.kind === SLOTS_KIND.name && ref.scope === tenant)) return new Map();
+  return slotPagesOf(await readConfig<SlotCatalog>(c, SLOTS_KIND, tenant));
+}
+/**
+ * W26 R2: the placement an operator request addresses. `page` is the decision
+ * request's own member name. For a slot name the catalogue carries on more than
+ * one page it is REQUIRED and must be one of those pages, because each page's
+ * placement is its own statistics object and there is no pooled one to answer
+ * with; the refusal names the pages. For any other name the identity is the
+ * page-less one it has always had, and a page, when named, must be the page
+ * the catalogue carries the slot on.
+ */
+type Placement = { ok: true; page?: string } | { ok: false; error: string; pages?: string[] };
+/**
+ * W26 R2 (review D3): every route that names one slot's statistics takes a
+ * CATALOGUE slot name — a slug, never carrying the `@` of a page-scoped
+ * placement's object name — so no operator can address a placement except by
+ * its slot and its `page`, or create an object under another placement's name.
+ */
+const SLOT_REQUIRED = 'slot required: a slot name of the catalogue';
+function placementOf(pages: ReadonlyMap<string, string[]>, slot: string, asked: string | undefined): Placement {
+  const page = asked?.trim() || undefined;
+  if (page !== undefined && !isCatalogueName(page)) return { ok: false, error: 'page must be a page name of the catalogue' };
+  const on = pages.get(slot) ?? [];
+  if (on.length > 1) {
+    if (page === undefined || !on.includes(page)) return { ok: false, error: `slot '${slot}' is on more than one page (${on.join(', ')}), and each page's placement learns apart; name one with page=`, pages: on };
+    return { ok: true, page };
+  }
+  if (page !== undefined && on.length === 1 && on[0] !== page) return { ok: false, error: `slot '${slot}' is not on page '${page}'`, pages: on };
+  return { ok: true };
+}
+const placementRefusal = (placement: Extract<Placement, { ok: false }>) => ({ ok: false, error: placement.error, ...(placement.pages ? { pages: placement.pages } : {}) });
+
+/**
+ * P11 (decision D1): the page a placement is on — the page `page=` names for a
+ * slot the catalogue carries on more than one page, else the one page it
+ * carries the slot on — or undefined where the slot is on no page.
+ */
+function placementPageOf(pages: ReadonlyMap<string, string[]>, slot: string, page: string | undefined): string | undefined {
+  const on = pages.get(slot) ?? [];
+  return page ?? (on.length === 1 ? on[0] : undefined);
+}
+/**
+ * P11 (decision D1): the configured evidence floor of that page, `{ floor, page }`
+ * (keys sorted), or null where it publishes none or there is no page; an answer
+ * then carries no floor member at all.
+ */
+function placementEvidenceFloor(learn: Pick<LearnConfig, 'evidenceFloors'> | null, at: string | undefined): { floor: number; page: string } | null {
+  const floor = learn && at !== undefined ? evidenceFloorOf(learn, at) : null;
+  return floor === null || at === undefined ? null : { floor, page: at };
+}
+/**
+ * P11: the tenant's learn document from the request's own pin, for a route that
+ * reads no other member of it, or null where the sealed set itself says the
+ * tenant publishes none (absence and unreadability kept apart, as
+ * `publishedProposals` keeps them: a listed document that cannot be read
+ * refuses exactly as every other read of it does).
+ */
+async function publishedLearn(c: { env: Env }, tenant: string): Promise<LearnConfig | null> {
+  let pin = requestPins.get(c);
+  if (!pin) { pin = pinPublication(c.env, tenant); requestPins.set(c, pin); }
+  const set = await pin;
+  if (!Object.values(set.refs).some(ref => ref.kind === LEARN_KIND.name && ref.scope === tenant)) return null;
+  return readConfig<LearnConfig>(c, LEARN_KIND, tenant);
+}
+
 /**
  * The decisions an outcome credits, with the provenance each of them was
  * DECIDED under. Only the outcome's own explicit reference is followed: a
@@ -111,13 +211,16 @@ const HISTORY_UNAVAILABLE = 'Visitor history unavailable';
  * W29 U1.01: what this deployment can do with a stored proposal. Autonomy
  * mutation is withdrawn for every tenant — `POST learn/cycle` and
  * `POST learn/proposals/:id/:decision` answer 503 below without reading or
- * writing anything — and the retained statuses were never verified as applied
- * (`GET learn/proposals` publishes the same `verified: false`). Any answer that
- * reports proposal work carries these two facts beside it, so a count is never
- * read as an action a person can take today. Stamped, not derived from
- * configuration, because no configuration a tenant can set makes the mutation
- * available: the routes below refuse unconditionally (F24 §5, document 35 §5
- * W29). It is stated here, once, beside the constants the same routes share.
+ * writing anything — and the retained statuses were never verified as applied.
+ * Any answer that reports proposal work carries these two facts beside it, so a
+ * count is never read as an action a person can take today. Stamped, not derived
+ * from configuration, because no configuration a tenant can set makes the
+ * mutation available: the routes below refuse unconditionally (F24 §5, document
+ * 35 §5 W29). It is stated here, once, beside the constants the same routes
+ * share, and every answer reads it (W29 R3, LANE-LOG R176): the work queue
+ * carries it whole as `autonomy`, and the `GET learn/proposals` history takes
+ * its `mutationAvailable` and its `verified` from these two members, so the two
+ * answers cannot part.
  */
 const AUTONOMY_WITHDRAWN = { mutationAvailable: false, proposalStatusesVerified: false } as const;
 
@@ -151,6 +254,133 @@ async function operatorRecent(env: Env, tenant: string, visitorId: string): Prom
   const result: RecentHistory = { ok: true, ring: value.ring as DecisionRecord[], index: value.index as number,
     retentionWitness: response.headers.get('X-Retention-Witness') === null ? null : JSON.parse(response.headers.get('X-Retention-Witness')!) as RetentionStamp };
   assertRecent(env, tenant, result); return result;
+}
+
+/**
+ * W37 T5 (decision D2): the decision history the per-shopper export answers for
+ * the ids of one person at one tenant — for each id their receipts, exactly as
+ * `GET visitors/{id}/receipts` answers them (every one, not one page), the
+ * entries of their own ring as `GET visitors/{id}/recent` answers them, and each
+ * receipted decision's ledger record as `GET ledger/{id}` answers it. It writes
+ * no per-read audit: the export's own subject-operation audit covers it. A ring
+ * that cannot be read, or a record whose retention authority is no longer
+ * honoured, refuses the export rather than leaving their history out; an erased
+ * record is never answered.
+ */
+export async function subjectDecisionHistory(c: { env: Env }, tenant: string, ids: readonly string[]): Promise<{
+  receipts: Record<string, ReturnType<typeof receiptOf>[]>; recent: Record<string, DecisionRecord[]>; records: Record<string, Record<string, unknown>>;
+}> {
+  const receipts: Record<string, ReturnType<typeof receiptOf>[]> = {}, recent: Record<string, DecisionRecord[]> = {};
+  const records: Record<string, Record<string, unknown>> = {};
+  const rings: Array<[string, DecisionRecord[]]> = [];
+  for (const id of ids) {
+    if (!HISTORY_VISITOR.test(id)) throw new Error(HISTORY_UNAVAILABLE);
+    rings.push([id, (await operatorRecent(c.env, tenant, id)).ring]);
+  }
+  if (!rings.some(([, ring]) => ring.length)) return { receipts, recent, records };
+  const catalog = await readConfig<ContentCatalog>(c, CONTENT_KIND, tenant);
+  const tombs = await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant);
+  for (const [id, ring] of rings) {
+    recent[id] = ring;
+    const ordered = ring.slice().sort((a, b) => b.ts - a.ts || a.position - b.position);
+    const names = catalogNames(catalog, ordered.map(r => r.item_id));
+    receipts[id] = ordered.map(r => receiptOf(r, names));
+    for (const decision of ordered) {
+      const recordId = decision.decision_id;
+      if (Object.hasOwn(records, recordId) || !validLedgerSelector(tenant, recordId)) continue;
+      const found = await findById<CapturedRecord>(c.env.STORAGE as unknown as R2Like, recordId, 'decision');
+      if (!found) continue;
+      if (!ownedLedgerRecord(found.record, tenant, recordId, 'decision')) throw new Error(HISTORY_UNAVAILABLE);
+      if (hidden(tombs, found.record)) continue;
+      requireRetention(c.env, found.record.retention?.ledger, tenant, 'ledger');
+      records[recordId] = Object.fromEntries(Object.entries(found.record).filter(([key]) => key !== DELIVERY_FIELD));
+    }
+  }
+  return { receipts, recent, records };
+}
+
+/** W37 T5: the ledger objects one export call may open, and the stored bytes it may read. */
+export const SUBJECT_EXPORT_LIMITS = { objects: REPORT_LIMITS.objects, bytes: 16 * 1024 * 1024 } as const;
+const EXPORT_STREAMS: readonly LedgerStream[] = ['decision', 'outcome', 'product-sort', 'behavior'];
+
+/**
+ * W37 T5: where a subject's ledger scan resumes. `key: null` is the partition's
+ * start. With `line: null` the object `key` has been read whole and the scan
+ * continues after it; with `line: n` the scan resumes inside the object `key`
+ * at its row n (rows are its non-empty lines, in order).
+ */
+export interface LedgerScanPosition { key: string | null; line: number | null }
+
+/**
+ * W37 T5 (decision D2): every row the tenant's ledger partition holds for the shopper,
+ * per stream, as stored — the R2 partition "is the export" (doc 22 §12.4), and
+ * a row names its person or browser in `visitor_id`. The partition has no
+ * per-shopper index, so the whole of the tenant's partition is read, oldest key
+ * first, and nothing of any other tenant (its keys start with `{tenant}/`).
+ * Whether a row's person or browser is the shopper's is decided by `owns`, again by
+ * every call; `owns` answers `null` when the call may decide no more, and the
+ * scan then stops at that row. One call also opens at most
+ * `SUBJECT_EXPORT_LIMITS` of the partition. `next` is where the same export
+ * continues. A row an erasure hides is never answered.
+ */
+export async function subjectLedgerRows(env: Env, tenant: string, owns: (visitorId: string) => Promise<boolean | null>,
+  from: LedgerScanPosition | null): Promise<{ rows: Record<LedgerStream, Record<string, unknown>[]>; complete: boolean; next: LedgerScanPosition | null }> {
+  const prefix = `${tenant}/`;
+  if (!TENANT.test(tenant) || (from?.key != null && (!from.key.startsWith(prefix) || from.key.length > 1024))) throw new Error('Ledger export unavailable');
+  const tombs = await loadTombstones(env.STORAGE as unknown as R2Erasable, tenant);
+  const rows = Object.fromEntries(EXPORT_STREAMS.map(stream => [stream, [] as Record<string, unknown>[]])) as Record<LedgerStream, Record<string, unknown>[]>;
+  let opened = 0, bytes = 0;
+  /** Reads one object's rows from row `skip`; answers the row at which `owns` stopped the call, or null when the object is read whole. */
+  const read = async (key: string, skip: number): Promise<number | null> => {
+    const stream = key.split('/')[3] as LedgerStream;
+    if (!EXPORT_STREAMS.includes(stream)) return null;
+    const object = await env.STORAGE.get(key);
+    opened++;
+    if (!object) return null;
+    const text = await object.text();
+    bytes += text.length;
+    let index = -1;
+    for (const line of text.split('\n')) {
+      if (!line) continue;
+      index++;
+      if (index < skip) continue;
+      let row: unknown;
+      try { row = JSON.parse(line); } catch { continue; }
+      if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+      const value = row as { tenant?: unknown; visitor_id?: unknown; ts?: unknown };
+      if ((value.tenant !== undefined && value.tenant !== tenant) || typeof value.visitor_id !== 'string') continue;
+      const verdict = await owns(value.visitor_id);
+      if (verdict === null) return index;
+      if (!verdict) continue;
+      if (tombs.has(value.visitor_id) && (typeof value.ts !== 'number' || hidden(tombs, value as { visitor_id: string; ts: number }))) continue;
+      rows[stream].push(row as Record<string, unknown>);
+    }
+    return null;
+  };
+  let last: string | null = from?.key ?? null;
+  if (from?.key != null && from.line !== null) {
+    const stopped = await read(from.key, from.line);
+    if (stopped !== null) return { rows, complete: false, next: { key: from.key, line: stopped } };
+  }
+  let cursor: string | undefined;
+  const cursors = new Set<string>();
+  for (;;) {
+    const page = await env.STORAGE.list({ prefix, limit: 1000, ...(cursor ? { cursor } : last ? { startAfter: last } : {}) });
+    for (const listed of page.objects) {
+      if (!listed.key.startsWith(prefix)) throw new Error('Ledger export unavailable');
+      // Keys at or before the position are already read (a listing may not honour startAfter).
+      if (last !== null && listed.key <= last) continue;
+      const stream = listed.key.split('/')[3] as LedgerStream;
+      if (EXPORT_STREAMS.includes(stream) && opened > 0
+        && (opened >= SUBJECT_EXPORT_LIMITS.objects || bytes + (listed.size ?? 0) > SUBJECT_EXPORT_LIMITS.bytes)) return { rows, complete: false, next: { key: last, line: null } };
+      const stopped = await read(listed.key, 0);
+      if (stopped !== null) return { rows, complete: false, next: { key: listed.key, line: stopped } };
+      last = listed.key;
+    }
+    if (!page.truncated) return { rows, complete: true, next: null };
+    if (!page.cursor || cursors.has(page.cursor)) throw new Error('Ledger export unavailable');
+    cursors.add(page.cursor); cursor = page.cursor;
+  }
 }
 
 /** Only minimized tenant read-audit rows, never the global account audit. */
@@ -190,20 +420,67 @@ decisionRoutes.get('/:tenant/trend', async (c) => {
 });
 
 /**
- * GET /v1/:tenant/lift/rows?slot=&brand=&level=pooled|cells&item=&q=&sort=&dir=&limit=&cursor= (doc 28 §4).
+ * W26 R2: the page a paged operator read addresses — the query's `page=`, or the
+ * page its cursor was cut for. A cursor cut for one page's table never pages
+ * another's: the two naming different pages is refused.
+ */
+function pagedPlacement(pages: ReadonlyMap<string, string[]>, slot: string, asked: string | undefined, cursor: { p?: string } | null): Placement {
+  const query = asked?.trim() || undefined;
+  if (cursor?.p !== undefined && query !== undefined && cursor.p !== query) return { ok: false, error: 'the cursor was cut for another page; start the listing again' };
+  const placement = placementOf(pages, slot, cursor?.p ?? query);
+  if (placement.ok && cursor && (cursor.p ?? undefined) !== placement.page) return { ok: false, error: 'the cursor was cut for another placement; start the listing again' };
+  return placement;
+}
+
+/**
+ * P42 (R-P78, decision D1): the stale marker of a placement whose last publication
+ * was refused because another placement's pooled statistics could not be read,
+ * while the snapshot in force is still the one it names; null otherwise. A marker
+ * that cannot be read, or is not one, is no marker: the read answers as before.
+ */
+async function staleMarkerFor(c: { env: Env }, tenant: string, brand: string, slot: string, page: string | undefined, inForce: unknown): Promise<StaleMarker | null> {
+  try { return staleMarkerIn(staleMarkerOf(await c.env.CACHE.get(liftStaleKey(tenant, brand, slot, page), 'json')), inForce); } catch { return null; }
+}
+
+/**
+ * P49 (R-P78, decision D1): what a placement's last publication refused after a
+ * learn republish names (`republished`), while the snapshot in force is still the
+ * one that refusal left in force; null otherwise. A record that cannot be read, or
+ * is not one, is none: the read answers as before.
+ */
+async function republishedFor(c: { env: Env }, tenant: string, brand: string, slot: string, page: string | undefined, inForce: unknown): Promise<Republished | null> {
+  try { return republishedIn(republishedRecordOf(await c.env.CACHE.get(liftRepublishedKey(tenant, brand, slot, page), 'json')), inForce); } catch { return null; }
+}
+
+/** P42 and P49: the members a lift read carries last, beside the snapshot in force, while they apply. */
+async function liftMarksFor(c: { env: Env }, tenant: string, brand: string, slot: string, page: string | undefined, inForce: unknown) {
+  const [stale, republished] = await Promise.all([staleMarkerFor(c, tenant, brand, slot, page, inForce), republishedFor(c, tenant, brand, slot, page, inForce)]);
+  return { ...(stale ? { stale } : {}), ...(republished ? { republished } : {}) };
+}
+
+/**
+ * GET /v1/:tenant/lift/rows?slot=&brand=&page=&level=pooled|cells&item=&q=&sort=&dir=&limit=&cursor= (doc 28 §4).
  * The grid as pages: one pooled row per item, or one item's cells; filtered, sorted and cut by the
  * server, with the catalog's names and the merchandiser's controls joined on. The cursor names the
  * snapshot version it was cut from, so a page never straddles two snapshots; when the snapshot has
  * moved on, the answer is 409 and the application starts the listing again. Same access as /lift.
+ * W26 R2: `page=` names the placement where the catalogue carries the slot name on more than one
+ * page (required there, and carried by the cursor); a slot on one page is read without it.
+ * P42: a placement whose snapshot in force is stale (`staleMarkerFor`) also answers `stale`, last.
+ * P49: and one whose publications are refused after a learn republish (`republishedFor`), `republished`, last.
  */
 decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  if (!isCatalogueName(slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   const cur = decodeCursor(c.req.query('cursor'));
   if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
+  const placement = pagedPlacement(await publishedSlotPages(c, tenant), slot, c.req.query('page'), cur);
+  c.header('Cache-Control', 'no-store');
+  if (!placement.ok) return c.json(placementRefusal(placement), 400);
+  const { page } = placement, at = page ? { page } : {};
   const levelQ = c.req.query('level');
   const level: RowLevel = cur ? cur.level : levelQ === 'cells' ? 'cells' : 'pooled';
   const item = cur ? cur.item : ((c.req.query('item') ?? '').trim() || undefined);
@@ -216,19 +493,28 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const limit = cur ? cur.limit ?? DEFAULT_LIMIT : Math.max(1, Math.min(MAX_LIMIT, Number(c.req.query('limit')) || DEFAULT_LIMIT));
   const offset = cur ? cur.o : 0;
   let snapshot: LiftSnapshot | null = null;
-  try { snapshot = (await c.env.CACHE.get(liftKey(tenant, brand, slot), 'json')) as LiftSnapshot | null; } catch { snapshot = null; }
-  c.header('Cache-Control', 'no-store');
-  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, level, total: 0, offset: 0, limit, rows: [], cursor: null });
+  try { snapshot = (await c.env.CACHE.get(liftKey(tenant, brand, slot, page), 'json')) as LiftSnapshot | null; } catch { snapshot = null; }
+  const marked = await liftMarksFor(c, tenant, brand, slot, page, snapshot);
+  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, level, total: 0, offset: 0, limit, rows: [], cursor: null, ...marked });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
   const [catalog, learn] = await Promise.all([readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
-  const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
+  // W32 S1.01 (F32 §4 item 5): the names are joined onto the rows this answer
+  // really names, never through a map of the whole catalogue. A query that
+  // SEARCHES or SORTS by name has to rank every candidate row by its name, so
+  // it asks for the snapshot's own ids — bounded by the rows the operator can
+  // see, still never by the catalogue; every other query asks for the page's
+  // ids alone, after the page is cut. Neither form changes the answer: the
+  // filter and the sort are the same function of the same rows.
+  const searching = q !== undefined || sort === 'name';
+  const names = searching ? catalogNames(catalog, Object.keys(snapshot.items ?? {})) : NO_NAMES;
   const rows = rowsOf(snapshot, names, learn.slots?.[slot]?.items, level, item);
-  const page = pageRows(rows, { level, item, q, sort, dir, offset, limit });
-  const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level, item, q, sort, dir, limit });
+  const cut = pageRows(rows, { level, item, q, sort, dir, offset, limit });
+  if (!searching) cut.rows = namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item)));
+  const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level, item, q, sort, dir, limit, ...(page ? { p: page } : {}) });
   // W25 V1.01: the grid states WHICH prior document its numbers were built with,
   // so an export a data scientist downloads can be reconciled against the
   // document they imported. 0 where the snapshot was built without one.
-  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, priorVersion: snapshot.priorVersion ?? 0, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+  return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', measurementBasis: snapshot.measurementBasis ?? 'served-v1', n0: snapshot.n0, nMin: snapshot.nMin, priorVersion: snapshot.priorVersion ?? 0, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor, ...marked });
 });
 
 /**
@@ -248,10 +534,36 @@ decisionRoutes.get('/:tenant/brands', operatorWrites(), async (c) => {
 });
 
 /**
+ * W20 R4: the `governance` block of one slot on the operator slots page, in the
+ * one word the advisory pin channel already uses for the same fact (`status`,
+ * `slot-pin-diagnostics/v1`). `available` carries the counts the counter store
+ * answered — zero reported as zero; `unavailable` says the store could not be
+ * read and states no count and no horizon, because a zero there would be a zero
+ * nobody observed. The engine's own `SlotGovernance` stays numeric: the outage is
+ * a fact about this read, so its variant is typed here, where the read is made.
+ */
+type AvailableSlotGovernance = { status: 'available' } & SlotGovernance;
+interface UnavailableSlotGovernance {
+  status: 'unavailable';
+  since: null;
+  scope: SlotGovernanceScope;
+  refusedPinCount: null;
+  refusedPins: null;
+  shortTakeCount: null;
+  shortTakePositions: null;
+  /** P47: the unreturned pins' count and names, `null` as every count is when the store could not be read. */
+  unreturnedPinCount: null;
+  unreturnedPins: null;
+}
+type SlotRow = Omit<SlotIndexEntry, 'governance'> & { governance?: AvailableSlotGovernance | UnavailableSlotGovernance };
+const UNAVAILABLE_GOVERNANCE: UnavailableSlotGovernance = { status: 'unavailable', since: null, scope: SLOT_GOVERNANCE_SCOPE,
+  refusedPinCount: null, refusedPins: null, shortTakeCount: null, shortTakePositions: null, unreturnedPinCount: null, unreturnedPins: null };
+
+/**
  * GET /v1/:tenant/learn/slots?brand=&q=&evidence=1 (doc 28 §4): every slot on every page, grouped by
  * page, with what is configured on it and how many pieces are eligible now; `q` narrows by slot or
  * page name; `evidence=1` adds what each slot has learned so far (items, events, when published),
- * for up to 200 slots. The application's picker and its overview.
+ * for up to 200 slots, and every slot's `governance` block. The application's picker and its overview.
  */
 decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -261,66 +573,102 @@ decisionRoutes.get('/:tenant/learn/slots', operatorWrites(), async (c) => {
   const now = Date.now();
   const [slots, catalog, learn] = await Promise.all([readConfig<SlotCatalog>(c, SLOTS_KIND, tenant), readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant)]);
   const index = slotsIndex(slots, catalog, learn, now, q);
+  let pages: Array<{ page: string; slots: Array<SlotIndexEntry | SlotRow> }> = index.pages;
   if (c.req.query('evidence') === '1') {
     // W20 G2 (R83, R86(a)): beside what each slot has LEARNED, what the decision
     // path REFUSED for it — the dead pins and the pinned slots that could not
     // fill their take, per slot, since the horizon the block states. One read of
-    // one tenant document, joined under the same flag and the same budget as the
-    // evidence it sits next to, and never silent: a slot with nothing to report
-    // carries zeros, not an absent member.
-    const governance = await readSlotGovernance(c.env, tenant, now);
+    // one tenant document, and never silent: a slot with nothing to report
+    // carries zeros, not an absent member, and a store that could not be read is
+    // named on every block (R4) rather than reported as zeros.
+    const governance = await observeSlotGovernance(c.env, tenant, now);
+    const governanceOf = (slot: string): AvailableSlotGovernance | UnavailableSlotGovernance => governance
+      ? { status: 'available', ...(governance.bySlot.get(slot) ?? emptySlotGovernance(governance.since)) }
+      : { ...UNAVAILABLE_GOVERNANCE };
     // W25 V1.01 (F20 §4.4): the ids this tenant's catalogue carries, so a prior
     // for an item it does not carry is not counted as something the slot has
     // learned about. The catalogue is the one this answer already read.
     const catalogue = new Set(catalog.pieces.map((p) => p.id));
+    // The 200-slot budget bounds the per-slot `evidence` reads, one store read
+    // each. The governance block is already in memory from the one read above, so
+    // it is joined onto EVERY row, the rows past the budget included (W20 R3).
     let budget = 200;
-    for (const page of index.pages) for (const s of page.slots) {
-      if (budget-- <= 0) { s.evidence = null; continue; }
-      s.governance = governance.bySlot.get(s.slot) ?? emptySlotGovernance(governance.since);
-      try {
-        const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
-        s.evidence = slotEvidence(snap, catalogue);
-      } catch { s.evidence = null; }
+    pages = [];
+    for (const page of index.pages) {
+      const rows: SlotRow[] = [];
+      for (const s of page.slots) {
+        const row: SlotRow = { ...s, governance: governanceOf(s.slot) };
+        rows.push(row);
+        if (budget-- <= 0) { row.evidence = null; continue; }
+        try {
+          // W26 R2: a page-scoped row's evidence is its own page's placement.
+          const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot, s.pageScoped ? s.page : undefined), 'json')) as LiftSnapshot | null;
+          row.evidence = slotEvidence(snap, catalogue);
+        } catch { row.evidence = null; }
+      }
+      pages.push({ page: page.page, slots: rows });
     }
   }
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages: index.pages });
+  return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages });
 });
 
 /**
- * GET /v1/:tenant/learn/exploring?slot=&brand=&limit=&cursor= (doc 28 §4): the items under the slot's
+ * GET /v1/:tenant/learn/exploring?slot=&brand=&page=&limit=&cursor= (doc 28 §4): the items under the slot's
  * observation floor, least observed first, paged; with the slot's exploration mode, share and floor.
+ * W26 R2: `page=` names the placement as it does on `/lift/rows`.
  */
 decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  if (!isCatalogueName(slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   const cur = decodeCursor(c.req.query('cursor'));
   if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
+  const slotPages = await publishedSlotPages(c, tenant);
+  const placement = pagedPlacement(slotPages, slot, c.req.query('page'), cur);
+  if (!placement.ok) { c.header('Cache-Control', 'no-store'); return c.json(placementRefusal(placement), 400); }
+  const { page } = placement, at = page ? { page } : {};
   const limit = cur ? cur.limit ?? DEFAULT_LIMIT : Math.max(1, Math.min(MAX_LIMIT, Number(c.req.query('limit')) || DEFAULT_LIMIT));
   const [snapshot, catalog, learn] = await Promise.all([
-    c.env.CACHE.get(liftKey(tenant, brand, slot), 'json').catch(() => null) as Promise<LiftSnapshot | null>,
+    c.env.CACHE.get(liftKey(tenant, brand, slot, page), 'json').catch(() => null) as Promise<LiftSnapshot | null>,
     readConfig<ContentCatalog>(c, CONTENT_KIND, tenant), readConfig<LearnConfig>(c, LEARN_KIND, tenant),
   ]);
   const ex = learn.slots?.[slot]?.exploration ?? null;
   // W28.W1.01: one representation of "the mode the engine runs, and the retained
   // setting where they differ" — the same helper the day report's §7 row uses.
   const eff = effectiveExploration(ex);
-  const effective = { mode: eff.mode ?? 'off', share: eff.unsupported ? 0 : ex?.share ?? 0,
+  // W28.R4: the share is the one the helper says a runnable policy reserves.
+  // A dial that cannot explore — `off` that kept a stored share, a retained
+  // withdrawn mode, no exploration block at all — reserves none, and this answer
+  // says 0 for all three, as the day report's row says `configured: null`.
+  const effective = { mode: eff.mode ?? 'off', share: eff.configured ?? 0,
     ...(eff.unsupported ? { configuredMode: eff.configuredMode, unsupported: true } : {}) };
   const floor = ex?.floor ?? DEFAULT_EXPLORE.floor;
+  // P11 (decision D1): the page's configured evidence floor, from the learn
+  // document this answer already read, and each row's exposures to it. A
+  // different floor from the exploration floor above, which keeps its name and
+  // its meaning; absent where the page has none, so the answer is as before.
+  const evidenceFloor = placementEvidenceFloor(learn, placementPageOf(slotPages, slot, page)), floored = evidenceFloor ? { evidenceFloor } : {};
   c.header('Cache-Control', 'no-store');
-  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, ...effective, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
+  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, ...at, version: 0, published: false, ...effective, floor, ...floored, total: 0, offset: 0, limit, rows: [], cursor: null });
   if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
-  const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
   // W25 V1.01 (F20 §4.4): what exploration should serve next can only be an item
   // the catalogue carries; a prior row for an id it does not carry is never
   // offered here. The catalogue is the one this answer already read.
-  const page = pageOf(exploringRows(snapshot, names, floor, new Set(names.keys())), cur ? cur.o : 0, limit);
-  const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level: 'exploring', limit });
-  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, ...effective, floor, total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+  //
+  // W32 S1.01: MEMBERSHIP is the whole catalogue and stays the whole catalogue —
+  // it is what decides which rows exist at all, and a page-bounded set here
+  // would silently drop every row the page did not reach, which is exactly the
+  // clause W25 added. What is bounded is the NAME join: the list is cut to the
+  // page first, and only the page's ids are looked up, because the order this
+  // list is in (least observed first, then id) does not depend on a name.
+  const catalogue = new Set(catalog.pieces.map((p) => p.id));
+  const cut = pageOf(exploringRows(snapshot, NO_NAMES, floor, catalogue, evidenceFloor?.floor), cur ? cur.o : 0, limit);
+  cut.rows = namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item)));
+  const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level: 'exploring', limit, ...(page ? { p: page } : {}) });
+  return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, ...effective, floor, ...floored, total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor });
 });
 
 /**
@@ -360,7 +708,8 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   let budget = 200;
   for (const s of entries) {
     if (budget-- <= 0) { s.evidence = null; continue; }
-    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = slotEvidence(snap, queueCatalogue); } catch { s.evidence = null; }
+    // W26 R2: a page-scoped row's evidence is its own page's placement.
+    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot, s.pageScoped ? s.page : undefined), 'json')) as LiftSnapshot | null; s.evidence = slotEvidence(snap, queueCatalogue); } catch { s.evidence = null; }
   }
   c.header('Cache-Control', 'no-store');
   // W21 E1.05 (R118(3)): the enrollment-anchor failures of the last thirty days,
@@ -383,7 +732,7 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
 
 /**
  * GET /v1/:tenant/visitors/:visitorId/receipts?limit=&cursor= (doc 28 §4): what this shopper was served,
- * newest first, each with the sentences that say why, from her own ring. Authenticated, like /recent.
+ * newest first, each with the sentences that say why, from the shopper's own ring. Authenticated, like /recent.
  * Records at or before the retained erasure cutoff are suppressed by the ring.
  */
 decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async (c) => {
@@ -401,8 +750,10 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
     ]);
     witness = ringRes; assertRecent(c.env, tenant, ringRes);
     const ring = ringRes.ring.slice().sort((a, b) => b.ts - a.ts || a.position - b.position);
-    const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
     const page = pageOf(ring, cur ? cur.o : 0, limit);
+    // W32 S1.01 (F32 §4 item 5): the receipts this page carries name at most
+    // `limit` pieces, so the catalogue is asked for those and no more.
+    const names = catalogNames(catalog, page.rows.map((r) => r.item_id));
     const cursor = page.next === null ? null : encodeCursor({ v: 0, o: page.next, level: 'exploring', limit });
     return c.json({ ok: true, tenant, visitor_id: visitorId, total: page.total, offset: page.offset, limit: page.limit, receipts: page.rows.map((r) => receiptOf(r, names)), cursor });
   } catch { return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); } });
@@ -412,30 +763,46 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
 });
 
 /**
- * GET /v1/:tenant/lift?slot=hero[&brand=]
+ * GET /v1/:tenant/lift?slot=hero[&brand=][&page=][&version=]
  * The lift snapshot in force for a slot: every item's decayed counts, estimate and
  * lift at every pooling level, and the slot's own rate per cell. Operator access
  * is required in enforced mode. This is the console's grid (doc 22 §12.2) as data.
+ * W26 R2: `page=` names the placement where the catalogue carries the slot name on
+ * more than one page, for the snapshot in force and for an archived version alike.
+ * P42: beside the snapshot in force (never an archived one), `stale`, last, while it is stale (`staleMarkerFor`).
+ * P49: and `republished`, last, while a learn republish keeps its publications refused (`republishedFor`).
  */
 decisionRoutes.get('/:tenant/lift', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  if (!isCatalogueName(slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  const slotPages = await publishedSlotPages(c, tenant);
+  const placement = placementOf(slotPages, slot, c.req.query('page'));
+  c.header('Cache-Control', 'no-store');
+  if (!placement.ok) return c.json(placementRefusal(placement), 400);
+  const { page } = placement;
   let snapshot: unknown = null;
   // Phase 3 / CW22: ?version= reads an archived snapshot instead of the one in force.
   const version = Number(c.req.query('version') ?? 0) || 0;
   if (version > 0) {
-    try { const obj = await c.env.STORAGE.get(liftArchiveKey(tenant, brand, slot, version)); snapshot = obj ? await obj.json() : null; } catch { snapshot = null; }
+    try { const obj = await c.env.STORAGE.get(liftArchiveKey(tenant, brand, slot, version, page)); snapshot = obj ? await obj.json() : null; } catch { snapshot = null; }
   } else {
-    try { snapshot = await c.env.CACHE.get(liftKey(tenant, brand, slot), 'json'); } catch { snapshot = null; }
+    try { snapshot = await c.env.CACHE.get(liftKey(tenant, brand, slot, page), 'json'); } catch { snapshot = null; }
   }
-  c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, brand, slot, snapshot });
+  // P11 (decision D1): the page's configured evidence floor and every item's
+  // exposures to it at level everyone, beside the snapshot, which is unchanged;
+  // absent where the page has none (or the tenant publishes no learn document).
+  // The learn document is read only for a slot that is on a page at all.
+  const floorPage = placementPageOf(slotPages, slot, page);
+  const evidenceFloor = floorPage === undefined ? null : placementEvidenceFloor(await publishedLearn(c, tenant), floorPage);
+  const marked = version > 0 ? {} : await liftMarksFor(c, tenant, brand, slot, page, snapshot);
+  return c.json({ ok: true, tenant, brand, slot, ...(page ? { page } : {}), snapshot,
+    ...(evidenceFloor ? { evidenceFloor, toEvidenceFloor: toEvidenceFloorOf(snapshot, evidenceFloor.floor) } : {}), ...marked });
 });
 
-/** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from her own object. Authenticated. */
+/** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from the visitor's own object. Authenticated. */
 decisionRoutes.get('/:tenant/visitors/:visitorId/recent', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const visitorId = (c.req.param('visitorId') ?? '').trim();
@@ -468,7 +835,10 @@ decisionRoutes.get('/:tenant/learn/proposals', operatorJwt(), async (c) => {
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const doc = await readConfig<ProposalsDoc>(c, PROPOSALS_KIND, tenant);
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, proposals: doc.proposals, history: { historical: true, verified: false, readOnly: true, complete: false, mutationAvailable: false, note: 'Stored proposal statuses are unverified. This bounded listing is not a complete audit trail.' } });
+  // The withdrawal and the unverified statuses are the work queue's two facts, read from the one statement of them.
+  return c.json({ ok: true, tenant, proposals: doc.proposals, history: { historical: true, verified: AUTONOMY_WITHDRAWN.proposalStatusesVerified,
+    readOnly: true, complete: false, mutationAvailable: AUTONOMY_WITHDRAWN.mutationAvailable,
+    note: 'Stored proposal statuses are unverified. This bounded listing is not a complete audit trail.' } });
 });
 decisionRoutes.post('/:tenant/learn/proposals/:id/:decision', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
@@ -498,15 +868,53 @@ decisionRoutes.post('/:tenant/trend/rollup', operatorJwt(), async (c) => {
  * the access error first (ruling R46).
  */
 class InvalidEntryContext extends Error {}
+/**
+ * P31: the page's report of the modules that have nothing to show for this page
+ * view — a JSON array of module identifiers, sent as one string field like
+ * `entry` — malformed. A REQUEST error, raised as the entry context's is.
+ */
+class InvalidNothingToShow extends Error {}
+/**
+ * A malformed consent hint (`trackingConsent`, `personalizationEnabled`): a
+ * value that is not exactly `'true'` or `'false'`, or a hint the query names
+ * more than once. A REQUEST error, raised as the entry context's is, and only
+ * after every selector, tenant and customer-identifier check, so each of those
+ * refusals stays the 401 it was; an admitted caller reaches the route's own
+ * documented `400 'Invalid consent hint'`.
+ */
+class InvalidConsentHint extends Error {}
+const CONSENT_HINTS = ['trackingConsent', 'personalizationEnabled'] as const;
+/** P31: the report's bounds: the field's length, the identifiers it names, and one identifier's length. */
+const NOTHING_TO_SHOW_LIMIT = 4096, NOTHING_TO_SHOW_MODULES = 64, MODULE_ID_LIMIT = 256;
+/**
+ * P31: the identifiers the page reports have nothing to show, each once, in the
+ * order sent; null when the field is not a JSON array of at most
+ * `NOTHING_TO_SHOW_MODULES` non-empty identifiers. An empty array is no report.
+ */
+function nothingToShowOf(raw: string): string[] | null {
+  if (raw.length > NOTHING_TO_SHOW_LIMIT) return null;
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { return null; }
+  if (!Array.isArray(value) || value.length > NOTHING_TO_SHOW_MODULES
+    || !value.every((id) => typeof id === 'string' && id.length > 0 && id.length <= MODULE_ID_LIMIT)) return null;
+  return [...new Set(value as string[])];
+}
 async function snapshotContext(request: Request): Promise<Record<string, string>> {
-  assertShopperSelectors(request);
+  // The consent hints' own shape is checked below as a request error; every
+  // other selector is checked here exactly as before.
+  assertShopperSelectors(request, { consentHints: 'route' });
   if (request.method === 'GET') {
-    const context = Object.fromEntries(new URL(request.url).searchParams);
+    const query = new URL(request.url).searchParams;
+    const context = Object.fromEntries(query);
     if (context.tenant !== undefined) throw new SessionAccessError();
     if (context.entry !== undefined) {
       try { if (context.entry.length > ENTRY_QUERY_LIMIT || !validEntry(JSON.parse(context.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
     }
-    for (const key of ['trackingConsent', 'personalizationEnabled']) if (context[key] !== undefined && context[key] !== 'true' && context[key] !== 'false') throw new SessionAccessError();
+    if (context.nothingToShow !== undefined && nothingToShowOf(context.nothingToShow) === null) throw new InvalidNothingToShow();
+    for (const key of CONSENT_HINTS) {
+      const values = query.getAll(key);
+      if (values.length > 1 || (values.length === 1 && values[0] !== 'true' && values[0] !== 'false')) throw new InvalidConsentHint();
+    }
     return context;
   }
   const query = new URL(request.url).searchParams;
@@ -516,24 +924,95 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new SessionAccessError();
   const out: Record<string, string> = {};
   for (const [key, item] of Object.entries(value)) {
-    if (!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance'].includes(key)
-      || typeof item !== 'string' || item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128)) throw new SessionAccessError();
+    // P13 (decision D1): the allow-list gains exactly one key, `customerId`, the
+    // customer's identifier the page carried (never a selector: it names no
+    // visitor and no session, and `userId`, `visitorId`, `sessionId` stay refused).
+    if (!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId'].includes(key)
+      // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
+      || typeof item !== 'string' || (key !== 'nothingToShow' && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
   }
   if (out.entry !== undefined) {
     try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
-  for (const key of ['trackingConsent', 'personalizationEnabled']) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new SessionAccessError();
+  if (out.nothingToShow !== undefined && nothingToShowOf(out.nothingToShow) === null) throw new InvalidNothingToShow();
+  if (out.customerId !== undefined && !isCarriedCustomerId(out.customerId)) throw new SessionAccessError();
+  for (const key of CONSENT_HINTS) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new InvalidConsentHint();
   return out;
 }
-decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper({ forward: false, bodyLimit: 8192, bodyTimeoutMs: 5000 }), async (c, next) => {
+
+/**
+ * P13 (H4, decision D1): a new visitor's first decision is served on the first
+ * request. A POST to the decision request that carries no shopper session at
+ * all (no `X-Shopper-Session`, no socket protocol) is the one call a new
+ * visitor makes: it is checked exactly as the session route and this route
+ * check a request before anything is written — the tenant (the path's and the
+ * request's), the body's bound and time limit, the strict key allow-list (no
+ * selector, no query), the entry, the nothing-to-show report and the consent
+ * hints — and any failure is the same `401` writing nothing. Only then is the
+ * session issued, the very grant POST /v1/:tenant/identity/session issues a
+ * browser with no capability (`anonymousWithConsent`, with the consent default
+ * that route gives it: the cookies' and the request's own refusal hints, which
+ * can only restrict), and the request is re-entered under it through the
+ * shopper's own object, where every existing check of this route runs on it
+ * unchanged. The answer is the first decision set with the issued session as
+ * `session`, in the shape the session route answers. A request that carries a
+ * session, valid or not, never takes this path, so a forged, stale or foreign
+ * one is refused `401` as before and a valid one gets no `session` member; a
+ * GET without one is refused as before. The site-key gate runs before any of it
+ * at the edge. Nothing about the customer's identifier selects anything here:
+ * the session is a fresh anonymous visitor's, whatever the body carries.
+ */
+const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: TenantVariables }>(async (c, next) => {
+  if (c.req.method !== 'POST' || capabilityToken(c.req.raw) !== null) return next();
+  const tenant = shopperTenant(c.env, c.req.raw, c.get('tenant'));
+  if ((c.req.param('tenant') ?? '') !== tenant) throw new SessionAccessError();
+  let text: string, context: Record<string, string>;
+  try {
+    text = await boundedShopperBody(c.req.raw, 8192, 5000);
+    context = await snapshotContext(c.req.raw);
+  } catch { throw new SessionAccessError(); }
+  const hints = intersectConsent(consentFromCookies(c.req.header('Cookie') ?? null), refusalHints({
+    ...(context.trackingConsent === 'false' ? { tracking: false } : {}),
+    ...(context.personalizationEnabled === 'false' ? { personalization: false } : {}),
+  }));
+  const session = await anonymousWithConsent(c.env, tenant, hints);
+  const principal = await verifySessionCapability(c.env, session.capability, tenant);
+  const headers = new Headers(c.req.raw.headers);
+  headers.set(SHOPPER_HEADER, session.capability);
+  const answered = await forwardShopperRequest(c.env, new Request(c.req.raw.url, { method: 'POST', headers, body: text }), principal,
+    (c.req.raw as Request & { cf?: unknown }).cf);
+  // A refusal or a failure is answered as the route answered it, without the
+  // session: the SDK then takes the session route as before.
+  if (answered.status !== 200) return answered;
+  const body = await answered.json().catch(() => null) as Record<string, unknown> | null;
+  if (!body || body.ok !== true) return c.json({ ok: false, error: 'Snapshot unavailable' }, 503);
+  const timing = answered.headers.get('Server-Timing');
+  if (timing) c.header('Server-Timing', timing);
+  // P30 (decision D2): the first decision set's context key, as the route answered it.
+  const contextKey = answered.headers.get('X-Context-Key');
+  if (contextKey) c.header('X-Context-Key', contextKey);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ...body, session });
+});
+decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionRequest, requireShopper({ forward: false, bodyLimit: 8192, bodyTimeoutMs: 5000 }), async (c, next) => {
   try { await snapshotContext(c.req.raw); }
-  catch (error) { if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400); throw error; }
+  catch (error) {
+    if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
+    if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
+    throw error;
+  }
   await next();
 }, requireShopper(), async (c) => {
   let context: Record<string, string>;
   try { context = await snapshotContext(c.req.raw); }
-  catch (error) { if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400); throw error; }
+  catch (error) {
+    if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
+    if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
+    throw error;
+  }
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const principal = shopperPrincipal(c.req.raw);
@@ -564,11 +1043,13 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     consent[key] = values[0] === 'true';
   }
   /**
-   * Named conditions the caller asserts for this request, as `ctx.<name>=value`.
-   * Garrett's weather arrives here: `?ctx.weather=snow`. They gate pieces that
-   * carry a matching `eligibleWhen` rule and do nothing else — a signal here can
-   * never boost a piece, re-rank the slot, or become behavioural evidence about
-   * the shopper. Bounded hard, because the query string is caller-controlled.
+   * Named conditions the caller asserts for this request, as `ctx.<name>=value`:
+   * the anchor product (`ctx.anchor`) a slot's `complements` rule reads, and on
+   * the demo profile alone a region that selects the regional prior. P31: they
+   * gate no piece — a module's `eligibleWhen` rule reads the decision's cell —
+   * and a signal here can never boost a piece, re-rank the slot, or become
+   * behavioural evidence about the shopper. Bounded hard, because the query
+   * string is caller-controlled.
    */
   const eligibilityContext: Record<string, string> = {};
   for (const [key, value] of Object.entries(context)) {
@@ -580,6 +1061,9 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     eligibilityContext[name] = value.trim();
   }
 
+  // P31: the page's report of the modules with nothing to show for this page view (validated above).
+  const nothingToShow = context.nothingToShow === undefined ? null : nothingToShowOf(context.nothingToShow);
+
   const sessionId = principal.sessionId;
   const cf = ((c.req.raw as unknown as { cf?: unknown }).cf ?? null) as { country?: string; regionCode?: string } | null;
 
@@ -588,6 +1072,12 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
   // shopper state and session this request belongs to.
   const out = await serveContentDecisions(c.env, {
     tenant, brand, page, visitorId, sessionId, channel, entry, cf, cookieHeader: c.req.header('Cookie') ?? null, consent,
+    // The OS family this request reports, for `platform` seed rules: the OS family is read from the request;
+    // the fired seed (ios or android) is recorded on the receipt as a driver; nothing finer is read or kept.
+    platform: platformOf(c.req.raw.headers),
+    // P37: the device class this request reports (client hint, else user agent), for `device` seed rules and
+    // configured orders naming a device: the class is read from the request; the user agent itself is never kept.
+    device: deviceOf(c.req.raw.headers),
     stateTenant: c.get('tenant'), principal, capability: capabilityToken(c.req.raw)!,
     // The offer envelope is the RENDERED-measurement path, and it only does
     // anything when the caller supplies a page instance (see service.ts:568 —
@@ -601,21 +1091,49 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', requireShopper
     ...(context.pageInstance ? { offer: { pageInstance: context.pageInstance } } : {}),
     browsingSessionId: (context.browsingSessionId ?? '').trim().slice(0, 128) || undefined,
     ...(Object.keys(eligibilityContext).length ? { context: eligibilityContext } : {}),
+    // P31: withheld before ranking: neither returned, nor recorded, nor counted as an exposure.
+    ...(nothingToShow?.length ? { nothingToShow } : {}),
+    // P13 (decision D1): the customer's identifier the POST body carried (validated above), written beside
+    // visitor_id on the records under tracking consent and read by nothing that decides.
+    ...(c.req.method === 'POST' && context.customerId !== undefined ? { customerId: context.customerId } : {}),
   });
+  // P13 (R-P66 item 2): under the tracking consent the decision was made with, the
+  // carried identifier is handed to the shopper's own object for the browser's
+  // link answer, after the decision, which it never reads; a failure changes
+  // nothing of the answer (the value is carried again on the next request).
+  if (c.req.method === 'POST' && context.customerId !== undefined && out.sources.consent.tracking) await carryOwnerCustomerId(c.env, principal, context.customerId);
   // Where the time went, for whoever is measuring: one Server-Timing entry per stage.
   c.header('Server-Timing', Object.entries(out.sources.timings).map(([k, v]) => `${k};dur=${v}`).join(', '));
+  // P30 (decision D2): a page whose declared layout slot is context-only names
+  // its context in the `X-Context-Key` header, sealed (src/content/service.ts):
+  // the page, the channel, the visit bucket, the device and, where admitted, the
+  // region — or its default variant — never a visitor, session or decision
+  // identifier, and never a member of the answer. A key that cannot be sealed is
+  // left off; the decision is the same either way, and the answer stays no-store.
+  if (out.contextKey) {
+    const key = await sealContextKey(c.env, tenant, out.brand, out.contextKey);
+    if (key) c.header('X-Context-Key', key);
+  }
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
   // CW31: nothing at all when the shopper withheld tracking consent.
-  const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.records) : Promise.resolve();
-  try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
+  // Ruling L-R10 (P02 decision D1): exactly the records the serve-time capture
+  // took, so a declared layout slot measured on served-v1 is never written here.
+  const ledger = out.write && c.env.LEDGER_RECOVERY_ENABLED !== 'true' ? enqueueDecisions(c.env, out.ledgerRecords) : Promise.resolve();
+  // G16 (W06.05 under the W09 owner rule): this route runs inside the shopper's
+  // owner, whose waitUntil retains work until it answers. It retains everything
+  // after the answer but a learning fan-out waiting on its erasure read, which
+  // runs inside the owner later and which the owner keeps alive with the
+  // platform's waitUntil (`continueAfterOwnerRead`); otherwise `ownerDrain` is
+  // `afterResponse` itself.
+  try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.ownerDrain); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
   const refusedPins = out.pinDiagnostics ?? [];
   // Private replay inputs travel only inside authenticated encrypted offers.
   const payload = { ok: true, tenant, brand: out.brand, page: out.page, ts: out.ts, arm: out.arm,
     // W21 E1.03: the experiment this answer belongs to — `arm` above is the
     // experience served, `experiment.arm` the experimental assignment — so a
-    // customer can join their own outcome data to the population we served her
-    // in. Absent for an unsigned caller, which is no shopper.
+    // customer can join their own outcome data to the population the shopper was
+    // served in. Absent for an unsigned caller, which is no shopper.
     ...(out.experiment ? { experiment: out.experiment } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
     // A refused pin has no delivery decision and no ledger row, so without this member
@@ -786,7 +1304,7 @@ decisionRoutes.get('/:tenant/ledger/batches', operatorJwt(), async (c) => {
 /**
  * CW28, the ledger half of erasure (doc 22 §15). GET lists the pending
  * tombstones so an export consumer can apply them at once; POST writes one for
- * a visitor and empties her ring (the identity route calls the same function
+ * a visitor and empties that visitor's ring (the identity route calls the same function
  * after erasing the profile); POST .../rewrite runs the scheduled rewrite now,
  * as the nightly cron does. All authenticated; the list carries visitor ids.
  * Registered before /ledger/:id so the literal segment wins.
@@ -904,10 +1422,14 @@ decisionRoutes.get('/:tenant/replay/:id', operatorJwt(), async (c) => {
 /**
  * POST /v1/:tenant/models/reference (doc 22 §9). The reference implementation
  * of the model contract, as a service a data science team can call to see the
- * shape, and point the `service` kind at by URL to see the term on a receipt.
- * Stateless; no visitor id crosses it.
+ * shape. Stateless; no visitor id crosses it. W34 E4 (F30): it carries the
+ * operator authentication and tenant scope of the learn write routes — the
+ * gate of POST learn/cycle, an operator token holding the resolved tenant's
+ * grant in enforced mode — so no site key, shopper session or other tenant's
+ * operator reaches it. No live decision calls it: the external-model policy is
+ * off (src/learn/external.ts).
  */
-decisionRoutes.post('/:tenant/models/reference', async (c) => {
+decisionRoutes.post('/:tenant/models/reference', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const body = (await c.req.json().catch(() => null)) as Partial<ExternalRequest> | null;
@@ -921,13 +1443,19 @@ decisionRoutes.post('/:tenant/models/reference', async (c) => {
   return c.json(referenceScore(req));
 });
 
-/** GET /v1/:tenant/lift/history?slot=[&brand=]: every archived snapshot version for the slot (doc 22 §12.2). */
+/**
+ * GET /v1/:tenant/lift/history?slot=[&brand=][&page=]: every archived snapshot version for the slot (doc 22 §12.2).
+ * W26 R2: a page-scoped placement's archive is its own page's; `page=` names it.
+ */
 decisionRoutes.get('/:tenant/lift/history', operatorWrites(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   const slot = (c.req.query('slot') ?? '').trim();
-  if (!TENANT.test(tenant) || !slot) return c.json({ ok: false, error: 'tenant slug and slot' }, 400);
+  if (!TENANT.test(tenant) || !isCatalogueName(slot)) return c.json({ ok: false, error: 'tenant slug and slot' }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
-  const prefix = `lift/${tenant}/${brand}/${slot}/`;
+  const placement = placementOf(await publishedSlotPages(c, tenant), slot, c.req.query('page'));
+  if (!placement.ok) { c.header('Cache-Control', 'no-store'); return c.json(placementRefusal(placement), 400); }
+  const { page } = placement;
+  const prefix = `lift/${tenant}/${brand}/${placementSlot(slot, page)}/`;
   const versions: Array<{ version: number; size: number; uploaded: string }> = [];
   let cursor: string | undefined;
   do {
@@ -940,7 +1468,7 @@ decisionRoutes.get('/:tenant/lift/history', operatorWrites(), async (c) => {
   } while (cursor);
   versions.sort((a, b) => b.version - a.version);
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, brand, slot, versions });
+  return c.json({ ok: true, tenant, brand, slot, ...(page ? { page } : {}), versions });
 });
 
 /**
@@ -964,9 +1492,9 @@ decisionRoutes.post('/:tenant/learn/recovery', operatorJwt(), async (c) => {
   try { b = JSON.parse(text); } catch { return c.json({ ok: false }, 400); }
   const component = (v: unknown): v is string => typeof v === 'string' && /^[a-zA-Z0-9_.-]{1,200}$/.test(v);
   if (!b || Array.isArray(b) || typeof b !== 'object' || !['status', 'repair'].includes(String(b.operation)) || !['stats', 'ring'].includes(String(b.kind))
-    || Object.keys(b).some(key => !['operation', 'kind', 'slot', 'brand', 'visitorId', 'digest', 'generation', 'operationId', 'intent'].includes(key))
-    || b.kind === 'stats' && (!component(b.slot) || !component(b.brand) || b.visitorId !== undefined)
-    || b.kind === 'ring' && (!component(b.visitorId) || b.slot !== undefined || b.brand !== undefined)) return c.json({ ok: false }, 400);
+    || Object.keys(b).some(key => !['operation', 'kind', 'slot', 'brand', 'page', 'visitorId', 'digest', 'generation', 'operationId', 'intent'].includes(key))
+    || b.kind === 'stats' && (!component(b.slot) || !component(b.brand) || b.visitorId !== undefined || b.page !== undefined && !isCatalogueName(b.page))
+    || b.kind === 'ring' && (!component(b.visitorId) || b.slot !== undefined || b.brand !== undefined || b.page !== undefined)) return c.json({ ok: false }, 400);
   if (b.operation === 'repair' && (typeof b.digest !== 'string' || !/^[a-f0-9]{64}$/.test(b.digest) || !Number.isSafeInteger(b.generation) || Number(b.generation) < 0
     || typeof b.operationId !== 'string' || !/^[a-f0-9]{32}$/.test(b.operationId)
     // W23 H1.01 (document 35 §5 row W23 :425 "Rebuild or explicitly reset
@@ -978,7 +1506,12 @@ decisionRoutes.post('/:tenant/learn/recovery', operatorJwt(), async (c) => {
     || !(b.kind === 'stats' ? b.intent === 'coarsen' || b.intent === 'reset' : b.intent === 'compact'))) return c.json({ ok: false }, 400);
   if (b.operation === 'status' && ['digest', 'generation', 'operationId', 'intent'].some(key => b[key] !== undefined)) return c.json({ ok: false }, 400);
   const kind = b.kind as 'stats' | 'ring', operation = b.operation as 'status' | 'repair';
-  const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string) : ringName(tenant, b.visitorId as string);
+  // W26 R2: recovery addresses one statistics OBJECT exactly, as it always has:
+  // `page` names a page-scoped placement's object, and without it the target is
+  // the page-less object — which, for a slot name a retained catalogue carries
+  // on more than one page, is the object its pages pooled into before W26 R2
+  // and is still a legitimate target to inspect or repair.
+  const target = kind === 'stats' ? statsName(tenant, b.brand as string, b.slot as string, b.page as string | undefined) : ringName(tenant, b.visitorId as string);
   return auditedLearningRecovery(c, tenant, operation, kind, target,
     operation === 'repair' ? { digest: b.digest as string, generation: b.generation as number } : {}, async () => {
       const ns = kind === 'stats' ? c.env.LEARN_STATS : c.env.DECISION_RING;
@@ -994,7 +1527,7 @@ decisionRoutes.post('/:tenant/learn/items/reset', operatorJwt(), async (c) => {
   c.header('Cache-Control', 'no-store');
   if (c.req.param('tenant') !== tenant || new URL(c.req.url).search !== '' || !user || user.type !== 'access'
     || !hasOperatorGrant(c.env, user.sub, tenant, c.get('auth'))) return c.json({ ok: false, error: 'Current tenant operator required' }, 403);
-  let b: { slot?: string; item?: string; brand?: string } | null, receipt;
+  let b: { slot?: string; item?: string; brand?: string; page?: string } | null, receipt, page: string | undefined;
   const authorize = async () => {
     let allowed = false;
     await operatorJwt()(c, async () => {
@@ -1009,11 +1542,16 @@ decisionRoutes.post('/:tenant/learn/items/reset', operatorJwt(), async (c) => {
     const meta = publicationMeta(c.req.raw.headers, user.sub);
     meta.authorize = authorize;
     b = await c.req.json();
-    if (!b || Object.keys(b).some(key => !['slot', 'item', 'brand'].includes(key))
-      || typeof b.slot !== 'string' || typeof b.item !== 'string' || !b.slot || !b.item || b.slot.length > 200 || b.item.length > 256
-      || b.brand !== undefined && (typeof b.brand !== 'string' || !b.brand || b.brand.length > 200)) return c.json({ ok: false, error: 'Invalid reset target' }, 400);
+    if (!b || Object.keys(b).some(key => !['slot', 'item', 'brand', 'page'].includes(key))
+      || !isCatalogueName(b.slot) || typeof b.item !== 'string' || !b.item || b.item.length > 256
+      || b.brand !== undefined && (typeof b.brand !== 'string' || !b.brand || b.brand.length > 200)
+      || b.page !== undefined && typeof b.page !== 'string') return c.json({ ok: false, error: 'Invalid reset target' }, 400);
     if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent' }, 503);
-    const request = { type: 'item-reset', item: b.item, slot: b.slot, brand: b.brand ?? tenant };
+    // W26 R2: the reset discards evidence in ONE placement's object, named by its page where the catalogue says so.
+    const placement = placementOf(await publishedSlotPages(c, tenant), b.slot, b.page);
+    if (!placement.ok) return c.json(placementRefusal(placement), 400);
+    page = placement.page;
+    const request = { type: 'item-reset', item: b.item, slot: b.slot, brand: b.brand ?? tenant, ...(page ? { page } : {}) };
     // Publish the retained reset INTENT first. Exact retry resolves this original
     // operation, never reads a fresh base or replaces intervening configuration.
     const result = await publish(c.env, LEARN_KIND, tenant, request, { ...meta, note: 'item reset admitted' }, current => current);
@@ -1025,9 +1563,9 @@ decisionRoutes.post('/:tenant/learn/items/reset', operatorJwt(), async (c) => {
   }
   try {
     await authorize();
-    const stub = c.env.LEARN_STATS!.get(c.env.LEARN_STATS!.idFromName(statsName(tenant, b!.brand ?? tenant, b!.slot!)));
+    const stub = c.env.LEARN_STATS!.get(c.env.LEARN_STATS!.idFromName(statsName(tenant, b!.brand ?? tenant, b!.slot!, page)));
     const response = await stub.fetch('https://learn/reset-item', { method: 'POST', body: JSON.stringify({
-      item: b!.item, tenant, slot: b!.slot, brand: b!.brand ?? tenant, publication: receipt.publication,
+      item: b!.item, tenant, slot: b!.slot, brand: b!.brand ?? tenant, ...(page ? { page } : {}), publication: receipt.publication,
       operationId: c.req.header('Idempotency-Key'),
     }) });
     const result = await response.json() as { ok?: unknown; item?: unknown; had?: unknown; resetCompleted?: unknown; publicationOutcome?: unknown };
@@ -1052,21 +1590,41 @@ decisionRoutes.post('/:tenant/learn/items/reset', operatorJwt(), async (c) => {
 decisionRoutes.post('/:tenant/learn/publish', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
-  const b = (await c.req.json().catch(() => null)) as { slot?: string; brand?: string } | null;
-  if (!b?.slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  const b = (await c.req.json().catch(() => null)) as { slot?: string; brand?: string; page?: string } | null;
+  if (!isCatalogueName(b?.slot)) return c.json({ ok: false, error: SLOT_REQUIRED }, 400);
   const brand = (b.brand ?? '').trim() || tenant;
   if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent on this stamp' }, 503);
   c.header('Cache-Control', 'no-store');
+  // W26 R2: one placement's object, named by its page where the catalogue says so.
+  const placement = placementOf(await publishedSlotPages(c, tenant), b.slot, typeof b.page === 'string' ? b.page : undefined);
+  if (!placement.ok) return c.json(placementRefusal(placement), 400);
+  const { page } = placement;
   try {
-    const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot)));
+    const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot, page)));
     const response = await stub.fetch('https://learn/publish', { method: 'POST' });
     const res = await response.json() as { ok?: unknown; published?: unknown; snapshot?: { tenant?: unknown; brand?: unknown; slot?: unknown; version?: unknown } | null } | null;
+    // P42 (R-P78, decision D1): the one refusal passed through is the object's
+    // pooled refusal, and only when its answer is exactly that (503, `{ ok: false,
+    // error, stale }`, a well-formed marker and the object's own sentence for it).
+    // The words answered are composed here from the checked marker, so no other
+    // downstream text is ever echoed; every other refusal stays the one below.
+    const stale = response.status === 503 ? staleRefusalIn(res) : null;
+    if (stale) { invalidateLiftCache(); return c.json({ ok: false, error: staleRefusalOf(stale), stale }, 503); }
+    // P49 (R-P78, D1): likewise the object's refusal after a learn republish, only
+    // when its answer is exactly that (503, `{ ok: false, error, republished }`, a
+    // well-formed member naming this placement and the object's own sentence for
+    // it); the words are composed here from the checked member and version.
+    const named = response.status === 503 ? republishedRefusalIn(res, tenant) : null;
+    if (named && named.republished.slot === b.slot && named.republished.page === page) {
+      invalidateLiftCache();
+      return c.json({ ok: false, error: republishedRefusalOf(named.republished, tenant, named.version), republished: named.republished }, 503);
+    }
     if (!response.ok || !res || res.ok !== true || typeof res.published !== 'boolean'
       || (res.published ? !res.snapshot || res.snapshot.tenant !== tenant || res.snapshot.brand !== brand || res.snapshot.slot !== b.slot
         || !Number.isSafeInteger(res.snapshot.version) || (res.snapshot.version as number) <= 0 : res.snapshot !== null)) throw new Error();
     invalidateLiftCache();
     // Acknowledged archive then KV write, not global KV propagation or client receipt.
-    return c.json({ ok: true, tenant, brand, slot: b.slot, published: res.published, snapshot: res.snapshot });
+    return c.json({ ok: true, tenant, brand, slot: b.slot, ...(page ? { page } : {}), published: res.published, snapshot: res.snapshot });
   } catch {
     invalidateLiftCache();
     return c.json({ ok: false, error: 'statistics acknowledgement unavailable' }, 503);
@@ -1100,10 +1658,11 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   c.header('Cache-Control', 'no-store');
-  const b = (await c.req.json().catch(() => null)) as { slot?: unknown; brand?: unknown; reward?: unknown; objective?: unknown; rebuildFrom?: unknown } | null;
+  const b = (await c.req.json().catch(() => null)) as { slot?: unknown; brand?: unknown; page?: unknown; reward?: unknown; objective?: unknown; rebuildFrom?: unknown } | null;
   if (!b || typeof b !== 'object' || Array.isArray(b)
-    || Object.keys(b).some(key => !['slot', 'brand', 'reward', 'objective', 'rebuildFrom'].includes(key))
-    || typeof b.slot !== 'string' || !b.slot || b.slot.length > 200
+    || Object.keys(b).some(key => !['slot', 'brand', 'page', 'reward', 'objective', 'rebuildFrom'].includes(key))
+    || (b.page !== undefined && typeof b.page !== 'string')
+    || !isCatalogueName(b.slot)
     || (b.brand !== undefined && (typeof b.brand !== 'string' || !b.brand || b.brand.length > 200))
     || (b.reward !== undefined && (typeof b.reward !== 'string' || !TRANSITION_REWARDS.has(b.reward)))
     || (b.objective !== undefined && (typeof b.objective !== 'string' || !['unit', 'revenue', 'margin'].includes(b.objective)))
@@ -1118,10 +1677,14 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
   const supplied = (c.req.header('Idempotency-Key') ?? '').trim();
   if (supplied && !/^[a-f0-9]{32}$/.test(supplied)) return c.json({ ok: false, error: 'Idempotency-Key must be 32 hexadecimal characters' }, 400);
   const operationId = supplied || crypto.randomUUID().replace(/-/g, '');
+  // W26 R2: the transition restarts ONE placement's object, named by its page where the catalogue says so.
+  const placement = placementOf(await publishedSlotPages(c, tenant), b.slot, b.page as string | undefined);
+  if (!placement.ok) return c.json(placementRefusal(placement), 400);
+  const { page } = placement;
   try {
-    const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot)));
+    const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot, page)));
     const response = await stub.fetch('https://learn/transition', { method: 'POST', body: JSON.stringify({
-      tenant, brand, slot: b.slot, operationId,
+      tenant, brand, slot: b.slot, ...(page ? { page } : {}), operationId,
       ...(b.reward !== undefined ? { reward: b.reward } : {}), ...(b.objective !== undefined ? { objective: b.objective } : {}),
       ...(b.rebuildFrom !== undefined ? { rebuildFrom: b.rebuildFrom } : {}),
     }) });
@@ -1130,11 +1693,21 @@ decisionRoutes.post('/:tenant/learn/generation', operatorJwt(), async (c) => {
     // Every isolate's per-request lift cache is dropped here for the same reason
     // publication drops it: what it holds is a generation that no longer stands.
     invalidateLiftCache();
+    // P50 (R-P78, D1): the one refusal passed through is the object's refusal of a
+    // transition that does not adopt a member a learn republish changed, only when
+    // its answer is exactly that (409, `{ ok: false, error, notAdopted }`, a
+    // well-formed member naming this placement and the object's own sentence for
+    // it); the words are composed here from the checked member, and every other
+    // refusal stays the one below.
+    const notAdopted = response.status === 409 ? notAdoptedRefusalIn(res, tenant) : null;
+    if (notAdopted && notAdopted.slot === b.slot && notAdopted.page === page) {
+      return c.json({ ok: false, error: notAdoptedRefusalOf(notAdopted, tenant), notAdopted, operationId }, 409);
+    }
     if (!response.ok || !res || res.ok !== true || typeof res.generation !== 'string' || !res.generation
       || !Number.isSafeInteger(res.restartedAt) || (res.archivedVersion !== null && !Number.isSafeInteger(res.archivedVersion))) {
       return c.json({ ok: false, error: 'statistics acknowledgement unavailable', operationId }, response.status === 409 ? 409 : 503);
     }
-    return c.json({ ok: true, tenant, brand, slot: b.slot, operationId, generation: res.generation,
+    return c.json({ ok: true, tenant, brand, slot: b.slot, ...(page ? { page } : {}), operationId, generation: res.generation,
       restartedAt: res.restartedAt, archivedVersion: res.archivedVersion ?? null,
       publicationOutcome: res.publicationOutcome ?? 'unknown', ...(res.rebuiltFrom ? { rebuiltFrom: res.rebuiltFrom } : {}) });
   } catch {
@@ -1206,6 +1779,9 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     }
     const learn = await readConfig<LearnConfig>(c, LEARN_KIND, tenant);
     for (const policy of defaultWindows) policy.windowsMs = learn.policy?.windowsMs ?? {};
+    // W25 R4: a day built from the ledger records builds its grids with the
+    // tenant's prior document, as the live table does, and says which revision.
+    const priors = await publishedReportPriors(c, tenant, learn);
     // Doc 31 §3: the day is the sum of its hour aggregates; only custom policies, or a day from before the
     // fold existed, are computed from the records, and such a day must be one a request can read.
     //
@@ -1220,7 +1796,7 @@ decisionRoutes.post('/:tenant/learn/report', operatorJwt(), async (c) => {
     let report: Awaited<ReturnType<typeof runDayReport>> | null = null, conflict: ReportRowConflict | null = null;
     for (let attempt = 0; attempt <= REPORT_CONFLICTS; attempt++) {
       try {
-        report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS }, c.env, resolved);
+        report = await runDayReport(c.env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand, date }, learn, policies, Date.now(), { maxObjects: REPORT_MAX_OBJECTS, priors }, c.env, resolved);
         conflict = null; break;
       } catch (error) {
         if (!(error instanceof ReportRowConflict)) throw error;

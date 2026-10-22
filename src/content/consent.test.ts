@@ -9,7 +9,7 @@ import type { Env } from '@/types/env';
 import { invalidateCache, write as writePublication, type DocumentKind, type WriteMeta } from '@/config/versionedStore';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from './kinds';
 import { armUnder, consentFromCookies, consentOf, personalizes } from './consent';
-import { serveContentDecisions, invalidateLiftCache } from './service';
+import { serveContentDecisions, invalidateLiftCache, slotLearnConfigOf } from './service';
 import { compareRecords, replayDecision, replayDeps } from '@/learn/replay';
 import type { DecisionRecord, LearnConfig, SlotCatalog } from './types';
 import { consumeLedger } from '@/ledger/consume';
@@ -28,7 +28,7 @@ import { PROPOSALS_KIND, EMPTY_PROPOSALS } from '@/learn/cycle';
 import { tombstoneKey } from '@/ledger/erasure';
 import * as configStore from '@/config/versionedStore';
 import { DEFAULT_STATS, buildSnapshot, emptyStats, levelKeys, liftFor, recordExposure, recordSuccess, type LiftSnapshot, type StatsState } from '@/learn/stats';
-import { liftArchiveKey, liftKey } from '@/learn/fan';
+import { liftArchiveKey, liftKey, reportLearningIncomplete } from '@/learn/fan';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { DEFAULT_POLICY, type RingEntry } from '@/learn/policy';
@@ -99,7 +99,10 @@ async function write<T>(env: Env, kind: DocumentKind<T>, scope: string, value: u
     operationId: base.revision + ':' + crypto.randomUUID(), ...meta });
 }
 
-async function envWith(snapshot: Record<string, unknown>, learn: LearnConfig = { holdout: { share: 0, salt: '', arms: ['default'] } }, pageSlots = ['hero'], tenant = 'coach', retainedLearn = false): Promise<{ env: Env; ring: string[]; shopper: string[] }> {
+/** W20 LG1 (step 3): a slot document retained from before today's write check,
+ * adopted as reviewed historical bytes at its own revision (W11 `retainedValue`). */
+type RetainedSlots = { revision: number; value: unknown };
+async function envWith(snapshot: Record<string, unknown>, learn: LearnConfig = { holdout: { share: 0, salt: '', arms: ['default'] } }, pageSlots = ['hero'], tenant = 'coach', retainedLearn = false, retainedSlots?: RetainedSlots): Promise<{ env: Env; ring: string[]; shopper: string[] }> {
   const ring: string[] = [], shopper: string[] = [];
   const objects = new Map<string, { text: string; etag: string }>();
   let version = 0;
@@ -140,7 +143,9 @@ async function envWith(snapshot: Record<string, unknown>, learn: LearnConfig = {
     [LEARN_KIND, tenant, learn], [REFLEX_KIND, reflexScopeForTenant(tenant), DEFAULT_REFLEX_CONFIG],
     [PRIORS_KIND, tenant, { rows: [] }], [PROPOSALS_KIND, tenant, EMPTY_PROPOSALS],
   ] as Array<[DocumentKind<unknown>, string, unknown]>;
-  expect((await initializePublicationSet(env, values.map(([kind, scope, value]) => ({ kind, scope,
+  expect((await initializePublicationSet(env, values.map(([kind, scope, value]) => kind.name === 'slots' && retainedSlots
+    ? { kind, scope, retainedValue: true as const, revision: { revision: retainedSlots.revision, at: 1, actor: 'retained', note: '', value: retainedSlots.value } }
+    : ({ kind, scope,
     ...(kind.name === 'learn' && retainedLearn ? { retainedValue: true as const } : {}), revision: { revision: 1, at: 1, actor: 'test', note: '', value } })), '0:' + crypto.randomUUID())).revision).toBe(1);
   return { env, ring, shopper };
 }
@@ -153,6 +158,16 @@ const serve = async (env: Env, nowMs?: number, guarded = false) => {
     const result = await serveContentDecisions(guarded ? ownerEnvironment(owner, env) : env, { tenant: 'coach', page: 'home', visitorId: visitor, sessionId: 's1', channel: 'direct', cf: null, cookieHeader: null, stateTenant: 'coach', principal, capability: principal.capability, nowMs });
     await result.afterResponse; return result;
   }, undefined, undefined, async () => fixtureConsent.get(env)!);
+};
+/** W20 LG1 (step 3): under W11 a committed slot revision's own bytes live in the
+ * publication, never in mutable KV (`slots:config:*` is no authority). */
+const slotsBody = async (env: Env, revision: number, tenant = 'coach'): Promise<string | null> =>
+  (await (await env.STORAGE.get(`config-publication/v1/${tenant}/slots/rev/${revision}.json`))?.text()) ?? null;
+/** W20 LG1 (step 3): the W09 owner authority the ledger consumer writes under. */
+const ownedConsume = async (env: Env, wire: unknown[], at: number) => {
+  const principal = await issueSessionCapability(env, { tenant: 'coach', subject: visitor, sessionId: 's1', kind: 'anonymous' }), owner = {};
+  return runOwnerOperation(owner, env, async () => { admitOwnerPrincipal(owner, principal); return consumeLedger(env, wire, at); },
+    undefined, undefined, async () => fixtureConsent.get(env)!);
 };
 
 it('W09.09 actual content caller freezes one combined admission before either sink and owner completion drains admission failure or delay', async () => {
@@ -286,7 +301,7 @@ describe('CW31 consent on the content service', () => {
         { slot: 'off', take: 1, weights: {}, pinnedPieceIds: ['missing'], offLimits: true },
       ] } };
       expect((await write(env, SLOTS_KIND, 'coach', document, { actor: 'fixture' })).ok).toBe(true);
-      const kv = env.CACHE as unknown as FakeKV, bytes = kv.store.get('slots:config:coach:rev:2');
+      const bytes = await slotsBody(env, 2); expect(typeof bytes).toBe('string');
       const first = await serve(env, now); await first.afterResponse;
       const cached = await serve(env, now + 1); await cached.afterResponse;
       for (const set of [first, cached]) {
@@ -295,7 +310,7 @@ describe('CW31 consent on the content service', () => {
       }
       const wire: unknown[] = [];
       env.EVENT_QUEUE = { sendBatch: async (messages: Array<{ body: unknown }>) => { wire.push(...messages.map(m => structuredClone(m.body))); } } as unknown as Queue;
-      expect((await enqueueDecisions(env, first.records)).code).toBe('accepted'); expect((await consumeLedger(env, wire, now + 2)).written).toBe(5);
+      expect((await enqueueDecisions(env, first.records)).code).toBe('accepted'); expect((await ownedConsume(env, wire, now + 2)).written).toBe(5);
       for (const record of first.records) {
         const retained = (await findById<DecisionRecord>(env.STORAGE, record.decision_id, 'decision'))!.record;
         expect(retained).toEqual(record); expect(await replayDecision(env, retained)).toMatchObject({ ok: true, equal: true });
@@ -304,11 +319,14 @@ describe('CW31 consent on the content service', () => {
       expect(rows.map(r => [r.slot, r.pinnedPieceIds, r.rankedCapacity])).toEqual([['hero', ['b', 'a'], 1], ['full', ['e', 'f'], 0], ['off', ['missing'], 0]]);
       expect(queueOf({ proposals: [], slots: rows, learn, erasuresPending: 0 }).slots_without_evidence).toEqual([{ page: 'home', slot: 'hero' }]);
       expect(queueOf({ proposals: [], slots: rows, learn, erasuresPending: 0 }).slots_acting).toEqual([{ page: 'home', slot: 'hero', gamma: 0.5 }]);
-      expect(kv.store.get('slots:config:coach:rev:2')).toBe(bytes);
-      const legacy = JSON.stringify({ revision: 3, at: 1, actor: 'retained', note: '', value: { governanceVersion: 2, pages: { home: [{ slot: 'hero', take: 1, weights: {}, pinnedPieceIds: { unknown: true } }] } } });
-      kv.store.set('slots:config:coach:current', legacy); kv.store.set('slots:config:coach:rev:3', legacy); invalidateCache();
-      const old = await serve(env, now + 3); await old.afterResponse; expect(old.decisions.map(d => d.contentId)).toEqual(['a']);
-      expect(kv.store.get('slots:config:coach:rev:3')).toBe(legacy);
+      expect(await slotsBody(env, 2)).toBe(bytes);
+      // W11: a retained revision is adopted as reviewed historical bytes at its own revision.
+      const legacy = { governanceVersion: 2, pages: { home: [{ slot: 'hero', take: 1, weights: {}, pinnedPieceIds: { unknown: true } }] } };
+      const { env: retainedEnv } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'full', 'off'], 'coach', false, { revision: 3, value: legacy });
+      expect((await write(retainedEnv, CONTENT_KIND, 'coach', { pieces: catalog }, { actor: 'fixture', expectedRevision: 1, operationId: '1:' + crypto.randomUUID() })).ok).toBe(true);
+      const legacyBytes = await slotsBody(retainedEnv, 3); expect(JSON.parse(legacyBytes!).value).toEqual(legacy);
+      const old = await serve(retainedEnv, now + 3); await old.afterResponse; expect(old.decisions.map(d => d.contentId)).toEqual(['a']);
+      expect(await slotsBody(retainedEnv, 3)).toBe(legacyBytes);
     }
   });
 
@@ -330,7 +348,7 @@ describe('CW31 consent on the content service', () => {
         { slot: 'hero', take: 6, weights: { contentType: 1 }, allowedTypes: ['film'], excludedTags },
       ] } };
       expect((await write(env, SLOTS_KIND, 'coach', document, { actor: 'fixture' })).ok).toBe(true);
-      const kv = env.CACHE as unknown as FakeKV, heldBytes = kv.store.get('slots:config:coach:rev:2');
+      const heldBytes = await slotsBody(env, 2); expect(typeof heldBytes).toBe('string');
       for (const time of [now, now + 1]) {
         const out = await serve(env, time); await out.afterResponse;
         expect(out.arm).toBe(arm);
@@ -341,14 +359,23 @@ describe('CW31 consent on the content service', () => {
         for (const record of out.records) expect(await replayDecision(env, JSON.parse(JSON.stringify(record)) as DecisionRecord)).toMatchObject({ ok: true, equal: true });
       }
       // Stored v1 never gains new constraints from formerly unknown fields.
+      // W11: the retained v1 revision is adopted as reviewed historical bytes at its own revision.
       const retained = { governanceVersion: 1, pages: { home: [{ slot: 'hero', take: 1, weights: {}, excludedTags: null, allowedTypes: [] }] } };
-      kv.store.set('slots:config:coach:current', JSON.stringify({ revision: 3, value: retained, at: 1, actor: 'old', note: '' })); invalidateCache();
-      const old = await serve(env, now + 2); await old.afterResponse;
+      const { env: retainedEnv } = await envWith({ affinity: { dims: { contentType: { video: 1, film: 0.8 } } } }, learn, ['hero', 'tagpin', 'typepin'], 'coach', false, { revision: 3, value: retained });
+      expect((await write(retainedEnv, CONTENT_KIND, 'coach', { pieces: catalog }, { actor: 'fixture', expectedRevision: 1, operationId: '1:' + crypto.randomUUID() })).ok).toBe(true);
+      const retainedBytes = await slotsBody(retainedEnv, 3); expect(JSON.parse(retainedBytes!).value).toEqual(retained);
+      const old = await serve(retainedEnv, now + 2); await old.afterResponse;
       expect(old.decisions[0]!.contentId).toBe('a'); expect(old.sources.slots.revision).toBe(3);
-      expect(kv.store.get('slots:config:coach:rev:2')).toBe(heldBytes);
-      kv.store.delete('slots:config:coach:current'); invalidateCache();
-      const absent = await serve(env, now + 3); await absent.afterResponse;
-      expect(absent.records).toEqual([]); expect(absent.decisions).toEqual([]); expect(absent.sources.slots.revision).toBe(0);
+      expect(await slotsBody(retainedEnv, 3)).toBe(retainedBytes);
+      expect(await slotsBody(env, 2)).toBe(heldBytes);
+      // W11 fails closed on a read error: a committed slot revision the store no
+      // longer returns is refused, never replaced by an empty or compiled document.
+      const read = env.STORAGE.get.bind(env.STORAGE);
+      const lost = vi.spyOn(env.STORAGE, 'get').mockImplementation(async (key: string) =>
+        key === 'config-publication/v1/coach/slots/rev/2.json' ? null : read(key) as never);
+      invalidateCache();
+      await expect(serve(env, now + 3)).rejects.toThrow('Configuration publication authority unavailable');
+      lost.mockRestore();
     }
   });
 
@@ -357,7 +384,10 @@ describe('CW31 consent on the content service', () => {
     for (const arm of ['personalized', 'default', 'no_learning'] as const) {
       const learn: LearnConfig = { holdout: { share: arm === 'personalized' ? 0 : 1, salt: 'gates', arms: [arm === 'no_learning' ? 'no_learning' : 'default'] },
         external: { kind: 'table', ref: 'dormant', timeoutMs: 10, fallback: 'omit' }, slots: { hero: { gamma: 1, external: { weight: 1 } }, story: { gamma: 0 } } };
-      const { env, ring } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent']);
+      // W34 LG1 (STALE arrangement): W34.E3 refuses a NEW learn document carrying an
+      // external term, so the dormant term is stored as a retained value (W11
+      // `retainedValue`, envWith's fifth parameter), the only way it can still be stored.
+      const { env, ring } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent'], 'coach', true);
       const kv = env.CACHE as unknown as FakeKV;
       const document: SlotCatalog = { pages: { home: [
         { slot: 'hero', take: 1, weights: { line: 1 }, pinnedPieceId: 'a', offLimits: true, fatigue: { weight: 1, windowHours: 24, cap: 3 } },
@@ -383,29 +413,40 @@ describe('CW31 consent on the content service', () => {
       const quiet = await serve(env, now + 2); await quiet.afterResponse;
       expect(quiet.records).toEqual([]); expect(quiet.decisions).toEqual([]); expect(ring).toEqual([]);
       expect(kv.reads.some(key => key.startsWith('lift:'))).toBe(false);
-      kv.store.delete('slots:config:coach:current');
+      // W11 (F15/F24): the committed slot revision's bytes live in the publication,
+      // never in mutable KV. What the store answers for them: their own bytes,
+      // nothing, other bytes, or an outage.
+      const slotKey = 'config-publication/v1/coach/slots/rev/3.json', read = env.STORAGE.get.bind(env.STORAGE);
+      const committed = await slotsBody(env, 3); expect(typeof committed).toBe('string');
+      let answer: { text: string } | null | 'outage' | undefined;
+      const object = (text: string) => ({ key: slotKey, etag: 'w2003-altered', size: new TextEncoder().encode(text).length,
+        body: new Response(text).body, text: async () => text, json: async () => JSON.parse(text) as unknown });
+      const store = vi.spyOn(env.STORAGE, 'get').mockImplementation(async (key: string) => {
+        if (key !== slotKey || answer === undefined) return read(key) as never;
+        if (answer === 'outage') throw new Error('synthetic slot outage');
+        return (answer === null ? null : object(answer.text)) as never;
+      });
+      answer = null;
       const cached = await serve(env, now + 3); await cached.afterResponse;
       expect(cached.records).toEqual([]); expect(cached.sources.slots.revision).toBe(3);
-      for (const value of [null, '{bad-json', JSON.stringify({ revision: 4, at: 1, actor: 'fixture', note: '', value: {
-        governanceVersion: 1, pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'true' }] },
-      } }), JSON.stringify({ revision: 4, at: 1, actor: 'fixture', note: '', value: { governanceVersion: 4, pages: {} } })]) {
-        if (value === null) kv.store.delete('slots:config:coach:current'); else kv.store.set('slots:config:coach:current', value);
+      // W11 fails closed on a read error: a committed slot revision that is gone,
+      // unparsable or no longer its own bytes is refused, never replaced by an
+      // empty or compiled document, and nothing is written.
+      const altered = (value: unknown) => JSON.stringify({ ...JSON.parse(committed!), value });
+      for (const value of [null, '{bad-json', altered({ governanceVersion: 1, pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'true' }] } }),
+        altered({ governanceVersion: 4, pages: {} })]) {
+        answer = value === null ? null : { text: value };
         invalidateCache(); ring.length = 0;
-        const absent = await serve(env, now + 4); await absent.afterResponse;
-        expect(absent.records).toEqual([]); expect(absent.decisions).toEqual([]);
-        expect(absent.sources.slots).toEqual({ version: null, revision: 0, count: 0 }); expect(ring).toEqual([]);
+        await expect(serve(env, now + 4)).rejects.toThrow('Configuration publication authority unavailable');
+        expect(ring).toEqual([]);
       }
-      const originalGet = kv.get.bind(kv);
-      const outage = vi.spyOn(kv, 'get').mockImplementation(async (key, type) => {
-        if (key === 'slots:config:coach:current') throw new Error('synthetic slot outage');
-        return originalGet(key, type);
-      }); invalidateCache();
-      const unavailable = await serve(env, now + 5); await unavailable.afterResponse;
-      expect(unavailable.decisions).toEqual([]); expect(unavailable.sources.slots.count).toBe(0); outage.mockRestore();
-      kv.store.set('slots:config:coach:current', JSON.stringify({ revision: 4, at: 1, actor: 'old', note: '', value: {
-        pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'unknown', excludedPieceIds: [null] }] },
-      } })); invalidateCache();
-      const legacy = await serve(env, now + 6); await legacy.afterResponse;
+      answer = 'outage'; invalidateCache(); ring.length = 0;
+      await expect(serve(env, now + 5)).rejects.toThrow('Configuration publication authority unavailable');
+      expect(ring).toEqual([]); store.mockRestore();
+      // W11: a retained revision is adopted as reviewed historical bytes at its own revision.
+      const retainedValue = { pages: { home: [{ slot: 'hero', take: 1, weights: {}, offLimits: 'unknown', excludedPieceIds: [null] }] } };
+      const { env: retainedEnv } = await envWith({ affinity: { dims: { line: { Drover: 1 } } } }, learn, ['hero', 'story', 'silent'], 'coach', true, { revision: 4, value: retainedValue }); // W34 LG1: retained, as above.
+      const legacy = await serve(retainedEnv, now + 6); await legacy.afterResponse;
       expect(legacy.records.map(r => r.item_id)).toEqual(['a']); expect(legacy.sources.slots.revision).toBe(4);
     }
   });
@@ -500,7 +541,12 @@ describe('CW31 consent on the content service', () => {
           for (let i = 0; i < 100; i++) recordExposure(state, item, cell, now, DEFAULT_STATS);
           for (let i = 0; i < (item === 'b' ? 90 : 1); i++) recordSuccess(state, item, cell, 'click', now, 1, DEFAULT_STATS);
         }
-        const map = new Map<string, unknown>([['learn', { tenant: 'coach', brand: 'coach', slot, config: { reward: 'click', objective: 'unit', stats: DEFAULT_STATS }, stats: state }]]);
+        // W28 LG1 (step 3, STALE arrangement): the seeded statistics state carries the slot configuration
+        // every current producer sends (`slotLearnConfigOf`, service.ts:113 — `measurementBasis` included).
+        // Seeded without it, the first read's exposure fan-out stores the explicit default, the object's
+        // configuration witness moves, and the cached read correctly withholds the snapshot published under
+        // the old witness (kit 02:313) — a fixture artefact, not the Thompson behaviour under test.
+        const map = new Map<string, unknown>([['learn', { tenant: 'coach', brand: 'coach', slot, config: { reward: 'click', objective: 'unit', stats: DEFAULT_STATS, measurementBasis: 'served-v1' }, stats: state }]]);
         const storage = { get: async (key: string) => structuredClone(map.get(key)), put: async (key: string, value: unknown) => { map.set(key, structuredClone(value)); },
           getAlarm: async () => null, setAlarm: async () => { /* Synthetic alarm scheduling has no wall-clock runner. */ } };
         const object = new LearnStats({ storage } as unknown as DurableObjectState, env); objects.set('coach:coach:' + slot, object);
@@ -695,9 +741,8 @@ describe('CW31 consent on the content service', () => {
   });
 
   it('W10.03 checks actual serving health on cold and cached snapshots and falls back after reset/restart', async () => {
-    const now = Date.now(), { env } = await envWith({ affinity: { dims: { line: { Drover: 0.9 } } } }, {
-      holdout: { share: 0, salt: '', arms: ['default'] }, stats: DEFAULT_STATS, slots: { hero: { gamma: 1, reward: 'click' } },
-    });
+    const learn: LearnConfig = { holdout: { share: 0, salt: '', arms: ['default'] }, stats: DEFAULT_STATS, slots: { hero: { gamma: 1, reward: 'click' } } };
+    const now = Date.now(), { env } = await envWith({ affinity: { dims: { line: { Drover: 0.9 } } } }, learn);
     class Storage {
       map = new Map<string, unknown>(); alarm: number | null = null;
       async get(k: string) { return structuredClone(this.map.get(k)); }
@@ -709,7 +754,7 @@ describe('CW31 consent on the content service', () => {
     const storage = new Storage(), state = { storage } as unknown as DurableObjectState;
     let target = new LearnStats(state, env), health = 0, held = false;
     env.LEARN_STATS = { idFromName: (n: string) => n, get: () => ({ fetch: (url: string, init?: RequestInit) => {
-      if (url.endsWith('/health')) {
+      if (url.endsWith('/witness')) { // R10 (amendment 6 / P62, R-P112(3)): the decision path's witness calls POST /witness since P62; its calls are counted and held here.
         health++;
         if (held) return new Promise<Response>((_resolve, reject) => {
           const fail = () => reject(new DOMException('Synthetic transport aborted', 'AbortError'));
@@ -721,7 +766,8 @@ describe('CW31 consent on the content service', () => {
     env.DECISION_RING = fakeNs({ ok: true, receipt: { version: 1, kind: 'append', received: 1, accepted: 1, cutoffSkipped: 0, retained: 1, indexed: 1 } }, []);
     const cell = { channel: 'direct', visit_bucket: 'unknown', region: null, affinity: null };
     const send = (path: string, body: unknown) => target.fetch(new Request('https://learn' + path, { method: 'POST', body: JSON.stringify(body) }));
-    const base = { tenant: 'coach', brand: 'coach', slot: 'hero', config: { reward: 'click', objective: 'unit', stats: DEFAULT_STATS } };
+    // R10 (baseline-52 #2): the seeded state carries the slot configuration serving itself sends, derived by `slotLearnConfigOf` (service.ts:194-197), so the first serve's own fan-out cannot move the object's configuration witness (LearnStats.ts:1577-1580, `config` digested whole) away from the one /publish sealed; the W28 LG1 precedent at :543-547.
+    const base = { tenant: 'coach', brand: 'coach', slot: 'hero', config: slotLearnConfigOf(learn)('hero') };
     expect((await send('/exposures', { ...base, exposures: Array.from({ length: 200 }, (_, i) => ({ item: i % 2 ? 'a' : 'b', cell, ts: now })) })).status).toBe(200);
     expect((await send('/credits', { ...base, credits: Array.from({ length: 50 }, () => ({ item: 'b', cell, ts: now, reward: 'click', weight: 1 })) })).status).toBe(200);
     expect((await send('/publish', {})).status).toBe(200);
@@ -765,7 +811,7 @@ describe('CW31 consent on the content service', () => {
       snap.witness = 'a'.repeat(64);
       const statsWriter = env.LEARN_STATS;
       env.LEARN_STATS = { idFromName: (name: string) => name, get: (name: string) => ({ fetch: (url: string, init?: RequestInit) =>
-        url.endsWith('/health') ? recoveryDigest(snap).then(digest => Response.json({ ok: true, state: 'healthy', tenant: 'coach', brand: 'coach', slot: 'hero', witness: snap.witness,
+        url.endsWith('/witness') ? recoveryDigest(snap).then(digest => Response.json({ ok: true, state: 'healthy', tenant: 'coach', brand: 'coach', slot: 'hero', witness: snap.witness, // R10 (amendment 6 / P62, R-P112(3)): the witness door the decision path calls since P62
           publication: { witness: snap.witness, digest, version: snap.version } }))
           : statsWriter.get(statsWriter.idFromName(name)).fetch(url, init) }) } as unknown as DurableObjectNamespace;
       const cache = env.CACHE as unknown as FakeKV, key = liftKey('coach', 'coach', 'hero');
@@ -893,9 +939,14 @@ describe('CW31 consent on the content service', () => {
   it('W04.02 owned state honors a prior false hint without restoring legacy profile mirrors', async () => {
     const { env, ring } = await envWith({});
     Object.assign(env, { JWT_SECRET: 'w0402-synthetic-signing-material-only', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a' });
-    const principal = await newAnonymousSession(env, 'coach');
-    const out = await serveContentDecisions(env, { tenant: 'coach', stateTenant: 'coach', page: 'home', visitorId: principal.subject, sessionId: principal.sessionId,
-      principal, capability: principal.capability, cookieHeader: 'opt_segments=PRIVATE; opt_session_id=victim; opt_tracking_consent=false' });
+    const principal = await newAnonymousSession(env, 'coach'), owner = {};
+    // R10 (baseline-52 #3): a signed principal is served only inside its owner's operation (`assertOwnerScope`, sessionAuthority.ts:443-446), so the unchanged request runs there exactly as this file's `serve` helper runs it (:209-217); every assertion below is unchanged.
+    const out = await runOwnerOperation(owner, env, async () => {
+      admitOwnerPrincipal(owner, principal);
+      const result = await serveContentDecisions(env, { tenant: 'coach', stateTenant: 'coach', page: 'home', visitorId: principal.subject, sessionId: principal.sessionId,
+        principal, capability: principal.capability, cookieHeader: 'opt_segments=PRIVATE; opt_session_id=victim; opt_tracking_consent=false' });
+      await result.afterResponse; return result;
+    }, undefined, undefined, async () => fixtureConsent.get(env)!);
     await out.afterResponse;
     expect(out.arm).toBe('default'); expect(out.write).toBe(false); expect(ring).toEqual([]);
     expect(out.sources.consent.tracking).toBe(false);
@@ -944,9 +995,18 @@ describe('CW31 consent on the content service', () => {
     let release!: (value: null) => void;
     const pending = new Promise<null>(resolve => { release = resolve; });
     env.STORAGE = { ...catalog, get: (key: string) => key === tombstoneKey('coach', visitor) ? pending : catalog.get(key) } as never;
-    const out = await serve(env);
+    // R10 (baseline-52 #4): `serve` awaits afterResponse inside the owner (:215), and that is the work this test holds open on the
+    // tombstone read; the decision is taken the W09.09 way instead (:222-225), afterResponse not awaited inside the owner operation.
+    const principal = await issueSessionCapability(env, { tenant: 'coach', subject: visitor, sessionId: 's1', kind: 'anonymous' }), owner = {};
+    const out = await runOwnerOperation(owner, env, async () => {
+      admitOwnerPrincipal(owner, principal);
+      const result = await serveContentDecisions(env, { tenant: 'coach', page: 'home', visitorId: visitor, sessionId: 's1', channel: 'direct',
+        cf: null, cookieHeader: null, stateTenant: 'coach', principal, capability: principal.capability });
+      void result.afterResponse.catch(() => {}); return result;
+    }, undefined, undefined, async () => fixtureConsent.get(env)!);
     expect(out.records).toHaveLength(1); expect(ring).toEqual([]);
     release(null); await out.afterResponse;
+    // Left RED (baseline-52 #4, class C): a fan-out outliving the owner's answer is refused at the owner fence (fan.ts:1053), and production keeps it inside the owner instead (decisions.ts:1104, sessionAuthority.ts:679), so the answer waits for this read.
     expect(ring).toEqual([`coach:${visitor} POST /append`]);
     for (const mode of ['refused-by-cutoff', 'unavailable', 'corrupt']) {
       ring.length = 0;
@@ -989,18 +1049,28 @@ describe('CW31 consent on the content service', () => {
       expect(Object.values(numeric).every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0)).toBe(true);
       expect(JSON.stringify(warn.mock.calls)).not.toMatch(/private|vis-|coach|cms-|content_click/);
 
+      // R10 (baseline-52 #5; W11, LANE-LOG.md:40, a reviewer FAILs any KV fallback re-admitted): configuration is read through the publication
+      // only (versionedStore.ts:92-95), so the read failure is injected at the publication's own storage read (publication.ts:177) and
+      // is a preparation failure: no fan-out, exactly the receipt the route reports for one (route.ts:127), numeric only. Only the learn
+      // member's own document read fails, so a re-admitted fallback would still read the catalogue and reach the ring.
       invalidateCache(); warn.mockClear();
-      env.CACHE = { get: async () => { throw new Error('private configuration'); } } as unknown as KVNamespace;
-      await outcomeToLearning(env, 'coach', event);
-      // Legacy config reads deliberately fall back; this task does not make them strict reads.
-      expect(ring).toHaveBeenCalledTimes(3); expect(warn).toHaveBeenCalledTimes(2);
-      expect(warn.mock.calls[0]).toEqual(['[config] read failed, serving fallback']);
-      expect(warn.mock.calls[1]).toEqual(['learning_incomplete', expect.objectContaining({ kind: 1, ringUnknown: 1 })]);
+      reportLearningIncomplete('outcome', null); const preparationFailure = warn.mock.calls[0]!; warn.mockClear();
+      const ringCalls = ring.mock.calls.length, stored = env.STORAGE.get.bind(env.STORAGE);
+      const failedPublication = vi.spyOn(env.STORAGE, 'get').mockImplementation((async (key: string) => {
+        if (key.includes('/' + LEARN_KIND.name + '/')) throw new Error('private configuration');
+        return stored(key);
+      }) as never);
+      try { await outcomeToLearning(env, 'coach', event); } finally { failedPublication.mockRestore(); }
+      expect(ring).toHaveBeenCalledTimes(ringCalls); expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]).toEqual(preparationFailure);
+      expect(Object.values(warn.mock.calls[0]![1] as Record<string, unknown>).every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0)).toBe(true);
+      expect(JSON.stringify(warn.mock.calls)).not.toMatch(/private|vis-|coach|cms-|content_click/);
       // A propagated preparation failure is distinct: inject it at the existing dependency seam.
       const failedConfig = vi.spyOn(configStore, 'readRevision').mockRejectedValueOnce(new Error('private preparation'));
       try {
         warn.mockClear(); await outcomeToLearning(env, 'coach', event);
-        expect(ring).toHaveBeenCalledTimes(3); expect(warn).toHaveBeenCalledTimes(1);
+        // R10 (baseline-52 #5): the ring count before this preparation failure, which no longer includes the removed fallback's fan-out above.
+        expect(ring).toHaveBeenCalledTimes(ringCalls); expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0]).toEqual(['learning_incomplete', expect.objectContaining({ kind: 1, code: 3, ringNotAttempted: 1, creditPlanKnown: 0 })]);
         failedConfig.mockRejectedValueOnce(new Error('private preparation'));
         warn.mockImplementation(() => { throw new Error('private logger'); });
@@ -1069,11 +1139,16 @@ describe('W34.01 deployment-off external scoring on the actual service', () => {
   beforeEach(() => { invalidateCache(); invalidateLiftCache(); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
+  // W34 LG1 (step 3, STALE arrangement): W34.E3 refuses a NEW learn document
+  // carrying an external term, so the stored document these cases serve is
+  // published as a retained value (W11 `retainedValue`, envWith's fifth
+  // parameter), the only way such a document can still be stored. Every
+  // assertion below is unchanged.
   it.each(configurations)('withdraws $kind / $ref despite a valid positive-weight stored document', async (external) => {
     const { env, ring, shopper } = await envWith(snapshot, {
       holdout: { share: 0, salt: '', arms: ['default'] },
       external, slots: { hero: { external: { weight: 0.5 } } },
-    });
+    }, ['hero'], 'coach', true);
     // All adapters would succeed and favour b if the live service invoked one.
     const answer = { version: 'synthetic-v1', scores: { b: 1 } };
     const fetchCall = vi.fn(async () => Response.json(answer));
@@ -1114,7 +1189,7 @@ describe('W34.01 deployment-off external scoring on the actual service', () => {
     const { env } = await envWith(snapshot, {
       holdout: { share: mode === 'default arm' ? 1 : 0, salt: '', arms: ['default'] },
       external: configurations[0], slots: { hero: { external: { weight: mode === 'zero weight' ? 0 : 0.5 } } },
-    });
+    }, ['hero'], 'coach', true); // W34 LG1 STALE arrangement: retained, as above.
     const fetchCall = vi.fn(async () => Response.json({ version: 'unused', scores: { b: 1 } }));
     vi.stubGlobal('fetch', fetchCall);
     const out = await serve(env);

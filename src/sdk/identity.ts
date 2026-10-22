@@ -5,10 +5,20 @@
 // cookie as fallback, both written. The formats are the demo storefront's,
 // verbatim, so a visitor known to the demo is the same visitor to the SDK.
 
-import { ENTRY_TERM_LIMIT } from '../services/visit';
+import { ENTRY_CAMPAIGN_LIMIT, ENTRY_TERM_LIMIT } from '../services/visit';
 import type { EntrySignals, Host } from './types';
 
 export const DEFAULT_VISITOR_KEY = 'opt_visitor_id';
+
+/**
+ * W16 R4 (LANE-LOG R81(c)): in BROKER mode the recognition proof belongs to the
+ * first-party broker as an HttpOnly cookie this script never sees, so the one
+ * thing the browser keeps for a return is the operation id its consume is keyed
+ * by. It travels to the broker in this header — never in the body the broker
+ * contract pins to `{ consent? }` — and the broker relays it beside the proof,
+ * so a return whose answer was lost is retried as the SAME consume.
+ */
+export const CONTINUITY_OPERATION_HEADER = 'X-Continuity-Operation';
 const YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 export function mintVisitorId(host: Host, key = DEFAULT_VISITOR_KEY): string {
@@ -69,7 +79,7 @@ export function rotateBrowsingSession(host: Host, key = DEFAULT_SESSION_KEY): vo
  * one that crosses a visit boundary. The server decides that.
  */
 export function entrySignals(host: Host): EntrySignals {
-  let utmMedium = '', utmSource = '', utmTerm = '';
+  let utmMedium = '', utmSource = '', utmTerm = '', utmCampaign = '';
   try {
     const usp = new URLSearchParams(host.location?.search ?? '');
     utmMedium = usp.get('utm_medium') ?? '';
@@ -81,9 +91,13 @@ export function entrySignals(host: Host): EntrySignals {
     // rest of the arrival still travels, so an overlong term costs the term only.
     utmTerm = usp.get('utm_term') ?? '';
     if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = '';
+    // P36: the campaign name, for a tenant whose published mapping reads it
+    // (the brand split), from the same read and refused at its bound the same way.
+    utmCampaign = usp.get('utm_campaign') ?? '';
+    if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = '';
   } catch { /* no search */ }
-  // Absent stays absent: a page load with no keyword carries no keyword field,
-  // so the arrival every other page load sends is unchanged.
-  return { utmMedium, utmSource, ...(utmTerm ? { utmTerm } : {}),
+  // Absent stays absent: a page load with no keyword or campaign carries no such
+  // field, so the arrival every other page load sends is unchanged.
+  return { utmMedium, utmSource, ...(utmTerm ? { utmTerm } : {}), ...(utmCampaign ? { utmCampaign } : {}),
     referrer: host.referrer ?? '', siteHost: host.location?.hostname ?? '' };
 }

@@ -1,0 +1,1632 @@
+{
+  "devices": [
+    {
+      "id": "iphone-18-pro-max",
+      "name": "Apple iPhone 18 Pro Max",
+      "maker": "apple",
+      "colour": "Glacier",
+      "files": {
+        "png": "devices/iphone-18-pro-max.png",
+        "webp": "devices/iphone-18-pro-max.webp",
+        "white": "devices/iphone-18-pro-max.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 256692,
+        "webp": 22174,
+        "jpg": 33753
+      },
+      "sha256": "866decdd9c4bc6392bca6f0f1678a0ac22e07d84abb62274e0ad68fdf266ec0a",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-18-pro-max-finish-select-glacier-202609?wid=1880&hei=2224&fmt=png-alpha",
+          "page": "https://www.apple.com/shop/buy-iphone/iphone-18-pro",
+          "retrieved": "2026-09-30",
+          "sha256": "3540d71a54e46ed4e820f9ff2d0f136e18dfec423cc45b373a8d1599585a1b05",
+          "bytes": 3592982,
+          "pixels": "1880x2224",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Apple on apple.com (Apple Store buy page). © Apple Inc.; iPhone and Apple are Apple trademarks. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Apple's own back-and-front pair; edges intact; only the Apple mark on the back; wallpaper on screen, no status bar, no carrier name."
+      }
+    },
+    {
+      "id": "iphone-18-pro",
+      "name": "Apple iPhone 18 Pro",
+      "maker": "apple",
+      "colour": "Burgundy",
+      "files": {
+        "png": "devices/iphone-18-pro.png",
+        "webp": "devices/iphone-18-pro.webp",
+        "white": "devices/iphone-18-pro.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 248529,
+        "webp": 28384,
+        "jpg": 37751
+      },
+      "sha256": "4710ecc5ff8efed8760e1cf7dde7b2a8cbbfbbbd62c8417357f8f8d513e8a35e",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-18-pro-finish-select-burgundy-202609?wid=1880&hei=2224&fmt=png-alpha",
+          "page": "https://www.apple.com/shop/buy-iphone/iphone-18-pro",
+          "retrieved": "2026-09-30",
+          "sha256": "e937e6f707e8ef2a17a218807d6abe0925c45e3a7e8fbc6c1085ba779b26e750",
+          "bytes": 3176019,
+          "pixels": "1880x2224",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Apple on apple.com (Apple Store buy page). © Apple Inc.; iPhone and Apple are Apple trademarks. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Apple's own back-and-front pair in the launch colour; edges intact; Apple mark only; clean at 1:1."
+      }
+    },
+    {
+      "id": "iphone-duo",
+      "name": "Apple iPhone Duo",
+      "maker": "apple",
+      "colour": "Night Sky",
+      "files": {
+        "png": "devices/iphone-duo.png",
+        "webp": "devices/iphone-duo.webp",
+        "white": "devices/iphone-duo.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 110012,
+        "webp": 31826,
+        "jpg": 31462
+      },
+      "sha256": "af9dff3cfeb7c1c00cb965ddf3ff703a686da3c3e7e940b8fda1a7cbd14c8007",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-duo-finish-select-night-sky-202609?wid=1880&hei=2224&fmt=png-alpha",
+          "page": "https://www.apple.com/shop/buy-iphone/iphone-duo",
+          "retrieved": "2026-09-30",
+          "sha256": "2a4c92e4575a435e25e066efbc70e833d264e66be06038ad49495cde0ebc26cf",
+          "bytes": 2344962,
+          "pixels": "1880x2224",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Apple on apple.com (Apple Store buy page). © Apple Inc.; iPhone and Apple are Apple trademarks. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Back and the open inner display. Wider than tall, so it fills by width and sits lower than the bar phones: correct, not a framing fault."
+      }
+    },
+    {
+      "id": "iphone-air",
+      "name": "Apple iPhone Air",
+      "maker": "apple",
+      "colour": "Sky Blue",
+      "files": {
+        "png": "devices/iphone-air.png",
+        "webp": "devices/iphone-air.webp",
+        "white": "devices/iphone-air.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 101689,
+        "webp": 21454,
+        "jpg": 27903
+      },
+      "sha256": "8ce5713f3bc3bd9363e1e41503ce48542127e5aa9a20bd06044e1a610ca8d610",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-air-finish-select-skyblue-202509?wid=1880&hei=2224&fmt=png-alpha",
+          "page": "https://www.apple.com/shop/buy-iphone/iphone-air",
+          "retrieved": "2026-09-30",
+          "sha256": "3ac94157ccc14c43c9d870f47050d9a9c9c5674f59e39174bd80a362252d1f9f",
+          "bytes": 1697989,
+          "pixels": "1880x2224",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Apple on apple.com (Apple Store buy page). © Apple Inc.; iPhone and Apple are Apple trademarks. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Apple's own back-and-front pair in Sky Blue; edges intact; Apple mark only."
+      }
+    },
+    {
+      "id": "iphone-17",
+      "name": "Apple iPhone 17",
+      "maker": "apple",
+      "colour": "Sage",
+      "files": {
+        "png": "devices/iphone-17.png",
+        "webp": "devices/iphone-17.webp",
+        "white": "devices/iphone-17.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 97525,
+        "webp": 26360,
+        "jpg": 35041
+      },
+      "sha256": "9802af1c7a0a3c4e89d1296392e153738185938659ea8ed8ba432dc0247edd78",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-17-finish-select-sage-202509_GEO_US?wid=1880&hei=2224&fmt=png-alpha",
+          "page": "https://www.apple.com/shop/buy-iphone/iphone-17",
+          "retrieved": "2026-09-30",
+          "sha256": "9d0493f7388ea418e7235c66ed45ad117b5180ed690d2635e122da06a08f3329",
+          "bytes": 2256656,
+          "pixels": "1880x2224",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Apple on apple.com (Apple Store buy page). © Apple Inc.; iPhone and Apple are Apple trademarks. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "US (eSIM-only) render; clean."
+      }
+    },
+    {
+      "id": "galaxy-s26-ultra",
+      "name": "Samsung Galaxy S26 Ultra",
+      "maker": "samsung",
+      "colour": "Black",
+      "files": {
+        "png": "devices/galaxy-s26-ultra.png",
+        "webp": "devices/galaxy-s26-ultra.webp",
+        "white": "devices/galaxy-s26-ultra.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 99003,
+        "webp": 23934,
+        "jpg": 31577
+      },
+      "sha256": "255347990688db7d8e7c3621422230f208ebae6218022d61f9c6d73ddd0105d0",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/s2602/gallery/us-galaxy-s26-ultra-s948-sm-s948uzkaxaa-550993359?fmt=png-alpha&scl=1",
+          "page": "https://www.samsung.com/us/smartphones/galaxy-s26-ultra/buy/",
+          "retrieved": "2026-09-30",
+          "sha256": "0eb67f4bd922e57647207567057450191702592c67b7eb97b72442ca0c1091ea",
+          "bytes": 58480,
+          "pixels": "1920x1280",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Samsung on samsung.com/us (unlocked SKU, so no carrier variant). © Samsung Electronics; Galaxy is a Samsung trademark. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Samsung's default pair with the S Pen, as Samsung shoots it; SAMSUNG wordmark on the back is the maker's own; unlocked SKU image."
+      }
+    },
+    {
+      "id": "galaxy-s26-plus",
+      "name": "Samsung Galaxy S26+",
+      "maker": "samsung",
+      "colour": "Cobalt Violet",
+      "files": {
+        "png": "devices/galaxy-s26-plus.png",
+        "webp": "devices/galaxy-s26-plus.webp",
+        "white": "devices/galaxy-s26-plus.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 91596,
+        "webp": 17334,
+        "jpg": 30940
+      },
+      "sha256": "42e4cd9aca7d9df95f562b443fa5d486db085565d3723485c688509dca10f6cf",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/s2602/gallery/us-galaxy-s26-s947-sm-s947uzvaxaa-550994937?fmt=png-alpha&scl=1",
+          "page": "https://www.samsung.com/us/smartphones/galaxy-s26-plus/buy/",
+          "retrieved": "2026-09-30",
+          "sha256": "c85ee0f30c0077b94980777326395cd4049ad06a176106fffe188ce435337671",
+          "bytes": 783126,
+          "pixels": "1920x1280",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Samsung on samsung.com/us (unlocked SKU, so no carrier variant). © Samsung Electronics; Galaxy is a Samsung trademark. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Clean pair, unlocked SKU."
+      }
+    },
+    {
+      "id": "galaxy-s26",
+      "name": "Samsung Galaxy S26",
+      "maker": "samsung",
+      "colour": "White",
+      "files": {
+        "png": "devices/galaxy-s26.png",
+        "webp": "devices/galaxy-s26.webp",
+        "white": "devices/galaxy-s26.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 90657,
+        "webp": 15036,
+        "jpg": 26110
+      },
+      "sha256": "af985f4c056275188bb71d057fdd39a3aeb140f6e870164209df1a00e54c03d4",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/s2602/gallery/us-galaxy-s26-s942-sm-s942uzwexaa-550995764?fmt=png-alpha&scl=1",
+          "page": "https://www.samsung.com/us/smartphones/galaxy-s26/buy/",
+          "retrieved": "2026-09-30",
+          "sha256": "b22fb3ca1795283a075b1c130b1bb622f758911b371b633074733ae545167ba4",
+          "bytes": 608357,
+          "pixels": "1920x1280",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Samsung on samsung.com/us (unlocked SKU, so no carrier variant). © Samsung Electronics; Galaxy is a Samsung trademark. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "White back carries its own grey outline, so it holds on a white card."
+      }
+    },
+    {
+      "id": "galaxy-z-fold8",
+      "name": "Samsung Galaxy Z Fold8",
+      "maker": "samsung",
+      "colour": "Graphite",
+      "files": {
+        "png": "devices/galaxy-z-fold8.png",
+        "webp": "devices/galaxy-z-fold8.webp",
+        "white": "devices/galaxy-z-fold8.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 99302,
+        "webp": 11338,
+        "jpg": 22889
+      },
+      "sha256": "1d9fd43701258caf88b64dc12aabed36dcb7b174235741eeae275a64915122ac",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/f2607/gallery/us-galaxy-z-fold8-f971-600257-sm-f971uzkaxaa-553841319?fmt=png-alpha&scl=1",
+          "page": "https://www.samsung.com/us/smartphones/galaxy-z-fold8/buy/",
+          "retrieved": "2026-09-30",
+          "sha256": "75b89d5c5e154f1a33f5c643555823f01574258bdf6e6f62b5fadcc021003934",
+          "bytes": 1464158,
+          "pixels": "1920x1280",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Samsung on samsung.com/us (unlocked SKU, so no carrier variant). © Samsung Electronics; Galaxy is a Samsung trademark. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Cover side and open inner screen; wide, fills by width."
+      }
+    },
+    {
+      "id": "galaxy-z-flip8",
+      "name": "Samsung Galaxy Z Flip8",
+      "maker": "samsung",
+      "colour": "Pink",
+      "files": {
+        "png": "devices/galaxy-z-flip8.png",
+        "webp": "devices/galaxy-z-flip8.webp",
+        "white": "devices/galaxy-z-flip8.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 64164,
+        "webp": 26210,
+        "jpg": 28219
+      },
+      "sha256": "9e6e110c966a20f2a81178114115b487c487e163a032bb3f21f473231ae339db",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://images.samsung.com/is/image/samsung/p6pim/us/f2607/gallery/us-galaxy-zflip8-f776-sm-f776uliaxaa-553843032?fmt=png-alpha&scl=1",
+          "page": "https://www.samsung.com/us/smartphones/galaxy-z-flip8/buy/",
+          "retrieved": "2026-09-30",
+          "sha256": "c3708b7b41d44db4ab99ff8c28093e05519443a8a010dadc551e71621c3c548b",
+          "bytes": 633985,
+          "pixels": "1920x1280",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product render published by Samsung on samsung.com/us (unlocked SKU, so no carrier variant). © Samsung Electronics; Galaxy is a Samsung trademark. No licence is granted by the page; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Folded cover screen and open phone; clean."
+      }
+    },
+    {
+      "id": "pixel-11-pro-xl",
+      "name": "Google Pixel 11 Pro XL",
+      "maker": "google",
+      "colour": "Canyon",
+      "files": {
+        "png": "devices/pixel-11-pro-xl.png",
+        "webp": "devices/pixel-11-pro-xl.webp",
+        "white": "devices/pixel-11-pro-xl.jpg"
+      },
+      "spare": "not in phones.json on 2026-09-30; ready if it is added",
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 182486,
+        "webp": 46658,
+        "jpg": 50684
+      },
+      "sha256": "b337c120020d806ac0b1c66a8b80b80d594de202496b080f27d1369a3404ef4b",
+      "generated": false,
+      "view": "back and front renders, placed as a pair",
+      "sources": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/jEVeFlAk_7Dy27zIImbR5s0tX--gd9pjhrItGqBriNCF7NDrGzfiqf48V_LbB2srWU29xkuoZzbJgsBtBWPydKgoLjq5tBbO5_o=s0",
+          "page": "https://store.google.com/us/config/pixel_11_pro?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "20614da3c78fbb710fad973397ddcb3c3e5ceb32f7fc9004260f2e2eb21c629b",
+          "bytes": 71155,
+          "pixels": "1554x1243",
+          "touchesEdge": false,
+          "ground": "transparent"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/8zef4fGTcFZobQv7kgKa0mlPWF3hUON4dzIhPTZ4cdd2teR6L9LSA6B-luoqFbfPmszWODZ_XRZXdXbuAPoJflt4pWBwWNd_Xg=s0",
+          "page": "https://store.google.com/us/config/pixel_11_pro?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "fe70dde9f31a944d37431b0355b7e4b4de751f0ab1a6610043f78c9789d5fad5",
+          "bytes": 149069,
+          "pixels": "1554x1243",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product renders published by Google on the Google Store (store.google.com, unlocked SKU). © Google LLC; Pixel is a Google trademark. No licence is granted by the page; used only to identify the product in an internal demo. The back and front renders are placed as a pair by this script; each render is unmodified apart from scale and ground.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only."
+      }
+    },
+    {
+      "id": "pixel-11-pro",
+      "name": "Google Pixel 11 Pro",
+      "maker": "google",
+      "colour": "Fog",
+      "files": {
+        "png": "devices/pixel-11-pro.png",
+        "webp": "devices/pixel-11-pro.webp",
+        "white": "devices/pixel-11-pro.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 171211,
+        "webp": 45688,
+        "jpg": 47428
+      },
+      "sha256": "6ee1fcf9e3450a2606f78351d7de6ddb798ec1a364f4844a4465d925050b0d21",
+      "generated": false,
+      "view": "back and front renders, placed as a pair",
+      "sources": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/z9YDvMS3im_9IxTkZrqOpFKbnsR7NwOJ6anTSxUJmuj7MxNPD6D0lZIAXnqGk33QNnI2sEpe1w3kNosJHy8yuZgA85M1BFJXvxA=s0",
+          "page": "https://store.google.com/us/config/pixel_11_pro?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "8e16f7ee477c525440df26632698f28e8c7666bd463c4bacc8513085a9f95971",
+          "bytes": 42151,
+          "pixels": "1554x1243",
+          "touchesEdge": false,
+          "ground": "transparent"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/NjsIE4dhO3c3zSHglEJDjKWZlaXS92TnjoUCXyKumttGOzBGauXJSVQtO2xschcmeTz1Y9iniYcG_M3AALDmO1QbD1fL23NSUuY=s0",
+          "page": "https://store.google.com/us/config/pixel_11_pro?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "8b6564a31b83fc146315e18cdaaf663fcab58519c3162cd2759f0697097d8a4a",
+          "bytes": 154838,
+          "pixels": "1554x1243",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product renders published by Google on the Google Store (store.google.com, unlocked SKU). © Google LLC; Pixel is a Google trademark. No licence is granted by the page; used only to identify the product in an internal demo. The back and front renders are placed as a pair by this script; each render is unmodified apart from scale and ground.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only; clean."
+      }
+    },
+    {
+      "id": "pixel-11",
+      "name": "Google Pixel 11",
+      "maker": "google",
+      "colour": "Frost",
+      "files": {
+        "png": "devices/pixel-11.png",
+        "webp": "devices/pixel-11.webp",
+        "white": "devices/pixel-11.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 173961,
+        "webp": 30118,
+        "jpg": 37101
+      },
+      "sha256": "8b29bd79d29d1e4e27589821428436ef04f85ea5a63b60635f849c8ee05612fb",
+      "generated": false,
+      "view": "back and front renders, placed as a pair",
+      "sources": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/kyHms-QRU2yPH7fecJnDdhXdRXWYQOismjTeOPYkQAZyzuS2VM6XjcmLnK_DxKw395F45EvItfctXpBadIOZhrN6lpqhB55pCw=s0",
+          "page": "https://store.google.com/us/config/pixel_11?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "79e7e4e7672dd401c1ccc3e682ff53c60968b3c3116984e503f269cb3c1a2e37",
+          "bytes": 106307,
+          "pixels": "1554x1243",
+          "touchesEdge": false,
+          "ground": "transparent"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/8mhmE9H4q6GY7rEkTJaRgXfBoqWQ1basSU39-M7nEqhdexfsOP7XQMgLTJQidiuQuFFtJgW1bSEwk5sMncrR8CtvAFOqJBfxE5ie=s0",
+          "page": "https://store.google.com/us/config/pixel_11?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "0500d82a2a7d756c5d0275c4c4c3bbe71b26e766ce6059303187ed4bc0cc35ee",
+          "bytes": 250048,
+          "pixels": "1554x1243",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official product renders published by Google on the Google Store (store.google.com, unlocked SKU). © Google LLC; Pixel is a Google trademark. No licence is granted by the page; used only to identify the product in an internal demo. The back and front renders are placed as a pair by this script; each render is unmodified apart from scale and ground.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Store back and front renders at one scale, back in front, as Google's own press pair is composed; G mark only; clean."
+      }
+    },
+    {
+      "id": "pixel-10a",
+      "name": "Google Pixel 10a",
+      "maker": "google",
+      "colour": "Lavender",
+      "files": {
+        "png": "devices/pixel-10a.png",
+        "webp": "devices/pixel-10a.webp",
+        "white": "devices/pixel-10a.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 105282,
+        "webp": 18114,
+        "jpg": 28079
+      },
+      "sha256": "eb493f8a0981429bfb36eff5912d30060e39a1b6f36afb59d008164b4db49227",
+      "generated": false,
+      "view": "back and front renders, placed as a pair",
+      "sources": [
+        {
+          "role": "back",
+          "url": "https://lh3.googleusercontent.com/IdB9Le3UUPMZBqGC5TduhBB8n12Dv8xKFJpmOnyWzLf0IHN_4qoXupO-3mTGstYuI-NETHcrhG2LdU85dXCH59OJ8HVf_-WftV8=s0",
+          "page": "https://store.google.com/us/config/pixel_10a?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "3435b071171bcb55e0f87e5740468c5ab38a15b4f60c23b4088f4edf835773b3",
+          "bytes": 82359,
+          "pixels": "1024x1024",
+          "touchesEdge": false,
+          "ground": "transparent"
+        },
+        {
+          "role": "front",
+          "url": "https://lh3.googleusercontent.com/9EjM7hLTMa6gUVkxl44VV_qHqJUBpnt9SLQpbwq9_DErsjofjDkB7phtHMwxm5G-yH0Kh7Sx6L4LauKI8v1WtBskRl5K9DRYPyc=s0",
+          "page": "https://store.google.com/us/config/pixel_10a?hl=en-US",
+          "retrieved": "2026-09-30",
+          "sha256": "5eff3f2063ca74492ba232831188a2eb0dfbb0cf7051d83673694d3c400781ad",
+          "bytes": 61090,
+          "pixels": "1554x1243",
+          "touchesEdge": false,
+          "ground": "opaque 0,0,0 keyed from the border"
+        }
+      ],
+      "licence": "Official product renders published by Google on the Google Store (store.google.com, unlocked SKU). © Google LLC; Pixel is a Google trademark. No licence is granted by the page; used only to identify the product in an internal demo. The back and front renders are placed as a pair by this script; each render is unmodified apart from scale and ground.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Front keyed from the store's black JPEG ground. A faint grey fringe of one to two pixels is visible at the front's corners only at 3x zoom; clean at 1:1 on white. Recorded, not hidden."
+      }
+    },
+    {
+      "id": "razr-2026",
+      "name": "Motorola razr (2026)",
+      "maker": "motorola",
+      "colour": "PANTONE Sporting Green",
+      "files": {
+        "png": "devices/razr-2026.png",
+        "webp": "devices/razr-2026.webp",
+        "white": "devices/razr-2026.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 139482,
+        "webp": 70706,
+        "jpg": 55260
+      },
+      "sha256": "64c27422d763eac552a633054ad4df00b082038dfe2f3b34f5107a1f50345fe8",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://motorolanews.com/download/905/motorola-razr-70-razr/194871/razr-70-sporting-green-hero.png",
+          "page": "https://motorolanews.com/pressbox/motorola-razr/motorola-razr-70-motorola-razr/",
+          "retrieved": "2026-09-30",
+          "sha256": "91605e4c6a73c2ce928589e907c341a25695ec1aab29d7f08f27500fed0ac1ac",
+          "bytes": 22995360,
+          "pixels": "8000x8000",
+          "touchesEdge": false,
+          "ground": "transparent",
+          "shadow": "faint floor shadow removed (it ran off the source frame)"
+        }
+      ],
+      "licence": "Official press-box image from Motorola News (motorolanews.com/pressbox, Motorola's own newsroom, \"All rights reserved\"). © Motorola Mobility LLC; razr and moto are Motorola trademarks. Press-box images are published for media use; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Press hero, open and folded; the floor shadow ran off the source frame and showed as a grey box, so it is dropped. Lock screens show the time and date of the maker's render, no carrier; razr and batwing marks are the maker's own."
+      }
+    },
+    {
+      "id": "edge-2026",
+      "name": "Motorola edge (2026)",
+      "maker": "motorola",
+      "colour": "PANTONE Martini Olive",
+      "files": {
+        "png": "devices/edge-2026.png",
+        "webp": "devices/edge-2026.webp",
+        "white": "devices/edge-2026.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 137442,
+        "webp": 53698,
+        "jpg": 42522
+      },
+      "sha256": "edda551883ba62622abf8db4d0340c090c37805228b7808b54790b744353b431",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://motorolanews.com/download/933/motorola-edge-2026/228545/motorola-edge-2026_pdp-hero.png",
+          "page": "https://motorolanews.com/pressbox/motorola-edge-family/motorola-edge-2026/",
+          "retrieved": "2026-09-30",
+          "sha256": "7bc6e9fdb328b0fb116ef73b7d5689a7a84b0d86892b5a8f6074d2d7e2f38d1f",
+          "bytes": 33976536,
+          "pixels": "8000x8000",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official press-box image from Motorola News (motorolanews.com/pressbox, Motorola's own newsroom, \"All rights reserved\"). © Motorola Mobility LLC; razr and moto are Motorola trademarks. Press-box images are published for media use; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Press pair at a dynamic angle; lock screen time and date only, no carrier."
+      }
+    },
+    {
+      "id": "moto-g-2026",
+      "name": "Motorola moto g (2026)",
+      "maker": "motorola",
+      "colour": "PANTONE Slipstream",
+      "files": {
+        "png": "devices/moto-g-2026.png",
+        "webp": "devices/moto-g-2026.webp",
+        "white": "devices/moto-g-2026.jpg"
+      },
+      "size": {
+        "width": 800,
+        "height": 800,
+        "productFill": 0.86
+      },
+      "bytes": {
+        "png": 122063,
+        "webp": 34488,
+        "jpg": 32324
+      },
+      "sha256": "b20436309916a732b97f79d03b20ab1c7e250ee421d9d233c8afea0fad896f3d",
+      "generated": false,
+      "view": "maker's own back-and-front render",
+      "sources": [
+        {
+          "role": "pair",
+          "url": "https://motorolanews.com/download/759/pantone-slipstream/171017/2026_moto-g-hero_slipstream.png",
+          "page": "https://motorolanews.com/pressbox/moto-g-family/moto-g-2026/",
+          "retrieved": "2026-09-30",
+          "sha256": "b135b97487edaca9b59c8f3f2330d57ecf7a6d724c2e1d66b3adcf9a02834d6f",
+          "bytes": 22431100,
+          "pixels": "8000x8000",
+          "touchesEdge": false,
+          "ground": "transparent"
+        }
+      ],
+      "licence": "Official press-box image from Motorola News (motorolanews.com/pressbox, Motorola's own newsroom, \"All rights reserved\"). © Motorola Mobility LLC; razr and moto are Motorola trademarks. Press-box images are published for media use; used only to identify the product in an internal demo. Crop, scale and ground only.",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Press pair at a dynamic angle; lock screen time and date only, no carrier."
+      }
+    }
+  ],
+  "placeholders": {
+    "device": "placeholder-device.svg",
+    "promo": "placeholder-promo.svg"
+  },
+  "totals": {
+    "files": 99,
+    "bytes": 4960859,
+    "megabytes": 4.73,
+    "budgetMegabytes": 25
+  },
+  "plans": [
+    {
+      "id": "plan-simple",
+      "name": "Simple",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "plans/plan-simple.svg",
+        "png": "plans/plan-simple.png",
+        "bytes": {
+          "svg": 1015,
+          "png": 11822
+        }
+      }
+    },
+    {
+      "id": "plan-go",
+      "name": "Unlimited Go",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "plans/plan-go.svg",
+        "png": "plans/plan-go.png",
+        "bytes": {
+          "svg": 1342,
+          "png": 10648
+        }
+      }
+    },
+    {
+      "id": "plan-more",
+      "name": "Unlimited More",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "plans/plan-more.svg",
+        "png": "plans/plan-more.png",
+        "bytes": {
+          "svg": 1328,
+          "png": 11668
+        }
+      }
+    },
+    {
+      "id": "plan-max",
+      "name": "Unlimited Max",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "plans/plan-max.svg",
+        "png": "plans/plan-max.png",
+        "bytes": {
+          "svg": 1307,
+          "png": 12071
+        }
+      }
+    }
+  ],
+  "modules": [
+    {
+      "id": "storage-memory",
+      "name": "Storage & memory",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "modules/storage-memory.svg",
+        "png": "modules/storage-memory.png",
+        "bytes": {
+          "svg": 1168,
+          "png": 11600
+        }
+      }
+    },
+    {
+      "id": "plan-pairing",
+      "name": "Pair with a plan",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "modules/plan-pairing.svg",
+        "png": "modules/plan-pairing.png",
+        "bytes": {
+          "svg": 1025,
+          "png": 9177
+        }
+      }
+    },
+    {
+      "id": "trade-in",
+      "name": "Trade in and save",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "modules/trade-in.svg",
+        "png": "modules/trade-in.png",
+        "bytes": {
+          "svg": 1068,
+          "png": 11887
+        }
+      }
+    },
+    {
+      "id": "protection",
+      "name": "Protect your phone",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "modules/protection.svg",
+        "png": "modules/protection.png",
+        "bytes": {
+          "svg": 1070,
+          "png": 12282
+        }
+      }
+    },
+    {
+      "id": "accessories",
+      "name": "Accessories",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "modules/accessories.svg",
+        "png": "modules/accessories.png",
+        "bytes": {
+          "svg": 1103,
+          "png": 10379
+        }
+      }
+    },
+    {
+      "id": "connected-devices",
+      "name": "Watch, tablet and more lines",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "modules/connected-devices.svg",
+        "png": "modules/connected-devices.png",
+        "bytes": {
+          "svg": 1084,
+          "png": 10354
+        }
+      }
+    },
+    {
+      "id": "home-bundle",
+      "name": "Add home internet",
+      "generated": false,
+      "method": "typographic SVG, deterministic",
+      "files": {
+        "svg": "modules/home-bundle.svg",
+        "png": "modules/home-bundle.png",
+        "bytes": {
+          "svg": 1111,
+          "png": 11050
+        }
+      }
+    }
+  ],
+  "promos": [
+    {
+      "key": "promo-iphone-18-pro-launch",
+      "catalogId": "promo_iphone_18_pro_launch",
+      "variantOf": null,
+      "title": "iPhone 18 Pro. Up to $1,200 off.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "iphone-18-pro"
+      ],
+      "set": "red-arches",
+      "candidate": "a",
+      "prompt": "A seamless deep red paper set; tall sculptural curves of white and black paper arc in from the left edge; a soft white glow of light pools on the floor at centre-right; one thin warm yellow line of light runs along the floor. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-iphone-18-pro-launch.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 56886,
+      "sha256": "0a24d799a44bdd4e2092caab37b8f16da099ff17bf0e0c7aca15171b730bc0e8",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Red set, white and black paper arches, a yellow floor line; Apple’s burgundy render stands in the pool of light with a contact shadow. No text; the only mark is Apple’s own on the device.",
+        "rejected": [
+          "red-arches-b: no defect; used for the moto g flash instead"
+        ]
+      }
+    },
+    {
+      "key": "promo-iphone-18-pro-launch-final",
+      "catalogId": "promo_iphone_18_pro_launch",
+      "variantOf": "promo-iphone-18-pro-launch",
+      "title": "iPhone 18 Pro. Up to $1,200 off.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "iphone-18-pro"
+      ],
+      "set": "red-dusk",
+      "candidate": "a",
+      "prompt": "The same seamless red paper set at dusk: deeper shadows, the paper curves at the left in near silhouette, one warm concentrated pool of light at centre-right, a single thin yellow light streak, an urgent end-of-sale evening mood, shot a little closer. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-iphone-18-pro-launch-final.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 36828,
+      "sha256": "b8f926aa3b9d170a85150f93bb077ecf758f9482c043fb216ddc3c94b2656640",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "The same promotion at dusk: a visibly different frame (dark set, one yellow streak) around the identical device, so Ends tonight reads as new creative on the same id.",
+        "rejected": [
+          "red-dusk-b: no defect; used for the razr instead"
+        ]
+      }
+    },
+    {
+      "key": "promo-galaxy-s26-new-line",
+      "catalogId": "promo_galaxy_s26_new_line",
+      "variantOf": null,
+      "title": "Galaxy S26 on us with a new line.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "galaxy-s26"
+      ],
+      "set": "white-disc",
+      "candidate": "a",
+      "prompt": "A clean white seamless set; a large bold red paper disc stands behind the centre-right like a rising sun; a black paper ribbon curls across the lower left corner; soft natural shadows. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-galaxy-s26-new-line.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 41892,
+      "sha256": "c7487ea0076710f60f128f25a7e925ef0c2db148c84df9882cd5cb3004a6a172",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "White Galaxy S26 in front of the red disc; the phone’s own grey outline holds it on the white set; the window frame at the right edge belongs to the set.",
+        "rejected": [
+          "white-disc-b: no defect; used for the iPhone 18 Pro upgrade instead"
+        ]
+      }
+    },
+    {
+      "key": "promo-four-lines",
+      "catalogId": "promo_four_lines",
+      "variantOf": null,
+      "title": "Four lines, $28 a line.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "iphone-17",
+        "galaxy-s26",
+        "pixel-11",
+        "razr-2026"
+      ],
+      "set": "white-plinth",
+      "candidate": "b",
+      "prompt": "A warm white seamless set; a long low red plinth runs across the lower centre of the frame; a few black paper geometric shapes lean at the left edge; soft daylight. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-four-lines.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 56667,
+      "sha256": "c1e3c18771cc72676fbfc1c91e12d461ec4b1da039d9ee62b0b609b047ac1887",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "iPhone 17, Galaxy S26, Pixel 11 and razr on the red plinth: four lines, four makers, all inside the frame. The razr is Motorola’s floating press render, so it sits a touch high: recorded.",
+        "rejected": [
+          "white-plinth-a (as the three-phone version): the plinth sat beside the phones and the right-hand phone ran to the frame edge"
+        ]
+      }
+    },
+    {
+      "key": "promo-bring-your-phone",
+      "catalogId": "promo_bring_your_phone",
+      "variantOf": null,
+      "title": "Bring your phone. Keep your number.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated still life",
+      "devices": [],
+      "set": "sim-card",
+      "candidate": "a",
+      "prompt": "Macro still life of a single blank white nano SIM card with gold contacts and a small silver SIM ejector pin on a glossy red surface, strong soft shadow, the background falling off to white at the top; no printing on the card. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-bring-your-phone.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 37349,
+      "sha256": "1cce91b833266c6e8ab6c1628837cea62be65d97d0d0e93186daebcc47c81c64",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "A blank SIM card (checked: no printing) and an ejector pin; the chip’s reflection on the glossy red is physically consistent.",
+        "rejected": [
+          "sim-card-b: no defect"
+        ]
+      }
+    },
+    {
+      "key": "promo-pixel-11-launch",
+      "catalogId": "promo_pixel_11_launch",
+      "variantOf": null,
+      "title": "Pixel 11 on us with a new line.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "pixel-11"
+      ],
+      "set": "black-circles",
+      "candidate": "b",
+      "prompt": "A black seamless set; two large overlapping red paper circles glow softly behind the centre-right; a soft top light; one thin yellow line accent on the floor. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-pixel-11-launch.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 45407,
+      "sha256": "eaf8c33938551fc9490ca8f9660c70d89f6b4816427caebe60c4ac09f8fa784f",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Pixel 11 left of centre (layout fitted) so the two glowing circles stay in view; yellow floor line.",
+        "rejected": [
+          "black-circles-a: the circles sit exactly behind the phone and vanish"
+        ]
+      }
+    },
+    {
+      "key": "promo-pixel-11-season",
+      "catalogId": "promo_pixel_11_season",
+      "variantOf": null,
+      "title": "Pixel 11. Up to $900 off with trade-in.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "pixel-11"
+      ],
+      "set": "black-arc",
+      "candidate": "b",
+      "prompt": "A black seamless set; a soft red glow rises behind the centre-right; a thin white arc of light curves across the floor; calm and luxurious. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-pixel-11-season.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 37760,
+      "sha256": "5882bab6894384d42b88c3b7da48a252a1c13cceca2174aa500c67cc03d89a76",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Pixel 11 shifted left (layout fitted) to reveal the red glow and the white floor arc; a different frame from the launch tile, as the two-weeks beat needs.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-iphone-duo-preorder",
+      "catalogId": "promo_iphone_duo_preorder",
+      "variantOf": null,
+      "title": "iPhone Duo. Pre-order 16 October.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "iphone-duo"
+      ],
+      "set": "black-arc",
+      "candidate": "a",
+      "prompt": "A black seamless set; a soft red glow rises behind the centre-right; a thin white arc of light curves across the floor; calm and luxurious. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-iphone-duo-preorder.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 36653,
+      "sha256": "9a08a72540dfbb4d9afe8e80addb981719a4dd798c417e9c8c1807d0440a1b99",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "White arc and red glow frame the open Duo; clean.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-galaxy-s26-ultra-upgrade",
+      "catalogId": "promo_galaxy_s26_ultra_upgrade",
+      "variantOf": null,
+      "title": "Galaxy S26 Ultra. Up to $900 off your upgrade.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "galaxy-s26-ultra"
+      ],
+      "set": "red-acrylic",
+      "candidate": "b",
+      "prompt": "A red seamless set; a tall curved panel of clear acrylic stands at centre-right catching a crisp highlight along its edge; soft white light; a black paper arc at the lower left. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-galaxy-s26-ultra-upgrade.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 38945,
+      "sha256": "264b51a6be436291c0413b4c6f36de4ac88d1e1c375913d28857f56d0ee38ffd",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Galaxy S26 Ultra render in front of the curved clear panel; S Pen as Samsung shoots it.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-iphone-18-pro-upgrade",
+      "catalogId": "promo_iphone_18_pro_upgrade",
+      "variantOf": null,
+      "title": "iPhone 18 Pro. Up to $1,020 off your upgrade.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "iphone-18-pro-max",
+        "iphone-18-pro"
+      ],
+      "set": "white-disc",
+      "candidate": "b",
+      "prompt": "A clean white seamless set; a large bold red paper disc stands behind the centre-right like a rising sun; a black paper ribbon curls across the lower left corner; soft natural shadows. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-iphone-18-pro-upgrade.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 40914,
+      "sha256": "e7904f1201f04f4796d3f5ac95b62c929d2b5bc3cfa23b60fe53ac8c74a991f2",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "iPhone 18 Pro Max (Glacier) and iPhone 18 Pro (Burgundy) in front of the red disc: the family for an upgrade offer; Apple marks only.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-galaxy-z-fold8-trade-in",
+      "catalogId": "promo_galaxy_z_fold8_trade_in",
+      "variantOf": null,
+      "title": "Galaxy Z Fold8. Up to $1,100 off.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "galaxy-z-fold8"
+      ],
+      "set": "red-acrylic",
+      "candidate": "a",
+      "prompt": "A red seamless set; a tall curved panel of clear acrylic stands at centre-right catching a crisp highlight along its edge; soft white light; a black paper arc at the lower left. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-galaxy-z-fold8-trade-in.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 34615,
+      "sha256": "cae0ce51d1370f1a2e7a0a9bd7bd3050486084877f005c94c2d0d82948768038",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Z Fold8 in front of the clear panel, black floor ring; clean.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-iphone-17-new-line",
+      "catalogId": "promo_iphone_17_new_line",
+      "variantOf": null,
+      "title": "iPhone 17 on us with a new line.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "iphone-17"
+      ],
+      "set": "white-plinth",
+      "candidate": "a",
+      "prompt": "A warm white seamless set; a long low red plinth runs across the lower centre of the frame; a few black paper geometric shapes lean at the left edge; soft daylight. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-iphone-17-new-line.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 45105,
+      "sha256": "04f9d222e773f9664f1c4c8eabc5ede3249d24f7918eac3a48cf1e1806d48bb6",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "iPhone 17 standing on the red plinth (layout fitted); black paper shapes and one yellow accent at the left.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-razr-new-line",
+      "catalogId": "promo_razr_new_line",
+      "variantOf": null,
+      "title": "razr 2026 on us with a new line.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "razr-2026"
+      ],
+      "set": "red-dusk",
+      "candidate": "b",
+      "prompt": "The same seamless red paper set at dusk: deeper shadows, the paper curves at the left in near silhouette, one warm concentrated pool of light at centre-right, a single thin yellow light streak, an urgent end-of-sale evening mood, shot a little closer. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-razr-new-line.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 50968,
+      "sha256": "7d8ce4f86fad7595ed50fa9c6cfa0600dff69c7df209e99bd8f8d786cbb192c1",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Motorola’s razr press render over the dark red set; lock screens show the maker’s time and date, no carrier.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-moto-g-flash",
+      "catalogId": null,
+      "variantOf": null,
+      "title": null,
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "moto-g-2026"
+      ],
+      "set": "red-arches",
+      "candidate": "b",
+      "prompt": "A seamless deep red paper set; tall sculptural curves of white and black paper arc in from the left edge; a soft white glow of light pools on the floor at centre-right; one thin warm yellow line of light runs along the floor. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-moto-g-flash.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 57541,
+      "sha256": "121ddeb5d2e140c6e158196177dcda416fc25f9192bd2b9899b82bfc3b39f657",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "moto g press pair on the red set with the arches and floor line; lock screen time and date only.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "promo-watch-tablet-line",
+      "catalogId": "promo_watch_tablet_line",
+      "variantOf": null,
+      "title": "Add a watch or tablet line.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated still life",
+      "devices": [],
+      "set": "watch-tablet",
+      "candidate": "a",
+      "prompt": "Editorial still life of a generic smartwatch with a plain black sport band and a generic slim tablet, both screens switched off as dark glass, resting on stacked red and white paper blocks on a white seamless set, crisp shadows. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-watch-tablet-line.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 36314,
+      "sha256": "4de88705288e00cf9552cbd7cf88549cd8536e2d2a6b1e3ab4d42a573422b1f8",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Generic watch and tablet, screens off as dark glass, no marks; strap holes and pin coherent.",
+        "rejected": [
+          "watch-tablet-b: no defect"
+        ]
+      }
+    },
+    {
+      "key": "promo-streaming-perk",
+      "catalogId": "promo_streaming_perk",
+      "variantOf": null,
+      "title": "The streaming bundle, three months on us.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated still life",
+      "devices": [],
+      "set": "popcorn",
+      "candidate": "a",
+      "prompt": "Evening still life for a streaming night in: a generous bowl of fresh popcorn in a plain white ceramic bowl on a folded red wool throw, on a black set, lit warmly from the front as if by an unseen screen; no screen, no remote control, no packaging, nothing printed. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-streaming-perk.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 55304,
+      "sha256": "03ad9c668e8882684431d1e70f306be300944d428aeb95dd8e911465b552d381",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "A bowl of popcorn on a folded red throw, black set; no screen, no remote, nothing printed.",
+        "rejected": [
+          "popcorn-b: no defect; a has the cleaner negative space"
+        ]
+      }
+    },
+    {
+      "key": "promo-5g-home",
+      "catalogId": "promo_5g_home",
+      "variantOf": null,
+      "title": "Add 5G Home for $35 a month.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated still life",
+      "devices": [],
+      "set": "home-console",
+      "candidate": "a",
+      "prompt": "A sleek plain white cylindrical home internet router with no markings and no lights on a light oak console table in a calm living room; a red painted wall behind; a black paper lamp shade; soft daylight from the left. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-5g-home.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 67583,
+      "sha256": "a7209957e18d764f6e76f09db013ecf9a32afa66c88173bc0b6e67a052e5066c",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "A plain white cylinder router with no light and no mark on an oak console; the mirror shows only furniture.",
+        "rejected": [
+          "home-console-b: the framed print’s black brush stroke reads as a letter"
+        ]
+      }
+    },
+    {
+      "key": "promo-black-friday-switch",
+      "catalogId": "promo_black_friday_switch",
+      "variantOf": null,
+      "title": "Black Friday, early: switch and get a phone on us.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated still life",
+      "devices": [],
+      "set": "black-bag",
+      "candidate": "a",
+      "prompt": "Black Friday still life: a glossy black paper shopping bag with black rope handles and red tissue paper spilling from the top, standing on a black seamless set with a red rim light; a small blank yellow card tag with no writing hangs from one handle. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-black-friday-switch.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 36788,
+      "sha256": "694fd1e905e8ad7383cd71e426c3ab5b7f30e545e7d1f21e519d62d5ea6bbcae",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Black bag, red tissue, a yellow tag checked blank; handles and tag string coherent.",
+        "rejected": [
+          "black-bag-b: no defect"
+        ]
+      }
+    },
+    {
+      "key": "promo-edge-flash",
+      "catalogId": "promo_edge_flash",
+      "variantOf": null,
+      "title": "edge 2026: $289.99 off.",
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated empty stage + the maker's render placed on it",
+      "devices": [
+        "edge-2026"
+      ],
+      "set": "black-slash",
+      "candidate": "a",
+      "prompt": "A black seamless set; one sharp diagonal slash of saturated red light cuts across the back wall like a lightning stroke; a single thin warm yellow line of light on the floor; crisp, high-energy, urgent; the centre-right of the floor is lit. EMPTY STAGE: no phone, no device and no product anywhere in the frame; keep the centre-right of the frame clear, lit and uncluttered, ready for a product to be placed later. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-edge-flash.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 44187,
+      "sha256": "a01d2ddd93eb12dca712cb55eecf8b555916dea8690a0f9c449b30755bb17d42",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Motorola’s edge press pair in front of a red diagonal slash of light on a black set, one yellow floor line; the lock screen shows the render’s own time and date, no carrier; no other text or marks.",
+        "rejected": [
+          "black-slash-b: no defect, the slash hides behind the phone"
+        ]
+      }
+    },
+    {
+      "key": "promo-accessories",
+      "catalogId": null,
+      "variantOf": null,
+      "title": null,
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated still life",
+      "devices": [],
+      "set": "accessories",
+      "candidate": "a",
+      "prompt": "Top-down flat lay on a red seamless paper surface: a plain white wireless earbuds charging case, a coiled braided white charging cable, a round white magnetic wireless charging puck and a plain black silicone phone case with no phone inside, arranged on a neat grid with generous spacing and crisp shadows; nothing printed on any object. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-accessories.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 62418,
+      "sha256": "7b3400711b1115345f08e7f01ba26d870d71dd0be8ec6153db2269a05ad8ce42",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Blank earbuds case, cable with USB-C ends, charging puck, black case; nothing printed.",
+        "rejected": [
+          "accessories-b: an EU two-pin wall plug, wrong for a US carrier"
+        ]
+      }
+    },
+    {
+      "key": "promo-loyalty",
+      "catalogId": null,
+      "variantOf": null,
+      "title": null,
+      "generated": true,
+      "model": "gemini-3.1-flash-image",
+      "method": "generated still life",
+      "devices": [],
+      "set": "gift-box",
+      "candidate": "a",
+      "prompt": "A gift box wrapped in glossy red paper with a warm yellow satin ribbon and bow on a black seamless set, soft top light, a few scattered white paper confetti circles on the floor. Premium editorial studio photograph for a mobile carrier promotion. Strict palette: saturated signal red (#EE0000), deep black and clean white, with at most one small warm yellow (#F5FF1E) accent. Seamless paper set, crisp directional key light with soft fill, clean graphic shapes, sharp focus, photographic realism, generous negative space on the left third. ABSOLUTELY NO text, NO letters, NO numbers, NO logos, NO brand marks, NO watermarks, NO people, NO hands, NO faces. Any screen is switched off: plain dark glass with no interface.",
+      "file": "promos/promo-loyalty.jpg",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 32377,
+      "sha256": "bdea727f02e40352ef5fce4de5382f62771b54d7ccc7de86f30feed093e45186",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "The ribbon crosses the box correctly and the bow is attached; no tag, no text.",
+        "rejected": [
+          "gift-box-b: no defect"
+        ]
+      }
+    }
+  ],
+  "heroes": [
+    {
+      "key": "hero-launch",
+      "catalogId": "hero_launch",
+      "title": "iPhone 18 Pro is here.",
+      "generated": false,
+      "method": "the makers' renders composed on a transparent ground",
+      "devices": [
+        "iphone-18-pro-max",
+        "iphone-18-pro"
+      ],
+      "file": "heroes/hero-launch.png",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 180257,
+      "sha256": "f9a452475b1c8f2fd8df6319a91109ee9e2b0067386d0e06c217b6f57c8ea4b7",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "iPhone 18 Pro Max and 18 Pro on a transparent ground, for the page’s own dark-red hero gradient.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "hero-family",
+      "catalogId": "hero_family",
+      "title": "Four lines. One simple bill.",
+      "generated": false,
+      "method": "the makers' renders composed on a transparent ground",
+      "devices": [
+        "iphone-17",
+        "galaxy-s26",
+        "pixel-11",
+        "razr-2026"
+      ],
+      "file": "heroes/hero-family.png",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 141568,
+      "sha256": "ba5ac47c3d721309c260c5ebb25ef751c4fb9bd2822b71cca6521f86e413ced3",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "iPhone 17, Galaxy S26, Pixel 11 and razr on a transparent ground.",
+        "rejected": []
+      }
+    },
+    {
+      "key": "hero-switch",
+      "catalogId": "hero_switch",
+      "title": "Switch in minutes. Keep your number.",
+      "generated": false,
+      "method": "the makers' renders composed on a transparent ground",
+      "devices": [
+        "galaxy-s26-plus",
+        "iphone-17"
+      ],
+      "file": "heroes/hero-switch.png",
+      "size": {
+        "width": 1200,
+        "height": 800
+      },
+      "bytes": 136570,
+      "sha256": "7df4672c00bb1b0463be66d304481971f6c2194b81c77643b3724daea5c7450a",
+      "gate": {
+        "verdict": "accept",
+        "checked": "2026-09-30",
+        "note": "Galaxy S26+ and iPhone 17 on a transparent ground: bring either kind of phone.",
+        "rejected": []
+      }
+    }
+  ],
+  "about": "Provenance and the human defect-check verdict for every image under public/vantage/img/. Devices are written by scripts/fetch-vantage-devices.mjs; promos, heroes, plans, modules and placeholders by scripts/generate-vantage-art.mjs. A verdict holds only for the sha256 it was given to; a changed file reads pending. No image carries a carrier mark; the makers' own marks on their devices are part of the product."
+}

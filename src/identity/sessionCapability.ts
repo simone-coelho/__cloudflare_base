@@ -89,6 +89,12 @@ async function encodeSessionCapability(env: Env, principal: SessionCapability, v
 const CONTINUITY_PREFIX = 'rc1';
 /** Ruled member: the broker-mode cookie that carries the long proof. */
 export const CONTINUITY_COOKIE = 'opt_shopper_continuity';
+/**
+ * W16 R4: set by a shopper object, and only on the 401 it answers for a
+ * provisional grant it retired when that same return was recognized, so the
+ * session route can answer the exact retry of that lost answer as a return.
+ */
+export const CONTINUITY_RETIRED_HEADER = 'X-Continuity-Retired';
 const CONTINUITY_MAX_PURPOSE = 120;
 
 export interface ContinuityDescriptor {
@@ -223,7 +229,8 @@ export function shopperPrincipal(req: Request): SessionCapability {
   assertSessionTarget(p);
   return p;
 }
-async function boundedShopperBody(request: Request, limit: number, timeoutMs: number, tooLarge = 'Shopper request too large'): Promise<string> {
+/** The shopper request's body, read within its byte bound and time limit (P13: also the new visitor's first decision request). */
+export async function boundedShopperBody(request: Request, limit: number, timeoutMs: number, tooLarge = 'Shopper request too large'): Promise<string> {
   const reader = request.clone().body?.getReader(); if (!reader) return '';
   let timer: ReturnType<typeof setTimeout> | undefined, active = true, complete = false;
   try {

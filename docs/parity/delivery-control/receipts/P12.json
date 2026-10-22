@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P12",
+  "workOrderHash": "sha256:3157647618cdaf10b38e5bda267a75884abe9f5e4c721220aecf50a70cef71e7",
+  "artifact": {
+    "revision": "1e53f877a7390f43b9ee19e73cc7770540e5b681",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p12-build merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "P12 built on rem/p12-build: c5f9f14f merges rem/integration 33faa38e (P02, P01, P28, P03, P10, P07, P04, P29, P31, P05 and P06 of this programme, P36, P37, P38, P40 and P39 of the second, the landing of the product branch and the governance files) into the per-ticket branch rem/tkt/P12 (44c34960, specification reviewed PASS at eb456472 on rem/spec-parity-c, batch S3 after its fix round); RED baseline 9 failed / 3 passed on P12's own reasons (I1 on both hosts and the I2 logic lock green), no PRECONDITION; 5f1d715c the format setting (src/reflex/core.ts type only, src/reflex/configStore.ts, src/routes/identity.ts): the reflex document's accountIdFormat with firstLanding and hashedEmail forms, each the source of a regular expression anchored at both ends, refused by name at validation, PUT and PATCH for a non-object, no form, an unknown form, a non-string, empty or over-500 pattern, a pattern that does not compile or is not anchored, a refused write leaving the revision in force, a document without the member validating and deciding as before (D2); 2df60ddb the change statement (src/identity/assertion.ts): HMAC-SHA256 base64url keyed by the tenant's identity secret over tenant, account-change, from, to and exp, exp at most 24 h ahead, each refusal named; 8348157b the once-guarded merge (src/durable-objects/ShopperReflex.ts, src/identity/link.ts, src/identity/store.ts, src/routes/identity.ts): the link's own accountId matched whole against the declared form before anything is forwarded (S3F-C3), an identifier outside it refused 400 naming accountIdFormat with nothing linked and the browser anonymous, a tenant declaring none linking exactly as today with the identityMembers key set unchanged and no new storage key (R-P7), a verified statement folding the from account's profile into the to account's own object with W35's mergedIdentity after the browser's transfer (decayed evidence added at the later touch, counters added, memberships re-evaluated, neither profile overridden, the from account keeping its own), the session projection republished, the once memory mergedAccounts of salted shopper ids inside identityMembers written only when a merge happens, holding no identifier and no statement, reached by erasure (S3F-C2), a listed account and a change back merging nothing more (D1, R-P38), each refused statement answered by name (401 missing, another pair, a secret the tenant does not hold, expired, more than 24 h ahead; 400 malformed) merging nothing; e27fdd4c the SDK (src/sdk/identify.ts, src/sdk/types.ts, both bundles in packages/sdk and public/sdk with the 0.2.0 copies and the declarations, the ESM sizeBudget re-recorded from 97280 to 102400 under R-P63 at 97323 bytes, the IIFE 102232 under its unchanged 102400): identify carries accountChange verbatim on every link request of the call including the retry after a 409 and a detach, and without the option the body is exactly identify.test.ts:37's key set; 1e53f877 the kit (docs/kit/01, 02 and 03); the Meridian bundle unchanged (--check exact at 73711 bytes, core.ts changed a type only); acceptance 12/12 on both hosts at 1e53f877 with W21 37/37, W35 9/9, P36 48/48, P39 28/28, P40 16/16, W40 9/9 and src/sdk 82/82 on the merged tree; the gate GATE_OK once at 1e53f877 (implementer/logs/gate.log: 3079 tests, 52 failing, ratchet 52/0 outside 52; typechecks and bundle checks exact).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S3/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P12/implementer/REPORT.md",
+      "git commits on rem/p12-build up to 1e53f877"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P12 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P12/reviewer/logs/acceptance.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P12/implementer/logs/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P12/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-13T16:21:29.854Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L4/records/P12.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L56/records/P12.md"
+      ]
+    },
+    {
+      "id": "LIVE2",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
