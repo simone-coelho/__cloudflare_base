@@ -1,0 +1,1842 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-activation",
+    "title": "Tapestry parity, the engine items the first activation needs (amendment 11), 17 tickets: group A, the first-dataset items of group C, group B, the rest of C",
+    "ticketIds": [
+      "P79",
+      "P80",
+      "P81",
+      "P77",
+      "P82",
+      "P83",
+      "P74",
+      "P92",
+      "P91",
+      "P90",
+      "P84",
+      "P85",
+      "P86",
+      "P87",
+      "P76",
+      "P88",
+      "P89"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P79",
+      "title": "A new page instance on every product page view inside their app (**amendment 11, E1, 2026-10-22**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E1 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E1 (copied verbatim in the specification)"
+      },
+      "outcome": "Inside the customer's app every product page view, a return to a product already seen included, opens its own page instance with its own decisions, deadline, receipts and impressions, while a variant switch within the same product does not.",
+      "criteria": [
+        {
+          "id": "PI1",
+          "kind": "LOCAL",
+          "observable": "In the SDK, a page view opened with the same page name and channel but another product (the page view's product key, a new member of the page view's options) opens a new page instance: a new pageInstance on the decision request, its own first-decision deadline (hydrateTimeoutMs from its own first request) and the earlier page view's holds released; leaving a product page and returning to it opens another; today: src/sdk/listen.ts:327 and :398–399 open a new instance only when the page name or the channel changes, so every product page after the first in the app keeps the first one's instance.",
+          "proof": "The P79 acceptance command runs the tests named unit:P79.PI1 in src/units/P79 and they pass."
+        },
+        {
+          "id": "PI2",
+          "kind": "LOCAL",
+          "observable": "Receipts and impressions belong to the page view they were painted in: the render acknowledgement, the viewable impression and the module and content impressions of the new page view carry its pageInstance and are each sent once for it, and a late answer of the earlier product's page view never paints into the new one.",
+          "proof": "The P79 acceptance command runs the tests named unit:P79.PI2 in src/units/P79 and they pass."
+        },
+        {
+          "id": "PI3",
+          "kind": "LOCAL",
+          "observable": "Locks: a page name or channel change still opens a new page instance as today; a page view of the same product with another variant (the variant changed, the product key unchanged) opens none and keeps its deadline, holds and receipts; P34 T1–T5 and P40's viewable impression unchanged.",
+          "proof": "The P79 acceptance command runs the tests named unit:P79.PI3 in src/units/P79 and they pass."
+        },
+        {
+          "id": "PI4",
+          "kind": "LOCAL",
+          "observable": "The kit states the rule: what opens a page view (another page, another channel, another product) and what does not (a variant switch, a re-ask), in kit 01 beside the hold paragraph (:163–172) and the hydrateTimeoutMs row (:659) and in kit 02 :444; today: kit 01 :169–170 says 'a new page view (another page, or a new page instance)' and no sentence says what opens one.",
+          "proof": "The P79 acceptance command runs the tests named unit:P79.PI4 in src/units/P79 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:23–28 (E1); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E1, approved as a whole on 2026-10-22 and numbered P79 by R-P245; group A, needed by Tapestry's December test (2 to 18 December), half a day."
+        },
+        {
+          "ref": "docs/tapestry-packs/1-front-end/01-quick-start.md:93–125; docs/tapestry-packs/1-front-end/03-data-contract.md:11, :63–67",
+          "description": "The front-end pack opens a page view on every app route change with listen.refresh({ page: 'pdp', nothingToShow }) and names no product, so at 11782ac0 each product page view after the first keeps the first's page instance (listen.ts:398–399) (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Verified at 11782ac0: src/sdk/listen.ts:327 (load: a new pageInstance only when none is open or the page or the channel changed) and :398–399 (refresh: the same rule) are where the document says; the page view's key does not exist yet: HydrateOptions (listen.ts:11–27) carries page, channel and nothingToShow only. Add the product key and the variant to the page view's options and open a page instance on a product change in both places (closed by unit:P79.PI1 and unit:P79.PI3).",
+        "Keep receipts per page view on a product change: resetCapture (listen.ts:207), the holds pruned by pageInstance (:259–260), the deadline per page view (:333–341) and the cached layout's page view, which is keyed by page only (cachedView, :566–568) (closed by unit:P79.PI2).",
+        "Write the rule into kit 01 (:163–172, :659) and kit 02 (:444) (closed by unit:P79.PI4); kit 01 section 3's code block is executed as written by unit:P34.T5 (src/units/P34/LEDGER.unit.test.ts:383–389), so an edit to it runs P34 too.",
+        "The product key this ticket adds is the one P80 sends as the anchor product (ctx.anchor); name it so P80 can read it without another SDK option.",
+        "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E1 enters the queue as P79 in tapestry-parity-activation, group A; needed by Tapestry's December test."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/listen.ts",
+        "src/sdk/types.ts",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P79 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S20 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S20 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S20 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P80",
+      "title": "The carousel slot's candidates limited to the images of the product on the page (**amendment 11, E2, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E2 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E2 (copied verbatim in the specification)"
+      },
+      "outcome": "On a product page the carousel offers only the images of the product on the page: never another product's image, its default where the page names no product, and the receipt says the slot was scoped.",
+      "criteria": [
+        {
+          "id": "AS1",
+          "kind": "LOCAL",
+          "observable": "A content slot declared as scoped to the anchor product, on a request that names the anchor product, has as candidates only the catalogue items whose product link (featuredProductIds) names that product by master identifier, or the master and the variant the request names where an item names a variant; an item of another product is never a candidate on any arm; today: the anchor is only a preference bonus on a slot with a complements rule (src/content/decide.ts:818–825, :858) and featuredProductIds is a link for credit that no ranking reads (src/content/types.ts:27–28; kit 03 :236).",
+          "proof": "The P80 acceptance command runs the tests named unit:P80.AS1 in src/units/P80 and they pass."
+        },
+        {
+          "id": "AS2",
+          "kind": "LOCAL",
+          "observable": "A scoped slot on a request that names no anchor, or whose anchor no item names, returns the empty list so the page keeps its default; the decision record and the receipt name the scope and the anchor, so a replay reproduces the candidates; today: no slot can be scoped (src/content/kinds.ts:1002–1008 admits only complements: { weight }) and the anchor is kept only as a receipt driver (decide.ts:812–817, :1403–1407).",
+          "proof": "The P80 acceptance command runs the tests named unit:P80.AS2 in src/units/P80 and they pass."
+        },
+        {
+          "id": "AS3",
+          "kind": "LOCAL",
+          "observable": "The browser SDK sends the anchor: a page view opened with a product key (P79) sends it as ctx.anchor, and the variant as its own ctx signal, on the GET snapshot and on the first POST request alike; today: the snapshot query (src/sdk/listen.ts:360–366) and the first request's body (listen.ts:350) carry no ctx signal, so only a server caller can name the anchor.",
+          "proof": "The P80 acceptance command runs the tests named unit:P80.AS3 in src/units/P80 and they pass."
+        },
+        {
+          "id": "AS4",
+          "kind": "LOCAL",
+          "observable": "Locks: the complements preference on an unscoped slot unchanged; the scope can only withhold, never add or boost a piece (the form of P31's report); the kit states the scoped slot (kit 03 :236–237 and the slot rules in kit 02) and kit 02 :792's 'a ctx. signal on the query string gates no module' names the scope as its one exception.",
+          "proof": "The P80 acceptance command runs the tests named unit:P80.AS4 in src/units/P80 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:30–35 (E2); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E2, approved as a whole and numbered P80 by R-P245; group A, needed by the December test, half a day to a day."
+        },
+        {
+          "ref": "docs/tapestry-packs/1-front-end/10-carousel-design-note.md §1, §7, §10",
+          "description": "The carousel pdp-carousel is the inner content slot of the pinned hero module; each image record names its product in featuredProductIds, with the variant where only some colours show; the engine 'limits the carousel to the images of the product on the page' (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Verified at 11782ac0: the anchor is read at src/content/decide.ts:818–820 from the request's ctx signals (admitted at src/routes/decisions.ts:1053–1061: at most 8 signals of at most 64 characters), applied as a preference at :822–825 and :858 and itemised at :1403–1407; featuredProductIds is carried onto the record at decide.ts:1986; the slot declaration is validateSlot (src/content/kinds.ts:904) with the complements rule at :1002–1008 and SlotStrategy at src/content/types.ts:173–260 (complements :240, ComplementsRule :456); the piece fields at kinds.ts:241–250. Add the scope declaration and the candidate filter (closed by unit:P80.AS1 and unit:P80.AS2).",
+        "Not in the document's 'starts from': the browser SDK sends no ctx signal at all (listen.ts:350, :360–366); send P79's product key as ctx.anchor and the variant as a second signal on both request forms (closed by unit:P80.AS3).",
+        "No variant member exists on a piece or a request; the carousel note puts the variant beside the master in featuredProductIds: the specification fixes the matching rule (master alone, or master with the named variant).",
+        "Carry the anchor into the record's inputs as nothing_to_show is (src/content/decide.ts, src/learn/receipts.ts, src/learn/replay.ts) so a scoped decision replays (closed by unit:P80.AS2).",
+        "Change kit 03 :236–237 and kit 02 :792 (closed by unit:P80.AS4).",
+        "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E2 enters the queue as P80 in tapestry-parity-activation, group A; needed by Tapestry's December test."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/decide.ts",
+        "src/content/kinds.ts",
+        "src/content/types.ts",
+        "src/reflex/contentCompose.ts",
+        "src/routes/decisions.ts",
+        "src/learn/receipts.ts",
+        "src/learn/replay.ts",
+        "src/sdk/listen.ts",
+        "src/sdk/types.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P80 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S21 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S21 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S21 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P81",
+      "title": "The push of the decision set over the live connection (the rendering record's N5) (**amendment 11, E3, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E3 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E3 (copied verbatim in the specification)"
+      },
+      "outcome": "When a page view opens and whenever the shopper's decisions for it change, the engine sends the decision set over the live connection the page holds; a server, or a page before its connection is up, still asks over HTTPS.",
+      "criteria": [
+        {
+          "id": "PU1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, with a page view open on a connected socket, the engine sends that page view's decision set as a content_decisions frame (the shape src/sdk/core.ts:1195–1197 emits as 'decisions' and listen applies) when the page view opens and after each admitted action that changes its decisions; the set carries the page view's pageInstance, and its records, receipts and exposures are those the snapshot path makes; today: no product code sends content_decisions (it appears only under src/sdk and its tests at 11782ac0).",
+          "proof": "The P81 acceptance command runs the tests named unit:P81.PU1 in src/units/P81 and they pass."
+        },
+        {
+          "id": "PU2",
+          "kind": "LOCAL",
+          "observable": "The SDK no longer re-requests over HTTPS on a channel signal while the socket is connected: neither a 'connected' status (src/sdk/listen.ts:584) nor an acknowledged action (listen.ts:583) causes a snapshot request; a page view's first list is asked with POST /v1/{tenant}/decisions/snapshot when the connection is not up; the subscribe surface (subscribe, onDecisions, hold, apply) is unchanged.",
+          "proof": "The P81 acceptance command runs the tests named unit:P81.PU2 in src/units/P81 and they pass."
+        },
+        {
+          "id": "PU3",
+          "kind": "LOCAL",
+          "observable": "The hold per page view (P34) governs what is drawn: a pushed set for a held slot of the same page view leaves it as delivered, a pushed set naming another pageInstance is not drawn, and known absence still restores the defaults; a set that needs personalization consent is neither sent without it (as pushFrame refuses, src/durable-objects/ShopperReflex.ts:1869–1885) nor emitted by the SDK (core.ts:1196).",
+          "proof": "The P81 acceptance command runs the tests named unit:P81.PU3 in src/units/P81 and they pass."
+        },
+        {
+          "id": "PU4",
+          "kind": "LOCAL",
+          "observable": "The kit's sentences are replaced: kit 01 :435 ('The socket is optional … not a promised production frame'), kit 01 :150 and :422, kit 02 :250, kit 03 :70 and :1992 ('no production sender promised') state the push and when the HTTPS request is used.",
+          "proof": "The P81 acceptance command runs the tests named unit:P81.PU4 in src/units/P81 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:37–42 (E3); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E3, approved as a whole and numbered P81 by R-P245; group A, needed by the December test, within a day or two; §3 decision 2 makes both delivery paths the design."
+        },
+        {
+          "ref": "docs/architecture/tapestry-rendering-and-caching-options-2026-10-09.md §6 N5; docs/tapestry-packs/1-front-end/03-data-contract.md:80–87",
+          "description": "N5: the shopper's object sends the decision set over the live connection when it changes, as the content_decisions frame the SDK applies; the data contract states that the engine delivers each page view's decisions over the WebSocket (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Verified receiver at 11782ac0: src/sdk/core.ts handleFrame :1185–1203 (content_decisions :1195–1197 emits 'decisions'); listen applies it at src/sdk/listen.ts:303–310. Verified re-request: follow() listen.ts:555–559, called after every sent action except impressions, dwell, viewable and layout exposures (:583) and on each 'connected' status (:584) (closed by unit:P81.PU2).",
+        "The sender's home, corrected: on the object host (REFLEX_HOST 'do') the socket is accepted in src/durable-objects/ShopperReflex.ts handleUpgrade :1061–1085 and frames leave through pushFrame :1869–1885 (callers :809, :1722, :2108; the update built in buildUpdate :1753); on the session host (the default) the socket lives in src/durable-objects/PersonalizationWebSocket.ts (upgrade :106, /owner/broadcast :88–91, broadcastUpdate :278–305), reached from src/services/RealtimeSegmentEngine.ts broadcastUpdate :1073–1085 through ShopperReflex.relayOperation :4155–4175; src/routes/realtime.ts only routes the upgrade (:71–101). The document's 'starts from' omits the session host's two files (closed by unit:P81.PU1 on both hosts).",
+        "The sender needs the open page view (page, pageInstance, channel, ctx signals) and must decide through the snapshot route's path (src/routes/decisions.ts:998, src/content/service.ts) so records, receipts and exposures match; the specification fixes how the page view reaches the sender (closed by unit:P81.PU1).",
+        "On the object host a buffered delivery takes effect at the alarm (ShopperReflex.ts:1160, :4029; R-P212), so 'whenever the decisions change' includes that path (closed by unit:P81.PU1).",
+        "Removing the re-request on a socket open changes unit:P34.T5's 'then one refresh' (src/units/P34/LEDGER.unit.test.ts:397–455): an R10 by the specifier, granted below.",
+        "Replace the kit sentences (closed by unit:P81.PU4).",
+        "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E3 enters the queue as P81 in tapestry-parity-activation, group A; needed by Tapestry's December test."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 2 (the owner, 2026-10-22)",
+          "effect": "Both delivery paths are the design: 'I should be able to call an API and get a decision, or I should be able to push it'; the push sender is built and the HTTPS request path stays for servers and a page's first list."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/core.ts",
+        "src/sdk/listen.ts",
+        "src/sdk/types.ts",
+        "src/routes/realtime.ts",
+        "src/routes/decisions.ts",
+        "src/content/service.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/durable-objects/PersonalizationWebSocket.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "src/units/P34/** (R10 of T5's refresh count only, by the specifier)",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P81 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S22 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S22 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S22 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P77",
+      "title": "The vocabulary routes allowed on customer deployments (**amendment 11, E4, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E4 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E4 (copied verbatim in the specification)"
+      },
+      "outcome": "On a customer deployment an operator can publish, read, validate, approve and roll back the attribute vocabulary, and an import there is checked against the vocabulary in effect.",
+      "criteria": [
+        {
+          "id": "VR1",
+          "kind": "LOCAL",
+          "observable": "Under the customer profile with operator authority, PUT and GET /content/vocabulary, its history, revisions, validate and rollback, POST /content/vocabulary/approve/{n} and GET /content/vocabulary/rejections reach their handlers (src/routes/content.ts:642–862, :1150, :1176); today: they are refused at the boundary, because the :kind pattern is (?:catalog|slots|learn|priors) (src/customerBoundary.ts:130) and approve and rejections have no entry (customerBoundary.ts:60–64).",
+          "proof": "The P77 acceptance command runs the tests named unit:P77.VR1 in src/units/P77 and they pass."
+        },
+        {
+          "id": "VR2",
+          "kind": "LOCAL",
+          "observable": "On a customer-profile deployment with a vocabulary approved, an import or pull carrying a tag value outside it is refused 422 naming the record, the attribute and the value (src/content/kinds.ts:2094) and the rejection report counts it, as kit 02 :2236–2242 and kit 03 :1432–1451 say.",
+          "proof": "The P77 acceptance command runs the tests named unit:P77.VR2 in src/units/P77 and they pass."
+        },
+        {
+          "id": "VR3",
+          "kind": "LOCAL",
+          "observable": "Locks: nothing else in the customer boundary changes: every other route's admission and refusal under the customer profile as before, every entry still a mounted path (src/index.api-boundary.test.ts:2428); the vocabulary routes still require operator authority.",
+          "proof": "The P77 acceptance command runs the tests named unit:P77.VR3 in src/units/P77 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts, and on a customer-profile stamp for the vocabulary routes.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:44–49 (E4); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E4, approved as a whole and numbered P77 by R-P245 (the vocabulary-routes candidate); group A, needed before the first dataset loads (about 10 November), hours."
+        },
+        {
+          "ref": "_evidence/parity-step3/PRODUCTION-READINESS-2026-10-22.md:94, :267, :273",
+          "description": "The lead's readiness analysis found the vocabulary routes refused on customer stamps (SOURCE-TRACED, not reproduced); R-P245 records that the amendment settles that refusal."
+        },
+        {
+          "ref": "docs/tapestry-packs/2-content-and-cms/01-value-list-notes.md",
+          "description": "The content pack says the approved value list is 'put into effect on your deployment' (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Verified at 11782ac0: src/customerBoundary.ts:60–64 (the /content/:kind entries) and :130 (the :kind pattern without vocabulary) are where the document says; add vocabulary to the pattern and entries for POST /content/vocabulary/approve/:n and GET /content/vocabulary/rejections (closed by unit:P77.VR1 and unit:P77.VR3).",
+        "Kit 02 :2225–2243 and kit 01 :449–455 state the routes with no profile limit; no kit sentence changes unless the specification finds one naming the customer profile (read by the reviewer under VR2).",
+        "No test pins the CUSTOMER_ROUTES list (src/units/P54/LEDGER.unit.test.ts:85–88); P38's units run the routes on the demo profile."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E4 enters the queue as P77 in tapestry-parity-activation, group A; needed by the first dataset (about 10 November)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/customerBoundary.ts",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P77 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S23 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S23 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S23 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P82",
+      "title": "Import diagnostics name the record, not the merged position (**amendment 11, E5, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E5 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E5 (copied verbatim in the specification)"
+      },
+      "outcome": "Every error and warning from an import or pull names the record by its identifier and by its position in the file sent, on merge as on replace.",
+      "criteria": [
+        {
+          "id": "ID1",
+          "kind": "LOCAL",
+          "observable": "A merge import whose refused record is the k-th record of the file names it by its id and by k in every error; today: errors are addressed pieces[i] in the assembled catalogue with no id (src/content/kinds.ts:163) and merge assembles the stored pieces first, then new ids (src/content/import.ts:287–303), so a new record is named at its merged position and an updated one at its stored position.",
+          "proof": "The P82 acceptance command runs the tests named unit:P82.ID1 in src/units/P82 and they pass."
+        },
+        {
+          "id": "ID2",
+          "kind": "LOCAL",
+          "observable": "On replace the same holds, and a record dropped before validation (a non-object entry, import.ts:281–284 and :128–129) does not shift the positions named for the records after it.",
+          "proof": "The P82 acceptance command runs the tests named unit:P82.ID2 in src/units/P82 and they pass."
+        },
+        {
+          "id": "ID3",
+          "kind": "LOCAL",
+          "observable": "Every warning naming a piece on an import or pull (unknown_dimension, case_variant_value, no_nonempty_registered_tags, unknown_slot_type: src/content/catalogDiagnostics.ts:17–28, pieceIndex) carries the record's id and its file position; ignored_field keeps recordIndex (catalogDiagnostics.ts:20, :238); the kit matches (kit 03 :321–324, kit 02 :1702 and :1721).",
+          "proof": "The P82 acceptance command runs the tests named unit:P82.ID3 in src/units/P82 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:51–56 (E5); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E5, approved as a whole and numbered P82 by R-P245; group A, needed by the first dataset, hours."
+        },
+        {
+          "ref": "docs/tapestry-packs/2-content-and-cms/05-export-specification.md:79–118",
+          "description": "The export specification says a refused load 'lists every problem at once' and that the answer 'names the record, the field and the value' (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Verified at 11782ac0: merge assembly src/content/import.ts:287–303, candidatesFrom :281–284; the route's importInto src/routes/content.ts:877–913 (publish over the assembled catalogue :895–896, errors answered :901); the piece address kinds.ts:163; the import's own eligibility check on the candidates (content.ts:885) and the vocabulary refusal (kinds.ts:2094); the warnings catalogDiagnostics.ts:166–240 (closed by unit:P82.ID1–ID3).",
+        "'The kit's error example': no import error example naming pieces[i] exists in docs/kit at 11782ac0 (searched docs/kit/*.md for 'pieces[' and '\"errors\": ['); the sentences to change are kit 03 :321–324 and kit 02 :1702, :1721 (closed by unit:P82.ID3); the pack's examples are the documents lane's."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E5 enters the queue as P82 in tapestry-parity-activation, group A; needed by the first dataset (about 10 November)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/import.ts",
+        "src/routes/content.ts",
+        "src/content/kinds.ts",
+        "src/content/catalogDiagnostics.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P82 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S24 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S24 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S24 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P83",
+      "title": "Two brand rules as guarantees: a minimum count of tagged items in the first positions, and a pin with a date window (**amendment 11, E6, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E6 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E6 (copied verbatim in the specification)"
+      },
+      "outcome": "A slot can guarantee at least N items carrying a tag in its first K positions and pin the item carrying a tag between two dates, so a shared carousel leads with the launch image on each product page during the launch and with nothing pinned after it.",
+      "criteria": [
+        {
+          "id": "GR1",
+          "kind": "LOCAL",
+          "observable": "A slot rule 'at least N items carrying tag T in the first K positions' is enforced at decision time on every arm that ranks: with at least N eligible items carrying T, the first K positions hold at least N of them whatever the scores and bands; with fewer, all of them are in the first K; the receipt names the rule; today: position bands only weight positions (src/content/kinds.ts:585–663; src/reflex/contentCompose.ts:124–207) and the diversity rule caps a value, never guarantees one.",
+          "proof": "The P83 acceptance command runs the tests named unit:P83.GR1 in src/units/P83 and they pass."
+        },
+        {
+          "id": "GR2",
+          "kind": "LOCAL",
+          "observable": "A pin may name a tag and a date window instead of an item: from date A to date B the eligible item carrying the tag (among the slot's candidates, so on a scoped carousel the page's product's image, P80) leads; before A and after B the slot decides as without the pin; today: every pin names an item identifier (pinnedPieceId, pinnedPieceIds, positionPins: src/content/types.ts:173–260) and none has a window.",
+          "proof": "The P83 acceptance command runs the tests named unit:P83.GR2 in src/units/P83 and they pass."
+        },
+        {
+          "id": "GR3",
+          "kind": "LOCAL",
+          "observable": "A tag-driven pin that no eligible item satisfies refuses nothing: the slot decides as without it and pinDiagnostics names the unmet pin; an item-identifier pin that is missing, ineligible or excluded still refuses the whole slot (P04 decision D1; contentCompose.ts:441–473).",
+          "proof": "The P83 acceptance command runs the tests named unit:P83.GR3 in src/units/P83 and they pass."
+        },
+        {
+          "id": "GR4",
+          "kind": "LOCAL",
+          "observable": "Locks and kit: P04, P15 and W20 locks unchanged for item pins and bands; the kit states both rules (kit 02 :493, :796, :1682 and the position bands :1841–1843; kit 03 :628, :787).",
+          "proof": "The P83 acceptance command runs the tests named unit:P83.GR4 in src/units/P83 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:58–63 (E6); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E6, approved as a whole and numbered P83 by R-P245; group A: (a) needed by the December test, (b) by the first launch with a campaign; half a day each."
+        },
+        {
+          "ref": "docs/tapestry-packs/2-content-and-cms/04-product-page-map-template.md:74–80 (rows G1–G7); docs/tapestry-packs/1-front-end/10-carousel-design-note.md §7",
+          "description": "Rows G4 (launch image pinned for 72 hours, pin_with_window) and G5 (at least one on_model image in the first N positions) are this ticket; G2 and G3 (a module never below a position) are labelled position_band but are not in E6 (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "References moved: the pin reservation and refusal are now src/reflex/contentCompose.ts:420–486 inside composeContentDetailed (:366), the position-pin refusal at :441–473, not 196–273 and 224–236, which now hold the band helpers (bandsOf :157–172, bandRunsOf :175, rankBanded :193–207); position bands are validateBands (src/content/kinds.ts:585–663), PositionBand (src/content/types.ts:336) and the composer's band ranking (:124–207) (closed by unit:P83.GR1 and unit:P83.GR3).",
+        "Position pins are refused on any slot but the declared layout slot (kinds.ts:731) and need governanceVersion 4; the carousel is an inner content slot of the pinned hero, so the tag pin is authored on a content slot, beside the prefix pin form (pinnedPieceIds, governance 3 or later, kinds.ts:921–926) (closed by unit:P83.GR2).",
+        "The receipt and the replay name both rules (src/content/decide.ts, src/learn/receipts.ts, src/learn/replay.ts) (closed by unit:P83.GR1 and unit:P83.GR2); change the kit sentences (closed by unit:P83.GR4).",
+        "The Meridian bundle public/meridian/engine.bundle.js is generated from src/reflex/contentCompose.ts among others (src/demos/meridian/contentCompose.ts:6–9): node scripts/build-meridian.mjs rebuilds it and the gate's --check compares it; it is not in allowedPaths, and the lead rules at the join who commits it."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E6 enters the queue as P83 in tapestry-parity-activation, group A; needed by Tapestry's December test for (a) and the first launch with a campaign for (b)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/reflex/contentCompose.ts",
+        "src/content/kinds.ts",
+        "src/content/types.ts",
+        "src/content/decide.ts",
+        "src/learn/receipts.ts",
+        "src/learn/replay.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P83 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S25 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S25 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S25 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P74",
+      "title": "The layout hold's live row (P74 on the remediation resume) (**amendment 11, E7, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E7 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E7 (copied verbatim in the specification)"
+      },
+      "outcome": "One socket open makes one refresh, so a page view's snapshots on the hosted hosts are the two the unit expects and P34's live row can pass.",
+      "criteria": [
+        {
+          "id": "CR1",
+          "kind": "LOCAL",
+          "observable": "With a socket that sends the server's welcome frame after its open, as both hosts do (src/durable-objects/ShopperReflex.ts:1077–1082; src/durable-objects/PersonalizationWebSocket.ts:179–180), a socket opening after the page view's first answer causes exactly one refresh: two snapshot requests in the page view; today: three, because onopen (src/sdk/core.ts:1233–1235) and the 'connected' frame (core.ts:1192) each set the status, setStatus emits 'socket' on every call (core.ts:1176) and listen.ts:584 refreshes on each.",
+          "proof": "The P74 acceptance command runs the tests named unit:P74.CR1 in src/units/P74 and they pass."
+        },
+        {
+          "id": "CR2",
+          "kind": "LOCAL",
+          "observable": "Locks: a reconnect after a close still refreshes once; an open during the page view's first snapshot still follows it with one refresh (listen.ts:555–559, P34's opening.follow); socketStatus still reads 'connected'; P34 T1–T5 green with the welcome frame sent after the open (R-P235: the fake socket never sent it, which is why unit:P34.T5 is green locally).",
+          "proof": "The P74 acceptance command runs the tests named unit:P74.CR2 in src/units/P74 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts, P34's T5 count clauses observed on both hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:65–69 (E7); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E7, 'as the lead has it', numbered P74 by R-P245 (the candidate named in RESUME); group A, needed by the December test, within a day or two."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md R-P232 (:686) and R-P235 (:689); _evidence/parity-step3/live/lanes/L15/REPORT.md",
+          "description": "Lane L15: P34 LIVE1 FAIL (PRODUCT: P74) decided by T5's count clauses on both hosts (three snapshots where the unit expects two); R-P235 confirmed it from the code at core.ts:1176, :1192, :1233/:1235 and listen.ts:584."
+        }
+      ],
+      "remainingWork": [
+        "Sequenced after P81 (E3), which removes the SDK's re-request on a socket signal: P74 then reduces to reporting one socket open as connected once and holding P34 T5's refresh count on the hosted stamp (R-P247(1)); the specification reads P34 T5 accordingly.",
+        "'As the lead has it' (E7) is read as R-P232(1) and R-P235: T5's count clauses on both hosts; the hold failures recorded in lane L15 (T3 on the session host, T5's fresh paint on the object host) were ruled latency facts for P76 (R-P232(2)), not this ticket (closed by unit:P74.CR1).",
+        "Verified at 11782ac0: src/sdk/core.ts:1176, :1192, :1233–1235 and src/sdk/listen.ts:584 are as R-P235 cites; fix in core.ts (one 'connected' per open) or listen.ts (one follow per open) (closed by unit:P74.CR1 and unit:P74.CR2).",
+        "The fake socket (src/sdk/testHost.ts:5–17) sends no welcome frame on open(); its receive() (:16) lets the P74 unit send one without changing the shared fake, which every SDK test uses.",
+        "P81, earlier in group A, removes the re-request on a socket signal (listen.ts:584) that this ticket fixes; if P81 merges first, CR1 is met by P81's change and this ticket is re-read by the lead as a lock on P81's form.",
+        "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E7 enters the queue as P74 in tapestry-parity-activation, group A; needed by Tapestry's December test."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/core.ts",
+        "src/sdk/listen.ts",
+        "src/units/P34/** (R10 of T5's socket open only, by the specifier)",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P74 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S26 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S26 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S26 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P92",
+      "title": "Small registrations the content pack relies on (**amendment 11, E17, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E17 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E17 (copied verbatim in the specification)"
+      },
+      "outcome": "A first dataset tagged as the content pack says loads without warnings for the interim post-purchase tag, the locale tag or the module register's purpose_later field, and a record with no format is read as the tagging guide says.",
+      "criteria": [
+        {
+          "id": "RG1",
+          "kind": "LOCAL",
+          "observable": "An import for the Coach tenant carrying journeyStage:post_purchase and locale tags raises no unknown_dimension warning for them, and locale is never learned as a shopper's interest; today: a tag dimension is registered only as a dimension of the tenant's own Reflex document (src/content/catalogDiagnostics.ts:181–197), and a Reflex dimension is an interest the engine learns (DimensionSpec, src/reflex/core.ts:26–44).",
+          "proof": "The P92 acceptance command runs the tests named unit:P92.RG1 in src/units/P92 and they pass."
+        },
+        {
+          "id": "RG2",
+          "kind": "LOCAL",
+          "observable": "A record carrying purpose_later (the module register's column, in JSON or CSV) is accepted and ignored: nothing stored and no ignored_field warning; today: a field outside FEED_FIELDS (src/content/import.ts:60–79) is named ignored_field (catalogDiagnostics.ts:20, :238).",
+          "proof": "The P92 acceptance command runs the tests named unit:P92.RG2 in src/units/P92 and they pass."
+        },
+        {
+          "id": "RG3",
+          "kind": "LOCAL",
+          "observable": "A record with no contentType tag takes its type as its format where the tenant's registry has a non-derived contentType dimension and the catalogue has not retired the fallback (src/content/typeAffinity.ts:32–50; kit 02 :1721), as the tagging guide says: a lock pins it.",
+          "proof": "The P92 acceptance command runs the tests named unit:P92.RG3 in src/units/P92 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:132–135 (E17); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E17, approved as a whole and numbered P92 by R-P245; group C, needed by the first dataset, hours."
+        },
+        {
+          "ref": "docs/tapestry-packs/2-content-and-cms/01-value-list-notes.md:82, :91–94; 02-content-and-image-record-schema.md:30, :40; 03-module-register-template.md:26–27; 06-tagging-guide.md:19–20",
+          "description": "Post-purchase is carried as the tag journeyStage:post_purchase; locale is market and language, 'a gate, never a taste'; purpose_later is optional; without contentType the engine falls back to the record's rendering kind (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Sequenced ahead of group B because the first dataset (about 10 November) needs it (R-P247(2)); E15's (b) and (c) wait for the customer's choice inside the ticket, the allow-list and (d) do not.",
+        "The Coach tenant is not provisioned on any stamp (parked by the owner, amendment 11 §3 decision 3) and the id coach in code is the demo's default configuration scope (src/reflex/configStore.ts:56, :615–622); the registration ships as the mechanism and a checked starting document, and its publication on the tenant is an operator step outside this amendment's authority (§4.5) (closed by unit:P92.RG1).",
+        "Registering locale as a Reflex dimension, the only registration that silences unknown_dimension today, would make it a learned interest, against the pack's 'a gate, never a taste': the specification fixes a registration that warns not and learns not (closed by unit:P92.RG1).",
+        "Accept and ignore purpose_later in the feed's field table (src/content/import.ts:60–79) (closed by unit:P92.RG2).",
+        "Checked (E17's 'check, and correct whichever is wrong'): the engine falls back to the type as the guide says (typeAffinity.ts:32–50), on two conditions the guide does not state, a non-derived contentType dimension and no retirement marker (P32); no engine change; the guide's wording is the documents lane's (closed by unit:P92.RG3)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E17 enters the queue as P92 in tapestry-parity-activation, group C; needed by the first dataset (about 10 November)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/import.ts",
+        "src/content/kinds.ts",
+        "src/content/catalogDiagnostics.ts",
+        "src/reflex/core.ts",
+        "src/reflex/configStore.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P92 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S36 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S36 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S36 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P91",
+      "title": "Import improvements the export specification states (**amendment 11, E16, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E16 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E16 (copied verbatim in the specification)"
+      },
+      "outcome": "An import says what it will do before it does it: no mode is refused, an unchanged load is skipped and says so, a dry run checks an export under the import's own rules without writing, a full export can expire what it leaves out behind a guard, and the endpoint can be limited to the customer's addresses.",
+      "criteria": [
+        {
+          "id": "IM1",
+          "kind": "LOCAL",
+          "observable": "POST /content/catalog/import and POST /content/catalog/pull with no mode are refused 400 naming the two modes, writing nothing; today: no mode is read as replace (src/routes/content.ts:938 and :985).",
+          "proof": "The P91 acceptance command runs the tests named unit:P91.IM1 in src/units/P91 and they pass."
+        },
+        {
+          "id": "IM2",
+          "kind": "LOCAL",
+          "observable": "A load whose assembled catalogue equals the stored one writes no revision and answers that it was skipped, naming the revision in force; today: the publication runs whatever changed (content.ts:895–896) and the answer reports changed: 0 on a new revision.",
+          "proof": "The P91 acceptance command runs the tests named unit:P91.IM2 in src/units/P91 and they pass."
+        },
+        {
+          "id": "IM3",
+          "kind": "LOCAL",
+          "observable": "A dry run validates an export (CSV or JSON, the aliases, merge against the stored catalogue, the vocabulary in effect) under the import's own rules and answers the same errors and diagnostics as the import, writing nothing; today: POST /content/catalog/validate takes a JSON catalogue document only (content.ts:688–693).",
+          "proof": "The P91 acceptance command runs the tests named unit:P91.IM3 in src/units/P91 and they pass."
+        },
+        {
+          "id": "IM4",
+          "kind": "LOCAL",
+          "observable": "A full-export mode expires (lifecycle expired) the stored pieces missing from the file, refused unless the request carries its guard; and a source-address allow-list on the import endpoint refuses a caller outside it.",
+          "proof": "The P91 acceptance command runs the tests named unit:P91.IM4 in src/units/P91 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts, and on a customer-profile stamp for the import endpoint.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:126–130 (E16); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E16, approved as a whole and numbered P91 by R-P245; group C: the no-mode refusal by the first dataset, the rest by the production export job; hours to half a day each."
+        },
+        {
+          "ref": "docs/tapestry-packs/2-content-and-cms/05-export-specification.md:77, :194–197",
+          "description": "The pack tells the customer that a load without a mode is read as replace and to name merge on every load (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Sequenced ahead of group B because the first dataset (about 10 November) needs it (R-P247(2)); E15's (b) and (c) wait for the customer's choice inside the ticket, the allow-list and (d) do not.",
+        "Verified at 11782ac0: the import route src/routes/content.ts:935–970 (mode default :938), the pull :972–990 (mode default :985), importInto :877–913, the validate route :688–693, assemble src/content/import.ts:287–303 (closed by unit:P91.IM1–IM4).",
+        "The no-mode refusal changes every existing test that imports without a mode: the specifier sweeps them and grants R10s by name.",
+        "Change kit 02 :1700–1702 and kit 03 :246–249 (read by the reviewer under each criterion); the pack's sentence (05-export-specification.md:77) is the documents lane's."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E16 enters the queue as P91 in tapestry-parity-activation, group C; needed by the first dataset for the no-mode refusal and the production export job for the rest."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/routes/content.ts",
+        "src/content/import.ts",
+        "src/config/publication.ts",
+        "src/customerBoundary.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P91 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S35 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S35 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S35 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P90",
+      "title": "The bucket-drop ingest, the scheduled authenticated pull, the manual-upload script, and an allow-list on the on-demand pull (**amendment 11, E15, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E15 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E15 (copied verbatim in the specification)"
+      },
+      "outcome": "The customer's IT can deliver the content export by each means the IT pack offers: a person on our side loads a file with a script, the on-demand pull reaches only allowed hosts, and the bucket drop and the scheduled pull exist where the customer chooses them.",
+      "criteria": [
+        {
+          "id": "EX1",
+          "kind": "LOCAL",
+          "observable": "(d) A script for a person on our side loads a customer file (JSON or CSV) into a named tenant through POST /content/catalog/import with the two publication headers (If-Match from the state read, an Idempotency-Key) and merge named, refusing a non-loopback target without an issued operator token; today: scripts/import-content.mjs is the demo's adapter (it pulls the Meridian catalogue: scripts/import-content.mjs:3–12).",
+          "proof": "The P90 acceptance command runs the tests named unit:P90.EX1 in src/units/P90 and they pass."
+        },
+        {
+          "id": "EX2",
+          "kind": "LOCAL",
+          "observable": "The on-demand pull (POST /content/catalog/pull) fetches only from hosts on the tenant's allow-list, over HTTPS, following no redirect; today: any http or https URL is fetched (src/routes/content.ts:977), HttpJsonSource sends no authentication header and follows redirects by default (src/content/import.ts:328–345), and kit 02 :1701 says HTTPS.",
+          "proof": "The P90 acceptance command runs the tests named unit:P90.EX2 in src/units/P90 and they pass."
+        },
+        {
+          "id": "EX3",
+          "kind": "LOCAL",
+          "observable": "(c) A scheduled pull from a URL the customer exposes: on a cron, their token read from a secret and sent as an authentication header, no redirects, an allowed host, once per export, and an alert on failure; today: wrangler.toml:242–243 carries three crons, none a pull, and the scheduled handler (src/index.ts:269) runs none.",
+          "proof": "The P90 acceptance command runs the tests named unit:P90.EX3 in src/units/P90 and they pass."
+        },
+        {
+          "id": "EX4",
+          "kind": "LOCAL",
+          "observable": "(b) A bucket drop: an object put in the tenant's bucket (by a scoped credential or a presigned upload) is ingested on notification or on a sweep, once per object, and a result object is written back.",
+          "proof": "The P90 acceptance command runs the tests named unit:P90.EX4 in src/units/P90 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts, and on a customer-profile stamp for the script, the pull and whichever of (b) and (c) the customer chose.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:119–124 (E15); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E15, approved as a whole and numbered P90 by R-P245; group C: (b) and (c) only if Tapestry chooses them in week 2 after the kickoff, (d) before the first dataset, the allow-list now."
+        },
+        {
+          "ref": "docs/tapestry-packs/3-it-and-integration/01-export-mechanisms.md (b) :141–176, (c) :178–211, (d) :213–233",
+          "description": "The IT pack's options (b), (c) and (d) as offered to the customer (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Sequenced ahead of group B because the first dataset (about 10 November) needs it (R-P247(2)); E15's (b) and (c) wait for the customer's choice inside the ticket, the allow-list and (d) do not.",
+        "First: (b) and (c) are built only if Tapestry chooses them in week 2 after the kickoff (amendment 11 §3 decision 4; decision D2); the lead records the customer's choice before batch S34's specification, and if either is not chosen the lead rules its criterion (EX3 or EX4) out of this ticket by an amendment ruling; (d) and the allow-list are built in any case.",
+        "Verified at 11782ac0: HttpJsonSource src/content/import.ts:328–345 (Accept JSON, JSON.parse, no authentication header, fetch's default redirect), the pull route src/routes/content.ts:972–990 (the http(s) check :977; the comment 'what URLs a tenant may name is a policy for CW1 to bind' :969–970), wrangler.toml:242–243 (no pull cron), scripts/import-content.mjs demo only (:3–12); the scheduled handler is src/index.ts:269 (closed by unit:P90.EX1–EX4).",
+        "No bucket, secret, cron or credential is created on any deployment by this ticket (amendment 11 §4.5): the build and its tests are local, and wrangler.toml lines are written, not deployed."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E15 enters the queue as P90 in tapestry-parity-activation, group C; needed by (d) the first dataset, the allow-list now, (b) and (c) only if chosen."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 4 (approved as a whole by the owner, 2026-10-22)",
+          "effect": "Group C's (b) and (c) are built only if Tapestry chooses them (week 2 after the kickoff); (d) before the first dataset; the allow-list on the on-demand pull now."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/import.ts",
+        "src/routes/content.ts",
+        "src/index.ts",
+        "src/ops/monitor.ts",
+        "src/types/env.ts",
+        "wrangler.toml",
+        "scripts/import-content.mjs",
+        "scripts/lib/tool-token.mjs",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P90 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S34 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S34 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S34 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P84",
+      "title": "The context order for the carousel before paint: the published table and the head script carry shot orders (N1, N3), the arm known before paint (N4) (**amendment 11, E8, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E8 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E8 (copied verbatim in the specification)"
+      },
+      "outcome": "On a cached product page the head script orders the carousel by the shot order published for the shopper's arrival context, within the brand rules and with the leading image preloaded, before the first frame, and the arm is known before paint even on a brand-new browser.",
+      "criteria": [
+        {
+          "id": "CO1",
+          "kind": "LOCAL",
+          "observable": "The published per-context document for the product page (N1) carries, beside the approved module layouts per device, channel and visit bucket, a carousel shot order per context (an order of shot-type tag values), the default row, the holdout share and salt version, the classifier version and its own version; it is shopper-free, served at a stable and a versioned address with public caching and regenerated when its inputs change; today: no such document or route exists, and per-context orders are module-id lists on the layout slot only (src/content/kinds.ts:760).",
+          "proof": "The P84 acceptance command runs the tests named unit:P84.CO1 in src/units/P84 and they pass."
+        },
+        {
+          "id": "CO2",
+          "kind": "LOCAL",
+          "observable": "The head script (N3), built from the engine's own classifier source (src/services/visit.ts) with a byte-exact build check, picks the row for the arrival context, orders the page's server-rendered image list by the row's shot order within the brand rules the document carries (P83), writes the order where the page's stylesheet reads it and writes one preload for the leading image; for the same entry, device and visit history it picks the row of the cell the engine derives.",
+          "proof": "The P84 acceptance command runs the tests named unit:P84.CO2 in src/units/P84 and they pass."
+        },
+        {
+          "id": "CO3",
+          "kind": "LOCAL",
+          "observable": "The arm is known before paint on a brand-new browser (N4): the page's draw with the published holdout share and the engine's arm for that visitor agree on its first decision, by the mechanism decision D2 records; a browser the engine already knows computes its arm with the engine's published function (src/content/holdout.ts armFor :280).",
+          "proof": "The P84 acceptance command runs the tests named unit:P84.CO3 in src/units/P84 and they pass."
+        },
+        {
+          "id": "CO4",
+          "kind": "LOCAL",
+          "observable": "The kit states the document, its addresses, the head script with its content-security-policy hash, and the server render's image list in the head as the script's documented input (kit 02 :620–640 and :1934; kit 01 :582–587 and :629).",
+          "proof": "The P84 acceptance command runs the tests named unit:P84.CO4 in src/units/P84 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:73–78 (E8); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E8, approved as a whole and numbered P84 by R-P245, which places N1, N3 and N4 here; group B, needed by the first activation, within a day or two for the table and the script, N4 as recorded."
+        },
+        {
+          "ref": "docs/architecture/tapestry-rendering-and-caching-options-2026-10-09.md §6 N1, N3, N4 (lines 406–440)",
+          "description": "The rendering record of 9 October; its references were to the 9 October tree and are corrected in remainingWork; N4 names two mechanisms and calls the choice 'a decision for the owner with their data science' (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        },
+        {
+          "ref": "docs/tapestry-packs/1-front-end/09-rendering-options-brief.md; docs/tapestry-packs/1-front-end/10-carousel-design-note.md §4–§6",
+          "description": "The customer pack states the table, the head script, the preload and the before-first-frame order as the design (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "First: N4's mechanism is not chosen. The rendering record names two (the engine mints the new visitor identifier into the arm the page drew, keeping the arm a pure function of the anchor and the salt; or the engine records the page's draw as the visitor's enrollment) and amendment 11 says 'N4 as recorded'; the lead records the owner's choice (with their data science) in AMENDMENTS.md before batch S27's specification, and CO3 is specified to it (decision D2).",
+        "References moved since the record: configuredOrderFor is src/content/decide.ts:725 (record 296–310), decideContent :752 (record from 321), composeContentDetailed src/reflex/contentCompose.ts:366 (record 173–432), the publication pin in src/content/service.ts at :739 (record 453); visit.ts VISIT_GAP_MS :32, ENTRY_CHANNELS :68, the channel classifier :210–307, liveVisit :378, visitArrival :428 (record 30–37, 121–124, 151–235, 380–398, 426–474); src/sdk/identity.ts entrySignals :81 (held); holdout.ts enrollmentFor :156, enrollmentAnchorOf :255, armFor :280 (record 146–175, 255–289); src/identity/sessionCapability.ts newAnonymousSession :186–188 (held).",
+        "Per-context orders and the context-only switch are refused on any slot but the declared layout slot (kinds.ts:760, :1255; decide.ts:639) and kit 02 :1934 says a context-only layout's inner slots are decided for the shopper: a per-context carousel order changes P01's and P30's rules; their locks are re-read by the specifier under R10 (closed by unit:P84.CO1).",
+        "The brand rules the head script applies come from P83 (sequenced before this ticket) (closed by unit:P84.CO2).",
+        "The head script's build output is generated, like the SDK bundles: the specification names it and its --check; it is not in allowedPaths. The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E8 enters the queue as P84 in tapestry-parity-activation, group B; needed by the first activation (January to early February)."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 E8 ('N4 as recorded'), approved as a whole on 2026-10-22; R-P245 (N1, N3 and N4 placed in E8)",
+          "effect": "N1, N3 and N4 are in force through this ticket; N4's mechanism is one of the two the rendering record names, and the owner's choice is recorded before the specification."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/decide.ts",
+        "src/content/kinds.ts",
+        "src/content/types.ts",
+        "src/content/service.ts",
+        "src/content/holdout.ts",
+        "src/content/cell.ts",
+        "src/routes/decisions.ts",
+        "src/identity/sessionCapability.ts",
+        "src/services/visit.ts",
+        "src/customerBoundary.ts",
+        "src/sdk/identity.ts",
+        "src/sdk/** (a new head-script source file only; the existing *.test.ts files are locks)",
+        "scripts/build-sdk.mjs",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P84 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S27 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S27 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S27 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P85",
+      "title": "An exposure record for a carousel drawn before paint (**amendment 11, E9, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E9 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E9 (copied verbatim in the specification)"
+      },
+      "outcome": "A carousel order the head script applied before paint is counted as an exposure of that page view, with its context and arm, and credited as a layout's modules are.",
+      "criteria": [
+        {
+          "id": "CX1",
+          "kind": "LOCAL",
+          "observable": "A beacon for a carousel order applied before paint (the context key or table row it was drawn under, the page, the carousel slot, the image ids in drawn order, the pageInstance) adds one exposure per drawn image to its context's learning, once per page view, under tracking consent, for a key or row the engine issued; today: a layout_exposure naming any slot other than the page's context-only layout slot answers ignored 'not_context_only' (src/content/service.ts:1340–1342).",
+          "proof": "The P85 acceptance command runs the tests named unit:P85.CX1 in src/units/P85 and they pass."
+        },
+        {
+          "id": "CX2",
+          "kind": "LOCAL",
+          "observable": "An engagement or outcome of a beacon-drawn image is credited to that exposure as a layout module's is (P30, P33), and the holdout's arms are never counted; P30's layout beacon unchanged.",
+          "proof": "The P85 acceptance command runs the tests named unit:P85.CX2 in src/units/P85 and they pass."
+        },
+        {
+          "id": "CX3",
+          "kind": "LOCAL",
+          "observable": "The kit states the carousel beacon (kit 01 :582–587; kit 02 :209–216 and :639; kit 03 :26 and :1095).",
+          "proof": "The P85 acceptance command runs the tests named unit:P85.CX3 in src/units/P85 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:80–85 (E9); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E9, approved as a whole and numbered P85 by R-P245; group B, needed by the first activation, half a day."
+        },
+        {
+          "ref": "docs/tapestry-packs/1-front-end/10-carousel-design-note.md §9",
+          "description": "The carousel's impression and click events and the holdout comparison the credit serves (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Verified the layout exposure path at 11782ac0: the SDK's layoutExposure src/sdk/listen.ts:560–574; the action route src/routes/realtime.ts:222–231; LayoutExposureBeacon and admitLayoutExposure src/content/service.ts:1287–1357 (the slot check :1340–1342); fanLayoutExposure src/learn/fan.ts:1277 (closed by unit:P85.CX1 and unit:P85.CX2).",
+        "This ticket depends on P84's per-context carousel order (E9 after E8); STRICT order puts P84 first.",
+        "Change the kit sentences (closed by unit:P85.CX3).",
+        "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E9 enters the queue as P85 in tapestry-parity-activation, group B; needed by the first activation (January to early February)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/listen.ts",
+        "src/sdk/types.ts",
+        "src/routes/realtime.ts",
+        "src/content/service.ts",
+        "src/learn/fan.ts",
+        "src/events/actionTypes.ts",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P85 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S28 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S28 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S28 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P86",
+      "title": "Catalogue size beyond the test scope (**amendment 11, E10, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E10 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E10 (copied verbatim in the specification)"
+      },
+      "outcome": "A catalogue with one record per image across the whole product range is stored and decided from, past today's single 2 MiB catalogue document, in the form the design decision chooses.",
+      "criteria": [
+        {
+          "id": "CS1",
+          "kind": "LOCAL",
+          "observable": "A catalogue of image records for the whole range, more than one 2 MiB document holds (kit 03 :253–262; PUBLICATION_MAX_BYTES, src/config/publication.ts:7), is accepted by import and pull in the form decision D2's design fixes, and every record is a candidate where its slot and its product scope admit it; today: a catalogue document over 2 MiB is refused.",
+          "proof": "The P86 acceptance command runs the tests named unit:P86.CS1 in src/units/P86 and they pass."
+        },
+        {
+          "id": "CS2",
+          "kind": "LOCAL",
+          "observable": "A product page's carousel decision reads only that product's records (P80's scope on the chosen store), and its decision work does not grow with the size of the range.",
+          "proof": "The P86 acceptance command runs the tests named unit:P86.CS2 in src/units/P86 and they pass."
+        },
+        {
+          "id": "CS3",
+          "kind": "LOCAL",
+          "observable": "The kit states the new limits and the design (kit 03 :253–262; kit 02 :1532's envelope).",
+          "proof": "The P86 acceptance command runs the tests named unit:P86.CS3 in src/units/P86 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:87–91 (E10); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E10, approved as a whole and numbered P86 by R-P245; group B, needed by the full range after the first test; design first, then within a day or two."
+        }
+      ],
+      "remainingWork": [
+        "First: a design decision (E10): per-product scoping of image records, sharding by product range, or a larger store; the lead records the choice under the owner's authority in AMENDMENTS.md before batch S29's specification, and CS1–CS3 are specified to it; the test scope fits today and the first dataset is sized with Tapestry after the first test.",
+        "Verified at 11782ac0: the limit is the publication store's (PUBLICATION_MAX_BYTES = 2 MiB, src/config/publication.ts:7), one catalogue document per scope; there is no piece-count cap in code: 'about 2,000 pieces' is kit 03's estimate at the shipped piece shape (:253–262).",
+        "Scoping by product is P80's mechanism; the chosen store must serve P80's filter without reading the whole range (closed by unit:P86.CS2)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E10 enters the queue as P86 in tapestry-parity-activation, group B; needed by the full range, after the first test."
+        },
+        {
+          "id": "D2",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 E10 'Done when' (approved as a whole by the owner, 2026-10-22, §3 decision 1)",
+          "effect": "Design first, then the build: the build starts only after the design choice among per-product scoping of image records, sharding by product range and a larger store is recorded."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/config/publication.ts",
+        "src/content/kinds.ts",
+        "src/content/types.ts",
+        "src/content/service.ts",
+        "src/content/decide.ts",
+        "src/content/import.ts",
+        "src/routes/content.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P86 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S29 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S29 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S29 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P87",
+      "title": "A catalogue-only service credential (**amendment 11, E11, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E11 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E11 (copied verbatim in the specification)"
+      },
+      "outcome": "A service credential can be limited to the catalogue import, so the credential the customer's IT holds cannot publish slots, learning or priors.",
+      "criteria": [
+        {
+          "id": "SC1",
+          "kind": "LOCAL",
+          "observable": "A stamp owner can register a service credential limited to the catalogue import (POST /auth/service-credentials); with it POST /content/catalog/import, POST /content/catalog/pull, POST /content/catalog/validate and the catalogue publication read are admitted; today: a service credential's role is operator or admin only (src/auth/authority.ts:7, :36; src/routes/auth.ts:305; migrations/0012_operator_authority.sql:19).",
+          "proof": "The P87 acceptance command runs the tests named unit:P87.SC1 in src/units/P87 and they pass."
+        },
+        {
+          "id": "SC2",
+          "kind": "LOCAL",
+          "observable": "With the catalogue-only credential every other operator route is refused 403 before its handler: PUT and rollback of slots, learn, priors and vocabulary, /config/reflex, and the learning, ledger and identity operator routes; today: operatorJwt (src/middleware/operatorAuth.ts:31–49) admits any credential granted to the tenant, and src/middleware/auth.ts:134 maps a service credential to roles [role] with read permission or '*'.",
+          "proof": "The P87 acceptance command runs the tests named unit:P87.SC2 in src/units/P87 and they pass."
+        },
+        {
+          "id": "SC3",
+          "kind": "LOCAL",
+          "observable": "Locks: operator and admin credentials unchanged; registration, expiry, revocation and replacement as kit 02 :2359 says; the kit names the new role.",
+          "proof": "The P87 acceptance command runs the tests named unit:P87.SC3 in src/units/P87 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts, and on a customer-profile stamp for the credential.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:93–98 (E11); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E11, approved as a whole and numbered P87 by R-P245; group B, needed by the production export job in January, half a day."
+        },
+        {
+          "ref": "docs/tapestry-packs/3-it-and-integration/01-export-mechanisms.md:115–126; docs/tapestry-packs/3-it-and-integration/05-security-pack.md §7",
+          "description": "The IT pack: one credential per calling system, bound to one tenant, rotated by issuing a second and revoking the first (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Starts-from incomplete: the roles are declared at src/auth/authority.ts:7 and :36, but the enforcement is in src/middleware/auth.ts:128–135 (a service JWT to roles and permissions), src/middleware/operatorAuth.ts:31–49 (operatorJwt on every operator route; src/routes/content.ts:66–69 for every content route), the schema src/routes/auth.ts:305, and the D1 table's CHECK (role IN ('operator', 'admin')) at migrations/0012_operator_authority.sql:19 and migrations/product/0012_operator_authority.sql:19 (closed by unit:P87.SC1 and unit:P87.SC2).",
+        "A new role needs an additive migration beside 0013 (SQLite cannot alter a CHECK in place); this ticket writes and tests it locally; applying it to any database is separate operational authority (kit 02 :2361; amendment 11 §4.5).",
+        "Name the role in kit 02 :2359 (closed by unit:P87.SC3)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E11 enters the queue as P87 in tapestry-parity-activation, group B; needed by the production export job (January)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/auth/authority.ts",
+        "src/middleware/auth.ts",
+        "src/middleware/operatorAuth.ts",
+        "src/routes/auth.ts",
+        "src/routes/content.ts",
+        "migrations/0014_*.sql (new, additive)",
+        "migrations/product/0014_*.sql (new, additive)",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P87 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S30 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S30 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S30 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P76",
+      "title": "First-answer time on the hosted stamps (P76 candidate) (**amendment 11, E12, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E12 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E12 (copied verbatim in the specification)"
+      },
+      "outcome": "A page's first decision arrives within the SDK's first-paint deadline on the hosted stamps, and until it does the kit states the measured times rather than design targets.",
+      "criteria": [
+        {
+          "id": "FA1",
+          "kind": "LOCAL",
+          "observable": "Every first answer on both hosts reports where its time went, the session issue included: the first-request door's Server-Timing names the session issue beside the snapshot's stages (documents, shopper, trend, lift, decide: src/content/service.ts:732–735, :768–1039); today: the door (src/routes/decisions.ts:966–997) awaits the session issue at :979 and copies only the forwarded snapshot's Server-Timing at :990–991.",
+          "proof": "The P76 acceptance command runs the tests named unit:P76.FA1 in src/units/P76 and they pass."
+        },
+        {
+          "id": "FA2",
+          "kind": "LOCAL",
+          "observable": "The kit states the first-answer time as measured: beside hydrateTimeoutMs (kit 01 :659) and the deadline paragraph (kit 01 :154–158), the first-answer times measured on the acceptance pair and the stamps and what paints when the deadline passes; today: kit 01 states the 1.5 s deadline only.",
+          "proof": "The P76 acceptance command runs the tests named unit:P76.FA2 in src/units/P76 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts, and on the stamps at the load profile the owner measures, first answers within hydrateTimeoutMs (1.5 s) and render acknowledgements within the SDK's 5 s deadline.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:100–103 (E12); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E12, 'as the lead defines it', numbered P76 by R-P245; needed by the performance budget session (week 1 to 2 after the kickoff) to state honestly, and by the first activation to meet."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md R-P232(2) (:686) and R-P235(1), (5) (:689); docs/remediation/RESUME.md:14",
+          "description": "The lead's recorded candidate: first answers past P34's 1.5 s first-paint deadline on both hosts of the pair (1.7–2.7 s on the object host, 1.9–4.8 s on the session host in lane L15) and acknowledgements past the SDK's 5 s deadline; the stamps run the session profile and were not measured; the owner's item is the real load profile."
+        },
+        {
+          "ref": "docs/tapestry-packs/1-front-end/07-performance-and-defaults.md:41",
+          "description": "The performance sheet states 'design targets, not measurements of your page' until this ticket is done (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "First: 'as the lead defines it' (E12): the lead writes P76's definition of done before batch S31's specification from the recorded candidate (R-P232(2), R-P235(1); RESUME:14); FA1 and FA2 are the analyst's LOCAL proposal from that record, and the latency fix itself is specified once the definition names its cause.",
+        "Constraints from the rulings: the default witness and ring budgets are 600 ms each (P72, R-P236) and the first decision after a long quiet spell is late by design (P70, R-P191); a fix does not wake the statistics object from the decision path or bring back the KV witness record without the KV-staleness ruling R-P191(2) left open; whether the lift and ring reads of a first answer overlap is UNVERIFIED in this draft.",
+        "Add the session issue to the first-request door's Server-Timing (closed by unit:P76.FA1); state the measured times in kit 01 (closed by unit:P76.FA2)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E12 enters the queue as P76 in tapestry-parity-activation, group B; needed by the performance budget session (week 1 to 2 after the kickoff) and the first activation."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/routes/decisions.ts",
+        "src/content/service.ts",
+        "src/learn/fan.ts",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P76 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S31 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S31 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S31 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P88",
+      "title": "Approved layouts enforced as a publication rule (N2) (**amendment 11, E13, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E13 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E13 (copied verbatim in the specification)"
+      },
+      "outcome": "A per-context order for a page is refused at publication unless it is one of the page's approved layouts, and the approved set is itself a published, versioned document.",
+      "criteria": [
+        {
+          "id": "AL1",
+          "kind": "LOCAL",
+          "observable": "The approved layouts of a page, per page and device, are a published, versioned document with history, revisions, validate and rollback like the other configuration documents; today: none exists (the content kinds are catalog, slots, learn, priors and vocabulary: src/routes/content.ts:83–93).",
+          "proof": "The P88 acceptance command runs the tests named unit:P88.AL1 in src/units/P88 and they pass."
+        },
+        {
+          "id": "AL2",
+          "kind": "LOCAL",
+          "observable": "Publishing a slots document whose per-context order on the declared layout slot is not one of the page's approved layouts for its device is refused 422 naming the page, the context and the order, writing nothing; an approved order publishes as today; today: validateOrders (src/content/kinds.ts:508, applied at :1042) checks an order against the slot's take, pins and exclusions only.",
+          "proof": "The P88 acceptance command runs the tests named unit:P88.AL2 in src/units/P88 and they pass."
+        },
+        {
+          "id": "AL3",
+          "kind": "LOCAL",
+          "observable": "Locks: P01 O1–O5 and P04's pin rules unchanged for approved orders; the kit states the rule and the document (kit 02 :450 and :1585).",
+          "proof": "The P88 acceptance command runs the tests named unit:P88.AL3 in src/units/P88 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:105–109 (E13); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E13, approved as a whole and numbered P88 by R-P245, which places N2 here; group B, needed by the first activation, hours."
+        },
+        {
+          "ref": "docs/architecture/tapestry-rendering-and-caching-options-2026-10-09.md §6 N2 (lines 417–420)",
+          "description": "N2: a set of approved layouts per page and device; an order outside it refused at publication with a named error; the console shows the set (the console part is not in E13) (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "N2's starts-from in the record (src/content/types.ts:156–193) moved: ConfiguredOrder and OrderContext are src/content/types.ts:440–452; validateOrders src/content/kinds.ts:508, called at :1042; the order cross-rules kinds.ts:756–790; P01's O5 is src/units/P01/LEDGER.unit.test.ts:249–252 (closed by unit:P88.AL2).",
+        "R-P70 ruled N2, with its console display, not in force; R-P245 puts the publication rule in force through E13; the console's display of the set is not in E13's done-when and stays outside this ticket.",
+        "A new document kind is admitted on a customer stamp only if src/customerBoundary.ts:130's pattern names it (as P77 does for vocabulary); the specification chooses a new kind or a member of the slots document (closed by unit:P88.AL1)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E13 enters the queue as P88 in tapestry-parity-activation, group B; needed by the first activation (January to early February)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/kinds.ts",
+        "src/content/types.ts",
+        "src/routes/content.ts",
+        "src/config/publication.ts",
+        "src/customerBoundary.ts",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P88 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S32 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S32 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S32 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P89",
+      "title": "The shopper's shot order carried between page views and into the next first landing, with corrections after sign-in (**amendment 11, E14, 2026-10-22**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
+        "locator": "E14 · section 2 of amendment 11 (the owner's amendment 2 of 2026-10-22)",
+        "requirement": "see amendment 11 section 2, item E14 (copied verbatim in the specification)"
+      },
+      "outcome": "The shopper's latest carousel shot order follows them: delivered over the live connection, kept in the browser for the next page view and the next first landing, corrected after a sign-in or a merge, and never applied to a carousel already on screen.",
+      "criteria": [
+        {
+          "id": "SO1",
+          "kind": "LOCAL",
+          "observable": "The engine delivers the shopper's latest shot order (the order of shot-type tags the carousel decision ranked by) over the live connection when it changes, on both hosts; today: no shot order is computed or sent.",
+          "proof": "The P89 acceptance command runs the tests named unit:P89.SO1 in src/units/P89 and they pass."
+        },
+        {
+          "id": "SO2",
+          "kind": "LOCAL",
+          "observable": "The SDK keeps the latest shot order in first-party storage under the tenant's key, and the head script (P84) applies it on the next page view and the next first landing as it applies a context's row; a browser whose storage was cleared lands as a new shopper; a delivery during a page view changes no slide already drawn.",
+          "proof": "The P89 acceptance command runs the tests named unit:P89.SO2 in src/units/P89 and they pass."
+        },
+        {
+          "id": "SO3",
+          "kind": "LOCAL",
+          "observable": "After a sign-in or a merge, the next page view uses the corrected order the engine sends for the merged shopper; a sign-out, an identity change or a personalization refusal clears the stored order.",
+          "proof": "The P89 acceptance command runs the tests named unit:P89.SO3 in src/units/P89 and they pass."
+        },
+        {
+          "id": "SO4",
+          "kind": "LOCAL",
+          "observable": "The kit states the carried order, its storage and its corrections (kit 01 beside the live connection's frames :420–435; kit 03's frame table :1992).",
+          "proof": "The P89 acceptance command runs the tests named unit:P89.SO4 in src/units/P89 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:111–115 (E14); _evidence/parity-step3/AMENDMENTS.md:703 (R-P245)",
+          "description": "The owner's item E14, approved as a whole and numbered P89 by R-P245; group B, needed by the first activation, half a day after E8."
+        },
+        {
+          "ref": "docs/tapestry-packs/1-front-end/10-carousel-design-note.md §4, §5, §6; docs/architecture/tapestry-rendering-and-caching-options-2026-10-09.md §6 N6 (lines 437–440)",
+          "description": "The returning shopper's order carried from the previous visit in first-party storage; N6: the context state the SDK keeps and corrections pushed forward (the Windows checkout /mnt/c/users/lah/documents/__development/optimizely/__cloudflare_base; not in rem/integration; read as a document only)."
+        }
+      ],
+      "remainingWork": [
+        "Depends on P81 (the push) and P84 (the shot order and the head script): E14 'after E8'; STRICT order puts both first. The ledger allows a blocker only on a BLOCKED ticket (tools/closure-ledger/src/core.mjs:338–339), so the dependency is written here.",
+        "N6's references moved: the visit and the cell are src/content/service.ts:799–806 (record 497–508); the SDK's session and storage are src/sdk/core.ts:640–800 (ready :733; record 662–789); the storage keys are built at core.ts:275–292 (closed by unit:P89.SO1–SO3).",
+        "Write the kit sentences (closed by unit:P89.SO4).",
+        "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 1 (the owner, 2026-10-22: 'we need to write all those tickets into the queue', approved as a whole); R-P245 (_evidence/parity-step3/AMENDMENTS.md:703)",
+          "effect": "E14 enters the queue as P89 in tapestry-parity-activation, group B; needed by the first activation (January to early February)."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/core.ts",
+        "src/sdk/listen.ts",
+        "src/sdk/types.ts",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/durable-objects/PersonalizationWebSocket.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "src/routes/realtime.ts",
+        "src/content/service.ts",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P89 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S33 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S33 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S33 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
