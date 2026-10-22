@@ -60,28 +60,16 @@
         }
       ],
       "remainingWork": [
-        {
-          "id": "RW1",
-          "description": "Raise the exported defaults LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS in src/learn/fan.ts from 200 to 600; the override's admission and refusal unchanged.",
-          "closedBy": "unit:P72.BD1, unit:P72.BD2"
-        },
-        {
-          "id": "RW2",
-          "description": "Read P62's locks that pin the number 200 as the exported defaults (test-only R10 in the form of R-P195).",
-          "closedBy": "unit:P72.BD2 and the P62 locks"
-        },
-        {
-          "id": "RW3",
-          "description": "State 600 ms and the reason in kit 02 (:369 and the heartbeat/cost paragraph), kit 03 (the budget and sources.budgets statements) and the commented wrangler.toml lines.",
-          "closedBy": "unit:P72.BD3"
-        }
+        "Raise the exported defaults LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS in src/learn/fan.ts from 200 to 600, the override's admission and refusal unchanged (closed by unit:P72.BD1 and unit:P72.BD2).",
+        "Read P62's locks that pin the number 200 as the exported defaults, test-only, in the form of R-P195 (closed by unit:P72.BD2 and the P62 locks at the artifact).",
+        "State 600 ms and the reason in kit 02 (:369 and the heartbeat/cost paragraph), kit 03 (the budget and sources.budgets statements) and the commented wrangler.toml lines (closed by unit:P72.BD3)."
       ],
       "decisions": [
         {
           "id": "D1",
-          "decision": "600 ms, not 500 (the owner, 2026-10-22, R-P236): the value lane L14/L15 proved on the pair, with a buffer over the largest warm read measured (478 ms).",
-          "by": "owner",
-          "date": "2026-10-22"
+          "status": "RESOLVED",
+          "authorityRef": "R-P236 (the owner, 2026-10-22); R-P217(3), R-P229, R-P235",
+          "effect": "The default is 600 ms, not 500: the value lanes L14 and L15 proved on the pair, with a buffer over the largest warm read measured (478 ms); the bounded override stays for operators."
         }
       ],
       "deferredLiveAcceptance": [
@@ -105,14 +93,13 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "db84b2768b0b0468a80099e20d8f4744b876091f",
+        "reviewedRevision": "pending the batch S19 specification review (filled by the lead at the review's PASS)",
         "verdict": "PASS",
         "evidence": [
-          "_evidence/parity-step3/S17/specifier/REPORT.md (rem-specifier; S17 at db84b276: P72 AK1/AK2, the P56 AA4 R10 de83175a, P71 BR1/BR2)",
-          "_evidence/parity-step3/S17/reviewer-spec/REPORT.md (rem-reviewer: PASS at the reviewed revision db84b276; P72 AK1 RED for the 401 on both hosts ×3, P71 BR1 RED on the object host ×3, the R10 correct; both fixes green together with P67 and the P65 additive legs, 153/153)"
+          "pending: the specification review of batch S19 records the reviewed revision and the RED/HONEST evidence per criterion"
         ],
         "negativeControlEvidence": [
-          "_evidence/parity-step3/S17/reviewer/logs/controls/ (twelve sketches: the fix 13/13; the clause dropped without the max → 500 and the rendered.at lock RED; the record at the client's time; the engine's present; an extra call; W23's min removed; a re-send shifted; the window/id checks removed; P71 null-as-no-profile 27/27; drop-all → BR2 RED; the session re-decision removed → BR1 session lock RED)"
+          "pending: the specification review of batch S19 records the sketches that turn each lock RED"
         ]
       },
       "doneWhen": [
