@@ -11,7 +11,7 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { REFLEX_KIND } from '@/reflex/configStore';
 import { publicationScope } from '@/config/publication';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from '@/content/kinds';
-import { liftKey, liftStaleKey, liftRepublishedKey, liftArchiveKey } from '@/learn/fan';
+import { liftKey, liftStaleKey, liftRepublishedKey, liftArchiveKey, LIFT_WITNESS_BUDGET_MS } from '@/learn/fan';
 import { slotGovernanceKey } from '@/learn/slotGovernance';
 import { CUSTOMER_ASSETS, CUSTOMER_OMITTED_BINDINGS, CUSTOMER_ROUTES, customerRequest } from '@/customerBoundary';
 import { captureRetention, type RetentionEnv } from '@/retention';
@@ -106,6 +106,16 @@ type Result = {
   pending: number;
   bodyReads?: number;
 };
+
+// R10 (amendment 10 P72, R-P240; test-only, R-P195's form): W10.03's held witness read is derived from the exported
+// default budget (src/learn/fan.ts `LIFT_WITNESS_BUDGET_MS`) instead of the numbers 500 and 400, which pinned the 200 ms
+// default: the fixture's `hold-health` fault holds the witness door the budget plus 300 ms, and the held read must be
+// refused within the budget plus 200 ms. At 200 ms these are today's 500 and 400; at P72's 600 ms, 900 and 800. The
+// lock reads "a read held past the budget is refused within the budget plus a margin" with no number of its own.
+/** W10.03: how long the `hold-health` fault holds the witness door: past the default budget. */
+const HELD_WITNESS_MS = LIFT_WITNESS_BUDGET_MS + 300;
+/** W10.03: the held read is refused within the default budget plus this margin (still short of the hold). */
+const HELD_REFUSAL_BOUND_MS = LIFT_WITNESS_BUDGET_MS + 200;
 
 // Kept in this file so independent reviewers can replay the complete fixture.
 // This wrapper accepts JSON over the local test transport and then constructs a
@@ -281,7 +291,7 @@ export class LearnStats extends NativeLearnStats {
     const path = new URL(request.url).pathname;
     const monitoring = await w12NativeFixture(this, request); if (monitoring) return monitoring;
     if (path === '/__learning_fixture') return learningFixture(this, request);
-    if (['/health', '/witness'].includes(path) && this.fault.mode === 'hold-health') await new Promise(resolve => setTimeout(resolve, 500)); // R10 (amendment 6 / P62, R-P112(3)): the fault holds the witness door the decision path calls since P62 too
+    if (['/health', '/witness'].includes(path) && this.fault.mode === 'hold-health') await new Promise(resolve => setTimeout(resolve, ${HELD_WITNESS_MS})); // R10 (amendment 6 / P62, R-P112(3)): the fault holds the witness door the decision path calls since P62 too; R10 (amendment 10 P72, R-P240): held past the exported default budget (HELD_WITNESS_MS)
     return super.fetch(request);
   }
 }
@@ -1723,7 +1733,7 @@ it('W10.03 native SQLite bounded waves, exact repair, ambiguous writes and persi
     const positive = await (await health()).json(); expect(positive).toMatchObject({ accepted: true });
     await ask(targets.stats, '/__learning_fixture', { action: 'fault', mode: 'hold-health' });
     const held = await (await health()).json() as { accepted: boolean; elapsedMs: number };
-    expect(held.accepted).toBe(false); expect(held.elapsedMs).toBeLessThan(400);
+    expect(held.accepted).toBe(false); expect(held.elapsedMs).toBeLessThan(HELD_REFUSAL_BOUND_MS); // R10 (amendment 10 P72, R-P240): the default budget plus a margin
     await ask(targets.stats, '/__learning_fixture', { action: 'fault', mode: '' });
     const old = emptyStats(); for (let i = 0; i < 300; i++) recordExposure(old, 'old' + i, cell, at, DEFAULT_STATS);
     console.log('W10.03 native phase repair');
