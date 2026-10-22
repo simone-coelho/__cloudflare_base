@@ -43,7 +43,8 @@
 //   · the ordinary alarm: the earliest expiry of the learning-effect markers the state holds
 //     (LearnStats.ts `effectExpiries`, the alarm's `finally`), read from the stored state;
 //   · the default budgets: src/learn/fan.ts `LIFT_WITNESS_BUDGET_MS` and `RING_READ_BUDGET_MS`, 200 ms
-//     each (amendment 9 §2: "the default budgets stay 200 ms"; P62.LW1's derivation).
+//     each (amendment 9 §2: "the default budgets stay 200 ms"; P62.LW1's derivation); amendment 10 (P72)
+//     rules them 600 ms, so WB2 reads them as the exported defaults (R10 below).
 //
 // THE READINGS THIS FILE RULES:
 //   · THE CONSTANTS. `WARM_HEARTBEAT_MS` and `WARM_TAIL_MS`, exported by
@@ -87,7 +88,10 @@
 //     (src/units/_parity8.ts `remoteLatency`, as P65.RS3 and P69.AK2 add it), a decision, its
 //     acknowledgement and a click make, per binding and method, no more remote calls before their
 //     answer than they make at 53de8f2b (BASE_CALLS_BEFORE_ANSWER, measured on this harness); the
-//     decision's `sources.budgets` names the 200 ms defaults.
+//     decision's `sources.budgets` names the exported defaults (R10, amendment 10 P72, R-P239(1);
+//     test-only, R-P195's form: read as src/learn/fan.ts `LIFT_WITNESS_BUDGET_MS` and
+//     `RING_READ_BUDGET_MS` instead of the number 200, which P72 raises to 600 ms; the title names
+//     no number, so it is the same test on either product).
 //   · WB2 "the ring object is NOT kept warm": a decision's ring read leaves the shopper's ring object's
 //     alarm as it was.
 //   · WB2's other locks — P63 NR1-NR3, P42 PW2, W27 R4 (P63.NR3's leg), P62 LW1-LW4, W38 B7 and P61's
@@ -190,8 +194,6 @@ import { decide, kvReadLog, later, liftWorld, objectDoor, PDP_MODULES, placement
 const PUBLISH_DELAY_MS = 30_000;
 /** The ruled values of the two constants (amendment 9 §2, D1's cost, LIFT-EDGE §5(v)). */
 const RULED = { WARM_HEARTBEAT_MS: 5_000, WARM_TAIL_MS: 600_000 };
-/** The default budgets that stay (amendment 9 §2; src/learn/fan.ts). */
-const DEFAULT_BUDGET_MS = 200;
 /** What every remote binding call waits under the lever (P65.RS3's lever). */
 const LEVER_MS = 20;
 /**
@@ -588,7 +590,7 @@ describe('unit:P70.WB2', () => {
         .toEqual(['in time', 'in time']);
     }, 120_000);
 
-    it(`host (${host}): LOCK — no new remote call before any answer: with ${LEVER_MS} ms added to every remote binding call, a decision on the product page, its acknowledgement and a click make, per binding and method, no more remote calls before their answer than the base; the decision's sources.budgets names the ${DEFAULT_BUDGET_MS} ms defaults`, async () => {
+    it(`host (${host}): LOCK — no new remote call before any answer: with ${LEVER_MS} ms added to every remote binding call, a decision on the product page, its acknowledgement and a click make, per binding and method, no more remote calls before their answer than the base; the decision's sources.budgets names the exported defaults`, async () => {
       const { m } = await liftWorld(host);
       const app = workerApp(m);
       const shopper = (await decide(m, 'pdp', { ack: false })).shopper;
@@ -612,9 +614,9 @@ describe('unit:P70.WB2', () => {
       expect([ack.status, click.status], `${host}: PRECONDITION — the acknowledgement and the click are accepted`).toEqual([200, 200]);
       expect.soft(beyond, `${host}: P70.WB2 — no remote call before an answer beyond the base's (a heartbeat is alarm work, never on the answer path)`)
         .toEqual([['decision', []], ['acknowledgement', []], ['click', []]]);
-      expect.soft([sourcesMember(page, 'budgets'), learningReadBudgets({}), LIFT_WITNESS_BUDGET_MS, RING_READ_BUDGET_MS],
-        `${host}: P70.WB2 — the default budgets stay ${DEFAULT_BUDGET_MS} ms and sources.budgets reports them (amendment 9 §2)`)
-        .toEqual([{ lift: DEFAULT_BUDGET_MS, ring: DEFAULT_BUDGET_MS }, { lift: DEFAULT_BUDGET_MS, ring: DEFAULT_BUDGET_MS }, DEFAULT_BUDGET_MS, DEFAULT_BUDGET_MS]);
+      expect.soft([sourcesMember(page, 'budgets'), learningReadBudgets({})],
+        `${host}: P70.WB2 — the decision runs under the exported default budgets and sources.budgets reports them (amendment 9 §2; R10, amendment 10 P72)`)
+        .toEqual([{ lift: LIFT_WITNESS_BUDGET_MS, ring: RING_READ_BUDGET_MS }, { lift: LIFT_WITNESS_BUDGET_MS, ring: RING_READ_BUDGET_MS }]);
     }, 60_000);
 
     it(`host (${host}): LOCK — the ring object is not kept warm (amendment 9 §2): a decision's ring read leaves the shopper's ring object's alarm as it was`, async () => {

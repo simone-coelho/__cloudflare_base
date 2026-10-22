@@ -191,10 +191,12 @@ TREND_ROLLUP_TENANTS = "coach"
 # only deployed state; absent or any other value is also off. No value enables a model.
 EXTERNAL_MODEL_POLICY = "off"
 # P62: the lift witness and ring read budgets in ms (src/learn/fan.ts `learningReadBudgets`), unset here and in
-# every env below, so the code defaults (200 and 200) apply. A whole number above 0 and below 5000, as text,
-# overrides one; any other value is refused, the default stays and the answer's sources.budgets.refused names it.
-# LIFT_WITNESS_BUDGET_MS = "200"
-# RING_READ_BUDGET_MS = "200"
+# every env below, so the code defaults (600 and 600, P72) apply: one edge round trip to a warm statistics object,
+# measured on the platform at up to 378 ms inside a warm tail, with a buffer; the budget bounds the wait, not the
+# read. A whole number above 0 and below 5000, as text, overrides one; any other value is refused, the default
+# stays and the answer's sources.budgets.refused names it.
+# LIFT_WITNESS_BUDGET_MS = "600"
+# RING_READ_BUDGET_MS = "600"
 # P70: the statistics object (LEARN_STATS) keeps itself warm for the witness read: code constants, not variables
 # (src/durable-objects/LearnStats.ts WARM_HEARTBEAT_MS = 5000 and WARM_TAIL_MS = 600000). After a witness call,
 # an exposure write or a credit write its one alarm is due at most 5 s ahead until 10 minutes after the last of
