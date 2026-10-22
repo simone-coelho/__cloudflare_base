@@ -3,6 +3,11 @@
 // site's defaults whatever the holdout hash says; tracking off means the
 // engine writes nothing about the request (no ring, no exposure, no ledger);
 // explicit scoped authority is required; unknown and legacy defaults are OFF.
+//
+// R10 (amendment 10 P72, R-P244; test-only, R-P195's form): W10.03's held witness read ("checks actual serving health
+// ...") is bounded by the exported default budget instead of the number 400, which pinned the 200 ms default: the
+// fixture holds the witness door until the read gives up (no number of its own), and the held read must be refused
+// within the default budget plus 200 ms (`HELD_REFUSAL_BOUND_MS`: 400 at 200 ms, 800 at P72's 600 ms).
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Env } from '@/types/env';
@@ -28,7 +33,7 @@ import { PROPOSALS_KIND, EMPTY_PROPOSALS } from '@/learn/cycle';
 import { tombstoneKey } from '@/ledger/erasure';
 import * as configStore from '@/config/versionedStore';
 import { DEFAULT_STATS, buildSnapshot, emptyStats, levelKeys, liftFor, recordExposure, recordSuccess, type LiftSnapshot, type StatsState } from '@/learn/stats';
-import { liftArchiveKey, liftKey, reportLearningIncomplete } from '@/learn/fan';
+import { liftArchiveKey, liftKey, reportLearningIncomplete, LIFT_WITNESS_BUDGET_MS } from '@/learn/fan';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { DEFAULT_POLICY, type RingEntry } from '@/learn/policy';
@@ -83,6 +88,8 @@ class FakeKV {
   async get(key: string, type?: string): Promise<unknown> { this.reads.push(key); const raw = this.store.get(key); return raw === undefined ? null : type === 'stream' ? new Response(raw).body : JSON.parse(raw); }
   async put(key: string, value: string): Promise<void> { this.store.set(key, value); }
 }
+/** W10.03 (R10, amendment 10 P72, R-P244): the held witness read is refused within the default budget plus this margin. */
+const HELD_REFUSAL_BOUND_MS = LIFT_WITNESS_BUDGET_MS + 200;
 /** A namespace whose one object answers every fetch with `reply` and records what was asked. */
 const fakeNs = (reply: unknown, calls: string[]) => ({
   idFromName: (n: string) => n,
@@ -783,7 +790,7 @@ describe('CW31 consent on the content service', () => {
     }
     cache.store.set(key, original); invalidateLiftCache(); held = true;
     const start = performance.now(), refused = await serve(env, now + 1, true); const heldMs = performance.now() - start;
-    expect(refused.records[0]!.explain.lift).toBeNull(); expect(heldMs).toBeLessThan(400); held = false;
+    expect(refused.records[0]!.explain.lift).toBeNull(); expect(heldMs).toBeLessThan(HELD_REFUSAL_BOUND_MS); held = false; // R10 (amendment 10 P72, R-P244): the default budget plus a margin
     vi.spyOn(env.STORAGE, 'put').mockRejectedValueOnce(new Error('Synthetic archive failure'));
     expect((await send('/reset-item', { item: 'b' })).status).toBe(503);
     const afterItemReset = await serve(env, now + 1, true); expect(afterItemReset.records[0]!.explain.lift).toBeNull();
