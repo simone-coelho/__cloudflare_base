@@ -96,11 +96,12 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "9bd77735ff5c28d29d072141ca1cd88668521b8c",
+        "reviewedRevision": "2f760cc184f877a48b715b4b9647657643744e43",
         "verdict": "PASS",
         "evidence": [
           "_evidence/parity-step3/S19/specifier/REPORT.md (rem-specifier; S19 at 9bd77735: P72 BD1/BD2/BD3 and the R10s of P62.LW1, P68.KT3, P70.WB2, W10.03)",
-          "_evidence/parity-step3/S19/reviewer-spec/REPORT.md (rem-reviewer at 9bd77735: PASS; BD1/BD3 RED today naming 200, BD2 honest lock; the four R10s pin what their tickets meant)"
+          "_evidence/parity-step3/S19/reviewer-spec/REPORT.md (rem-reviewer at 9bd77735: PASS; BD1/BD3 RED today naming 200, BD2 honest lock; the four R10s pin what their tickets meant)",
+          "_evidence/parity-step3/S19/reviewer-spec/REPORT-2f760cc1.md (rem-reviewer at 2f760cc1: PASS; the consent W10.03 R10 and a whole-suite comparison at 200 and 600 ms with no other RED)"
         ],
         "negativeControlEvidence": [
           "_evidence/parity-step3/S19/reviewer-spec/REPORT.md: liftonly turns BD1 RED on the ring; breakbound turns BD2 RED with 5000 admitted; norace and slow turn W10.03 RED at both defaults"
