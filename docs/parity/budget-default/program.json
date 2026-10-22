@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-budget-default",
+    "title": "Tapestry parity, the witness and ring budgets sized for the edge by default (amendment 10), 1 ticket",
+    "ticketIds": [
+      "P72"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P72",
+      "title": "The witness and ring budgets are 600 ms by default (**amendment 10, 2026-10-22**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-10/BTI-Parity-Amendment-2026-10-22.md (amendment 10, committed beside the program)",
+        "locator": "P72 · section 2 of amendment 10; R-P236; lanes L12–L15 and R-P217(3), R-P229, R-P235",
+        "requirement": "see amendment 10 section 2, ticket P72 (copied verbatim in the specification)"
+      },
+      "outcome": "A decision with no override waits up to 600 ms for the lift witness and the ring read instead of 200 ms, so a warm read on the platform (measured at 204–378 ms, largest 478 ms inside a warm tail) is served rather than withheld; the bounded override of P62 is unchanged; the kit states the budgets and why.",
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/live/lanes/CONSOLIDATION-L12/REPORT.md §P70; lanes/L13/REPORT.md; lanes/L14/REPORT.md; lanes/L15/REPORT.md; AMENDMENTS.md R-P217, R-P229, R-P235",
+          "description": "At the 200 ms default 26 of 706 in-tail reads and 5 of 24 object-host probe readers were late (204–378 ms); at the 600 ms override and with P70 fix round 1 every in-tail reader was served on both hosts (46 of 46 in L14; every measured lift reader in L15)."
+        }
+      ],
+      "criteria": [
+        {
+          "id": "BD1",
+          "kind": "LOCAL",
+          "observable": "On both hosts a decision made with no budget override admits and reports sources.budgets {\"lift\":600,\"ring\":600} with no refused member, and the exported defaults LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS read 600; today: 200 and 200.",
+          "proof": "The P72 acceptance command runs the tests named unit:P72.BD1 in src/units/P72 and they pass."
+        },
+        {
+          "id": "BD2",
+          "kind": "LOCAL",
+          "observable": "The bounded override of P62 is unchanged in form: an override of 599 is admitted and reported, an override at or above 5000 is refused with the default of 600 in force and sources.budgets.refused naming it, on both hosts; P62's locks that pin the number 200 are read as the exported defaults (test-only R10).",
+          "proof": "The P72 acceptance command runs the tests named unit:P72.BD2 in src/units/P72, and the P62 locks, and they pass."
+        },
+        {
+          "id": "BD3",
+          "kind": "LOCAL",
+          "observable": "The kit statements of the budgets (kit 02 :369 and the heartbeat/cost paragraph; kit 03's budget and sources.budgets statements) and the commented wrangler.toml lines state 600 ms and the reason (one edge round trip to a warm statistics object measured at up to 378 ms; the budget bounds the wait, not the read); today they state 200.",
+          "proof": "The P72 acceptance command runs the tests named unit:P72.BD3 in src/units/P72 and they pass."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "The released artifact shows the behaviour of every LOCAL criterion on both deployed shopper hosts at the default budgets with no override: P70's §2 probe at 75 s and 300 s and one lift reader each of P29, P30 and P42 served inside a warm tail, and sources.budgets reading {\"lift\":600,\"ring\":600} on every answer.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ]
+    }
+  ]
+}
