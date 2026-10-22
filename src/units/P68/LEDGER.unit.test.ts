@@ -92,6 +92,9 @@
 //     P61-P66 and src/content/*.test.ts) and every unit of amendments 5-7 unchanged: their own
 //     commands, in the gate. The kit's line counts are STATED, not locked (program.json at 946c999a,
 //     R-P162): kit 02 2358 lines and kit 03 1980 at 8d07696f; kit 02 2371 at f7cbf331 (P66).
+//     R10 (amendment 10 P72, R-P239(1); test-only, R-P195's form): KT3's defaults are read as the exported
+//     `LIFT_WITNESS_BUDGET_MS` and `RING_READ_BUDGET_MS` of src/learn/fan.ts instead of the number 200, so the lock
+//     holds P62's semantics whatever default P72 rules (600 ms); its admitted and refused cases are unchanged.
 //
 // SKETCH (scratch copies, never committed; _evidence/parity-step3/S16/specifier/sketches/): on 8d07696f
 // (sketch-p68.py) the drifted citation corrected (:537 → :553), kit 02 :1171 saying the skipped alarm "still writes
@@ -112,6 +115,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import { learningReadBudgets } from '@/learn/fan';
+import { LIFT_WITNESS_BUDGET_MS, RING_READ_BUDGET_MS } from '@/learn/fan';
 
 import { readTree } from '../_parity';
 
@@ -396,11 +400,11 @@ describe('unit:P68.KT2', () => {
 
 describe('unit:P68.KT3', () => {
   it('logic: LOCK — P62\'s override semantics are unchanged: a whole number of milliseconds above 0 and below 5 000, as text or number, is admitted; anything else is refused, named and the default kept; unset names nothing', () => {
-    expect.soft(learningReadBudgets({}), 'P68.KT3 — unset: the defaults, nothing named').toEqual({ lift: 200, ring: 200 });
+    expect.soft(learningReadBudgets({}), 'P68.KT3 — unset: the defaults, nothing named').toEqual({ lift: LIFT_WITNESS_BUDGET_MS, ring: RING_READ_BUDGET_MS });
     expect.soft(learningReadBudgets({ LIFT_WITNESS_BUDGET_MS: '150', RING_READ_BUDGET_MS: 4999 }), 'P68.KT3 — admitted values').toEqual({ lift: 150, ring: 4999 });
     expect.soft(learningReadBudgets({ LIFT_WITNESS_BUDGET_MS: '0', RING_READ_BUDGET_MS: '5000' }), 'P68.KT3 — the bounds are refused, named, defaults kept')
-      .toEqual({ lift: 200, ring: 200, refused: ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'] });
+      .toEqual({ lift: LIFT_WITNESS_BUDGET_MS, ring: RING_READ_BUDGET_MS, refused: ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'] });
     expect.soft(learningReadBudgets({ LIFT_WITNESS_BUDGET_MS: '1.5', RING_READ_BUDGET_MS: 'abc' }), 'P68.KT3 — a fraction or a word is refused')
-      .toEqual({ lift: 200, ring: 200, refused: ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'] });
+      .toEqual({ lift: LIFT_WITNESS_BUDGET_MS, ring: RING_READ_BUDGET_MS, refused: ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'] });
   });
 });

@@ -71,7 +71,10 @@
 // replay):
 //   · src/learn/fan.ts exports `LIFT_WITNESS_BUDGET_MS = 200`, `RING_READ_BUDGET_MS =
 //     200` and `LIFT_RECENT_WINDOW_MS` (≥ 115 800); the decision path's witness and
-//     ring read use them unless an admitted override applies.
+//     ring read use them unless an admitted override applies. R10 (amendment 10, P72;
+//     R-P236/R-P237, test-only, R-P195's form): the defaults are P72's to state (600 ms
+//     each); this file reads them as the exported constants wherever it pinned 200, and
+//     keeps the 100 ms its titles name for a read inside the default.
 //   · `sources.budgets` on every answer: `{ lift, ring }`, the budgets in force for the
 //     decision (ms), with `refused` — the names of the refused overrides, sorted — only
 //     when an override was refused. A refused override leaves the default in force.
@@ -172,7 +175,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { invalidateLiftCache } from '@/content/service';
 import type { DecisionRecord } from '@/content/types';
-import { liftKey, statsName } from '@/learn/fan';
+import { liftKey, LIFT_WITNESS_BUDGET_MS, RING_READ_BUDGET_MS, statsName } from '@/learn/fan';
 import { recoveryDigest } from '@/ledger/recovery';
 import { ACK_DEADLINE_MS } from '@/sdk/core';
 
@@ -185,8 +188,10 @@ import {
   type StorageLog,
 } from '../_parity9';
 
-/** The derived defaults (header). */
-const LIFT_DEFAULT_MS = 200, RING_DEFAULT_MS = 200;
+/** The defaults: the exported constants (R10, amendment 10 P72: 200 ms each until P72, then 600 ms; the header). */
+const LIFT_DEFAULT_MS = LIFT_WITNESS_BUDGET_MS, RING_DEFAULT_MS = RING_READ_BUDGET_MS;
+/** A read inside either default: the 100 ms the titles name (twice today's 50 ms literal, above the edge's largest served witness lap, 96 ms). */
+const INSIDE_MS = 100;
 /** The window's derived floor (header): LIFT_TTL_MS plus the largest observed store propagation. */
 const WINDOW_FLOOR_MS = 60_000 + 55_800;
 /**
@@ -234,10 +239,10 @@ const asOf = (copy: Copy, latest: Copy) => ({ latest: latest.version, publishedA
 // ===========================================================================
 
 describe('unit:P62.LW1 (R-P110 decision 1)', () => {
-  it('logic: the lift witness budget and the ring read budget are exported named constants of src/learn/fan.ts at the derived edge-sized defaults (200 ms and 200 ms), under the SDK\'s deadline', async () => {
+  it('logic: the lift witness budget and the ring read budget are exported named constants of src/learn/fan.ts at their edge-sized defaults (R10, amendment 10 P72: the exported defaults), under the SDK\'s deadline', async () => {
     const lift = await named('LIFT_WITNESS_BUDGET_MS', 'the lift witness budget');
     const ring = await named('RING_READ_BUDGET_MS', 'the ring read budget');
-    expect({ lift, ring }, 'P62.LW1 — the code defaults are the derived ones: one edge round trip at the top of ACK-LAT\'s estimate (180 ms) plus the object\'s measured work (13 ms), rounded up').toEqual({ lift: LIFT_DEFAULT_MS, ring: RING_DEFAULT_MS });
+    expect({ lift, ring }, 'P62.LW1 — the code defaults are the exported ones (R10, amendment 10 P72 states their value)').toEqual({ lift: LIFT_DEFAULT_MS, ring: RING_DEFAULT_MS });
     expect(Math.max(lift, ring) < ACK_DEADLINE_MS, 'P62.LW1 — both are inside the SDK\'s deadline').toBe(true);
   });
 
@@ -245,11 +250,11 @@ describe('unit:P62.LW1 (R-P110 decision 1)', () => {
     it(`host (${host}): with no override, a witness answering in 100 ms (twice today's 50 ms literal, above the largest witness lap the edge showed on a served decision, 96 ms) is applied and one answering 10 ms after LIFT_WITNESS_BUDGET_MS is not; the ring answering in 100 ms fatigues and 10 ms after RING_READ_BUDGET_MS does not; sources.budgets names the defaults`, async () => {
       const { m, v1 } = await liftWorld(host);
       const witness = witnessLever(m), ring = ringLever(m);
-      witness.delay(LIFT_DEFAULT_MS / 2); ring.delay(RING_DEFAULT_MS / 2);
+      witness.delay(INSIDE_MS); ring.delay(INSIDE_MS);
       const first = await decide(m, 'pdp');
       const inside = await decide(m, 'pdp', { shopper: first.shopper });
-      expect(liftOnRecord(inside.record), `${host}: P62.LW1 — the edge-sized default applies a copy whose witness answers in ${LIFT_DEFAULT_MS / 2} ms`).toEqual(servedFrom(v1!.version));
-      expect(fatigued(inside.snapshot), `${host}: P62.LW1 — and fatigues from a ring answering in ${RING_DEFAULT_MS / 2} ms`).toBe(true);
+      expect(liftOnRecord(inside.record), `${host}: P62.LW1 — the edge-sized default applies a copy whose witness answers in ${INSIDE_MS} ms`).toEqual(servedFrom(v1!.version));
+      expect(fatigued(inside.snapshot), `${host}: P62.LW1 — and fatigues from a ring answering in ${INSIDE_MS} ms`).toBe(true);
       const lift = await named('LIFT_WITNESS_BUDGET_MS', 'the lift witness budget'), ringBudget = await named('RING_READ_BUDGET_MS', 'the ring read budget');
       witness.delay(lift + 10); ring.delay(ringBudget + 10);
       const late = await decide(m, 'pdp', { shopper: first.shopper });
@@ -271,7 +276,7 @@ describe('unit:P62.LW1 (R-P110 decision 1)', () => {
       witness.restore(); ring.restore();
       expect(liftOnRecord(inside.record), `${host}: P62.LW1 — under the 120 ms override a witness answering in 60 ms is applied`).toEqual(servedFrom(v1!.version));
       expect(fatigued(inside.snapshot), `${host}: P62.LW1 — and a ring answering in 60 ms fatigues`).toBe(true);
-      expect(liftOnRecord(late.record), `${host}: P62.LW1 — under the 120 ms override a witness answering in 130 ms serves nothing (under the 200 ms default it would serve)`).toEqual(UNSERVED);
+      expect(liftOnRecord(late.record), `${host}: P62.LW1 — under the 120 ms override a witness answering in 130 ms serves nothing (under the default it would serve)`).toEqual(UNSERVED);
       expect(fatigued(late.snapshot), `${host}: P62.LW1 — and a ring answering in 130 ms fatigues nothing`).toBe(false);
       expect(sourcesMember(late.snapshot, 'budgets'), `${host}: P62.LW1 — sources.budgets names the override in force`).toEqual({ lift: 120, ring: 120 });
     }, 120_000);
@@ -281,12 +286,12 @@ describe('unit:P62.LW1 (R-P110 decision 1)', () => {
         const { m, v1 } = await liftWorld(host);
         setEnv(m, { LIFT_WITNESS_BUDGET_MS: value, RING_READ_BUDGET_MS: value });
         const witness = witnessLever(m);
-        witness.delay(LIFT_DEFAULT_MS / 2);
+        witness.delay(INSIDE_MS);
         const inside = await decide(m, 'pdp');
         witness.delay(LIFT_DEFAULT_MS + 10);
         const late = await decide(m, 'pdp');
         witness.restore();
-        expect(liftOnRecord(inside.record), `${host}: P62.LW1 — "${value}" refused, the default applies a witness answering in ${LIFT_DEFAULT_MS / 2} ms`).toEqual(servedFrom(v1!.version));
+        expect(liftOnRecord(inside.record), `${host}: P62.LW1 — "${value}" refused, the default applies a witness answering in ${INSIDE_MS} ms`).toEqual(servedFrom(v1!.version));
         expect(liftOnRecord(late.record), `${host}: P62.LW1 — "${value}" refused, the default refuses a witness answering ${LIFT_DEFAULT_MS + 10} ms late`).toEqual(UNSERVED);
         expect(sourcesMember(late.snapshot, 'budgets'), `${host}: P62.LW1 — sources.budgets names the defaults and both refused overrides`)
           .toEqual({ lift: LIFT_DEFAULT_MS, ring: RING_DEFAULT_MS, refused: ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'] });
