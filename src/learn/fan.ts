@@ -8,22 +8,22 @@ import type { Env } from '@/types/env';
 import type { LiftSnapshot, NotAdopted, NotAdoptedChange, Republished, RepublishedChange, StaleMarker } from './stats';
 
 /**
- * P62 (amendment 6, R-P110 decision 1): the lift witness's budget, sized for the
- * edge. It is the round trip to the statistics object and nothing else (W38 B7,
- * below): one edge round trip to a Durable Object at the top of the measured
- * per-call estimate (180 ms) plus the object's own measured work per witness at
- * the acceptance pair's scale (13 ms), rounded up to the next 10 ms. A
- * deployment may set another through `LIFT_WITNESS_BUDGET_MS`
- * (`learningReadBudgets`).
+ * P62 (amendment 6, R-P110 decision 1), P72 (amendment 10, R-P236): the lift
+ * witness's budget, sized for the edge. It is the round trip to the statistics
+ * object and nothing else (W38 B7, below): one edge round trip to a warm
+ * statistics object, measured on the acceptance pair at up to 378 ms inside a
+ * warm tail, with the owner's buffer: 600 ms. It bounds the wait, not the read:
+ * a read inside it answers as soon as it is done. A deployment may set another
+ * through `LIFT_WITNESS_BUDGET_MS` (`learningReadBudgets`).
  */
-export const LIFT_WITNESS_BUDGET_MS = 200;
+export const LIFT_WITNESS_BUDGET_MS = 600;
 /**
- * P62 (R-P110 decision 1): the visitor ring read's budget, the same shape (one
- * hop to the visitor's `DecisionRing`, whose own bounded read is far below the
- * statistics object's): 200 ms. A deployment may set another through
- * `RING_READ_BUDGET_MS`.
+ * P62 (R-P110 decision 1), P72: the visitor ring read's budget, the same shape
+ * (one hop to the visitor's `DecisionRing`, whose own bounded read is far below
+ * the statistics object's) and the same default: 600 ms. A deployment may set
+ * another through `RING_READ_BUDGET_MS`.
  */
-export const RING_READ_BUDGET_MS = 200;
+export const RING_READ_BUDGET_MS = 600;
 /**
  * P62 (R-P110 decision 2, R-P112(6)): how long after its PUBLICATION a copy that
  * is no longer the statistics object's latest is still served, when the object

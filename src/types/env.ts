@@ -30,7 +30,7 @@ export interface Env {
    * the slot's statistics object, read per decision by `learningReadBudgets` (src/learn/fan.ts). It is
    * admitted when it is a whole number of milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`
    * (5 000 ms, the SDK's request deadline), written as its decimal text; any other value is refused, the
-   * code default (`LIFT_WITNESS_BUDGET_MS`, 200 ms) stays in force and the refusal is named in the
+   * code default (`LIFT_WITNESS_BUDGET_MS`, 600 ms) stays in force and the refusal is named in the
    * decision answer's `sources.budgets.refused`. Absent, the default applies and nothing is named. The
    * budget in force is reported in `sources.budgets.lift`.
    */
@@ -40,7 +40,7 @@ export interface Env {
    * visitor's `DecisionRing`, read per decision by `learningReadBudgets` (src/learn/fan.ts). It is
    * admitted when it is a whole number of milliseconds above 0 and below `LEARNING_READ_BUDGET_CEILING_MS`
    * (5 000 ms, the SDK's request deadline), written as its decimal text; any other value is refused, the
-   * code default (`RING_READ_BUDGET_MS`, 200 ms) stays in force and the refusal is named in the decision
+   * code default (`RING_READ_BUDGET_MS`, 600 ms) stays in force and the refusal is named in the decision
    * answer's `sources.budgets.refused`. Absent, the default applies and nothing is named. The budget in
    * force is reported in `sources.budgets.ring`.
    */
