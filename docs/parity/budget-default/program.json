@@ -61,8 +61,8 @@
       ],
       "remainingWork": [
         "Raise the exported defaults LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS in src/learn/fan.ts from 200 to 600, the override's admission and refusal unchanged (closed by unit:P72.BD1 and unit:P72.BD2).",
-        "Read P62's locks that pin the number 200 as the exported defaults, test-only, in the form of R-P195 (closed by unit:P72.BD2 and the P62 locks at the artifact).",
-        "State 600 ms and the reason in kit 02 (:369 and the heartbeat/cost paragraph), kit 03 (the budget and sources.budgets statements) and the commented wrangler.toml lines (closed by unit:P72.BD3)."
+        "Read P62's, P68.KT3's and P70.WB2's locks that pin the number 200 as the exported defaults, test-only, in the form of R-P195 (closed by unit:P72.BD2 and those locks green at the artifact).",
+        "State 600 ms and the reason in kit 02 (:369, the heartbeat/cost paragraph and the :328 sample answer), in kit 03 (one new sentence beside its sources description: the two budgets, their default and the bounded override), in src/types/env.ts's two doc comments and in the commented wrangler.toml lines (closed by unit:P72.BD3)."
       ],
       "decisions": [
         {
@@ -82,7 +82,10 @@
       ],
       "allowedPaths": [
         "src/learn/fan.ts",
+        "src/types/env.ts",
         "src/units/P62/LEDGER.unit.test.ts",
+        "src/units/P68/LEDGER.unit.test.ts",
+        "src/units/P70/LEDGER.unit.test.ts",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "wrangler.toml"
