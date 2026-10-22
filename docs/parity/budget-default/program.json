@@ -18,7 +18,7 @@
     {
       "id": "P72",
       "title": "The witness and ring budgets are 600 ms by default (**amendment 10, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-10/BTI-Parity-Amendment-2026-10-22.md (amendment 10, committed beside the program)",
