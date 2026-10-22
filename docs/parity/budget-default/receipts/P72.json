@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P72",
+  "workOrderHash": "sha256:24933144aff9e6bd7fe756cff07893b3913fc05de66cc332cbcdc0c02398b568",
+  "artifact": {
+    "revision": "88c991529a8273eaae7b61280af4d1f34f4d60cc",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p72-joined-r2 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p72-build at 9a1c1c6e (54f43549 the mechanism, restored at 9a1c1c6e over the merge af4919d7 of the spec 9bd77735: src/learn/fan.ts :19 and :26 raise the exported defaults LIFT_WITNESS_BUDGET_MS and RING_READ_BUDGET_MS from 200 to 600 ms with the reason in their doc comments (one edge round trip to a warm statistics object measured on the platform at up to 378 ms inside a warm tail, with a buffer; the budget bounds the wait, not the read); the override's admission, refusal and 5000 ceiling unchanged; src/types/env.ts :33/:43 doc comments at 600; kit 02 :328 sample at 600/600, :368–372 the sources.budgets sentence with the reason, :402 the heartbeat paragraph at 600; kit 03 :1516–1520 one new sentence naming both budgets, the default and the bounded override; wrangler.toml :193–199 the commented block at 600 with the reason; the spec's R10s of P62.LW1, P68.KT3, P70.WB2 and W10.03 read the exported defaults); P72 13/13 ×3 on both hosts; the locks 235/235 (P62 55, P61 44, P70 20, P63 34, P42 11, W27 LEDGER 4, W27 B1 12, learn.test.ts 44, priorsAbsent.test.ts 3, P68 8); src/index.api-boundary.test.ts 71/72 with W10.03 green and W01.08's own 30 s timeout when run on this machine (R-P240); tsc app and SDK 0; both bundle checks exact; eslint 0. The owner's decision: 600, not 500 (R-P236).\nDelivery review PASS at the join ba10916b (R-P243). Recorded for the next round that touches these files: the kit, fan.ts and wrangler.toml say \"measured at up to 378 ms inside a warm tail\" (the sixth release's warm-read figure as amendment 10 §2 states) while lane L14 served a read at 478 ms inside a warm tail on the eighth release; the correction to \"largest 478 ms\" goes with BD3's regex and the authority text; the 600 ms default holds over either figure.\nSecond join (R-P246): the first official gate run on the join ba10916b failed on one fixture lock outside the grant (src/content/consent.test.ts W10.03, a hold expected refused within 400 ms); the specifier re-read it at 2f760cc1 (the bound derived from the exported LIFT_WITNESS_BUDGET_MS + 200 ms, the hold unchanged) and swept 61 test files by shape under the 600 ms sketch (1214 of 1214 green); the builder merged it at 1f94ebe5 with the product files byte-identical to 9a1c1c6e; the receipt's artifact is the second join 88c99152, gated by S19/gate-r2.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S19/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S19/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P72/implementer/REPORT.md",
+      "git commits on rem/p72-joined-r2 up to 88c99152"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P72 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S19/reviewer-p72/logs/j2-p72.txt"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S19/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P72/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-22T23:41:51.737Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
