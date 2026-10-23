@@ -16,6 +16,14 @@ export interface HydrateOptions {
      * string of the identifiers, each once; nothing is sent when it names none.
      */
     nothingToShow?: string[];
+    /**
+     * P79: the product of a product page view, your product identifier, the same value your product events
+     * carry as `productId`. It is part of the page view: a `hydrate` or `refresh` naming another product opens
+     * a new page view (its own page instance, deadline, holds and receipts), as another page or channel does.
+     */
+    productId?: string;
+    /** P79: the variant of that product (a colour, a size); a change of `variantId` alone opens no page view. */
+    variantId?: string;
 }
 export type SlotCallback = (decisions: ContentDecision[], set: DecisionSet) => void;
 export type SetCallback = (set: DecisionSet | null) => void;

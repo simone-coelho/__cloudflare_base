@@ -1835,6 +1835,7 @@
   }
 
   // src/sdk/listen.ts
+  var samePageView = (a, b) => a.page === b.page && a.channel === b.channel && a.productId === b.productId;
   function nothingToShowField(ids) {
     if (!Array.isArray(ids)) return void 0;
     const named = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
@@ -2014,7 +2015,7 @@
     }
     async function load(o, looped) {
       if (destroyed) return null;
-      if (!pageInstance || !selected || selected.page !== o.page || selected.channel !== o.channel) {
+      if (!pageInstance || !selected || !samePageView(selected, o)) {
         pageInstance = host.uuid();
         resetCapture();
       }
@@ -2084,7 +2085,7 @@
     }
     function refresh(o) {
       if (destroyed || !o && !selected) return Promise.resolve(null);
-      if (o && selected && (o.page !== selected.page || o.channel !== selected.channel)) {
+      if (o && selected && !samePageView(o, selected)) {
         ++intent;
         selected = { ...o };
         pageInstance = host.uuid();
@@ -2295,7 +2296,8 @@
       if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== "object") return;
       const { contextKey, page, slot } = beacon, modules = Array.isArray(beacon.modules) ? beacon.modules : [];
       if (typeof contextKey !== "string" || !contextKey || contextKey.length > 512 || typeof page !== "string" || !page || typeof slot !== "string" || !slot || !modules.length || modules.length > 50 || !modules.every((id) => typeof id === "string" && id.length > 0) || new Set(modules).size !== modules.length) return;
-      const instance = pageInstance && selected?.page === page ? pageInstance : cachedView?.page === page ? cachedView.instance : (cachedView = { page, instance: host.uuid() }).instance;
+      const productId = typeof beacon.productId === "string" && beacon.productId ? beacon.productId : void 0;
+      const instance = pageInstance && selected?.page === page && (productId === void 0 || selected.productId === productId) ? pageInstance : cachedView?.page === page && cachedView.productId === productId ? cachedView.instance : (cachedView = { page, productId, instance: host.uuid() }).instance;
       const once = JSON.stringify([instance, slot]);
       if (exposed.has(once)) return;
       if (exposed.size >= 256) exposed.delete(exposed.values().next().value);
