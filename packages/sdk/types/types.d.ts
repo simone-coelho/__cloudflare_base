@@ -158,6 +158,8 @@ export interface LayoutExposure {
     page: string;
     slot: string;
     modules: string[];
+    /** P79: the product of the page view the cached layout was drawn for (`HydrateOptions.productId`); kept by the SDK, not sent. */
+    productId?: string;
 }
 /**
  * `utmTerm` is the campaign's search keyword, present only when the page load

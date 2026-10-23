@@ -144,7 +144,11 @@ export type SdkEventType =
  * page view: the `X-Context-Key` the cached layout was answered under, the page,
  * the layout slot and the module ids drawn, in drawn order.
  */
-export interface LayoutExposure { contextKey: string; page: string; slot: string; modules: string[] }
+export interface LayoutExposure {
+  contextKey: string; page: string; slot: string; modules: string[];
+  /** P79: the product of the page view the cached layout was drawn for (`HydrateOptions.productId`); kept by the SDK, not sent. */
+  productId?: string;
+}
 
 /**
  * `utmTerm` is the campaign's search keyword, present only when the page load
