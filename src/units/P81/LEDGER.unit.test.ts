@@ -39,7 +39,9 @@
 //     request then gets has changed, on both hosts; measured, _evidence/parity-step3/S22/specifier/logs/probe-today2.log);
 //     (4) a publication change that changes them, sent at the latest at the socket's next heartbeat. Each later push
 //     names the same pageInstance and carries the set a request for that page view then gets. No push without the
-//     shopper's personalization consent. Whether an unchanged set is pushed again is not ruled.
+//     shopper's personalization consent. R-P269: an unchanged set is never pushed again (P70's "publishes only a change",
+//     P74's dedupe): a trigger that leaves the set unchanged sends no frame, and a socket opened for the shopper brings no
+//     frame repeating the page view's current set: the set reaches the page once per page instance unless it changes.
 //   · THE SDK: neither a 'connected' status nor an acknowledged action re-requests while the socket is connected; while
 //     it is not connected an acknowledged action re-requests as today (so a page without a socket still follows); a
 //     page view's first list, and every refresh the page itself calls, is asked over HTTPS (that request is how the
@@ -528,6 +530,31 @@ describe('unit:P81.PU3', () => {
         await b.act(VIEW_TABBY_26, true);
         await pause(1500);
         expect.soft(pushed(socket).map(framed), `${host}: P81.PU3 — no decision set is pushed without personalization consent`).toEqual([]);
+      });
+    }, 180_000);
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}, native): LOCK (R-P269) — an unchanged set is never pushed again: heartbeats that change nothing, and a second socket opened for the shopper, bring no frame repeating the page view's current set`, async () => {
+      await nativeWorld(host, async w => {
+        const b = await w.browser({ tracking: true, personalization: true });
+        const first = await b.socket();
+        const instance = `p81-pu3-once-${host}-${crypto.randomUUID()}`;
+        expect((await b.ask(instance)).status, `${host}: PRECONDITION — the page view's first list is answered`).toBe(200);
+        await nextPush(first, 0);
+        await pause(300);
+        for (let i = 0; i < 2; i++) { first.send({ type: 'heartbeat', userId: b.subject }); await pause(600); }
+        const second = await b.socket();
+        second.send({ type: 'heartbeat', userId: b.subject });
+        await pause(600);
+        first.send({ type: 'heartbeat', userId: b.subject });
+        await pause(600);
+        const onFirst = pushed(first).filter(f => f.pageInstance === instance).map(f => JSON.stringify(itemsOf(f.decisions)));
+        const current = onFirst.at(-1);
+        expect.soft({
+          repeatedOnTheFirstSocket: onFirst.filter((items, i) => i > 0 && items === onFirst[i - 1]),
+          repeatedOnTheSecondSocket: pushed(second).filter(f => f.pageInstance === instance && JSON.stringify(itemsOf(f.decisions)) === current).length,
+        }, `${host}: P81.PU3 — the page view's set is pushed once unless it changes`).toEqual({ repeatedOnTheFirstSocket: [], repeatedOnTheSecondSocket: 0 });
       });
     }, 180_000);
   }
