@@ -512,6 +512,8 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     ...(rankingSlots ? { replayRankingSlots: rankingSlots } : {}),
     affinity: { dims: inputs.affinity }, regional, ...(contextBlend ? { contextBlend } : {}), ...(layoutPriors ? { layoutPriors } : {}), cell: served.cell, arm: served.arm,
     ...(report?.length ? { nothingToShow: report } : {}),
+    // P80: the anchor (and variant) a scoped slot read, as the record carries them.
+    ...(typeof inputs.anchor === 'string' ? { eligibility: { signals: { anchor: inputs.anchor, ...(typeof inputs.variant === 'string' ? { variant: inputs.variant } : {}) } } } : {}),
     versions: { ...served.versions }, configLabel: served.config_label,
     candidateLimit: manifest?.candidateLimit ?? Math.max(10, served.candidates.length),
     learning: learning ? {
