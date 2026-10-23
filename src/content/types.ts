@@ -239,6 +239,13 @@ export interface SlotStrategy {
    */
   complements?: ComplementsRule;
   /**
+   * P80: `anchor` scopes the slot to the anchor product the request names
+   * (`ctx.anchor`): its candidates are only the pieces whose `featuredProductIds`
+   * name that product, alone or beside the variant the request names
+   * (`ctx.variant`); a request that names no anchor decides it empty.
+   */
+  scope?: 'anchor';
+  /**
    * P10 (decisions D1, D2): this slot's own signal floor, overriding the
    * tenant's (`SlotCatalog.signalFloor`). While the shopper's count of signals
    * is at most the floor the slot is decided on context alone, so the response
@@ -1028,6 +1035,9 @@ export interface DecisionInputs {
    * the decision withheld; a record without it was decided without a report.
    */
   nothing_to_show?: string[];
+  /** P80: the anchor product (and its variant) the request named, carried when a slot scoped to it was decided; replayed. */
+  anchor?: string;
+  variant?: string;
   /**
    * P31: each eligibility rule's verdict on the decision's cell, module →
    * true or false, for every live module of the page that carries a rule
@@ -1197,6 +1207,12 @@ export interface DecisionRecord {
      * sorted. Present on every record of such a slot and on no other.
      */
     signalFloor?: { floor: SignalFloor; signals: number };
+    /**
+     * P80: this position's slot is declared `scope: 'anchor'`: the anchor (and
+     * variant) its candidates were limited to, keys sorted. Present on every
+     * record of such a slot and on no other; compared by value in replay.
+     */
+    scope?: { anchor: string; variant?: string };
     /**
      * P04: a position pin or an off-limits mark placed this module: the rule and
      * the position it set, counted from 1 (`pinned` at its pinned position,

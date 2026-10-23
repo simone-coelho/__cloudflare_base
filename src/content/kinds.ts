@@ -1006,6 +1006,9 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!isRecord(c) || !isNum(c.weight) || c.weight < 0 || c.weight > 1) errors.push(`${at}.complements: { weight 0..1 }`);
     else complements = { weight: c.weight };
   }
+  // P80: a slot scoped to the request's anchor product; the one value is `anchor`.
+  if (s.scope !== undefined && s.scope !== 'anchor') errors.push(`${at}.scope: 'anchor' when present`);
+  const scope = s.scope === 'anchor' ? 'anchor' as const : undefined;
   let diversity: DiversityRule | undefined;
   if (s.diversity !== undefined) {
     const d = s.diversity;
@@ -1127,7 +1130,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
-    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}),
+    ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}), ...(scope ? { scope } : {}),
     ...(signalFloor !== undefined ? { signalFloor } : {}),
     ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
     ...(contextOnly ? { contextOnly } : {}),

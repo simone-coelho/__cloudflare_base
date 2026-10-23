@@ -2037,7 +2037,8 @@
       const timedOut = () => !!v.expired && !expired;
       try {
         const nothingToShow = nothingToShowField(o.nothingToShow);
-        const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {} } };
+        const anchor = { ...o.productId ? { "ctx.anchor": o.productId } : {}, ...o.variantId ? { "ctx.variant": o.variantId } : {} };
+        const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {}, ...anchor } };
         const pending = core.ready(false, first2);
         const generation = core.generation;
         const active = () => owner === intent && generation === core.generation;
@@ -2056,7 +2057,8 @@
           entry: consent.tracking ? snapshotEntry(core.entry) : void 0,
           trackingConsent: consent.tracking ? void 0 : "false",
           personalizationEnabled: consent.personalization ? void 0 : "false",
-          nothingToShow
+          nothingToShow,
+          ...anchor
         });
         if (!active() || !core.isCurrent(generation)) return null;
         if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== void 0 && json.page !== o.page || json.pageInstance !== void 0 && json.pageInstance !== pageInstance) {
