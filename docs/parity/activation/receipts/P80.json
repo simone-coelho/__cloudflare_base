@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P80",
+  "workOrderHash": "sha256:1c7f6cc7e8628fd4aa21a004a1f68c1b66aff4facc4466970ff058dfcdef17e0",
+  "artifact": {
+    "revision": "c7a2c54540be9eb58cd34744ce4f27254148ec9e",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p80-joined-r4 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p80-build at a0e88c1d (a3df9b7a the merge of rem/integration a1634760; cca3c3a8 the merge of the S21 spec 776a705d; a0e88c1d the mechanism: kinds.ts accepts scope: 'anchor' on a content slot and refuses any other value, carried on SlotStrategy; each scoped slot's spec adds the out-of-scope pieces to its withheld set on every arm (a piece naming only the anchor is a candidate for every variant, a piece naming the anchor plus a variant only when ctx.variant names it, any other piece never; no anchor or no match leaves the slot empty so the page keeps its default); the complements preference on an unscoped slot unchanged; each record of a scoped slot carries explain.scope {anchor, variant?} and the page-level inputs inputs.anchor/inputs.variant, passed back by the replay; the receipt carries scope and a why naming the anchor; the POST body admits ctx-prefixed keys under the GET's bounds; the SDK sends P79's productId as ctx.anchor and variantId as ctx.variant on the first request and the decision request only when the page view names them; kit 03 :236 and a new explain.scope row, kit 02 :794, section 4 and the receipts paragraph state it; kit 02's citations into listen.ts and routes/decisions.ts re-pointed; the SDK bundles rebuilt (ESM 104,696 of 107,520; IIFE 109,943 of 112,640)); P80 23/23 ×3 on both hosts; the locks 670/670; tsc app and SDK 0; both bundle checks exact; eslint no new warning. Amendment 11 E2, the owner's amendment of 2026-10-22 (R-P245, R-P247, R-P258).\nSecond round (R-P264/R-P267): the spec review found that a new browser's first POST with out-of-bounds ctx signals had its session issued and a shopper object written before the 400 refusal; the specifier added the first-request leg and the 129-character and bad-name cases (5d76d853, spec gate PASS); the builder's db74aafc adds a contextSignalsOf validator run inside snapshotContext on the GET query and the POST body before a session is issued (a first request's bad signal refused 401 writing nothing; with a session 400 as the GET, ctx keys skipping the body's 128-character general check); kit 02 :332's citations re-pointed; P80 25/25 ×3; the locks 717/717 (the first-request units P13, P54, P57, P60, P79, P34, W16 included); tsc, both bundle checks exact (the bundles unchanged), eslint no new warning. The first join befce139's gate (3841/3841) is the feedback run; the receipt's artifact is the second join.\n\n\nFIX ROUND 1 (R-P270, R-P274, R-P275, R-P276): rem/p80-build at a1ee8eb6 (d78c47f3 the fix: the P80 scope step moved out of the slot-spec chain to run after the eligibility loop, once P30's context withholding is complete, so a scoped context-only layout slot keeps P30's withheld set and its one-order promise; listen.ts's signalValue and anchorSignals send ctx.anchor, trimmed, only for a productId of 1–64 characters after trimming, and ctx.variant only beside a sent anchor under the same bound, so an out-of-bounds productId sends neither signal and the page view is served without an anchor, and an out-of-bounds variantId drops the variant alone; kit 02 :302 lists the POST's customerId and ctx-prefixed fields with the bounds, the three error strings and the first-request 401, kit 01 :173, kit 02 :450 and :1552 state the productId bound, kit 03 :238 names the body; kit 02 :958 listen.ts citations re-pointed; f29bea98 the kit clause: characters are UTF-16 code units and the GET's \"as sent\" is the decoded value; f986c43f and a1ee8eb6 the merges of the fix-round specs 4c1bf9e9 and 223fe662, test-only); P80 33/33 ×3; P30 25/25; locks 414 + 263 + 72; both typechecks 0; bundles exact (ESM 105,035 of 107,520, IIFE 110,298 of 112,640); eslint unchanged; a control with db74aafc's decide.ts and listen.ts turns the five R-P270 legs RED. Told: the SDK has no diagnostic channel, so a dropped productId is reported nowhere beyond the kit; the GET checks the raw length; samePageView compares the raw productId. Cause: the delivery review at the second join 10928981 found a scoped context-only layout slot serving a P30-withheld module and an over-long productId costing the whole page.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S21/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S21/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P80/implementer/REPORT.md",
+      "git commits on rem/p80-joined-r4 up to c7a2c545"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P80 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S21/fix1/reviewer/logs/delta/P80-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S21/fix1/gate-r4/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P80/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P80/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-23T20:19:30.403Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
