@@ -882,9 +882,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // P10: a slot below the floor is scored on the context view, never on the shopper's interests.
     .map((spec) => below.has(spec.slot) ? { ...spec, affinity: contextView }
       // P30: a context-only layout slot is scored on its context's view, and withholds what its context does not admit.
-      : contextual.has(spec.slot) ? { ...spec, affinity: layoutView, withheld: contextWithheld } : spec)
-    // P80: a slot scoped to the anchor withholds the pieces out of its scope, beside what it already withholds.
-    .map((spec) => scopedSlots.has(spec.slot) ? { ...spec, withheld: spec.withheld ? new Set([...spec.withheld, ...outOfScope]) : outOfScope } : spec);
+      : contextual.has(spec.slot) ? { ...spec, affinity: layoutView, withheld: contextWithheld } : spec);
   // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
   // exist for this decision, however well it would have scored.
   // P31: nor does a module whose own eligibility rule the decision's cell does
@@ -934,6 +932,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     if (contextRule && layoutSwitch && piece.eligibleWhen && piece.slotTypes.includes(layoutSwitch.slot)
       && !matchesEligibility(piece.eligibleWhen, contextRule)) contextWithheld.add(piece.id);
   }
+  // P80: a slot scoped to the anchor withholds the pieces out of its scope, beside what it already
+  // withholds. Joined only now that the loop above has filled P30's context withholding, so a scoped
+  // context-only layout slot keeps every module its context does not admit: the scope only withholds.
+  specs.forEach((spec, k) => { if (scopedSlots.has(spec.slot)) specs[k] = { ...spec, withheld: spec.withheld ? new Set([...spec.withheld, ...outOfScope]) : outOfScope }; });
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
   // with enough evidence for this item in this cell. The base and the lift are

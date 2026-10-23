@@ -875,6 +875,27 @@ class InvalidEntryContext extends Error {}
  */
 class InvalidNothingToShow extends Error {}
 /**
+ * P80 (R-P264): a named context signal (`ctx.<name>`) outside its bounds — a
+ * name outside /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/, a value that is empty or over 64
+ * characters, or more than 8 signals — on the query string or in the body. With
+ * a session it is answered 400 with the message; on a new browser's first
+ * request it is one of the checks made before the session is issued.
+ */
+class InvalidContextSignal extends Error {}
+/** P80: the request's named context signals, bounded (`InvalidContextSignal`), by name, their values trimmed. */
+function contextSignalsOf(context: Record<string, string>): Record<string, string> {
+  const signals: Record<string, string> = {};
+  for (const [key, value] of Object.entries(context)) {
+    if (!key.startsWith('ctx.')) continue;
+    const name = key.slice(4);
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) throw new InvalidContextSignal('Invalid context signal name');
+    if (typeof value !== 'string' || !value.trim() || value.length > 64) throw new InvalidContextSignal('Invalid context signal value');
+    if (Object.keys(signals).length >= 8) throw new InvalidContextSignal('Too many context signals');
+    signals[name] = value.trim();
+  }
+  return signals;
+}
+/**
  * A malformed consent hint (`trackingConsent`, `personalizationEnabled`): a
  * value that is not exactly `'true'` or `'false'`, or a hint the query names
  * more than once. A REQUEST error, raised as the entry context's is, and only
@@ -911,6 +932,7 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
       try { if (context.entry.length > ENTRY_QUERY_LIMIT || !validEntry(JSON.parse(context.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
     }
     if (context.nothingToShow !== undefined && nothingToShowOf(context.nothingToShow) === null) throw new InvalidNothingToShow();
+    contextSignalsOf(context);
     for (const key of CONSENT_HINTS) {
       const values = query.getAll(key);
       if (values.length > 1 || (values.length === 1 && values[0] !== 'true' && values[0] !== 'false')) throw new InvalidConsentHint();
@@ -931,13 +953,15 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     // them, under the same bounds (checked with the query's, below).
     if ((!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId'].includes(key) && !key.startsWith('ctx.'))
       // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
-      || typeof item !== 'string' || (key !== 'nothingToShow' && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
+      // P80 (R-P264): a context signal's own bounds are its validator's, below, so an overlong one is a request error.
+      || typeof item !== 'string' || (key !== 'nothingToShow' && !key.startsWith('ctx.') && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
   }
   if (out.entry !== undefined) {
     try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
   if (out.nothingToShow !== undefined && nothingToShowOf(out.nothingToShow) === null) throw new InvalidNothingToShow();
+  contextSignalsOf(out);
   if (out.customerId !== undefined && !isCarriedCustomerId(out.customerId)) throw new SessionAccessError();
   for (const key of CONSENT_HINTS) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new InvalidConsentHint();
   return out;
@@ -1002,6 +1026,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   catch (error) {
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidContextSignal) return c.json({ ok: false, error: error.message }, 400);
     if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
   }
@@ -1012,6 +1037,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   catch (error) {
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidContextSignal) return c.json({ ok: false, error: error.message }, 400);
     if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
   }
@@ -1053,15 +1079,9 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
    * behavioural evidence about the shopper. Bounded hard, because the query
    * string is caller-controlled.
    */
-  const eligibilityContext: Record<string, string> = {};
-  for (const [key, value] of Object.entries(context)) {
-    if (!key.startsWith('ctx.')) continue;
-    const name = key.slice(4);
-    if (!/^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(name)) return c.json({ ok: false, error: 'Invalid context signal name' }, 400);
-    if (typeof value !== 'string' || !value.trim() || value.length > 64) return c.json({ ok: false, error: 'Invalid context signal value' }, 400);
-    if (Object.keys(eligibilityContext).length >= 8) return c.json({ ok: false, error: 'Too many context signals' }, 400);
-    eligibilityContext[name] = value.trim();
-  }
+  // P80 (R-P264): bounded with the request's other checks (`snapshotContext`, above), so a new browser's first
+  // request is refused before its session is issued; read here as admitted.
+  const eligibilityContext = contextSignalsOf(context);
 
   // P31: the page's report of the modules with nothing to show for this page view (validated above).
   const nothingToShow = context.nothingToShow === undefined ? null : nothingToShowOf(context.nothingToShow);
