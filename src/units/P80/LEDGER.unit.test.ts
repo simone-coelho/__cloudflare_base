@@ -99,6 +99,14 @@
 // issued its session); an out-of-bounds variantId drops only the variant. The SDK has no diagnostic or warning channel
 // today (src/sdk: no such member or event), so the dropped value is reported nowhere and no leg asserts a report.
 //
+// R-P274 (the R-P270 spec review): one leg under AS3, on the SDK and both hosts, every other line unchanged: a productId
+// and a variantId padded with spaces beyond 64 characters as given but within 64 once trimmed are sent trimmed, and the
+// page view is served (200, a new browser issued its session) with the scoped slot scoped to the trimmed anchor and
+// variant. Told, no leg: the GET's bound reads the raw value's length; P79's same-page-view test reads the raw productId.
+// R-P275 (the delivery review at 69abe4b7, finding 2): AS4's R-P270 leg compares the scoped slot's order for a North
+// Carolina shopper with a London shopper's (it compared two North Carolina shoppers, who cannot differ on a module
+// admitted in the US only); an assertion change inside this round's own leg, no receipted leg touched (R-P143).
+//
 // HARNESS: src/units/_parity.ts (the mounted application, both hosts), src/sdk/testHost.ts (the SDK legs). Imports
 // from src/units/: ../_parity.
 
@@ -243,7 +251,7 @@ const view = (productId?: string, variantId?: string, extra: Record<string, unkn
 /** R-P270: the page's modules, each naming the anchor as its product, the grid admitted only in the US (a rule P30's context-only slot cannot read). */
 const contextOnlyDocuments = (scoped: boolean) => ({ pieces: MODULES.map(p => ({ ...p, featuredProductIds: [A], ...(p.id === M.grid ? { eligibleWhen: { regions: ['US'] } } : {}) })),
   slots: declaredSlots([layoutSlot({ contextOnly: { enabled: true }, ...(scoped ? { scope: 'anchor' } : {}) })]), learn: learnDocument() });
-const NORTH_CAROLINA = { country: 'US', regionCode: 'NC' };
+const NORTH_CAROLINA = { country: 'US', regionCode: 'NC' }, LONDON = { country: 'GB', regionCode: 'LND' };
 /** The GET snapshot with the page's ctx signals and the edge's geolocation (P31's legacy request). */
 async function getSnapshotFrom(m: Mounted, s: Shopper, signals: Record<string, string>, label: string, cf: Record<string, string>): Promise<Snapshot> {
   const pageInstance = pageInstanceOf(label);
@@ -510,6 +518,46 @@ describe('unit:P80.AS3', () => {
       } finally { sdk.destroy(); }
     }, 120_000);
   }
+
+  /** R-P274: a productId and a variantId padded with spaces beyond 64 characters as given (69 and 65), within 64 once trimmed. */
+  const PADDED_A = `${' '.repeat(30)}${A}${' '.repeat(30)}`, PADDED_BLACK = `${' '.repeat(25)}${BLACK}${' '.repeat(25)}`;
+  it('sdk: R-P274 — a productId and a variantId padded with spaces beyond 64 characters as given, but within 64 once trimmed, are sent trimmed as ctx.anchor and ctx.variant (a 64-character productId padded to 65 as ctx.anchor of 64), on the decision request and a new browser\'s first request alike', async () => {
+    const p = sdkPage();
+    expect(await p.core.ready(), 'PRECONDITION: the browser holds its session').toBe(true);
+    expect([PADDED_A.length, PADDED_BLACK.length, PADDED_A.trim(), PADDED_BLACK.trim()], 'PRECONDITION: the padded values are over 64 as given, the anchor and its Black variant trimmed').toEqual([69, 65, A, BLACK]);
+    const report = { nothingToShow: ['module.PDP.reviews.1'] };
+    for (const v of [view(undefined, undefined, report), view(PADDED_A, PADDED_BLACK, report), view(`${'P'.repeat(64)} `, undefined, report)]) await p.listen.refresh(v);
+    expect(p.bodies.length, 'PRECONDITION: one decision request per page view').toBe(3);
+    const [plain, ...rest] = p.bodies.map(lasting);
+    const fresh = sdkPage(), freshPlain = sdkPage();
+    await fresh.listen.hydrate(view(PADDED_A, PADDED_BLACK));
+    await freshPlain.listen.hydrate(view());
+    expect.soft([...rest, lasting(fresh.bodies[0])], 'P80.AS3 — the padded signals are sent trimmed (R-P274)').toEqual([{ ...plain, 'ctx.anchor': A, 'ctx.variant': BLACK },
+      { ...plain, 'ctx.anchor': 'P'.repeat(64) }, { ...lasting(freshPlain.bodies[0]), 'ctx.anchor': A, 'ctx.variant': BLACK }]);
+    p.destroy(); fresh.destroy(); freshPlain.destroy();
+  });
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P274 — over the mounted application, a product page view whose productId and variantId are padded with spaces beyond 64 characters (within 64 once trimmed) is served as the trimmed product's page: a new browser's first request is answered 200 with its session, and with a session the same, the scoped carousel scoped to the trimmed anchor and variant (the anchor's Black images) and the layout served`, async () => {
+      const m = await mount(host, documents());
+      expectPublished(m, 'P80.AS3 — the carousel declared scoped publishes');
+      const calls: string[] = [];
+      const fresh = await freshSdkOn(m, calls);
+      const first = await fresh.listen.hydrate(view(PADDED_A, PADDED_BLACK));
+      const firstView = { firstCall: calls[0] ?? 'no call', carousel: sorted(carousel(asSnapshot(first))), layout: servedIn(asSnapshot(first), LAYOUT).length > 0 ? 'served' : 'not served' };
+      fresh.destroy();
+      const s = await walletShopper(m);
+      const sdk = await sdkOn(m, s);
+      try {
+        const padded = await sdk.listen.refresh(view(PADDED_A, PADDED_BLACK));
+        expect.soft({ firstView, withSession: { status: asSnapshot(padded).status, carousel: sorted(carousel(asSnapshot(padded))), layout: servedIn(asSnapshot(padded), LAYOUT).length > 0 ? 'served' : 'not served' } },
+          `${host}: P80.AS3 — a padded productId and variantId are the trimmed product's page (R-P274)`).toEqual({
+          firstView: { firstCall: `POST /v1/${TENANT}/decisions/snapshot no-session 200 session issued`, carousel: CASES[0]!.candidates, layout: 'served' },
+          withSession: { status: 200, carousel: CASES[0]!.candidates, layout: 'served' },
+        });
+      } finally { sdk.destroy(); }
+    }, 120_000);
+  }
 });
 
 // ===========================================================================
@@ -555,22 +603,22 @@ describe('unit:P80.AS4', () => {
   }
 
   for (const host of HOSTS) {
-    it(`host (${host}): R-P270 — LOCK on a layout slot both context-only (P30) and declared scope: 'anchor': the scope only withholds, so the slot serves a subsequence of the same slot unscoped, never the module P30 withholds for the request's context, and every shopper of one context gets the identical order`, async () => {
+    it(`host (${host}): R-P270 — LOCK on a layout slot both context-only (P30) and declared scope: 'anchor': the scope only withholds, so the slot serves a subsequence of the same slot unscoped, never the module P30 withholds for the request's context, and every shopper of one context gets the identical order, a North Carolina and a London shopper alike (R-P275)`, async () => {
       const m = await mount(host, contextOnlyDocuments(true)), reference = await mount(host, contextOnlyDocuments(false));
       expectPublished(m, 'P80.AS4 — the scoped context-only layout slot publishes');
       expectPublished(reference, 'P80.AS4 — the same slot unscoped publishes');
-      const ask = async (world: Mounted, label: string) => {
+      const ask = async (world: Mounted, label: string, cf: Record<string, string> = NORTH_CAROLINA) => {
         const s = await shopperOn(world);
         expect((await s.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the page view of the paid-social arrival`).toBe(200);
-        return servedIn(await getSnapshotFrom(world, s, { anchor: A }, label, NORTH_CAROLINA), LAYOUT);
+        return servedIn(await getSnapshotFrom(world, s, { anchor: A }, label, cf), LAYOUT);
       };
       const unscoped = await ask(reference, 'p80-as4-context-unscoped');
       expect([unscoped.length > 0, unscoped.includes(M.grid)], `${host}: PRECONDITION — unscoped, P30 withholds the regional module from the context-only slot (${JSON.stringify(unscoped)})`).toEqual([true, false]);
-      const scoped = await ask(m, 'p80-as4-context-scoped'), again = await ask(m, 'p80-as4-context-scoped-again');
+      const scoped = await ask(m, 'p80-as4-context-scoped'), again = await ask(m, 'p80-as4-context-scoped-london', LONDON);
       let at = 0;
       const within = scoped.every(id => { const found = unscoped.indexOf(id, at); if (found < 0) return false; at = found + 1; return true; });
       expect.soft({ subsequence: within ? 'a subsequence of the unscoped slot' : `not a subsequence: ${JSON.stringify(scoped)} of ${JSON.stringify(unscoped)}`,
-        regionalModule: scoped.includes(M.grid) ? 'served' : 'withheld', oneContext: JSON.stringify(scoped) === JSON.stringify(again) ? 'the identical order' : `differs: ${JSON.stringify(again)}` },
+        regionalModule: scoped.includes(M.grid) ? 'served' : 'withheld', oneContext: JSON.stringify(scoped) === JSON.stringify(again) ? 'the identical order' : `differs: North Carolina ${JSON.stringify(scoped)}, London ${JSON.stringify(again)}` },
       `${host}: P80.AS4 — the scope keeps P30's withholding and its promise (R-P270)`).toEqual({ subsequence: 'a subsequence of the unscoped slot', regionalModule: 'withheld', oneContext: 'the identical order' });
     }, 120_000);
   }
