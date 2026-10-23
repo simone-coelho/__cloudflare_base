@@ -89,6 +89,9 @@
 //     answer has issued the session, and today's SDK paints and acknowledges that
 //     answer, then refreshes once; it pins the kit's claim for a new visitor
 //     across the build. T5's held-session leg is the one P34 turns green.
+//   · R10 (amendment 11 P81, PU2; granted in its brief, test-only, R-P195's form): T5's two legs read the count after
+//     the socket's open without the re-request P81 removes (no refresh: the engine pushes the page view's set), their
+//     titles saying so. P34.T1's 'a socket open' trigger is not part of the grant and is listed for the lead.
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -409,7 +412,7 @@ describe('unit:P34.T5', () => {
     return painted;
   };
 
-  it('sdk: on the page view of a browser that holds a session, the kit\'s ten-line example, run as written over the SDK, paints the first answer and acknowledges it, then refreshes once', async () => {
+  it('sdk: on the page view of a browser that holds a session, the kit\'s ten-line example, run as written over the SDK, paints the first answer and acknowledges it, and the socket\'s open asks for nothing over HTTPS', async () => {
     const s = sdk();
     await s.core.ready();
     const painted = example(s);
@@ -422,11 +425,12 @@ describe('unit:P34.T5', () => {
     expect(painted[0], 'P34.T5 — the example paints the first answer, not a re-asked one').toEqual({ id: 'TAP-HERO-TABBY-FIRST', decisionId: 'first-hero-0-hero.tabby.first' });
     const acks = s.actions.filter(a => a.type === 'content_impression');
     expect(acks.map(a => [a.data.decisionId, a.status]), 'P34.T5 — and acknowledges that paint').toEqual([['first-hero-0-hero.tabby.first', 200]]);
-    expect(s.snapshots.length, 'P34.T5 — then one refresh').toBe(2);
+    // R10 (amendment 11 P81, PU2; the brief's grant, R-P195's form): the count after the socket's open without the re-request.
+    expect(s.snapshots.length, 'P34.T5 — and the socket\'s open makes no refresh: the engine pushes the page view\'s set (P81)').toBe(1);
     s.destroy();
   });
 
-  it('sdk: LOCKED — on a fresh browser (S4-C18, S4-C19), the kit\'s ten-line example, run as written over the SDK, paints the first answer, which issues the session, and acknowledges it; then the socket the example asked for opens and the page refreshes exactly once', async () => {
+  it('sdk: LOCKED — on a fresh browser (S4-C18, S4-C19), the kit\'s ten-line example, run as written over the SDK, paints the first answer, which issues the session, and acknowledges it; then the socket the example asked for opens and asks for nothing over HTTPS', async () => {
     const s = sdk();
     const painted = example(s);
     await settle();
@@ -442,7 +446,8 @@ describe('unit:P34.T5', () => {
     await settle();
     // Whatever the open re-asks is answered, so a refresh coalesced behind it is asked too.
     await answerPending(s, { page: 'home', arm: 'personalized', decisions: [decision('hero', 0, 'hero.tabby.second', 'on-model')] }, 'refresh');
-    expect(s.snapshots.length, 'P34.T5 — on a fresh browser, then one refresh, once the socket opens').toBe(2);
+    // R10 (amendment 11 P81, PU2; the brief's grant, R-P195's form): the count after the socket's open without the re-request.
+    expect(s.snapshots.length, 'P34.T5 — on a fresh browser, the socket\'s open makes no refresh: the engine pushes the page view\'s set (P81)').toBe(1);
     s.destroy();
   });
 
