@@ -67,7 +67,7 @@ the value, the second by sending a different column.
 
 ## The decision
 
-One item in snapshot `decisions[]`; the set carries its original `pageInstance`. The engine also sends the set over the socket as a `content_decisions` frame for the open page view, when its first list is answered and whenever it changes.
+One item in snapshot `decisions[]`; the set carries its original `pageInstance`. The engine also sends the open page view's set over the socket as a `content_decisions` frame whenever it differs from what the page view last received; the answer to the page's own request is never also sent.
 
 | Field | Meaning |
 |---|---|
@@ -1995,6 +1995,6 @@ and ODP audiences) never appear in `dims` because of a restoration.
 | `connected` | `{ connectionId, userId, timestamp }` |
 | `personalization_update` | `{ userId, timestamp, data: { segments[], decisions{}, featureVariables{}, recommendations[], sortOrder[], journeyStage, affinity: { dims, audiences, changed[], odpConfirmed[], applied? } } }`. `applied` itemises the action, the product type and the weight the event applied, only while the registry declares `productTypeWeights` (Action weights per product type, above). `journeyStage` is one of `exploring`, `thinking`, `deciding`: the stage of the shopper's CURRENT VISIT, derived from the visit's own counters against the `journey` thresholds published on your reflex configuration document. It starts again at `exploring` in a new visit and after the purchase that reached `deciding`. With no `journey` block published the engine's compiled default decides (`thinking` at the third interaction of the visit, `deciding` at the first purchase), so the stage still moves and the pooled learning key still spreads across `s=early`, `s=mid` and `s=late` rather than collapsing onto `s=early`; `sources.journey` on a decision names that default and its `revision: 0`. |
 | `segment_update` | The same shape, on a membership change alone |
-| `content_decisions` | Sent by the engine for the open page view when its first list is answered and whenever its decisions change (not again while unchanged; never without personalization consent). A decision set exactly as the snapshot route answers it: `{ page, pageInstance, arm, versions, config_label, decisions[], ts }` |
+| `content_decisions` | Sent by the engine for the open page view whenever its decisions differ from what the page view last received (never the answer to the page's own request; never without personalization consent). A decision set exactly as the snapshot route answers it: `{ page, pageInstance, arm, versions, config_label, decisions[], ts }` |
 | `audience_published` | `{ userId, data: { timestamp, source, audienceWentLive: { key, name } } }` |
 | `odp_receipt` | `{ userId, data: { receiptId, status, ts, source } }`: the customer data platform's answer to a forwarded event |

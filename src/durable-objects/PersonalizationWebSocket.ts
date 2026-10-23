@@ -215,6 +215,7 @@ export class PersonalizationWebSocket {
   }
 
   private async handleWebSocketClose(connectionId: string, userId: string) {
+    const principal = this.principals.get(connectionId);
     this.connections.delete(connectionId);
     this.principals.delete(connectionId);
     
@@ -227,6 +228,20 @@ export class PersonalizationWebSocket {
     }
 
     await this.saveConnectionState();
+    // P81 (R-P271): the shopper's last socket closed: its object drops the page view it kept to push to it.
+    if (principal && !this.userConnections.has(userId)) await this.notifyClosed(connectionId, principal);
+  }
+
+  /** P81: tell the shopper's own object that its last socket here closed (a frame of type `closed`); never throws. */
+  private async notifyClosed(connectionId: string, principal: SessionCapability): Promise<void> {
+    try {
+      if (!this.env) return;
+      const signed = await signSessionCapability(this.env, principal);
+      await shopperObject(this.env.SHOPPER_REFLEX, principal.subject, principal.tenant).fetch('https://shopper-reflex/authority/relay-frame', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', [SHOPPER_HEADER]: signed.capability, 'X-Tenant': principal.tenant },
+        body: JSON.stringify({ connectionId, type: 'closed' }),
+      });
+    } catch { /* the kept view is replaced by the next page view, or erased */ }
   }
 
   private async handleBroadcast(request: Request): Promise<Response> {
