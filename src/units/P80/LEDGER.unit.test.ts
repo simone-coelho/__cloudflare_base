@@ -33,7 +33,10 @@
 //     the same `ctx.<name>` keys, flat strings, in the POST body, under the GET's bounds (src/routes/decisions.ts: a
 //     name /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/, a value of 1 to 64 characters, at most 8 signals). The SDK sends them on
 //     its decision request (the POST `core.getJson` sends) and on a new browser's first request (P13), only when the
-//     page view names them; nothing else of the request changes.
+//     page view names them; nothing else of the request changes. R-P264: with a session, a POST whose signals break the
+//     bounds is answered as the GET is (400 and the GET's error, a value over 128 characters included); on a new
+//     browser's first request (no session) the signals are checked with P13's other first-request checks BEFORE the
+//     session is issued, and any failure is the same 401 writing nothing (no session, no shopper object, no key).
 //   · THE MATCHING RULE: an item whose `featuredProductIds` names the anchor and nothing else is a candidate for every
 //     variant; an item that names the anchor and other identifiers (a colour-specific image: the master with its
 //     variant beside it) is a candidate only when the request names one of those identifiers as `ctx.variant`; an
@@ -79,6 +82,13 @@
 // `novariant` (the variant ignored) turns AS1 and AS3's scoped answers RED; `getonly` (the POST still refusing ctx keys)
 // turns AS3's POST, bounds and SDK legs RED; `nosdk` (the SDK sending nothing) turns AS3's SDK legs RED; `boost` (the
 // scope also adds to an in-scope piece's score) turns AS4's only-withholds lock RED.
+// R-P264 (the S21 spec review): the fix sketch now checks the POST's signals in the request's own context checks, so a
+// new browser's first request that breaks them is refused 401 before its session is issued, and with a session they
+// answer the GET's 400 (a value over 128 characters included). Measured (_evidence/parity-step3/S21/specifier/logs/r264/):
+// the first-request leg GREEN on today's product (2641ede2) and under the fix; `oldbounds` (the first sketch, the bounds
+// checked after the session is issued) and the P80 build befce139 turn it RED (400 with a shopper object and a key
+// written) and the with-session leg RED at 129 characters (401); P13, P34, P54, P57, P60, P79, W16 and
+// src/middleware/edgeAccess.test.ts green on today's product and under the fix.
 //
 // HARNESS: src/units/_parity.ts (the mounted application, both hosts), src/sdk/testHost.ts (the SDK legs). Imports
 // from src/units/: ../_parity.
@@ -176,6 +186,13 @@ async function postSnapshot(m: Mounted, capability: string | null, signals: Reco
   return answered(m, response, pageInstance);
 }
 const carousel = (snapshot: Snapshot) => servedIn(snapshot, CAROUSEL);
+/** Signals outside the GET's bounds (src/routes/decisions.ts: a name /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/, a value of 1 to 64 characters, at most 8). */
+const OUT_OF_BOUNDS: Array<[string, Record<string, string>]> = [
+  ['a value over 64 characters', { anchor: 'X'.repeat(65) }],
+  ['a value over 128 characters', { anchor: 'X'.repeat(129) }],
+  ['a bad name', { '9bad': 'v' }],
+  ['nine signals', Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`signal${i}`, 'yes']))],
+];
 const sorted = (ids: string[]) => [...ids].sort();
 const refusal = (snapshot: Snapshot) => `${snapshot.status} ${JSON.stringify(snapshot.body).slice(0, 160)}`;
 
@@ -353,19 +370,43 @@ describe('unit:P80.AS3', () => {
         `${host}: P80.AS3 — a new browser's first POST admits the signals and is issued its session (answered ${refusal(first)})`).toEqual([200, 'string', CASES[0]!.candidates]);
     }, 120_000);
 
-    it(`host (${host}): the POST body's ctx signals are bounded as the GET's: a value over 64 characters and a ninth signal are refused with the GET's status and error`, async () => {
+    it(`host (${host}): the POST body's ctx signals are bounded as the GET's: a value over 64 characters, one over 128, a bad name and a ninth signal are refused with the GET's status and error`, async () => {
       const m = await mount(host, documents());
       expectPublished(m, 'P80.AS3 — the carousel declared scoped publishes');
       const s = await walletShopper(m);
-      const long = { anchor: 'X'.repeat(65) };
-      const nine = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`signal${i}`, 'yes']));
       const answers: Array<[string, string, string]> = [];
-      for (const [name, signals] of [['a value over 64 characters', long], ['nine signals', nine]] as Array<[string, Record<string, string>]>) {
+      for (const [name, signals] of OUT_OF_BOUNDS) {
         const viaGet = await getSnapshot(m, s, signals, 'p80-as3-bound-get'), viaPost = await postSnapshot(m, s.grant.capability, signals, 'p80-as3-bound-post');
         expect(viaGet.status, `${host}: PRECONDITION — ${name}: the GET refuses it (${refusal(viaGet)})`).toBe(400);
         answers.push([name, `${viaGet.status} ${String(viaGet.body.error)}`, `${viaPost.status} ${String(viaPost.body.error)}`]);
       }
       expect.soft(answers.map(([name, , post]) => [name, post]), `${host}: P80.AS3 — the POST refuses as the GET does`).toEqual(answers.map(([name, get]) => [name, get]));
+    }, 120_000);
+
+    it(`host (${host}): R-P264 — a new browser's first POST (no session) whose ctx signals break the bounds (a value over 64 characters, a bad name, nine signals) is refused exactly as any other refused first request is, 401, writing nothing: no session, no shopper object, no key, nothing queued (P13's first-request rule)`, async () => {
+      const m = await mount(host, documents());
+      expectPublished(m, 'P80.AS3 — the carousel declared scoped publishes');
+      const sessions = () => (m.env.SESSIONS as unknown as { data: Map<string, unknown> }).data.size;
+      const keys = () => [...m.shoppers.values()].reduce((n, r) => n + r.data.size, 0);
+      const firstPost = async (fields: Record<string, string>) => {
+        const before = [sessions(), m.shoppers.size, keys(), m.queued.length];
+        const response = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST', headers: { 'X-Tenant': TENANT, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance: pageInstanceOf('p80-as3-first-bounds'), ...fields }) }));
+        const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+        await m.drain();
+        const after = [sessions(), m.shoppers.size, keys(), m.queued.length];
+        return { answer: `${response.status} ${String(body.error)}`, written: after.map((n, i) => n - before[i]!) };
+      };
+      // The control: a first request refused by P13's own checks (a selector the body may not carry).
+      const control = await firstPost({ userId: 'vis-00000000-0000-4000-8000-000000000000' });
+      expect([control.answer.startsWith('401'), control.written], `${host}: PRECONDITION — a refused first request is a 401 writing nothing (${control.answer})`).toEqual([true, [0, 0, 0, 0]]);
+      const rows: Array<[string, string, number[]]> = [];
+      for (const [name, signals] of OUT_OF_BOUNDS.filter(([name]) => name !== 'a value over 128 characters')) {
+        const refused = await firstPost(Object.fromEntries(Object.entries(signals).map(([key, value]) => [`ctx.${key}`, value])));
+        rows.push([name, refused.answer, refused.written]);
+      }
+      expect.soft(rows, `${host}: P80.AS3 — each is refused as the control is, before anything is written (sessions, shopper objects, keys, queued: +0)`)
+        .toEqual(rows.map(([name]) => [name, control.answer, [0, 0, 0, 0]]));
     }, 120_000);
 
     it(`host (${host}): the SDK over the mounted application, a product page view opened with refresh({ page: 'pdp', productId: 'COA-CH857', variantId: 'COA-CH857-BLACK' }), is delivered the scoped carousel: the anchor's Black images only`, async () => {
