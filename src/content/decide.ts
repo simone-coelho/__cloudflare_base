@@ -275,6 +275,12 @@ const NO_SIGNAL: AffinityViewLike = { dims: {} };
  * already carries for this; there is no separate viewed-product member.
  */
 export const ANCHOR_SIGNAL = 'anchor';
+/**
+ * P80: the variant of the anchor product the page names (`ctx.variant`), read
+ * only by a slot declared `scope: 'anchor'`: a piece that names a variant beside
+ * the anchor is a candidate there only for that variant.
+ */
+export const VARIANT_SIGNAL = 'variant';
 
 /** The sample bound both existing advisory channels carry; the count stays whole. */
 const CONSTRAINT_WARNING_SAMPLE = 50;
@@ -818,6 +824,22 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const anchorSignal = i.eligibility?.signals?.[ANCHOR_SIGNAL];
   const anchor = typeof anchorSignal === 'string' ? anchorSignal.trim() : '';
   const completesAnchor = (p: ContentPieceLike): boolean => anchor !== '' && ((p as ContentPiece).complements ?? []).includes(anchor);
+  // P80: a slot DECLARED `scope: 'anchor'` serves only the pieces whose product
+  // link (`featuredProductIds`) names the anchor the request names: alone (an
+  // image of the product, for every variant), or beside the variant the request
+  // names (`ctx.variant`); without an anchor, none, so the page keeps its default.
+  // A declaration, never a signal gate (P31): no other slot reads the anchor so.
+  // It only withholds, on every arm: what the slot serves is what it would serve
+  // unscoped, without the pieces of another product, no product or another variant.
+  const variantSignal = i.eligibility?.signals?.[VARIANT_SIGNAL];
+  const variant = typeof variantSignal === 'string' ? variantSignal.trim() : '';
+  const scopedSlots = new Set(i.slots.filter((s) => s.scope === 'anchor').map((s) => s.slot));
+  const inScope = (p: ContentPieceLike): boolean => {
+    const ids = (p as ContentPiece).featuredProductIds ?? [];
+    return anchor !== '' && ids.includes(anchor) && (ids.length === 1 || (variant !== '' && ids.includes(variant)));
+  };
+  const outOfScope = new Set<string>(scopedSlots.size ? i.pieces.filter((p) => !inScope(p)).map((p) => p.id) : []);
+  const scopeRecord = { anchor, ...(variant ? { variant } : {}) };
   // P30: never on a context-only layout slot, whose context does not name the anchor the page asserts.
   const complementsOf = new Map<string, number>(i.arm === 'default' || anchor === '' ? [] : i.slots.flatMap((s) => {
     const w = s.complements?.weight;
@@ -910,6 +932,10 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     if (contextRule && layoutSwitch && piece.eligibleWhen && piece.slotTypes.includes(layoutSwitch.slot)
       && !matchesEligibility(piece.eligibleWhen, contextRule)) contextWithheld.add(piece.id);
   }
+  // P80: a slot scoped to the anchor withholds the pieces out of its scope, beside what it already
+  // withholds. Joined only now that the loop above has filled P30's context withholding, so a scoped
+  // context-only layout slot keeps every module its context does not admit: the scope only withholds.
+  specs.forEach((spec, k) => { if (scopedSlots.has(spec.slot)) specs[k] = { ...spec, withheld: spec.withheld ? new Set([...spec.withheld, ...outOfScope]) : outOfScope }; });
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
   // with enough evidence for this item in this cell. The base and the lift are
@@ -1520,6 +1546,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     // P31: the page's report as the decision accepted it, and each rule's
     // verdict on the cell (keys sorted), page-level and only when there is one.
     ...(report.length ? { nothing_to_show: [...report] } : {}),
+    // P80: the signals a scoped slot read, so the replay reproduces its candidates.
+    ...(scopedSlots.size && anchor !== '' ? { anchor, ...(variant ? { variant } : {}) } : {}),
     ...(verdictsRecorded.length ? { eligibility_verdicts: Object.fromEntries(verdictsRecorded.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) } : {}),
     // P30: the context a switched slot was decided in beyond the record's page and
     // cell — the device, and the region where admitted — written only when one was (C11, keys sorted).
@@ -1985,6 +2013,8 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
       versions: { ...i.versions, lift: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.version ?? 0, prior: d.strategy === 'tenant-pinned' ? 0 : learning?.snapshots[d.slot]?.priorVersion ?? 0 }, config_label: i.configLabel,
       ...(byId.get(d.contentId)?.featuredProductIds?.length ? { featured_product_ids: [...byId.get(d.contentId)!.featuredProductIds!] } : {}),
       explain: {
+        // P80: the anchor (and variant) a scoped slot's candidates were limited to, keys sorted.
+        ...(scopedSlots.has(d.slot) && anchor !== '' ? { scope: { ...scopeRecord } } : {}),
         drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}),
         ...(contextItem ? { contextPrior: contextItem } : {}), lift, score_final: d.score,
         ...(inSwap && swap ? { exploration: { bucket: swap.bucket, mode: swap.mode, positions: [swap.positions[0], swap.positions[1]] as [number, number], reason: swap.reason } }

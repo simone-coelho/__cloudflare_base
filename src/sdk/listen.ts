@@ -28,14 +28,35 @@ export interface HydrateOptions {
    * P79: the product of a product page view, your product identifier, the same value your product events
    * carry as `productId`. It is part of the page view: a `hydrate` or `refresh` naming another product opens
    * a new page view (its own page instance, deadline, holds and receipts), as another page or channel does.
+   * P80: sent, trimmed, as the decision request's `ctx.anchor` only when it is 1 to 64 characters after
+   * trimming; any other value sends neither it nor `variantId`, and the page view is served as one without an anchor.
    */
   productId?: string;
-  /** P79: the variant of that product (a colour, a size); a change of `variantId` alone opens no page view. */
+  /**
+   * P79: the variant of that product (a colour, a size); a change of `variantId` alone opens no page view.
+   * P80: sent, trimmed, as `ctx.variant` beside the anchor only when it is 1 to 64 characters after trimming.
+   */
   variantId?: string;
 }
 
 /** P79: two page views' options name the same page view when they name the same page, channel and product (a variant switch keeps it). */
 const samePageView = (a: HydrateOptions, b: HydrateOptions): boolean => a.page === b.page && a.channel === b.channel && a.productId === b.productId;
+
+/** P80: a page-asserted signal's value within the engine's bound (1 to 64 characters after trimming), trimmed; else undefined. */
+function signalValue(value: unknown): string | undefined {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return trimmed.length >= 1 && trimmed.length <= 64 ? trimmed : undefined;
+}
+
+/**
+ * P80: the page view's product as the anchor of a slot scoped to it (`ctx.anchor`), its variant beside it
+ * (`ctx.variant`), each only within the engine's bound: a product out of it sends neither, so the page view is
+ * served as one without an anchor rather than refused whole; a variant out of it is dropped alone.
+ */
+function anchorSignals(o: HydrateOptions): { 'ctx.anchor'?: string; 'ctx.variant'?: string } {
+  const anchor = signalValue(o.productId), variant = anchor === undefined ? undefined : signalValue(o.variantId);
+  return { ...(anchor !== undefined ? { 'ctx.anchor': anchor } : {}), ...(variant !== undefined ? { 'ctx.variant': variant } : {}) };
+}
 
 /** P31: the report as the decision request carries it — a JSON array of the identifiers, each once — or undefined when it names none. */
 function nothingToShowField(ids: unknown): string | undefined {
@@ -358,7 +379,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
       // P13 (H4): a new visitor's session is issued with this decision request, one
       // call; consent-dependent context (session, channel, entry) is never sent then.
       const nothingToShow = nothingToShowField(o.nothingToShow);
-      const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}) } };
+      // P80: the page view's product (P79) is the anchor product of a slot scoped to it, its variant beside it, within bounds.
+      const anchor = anchorSignals(o);
+      const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}), ...anchor } };
       const pending = core.ready(false, first);
       const generation = core.generation;
       const active = () => owner === intent && generation === core.generation;
@@ -374,7 +397,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         browsingSessionId: consent.tracking ? core.sessionId : undefined, brand: core.config.brand, channel: consent.tracking ? o.channel : undefined,
         entry: consent.tracking ? snapshotEntry(core.entry) : undefined,
         trackingConsent: consent.tracking ? undefined : 'false', personalizationEnabled: consent.personalization ? undefined : 'false',
-        nothingToShow,
+        nothingToShow, ...anchor,
       })) as { ok?: boolean; page?: string; pageInstance?: string; arm?: string; versions?: Record<string, number>; config_label?: string; decisions?: unknown; ts?: number } | null;
       if (!active() || !core.isCurrent(generation)) return null;
       if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== undefined && json.page !== o.page
