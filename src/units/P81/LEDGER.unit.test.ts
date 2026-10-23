@@ -75,7 +75,7 @@
 // fix P02, P13, P60, P64, P65, P67, P68, P70, P79, W35, src/sdk/*.test.ts, src/routes/realtime.sdkContract.test.ts,
 // src/reflex/shopperReflex{,.identity,.consent}.test.ts, src/services/telemetry.boundary.test.ts and
 // src/index.api-boundary.test.ts stay green; P34 is green but for T1's 'a socket open' leg (the R10 below); the SDK
-// bundles grow 509 bytes (ESM) and 519 (IIFE), within the budget. An earlier sketch that pushed before the answer and
+// bundles grow 88 bytes (ESM, 104 784 of 107 520) and 90 (IIFE, 110 033 of 112 640) over this head's. An earlier sketch that pushed before the answer and
 // without a socket turned P64.OT4, P65.RS3, P67.OM2 and P70.WB2 (no remote call before the answer) and P02.A3 (a
 // served-v1 capture per re-decision) RED, and one that added lines turned P68.KT1 RED (kit 02 cites ShopperReflex.ts and
 // listen.ts by line), and one that scheduled the continuation without a socket turned W36.S2 RED (the session
