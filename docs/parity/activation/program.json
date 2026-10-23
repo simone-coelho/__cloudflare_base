@@ -331,7 +331,8 @@
         "Replace the kit sentences (closed by unit:P81.PU4).",
         "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
         "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4)).",
-        "Ruled R-P269: an unchanged decision set is not pushed again (a trigger that leaves the decisions unchanged sends no frame; no duplicate frame per socket open); the push follows the owner's answer (P56's continueAfterOwnerAnswer); a re-decision runs only while the shopper has a socket; kit 02's citations into ShopperReflex.ts and listen.ts are re-pointed by the build."
+        "Ruled R-P269: an unchanged decision set is not pushed again (a trigger that leaves the decisions unchanged sends no frame; no duplicate frame per socket open); the push follows the owner's answer (P56's continueAfterOwnerAnswer); a re-decision runs only while the shopper has a socket; kit 02's citations into ShopperReflex.ts and listen.ts are re-pointed by the build.",
+        "Ruled R-P271: the build at 2d6371e3 is provisional — the open page view kept in memory is lost when the shopper's object hibernates (the Hibernation API; ~13–17 s idle against a 25 s SDK heartbeat), so pushes stop until the page's next request; closed in this round: the page view kept at rest under the shopper's own object (one key, overwritten per page view, removed at the last socket's close, erased by eraseWithBarrier), a restart leg and an erasure lock by the specifier, the P72.BD3 regex R10 granted so the kit states 'largest 478 ms' alone."
       ],
       "decisions": [
         {
@@ -376,7 +377,9 @@
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
         "packages/sdk/types/**",
-        "packages/sdk/package.json"
+        "packages/sdk/package.json",
+        "src/units/P72/** (R10 of BD3's 378 ms regex only, by the specifier; R-P271)",
+        "wrangler.toml (comment lines only: the 378 ms figure; R-P271)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P81 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
