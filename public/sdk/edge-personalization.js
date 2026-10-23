@@ -2002,7 +2002,9 @@
       ++intent;
       deliver(set, set.page);
     }
-    const offDecisions = core.on("decisions", (set) => apply(set));
+    const offDecisions = core.on("decisions", (set) => {
+      if (!set.pageInstance || !pageInstance || set.pageInstance === pageInstance) apply(set);
+    });
     const offGeneration = core.on("generation", () => {
       cachedView = null;
       exposed.clear();
@@ -2314,11 +2316,9 @@
       };
     }
     const offSent = core.on("sent", (event) => {
-      if (!["content_impression", "content_dwell", "content_viewable", "layout_exposure"].includes(event.type)) follow();
+      if (!["content_impression", "content_dwell", "content_viewable", "layout_exposure"].includes(event.type) && core.socketStatus !== "connected") follow();
     });
-    const offSocket = core.on("socket", (status) => {
-      if (status === "connected") follow();
-    });
+    const offSocket = () => void 0;
     const timer = opts.refreshMs === void 0 ? void 0 : host.setInterval(() => {
       if (selected) void refresh();
     }, Math.max(1e3, Math.min(3e5, opts.refreshMs)));

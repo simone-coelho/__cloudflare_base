@@ -58,7 +58,7 @@ import { BoundaryStorageUnavailable, SyntheticObjectBoundary, SyntheticUnavailab
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { historicalReflexSchema, sessionDataSchema, SessionManager, SESSION_TTL_SECONDS, type SessionData } from '@/services/SessionManager';
-import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose, validationRefusal, validationRefusalOf } from '@/identity/sessionAuthority';
+import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, continueAfterOwnerAnswer, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose, validationRefusal, validationRefusalOf } from '@/identity/sessionAuthority';
 import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwardLedgerOperation, LEDGER_OPERATION_HARD_BYTES, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
@@ -75,7 +75,7 @@ import { ACTION_EVENT_TYPE_SET, isEventNonce } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { PublicationError } from '@/config/publication';
+import { pinPublication, PublicationError } from '@/config/publication';
 import { applyProfileSnapshot, enrichmentInputs, mergeEnrichment, readEnrichment, type ImportOutcome, type ProfileEnrichment, type ProfileSnapshotRow } from '@/identity/profileEnrichment';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
@@ -563,7 +563,7 @@ export class ShopperReflex {
             throw new SessionAccessError();
           }
         }
-        return dispatchOwnedRequest(this, this.env, owned, principal!, req => this.fetch(req));
+        return this.dispatchAndPush(owned, selected, headers, principal!); // P81: the page view it opens, and the push after the answer
       }).catch(error => {
         if (error instanceof SessionAccessError) return json({ ok: false, error: 'Shopper session unavailable' }, 401);
         // P57: a conflicting render acknowledgement is this object's typed refusal, never an untyped 500.
@@ -577,7 +577,7 @@ export class ShopperReflex {
         await this.assertOwned(principal!, request, false, false);
         if (url.pathname === '/authority/relay-frame') {
           const body = z.object({ connectionId: z.string().uuid(), type: z.enum(['heartbeat', 'subscribe', 'unsubscribe']) }).strict().parse(await request.json());
-          return this.relayOperation('frame', principal!.subject, principal!.tenant, body);
+          return this.relayFrameAndPush(principal!, body); // P81: a heartbeat of the relay's socket also sends a publication change
         }
         const target = new URL(request.url); target.pathname = '/owner/upgrade';
         return this.env.PERSONALIZATION_WEBSOCKET.get(this.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(principal!.tenant, principal!.subject)))
@@ -1109,7 +1109,7 @@ export class ShopperReflex {
       await this.serialize(async () => {
         try {
           await this.assertOwned(attachment.principal!, undefined, false, false);
-          ws.send(JSON.stringify({ type: 'heartbeat_response', timestamp: Date.now() }));
+          ws.send(JSON.stringify({ type: 'heartbeat_response', timestamp: Date.now() })); if (this.pushView) this.afterAnswer(env => this.pushChanged(env, true)); // P81
         } catch { ws.close(1008, 'Shopper session unavailable'); }
       });
       return;
@@ -4153,6 +4153,112 @@ export class ShopperReflex {
     return structuredClone(stamps);
   }
 
+  // ── P81: the open page view's decision set, pushed over the live connection ──
+  /**
+   * P81 (amendment 11 E3): the page view the shopper's last decision request opened — that request as it reached this
+   * object (`KeptRequest`), the principal it was admitted under, what its last set offered (`offeredOf`) and the
+   * publication set it was last decided under — kept in memory to decide it again through the same route. A page
+   * view reaches the engine only through its own decision request; no socket message names one.
+   */
+  private pushView: { request: KeptRequest; principal: SessionCapability; offered: string; publication?: string } | null = null;
+  /** P81: on the session host, whether a socket of the shopper was upgraded, or heartbeats, through this object (the relay holds it). */
+  private relaySocket = false;
+  /** P81: whether the shopper holds a socket the push can reach: this object's own (object host), else the relay's. */
+  private pushConnected(): boolean {
+    return (this.env.REFLEX_HOST ?? 'session') === 'do' ? this.state.getWebSockets().length > 0 : this.relaySocket;
+  }
+  /** P81: work right after the owner's answer, re-entered through this object's serializer (P56); it never reaches the answer. */
+  private afterAnswer(work: (env: Env) => Promise<void>): void {
+    void continueAfterOwnerAnswer(work).catch(() => undefined);
+  }
+  /**
+   * P81: an owned request dispatched to its route. A decision request (`POST …/decisions/snapshot`) keeps the page
+   * view it opens, and its answered set is pushed after the answer; an admitted action (not an impression, a dwell, a
+   * viewable impression or a layout exposure) has the page view decided again after the answer. Either only while
+   * the shopper holds a socket: without one nothing more runs than before.
+   */
+  private async dispatchAndPush(owned: Request, selected: string, headers: Headers, principal: SessionCapability): Promise<Response> {
+    const path = new URL(owned.url).pathname, post = owned.method === 'POST';
+    const opens = post && /\/decisions\/snapshot$/.test(path), acts = post && path === '/realtime/action';
+    let request = owned, kept: KeptRequest | null = null, type: unknown = null;
+    if (opens || acts) {
+      const body = await owned.text(), cf = (owned as Request & { cf?: unknown }).cf;
+      request = new Request(selected, { method: 'POST', headers, body });
+      Object.defineProperty(request, 'cf', { value: cf });
+      if (opens) kept = { url: selected, headers: [...headers.entries()], body, cf };
+      else try { type = (JSON.parse(body) as { type?: unknown }).type; } catch { type = null; }
+    }
+    const answer = await dispatchOwnedRequest(this, this.env, request, principal, req => this.fetch(req));
+    try {
+      if (path === '/realtime/ws' && answer.status === 101) this.relaySocket = true;
+      if (answer.status !== 200) return answer;
+      if (kept) {
+        const set = await answer.clone().json().catch(() => null) as Record<string, unknown> | null;
+        if (set && typeof set.pageInstance === 'string') {
+          const view = this.pushView = { request: kept, principal, offered: offeredOf(set) };
+          if (this.pushConnected()) this.afterAnswer(env => this.pushFirst(env, set, view));
+        }
+      } else if (acts && this.pushView && this.pushConnected() && !QUIET_ACTIONS.has(String(type))) this.afterAnswer(env => this.pushChanged(env, false));
+    } catch { /* the push never touches the answer */ }
+    return answer;
+  }
+  /** P81: a frame the relay's socket sent (session host); a heartbeat also has a publication change pushed. */
+  private async relayFrameAndPush(principal: SessionCapability, body: { type: string; connectionId: string }): Promise<Response> {
+    const relayed = await this.relayOperation('frame', principal.subject, principal.tenant, body);
+    if (body.type === 'heartbeat') { this.relaySocket = true; if (this.pushView) this.afterAnswer(env => this.pushChanged(env, true)); }
+    return relayed;
+  }
+  /** P81: the publication set in force for the tenant (revision and digest), read as the decision route reads it; undefined where it cannot be read. */
+  private async publicationOf(env: Env, tenant: string): Promise<string | undefined> {
+    try { const pin = await pinPublication(env, tenant, true); return `${pin.revision}:${pin.digest}`; } catch { return undefined; }
+  }
+  /** P81: the page view's first list, as its decision request was answered, sent as a frame. */
+  private async pushFirst(env: Env, set: Record<string, unknown>, view: NonNullable<ShopperReflex['pushView']>): Promise<void> {
+    view.publication = await this.publicationOf(env, view.principal.tenant);
+    if (this.pushView === view) await this.sendDecisions(set, view.principal);
+  }
+  /**
+   * P81: the open page view decided again through the decision route (its records, receipts and offers are a
+   * request's), its set pushed only when what it offers changed. At a heartbeat it is decided again only when the
+   * tenant's publication set changed since its last decision. Never without the shopper's personalization consent,
+   * and never without a socket.
+   */
+  private async pushChanged(env: Env, heartbeat: boolean): Promise<void> {
+    const view = this.pushView;
+    if (!view || !this.pushConnected()) return;
+    try {
+      requireConsentPurpose(await this.consentNow(), 'personalization');
+      const publication = await this.publicationOf(env, view.principal.tenant);
+      if (heartbeat) {
+        if (publication === undefined || publication === view.publication) return;
+        if (view.publication === undefined) { view.publication = publication; return; }
+      }
+      const request = new Request(view.request.url, { method: 'POST', headers: new Headers(view.request.headers), body: view.request.body });
+      Object.defineProperty(request, 'cf', { value: view.request.cf });
+      await this.assertOwned(view.principal, request, false);
+      const answer = await dispatchOwnedRequest(this, this.env, request, view.principal, req => this.fetch(req));
+      if (answer.status !== 200 || this.pushView !== view) return;
+      const set = await answer.json() as Record<string, unknown>;
+      view.publication = publication;
+      const offered = offeredOf(set);
+      if (offered === view.offered) return;
+      view.offered = offered;
+      await this.sendDecisions(set, view.principal);
+    } catch { /* no push: the page keeps what it has */ }
+  }
+  /** P81: the set as a `content_decisions` frame, over this object's sockets (object host) or the relay's (session host); both refuse without personalization consent. */
+  private async sendDecisions(set: Record<string, unknown>, principal: SessionCapability): Promise<void> {
+    if (!this.pushConnected()) return;
+    const { ok: _ok, session: _session, ...decided } = set;
+    void _ok; void _session;
+    const frame = { ...decided, type: 'content_decisions', userId: principal.subject };
+    try {
+      await this.assertOwned(principal, undefined, false, false);
+      if ((this.env.REFLEX_HOST ?? 'session') === 'do') await this.pushFrame(frame);
+      else await this.relayOperation('broadcast', principal.subject, principal.tenant, frame);
+    } catch { /* no consent, or no socket */ }
+  }
+
   private async relayOperation(operation: string, subject: string, tenant: string, payload?: unknown): Promise<Response> {
     if (!ownerHeld(this) || !this.isActualObject(tenant, subject)) throw new SessionAccessError();
     const authority = await this.grantAuthority();
@@ -4564,4 +4670,13 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+/** P81: the decision request that opened the shopper's page view, as it reached the owner, to decide it again. */
+interface KeptRequest { url: string; headers: Array<[string, string]>; body: string; cf: unknown }
+/** P81: the actions that change no decision (the SDK asks nothing after them either). */
+const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure']);
+/** P81: what a decision set offers, per slot in order: a page view's set is pushed again only when this changes. */
+function offeredOf(set: Record<string, unknown>): string {
+  return JSON.stringify(((set.decisions ?? []) as Array<{ slot?: unknown; contentId?: unknown }>).map((d) => [d.slot, d.contentId]));
 }
