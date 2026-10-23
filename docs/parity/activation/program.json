@@ -34,7 +34,7 @@
     {
       "id": "P79",
       "title": "A new page instance on every product page view inside their app (**amendment 11, E1, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
@@ -148,7 +148,7 @@
     {
       "id": "P80",
       "title": "The carousel slot's candidates limited to the images of the product on the page (**amendment 11, E2, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
