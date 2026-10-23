@@ -4186,9 +4186,10 @@ export class ShopperReflex {
   /**
    * P81 (R-P271, R-P272): an owned request dispatched to its route. A decision request (`POST …/decisions/snapshot`)
    * that is answered keeps its page view at rest (under personalization consent), with the digest of the set its
-   * answer gave the page; that answer is never also pushed. An admitted action (not an impression, a dwell, a viewable
-   * impression or a layout exposure) and a socket's open have the kept page view decided again after the answer, its
-   * set pushed only when it differs from what the page view last received. Only while the shopper holds a socket.
+   * answer gave the page and the publication set it was decided under; that answer is never also pushed. An admitted
+   * action (not an impression, a dwell, a viewable impression or a layout exposure) has the kept page view decided
+   * again after the answer, its set pushed only when it differs from what the page view last received. A socket's open
+   * decides nothing (R-P273): a publication change is caught at its first heartbeat. Only while the shopper holds a socket.
    */
   private async dispatchAndPush(owned: Request, selected: string, headers: Headers, principal: SessionCapability): Promise<Response> {
     const path = new URL(owned.url).pathname, post = owned.method === 'POST';
@@ -4208,7 +4209,6 @@ export class ShopperReflex {
         const state = await this.readPush();
         const next = sessionHost && state?.socket !== true ? { ...(state ?? { version: 1 as const }), socket: true as const } : state;
         if (next !== state) await this.writePush(next);
-        if (next?.view && this.pushConnected(next)) this.afterAnswer(env => this.pushChanged(env, false, principal));
         return answer;
       }
       if (answer.status !== 200 || (!opens && !acts)) return answer;
@@ -4218,11 +4218,12 @@ export class ShopperReflex {
         try { requireConsentPurpose(await this.consentNow(), 'personalization'); } catch { return answer; }
         const state = await this.readPush();
         const refusals = refusalCookies(headers.get('Cookie'));
+        // The publication set the decision was pinned under: the operation already holds the decision's own pin, so this
+        // reads it again from the serving cache, with no read of the store (R-P273: kept with the view always).
+        const publication = await this.publicationOf(ownerEnvironment(this, this.env), principal.tenant);
         const view: PushView = { url: selected, body, cf: coarseRequestCF(cf), ...(refusals ? { refusals } : {}), principal,
-          pageInstance: set.pageInstance, offered: await offeredDigest(set) };
-        const next: PushState = { version: 1, ...(state?.socket ? { socket: true } : {}), view };
-        await this.writePush(next);
-        if (this.pushConnected(next)) this.afterAnswer(env => this.notePublication(env, view));
+          pageInstance: set.pageInstance, offered: await offeredDigest(set), ...(publication !== undefined ? { publication } : {}) };
+        await this.writePush({ version: 1, ...(state?.socket ? { socket: true } : {}), view });
       } else if (!QUIET_ACTIONS.has(String(type))) {
         const state = await this.readPush();
         if (state?.view && this.pushConnected(state)) this.afterAnswer(env => this.pushChanged(env, false, principal));
@@ -4261,15 +4262,6 @@ export class ShopperReflex {
   /** P81: the publication set in force for the tenant (revision and digest), read as the decision route reads it; undefined where it cannot be read. */
   private async publicationOf(env: Env, tenant: string): Promise<string | undefined> {
     try { const pin = await pinPublication(env, tenant, true); return `${pin.revision}:${pin.digest}`; } catch { return undefined; }
-  }
-  /** P81: after a page view's own request was answered (never pushed: R-P272), the publication set it was decided under, for the heartbeat's comparison. */
-  private async notePublication(env: Env, view: PushView): Promise<void> {
-    try {
-      const state = await this.readPush();
-      if (state?.view?.pageInstance !== view.pageInstance || state.view.offered !== view.offered || state.view.publication !== undefined) return;
-      const publication = await this.publicationOf(env, view.principal.tenant);
-      if (publication !== undefined) await this.writePush({ ...state, view: { ...state.view, publication } });
-    } catch { /* the next heartbeat records it */ }
   }
   /**
    * P81: the kept page view decided again through the decision route — a request re-signed from the kept
