@@ -170,7 +170,7 @@ following the answers. Calling `release()` ends the hold, and so does a new page
 new page instance); a release does not repaint by itself: the next answer the page receives repaints the
 slot (call `refresh()` to ask for one at once). A hold never holds back known absence: a consent refusal,
 an identity change or a failed answer still restores the defaults. Made before the first `refresh` or
-`hydrate`, or after an identity change, a hold holds nothing.
+`hydrate`, or after an identity change, a hold holds nothing. A new page view begins with a `hydrate` or `refresh` that names another page, another channel or another product (`productId`, your product identifier, the value your product events carry), and with a cached layout's report for another product: it has its own page instance, deadline, holds and receipts. A variant switch of the same product (`variantId` changed, `productId` the same) and a re-ask (`refresh()`, or the SDK's own after an acknowledged event) do not begin one.
 
 Keep defaults in the initial HTML and restore them on `[]`; asynchronous client refresh can repaint defaults. For server-first paint use the delivered server-side source module `src/sdk/server.ts`, not a browser global or a claimed published npm artifact:
 
@@ -656,5 +656,5 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | `sessionBroker` | absent | Same-origin POST broker for the server-first-paint path |
 | `heartbeatMs` | 25000 | Socket keepalive |
 | `reconnectMs` | 3000 | Socket reconnect delay |
-| `hydrateTimeoutMs` | 1500 | The page view's first-decision deadline, after which defaults stand: measured from its first snapshot request, never restarted by a re-ask |
+| `hydrateTimeoutMs` | 1500 | The page view's first-decision deadline, after which defaults stand: measured from its first snapshot request, never restarted by a re-ask; another page, channel or product (`productId`) is a new page view with its own deadline, a variant switch (`variantId`) is not |
 | `visitorIdKey` | `opt_visitor_id` | Storage key for the visitor id |
