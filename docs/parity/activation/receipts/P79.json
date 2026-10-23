@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P79",
+  "workOrderHash": "sha256:db611c064a33b163985d36c7913ea9eadb20dc5ae0c0ccd09c4a77d1d894fa6b",
+  "artifact": {
+    "revision": "87a552a56a1f86ad60030846cc889d4bc682e34c",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p79-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p79-build at 6f731182 (b7008a3e the merge of the S20 spec 744cd4a1; 6f731182 the mechanism: HydrateOptions gains productId (the customer's product identifier, the value their product events carry) and variantId, LayoutExposure gains productId; one samePageView test (page name, channel, product) in load(), refresh() and the cached-layout view, so another product opens a new page instance with its own decision set, deadline, holds and receipts, a cached layout for another product gets its own page instance and its beacon is sent for it, a page-name or channel change still opens one, a variant switch or a re-ask does not; P79 sends nothing new on the decision request (the anchor is P80's); kit 01 :173 and :659 and kit 02 :450 state the rule; P68's six citations of listen.ts re-pointed by +11 lines; the SDK bundles rebuilt (ESM 104,534 of 107,520 bytes, IIFE 109,777 of 112,640) and committed); P79 24/24 ×3 on the SDK and both hosts; the locks 387/387 (P03 8, P13 13, P30 25, P34 9, P40 16, P60 18, P68 8, src/sdk 82, realtime.sdkContract 120, P62 55, P70 20, P72 13); tsc app and SDK 0; both bundle checks exact; eslint 0. Amendment 11 E1, the owner's amendment of 2026-10-22 (R-P245, R-P247).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S20/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S20/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P79/implementer/REPORT.md",
+      "git commits on rem/p79-joined up to 87a552a5"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P79 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S20/reviewer-p79/logs/P79-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S20/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P79/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-23T00:58:15.094Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
