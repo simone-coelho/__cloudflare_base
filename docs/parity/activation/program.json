@@ -34,7 +34,7 @@
     {
       "id": "P79",
       "title": "A new page instance on every product page view inside their app (**amendment 11, E1, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
@@ -127,13 +127,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S20 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "744cd4a1d9a0cdf6ce6eafcee4b4ae3f3b9c2723",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S20 records the reviewed revision and the RED/HONEST evidence per criterion"
+          "_evidence/parity-step3/S20/specifier/REPORT.md (rem-specifier; S20 at 744cd4a1: P79 PI1–PI4, 14 RED today on the SDK and both hosts, the locks green)",
+          "_evidence/parity-step3/S20/reviewer-spec/REPORT.md (rem-reviewer at 744cd4a1: PASS; every RED names the missing behaviour; a whole-suite comparison at today's product and under the fix finds nothing else RED)"
         ],
         "negativeControlEvidence": [
-          "pending: the specification review of batch S20 records the sketches that turn each lock RED"
+          "_evidence/parity-step3/S20/reviewer-spec/REPORT.md: variantopens, nopagename, nochannel, loadonly and nocache each turn their lock or leg RED where the specifier says"
         ]
       },
       "doneWhen": [
@@ -147,7 +148,7 @@
     {
       "id": "P80",
       "title": "The carousel slot's candidates limited to the images of the product on the page (**amendment 11, E2, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
