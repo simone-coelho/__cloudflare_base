@@ -249,13 +249,14 @@
       "specificationGate": {
         "specifier": "rem-specifier",
         "reviewer": "rem-reviewer",
-        "reviewedRevision": "pending the batch S21 specification review (filled by the lead at the review's PASS)",
+        "reviewedRevision": "5d76d8533a681aaceb5a9274d47600e2e7dcc37e",
         "verdict": "PASS",
         "evidence": [
-          "pending: the specification review of batch S21 records the reviewed revision and the RED/HONEST evidence per criterion"
+          "_evidence/parity-step3/S21/specifier/REPORT.md (rem-specifier; S21 at 776a705d then 5d76d853: P80 AS1–AS4 with the first-request leg, 19 RED today, the locks green)",
+          "_evidence/parity-step3/S21/reviewer-spec/REPORT.md (rem-reviewer: FAIL at 776a705d on the first-request leg, PASS at 5d76d853; the whole-suite comparison at today's product and under the fix differs only in P80's tests)"
         ],
         "negativeControlEvidence": [
-          "pending: the specification review of batch S21 records the sketches that turn each lock RED"
+          "_evidence/parity-step3/S21/reviewer-spec/REPORT.md: signalgate, noanchorall, novariant, getonly, nosdk, boost and oldbounds each turn their lock or leg RED where claimed; noreplay turns the replay leg RED"
         ]
       },
       "doneWhen": [
