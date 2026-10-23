@@ -358,7 +358,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
       // P13 (H4): a new visitor's session is issued with this decision request, one
       // call; consent-dependent context (session, channel, entry) is never sent then.
       const nothingToShow = nothingToShowField(o.nothingToShow);
-      const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}) } };
+      // P80: the page view's product (P79) is the anchor product of a slot scoped to it, its variant beside it.
+      const anchor = { ...(o.productId ? { 'ctx.anchor': o.productId } : {}), ...(o.variantId ? { 'ctx.variant': o.variantId } : {}) };
+      const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}), ...anchor } };
       const pending = core.ready(false, first);
       const generation = core.generation;
       const active = () => owner === intent && generation === core.generation;
@@ -374,7 +376,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         browsingSessionId: consent.tracking ? core.sessionId : undefined, brand: core.config.brand, channel: consent.tracking ? o.channel : undefined,
         entry: consent.tracking ? snapshotEntry(core.entry) : undefined,
         trackingConsent: consent.tracking ? undefined : 'false', personalizationEnabled: consent.personalization ? undefined : 'false',
-        nothingToShow,
+        nothingToShow, ...anchor,
       })) as { ok?: boolean; page?: string; pageInstance?: string; arm?: string; versions?: Record<string, number>; config_label?: string; decisions?: unknown; ts?: number } | null;
       if (!active() || !core.isCurrent(generation)) return null;
       if (!json || json.ok !== true || !Array.isArray(json.decisions) || json.page !== undefined && json.page !== o.page
