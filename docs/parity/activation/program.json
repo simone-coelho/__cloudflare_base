@@ -329,7 +329,8 @@
         "Removing the re-request on a socket open changes unit:P34.T5's 'then one refresh' (src/units/P34/LEDGER.unit.test.ts:397–455): an R10 by the specifier, granted below.",
         "Replace the kit sentences (closed by unit:P81.PU4).",
         "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
-        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4)).",
+        "Ruled R-P269: an unchanged decision set is not pushed again (a trigger that leaves the decisions unchanged sends no frame; no duplicate frame per socket open); the push follows the owner's answer (P56's continueAfterOwnerAnswer); a re-decision runs only while the shopper has a socket; kit 02's citations into ShopperReflex.ts and listen.ts are re-pointed by the build."
       ],
       "decisions": [
         {
@@ -366,7 +367,7 @@
         "docs/kit/01-integration-guide.md",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
-        "src/units/P34/** (R10 of T5's refresh count only, by the specifier)",
+        "src/units/P34/** (R10 of T5's refresh count and T1's socket-open refresh, by the specifier)",
         "public/sdk/0.2.0/edge-personalization.js",
         "public/sdk/0.2.0/edge-personalization.esm.js",
         "public/sdk/edge-personalization.js",
