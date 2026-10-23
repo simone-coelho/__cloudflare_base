@@ -927,7 +927,9 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     // P13 (decision D1): the allow-list gains exactly one key, `customerId`, the
     // customer's identifier the page carried (never a selector: it names no
     // visitor and no session, and `userId`, `visitorId`, `sessionId` stay refused).
-    if (!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId'].includes(key)
+    // P80: and the named context signals `ctx.<name>`, as the query string carries
+    // them, under the same bounds (checked with the query's, below).
+    if ((!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId'].includes(key) && !key.startsWith('ctx.'))
       // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
       || typeof item !== 'string' || (key !== 'nothingToShow' && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
