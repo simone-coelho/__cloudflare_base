@@ -4175,9 +4175,27 @@ export class ShopperReflex {
     if (next) await this.state.storage.put(PUSH_VIEW_KEY, next); else await this.state.storage.delete(PUSH_VIEW_KEY);
     this.pushState = next;
   }
-  /** P81: whether the shopper holds a socket the push can reach: this object's own (object host), else the relay's, as recorded. */
-  private pushConnected(state: PushState | null): boolean {
-    return (this.env.REFLEX_HOST ?? 'session') === 'do' ? this.state.getWebSockets().length > 0 : state?.socket === true;
+  /**
+   * P81: whether the shopper holds a socket the push can reach: this object's own (object host), else the relay's, as
+   * recorded with the grant of the socket that last reported (session host). R-P281: a grant this object no longer holds
+   * live (expired: the relay closes its socket itself and its close notice cannot be signed; or revoked) means no
+   * socket: the flag is cleared, and the kept page view with it unless its own grant is still live.
+   */
+  private async pushConnected(state: PushState | null): Promise<boolean> {
+    if ((this.env.REFLEX_HOST ?? 'session') === 'do') return this.state.getWebSockets().length > 0;
+    if (state?.socket !== true) return false;
+    let held: (grantId: string | undefined) => boolean;
+    try {
+      const grants = (await this.grantAuthority())?.grants ?? {}, now = Date.now() / 1000;
+      held = grantId => grantId !== undefined && Object.hasOwn(grants, grantId) && grants[grantId]!.exp > now;
+    } catch { return false; }
+    if (held(state.socketGrant)) return true;
+    await this.writePush(state.view && held(state.view.principal.grantId) ? { version: 1, view: state.view } : null);
+    return false;
+  }
+  /** P81: the socket flag as recorded for a socket whose principal reported (session host): its grant with it. */
+  private socketFlag(principal: SessionCapability): Pick<PushState, 'socket' | 'socketGrant'> {
+    return principal.grantId === undefined ? {} : { socket: true, socketGrant: principal.grantId };
   }
   /** P81: work right after the owner's answer, re-entered through this object's serializer (P56); it never reaches the answer. */
   private afterAnswer(work: (env: Env) => Promise<void>): void {
@@ -4209,7 +4227,7 @@ export class ShopperReflex {
       const sessionHost = (this.env.REFLEX_HOST ?? 'session') !== 'do';
       if (path === '/realtime/ws' && answer.status === 101) {
         const state = await this.readPush();
-        const next = sessionHost && state?.socket !== true ? { ...(state ?? { version: 1 as const }), socket: true as const } : state;
+        const next = sessionHost && principal.grantId !== undefined && state?.socketGrant !== principal.grantId ? { ...(state ?? { version: 1 as const }), ...this.socketFlag(principal) } : state;
         if (next !== state) await this.writePush(next);
         return answer;
       }
@@ -4220,7 +4238,7 @@ export class ShopperReflex {
         const state = await this.readPush();
         const decided = (set.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
         if (decided?.tracking !== true) { // R-P281: tracking alone; every send still requires personalization consent
-          if (state?.view) await this.writePush(state.socket ? { version: 1, socket: true } : null);
+          if (state?.view) await this.writePush(state.socket ? { version: 1, socket: true, socketGrant: state.socketGrant } : null);
           return answer;
         }
         // R-P281: no refusal hint is kept: the request's hints are this object's consent already (assertOwned), and
@@ -4230,10 +4248,10 @@ export class ShopperReflex {
         const publication = await this.publicationOf(ownerEnvironment(this, this.env), principal.tenant);
         const view: PushView = { url: selected, body, cf: coarseRequestCF(cf), principal,
           pageInstance: set.pageInstance, offered: await offeredDigest(set), ...(publication !== undefined ? { publication } : {}) };
-        await this.writePush({ version: 1, ...(state?.socket ? { socket: true } : {}), view });
+        await this.writePush({ version: 1, ...(state?.socket ? { socket: true, socketGrant: state.socketGrant } : {}), view });
       } else if (!QUIET_ACTIONS.has(String(type))) {
         const state = await this.readPush();
-        if (state?.view && this.pushConnected(state)) this.afterAnswer(env => this.pushChanged(env, false, principal));
+        if (state?.view && await this.pushConnected(state)) this.afterAnswer(env => this.pushChanged(env, false, principal));
       }
     } catch { /* the push never touches the answer */ }
     return answer;
@@ -4242,7 +4260,7 @@ export class ShopperReflex {
   private async afterHeartbeat(): Promise<void> {
     try {
       const state = await this.readPush();
-      if (state?.view && this.pushConnected(state)) this.afterAnswer(env => this.pushChanged(env, true));
+      if (state?.view && await this.pushConnected(state)) this.afterAnswer(env => this.pushChanged(env, true));
     } catch { /* a heartbeat is answered whatever happens here */ }
   }
   /**
@@ -4255,7 +4273,7 @@ export class ShopperReflex {
     if (body.type === 'heartbeat') {
       try {
         const state = await this.readPush();
-        if (state?.socket !== true) await this.writePush({ ...(state ?? { version: 1 }), socket: true });
+        if (principal.grantId !== undefined && state?.socketGrant !== principal.grantId) await this.writePush({ ...(state ?? { version: 1 }), ...this.socketFlag(principal) });
       } catch { /* the heartbeat is answered whatever happens here */ }
       await this.afterHeartbeat();
     }
@@ -4289,7 +4307,7 @@ export class ShopperReflex {
   private async pushChanged(env: Env, heartbeat: boolean, current?: SessionCapability): Promise<void> {
     try {
       const state = await this.readPush(), view = state?.view;
-      if (!state || !view || !this.pushConnected(state)) return;
+      if (!state || !view || !await this.pushConnected(state)) return;
       requireConsentPurpose(await this.consentNow(), 'personalization');
       const publication = await this.publicationOf(env, view.principal.tenant);
       if (heartbeat) {
@@ -4317,7 +4335,7 @@ export class ShopperReflex {
   }
   /** P81: the set as a `content_decisions` frame, over this object's sockets (object host) or the relay's (session host); both refuse without personalization consent. */
   private async sendDecisions(set: Record<string, unknown>, principal: SessionCapability): Promise<void> {
-    if (!this.pushConnected(await this.readPush())) return;
+    if (!await this.pushConnected(await this.readPush())) return;
     const { ok: _ok, session: _session, ...decided } = set;
     void _ok; void _session;
     const frame = { ...decided, type: 'content_decisions', userId: principal.subject };
@@ -4746,7 +4764,7 @@ const PUSH_VIEW_KEY = 'pushView';
 /** P81: the open page view as kept (see `pushState`). */
 interface PushView { url: string; body: string; cf: { country?: string; regionCode?: string }; principal: SessionCapability;
   pageInstance: string; offered: string; publication?: string }
-interface PushState { version: 1; socket?: true; view?: PushView }
+interface PushState { version: 1; socket?: true; socketGrant?: string; view?: PushView }
 /** P81: the actions that change no decision (the SDK asks nothing after them either). */
 const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure']);
 /** P81: the digest of what a decision set offers, per slot in order: a page view's set is pushed again only when it changes. */
