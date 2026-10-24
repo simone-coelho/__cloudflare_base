@@ -41,8 +41,8 @@ export interface Listen {
     hydrate(opts: HydrateOptions): Promise<DecisionSet | null>;
     /**
      * One active refresh and one coalesced pending intent; no overlapping fetches. P34: an
-     * acknowledged event or a socket open during the page view's first snapshot does not cancel it:
-     * its answer is delivered, then exactly one refresh follows.
+     * acknowledged event during the page view's first snapshot does not cancel it: its answer is
+     * delivered, then one refresh follows (P81: only while no socket is connected).
      */
     refresh(opts?: HydrateOptions): Promise<DecisionSet | null>;
     /**

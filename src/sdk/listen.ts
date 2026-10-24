@@ -77,8 +77,8 @@ export interface Listen {
   hydrate(opts: HydrateOptions): Promise<DecisionSet | null>;
   /**
    * One active refresh and one coalesced pending intent; no overlapping fetches. P34: an
-   * acknowledged event or a socket open during the page view's first snapshot does not cancel it:
-   * its answer is delivered, then exactly one refresh follows.
+   * acknowledged event during the page view's first snapshot does not cancel it: its answer is
+   * delivered, then one refresh follows (P81: only while no socket is connected).
    */
   refresh(opts?: HydrateOptions): Promise<DecisionSet | null>;
   /**
@@ -343,7 +343,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     deliver(set, set.page);
   }
 
-  const offDecisions = core.on('decisions', (set) => apply(set));
+  const offDecisions = core.on('decisions', (set) => { if (!set.pageInstance || !pageInstance || set.pageInstance === pageInstance) apply(set); }); // P81: another page view's pushed set is not drawn
   const offGeneration = core.on('generation', () => {
     cachedView = null; exposed.clear();
     const page = current?.page ?? absence?.page ?? '';
@@ -581,10 +581,10 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   }
 
   /**
-   * P34: an acknowledged event or a socket open asks again. While the page
-   * view's first snapshot is in flight it is not cancelled: its answer is
-   * delivered, then one refresh follows, however many arrived. Later they
-   * coalesce exactly as the page's own `refresh()` does.
+   * P34: an acknowledged event asks again (P81: only while no socket is connected:
+   * a connected socket gets the engine's push). While the page view's first snapshot
+   * is in flight it is not cancelled: its answer is delivered, then one refresh
+   * follows, however many arrived; later they coalesce as `refresh()` does.
    */
   function follow(): void {
     if (!selected) return;
@@ -616,8 +616,8 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   }
 
   // P30: nor does the cached layout's beacon, which reports what a cache drew.
-  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure'].includes(event.type)) follow(); });
-  const offSocket = core.on('socket', status => { if (status === 'connected') follow(); });
+  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure'].includes(event.type) && core.socketStatus !== 'connected') follow(); });
+  const offSocket = (): void => undefined; // P81: a socket open asks nothing again; the engine pushes the page view's changes
   const timer = opts.refreshMs === undefined ? undefined : host.setInterval(() => { if (selected) void refresh(); }, Math.max(1_000, Math.min(300_000, opts.refreshMs)));
   function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); exposed.clear(); cachedView = null; content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
   return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, destroy };

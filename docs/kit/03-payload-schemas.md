@@ -67,7 +67,7 @@ the value, the second by sending a different column.
 
 ## The decision
 
-One item in snapshot `decisions[]`; the set carries its original `pageInstance`. `content_decisions` is a client-compatible historical frame, not a production delivery promise.
+One item in snapshot `decisions[]`; the set carries its original `pageInstance`. The engine also sends the open page view's set over the socket as a `content_decisions` frame whenever it differs from what the page view last received; the answer to the page's own request is never also sent.
 
 | Field | Meaning |
 |---|---|
@@ -1494,7 +1494,7 @@ nothing else unless a publication is due: no snapshot, no publication check, no 
 and no key written. A publication is due only 30 seconds after new evidence, a clean-up of a shopper's learning effects that retires their markers, a stats repair (`coarsen` or the explicit `reset`, a repeat of one included), a republication of the tenant's
 documents (which a heartbeat with nothing else pending sees in the publication head the configuration cache
 holds, reading the head and its set at most once every 30 seconds) or a refused or failed publication (its
-retry), never earlier while the object keeps running, and that alarm publishes only a change, as above (across a restart, a write still pending is published by the restarted object's first alarm, below, up to 30 seconds before it was due and never lost: 14 seconds after the write where measured). It costs up to 720 alarm invocations per
+retry), never earlier unless the object restarted in between, and that alarm publishes only a change, as above (across a restart, a write still pending is published by the restarted object's first alarm, below, up to 30 seconds before it was due and never lost: 14 seconds after the write where measured). It costs up to 720 alarm invocations per
 object-hour inside the tail, and the object stays resident for the tail after each touch or restart; after it the heartbeats stop and the
 alarm left is the next marker's expiry, if any. An object started again knows neither its last touch nor a
 pending change's age: its first alarm runs the routine publication once, which publishes only a change, and,
@@ -1516,7 +1516,7 @@ counts each outcome for the tenant as `learningReads` (the API reference, the sn
 monitor).
 The witness read and the shopper's ring read each wait at most their budget, reported in `sources.budgets`:
 600 ms each by default (`LIFT_WITNESS_BUDGET_MS`, `RING_READ_BUDGET_MS`), one edge round trip to a warm
-statistics object, measured on the platform at up to 378 ms inside a warm tail, with a buffer, since the budget
+statistics object, measured on the platform at a largest 478 ms inside a warm tail, with a buffer, since the budget
 bounds the wait, not the read; a deployment may override either with a whole number of milliseconds below 5 000,
 and any other value is refused, the 600 ms default kept and the variable named in `sources.budgets.refused`.
 A slot name the tenant's catalogue carries on more than one page has one snapshot per page, read with
@@ -1995,6 +1995,6 @@ and ODP audiences) never appear in `dims` because of a restoration.
 | `connected` | `{ connectionId, userId, timestamp }` |
 | `personalization_update` | `{ userId, timestamp, data: { segments[], decisions{}, featureVariables{}, recommendations[], sortOrder[], journeyStage, affinity: { dims, audiences, changed[], odpConfirmed[], applied? } } }`. `applied` itemises the action, the product type and the weight the event applied, only while the registry declares `productTypeWeights` (Action weights per product type, above). `journeyStage` is one of `exploring`, `thinking`, `deciding`: the stage of the shopper's CURRENT VISIT, derived from the visit's own counters against the `journey` thresholds published on your reflex configuration document. It starts again at `exploring` in a new visit and after the purchase that reached `deciding`. With no `journey` block published the engine's compiled default decides (`thinking` at the third interaction of the visit, `deciding` at the first purchase), so the stage still moves and the pooled learning key still spreads across `s=early`, `s=mid` and `s=late` rather than collapsing onto `s=early`; `sources.journey` on a decision names that default and its `revision: 0`. |
 | `segment_update` | The same shape, on a membership change alone |
-| `content_decisions` | Client-compatible only, no production sender promised. A decision set: `{ page, arm, versions, config_label, decisions[], ts }` |
+| `content_decisions` | Sent by the engine for the open page view whenever its decisions differ from what the page view last received (never the answer to the page's own request; never without personalization consent). A decision set exactly as the snapshot route answers it: `{ page, pageInstance, arm, versions, config_label, decisions[], ts }` |
 | `audience_published` | `{ userId, data: { timestamp, source, audienceWentLive: { key, name } } }` |
 | `odp_receipt` | `{ userId, data: { receiptId, status, ts, source } }`: the customer data platform's answer to a forwarded event |

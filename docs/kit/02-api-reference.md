@@ -247,7 +247,7 @@ event attributes (`eventAttributes: "event-when-unknown"`).
 ### `GET /realtime/ws?tenant=<tenant>`
 
 The live channel; a WebSocket upgrade. Subject/profile routing derives from the verified capability on both hosts. The SDK sends `shopper-session-v1`, the capability, and `sdk-key-v1.<canonical base64url UTF-8 site key>` as subprotocols (key at most512 UTF-8 bytes). The site key remains an independent tenant gate. Duplicate, malformed or conflicting selectors refuse before owner effects. Legacy selectors remain guarded; headers/protocols still require sensitive-data handling, and no historical-log deletion is implied. Frames from the platform: `connected`, `heartbeat_response`,
-`personalization_update`, `segment_update`, `audience_published`, `odp_receipt`. `content_decisions` is only a client-compatible shape; current content delivery uses supported snapshot refresh.
+`personalization_update`, `segment_update`, `audience_published`, `odp_receipt`, `content_decisions`. The engine sends `content_decisions`, the open page view's decision set exactly as its decision request would be answered, whenever the set differs from what the page view last received by either channel (after an admitted action, a buffered delivery, or a publication change at the latest at the socket's next heartbeat; a socket's open decides nothing); never the answer to the page's own request, never without the shopper's personalization consent at the time it is sent. The open page view is the latest decision request's, kept under the shopper's own object until the shopper's last socket closes, so a push follows the object's restart. A page left open past its session grant's lifetime receives pushes again once its next request renews it. A page view whose decision request ran with tracking withheld (a new visitor's first request, before the shopper's choice, among them) is not kept, so its page receives pushes only after it asks again under the shopper's choice. Servers, a page's first list before the connection is up and a refresh the page calls use the HTTPS snapshot request (`POST`).
 The client sends `{"type":"heartbeat"}` on the SDK's interval. Frame bodies are in the
 [payload schemas](./03-payload-schemas.md#socket-frames).
 
@@ -367,8 +367,8 @@ decision read none: no slot of the page applies a fatigue dial, or the arm is th
 read's own time, in whole milliseconds, from its start to its outcome; a `late` read reports at least the
 budget it waited. `sources.budgets` is `{ lift, ring }`, those budgets in milliseconds: by default
 `LIFT_WITNESS_BUDGET_MS` and `RING_READ_BUDGET_MS`, 600 ms each (src/learn/fan.ts): one edge round trip to a
-warm Durable Object, which for the statistics object was measured on the platform at up to 378 ms inside a warm
-tail, with a buffer; the budget bounds the wait for the read, not the read, so a read inside it answers as soon
+warm Durable Object, which for the statistics object was measured on the platform at a largest 478 ms inside a
+warm tail, with a buffer; the budget bounds the wait for the read, not the read, so a read inside it answers as soon
 as it is done. A deployment may set either as an environment
 variable of the same name: the decimal text of a whole number of milliseconds above 0 and below 5 000 (the
 SDK's own deadline) is admitted; any other value is refused, the default stays in force, and
@@ -392,13 +392,13 @@ expiry (the statistics publisher, below). The cost is up to 720 alarm invocation
 hour inside the tail, and the object resident for the tail after each touch or restart; after the tail the heartbeats
 stop and only those alarms remain. The bound is the platform's eviction
 of an idle object (observed after about 13 to 17 seconds), not a contract: the first decision after a quiet
-spell longer than the tail may still find the object asleep, and its lift read is then `late`, named in
+spell longer than the tail may still find the object asleep, and its lift read can then be `late`, named in
 `sources.lift`. An object started again (after a deployment, or by the platform inside a tail) knows neither
 its last touch nor the age of a pending change: its first alarm runs the routine publication once, which
 publishes only a change, and, unless that alarm is a learning-effect marker's expiry, resumes the heartbeat
 as a touch would, so the tail may extend by up to 600 seconds after each restart and an object that keeps
 restarting less than ten minutes apart stays warm; a reader arriving after the object was evicted and before
-its next alarm still finds it asleep. The shopper's ring object is not kept warm, so a cold ring read stays `late` in
+its next alarm still finds it asleep. The shopper's ring object is not kept warm, so a cold ring read can be `late` in
 `sources.ring`. The heartbeat leaves the budgets as they are: 600 ms each by default.
 
 **A declared layout slot.** A slot the slot document declares with `layout: true` (under
@@ -447,7 +447,7 @@ receipt of the answer that moved it. A page may hold a slot for the page view wi
 answer of that page view leaves the held slot as it was painted, and the render acknowledgements and
 engagements of its modules keep the `decisionId` each was painted and acknowledged with, although the newer
 answer moved or dropped the module. A release does not repaint by itself; the next answer repaints the
-slot. A hold never holds back known absence (a consent refusal, an identity change, a failed answer). A new page view begins with a `hydrate` or `refresh` that names another page, another channel or another product (`productId`, your product identifier, the value your product events carry), and with a cached layout's report for another product: it has its own page instance, deadline, holds and receipts. A variant switch of the same product (`variantId` changed, `productId` the same) and a re-ask (`refresh()`, or the SDK's own after an acknowledged event) do not begin one. The SDK sends `productId` as the decision request's `ctx.anchor`, and `variantId` beside it as `ctx.variant`, each trimmed and only when it is 1 to 64 characters after trimming: a `productId` outside that bound sends neither, and the page view is served as one without an anchor; a `variantId` outside it is dropped alone.
+slot. A hold never holds back known absence (a consent refusal, an identity change, a failed answer). A new page view begins with a `hydrate` or `refresh` that names another page, another channel or another product (`productId`, your product identifier, the value your product events carry; a `refresh` that names no `productId` after one that named one counts as another product, as a missing channel does): it has its own page instance, deadline, holds and receipts. A cached layout's report for another product is reported under its own page instance. A variant switch of the same product (`variantId` changed, `productId` the same) and a re-ask (`refresh()`, or the SDK's own after an acknowledged event) do not begin one. The SDK sends `productId` as the decision request's `ctx.anchor`, and `variantId` beside it as `ctx.variant`, each trimmed and only when it is 1 to 64 characters after trimming: a `productId` outside that bound sends neither, and the page view is served as one without an anchor; a `variantId` outside it is dropped alone.
 
 **A configured order per context.** A merchandiser can publish, on the page's declared layout slot, a
 module order per context (`orders`, governance version 4; [the layout slot](./03-payload-schemas.md#the-layout-slot)),
