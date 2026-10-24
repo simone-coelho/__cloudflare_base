@@ -91,6 +91,8 @@
 // first-request residuals, the retention-expiry residual above and that the newest tab's page view takes the pushes
 // (R-P281 finding 3, the builder's sentences, read by the review; no leg). TOLD, a LIVE1 risk: whether the relay can be
 // evicted before its close notice (kept alive by its waitUntil) reaches the shopper's object is not measurable locally.
+// TOLD, not a leg (R-P286): with several sockets under different grants, the session host's socket flag follows the
+// socket that last reported, so a lapse of that one grant pauses the pushes until another socket's next heartbeat (25 s).
 //
 // FIXTURE. P02's product page (src/units/_parity.ts: the registered modules, the declared layout slot measured
 // rendered-v1); a shopper who viewed nothing, whose page view then follows a Tabby view (COA-CH857), live or buffered,
@@ -292,6 +294,8 @@ interface Browser {
   socket: (capability?: string) => Promise<NativeSocket>;
   /** A decision request for the page view under another capability of the same shopper, with a cookie header if given (fix round 1). */
   askWith: (capability: string, pageInstance: string, cookie?: string) => Promise<Answer>;
+  /** A decision request for the page view with further members of the SDK's body (fix round 2: its consent hints). */
+  askBody: (pageInstance: string, members: Record<string, string>) => Promise<Answer>;
   /** A live action under another capability of the same shopper (fix round 1: a second grant). */
   actWith: (capability: string, event: { type: string; data: Record<string, unknown> }) => Promise<Answer>;
 }
@@ -399,7 +403,8 @@ async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>, 
       const askWith = async (capability: string, pageInstance: string, cookie?: string) => parsed(await runtime.fetch(`https://shop.example/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
         headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: capability, 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
         body: JSON.stringify({ page: 'pdp', brand: TENANT, pageInstance }) }));
-      return { subject: g.subject, sessionId: g.sessionId, capability: g.capability, call, ask, act, choose, socket, actWith, askWith };
+      const askBody = (pageInstance: string, members: Record<string, string>) => call(`/v1/${TENANT}/decisions/snapshot`, { page: 'pdp', brand: TENANT, pageInstance, ...members });
+      return { subject: g.subject, sessionId: g.sessionId, capability: g.capability, call, ask, act, choose, socket, actWith, askWith, askBody };
     };
     const browser = async (consent: { tracking: boolean; personalization: boolean }) => browserOf(await fixture('/grant', { tenant: TENANT }) as unknown as Session, consent);
     const firstRequest = async (pageInstance: string, consent: { tracking: boolean; personalization: boolean }) => {
@@ -1066,6 +1071,40 @@ describe('unit:P81.PU3', () => {
           personalizationInForceAfterThePush: (reask.body.sources as { consent?: { personalization?: unknown } } | undefined)?.consent?.personalization },
         `${host}: P81.PU3 — the kept page view replays no refusal hint (R-P281)`).toEqual({
           keptAtTheAnswer: 'kept', atTheGrant: [], atTheNextAction: { pageInstance: instance, items: itemsOf(reask.body.decisions) }, framesAfterTheAction: 1,
+          personalizationInForceAfterThePush: true,
+        });
+      });
+    }, 180_000);
+
+    it(`host (${host}, native): R-P286 (d) — a page view asked as the SDK asks it with personalization off (its body's own hint, personalizationEnabled: 'false', beside the browsing session tracking allows; src/sdk/listen.ts) is kept, nothing is pushed before the grant, and the shopper's mid-page grant brings no frame by itself and one frame at the next admitted action: the hint is not replayed and the grant stays in force`, async () => {
+      await nativeWorld(host, async w => {
+        const b = await w.browser({ tracking: true, personalization: false });
+        const socket = await b.socket();
+        const instance = `p81-fix2-body-hint-${host}-${crypto.randomUUID()}`;
+        // The SDK's body with tracking allowed and personalization off: no trackingConsent member, personalizationEnabled 'false'.
+        const hinted = await b.askBody(instance, { browsingSessionId: b.sessionId, personalizationEnabled: 'false' });
+        const decided = (hinted.body.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+        expect([hinted.status, decided?.tracking, decided?.personalization], `${host}: PRECONDITION — the SDK's page view is answered with tracking allowed and personalization off (${JSON.stringify(hinted.body).slice(0, 160)})`).toEqual([200, true, false]);
+        await pause(300);
+        const keptAtTheAnswer = (await w.keysNaming(b, instance)).includes(PUSH_VIEW_KEY) ? 'kept' : 'not kept';
+        expect((await b.act(VIEW_TABBY_26)).status, `${host}: PRECONDITION — the Tabby view is admitted`).toBe(200);
+        await pause(1500);
+        const beforeTheGrant = since(socket, 0, instance);
+        const granted = pushed(socket).length;
+        expect((await b.choose(FULL)).status, `${host}: PRECONDITION — the mid-page personalization grant is admitted`).toBe(200);
+        await pause(1500);
+        const atTheGrant = since(socket, granted, instance);
+        const count = pushed(socket).length;
+        expect((await b.act(VIEW_WILLOW)).status, `${host}: PRECONDITION — the Willow view is admitted`).toBe(200);
+        const atTheNextAction = await nextPush(socket, count);
+        await pause(1000);
+        const framesAfterTheAction = since(socket, count, instance).length;
+        // The SDK's next request for the page view under the grant: no hint, the browsing session beside it.
+        const reask = await b.askBody(instance, { browsingSessionId: b.sessionId });
+        expect.soft({ keptAtTheAnswer, beforeTheGrant, atTheGrant, atTheNextAction: framed(atTheNextAction), framesAfterTheAction,
+          personalizationInForceAfterThePush: (reask.body.sources as { consent?: { personalization?: unknown } } | undefined)?.consent?.personalization },
+        `${host}: P81.PU3 — the kept page view replays no consent member of the SDK's body (R-P286)`).toEqual({
+          keptAtTheAnswer: 'kept', beforeTheGrant: [], atTheGrant: [], atTheNextAction: { pageInstance: instance, items: itemsOf(reask.body.decisions) }, framesAfterTheAction: 1,
           personalizationInForceAfterThePush: true,
         });
       });
