@@ -4157,7 +4157,7 @@ export class ShopperReflex {
   /**
    * P81 (amendment 11 E3, R-P271): the open page view, kept at rest under ONE key of this object (`PUSH_VIEW_KEY`):
    * the latest decision request's admitted fields (page, pageInstance, brand, channel, the context signals, the
-   * report …), its route URL, coarse request metadata, the principal it was admitted under (its
+   * report …; never a consent hint, R-P286), its route URL, coarse request metadata, the principal it was admitted under (its
    * claims, never a credential: a request is re-signed from them), the digest of what its last set offered and the
    * publication set it was last decided under; on the session host also whether the relay holds a socket. Written
    * when a decision request is answered (overwriting the earlier page view), removed when the shopper's last socket
@@ -4246,7 +4246,7 @@ export class ShopperReflex {
         // The publication set the decision was pinned under: the operation already holds the decision's own pin, so this
         // reads it again from the serving cache, with no read of the store (R-P273: kept with the view always).
         const publication = await this.publicationOf(ownerEnvironment(this, this.env), principal.tenant);
-        const view: PushView = { url: selected, body, cf: coarseRequestCF(cf), principal,
+        const view: PushView = { url: selected, body: keptBody(body), cf: coarseRequestCF(cf), principal, // R-P286: no consent member
           pageInstance: set.pageInstance, offered: await offeredDigest(set), ...(publication !== undefined ? { publication } : {}) };
         await this.writePush({ version: 1, ...(state?.socket ? { socket: true, socketGrant: state.socketGrant } : {}), view });
       } else if (!QUIET_ACTIONS.has(String(type))) {
@@ -4769,6 +4769,18 @@ interface PushState { version: 1; socket?: true; socketGrant?: string; view?: Pu
 /** P81: the actions that change no decision (the SDK asks nothing after them either). */
 const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure']);
 /** P81: the digest of what a decision set offers, per slot in order: a page view's set is pushed again only when it changes. */
+/**
+ * P81 (R-P286): the decision request's body as kept: every admitted member (page, brand, pageInstance, channel, entry,
+ * browsingSessionId, nothingToShow, customerId, the ctx signals) but the consent hints the page sent with it
+ * (`trackingConsent`, `personalizationEnabled`, the body's only consent-bearing members), which this object's consent
+ * holds already from the request's own admission; replaying one would withdraw a choice the shopper made since, so a
+ * re-decision reads the consent in force. The body was admitted by the route (one JSON object of strings).
+ */
+function keptBody(body: string): string {
+  const value = JSON.parse(body) as Record<string, unknown>;
+  return JSON.stringify(Object.fromEntries(Object.entries(value).filter(([key]) => !CONSENT_BODY_HINTS.has(key))));
+}
+const CONSENT_BODY_HINTS = new Set(['trackingConsent', 'personalizationEnabled']);
 async function offeredDigest(set: Record<string, unknown>): Promise<string> {
   const offered = JSON.stringify(((set.decisions ?? []) as Array<{ slot?: unknown; contentId?: unknown }>).map((d) => [d.slot, d.contentId]));
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(offered)))].map((b) => b.toString(16).padStart(2, '0')).join('');
