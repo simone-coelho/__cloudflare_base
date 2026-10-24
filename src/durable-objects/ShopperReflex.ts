@@ -4280,9 +4280,10 @@ export class ShopperReflex {
     return relayed;
   }
   /**
-   * P81 (R-P281): the owner refused a frame of the relay's socket (a grant it revoked at a logout, or one past its
-   * lifetime): the relay closes that socket, and its close notice would be refused the same way, so the owner drops
-   * the kept page view and the socket flag itself. Nothing the refused frame asked for is done.
+   * P81 (R-P281): the owner refused a frame of the relay's socket (a grant it revoked, as at a logout, or a principal it
+   * no longer admits): the relay closes that socket, and its close notice would be refused the same way, so the owner
+   * drops the kept page view and the socket flag itself. Nothing the refused frame asked for is done. (A grant past its
+   * lifetime never reaches here: the relay closes that socket itself; `pushConnected` answers for it.)
    */
   private async relayRefused(principal: SessionCapability, path: string): Promise<void> {
     if (path !== '/authority/relay-frame' || !this.isActualObject(principal.tenant, principal.subject)) return;
