@@ -58,7 +58,7 @@ import { BoundaryStorageUnavailable, SyntheticObjectBoundary, SyntheticUnavailab
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { historicalReflexSchema, sessionDataSchema, SessionManager, SESSION_TTL_SECONDS, type SessionData } from '@/services/SessionManager';
-import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose, validationRefusal, validationRefusalOf } from '@/identity/sessionAuthority';
+import { AcknowledgementConflictError, assertShopperSelectors, admitOwnerPrincipal, coarseRequestCF, continueAfterOwnerAnswer, dispatchOwnedRequest, ownedRequestPath, ownerHeld, ownerEnvironment, ownerEffect, recheckOwnerInvocation, retainOwnerWork, runOwnerOperation, requireConsentPurpose, validationRefusal, validationRefusalOf } from '@/identity/sessionAuthority';
 import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwardLedgerOperation, LEDGER_OPERATION_HARD_BYTES, type LedgerOwnerOperation } from '@/identity/sessionAuthority';
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
@@ -75,7 +75,7 @@ import { ACTION_EVENT_TYPE_SET, isEventNonce } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { PublicationError } from '@/config/publication';
+import { pinPublication, PublicationError } from '@/config/publication';
 import { applyProfileSnapshot, enrichmentInputs, mergeEnrichment, readEnrichment, type ImportOutcome, type ProfileEnrichment, type ProfileSnapshotRow } from '@/identity/profileEnrichment';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
@@ -563,7 +563,7 @@ export class ShopperReflex {
             throw new SessionAccessError();
           }
         }
-        return dispatchOwnedRequest(this, this.env, owned, principal!, req => this.fetch(req));
+        return this.dispatchAndPush(owned, selected, headers, principal!); // P81: the page view it opens, and the push after the answer
       }).catch(error => {
         if (error instanceof SessionAccessError) return json({ ok: false, error: 'Shopper session unavailable' }, 401);
         // P57: a conflicting render acknowledgement is this object's typed refusal, never an untyped 500.
@@ -574,10 +574,10 @@ export class ShopperReflex {
     if (url.pathname === '/authority/relay-frame' || url.pathname === '/authority/relay-upgrade') {
       if (!principal) return json({ ok: false }, 401);
       return this.serialize(async () => {
-        await this.assertOwned(principal!, request, false, false);
+        await this.assertOwned(principal!, request, false, false).catch(async (refused: unknown) => { await this.relayRefused(principal!, url.pathname); throw refused; }); // P81 (R-P281)
         if (url.pathname === '/authority/relay-frame') {
-          const body = z.object({ connectionId: z.string().uuid(), type: z.enum(['heartbeat', 'subscribe', 'unsubscribe']) }).strict().parse(await request.json());
-          return this.relayOperation('frame', principal!.subject, principal!.tenant, body);
+          const body = z.object({ connectionId: z.string().uuid(), type: z.enum(['heartbeat', 'subscribe', 'unsubscribe', 'closed']) }).strict().parse(await request.json());
+          return this.relayFrameAndPush(principal!, body); // P81: a heartbeat of the relay's socket also sends a publication change
         }
         const target = new URL(request.url); target.pathname = '/owner/upgrade';
         return this.env.PERSONALIZATION_WEBSOCKET.get(this.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(principal!.tenant, principal!.subject)))
@@ -1109,7 +1109,7 @@ export class ShopperReflex {
       await this.serialize(async () => {
         try {
           await this.assertOwned(attachment.principal!, undefined, false, false);
-          ws.send(JSON.stringify({ type: 'heartbeat_response', timestamp: Date.now() }));
+          ws.send(JSON.stringify({ type: 'heartbeat_response', timestamp: Date.now() })); await this.afterHeartbeat(); // P81: a publication change is pushed
         } catch { ws.close(1008, 'Shopper session unavailable'); }
       });
       return;
@@ -1132,7 +1132,7 @@ export class ShopperReflex {
   }
 
   async webSocketClose(_ws: WebSocket, _code: number, _reason: string, _wasClean: boolean): Promise<void> {
-    // Nothing to clean: connection bookkeeping IS state.getWebSockets(); shopper
+    await this.socketClosed(_ws); // P81: the shopper's last socket closed: the kept page view goes. Otherwise: connection bookkeeping IS state.getWebSockets(); shopper
     // state persists in storage; the pending alarm keeps decay-out + retention live.
   }
 
@@ -1985,7 +1985,7 @@ export class ShopperReflex {
       }
       if (this.affinity?.retention && readRetention(this.affinity.retention, this.affinity.retention.tenant, 'profile').expiresAt <= now) {
         await this.state.storage.transaction(async transaction => {
-          await transaction.delete(['affinity', 'pipeline', 'audienceOwner']);
+          await transaction.delete(['affinity', 'pipeline', 'audienceOwner', PUSH_VIEW_KEY]); // P81 (R-P281): the kept page view with them
           // W06.BASE.02: the expired profile leaves no spent grant naming its
           // subject or session. The record stays, epoch and all, as the barrier
           // that keeps a legacy writer out; a grant still inside its own
@@ -1999,7 +1999,7 @@ export class ShopperReflex {
           const live = Object.fromEntries(Object.entries(stored.grants).filter(([, grant]) => grant.exp > now / 1000));
           if (Object.keys(live).length < Object.keys(stored.grants).length) await transaction.put({ grantAuthority: { ...stored, grants: live } });
         });
-        this.invalidateMirrors(); await this.load();
+        this.invalidateMirrors(); this.pushState = undefined; await this.load();
       }
       if (!this.affinity) {
         const next = Math.min(...[...imports.values()].filter(receipt => receipt.expires > now).map(receipt => receipt.expires));
@@ -2389,7 +2389,7 @@ export class ShopperReflex {
     erasureId: string; receiptKey: string; witness: string | null;
     source?: { sessionId: string; epoch: string };
   }): Promise<void> {
-    const relayPrincipal = Object.values((await this.grantAuthority())?.grants ?? {})[0];
+    this.pushState = undefined; const relayPrincipal = Object.values((await this.grantAuthority())?.grants ?? {})[0]; // P81: the kept page view is erased below with the rest
     const grantAuthority: GrantAuthority = { version: 1, epoch: crypto.randomUUID(), grants: {} };
     try {
       await this.state.storage.transaction(async transaction => {
@@ -2704,7 +2704,7 @@ export class ShopperReflex {
             // W16 C6: logout retires the recognition chain BEFORE the grant it
             // belonged to, so no window exists where the browser could come
             // back as a shopper this device just stopped being.
-            try { await this.state.storage.delete(CONTINUITY_KEY);
+            try { await this.state.storage.delete(CONTINUITY_KEY); this.pushState = undefined; await this.state.storage.delete(PUSH_VIEW_KEY); // P81 (R-P281)
               await this.state.storage.put({ grantAuthority: authority, [key]: complete, consent }); }
             finally {
               this.closeGrants(source.grantId);
@@ -4153,6 +4153,200 @@ export class ShopperReflex {
     return structuredClone(stamps);
   }
 
+  // ── P81: the open page view's decision set, pushed over the live connection ──
+  /**
+   * P81 (amendment 11 E3, R-P271): the open page view, kept at rest under ONE key of this object (`PUSH_VIEW_KEY`):
+   * the latest decision request's admitted fields (page, pageInstance, brand, channel, the context signals, the
+   * report …), its route URL, coarse request metadata, the principal it was admitted under (its
+   * claims, never a credential: a request is re-signed from them), the digest of what its last set offered and the
+   * publication set it was last decided under; on the session host also whether the relay holds a socket. Written
+   * when a decision request is answered (overwriting the earlier page view), removed when the shopper's last socket
+   * closes, at a logout, at a refusal of the relay's grant, at the profile's retention expiry and by `eraseWithBarrier`.
+   */
+  private pushState: PushState | null | undefined = undefined;
+  private async readPush(): Promise<PushState | null> {
+    if (this.pushState !== undefined) return this.pushState;
+    let stored: PushState | undefined;
+    try { stored = await this.state.storage.get<PushState>(PUSH_VIEW_KEY); } catch { return null; }
+    return this.pushState = stored?.version === 1 ? stored : null;
+  }
+  private async writePush(next: PushState | null): Promise<void> {
+    this.pushState = undefined;
+    if (next) await this.state.storage.put(PUSH_VIEW_KEY, next); else await this.state.storage.delete(PUSH_VIEW_KEY);
+    this.pushState = next;
+  }
+  /**
+   * P81: whether the shopper holds a socket the push can reach: this object's own (object host), else the relay's, as
+   * recorded with the grant of the socket that last reported (session host). R-P281: a grant this object no longer holds
+   * live (expired: the relay closes its socket itself and its close notice cannot be signed; or revoked) means no
+   * socket: the flag is cleared, and the kept page view with it unless its own grant is still live.
+   */
+  private async pushConnected(state: PushState | null): Promise<boolean> {
+    if ((this.env.REFLEX_HOST ?? 'session') === 'do') return this.state.getWebSockets().length > 0;
+    if (state?.socket !== true) return false;
+    let held: (grantId: string | undefined) => boolean;
+    try {
+      const grants = (await this.grantAuthority())?.grants ?? {}, now = Date.now() / 1000;
+      held = grantId => grantId !== undefined && Object.hasOwn(grants, grantId) && grants[grantId]!.exp > now;
+    } catch { return false; }
+    if (held(state.socketGrant)) return true;
+    await this.writePush(state.view && held(state.view.principal.grantId) ? { version: 1, view: state.view } : null);
+    return false;
+  }
+  /** P81: the socket flag as recorded for a socket whose principal reported (session host): its grant with it. */
+  private socketFlag(principal: SessionCapability): Pick<PushState, 'socket' | 'socketGrant'> {
+    return principal.grantId === undefined ? {} : { socket: true, socketGrant: principal.grantId };
+  }
+  /** P81: work right after the owner's answer, re-entered through this object's serializer (P56); it never reaches the answer. */
+  private afterAnswer(work: (env: Env) => Promise<void>): void {
+    void continueAfterOwnerAnswer(work).catch(() => undefined);
+  }
+  /**
+   * P81 (R-P271, R-P272): an owned request dispatched to its route. A decision request (`POST …/decisions/snapshot`)
+   * that is answered keeps its page view at rest when the decision ran with the shopper's tracking consent (its
+   * answer's `sources.consent`; CW31, R-P278, R-P281: a request decided with tracking withheld leaves nothing,
+   * and removes a page view kept before it), with the digest of the set its
+   * answer gave the page and the publication set it was decided under; that answer is never also pushed. An admitted
+   * action (not an impression, a dwell, a viewable impression or a layout exposure) has the kept page view decided
+   * again after the answer, its set pushed only when it differs from what the page view last received. A socket's open
+   * decides nothing (R-P273): a publication change is caught at its first heartbeat. Only while the shopper holds a socket.
+   */
+  private async dispatchAndPush(owned: Request, selected: string, headers: Headers, principal: SessionCapability): Promise<Response> {
+    const path = new URL(owned.url).pathname, post = owned.method === 'POST';
+    const opens = post && /\/decisions\/snapshot$/.test(path), acts = post && path === '/realtime/action';
+    let request = owned, body = '', type: unknown = null;
+    const cf = (owned as Request & { cf?: unknown }).cf;
+    if (opens || acts) {
+      body = await owned.text();
+      request = new Request(selected, { method: 'POST', headers, body });
+      Object.defineProperty(request, 'cf', { value: cf });
+      if (acts) try { type = (JSON.parse(body) as { type?: unknown }).type; } catch { type = null; }
+    }
+    const answer = await dispatchOwnedRequest(this, this.env, request, principal, req => this.fetch(req));
+    try {
+      const sessionHost = (this.env.REFLEX_HOST ?? 'session') !== 'do';
+      if (path === '/realtime/ws' && answer.status === 101) {
+        const state = await this.readPush();
+        const next = sessionHost && principal.grantId !== undefined && state?.socketGrant !== principal.grantId ? { ...(state ?? { version: 1 as const }), ...this.socketFlag(principal) } : state;
+        if (next !== state) await this.writePush(next);
+        return answer;
+      }
+      if (answer.status !== 200 || (!opens && !acts)) return answer;
+      if (opens) {
+        const set = await answer.clone().json().catch(() => null) as Record<string, unknown> | null;
+        if (!set || typeof set.pageInstance !== 'string') return answer;
+        const state = await this.readPush();
+        const decided = (set.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
+        if (decided?.tracking !== true) { // R-P281: tracking alone; every send still requires personalization consent
+          if (state?.view) await this.writePush(state.socket ? { version: 1, socket: true, socketGrant: state.socketGrant } : null);
+          return answer;
+        }
+        // R-P281: no refusal hint is kept: the request's hints are this object's consent already (assertOwned), and
+        // replaying one would withdraw a choice the shopper made since. A re-decision reads the consent in force.
+        // The publication set the decision was pinned under: the operation already holds the decision's own pin, so this
+        // reads it again from the serving cache, with no read of the store (R-P273: kept with the view always).
+        const publication = await this.publicationOf(ownerEnvironment(this, this.env), principal.tenant);
+        const view: PushView = { url: selected, body, cf: coarseRequestCF(cf), principal,
+          pageInstance: set.pageInstance, offered: await offeredDigest(set), ...(publication !== undefined ? { publication } : {}) };
+        await this.writePush({ version: 1, ...(state?.socket ? { socket: true, socketGrant: state.socketGrant } : {}), view });
+      } else if (!QUIET_ACTIONS.has(String(type))) {
+        const state = await this.readPush();
+        if (state?.view && await this.pushConnected(state)) this.afterAnswer(env => this.pushChanged(env, false, principal));
+      }
+    } catch { /* the push never touches the answer */ }
+    return answer;
+  }
+  /** P81: a heartbeat of a socket (either host) has a publication change pushed after it. */
+  private async afterHeartbeat(): Promise<void> {
+    try {
+      const state = await this.readPush();
+      if (state?.view && await this.pushConnected(state)) this.afterAnswer(env => this.pushChanged(env, true));
+    } catch { /* a heartbeat is answered whatever happens here */ }
+  }
+  /**
+   * P81: a frame the relay's socket sent (session host). A heartbeat records that the relay holds a socket and has a
+   * publication change pushed; `closed`, sent by the relay when the shopper's last socket closes, removes the kept page view.
+   */
+  private async relayFrameAndPush(principal: SessionCapability, body: { type: string; connectionId: string }): Promise<Response> {
+    if (body.type === 'closed') { await this.writePush(null); return json({ ok: true }); }
+    const relayed = await this.relayOperation('frame', principal.subject, principal.tenant, body);
+    if (body.type === 'heartbeat') {
+      try {
+        const state = await this.readPush();
+        if (principal.grantId !== undefined && state?.socketGrant !== principal.grantId) await this.writePush({ ...(state ?? { version: 1 }), ...this.socketFlag(principal) });
+      } catch { /* the heartbeat is answered whatever happens here */ }
+      await this.afterHeartbeat();
+    }
+    return relayed;
+  }
+  /**
+   * P81 (R-P281): the owner refused a frame of the relay's socket (a grant it revoked, as at a logout, or a principal it
+   * no longer admits): the relay closes that socket, and its close notice would be refused the same way, so the owner
+   * drops the kept page view and the socket flag itself. Nothing the refused frame asked for is done. (A grant past its
+   * lifetime never reaches here: the relay closes that socket itself; `pushConnected` answers for it.)
+   */
+  private async relayRefused(principal: SessionCapability, path: string): Promise<void> {
+    if (path !== '/authority/relay-frame' || !this.isActualObject(principal.tenant, principal.subject)) return;
+    try { await this.writePush(null); } catch { /* the refusal is answered whatever happens here */ }
+  }
+  /** P81: the shopper's last socket on this object closed (object host): the kept page view goes. */
+  private async socketClosed(closing: WebSocket): Promise<void> {
+    if (this.state.getWebSockets().some(socket => socket !== closing)) return;
+    try { await this.writePush(null); } catch { /* a stale view is removed by the next page view or the erasure */ }
+  }
+  /** P81: the publication set in force for the tenant (revision and digest), read as the decision route reads it; undefined where it cannot be read. */
+  private async publicationOf(env: Env, tenant: string): Promise<string | undefined> {
+    try { const pin = await pinPublication(env, tenant, true); return `${pin.revision}:${pin.digest}`; } catch { return undefined; }
+  }
+  /**
+   * P81: the kept page view decided again through the decision route — a request re-signed from the kept
+   * principal (or the action's own), the kept fields as its body — so its records, receipts and offers are a
+   * request's; its set pushed only when what it offers changed. At a heartbeat it is decided again only when the
+   * tenant's publication set changed since its last decision. Never without the shopper's personalization consent,
+   * and never without a socket.
+   */
+  private async pushChanged(env: Env, heartbeat: boolean, current?: SessionCapability): Promise<void> {
+    try {
+      const state = await this.readPush(), view = state?.view;
+      if (!state || !view || !await this.pushConnected(state)) return;
+      requireConsentPurpose(await this.consentNow(), 'personalization');
+      const publication = await this.publicationOf(env, view.principal.tenant);
+      if (heartbeat) {
+        if (publication === undefined || publication === view.publication) return;
+        if (view.publication === undefined) { await this.writePush({ ...state, view: { ...view, publication } }); return; }
+      }
+      const principal = current ?? view.principal;
+      const signed = await signSessionCapability(this.env, principal);
+      const headers = new Headers({ 'Content-Type': 'application/json', 'X-Tenant': principal.tenant, [SHOPPER_HEADER]: signed.capability });
+      // (no Cookie: the consent in force decides, R-P281)
+      const request = new Request(view.url, { method: 'POST', headers, body: view.body });
+      Object.defineProperty(request, 'cf', { value: view.cf });
+      await this.assertOwned(principal, request, false);
+      const answer = await dispatchOwnedRequest(this, this.env, request, principal, req => this.fetch(req));
+      if (answer.status !== 200) return;
+      const set = await answer.json() as Record<string, unknown>;
+      const latest = await this.readPush();
+      if (latest?.view?.pageInstance !== view.pageInstance || set.pageInstance !== view.pageInstance) return;
+      const offered = await offeredDigest(set), changed = offered !== latest.view.offered;
+      if (changed || publication !== latest.view.publication) {
+        await this.writePush({ ...latest, view: { ...latest.view, offered, ...(publication !== undefined ? { publication } : {}) } });
+      }
+      if (changed) await this.sendDecisions(set, principal);
+    } catch { /* no push: the page keeps what it has */ }
+  }
+  /** P81: the set as a `content_decisions` frame, over this object's sockets (object host) or the relay's (session host); both refuse without personalization consent. */
+  private async sendDecisions(set: Record<string, unknown>, principal: SessionCapability): Promise<void> {
+    if (!await this.pushConnected(await this.readPush())) return;
+    const { ok: _ok, session: _session, ...decided } = set;
+    void _ok; void _session;
+    const frame = { ...decided, type: 'content_decisions', userId: principal.subject };
+    try {
+      await this.assertOwned(principal, undefined, false, false);
+      if ((this.env.REFLEX_HOST ?? 'session') === 'do') await this.pushFrame(frame);
+      else await this.relayOperation('broadcast', principal.subject, principal.tenant, frame);
+    } catch { /* no consent, or no socket */ }
+  }
+
   private async relayOperation(operation: string, subject: string, tenant: string, payload?: unknown): Promise<Response> {
     if (!ownerHeld(this) || !this.isActualObject(tenant, subject)) throw new SessionAccessError();
     const authority = await this.grantAuthority();
@@ -4564,4 +4758,18 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+/** P81 (R-P271): the one storage key the open page view is kept under; erased by `eraseWithBarrier`, never retained. */
+const PUSH_VIEW_KEY = 'pushView';
+/** P81: the open page view as kept (see `pushState`). */
+interface PushView { url: string; body: string; cf: { country?: string; regionCode?: string }; principal: SessionCapability;
+  pageInstance: string; offered: string; publication?: string }
+interface PushState { version: 1; socket?: true; socketGrant?: string; view?: PushView }
+/** P81: the actions that change no decision (the SDK asks nothing after them either). */
+const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure']);
+/** P81: the digest of what a decision set offers, per slot in order: a page view's set is pushed again only when it changes. */
+async function offeredDigest(set: Record<string, unknown>): Promise<string> {
+  const offered = JSON.stringify(((set.decisions ?? []) as Array<{ slot?: unknown; contentId?: unknown }>).map((d) => [d.slot, d.contentId]));
+  return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(offered)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
