@@ -148,7 +148,7 @@
     {
       "id": "P80",
       "title": "The carousel slot's candidates limited to the images of the product on the page (**amendment 11, E2, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
@@ -206,7 +206,9 @@
         "Carry the anchor into the record's inputs as nothing_to_show is (src/content/decide.ts, src/learn/receipts.ts, src/learn/replay.ts) so a scoped decision replays (closed by unit:P80.AS2).",
         "Change kit 03 :236–237 and kit 02 :792 (closed by unit:P80.AS4).",
         "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
-        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4)).",
+        "R-P270 fix round 1: the delivery review at the second join 10928981 FAILED on one defect — a layout slot both context-only and scope:'anchor' serves a P30-withheld module (decide.ts:887 copies the withheld set before contextWithheld is filled); remedied by keeping P30's live set and pinned by a spec leg; ruled: the SDK sends ctx.anchor only for a productId of 1–64 characters after trimming (out of bounds: neither signal, the page served without an anchor; an out-of-bounds variantId drops only the variant), the kit states the bound; kit 02 :302's POST field list and kit 03 :238's complements row corrected. Legs on rem/spec-p80-fix1, fix on rem/p80-build, official gate S21/fix1/gate-r3 on the third join.",
+        "Ruled R-P274: the fix-round spec review at 4c1bf9e9 FAILED on one unpinned case (a padded productId sent trimmed); one leg added by the specifier, the builder re-merges without a product change, a fourth join, official gate S21/fix1/gate-r4 (gate-r3 aborted as feedback); told: the GET raw-length bound, samePageView on the raw productId, no SDK diagnostic channel."
       ],
       "decisions": [
         {
@@ -270,7 +272,7 @@
     {
       "id": "P81",
       "title": "The push of the decision set over the live connection (the rendering record's N5) (**amendment 11, E3, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
@@ -329,7 +331,10 @@
         "Removing the re-request on a socket open changes unit:P34.T5's 'then one refresh' (src/units/P34/LEDGER.unit.test.ts:397–455): an R10 by the specifier, granted below.",
         "Replace the kit sentences (closed by unit:P81.PU4).",
         "The SDK bundles are generated: node scripts/build-sdk.mjs rebuilds public/sdk/edge-personalization.js and .esm.js, their copies under public/sdk/0.2.0/ and packages/sdk/ from src/sdk, and the gate's node scripts/build-sdk.mjs --check compares them with a fresh build; they are not in allowedPaths, and the lead rules at the join who commits the rebuilt outputs.",
-        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4))."
+        "The SDK bundles under public/sdk/0.2.0/ are rebuilt by scripts/build-sdk.mjs and committed with the change, so the gate's build-sdk --check passes (R-P247(4)).",
+        "Ruled R-P269: an unchanged decision set is not pushed again (a trigger that leaves the decisions unchanged sends no frame; no duplicate frame per socket open); the push follows the owner's answer (P56's continueAfterOwnerAnswer); a re-decision runs only while the shopper has a socket; kit 02's citations into ShopperReflex.ts and listen.ts are re-pointed by the build.",
+        "Ruled R-P271: the build at 2d6371e3 is provisional — the open page view kept in memory is lost when the shopper's object hibernates (the Hibernation API; ~13–17 s idle against a 25 s SDK heartbeat), so pushes stop until the page's next request; closed in this round: the page view kept at rest under the shopper's own object (one key, overwritten per page view, removed at the last socket's close, erased by eraseWithBarrier), a restart leg and an erasure lock by the specifier, the P72.BD3 regex R10 granted so the kit states 'largest 478 ms' alone.",
+        "Ruled R-P272 (spec review FAIL at 77297ce3): a page's own decision request is answered in its response and never also pushed; a frame only when the set differs from what the page view last received by either channel (the first list after the socket opens only when changed; an unchanged action or re-ask sends nothing); legs added for a new browser's first request, a second page view, consent withdrawn mid-page, a dropped socket, another shopper's socket; header refreshed and deferrals stated; no alarm trigger needed (interest applied at delivery on both hosts)."
       ],
       "decisions": [
         {
@@ -366,7 +371,7 @@
         "docs/kit/01-integration-guide.md",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
-        "src/units/P34/** (R10 of T5's refresh count only, by the specifier)",
+        "src/units/P34/** (R10 of T5's refresh count and T1's socket-open refresh, by the specifier)",
         "public/sdk/0.2.0/edge-personalization.js",
         "public/sdk/0.2.0/edge-personalization.esm.js",
         "public/sdk/edge-personalization.js",
@@ -374,7 +379,9 @@
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
         "packages/sdk/types/**",
-        "packages/sdk/package.json"
+        "packages/sdk/package.json",
+        "src/units/P72/** (R10 of BD3's 378 ms regex only, by the specifier; R-P271)",
+        "wrangler.toml (comment lines only: the 378 ms figure; R-P271)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P81 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {

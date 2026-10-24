@@ -1835,6 +1835,14 @@ function createEmit(core, listen) {
 
 // src/sdk/listen.ts
 var samePageView = (a, b) => a.page === b.page && a.channel === b.channel && a.productId === b.productId;
+function signalValue(value) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  return trimmed.length >= 1 && trimmed.length <= 64 ? trimmed : void 0;
+}
+function anchorSignals(o) {
+  const anchor = signalValue(o.productId), variant = anchor === void 0 ? void 0 : signalValue(o.variantId);
+  return { ...anchor !== void 0 ? { "ctx.anchor": anchor } : {}, ...variant !== void 0 ? { "ctx.variant": variant } : {} };
+}
 function nothingToShowField(ids) {
   if (!Array.isArray(ids)) return void 0;
   const named = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
@@ -2036,7 +2044,7 @@ function createListen(core, opts = {}) {
     const timedOut = () => !!v.expired && !expired;
     try {
       const nothingToShow = nothingToShowField(o.nothingToShow);
-      const anchor = { ...o.productId ? { "ctx.anchor": o.productId } : {}, ...o.variantId ? { "ctx.variant": o.variantId } : {} };
+      const anchor = anchorSignals(o);
       const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {}, ...anchor } };
       const pending = core.ready(false, first2);
       const generation = core.generation;
