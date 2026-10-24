@@ -44,8 +44,11 @@
 //     names the open page view's pageInstance and carries the set a request for it then gets. No push without the
 //     shopper's personalization consent, also after a withdrawal. R-P269: a trigger that leaves the set unchanged sends
 //     no frame (heartbeats, a second socket, an unchanged action, the page's re-ask). A second page view (another
-//     decision request) replaces the first, and a new browser's first request (P13, no session) opens the page view the
-//     issued session's socket is pushed to.
+//     decision request) replaces the first. A new browser's first request (P13, no session) is decided before any
+//     explicit choice, so with tracking withheld (src/content/consent.ts carryConsent: no instruction is REFUSING), and
+//     CW31 has the engine write nothing about such a request (consent.ts's header; service.ts decideContent's `write`):
+//     its page view is not kept, and only the page's next decision request under the choice opens the page view the
+//     issued session's socket is pushed to (S22 round 3: R-P272's first-request reading measured against CW31).
 //   · THE PAGE VIEW AT REST (R-P271): the open page view is kept under the shopper's own object (one key, `pushView` on
 //     both hosts as the builder named it, R-P273; the latest page view, overwritten per page view, removed at the last
 //     socket's close, never retained by the erasure, eraseWithBarrier): a push survives the object's restart (the
@@ -70,7 +73,9 @@
 // of another kind (the profile's retention expiry deleting affinity and pipeline) reaches the page only at its next
 // action or request, because the heartbeat re-decides on a publication change alone. TOLD, not a leg (R-P273): a
 // heartbeat's push re-signs the stored principal's claims, so after the session grant's lifetime nothing is pushed
-// until the page's next request renews it.
+// until the page's next request renews it. TOLD, not a leg (CW31): after a new visitor's first choice, the page view
+// its first request opened is pushed to only once the page asks again, because the SDK does not ask again on a
+// consent grant (src/sdk/listen.ts: a consent change only withdraws).
 //
 // FIXTURE. P02's product page (src/units/_parity.ts: the registered modules, the declared layout slot measured
 // rendered-v1); a shopper who viewed nothing, whose page view then follows a Tabby view (COA-CH857), live or buffered.
@@ -214,7 +219,7 @@ interface NativeWorld {
   restart: (b: Browser) => Promise<string>;
   /** The keys of the shopper's object whose stored value names `needle`. */
   keysNaming: (b: Browser, needle: string) => Promise<string[]>;
-  /** The shopper's erasure through the operator's route (`POST /v1/{tenant}/identity/erase`), resumed while pending. */
+  /** The shopper's erasure through the operator's route (`POST /v1/{tenant}/identity/erase`), resumed while pending, bounded at 30 s. */
   erase: (b: Browser) => Promise<Answer>;
 }
 
@@ -299,10 +304,14 @@ async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>):
       return (await instanceOf(b)) === before ? 'the same instance' : 'a fresh instance';
     };
     const keysNaming = async (b: Browser, needle: string) => (await fixture('/keys', { tenant: TENANT, subject: b.subject, needle })).keys as string[];
-    const erase = async (b: Browser) => {
-      let answer = await operator('POST', `/v1/${TENANT}/identity/erase`, { visitorId: b.subject });
-      for (let resume = 0; answer.body.status === 'pending' && resume < 40; resume++) { await pause(250); answer = await operator('POST', `/v1/${TENANT}/identity/erase`, { visitorId: b.subject }); }
-      return answer;
+    const erase = async (b: Browser): Promise<Answer> => {
+      const erasing = (async () => {
+        let answer = await operator('POST', `/v1/${TENANT}/identity/erase`, { visitorId: b.subject });
+        for (let resume = 0; answer.body.status === 'pending' && resume < 40; resume++) { await pause(250); answer = await operator('POST', `/v1/${TENANT}/identity/erase`, { visitorId: b.subject }); }
+        return answer;
+      })().catch((error: unknown): Answer => ({ status: 0, body: { error: String(error) } }));
+      // Bounded, so an erasure that never answers is named rather than timing the leg out (it answers within a second here).
+      return Promise.race([erasing, pause(30_000).then((): Answer => ({ status: 0, body: { error: 'the erasure did not answer within 30 s' } }))]);
     };
     return await work({ browser, firstRequest, publishSlots, restart, keysNaming, erase });
   } finally {
@@ -503,20 +512,33 @@ describe('unit:P81.PU1', () => {
       });
     }, 180_000);
 
-    it(`host (${host}, native): R-P272 — a new browser's first decision request (no session, P13) opens the page view the engine pushes to: once its socket opens with the issued session and an action changes the set, a frame names that first request's pageInstance`, async () => {
+    it(`host (${host}, native): R-P272 (CW31) — a new browser's first decision request (no session, P13) is decided before any choice, tracking withheld, so nothing of it is kept (no stored key names its pageInstance) and after the shopper's choice a changing action brings no frame for it; once the page asks again under the choice (the same pageInstance), the issued session's socket is pushed that page view's set after the next changing action`, async () => {
       await nativeWorld(host, async w => {
         const instance = `p81-pu1-first-${host}-${crypto.randomUUID()}`;
         const { answer, browser } = await w.firstRequest(instance, FULL);
-        expect([answer.status, browser === null ? 'no session issued' : 'a session issued'], `${host}: PRECONDITION — the first request is answered and issues a session (${JSON.stringify(answer.body).slice(0, 160)})`)
-          .toEqual([200, 'a session issued']);
+        expect([answer.status, browser === null ? 'no session issued' : 'a session issued', (answer.body.session as { consent?: { tracking?: unknown } } | undefined)?.consent?.tracking ?? 'no consent on the session'],
+          `${host}: PRECONDITION — the first request is answered and issues a session, decided before any choice with tracking withheld (${JSON.stringify(answer.body).slice(0, 160)})`)
+          .toEqual([200, 'a session issued', false]);
         const socket = await browser!.socket();
         await pause(500);
-        const count = pushed(socket).length;
+        const keptFromTheFirstRequest = await w.keysNaming(browser!, instance);
+        let count = pushed(socket).length;
         expect((await browser!.act(VIEW_TABBY_26)).status, `${host}: PRECONDITION — the Tabby view is admitted`).toBe(200);
+        await pause(1500);
+        const beforeThePageAsksAgain = since(socket, count, instance);
+        const asked = await browser!.ask(instance);
+        expect(asked.status, `${host}: PRECONDITION — the page asks again for its page view, under the shopper's choice`).toBe(200);
+        await pause(300);
+        count = pushed(socket).length;
+        expect((await browser!.act(VIEW_WILLOW)).status, `${host}: PRECONDITION — the Willow view is admitted`).toBe(200);
         const afterAction = await nextPush(socket, count);
         await pause(300);
         const reask = await browser!.ask(instance);
-        expect.soft(framed(afterAction), `${host}: P81.PU1 — the first request's page view is pushed to`).toEqual({ pageInstance: instance, items: itemsOf(reask.body.decisions) });
+        expect(changed(asked, reask), `${host}: PRECONDITION — the Willow view changed the page view's decisions`).toBe('changed');
+        expect.soft({ keptFromTheFirstRequest, beforeThePageAsksAgain, afterThePageAskedAgain: framed(afterAction) },
+          `${host}: P81.PU1 — nothing of a request decided with tracking withheld is kept (CW31); the page view the page then asks for is pushed to`).toEqual({
+          keptFromTheFirstRequest: [], beforeThePageAsksAgain: [], afterThePageAskedAgain: { pageInstance: instance, items: itemsOf(reask.body.decisions) },
+        });
       });
     }, 180_000);
 
