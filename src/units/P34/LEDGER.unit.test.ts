@@ -89,6 +89,12 @@
 //     answer has issued the session, and today's SDK paints and acknowledges that
 //     answer, then refreshes once; it pins the kit's claim for a new visitor
 //     across the build. T5's held-session leg is the one P34 turns green.
+//   · R10 (amendment 11 P81, PU2; granted in its brief, test-only, R-P195's form): T5's two legs read the count after
+//     the socket's open without the re-request P81 removes (no refresh: the engine pushes the page view's set), their
+//     titles saying so.
+//   · S22 R10 (amendment 11 P81; granted R-P269, test-only, R-P195's form): T1's 'a socket open' leg reads no HTTPS
+//     refresh after the socket's open (the content_decisions frame does the work); its acknowledged-event leg, with no
+//     socket connected, keeps exactly one refresh; every other assertion of the lock is kept.
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -198,7 +204,10 @@ afterEach(() => { vi.useRealTimers(); });
 
 describe('unit:P34.T1', () => {
   for (const trigger of TRIGGERS) {
-    it(`sdk: ${trigger.name} while the first snapshot is in flight no longer discards it: the answer is delivered to the page, then exactly one refresh follows and is delivered`, async () => {
+    // S22 R10 (amendment 11 P81; granted R-P269), test-only, R-P195's form: a socket open is followed by no HTTPS refresh,
+    // the content_decisions frame does the work; an acknowledged event (no socket connected) is still followed by one.
+    const refreshes = trigger.name === 'a socket open' ? 0 : 1;
+    it(`sdk: ${trigger.name} while the first snapshot is in flight no longer discards it: the answer is delivered to the page, then ${refreshes ? 'exactly one refresh follows and is delivered' : 'no HTTPS refresh follows (the engine pushes, P81)'}`, async () => {
       const s = sdk();
       await s.core.ready();
       const painted: string[][] = [];
@@ -210,11 +219,13 @@ describe('unit:P34.T1', () => {
       s.snapshots[0]!.answer(page([GRID, RECO, LOOK], [STORY_A]), 'first');
       await settle();
       expect(painted[0], `P34.T1 — after ${trigger.name}, the in-flight first answer is delivered to the page`).toEqual([GRID, RECO, LOOK]);
-      expect(s.snapshots.length, `P34.T1 — then one refresh follows`).toBe(2);
-      s.snapshots[1]!.answer(page([LOOK, GRID, EDIT], [STORY_A]), 'refresh');
-      await settle();
-      expect(painted, 'P34.T1 — the first answer, then the refreshed one, and nothing else').toEqual([[GRID, RECO, LOOK], [LOOK, GRID, EDIT]]);
-      expect(s.snapshots.length, 'P34.T1 — exactly one refresh').toBe(2);
+      expect(s.snapshots.length, refreshes ? `P34.T1 — then one refresh follows` : 'P34.T1 — then no refresh follows the socket open (S22 R10, P81)').toBe(1 + refreshes);
+      if (refreshes) {
+        s.snapshots[1]!.answer(page([LOOK, GRID, EDIT], [STORY_A]), 'refresh');
+        await settle();
+        expect(painted, 'P34.T1 — the first answer, then the refreshed one, and nothing else').toEqual([[GRID, RECO, LOOK], [LOOK, GRID, EDIT]]);
+      } else expect(painted, 'P34.T1 — the first answer, and nothing else').toEqual([[GRID, RECO, LOOK]]);
+      expect(s.snapshots.length, refreshes ? 'P34.T1 — exactly one refresh' : 'P34.T1 — no refresh').toBe(1 + refreshes);
       s.destroy();
     });
   }
@@ -409,7 +420,7 @@ describe('unit:P34.T5', () => {
     return painted;
   };
 
-  it('sdk: on the page view of a browser that holds a session, the kit\'s ten-line example, run as written over the SDK, paints the first answer and acknowledges it, then refreshes once', async () => {
+  it('sdk: on the page view of a browser that holds a session, the kit\'s ten-line example, run as written over the SDK, paints the first answer and acknowledges it, and the socket\'s open asks for nothing over HTTPS', async () => {
     const s = sdk();
     await s.core.ready();
     const painted = example(s);
@@ -422,11 +433,12 @@ describe('unit:P34.T5', () => {
     expect(painted[0], 'P34.T5 — the example paints the first answer, not a re-asked one').toEqual({ id: 'TAP-HERO-TABBY-FIRST', decisionId: 'first-hero-0-hero.tabby.first' });
     const acks = s.actions.filter(a => a.type === 'content_impression');
     expect(acks.map(a => [a.data.decisionId, a.status]), 'P34.T5 — and acknowledges that paint').toEqual([['first-hero-0-hero.tabby.first', 200]]);
-    expect(s.snapshots.length, 'P34.T5 — then one refresh').toBe(2);
+    // R10 (amendment 11 P81, PU2; the brief's grant, R-P195's form): the count after the socket's open without the re-request.
+    expect(s.snapshots.length, 'P34.T5 — and the socket\'s open makes no refresh: the engine pushes the page view\'s set (P81)').toBe(1);
     s.destroy();
   });
 
-  it('sdk: LOCKED — on a fresh browser (S4-C18, S4-C19), the kit\'s ten-line example, run as written over the SDK, paints the first answer, which issues the session, and acknowledges it; then the socket the example asked for opens and the page refreshes exactly once', async () => {
+  it('sdk: LOCKED — on a fresh browser (S4-C18, S4-C19), the kit\'s ten-line example, run as written over the SDK, paints the first answer, which issues the session, and acknowledges it; then the socket the example asked for opens and asks for nothing over HTTPS', async () => {
     const s = sdk();
     const painted = example(s);
     await settle();
@@ -442,7 +454,8 @@ describe('unit:P34.T5', () => {
     await settle();
     // Whatever the open re-asks is answered, so a refresh coalesced behind it is asked too.
     await answerPending(s, { page: 'home', arm: 'personalized', decisions: [decision('hero', 0, 'hero.tabby.second', 'on-model')] }, 'refresh');
-    expect(s.snapshots.length, 'P34.T5 — on a fresh browser, then one refresh, once the socket opens').toBe(2);
+    // R10 (amendment 11 P81, PU2; the brief's grant, R-P195's form): the count after the socket's open without the re-request.
+    expect(s.snapshots.length, 'P34.T5 — on a fresh browser, the socket\'s open makes no refresh: the engine pushes the page view\'s set (P81)').toBe(1);
     s.destroy();
   });
 
