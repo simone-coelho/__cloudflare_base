@@ -2704,7 +2704,7 @@ export class ShopperReflex {
             // W16 C6: logout retires the recognition chain BEFORE the grant it
             // belonged to, so no window exists where the browser could come
             // back as a shopper this device just stopped being.
-            try { this.pushState = undefined; await this.state.storage.delete([CONTINUITY_KEY, PUSH_VIEW_KEY]); // P81 (R-P281): and the kept page view, socket flag and all
+            try { await this.state.storage.delete(CONTINUITY_KEY); this.pushState = undefined; await this.state.storage.delete(PUSH_VIEW_KEY); // P81 (R-P281)
               await this.state.storage.put({ grantAuthority: authority, [key]: complete, consent }); }
             finally {
               this.closeGrants(source.grantId);
