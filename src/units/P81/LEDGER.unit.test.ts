@@ -79,8 +79,11 @@
 // DEFERRED, with the reason: the ledger's records and receipts of a pushed decision are not read natively, because
 // src/units/_native.ts binds no queue (the acknowledgement admitted `durable` is the boundary checked); several tabs of one
 // shopper are not exercised, because the harness opens one page view per shopper. TOLD, not a leg: an alarm-time change
-// of another kind (the profile's retention expiry deleting affinity and pipeline) reaches the page only at its next
-// action or request, because the heartbeat re-decides on a publication change alone. TOLD, not a leg (R-P273): a
+// of another kind (the profile's retention expiry deleting affinity, pipeline and, since fix round 1, the page view at
+// rest) reaches the page only at its next request: a page without a live connection makes one after each action, while
+// a connected page's next action re-decides nothing, the page view being gone. TOLD, not a leg (R-P282 (4)): a page view
+// kept for a shopper who never forms a profile has no retention bound of its own; it goes at the socket's close, a
+// logout, a lapsed socket grant, the next page view or the erasure. TOLD, not a leg (R-P273): a
 // heartbeat's push re-signs the stored principal's claims, so after the session grant's lifetime nothing is pushed
 // until the page's next request renews it. TOLD, not a leg (CW31): after a new visitor's first choice, the page view
 // its first request opened is pushed to only once the page asks again, because the SDK does not ask again on a
