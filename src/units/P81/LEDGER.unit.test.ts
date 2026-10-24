@@ -78,35 +78,46 @@
 // consent grant (src/sdk/listen.ts: a consent change only withdraws).
 //
 // FIXTURE. P02's product page (src/units/_parity.ts: the registered modules, the declared layout slot measured
-// rendered-v1); a shopper who viewed nothing, whose page view then follows a Tabby view (COA-CH857), live or buffered.
+// rendered-v1); a shopper who viewed nothing, whose page view then follows a Tabby view (COA-CH857), live or buffered,
+// and a Willow view (COA-C2621) after it; the operator's slots publication that has the layout slot take two modules.
 // The host legs run the real Worker in workerd on each shopper host (src/units/_native.ts, P66's native world), with the
 // real socket; the SDK legs drive createCore, createListen and createEmit on the test host with a fake socket.
 //
 // NO NEW EXPORT IS IMPORTED.
 //
-// MEASURED at 246358ae (P80's join merged; _evidence/parity-step3/S22/specifier/logs/, serial, --no-cache, working
-// directory the tree): 8 RED for the missing behaviour (no content_decisions frame on either host after the first list,
-// an action, a buffered delivery or a publication change; the SDK re-requests on 'connected' and on an acknowledged
-// action while connected; a pushed set of another page view is drawn; the kit disclaims the push); the 8 locks GREEN.
-// NEGATIVE CONTROLS (scratch trees, never committed; _evidence/parity-step3/S22/specifier/sketches/p81.py, logs/d/): the
-// fix (the shopper's object keeps the page view a decision request opened and pushes its answered set; after an
-// admitted action and at a socket heartbeat it decides that request again through the route and pushes a changed set,
-// right after its answer through P56's continueAfterOwnerAnswer, scheduled only while the shopper holds a socket; the SDK
-// re-requests only without a connected socket and draws no other page view's set; the kit's six passages) turns all 16
-// GREEN three times; `norecord` (a push without receipts and offers) turns PU1 RED on both hosts; `ignorehold` turns
-// PU3's hold lock RED; `keeprerequest` turns PU2's two legs RED; `otherdrawn` turns PU3's page-instance leg RED. Under the
-// fix P02, P13, P60, P64, P65, P67, P68, P70, P79, W35, src/sdk/*.test.ts, src/routes/realtime.sdkContract.test.ts,
-// src/reflex/shopperReflex{,.identity,.consent}.test.ts, src/services/telemetry.boundary.test.ts and
-// src/index.api-boundary.test.ts stay green; P34 is green but for T1's 'a socket open' leg (the R10 below); the SDK
-// bundles grow 88 bytes (ESM, 104 784 of 107 520) and 90 (IIFE, 110 033 of 112 640) over this head's. An earlier sketch that pushed before the answer and
-// without a socket turned P64.OT4, P65.RS3, P67.OM2 and P70.WB2 (no remote call before the answer) and P02.A3 (a
-// served-v1 capture per re-decision) RED, and one that added lines turned P68.KT1 RED (kit 02 cites ShopperReflex.ts and
-// listen.ts by line), and one that scheduled the continuation without a socket turned W36.S2 RED (the session
-// projection read again after its write): constraints a build keeps. The whole-suite comparison (R-P248, vitest run src
-// on today's product and on the fix, logs/today-suite.json and logs/d/fix-suite.json) names, beyond the scratch tree's
-// own artifacts (no git repository, no wrangler variants: root.worker, P45-P47, P51-P53, W39, W40, each failing on an
-// unchanged copy too), only P34.T1's socket-open leg and W36.S2 (fixed by the gate, logs/f/); P80's four R-P264 legs fail
-// on both, against P80's build.
+// MEASURED (round 3: R-P271, R-P272, R-P273; _evidence/parity-step3/S22/specifier/logs/r6/, serial, --no-cache, working
+// directory the tree): on the product before the build (3922dbe8, P80 merged) 20 RED for the missing behaviour (no
+// content_decisions frame after an action, a buffered delivery, a publication change at the heartbeat or a second page
+// view, on either host; nothing kept at rest, so the closed-socket and erasure legs stop at their PRECONDITION; the SDK
+// re-requests on 'connected' and on an acknowledged action while connected and draws another page view's set; the kit
+// disclaims the push), the 13 locks GREEN. On the builder's 55dfad1c, 1 RED: the erasure on the session host never
+// answers (bounded at 30 s): the relay's close notice (PersonalizationWebSocket.ts handleWebSocketClose, notifyClosed)
+// awaits the shopper's object while that object's erasure awaits the relay's revoke (ShopperReflex.ts eraseWithBarrier);
+// with the notice not awaited the erasure answers in 233 ms (logs/r4/probe2.log).
+// NEGATIVE CONTROLS (scratch trees, never committed; _evidence/parity-step3/S22/specifier/sketches/p81r4.py on 3922dbe8):
+// the fix (the shopper's object keeps the page view a decision request opened, only under tracking consent (CW31), under
+// one key `pushView`, never pushing that answer; after an admitted action and at a socket heartbeat it decides the page
+// view again through the route, right after the answer through P56's continueAfterOwnerAnswer and only while the shopper
+// holds a socket, and pushes a set that differs from the one the page last received; a socket's opening decides
+// nothing; the view goes at the first trigger after its last socket closed, and with the erasure; the SDK re-requests
+// only without a connected socket and draws no other page view's set; the kit's six passages) turns all 33 GREEN three
+// times; `openpush` (the socket's opening decides again and pushes a changed set: R-P272's reading) turns PU1's window
+// leg RED on both hosts; `chatty` (a push at every trigger) and `chattyaction` (a push after every action) turn PU3's
+// unchanged-set lock RED on both hosts; `fixa` (a request decided with tracking withheld kept, without the four members
+// P13 forbids a store to hold) turns the first-request leg RED on both hosts, the rest of the suite green (CW31 is its
+// only bar; logs/r4/fixa-suite.json); round 1's `norecord`, `ignorehold`, `keeprerequest` and `otherdrawn` stand
+// (logs/d/). A sketch keeping the raw request under withheld tracking turned P13.H4 RED on both hosts (R-P67: a store
+// held the carried identifier and the browsing session; logs/r4/fix-suite.json). Under the fix P13, P34, P70 and P72 are
+// green and the SDK bundles stay within budget (IIFE 110 388 of 112 640). Constraints a build keeps, from earlier
+// sketches: pushing before the answer turned P64.OT4, P65.RS3, P67.OM2 and P70.WB2 RED (no remote call before the
+// answer); a re-decision without a socket turned P02.A3 RED (a served-v1 capture per re-decision); added lines turned
+// P68.KT1 RED (kit 02 cites ShopperReflex.ts and listen.ts by line); a continuation scheduled without a socket turned
+// W36.S2 RED (the session projection read again after its write).
+// The whole-suite comparison (R-P248; vitest run src on 55dfad1c with this round's tests, logs/r4/today-suite.json, and
+// under the fix, logs/r6/fix-suite.json): beyond the scratch tree's own artifacts (no git repository, no wrangler
+// variants: root.worker, P45-P47, P51-P53, W39, W40, failing on both), the two differ only on W36.S2 (session: the
+// sketch's continuation, the constraint above, which 55dfad1c keeps) and on P81's own legs (on 55dfad1c the erasure
+// leg on the session host, and the first-request leg in its first reading, since read against CW31).
 //
 // HARNESS: src/units/_native.ts, src/units/_parity.ts, src/sdk/testHost.ts. Imports from src/units/: ../_native,
 // ../_parity.
