@@ -1516,7 +1516,7 @@ counts each outcome for the tenant as `learningReads` (the API reference, the sn
 monitor).
 The witness read and the shopper's ring read each wait at most their budget, reported in `sources.budgets`:
 600 ms each by default (`LIFT_WITNESS_BUDGET_MS`, `RING_READ_BUDGET_MS`), one edge round trip to a warm
-statistics object, measured on the platform at 378 ms inside a warm tail (a largest 478 ms since), with a buffer, since the budget
+statistics object, measured on the platform at a largest 478 ms inside a warm tail, with a buffer, since the budget
 bounds the wait, not the read; a deployment may override either with a whole number of milliseconds below 5 000,
 and any other value is refused, the 600 ms default kept and the variable named in `sources.budgets.refused`.
 A slot name the tenant's catalogue carries on more than one page has one snapshot per page, read with

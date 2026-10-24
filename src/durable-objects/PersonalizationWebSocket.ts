@@ -228,8 +228,14 @@ export class PersonalizationWebSocket {
     }
 
     await this.saveConnectionState();
-    // P81 (R-P271): the shopper's last socket closed: its object drops the page view it kept to push to it.
-    if (principal && !this.userConnections.has(userId)) await this.notifyClosed(connectionId, principal);
+    // P81 (R-P271, R-P278): the shopper's last socket closed: its object drops the page view it kept to push to it.
+    // The notice is not awaited here: a close the shopper's own object caused (its revoke, inside its erasure) would
+    // otherwise wait on that object while it waits on this one. It is kept alive by this object's waitUntil and
+    // reaches the shopper's object once that object's current operation ends.
+    if (principal && !this.userConnections.has(userId)) {
+      const notice = this.notifyClosed(connectionId, principal);
+      try { this.state.waitUntil(notice); } catch { void notice; }
+    }
   }
 
   /** P81: tell the shopper's own object that its last socket here closed (a frame of type `closed`); never throws. */

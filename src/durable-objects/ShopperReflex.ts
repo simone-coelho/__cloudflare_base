@@ -4185,7 +4185,9 @@ export class ShopperReflex {
   }
   /**
    * P81 (R-P271, R-P272): an owned request dispatched to its route. A decision request (`POST …/decisions/snapshot`)
-   * that is answered keeps its page view at rest (under personalization consent), with the digest of the set its
+   * that is answered keeps its page view at rest when the decision ran with the shopper's tracking and personalization
+   * consent (its answer's `sources.consent`; CW31, R-P278: a request decided with tracking withheld leaves nothing,
+   * and removes a page view kept before it), with the digest of the set its
    * answer gave the page and the publication set it was decided under; that answer is never also pushed. An admitted
    * action (not an impression, a dwell, a viewable impression or a layout exposure) has the kept page view decided
    * again after the answer, its set pushed only when it differs from what the page view last received. A socket's open
@@ -4215,8 +4217,12 @@ export class ShopperReflex {
       if (opens) {
         const set = await answer.clone().json().catch(() => null) as Record<string, unknown> | null;
         if (!set || typeof set.pageInstance !== 'string') return answer;
-        try { requireConsentPurpose(await this.consentNow(), 'personalization'); } catch { return answer; }
         const state = await this.readPush();
+        const decided = (set.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+        if (decided?.tracking !== true || decided.personalization !== true) {
+          if (state?.view) await this.writePush(state.socket ? { version: 1, socket: true } : null);
+          return answer;
+        }
         const refusals = refusalCookies(headers.get('Cookie'));
         // The publication set the decision was pinned under: the operation already holds the decision's own pin, so this
         // reads it again from the serving cache, with no read of the store (R-P273: kept with the view always).
