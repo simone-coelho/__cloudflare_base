@@ -42,7 +42,8 @@
 //     interest is persisted before the answer on both hosts; the alarm settles the carried outcome only, the
 //     reviewer's finding 9); (3) a publication change, sent at the latest at the socket's next heartbeat. Each push
 //     names the open page view's pageInstance and carries the set a request for it then gets. No push without the
-//     shopper's personalization consent, also after a withdrawal. R-P269: a trigger that leaves the set unchanged sends
+//     shopper's personalization consent, also after a withdrawal; a mid-page grant brings no frame by itself and takes
+//     effect at the next admitted action (R-P281). R-P269: a trigger that leaves the set unchanged sends
 //     no frame (heartbeats, a second socket, an unchanged action, the page's re-ask). A second page view (another
 //     decision request) replaces the first. A new browser's first request (P13, no session) is decided before any
 //     explicit choice, so with tracking withheld (src/content/consent.ts carryConsent: no instruction is REFUSING), and
@@ -54,7 +55,15 @@
 //     socket's close, never retained by the erasure, eraseWithBarrier): a push survives the object's restart (the
 //     object host's hibernation eviction with its socket attached; the session host's owner object reset while its
 //     relay keeps the socket); after the socket closes, or after the erasure, nothing is pushed and no stored key names
-//     the page view's pageInstance.
+//     the page view's pageInstance. Fix round 1 (R-P281 and its clarification): it is kept for a request decided under
+//     tracking consent, whatever the personalization choice (CW31-exact; the sends keep requiring personalization), and
+//     keeps no refusal hint to replay: a re-decision reads the consent in force, so a mid-page grant is honoured at the
+//     next admitted action (as the round-3 withdrawal is). The shopper's object acts on its own revocations: a logout
+//     (identity detach) leaves no page view at rest. A socket whose grant lapses is closed by the relay at its heartbeat
+//     and the object hears nothing (the relay cannot sign for a lapsed grant); it counts as no socket, so an admitted
+//     action decides nothing again (R-P269(3)), and the page view at rest goes unless its own grant is still live. The
+//     profile's retention expiry deletes it with the profile (W06.BASE.02). The relay door accepts nothing without a
+//     valid principal: a `closed` notice with no capability, or another shopper's, is refused and changes nothing.
 //   · THE SDK: neither a 'connected' status nor an acknowledged action re-requests while the socket is connected; while
 //     it is not connected an acknowledged action re-requests as today (so a page without a socket still follows); a
 //     page view's first list, and every refresh the page itself calls, is asked over HTTPS (that request is how the
@@ -75,13 +84,22 @@
 // heartbeat's push re-signs the stored principal's claims, so after the session grant's lifetime nothing is pushed
 // until the page's next request renews it. TOLD, not a leg (CW31): after a new visitor's first choice, the page view
 // its first request opened is pushed to only once the page asks again, because the SDK does not ask again on a
-// consent grant (src/sdk/listen.ts: a consent change only withdraws).
+// consent grant (src/sdk/listen.ts: a consent change only withdraws). Kit 02 states, beside the grant-lifetime and the
+// first-request residuals, the retention-expiry residual above and that the newest tab's page view takes the pushes
+// (R-P281 finding 3, the builder's sentences, read by the review; no leg). TOLD, a LIVE1 risk: whether the relay can be
+// evicted before its close notice (kept alive by its waitUntil) reaches the shopper's object is not measurable locally.
 //
 // FIXTURE. P02's product page (src/units/_parity.ts: the registered modules, the declared layout slot measured
 // rendered-v1); a shopper who viewed nothing, whose page view then follows a Tabby view (COA-CH857), live or buffered,
 // and a Willow view (COA-C2621) after it; the operator's slots publication that has the layout slot take two modules.
 // The host legs run the real Worker in workerd on each shopper host (src/units/_native.ts, P66's native world), with the
-// real socket; the SDK legs drive createCore, createListen and createEmit on the test host with a fake socket.
+// real socket; the SDK legs drive createCore, createListen and createEmit on the test host with a fake socket. Fix round
+// 1 adds fixture doors to the wrapper only: the Worker's clock moved ahead (a module offset on Date.now, W16's native
+// pattern), the shopper's object's alarm run (W16's door), a second grant of the same shopper and session as a continuity
+// return issues one (a new grantId under the authority's epoch), the requests the object and the relay received (the
+// relay's broadcasts with their frame type: on the session host a re-decision is observed by the set it sends the
+// relay; one that sends nothing is not observable natively), and a frame sent to the object's relay door under a given
+// capability or none; a world can carry a one-hour profile retention.
 //
 // NO NEW EXPORT IS IMPORTED.
 //
@@ -118,6 +136,23 @@
 // variants: root.worker, P45-P47, P51-P53, W39, W40, failing on both), the two differ only on W36.S2 (session: the
 // sketch's continuation, the constraint above, which 55dfad1c keeps) and on P81's own legs (on 55dfad1c the erasure
 // leg on the session host, and the first-request leg in its first reading, since read against CW31).
+//
+// FIX ROUND 1 (R-P281 and its clarification; _evidence/parity-step3/S22/specifier/logs/fix1b/, serial, --no-cache,
+// working directory the tree): eleven legs under PU3 — (a) the logout, (c) the retention expiry, (d) the personalization
+// grant after a declined choice and after a refusal hint, and the relay door's LOCK, on both hosts; (b) the lapsed grant
+// on the session host. On the join f4cd9e13, 8 RED for the missing behaviour: (a) on the session host
+// `keysNamingThePageView: ["pushView"]` (the object host closes its own sockets and is clean, GREEN); (b) both shoppers'
+// next actions send the relay a re-decided set (`"POST /owner/broadcast content_decisions"`) and b's page view stays;
+// (c) `expected [ 'pushView' ] to deeply equal []` on both hosts; (d) `keptAtTheAnswer: "not kept"`, `atTheNextAction:
+// "no content_decisions frame"` on both hosts, for both legs; the LOCK GREEN. On the builder's 78e08d9a (read-only
+// archive) all 44 GREEN. NEGATIVE CONTROLS (sketches/p81fix1.py on f4cd9e13): the fix 44/44 three times; `permissive` (the
+// relay door honouring `closed` without a valid principal, the logout and the lapse left to the relay's notice) turns the
+// LOCK RED on both hosts and (b) RED (a lapsed grant's notice is never signed); `nodetach` turns (a) RED; `noexpiry` (b);
+// `noretention` (c) on both hosts; `persgate` (the build's personalization gate) both (d) legs on both hosts; `replay`
+// (the refusal hint replayed at a re-decision) the hint leg on both hosts (`personalizationInForceAfterThePush: false`:
+// the grant undone); `dropview` (the page view dropped at a lapsed socket whatever its own grant) (b)'s kept case. Under
+// the fix P13, P34, P72, P70, W36, P68, P02, P64-P67, src/reflex, src/index.api-boundary.test.ts and
+// src/routes/realtime.sdkContract.test.ts pass, 603/603. SUITE_SENTENCE
 //
 // HARNESS: src/units/_native.ts, src/units/_parity.ts, src/sdk/testHost.ts. Imports from src/units/: ../_native,
 // ../_parity.
@@ -156,18 +191,42 @@ const NATIVE_SECRET = 'p81-native-operator-signing-material';
  * its storage whose value names a string (the page view's pageInstance).
  */
 const NATIVE_WRAPPER = `
-import worker, { ShopperReflex as BaseShopperReflex, PersonalizationWebSocket, DecisionRing, LearnStats, RegionTrend } from './src/index.ts';
+import worker, { ShopperReflex as BaseShopperReflex, PersonalizationWebSocket as BasePersonalizationWebSocket, DecisionRing, LearnStats, RegionTrend } from './src/index.ts';
 import { initializePublicationSet } from './src/config/publication.ts';
 import { REFLEX_KIND, reflexScopeForTenant } from './src/reflex/configStore.ts';
 import { CONTENT_KIND, SLOTS_KIND, LEARN_KIND } from './src/content/kinds.ts';
 import { PRIORS_KIND } from './src/learn/priors.ts';
-import { newAnonymousSession } from './src/identity/sessionCapability.ts';
+import { newAnonymousSession, signSessionCapability, SHOPPER_HEADER } from './src/identity/sessionCapability.ts';
 import { shopperObjectName } from './src/tenancy/objects.ts';
-export { PersonalizationWebSocket, DecisionRing, LearnStats, RegionTrend };
+export { DecisionRing, LearnStats, RegionTrend };
+export class PersonalizationWebSocket extends BasePersonalizationWebSocket {
+  constructor(state, env) { super(state, env); this.p81Paths = []; }
+  async fetch(request) {
+    const path = new URL(request.url).pathname;
+    if (path === '/__p81_paths') return Response.json({ paths: this.p81Paths });
+    let type = '';
+    if (path === '/owner/broadcast') { try { type = ' ' + String((await request.clone().json()).payload?.type); } catch { type = ' unreadable'; } }
+    this.p81Paths.push(request.method + ' ' + path + type);
+    return super.fetch(request);
+  }
+}
+const p81RealNow = Date.now.bind(Date);
+let p81Offset = 0;
+Date.now = () => p81RealNow() + p81Offset;
 export class ShopperReflex extends BaseShopperReflex {
-  constructor(state, env) { super(state, env); this.p81Instance = crypto.randomUUID(); this.p81State = state; }
+  constructor(state, env) { super(state, env); this.p81Instance = crypto.randomUUID(); this.p81State = state; this.p81Env = env; this.p81Paths = []; }
   async fetch(request) {
     const url = new URL(request.url);
+    if (url.pathname === '/__p81_paths') return Response.json({ paths: this.p81Paths });
+    if (url.pathname === '/__p81_alarm') { await this.alarm(); return Response.json({ ran: true }); }
+    if (url.pathname === '/__p81_grant') {
+      const authority = await this.p81State.storage.get('grantAuthority'), first = Object.values(authority.grants)[0];
+      const iat = Math.floor(Date.now() / 1000), grant = { ...first, grantId: crypto.randomUUID(), iat, exp: iat + 86400 };
+      authority.grants[grant.grantId] = grant;
+      await this.p81State.storage.put('grantAuthority', authority);
+      return Response.json(await signSessionCapability(this.p81Env, grant));
+    }
+    if (!url.pathname.startsWith('/__p81_')) this.p81Paths.push(request.method + ' ' + url.pathname);
     if (url.pathname === '/__p81_instance') return Response.json({ instance: this.p81Instance });
     if (url.pathname === '/__p81_restart') { this.p81State.abort('p81 fixture restart'); return Response.json({ restarted: true }); }
     if (url.pathname === '/__p81_keys') {
@@ -193,9 +252,20 @@ export default {
       return Response.json({ published: input.tenant });
     }
     if (url.pathname === '/grant') return Response.json(await newAnonymousSession(env, input.tenant));
+    if (url.pathname === '/clock') { p81Offset = input.offset; return Response.json({ now: Date.now() }); }
     const object = env.SHOPPER_REFLEX.get(env.SHOPPER_REFLEX.idFromName(shopperObjectName(input.tenant, input.subject)));
     if (url.pathname === '/instance') return object.fetch('https://shopper-reflex/__p81_instance');
     if (url.pathname === '/keys') return object.fetch('https://shopper-reflex/__p81_keys?needle=' + encodeURIComponent(input.needle));
+    if (url.pathname === '/paths') return object.fetch('https://shopper-reflex/__p81_paths');
+    if (url.pathname === '/relay-paths') return env.PERSONALIZATION_WEBSOCKET.get(env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(input.tenant, input.subject))).fetch('https://relay/__p81_paths');
+    if (url.pathname === '/alarm') return object.fetch('https://shopper-reflex/__p81_alarm');
+    if (url.pathname === '/second-grant') return object.fetch('https://shopper-reflex/__p81_grant');
+    if (url.pathname === '/relay-frame') {
+      const response = await object.fetch('https://shopper-reflex/authority/relay-frame', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant': input.tenant, ...(input.capability ? { [SHOPPER_HEADER]: input.capability } : {}) },
+        body: JSON.stringify({ connectionId: crypto.randomUUID(), type: input.type }) });
+      return Response.json({ status: response.status });
+    }
     if (url.pathname === '/restart') { try { await object.fetch('https://shopper-reflex/__p81_restart'); } catch (error) { return Response.json({ restarted: String(error) }); } return Response.json({ restarted: 'without error' }); }
     return new Response(null, { status: 404 });
   },
@@ -207,15 +277,19 @@ interface Frame { type?: string; page?: string; pageInstance?: string; decisions
 interface NativeSocket { frames: Frame[]; send: (frame: unknown) => void; waitFor: (predicate: () => boolean, ms?: number) => Promise<boolean>; close: () => void }
 interface Session { capability: string; subject: string; sessionId: string; grantId: string; iat: number; exp: number; consent?: { instruction?: { revision?: unknown } } }
 interface Browser {
-  subject: string; sessionId: string;
+  subject: string; sessionId: string; capability: string;
   call: (path: string, body?: unknown) => Promise<Answer>;
   /** A decision request for the page view, the route the SDK posts. */
   ask: (pageInstance: string) => Promise<Answer>;
   /** A live action, as the SDK posts it; `buffered` makes it a buffered delivery. */
   act: (event: { type: string; data: Record<string, unknown> }, buffered?: boolean) => Promise<Answer>;
   /** The shopper's choice again (P05's preferences route), against the revision of the choice in force. */
-  choose: (consent: { tracking: boolean; personalization: boolean }) => Promise<Answer>;
-  socket: () => Promise<NativeSocket>;
+  choose: (consent: { tracking: boolean; personalization: boolean }, expectedRevision?: unknown) => Promise<Answer>;
+  socket: (capability?: string) => Promise<NativeSocket>;
+  /** A decision request for the page view under another capability of the same shopper, with a cookie header if given (fix round 1). */
+  askWith: (capability: string, pageInstance: string, cookie?: string) => Promise<Answer>;
+  /** A live action under another capability of the same shopper (fix round 1: a second grant). */
+  actWith: (capability: string, event: { type: string; data: Record<string, unknown> }) => Promise<Answer>;
 }
 interface NativeWorld {
   browser: (consent: { tracking: boolean; personalization: boolean }) => Promise<Browser>;
@@ -232,11 +306,25 @@ interface NativeWorld {
   keysNaming: (b: Browser, needle: string) => Promise<string[]>;
   /** The shopper's erasure through the operator's route (`POST /v1/{tenant}/identity/erase`), resumed while pending, bounded at 30 s. */
   erase: (b: Browser) => Promise<Answer>;
+  /** Fix round 1: the browser of a session the engine issued (a logout's replacement), its choice made and its page view admitted. */
+  adopt: (session: Session, consent: { tracking: boolean; personalization: boolean }) => Promise<Browser>;
+  /** Fix round 1: the Worker's clock moved `seconds` ahead (the wrapper's offset on Date.now, W16's pattern); the actions' timestamps follow it. */
+  clock: (seconds: number) => Promise<void>;
+  /** Fix round 1: the shopper's object's own alarm handler run now (W16's door). */
+  alarm: (b: Browser) => Promise<void>;
+  /** Fix round 1: a second grant of the same shopper and session, as a continuity return issues one (a new grantId under the authority's epoch, from now). */
+  secondGrant: (b: Browser) => Promise<string>;
+  /** Fix round 1: the paths of the requests the shopper's object received (this instance), in order. */
+  paths: (b: Browser) => Promise<string[]>;
+  /** Fix round 1: the requests the shopper's relay (session host) received, in order; a broadcast with its frame's type (`POST /owner/broadcast content_decisions`: a push sent to it). */
+  relayPaths: (b: Browser) => Promise<string[]>;
+  /** Fix round 1: a relay frame sent to the shopper's object's relay door, under `capability` (or none); the door's status. */
+  relayFrame: (b: Browser, capability: string | null, type: string) => Promise<number>;
 }
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 /** One host in workerd: the documents published, then `work` (P66's native world, with the socket). */
-async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>): Promise<T> {
+async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>, options: { profileMs?: number } = {}): Promise<T> {
   const bundle = await (nativeBundle ??= bundleNativeWorker(NATIVE_WRAPPER, 'p81-ledger-native'));
   const directory = nativeScratchDirectory('p81-ledger-native-');
   const policy = { id: 'p81-native-policy', revision: 1, durationMs: 3650 * 86_400_000, basis: 'admitted', renewal: 'new-record-only' };
@@ -245,7 +333,9 @@ async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>):
     kvNamespaces: ['CACHE', 'SESSIONS'], r2Buckets: ['STORAGE'],
     bindings: { DEPLOYMENT_PROFILE: 'demo', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', REFLEX_HOST: host, JWT_SECRET: NATIVE_SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a',
       IDENTITY_SECRETS: `${TENANT}:p81-native-identity`, LEDGER_RECOVERY_ENABLED: 'true', TENANTS: JSON.stringify({ provisioned: [TENANT], operatorGrants: { ops: [TENANT] } }),
-      RETENTION: JSON.stringify({ version: 1, tenants: { [TENANT]: Object.fromEntries(RETENTION_CATEGORIES.map(category => [category, policy])) } }) } });
+      RETENTION: JSON.stringify({ version: 1, tenants: { [TENANT]: Object.fromEntries(RETENTION_CATEGORIES.map(category => [category,
+        category === 'profile' && options.profileMs !== undefined ? { ...policy, id: 'p81-native-profile', durationMs: options.profileMs } : policy])) } }) } });
+  let offsetMs = 0;
   const sockets: Array<{ close: (code: number, reason: string) => void }> = [];
   try {
     const fixture = async (path: string, body: unknown) => {
@@ -275,18 +365,21 @@ async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>):
       let revision: unknown = g.consent?.instruction?.revision ?? null;
       const call = async (path: string, body?: unknown) => parsed(await runtime.fetch(`https://shop.example${path}`, { method: body === undefined ? 'GET' : 'POST',
         headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: g.capability, 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }));
-      const choose = async (choice: { tracking: boolean; personalization: boolean }) => {
+      const choose = async (choice: { tracking: boolean; personalization: boolean }, expectedRevision?: unknown) => {
         const answer = await call(`/realtime/session/${g.sessionId}/preferences`, { trackingConsent: choice.tracking, personalizationEnabled: choice.personalization,
-          choice: { id: crypto.randomUUID(), expectedRevision: revision, grantId: g.grantId, iat: g.iat, exp: g.exp } });
+          choice: { id: crypto.randomUUID(), expectedRevision: expectedRevision === undefined ? revision : expectedRevision, grantId: g.grantId, iat: g.iat, exp: g.exp } });
         revision = (answer.body.consent as { instruction?: { revision?: unknown } } | undefined)?.instruction?.revision ?? revision;
         return answer;
       };
       expect((await choose(consent)).status, `PRECONDITION (${host} native): the shopper's explicit choice`).toBe(200);
       const act = (event: { type: string; data: Record<string, unknown> }, buffered = false) => call('/realtime/action', { ...event, source: 'sdk', userId: g.subject, sessionId: g.sessionId,
-        eventId: crypto.randomUUID(), ...(buffered ? { processing: 'buffered', timestamp: Date.now() - 60_000, browsingSessionId: g.sessionId } : { timestamp: Date.now() }) });
+        eventId: crypto.randomUUID(), ...(buffered ? { processing: 'buffered', timestamp: Date.now() + offsetMs - 60_000, browsingSessionId: g.sessionId } : { timestamp: Date.now() + offsetMs }) });
+      const actWith = async (capability: string, event: { type: string; data: Record<string, unknown> }) => parsed(await runtime.fetch('https://shop.example/realtime/action', { method: 'POST',
+        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: capability, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...event, source: 'sdk', userId: g.subject, sessionId: g.sessionId, eventId: crypto.randomUUID(), timestamp: Date.now() + offsetMs }) }));
       expect((await act(PAGE_VIEW)).status, `PRECONDITION (${host} native): the shopper's page view`).toBe(200);
-      const socket = async (): Promise<NativeSocket> => {
-        const response = await runtime.fetch(`https://shop.example/realtime/ws?tenant=${TENANT}`, { headers: { Upgrade: 'websocket', 'Sec-WebSocket-Protocol': `shopper-session-v1, ${g.capability}` } });
+      const socket = async (capability = g.capability): Promise<NativeSocket> => {
+        const response = await runtime.fetch(`https://shop.example/realtime/ws?tenant=${TENANT}`, { headers: { Upgrade: 'websocket', 'Sec-WebSocket-Protocol': `shopper-session-v1, ${capability}` } });
         const ws = (response as unknown as { webSocket?: { accept(): void; send(data: string): void; close(code: number, reason: string): void;
           addEventListener(type: string, listener: (event: { data: unknown }) => void): void } }).webSocket;
         expect([response.status, Boolean(ws)], `PRECONDITION (${host} native): the socket is upgraded`).toEqual([101, true]);
@@ -299,7 +392,10 @@ async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>):
         return { frames, send: frame => { try { ws!.send(JSON.stringify(frame)); } catch { /* a closed socket sends nothing */ } }, waitFor, close: () => { try { ws!.close(1000, 'p81 page left'); } catch { /* closed */ } } };
       };
       const ask = (pageInstance: string) => call(`/v1/${TENANT}/decisions/snapshot`, { page: 'pdp', brand: TENANT, pageInstance });
-      return { subject: g.subject, sessionId: g.sessionId, call, ask, act, choose, socket };
+      const askWith = async (capability: string, pageInstance: string, cookie?: string) => parsed(await runtime.fetch(`https://shop.example/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
+        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: capability, 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+        body: JSON.stringify({ page: 'pdp', brand: TENANT, pageInstance }) }));
+      return { subject: g.subject, sessionId: g.sessionId, capability: g.capability, call, ask, act, choose, socket, actWith, askWith };
     };
     const browser = async (consent: { tracking: boolean; personalization: boolean }) => browserOf(await fixture('/grant', { tenant: TENANT }) as unknown as Session, consent);
     const firstRequest = async (pageInstance: string, consent: { tracking: boolean; personalization: boolean }) => {
@@ -324,7 +420,13 @@ async function nativeWorld<T>(host: Host, work: (w: NativeWorld) => Promise<T>):
       // Bounded, so an erasure that never answers is named rather than timing the leg out (it answers within a second here).
       return Promise.race([erasing, pause(30_000).then((): Answer => ({ status: 0, body: { error: 'the erasure did not answer within 30 s' } }))]);
     };
-    return await work({ browser, firstRequest, publishSlots, restart, keysNaming, erase });
+    const clock = async (seconds: number) => { offsetMs = seconds * 1000; await fixture('/clock', { offset: offsetMs }); };
+    const alarm = async (b: Browser) => { await fixture('/alarm', { tenant: TENANT, subject: b.subject }); };
+    const secondGrant = async (b: Browser) => String((await fixture('/second-grant', { tenant: TENANT, subject: b.subject })).capability);
+    const paths = async (b: Browser) => (await fixture('/paths', { tenant: TENANT, subject: b.subject })).paths as string[];
+    const relayPaths = async (b: Browser) => (await fixture('/relay-paths', { tenant: TENANT, subject: b.subject })).paths as string[];
+    const relayFrame = async (b: Browser, capability: string | null, type: string) => Number((await fixture('/relay-frame', { tenant: TENANT, subject: b.subject, capability, type })).status);
+    return await work({ browser, firstRequest, publishSlots, restart, keysNaming, erase, adopt: browserOf, clock, alarm, secondGrant, paths, relayPaths, relayFrame });
   } finally {
     for (const ws of sockets) { try { ws.close(1000, 'p81 fixture complete'); } catch { /* closed */ } }
     await runtime.dispose(); directory.remove();
@@ -863,7 +965,169 @@ describe('unit:P81.PU3', () => {
           `${host}: P81.PU3 — the erasure takes the page view with the rest of the shopper's state (R-P271)`).toEqual({ pushedAfterTheErasure: [], keysNamingThePageView: [] });
       });
     }, 180_000);
+
+    // Fix round 1 (R-P281): the owner acts on its own revocations and refusals; the page view at rest is gated on tracking alone.
+    it(`host (${host}, native): R-P281 (a) — a logout (POST /v1/{tenant}/identity/detach) with the page view open on a connected socket leaves no stored key naming the page view, and no frame of it follows an action or a publication change, on the closed socket or on the replacement session's`, async () => {
+      await nativeWorld(host, async w => {
+        const b = await w.browser(FULL);
+        const instance = `p81-fix1-logout-${host}-${crypto.randomUUID()}`;
+        expect((await b.ask(instance)).status, `${host}: PRECONDITION — the page view's first list is answered`).toBe(200);
+        const socket = await b.socket();
+        await pause(500);
+        expect((await b.act(VIEW_TABBY_26)).status, `${host}: PRECONDITION — the Tabby view is admitted`).toBe(200);
+        expect(framed(await nextPush(socket, 0)) === 'no content_decisions frame' ? 'not pushed' : 'pushed', `${host}: PRECONDITION — the page view is pushed to before the logout`).toBe('pushed');
+        expect(await w.keysNaming(b, instance), `${host}: PRECONDITION — the open page view is kept at rest under the shopper's one key`).toContain(PUSH_VIEW_KEY);
+        const count = pushed(socket).length;
+        const detached = await b.call(`/v1/${TENANT}/identity/detach`, {});
+        const replacement = detached.body.session as Session | undefined;
+        expect([detached.status, detached.body.detached, typeof replacement?.capability], `${host}: PRECONDITION — the logout is answered with the replacement session (${JSON.stringify(detached.body).slice(0, 160)})`)
+          .toEqual([200, true, 'string']);
+        await pause(1500);
+        const next = await w.adopt(replacement!, FULL);
+        const nextSocket = await next.socket();
+        expect((await next.act(VIEW_WILLOW)).status, `${host}: PRECONDITION — the replacement session's Willow view is admitted`).toBe(200);
+        expect((await w.publishSlots(declaredSlots([layoutSlot({ take: 2 })]))).status, `${host}: PRECONDITION — the operator publishes the slots change`).toBe(200);
+        nextSocket.send({ type: 'heartbeat', userId: next.subject });
+        await pause(1500);
+        expect.soft({ keysNamingThePageView: await w.keysNaming(b, instance), framesOfThePageView: [...since(socket, count, instance), ...since(nextSocket, 0, instance)] },
+          `${host}: P81.PU3 — a logout takes the page view at rest with the grant it revokes (R-P281)`).toEqual({ keysNamingThePageView: [], framesOfThePageView: [] });
+      });
+    }, 180_000);
+
+    it(`host (${host}, native): R-P281 (c) — the profile's retention expiry (the shopper's object's alarm, the profile past the tenant's retention) deletes the page view at rest with the profile`, async () => {
+      await nativeWorld(host, async w => {
+        const b = await w.browser(FULL);
+        const instance = `p81-fix1-retention-${host}-${crypto.randomUUID()}`;
+        expect((await b.ask(instance)).status, `${host}: PRECONDITION — the page view's first list is answered`).toBe(200);
+        expect((await b.act(VIEW_TABBY_26)).status, `${host}: PRECONDITION — the Tabby view is admitted`).toBe(200);
+        await pause(300);
+        expect([(await w.keysNaming(b, instance)).includes(PUSH_VIEW_KEY), (await w.keysNaming(b, '')).includes('affinity')],
+          `${host}: PRECONDITION — the page view is kept at rest beside the shopper's profile`).toEqual([true, true]);
+        await w.clock(2 * 3600);
+        await w.alarm(b);
+        expect((await w.keysNaming(b, '')).includes('affinity'), `${host}: PRECONDITION — the profile's retention (one hour) expired at the alarm`).toBe(false);
+        expect.soft(await w.keysNaming(b, instance), `${host}: P81.PU3 — the retention expiry deletes the page view at rest (R-P281)`).toEqual([]);
+      }, { profileMs: 3_600_000 });
+    }, 180_000);
+
+    it(`host (${host}, native): R-P281 (d) — tracking allowed and personalization declined at the answer: the page view is kept at rest, nothing is pushed before the grant, and a mid-page personalization grant brings no frame by itself and one frame, the set a request then gets, at the next admitted action`, async () => {
+      await nativeWorld(host, async w => {
+        const b = await w.browser({ tracking: true, personalization: false });
+        const socket = await b.socket();
+        const instance = `p81-fix1-granted-${host}-${crypto.randomUUID()}`;
+        expect((await b.ask(instance)).status, `${host}: PRECONDITION — the page view's first list is answered`).toBe(200);
+        await pause(300);
+        const keptAtTheAnswer = (await w.keysNaming(b, instance)).includes(PUSH_VIEW_KEY) ? 'kept' : 'not kept';
+        expect((await b.act(VIEW_TABBY_26)).status, `${host}: PRECONDITION — the Tabby view is admitted`).toBe(200);
+        await pause(1500);
+        const beforeTheGrant = since(socket, 0, instance);
+        const granted = pushed(socket).length;
+        expect((await b.choose(FULL)).status, `${host}: PRECONDITION — the mid-page personalization grant is admitted`).toBe(200);
+        await pause(1500);
+        const atTheGrant = since(socket, granted, instance);
+        const count = pushed(socket).length;
+        expect((await b.act(VIEW_WILLOW)).status, `${host}: PRECONDITION — the Willow view is admitted`).toBe(200);
+        const atTheNextAction = await nextPush(socket, count);
+        await pause(1000);
+        const framesAfterTheAction = since(socket, count, instance).length;
+        const reask = await b.ask(instance);
+        expect.soft({ keptAtTheAnswer, beforeTheGrant, atTheGrant, atTheNextAction: framed(atTheNextAction), framesAfterTheAction },
+          `${host}: P81.PU3 — the page view at rest is gated on tracking alone; the sends on personalization (R-P281)`).toEqual({
+          keptAtTheAnswer: 'kept', beforeTheGrant: [], atTheGrant: [], atTheNextAction: { pageInstance: instance, items: itemsOf(reask.body.decisions) }, framesAfterTheAction: 1,
+        });
+      });
+    }, 180_000);
+
+    it(`host (${host}, native): R-P281 (d) — a page view asked under a refusal hint (the cookie opt_personalization_enabled=false) is kept, and the shopper's later explicit grant is honoured at the next admitted action: the hint is not replayed, a re-decision reads the consent in force (one frame, the set a request then gets, and the grant still in force after it)`, async () => {
+      await nativeWorld(host, async w => {
+        const b = await w.browser(FULL);
+        const socket = await b.socket();
+        const instance = `p81-fix1-hint-${host}-${crypto.randomUUID()}`;
+        const hinted = await b.askWith(b.capability, instance, 'opt_personalization_enabled=false');
+        const decided = (hinted.body.sources as { consent?: { tracking?: unknown; personalization?: unknown; instruction?: { revision?: unknown } } } | undefined)?.consent;
+        expect([hinted.status, decided?.tracking, decided?.personalization], `${host}: PRECONDITION — the hinted page view is answered with personalization refused (${JSON.stringify(hinted.body).slice(0, 160)})`).toEqual([200, true, false]);
+        await pause(300);
+        const keptAtTheAnswer = (await w.keysNaming(b, instance)).includes(PUSH_VIEW_KEY) ? 'kept' : 'not kept';
+        const granted = await b.choose(FULL, decided?.instruction?.revision);
+        expect(granted.status, `${host}: PRECONDITION — the explicit grant is admitted (${JSON.stringify(granted.body).slice(0, 160)})`).toBe(200);
+        await pause(1500);
+        const atTheGrant = since(socket, 0, instance);
+        const count = pushed(socket).length;
+        expect((await b.act(VIEW_TABBY_26)).status, `${host}: PRECONDITION — the Tabby view is admitted`).toBe(200);
+        const atTheNextAction = await nextPush(socket, count);
+        await pause(1000);
+        const framesAfterTheAction = since(socket, count, instance).length;
+        const reask = await b.ask(instance);
+        expect.soft({ keptAtTheAnswer, atTheGrant, atTheNextAction: framed(atTheNextAction), framesAfterTheAction,
+          personalizationInForceAfterThePush: (reask.body.sources as { consent?: { personalization?: unknown } } | undefined)?.consent?.personalization },
+        `${host}: P81.PU3 — the kept page view replays no refusal hint (R-P281)`).toEqual({
+          keptAtTheAnswer: 'kept', atTheGrant: [], atTheNextAction: { pageInstance: instance, items: itemsOf(reask.body.decisions) }, framesAfterTheAction: 1,
+          personalizationInForceAfterThePush: true,
+        });
+      });
+    }, 180_000);
+
+    it(`host (${host}, native): LOCK (R-P281) — the shopper's object's relay door accepts nothing without a valid principal: a 'closed' notice with no capability, or under another shopper's, is refused and leaves the page view at rest, still pushed to after a changing action`, async () => {
+      await nativeWorld(host, async w => {
+        const b = await w.browser(FULL), other = await w.browser(FULL);
+        const instance = `p81-fix1-door-${host}-${crypto.randomUUID()}`;
+        expect((await b.ask(instance)).status, `${host}: PRECONDITION — the page view's first list is answered`).toBe(200);
+        const socket = await b.socket();
+        await pause(500);
+        const refused = [await w.relayFrame(b, null, 'closed'), await w.relayFrame(b, other.capability, 'closed')].map(status => status >= 400 ? 'refused' : `accepted (${status})`);
+        await pause(500);
+        const kept = (await w.keysNaming(b, instance)).includes(PUSH_VIEW_KEY) ? 'kept' : 'not kept';
+        const count = pushed(socket).length;
+        expect((await b.act(VIEW_TABBY_26)).status, `${host}: PRECONDITION — the Tabby view is admitted`).toBe(200);
+        const afterAction = await nextPush(socket, count);
+        await pause(300);
+        const reask = await b.ask(instance);
+        expect.soft({ refused, kept, afterAction: framed(afterAction) }, `${host}: P81.PU3 — no notice without a valid principal removes the page view (R-P281)`)
+          .toEqual({ refused: ['refused', 'refused'], kept: 'kept', afterAction: { pageInstance: instance, items: itemsOf(reask.body.decisions) } });
+      });
+    }, 180_000);
   }
+
+  it(`host (session, native): R-P281 (b) — a socket whose grant lapses (the relay closes it at its heartbeat; the shopper's object hears nothing) leaves no socket an action decides again for: the next admitted action, under the shopper's other live grant, sends the relay no re-decided set; the page view at rest goes when its own grant lapsed with the socket's, and is kept when it was asked under the live grant, pushed to again once a socket reports under it`, async () => {
+    await nativeWorld('session', async w => {
+      // b's page view is asked under the socket's grant; c's under a second grant that outlives the socket's.
+      const b = await w.browser(FULL), c = await w.browser(FULL);
+      const gone = `p81-fix1-lapsed-gone-${crypto.randomUUID()}`, kept = `p81-fix1-lapsed-kept-${crypto.randomUUID()}`;
+      expect((await b.ask(gone)).status, 'session: PRECONDITION — b\'s page view is answered under the socket\'s grant').toBe(200);
+      const bSocket = await b.socket(), cSocket = await c.socket();
+      await pause(500);
+      expect((await b.act(VIEW_TABBY_26)).status, 'session: PRECONDITION — b\'s Tabby view is admitted').toBe(200);
+      expect(framed(await nextPush(bSocket, 0)) === 'no content_decisions frame' ? 'not pushed' : 'pushed', 'session: PRECONDITION — b\'s page view is pushed to while its socket is open').toBe('pushed');
+      await w.clock(50_000);
+      const bSecond = await w.secondGrant(b), cSecond = await w.secondGrant(c);
+      expect((await c.askWith(cSecond, kept)).status, 'session: PRECONDITION — c\'s page view is answered under its second grant').toBe(200);
+      await w.clock(86_400 + 600);
+      const answered = [bSocket, cSocket].map(x => x.frames.filter(f => f.type === 'heartbeat_response').length);
+      for (const [x, subject] of [[bSocket, b.subject], [cSocket, c.subject]] as const) x.send({ type: 'heartbeat', userId: subject });
+      await pause(1500);
+      expect([await bSocket.waitFor(() => bSocket.frames.filter(f => f.type === 'heartbeat_response').length > answered[0]!, 500),
+        await cSocket.waitFor(() => cSocket.frames.filter(f => f.type === 'heartbeat_response').length > answered[1]!, 500), (await b.act(PAGE_VIEW)).status],
+      'session: PRECONDITION — the sockets\' grants lapsed: no heartbeat is answered (the relay closed them) and the lapsed grant acts no more').toEqual([false, false, 401]);
+      const before = [(await w.relayPaths(b)).length, (await w.relayPaths(c)).length];
+      expect([(await b.actWith(bSecond, VIEW_WILLOW)).status, (await c.actWith(cSecond, VIEW_TABBY_26)).status], 'session: PRECONDITION — each shopper\'s changing action is admitted under the live grant').toEqual([200, 200]);
+      await pause(1500);
+      const sent = async (x: Browser, from: number) => (await w.relayPaths(x)).slice(from).filter(path => path.endsWith(' content_decisions'));
+      const afterTheLapse = { bReDecidedSetsSentToTheRelay: await sent(b, before[0]!), cReDecidedSetsSentToTheRelay: await sent(c, before[1]!),
+        bKeysNamingThePageView: await w.keysNaming(b, gone), cKeysNamingThePageView: await w.keysNaming(c, kept) };
+      // c's page view, kept, is pushed to again once a socket reports under its live grant.
+      const cNextSocket = await c.socket(cSecond);
+      await pause(500);
+      const count = pushed(cNextSocket).length;
+      expect((await c.actWith(cSecond, VIEW_WILLOW)).status, 'session: PRECONDITION — c\'s Willow view is admitted under its live grant').toBe(200);
+      const resumed = await nextPush(cNextSocket, count);
+      await pause(300);
+      const reask = await c.askWith(cSecond, kept);
+      expect.soft({ ...afterTheLapse, cPushedAgain: framed(resumed) }, 'session: P81.PU3 — a lapsed socket is no socket; the page view goes with its own grant (R-P281, R-P269(3))').toEqual({
+        bReDecidedSetsSentToTheRelay: [], cReDecidedSetsSentToTheRelay: [], bKeysNamingThePageView: [], cKeysNamingThePageView: [PUSH_VIEW_KEY],
+        cPushedAgain: { pageInstance: kept, items: itemsOf(reask.body.decisions) },
+      });
+    });
+  }, 180_000);
 });
 
 // ===========================================================================
