@@ -152,7 +152,8 @@
 // (the refusal hint replayed at a re-decision) the hint leg on both hosts (`personalizationInForceAfterThePush: false`:
 // the grant undone); `dropview` (the page view dropped at a lapsed socket whatever its own grant) (b)'s kept case. Under
 // the fix P13, P34, P72, P70, W36, P68, P02, P64-P67, src/reflex, src/index.api-boundary.test.ts and
-// src/routes/realtime.sdkContract.test.ts pass, 603/603. SUITE_SENTENCE
+// src/routes/realtime.sdkContract.test.ts pass, 603/603; the whole suite under the fix (logs/fix1b/fix-suite.json) fails
+// only the scratch tree's own artifacts (root.worker, P45-P47, P51-P53, W39, W40), W36.S2 included green.
 //
 // HARNESS: src/units/_native.ts, src/units/_parity.ts, src/sdk/testHost.ts. Imports from src/units/: ../_native,
 // ../_parity.
