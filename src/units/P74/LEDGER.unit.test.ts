@@ -48,6 +48,19 @@
 // and P81's SDK legs read no count of `socket` emissions and no request after a reconnect; see MEASURED).
 // NO NEW EXPORT IS IMPORTED.
 //
+// MEASURED at b9bb3978 (_evidence/parity-step3/S26/specifier/logs/a/, serial, --no-cache, working directory the tree):
+// 3 RED for the missing behaviour — CR1's two legs (the open reported `connecting, connected, connected`) and CR2's
+// reconnect leg (no request on the reconnect, its answer never painted, the reconnect reported with `connected` twice);
+// CR2's LOCK GREEN, as are the one-request clauses of CR1 (P81's form). NEGATIVE CONTROLS (sketches/p74.py, never
+// committed): the fix — src/sdk/core.ts `setStatus` reporting a change of status only, src/sdk/listen.ts following once
+// when the socket connects again after a close — 4/4 three times, tsc clean; with the SDK bundles rebuilt by
+// node scripts/build-sdk.mjs in the tree, P34 (T1–T5 and its build check), src/sdk/core.test.ts, listen.test.ts,
+// identify.test.ts and src/console/console.render.test.ts 126/126 on today and under the fix, and P81's SDK legs 10/10 on
+// both. Wrong fixes: `everyopen` (a refresh on every open) turns all four legs RED; `tworeconnect` (one request per
+// `connected` on a reconnect) CR1's two and CR2's reconnect leg; `nonereconnect` (none on a reconnect) CR2's reconnect
+// leg; `twiceconnected` (`connected` reported twice, a reconnect followed once) CR1's two and CR2's reconnect leg (its
+// statuses); `welcomereconnect` (the welcome frame counted as a reconnect) all four.
+//
 // HARNESS: the P34 harness (src/units/P34/LEDGER.unit.test.ts `sdk`), restated here. Imports from src/units/: ../_parity
 // (`readTree`, for the kit's code block).
 
