@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P74",
+  "workOrderHash": "sha256:bd9d531d14a69a11a8469e8bf336bfe26e5af8695ea89ab6102370984371ab29",
+  "artifact": {
+    "revision": "3bd7e4ac616d98d5c288156b8bff7ddd158c78ef",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p74-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p74-build at bdafe8d4 (48097e3c the merge of the S26 spec 768e1994; 4419b47f the mechanism with the six SDK bundles regenerated; bdafe8d4 the merge of the integration head after P83: src/sdk/core.ts setStatus reports a socket status only when it changes, so one open emits connecting then connected, a reconnect emits reconnecting, connecting, connected, and the hosts' welcome frame after the open reports nothing; src/sdk/listen.ts replaces the empty socket listener with one that keeps two flags, joined on the first connected and lost on a reconnecting, closed or error heard after it, and asks once, through follow, on a connected while lost, so a first open asks nothing, an open during the first snapshot adds nothing, a reconnect after a close asks exactly once for the open page view and its answer is painted, and the welcome frame is never counted as a reconnect; the SDK bundles under public/sdk, public/sdk/0.2.0 and packages/sdk regenerated with node scripts/build-sdk.mjs in the same commit, the declarations identical and packages/sdk/package.json unchanged, ESM 105,417 of 107,520 bytes and IIFE 110,700 of 112,640). Specification 768e1994 (4 tests on the P34 harness with the welcome frame sent through the fake socket after every open: CR1 a socket opening after the first answer and one opening during the first snapshot each leave one snapshot request and the statuses connecting, connected with socketStatus connected; CR2 a reconnect after a close asks exactly once for the same page instance with the answer painted and the statuses reconnecting, connecting, connected; CR2 lock the kit's ten-line example with the welcome frame on a browser holding a session and on a fresh one). P74 4/4 x3; the locks P34 T1–T5 with its own build check, core.test, listen.test, identify.test and console.render.test 126/126; P81's SDK legs 10/10; both typechecks 0; both bundle checks exact; eslint 0. Amendment 11 E7, the owner's amendment of 2026-10-22 (R-P245; re-read under R-P311 after P81 removed the re-request on a socket signal: CR1 a lock on P81's form plus change-only status reporting, CR2's reconnect clause kept and its open-during-first-snapshot clause re-read to P81's R10 of P34 T5; R-P313–R-P315, R-P318, R-P325). Told: an identity change (disconnect then connect) asks once as a reconnect does and re-keeps the page view on the new identity's object; change-only reporting also drops repeated error, unavailable and closed emissions, which no lock reads; the hosts drop the kept page view when the shopper's last socket closes and pushes need it, so pushes resume after a reconnect only once that one request re-keeps the view, for the LIVE1 lane to observe on both hosts (P34's T5 count clauses and P74's LV1).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S26/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S26/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P74/implementer/REPORT.md",
+      "git commits on rem/p74-joined up to 3bd7e4ac"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P74 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S26/reviewer-p74/logs/main-P74-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S26/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P74/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-25T09:07:53.760Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
