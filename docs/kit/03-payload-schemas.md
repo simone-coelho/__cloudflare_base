@@ -252,11 +252,12 @@ customer IDs default to `id`, tags to `{}`, and lifecycle to `live`. Catalog PUT
 CSV blank cells mean omitted, not cleared. Supplied canonical fields take precedence over aliases,
 including malformed values: JSON nulls refuse except the supported `art: null`.
 
-`mode` is required on every import and pull: `merge`, `replace` or `full`; a load without one, or with another word,
-is refused `400` naming the three, before anything is read or written (after the operator's authority and the
-`import-sources` list below, before the preconditions). `full` replaces like `replace` and keeps every stored item the file leaves out, after the file's items in stored
+Every load names its mode (`mode` is required on every import and pull): `merge`, `replace` or `full`; a load without
+one, or with another word, is refused 400 naming the three, before anything is read or written (after the operator's
+authority and the `import-sources` list below, before the preconditions). `full` replaces like `replace` and keeps every stored item the file leaves out, after the file's items in stored
 order, with lifecycle `expired` (its records and receipts still resolve it; an expired item is eligible for no
-decision), behind its guard `expire`, the number of items it expires: `428` without it, `409` naming the number when
+decision), behind its guard `expire`, the number of stored items the file leaves out, an item already expired
+included: `428` without it, `409` naming the number when
 it names another, and nothing is written either way. A load whose result equals the catalog in force writes no
 revision and answers with `skipped` true (reason `unchanged`) and the revision in force. `dryRun=1` on the import checks the file under these
 same rules over the revision its `If-Match` names, with no `Idempotency-Key`, and answers what the import would plus
