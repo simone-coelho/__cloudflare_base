@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P82",
+  "workOrderHash": "sha256:6ad9afbc463b738bab0f3b3ab376e438367fa35b5b2c157debb87c24c518112c",
+  "artifact": {
+    "revision": "60e61df359b1120e81ef9a9bd1caa5c483ab67f4",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p82-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p82-build at 1a908c44 (b5fa5c3b the merge of the S24 spec 35efbb36; 1efeae3e the mechanism; 1a908c44 the merge of the spec fix e66f87d3: src/content/import.ts keeps each candidate's position in the file sent, counting every entry including dropped non-object ones, returns each assembled piece's origin beside the pieces and never inside the stored document, and re-addresses a leading pieces[i] as records[k] followed by the id in quotes, cut to 64 code units with … when cut, records[k] alone for a record with no id, pieces[i] kept for a stored piece the merge did not carry, the vocabulary refusal's own id echo dropped so the id appears once; src/routes/content.ts importInto uses the record address at its three refusal points (eligibility, vocabulary, validator) and passes each stored piece's record to the diagnostics; src/content/catalogDiagnostics.ts gives the four piece warnings recordIndex, recordId (cut to 64) and recordIdTruncated beside pieceIndex only when an import or pull passes the piece records, PUT, validate and reads passing none, ignored_field untouched; src/content/kinds.ts exports the existing shown id formatter, one line; kit 02's import row states the address, its diagnostics paragraph names the three members on import and pull and limits \"IDs are not echoed\" to PUT, validation and reads; kit 03's recordIndex paragraph states both). Specification 35efbb36 + e66f87d3 (13 tests on both hosts: ID1 merge, ID2 replace with dropped entries, CSV, a pull and a record with no id, ID3 the four piece warnings and ignored_field exact, the locks on stored order, the PUT path, the 422 shape and the PUT/validate members, the kit test binding the address form (records[k] followed by the quoted id) in kit 02 and kit 03; four test-only R10s W19.F3.06, W19.S1.02, W19.F2.01, W19.S1.01). P82 13/13 x3; W19 29/29; the lock files 108/108 (P38 13, P02 15, P08 14, P68 8, complements 7, routes/content 40, content/import 11); both typechecks 0; both bundle checks exact (unchanged); eslint no problem on the four touched files. Amendment 11 E5, the owner's amendment of 2026-10-22 (R-P245; R-P294, R-P297, R-P299–R-P302). Told: a retried import answered from the retained answer replays its first answer's address (the publish callback does not run), the warnings unaffected; a non-string id is treated as no id; a stored piece the merge did not carry keeps pieces[i] and its warnings name no record; the pack's own examples belong to the documents lane.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S24/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S24/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P82/implementer/REPORT.md",
+      "git commits on rem/p82-joined up to 60e61df3"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P82 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S24/reviewer-p82/logs/main-P82-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S24/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P82/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-25T04:53:20.923Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
