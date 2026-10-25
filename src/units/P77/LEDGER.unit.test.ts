@@ -141,9 +141,10 @@ async function sixMemberSet(env: Env, tenant: string): Promise<void> {
     revision: { revision: 1, value, actor: 'ops', note: `p77 ${kind.name}`, at } })) as PublicationBaseline[], `0:${crypto.randomUUID()}`);
   invalidatePublicationCache(); invalidateCache();
 }
-/** A stamp on `host` whose tenant holds the six-member set. */
+/** A stamp on `host` whose tenant holds the six-member set; its ledger recovery enabled, as a deployed stamp's is, so a shopper's action is admitted. */
 async function stamp(host: (typeof HOSTS)[number]): Promise<Stamp> {
   const s = await customerStamp(host);
+  Object.assign(s.env as unknown as Record<string, unknown>, { LEDGER_RECOVERY_ENABLED: 'true' });
   await sixMemberSet(s.env, TENANT);
   return s;
 }
@@ -269,7 +270,9 @@ describe('unit:P77.VR2', () => {
 
   it('logic: CONTROL — kit 02\'s vocabulary section and kit 01\'s vocabulary paragraph state the routes (PUT /content/vocabulary, POST /content/vocabulary/approve/{n}, GET /content/vocabulary/rejections) with no deployment-profile limit, so no kit sentence changes', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md'), start = kit02.indexOf('### The attribute vocabulary (`/content/vocabulary`)');
-    const section = start < 0 ? '' : kit02.slice(start, kit02.indexOf('\n### ', start + 1) < 0 ? undefined : kit02.indexOf('\n### ', start + 1));
+    // The section runs to the next heading of its level or above.
+    const ends = ['\n## ', '\n### '].map(h => kit02.indexOf(h, start + 1)).filter(i => i > start);
+    const section = start < 0 ? '' : kit02.slice(start, ends.length ? Math.min(...ends) : undefined);
     const kit01 = readTree('docs/kit/01-integration-guide.md'), at = kit01.indexOf('Tag values are free text until your brand approves an attribute vocabulary');
     const paragraph = at < 0 ? '' : kit01.slice(at, kit01.indexOf('\n\n', at) < 0 ? undefined : kit01.indexOf('\n\n', at));
     const profileLimit = /DEPLOYMENT_PROFILE|\b(?:customer|demo) (?:profile|deployment|stamp)s?\b|\bon the (?:customer|demo)\b/i;
