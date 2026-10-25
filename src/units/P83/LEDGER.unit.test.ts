@@ -221,6 +221,8 @@ describe('unit:P83.GR1', () => {
     }, 'P83.GR1 — each refused by name (today the member is not read: every one is published)').toEqual({
       countOverSpan: [422, 'named'], spanOverTake: [422, 'named'], countBelowOne: [422, 'named'], missingTag: [422, 'named'], besideOrders: [422, 'named'] });
     expect((await putDocument(m, 'slots', declaredSlots([layoutSlot(), carousel({ minimum: minimumOf(1, 2) })]), 'p83 well formed')).status, 'P83.GR1 — a well-formed rule publishes').toBe(200);
+    expect((await putDocument(m, 'slots', declaredSlots([layoutSlot({ orders: [{ context: { channel: 'paid_social', visitBuckets: ['1'] }, modules: [M.grid] }] }), carousel()]),
+      'p83 orders alone')).status, 'P83.GR1 — CONTROL: the same orders without the rule publish (the refusal beside orders is the rule\'s alone)').toBe(200);
   }, 120_000);
 });
 
