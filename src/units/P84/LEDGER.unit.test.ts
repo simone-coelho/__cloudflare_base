@@ -196,6 +196,9 @@
 // to send (image, script, frame and media sources by property or attribute, sockets, event streams, sourced elements and
 // links the run adds, exactly one image preload of a listed image source excepted); the CO3 SDK leg's first two mint draws
 // miss the class drawn.
+// R-P379 (the fix-round review at 72aa84ed): the browser stand-in finishes the page's run before anything is read (the load
+// event, every held timer, frame and idle callback, the microtasks between) and counts every element the run adds beyond the
+// one image preload, and every @import or url( in added style text or a style attribute.
 // NEW EXPORT IMPORTED: CLASSIFIER_VERSION from src/services/visit.ts (P3); RED on its absence where named.
 //
 // The fixture's site is shop.example.invalid; no test reaches the network (the head script's double loads nothing).
@@ -470,7 +473,7 @@ describe('unit:P84.CO1', () => {
       const first = await response.json().catch(() => ({})) as Record<string, unknown>;
       await m.drain();
       const table = await tableAt(m, 'pdp');
-      const paint = runHead({ url: urlWith({ utm_medium: 'paid_social', utm_source: 'instagram' }), userAgent: MOBILE_UA, table: table.status === 200 ? table.body : TABLE,
+      const paint = await runHead({ url: urlWith({ utm_medium: 'paid_social', utm_source: 'instagram' }), userAgent: MOBILE_UA, table: table.status === 200 ? table.body : TABLE,
         images: HEAD_IMAGES, consent: false });
       expect.soft({ engine: [response.status, first.arm ?? null, railOf(first)], paint: [paint.error ?? paint.context, paint.order] },
         `${host}: P84.CO1 — without a recorded choice the engine and the page agree on the default (today there is no head script)`).toEqual({
@@ -635,7 +638,7 @@ interface HeadOptions { url: string; referrer?: string; userAgent?: string; tabl
 interface HeadRun { error: string | null; context: string | null; arm: string | null; table: string | null; positions: string[]; order: string[];
   preloads: Array<Record<string, string | null>>; preloadBeforeStylesheet: boolean; otherStyles: string[]; hidden: number; sent: number; cookieWritten: boolean;
   stored: Record<string, unknown> | null }
-function runHead(o: HeadOptions): HeadRun {
+async function runHead(o: HeadOptions): Promise<HeadRun> {
   const none: HeadRun = { error: null, context: null, arm: null, table: null, positions: [], order: [], preloads: [], preloadBeforeStylesheet: false, otherStyles: [],
     hidden: 0, sent: 0, cookieWritten: false, stored: null };
   if (!existsSync(HEAD_FILE)) return { ...none, error: 'public/sdk/edge-head.js is not built (today there is no head script)' };
@@ -680,6 +683,14 @@ function runHead(o: HeadOptions): HeadRun {
   for (const name of ['WebSocket', 'EventSource']) Object.defineProperty(w, name, { configurable: true, value: function () { count(); throw new Error('the head script opens no connection'); } });
   const sourcedBefore = Array.from(w.document.querySelectorAll('[src], [srcset], [data]')).length;
   const linksBefore = Array.from(w.document.head.querySelectorAll('link')).length;
+  // R-P379: the page's run is finished before anything is read — its timers (whatever their delay), frames and idle
+  // callbacks are held and run after the load event, the microtasks between them drained, so a deferred send is counted.
+  const held: Array<() => void> = [];
+  const hold = (fn: unknown, ...args: unknown[]) => { if (typeof fn === 'function') held.push(() => (fn as (...a: unknown[]) => void)(...args)); return held.length; };
+  for (const name of ['setTimeout', 'setInterval', 'requestAnimationFrame', 'requestIdleCallback']) {
+    Object.defineProperty(w, name, { configurable: true, value: (fn: unknown, _delay?: unknown, ...args: unknown[]) => hold(fn, ...(name === 'requestAnimationFrame' ? [0] : args)) });
+  }
+  const elementsBefore = Array.from(w.document.querySelectorAll('*')).length;
   const random = o.random ?? 0.999;
   w.Math.random = () => random;
   Object.defineProperty(w, 'crypto', { configurable: true, value: { randomUUID: () => crypto.randomUUID(),
@@ -687,6 +698,15 @@ function runHead(o: HeadOptions): HeadRun {
   if (o.now !== undefined) { const now = o.now; w.Date.now = () => now; }
   let error: string | null = null;
   try { w.eval(readFileSync(HEAD_FILE, 'utf8')); } catch (e) { error = `the head script threw: ${(e as Error).message}`; }
+  const events = w as unknown as { dispatchEvent(e: unknown): boolean; Event: new (type: string) => unknown; document: { dispatchEvent(e: unknown): boolean } };
+  try { events.document.dispatchEvent(new events.Event('DOMContentLoaded')); events.dispatchEvent(new events.Event('load')); } catch (e) { error ??= `the page's load threw: ${(e as Error).message}`; }
+  for (let round = 0; round < 50; round++) {
+    await new Promise(resolve => setImmediate(resolve));
+    const due = held.splice(0);
+    if (!due.length) break;
+    for (const run of due) { try { run(); } catch { /* a deferred callback's own failure */ } }
+  }
+  await new Promise(resolve => setImmediate(resolve));
   const root = w.document.documentElement;
   const positions = o.images.map((_, n) => root.style.getPropertyValue(`--op-${CAROUSEL}-${n + 1}`).trim());
   const order = o.images.map((img, n) => ({ id: img.id, at: Number(positions[n]) })).filter(x => Number.isInteger(x.at) && x.at >= 1).sort((a, b) => a.at - b.at).map(x => x.id);
@@ -703,11 +723,18 @@ function runHead(o: HeadOptions): HeadRun {
   const added = links.length - linksBefore;
   const allowed = preloads.filter(l => l.as === 'image' && sources.has(l.href ?? '')).length >= 1 ? 1 : 0;
   sent += Math.max(0, added - allowed);
+  // R-P379: every element the run added beyond that one preload, and every stylesheet request in style text or a style attribute.
+  sent += Math.max(0, Array.from(w.document.querySelectorAll('*')).length - elementsBefore - allowed);
+  const styleText = [...Array.from(w.document.querySelectorAll('style')).map(e => (e as unknown as { textContent: string | null }).textContent ?? ''),
+    ...Array.from(w.document.querySelectorAll('[style]')).map(e => (e as unknown as DomElement).getAttribute('style') ?? '')].join('\n');
+  sent += (styleText.match(/@import|url\(/gi) ?? []).length;
   let stored: Record<string, unknown> | null = null;
   try { stored = JSON.parse(w.localStorage.getItem('opt_head') ?? 'null') as Record<string, unknown> | null; } catch { stored = null; }
   return { error, context: root.getAttribute('data-op-context'), arm: root.getAttribute('data-op-arm'), table: root.getAttribute('data-op-table'), positions, order, preloads,
     preloadBeforeStylesheet: firstPreload >= 0 && firstPreload < firstStylesheet, otherStyles, hidden, sent, cookieWritten: w.document.cookie !== cookieBefore, stored };
 }
+/** One page after another (each run owns its window; nothing shared runs at once). */
+async function serial<T, R>(xs: readonly T[], f: (x: T) => Promise<R>): Promise<R[]> { const out: R[] = []; for (const x of xs) out.push(await f(x)); return out; }
 const urlWith = (q: Record<string, string>) => `${PRODUCT_URL}${Object.keys(q).length ? `?${new URLSearchParams(q).toString()}` : ''}`;
 /** The arrival as the SDK's entrySignals reads a page (src/sdk/identity.ts): its utm fields, the referrer and the site host. */
 const entryOf = (q: Record<string, string>, referrer: string): ChannelSignals => ({ utmMedium: q.utm_medium ?? '', utmSource: q.utm_source ?? '',
@@ -793,15 +820,15 @@ describe('unit:P84.CO2', () => {
     expect.soft(unflagged, 'P84.CO2 — a copy or its hash one byte off fails the check by name (the copy is left under the system temporary directory)').toEqual([]);
   }, 300_000);
 
-  it('sdk: the built script\'s cell is the engine\'s — for a table of arrivals (paid social, cpc by its source, organic, a lookalike host, email by its source, a bare paid medium, typed in, a tablet, a return, a reload inside the visit, thirty minutes idle, no browser) its data-op-context is liveVisit + visitBucket + deviceOf for the same page and stored visit, and it stores the visit as liveVisit leaves it', () => {
-    const runs = ARRIVALS.map(c => ({ c, run: runHead({ url: urlWith(c.q), referrer: c.referrer, userAgent: c.ua, table: TABLE, images: HEAD_IMAGES, storage: storedVisit(c.prior), now: NOW }) }));
+  it('sdk: the built script\'s cell is the engine\'s — for a table of arrivals (paid social, cpc by its source, organic, a lookalike host, email by its source, a bare paid medium, typed in, a tablet, a return, a reload inside the visit, thirty minutes idle, no browser) its data-op-context is liveVisit + visitBucket + deviceOf for the same page and stored visit, and it stores the visit as liveVisit leaves it', async () => {
+    const runs = await serial(ARRIVALS, async c => ({ c, run: await runHead({ url: urlWith(c.q), referrer: c.referrer, userAgent: c.ua, table: TABLE, images: HEAD_IMAGES, storage: storedVisit(c.prior), now: NOW }) }));
     expect.soft(runs.map(({ run }) => run.error).filter(Boolean), 'P84.CO2 — the head script runs').toEqual([]);
     expect.soft(runs.map(({ c, run }) => [c.name, run.context]), 'P84.CO2 — its cell equals the engine\'s for every arrival').toEqual(ARRIVALS.map(c => [c.name, engineCell(c).context]));
     expect.soft(runs.map(({ c, run }) => [c.name, (run.stored as { visit?: unknown } | null)?.visit ?? null]), 'P84.CO2 — the visit it keeps is the engine\'s (RULING P4: opt_head.visit)')
       .toEqual(ARRIVALS.map(c => [c.name, engineCell(c).visit]));
   });
 
-  it('sdk: with the tenant\'s channelVocabulary in the document (C4) the built script classifies by its rules and cut, as liveVisit does with that vocabulary and visitBucketOf with its cut — the brand split by campaign, a non-brand click, typed in, an arrival no rule names (the default row), a third visit in bucket 2-4', () => {
+  it('sdk: with the tenant\'s channelVocabulary in the document (C4) the built script classifies by its rules and cut, as liveVisit does with that vocabulary and visitBucketOf with its cut — the brand split by campaign, a non-brand click, typed in, an arrival no rule names (the default row), a third visit in bucket 2-4', async () => {
     const table = tableDocument({ channelVocabulary: CHANNEL_VOCABULARY_MEMBER, rows: VOCAB_ROWS });
     const cases: ArrivalCase[] = [
       { name: 'cpc on the brand campaign', q: { utm_medium: 'cpc', utm_source: 'google', utm_campaign: 'brand_spring' }, referrer: 'https://www.google.com/', ua: DESKTOP_UA, prior: null },
@@ -818,23 +845,23 @@ describe('unit:P84.CO2', () => {
       const device = deviceFor(c.ua);
       return [c.name, visit.entryChannel && device ? `${visit.entryChannel}|${visitBucketOf(visit.visitCount, [1, 2, 5])}|${device}` : 'default'];
     });
-    const runs = cases.map(c => [c.name, runHead({ url: urlWith(c.q), referrer: c.referrer, userAgent: c.ua, table, images: HEAD_IMAGES, storage: storedVisit(c.prior), now: NOW })] as const);
+    const runs = await serial(cases, async c => [c.name, await runHead({ url: urlWith(c.q), referrer: c.referrer, userAgent: c.ua, table, images: HEAD_IMAGES, storage: storedVisit(c.prior), now: NOW })] as const);
     expect.soft(runs.map(([name, run]) => [name, run.error]).filter(([, e]) => e), 'P84.CO2 — the head script runs').toEqual([]);
     expect.soft(runs.map(([name, run]) => [name, run.context]), 'P84.CO2 — the tenant\'s own classification and cut, as the engine\'s').toEqual(expected);
   });
 
-  it('sdk: the row it applies — the cell\'s on a recorded consent; the default row for the holdout class, for no recorded consent, for the SDK\'s refusal cookie, for a classifier version not its own and, for one paint, for a rotated salt version; it names the table version it applied', () => {
+  it('sdk: the row it applies — the cell\'s on a recorded consent; the default row for the holdout class, for no recorded consent, for the SDK\'s refusal cookie, for a classifier version not its own and, for one paint, for a rotated salt version; it names the table version it applied', async () => {
     const ps = { url: urlWith({ utm_medium: 'paid_social', utm_source: 'instagram' }), userAgent: MOBILE_UA, images: HEAD_IMAGES, now: NOW };
     const arm = (cls: string, saltVersion = 1) => ({ opt_head: JSON.stringify({ arm: { class: cls, saltVersion, tableVersion: TABLE.version } }) });
     const rotated = tableDocument({ holdout: { arms: ['default'], saltVersion: 2, share: 0.2 } });
     // The class is asserted where the reading fixes it (null: not asserted, the rotated salt's class being re-derived later).
     const cases: Array<[string, HeadRun, string, string | null]> = [
-      ['a brand-new browser drawn personalized', runHead({ ...ps, table: TABLE, random: 0.999 }), 'paid_social|1|mobile', 'personalized'],
-      ['a stored holdout class', runHead({ ...ps, table: TABLE, storage: arm('default') }), 'default', 'default'],
-      ['no recorded consent', runHead({ ...ps, table: TABLE, consent: false }), 'default', 'personalized'],
-      ['the SDK\'s refusal cookie', runHead({ ...ps, table: TABLE, cookie: 'opt_personalization_enabled=false' }), 'default', 'personalized'],
-      ['another classifier version', runHead({ ...ps, table: tableDocument({ classifierVersion: 'p84-another-classifier' }) }), 'default', 'personalized'],
-      ['a rotated salt version (one paint)', runHead({ ...ps, table: rotated, storage: arm('personalized', 1) }), 'default', null],
+      ['a brand-new browser drawn personalized', await runHead({ ...ps, table: TABLE, random: 0.999 }), 'paid_social|1|mobile', 'personalized'],
+      ['a stored holdout class', await runHead({ ...ps, table: TABLE, storage: arm('default') }), 'default', 'default'],
+      ['no recorded consent', await runHead({ ...ps, table: TABLE, consent: false }), 'default', 'personalized'],
+      ['the SDK\'s refusal cookie', await runHead({ ...ps, table: TABLE, cookie: 'opt_personalization_enabled=false' }), 'default', 'personalized'],
+      ['another classifier version', await runHead({ ...ps, table: tableDocument({ classifierVersion: 'p84-another-classifier' }) }), 'default', 'personalized'],
+      ['a rotated salt version (one paint)', await runHead({ ...ps, table: rotated, storage: arm('personalized', 1) }), 'default', null],
     ];
     expect.soft(cases.map(([name, run]) => [name, run.error]).filter(([, e]) => e), 'P84.CO2 — the head script runs').toEqual([]);
     expect.soft(cases.map(([name, run, , armClass]) => [name, run.context, armClass === null ? null : run.arm]), 'P84.CO2 — the row each page applies, and its class')
@@ -843,18 +870,18 @@ describe('unit:P84.CO2', () => {
       .toEqual(cases.map(([name]) => [name, name === 'another classifier version' ? tableDocument({ classifierVersion: 'p84-another-classifier' }).version : name.startsWith('a rotated') ? rotated.version : TABLE.version]));
   });
 
-  it('sdk: the order — the row\'s shot order, images of one shot type in server order, the untagged and the unnamed shot after them, within P83\'s minimum and, inside its window, its tag pin (and not outside it); the default row keeps the server order within the same rules; one custom property per image position on the root, nothing hidden, exactly one image preload for the leading image before the stylesheet, nothing fetched or sent, no cookie written', () => {
+  it('sdk: the order — the row\'s shot order, images of one shot type in server order, the untagged and the unnamed shot after them, within P83\'s minimum and, inside its window, its tag pin (and not outside it); the default row keeps the server order within the same rules; one custom property per image position on the root, nothing hidden, exactly one image preload for the leading image before the stylesheet, nothing fetched or sent, no cookie written', async () => {
     const page = (q: Record<string, string>, ua: string, extra: Partial<HeadOptions> = {}) => runHead({ url: urlWith(q), userAgent: ua, table: TABLE, images: HEAD_IMAGES, now: NOW, random: 0.999, ...extra });
     const launchTable = tableDocument({ brandRules: { minimum: MINIMUM, pinnedTag: PINNED_TAG } });
     const cases: Array<[string, HeadRun, string[]]> = [
-      ['paid social on mobile', page({ utm_medium: 'paid_social', utm_source: 'instagram' }, MOBILE_UA), ids(3, 5, 4, 1, 6, 2, 7, 8)],
-      ['email on desktop: the minimum brings image 3 in', page({ utm_medium: 'email', utm_source: 'newsletter' }, DESKTOP_UA), ids(2, 3, 4, 1, 6, 5, 7, 8)],
-      ['paid search: a partial order', page({ utm_medium: 'cpc', utm_source: 'google' }, DESKTOP_UA), ids(4, 3, 1, 6, 2, 5, 7, 8)],
-      ['email on desktop, the launch inside its window', page({ utm_medium: 'email', utm_source: 'newsletter' }, DESKTOP_UA, { table: launchTable, images: LAUNCH_HEAD_IMAGES, now: T0 }),
+      ['paid social on mobile', await page({ utm_medium: 'paid_social', utm_source: 'instagram' }, MOBILE_UA), ids(3, 5, 4, 1, 6, 2, 7, 8)],
+      ['email on desktop: the minimum brings image 3 in', await page({ utm_medium: 'email', utm_source: 'newsletter' }, DESKTOP_UA), ids(2, 3, 4, 1, 6, 5, 7, 8)],
+      ['paid search: a partial order', await page({ utm_medium: 'cpc', utm_source: 'google' }, DESKTOP_UA), ids(4, 3, 1, 6, 2, 5, 7, 8)],
+      ['email on desktop, the launch inside its window', await page({ utm_medium: 'email', utm_source: 'newsletter' }, DESKTOP_UA, { table: launchTable, images: LAUNCH_HEAD_IMAGES, now: T0 }),
         ids(9, 3, 2, 4, 1, 6, 5, 7, 8)],
-      ['email on desktop, before the launch window', page({ utm_medium: 'email', utm_source: 'newsletter' }, DESKTOP_UA, { table: launchTable, images: LAUNCH_HEAD_IMAGES, now: T0 - 2 * 3_600_000 }),
+      ['email on desktop, before the launch window', await page({ utm_medium: 'email', utm_source: 'newsletter' }, DESKTOP_UA, { table: launchTable, images: LAUNCH_HEAD_IMAGES, now: T0 - 2 * 3_600_000 }),
         ids(2, 3, 4, 1, 6, 9, 5, 7, 8)],
-      ['the holdout class: the server order within the rules', page({ utm_medium: 'paid_social', utm_source: 'instagram' }, MOBILE_UA, { random: 0 }), ids(1, 3, 2, 4, 5, 6, 7, 8)],
+      ['the holdout class: the server order within the rules', await page({ utm_medium: 'paid_social', utm_source: 'instagram' }, MOBILE_UA, { random: 0 }), ids(1, 3, 2, 4, 5, 6, 7, 8)],
     ];
     expect.soft(cases.map(([name, run]) => [name, run.error]).filter(([, e]) => e), 'P84.CO2 — the head script runs').toEqual([]);
     expect.soft(cases.map(([name, run]) => [name, run.order]), 'P84.CO2 — the painted order').toEqual(cases.map(([name, , order]) => [name, order]));
@@ -887,7 +914,7 @@ describe('unit:P84.CO2', () => {
       for (const [name, entry, q, device] of arrivals) {
         const engine = await firstDecision(m, entry, device);
         expect(engine.status, `${host}: PRECONDITION — ${name}: the page is answered`).toBe(200);
-        const paint = runHead({ url: urlWith(q), userAgent: device === 'mobile' ? MOBILE_UA : DESKTOP_UA, table: table.body, images: LAUNCH_HEAD_IMAGES });
+        const paint = await runHead({ url: urlWith(q), userAgent: device === 'mobile' ? MOBILE_UA : DESKTOP_UA, table: table.body, images: LAUNCH_HEAD_IMAGES });
         outcomes.push([name, paint.order, engine.rail]);
       }
       expect.soft(outcomes, `${host}: P84.CO2 — the page's paint and the engine's carousel are one order`).toEqual(arrivals.map(([name, , , , order]) => [name, order, order]));
@@ -1108,20 +1135,20 @@ describe('unit:P84.CO3', () => {
     }, 120_000);
   }
 
-  it('sdk: the head script\'s draw and a known browser\'s class — a brand-new browser draws default with p = share × (default arms) ÷ |arms| (40 per cent over default and no_learning: 0.19 default, 0.21 personalized; over default alone: 0.39 default, 0.41 personalized) and stores { class, saltVersion, tableVersion }; a browser holding its identifier and the last answer\'s experiment computes armFor(identifier, the salt in experiment.id) whatever its random source says, equal to the engine\'s for forty identifiers', () => {
+  it('sdk: the head script\'s draw and a known browser\'s class — a brand-new browser draws default with p = share × (default arms) ÷ |arms| (40 per cent over default and no_learning: 0.19 default, 0.21 personalized; over default alone: 0.39 default, 0.41 personalized) and stores { class, saltVersion, tableVersion }; a browser holding its identifier and the last answer\'s experiment computes armFor(identifier, the salt in experiment.id) whatever its random source says, equal to the engine\'s for forty identifiers', async () => {
     const tableFor = (arms: string[], share: number) => tableDocument({ holdout: { arms, saltVersion: 1, share } });
     const two = tableFor(['default', 'no_learning'], 0.4), one = tableFor(['default'], 0.4);
     const page = { url: urlWith({ utm_medium: 'email', utm_source: 'newsletter' }), userAgent: DESKTOP_UA, images: HEAD_IMAGES, now: NOW };
     const draws: Array<[string, { version: string }, number, string]> = [['two arms', two, 0.19, 'default'], ['two arms', two, 0.21, 'personalized'],
       ['one arm', one, 0.39, 'default'], ['one arm', one, 0.41, 'personalized']];
-    const runs = draws.map(([name, table, random]) => { const run = runHead({ ...page, table, random }); return [name, random, run.error ?? run.arm, run.stored?.arm ?? null]; });
+    const runs = await serial(draws, async ([name, table, random]) => { const run = await runHead({ ...page, table, random }); return [name, random, run.error ?? run.arm, run.stored?.arm ?? null]; });
     expect.soft(runs, 'P84.CO3 — the page draws with the engine\'s split and stores the class with the table version').toEqual(draws.map(([name, table, random, cls]) =>
       [name, random, cls, { class: cls, saltVersion: 1, tableVersion: table.version }]));
     const holdout = holdoutOf(0.5), table = tableFor(['default'], 0.5);
     const visitors = Array.from({ length: 40 }, (_, n) => `vis-00000000-0000-4000-8000-${String(n).padStart(12, '0')}`);
     const engine = visitors.map(v => classOf(armFor(v, holdout)));
     expect(new Set(engine).size, 'PRECONDITION — the forty identifiers fall in both classes').toBe(2);
-    const known = visitors.map(v => runHead({ ...page, table, random: 0, storage: { opt_visitor_id: v,
+    const known = await serial(visitors, v => runHead({ ...page, table, random: 0, storage: { opt_visitor_id: v,
       opt_head: JSON.stringify({ experiment: { id: `${TENANT}:${BRAND}:p84-salt`, saltVersion: 1 } }) } }));
     expect.soft(known.map(r => r.error ?? r.arm), 'P84.CO3 — a known browser\'s class is armFor of its identifier and the published salt, never a fresh draw').toEqual(engine);
   });
