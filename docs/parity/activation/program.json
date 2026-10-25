@@ -1249,7 +1249,9 @@
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
         "packages/sdk/types/**",
-        "packages/sdk/package.json"
+        "packages/sdk/package.json",
+        "src/identity/consentContinuity.ts",
+        "src/reflex/contentCompose.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P84 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
