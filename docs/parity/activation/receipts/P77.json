@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P77",
+  "workOrderHash": "sha256:c98101ae975acc11f52cd9b0c8d682a35c9edd89a22ccf3c8779d9b0b7309454",
+  "artifact": {
+    "revision": "dc8f2bfc834669d56c6e719e85dd8400449b21c3",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p77-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p77-build at 6be57f3e (c44d6de1 the merge of the S23 spec e30529bc; 6be57f3e the merge of its comment-only 19a017d0; 900f740a the mechanism: src/customerBoundary.ts admits vocabulary as a content kind in the :kind pattern beside catalog, slots, learn and priors, so PUT and GET /content/vocabulary, its history, revisions, validate and rollback reach their handlers on a customer deployment, and two entries admit POST /content/vocabulary/approve/:n and GET or HEAD /content/vocabulary/rejections; no handler, kit page or door changed; operator authority stays in the content routes' existing middleware, 401 without a credential and 403 without a membership on the tenant, so an import on a customer deployment carrying a value outside the approved vocabulary is refused 422 naming the record, the attribute and the value and the rejection report counts a shopper event with that value). Specification e30529bc + 19a017d0 (11 tests on the W08 customer stamp with AUTH_MODE enforced on both hosts: VR1 the nine calls reach their handlers, VR2 the 422 and the rejection count, VR3 the boundary's 102 other entries locked literally, the two new operations admitted for their own methods only, authority, the other refusals unchanged, the kit control). P77 11/11 x3; the 12 lock files 223/223 (index.api-boundary 72, routes/content 40, P54 9, P38 13, W08 C1 7, P68 8, W37 40, H3 34); both typechecks 0; both bundle checks exact (unchanged); eslint no problem. Amendment 11 E4, the owner's amendment of 2026-10-22 (R-P245, R-P247). Told deferrals: the catalog pull is not exercised natively (it needs a connector and shares the import's validation); a wrong method on the two new operations gets the router's 404, indistinguishable from the boundary's from outside; test comments citing customerBoundary.ts line numbers moved two lines (P54 :34, index.api-boundary :2431; W37 :911 and :1497 were already off), comments only.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S23/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S23/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P77/implementer/REPORT.md",
+      "git commits on rem/p77-joined up to dc8f2bfc"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P77 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S23/reviewer-p77/logs/P77-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S23/gate-r3/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P77/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-25T03:02:13.193Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
