@@ -86,8 +86,8 @@ const N1 = piece('look.new-one', { category: ['bags'], color: ['black'] });
 const { title: _t2, ...N2 } = piece('look.new-two', { category: ['bags'] }); void _t2;
 /** A new record carrying a colour outside the vocabulary. */
 const N3 = piece('look.new-three', { category: ['bags'], color: ['chartreuse'] });
-/** A new record whose eligibility rule names an entry channel no tenant has. */
-const N4 = piece('look.new-four', { category: ['bags'] }, { eligibleWhen: { context: { channel: ['carrier-pigeon'] } } });
+/** A new record whose eligibility rule names an entry channel no tenant has (the import's own check over the candidates, kinds.ts catalogRuleErrors). */
+const N4 = piece('look.new-four', { category: ['bags'] }, { eligibleWhen: { context: { entry_channel: ['carrier-pigeon'] } } });
 /** An id over the sixty-four-code-unit bound, on a record with no title. */
 const LONG_ID = `look.${'long-identifier-'.repeat(5)}end`;
 const { title: _tl, ...LONG } = piece(LONG_ID, { category: ['bags'] }); void _tl;
