@@ -1305,6 +1305,7 @@ function createCore(config, host) {
   let reconnectTimer = null;
   let socketGeneration = 0;
   function setStatus(s) {
+    if (s === status) return;
     status = s;
     emit("socket", s);
   }
@@ -2325,7 +2326,16 @@ function createListen(core, opts = {}) {
   const offSent = core.on("sent", (event) => {
     if (!["content_impression", "content_dwell", "content_viewable", "layout_exposure"].includes(event.type) && core.socketStatus !== "connected") follow();
   });
-  const offSocket = () => void 0;
+  let joined = false, lost = false;
+  const offSocket = core.on("socket", (status) => {
+    if (status === "connected") {
+      if (lost) {
+        lost = false;
+        follow();
+      }
+      joined = true;
+    } else if (joined && (status === "reconnecting" || status === "closed" || status === "error")) lost = true;
+  });
   const timer = opts.refreshMs === void 0 ? void 0 : host.setInterval(() => {
     if (selected) void refresh();
   }, Math.max(1e3, Math.min(3e5, opts.refreshMs)));
