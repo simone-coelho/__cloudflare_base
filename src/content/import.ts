@@ -6,7 +6,7 @@
 // the route does that, so the same functions serve a file, a paste, or a pull.
 
 import type { ContentCatalog, ContentPiece } from './types';
-import { CATALOG_DOCUMENT_FIELDS, PIECE_FIELDS } from './kinds';
+import { CATALOG_DOCUMENT_FIELDS, PIECE_FIELDS, shown } from './kinds';
 import { inputLimit, inputRecords, inputTextBytes, INPUT_MAX_RECORDS, readInputText } from '@/config/input';
 
 // ── Normalization: many export shapes, one catalog shape ────────────────────
@@ -279,27 +279,97 @@ export type ImportMode = 'replace' | 'merge';
 
 /** Candidate pieces from raw records; nulls dropped, order kept. */
 export function candidatesFrom(records: unknown[]): Record<string, unknown>[] {
+  return positionedCandidates(records).pieces;
+}
+
+/**
+ * P82 (E5): the candidate pieces, each beside its position in the file sent: `positions[j]` is the index among the
+ * records as sent of the record candidate j came from, so an entry the import drops (not a record) still counts.
+ */
+export function positionedCandidates(records: unknown[]): { pieces: Record<string, unknown>[]; positions: number[] } {
   inputRecords(records);
-  return records.map(normalizePiece).filter((p): p is Record<string, unknown> => p !== null);
+  const pieces: Record<string, unknown>[] = [], positions: number[] = [];
+  records.forEach((record, k) => {
+    const piece = normalizePiece(record);
+    if (piece !== null) { pieces.push(piece); positions.push(k); }
+  });
+  return { pieces, positions };
 }
 
 /** Replace, or partial upsert by id. Omission preserves known fields; defaults belong only to inserts. */
 export function assemble(current: ContentCatalog, incoming: Record<string, unknown>[], mode: ImportMode): { pieces: unknown[] } {
+  return { pieces: assembleFrom(current, incoming, mode).pieces };
+}
+
+/**
+ * P82 (E5): `assemble`, and beside it (never inside the document) where each assembled piece came from: `origins[i]`
+ * is the index among the candidates of the record that last wrote piece i, or null for a stored piece the merge did not
+ * carry.
+ */
+export function assembleFrom(current: ContentCatalog, incoming: Record<string, unknown>[], mode: ImportMode): { pieces: unknown[]; origins: (number | null)[] } {
   const inserted = (p: Record<string, unknown>) => ({ customerContentId: p.id, tags: {}, lifecycle: { status: 'live' }, ...p });
-  if (mode === 'replace') return { pieces: incoming.map(inserted) };
+  if (mode === 'replace') return { pieces: incoming.map(inserted), origins: incoming.map((_, j) => j) };
   const byId = new Map<string, unknown>(current.pieces.map((p: ContentPiece) => [p.id, p]));
-  const invalid: unknown[] = [];
-  for (const p of incoming) {
+  const from = new Map<string, number>();
+  const invalid: unknown[] = [], invalidFrom: number[] = [];
+  incoming.forEach((p, j) => {
     const id = typeof p.id === 'string' ? p.id : '';
-    if (!id) { invalid.push(p); continue; } // Required insert IDs must reach validation, not disappear.
+    if (!id) { invalid.push(p); invalidFrom.push(j); return; } // Required insert IDs must reach validation, not disappear.
     const previous = byId.get(id);
     const next: Record<string, unknown> = isRecord(previous) ? { ...previous, ...p } : inserted(p);
     if (isRecord(previous) && isRecord(p.window) && Object.keys(p.window).length) {
       next.window = { ...(isRecord(previous.window) ? previous.window : {}), ...p.window };
     }
     byId.set(id, next);
-  }
-  return { pieces: [...byId.values(), ...invalid] };
+    from.set(id, j);
+  });
+  return { pieces: [...byId.values(), ...invalid], origins: [...[...byId.keys()].map(id => from.get(id) ?? null), ...invalidFrom] };
+}
+
+// ── P82 (E5): the record an import's answer names ────────────────────────────
+
+/** The longest record id an answer echoes, in UTF-16 code units, as the diagnostics bound a dimension name. */
+export const RECORD_ID_BOUND = 64;
+
+/**
+ * The address of the record at position `k` of the file sent: `records[k] '<id>'`, the id cut to RECORD_ID_BOUND code
+ * units and followed by `…` when cut; `records[k]` alone for a record with no id (none, or not a non-empty string).
+ */
+export function recordAddress(k: number, id: unknown): string {
+  return typeof id === 'string' && id.length > 0 ? `records[${k}] '${id.slice(0, RECORD_ID_BOUND)}'${id.length > RECORD_ID_BOUND ? '\u2026' : ''}` : `records[${k}]`;
+}
+
+/**
+ * Errors addressed `pieces[i]` (the catalogue validator, the eligibility check and the vocabulary refusal all begin a
+ * piece's error so) re-addressed to the record of the file sent that wrote piece i: `pieces[i]` of `pieces` came from
+ * the record at `positions[i]`, or from no record of the file (null, a stored piece a merge did not carry), whose error
+ * keeps its address. The rest of each error is unchanged, but for the vocabulary refusal's own echo of the piece's id
+ * (` '<id>'` or ` (no id)` after the address), which the record's address already says. Every other error is unchanged.
+ */
+export function recordAddressed(errors: readonly string[], pieces: readonly unknown[], positions: ReadonlyArray<number | null>): string[] {
+  return errors.map((error) => {
+    const at = /^pieces\[(\d+)\]/.exec(error);
+    const i = at ? Number(at[1]) : -1, k = i >= 0 && i < positions.length ? positions[i] : null;
+    if (!at || k === null || k === undefined) return error;
+    const id = isRecord(pieces[i]) ? pieces[i].id : undefined;
+    let rest = error.slice(at[0].length);
+    const echoed = typeof id === 'string' && id.length > 0 ? ` ${shown(id)}` : ' (no id)';
+    if (rest.startsWith(echoed + ' ')) rest = rest.slice(echoed.length);
+    return recordAddress(k, id) + rest;
+  });
+}
+
+/**
+ * The record of the file sent each stored piece came from, for an import's and a pull's warnings: the last candidate
+ * carrying the piece's id (a merge applies the last), or null for a stored piece the file did not carry.
+ */
+export function storedPieceRecords(stored: ContentCatalog, incoming: readonly Record<string, unknown>[], positions: readonly number[]): ({ recordIndex: number; recordId: string } | null)[] {
+  const last = new Map<string, number>();
+  incoming.forEach((p, j) => { if (typeof p.id === 'string') last.set(p.id, positions[j]!); });
+  return stored.pieces.map((piece) => {
+    const k = last.get(piece.id);
+    return k === undefined ? null : { recordIndex: k, recordId: piece.id };
+  });
 }
 
 // ── The provider seam ───────────────────────────────────────────────────────
