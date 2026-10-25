@@ -217,7 +217,7 @@ describe('unit:P92.RG1', () => {
         without: [['story.after-order', 'journeyStage'], ['story.market-us', 'locale'], ['story.downtown', 'styleWorld']], style: [] });
     }, 120_000);
 
-    it(`host (${host}): publication refuses a malformed gate registration by name — a gate that is also a learned dimension, a duplicate, an empty key, a list that is not one — and admits a well-formed one`, async () => {
+    it(`host (${host}): publication refuses a malformed gate registration by name — a gate that is also a learned dimension, a duplicate, an empty key, a list that is not one, an empty list, a key carrying a tag separator, an untrimmed key, a key over 64 characters, a reserved key, more than 64 keys (R-P326) — and admits a well-formed one`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P92.RG1 — the tenant documents publish');
       const check = async (gates: unknown) => {
@@ -228,6 +228,13 @@ describe('unit:P92.RG1', () => {
       expect.soft({ learned: await check(['locale', 'category']), duplicate: await check(['locale', 'locale']), empty: await check(['']), notAList: await check('locale') },
         `${host}: P92.RG1 — each refused by name (today the member is not read: every one validates)`).toEqual({
         learned: [422, 'named'], duplicate: [422, 'named'], empty: [422, 'named'], notAList: [422, 'named'] });
+      // R-P326: the rest of R-P316 (1)'s rule — the list's bounds, the key's length and trimming, the tag separators, the reserved keys.
+      expect.soft({ emptyList: await check([]), colon: await check(['loc:ale']), semicolon: await check(['loc;ale']), pipe: await check(['loc|ale']),
+        untrimmed: await check([' locale ']), longKey: await check(['g'.repeat(65)]), reserved: await check(['constructor']),
+        tooMany: await check(Array.from({ length: 65 }, (_, i) => `gate${i + 1}`)) },
+      `${host}: P92.RG1 — each refused by name (R-P326; today the member is not read: every one validates)`).toEqual({
+        emptyList: [422, 'named'], colon: [422, 'named'], semicolon: [422, 'named'], pipe: [422, 'named'],
+        untrimmed: [422, 'named'], longKey: [422, 'named'], reserved: [422, 'named'], tooMany: [422, 'named'] });
       const ok = await asOperator(m, 'POST', '/config/reflex/validate', { config: { ...WITHOUT_GATES, [GATES]: ['journeyStage', 'locale'] } });
       expect(ok.status, `${host}: P92.RG1 — a well-formed registration validates (${show(ok)})`).toBe(200);
     }, 120_000);
