@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P90",
+  "workOrderHash": "sha256:25b53c38b57a95fdd0c9d7fe6190835c14eec3d6c65b4caff7d53d40a8808534",
+  "artifact": {
+    "revision": "2ae8c39d2049439a9ac628c23d8f3cb855fbbac9",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p90-joined-r2 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p90-build at 614f0dad (round 2: 683f0407 the script refuses unknown flags, stray arguments and value-taking flags without a value exit 2 before any request and --format, --mode or --dry-run without --file, and names a refused operator token with its status on the draft read; 614f0dad the merge of the round-2 spec 9b104122; round 1: ce5db0cf and a71a73a1 the merges of the S29 spec 39a520fa and db659f98; 6cf0e383 the mechanism, the script and the kit; 95d191e9 the script's query encoding without URLSearchParams: scripts/import-content.mjs gains a file mode, --file with the format from --format or the .json/.csv extension, --mode merge (the default) or replace with full refused locally naming the API and its expire guard, --dry-run sending dryRun=1, each run reading the catalogue draft in force and posting /content/catalog/import with If-Match from that read and an Idempotency-Key derived from the exact request including its query members, a CSV body as text/csv, printing the answer and exiting 0 on 200, 1 on a server refusal with the errors printed and 2 on a local refusal before any request (no token for a target that is not a loopback address, an unreadable file, an unknown format or mode) printed as import-content: ... with no stack trace, the demo pull path unchanged apart from that exit code; src/content/import.ts fetches the pull with redirect manual so any 3xx answer becomes the error source answered N; redirects are not followed, answered 502 with nothing written, accepts https or http only on localhost, 127.0.0.1 or [::1] with no credentials, and widens the import-sources document to addresses and hosts, at least one present, each 1 to 64 entries, no other key, a hosts entry an exact lowercase hostname or IP literal as the URL parser renders it with an optional port from 1 to 65535, a default port, a wildcard, a scheme, a path or a credential refused by name, and hostAllowed comparing the URL's hostname plus port exactly; src/routes/content.ts orders the pull authority, body, the caller list addresses, mode, expire, the scheme (400 naming https), the host list (403 naming import-sources and the host, the fetch never called), the preconditions, the fetch, and reads a document without addresses as no caller restriction; kit 02's pull row states https with http only on the loopback hosts, that redirects are not followed and the 403 for hosts; kit 03's import-sources paragraph states hosts and the port rule). Specification db659f98 + 9b104122 (15 tests; the R10 in scripts/lib/tool-token.test.mjs, R-P347). EX3 and EX4 are DECISION criteria on D3 (R-P341): nothing created on any deployment, no cron, no bucket binding, no secret.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S29/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S29/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P90/implementer/REPORT.md",
+      "git commits on rem/p90-joined-r2 up to 2ae8c39d"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P90 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "S29/reviewer-p90/logs/r2-w-p90-run1.json"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S29/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P90/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-25T18:22:00.217Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
