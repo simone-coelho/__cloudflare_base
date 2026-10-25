@@ -56,39 +56,24 @@
 //     `{ version?, pieces }` only): a stored catalogue carrying the marker never equals an import's assembled document,
 //     so it is never skipped, and an import un-retires the fallback. Observed, not P91's.
 //
-// THE R10 SWEEP (reading 1; each line the R10 proposed: the mode the test's expectations already assume)
-//   A. Without a mode (the grant's own kind):
-//     src/routes/content.test.ts :546 import (`bad.pieces`, the catalogue becomes them) → `?mode=replace`; :551 pull
-//       (warningCount 2, the pulled piece alone) → body `mode: 'replace'`; :564 pull (503, the recovered document's first
-//       piece is 'pulled') → `mode: 'replace'`; :840 import (its answer is matched `mode: 'replace'`) → `&mode=replace`;
-//       :845 and :849 imports refused 422 → `&mode=replace`; :855 pull (`pieces: 1`) → `mode: 'replace'`; :858 pull refused
-//       400 for its file: URL → `mode: 'replace'` (so it still measures the URL); :961, :964, :969 pulls (409, 503, 409; :964
-//       publishes, the other two carry the pending operation's body) → `mode: 'replace'`; :1008 the oversized lanes
-//       `/content/catalog/import` and `/content/catalog/import?format=csv` (413) → `?mode=replace` / `&mode=replace` (the pull
-//       lane's body is read before its mode: unchanged); :1040 the over-many-records import (413) → `?mode=replace`; :1047
-//       and :1051 pulls (413 twice, 502) → `mode: 'replace'`; :1056 and :1058 the 501-record import and its exact retry
-//       (`pieces: 501`) → `?mode=replace` on both. Under the ruled order (the mode before the
-//       preconditions; the pull's body first) also: :950 and :951 (pull, body '{', no If-Match → 428; If-Match '1' → 400)
-//       → the body `{"url":"https://cms.example/feed","mode":"replace"}`, so each still measures its precondition refusal;
-//       :1021's second entry (an import with no If-Match → 428) → the path `/content/catalog/import?mode=replace` with the
-//       third entry's suffix `&scope=other`. Unchanged: :911–917 (401 before anything), :1021's first entry (401).
-//     src/units/W19/B2.unit.test.ts :670–672 (W19.L1.01's JSON import, CSV import and pull of the feed over an empty
-//       catalogue) → `mode=replace` on the two imports' query and `mode: 'replace'` in the pull's body; :701 import over an
-//       empty catalogue → `&mode=replace`; :973–974 (W19.S1.01's JSON import and pull) → as :670–672; :1062 import (empty
-//       catalogue) → `&mode=replace`; :1112 and :1129 imports refused 422 → `&mode=replace`.
-//     scripts/import-content.mjs :92–93 (product, outside the grant): the demo importer's pull names no mode → it would
-//       be refused; the builder's grant adds `mode: 'replace'` (the demo catalogue replaces the stored one, as today).
-//     The kit (kit 02 :1726–1727): the import row reads `mode=replace|merge` and the pull row `mode?` (optional): restated
-//       by the builder (reading 5), locked here.
-//     Every other import or pull in src/units/** and src/**/*.test.ts names its mode (W19 B1 and B3 default `replace`,
-//       P82, P44, P38, P77, P31, W20 B1, content.test.ts :547, :843, :954–959).
-//   B. IM2 collisions (the same catalogue loaded twice expecting a new revision; beyond the mode-only grant, each needs a
-//     ruling): src/units/W19/B1.unit.test.ts W19.F1.03 :605–646 (a byte-identical re-import, the CSV round trip and the
-//     second identical import each expect a new revision, :631–634 "byte-identical or not"); src/units/W19/B2.unit.test.ts
-//     W19.L1.01 :666–691 (the same feed by JSON import, CSV import, pull and PUT, each `revision` + 1; the CSV import and
-//     the pull would be skipped, and the next path's If-Match would then name a revision ahead of the one in force) and
-//     W19.S1.01 :972–985 (the same, JSON import, pull and PUT). The full list is measured under the sketch once the gate
-//     allows (the whole suite, today against the sketch).
+// THE R10s (granted by name in R-P332; test-only, R-P195's form; the lines named at the base 92a7132e):
+//   A. The mode named (every other assertion unchanged): src/routes/content.test.ts :546 (`?mode=replace`), :551 and :564
+//     (pull body `mode: 'replace'`), :840, :845, :849 (`&mode=replace`), :855 and :858 (pull body), :950 and :951 (the
+//     pull body `{"url":"https://cms.example/feed","mode":"replace"}`, so each still measures its 428 and its 400 under the
+//     ruled order), :961, :964, :969 (pull body), :1008 (the two import lanes `?mode=replace`, `&mode=replace`), :1019 and
+//     :1021 (the oversized import's path `?mode=replace` and the third entry's suffix `&scope=other`), :1040
+//     (`?mode=replace`), :1047 and :1051 (pull body), :1056 and :1058 (`?mode=replace` on the import and its exact retry);
+//     src/units/W19/B2.unit.test.ts :670–672 (W19.L1.01's two imports `mode=replace`, its pull body), :701, :973–974
+//     (W19.S1.01's import and pull), :977 (its path built with `&` after a `?`), :1062, :1112, :1129 (`mode=replace`).
+//   B. E16's skip superseding W19's "each accepted import allocates the next revision, byte-identical or not":
+//     src/units/W19/B1.unit.test.ts W19.F1.03 :610 and :618 (the identical re-import and the CSV round trip also expect
+//     `skipped: true` with the revision in force), :630–640 (the comment reworded naming R-P332; both identical imports
+//     skipped, the second answering the revision in force and its label, no new revision); src/units/W19/B2.unit.test.ts
+//     W19.L1.01 :680 (the CSV import and the pull of the stored feed expect the skip and the revision in force; the JSON
+//     import and the PUT one new revision each; `revision` follows the revision in force, so each step's If-Match names it)
+//     and W19.S1.01 :982 (the same for its pull). Every other assertion of the three tests is unchanged.
+//   The builder's (R-P332's widened grant): scripts/import-content.mjs :92–93, the demo importer's pull names
+//   `mode: 'replace'`.
 //
 // HARNESS: src/units/_parity.ts (the mounted app, both shopper hosts, the operator routes), src/units/_parity5.ts (the home
 // page's pieces and documents) and src/units/W08/_customer.ts (the in-process customer stamp, for the allow-list on a customer
