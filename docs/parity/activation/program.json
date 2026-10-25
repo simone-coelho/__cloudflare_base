@@ -810,7 +810,7 @@
     {
       "id": "P92",
       "title": "Small registrations the content pack relies on (**amendment 11, E17, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
