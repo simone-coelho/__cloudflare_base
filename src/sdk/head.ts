@@ -92,7 +92,18 @@ function tableOf(v: unknown): ContextTable | null {
 function stateOf(raw: string | null): HeadState {
   try { const v: unknown = JSON.parse(raw || '{}'); return record(v) ? v as HeadState : {}; } catch { return {}; }
 }
-const cookieRefuses = (page: Page, name: string): boolean => new RegExp(`(?:^|;\\s*)${name}=false(?:;|$)`).test(page.document.cookie);
+/**
+ * A refusal the SDK holds for `choice` (`tracking` or `personalization`): the page's own refusal cookie
+ * (`opt_tracking_consent=false`, `opt_personalization_enabled=false`), or the SDK's refusal mirror for any endpoint and
+ * tenant (`opt_shopper_refusal%3A…_<choice>`, present while the refusal is in force).
+ */
+function cookieRefuses(page: Page, choice: 'tracking' | 'personalization'): boolean {
+  const own = choice === 'tracking' ? 'opt_tracking_consent' : 'opt_personalization_enabled';
+  return page.document.cookie.split(';').some((pair) => {
+    const at = pair.indexOf('='), name = pair.slice(0, at).trim(), value = pair.slice(at + 1).trim();
+    return at > 0 && (name === own ? value === 'false' : name.startsWith('opt_shopper_refusal') && name.endsWith(`_${choice}`) && value !== '');
+  });
+}
 
 function main(page: Page): void {
   const table = tableOf(readBlock(page, 'op-context-table')), images = readBlock(page, 'op-images');
@@ -101,14 +112,14 @@ function main(page: Page): void {
   let state: HeadState = {};
   try { state = stateOf(page.localStorage.getItem(HEAD_STATE_KEY)); } catch { state = {}; }
 
-  // Consent, as the engine reads it: the SDK's record of the engine's answer
-  // where it has kept one, else the server render's hint on the root; the
-  // SDK's refusal cookies override both. Personalization takes tracking.
+  // Consent, as the engine reads it: the SDK's record of the engine's last
+  // answer where it has kept one, else the server render's hint on the root;
+  // a refusal cookie overrides both. Personalization takes tracking.
   const hint = (root.getAttribute('data-op-consent') || '').split(/\s+/);
   const kept = record(state.consent) ? state.consent : null;
-  const refusesTracking = cookieRefuses(page, 'opt_tracking_consent') || (kept !== null && kept.tracking !== true);
+  const refusesTracking = cookieRefuses(page, 'tracking') || (kept !== null && kept.tracking !== true);
   const tracking = !refusesTracking && (kept !== null || hint.includes('tracking') || hint.includes('personalization'));
-  const personalization = tracking && (kept ? kept.personalization === true : hint.includes('personalization')) && !cookieRefuses(page, 'opt_personalization_enabled');
+  const personalization = tracking && (kept ? kept.personalization === true : hint.includes('personalization')) && !cookieRefuses(page, 'personalization');
 
   // The cell: the engine's classifier over the stored visit and this page's arrival. The visit is kept only under
   // tracking consent and dropped once tracking is refused; with neither, it is left as it is and not read.
@@ -170,11 +181,13 @@ function cellOf(page: Page, table: ContextTable, state: HeadState, now: number):
  */
 function paint(page: Page, table: ContextTable, slot: string, images: HeadImage[], shots: string[] | null, now: number): void {
   const root = page.document.documentElement;
-  const tagged = (n: number, rule: TagRule) => (images[n]?.tags?.[rule.dimension] ?? []).includes(rule.value);
+  // An image's values of a dimension: anything but a list is none.
+  const valuesOf = (n: number, dimension: string): unknown[] => { const v: unknown = images[n]?.tags?.[dimension]; return Array.isArray(v) ? v : []; };
+  const tagged = (n: number, rule: TagRule) => valuesOf(n, rule.dimension).includes(rule.value);
   const rank = (n: number): number => {
     if (!shots) return 0;
     let best = shots.length;
-    for (const value of images[n]?.tags?.contentType ?? []) { const at = shots.indexOf(value); if (at >= 0 && at < best) best = at; }
+    for (const value of valuesOf(n, 'contentType')) { const at = typeof value === 'string' ? shots.indexOf(value) : -1; if (at >= 0 && at < best) best = at; }
     return best;
   };
   let order = images.map((_, n) => n).sort((a, b) => rank(a) - rank(b) || a - b);

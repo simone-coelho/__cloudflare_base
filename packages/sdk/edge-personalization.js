@@ -1937,7 +1937,6 @@
     }
     const offConsent = core.onConsentChange(() => {
       if (!core.trackingAllowed) resetCapture();
-      keepForHead();
       if (!permitted(current)) deliver(null, current?.page ?? "");
     });
     function keepForHead(experiment) {
@@ -1961,7 +1960,7 @@
       try {
         const state = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? "null");
         const arm = state?.arm;
-        return arm && (arm.class === "default" || arm.class === "personalized") && typeof arm.tableVersion === "string" && arm.tableVersion.length <= 128 ? JSON.stringify({ class: arm.class, tableVersion: arm.tableVersion }) : void 0;
+        return arm && (arm.class === "default" || arm.class === "personalized") && typeof arm.tableVersion === "string" && arm.tableVersion.length >= 1 && arm.tableVersion.length <= 128 ? JSON.stringify({ class: arm.class, tableVersion: arm.tableVersion }) : void 0;
       } catch {
         return void 0;
       }

@@ -45,7 +45,7 @@ import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
 import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, toEvidenceFloorOf, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
-import { contextTableOf, evidenceFloorOf } from '@/content/decide';
+import { contextTableOf, evidenceFloorOf, type ContextTableDocument } from '@/content/decide';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -1115,11 +1115,11 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
  * declared layout slot has none (404). The server render fetches it and inlines
  * it for the head script (src/sdk/head.ts).
  */
-decisionRoutes.get('/:tenant/context-table/:page/:version?', async (c) => {
+const contextTable = createMiddleware<{ Bindings: Env; Variables: TenantVariables }>(async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim(), page = c.req.param('page') ?? '', version = c.req.param('version');
   const none = (status: 404 | 503, error: string) => { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error }, status); };
   if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(tenant)) return none(404, 'no context table for that page');
-  let doc: (Awaited<ReturnType<typeof contextTableOf>> & { version: string }) | null = null;
+  let doc: (ContextTableDocument & { version: string }) | null = null;
   try {
     const pin = await pinPublication(c.env, tenant, true);
     const [slotsRev, learnRev] = await Promise.all([readPinnedPublication(c.env, SLOTS_KIND, tenant, pin), readPinnedPublication(c.env, LEARN_KIND, tenant, pin)]);
@@ -1138,6 +1138,8 @@ decisionRoutes.get('/:tenant/context-table/:page/:version?', async (c) => {
   c.header('Cache-Control', version === undefined ? 'public, max-age=60' : 'public, max-age=31536000, immutable');
   return c.json(doc);
 });
+decisionRoutes.get('/:tenant/context-table/:page', contextTable);
+decisionRoutes.get('/:tenant/context-table/:page/:version', contextTable);
 decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionRequest, requireShopper({ forward: false, bodyLimit: 8192, bodyTimeoutMs: 5000 }), async (c, next) => {
   try { await snapshotContext(c.req.raw); }
   catch (error) {

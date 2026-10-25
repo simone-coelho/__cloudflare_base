@@ -264,13 +264,15 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
     if (matches.length === 1) view(placement(set, matches[0]!), shown);
   }
-  const offConsent = core.onConsentChange(() => { if (!core.trackingAllowed) resetCapture(); keepForHead(); if (!permitted(current)) deliver(null, current?.page ?? ''); });
+  const offConsent = core.onConsentChange(() => { if (!core.trackingAllowed) resetCapture(); if (!permitted(current)) deliver(null, current?.page ?? ''); });
 
   /**
-   * P84 (E8): what the head script reads before the next paint, kept under `opt_head` beside its own state: the
-   * consent the engine acknowledged (so a page without the server render's hint knows it, and a withdrawal reaches
-   * the next paint) and, from an answer, its experiment (the id names the salt, `<tenant>:<brand>:<salt>`, with the
-   * salt version), from which the head script computes the class of a browser the engine knows.
+   * P84 (E8): what the head script reads before the next paint, kept under `opt_head` beside its own state, from a
+   * current answer only (never from a stale one or outside a request, so no fenced write is added): the consent the
+   * engine acknowledged with it, so a page without the server render's hint knows it, and its experiment (the id
+   * names the salt, `<tenant>:<brand>:<salt>`, with the salt version), from which the head script computes the class
+   * of a browser the engine knows. A withdrawal between answers reaches the next paint through the SDK's refusal
+   * cookies, which the head script reads before anything kept here.
    */
   function keepForHead(experiment?: unknown): void {
     try {
@@ -287,7 +289,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     try {
       const state = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? 'null') as { arm?: { class?: unknown; tableVersion?: unknown } } | null;
       const arm = state?.arm;
-      return arm && (arm.class === 'default' || arm.class === 'personalized') && typeof arm.tableVersion === 'string' && arm.tableVersion.length <= 128
+      return arm && (arm.class === 'default' || arm.class === 'personalized') && typeof arm.tableVersion === 'string' && arm.tableVersion.length >= 1 && arm.tableVersion.length <= 128
         ? JSON.stringify({ class: arm.class, tableVersion: arm.tableVersion }) : undefined;
     } catch { return undefined; }
   }
