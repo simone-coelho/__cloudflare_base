@@ -106,6 +106,8 @@ const N4 = piece('look.new-four', { category: ['bags'] }, { eligibleWhen: { cont
 /** An id over the sixty-four-code-unit bound, on a record with no title. */
 const LONG_ID = `look.${'long-identifier-'.repeat(5)}end`;
 const { title: _tl, ...LONG } = piece(LONG_ID, { category: ['bags'] }); void _tl;
+/** R-P300: a record with no id (the validator refuses it; its address is `records[k]` alone). */
+const { id: _ni, ...NO_ID } = piece('look.no-id', { category: ['bags'] }); void _ni;
 
 const REGISTRY = { ...REFLEX_DOCUMENT, version: 'p82-attribute-registry',
   dimensions: [{ key: 'category', source: 'category' }, { key: 'productType', source: 'productType' }, { key: 'color', source: 'color' }, { key: 'occasion', source: 'occasion', multi: true }] };
@@ -219,6 +221,7 @@ describe('unit:P82.ID2', () => {
       const rule = await importJson(m, [null, N4, ALPHA], 'replace');
       const csv = await importCsv(m, [ALPHA, N2], 'replace');
       const pulled = await pull(m, [null, ALPHA, N2], 'replace');
+      const noId = await importJson(m, [ALPHA, NO_ID], 'replace');
       await inEffect(m);
       const vocabulary = await importJson(m, ['an entry that is not a record', ALPHA, BETA, GAMMA, N3], 'replace');
       const all = [schema, rule, csv, pulled, vocabulary];
@@ -232,6 +235,8 @@ describe('unit:P82.ID2', () => {
       }, `${host}: P82.ID2 — the k of the file as sent (today pieces[i] counted after the dropped entries, with no id)`).toEqual({
         validator: 'named', eligibility: 'named', csvRow: 'named', pull: 'named', vocabulary: 'named',
       });
+      // R-P300: a record with no id is addressed by its position alone, never by an id it does not have.
+      expect.soft([noId.status, errorsOf(noId)], `${host}: P82.ID2 — a record with no id is addressed records[k] alone (R-P300)`).toEqual([422, ['records[1].id: required string']]);
     }, 120_000);
 
     it(`host (${host}): LOCK — a clean replace stores the file's records in file order, an empty file is refused with today's words, and a PUT's refusal keeps addressing the document's own pieces[i]`, async () => {
@@ -331,5 +336,9 @@ describe('unit:P82.ID3', () => {
     }, 'P82.ID3 — the kit states the record address and the warning members (today: pieceIndex and recordIndex only)').toEqual({
       importRow: [true, true, true], diagnostics: [true, true, true, true], notEchoed: ['qualified'], kit03: [true, true, true],
     });
+    // R-P300: both passages state the address form itself, the position and the record's quoted id: records[k] '<id>'.
+    const addressed = (text: string) => /records\[[^\]]*\] '[^']*'/.test(text) ? "records[k] '<id>'" : "no records[k] '<id>' address";
+    expect.soft({ importRow: addressed(row), kit03: addressed(paragraph) }, 'P82.ID3 — the import row and the recordIndex paragraph state the address records[k] \'<id>\' (R-P300)')
+      .toEqual({ importRow: "records[k] '<id>'", kit03: "records[k] '<id>'" });
   });
 });
