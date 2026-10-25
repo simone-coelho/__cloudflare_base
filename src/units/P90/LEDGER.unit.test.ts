@@ -72,6 +72,28 @@
 // DEFERRED: LV1 (both hosts and a customer-profile stamp for the script and the pull); the pack's sentences are the
 // documents lane's. TOLD: (b) and (c) are not built (D3).
 //
+// RULED (R-P345): the readings as amended by R-P344 ratified; the harness form accepted; the `hosts` member confirmed; the
+// scheme check moves ahead of the preconditions and the non-loopback refusal becomes exit 2 with `import-content: …`, the
+// demo path alike; the no-collision sweep of the pull tests accepted.
+// MEASURED at 5be67f91 (_evidence/parity-step3/S29/specifier/logs/a/ and b/, serial, --no-cache, working directory the tree):
+// today 15 RED for the missing behaviour (the script has no --file and pulls the demo catalogue; an http: or redirecting
+// feed is fetched and written; a `hosts` member is refused as another key; the kit silent); the fix (sketches/p90.py:
+// scripts/import-content.mjs, src/content/import.ts, src/routes/content.ts, the kit; its host-entry rule refuses a wildcard,
+// which the URL parser renders as itself) 15/15 three times; the wrong fixes, each RED on its own legs: `noifmatch`,
+// `nokey` and `nomode` EX1's legs ×4 each (the refused record's 422 becomes 428 or 400), `mintremote` EX1's refusal leg ×2,
+// `httpanywhere` and `followredirects` EX2's scheme-and-redirect leg ×2 each, `hostafterfetch` EX2's hosts and customer
+// legs ×4, `hostsuffix` EX2's hosts leg ×2, `hostimportonly` EX2's hosts, together and customer legs ×6, `kitleft` the kit
+// leg; tsc exit 0 on both. Locks: W19 B1–B3, P82, P38, P91, content.test.ts and the publication tests 122/122 on both
+// trees; W39 (each scratch copy given a .git of its own) 7/12 on both, the five H3 tests passing, H1, H2, H4 ×2 and H5
+// failing alike (the scratch layout), not counted.
+// COLLISION FOUND (for ruling): scripts/lib/tool-token.test.mjs (node --test) :169–175 and :203–213 drive every family
+// script through a synthetic adapter and expect a token refusal as a thrown `Operator credentials unavailable` with no
+// output; R-P345's exit 2 with `import-content: …` makes the import-content cases answer `synthetic exit 2` with one output
+// line, so "import-content: unsafe configuration stops…" and "import-content: CLI precedence and remote token path…" fail
+// (28/35 under the fix against 30/35 today; the five failing on both trees, acceptance-run's four and W03.03, are the
+// scratch layout's). Proposed R10 (test-only, R-P195's form): for `import-content` those two tests expect `synthetic exit 2`
+// and one output line `import-content: Operator credentials unavailable…`, nothing sent; every other script's case unchanged.
+//
 // HARNESS: src/units/_parity.ts (the mounted app, both hosts, the operator routes), src/units/_parity5.ts (the home page's
 // pieces and documents, `putKind`) and src/units/W08/_customer.ts (the in-process customer stamp). Imports from src/units/:
 // ../_parity, ../_parity5, ../W08/_customer.
