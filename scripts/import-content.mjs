@@ -74,9 +74,10 @@ const auth = { 'Content-Type': 'application/json', Authorization: `Bearer ${toke
 
 // ── The configuration publication protocol (kit 02 §4) ──────────────────────────────────────────
 const fail = (message) => { console.error(`import-content: ${message}`); process.exit(1); };
+/** A query string from its members, in order (plain encoding: the script runs where only the language's own globals are). */
+const queryString = (members) => Object.entries(members).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
 const call = async (method, path, body, headers = {}, query = {}) => {
-  const params = new URLSearchParams({ scope, ...query });
-  const response = await fetch(`${base}${path}?${params.toString()}`, { method, headers: { ...auth, ...headers }, ...(body === undefined ? {} : { body }) });
+  const response = await fetch(`${base}${path}?${queryString({ scope, ...query })}`, { method, headers: { ...auth, ...headers }, ...(body === undefined ? {} : { body }) });
   let answer = null;
   try { answer = await response.json(); } catch { answer = null; }
   return { status: response.status, body: answer && typeof answer === 'object' ? answer : {} };
@@ -130,7 +131,7 @@ if (upload) {
   const query = { format: upload.format, mode: upload.mode, ...(upload.dryRun ? { dryRun: '1' } : {}) };
   const path = '/content/catalog/import';
   const headers = { 'Content-Type': upload.format === 'csv' ? 'text/csv' : 'application/json', 'If-Match': current.ifMatch,
-    'Idempotency-Key': await operationKey(current.revision, [scope, 'POST', `${path}?${new URLSearchParams(query).toString()}`, current.ifMatch, upload.text]) };
+    'Idempotency-Key': await operationKey(current.revision, [scope, 'POST', `${path}?${queryString(query)}`, current.ifMatch, upload.text]) };
   const { status, body } = await call('POST', path, upload.text, headers, query);
   const errors = body.errors ?? (body.error ? [body.error] : undefined);
   console.log('import:', JSON.stringify({ status, ok: body.ok === true, revision: body.revision, changed: body.changed, removed: body.removed,
