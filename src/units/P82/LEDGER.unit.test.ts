@@ -49,11 +49,9 @@
 //   · src/units/W19/B2.unit.test.ts :1113 and :1124 (W19.S1.02): the exact import 422 strings take the address
 //     (`records[1] 'has-none'…`, `records[0] 'csv-has-none'…`);
 //   · src/units/W19/B1.unit.test.ts :697 (W19.F2.01): the JSON import, CSV import and pull legs take the address; the PUT
-//     leg keeps `pieces[0].journeyStageFit`.
-// COLLISION NOT IN THE GRANT, for the lead: src/units/W19/B2.unit.test.ts :1014–1016 (W19.S1.01) compares the JSON import's
-// and the pull's warnings with `toEqual` against `{ code, pieceIndex, slotType }` objects, so the three ruled members turn
-// it RED for those two labels (its PUT and read labels stay green); it needs the same grant to read the import and pull
-// answers' warnings with the members added.
+//     leg keeps `pieces[0].journeyStageFit`;
+//   · src/units/W19/B2.unit.test.ts :1014–1016 (W19.S1.01; granted R-P297): the JSON import's and the pull's
+//     `unknown_slot_type` warnings gain the record's position and id; the direct PUT's and the read's stay exactly as before.
 //
 // DEFERRED, with the reason: the pack's own examples (docs/tapestry-packs, the documents lane). TOLD, not a leg: a warning
 // about a stored piece the merge did not carry names no record; an error the validator raises about a stored piece the

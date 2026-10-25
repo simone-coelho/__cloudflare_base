@@ -1010,10 +1010,17 @@ describe('unit:W19.S1.01', () => {
       //    `warnings[]` keyed by `pieceIndex`, counted in `warningCount` — on
       //    every write answer AND on the read, because the channel is a function
       //    of the stored documents (routes/content.ts:209, :287, :317).
+      // S24 R10 (amendment 11 P82; granted R-P297), test-only, R-P195's form: on the import's and the pull's answers each
+      // warning also names the record of the file that wrote the piece, its position in the file sent and its id (P82.ID3);
+      // the direct PUT's and the read's expectations are exactly as before.
+      const recordedWarnings = [
+        { ...expectedWarnings[0]!, recordIndex: 1, recordId: 'compiled-only-edit', recordIdTruncated: false },
+        { ...expectedWarnings[1]!, recordIndex: 2, recordId: 'partly-defined-edit', recordIdTruncated: false },
+      ];
       for (const { label, answer } of answers) {
         expect(answer.diagnostics.warnings,
           `W19.S1.01 — ${label}: a stored piece naming a slot type no page of the tenant's slots document defines is named, by piece and by slot type`)
-          .toEqual(expectedWarnings);
+          .toEqual(label === 'JSON import' || label === 'pull' ? recordedWarnings : expectedWarnings);
         expect(answer.diagnostics.warningCount, `W19.S1.01 — ${label}: and is counted like every other warning`).toBe(2);
         expect(answer.diagnostics.slots,
           `W19.S1.01 — ${label}: the answer names the slots document it compared against, as it already names the registry`)
