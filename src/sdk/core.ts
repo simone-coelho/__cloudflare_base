@@ -1173,7 +1173,8 @@ export function createCore(config: ClientConfig, host: Host): Core {
   let reconnectTimer: unknown = null;
   let socketGeneration = 0;
 
-  function setStatus(s: SocketStatus): void { status = s; emit('socket', s); }
+  // P74 (R-P311): a status is reported when it changes, so the hosts' welcome frame after an open reports nothing again.
+  function setStatus(s: SocketStatus): void { if (s === status) return; status = s; emit('socket', s); }
 
   function socketUrl(): string | null {
     if (!cfg.endpoint) return null;

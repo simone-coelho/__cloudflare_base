@@ -617,7 +617,15 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
 
   // P30: nor does the cached layout's beacon, which reports what a cache drew.
   const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure'].includes(event.type) && core.socketStatus !== 'connected') follow(); });
-  const offSocket = (): void => undefined; // P81: a socket open asks nothing again; the engine pushes the page view's changes
+  // P81: a socket open asks nothing again; the engine pushes the page view's changes. P74 (R-P311): a socket connected
+  // again after it was lost (closed, reconnecting or in error after this view's first connection) asks once, since the
+  // engine dropped the page view it pushes to with the shopper's last socket; a first open asks nothing, an open during
+  // the first snapshot follows it with nothing, and the welcome frame (no change of status) is never a reconnect.
+  let joined = false, lost = false;
+  const offSocket = core.on('socket', status => {
+    if (status === 'connected') { if (lost) { lost = false; follow(); } joined = true; }
+    else if (joined && (status === 'reconnecting' || status === 'closed' || status === 'error')) lost = true;
+  });
   const timer = opts.refreshMs === undefined ? undefined : host.setInterval(() => { if (selected) void refresh(); }, Math.max(1_000, Math.min(300_000, opts.refreshMs)));
   function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); exposed.clear(); cachedView = null; content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
   return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, destroy };
