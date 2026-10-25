@@ -111,8 +111,9 @@
 //      than its own, a salt version other than the stored one (one paint, the stored class re-derived next time). The
 //      brand rules apply on every row, the default included, exactly as the engine applies them (P83's tag pin within its
 //      window, then the minimum's promotion).
-//   P5 The arm (direct path, R-P359): the SDK's first decision request carries `entry` (snapshotEntry of the arrival it
-//      already computes, C2 as R-P363 rules it) beside `arm`. A brand-new browser's head script draws `default` with p = share ×
+//   P5 The arm (direct path, R-P359): the SDK's first decision request carries `arm`; C2 as R-P363 rules it has `entry`
+//      beside it, which the SDK computes only under tracking consent (core.ts entryOf :482-486), so a brand-new browser's
+//      first request carries no arrival (asserted: absent or blank; READING FOR RULING, the C2/C3 conflict's SDK half). A brand-new browser's head script draws `default` with p = share ×
 //      (count of `default` in arms) ÷ |arms| (armFor's split), else `personalized`, from crypto.getRandomValues, and
 //      stores { class, tableVersion, saltVersion }; the SDK's first decision request (direct mode, fresh browser) carries
 //      `arm`: the JSON text of { class, tableVersion } (a string, as `entry` is: snapshotContext's allow-list admits string
@@ -195,7 +196,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { Hono } from 'hono';
-import { JSDOM, ResourceLoader } from 'jsdom';
+import * as jsdom from 'jsdom';
 import { describe, expect, it, vi } from 'vitest';
 
 // The customer stamp loads the real Worker (src/index.ts); the module doubles its harness names (src/units/W08/_customer.ts).
@@ -221,7 +222,7 @@ import { authorityLocks } from '@/sdk/testHost';
 import type { RequestInitLike, ResponseLike } from '@/sdk/types';
 import { deviceOf } from '@/services/platform';
 // CLASSIFIER_VERSION is a NEW export (P3); the rest are today's.
-import { CLASSIFIER_VERSION, liveVisit, snapshotEntry, visitBucket, type ChannelSignals, type ContextVocabulary, type VisitContext } from '@/services/visit';
+import { CLASSIFIER_VERSION, liveVisit, visitBucket, type ChannelSignals, type ContextVocabulary, type VisitContext } from '@/services/visit';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import type { Env } from '@/types/env';
 
@@ -512,7 +513,8 @@ describe('unit:P84.CO1', () => {
       ['two contexts of equal specificity', slotsOf({ shotOrders: [{ context: { channel: 'email', visitBuckets: 'any' }, order: ['studio'] }, { context: { channel: 'any', visitBuckets: ['1'] }, order: ['detail'] }] }), 'any'],
       ['a value outside the grammar (an angle bracket)', slotsOf({ shotOrders: [{ context: { channel: 'email', visitBuckets: ['1'] }, order: ['<b>model</b>'] }] }), '<b>model</b>'],
       ['a value repeated', slotsOf({ shotOrders: [{ context: { channel: 'email', visitBuckets: ['1'] }, order: ['studio', 'studio'] }] }), 'studio'],
-      ['P01 orders on the carousel (control)', slotsOf({ orders: [{ context: { channel: 'email', visitBuckets: ['1'] }, modules: [id(1)] }] }), 'pdp-carousel'],
+      // The control's carousel carries no minimum: P83 refuses a minimum beside orders before P01's layout-only rule is read.
+      ['P01 orders on the carousel (control)', slotsOf({ orders: [{ context: { channel: 'email', visitBuckets: ['1'] }, modules: [id(1)] }], minimum: undefined }), 'pdp-carousel'],
       ['P30 contextOnly on the carousel (control)', slotsOf({ contextOnly: { enabled: true } }), 'pdp-carousel'],
     ];
     const outcomes: Array<{ case: string; status: number; named: boolean; errors: string[] }> = [];
@@ -595,7 +597,17 @@ const LAUNCH_HEAD_IMAGES = [...IMAGES, LAUNCH_IMAGE].map(headImage);
 const tableDocument = (over: Record<string, unknown> = {}) => { const doc = expectedDocument(over); return { ...doc, version: sha256Hex(canonical(doc)) }; };
 const TABLE = tableDocument();
 const PRODUCT_URL = 'https://shop.example.invalid/products/tabby-shoulder-bag-26';
+/** The repository types jsdom minimally (src/console/jsdom.d.ts: JSDOM, its window a record); the parts used here, typed locally. */
+type Loader = new (options: { userAgent: string }) => { fetch(url: string, options: unknown): unknown };
+const { JSDOM, ResourceLoader } = jsdom as unknown as { JSDOM: typeof jsdom.JSDOM; ResourceLoader: Loader };
+/** A subresource loader that loads nothing: no head-script run reaches the network. */
 class NoFetch extends ResourceLoader { override fetch() { return null; } }
+interface DomElement { getAttribute(name: string): string | null; style: { length: number; item(i: number): string; getPropertyValue(name: string): string } }
+interface HeadWindow {
+  localStorage: { getItem(key: string): string | null; setItem(key: string, value: string): void };
+  document: { cookie: string; documentElement: DomElement; head: { querySelectorAll(selector: string): ArrayLike<DomElement> }; querySelectorAll(selector: string): ArrayLike<unknown> };
+  navigator: object; XMLHttpRequest: { prototype: unknown }; Math: { random: () => number }; Date: { now: () => number }; eval(code: string): unknown;
+}
 
 interface HeadOptions { url: string; referrer?: string; userAgent?: string; table: unknown; images: HeadImage[]; storage?: Record<string, string>;
   cookie?: string; consent?: boolean; random?: number; now?: number }
@@ -613,7 +625,7 @@ function runHead(o: HeadOptions): HeadRun {
     + o.images.map(i => `<figure data-op-slot="${CAROUSEL}" data-op-content="${i.id}"><img src="${i.src}" alt=""></figure>`).join('') + '</div></body></html>';
   const dom = new JSDOM(html, { url: o.url, ...(o.referrer ? { referrer: o.referrer } : {}), runScripts: 'outside-only',
     resources: new NoFetch({ userAgent: o.userAgent ?? DESKTOP_UA }) });
-  const w = dom.window;
+  const w = dom.window as unknown as HeadWindow;
   for (const [k, v] of Object.entries(o.storage ?? {})) w.localStorage.setItem(k, v);
   if (o.cookie) w.document.cookie = o.cookie;
   const cookieBefore = w.document.cookie;
@@ -634,13 +646,13 @@ function runHead(o: HeadOptions): HeadRun {
   const root = w.document.documentElement;
   const positions = o.images.map((_, n) => root.style.getPropertyValue(`--op-${CAROUSEL}-${n + 1}`).trim());
   const order = o.images.map((img, n) => ({ id: img.id, at: Number(positions[n]) })).filter(x => Number.isInteger(x.at) && x.at >= 1).sort((a, b) => a.at - b.at).map(x => x.id);
-  const links = [...w.document.head.querySelectorAll('link')];
-  const attr = (l: Element, name: string, property: string) => l.getAttribute(name) ?? ((l as unknown as Record<string, unknown>)[property] as string | undefined) ?? null;
+  const links = Array.from(w.document.head.querySelectorAll('link'));
+  const attr = (l: DomElement, name: string, property: string) => l.getAttribute(name) ?? ((l as unknown as Record<string, unknown>)[property] as string | undefined) ?? null;
   const preloads = links.filter(l => l.getAttribute('rel') === 'preload').map(l => ({ as: attr(l, 'as', 'as'), href: attr(l, 'href', 'href'),
     imagesrcset: attr(l, 'imagesrcset', 'imageSrcset'), imagesizes: attr(l, 'imagesizes', 'imageSizes'), fetchpriority: attr(l, 'fetchpriority', 'fetchPriority') }));
   const firstPreload = links.findIndex(l => l.getAttribute('rel') === 'preload'), firstStylesheet = links.findIndex(l => l.getAttribute('rel') === 'stylesheet');
   const otherStyles = Array.from({ length: root.style.length }, (_, i) => root.style.item(i)).filter(name => !name.startsWith('--op-'));
-  const hidden = [...w.document.querySelectorAll('[hidden], body [style]')].length;
+  const hidden = Array.from(w.document.querySelectorAll('[hidden], body [style]')).length;
   let stored: Record<string, unknown> | null = null;
   try { stored = JSON.parse(w.localStorage.getItem('opt_head') ?? 'null') as Record<string, unknown> | null; } catch { stored = null; }
   return { error, context: root.getAttribute('data-op-context'), arm: root.getAttribute('data-op-arm'), table: root.getAttribute('data-op-table'), positions, order, preloads,
@@ -684,7 +696,7 @@ function engineCell(c: ArrivalCase): { context: string; visit: Record<string, un
   const device = deviceFor(c.ua);
   return { context: visit.entryChannel && device ? `${visit.entryChannel}|${visitBucket(visit.visitCount)}|${device}` : 'default', visit: { ...visit, lastSeen: NOW } };
 }
-const storedVisit = (prior: ArrivalCase['prior']) => prior ? { opt_head: JSON.stringify({ visit: prior }) } : {};
+const storedVisit = (prior: ArrivalCase['prior']): Record<string, string> => prior ? { opt_head: JSON.stringify({ visit: prior }) } : {};
 
 describe('unit:P84.CO2', () => {
   it('logic: the head script is built by scripts/build-sdk.mjs from src/sdk/head.ts (a third SDK target, IIFE, with its two copies), its bundle reads src/services/visit.ts; `node scripts/build-sdk.mjs --check` exits 0 and names it; each copy carries edge-head.js.csp = sha256-<base64 SHA-256 of its bytes>; the package exports it within a 16,384-byte budget (R-P364); on a copy of the tree one byte off in any copy or its .csp fails the check by name', async () => {
@@ -956,7 +968,7 @@ describe('unit:P84.CO3', () => {
         `${host}: P84.CO3 — ignored with a diagnostic (today the member is refused 401)`).toEqual({ status: 200, arm: armFor(s.subject, holdout), armRequest: { class: other, honoured: false, reason: 'ignored' }, counted: 1 });
     }, 120_000);
 
-    it(`sdk (${host}): the SDK's first decision request on the direct path carries entry (the arrival it computes, C2 as ruled) and arm, the JSON text of the class and table version the head script stored; the issued identifier lands in that class, and the SDK keeps the answer's experiment for the head script; a browser with no stored draw sends no arm member (lock)`, async () => {
+    it(`sdk (${host}): the SDK's first decision request on the direct path carries arm (no arrival before a choice), the JSON text of the class and table version the head script stored; the issued identifier lands in that class, and the SDK keeps the answer's experiment for the head script; a browser with no stored draw sends no arm member (lock)`, async () => {
       const holdout = holdoutOf(0.3);
       const m = await mount(host, docsWith({ learn: learnOf({ ...holdout }) }));
       expectPublished(m, 'P84.CO3 — the documents publish');
@@ -969,13 +981,16 @@ describe('unit:P84.CO3', () => {
         const subject = (first?.answer.session as { subject?: string } | undefined)?.subject ?? null;
         const experiment = first?.answer.experiment as { id?: string; saltVersion?: number | null } | undefined;
         const stored = JSON.parse(drawn.host.storage.get('opt_head') ?? 'null') as { experiment?: unknown } | null;
+        // No arrival leaves before a choice (the SDK computes it only under tracking consent, core.ts entryOf :482-486; the
+        // engine reads it only under one, service.ts :791): the first request's entry is absent or blank (C2 reading, for ruling).
         const entry = first?.body?.entry;
+        const arrival = typeof entry === 'string' ? JSON.parse(entry) as Record<string, string> : null;
         expect.soft({ first: first ? 'sent' : `no first request: ${drawn.calls.map(c => c.call).join(', ')}`, arm: typeof text === 'string' ? JSON.parse(text) as unknown : text ?? null,
-          entry: typeof entry === 'string' ? JSON.parse(entry) as unknown : entry ?? null,
+          entry: arrival === null || Object.values(arrival).every(v => v === '') ? 'no arrival before a choice' : arrival,
           minted: subject ? classOf(armFor(subject, holdout)) : null, kept: stored?.experiment ?? null },
-        `${host}: P84.CO3 — the stored draw and the arrival ride the first request and the draw is honoured; the answer's experiment is kept (today the SDK sends neither)`).toEqual({ first: 'sent',
+        `${host}: P84.CO3 — the stored draw rides the first request and is honoured; no arrival before a choice; the answer's experiment is kept (today the SDK sends no arm)`).toEqual({ first: 'sent',
           arm: { class: 'default', tableVersion: version },
-          entry: JSON.parse(snapshotEntry({ utmMedium: 'paid_social', utmSource: 'instagram', referrer: '', siteHost: SITE }) ?? 'null') as unknown,
+          entry: 'no arrival before a choice',
           minted: 'default', kept: experiment ? { id: experiment.id, saltVersion: experiment.saltVersion } : 'an answer carrying experiment' });
       } finally { drawn.destroy(); }
       const plain = freshSdk(m, {});
