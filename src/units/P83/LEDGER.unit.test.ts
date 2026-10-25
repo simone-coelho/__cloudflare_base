@@ -53,7 +53,10 @@
 // vocabulary; (2) the snapshot's `refusedCount` and the slot-governance count (src/content/service.ts)
 // keep counting every `pinDiagnostics` entry, the unmet tag pin included, as they count P43's `module_not_returned`
 // today (allowedPaths frozen; an advisory candidate for the owner): the GR3 leg locks only the form (`refusedCount`
-// beside the entries); (3) wording gender-neutral.
+// beside the entries); (3) wording gender-neutral. R-P309 (the review of 61925cae): four assertions added, none changed —
+// GR3 the rule asking more than the span's unpinned positions never moves the pinned item; GR4 the kit's window ends
+// and "enforced, not weighted" bound as phrases; GR2 a window missing one of its ends refused by name; GR1 the
+// receipt of an item the rule moved down.
 //
 // R10: none (P04, P15, W20, P80, P38 and the content, decide and receipt tests unchanged under the sketch; the whole suite below).
 //
@@ -75,26 +78,31 @@
 // in P80's shape; the shopper who viewed a handbag (the visitor's interest ranks the handbag images above the others), or a cold one;
 // the holdout's default arm in a world of its own. The decision's clock is moved with fake Date only.
 //
-// MEASURED at eb364d21 (_evidence/parity-step3/S25/specifier/logs/d/, serial, --no-cache, working directory the tree):
+// MEASURED at 744ff15f (_evidence/parity-step3/S25/specifier/logs/e/, serial, --no-cache, working directory the tree):
 // 17 RED for the missing behaviour — GR1 (the rule not read: the catalogue order on the default arm, the on-model images
-// not served on the personalized arm, no `minimum` on a record or a receipt, every malformed rule and the rule beside
-// orders published), GR2 (the launch image never leads, no `pinnedTag` on a record or a receipt, the best-ranked launch
-// image not chosen, every malformed pin published), GR3 (no unmet entry and no `refusedCount`; the pin and the rule
-// together not applied), GR4 (the kit silent); the locks inside them GREEN (P04's item-pin refusal, the orders alone
+// not served on the personalized arm, no `minimum` on a record or a receipt, the moved-down item's receipt included,
+// every malformed rule and the rule beside orders published), GR2 (the launch image never leads, no `pinnedTag` on a
+// record or a receipt, the best-ranked launch image not chosen, every malformed pin published, a window missing an end
+// included), GR3 (no unmet entry and no `refusedCount`; the pin and the rule together not applied, the rule asking 2 in
+// the first 2 included), GR4 (the kit silent); the locks inside them GREEN (P04's item-pin refusal, the orders alone
 // published, the item-pin and band sentences). NEGATIVE CONTROLS (sketches/p83.py, never committed): the fix —
 // src/content/kinds.ts (both members published; the rule refused beside orders), src/content/decide.ts (the tag pin
 // passed only inside its window by the decision's clock, both members onto the record, the unmet pin named after the
-// refusals), src/reflex/contentCompose.ts (the tag pin and the guarantee in `decideSlot`), src/learn/receipts.ts (both
-// members and their `why`), src/learn/replay.ts (a tag-pinned position and the ranked positions after it) and the kit —
-// 17/17 four times, tsc clean; `ordersadmitted` (the rule admitted beside orders) turns GR1's publication leg RED; at
-// eb176a88 (logs/b/, legs the later head left as they were) `weighted` (a score boost) GR1's four host legs, `wholetake`
-// (the whole take counted) GR1's four and GR3's two-rules leg, `outsidewindow` GR2's window leg, `refuseunmet` GR3's
-// unmet leg, `firstbycatalogue` GR2's best-ranked leg, `silentreceipt` GR1's and GR2's record legs, `kitleft` GR4, each
-// on both hosts where the leg runs on both. P04, P15, W20, P80, P38, src/content/decide.test.ts, src/learn/receipts.test.ts
-// and src/routes/content.test.ts: 168/168 on today and under the fix (logs/a/). The whole suite at eb176a88 (logs/c/,
-// compare.txt): 3926 tests on both trees, no test failing under the fix alone; the 17 P83 tests the only difference. The
-// 61 failing on both trees, their cause not measured here: P82's specification (7, its product not on this branch) and
-// 54 in src/demos/kit/root.worker.test.ts, P45-P47, P51-P53, W19 B1-B3, W39 and W40 (LEDGER, P6).
+// refusals), src/reflex/contentCompose.ts (the tag pin and the guarantee in `decideSlot`, a pinned decision never
+// moved), src/learn/receipts.ts (both members and their `why`), src/learn/replay.ts (a tag-pinned position and the
+// ranked positions after it) and the kit (the window's ends in order, the rule enforced, never weighted) — 17/17 three
+// times; the reviewer's controls (S25/reviewer-spec/sketches/ctl-p83.py, after the fix): `evictpinned` (the guarantee
+// moves a pinned decision) turns GR3's both-rules leg RED, `kitwrong` (both rules stated backwards) GR4; the wrong fixes:
+// `openended` (a window without `to` published as open-ended) GR2's publication leg, `receiptmovedin` (the rule on the
+// receipt of a moved-in item only) GR1's personalized leg, `ordersadmitted` GR1's publication leg, `weighted` (a score
+// boost) GR1's four host legs and GR3's both-rules leg, `wholetake` (the whole take counted) the same six, `outsidewindow`
+// GR2's window leg, `refuseunmet` GR3's unmet leg, `firstbycatalogue` GR2's best-ranked leg, `silentreceipt` GR1's and
+// GR2's record legs, `kitleft` GR4, each on both hosts where the leg runs on both. tsc on today: exit 0. P04, P15, W20,
+// P80, P38, src/content/decide.test.ts, src/learn/receipts.test.ts and src/routes/content.test.ts: 168/168 on today and
+// under the fix (logs/a/). The whole suite at eb176a88 (logs/c/, compare.txt; the later heads add P83 assertions only):
+// 3926 tests on both trees, no test failing under the fix alone; the 17 P83 tests the only difference. The 61 failing on
+// both trees, their cause not measured here: P82's specification (7, its product not on this branch) and 54 in
+// src/demos/kit/root.worker.test.ts, P45-P47, P51-P53, W19 B1-B3, W39 and W40 (LEDGER, P6).
 //
 // HARNESS: src/units/_parity.ts. Imports from src/units/: ../_parity.
 
