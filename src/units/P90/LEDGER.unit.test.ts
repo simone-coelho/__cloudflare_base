@@ -72,6 +72,11 @@
 // DEFERRED: LV1 (both hosts and a customer-profile stamp for the script and the pull); the pack's sentences are the
 // documents lane's. TOLD: (b) and (c) are not built (D3).
 //
+// R-P349 (the spec review at 39a520fa): four assertions added, none changed — EX1's loading leg shows the Idempotency-Key
+// derived from the request (two identical dry runs over one draft send one key, another file another key, a later draft its
+// own N); EX2's scheme leg adds the 303 and 308 answers; EX2's hosts leg shows the scheme before the host list (an http: URL
+// to an unlisted host 400 naming https, not 403); the kit leg binds phrases ("`http:` only on localhost…", "redirects are
+// not followed" or "no redirect" with 502), today's row locked RED.
 // RULED (R-P345): the readings as amended by R-P344 ratified; the harness form accepted; the `hosts` member confirmed; the
 // scheme check moves ahead of the preconditions and the non-loopback refusal becomes exit 2 with `import-content: …`, the
 // demo path alike; the no-collision sweep of the pull tests accepted.
@@ -250,6 +255,19 @@ describe('unit:P90.EX1', () => {
           expected('the same JSON again (skipped)', 'json', 'merge', 200), expected('--mode replace', 'json', 'replace', 200), expected('--dry-run', 'csv', 'merge', 200, true)]);
         const answers = server.received().filter(r => r.method === 'POST').map(r => [r.answer.skipped ?? false, r.answer.dryRun ?? false]);
         expect.soft(answers, `${host}: PRECONDITION — the server skipped the identical re-load and answered the dry run`).toEqual([[false, false], [false, false], [true, false], [false, false], [false, true]]);
+        // R-P349: the Idempotency-Key is derived from the request, never random — two identical dry runs over one draft send
+        // one key, another file another key; a draft at another revision names its own N.
+        const keyOf = async (args: string[]) => { const from = server.received().length; await runScript([...common, ...args], server.base);
+          return server.received().slice(from).find(r => r.method === 'POST')?.idempotencyKey ?? 'none'; };
+        const draft = await draftOf(m);
+        const sameA = await keyOf(['--file', csv, '--dry-run']), sameB = await keyOf(['--file', csv, '--dry-run']), other = await keyOf(['--file', json, '--dry-run']);
+        const written = await keyOf(['--file', fileOf('next.json', JSON.stringify([piece('p90.next')]))]);
+        const after = await draftOf(m);
+        const later = await keyOf(['--file', csv, '--dry-run']);
+        expect.soft({ identical: sameA === sameB ? 'one key' : `two keys (${sameA} / ${sameB})`, otherFile: other !== sameA ? 'another key' : 'the same key',
+          n: [sameA.split(':')[0], written.split(':')[0], later.split(':')[0]], laterKey: later !== sameA ? 'another key' : 'the same key' },
+        `${host}: P90.EX1 — the key is the request's: deterministic, bound to the file and to the draft`).toEqual({ identical: 'one key', otherFile: 'another key',
+          n: [String(draft.revision), String(draft.revision), String(after.revision)], laterKey: 'another key' });
       } finally { await server.close(); }
     }, 180_000);
 
@@ -331,6 +349,8 @@ describe('unit:P90.EX2', () => {
         'https://cms.example.invalid/moved-301.json': { status: 301, location: 'https://cms.example.invalid/feed.json' },
         'https://cms.example.invalid/moved-302.json': { status: 302, location: 'https://cms.example.invalid/feed.json' },
         'https://cms.example.invalid/moved-307.json': { status: 307, location: 'https://cms.example.invalid/feed.json' },
+        'https://cms.example.invalid/moved-303.json': { status: 303, location: 'https://cms.example.invalid/feed.json' },
+        'https://cms.example.invalid/moved-308.json': { status: 308, location: 'https://cms.example.invalid/feed.json' },
         'https://cms.example.invalid/feed.json': { status: 200, records: FEED_RECORDS },
         'http://cms.example.invalid/feed.json': { status: 200, records: FEED_RECORDS },
       });
@@ -343,7 +363,7 @@ describe('unit:P90.EX2', () => {
         for (const url of ['http://localhost:9/p90.json', 'http://127.0.0.1:9/p90.json', 'http://[::1]:9/p90.json']) loopback.push([url, (await pullFrom(m, url)).status]);
         const middle = await catalogue(m);
         const redirects = [];
-        for (const code of [301, 302, 307]) {
+        for (const code of [301, 302, 303, 307, 308]) {
           const a = await pullFrom(m, `https://cms.example.invalid/moved-${code}.json`);
           redirects.push([code, a.status, errorsOf(a).some(e => e.includes(`pull failed: source answered ${code}`) && /redirects are not followed/.test(e)) ? 'named' : `not named (${show(a)})`]);
         }
@@ -352,7 +372,7 @@ describe('unit:P90.EX2', () => {
           plain: [400, 'names https'], plainBare: 400, afterPlain: { fetched: 0, catalogue: before } });
         expect.soft(loopback, `${host}: P90.EX2 — LOCK: http: on a loopback host is accepted`).toEqual([['http://localhost:9/p90.json', 200], ['http://127.0.0.1:9/p90.json', 200], ['http://[::1]:9/p90.json', 200]]);
         expect.soft({ redirects, written: await catalogue(m) }, `${host}: P90.EX2 — a redirect is refused 502 by name and not followed, nothing written (today it is followed)`).toEqual({
-          redirects: [[301, 502, 'named'], [302, 502, 'named'], [307, 502, 'named']], written: middle });
+          redirects: [[301, 502, 'named'], [302, 502, 'named'], [303, 502, 'named'], [307, 502, 'named'], [308, 502, 'named']], written: middle });
       } finally { f.restore(); }
     }, 180_000);
 
@@ -377,6 +397,10 @@ describe('unit:P90.EX2', () => {
           const a = await pullFrom(m, url);
           refused.push([url, a.status, errorsOf(a).some(e => e.includes('import-sources') && e.includes(hostShown)) ? 'names import-sources and the host' : `does not (${show(a)})`]);
         }
+        // R-P349: the scheme before the host list — an http: URL to an unlisted, non-loopback host is refused 400 naming https.
+        const plainUnlisted = await pullFrom(m, 'http://evil.example.invalid/feed.json');
+        expect.soft([plainUnlisted.status, errorsOf(plainUnlisted).some(e => /https/.test(e)) ? 'names https' : `does not (${show(plainUnlisted)})`],
+          `${host}: P90.EX2 — the scheme is checked before the host list`).toEqual([400, 'names https']);
         const unlistedBare = await pullFrom(m, 'https://evil.example.invalid/feed.json', {});
         const listedBare = await pullFrom(m, 'https://cms.example.invalid/feed.json', {});
         const after = { fetched: f.fetched().length, catalogue: await catalogue(m) };
@@ -456,7 +480,9 @@ describe('unit:P90.EX2', () => {
     const pullRow = kit02.split('\n').find(line => line.startsWith('| `POST /content/catalog/pull')) ?? '';
     const listParagraph = kit03.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.includes('`import-sources`') && p.includes('`addresses`')) ?? '';
     expect.soft({
-      pullRow: [/https/i.test(pullRow) && /http:?[^|]*(localhost|loopback)/i.test(pullRow), /redirect/i.test(pullRow), /`hosts`/.test(pullRow) && /403/.test(pullRow)],
+      // R-P349: phrases, not words — https with the loopback exception, and redirects not followed (or "no redirect" with 502).
+      pullRow: [/`?https:?`?/.test(pullRow) && /`?http:?`? only (on|for) (a )?(localhost|loopback)/i.test(pullRow),
+        /redirects are not followed/i.test(pullRow) || (/no redirect/i.test(pullRow) && /502/.test(pullRow)), /`hosts`/.test(pullRow) && /403/.test(pullRow)],
       listParagraph: [/`hosts`/.test(listParagraph), /port/.test(listParagraph), /`addresses`/.test(listParagraph)],
     }, 'P90.EX2 — the kit states the scheme, the redirects and the host list (today neither row nor paragraph does)').toEqual({ pullRow: [true, true, true], listParagraph: [true, true, true] });
     const wrangler = readTree('wrangler.toml'), env = readTree('src/types/env.ts');
