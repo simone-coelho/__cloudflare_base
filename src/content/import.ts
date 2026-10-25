@@ -8,6 +8,7 @@
 import type { ContentCatalog, ContentPiece } from './types';
 import { CATALOG_DOCUMENT_FIELDS, PIECE_FIELDS, shown } from './kinds';
 import { inputLimit, inputRecords, inputTextBytes, INPUT_MAX_RECORDS, readInputText } from '@/config/input';
+import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 
 // ── Normalization: many export shapes, one catalog shape ────────────────────
 
@@ -284,7 +285,14 @@ export const CSV_COLUMNS = [
 
 // ── Assembly ────────────────────────────────────────────────────────────────
 
-export type ImportMode = 'replace' | 'merge';
+/**
+ * How a load meets the catalogue in force (P91, R-P330: every load names one): `merge` upserts by id, `replace` is the
+ * whole catalogue, `full` replaces like `replace` and keeps every stored piece the file leaves out, after the file's
+ * pieces in stored order, with lifecycle `expired`.
+ */
+export type ImportMode = 'replace' | 'merge' | 'full';
+export const IMPORT_MODES: readonly ImportMode[] = ['merge', 'replace', 'full'];
+export const isImportMode = (value: unknown): value is ImportMode => typeof value === 'string' && (IMPORT_MODES as readonly string[]).includes(value);
 
 /** Candidate pieces from raw records; nulls dropped, order kept. */
 export function candidatesFrom(records: unknown[]): Record<string, unknown>[] {
@@ -318,6 +326,13 @@ export function assemble(current: ContentCatalog, incoming: Record<string, unkno
 export function assembleFrom(current: ContentCatalog, incoming: Record<string, unknown>[], mode: ImportMode): { pieces: unknown[]; origins: (number | null)[] } {
   const inserted = (p: Record<string, unknown>) => ({ customerContentId: p.id, tags: {}, lifecycle: { status: 'live' }, ...p });
   if (mode === 'replace') return { pieces: incoming.map(inserted), origins: incoming.map((_, j) => j) };
+  // P91: a full export replaces, then keeps each stored piece the file leaves out, in stored order, expired (its records
+  // and receipts still resolve it; an expired piece is eligible for no decision). Their origins are null: no record sent them.
+  if (mode === 'full') {
+    const sent = new Set(incoming.map((p) => p.id));
+    const expired = current.pieces.filter((p: ContentPiece) => !sent.has(p.id)).map((p: ContentPiece) => ({ ...p, lifecycle: { ...p.lifecycle, status: 'expired' as const } }));
+    return { pieces: [...incoming.map(inserted), ...expired], origins: [...incoming.map((_, j) => j), ...expired.map(() => null)] };
+  }
   const byId = new Map<string, unknown>(current.pieces.map((p: ContentPiece) => [p.id, p]));
   const from = new Map<string, number>();
   const invalid: unknown[] = [], invalidFrom: number[] = [];
@@ -422,3 +437,69 @@ export class HttpJsonSource implements ContentSource {
     return (await this.pullExport()).records;
   }
 }
+
+// ── P91 (E16): the tenant's import-sources list ──────────────────────────────
+
+/** An IPv4 or IPv6 address as its bytes (4 or 16), or null when the text is neither. Embedded IPv4 in IPv6 is not read. */
+function addressBytes(text: string): number[] | null {
+  if (/^(0|[1-9][0-9]{0,2})(\.(0|[1-9][0-9]{0,2})){3}$/.test(text)) {
+    const parts = text.split('.').map(Number);
+    return parts.every((n) => n <= 255) ? parts : null;
+  }
+  if (!text.includes(':') || text.split('::').length > 2) return null;
+  const [head, tail] = text.split('::') as [string, string | undefined];
+  const groups = (part: string) => (part ? part.split(':') : []);
+  const front = groups(head), back = tail === undefined ? [] : groups(tail);
+  const fill = tail === undefined ? 0 : 8 - front.length - back.length;
+  if ((tail === undefined && front.length !== 8) || (tail !== undefined && fill < 1)) return null;
+  const all = [...front, ...Array<string>(fill).fill('0'), ...back];
+  if (all.length !== 8 || !all.every((group) => /^[0-9a-fA-F]{1,4}$/.test(group))) return null;
+  return all.flatMap((group) => { const n = parseInt(group, 16); return [n >> 8, n & 255]; });
+}
+/** One list entry, an address (a range of one) or a CIDR range, as its bytes and prefix length; null when malformed. */
+function addressRange(entry: string): { bytes: number[]; prefix: number } | null {
+  const [address, prefix, extra] = entry.split('/');
+  if (extra !== undefined || !address) return null;
+  const bytes = addressBytes(address);
+  if (!bytes) return null;
+  const bits = bytes.length * 8, length = prefix === undefined ? bits : /^(0|[1-9][0-9]{0,2})$/.test(prefix) ? Number(prefix) : NaN;
+  return length >= 0 && length <= bits ? { bytes, prefix: length } : null;
+}
+/** Whether `address` is one of the list's addresses or inside one of its ranges (same family only). */
+export function addressAllowed(list: readonly string[], address: string): boolean {
+  const caller = addressBytes(address);
+  if (!caller) return false;
+  return list.some((entry) => {
+    const range = addressRange(entry);
+    if (!range || range.bytes.length !== caller.length) return false;
+    for (let i = 0, left = range.prefix; left > 0; i++, left -= 8) {
+      const mask = left >= 8 ? 255 : (0xff << (8 - left)) & 255;
+      if ((range.bytes[i]! & mask) !== (caller[i]! & mask)) return false;
+    }
+    return true;
+  });
+}
+/** The tenant's import-sources list: the caller addresses allowed on the import, the pull and the dry run. */
+export interface ImportSources { addresses: string[] }
+/** At most this many entries in one list. */
+export const IMPORT_SOURCES_MAX = 64;
+function validateImportSources(candidate: unknown): ValidationResult<ImportSources> {
+  if (!isRecord(candidate) || Object.keys(candidate).some((key) => key !== 'addresses')) return { ok: false, errors: ['import-sources: an object { addresses }'] };
+  const list = candidate.addresses, errors: string[] = [];
+  if (!Array.isArray(list) || list.length < 1 || list.length > IMPORT_SOURCES_MAX) errors.push(`addresses: 1 to ${IMPORT_SOURCES_MAX} IPv4 or IPv6 addresses or CIDR ranges`);
+  else list.forEach((entry, i) => {
+    if (typeof entry !== 'string' || !addressRange(entry)) errors.push(`addresses[${i}]: ${JSON.stringify(entry)?.slice(0, 80) ?? typeof entry} is not an IPv4 or IPv6 address or CIDR range`);
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: { addresses: [...(list as string[])] } };
+}
+/**
+ * P91 (E16, R-P330): the optional publication member `import-sources`, `{ addresses: [...] }`. While a tenant publishes
+ * one, a caller whose `CF-Connecting-IP` is outside it, or absent, is refused on the import, the pull and the dry run.
+ */
+export const IMPORT_SOURCES_KIND: DocumentKind<ImportSources> = {
+  name: 'import-sources',
+  publication: 'r2',
+  validate: validateImportSources,
+  // No stamp: a revision is stored exactly as the tenant authored it.
+  versionOf: () => '',
+};
