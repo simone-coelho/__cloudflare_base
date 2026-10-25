@@ -72,6 +72,10 @@
 //     W19.L1.01 :680 (the CSV import and the pull of the stored feed expect the skip and the revision in force; the JSON
 //     import and the PUT one new revision each; `revision` follows the revision in force, so each step's If-Match names it)
 //     and W19.S1.01 :982 (the same for its pull). Every other assertion of the three tests is unchanged.
+//   R-P334 (the collision the whole suite found): src/routes/content.test.ts W19.01 :607–609 (the JSON import
+//     `?mode=replace`, the CSV import `?format=csv&mode=replace`, the pull body `mode: 'replace'`) and :612 (the JSON
+//     import of `feed`, identical to the PUT's catalogue, expects `skipped: true`, `reason: 'unchanged'` and the revision in
+//     force; the CSV import and the pull keep `revision: ++revision`, the counter following the revision in force).
 //   The builder's (R-P332's widened grant): scripts/import-content.mjs :92–93, the demo importer's pull names
 //   `mode: 'replace'`.
 //
@@ -92,7 +96,7 @@
 // failing today alone the 13 P91 tests and the three W19 tests above. R-P332 (C), measured: a first re-import over a
 // catalogue an initialization wrote (its version unstamped, `parity-coach-catalogue`) writes once (revision 2,
 // `changed: 0`), and the next identical load is skipped.
-// COLLISION FOUND BY THE COMPARISON (for ruling): src/routes/content.test.ts "W19.01 publishes equivalent JSON CSV pull and
+// COLLISION FOUND BY THE COMPARISON (ruled R-P334, the R10 above): src/routes/content.test.ts "W19.01 publishes equivalent JSON CSV pull and
 // direct catalogs with safe merge retries" :607–609 — a JSON import (`/import`), a CSV import (`/import?format=csv`) and a
 // pull, none naming a mode (missed by the provisional sweep: the paths are relative suffixes), each expecting
 // `revision: ++revision`; under the fix the first is refused 400. With the mode named (replace), the JSON import of `feed`
