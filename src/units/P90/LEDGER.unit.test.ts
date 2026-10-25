@@ -86,13 +86,16 @@
 // leg; tsc exit 0 on both. Locks: W19 B1–B3, P82, P38, P91, content.test.ts and the publication tests 122/122 on both
 // trees; W39 (each scratch copy given a .git of its own) 7/12 on both, the five H3 tests passing, H1, H2, H4 ×2 and H5
 // failing alike (the scratch layout), not counted.
-// COLLISION FOUND (for ruling): scripts/lib/tool-token.test.mjs (node --test) :169–175 and :203–213 drive every family
+// COLLISION FOUND (ruled R-P347): scripts/lib/tool-token.test.mjs (node --test) :169–175 and :203–213 drive every family
 // script through a synthetic adapter and expect a token refusal as a thrown `Operator credentials unavailable` with no
 // output; R-P345's exit 2 with `import-content: …` makes the import-content cases answer `synthetic exit 2` with one output
 // line, so "import-content: unsafe configuration stops…" and "import-content: CLI precedence and remote token path…" fail
 // (28/35 under the fix against 30/35 today; the five failing on both trees, acceptance-run's four and W03.03, are the
-// scratch layout's). Proposed R10 (test-only, R-P195's form): for `import-content` those two tests expect `synthetic exit 2`
-// and one output line `import-content: Operator credentials unavailable…`, nothing sent; every other script's case unchanged.
+// scratch layout's). R10 GRANTED (R-P347, test-only, R-P195's form) and written: scripts/lib/tool-token.test.mjs :166–172 (a
+// helper `tokenRefused`), :169–175 → :176–182 ("unsafe configuration stops…": for `import-content` `synthetic exit 2` and the
+// one output line `import-content: Operator credentials unavailable…`, the empty-output check kept for every other script)
+// and :203–213 → :210–220 ("CLI precedence and remote token path…": the two refusal loops through `tokenRefused`); nothing
+// sent in every case; every other script's cases unchanged.
 //
 // HARNESS: src/units/_parity.ts (the mounted app, both hosts, the operator routes), src/units/_parity5.ts (the home page's
 // pieces and documents, `putKind`) and src/units/W08/_customer.ts (the in-process customer stamp). Imports from src/units/:
