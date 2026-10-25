@@ -65,6 +65,11 @@
 // LEDGER.unit.test.ts :462, :471, :600) filter `layout_exposure` by type. To measure under the sketch: the realtime action
 // tests, the fan tests, the SDK tests, P79, P81, P84.
 //
+// GRANT (R-P386, 24a45d6d): src/sdk/wire.ts is in P85's allowedPaths — the SDK's wire table sends an unlisted type as
+// `custom`, so `carousel_exposure` needs its entry (src/sdk/wire.ts :35). MEASURED (s31b, 7e32d3a8): under the sketch the
+// SDK bundles grow past their recorded budgets (edge-personalization.esm.js 108,329 of 107,520 bytes, edge-personalization.js
+// 113,714 of 112,640), so `build-sdk --check` fails (P84.CO2's build leg): packages/sdk/package.json's sizeBudget follows
+// W40.P3's rule (the measured size rounded up to the next 5,120 bytes), set by the builder (a granted path), no R10.
 // NO NEW EXPORT IS IMPORTED. Read loosely: `listen.carouselExposure`, the action `carousel_exposure`, the answer members.
 // DEFERRED / RESIDUAL: LV1; the shot-type roll-up (R4); the day report's carousel rows.
 //
