@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P91",
+  "workOrderHash": "sha256:7678465dd23ad898815e10209a631db8f8338efd1337f263aedfd00514ca4ced",
+  "artifact": {
+    "revision": "9bb93205d975dea0bacd91342c37b701c7efe2d3",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p91-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p91-build at 4e593617 (85b20054 and 266e9c80 the merges of the S28 spec 83dee5f5 and aa5b04c0; 2d9a4e77 the mechanism, the kits and the demo importer; 72a49376 one kit 03 sentence; 6ddf9abd the merge of the spec fix 4ec503ce; 4e593617 kit wording: src/routes/content.ts refuses an import or pull that names no mode, or an unknown one, 400 naming merge, replace and full before the preconditions, checks the import-sources list after authority and before the mode (403 naming import-sources, nothing written), reads the pull's body first, decides the full-export guard count, the unchanged skip and the dry run inside the publication's own candidate step before any write, answers an unchanged load 200 with skipped true, reason unchanged, the revision in force, changed 0 and removed 0 beside the diagnostics of a written load, runs the dry run (dryRun=1, any other value refused 400) under If-Match alone with its own operation id, retaining nothing, and admits import-sources as an optional member for history, revisions, PUT creation, status and recover; src/content/import.ts gives ImportMode the word full, assembles a full export as the file in file order then the stored pieces the file omits in stored order with lifecycle expired and not eligible, parses exact IPv4 and IPv6 addresses and CIDR ranges read from CF-Connecting-IP only, failing closed with a list and no readable address, and defines the import-sources kind with one to sixty-four entries, each malformed entry named; src/config/publication.ts registers import-sources in KINDS, kindFor and OPTIONAL_MEMBERS and exports documentDigest, so an unchanged load is the stored digest against the candidate stamped at the stored revision and piece order counts; src/customerBoundary.ts admits import-sources in its kind list; scripts/import-content.mjs names mode replace on the demo pull; kit 02 and kit 03 state that every load names its mode, the skip, the dry run, the full-export mode behind its guard expire (the number of stored items the file leaves out, an item already expired included) and the import-sources list). Specification 4ec503ce (19 tests; test-only R10s naming the mode in content.test.ts and W19 B2 and expecting the skip in W19 F1.03, L1.01, S1.01 and content.test.ts W19.01, R-P332 and R-P334). The three test-only gaps of the spec review at aa5b04c0 (R-P337) were already met by the build.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S28/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S28/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P91/implementer/REPORT.md",
+      "git commits on rem/p91-joined up to 9bb93205"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P91 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "S28/reviewer-p91/logs/w-p91-run1.json"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S28/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P91/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-25T16:14:51.366Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
