@@ -90,7 +90,7 @@ const write = async (method, path, current, body) => {
 
 // 1. The catalog, through the seam, over the catalog draft.
 const pull = await write('POST', '/content/catalog/pull', await draft('catalog'),
-  JSON.stringify({ url: `${base}/meridian/api/catalog?vertical=${vertical}`, path: 'content', note: `demo catalog import (${vertical})` }));
+  JSON.stringify({ url: `${base}/meridian/api/catalog?vertical=${vertical}`, path: 'content', mode: 'replace', note: `demo catalog import (${vertical})` }));
 // The Worker fetches the source before it publishes anything (src/routes/content.ts, /catalog/pull),
 // so a source that answers 404 leaves every document as it was. On this importer's own source that
 // 404 means the Worker does not serve the demo APIs: it enforces authentication.
