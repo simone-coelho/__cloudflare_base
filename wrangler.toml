@@ -192,7 +192,7 @@ TREND_ROLLUP_TENANTS = "coach"
 EXTERNAL_MODEL_POLICY = "off"
 # P62: the lift witness and ring read budgets in ms (src/learn/fan.ts `learningReadBudgets`), unset here and in
 # every env below, so the code defaults (600 and 600, P72) apply: one edge round trip to a warm statistics object,
-# measured on the platform at up to 378 ms inside a warm tail, with a buffer; the budget bounds the wait, not the
+# measured on the platform at a largest 478 ms inside a warm tail, with a buffer; the budget bounds the wait, not the
 # read. A whole number above 0 and below 5000, as text, overrides one; any other value is refused, the default
 # stays and the answer's sources.budgets.refused names it.
 # LIFT_WITNESS_BUDGET_MS = "600"

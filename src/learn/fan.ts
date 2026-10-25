@@ -11,7 +11,7 @@ import type { LiftSnapshot, NotAdopted, NotAdoptedChange, Republished, Republish
  * P62 (amendment 6, R-P110 decision 1), P72 (amendment 10, R-P236): the lift
  * witness's budget, sized for the edge. It is the round trip to the statistics
  * object and nothing else (W38 B7, below): one edge round trip to a warm
- * statistics object, measured on the acceptance pair at up to 378 ms inside a
+ * statistics object, measured on the platform at a largest 478 ms inside a
  * warm tail, with the owner's buffer: 600 ms. It bounds the wait, not the read:
  * a read inside it answers as soon as it is done. A deployment may set another
  * through `LIFT_WITNESS_BUDGET_MS` (`learningReadBudgets`).

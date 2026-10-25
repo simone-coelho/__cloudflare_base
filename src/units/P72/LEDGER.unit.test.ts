@@ -59,6 +59,9 @@
 // instead of 200): src/units/P62/LEDGER.unit.test.ts (P62.LW1), src/units/P68/LEDGER.unit.test.ts (P68.KT3) and
 // src/units/P70/LEDGER.unit.test.ts (P70.WB2's remote-call lock), the last two granted under R-P239(1).
 //
+// S22 R10 (amendment 11 P81; granted R-P271), test-only, R-P195's form: BD3's reason may state 378 ms or, alone, the
+// largest 478 ms measured since (R-P243); `WARM_ROUND_TRIP` reads either, every other assertion kept.
+//
 // No new export is imported; every member read exists at this head.
 //
 // FIXTURE. P61's and P62's lift world (src/units/_parity9.ts `liftWorld`): P08's pooled world, the product page's slot
@@ -75,8 +78,12 @@ import { decide, liftWorld, sourcesMember } from '../_parity9';
 
 /** Amendment 10 §2: the default of both budgets. */
 const DEFAULT_MS = 600;
-/** Amendment 10 §2: the reason the kit states with it (one edge round trip to a warm statistics object, measured). */
-const WARM_ROUND_TRIP = /378\s?ms/;
+/**
+ * Amendment 10 §2: the reason the kit states with it (one edge round trip to a warm statistics object, measured).
+ * S22 R10 (amendment 11 P81; granted R-P271), test-only, R-P195's form: the measurement may be stated as amendment 10's
+ * 378 ms or, alone, as the largest read measured since, 478 ms (R-P243); every other assertion is kept.
+ */
+const WARM_ROUND_TRIP = /\b(378|478)\s?ms\b/;
 const BOTH = ['LIFT_WITNESS_BUDGET_MS', 'RING_READ_BUDGET_MS'];
 const setEnv = (m: Mounted, values: Record<string, string>) => { Object.assign(m.env as unknown as Record<string, unknown>, values); };
 
