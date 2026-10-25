@@ -30,7 +30,7 @@ import { stampOwner } from '@/auth/authority';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type Revision, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, completePublicationSet, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
-  readOptionalPublication, readPublication, recoverPublication, type PublicationBaseline, type PublicationPin } from '@/config/publication';
+  readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationPin } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
@@ -39,7 +39,7 @@ import { invalidateConfigCache, REFLEX_KIND, reflexScopeForTenant } from '@/refl
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
-import { HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, positionedCandidates, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
+import { addressAllowed, HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, IMPORT_SOURCES_KIND, isImportMode, parseCsvTable, positionedCandidates, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
 import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
@@ -89,11 +89,16 @@ const KINDS: Record<string, { kind: DocumentKind<any>; fallback: any; fromCsv?: 
   // P38: the tenant's attribute vocabulary. An optional member: a tenant that
   // never published one has none, and reads it as absent (revision 0).
   vocabulary: { kind: VOCABULARY_KIND, fallback: null },
+  // P91 (E16): the tenant's import-sources list, an optional member: absent until published, and then every caller of
+  // the import, the pull and the dry run is checked against it.
+  'import-sources': { kind: IMPORT_SOURCES_KIND, fallback: null },
 };
-const UNKNOWN_KIND = 'kind must be catalog, slots, learn, priors or vocabulary';
+const UNKNOWN_KIND = 'kind must be catalog, slots, learn, priors, vocabulary or import-sources';
 
 function kindOf(name: string | undefined) { return KINDS[(name ?? '').toLowerCase()] ?? null; }
 const isVocabulary = (kind: { name: string }) => kind.name === VOCABULARY_KIND.name;
+/** An optional member of the publication set (P38, P91): absent until its tenant publishes one, its first write over revision 0. */
+const isOptionalMember = (kind: { name: string }) => isVocabulary(kind) || kind.name === IMPORT_SOURCES_KIND.name;
 
 /**
  * P38: the vocabulary's two members, read from ONE pin of the current set: the
@@ -530,8 +535,8 @@ function actorOf(c: { get: (k: 'auth') => AuthContext | undefined }): string {
   return c.get('auth')?.user?.sub ?? c.get('auth')?.user?.email ?? 'unknown';
 }
 const noteOf = (v: unknown) => (typeof v === 'string' ? v.slice(0, 500) : '');
-function catalogMeta(c: Context<Ctx>, note?: string, creation = false): WriteMeta {
-  const meta = publicationMeta(c.req.raw.headers, actorOf(c), note, creation);
+function catalogMeta(c: Context<Ctx>, note?: string, creation = false, headers: Headers = c.req.raw.headers): WriteMeta {
+  const meta = publicationMeta(headers, actorOf(c), note, creation);
   meta.authorize = async () => {
     let allowed = false;
     await operatorJwt()(c, async () => {
@@ -651,6 +656,12 @@ contentRoutes.get('/:kind', async (c) => {
       approval: approval ? { revision: approval.value.revision, actor: approval.actor, note: approval.note, at: approval.at } : null,
       ...(stored ? documentEnvelopeOf(k.kind, stored.value) : {}) });
   }
+  if (k.kind.name === IMPORT_SOURCES_KIND.name) {
+    // P91: absent until published (revision 0), and then the list in force.
+    const { publication, revision: listed } = await readOptionalPublication(c.env, k.kind, scope);
+    return c.json({ scope, kind: k.kind.name, source: listed ? 'stored' : 'absent', revision: listed?.revision ?? 0, publication,
+      actor: listed?.actor ?? null, note: listed?.note ?? null, at: listed?.at ?? null, document: listed?.value ?? null });
+  }
   const rev = await readPublication(c.env, k.kind, scope);
   const value = rev ? rev.value : k.fallback;
   return c.json({ scope, kind: k.kind.name, source: rev ? 'stored' : 'compiled-default', revision: rev?.revision ?? 0,
@@ -670,7 +681,7 @@ contentRoutes.get('/:kind/history', async (c) => {
   const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
   const scope = scopeOf(c, k.kind);
   // P38: a tenant that never published a vocabulary has no history of one.
-  if (isVocabulary(k.kind) && !(await readOptionalPublication(c.env, k.kind, scope)).revision) return c.json({ scope, kind: k.kind.name, revisions: [] });
+  if (isOptionalMember(k.kind) && !(await readOptionalPublication(c.env, k.kind, scope)).revision) return c.json({ scope, kind: k.kind.name, revisions: [] });
   return c.json({ scope, kind: k.kind.name, revisions: await readIndex(c.env, k.kind, scope) });
 });
 
@@ -679,7 +690,7 @@ contentRoutes.get('/:kind/revisions/:n', async (c) => {
   const scope = scopeOf(c, k.kind);
   const n = Number(c.req.param('n'));
   if (!Number.isInteger(n) || n < 1) return c.json({ error: 'revision must be a positive integer' }, 400);
-  if (isVocabulary(k.kind) && !(await readOptionalPublication(c.env, k.kind, scope)).revision) return c.json({ error: `revision ${n} not found for scope "${scope}"` }, 404);
+  if (isOptionalMember(k.kind) && !(await readOptionalPublication(c.env, k.kind, scope)).revision) return c.json({ error: `revision ${n} not found for scope "${scope}"` }, 404);
   const rev = await readVersion(c.env, k.kind, scope, n);
   return rev ? c.json({ scope, kind: k.kind.name, ...rev }) : c.json({ error: `revision ${n} not found for scope "${scope}"` }, 404);
 });
@@ -735,8 +746,8 @@ contentRoutes.post('/:kind/validate', async (c) => {
 // ── Writes ───────────────────────────────────────────────────────────────────
 contentRoutes.put('/:kind', async (c) => {
   const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: UNKNOWN_KIND }, 404);
-  // P38: the first vocabulary revision is written over revision 0 (none stored).
-  const scope = scopeOf(c, k.kind), meta = catalogMeta(c, undefined, isVocabulary(k.kind));
+  // P38, P91: the first revision of an optional member is written over revision 0 (none stored).
+  const scope = scopeOf(c, k.kind), meta = catalogMeta(c, undefined, isOptionalMember(k.kind));
   let candidate: unknown;
   let related: unknown;
   let note = '';
@@ -874,8 +885,17 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
 
 // ── The import adapter ───────────────────────────────────────────────────────
 
+/**
+ * P91 (E16, R-P330): a load the publication does not write, decided inside the publication's own candidate step, after
+ * the preconditions and the assembly and before anything is written: a result equal to the catalogue in force (the
+ * skip), a dry run, or a full export whose guard names another number than the pieces it would expire.
+ */
+class HeldLoad extends Error {
+  constructor(readonly held: 'unchanged' | 'dry-run' | 'expire', readonly candidate: ContentCatalog | null, readonly expiring = 0) { super(held); }
+}
+
 async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode, note: string, source: object, meta: WriteMeta,
-  document?: { value: unknown; accepted: ReadonlySet<string> }) {
+  document?: { value: unknown; accepted: ReadonlySet<string> }, opts: { dryRun?: boolean; expire?: number } = {}) {
   const scope = catalogScope(c);
   const { pieces: incoming, positions } = positionedCandidates(records); // P82: each candidate's position in the file sent
   if (incoming.length === 0) return c.json({ ok: false, errors: ['no records found in the import'] }, 422);
@@ -892,18 +912,47 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
   // P82 (E5): the assembled pieces and, beside them, the position in the file sent of the record each came from.
   let placed: { pieces: unknown[]; positions: (number | null)[] } | undefined;
   const addressed = (errors: string[]) => placed ? recordAddressed(errors, placed.pieces, placed.positions) : errors;
+  const diagnosed = (catalog: ContentCatalog, revision: number | null) => catalogDiagnostics(c.env, scope, catalog, revision,
+    { records, accepted: FEED_FIELDS, ...(document ? { document } : {}), pieceRecords: storedPieceRecords(catalog, incoming, positions) });
   let result;
   try {
     // P38 (VA2): the assembled catalogue under the vocabulary in effect in the set it is published over.
-    result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode }, { ...meta, note },
-      (current, set) => {
+    result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode, ...(opts.expire !== undefined ? { expire: opts.expire } : {}) },
+      { ...meta, note },
+      async (current, set) => {
         base = current;
         const assembled = assembleFrom(current, incoming, mode);
         placed = { pieces: assembled.pieces, positions: assembled.origins.map(j => j === null ? null : positions[j]!) };
-        return governedOver(c.env, scope, set, { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), pieces: assembled.pieces });
+        // P91: the full export's guard, compared with what the assembly expires, before anything is written.
+        if (mode === 'full') {
+          const expiring = assembled.origins.filter(j => j === null).length;
+          if (opts.expire !== expiring) throw new HeldLoad('expire', null, expiring);
+        }
+        const governed = await governedOver(c.env, scope, set, { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), pieces: assembled.pieces });
+        const checked = CONTENT_KIND.validate(governed);
+        if (checked.ok) {
+          // P91 (R-P330): unchanged when the candidate, stamped at the stored revision, has the stored document's digest.
+          if (await documentDigest(CONTENT_KIND.stamp!(checked.value, meta.expectedRevision!)) === await documentDigest(current)) throw new HeldLoad('unchanged', current);
+          if (opts.dryRun) throw new HeldLoad('dry-run', checked.value);
+        }
+        return governed;
       });
   } catch (error) {
     if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: addressed(error.errors), received: records.length }, 422);
+    if (error instanceof HeldLoad) {
+      if (error.held === 'expire') {
+        return c.json({ ok: false, error: `mode=full expires ${error.expiring} stored piece${error.expiring === 1 ? '' : 's'} the file leaves out; expire=${opts.expire} names another number, so nothing was written`,
+          code: 'expire_mismatch', expire: error.expiring }, 409);
+      }
+      // The skip and the dry run: nothing was written, so the answer names the revision in force.
+      const stored = base!, shown = error.held === 'unchanged' ? stored : error.candidate!;
+      return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: shown.pieces.length,
+        changed: error.held === 'unchanged' ? 0 : changedPieces(stored, shown), removed: error.held === 'unchanged' ? 0 : removedPieces(stored, shown),
+        changedBasis: 'stored' as const,
+        ...(error.held === 'unchanged' ? { skipped: true, reason: 'unchanged' } : {}), ...(opts.dryRun ? { dryRun: true } : {}),
+        revision: meta.expectedRevision, publication: meta.expectedPublication, version: stored.version ?? '',
+        diagnostics: await diagnosed(shown, meta.expectedRevision ?? null) });
+    }
     throw error;
   }
   if (!result.ok) return c.json({ ok: false, errors: addressed(result.errors), received: records.length }, 422);
@@ -914,8 +963,7 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
     removed: measured ? removedPieces(before.catalog, result.revision.value) : null,
     changedBasis: before.basis,
     revision: result.revision.revision, publication: result.revision.publication, version: result.revision.value.version ?? '',
-    diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision,
-      { records, accepted: FEED_FIELDS, ...(document ? { document } : {}), pieceRecords: storedPieceRecords(result.revision.value, incoming, positions) }) });
+    diagnostics: await diagnosed(result.revision.value, result.revision.revision) });
 }
 
 /**
@@ -935,15 +983,59 @@ async function publishedOver(env: Env, scope: string, revision: number | undefin
   } catch { return { catalog: EMPTY_CATALOG, basis: 'unavailable' }; }
 }
 
+/** P91 (R-P330): a load names its mode; anything else, none included, is refused naming the three, before anything is read or written. */
+const modeRefusal = (c: Context<Ctx>) => c.json({ ok: false, code: 'mode_required',
+  error: 'mode is required: merge (upsert by id), replace (the whole catalog) or full (replace, and expire the stored pieces the file leaves out, with expire=<n>, their number)' }, 400);
+/** P91: the full export's guard, required with `full` (428 without it) and a whole number when present; ignored by the other modes. */
+function guardOf(c: Context<Ctx>, mode: ImportMode, raw: unknown): number | undefined | Response {
+  if (raw === undefined || raw === null || raw === '') {
+    return mode === 'full' ? c.json({ ok: false, code: 'expire_required', error: 'mode=full requires expire=<n>, the number of stored pieces the file leaves out, which it expires' }, 428) : undefined;
+  }
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' && /^(0|[1-9][0-9]*)$/.test(raw) ? Number(raw) : NaN;
+  return Number.isSafeInteger(n) && n >= 0 ? n : c.json({ ok: false, code: 'invalid_expire', error: 'expire must be a whole number of pieces' }, 400);
+}
 /**
- * POST /content/catalog/import?scope=&format=json|csv&mode=replace|merge
+ * P91 (R-P330): the tenant's import-sources list, read from `CF-Connecting-IP` alone (never `X-Forwarded-For`, which a
+ * caller writes): with a list published, a caller outside it, or with no readable address, is refused 403 naming it;
+ * with none, every caller is allowed as before.
+ */
+async function sourceRefusal(c: Context<Ctx>, scope: string): Promise<Response | null> {
+  const { revision } = await readOptionalPublication(c.env, IMPORT_SOURCES_KIND, scope);
+  if (!revision) return null;
+  const address = (c.req.header('CF-Connecting-IP') ?? '').trim();
+  if (address && addressAllowed(revision.value.addresses, address)) return null;
+  return c.json({ ok: false, code: 'source_not_allowed', error: address
+    ? `the caller's address ${address.slice(0, 64)} is outside the tenant's import-sources list`
+    : "no caller address (CF-Connecting-IP) to check against the tenant's import-sources list" }, 403);
+}
+/**
+ * P91 (R-P330): a dry run's preconditions. It merges over the revision its If-Match names and is refused 428 or 409 as
+ * the import is, but carries no Idempotency-Key: it retains nothing, so it runs under an operation id of its own.
+ */
+function dryRunMeta(c: Context<Ctx>): WriteMeta {
+  const headers = new Headers(c.req.raw.headers);
+  const named = /^"(0|[1-9][0-9]*)\//.exec(headers.get('If-Match') ?? '');
+  if (named) headers.set('Idempotency-Key', `${named[1]}:${crypto.randomUUID()}`);
+  return catalogMeta(c, undefined, false, headers);
+}
+
+/**
+ * POST /content/catalog/import?scope=&format=json|csv&mode=merge|replace|full&expire=&dryRun=1&path=
  * JSON: the body, or its `pieces` / `content` / `items` array, or ?path=a.b.
  * CSV: header row of CSV_COLUMNS in any order; tags as `dim:value;dim:v1|v2`.
+ * P91 (R-P330): the authority, then the import-sources list, then the mode, the switch and the guard, then the
+ * preconditions; the assembly, the guard's count and the skip are the publication's, before any write.
  */
 contentRoutes.post('/catalog/import', async (c) => {
-  catalogScope(c); const meta = catalogMeta(c);
+  const scope = catalogScope(c);
+  const outside = await sourceRefusal(c, scope); if (outside) return outside;
+  const mode = c.req.query('mode');
+  if (!isImportMode(mode)) return modeRefusal(c);
+  const dryRun = c.req.query('dryRun');
+  if (dryRun !== undefined && dryRun !== '1') return c.json({ ok: false, code: 'invalid_dry_run', error: 'dryRun must be 1 (a dry run, which writes nothing) or absent' }, 400);
+  const expire = guardOf(c, mode, c.req.query('expire')); if (expire instanceof Response) return expire;
+  const meta = dryRun === '1' ? dryRunMeta(c) : catalogMeta(c);
   const format = (c.req.query('format') ?? '').toLowerCase() || (c.req.header('content-type')?.includes('csv') ? 'csv' : 'json');
-  const mode: ImportMode = c.req.query('mode') === 'merge' ? 'merge' : 'replace';
   const note = noteOf(c.req.query('note')) || `${format} import (${mode})`;
   let records: unknown[];
   let document: { value: unknown; accepted: ReadonlySet<string> } | undefined;
@@ -969,18 +1061,24 @@ contentRoutes.post('/catalog/import', async (c) => {
     records = found.records;
     document = { value: body, accepted: catalogDocumentFields(found.carrier) };
   }
-  return importInto(c, records, mode, note, { format, path: c.req.query('path') ?? null }, meta, document);
+  return importInto(c, records, mode, note, { format, path: c.req.query('path') ?? null }, meta, document, { dryRun: dryRun === '1', expire });
 });
 
 /**
- * POST /content/catalog/pull  { url, path?, mode?, note? }
+ * POST /content/catalog/pull  { url, path?, mode, expire?, note? }
  * The CMS/DAM seam: the worker fetches a JSON document and imports it. The URL
  * must be http(s); what URLs a tenant may name is a policy for CW1 to bind.
+ * P91 (R-P330): the body is read first, for the mode and the guard it carries; then the order is the import's.
  */
 contentRoutes.post('/catalog/pull', async (c) => {
-  const scope = catalogScope(c), meta = catalogMeta(c);
+  const scope = catalogScope(c);
+  const body = await readInputJson(c.req.raw.body) as { url?: unknown; path?: unknown; mode?: unknown; expire?: unknown; note?: unknown } | null;
+  const outside = await sourceRefusal(c, scope); if (outside) return outside;
+  const mode = body?.mode;
+  if (!isImportMode(mode)) return modeRefusal(c);
+  const expire = guardOf(c, mode, body?.expire); if (expire instanceof Response) return expire;
+  const meta = catalogMeta(c);
   await assertPublicationBase(c.env, CONTENT_KIND, scope, meta);
-  const body = await readInputJson(c.req.raw.body) as { url?: unknown; path?: unknown; mode?: unknown; note?: unknown } | null;
   const url = typeof body?.url === 'string' ? body.url.trim() : '';
   if (!/^https?:\/\//i.test(url)) return c.json({ error: 'url must be http(s)' }, 400);
   let pulled: PulledExport;
@@ -990,10 +1088,9 @@ contentRoutes.post('/catalog/pull', async (c) => {
     if (e instanceof InputError && e.status === 413) throw e;
     return c.json({ ok: false, errors: [`pull failed: ${e instanceof Error ? e.message : String(e)}`] }, 502);
   }
-  const mode: ImportMode = body?.mode === 'merge' ? 'merge' : 'replace';
   return importInto(c, pulled.records, mode, noteOf(body?.note) || `pull from ${new URL(url).host} (${mode})`,
     { type: 'pull', url, path: typeof body?.path === 'string' ? body.path : null }, meta,
-    { value: pulled.document, accepted: catalogDocumentFields(pulled.carrier) });
+    { value: pulled.document, accepted: catalogDocumentFields(pulled.carrier) }, { expire });
 });
 
 function publicationTarget(c: Context<Ctx>) {
@@ -1007,11 +1104,11 @@ function publicationTarget(c: Context<Ctx>) {
 }
 contentRoutes.get('/catalog/publication', c => {
   const { kind, scope } = publicationTarget(c);
-  const meta = c.req.header('If-Match') || c.req.header('Idempotency-Key') ? catalogMeta(c, undefined, isVocabulary(kind)) : undefined;
+  const meta = c.req.header('If-Match') || c.req.header('Idempotency-Key') ? catalogMeta(c, undefined, isOptionalMember(kind)) : undefined;
   return publicationStatus(c.env, kind, scope, meta).then(status => c.json(status));
 });
 contentRoutes.post('/catalog/publication/recover', async c => {
-  const { kind, scope } = publicationTarget(c), meta = catalogMeta(c, undefined, isVocabulary(kind));
+  const { kind, scope } = publicationTarget(c), meta = catalogMeta(c, undefined, isOptionalMember(kind));
   const result = await recoverPublication(c.env, kind, scope, meta);
   return result.ok ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, document: result.revision.value,
     ...(kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision) } : {}) }) : c.json(result, 422);

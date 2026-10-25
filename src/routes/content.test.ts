@@ -543,12 +543,12 @@ describe('/content routes', () => {
     expect({ ...retained, publication: receipt.publication }).toEqual(receipt);
     expect(retained!.publication).toEqual((await readPublication(env, CONTENT_KIND, 'coach')).publication);
     await successful(await call('/catalog', 'GET', auth), 3, 2); // Diagnose returned current, not the earlier retry's catalog.
-    await successful(await call('/catalog/import', 'POST', publicationHeaders(env, auth, 3), bad.pieces), 4, 0);
+    await successful(await call('/catalog/import?mode=replace', 'POST', publicationHeaders(env, auth, 3), bad.pieces), 4, 0); // P91 R10 (R-P332): the mode named
     await successful(await call('/catalog/import?format=csv&mode=merge', 'POST', { ...publicationHeaders(env, auth, 4), 'Content-Type': 'text/csv' },
       'id,type,title,tags,slotTypes\ncsv,video,CSV,mystery:present,story'), 5, 0);
     const remote = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify([{ ...piece('pulled'), tags: { absent: ['value'] } }])));
     try {
-      await successful(await call('/catalog/pull', 'POST', publicationHeaders(env, auth, 5), { url: 'https://cms.example/diagnostics' }), 6, 2);
+      await successful(await call('/catalog/pull', 'POST', publicationHeaders(env, auth, 5), { url: 'https://cms.example/diagnostics', mode: 'replace' }), 6, 2); // P91 R10 (R-P332)
       await successful(await call('/catalog/rollback/2', 'POST', publicationHeaders(env, auth, 6), {}), 7, 0);
       const get = storage.get.bind(storage);
       const outage = vi.spyOn(storage, 'get').mockImplementation(async key => { if (key.includes('/reflex/rev/')) throw new Error('private registry outage'); return get(key); });
@@ -561,7 +561,7 @@ describe('/content routes', () => {
       } finally { outage.mockRestore(); }
       const pending = publicationHeaders(env, auth, 8); storage.failPut = storage.puts + 3;
       const reads = kv.calls.length;
-      expect((await call('/catalog/pull', 'POST', pending, { url: 'https://cms.example/diagnostics' })).status).toBe(503);
+      expect((await call('/catalog/pull', 'POST', pending, { url: 'https://cms.example/diagnostics', mode: 'replace' })).status).toBe(503); // P91 R10 (R-P332)
       expect(kv.calls.length).toBe(reads); storage.failPut = 0;
       const recovered = await successful(await call('/catalog/publication/recover', 'POST', pending), 9, 2);
       expect(recovered.document!.pieces[0]!.id).toBe('pulled');
@@ -604,12 +604,17 @@ describe('/content routes', () => {
     const remote = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ content: feed })));
     try {
       for (const [suffix, method, body, expected] of [
-        ['', 'PUT', { document: catalog }, catalog], ['/import', 'POST', feed, catalog],
-        ['/import?format=csv', 'POST', csv, { pieces: [csvPromoted, rival] }],
-        ['/pull', 'POST', { url: 'https://synthetic.invalid/catalog', path: 'content' }, catalog],
+        // P91 R10 (R-P334): the three loads name their mode (replace).
+        ['', 'PUT', { document: catalog }, catalog], ['/import?mode=replace', 'POST', feed, catalog],
+        ['/import?format=csv&mode=replace', 'POST', csv, { pieces: [csvPromoted, rival] }],
+        ['/pull', 'POST', { url: 'https://synthetic.invalid/catalog', path: 'content', mode: 'replace' }, catalog],
       ] as const) {
         const response = await request(suffix, method, body); expect(response.status).toBe(200);
-        expect(await response.json()).toMatchObject({ ok: true, revision: ++revision });
+        // P91 R10 (R-P334, E16): the JSON import of `feed` over the PUT's catalogue is identical (`explore` reads as
+        // `exploring`), so it is skipped and answers the revision in force; the CSV import and the pull change the catalogue
+        // and write the next revision. `revision` follows the revision in force, so each step's If-Match names it.
+        if (suffix === '/import?mode=replace') expect(await response.json()).toMatchObject({ ok: true, skipped: true, reason: 'unchanged', revision });
+        else expect(await response.json()).toMatchObject({ ok: true, revision: ++revision });
         expect((await current()).value.pieces).toEqual(expected.pieces);
       }
       expect(remote).toHaveBeenCalledTimes(1);
@@ -837,25 +842,27 @@ describe('/content routes', () => {
   });
 
   it('imports JSON (replace), CSV (merge), and reports what it could not use', async () => {
-    const j = await (await app.request(`${H}/catalog/import?scope=coach`, { method: 'POST', headers: publicationHeaders(env, auth), body: JSON.stringify({ content: [{ systemId: 'p1', customerContentId: 'C1', type: 'editorial', title: 'P1', tags: { line: ['Drover'] }, slotTypes: ['chero'] }] }) }, env)).json();
+    // P91 R10 (R-P332): the three imports below name their mode (replace, as the first answer is matched).
+    const j = await (await app.request(`${H}/catalog/import?scope=coach&mode=replace`, { method: 'POST', headers: publicationHeaders(env, auth), body: JSON.stringify({ content: [{ systemId: 'p1', customerContentId: 'C1', type: 'editorial', title: 'P1', tags: { line: ['Drover'] }, slotTypes: ['chero'] }] }) }, env)).json();
     expect(j).toMatchObject({ ok: true, mode: 'replace', received: 1, imported: 1, pieces: 1, revision: 2 });
     const csv = 'id,customerContentId,type,title,tags,slotTypes\np2,C2,video,P2,occasion:evening,story\n';
     const m = await (await app.request(`${H}/catalog/import?scope=coach&format=csv&mode=merge`, { method: 'POST', headers: { ...publicationHeaders(env, auth, 2), 'Content-Type': 'text/csv' }, body: csv }, env)).json();
     expect(m).toMatchObject({ ok: true, mode: 'merge', pieces: 2, revision: 3 });
-    const bad = await app.request(`${H}/catalog/import?scope=coach`, { method: 'POST', headers: publicationHeaders(env, auth, 3), body: JSON.stringify({ content: [{ id: 'p3' }] }) }, env);
+    const bad = await app.request(`${H}/catalog/import?scope=coach&mode=replace`, { method: 'POST', headers: publicationHeaders(env, auth, 3), body: JSON.stringify({ content: [{ id: 'p3' }] }) }, env);
     expect(bad.status).toBe(422);
     // A missing customer id falls back to the piece id on purpose; type, title and slotTypes cannot.
     expect(await bad.json()).toMatchObject({ ok: false, errors: expect.arrayContaining([expect.stringContaining('.type'), expect.stringContaining('.title'), expect.stringContaining('slotTypes')]) });
-    expect((await app.request(`${H}/catalog/import?scope=coach`, { method: 'POST', headers: publicationHeaders(env, auth, 3), body: JSON.stringify({ nothing: [] }) }, env)).status).toBe(422);
+    expect((await app.request(`${H}/catalog/import?scope=coach&mode=replace`, { method: 'POST', headers: publicationHeaders(env, auth, 3), body: JSON.stringify({ nothing: [] }) }, env)).status).toBe(422);
   });
 
   it('pulls from a URL through the seam, http(s) only', async () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ content: [{ id: 'q1', customerContentId: 'Q1', type: 'guide', title: 'Q', tags: {}, slotTypes: ['story'] }] })));
     try {
-      const r = await (await app.request(`${H}/catalog/pull?scope=coach`, { method: 'POST', headers: publicationHeaders(env, auth), body: JSON.stringify({ url: 'https://cms.example/export.json', path: 'content' }) }, env)).json();
+      // P91 R10 (R-P332): both pulls name their mode (replace).
+      const r = await (await app.request(`${H}/catalog/pull?scope=coach`, { method: 'POST', headers: publicationHeaders(env, auth), body: JSON.stringify({ url: 'https://cms.example/export.json', path: 'content', mode: 'replace' }) }, env)).json();
       expect(r).toMatchObject({ ok: true, pieces: 1, revision: 2 });
       expect(spy).toHaveBeenCalledWith('https://cms.example/export.json', expect.anything());
-      expect((await app.request(`${H}/catalog/pull?scope=coach`, { method: 'POST', headers: publicationHeaders(env, auth, 2), body: JSON.stringify({ url: 'file:///etc/passwd' }) }, env)).status).toBe(400);
+      expect((await app.request(`${H}/catalog/pull?scope=coach`, { method: 'POST', headers: publicationHeaders(env, auth, 2), body: JSON.stringify({ url: 'file:///etc/passwd', mode: 'replace' }) }, env)).status).toBe(400);
     } finally { spy.mockRestore(); }
   });
 });
@@ -947,8 +954,10 @@ describe('W11.01 catalog operation boundary and exact import base', () => {
       expect(storage.calls.length).toBe(before);
       const remote = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ content: [piece('pulled')] })));
       try {
-        expect((await call('catalog/pull', 'POST', auth, '{')).status).toBe(428);
-        expect((await call('catalog/pull', 'POST', { ...publicationHeaders(env, auth), 'If-Match': '1' }, '{')).status).toBe(400);
+        // P91 R10 (R-P332): the pull reads its body (its mode) before its preconditions, so each body names a feed and a mode
+        // and still measures its precondition refusal (428 without If-Match, 400 for a malformed one).
+        expect((await call('catalog/pull', 'POST', auth, '{"url":"https://cms.example/feed","mode":"replace"}')).status).toBe(428);
+        expect((await call('catalog/pull', 'POST', { ...publicationHeaders(env, auth), 'If-Match': '1' }, '{"url":"https://cms.example/feed","mode":"replace"}')).status).toBe(400);
         expect(remote).not.toHaveBeenCalled();
         const first = publicationHeaders(env, auth), second = publicationHeaders(env, auth);
         const race = await Promise.all([call('catalog/import?mode=merge', 'POST', first, [piece('one')]), call('catalog/import?mode=merge', 'POST', second, [piece('two')])]);
@@ -958,15 +967,15 @@ describe('W11.01 catalog operation boundary and exact import base', () => {
         expect((await call('catalog/import?mode=replace', 'POST', winner, [piece(id)])).status).toBe(409);
         expect((await call('catalog/import?mode=merge', 'POST', publicationHeaders(env, auth, 2), [piece('next')])).status).toBe(200);
         expect((await readPublication(env, CONTENT_KIND, 'atelier-a')).value.pieces.map(p => p.id)).toEqual([id, 'next']);
-        expect((await call('catalog/pull', 'POST', publicationHeaders(env, auth, 1), { url: 'https://cms.example/feed' })).status).toBe(409);
+        expect((await call('catalog/pull', 'POST', publicationHeaders(env, auth, 1), { url: 'https://cms.example/feed', mode: 'replace' })).status).toBe(409); // P91 R10 (R-P332)
         expect(remote).not.toHaveBeenCalled();
         const pendingHeaders = publicationHeaders(env, auth, 3); storage.failPut = storage.puts + 3; storage.afterWrite = false;
-        expect((await call('catalog/pull', 'POST', pendingHeaders, { url: 'https://cms.example/feed' })).status).toBe(503);
+        expect((await call('catalog/pull', 'POST', pendingHeaders, { url: 'https://cms.example/feed', mode: 'replace' })).status).toBe(503); // P91 R10 (R-P332)
         expect(remote).toHaveBeenCalledTimes(1); storage.failPut = 0;
         const successor = { ...auth, Authorization: `Bearer ${await token({ sub: 'successor', type: 'service' })}` };
         expect(await (await call('catalog/publication', 'GET', successor)).json()).toMatchObject({ state: 'pending', committedRevision: 3, operationId: pendingHeaders['Idempotency-Key'], actor: 'alpha' });
         expect((await call('catalog/revisions/4')).status).toBe(404);
-        expect((await call('catalog/pull', 'POST', pendingHeaders, { url: 'https://cms.example/feed' })).status).toBe(409);
+        expect((await call('catalog/pull', 'POST', pendingHeaders, { url: 'https://cms.example/feed', mode: 'replace' })).status).toBe(409); // P91 R10 (R-P332)
         expect((await call('catalog/publication/recover', 'POST', { ...pendingHeaders, Authorization: successor.Authorization })).status).toBe(200);
         expect(await (await call('catalog', 'GET', successor)).json()).toMatchObject({ revision: 4, actor: 'alpha', document: { pieces: [{ id: 'pulled' }] } });
         expect((await call('catalog/publication/recover', 'POST', { ...pendingHeaders, Authorization: successor.Authorization })).status).toBe(200);
@@ -1005,7 +1014,7 @@ describe('authenticated reflex administration', () => {
       ...['catalog', 'slots', 'learn', 'priors'].flatMap(kind => [
         [`/content/${kind}/validate?scope=coach`, 'POST'], [`/content/${kind}?scope=coach`, 'PUT'], [`/content/${kind}/rollback/1?scope=coach`, 'POST'],
       ] as Array<[string, string]>),
-      ['/content/priors?scope=coach', 'PUT', 'text/csv'], ['/content/catalog/import', 'POST'], ['/content/catalog/import?format=csv', 'POST', 'text/csv'], ['/content/catalog/pull', 'POST'],
+      ['/content/priors?scope=coach', 'PUT', 'text/csv'], ['/content/catalog/import?mode=replace', 'POST'], ['/content/catalog/import?format=csv&mode=replace', 'POST', 'text/csv'], ['/content/catalog/pull', 'POST'], // P91 R10 (R-P332): the imports name their mode
     ];
     for (const [path, method, type] of lanes) {
       const operation = oversized(path, method, { ...publicationHeaders(env, auth), ...(type ? { 'Content-Type': type } : {}) });
@@ -1016,9 +1025,9 @@ describe('authenticated reflex administration', () => {
     }
     expect(puts()).toBe(before); expect(JSON.stringify([[...kv.store], [...storage.objects]])).toBe(state);
     for (const [headers, expected, suffix] of [
-      [{ 'Content-Type': 'application/json' }, 401, ''], [auth, 428, ''], [publicationHeaders(env, auth), 403, '?scope=other'],
+      [{ 'Content-Type': 'application/json' }, 401, ''], [auth, 428, ''], [publicationHeaders(env, auth), 403, '&scope=other'],
     ] as const) {
-      const denied = oversized('/content/catalog/import' + suffix, 'POST', headers);
+      const denied = oversized('/content/catalog/import?mode=replace' + suffix, 'POST', headers); // P91 R10 (R-P332): the mode named
       expect((await denied.result).status).toBe(expected); expect(denied.state().pulls).toBe(0);
     }
     for (const path of ['/config/reflex/rollback/1?scope=coach', '/content/catalog/rollback/1']) {
@@ -1037,25 +1046,25 @@ describe('authenticated reflex administration', () => {
       expect(catalogValidate).not.toHaveBeenCalled(); expect(priorsValidate).not.toHaveBeenCalled();
     } finally { catalogValidate.mockRestore(); priorsValidate.mockRestore(); }
     for (const [path, body, type] of [
-      ['/content/catalog/import', JSON.stringify({ content: Array(INPUT_MAX_RECORDS + 1).fill(null) }), 'application/json'],
+      ['/content/catalog/import?mode=replace', JSON.stringify({ content: Array(INPUT_MAX_RECORDS + 1).fill(null) }), 'application/json'], // P91 R10 (R-P332)
       ['/content/priors?scope=coach', 'slot,item,cell,p_prior,n_equiv\n' + Array(INPUT_MAX_RECORDS + 1).fill('story,p1,*,0.5,2').join('\n'), 'text/csv'],
     ]) expect((await call(path!, path!.includes('/import') ? 'POST' : 'PUT', body, { ...publicationHeaders(env, auth), 'Content-Type': type! })).status).toBe(413);
     const remote = vi.spyOn(globalThis, 'fetch');
     try {
       for (const response of [new Response(' '.repeat(INPUT_MAX_BYTES + 1)), new Response(JSON.stringify(Array(INPUT_MAX_RECORDS + 1).fill(null)))]) {
         remote.mockResolvedValueOnce(response);
-        const result = await call('/content/catalog/pull', 'POST', '{"url":"https://synthetic.invalid/feed"}', publicationHeaders(env, auth));
+        const result = await call('/content/catalog/pull', 'POST', '{"url":"https://synthetic.invalid/feed","mode":"replace"}', publicationHeaders(env, auth)); // P91 R10 (R-P332)
         expect(result.status).toBe(413); expect(result.headers.get('cache-control')).toBe('no-store'); expect(await result.json()).toMatchObject({ code: 'input_budget_exceeded' });
       }
       remote.mockResolvedValueOnce(new Response('{'));
-      expect((await call('/content/catalog/pull', 'POST', '{"url":"https://synthetic.invalid/feed"}', publicationHeaders(env, auth))).status).toBe(502);
+      expect((await call('/content/catalog/pull', 'POST', '{"url":"https://synthetic.invalid/feed","mode":"replace"}', publicationHeaders(env, auth))).status).toBe(502); // P91 R10 (R-P332)
     } finally { remote.mockRestore(); }
     expect(puts()).toBe(before); expect(JSON.stringify([[...kv.store], [...storage.objects]])).toBe(state);
     const records = Array.from({ length: 501 }, (_, i) => piece(`admitted-${i}`)), headers = publicationHeaders(env, auth);
     const imported = JSON.stringify({ content: records });
-    expect(await (await call('/content/catalog/import', 'POST', imported, headers)).json()).toMatchObject({ ok: true, pieces: 501, received: 501, revision: 2 });
+    expect(await (await call('/content/catalog/import?mode=replace', 'POST', imported, headers)).json()).toMatchObject({ ok: true, pieces: 501, received: 501, revision: 2 }); // P91 R10 (R-P332)
     const afterImport = puts();
-    expect(await (await call('/content/catalog/import', 'POST', imported, headers)).json()).toMatchObject({ ok: true, pieces: 501, revision: 2 });
+    expect(await (await call('/content/catalog/import?mode=replace', 'POST', imported, headers)).json()).toMatchObject({ ok: true, pieces: 501, revision: 2 }); // P91 R10 (R-P332)
     expect(puts()).toBe(afterImport);
     expect(await (await call('/content/catalog/validate', 'POST', JSON.stringify({ pieces: records }))).json()).toMatchObject({ valid: true });
     expect(await (await call('/content/priors?scope=coach', 'PUT', 'slot,item,cell,p_prior,n_equiv\r\nstory,p1,,0.5,2', { ...authoredHeaders(env, auth, 'prior'), 'Content-Type': 'text/csv' })).json()).toMatchObject({ ok: true, document: { rows: [{ cell: '*', p_prior: 0.5 }] } });

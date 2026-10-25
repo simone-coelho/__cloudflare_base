@@ -9,7 +9,7 @@ export const PUBLICATION_CACHE_MS = 30_000;
 const LIMIT = 50, MEMBERS = 16, CACHE_ENTRIES = 32, CACHE_BYTES = 8 * 1024 * 1024;
 const encoder = new TextEncoder(), HASH = /^[0-9a-f]{64}$/;
 const OPERATION = /^(0|[1-9][0-9]*):[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval']);
+const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval', 'import-sources']);
 /**
  * P38: the members a coherent set may lack and a publication may ADD. A tenant
  * that never published a vocabulary has a set without one, and that set stays
@@ -18,7 +18,8 @@ const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposal
  * authored precondition of revision 0, inside the same one-CAS set publication
  * every other member uses. No other member can be created or removed this way.
  */
-const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval']);
+// P91 (E16): the tenant's import-sources list is optional too: a tenant that publishes none allows every caller.
+const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval', 'import-sources']);
 /**
  * P48 (R-P78, R-P82 (4)): the two members a committed set lacks only because
  * the demo bootstrap created it with four, by kind name, with the name an
@@ -93,6 +94,8 @@ function canonical(v: unknown, depth = 0): string {
 async function digest(value: unknown): Promise<string> {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(canonical(value))))).map(n => n.toString(16).padStart(2, '0')).join('');
 }
+/** P91 (R-P330): the digest of a document's value, keys sorted, as the publication computes it: equal values, equal digests. */
+export function documentDigest(value: unknown): Promise<string> { return digest(value); }
 function serialized(value: unknown): string {
   const raw = canonical(value);
   if (encoder.encode(raw).byteLength > PUBLICATION_MAX_BYTES) throw new PublicationError('Publication exceeds 2 MiB', 413, 'document_too_large');
@@ -343,6 +346,7 @@ async function kindFor(name: string): Promise<DocumentKind<unknown>> {
     case 'proposals': return (await import('@/learn/cycle')).PROPOSALS_KIND;
     case 'vocabulary': return (await import('@/content/kinds')).VOCABULARY_KIND as unknown as DocumentKind<unknown>;
     case 'vocabulary-approval': return (await import('@/content/kinds')).VOCABULARY_APPROVAL_KIND as unknown as DocumentKind<unknown>;
+    case 'import-sources': return (await import('@/content/import')).IMPORT_SOURCES_KIND as unknown as DocumentKind<unknown>;
     default: throw unavailable();
   }
 }
