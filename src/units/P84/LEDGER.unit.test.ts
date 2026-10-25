@@ -46,8 +46,8 @@
 //   · `holdout: { share, arms, saltVersion }`; the head script's default-class probability by the engine's own function
 //     (share ÷ |arms| per arm, holdout.ts armFor), byte-exact through the build.
 //   · the head script inlined by the server render; the build writes `edge-head.js.csp` (base64 SHA-256 of the committed
-//     bytes, checked by --check); the kit states the computation, never a literal hash; budget 8192 bytes (R-P364: 16,384
-//     raw minified bytes, as the SDK's budgets are counted; one byte-exact classifier).
+//     bytes, checked by --check); the kit states the computation, never a literal hash; budget 8192 bytes (R-P371: the head
+//     built unminified like the SDK bundles, its budget by W40.P3's rule, the size rounded up to the next 5,120 bytes).
 //   · the mint's cap min(4096, ceil(ln(1e-6)/ln(1−p))) with a counted diagnostic (cap reached, mismatch, a learn publish
 //     between the holdout read at the mint and the decision's pin).
 //   · `shotOrders: [{ context, order }]` on a content slot in P01's context form, refused by name on the layout slot and
@@ -89,8 +89,8 @@
 //      every shotOrder null and brandRules {}.
 //   P4 The head script: src/sdk/head.ts → `public/sdk/edge-head.js` (IIFE), its copies `public/sdk/0.2.0/edge-head.js` and
 //      `packages/sdk/edge-head.js` (a third SDK_TARGETS entry in scripts/build-sdk.mjs), each with `edge-head.js.csp`
-//      beside it holding `sha256-<base64 SHA-256 of the bytes>`; packages/sdk/package.json exports it with sizeBudget 16384
-//      (R-P364: the sketch's head is 12,609 bytes minified, the classifier with its vocabulary path 7,463 of them).
+//      beside it holding `sha256-<base64 SHA-256 of the bytes>`; packages/sdk/package.json exports it with its sizeBudget by
+//      W40.P3's rule (R-P371: built unminified, minify: false as the recorded build options require; 22,291 bytes → 25,600).
 //      Its inputs, written by the server render in the head before it: `<script type="application/json"
 //      id="op-context-table">` (the document) and `<script type="application/json" id="op-images">` (the carousel's image
 //      list in the server order: [{ id, tags: { contentType?, <each brand-rule dimension>? }, src, srcset?, sizes? }]).
@@ -149,6 +149,11 @@
 //      recorded choice gets the holdout default from the engine (its first answer on the direct path, its entry on the
 //      request) and the head script, with no recorded consent, paints the default row: the same order. No assertion
 //      claims a context row for a first answer without a choice.
+//      NARROWED (R-P371): the engine reads a never-seen shopper as visit bucket first ONLY when the request carries
+//      `entry` and her recorded choice grants tracking; without an arrival, or without tracking, the bucket stays unknown
+//      as today (P01.O2, P30.X3). READING (measured, for ruling): and only when that entry classifies to a channel —
+//      W16.C2.04 (src/units/W16/C2.unit.test.ts :422-425, "an unrecognized arrival leaves the decision cell unknown ...
+//      with no fabricated visit 1") decides a cold shopper carrying an unrecognized entry and locks bucket `unknown`.
 //   C3 (accepted) A brand-new browser has no recorded choice on the engine at its first request (personalization takes an explicit
 //      instruction, src/content/consent.ts personalizes()), so its first answer's experiment.arm is the ineligible
 //      assignment, not the page's class; these tests assert the class on the identifier (armFor(subject, salt)) and on
@@ -699,11 +704,11 @@ function engineCell(c: ArrivalCase): { context: string; visit: Record<string, un
 const storedVisit = (prior: ArrivalCase['prior']): Record<string, string> => prior ? { opt_head: JSON.stringify({ visit: prior }) } : {};
 
 describe('unit:P84.CO2', () => {
-  it('logic: the head script is built by scripts/build-sdk.mjs from src/sdk/head.ts (a third SDK target, IIFE, with its two copies), its bundle reads src/services/visit.ts; `node scripts/build-sdk.mjs --check` exits 0 and names it; each copy carries edge-head.js.csp = sha256-<base64 SHA-256 of its bytes>; the package exports it within a 16,384-byte budget (R-P364); on a copy of the tree one byte off in any copy or its .csp fails the check by name', async () => {
+  it('logic: the head script is built by scripts/build-sdk.mjs from src/sdk/head.ts (a third SDK target, IIFE, with its two copies), its bundle reads src/services/visit.ts; `node scripts/build-sdk.mjs --check` exits 0 and names it; each copy carries edge-head.js.csp = sha256-<base64 SHA-256 of its bytes>; it is built unminified like the SDK bundles and the package exports it with its budget by W40.P3\'s rule (R-P371); on a copy of the tree one byte off in any copy or its .csp fails the check by name', async () => {
     const build = await import(/* @vite-ignore */ new URL('../../../scripts/build-sdk.mjs', import.meta.url).href) as {
       SDK_TARGETS: Array<{ entry: string; output: string; format: string }>;
       buildSDK: (o: { root: string }) => Promise<Array<{ metafile: { inputs: Record<string, unknown>; outputs: Record<string, { inputs: Record<string, unknown> }> } }>>;
-      verifySDK: (o: { root: string }) => Promise<unknown> };
+      verifySDK: (o: { root: string }) => Promise<unknown>; sdkBuildOptions: (root?: string) => Promise<Array<{ entryPoints: string[]; minify: boolean }>> };
     const target = build.SDK_TARGETS.find(t => t.output === 'public/sdk/edge-head.js');
     expect.soft(target, 'P84.CO2 — the head script is an SDK target (today SDK_TARGETS holds the two bundles only)').toEqual({ entry: 'src/sdk/head.ts', output: 'public/sdk/edge-head.js', format: 'iife' });
     const check = spawnSync(process.execPath, ['scripts/build-sdk.mjs', '--check'], { cwd: ROOT, encoding: 'utf8' });
@@ -717,8 +722,12 @@ describe('unit:P84.CO2', () => {
     expect.soft(csp, 'P84.CO2 — three copies, each with its content-security-policy hash beside it').toEqual(copies.map(path => [path, 'its hash']));
     const manifest = JSON.parse(readTree('packages/sdk/package.json')) as { exports?: unknown; sizeBudget?: Record<string, number> };
     const bytes = existsSync(join(ROOT, 'packages/sdk/edge-head.js')) ? readFileSync(join(ROOT, 'packages/sdk/edge-head.js')).length : -1;
-    expect.soft([JSON.stringify(manifest.exports ?? {}).includes('./edge-head.js'), manifest.sizeBudget?.['./edge-head.js'], bytes > 0 && bytes <= 16384],
-      'P84.CO2 — the package exports the head script with its 16,384-byte budget (R-P364), and it is within it').toEqual([true, 16384, true]);
+    const budget = manifest.sizeBudget?.['./edge-head.js'];
+    const byRule = typeof budget === 'number' && bytes > 0 && budget % 5120 === 0 && budget >= bytes && budget - bytes < 5120;
+    expect.soft([JSON.stringify(manifest.exports ?? {}).includes('./edge-head.js'), byRule ? 'its size rounded up to the next 5,120 bytes' : `${String(budget)} for ${bytes} bytes`],
+      'P84.CO2 — the package exports the head script with its budget by W40.P3\'s rule (R-P371)').toEqual([true, 'its size rounded up to the next 5,120 bytes']);
+    const options = await build.sdkBuildOptions(ROOT);
+    expect.soft(options.filter(o => o.entryPoints.includes('src/sdk/head.ts')).map(o => o.minify), 'P84.CO2 — built unminified like the SDK bundles (R-P371)').toEqual([false]);
     if (!target) return;
     const results = await build.buildSDK({ root: ROOT });
     const head = results[build.SDK_TARGETS.indexOf(target)];
@@ -954,6 +963,23 @@ describe('unit:P84.CO3', () => {
         { share: 1, unmet: [200, 'one mint', { class: 'personalized', honoured: false, reason: 'mismatch' }], met: [200, 'one mint', { class: 'default', honoured: true }], counted: { capped: 0, ignored: 0, mismatch: 1, republished: 0 } },
       ]);
     }, 180_000);
+
+    it(`host (${host}): a malformed arm member answers 400 'Invalid arm member' wherever the request reaches parsing — on a new browser's first request (no session) and on a request carrying a session: not JSON, a class outside default and personalized, no table version, a table version that is not a string (R-P371)`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P84.CO3 — the documents publish');
+      const s = await shopperOn(m);
+      const malformed = ['not json', JSON.stringify({ class: 'holdout', tableVersion: 'v' }), JSON.stringify({ class: 'default' }), JSON.stringify({ class: 'default', tableVersion: 5 })];
+      const answers: Array<[string, string, number, unknown]> = [];
+      for (const arm of malformed) for (const session of [false, true]) {
+        const response = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
+          headers: { 'X-Tenant': TENANT, 'Content-Type': 'application/json', ...(session ? { [SHOPPER_HEADER]: s.grant.capability } : {}) },
+          body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance: pageInstanceOf('p84-malformed'), 'ctx.anchor': A, arm }) }));
+        const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+        await m.drain();
+        answers.push([arm, session ? 'with a session' : 'a new browser', response.status, body.error ?? null]);
+      }
+      expect.soft(answers, `${host}: P84.CO3 — each malformed member refused 400 by name (today an unknown member is 401)`).toEqual(answers.map(([arm, who]) => [arm, who, 400, 'Invalid arm member']));
+    }, 120_000);
 
     it(`host (${host}): a browser the engine already knows — a decision request carrying her session and an arm member naming the other class is answered as without it (her experiment.arm armFor(her identifier, the holdout)), armRequest { honoured: false, reason: ignored }, counted arm_draw.ignored`, async () => {
       const holdout = holdoutOf(0.5);
