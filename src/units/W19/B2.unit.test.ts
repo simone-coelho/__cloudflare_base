@@ -672,9 +672,10 @@ describe('unit:W19.L1.01', () => {
     try {
       let revision = 1;
       for (const [label, suffix, method, body, contentType] of [
-        ['JSON import', '/import', 'POST', JSON.stringify(feed), 'application/json'],
-        ['CSV import', '/import?format=csv', 'POST', csv, 'text/csv'],
-        ['pull', '/pull', 'POST', JSON.stringify({ url: 'https://cms.example/market-feed', path: 'content' }), 'application/json'],
+        // P91 R10 (R-P332): each load names its mode (replace, the feed over an empty catalogue).
+        ['JSON import', '/import?mode=replace', 'POST', JSON.stringify(feed), 'application/json'],
+        ['CSV import', '/import?format=csv&mode=replace', 'POST', csv, 'text/csv'],
+        ['pull', '/pull', 'POST', JSON.stringify({ url: 'https://cms.example/market-feed', path: 'content', mode: 'replace' }), 'application/json'],
         ['direct PUT', '', 'PUT', JSON.stringify({ document: { pieces: feed } }), 'application/json'],
       ] as const) {
         const response = await authoringApp.request(`${H}/catalog${suffix}${suffix.includes('?') ? '&' : '?'}scope=${AUTHORING_TENANT}`,
@@ -682,7 +683,12 @@ describe('unit:W19.L1.01', () => {
         expect(response.status, `${label}: ${await response.clone().text()}`).toBe(200);
         const answer = await response.json() as CatalogAnswer;
         expect(answer.ok, `${label}: the write is accepted`).toBe(true);
-        expect(answer.revision, `${label}: one new revision`).toBe(++revision);
+        // P91 R10 (R-P332, E16 superseding the old rule): the CSV import and the pull load the feed the JSON import already
+        // stored, so each is skipped and answers the revision in force; the first load and the direct PUT write the next one.
+        // `revision` follows the revision in force, so each step's If-Match names it.
+        if (label === 'CSV import' || label === 'pull') {
+          expect([answer.revision, (answer as { skipped?: unknown }).skipped], `${label}: an identical re-load is skipped, the revision in force answered`).toEqual([revision, true]);
+        } else expect(answer.revision, `${label}: one new revision`).toBe(++revision);
         // 1. The tag survives the path, exactly. Deep equality on the whole
         //    stored piece: nothing rewrites the locale value, nothing folds its
         //    case, nothing drops the dimension, and no other field moves either.
@@ -703,7 +709,7 @@ describe('unit:W19.L1.01', () => {
       invalidateCache();
       const unregistered = authoringEnv();
       await initializeAuthoring(unregistered, { version: 'w19-b2-catalog', pieces: [] }, REGISTRY_WITHOUT_LOCALE);
-      const second = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}`,
+      const second = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}&mode=replace`, // P91 R10 (R-P332): the mode named
         { method: 'POST', headers: publicationHeaders(unregistered, auth, 1), body: JSON.stringify(feed) }, unregistered);
       expect(second.status, await second.clone().text()).toBe(200);
       const answer = await second.json() as CatalogAnswer;
@@ -975,16 +981,21 @@ describe('unit:W19.S1.01', () => {
     try {
       let revision = 1;
       for (const [label, suffix, method, body] of [
-        ['JSON import', '/import', 'POST', JSON.stringify(feed)],
-        ['pull', '/pull', 'POST', JSON.stringify({ url: 'https://cms.example/market-feed', path: 'content' })],
+        // P91 R10 (R-P332): each load names its mode (replace, the feed over an empty catalogue).
+        ['JSON import', '/import?mode=replace', 'POST', JSON.stringify(feed)],
+        ['pull', '/pull', 'POST', JSON.stringify({ url: 'https://cms.example/market-feed', path: 'content', mode: 'replace' })],
         ['direct PUT', '', 'PUT', JSON.stringify({ document: { pieces: feed } })],
       ] as const) {
-        const response = await authoringApp.request(`${H}/catalog${suffix}?scope=${AUTHORING_TENANT}`,
+        const response = await authoringApp.request(`${H}/catalog${suffix}${suffix.includes('?') ? '&' : '?'}scope=${AUTHORING_TENANT}`,
           { method, headers: publicationHeaders(env, auth, revision), body }, env);
         expect(response.status, `${label}: ${await response.clone().text()}`).toBe(200);
         const answer = await response.json() as CatalogAnswer;
         expect(answer.ok, `${label}: the write is accepted`).toBe(true);
-        expect(answer.revision, `${label}: one new revision`).toBe(++revision);
+        // P91 R10 (R-P332, E16 superseding the old rule): the pull loads the feed the JSON import already stored, so it is
+        // skipped and answers the revision in force; `revision` follows the revision in force for each step's If-Match.
+        if (label === 'pull') {
+          expect([answer.revision, (answer as { skipped?: unknown }).skipped], `${label}: an identical re-load is skipped, the revision in force answered`).toEqual([revision, true]);
+        } else expect(answer.revision, `${label}: one new revision`).toBe(++revision);
         // 1. A piece naming an undefined slot is WARNED, never refused: it is
         //    stored whole, exactly as the feed sent it (reading (b)).
         expect(await storedPieces(env), `W19.S1.01 — ${label}: every piece is stored whole, undefined slot type and all`).toEqual(expected);
@@ -1064,7 +1075,7 @@ describe('unit:W19.S1.02', () => {
     //    `slotTypes`"), stored under the canonical name and nowhere else.
     const jsonAlias = { id: 'alias-json', customerContentId: 'CMS-ALIAS-JSON', type: 'editorial', title: 'Alias On The JSON Feed',
       tags: { locale: ['en-GB'], line: ['Tabby'] }, slots: ['market-hero'] };
-    const first = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}`,
+    const first = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}&mode=replace`, // P91 R10 (R-P332): the mode named
       { method: 'POST', headers: publicationHeaders(env, auth, 1), body: JSON.stringify([jsonAlias]) }, env);
     expect(first.status, await first.clone().text()).toBe(200);
     expect(await storedPieces(env),
@@ -1114,7 +1125,7 @@ describe('unit:W19.S1.02', () => {
       { id: 'has-a-slot', customerContentId: 'CMS-HAS', type: 'editorial', title: 'Has One', tags: { line: ['Tabby'] }, slots: ['market-hero'] },
       { id: 'has-none', customerContentId: 'CMS-NONE', type: 'editorial', title: 'Has None', tags: { line: ['Tabby'] } },
     ];
-    const third = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}`,
+    const third = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}&mode=replace`, // P91 R10 (R-P332): the mode named
       { method: 'POST', headers: publicationHeaders(env, auth, 4), body: JSON.stringify(refused) }, env);
     expect(third.status, 'W19.S1.02 — a feed whose piece names no slot at all is refused').toBe(422);
     const refusal = await third.json() as CatalogAnswer;
@@ -1131,7 +1142,7 @@ describe('unit:W19.S1.02', () => {
     const emptyCsv = csvOf(['id', 'customerContentId', 'type', 'title', 'tags', 'slots'], [
       { id: 'csv-has-none', customerContentId: 'CMS-CSV-NONE', type: 'editorial', title: 'CSV Has None', tags: 'line:Tabby', slots: '' },
     ]);
-    const fourth = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}&format=csv`,
+    const fourth = await authoringApp.request(`${H}/catalog/import?scope=${AUTHORING_TENANT}&format=csv&mode=replace`, // P91 R10 (R-P332): the mode named
       { method: 'POST', headers: { ...publicationHeaders(env, auth, 4), 'Content-Type': 'text/csv' }, body: emptyCsv }, env);
     expect(fourth.status, 'W19.S1.02 — a CSV row with a blank slots cell is refused too').toBe(422);
     expect((await fourth.json() as CatalogAnswer).errors,
