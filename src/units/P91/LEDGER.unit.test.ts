@@ -61,7 +61,12 @@
 // preconditions 403, not 428; a caller outside the list with no mode 403, the list before the mode; nothing written); IM2's
 // reorder LOCK (a replace whose file holds the same pieces in reverse order writes a new revision and the stored order
 // follows the file: green today, the skip compares order); the kit leg binds kit 02's import row and kit 03's sentence to
-// "mode is required, a load without one is refused 400" (today's `mode=replace\|merge` row locked RED).
+// "mode is required, a load without one is refused 400" (today's `mode=replace\|merge` row locked RED). MEASURED at
+// 7dbabd5f (logs/g/): today 15 RED and 4 green (the validate locks and the reorder locks); the fix 19/19 three times (its kit
+// 03 sentence now states the refusal); the reviewer's controls (S28/reviewer-spec/sketches/ctl-p91.py after the fix) each
+// RED on its own leg alone — `orderswap2` the order leg ×2 (428 where 400 and 403 are expected), `skipunordered` the
+// reorder lock ×2, `kitoptional` the kit leg; the nine wrong fixes RED on the legs they turned RED before, the new legs
+// adding `nomodereplace` and `allowimportonly` to the order leg and `skipcount` to the reorder lock; tsc exit 0 on both.
 //
 // THE R10s (granted by name in R-P332; test-only, R-P195's form; the lines named at the base 92a7132e):
 //   A. The mode named (every other assertion unchanged): src/routes/content.test.ts :546 (`?mode=replace`), :551 and :564
