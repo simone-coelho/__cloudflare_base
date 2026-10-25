@@ -9,12 +9,6 @@ import { ENTRY_CAMPAIGN_LIMIT, ENTRY_TERM_LIMIT } from '../services/visit';
 import type { EntrySignals, Host } from './types';
 
 export const DEFAULT_VISITOR_KEY = 'opt_visitor_id';
-/**
- * P84 (E8): the first-party storage the head script (src/sdk/head.ts) and the
- * SDK share: the head script's visit and a brand-new browser's draw, and what
- * the SDK keeps for it from each answer (src/sdk/listen.ts).
- */
-export const HEAD_STATE_KEY = 'opt_head';
 
 /**
  * W16 R4 (LANE-LOG R81(c)): in BROKER mode the recognition proof belongs to the
@@ -82,11 +76,9 @@ export function rotateBrowsingSession(host: Host, key = DEFAULT_SESSION_KEY): vo
 /**
  * How this page load arrived: captured once from the current document and sent
  * with every action, because the client cannot know which event will be the
- * one that crosses a visit boundary. The server decides that. P84: the head
- * script reads the same arrival before paint, from the page's own location and
- * referrer (src/sdk/head.ts), so its cell is the one the engine records.
+ * one that crosses a visit boundary. The server decides that.
  */
-export function entrySignals(host: Pick<Host, 'location' | 'referrer'>): EntrySignals {
+export function entrySignals(host: Host): EntrySignals {
   let utmMedium = '', utmSource = '', utmTerm = '', utmCampaign = '';
   try {
     const usp = new URLSearchParams(host.location?.search ?? '');

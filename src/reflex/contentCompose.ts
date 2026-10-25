@@ -65,13 +65,6 @@ export interface ContentSlotSpec {
    */
   minimum?: { dimension: string; value: string; count: number; within: number };
   /**
-   * P84 (E8): the context's shot order (the caller resolves it for the cell on an arm that personalizes): candidates of
-   * EQUAL score are ordered by the lowest position any of their own `tags.contentType` values holds in it, a candidate
-   * with none listed after every listed one, then by catalogue order as before. So a cold shopper's carousel (every score
-   * equal) is the row, images of one shot type in catalogue order, and P83's tag pin and minimum apply after it unchanged.
-   */
-  shotOrder?: readonly string[];
-  /**
    * P83 (E6): the tag pin, passed by the caller only while its window is in effect: the best-ranked eligible candidate
    * carrying the tag leads the slot; with none, the slot decides as without it and the pin is named, refusing nothing.
    */
@@ -638,16 +631,8 @@ export function composeContentDetailed(
       }
       return { p, score, drivers, band };
     };
-    // P84 (E8): a candidate's place in the context's shot order (0 without one, so nothing changes).
-    const shotOrder = slot.shotOrder;
-    const shotRank = (p: ContentPieceLike): number => {
-      if (!shotOrder?.length) return 0;
-      let best = shotOrder.length;
-      for (const value of p.tags.contentType ?? []) { const at = shotOrder.indexOf(value); if (at >= 0 && at < best) best = at; }
-      return best;
-    };
     const byScoreThenCatalogue = (x: { p: ContentPieceLike; score: number }, y: { p: ContentPieceLike; score: number }) =>
-      y.score - x.score || shotRank(x.p) - shotRank(y.p) || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
+      y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
     // P83 (E6): the tag pin in effect (the caller passes it only inside its window): the best-ranked eligible candidate
     // carrying the tag, ranked as the slot's first position ranks (its band's weights when a band covers it), leads the
     // slot and is never ranked again nor explored; the other positions rank as without it. With none (or with the

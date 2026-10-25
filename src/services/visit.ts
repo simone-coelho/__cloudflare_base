@@ -30,15 +30,6 @@ import { deviceClassOf, type DeviceClass } from './platform';
  * disagrees with their tool is a number we spend a meeting defending.
  */
 export const VISIT_GAP_MS = 30 * 60 * 1000;
-/**
- * P84 (E8, N3): the version of the arrival classifier this file defines — the
- * channel rules (`entryChannel`, a tenant vocabulary's `classifyByVocabulary`),
- * the thirty-minute visit (`liveVisit`) and the buckets. The context table names
- * it and the head script, built from this very file (src/sdk/head.ts), carries
- * it; a table naming another version makes the head script paint the default
- * row. Change it with any change to how an arrival is classified or counted.
- */
-export const CLASSIFIER_VERSION = 'entry-channel-v1';
 
 /** Doc 22 section 5.4's visit bucket. */
 export type VisitBucket = '1' | '2-3' | '4+';
@@ -492,32 +483,6 @@ export function nextVisitCount(
     : 0;
   if (prior === 0) return 1;
   return isNewVisit(lastSeenMs, nowMs, gapMs) ? prior + 1 : prior;
-}
-
-/**
- * P36: a bucket's name under a cut — its single number (`1`) or its range
- * (`2-3`), the last one open (`4+`). Today's cut names today's buckets.
- */
-export function bucketNamesOf(cut: readonly number[]): string[] {
-  return cut.map((bound, i) => {
-    const next = cut[i + 1];
-    if (next === undefined) return `${bound}+`;
-    return next - 1 === bound ? String(bound) : `${bound}-${next - 1}`;
-  });
-}
-
-/**
- * P36: the bucket a visit number falls in under a cut (its lower bounds,
- * ascending from 1), `unknown` for no visit number; `names` the cut's names
- * when the caller holds them. The decision's cell reads it (src/content/cell.ts
- * visitBucketOf) and P84's head script reads it for a tenant's published cut,
- * so the page and the engine name one bucket.
- */
-export function visitBucketUnder(n: number | null | undefined, cut: readonly number[], names: readonly string[] = bucketNamesOf(cut)): string {
-  if (n === null || n === undefined || !Number.isFinite(n) || n < 1) return 'unknown';
-  let at = 0;
-  for (let i = 0; i < cut.length; i++) if (n >= cut[i]!) at = i;
-  return names[at] ?? 'unknown';
 }
 
 /**

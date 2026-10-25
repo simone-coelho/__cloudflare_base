@@ -640,34 +640,6 @@ every shopper of one context gets the same key. It is a header, never a member o
 `Cache-Control: no-store`, and a new visitor's first request carries it too. A page drawn from a cache under that
 key reports its exposures with the `layout_exposure` beacon (section 1).
 
-**The context table and the head script.** A page with a declared layout slot has a context table, a
-shopper-free document your server render inlines so the page paints the shopper's context before its first frame
-([the integration guide](./01-integration-guide.md), section 7). `GET /v1/{tenant}/context-table/{page}` answers it
-with `Cache-Control: public, max-age=60`; `GET /v1/{tenant}/context-table/{page}/{version}` answers the same bytes
-with `Cache-Control: public, max-age=31536000, immutable` while that version is the one in force, and `404` once it
-is not (a cache keeps what it holds until it expires: the stable address is the one to fetch). Both are `GET` reads
-behind the site key like every `/v1` read on a customer deployment; they need no session, set no cookie and name no
-shopper. A page without a declared layout slot, or one the slots document does not name, answers `404`. The table
-is computed on read from the slots and learn documents in force, so a publication that changes one of its inputs
-moves its `version` and one that leaves them as they were leaves it byte for byte; `version` is the SHA-256, in
-hexadecimal, of the document's canonical JSON (keys sorted, no white space) without `version`. Its members:
-`version`; `page`; `layoutSlot`, the declared layout slot; `carouselSlot`, the slot that carries
-[shot orders](./03-payload-schemas.md#shot-orders), or `null`; `classifierVersion`, the version of the arrival
-classifier the head script must carry; `holdout`, the holdout's `share`, `arms` and `saltVersion` (counted as the
-experiment counts it); `default`, the default row; `rows`, one per cell of the tenant's terms (each of the six
-channel words, or each channel id of a published [context vocabulary](#the-context-vocabulary-contextvocabulary),
-with each visit bucket of its cut), each with `layout`, the module order of the per-context order the decision
-resolves for that cell, and `shotOrder`, the carousel's shot order resolved by the same rule, both per device as
-`{ mobile, desktop }` and `null` where nothing matches (the page keeps its server order); and `brandRules`, the
-carousel's `minimum` and `pinnedTag` as published. A tenant that publishes a context vocabulary also has
-`channelVocabulary: { revision, channels, rules, visitBuckets }`, which the head script classifies by. The default
-row is `null` throughout. The table carries shot types per context, never items. The head script, `edge-head.js`
-in the SDK package, is built from the engine's own classifier by `node scripts/build-sdk.mjs`, and
-`node scripts/build-sdk.mjs --check` fails on any byte of it that differs. Your server render inlines it verbatim, so
-its content-security-policy source is `'sha256-…'` of exactly those bytes: the SHA-256 of the file, in base64, which
-the build writes beside each copy as `edge-head.js.csp` (the whole source, `sha256-` and the digest). Build your
-policy from that file at deploy time, never from a hash copied by hand: a new release changes it.
-
 **The context prior.** A tenant can let the arrival's context shape a first decision through a population
 prior per context, beside the regional prior: `contextPrior: { enabled, kBlend, minEvents }` in the learn
 document turns it on with its own `kBlend` (its K) and `minEvents`, in the regional block's grammar
@@ -1468,28 +1440,6 @@ her browser happens to be carrying: she is served the site's own defaults, the a
 `GET /v1/{tenant}/learn/queue` as `enrollment_anchor_unavailable`.
 `enrollment_anchor_unavailable` is a lower bound: concurrent anchor failures can collapse into one increment, so read it as a floor and never as an exact count.
 
-**A brand-new browser's arm before paint.** The head script (the context table, section 2) knows the arm before
-the page's first frame. A browser the engine already knows computes it with the engine's own function, from its
-stored visitor identifier and the salt the last answer's `experiment.id` names. A brand-new browser draws it:
-`default` with probability `share` × (the number of `default` entries in `arms`) ÷ (the number of `arms`), the
-engine's own split of the holdout, else `personalized`. The member `arm` rides the SDK's first decision request
-on the direct path (no session yet, no broker) as the JSON text of
-`{ "class": "default" | "personalized", "tableVersion": "<the context table's version>" }`, and the engine draws
-the new visitor identifier again until its arm is in that class (every arm but `default` is `personalized`), at
-most min(4096, ⌈ln 10⁻⁶ ÷ ln(1 − p)⌉) draws, p the class's probability, and once where p is 0 or 1; the arm
-stays a function of the identifier and the salt, so every later decision agrees. The answer says what became of
-it as `armRequest`, `{ class, honoured, reason? }`: honoured, or not with `reason` `capped` (not met within the cap,
-the identifier keeping the arm it drew), `mismatch` (a share of 0 or 1 that cannot meet the class),
-`republished` (a learn publication between the draw and the decision moved the identifier out of it) or `ignored`
-(a request that already carries a session, whose arm never changes and whose answer is as without the member). A
-malformed member is refused `400 'Invalid arm member'`, and on a new browser's first request `401`, writing nothing,
-as every malformed member is. Each reason is counted for your operators on `GET /v1/{tenant}/learn/queue` as
-`arm_draw`, `{ capped, ignored, mismatch, republished }`, a count over thirty days that names no visitor, read as a
-floor as `enrollment_anchor_unavailable` is. Two cases are told and not counted: a page on the session route or a
-session broker gets the engine's own draw, so its head script can paint another class than its first answer's
-until the SDK keeps that answer's experiment; and a recognised shopper's arm is her enrollment anchor's (above),
-which a head script on another browser cannot see.
-
 The canonical nightly report groups by the experimental assignment on every path: `ineligible` is its own row, never part of `default`, and a day summed from hours folded before this release answers `armVisitors: null` and names those hours in `coverage.unassignedHours`.
 The day report built on demand from the day's records groups by the assignment.
 
@@ -2008,9 +1958,7 @@ records' `explain` members, each as the [decision record](./03-payload-schemas.m
 Its render acknowledgements and engagements credit the inner slot's own statistics object, under the page-scoped
 name where a retained slots document carries that slot name on more than one page, never the module's
 layout position. On a context-only layout slot the inner slots are decided for the shopper, as any slot of the page
-is, and `X-Context-Key` names the layout's context alone. The carousel's shot order is published per context beside
-the module order (`shotOrder` in each row of the context table, section 2): shot types, never items, which stay
-decided for the shopper.
+is, and `X-Context-Key` names the layout's context alone.
 
 The page's decisions, layout and inner slots alike, are one receipt set: one composition, one `ts`, and one page
 manifest (`inputs.replay`) on every record naming, in document order, every slot that was decided, an undecided

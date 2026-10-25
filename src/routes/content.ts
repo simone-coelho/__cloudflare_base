@@ -236,44 +236,6 @@ function requestLearnDocument(primary: DocumentKind<unknown>, candidate: unknown
 }
 
 /**
- * P84 (E8, R-P359 Q4): a carousel's shot orders name `contentType` values. Where
- * the vocabulary in effect governs `contentType` (P38), each value must be one
- * of its ids, the form every governed catalogue tag is stored in, so a shot type
- * the images cannot carry is refused 422 naming the order, the position and the
- * value; where none governs it the values stand as the slot validator bounds
- * them, never checked against the catalogue's current values. A document naming
- * no shot order is never touched: no read is made for it. Fail closed: a
- * vocabulary that cannot be read refuses the publication 503.
- */
-async function shotVocabularyRefusals(env: Env, scope: string, slotsCandidate: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
-  const named: Array<{ at: string; value: string }> = [];
-  const pages = slotsCandidate && typeof slotsCandidate === 'object' ? (slotsCandidate as { pages?: unknown }).pages : undefined;
-  if (pages && typeof pages === 'object' && !Array.isArray(pages)) for (const [page, list] of Object.entries(pages as Record<string, unknown>)) {
-    if (!Array.isArray(list)) continue;
-    list.forEach((slot: unknown, i) => {
-      const orders = slot && typeof slot === 'object' ? (slot as { shotOrders?: unknown }).shotOrders : undefined;
-      if (!Array.isArray(orders)) return;
-      orders.forEach((order: unknown, k) => {
-        const values = order && typeof order === 'object' ? (order as { order?: unknown }).order : undefined;
-        if (Array.isArray(values)) values.forEach((value: unknown, j) => { if (typeof value === 'string') named.push({ at: `pages.${page}[${i}].shotOrders[${k}].order[${j}]`, value }); });
-      });
-    });
-  }
-  if (!named.length) return null;
-  let approval: Awaited<ReturnType<typeof vocabularyState>>['approval'];
-  try { approval = (await vocabularyState(env, scope)).approval; }
-  catch { return { status: 503, errors: ['vocabulary: the vocabulary in effect is unavailable, so the contentType values this slots document\'s shot orders name cannot be checked against it'] }; }
-  const attribute = approval ? vocabularyTableOf(approval.value).attributes.get('contentType') : undefined;
-  if (!approval || !attribute) return null;
-  const revision = approval.value.revision, ids = [...attribute.ids], offered = `${ids.slice(0, 8).join(' | ')}${ids.length > 8 ? ` | … (${ids.length} ids)` : ''}`;
-  const errors = named.filter(({ value }) => !attribute.ids.has(value)).map(({ at, value }) => {
-    const id = attribute.words.get(value);
-    return `${at}: ${JSON.stringify(value)} is outside the vocabulary in effect (revision ${revision}) for contentType; ${id === undefined ? `name one of its ids (${offered})` : `it is a synonym of ${JSON.stringify(id)}, and a shot order names the id`}`;
-  });
-  return errors.length ? { status: 422, errors } : null;
-}
-
-/**
  * P36 (R-P46): a slots document that names what a tenant's context vocabulary
  * decides — a seed rule on the channel, the source platform or the landing-page
  * type, or a per-context order's channel and visit buckets — is checked against
@@ -286,8 +248,6 @@ async function shotVocabularyRefusals(env: Env, scope: string, slotsCandidate: u
  * learn document that cannot be read refuses the publication.
  */
 async function vocabularyRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unknown, learnCandidate?: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
-  const shots = await shotVocabularyRefusals(c.env, scope, slotsCandidate);
-  if (shots) return shots;
   if (!slotsNameContext(slotsCandidate)) return null;
   let learn: LearnConfig;
   if (learnCandidate !== undefined) {

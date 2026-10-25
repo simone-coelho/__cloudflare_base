@@ -7,13 +7,13 @@
 
 import { composeContentDetailed, compositionOrder, HISTORICAL_PINS, HISTORICAL_GOVERNANCE, HISTORICAL_GOVERNANCE_V1, type HistoricalPins, type HistoricalGovernance, type ContentPieceLike, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust, type SettleHook, type SlotBand } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, MinimumRule, TagPin, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, LiftAsOf, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
+  Arm, Authority, Cell, ConfiguredOrder, ConstraintDiagnostic, ConstraintDiagnostics, ContentDecisionSet, ContentPiece, ContextPriorBlend, DecisionRecord, DecisionVersions, DocumentConstraintDiagnostics, IdentityAnchor, LayoutBlendTerms, LayoutMove, LayoutMoveTerm, LayoutReason, LayoutReasonCause, LayoutWithheld, LayoutWithheldCause, LearnConfig, LiftApplied, LiftAsOf, PageConstraintDiagnostic, RegionalBlend, SeedDiagnostic, SeedDriver, SeedRule, SignalFloor, SlotStrategy,
   ConversionTable, SuccessEvent, SuccessEventApplied,
 } from './types';
 import { OFF_LIMITS_ITEM } from '@/ledger/records';
 import { contextSpecificity, validateSeedRules } from './kinds';
-import { arrivedFromNetwork, CLASSIFIER_VERSION, ENTRY_CHANNELS, entryChannelOf, isContextId, type ChannelRule, type ChannelSignals, type RecencyBucket } from '@/services/visit';
-import { contextCellOf, contextKeyOf, contextTermsOf, defaultContextKeyOf, TODAY_TERMS, type ContextTerms } from './cell';
+import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, type RecencyBucket } from '@/services/visit';
+import { contextCellOf, contextKeyOf, defaultContextKeyOf, TODAY_TERMS, type ContextTerms } from './cell';
 import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
 import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, windowBounds, type EligibilityContext } from './lifecycle';
@@ -759,75 +759,6 @@ export function configuredOrderFor(slot: Pick<SlotStrategy, 'layout' | 'orders'>
   return best && !tied && Array.isArray(best.modules) ? best : null;
 }
 
-/**
- * P84 (E8): a slot's shot order for a cell and a device, by P01's matching rule
- * (`configuredOrderFor`: a context matches its channel or `any`, its buckets or
- * `any`, its device or none; the most specific match wins and a tie decides
- * nothing). Null where the slot carries no shot orders or none matches. Pure:
- * the context table's rows and the decision read this one function, so the row
- * a page paints is the order the engine serves.
- */
-export function shotOrderFor(slot: Pick<SlotStrategy, 'shotOrders'>, cell: Pick<Cell, 'channel' | 'visit_bucket'>, device?: DeviceClass | null): string[] | null {
-  const orders = slot.shotOrders;
-  if (!Array.isArray(orders) || orders.length === 0) return null;
-  const resolved = configuredOrderFor({ layout: true, orders: orders.map((o) => ({ context: o.context, modules: o.order })) }, cell, device);
-  return resolved ? [...resolved.modules] : null;
-}
-
-/** P84: a value per device class, null where nothing is configured for it. */
-export interface PerDevice { desktop: string[] | null; mobile: string[] | null }
-/**
- * P84 (E8; the rendering record's N1, R-P363 P3): a page's context table, the
- * shopper-free document the head script applies before paint. Every cell of
- * the tenant's terms (the six channel words, or the channel ids of its
- * published context vocabulary, each with every bucket of its cut) carries the
- * module layout of the page's declared layout slot (P01's order the engine
- * resolves for that cell on each device) and the carousel's shot order (P84's,
- * resolved by the same rule), null where none matches and the page keeps its
- * server order; the default row is null throughout. Beside the rows: the
- * holdout's share, arms and salt version, the classifier version the head
- * script must carry, the carousel's brand rules (P83) as published, and a
- * tenant's vocabulary as the head script classifies by it (C4). The route adds
- * `version`, the SHA-256 of the canonical bytes of the rest.
- */
-export interface ContextTableDocument {
-  page: string;
-  layoutSlot: string;
-  carouselSlot: string | null;
-  classifierVersion: string;
-  holdout: { share: number; arms: Array<'default' | 'no_learning'>; saltVersion: number | null };
-  default: { layout: PerDevice; shotOrder: PerDevice };
-  rows: Array<{ channel: string; visitBucket: string; layout: PerDevice; shotOrder: PerDevice }>;
-  brandRules: { minimum?: MinimumRule; pinnedTag?: TagPin };
-  channelVocabulary?: { revision: number; channels: string[]; rules: ChannelRule[]; visitBuckets: number[] };
-}
-/**
- * P84: the context table of `page` from the documents the caller read from ONE
- * pinned publication set, or null where the page declares no layout slot. Pure.
- */
-export function contextTableOf(page: string, slots: readonly SlotStrategy[], learn: LearnConfig, learnRevision: number, saltVersion: number | null): ContextTableDocument | null {
-  const layout = slots.find((s) => s.layout === true);
-  if (!layout) return null;
-  const carousel = slots.find((s) => s.layout !== true && (s.shotOrders?.length ?? 0) > 0) ?? null;
-  const vocabulary = learn.contextVocabulary ?? null, terms = contextTermsOf(vocabulary);
-  const channels = vocabulary ? vocabulary.channels.map((c) => c.id) : [...ENTRY_CHANNELS];
-  const perDevice = (of: (device: DeviceClass) => string[] | null): PerDevice => ({ desktop: of('desktop'), mobile: of('mobile') });
-  const rows = channels.flatMap((channel) => terms.buckets.map((visitBucket) => {
-    const cell = { channel, visit_bucket: visitBucket };
-    return { channel, visitBucket,
-      layout: perDevice((device) => { const order = configuredOrderFor(layout, cell, device); return order ? [...order.modules] : null; }),
-      shotOrder: perDevice((device) => carousel ? shotOrderFor(carousel, cell, device) : null) };
-  }));
-  const minimum = carousel?.minimum, pinnedTag = carousel?.pinnedTag;
-  return { page, layoutSlot: layout.slot, carouselSlot: carousel?.slot ?? null, classifierVersion: CLASSIFIER_VERSION,
-    holdout: { share: learn.holdout.share, arms: [...learn.holdout.arms], saltVersion },
-    default: { layout: perDevice(() => null), shotOrder: perDevice(() => null) },
-    rows,
-    brandRules: { ...(minimum ? { minimum: { count: minimum.count, dimension: minimum.dimension, value: minimum.value, within: minimum.within } } : {}),
-      ...(pinnedTag ? { pinnedTag: { dimension: pinnedTag.dimension, value: pinnedTag.value, window: { from: pinnedTag.window.from, to: pinnedTag.window.to } } } : {}) },
-    ...(vocabulary ? { channelVocabulary: { revision: learnRevision, channels, rules: vocabulary.rules, visitBuckets: [...terms.cut] } } : {}) };
-}
-
 /** P28: the blend's terms as a record and a receipt carry them: R, B and Q at three decimals, p as published, keys sorted. */
 const blendRecord = (terms: LayoutBlendTerms): LayoutBlendTerms => ({ B: r3(terms.B), Q: r3(terms.Q), R: r3(terms.R), p: terms.p });
 
@@ -938,14 +869,6 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     const order = configuredOrderFor(s, i.cell, i.device);
     if (order) configured.set(s.slot, order);
   }
-  // P84 (E8): the carousel's shot order for the cell, the tie-break of equal
-  // scores (`ContentSlotSpec.shotOrder`), by the same rule and on the same arms:
-  // never on the holdout's default arm, which keeps the slot's own order.
-  const shots = new Map<string, string[]>();
-  if (i.arm !== 'default') for (const s of i.slots) {
-    const order = shotOrderFor(s, i.cell, i.device);
-    if (order) shots.set(s.slot, order);
-  }
   // P28 (decision D1): the page's declared layout slot whose learn dials opt
   // into the behaviour-and-performance blend. Part of the learning layer, so
   // never on the holdout's default arm (no learning runs there, and the arm
@@ -970,7 +893,6 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec)
     .map((spec) => complementsOf.has(spec.slot) ? { ...spec, prefer: { test: completesAnchor, bonus: complementsOf.get(spec.slot)!, label: anchor } } : spec)
     .map((spec) => blends.has(spec.slot) ? { ...spec, blend: true as const } : spec)
-    .map((spec) => shots.has(spec.slot) ? { ...spec, shotOrder: shots.get(spec.slot)! } : spec)
     // P10: a slot below the floor is scored on the context view, never on the shopper's interests.
     .map((spec) => below.has(spec.slot) ? { ...spec, affinity: contextView }
       // P30: a context-only layout slot is scored on its context's view, and withholds what its context does not admit.

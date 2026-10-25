@@ -586,39 +586,6 @@ of it. The engine adds one exposure per drawn module to that context's learning 
 device is no learning level), and adds nothing for a beacon sent without tracking consent, with a key it did not
 issue, or repeated for the same page view. Only a layout slot measured on `rendered-v1` counts it.
 
-### The carousel before paint: the context table and the head script
-
-On a page with a declared layout slot, your server render can paint the carousel in the shopper's context before
-the first frame, with no request on the shopper's time. Publish the carousel's shot orders
-([schema](./03-payload-schemas.md#shot-orders)); fetch the page's context table, `GET /v1/{tenant}/context-table/{page}`
-with your site key (public for a minute; [the reference](./02-api-reference.md), section 2); and write, in the head
-before your stylesheets:
-
-1. `<script type="application/json" id="op-context-table">` holding the table exactly as it was answered;
-2. `<script type="application/json" id="op-images">` holding the carousel's images in your server's order, each
-   `{ "id", "tags", "src", "srcset", "sizes" }`, its `tags` carrying `contentType` and every dimension the table's
-   `brandRules` name;
-3. the head script, `edge-head.js` from the SDK package, inline and verbatim; its content-security-policy source
-   is in `edge-head.js.csp` beside it.
-
-Set `data-op-consent="personalization"` on the root element when your consent tool holds the shopper's
-personalization choice. It is a hint for the first page: the SDK keeps the engine's own record of the choice for the
-script from then on, and the SDK's refusal cookies always win. The script derives the arrival's channel and visit
-bucket with the engine's own classifier, the device from the user agent, and the arm (a brand-new browser's is
-drawn here, and the SDK's first decision request asks the engine to mint the new visitor into it), takes the
-table's row for that context and writes on the root element `data-op-context` (`<channel>|<visitBucket>|<device>`,
-or `default`), `data-op-arm` and `data-op-table`, and one custom property per image: `--op-pdp-carousel-1`,
-`--op-pdp-carousel-2` and so on, generally `--op-{slot}-{n}`, n the image's place in your list and the value its
-painted place. Order the carousel with them (`order: var(--op-pdp-carousel-3)` on the third image's element). It
-also adds one `<link rel="preload" as="image" fetchpriority="high">` for the image that leads, before your first
-stylesheet. It hides nothing, fetches nothing, sends nothing and writes no cookie; its state is first-party storage
-under `opt_head`, the visit kept only under tracking consent. It paints the default row, your server order within
-the brand rules, for the holdout's default class, without a recorded personalization choice, for an arrival or a
-device it cannot classify, for a table naming another classifier version, and once after the experiment's salt
-changes. The engine's own first decision for a shopper whose choice is recorded orders the carousel by the same
-row, so the page and the SDK's answer agree; the arm agrees on the direct path, where the first decision request
-issues the session, while a page on the session route or a session broker gets the engine's own draw.
-
 ### Content inside a module: inner content slots
 
 A module can hold content of its own: a complete-the-look module shows the items that complete the look, a
@@ -661,8 +628,7 @@ the page or naming the layout slot itself, one inner slot named for two modules,
 against the published catalogue) a module the catalogue does not define for the layout slot: no item has that id,
 or the item does not name the layout slot in its `slotTypes`. On a context-only layout slot (above) the module order is one per context, while its inner slots are
 ordinary slots decided for the shopper: `X-Context-Key` names the layout's context alone, so cache the module order,
-never an inner slot's items. The carousel's shot order is published per context beside it (the context table,
-above): shot types, never items. A page whose layout slot names no inner slot is decided exactly as before, in the
+never an inner slot's items. A page whose layout slot names no inner slot is decided exactly as before, in the
 order the slot document lists its slots.
 
 ## 8. What to test before the freeze

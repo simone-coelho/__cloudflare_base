@@ -12,10 +12,33 @@ import { isShopperId } from '@/identity/shopperId';
 import type { TenantId } from '@/tenancy/tenant';
 import type { Arm, EnrollmentProvenance, HoldoutConfig } from './types';
 
-// P84 (E8, N4): the pure draw lives in src/sdk/armDraw.ts, imported by nothing
-// else, so the head script bundles the very function the engine runs here.
-import { armFor, bucketOf, fnv1a, hash32, mix32 } from '@/sdk/armDraw';
-export { armFor, bucketOf, fnv1a, hash32, mix32 };
+/** FNV-1a, 32-bit. Small, fast, and the same everywhere it is used in this repo. */
+export function fnv1a(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+/**
+ * The finalizer murmur3 ends with: every input bit reaches every output bit. FNV-1a alone leaves ids
+ * that differ only in their last character a fixed distance apart, so a customer whose visitor ids are
+ * sequential (account numbers, a commerce customer list) would get a holdout that is a block sample,
+ * not a random one (found 2026-09-04; 180 of 200 blocks of ten consecutive ids on one arm, 0 after).
+ */
+export function mix32(h: number): number {
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+/** A well-mixed 32-bit hash of a string: FNV-1a with the finalizer. The same everywhere a bucket is drawn. */
+export const hash32 = (s: string): number => mix32(fnv1a(s));
+
+/** A visitor's position in [0, 1), stable for a given salt. */
+export function bucketOf(visitorId: string, salt: string): number {
+  return hash32(`${salt}:${visitorId}`) / 4294967296;
+}
 
 /**
  * W21 E1 (F07 §5.7): the experiment an arm belongs to. The published salt is
@@ -254,45 +277,13 @@ export async function enrollmentAnchorOf(env: Env, tenant: TenantId, subject: st
   return { anchor: earliest.visitorId, anchorGeneration: 1 };
 }
 
-/**
- * P84 (E8, N4, R-P359 Q8): the arm-draw diagnostics, for the operator's work
- * queue beside the enrollment counter. A brand-new browser's page draws its
- * class before paint and the engine mints the new identifier into that class
- * (`newAnonymousSession` with a target); each time it cannot, the reason is
- * counted: `capped` (the class was not met within the cap of redraws),
- * `mismatch` (a share of 0 or 1 cannot meet the class at all), `republished`
- * (a learn publication between the holdout read at the mint and the decision's
- * own pin moved the identifier out of the class) and `ignored` (a request that
- * already carries a session named a class, which never changes its arm). A
- * per-tenant COUNT over a bounded window and nothing else — no visitor id, no
- * session, no class — written after the answer, never able to fail a decision,
- * on the same operator cache as the enrollment counter.
- */
-export const ARM_DRAW_REASONS = ['capped', 'ignored', 'mismatch', 'republished'] as const;
-export type ArmDrawReason = (typeof ARM_DRAW_REASONS)[number];
-export type ArmDrawCounts = Record<ArmDrawReason, number>;
-export const armDrawKey = (tenant: string): string => `arm-draw:v1:${tenant}`;
-interface ArmDrawDocument extends ArmDrawCounts { version: 1; since: number }
-const armDrawDocument = (raw: unknown, now: number): ArmDrawDocument | null => {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const value = raw as Record<string, unknown>;
-  if (value.version !== 1 || typeof value.since !== 'number' || !Number.isSafeInteger(value.since)
-    || value.since < 0 || value.since > now || now - value.since >= ENROLLMENT_HEALTH_HORIZON_MS) return null;
-  const count = (key: ArmDrawReason) => { const n = value[key]; return typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : 0; };
-  return { version: 1, since: value.since, capped: count('capped'), ignored: count('ignored'), mismatch: count('mismatch'), republished: count('republished') };
-};
-const countsOf = (doc: ArmDrawDocument | null): ArmDrawCounts =>
-  ({ capped: doc?.capped ?? 0, ignored: doc?.ignored ?? 0, mismatch: doc?.mismatch ?? 0, republished: doc?.republished ?? 0 });
-/** Never throws: an unreadable counter answers zero. */
-export async function readArmDraw(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<ArmDrawCounts> {
-  try { return countsOf(armDrawDocument(await env.CACHE.get(armDrawKey(tenant), 'json'), now)); }
-  catch { return countsOf(null); }
-}
-export async function recordArmDraw(env: Pick<Env, 'CACHE'>, tenant: string, reason: ArmDrawReason, now: number): Promise<void> {
-  try {
-    const previous = armDrawDocument(await env.CACHE.get(armDrawKey(tenant), 'json'), now);
-    const next: ArmDrawDocument = { version: 1, since: previous?.since ?? now, ...countsOf(previous) };
-    next[reason] += 1;
-    await env.CACHE.put(armDrawKey(tenant), JSON.stringify(next), { expirationTtl: Math.floor(ENROLLMENT_HEALTH_HORIZON_MS / 1000) });
-  } catch { /* a diagnostic counter never fails a decision, and never retries on the shopper's time */ }
+export function armFor(visitorId: string, h: HoldoutConfig): Arm {
+  const share = Math.min(1, Math.max(0, Number.isFinite(h.share) ? h.share : 0));
+  if (share <= 0) return 'personalized';
+  const b = bucketOf(visitorId, h.salt);
+  if (b >= share) return 'personalized';
+  // Inside the holdout slice, split evenly across the configured arms.
+  const arms = h.arms.length ? h.arms : (['default'] as const);
+  const idx = Math.min(arms.length - 1, Math.floor((b / share) * arms.length));
+  return arms[idx] ?? 'default';
 }

@@ -1547,17 +1547,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       }
       return { p, score, drivers, band };
     };
-    const shotOrder = slot.shotOrder;
-    const shotRank = (p) => {
-      if (!shotOrder?.length) return 0;
-      let best = shotOrder.length;
-      for (const value of p.tags.contentType ?? []) {
-        const at = shotOrder.indexOf(value);
-        if (at >= 0 && at < best) best = at;
-      }
-      return best;
-    };
-    const byScoreThenCatalogue = (x, y) => y.score - x.score || shotRank(x.p) - shotRank(y.p) || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
+    const byScoreThenCatalogue = (x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
     let tagLead = false;
     if (slot.pinnedTag && !prefix && free > 0) {
       const tag = slot.pinnedTag, leadBand = wellFormedBands(slot)?.find((band) => band.from <= 1 && band.to >= 1);

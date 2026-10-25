@@ -304,18 +304,6 @@ export interface SlotStrategy {
    */
   contextOnly?: ContextOnlySwitch;
   /**
-   * P84 (E8): the page's carousel shot order per context, in P01's context form:
-   * for the context P01's rule resolves (the most specific match; a tie decides
-   * nothing), the carousel's candidates of equal score are ordered by the first
-   * position of their `tags.contentType` values in `order`, images of one shot
-   * type and those it names none of after them in catalogue order. Read on an
-   * arm that personalizes, the holdout's default arm keeping the slot's own
-   * order. Published on one content slot of a page with a declared layout slot,
-   * and in the page's context table (`GET /v1/{tenant}/context-table/{page}`),
-   * which the head script applies before paint.
-   */
-  shotOrders?: ShotOrder[];
-  /**
    * P15 (decision D1): position bands. Positions 1 to 2 can run one strategy
    * and positions 3 to 5 another inside this one slot: each band covers the
    * positions `from` to `to`, counted from 1 within the slot, and carries
@@ -480,8 +468,6 @@ export interface OrderContext {
  * its keys in sorted order, so a replay compares it by value.
  */
 export interface ConfiguredOrder { context: OrderContext; modules: string[] }
-/** P84 (E8): one context's carousel shot order, 1 to 16 distinct `contentType` values. */
-export interface ShotOrder { context: OrderContext; order: string[] }
 
 export interface DiversityRule { dimension: string; max: number }
 /** P83 (E6): at least `count` items carrying the tag `dimension`/`value` in the first `within` positions. */

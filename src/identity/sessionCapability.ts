@@ -183,18 +183,8 @@ export async function continuityDigest(proof: string): Promise<string> {
   return Array.from(new Uint8Array(out), b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * P84 (E8, N4, R-P356 mechanism (a)): the class a brand-new browser's page drew
- * before paint. The new visitor identifier is drawn again until `accept` holds
- * for it, at most `cap` draws in all (one draw is today's mint), so the arm,
- * still a pure function of the identifier and the salt, is the class the page
- * painted. Whether the last draw is accepted is the caller's to read.
- */
-export interface MintTarget { readonly accept: (subject: string) => boolean; readonly cap: number }
-export function newAnonymousSession(env: Env, tenant: string, target?: MintTarget) {
-  let subject = `vis-${crypto.randomUUID()}`;
-  for (let draws = 1; target && draws < target.cap && !target.accept(subject); draws++) subject = `vis-${crypto.randomUUID()}`;
-  return issueSessionCapability(env, { tenant, subject, sessionId: `s-${crypto.randomUUID()}`, kind: 'anonymous' });
+export function newAnonymousSession(env: Env, tenant: string) {
+  return issueSessionCapability(env, { tenant, subject: `vis-${crypto.randomUUID()}`, sessionId: `s-${crypto.randomUUID()}`, kind: 'anonymous' });
 }
 export async function verifySessionCapability(env: Env, token: string | null | undefined, tenant: string): Promise<SessionCapability> {
   const cfg = config(env);

@@ -5,7 +5,7 @@
 
 import type { AffinitySnapshot, ReflexConfig } from '@/reflex/core';
 import { asStage } from '@/services/JourneyStage';
-import { bucketNamesOf, channelIn, ENTRY_CHANNELS, visitBucketUnder, type ContextVocabulary } from '@/services/visit';
+import { channelIn, ENTRY_CHANNELS, type ContextVocabulary } from '@/services/visit';
 import type { Cell } from './types';
 
 /** The subset of request.cf this module reads. */
@@ -46,8 +46,17 @@ export const TODAY_CUT: readonly number[] = Object.freeze([1, 2, 4]);
 /** Today's ladder depth: every level below everyone (channel, visit bucket, stage, region, affinity). */
 export const FULL_DEPTH = 5;
 
-/** P36: a bucket's name under a cut (src/services/visit.ts, where the head script reads it too, P84). */
-export { bucketNamesOf };
+/**
+ * P36: a bucket's name under a cut — its single number (`1`) or its range
+ * (`2-3`), the last one open (`4+`). Today's cut names today's buckets.
+ */
+export function bucketNamesOf(cut: readonly number[]): string[] {
+  return cut.map((bound, i) => {
+    const next = cut[i + 1];
+    if (next === undefined) return `${bound}+`;
+    return next - 1 === bound ? String(bound) : `${bound}-${next - 1}`;
+  });
+}
 
 /**
  * P36: the context terms a tenant's decisions, learning and authoring read:
@@ -89,7 +98,11 @@ export function contextTermsOf(vocabulary: ContextVocabulary | null | undefined)
  * P36: a tenant's published cut names its own buckets (R-P46).
  */
 export function visitBucketOf(n: number | null | undefined, cut: readonly number[] = TODAY_CUT): Cell['visit_bucket'] {
-  return visitBucketUnder(n, cut, cut === TODAY_CUT ? TODAY_TERMS.buckets : bucketNamesOf(cut));
+  if (n === null || n === undefined || !Number.isFinite(n) || n < 1) return 'unknown';
+  const names = cut === TODAY_CUT ? TODAY_TERMS.buckets : bucketNamesOf(cut);
+  let at = 0;
+  for (let i = 0; i < cut.length; i++) if (n >= cut[i]!) at = i;
+  return names[at] ?? 'unknown';
 }
 
 export function cellFor(input: {

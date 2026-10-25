@@ -19,20 +19,16 @@
       "types": "./types/browser.d.ts",
       "default": "./edge-personalization.js"
     },
-    "./edge-head.js": "./edge-head.js",
     "./package.json": "./package.json"
   },
   "files": [
     "edge-personalization.esm.js",
     "edge-personalization.js",
-    "edge-head.js",
-    "edge-head.js.csp",
     "types",
     "README.md"
   ],
   "sizeBudget": {
     "./edge-personalization.esm.js": 107520,
-    "./edge-personalization.js": 112640,
-    "./edge-head.js": 16384
+    "./edge-personalization.js": 112640
   }
 }
