@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P81",
+  "workOrderHash": "sha256:852aef23a6f5316fcf61abd9dbc5c0d917d2085214b500f7b63a4b25678d8d52",
+  "artifact": {
+    "revision": "a9805fff457613f67f9d75473d5fe9d2c91904ac",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p81-joined-r3 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p81-build at 86e4b1d9 (86e4b1d9 the fan.ts comment, comment only) (78e81680 the mechanism: the shopper's object pushes the decision set to the page over the live connection as the content_decisions frame the SDK already receives, naming the pageInstance; the sender decides through the snapshot route's path so the record, the receipts and the exposures of a pushed set are those of a request; the triggers are an acknowledged action, a buffered delivery taking effect at the alarm on the object host and a publication change; the SDK no longer re-requests over HTTPS on connected or after a sent action; the HTTPS path stays for servers and for a page's first list; kit 01, 02 and 03 state the push and drop \"the socket is optional\" and \"no production push is promised\"; 4030fa52 the page view at rest under one key, pushView, in the shopper's own storage on both hosts: the view's own admitted decision request, the principal's claims re-signed without extending authority or lifetime, the digest of the set the page last received by its own answer or by a frame, the publication identity it was decided under and, on the session host, whether the relay holds a socket; each new page view overwrites it, the last socket's close removes it, eraseWithBarrier erases it; a frame goes out only when the set differs from the last the page received by either channel and a page's own answer is never also pushed; 111fe21e a socket open decides nothing and only records the socket, the publication identity is stored at the answer always; 55dfad1c the merge of rem/integration 2cbcfefe with P80's scope step and the SDK's anchor signals kept beside P81's; bb8eec2d the relay hands its close notice to state.waitUntil instead of awaiting it inside its close handler, so the shopper's erasure no longer deadlocks against the relay while pushView is still removed at the last close; a page view is kept only when its decision ran with tracking and personalization consent and a request decided with tracking withheld stores nothing and removes a kept view (CW31, R-P278); wrangler.toml, kit 02, kit 03 and the fan.ts comment state the largest measured read as 478 ms alone; kit 02 names the first-request and expired-grant residuals; the six SDK bundles rebuilt, ESM 105,094 of 107,520, IIFE 110,357 of 112,640). Specification c102841a + 77297ce3 + b39e85c4 (33 tests: 20 behaviour legs, 13 locks; R-P269, R-P271, R-P272, R-P273, R-P278). P81 33/33 x3 on both hosts; P80 33, P34 9, P79 24, P30 25, P68 8, P13 13, P72 13, P70 20, W36 21, realtime.sdkContract 120, the SDK suites 82, routes/identity 49, the shopper object's suites 34 (451/451 in one run); tsc app and SDK 0; both bundle checks exact; eslint no new warning. Amendment 11 E3, the owner's amendment of 2026-10-22 (R-P245, R-P247, R-P263). Told residuals: a new visitor's first page view receives pushes only after the page asks again, because the SDK does not re-ask when consent is granted; after the session grant's lifetime nothing is pushed until the page's next request renews it; an alarm-time retention expiry reaches the page at its next action or request; ledger receipts are not checked natively; several tabs share one page view per shopper.\n\n\nFIX ROUND 1 (R-P281, R-P282, R-P283): rem/p81-build at 7b6357d2 (4353b737 the merge of the fix spec e5c8b05e, 7b6357d2 the merge of its header-only caf73fbe; f28deb3a the mechanism: at logout the shopper's object deletes pushView, view and socket flag, right after the recognition chain and before it revokes the relay; a relay frame signed with a revoked grant of the owner's own is refused and drops pushView; an unsigned or foreign principal gets 401 and changes nothing; the profile retention expiry deletes pushView in the same transaction as affinity, pipeline and audienceOwner; the page view at rest is kept when the answer's consent shows tracking true, CW31-exact, while both send paths keep requiring personalization consent at send time; the kept view carries no refusal hints to replay, so a re-decision reads the consent in force and a mid-page personalization grant is honoured at the next admitted action; 42bbcd62 the session host's socket flag records the grant of the socket that last reported and is checked for liveness before any re-decision, cleared if lapsed, the view dropped too unless its own grant is live, because a grant's expiry never reaches the owner, the relay closes the socket itself; 78e08d9a the logout path deletes one key at a time; kit 02 :250 adds that the newest tab's page view takes the pushes, that a retention expiry reaches an open page at its next request, and that the view is kept until the last socket closes or the shopper logs out). Specification e5c8b05e adds 11 legs under PU3 (logout with the socket open on both hosts, the lapsed socket grant with a second live grant kept, the retention expiry, tracking on with personalization declined then granted mid-page with and without the refusal cookie, the relay-door LOCK); P81 44/44 x3; the 21 named locks 451/451; the storage locks 356/356 (W16.C6.07 fixed: a harness delete takes one key); PROBE-DETACH2 clean on both hosts; both typechecks 0; both bundles exact (unchanged); eslint no new warning. Cause: the delivery review at the join f4cd9e13 found the relay's close notice refused by assertOwned after a logout or a lapsed grant, leaving pushView at rest on the session host, a stale socket flag, and the retention expiry leaving pushView. Told residuals: a page view kept for a shopper who never forms a profile has no retention bound of its own and goes at socket close, logout, a lapsed socket grant, the next page view or erasure; the relay evicted before its waitUntil close notice is not measurable locally; a re-decision that sends nothing is not observable natively on the session host.\n\n\nFIX ROUND 2 (R-P286, R-P287): rem/p81-build at 478f6fda (478f6fda the merge of the spec leg 2b3671bb; da5ca79e the fix: the page view is kept with its request body minus trackingConsent and personalizationEnabled through a keptBody helper, so a re-decision reads the consent in force instead of replaying the page's own refusal hint; the route's POST body admits only page, brand, channel, entry, browsingSessionId, the two consent members, pageInstance, nothingToShow, customerId and ctx-prefixed keys, so those two are the only consent-bearing members; the cookie-hint fix of round 1 unchanged). Specification 2b3671bb adds one leg under PU3 on both hosts: the page asks with the body the SDK sends when tracking is on and personalization is off, the view is kept, nothing is pushed before or at the mid-page grant, one frame follows the next admitted action and personalization stays in force after the push; P81 46/46 x3; the 21 named locks 451/451; the 15 storage locks 356/356; PROBE3B with the body hint a frame and consent in force true on both hosts; PROBE-DETACH2 clean; both typechecks 0; both bundles exact (unchanged); eslint no new warning. Cause: the delta delivery review at the second join 49214684 found the kept body replaying the SDK's personalizationEnabled false hint after a mid-page grant, withdrawing the grant (R-P282 (2) not met for the body hint). Told residual: on the session host the socket flag follows the socket that last reported, so a lapse of that one grant pauses pushes until another socket's next heartbeat, 25 seconds.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S22/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S22/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P81/implementer/REPORT.md",
+      "git commits on rem/p81-joined-r3 up to a9805fff"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P81 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S22/reviewer-p81/fix2-logs/P81-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S22/fix2/gate-r3/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P81/fix2/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P81/fix1/reviewer/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P81/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-25T00:26:26.850Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
