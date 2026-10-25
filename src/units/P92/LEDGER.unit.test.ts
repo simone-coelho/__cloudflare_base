@@ -59,15 +59,17 @@
 //   · src/units/W19/B2.unit.test.ts TENANT_REGISTRY and REGISTRY_WITHOUT_LOCALE (the two fixtures spreading
 //     DEFAULT_REFLEX_CONFIG) inherit `gateDimensions: ['journeyStage', 'locale']` while TENANT_REGISTRY learns `locale`:
 //     R-P316 (1) refuses the baseline ("Invalid baseline configuration"), so W19.L1.01–L1.03, S1.01 and S1.02 fail; and
-//     REGISTRY_WITHOUT_LOCALE would carry the `locale` gate, silencing the `unknown_dimension` W19.L1.01 expects. Needs an
-//     R10 (test-only, R-P195's form): both fixtures spread DEFAULT_REFLEX_CONFIG without its `gateDimensions` (a tenant
-//     registry of its own, registering no gate); every assertion unchanged.
+//     REGISTRY_WITHOUT_LOCALE would carry the `locale` gate, silencing the `unknown_dimension` W19.L1.01 expects. R10
+//     GRANTED (R-P322) and written: both fixtures copy DEFAULT_REFLEX_CONFIG without its `gateDimensions`.
 //   · src/units/W20/LEDGER.unit.test.ts TENANT_REGISTRY (DEFAULT_REFLEX_CONFIG spread, `locale` learned): the same refusal,
-//     W20.R1–R5 fail. Needs the same R10.
+//     W20.R1–R5 fail. The same R10, granted (R-P322) and written.
 //   · src/units/P10/LEDGER.unit.test.ts, unit:P10.F2 host (session): its CONTROL "at floor 0 the slot explores" answered false
 //     under the sketch in one suite run (rotation at share 1, whose pick depends on the visitor's bucket); not attributed:
-//     to re-run three times on both trees after the gate.
-// R10: none written (the two above wait for the lead's ruling). NO NEW EXPORT IS IMPORTED.
+//     to re-run three times on both trees after the gate (R-P322 (2)).
+// R10 (R-P322, test-only, R-P195's form, fixtures only, every assertion unchanged): src/units/W19/B2.unit.test.ts
+// TENANT_REGISTRY (REGISTRY_WITHOUT_LOCALE copies it) and src/units/W20/LEDGER.unit.test.ts TENANT_REGISTRY copy
+// DEFAULT_REFLEX_CONFIG without its `gateDimensions`: a stored registry does not inherit the default's gates, and one that
+// learns `locale` registers no gate for it (the validator keeps its rule). NO NEW EXPORT IS IMPORTED.
 //
 // MEASURED (_evidence/parity-step3/S27/specifier/logs/, serial, --no-cache, working directory the tree). At 511aa9cd: today
 // 11 RED for the missing behaviour — RG1's starting document (no `gateDimensions`), the import legs (journeyStage and
