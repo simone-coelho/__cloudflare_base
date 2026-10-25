@@ -38,8 +38,8 @@
 //      that is not the one in force, S3); `unknown_context` (a context that version has no row for: channel × bucket of
 //      its rows and a device mobile|desktop, or `default`); `not_carousel` (a slot that is not that version's
 //      `carouselSlot` for the page); `unknown_image` (an image that is not a catalogue piece naming the slot, or more
-//      images than the slot's take); `not_learning` (an arm `default` or `no_learning`, P30's word for the holdout's key;
-//      R3: it records nothing); `not_measured` (the carousel not on `rendered-v1`, P30's rule); `unavailable`. A repeat for
+//      images than the slot's take); `not_learning` (the ENGINE's arm for the shopper is the holdout's `default` or
+//      `no_learning`, R-P393; R3: it records nothing); `not_measured` (the carousel not on `rendered-v1`, P30's rule); `unavailable`. A repeat for
 //      the same page view is answered `admitted` and counted once (P30's form; R-P382 amends the brief's "ignored").
 //   S3 Only the table version in force for the page is admitted; a page cached before a publication sends `stale_table`
 //      for up to a minute (the stable address's max-age), told in the kit (R-P382; the replaced-version window dropped).
@@ -65,6 +65,13 @@
 // LEDGER.unit.test.ts :462, :471, :600) filter `layout_exposure` by type. To measure under the sketch: the realtime action
 // tests, the fan tests, the SDK tests, P79, P81, P84.
 //
+// R-P393 (from the builder's plan): `not_learning` is decided by the ENGINE's own arm — the shopper's assignment as the
+// decision draws it (armFor over the enrollment anchor; an unavailable anchor is not_learning, fail closed) — never the
+// page's claim; the page's `arm` stays in the beacon, the answer carries it as `armClaimed`, and a disagreement between
+// the claim and the engine's arm is counted in P84's arm_draw `mismatch` (the learn queue). The `default` context is
+// recorded as the engine records an unknown context (the cell { channel: unknown, visit_bucket: unknown }: the root and
+// the c=unknown level); these tests read the root. src/routes/decisions.ts is granted (adb14184) for the shared
+// table-version helper.
 // GRANT (R-P386, 24a45d6d): src/sdk/wire.ts is in P85's allowedPaths — the SDK's wire table sends an unlisted type as
 // `custom`, so `carousel_exposure` needs its entry (src/sdk/wire.ts :35). MEASURED (s31b, 7e32d3a8): under the sketch the
 // SDK bundles grow past their recorded budgets (edge-personalization.esm.js 108,329 of 107,520 bytes, edge-personalization.js
@@ -84,7 +91,7 @@ import { testHost } from '@/sdk/testHost';
 import type { RequestInitLike, ResponseLike } from '@/sdk/types';
 
 import {
-  declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, learned, MODULES, mount, pageInstanceOf, putDocument, readTree, shopperOn, TENANT,
+  asOperator, BRAND, declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, learned, MODULES, mount, pageInstanceOf, putDocument, readTree, shopperOn, TENANT,
   type Answer, type Decision, type Mounted, type Shopper,
 } from '../_parity';
 
@@ -164,7 +171,7 @@ describe('unit:P85.CX1', () => {
       expect.soft([answerOf(fallback), Math.round(root - rootBefore)], `${host}: P85.CX1 — the default row admitted, counted at the root (S4)`).toEqual([[200, 'admitted', 8], 1]);
     }, 120_000);
 
-    it(`host (${host}): ignored by name and adding nothing — no tracking consent (tracking_refused), a version never issued (stale_table), a context the version has no row for (unknown_context), a slot that is not the carousel (not_carousel), another product's image (unknown_image), the holdout's arm (not_learning); malformed data 400; P30's layout beacon on the carousel slot still answers not_context_only (lock)`, async () => {
+    it(`host (${host}): ignored by name and adding nothing — no tracking consent (tracking_refused), a version never issued (stale_table), a context the version has no row for (unknown_context), a slot that is not the carousel (not_carousel), another product's image (unknown_image); malformed data 400; P30's layout beacon on the carousel slot still answers not_context_only (lock)`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P85.CX1 — the documents publish');
       const table = await tableOf(m);
@@ -179,8 +186,6 @@ describe('unit:P85.CX1', () => {
         ['a context with no row (a device outside the classes)', s, { ...valid, context: 'paid_social|1|watch' }, 'unknown_context'],
         ['the layout slot', s, { ...valid, slot: LAYOUT, images: [MODULES[0]!.id] }, 'not_carousel'],
         ['another product\'s image', s, { ...valid, images: [id(3), WALLET.id] }, 'unknown_image'],
-        ['the holdout\'s arm (default)', s, { ...valid, arm: 'default' }, 'not_learning'],
-        ['the holdout\'s arm (no_learning)', s, { ...valid, arm: 'no_learning' }, 'not_learning'],
       ];
       const answers: unknown[][] = [];
       for (const [name, who, data] of cases) answers.push([name, ...answerOf(await carouselBeacon(who, { ...data, pageInstance: pageInstanceOf('p85-cx1-ignored') }))]);
@@ -195,6 +200,24 @@ describe('unit:P85.CX1', () => {
       expect.soft(malformed, `${host}: P85.CX1 — malformed beacons refused 400 by name`).toEqual(malformed.map(() => [400, 'Invalid carousel exposure']));
       const layout = await s.action({ type: 'layout_exposure', data: { contextKey: 'pdp|c=paid_social|v=1|k=0', page: 'pdp', slot: CAROUSEL, modules: [id(3)], pageInstance: pageInstanceOf('p85-cx1-lock') } });
       expect.soft([layout.status, layout.body.exposure ?? null, layout.body.reason ?? null], `${host}: P85.CX1 — LOCK: P30's layout beacon is unchanged`).toEqual([200, 'ignored', 'key_not_issued']);
+    }, 120_000);
+
+    it(`host (${host}): the engine's own arm decides (R-P393) — a shopper the engine assigns to the holdout's default arm is ignored not_learning even when the page claims personalized, and a personalized shopper is admitted even when the page claims default; each answer carries the page's claim as armClaimed and each disagreement is counted in the learn queue's arm_draw mismatch`, async () => {
+      const outcome = async (learn: unknown, claim: string) => {
+        const m = await mount(host, docsWith({ learn }));
+        expectPublished(m, 'P85.CX1 — the documents publish');
+        const table = await tableOf(m);
+        expect(table.status, `${host}: PRECONDITION P84 — the context table answers`).toBe(200);
+        const s = await shopperOn(m);
+        const answer = await carouselBeacon(s, { tableVersion: table.version, context: 'paid_social|1|mobile', images: PAINTED, pageInstance: pageInstanceOf('p85-cx1-claim'), arm: claim });
+        await m.drainLedger();
+        const queue = await asOperator(m, 'GET', `/v1/${TENANT}/learn/queue?brand=${BRAND}`);
+        return [...answerOf(answer), answer.body.armClaimed ?? null, (queue.body.arm_draw as { mismatch?: number } | undefined)?.mismatch ?? null, Object.keys(await at(m, CELL, 'n')).length];
+      };
+      const holdoutClaimingPersonalized = await outcome(learnOf('click', { share: 1, salt: 'p85-holdout', arms: ['default'] }), 'personalized');
+      const personalizedClaimingDefault = await outcome(learnOf(), 'default');
+      expect.soft({ holdoutClaimingPersonalized, personalizedClaimingDefault }, `${host}: P85.CX1 — the engine's arm, never the page's claim, decides; the disagreement counted`).toEqual({
+        holdoutClaimingPersonalized: [200, 'ignored', 'not_learning', 'personalized', 1, 0], personalizedClaimingDefault: [200, 'admitted', 8, 'default', 1, 8] });
     }, 120_000);
 
     it(`host (${host}): the version in force only (S3) — after a slots publication moves the version, a beacon naming the replaced version is ignored stale_table at once and the new version is admitted`, async () => {
