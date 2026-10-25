@@ -71,7 +71,11 @@
 // DEFAULT_REFLEX_CONFIG without its `gateDimensions`: a stored registry does not inherit the default's gates, and one that
 // learns `locale` registers no gate for it (the validator keeps its rule). NO NEW EXPORT IS IMPORTED.
 //
-// MEASURED (_evidence/parity-step3/S27/specifier/logs/, serial, --no-cache, working directory the tree). At e16d0420 (logs/d/):
+// MEASURED (_evidence/parity-step3/S27/specifier/logs/, serial, --no-cache, working directory the tree). At b7bf4b1a (logs/e/,
+// R-P326's eight refusals added to RG1's refusal leg): today 11 RED (the same legs as below, the refusal leg's new
+// assertion RED with them: every case validates, 200), the fix 17/17 three times, the reviewer's `laxgates`
+// (S27/reviewer-spec/sketches/ctl-p92.py after the fix: the four first checks alone) RG1's refusal leg on both hosts, all
+// eight cases answered 200. At e16d0420 (logs/d/):
 // today 11 RED for the missing behaviour — RG1's starting document (no `gateDimensions`), the import legs (journeyStage
 // and locale warn: five `unknown_dimension` where one is expected), the registry-document legs (styleWorld still warns as
 // a gate), the refusal legs (every malformed registration validates) and its kit leg; RG2's three legs (`purpose_later`
