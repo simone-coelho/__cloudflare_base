@@ -65,6 +65,23 @@
 // in P38's shape for the vocabulary refusal; customer-neutral ids. A pull is driven with the feed answered by a stubbed
 // fetch of the feed's URL, as W19.S1.01 drives it.
 //
+// MEASURED at the spec head (rem/integration 000130da merged; _evidence/parity-step3/S24/specifier/logs/d/, serial,
+// --no-cache, working directory the tree): 7 RED for the missing behaviour — ID1 and ID2 on both hosts (`pieces[1].title:
+// required string`, `pieces[4].title…`, `pieces[0].eligibleWhen.context.entry_channel: 'carrier-pigeon'…`, `pieces[3]
+// 'look.new-three' tags.color…`: the assembled or candidate position, the id only on the vocabulary refusal), ID3 on both
+// hosts (no `recordIndex`, `recordId` or `recordIdTruncated` on a piece warning) and the kit leg (no address, no member,
+// `IDs are not echoed` unqualified); the 6 locks GREEN. NEGATIVE CONTROLS (sketches/p82.py, never committed): the fix
+// (src/routes/content.ts importInto, line-neutral: the candidates' file positions, the assembled pieces' sources, the three
+// refusal points re-addressed, the import's and the pull's piece warnings given the record; the kit's three passages) 13/13
+// three times; `idonly`, `mergedpos` and `warningsonly` turn ID1 and ID2 RED on both hosts; `keptpos` (k counted after the
+// dropped entries) ID2 on both hosts; `errorsonly` ID3's warning leg on both hosts; `kitleft` the kit leg; `echoall` (a
+// record id on every path's warnings) the PUT and validate LOCK on both hosts. W19 at the spec head: the four R10 legs RED
+// today (they read the new form), 29/29 under the fix.
+// The whole suite (R-P248; vitest run src at the spec head, logs/d/today-suite.json, and under the fix, logs/d/fix-suite.json):
+// beyond the scratch tree's own artifacts (no git repository, no wrangler variants: root.worker, P45-P47, P51-P53, W39, W40,
+// failing on both), the two differ only on P82's seven legs and the four R10 legs (W19.F2.01, W19.S1.01, W19.S1.02,
+// W19.F3.06), each RED today and GREEN under the fix.
+//
 // HARNESS: src/units/_parity.ts, src/units/_parity5.ts. Imports from src/units/: ../_parity, ../_parity5.
 
 import { describe, expect, it, vi } from 'vitest';
