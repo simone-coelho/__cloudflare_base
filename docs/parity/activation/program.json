@@ -1016,7 +1016,7 @@
     {
       "id": "P90",
       "title": "The bucket-drop ingest, the scheduled authenticated pull, the manual-upload script, and an allow-list on the on-demand pull (**amendment 11, E15, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
