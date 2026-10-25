@@ -608,6 +608,8 @@ describe('unit:W19.F1.03', () => {
       'W19.F1.03 — importing what the store returned leaves `pieces` byte-identical').toBe(bytes);
     expect(again.changed,
       'W19.F1.03 — re-importing the stored catalogue changes no piece, and the answer says so').toBe(0);
+    // P91 R10 (R-P332): E16's skip supersedes the old rule: the identical re-import writes no revision.
+    expect([(again as { skipped?: unknown }).skipped, again.revision], 'W19.F1.03 — the identical re-import is skipped, the revision in force answered').toEqual([true, first.revision]);
 
     // 2. The same round trip through the documented CSV columns.
     const csv = csvOf(CSV_HEADER, (await f.read()).document.pieces.map(csvRowOf));
@@ -616,6 +618,8 @@ describe('unit:W19.F1.03', () => {
     expect(JSON.stringify((await f.read()).document.pieces),
       'W19.F1.03 — the CSV round trip leaves `pieces` byte-identical to the JSON round trip').toBe(bytes);
     expect(viaCsv.changed, 'W19.F1.03 — the CSV round trip changes no piece').toBe(0);
+    // P91 R10 (R-P332): the CSV round trip of the stored catalogue is skipped too.
+    expect([(viaCsv as { skipped?: unknown }).skipped, viaCsv.revision], 'W19.F1.03 — the CSV round trip is skipped, the revision in force answered').toEqual([true, first.revision]);
 
     // 3. The same feed imported twice as two distinct operations.
     const once = await f.importJson([KIT_PIECE, KIT_PIECE_TWO]);
@@ -627,17 +631,15 @@ describe('unit:W19.F1.03', () => {
     expect(twice.changed,
       'W19.F1.03 — the answer of the second import reports no changed piece').toBe(0);
 
-    // 4. The revision behaviour is the versioned store's documented one, stated
-    //    here so "idempotent" is never read as "no revision": every ACCEPTED
-    //    publication allocates the next revision and stamps its label
-    //    (`stampLabel`, src/content/kinds.ts:17-21 and :153, `content+rN`),
-    //    while an EXACT-REQUEST RETRY — the same `If-Match` precondition and the
-    //    same `Idempotency-Key` — returns the retained revision and writes
-    //    nothing (kit 03 :158, "Existing revision preconditions and
-    //    exact-request retries still apply"; src/config/publication.ts:335-339
-    //    `sameOperation`).
-    expect(twice.revision, 'each accepted import allocates the next revision, byte-identical or not').toBe(once.revision! + 1);
-    expect(twice.version, 'and stamps that revision into the stored version label').toBe(`content+r${once.revision! + 1}`);
+    // 4. The revision behaviour. P91 R10 (R-P332): the owner's E16 ("a load that changes nothing is skipped and says so")
+    //    supersedes the rule this unit first stated ("every ACCEPTED publication allocates the next revision, byte-identical
+    //    or not"): a load whose candidate equals the stored catalogue writes no revision and answers the revision in force,
+    //    its label unchanged (`stampLabel`, src/content/kinds.ts, `content+rN`); an EXACT-REQUEST RETRY — the same `If-Match`
+    //    precondition and the same `Idempotency-Key` — still answers that same revision and writes nothing (kit 03,
+    //    "Existing revision preconditions and exact-request retries still apply").
+    expect([(once as { skipped?: unknown }).skipped, (twice as { skipped?: unknown }).skipped], 'both identical imports are skipped').toEqual([true, true]);
+    expect(twice.revision, 'an identical import answers the revision in force, no new one').toBe(once.revision!);
+    expect(twice.version, 'and the stored version label is that revision\'s').toBe(`content+r${once.revision!}`);
     expect((await f.read()).revision, 'which is the revision the store now serves').toBe(twice.revision);
     const retryHeaders = await f.headers();
     const retried = await f.importJson([KIT_PIECE, KIT_PIECE_TWO], 'replace', retryHeaders);
