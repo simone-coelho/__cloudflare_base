@@ -14,50 +14,36 @@
 // The pack's export specification (docs/tapestry-packs/2-content-and-cms/05-export-specification.md, the Windows checkout,
 // read as a document) states the loads' behaviours (:70–118, :187–203).
 //
-// PROVISIONAL (S28): the readings below are the lead's provisional readings of the brief with the specifier's proposals
-// for the members the brief leaves open, for ruling; only IM1's legs are written. Nothing is measured yet.
-//
-// READINGS
+// THE READINGS, RULED (R-P330, on the builder's code map; the brief's readings 1–5 with the names and the order fixed):
 //   1  IM1. `POST /content/catalog/import` and `POST /content/catalog/pull` with no `mode`, or a mode outside `merge`,
-//      `replace` and `full` (reading 4), answer 400 `{ ok: false, error: <a sentence naming merge, replace and full>,
-//      code: 'mode_required' }` and write nothing: no revision, no publication record, no diagnostics member. PROPOSED
-//      PLACEMENT: after the operator authority (401/403), the tenant scope and the authored preconditions (428, a
-//      malformed If-Match 400), and before anything is read or fetched: the import checks its query `mode` before
-//      reading the body; the pull reads its JSON body (the mode is a body member) and checks it before the URL and
-//      before any fetch. So a no-mode request reads or fetches nothing (413 and 502 answers for an import or pull that
-//      names no mode become this 400: see the R10 sweep).
-//   2  IM2. A load (import or pull, any mode) whose assembled catalogue document equals the stored one (the same pieces in
-//      the same order, every member equal, compared on the canonical form the store digests) writes nothing and answers
-//      200 with the written load's members (`ok`, `scope`, `mode`, `received`, `imported`, `pieces`, `changed: 0`,
-//      `removed: 0`, `changedBasis`, `diagnostics` computed as for a written load) plus `skipped: true` and
-//      `reason: 'unchanged'`, its `revision`, `publication` and `version` those IN FORCE (no new revision, no publication
-//      record, no receipt: a retry of a skipped request is decided again). The authored preconditions still hold (a stale
-//      If-Match is 409 as today). A load that differs in any member of any piece writes as today.
-//   3  IM3. PROPOSED SWITCH: the import's query member `dryRun=1` (any other value: 400 naming `dryRun`), on JSON and CSV
-//      alike, through the same path as the import (aliases, CSV columns, merge or replace against the stored catalogue,
-//      the vocabulary in effect, P82's `records[k] '<id>'` address): the same 422 body on refusal; on acceptance the same
-//      200 members as the import (or the skip of reading 2) plus `dryRun: true`, with `revision`, `publication` and
-//      `version` those in force and nothing written. The authored preconditions are not required (it writes nothing).
-//      `POST /content/catalog/validate` is unchanged (LOCK). A dry run of a pull is not offered (TOLD).
-//   4  IM4. PROPOSED MODE WORD `full`: the file's records replace the catalogue as `replace` does, and every stored piece
-//      the file leaves out is kept after them, in its stored order, with `lifecycle: { status: 'expired' }` (an expired
-//      piece is eligible for no decision). PROPOSED GUARD: the request names the number of pieces it expires, `expire=<n>`
-//      on the import's query, `expire: n` in the pull's body; absent, 428 `{ code: 'expire_required', expire: <the count> }`
-//      naming `expire` and the count; different, 409 `{ code: 'expire_mismatch', expire: <the count> }` naming both;
-//      nothing written either way. The kit can state it in one sentence: "`mode=full` replaces the catalogue and expires
-//      every stored piece the file leaves out; it requires `expire=<n>`, the number it expires, and is refused naming
-//      that number otherwise." PROPOSED ALLOW-LIST HOME: the tenant's slots document gains `importSources` (beside
-//      `signalFloor`, a tenant-wide content setting, published and rolled back like it; a catalogue import never touches
-//      it): 1 to 64 entries, each an IPv4 or IPv6 address or CIDR range, refused by name otherwise. With the list set,
-//      the import (dry run included) and the pull answer 403 `{ code: 'source_not_allowed' }` naming the address to a
-//      caller whose `CF-Connecting-IP` is outside it (never `X-Forwarded-For`, which the caller writes; a request
-//      without `CF-Connecting-IP` is outside any list), writing nothing; without it every caller is allowed as today.
-//      The customer boundary (src/customerBoundary.ts) admits paths and methods, not query members, so `mode=full` and
-//      `dryRun=1` pass it already (a lock); a customer-profile leg on the in-process customer stamp
-//      (src/units/W08/_customer.ts customerStamp) is offered for the allow-list.
-//   5  Locks: W19's import tests, P82, P38, P02, P08, the content, import and complements tests and the publication tests;
+//      `replace` and `full`, answer 400 naming the three words and write nothing (no revision, no publication record, no
+//      diagnostics); a pull refused so fetches nothing. THE ORDER, on both routes: the operator authority (401/403) → the
+//      allow-list (403, reading 4) → the mode, the dry-run switch and the guard's presence (400/428) → the authored
+//      preconditions (428/409) → parsing and assembly → the guard's count (409) → the write; the pull reads its JSON body
+//      first (its mode, its guard and its URL are body members).
+//   2  IM2. A load (import or pull, any mode) whose candidate, stamped at the stored revision (`CONTENT_KIND.stamp`
+//      rewrites `version`), has the stored document's digest writes nothing and answers 200 with `skipped: true`,
+//      `reason: 'unchanged'`, `revision` the one in force, `changed: 0`, `removed: 0` and the same diagnostics members as a
+//      written load; the preconditions are checked first, a retry recomputes the same skip; a load that differs in any
+//      member of any piece writes as today. PUT and the other kinds do not opt in.
+//   3  IM3. `dryRun=1` on the import's query (any other value: 400 naming `dryRun`): the import's own path (JSON and CSV,
+//      the aliases, merge or replace against the revision `If-Match` names, the vocabulary in effect, P82's
+//      `records[k] '<id>'` address), its 428/409 precondition answers kept, `Idempotency-Key` not required; the same 422
+//      body on refusal; on acceptance the import's members plus `dryRun: true`, nothing written. `POST
+//      /content/catalog/validate` is unchanged (LOCK).
+//   4  IM4. The mode `full`: the file's records replace the catalogue in file order, then every stored piece the file
+//      leaves out follows in stored order with `lifecycle.status: 'expired'` (not eligible), its record kept. Its guard,
+//      `expire=<n>` (the import's query, the pull's body), must equal the number the server expires: absent → 428 naming
+//      `expire`; different → 409 naming the server's count; nothing written either way. The allow-list: a new optional
+//      content kind `import-sources`, document `{ addresses: [...] }` (exact IPv4 or IPv6 addresses or CIDR ranges),
+//      published through the content routes under operator authority (history, validate and rollback as the other
+//      optional members; the customer boundary's `:kind` entries admit it); with a list set, the import, the pull and the
+//      dry run read the caller's address from `CF-Connecting-IP` only (never `X-Forwarded-For`), refuse a caller outside
+//      the list, or with no readable address, 403 naming `import-sources`, writing nothing; with no list every caller is
+//      allowed as today.
+//   5  Locks: W19's import tests, P82, P38, P02, P08, the content, import and complements tests, the publication tests;
 //      PUT and validate unchanged; the kit's import and pull sentences (kit 02 :1726–1727, kit 03 :246–251) state the four
-//      behaviours.
+//      behaviours (today's optional `mode?` locked RED).
 //
 // WHAT THE CODE OR THE PACK CONTRADICTS (told):
 //   · The pack says "A load that does not say which mode it is in is read as replace" (05 :77) and "Merge named on every
@@ -81,8 +67,11 @@
 //       `/content/catalog/import` and `/content/catalog/import?format=csv` (413) → `?mode=replace` / `&mode=replace` (the pull
 //       lane's body is read before its mode: unchanged); :1040 the over-many-records import (413) → `?mode=replace`; :1047
 //       and :1051 pulls (413 twice, 502) → `mode: 'replace'`; :1056 and :1058 the 501-record import and its exact retry
-//       (`pieces: 501`) → `?mode=replace` on both. Unchanged: :911–917 (401 before anything), :950–951 (428 and 400 before
-//       the body), :1021 (401, 428, 403 before the mode).
+//       (`pieces: 501`) → `?mode=replace` on both. Under the ruled order (the mode before the
+//       preconditions; the pull's body first) also: :950 and :951 (pull, body '{', no If-Match → 428; If-Match '1' → 400)
+//       → the body `{"url":"https://cms.example/feed","mode":"replace"}`, so each still measures its precondition refusal;
+//       :1021's second entry (an import with no If-Match → 428) → the path `/content/catalog/import?mode=replace` with the
+//       third entry's suffix `&scope=other`. Unchanged: :911–917 (401 before anything), :1021's first entry (401).
 //     src/units/W19/B2.unit.test.ts :670–672 (W19.L1.01's JSON import, CSV import and pull of the feed over an empty
 //       catalogue) → `mode=replace` on the two imports' query and `mode: 'replace'` in the pull's body; :701 import over an
 //       empty catalogue → `&mode=replace`; :973–974 (W19.S1.01's JSON import and pull) → as :670–672; :1062 import (empty
@@ -101,13 +90,29 @@
 //     W19.S1.01 :972–985 (the same, JSON import, pull and PUT). The full list is measured under the sketch once the gate
 //     allows (the whole suite, today against the sketch).
 //
-// HARNESS: src/units/_parity.ts (the mounted app, both shopper hosts, the operator routes) and src/units/_parity5.ts (the home
-// page's pieces and documents). Imports from src/units/: ../_parity, ../_parity5.
+// HARNESS: src/units/_parity.ts (the mounted app, both shopper hosts, the operator routes), src/units/_parity5.ts (the home
+// page's pieces and documents) and src/units/W08/_customer.ts (the in-process customer stamp, for the allow-list on a customer
+// deployment). Imports from src/units/: ../_parity, ../_parity5, ../W08/_customer.
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { asOperator, errorsOf, expectPublished, HOSTS, loadDocument, mount, TENANT, type Answer, type Mounted } from '../_parity';
-import { HERO, HOME_PIECES, homeLearn, homeSlots } from '../_parity5';
+// The customer stamp loads the real Worker (src/index.ts); the module doubles its harness names (src/units/W08/_customer.ts).
+vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the Agents router is not on these paths'); } }));
+vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
+vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
+
+import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
+import { invalidateCache, type DocumentKind } from '@/config/versionedStore';
+import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
+import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
+import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
+import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
+import type { Env } from '@/types/env';
+
+import { asOperator, errorsOf, expectPublished, HOSTS, loadDocument, mount, readTree, REFLEX_DOCUMENT, shopperOn, TENANT,
+  type Answer, type Mounted } from '../_parity';
+import { HERO, HOME, HOME_PIECES, homeLearn, homeSlots, putKind, readKind } from '../_parity5';
+import { customerStamp, TENANT as CUSTOMER_TENANT, type Stamp } from '../W08/_customer';
 
 const piece = (id: string, extra: Record<string, unknown> = {}) =>
   ({ id, customerContentId: `CMS-${id.toUpperCase()}`, type: 'editorial', title: `Story ${id}`, tags: { line: ['Tabby'] }, slotTypes: [HERO], ...extra });
@@ -117,6 +122,40 @@ const preconditions = async (m: Mounted) => {
   return { 'If-Match': `"${base.revision}/${base.publication.revision}/${base.publication.digest}"`, 'Idempotency-Key': `${base.revision}:${crypto.randomUUID()}` };
 };
 const show = (a: Answer) => `${a.status} ${JSON.stringify(a.body).slice(0, 300)}`;
+const q = (members: Record<string, string>) => new URLSearchParams({ scope: TENANT, ...members }).toString();
+/** `POST /content/catalog/import?…` with a JSON array, the authored preconditions unless `headers` names its own. */
+const importJson = async (m: Mounted, records: unknown[], members: Record<string, string>, headers?: Record<string, string>) =>
+  asOperator(m, 'POST', `/content/catalog/import?${q(members)}`, records, headers ?? await preconditions(m));
+/** The same as CSV over `columns` (P82's harness; tags `dimension:value|value;…`). */
+async function importCsv(m: Mounted, rows: Array<Record<string, unknown>>, columns: string[], members: Record<string, string>, headers?: Record<string, string>): Promise<Answer> {
+  const cell = (v: unknown) => { const t = v === undefined ? '' : Array.isArray(v) ? v.join('|') : typeof v === 'object' && v !== null
+    ? Object.entries(v).map(([d, values]) => `${d}:${(values as string[]).join('|')}`).join(';') : String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const body = [columns.join(','), ...rows.map(r => columns.map(c => cell(r[c])).join(','))].join('\n') + '\n';
+  const response = await m.fetch(new Request(`https://ops.invalid/content/catalog/import?${q({ format: 'csv', ...members })}`, { method: 'POST',
+    headers: { 'X-Tenant': TENANT, Authorization: `Bearer ${m.operatorToken}`, 'Content-Type': 'text/csv', ...(headers ?? await preconditions(m)) }, body }));
+  const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+  await m.drain();
+  return answer;
+}
+const FEED_URL = 'https://cms.example.invalid/p91-feed.json';
+/** `POST /content/catalog/pull` of a feed `{ content: records }` answered by a stub of its URL (no network); `members` joins the body. */
+async function pull(m: Mounted, records: unknown[], members: Record<string, unknown>, headers?: Record<string, string>): Promise<Answer> {
+  const original = globalThis.fetch;
+  const stub = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input instanceof Request ? input.url : input) === FEED_URL ? new Response(JSON.stringify({ content: records }), { headers: { 'Content-Type': 'application/json' } }) : original(input, init));
+  try { return await asOperator(m, 'POST', `/content/catalog/pull?scope=${TENANT}`, { url: FEED_URL, path: 'content', ...members }, headers ?? await preconditions(m)); }
+  finally { stub.mockRestore(); }
+}
+/** The stored pieces, as the catalogue in force holds them. */
+const storedPieces = async (m: Mounted) => (await loadDocument(m, 'catalog')).document.pieces as Array<Record<string, unknown>>;
+/** The members an accepted load answers besides its identity (revision, publication, version) and its diagnostics' revision. */
+const loadMembers = (a: Answer) => ({ ok: a.body.ok, scope: a.body.scope, mode: a.body.mode, received: a.body.received, imported: a.body.imported,
+  pieces: a.body.pieces, changed: a.body.changed, removed: a.body.removed, changedBasis: a.body.changedBasis,
+  warnings: (a.body.diagnostics as { warnings?: unknown } | undefined)?.warnings ?? 'no diagnostics',
+  counts: (a.body.diagnostics as { counts?: unknown } | undefined)?.counts ?? 'no diagnostics' });
+/** The If-Match of the catalogue in force alone (a dry run carries no Idempotency-Key). */
+const ifMatchOnly = async (m: Mounted) => { const { 'If-Match': ifMatch } = await preconditions(m); return { 'If-Match': ifMatch! }; };
+
 /** The catalogue in force: its revision, its publication revision and its piece ids. */
 const inForce = async (m: Mounted) => { const d = await loadDocument(m, 'catalog');
   return { revision: d.revision, publication: d.publication.revision, pieces: (d.document.pieces as Array<{ id: string }>).map(p => p.id) }; };
@@ -143,11 +182,229 @@ describe('unit:P91.IM1', () => {
         ['pull, no mode', await asOperator(m, 'POST', `/content/catalog/pull?scope=${TENANT}`, { url: 'https://cms.example.invalid/p91-feed.json', path: 'content' }, await preconditions(m))],
         ['pull, mode upsert', await asOperator(m, 'POST', `/content/catalog/pull?scope=${TENANT}`, { url: 'https://cms.example.invalid/p91-feed.json', path: 'content', mode: 'upsert' }, await preconditions(m))],
       ];
+      const feedCalls = feed.mock.calls.length;
       feed.mockRestore();
       expect.soft(answers.map(([name, a]) => [name, a.status, namesModes(a), Object.hasOwn(a.body, 'diagnostics') ? 'diagnostics' : 'no diagnostics']),
         `${host}: P91.IM1 — each refused 400 naming the modes (today read as replace: ${answers.map(([n, a]) => `${n} ${show(a)}`).join(' | ').slice(0, 400)})`).toEqual(
         answers.map(([name]) => [name, 400, 'names merge, replace and full', 'no diagnostics']));
       expect.soft(await inForce(m), `${host}: P91.IM1 — nothing written: the catalogue, its revision and its publication as before`).toEqual(before);
+      expect.soft(feedCalls, `${host}: P91.IM1 — a pull refused so fetches nothing (today it fetches the feed)`).toBe(0);
+    }, 120_000);
+  }
+
+  // The kit (kit 02's import and pull rows, kit 03's import paragraph and the allow-list), for the four behaviours.
+  it('logic: kit 02\'s import and pull rows and kit 03\'s import paragraph state the required mode (merge, replace or full), the skip, the dry run, the full export\'s guard and the import-sources list; today\'s optional pull mode is gone', () => {
+    const kit02 = readTree('docs/kit/02-api-reference.md'), kit03 = readTree('docs/kit/03-payload-schemas.md');
+    const rowOf = (route: string) => kit02.split('\n').find(line => line.startsWith(`| \`POST /content/catalog/${route}`)) ?? '';
+    const paragraphs = kit03.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
+    const has = (...words: Array<string | RegExp>) => paragraphs.some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
+    const importRow = rowOf('import'), pullRow = rowOf('pull');
+    expect.soft({
+      importRow: [/full/.test(importRow), importRow.includes('dryRun=1'), importRow.includes('expire'), importRow.includes('skipped')],
+      pullRow: [pullRow.includes('mode?'), /\bexpire\b/.test(pullRow)],
+      kit03Loads: has('`full`', '`expire`', 'expired', '`skipped`', '`dryRun=1`'),
+      kit03Sources: has('`import-sources`', '`CF-Connecting-IP`', '403'),
+    }, 'P91 — the kit states the four behaviours (today it states none, and the pull\'s mode is optional)').toEqual({
+      importRow: [true, true, true, true], pullRow: [false, true], kit03Loads: true, kit03Sources: true });
+  });
+});
+
+// ===========================================================================
+// unit:P91.IM2 — a load that changes nothing is skipped and says so
+// ===========================================================================
+
+describe('unit:P91.IM2', () => {
+  for (const host of HOSTS) {
+    it(`host (${host}): an unchanged merge, an unchanged replace and an unchanged pull write nothing and answer 200 skipped (reason unchanged, the revision in force, changed 0, removed 0, the diagnostics); a load changing one field of one piece writes as today`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P91.IM2 — the tenant documents publish');
+      // A first load through the import, so the catalogue in force is one an import wrote, stamped at its revision.
+      const first = await importJson(m, [piece('story.new-one')], { mode: 'merge' });
+      expect(first.status, `${host}: PRECONDITION — the first load writes (${show(first)})`).toBe(200);
+      const before = await inForce(m), stored = await storedPieces(m);
+      const loads: Array<[string, Answer]> = [
+        ['merge', await importJson(m, stored, { mode: 'merge' })],
+        ['replace', await importJson(m, stored, { mode: 'replace' })],
+        ['pull', await pull(m, stored, { mode: 'replace' })],
+      ];
+      const skip = (a: Answer) => [a.status, a.body.skipped ?? 'no skipped member', a.body.reason ?? 'no reason', a.body.revision, a.body.changed, a.body.removed,
+        (a.body.diagnostics as { schema?: unknown; catalogRevision?: unknown } | undefined)?.schema ?? 'no diagnostics',
+        (a.body.diagnostics as { catalogRevision?: unknown } | undefined)?.catalogRevision ?? 'no diagnostics'];
+      expect.soft(loads.map(([name, a]) => [name, ...skip(a)]), `${host}: P91.IM2 — each skipped with the revision in force (today each writes a new revision)`).toEqual(
+        loads.map(([name]) => [name, 200, true, 'unchanged', before.revision, 0, 0, 'catalog-registry-diagnostics/v1', before.revision]));
+      expect.soft(await inForce(m), `${host}: P91.IM2 — nothing written: the revision and the publication in force as before`).toEqual(before);
+      // One field of one piece: written as today (the same count of pieces, a different document).
+      const edited = await importJson(m, [{ ...stored[0], title: `${String(stored[0]!.title)}, revised` }], { mode: 'merge' });
+      expect.soft([edited.status, edited.body.revision, edited.body.changed, edited.body.skipped ?? 'no skipped member'],
+        `${host}: P91.IM2 — a one-field change writes the next revision`).toEqual([200, before.revision + 1, 1, 'no skipped member']);
     }, 120_000);
   }
 });
+
+// ===========================================================================
+// unit:P91.IM3 — a dry run under the import's own rules, writing nothing
+// ===========================================================================
+
+describe('unit:P91.IM3', () => {
+  const COLUMNS = ['id', 'customerContentId', 'type', 'title', 'tags', 'slotTypes'];
+  for (const host of HOSTS) {
+    it(`host (${host}): a dry run answers what the import would — a CSV with a bad record the same 422 body, a JSON merge with the feed's aliases the same members plus dryRun true, a vocabulary refusal the same 422 — writing nothing; it keeps If-Match without Idempotency-Key; dryRun=yes is refused naming it`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P91.IM3 — the tenant documents publish');
+      const before = await inForce(m);
+      // 1. A CSV with a refused record (no title): the dry run's 422 body is the import's.
+      const rows = [piece('story.csv-good'), { ...piece('story.csv-bad'), title: '' }];
+      const dryCsv = await importCsv(m, rows, COLUMNS, { mode: 'merge', dryRun: '1' }, await ifMatchOnly(m));
+      const afterDryCsv = await inForce(m);
+      const realCsv = await importCsv(m, rows, COLUMNS, { mode: 'merge' });
+      expect.soft([dryCsv.status, dryCsv.body], `${host}: P91.IM3 — the dry run of the CSV refuses as the import does (today the switch is ignored: ${show(dryCsv)})`).toEqual([realCsv.status, realCsv.body]);
+      expect.soft(realCsv.status, `${host}: PRECONDITION — the import refuses the record with no title`).toBe(422);
+      // 2. A JSON merge carrying the feed's aliases and a partial update (the import's rules, not the validator's).
+      const records = [{ systemId: 'story.alias', cmsId: 'CMS-ALIAS', kind: 'editorial', title: 'The alias story', tags: { line: ['Tabby'] }, slots: [HERO] },
+        { id: 'story.harbor', title: 'The harbor edit, revised' }];
+      const dry = await importJson(m, records, { mode: 'merge', dryRun: '1' }, await ifMatchOnly(m));
+      const afterDry = await inForce(m);
+      const real = await importJson(m, records, { mode: 'merge' });
+      expect(real.status, `${host}: PRECONDITION — the import accepts the merge (${show(real)})`).toBe(200);
+      expect.soft({ members: loadMembers(dry), dryRun: dry.body.dryRun ?? 'no dryRun member', revision: dry.body.revision },
+        `${host}: P91.IM3 — the dry run answers the import's members, says it was a dry run and names the revision in force (today: ${show(dry)})`).toEqual({
+        members: loadMembers(real), dryRun: true, revision: before.revision });
+      expect.soft([afterDryCsv, afterDry], `${host}: P91.IM3 — neither dry run wrote anything`).toEqual([before, before]);
+      // 3. The vocabulary in effect: a value outside it refuses the dry run as it refuses the import (P82's address).
+      expect((await putKind(m, 'vocabulary', { version: 'p91-vocabulary', attributes: { color: { values: [{ id: 'black', name: 'Black' }] } } }, 'p91 vocabulary')).status,
+        'PRECONDITION: the vocabulary publishes').toBe(200);
+      const base = await readKind(m, 'vocabulary');
+      const publication = base.body.publication as { revision: number; digest: string };
+      expect((await asOperator(m, 'POST', `/content/vocabulary/approve/1?scope=${TENANT}`, {}, { 'If-Match': `"${base.body.revision as number}/${publication.revision}/${publication.digest}"`,
+        'Idempotency-Key': `1:${crypto.randomUUID()}` })).status, 'PRECONDITION: the vocabulary is approved').toBe(200);
+      const outside = [piece('story.outside', { tags: { line: ['Tabby'], color: ['chartreuse'] } })];
+      const dryOutside = await importJson(m, outside, { mode: 'merge', dryRun: '1' }, await ifMatchOnly(m));
+      const realOutside = await importJson(m, outside, { mode: 'merge' });
+      expect.soft([dryOutside.status, dryOutside.body], `${host}: P91.IM3 — the vocabulary refuses the dry run as it refuses the import`).toEqual([realOutside.status, realOutside.body]);
+      expect.soft(errorsOf(realOutside).some(e => e.startsWith("records[0] 'story.outside'") && e.includes('tags.color') && e.includes('chartreuse')),
+        `${host}: PRECONDITION — the import's refusal names the record (P82), the field and the value`).toBe(true);
+      // 4. The switch and the preconditions.
+      const noIfMatch = await importJson(m, records, { mode: 'merge', dryRun: '1' }, {});
+      const yes = await importJson(m, records, { mode: 'merge', dryRun: 'yes' }, await ifMatchOnly(m));
+      expect.soft({ noIfMatch: noIfMatch.status, yes: [yes.status, errorsOf(yes).some(e => e.includes('dryRun')) ? 'named' : `not named (${show(yes)})`] },
+        `${host}: P91.IM3 — a dry run without If-Match is refused 428 as the import is; dryRun=yes is refused 400 naming the switch`).toEqual({ noIfMatch: 428, yes: [400, 'named'] });
+    }, 180_000);
+
+    it(`host (${host}): LOCK — POST /content/catalog/validate is unchanged: a JSON document whose piece uses a feed alias is refused 422 naming pieces[0].id, and a CSV body 400`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P91.IM3 — the tenant documents publish');
+      const aliased = await asOperator(m, 'POST', `/content/catalog/validate?scope=${TENANT}`, { pieces: [{ systemId: 'story.alias', customerContentId: 'CMS-ALIAS', type: 'editorial', title: 'Alias', tags: {}, slotTypes: [HERO] }] });
+      const csv = await m.fetch(new Request(`https://ops.invalid/content/catalog/validate?scope=${TENANT}`, { method: 'POST',
+        headers: { 'X-Tenant': TENANT, Authorization: `Bearer ${m.operatorToken}`, 'Content-Type': 'text/csv' }, body: 'id,type,title,tags,slotTypes\nx,editorial,X,,home-hero\n' }));
+      expect.soft({ aliased: [aliased.status, errorsOf(aliased).some(e => e.startsWith('pieces[0].id')) ? 'pieces[0].id named' : `not named (${show(aliased)})`], csv: csv.status },
+        `${host}: P91.IM3 — LOCK: the validate route reads the catalogue document alone, as today`).toEqual({ aliased: [422, 'pieces[0].id named'], csv: 400 });
+    }, 120_000);
+  }
+});
+
+// ===========================================================================
+// unit:P91.IM4 — a full export expires what it leaves out, behind its guard; the allow-list
+// ===========================================================================
+
+describe('unit:P91.IM4', () => {
+  /** The file of a full export: two of the four stored pieces and a new one; the other two are left out. */
+  const FILE = () => [{ ...HOME_PIECES[0] }, { ...HOME_PIECES[1] }, piece('story.new-one')];
+  const LEFT_OUT = [HOME_PIECES[2].id, HOME_PIECES[3].id];
+  for (const host of HOSTS) {
+    it(`host (${host}): mode=full replaces the catalogue and expires the two pieces the file leaves out (file order, then the expired in stored order; their records kept, no longer eligible) behind expire=2; refused 428 without expire and 409 naming 2 with expire=3, writing nothing; the pull likewise`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P91.IM4 — the tenant documents publish');
+      const before = await inForce(m);
+      const unguarded = await importJson(m, FILE(), { mode: 'full' });
+      const wrong = await importJson(m, FILE(), { mode: 'full', expire: '3' });
+      const afterRefusals = await inForce(m);
+      expect.soft({ unguarded: [unguarded.status, errorsOf(unguarded).some(e => e.includes('expire')) ? 'names expire' : `does not (${show(unguarded)})`],
+        wrong: [wrong.status, errorsOf(wrong).some(e => /\b2\b/.test(e)) ? 'names 2' : `does not name 2 (${show(wrong)})`], written: afterRefusals },
+      `${host}: P91.IM4 — refused without its guard and with a wrong count, writing nothing (today the mode is read as replace)`).toEqual({
+        unguarded: [428, 'names expire'], wrong: [409, 'names 2'], written: before });
+      const guarded = await importJson(m, FILE(), { mode: 'full', expire: '2' });
+      expect(guarded.status, `${host}: PRECONDITION — the guarded full export is accepted (${show(guarded)})`).toBe(200);
+      const stored = await storedPieces(m);
+      expect.soft(stored.map(p => [p.id, (p.lifecycle as { status?: string } | undefined)?.status]), `${host}: P91.IM4 — the file in file order, then the left-out pieces expired in stored order`).toEqual([
+        [HOME_PIECES[0].id, 'live'], [HOME_PIECES[1].id, 'live'], ['story.new-one', 'live'], [LEFT_OUT[0], 'expired'], [LEFT_OUT[1], 'expired']]);
+      const served = (await (await shopperOn(m)).snapshot(HOME)).decisions.filter(d => d.slot === HERO).map(d => d.contentId).sort();
+      expect.soft(served, `${host}: P91.IM4 — an expired piece is eligible for no decision`).toEqual([HOME_PIECES[0].id, HOME_PIECES[1].id, 'story.new-one'].sort());
+      const p = await mount(host, DOCS);
+      expectPublished(p, 'P91.IM4 — the tenant documents publish');
+      const pullUnguarded = await pull(p, FILE(), { mode: 'full' });
+      const pullGuarded = await pull(p, FILE(), { mode: 'full', expire: 2 });
+      expect.soft([pullUnguarded.status, pullGuarded.status, (await storedPieces(p)).map(x => (x.lifecycle as { status?: string } | undefined)?.status)],
+        `${host}: P91.IM4 — the pull carries the mode and its guard in its body`).toEqual([428, 200, ['live', 'live', 'live', 'expired', 'expired']]);
+    }, 180_000);
+
+    it(`host (${host}): with an import-sources list published, the import, the pull and the dry run admit a caller whose CF-Connecting-IP is on it (an address or inside a range) and refuse 403 naming import-sources one outside it or with no readable address (X-Forwarded-For is never read), writing nothing; a malformed list is refused by name; with no list every caller is allowed`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P91.IM4 — the tenant documents publish');
+      const listed = await putKind(m, 'import-sources', { addresses: ['203.0.113.7', '198.51.100.0/24', '2001:db8::/32'] }, 'p91 import sources');
+      const malformed = await putKind(m, 'import-sources', { addresses: ['not-an-address'] }, 'p91 malformed');
+      const from = (address: string | null, extra: Record<string, string> = {}) => ({ ...(address ? { 'CF-Connecting-IP': address } : {}), ...extra });
+      const named = (a: Answer) => [a.status, a.status === 403 ? (errorsOf(a).some(e => e.includes('import-sources')) ? 'names import-sources' : `does not (${show(a)})`) : 'admitted'];
+      const answers: Array<[string, Answer]> = [];
+      for (const [label, address, extra] of [['listed address', '203.0.113.7', {}], ['inside the range', '198.51.100.42', {}], ['inside the IPv6 range', '2001:db8::5', {}],
+        ['outside', '192.0.2.1', {}], ['no CF-Connecting-IP, a listed X-Forwarded-For', null, { 'X-Forwarded-For': '203.0.113.7' }]] as Array<[string, string | null, Record<string, string>]>) {
+        answers.push([`import, ${label}`, await importJson(m, [piece(`story.from-${answers.length}`)], { mode: 'merge' }, { ...await preconditions(m), ...from(address, extra) })]);
+      }
+      const before = await inForce(m);
+      answers.push(['pull, outside', await pull(m, [piece('story.pulled')], { mode: 'merge' }, { ...await preconditions(m), ...from('192.0.2.1') })]);
+      answers.push(['dry run, outside', await importJson(m, [piece('story.dry')], { mode: 'merge', dryRun: '1' }, { ...await ifMatchOnly(m), ...from('192.0.2.1') })]);
+      expect.soft({ listed: listed.status, malformed: [malformed.status, errorsOf(malformed).some(e => e.includes('addresses')) ? 'names addresses' : `does not (${show(malformed)})`] },
+        `${host}: P91.IM4 — the list publishes through the content routes and a malformed one is refused by name (today the kind does not exist)`).toEqual({ listed: 200, malformed: [422, 'names addresses'] });
+      expect.soft(answers.map(([label, a]) => [label, ...named(a)]), `${host}: P91.IM4 — the caller's CF-Connecting-IP against the list`).toEqual([
+        ['import, listed address', 200, 'admitted'], ['import, inside the range', 200, 'admitted'], ['import, inside the IPv6 range', 200, 'admitted'],
+        ['import, outside', 403, 'names import-sources'], ['import, no CF-Connecting-IP, a listed X-Forwarded-For', 403, 'names import-sources'],
+        ['pull, outside', 403, 'names import-sources'], ['dry run, outside', 403, 'names import-sources']]);
+      expect.soft(await inForce(m), `${host}: P91.IM4 — the refused pull and dry run wrote nothing`).toEqual(before);
+      const open = await mount(host, DOCS);
+      expectPublished(open, 'P91.IM4 — the tenant documents publish');
+      const anyone = await importJson(open, [piece('story.anyone')], { mode: 'merge' }, { ...await preconditions(open), 'CF-Connecting-IP': '192.0.2.1' });
+      expect.soft(anyone.status, `${host}: P91.IM4 — LOCK: with no list every caller is allowed, as today`).toBe(200);
+    }, 180_000);
+
+    it(`host (${host}): on a customer deployment (the in-process customer stamp), the import-sources list published by the tenant's operator refuses an import from outside it 403 and admits one from inside, and the boundary admits the dry run and the full mode`, async () => {
+      const s = await stampWithSet(host);
+      const head = await operator(s, 'GET', '/content/import-sources');
+      const listed = await operator(s, 'PUT', '/content/import-sources', { body: { document: { addresses: ['203.0.113.7'] }, note: 'p91 customer list' }, headers: authored(head) });
+      const catalog = async () => authored(await operator(s, 'GET', '/content/catalog'));
+      const outside = await operator(s, 'POST', '/content/catalog/import?mode=merge', { body: [piece('story.c-outside')], headers: { ...await catalog(), 'CF-Connecting-IP': '192.0.2.1' } });
+      const inside = await operator(s, 'POST', '/content/catalog/import?mode=merge', { body: [piece('story.c-inside')], headers: { ...await catalog(), 'CF-Connecting-IP': '203.0.113.7' } });
+      const { 'If-Match': ifMatch } = await catalog();
+      const dry = await operator(s, 'POST', '/content/catalog/import?mode=merge&dryRun=1', { body: [piece('story.c-dry')], headers: { 'If-Match': ifMatch!, 'CF-Connecting-IP': '203.0.113.7' } });
+      const stored = ((await operator(s, 'GET', '/content/catalog')).body.document as { pieces: Array<{ id: string; lifecycle?: { status?: string } }> }).pieces.map(p => p.id);
+      const full = await operator(s, 'POST', `/content/catalog/import?mode=full&expire=${stored.length - 1}`, { body: [piece('story.c-inside')], headers: { ...await catalog(), 'CF-Connecting-IP': '203.0.113.7' } });
+      expect.soft({ listed: listed.status, outside: outside.status, inside: inside.status, dry: [dry.status, dry.body.dryRun ?? 'no dryRun member'], full: full.status },
+        `${host}: P91.IM4 — on the customer profile (today the kind does not exist and every caller imports)`).toEqual({ listed: 200, outside: 403, inside: 200, dry: [200, true], full: 200 });
+    }, 180_000);
+  }
+});
+
+/** The customer stamp's tenant with its six-member set, as an adoption leaves it (P77's pattern); the home page's pieces. */
+async function stampWithSet(host: (typeof HOSTS)[number]): Promise<Stamp> {
+  const s = await customerStamp(host);
+  const at = Date.now();
+  const members: Array<[DocumentKind<unknown>, string, unknown]> = [
+    [REFLEX_KIND as DocumentKind<unknown>, reflexScopeForTenant(CUSTOMER_TENANT), REFLEX_DOCUMENT],
+    [CONTENT_KIND as DocumentKind<unknown>, CUSTOMER_TENANT, { version: 'p91-catalogue', pieces: [...HOME_PIECES] }],
+    [SLOTS_KIND as DocumentKind<unknown>, CUSTOMER_TENANT, homeSlots()],
+    [LEARN_KIND as DocumentKind<unknown>, CUSTOMER_TENANT, homeLearn()],
+    [PRIORS_KIND as DocumentKind<unknown>, CUSTOMER_TENANT, EMPTY_PRIORS],
+    [PROPOSALS_KIND as DocumentKind<unknown>, CUSTOMER_TENANT, EMPTY_PROPOSALS],
+  ];
+  await initializePublicationSet(s.env as Env, members.map(([kind, scope, value]) => ({ kind, scope,
+    revision: { revision: 1, value, actor: 'ops', note: `p91 ${kind.name}`, at } })) as PublicationBaseline[], `0:${crypto.randomUUID()}`);
+  invalidatePublicationCache(); invalidateCache();
+  return s;
+}
+/** The tenant's operator on the customer stamp (a membership, not the stamp owner). */
+const operator = (s: Stamp, method: string, path: string, opts: { body?: unknown; headers?: Record<string, string> } = {}) =>
+  s.call(method, path, { token: s.tokens.operator, ...opts });
+/** The authored preconditions over a read's head (kit 02), revision 0 for an optional member not yet published. */
+const authored = (read: Answer): Record<string, string> => {
+  const publication = read.body.publication as { revision?: number; digest?: string } | undefined;
+  const revision = typeof read.body.revision === 'number' ? read.body.revision : 0;
+  return { ...(publication?.digest ? { 'If-Match': `"${revision}/${publication.revision}/${publication.digest}"` } : {}), 'Idempotency-Key': `${revision}:${crypto.randomUUID()}` };
+};
