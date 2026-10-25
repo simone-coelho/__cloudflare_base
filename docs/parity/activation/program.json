@@ -272,7 +272,7 @@
     {
       "id": "P81",
       "title": "The push of the decision set over the live connection (the rendering record's N5) (**amendment 11, E3, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
@@ -407,7 +407,7 @@
     {
       "id": "P77",
       "title": "The vocabulary routes allowed on customer deployments (**amendment 11, E4, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
