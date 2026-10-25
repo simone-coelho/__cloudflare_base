@@ -71,7 +71,11 @@
 // DEFAULT_REFLEX_CONFIG without its `gateDimensions`: a stored registry does not inherit the default's gates, and one that
 // learns `locale` registers no gate for it (the validator keeps its rule). NO NEW EXPORT IS IMPORTED.
 //
-// MEASURED (_evidence/parity-step3/S27/specifier/logs/, serial, --no-cache, working directory the tree). At e16d0420 (logs/d/):
+// MEASURED (_evidence/parity-step3/S27/specifier/logs/, serial, --no-cache, working directory the tree). At b7bf4b1a (logs/e/,
+// R-P326's eight refusals added to RG1's refusal leg): today 11 RED (the same legs as below, the refusal leg's new
+// assertion RED with them: every case validates, 200), the fix 17/17 three times, the reviewer's `laxgates`
+// (S27/reviewer-spec/sketches/ctl-p92.py after the fix: the four first checks alone) RG1's refusal leg on both hosts, all
+// eight cases answered 200. At e16d0420 (logs/d/):
 // today 11 RED for the missing behaviour — RG1's starting document (no `gateDimensions`), the import legs (journeyStage
 // and locale warn: five `unknown_dimension` where one is expected), the registry-document legs (styleWorld still warns as
 // a gate), the refusal legs (every malformed registration validates) and its kit leg; RG2's three legs (`purpose_later`
@@ -217,7 +221,7 @@ describe('unit:P92.RG1', () => {
         without: [['story.after-order', 'journeyStage'], ['story.market-us', 'locale'], ['story.downtown', 'styleWorld']], style: [] });
     }, 120_000);
 
-    it(`host (${host}): publication refuses a malformed gate registration by name — a gate that is also a learned dimension, a duplicate, an empty key, a list that is not one — and admits a well-formed one`, async () => {
+    it(`host (${host}): publication refuses a malformed gate registration by name — a gate that is also a learned dimension, a duplicate, an empty key, a list that is not one, an empty list, a key carrying a tag separator, an untrimmed key, a key over 64 characters, a reserved key, more than 64 keys (R-P326) — and admits a well-formed one`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P92.RG1 — the tenant documents publish');
       const check = async (gates: unknown) => {
@@ -228,6 +232,13 @@ describe('unit:P92.RG1', () => {
       expect.soft({ learned: await check(['locale', 'category']), duplicate: await check(['locale', 'locale']), empty: await check(['']), notAList: await check('locale') },
         `${host}: P92.RG1 — each refused by name (today the member is not read: every one validates)`).toEqual({
         learned: [422, 'named'], duplicate: [422, 'named'], empty: [422, 'named'], notAList: [422, 'named'] });
+      // R-P326: the rest of R-P316 (1)'s rule — the list's bounds, the key's length and trimming, the tag separators, the reserved keys.
+      expect.soft({ emptyList: await check([]), colon: await check(['loc:ale']), semicolon: await check(['loc;ale']), pipe: await check(['loc|ale']),
+        untrimmed: await check([' locale ']), longKey: await check(['g'.repeat(65)]), reserved: await check(['constructor']),
+        tooMany: await check(Array.from({ length: 65 }, (_, i) => `gate${i + 1}`)) },
+      `${host}: P92.RG1 — each refused by name (R-P326; today the member is not read: every one validates)`).toEqual({
+        emptyList: [422, 'named'], colon: [422, 'named'], semicolon: [422, 'named'], pipe: [422, 'named'],
+        untrimmed: [422, 'named'], longKey: [422, 'named'], reserved: [422, 'named'], tooMany: [422, 'named'] });
       const ok = await asOperator(m, 'POST', '/config/reflex/validate', { config: { ...WITHOUT_GATES, [GATES]: ['journeyStage', 'locale'] } });
       expect(ok.status, `${host}: P92.RG1 — a well-formed registration validates (${show(ok)})`).toBe(200);
     }, 120_000);
