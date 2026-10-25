@@ -1010,10 +1010,17 @@ describe('unit:W19.S1.01', () => {
       //    `warnings[]` keyed by `pieceIndex`, counted in `warningCount` — on
       //    every write answer AND on the read, because the channel is a function
       //    of the stored documents (routes/content.ts:209, :287, :317).
+      // S24 R10 (amendment 11 P82; granted R-P297), test-only, R-P195's form: on the import's and the pull's answers each
+      // warning also names the record of the file that wrote the piece, its position in the file sent and its id (P82.ID3);
+      // the direct PUT's and the read's expectations are exactly as before.
+      const recordedWarnings = [
+        { ...expectedWarnings[0]!, recordIndex: 1, recordId: 'compiled-only-edit', recordIdTruncated: false },
+        { ...expectedWarnings[1]!, recordIndex: 2, recordId: 'partly-defined-edit', recordIdTruncated: false },
+      ];
       for (const { label, answer } of answers) {
         expect(answer.diagnostics.warnings,
           `W19.S1.01 — ${label}: a stored piece naming a slot type no page of the tenant's slots document defines is named, by piece and by slot type`)
-          .toEqual(expectedWarnings);
+          .toEqual(label === 'JSON import' || label === 'pull' ? recordedWarnings : expectedWarnings);
         expect(answer.diagnostics.warningCount, `W19.S1.01 — ${label}: and is counted like every other warning`).toBe(2);
         expect(answer.diagnostics.slots,
           `W19.S1.01 — ${label}: the answer names the slots document it compared against, as it already names the registry`)
@@ -1110,7 +1117,9 @@ describe('unit:W19.S1.02', () => {
     expect(refusal.received, 'W19.S1.02 — and says how many records it read').toBe(2);
     expect(refusal.errors,
       'W19.S1.02 — the refusal names the record and the field in the documented words (BTI guide :233)')
-      .toContain('pieces[1].slotTypes: required non-empty string array');
+      // S24 R10 (amendment 11 P82; granted R-P294 (3)), test-only, R-P195's form: an import's refusal names the record by
+      // its position in the file sent and its id (P82.ID2's address), the field and the words as before.
+      .toContain("records[1] 'has-none'.slotTypes: required non-empty string array");
 
     // 5. …and the same for an empty CSV cell, which is the shape a real feed
     //    fails in. Nothing was published by either refusal.
@@ -1121,7 +1130,7 @@ describe('unit:W19.S1.02', () => {
       { method: 'POST', headers: { ...publicationHeaders(env, auth, 4), 'Content-Type': 'text/csv' }, body: emptyCsv }, env);
     expect(fourth.status, 'W19.S1.02 — a CSV row with a blank slots cell is refused too').toBe(422);
     expect((await fourth.json() as CatalogAnswer).errors,
-      'W19.S1.02 — in the same documented words').toContain('pieces[0].slotTypes: required non-empty string array');
+      'W19.S1.02 — in the same documented words').toContain("records[0] 'csv-has-none'.slotTypes: required non-empty string array"); // S24 R10 (R-P294 (3)): P82's address
     expect(await storedPieces(env), 'W19.S1.02 — and nothing was partially published by either refusal').toEqual(before);
   });
 });
