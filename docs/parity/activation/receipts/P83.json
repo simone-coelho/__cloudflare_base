@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P83",
+  "workOrderHash": "sha256:ec1de0ff04df831b9ebcbcaa22f572d80c29533921c0d46c94363414351ace2e",
+  "artifact": {
+    "revision": "0a87cf3db388732dfe77e8d15665d86a3f4f224b",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p83-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p83-build at 07ce7dba (cee3da9f the merge of the S25 spec 61925cae; 7c61088a the mechanism with the regenerated Meridian bundle; b02151e1 the adjacent-swap skip; d6d73e8e, 07ce7dba the kit phrases the merge of the spec fix 2f4d265a: two brand rules as guarantees. Rule (a) minimum { dimension, value, count, within } on a slot beside diversity, read on every governance version, refused by name when malformed or beside per-context orders; after a slot's pins and ranking, on every arm the engine ranks, the best-ranked items carrying the tag come into the first within positions and the lowest-ranked others there leave and follow at once; pinned positions count when they carry the tag and never move; each moved decision carries explain.minimum with its position without the rule, on its record and its receipt, and the receipt's why names the tag; the replay agrees; the P05 adjacent swap never exchanges a carrier inside the span with a non-carrier outside it. Rule (b) pinnedTag { dimension, value, window: { from, to } } on a content slot, both ends required in ISO 8601 with from before to, governance 3 or later, refused beside pinnedPieceId or pinnedPieceIds; passed to the composer only while the window is in effect, from inclusive to to exclusive by the decision's clock with the piece window's comparison; the best-ranked eligible carrier, after P80's scope, leads the slot as tenant-pinned on every arm with explain.pinnedTag on the decision, the record and the receipt; with no carrier, or with position 1 already fixed, the slot decides as without it and pinDiagnostics names the pin with reason unmet_tag_pin, which decide.ts keeps out of its refusal rules; an item pin missing, ineligible or excluded still refuses the whole slot (P04 D1). Types: MinimumRule, TagPin, the slot and explain members in src/content/types.ts; PinDiagnostic.pinnedPieceId optional with type-only lines at src/learn/slotGovernance.ts :83 and :91 and a narrowing in decide.ts's refusal-by-withholding check, no behaviour change. Kit 02 gains two paragraphs after the item-pin section and kit 03's slot-field sentence states both rules, the window's ends in order and the minimum enforced, not weighted; the two owed P82 lines (kit 02 :2016–2017, kit 03 :240–241) now read records[k] with the quoted id, line-neutral. public/meridian/engine.bundle.js regenerated, 82,903 to 86,683 bytes). Specification 61925cae + 2f4d265a (17 tests on both hosts: GR1 the guarantee on the default and a personalized arm with and without bands, records, receipts and replays, publication refusals with the orders-alone control; GR2 the window's five instants on two product pages, records and receipts, the best-ranked carrier, publication refusals including a window missing either end; GR3 the unmet pin as a diagnostic with the snapshot's counts locked in form, the item-pin refusal lock, both rules on one slot with count 2 within 2 and the pinned item unmoved, the adjacent swap kept off the span's edge; GR4 the kit binding the phrases). P83 17/17 x3; the lock files 187/187 at the builder's round 1 (P04 13, P15 20, W20 34, P80 33, P38 13, P43 11, P68 8, decide 11, receipts 4, routes/content 40) and 205/205 with P05 18 at the join; W19 and P82 42/42; both typechecks 0; SDK bundles exact and unchanged; Meridian bundle exact; eslint 0 errors. Amendment 11 E6, the owner's amendment of 2026-10-22 (R-P245; R-P303, R-P306–R-P311, R-P319). Told: the tag-pinned decision's record carries the scoring terms that chose it beside score 0, authority pin and versions 0; on a declared layout slot whose position 1 is pinned or held a tag pin in its window is named unmet and the slot decides as without it; an open-ended tag pin is not offered; the snapshot's refusedCount and the slot-governance count include the unmet tag pin as they include P43's module_not_returned (an advisory candidate); minimum never meets an order served exactly or blended because it is refused beside orders.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S25/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S25/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P83/implementer/REPORT.md",
+      "git commits on rem/p83-joined up to 0a87cf3d"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P83 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S25/reviewer-p83/logs/main-P83-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S25/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P83/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-25T07:32:11.941Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -602,7 +602,7 @@
     {
       "id": "P83",
       "title": "Two brand rules as guarantees: a minimum count of tagged items in the first positions, and a pin with a date window (**amendment 11, E6, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
@@ -709,7 +709,7 @@
     {
       "id": "P74",
       "title": "The layout hold's live row (P74 on the remediation resume) (**amendment 11, E7, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",

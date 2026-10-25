@@ -1695,6 +1695,30 @@ Deploy compatible readers/workers/UI before publishing controls: pre-governance 
 whereas version-1 readers reject stored version 2; either can retain older cached revisions.
 Binary rollback after governed publication needs explicit operator configuration restoration or withdrawal first.
 
+A tag pin, `pinnedTag: { dimension, value, window: { from, to } }` on a content slot (governance 3 or later), pins
+the item carrying a tag instead of an item identifier, for a window, `from` inclusive, `to` exclusive (both
+ends required, ISO 8601, `from` before `to`; the piece window's own comparison, by the decision's clock), the
+best-ranked eligible candidate carrying the tag (after an anchor scope narrows the candidates, so a carousel shared
+by every product page leads with each page's own item) leads the slot on every arm, authority `pin`, never ranked
+nor explored, its record and receipt naming the pin (`explain.pinnedTag`); the other positions rank as without it,
+and before and after the window the slot decides exactly as without it. It is mutually exclusive with
+`pinnedPieceId` and `pinnedPieceIds`, refused by name beside either. A tag pin in its window that no eligible
+candidate satisfies refuses nothing: the slot decides as without it and `pinDiagnostics` names it as
+`{ pinnedTag: { dimension, value }, reason: 'unmet_tag_pin', slot }` (counted with the entries beside it, as
+`module_not_returned` is); an item pin that is missing, ineligible or excluded still refuses the whole slot.
+
+A slot's `minimum: { dimension, value, count, within }` is a guarantee, enforced and never weighted: on every arm
+the engine ranks (the holdout's default arm included), after the slot's pins and its ranking (bands, exploration
+and the diversity rule included), at least `count` items carrying the tag stand in the first `within` positions
+whenever that many are eligible, and all of them when fewer are. The best-ranked items carrying it come into those
+positions, the lowest-ranked items there not carrying it leave and follow at once, before the rest of the take; a
+pinned item (a prefix pin, a tag pin's item, a position pin, a held off-limits module) counts when it carries the
+tag and never moves. Each decision the rule moved, in or down, names it on its record and receipt
+(`explain.minimum`, with `from`, the position it held without the rule). `count` is an integer from 1 and `within`
+an integer from `count` to the slot's take; a malformed rule, and a rule beside per-context `orders` (a slot
+serving an order is not ranked), is refused by name. With a tag pin on the same slot the pin takes position 1 and
+the guarantee counts it.
+
 Two more for the catalog, both requiring the operator token, the seam your content system connects to:
 
 | Route | Body | Does |
@@ -2013,8 +2037,8 @@ catalogue whose `pooled` is anything else reads as undeclared. A catalogue witho
 decides, records and replays exactly as before. A direct publication (`PUT /content/catalog`) that declares
 `pooled` keeps it on the stored piece with no `ignored_field` advisory for it, `POST /content/catalog/validate`
 answers the same advisories, and a feed import or pull carries it the same way, so a catalogue refreshed from a
-feed declares its pooled modules (in CSV, a `pooled` cell `true`; any other value is refused naming
-`pieces[i].pooled`, and a blank cell declares nothing). Limits: a snapshot reads the record from every placement when it is published: a placement whose own
+feed declares its pooled modules (in CSV, a `pooled` cell `true`; any other value is refused naming the record as
+`records[k] '<id>'` with its field `pooled`, and a blank cell declares nothing). Limits: a snapshot reads the record from every placement when it is published: a placement whose own
 evidence has not moved since another page's did serves the record as it last published it. A day report's
 grids, from folded hours or from a day's ledger records, are still built per slot from that slot's own
 evidence, so a pooled module's row there is its own placement's and not the pooled record.

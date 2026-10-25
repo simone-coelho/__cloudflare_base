@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, OrderContext, PositionBand, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { isRewardType, REWARD_TYPES, type RewardType } from '@/ledger/records';
@@ -925,6 +925,20 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     else pinnedPieceIds = [...ids];
     if (Object.hasOwn(s, 'pinnedPieceId')) errors.push(`${at}: scalar and prefix pins are mutually exclusive`);
   }
+  // P83 (E6): the tag pin with its window, beside the prefix pin form (governance 3 or later): both ends required, ISO
+  // 8601, from before to; never beside an item pin.
+  let pinnedTag: TagPin | undefined;
+  if (governance >= 3 && Object.hasOwn(s, 'pinnedTag')) {
+    const t = s.pinnedTag, w = isRecord(t) ? t.window : undefined;
+    const from = isRecord(w) && isStr(w.from) ? Date.parse(w.from) : NaN, to = isRecord(w) && isStr(w.to) ? Date.parse(w.to) : NaN;
+    if (!isRecord(t) || !isStr(t.dimension) || !isStr(t.value) || !isRecord(w) || !Number.isFinite(from) || !Number.isFinite(to) || from >= to) {
+      errors.push(`${at}.pinnedTag: { dimension, value: a tag; window: { from, to }: both ends ISO 8601 dates, from before to }`);
+    } else if (Object.hasOwn(s, 'pinnedPieceId') || Object.hasOwn(s, 'pinnedPieceIds')) {
+      errors.push(`${at}.pinnedTag: a tag pin and an item pin (pinnedPieceId, pinnedPieceIds) are mutually exclusive`);
+    } else pinnedTag = { dimension: t.dimension as string, value: t.value as string, window: { from: w.from as string, to: w.to as string } };
+  } else if (Object.hasOwn(s, 'pinnedTag') && earlyMark !== null) {
+    errors.push(`${at}.pinnedTag: a tag pin needs governanceVersion 3 or later; this document is marked governanceVersion ${earlyMark}`);
+  }
   let excludedPieceIds: string[] | undefined;
   if (governance) {
     if (Object.hasOwn(s, 'offLimits') && typeof s.offLimits !== 'boolean') errors.push(`${at}.offLimits: boolean when present`);
@@ -1014,6 +1028,18 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     const d = s.diversity;
     if (!isRecord(d) || !isStr(d.dimension) || !isNum(d.max) || !Number.isInteger(d.max) || d.max < 1) errors.push(`${at}.diversity: { dimension: a tag dimension, max: integer ≥ 1 }`);
     else diversity = { dimension: d.dimension.trim(), max: d.max };
+  }
+  // P83 (E6): the guarantee, at least `count` items carrying the tag in the first `within` positions; read on every
+  // governance version, as `diversity` is. Never beside per-context orders (R-P307): a slot serving an order is not ranked.
+  let minimum: MinimumRule | undefined;
+  if (s.minimum !== undefined) {
+    const r = s.minimum, slotTake = isNum(take) && Number.isInteger(take) ? take : 0;
+    if (!isRecord(r) || !isStr(r.dimension) || !isStr(r.value) || !Number.isInteger(r.count) || !Number.isInteger(r.within)
+      || (r.count as number) < 1 || (r.within as number) < (r.count as number) || (r.within as number) > slotTake) {
+      errors.push(`${at}.minimum: { dimension, value: a tag; count: an integer from 1; within: an integer from count to the slot's take }`);
+    } else if (carriesOrders(s)) {
+      errors.push(`${at}.minimum: a slot serving per-context orders is not ranked, so it carries no guarantee`);
+    } else minimum = { dimension: r.dimension, value: r.value, count: r.count as number, within: r.within as number };
   }
   // W16 C3 / R30(1): the seed rule set is read on every slot regardless of the
   // governance marker, as merchandising, stage, freshness, fatigue and diversity
@@ -1130,6 +1156,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(governance && typeof s.offLimits === 'boolean' ? { offLimits: s.offLimits } : {}), ...(excludedPieceIds ? { excludedPieceIds } : {}),
     ...(allowedTypes ? { allowedTypes } : {}), ...(excludedTags ? { excludedTags } : {}), ...(pinnedPieceIds ? { pinnedPieceIds } : {}),
     ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
+    ...(minimum ? { minimum } : {}), ...(pinnedTag ? { pinnedTag } : {}),
     ...(seeds ? { seeds } : {}), ...(layout ? { layout: true as const } : {}), ...(orders ? { orders } : {}), ...(complements ? { complements } : {}), ...(scope ? { scope } : {}),
     ...(signalFloor !== undefined ? { signalFloor } : {}),
     ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
