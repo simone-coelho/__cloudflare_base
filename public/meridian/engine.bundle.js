@@ -93,6 +93,9 @@ var DEFAULT_REFLEX_CONFIG = {
     // contentType attribute; the sanitizer admits it because this entry exists.
     { key: "contentType", source: "contentType" }
   ],
+  // P92 (E17): the content pack's gates, known to the catalogue and never learned: post-purchase content and the
+  // record's market and language.
+  gateDimensions: ["journeyStage", "locale"],
   weights: {
     // Views build affinity 1:1; intent actions weigh heavier (doc 16 §4 table).
     product_view: 1,

@@ -164,6 +164,26 @@ function checkHysteresis(errors: string[], path: string, thetaIn: unknown, theta
   }
 }
 
+/**
+ * P92 (E17): `gateDimensions`, 1 to 64 distinct tag dimension keys, each 1 to 64 characters with no surrounding space
+ * and none of the tag separators `:` `;` `|`, no reserved key, and none a key the document's `dimensions` learn (a
+ * dimension is learned or a gate, never both). Every refusal names `gateDimensions`.
+ */
+function validateGateDimensions(errors: string[], value: unknown, dimensions: unknown): void {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 64) {
+    errors.push('gateDimensions must be a list of 1 to 64 tag dimension keys'); return;
+  }
+  const learned = new Set(Array.isArray(dimensions) ? dimensions.map((d) => (typeof d === 'object' && d !== null ? (d as { key?: unknown }).key : undefined)) : []);
+  const seen = new Set<string>();
+  value.forEach((key: unknown, i: number) => {
+    if (typeof key !== 'string' || key.length < 1 || key.length > 64 || key.trim() !== key || /[:;|]/.test(key) || RESERVED_KEYS.has(key)) {
+      errors.push(`gateDimensions[${i}] must be a tag dimension key: 1 to 64 characters, no surrounding space, none of : ; |`);
+    } else if (seen.has(key)) errors.push(`gateDimensions[${i}] "${key}" is duplicated; gate keys must be unique`);
+    else if (learned.has(key)) errors.push(`gateDimensions[${i}] "${key}" is also a learned dimension; a dimension is learned or a gate, never both`);
+    else seen.add(key);
+  });
+}
+
 function validateDimension(errors: string[], d: unknown, i: number, seen: Set<string>, global: ReflexConfig): void {
   const path = `dimensions[${i}]`;
   if (typeof d !== 'object' || d === null || Array.isArray(d)) {
@@ -532,6 +552,8 @@ export function validateReflexConfig(candidate: unknown): ValidationResult {
   // P14 (decisions D1, D2): the product-type weights ride this document too, on
   // a dimension it declares; absent is valid and every event weighs what its action weighs.
   if (c.productTypeWeights !== undefined) validateProductTypeWeights(errors, c.productTypeWeights, c.dimensions);
+  // P92 (E17): the gate dimensions, tag keys known to the catalogue and never learned.
+  if (c.gateDimensions !== undefined) validateGateDimensions(errors, c.gateDimensions, c.dimensions);
 
   if (!Array.isArray(c.dimensions)) {
     errors.push('dimensions must be an array');
@@ -758,6 +780,8 @@ export interface ReflexConfigPatch {
   moduleEngagementWeight?: number;
   /** P14: the whole product-type weights block, replaced as a unit — an edit sends the block as it should stand. */
   productTypeWeights?: ReflexConfig['productTypeWeights'];
+  /** P92: the whole gate list, replaced as a unit — a gate list is not merged by name. */
+  gateDimensions?: string[];
   weights?: Record<string, number>;
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
@@ -774,7 +798,7 @@ export interface ReflexConfigPatch {
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
-  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity', 'suppression', 'accountIdFormat', 'moduleEngagementWeight', 'productTypeWeights'] as const) {
+  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes', 'journey', 'continuity', 'suppression', 'accountIdFormat', 'moduleEngagementWeight', 'productTypeWeights', 'gateDimensions'] as const) {
     if (patch[field] !== undefined) (next as unknown as Record<string, unknown>)[field] = patch[field];
   }
   if (patch.weights) next.weights = { ...next.weights, ...patch.weights };

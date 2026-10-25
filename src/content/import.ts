@@ -72,11 +72,20 @@ export const FEED_FIELD_ALIASES: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
- * Every field name a feed record may carry: the published piece's own fields
- * and the aliases above. A record key outside this set reaches no stored piece,
- * which is what `ignoredFieldsOf` reports on the write answer.
+ * P92 (E17): the fields a feed may carry that the contract accepts and ignores: the module register's optional
+ * `purpose_later` column, one sentence of what a module is for, until the semantic term exists. Never copied onto a
+ * piece (the normalizer below reads only the published fields), so never stored, and never named `ignored_field` on
+ * an import or a pull; a direct publication keeps the validator's own closed set and still names it.
  */
-export const FEED_FIELDS: ReadonlySet<string> = new Set([...PIECE_FIELDS, ...Object.values(FEED_FIELD_ALIASES).flat()]);
+export const ACCEPTED_AND_IGNORED: readonly string[] = ['purpose_later'];
+
+/**
+ * Every field name a feed record may carry: the published piece's own fields,
+ * the aliases above and the fields accepted and ignored. A record key outside
+ * this set reaches no stored piece, which is what `ignoredFieldsOf` reports on
+ * the write answer.
+ */
+export const FEED_FIELDS: ReadonlySet<string> = new Set([...PIECE_FIELDS, ...Object.values(FEED_FIELD_ALIASES).flat(), ...ACCEPTED_AND_IGNORED]);
 
 /**
  * The keys of one raw record the published contract does not list, in the order

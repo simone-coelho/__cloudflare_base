@@ -47,6 +47,12 @@ export interface DimensionSpec {
 export interface ReflexConfig {
   version: string;
   dimensions: DimensionSpec[];
+  /**
+   * P92 (E17): tag dimensions registered as gates (a market and language, content made for after an order): known to
+   * the catalogue, so a tag on one raises no `unknown_dimension`, and never learned: no learner reads this list, and
+   * a gate value never counts as a registered tag. A key is learned (`dimensions`) or a gate, never both.
+   */
+  gateDimensions?: string[];
   /** Action → accumulation weight. Unknown actions weigh 0 (still re-evaluate). */
   weights: Record<string, number>;
   /** Global decay half-life-ish time constant τ (ms): R_eff = R·exp(−Δt/τ). */
@@ -584,6 +590,9 @@ export const DEFAULT_REFLEX_CONFIG: ReflexConfig = {
     // contentType attribute; the sanitizer admits it because this entry exists.
     { key: 'contentType', source: 'contentType' },
   ],
+  // P92 (E17): the content pack's gates, known to the catalogue and never learned: post-purchase content and the
+  // record's market and language.
+  gateDimensions: ['journeyStage', 'locale'],
   weights: {
     // Views build affinity 1:1; intent actions weigh heavier (doc 16 §4 table).
     product_view: 1,

@@ -185,8 +185,13 @@ import type { ContentCatalog, ContentDecisionSet, ContentPiece, SlotStrategy } f
  * are deliberately absent, so a reader of this document is distinguishable from
  * a reader of the bundled list.
  */
+// R10 (R-P322, P92; test-only, R-P195's form): the tenant's registry is a copy of DEFAULT_REFLEX_CONFIG WITHOUT its
+// `gateDimensions` (P92): a stored registry does not inherit the default's gates, and one that learns `locale` registers no
+// gate for it. REGISTRY_WITHOUT_LOCALE below copies this one, so it carries none either. Every assertion unchanged.
+const { gateDimensions: _defaultGates, ...REFLEX_WITHOUT_GATES } = DEFAULT_REFLEX_CONFIG as typeof DEFAULT_REFLEX_CONFIG & { gateDimensions?: unknown };
+void _defaultGates;
 const TENANT_REGISTRY = {
-  ...DEFAULT_REFLEX_CONFIG,
+  ...REFLEX_WITHOUT_GATES,
   version: 'w19-b2-registry',
   dimensions: [
     { key: 'line', source: 'line' },
