@@ -64,30 +64,30 @@
 //   · src/units/W20/LEDGER.unit.test.ts TENANT_REGISTRY (DEFAULT_REFLEX_CONFIG spread, `locale` learned): the same refusal,
 //     W20.R1–R5 fail. The same R10, granted (R-P322) and written.
 //   · src/units/P10/LEDGER.unit.test.ts, unit:P10.F2 host (session): its CONTROL "at floor 0 the slot explores" answered false
-//     under the sketch in one suite run (rotation at share 1, whose pick depends on the visitor's bucket); not attributed:
-//     to re-run three times on both trees after the gate (R-P322 (2)).
+//     under the sketch in one suite run; re-run three times on each tree, 14/14 every time: the control reads a fresh
+//     shopper's rotation pick, hashed on the visitor's bucket, not the default document's content. TOLD (R-P322 (2)).
 // R10 (R-P322, test-only, R-P195's form, fixtures only, every assertion unchanged): src/units/W19/B2.unit.test.ts
 // TENANT_REGISTRY (REGISTRY_WITHOUT_LOCALE copies it) and src/units/W20/LEDGER.unit.test.ts TENANT_REGISTRY copy
 // DEFAULT_REFLEX_CONFIG without its `gateDimensions`: a stored registry does not inherit the default's gates, and one that
 // learns `locale` registers no gate for it (the validator keeps its rule). NO NEW EXPORT IS IMPORTED.
 //
-// MEASURED (_evidence/parity-step3/S27/specifier/logs/, serial, --no-cache, working directory the tree). At 511aa9cd: today
-// 11 RED for the missing behaviour — RG1's starting document (no `gateDimensions`), the import legs (journeyStage and
-// locale warn: five `unknown_dimension` where one is expected), the registry-document legs (styleWorld still warns as a
-// gate), the refusal legs (every malformed registration validates) and its kit leg; RG2's three legs (`purpose_later`
+// MEASURED (_evidence/parity-step3/S27/specifier/logs/, serial, --no-cache, working directory the tree). At e16d0420 (logs/d/):
+// today 11 RED for the missing behaviour — RG1's starting document (no `gateDimensions`), the import legs (journeyStage
+// and locale warn: five `unknown_dimension` where one is expected), the registry-document legs (styleWorld still warns as
+// a gate), the refusal legs (every malformed registration validates) and its kit leg; RG2's three legs (`purpose_later`
 // named `ignored_field`; the kit silent) — and 6 LOCKS GREEN (RG1's never-learned and gating legs, RG3's fallback legs);
-// under the fix 17/17 (logs/b/fix-suite). The wrong fixes (sketches/p92.py, logs/b/): `learned` (journeyStage and
-// locale learned dimensions) turns RG1's logic, import, registry-document, refusal and never-learned legs RED (9);
-// `silenceall` the import and registry-document legs (4); `storepurpose` and `ignoreall` RG2's host legs (2 each);
-// `diagonly` (the registration hard-coded in the diagnostics) RG1's logic, registry-document and refusal legs (5);
-// `docsonly` (the starting document alone) the import and registry-document legs (4); `kitleft` both kit legs (2).
-// At a9b487ce (logs/a/, before the fixture repair of reading 1 (c) and the CSV column): the fix 13/17 three times, the
-// four RED legs being that fixture's; the locks (W19, P82, P38, P02, P08, P32, the content route, import, complements,
-// kinds and seedPlatform tests, configStore.test.ts) 199/199 today and 194/199 under the fix (W19 B2's five, COLLISIONS
-// above); tsc exit 0 on today and under the fix. The whole suite at 511aa9cd (logs/b/compare.txt): 3926 tests on both
-// trees; failing under the fix alone 11 (W19 B2 5, W20 5, P10.F2 session 1: COLLISIONS above); failing today alone the 11
-// P92 tests. NOT YET MEASURED (held for P74's gate): the fix three times at 511aa9cd, `gatecounts` (a gate value counted
-// as a nonblank registered tag), P10 re-run.
+// the fix 17/17 three times; `gatecounts` (a gate value counted as a nonblank registered tag) RG1's import legs (2);
+// W19 B2 and W20 under the R10s 14/14 on today and under the fix; P10 14/14 three times on each tree (P10.F2's control
+// reads a fresh shopper's rotation pick, hashed on the visitor's bucket: the one RED of the whole-suite run below did not
+// recur, TOLD per R-P322 (2)); tsc exit 0 on today and under the fix. At 511aa9cd (logs/b/): the wrong fixes
+// (sketches/p92.py) — `learned` (journeyStage and locale learned dimensions) RG1's logic, import, registry-document,
+// refusal and never-learned legs (9); `silenceall` the import and registry-document legs (4); `storepurpose` and
+// `ignoreall` RG2's host legs (2 each); `diagonly` (the registration hard-coded in the diagnostics) RG1's logic,
+// registry-document and refusal legs (5); `docsonly` (the starting document alone) the import and registry-document legs
+// (4); `kitleft` both kit legs (2); and the whole suite (compare.txt): 3926 tests on both trees, failing under the fix
+// alone 11 (W19 B2 5 and W20 5, the R10s above; P10.F2 session 1, not recurring), failing today alone the 11 P92 tests.
+// At a9b487ce (logs/a/): the locks (W19, P82, P38, P02, P08, P32, the content route, import, complements, kinds and
+// seedPlatform tests, configStore.test.ts) 199/199 today and 194/199 under the fix (W19 B2's five, before the R10).
 //
 // HARNESS: src/units/_parity.ts and src/units/_parity5.ts (the mounted app, both shopper hosts, the operator routes).
 // Imports from src/units/: ../_parity, ../_parity5.
