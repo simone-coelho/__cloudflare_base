@@ -82,6 +82,13 @@
 // failing on both), the two differ only on P82's seven legs and the four R10 legs (W19.F2.01, W19.S1.01, W19.S1.02,
 // W19.F3.06), each RED today and GREEN under the fix.
 //
+// R-P300 (the spec review at 35efbb36; logs/e/): two assertions added, no other line changed. ID2 sends a record with no
+// id and expects `[422, ['records[1].id: required string']]` (today `pieces[1].id: required string`; the reviewer's
+// `noidundef`, applied after the fix, answers `records[1] 'undefined'.id: required string` and turns ID2 RED on both
+// hosts); the kit test binds the address form `records[k] '<id>'` in kit 02's import row and kit 03's recordIndex
+// paragraph (the reviewer's `kitnoid`, the kit stating `records[k]` with no id, turns it RED). At b008917c: today 7 RED, the
+// fix 13/13 three times.
+//
 // HARNESS: src/units/_parity.ts, src/units/_parity5.ts. Imports from src/units/: ../_parity, ../_parity5.
 
 import { describe, expect, it, vi } from 'vitest';
