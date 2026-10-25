@@ -164,11 +164,12 @@ describe('unit:P85.CX1', () => {
         .toEqual([[200, 'admitted', 8], [200, 'admitted', 8]]);
       expect.soft(await at(m, CELL, 'n'), `${host}: P85.CX1 — one exposure per drawn image in the context's cell, the repeat counted once`)
         .toEqual(Object.fromEntries(PAINTED.map(item => [item, 1])));
-      const before = await learned(m);
+      const cellBefore = await at(m, CELL, 'n');
       const fallback = await carouselBeacon(s, { tableVersion: table.version, context: 'default', images: IMAGES.map(p => p.id), pageInstance: pageInstanceOf('p85-cx1-default') });
       await m.drainLedger();
-      const root = (await learned(m))[id(1)]?.n ?? 0, rootBefore = before[id(1)]?.n ?? 0;
-      expect.soft([answerOf(fallback), Math.round(root - rootBefore)], `${host}: P85.CX1 — the default row admitted, counted at the root (S4)`).toEqual([[200, 'admitted', 8], 1]);
+      expect.soft([answerOf(fallback), await at(m, 'c=unknown', 'n'), await at(m, CELL, 'n')],
+        `${host}: P85.CX1 — the default row admitted and counted as an unknown context is (R-P393): at the c=unknown level of the carousel's own object, the paid-social cell unchanged`)
+        .toEqual([[200, 'admitted', 8], Object.fromEntries(IMAGES.map(p => [p.id, 1])), cellBefore]);
     }, 120_000);
 
     it(`host (${host}): ignored by name and adding nothing — no tracking consent (tracking_refused), a version never issued (stale_table), a context the version has no row for (unknown_context), a slot that is not the carousel (not_carousel), another product's image (unknown_image); malformed data 400; P30's layout beacon on the carousel slot still answers not_context_only (lock)`, async () => {
@@ -200,6 +201,24 @@ describe('unit:P85.CX1', () => {
       expect.soft(malformed, `${host}: P85.CX1 — malformed beacons refused 400 by name`).toEqual(malformed.map(() => [400, 'Invalid carousel exposure']));
       const layout = await s.action({ type: 'layout_exposure', data: { contextKey: 'pdp|c=paid_social|v=1|k=0', page: 'pdp', slot: CAROUSEL, modules: [id(3)], pageInstance: pageInstanceOf('p85-cx1-lock') } });
       expect.soft([layout.status, layout.body.exposure ?? null, layout.body.reason ?? null], `${host}: P85.CX1 — LOCK: P30's layout beacon is unchanged`).toEqual([200, 'ignored', 'key_not_issued']);
+    }, 120_000);
+
+    it(`host (${host}): two more ignored reasons, adding nothing — a carousel not measured on rendered-v1 (not_measured), and more images than the carousel's take (unknown_image)`, async () => {
+      const servedLearn = learnDocument({ [CAROUSEL]: { measurementBasis: 'served-v1', reward: 'click' } });
+      const served = await mount(host, docsWith({ learn: servedLearn }));
+      expectPublished(served, 'P85.CX1 — the carousel on served-v1 publishes');
+      const narrow = await mount(host, docsWith({ slots: { ...SLOTS, pages: { pdp: [layoutSlot(), carousel({ take: 4 })] } } }));
+      expectPublished(narrow, 'P85.CX1 — the carousel taking four publishes');
+      const answers: unknown[][] = [];
+      for (const [name, m] of [['not on rendered-v1', served], ['eight images on a carousel taking four', narrow]] as const) {
+        const table = await tableOf(m);
+        expect(table.status, `${host}: PRECONDITION P84 — the context table answers (${name})`).toBe(200);
+        const answer = await carouselBeacon(await shopperOn(m), { tableVersion: table.version, context: 'paid_social|1|mobile', images: PAINTED, pageInstance: pageInstanceOf('p85-cx1-more') });
+        await m.drainLedger();
+        answers.push([name, ...answerOf(answer), Object.keys(await at(m, CELL, 'n')).length]);
+      }
+      expect.soft(answers, `${host}: P85.CX1 — each ignored by name, nothing counted`).toEqual([['not on rendered-v1', 200, 'ignored', 'not_measured', 0],
+        ['eight images on a carousel taking four', 200, 'ignored', 'unknown_image', 0]]);
     }, 120_000);
 
     it(`host (${host}): the engine's own arm decides (R-P393) — a shopper the engine assigns to the holdout's default arm is ignored not_learning even when the page claims personalized, and a personalized shopper is admitted even when the page claims default; each answer carries the page's claim as armClaimed and each disagreement is counted in the learn queue's arm_draw mismatch`, async () => {
@@ -339,10 +358,12 @@ describe('unit:P85.CX2', () => {
       const s = await shopperOn(m);
       const pageInstance = pageInstanceOf('p85-cx2-holdout');
       await decided(m, s, pageInstance, id(3));
+      const recordedBefore = [await at(m, 'c=unknown', 'n'), await at(m, CELL, 'n')];
       const beacon = await carouselBeacon(s, { tableVersion: table.version, context: 'default', images: PAINTED.slice(0, 4), pageInstance, arm: 'default' });
       await clickOn(s, id(3), 1, pageInstance);
       await m.drainLedger();
-      expect.soft([answerOf(beacon), await creditsOf(m)], `${host}: P85.CX2 — ignored not_learning, nothing credited`).toEqual([[200, 'ignored', 'not_learning'], {}]);
+      expect.soft([answerOf(beacon), await creditsOf(m), [await at(m, 'c=unknown', 'n'), await at(m, CELL, 'n')]], `${host}: P85.CX2 — ignored not_learning, nothing recorded by the beacon, nothing credited`)
+        .toEqual([[200, 'ignored', 'not_learning'], {}, recordedBefore]);
     }, 120_000);
   }
 });
