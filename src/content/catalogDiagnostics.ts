@@ -190,6 +190,8 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
     if (!stored && !isDemoConfigScope(scope)) return unavailable;
     const config = stored ? stored.value : await compiledDefaultFor(scope);
     const registered = new Set(config.dimensions.map(dimension => dimension.key));
+    // P92 (E17): the registry's gate dimensions: a tag on one is known (no unknown_dimension), and never a registered tag.
+    const gates = new Set<string>(config.gateDimensions ?? []);
     const implicitType = config.dimensions.some(dimension => dimension.key === 'contentType' && !dimension.derive);
     const counts: Record<string, number> = {}, prefix: Occurrence[] = [], first = new Map<string, Occurrence>();
     let warningCount = 0;
@@ -204,8 +206,8 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
       const from = request?.pieceRecords?.[pieceIndex];
       const record: RecordMembers = from ? { recordIndex: from.recordIndex, recordId: from.recordId.slice(0, BOUND), recordIdTruncated: from.recordId.length > BOUND } : {};
       Object.entries(piece.tags).forEach(([dimension, values], dimensionIndex) => {
-        if (!registered.has(dimension)) add({ code: 'unknown_dimension', pieceIndex, dimensionIndex,
-          dimension: dimension.slice(0, BOUND), dimensionTruncated: dimension.length > BOUND, ...record });
+        if (!registered.has(dimension)) { if (!gates.has(dimension)) add({ code: 'unknown_dimension', pieceIndex, dimensionIndex,
+          dimension: dimension.slice(0, BOUND), dimensionTruncated: dimension.length > BOUND, ...record }); }
         else if (values.some(value => value.trim().length > 0)) nonempty = true;
         // Two spellings of one value that differ only by case are two values to
         // every scorer, so one of them is dead taxonomy the feed cannot see.
