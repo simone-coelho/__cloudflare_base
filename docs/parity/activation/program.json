@@ -1252,7 +1252,9 @@
         "packages/sdk/package.json",
         "src/identity/consentContinuity.ts",
         "src/reflex/contentCompose.ts",
-        "src/routes/content.ts"
+        "src/routes/content.ts",
+        "scripts/stamp-workflow.mjs",
+        "public/_headers"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P84 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
