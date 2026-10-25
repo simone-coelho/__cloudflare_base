@@ -132,6 +132,10 @@ const SCOPED = [
   // Two launch images of one product: the first in catalogue order is not the one the visitor's interest ranks first.
   image('img-e-launch-slg', [LAUNCH], 'Small Leather Goods', [E]), image('img-e-studio', ['studio'], 'Handbags', [E]), image('img-e-launch-bag', [LAUNCH], 'Handbags', [E]),
 ];
+/** R-P309 (1): a product whose launch image is not on-model, with two on-model images and one other, in a world of its own. */
+const G = 'COA-PG200';
+const SPAN = [image('img-g-flat', ['flat-lay'], 'Handbags', [G]), image('img-g-model-1', ['on-model'], 'Small Leather Goods', [G]),
+  image('img-g-model-2', ['on-model'], 'Small Leather Goods', [G]), image('img-g-launch', [LAUNCH], 'Handbags', [G])];
 /** The window: from one hour to three hours past the test's own start, so every grant issued at the start stays live. */
 const T0 = Math.floor(Date.now() / 60_000) * 60_000;
 const FROM = T0 + 3_600_000, TO = T0 + 3 * 3_600_000;
@@ -217,6 +221,9 @@ describe('unit:P83.GR1', () => {
       const receipts = (await receiptsOf(m!, s!.subject)).filter(x => x.slot === CAROUSEL);
       expect.soft(receipts.filter(x => x.item === 'img-model-5').map(x => [sortedKeys(x.minimum ?? null), ((x.why ?? []) as string[]).some(w => w.includes('on-model')) ? 'a why names the tag' : 'no why names the tag']),
         `${host}: P83.GR1 — the receipt carries the rule as the record does, and says why`).toEqual([[{ ...rule, from: 5 }, 'a why names the tag']]);
+      // R-P309 (4): an item the rule moved down carries it on its receipt as on its record.
+      expect.soft(receipts.filter(x => x.item === 'img-studio-2').map(x => [sortedKeys(x.minimum ?? null), ((x.why ?? []) as string[]).some(w => w.includes('on-model')) ? 'a why names the tag' : 'no why names the tag']),
+        `${host}: P83.GR1 — the receipt of an item the rule moved down carries the rule and the position it held without it, and says why`).toEqual([[{ ...rule, from: 2 }, 'a why names the tag']]);
       const replays: unknown[][] = [];
       for (const r of records) { const replay = await replayOf(m!, r.decision_id); replays.push([r.item_id, replay.status, replay.body.classification ?? replay.body.reason ?? null]); }
       expect.soft(replays, `${host}: P83.GR1 — each decision replays equal`).toEqual(records.map(r => [r.item_id, 200, 'equal']));
@@ -311,7 +318,7 @@ describe('unit:P83.GR2', () => {
   // A write is read under the current contract (governance 3 or later, src/content/kinds.ts parseSlotCatalog), so a write
   // marked earlier cannot hold a tag pin below 3; a retained document marked earlier ignores the member, as it ignores every
   // later member.
-  it('host: publication refuses a malformed tag pin by name — beside an item pin, a window whose start is not before its end, a window end that is no date — and admits a well-formed one', async () => {
+  it('host: publication refuses a malformed tag pin by name — beside an item pin, a window whose start is not before its end, a window end that is no date, a window missing one of its ends (R-P309) — and admits a well-formed one', async () => {
     const m = await mount('session', docs(SCOPED, scopedCarousel()));
     expectPublished(m, 'P83.GR2 — the documents publish');
     const put = async (slot: Record<string, unknown>, extra: Record<string, unknown> = {}) => {
@@ -324,6 +331,11 @@ describe('unit:P83.GR2', () => {
       endNoDate: await put(scopedCarousel({ pinnedTag: pinnedTagOf({ from: WINDOW.from, to: 'next week' }) })),
     }, 'P83.GR2 — each refused by name (today the member is not read: every one is published)').toEqual({
       besideAnItemPin: [422, 'named'], startNotBeforeEnd: [422, 'named'], endNoDate: [422, 'named'] });
+    // R-P309 (3): a window missing one of its ends is never open-ended: refused by name.
+    expect.soft({
+      toMissing: await put(scopedCarousel({ pinnedTag: { dimension: 'shot', value: LAUNCH, window: { from: WINDOW.from } } })),
+      fromMissing: await put(scopedCarousel({ pinnedTag: { dimension: 'shot', value: LAUNCH, window: { to: WINDOW.to } } })),
+    }, 'P83.GR2 — a window missing one of its ends refused by name, never read as open-ended').toEqual({ toMissing: [422, 'named'], fromMissing: [422, 'named'] });
     expect((await putDocument(m, 'slots', declaredSlots([layoutSlot(), scopedCarousel({ pinnedTag: pinnedTagOf() })]), 'p83 well formed')).status, 'P83.GR2 — a well-formed tag pin publishes').toBe(200);
   }, 120_000);
 });
@@ -353,7 +365,7 @@ describe('unit:P83.GR3', () => {
       expect.soft([unmet.body.refusedCount, unmet.body.omittedCount], `${host}: P83.GR3 — LOCK: refusedCount and omittedCount beside the entries, as today`).toEqual([1, 0]);
     }, 180_000);
 
-    it(`host (${host}): with the tag pin and the rule (1 on-model image in the first 2) on one slot, the pin takes position 1 and the rule counts it: a launch image that is not on-model brings the on-model image to position 2; one that is on-model brings nothing`, async () => {
+    it(`host (${host}): with the tag pin and the rule (1 on-model image in the first 2) on one slot, the pin takes position 1 and the rule counts it: a launch image that is not on-model brings the on-model image to position 2; one that is on-model brings nothing; a rule asking more than the span's unpinned positions never moves the pinned item (R-P309)`, async () => {
       const m = await mount(host, docs(SCOPED, scopedCarousel({ pinnedTag: pinnedTagOf(), minimum: minimumOf(1, 2) })));
       expectPublished(m, 'P83.GR3 — both rules publish on one slot');
       const s = await shopperOn(m);
@@ -362,6 +374,16 @@ describe('unit:P83.GR3', () => {
       vi.useRealTimers();
       expect.soft({ a, b }, `${host}: P83.GR3 — the pin first, then the guarantee counting it`).toEqual({
         a: ['img-a-launch', 'img-a-model', 'img-a-studio'], b: ['img-b-launch', 'img-b-model'] });
+      // R-P309 (1), R-P303 (2) "never a pinned item": 2 on-model images asked in the first 2 beside a launch image that is not
+      // on-model. The pinned image keeps position 1; one on-model image follows it (the span's one unpinned position), the
+      // image it displaced at once after; the second on-model image is not served (take 3).
+      const n = await mount(host, docs([...SCOPED, ...SPAN], scopedCarousel({ pinnedTag: pinnedTagOf(), minimum: minimumOf(2, 2) })));
+      expectPublished(n, 'P83.GR3 — both rules publish, the rule asking 2 in the first 2');
+      const u = await shopperOn(n);
+      clockAt(FROM + 60_000);
+      const g = railOf(await page(n, u, G));
+      vi.useRealTimers();
+      expect.soft(g, `${host}: P83.GR3 — the pinned item keeps position 1 when the rule asks more than the span's other positions hold`).toEqual(['img-g-launch', 'img-g-model-1', 'img-g-flat']);
     }, 180_000);
   }
 });
@@ -387,5 +409,13 @@ describe('unit:P83.GR4', () => {
       prefixExclusive: kit02.includes('It is mutually exclusive with scalar `pinnedPieceId`, even with [].'),
       bandsSection: kit02.includes('### Position bands (`bands`)'),
     }, 'P83.GR4 — LOCK: the item-pin and band sentences stand').toEqual({ itemPinRefuses: true, prefixExclusive: true, bandsSection: true });
+    // R-P309 (2): the sentences' meaning, not their keywords: the window's ends in that order, and the rule enforced, not
+    // weighted (`enforced` itself not negated), in the passage naming each member, in both kits.
+    const ends = /`?from`? inclusive, `?to`? exclusive/i, enforced = /(?<!\b(?:never|not)\s)\benforced(?:,|;|\sand)?\s(?:never|not)\s(?:a\s)?weighted\b/i;
+    expect.soft({
+      kit02Ends: has(kit02, /`pinnedTag[`:]/, ends), kit03Ends: has(kit03, /`pinnedTag[`:]/, ends),
+      kit02Enforced: has(kit02, /`minimum[`:]/, enforced), kit03Enforced: has(kit03, /`minimum[`:]/, enforced),
+    }, 'P83.GR4 — the kit says the window runs from inclusive to exclusive and the rule is enforced, not weighted (today neither)').toEqual({
+      kit02Ends: true, kit03Ends: true, kit02Enforced: true, kit03Enforced: true });
   });
 });
