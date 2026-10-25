@@ -170,13 +170,17 @@
 //      slot the inner slots are decided for the shopper") stand: the document carries shot TYPES per context, never
 //      items; CO4 adds the sentence that the carousel's shot order is published per context and leaves those two true.
 //
-// R10 PROPOSED (R-P371; test-only, R-P195's form, titles and comments untouched; measured in scratch, not edited here):
+// R10 (granted by name, R-P372 (2); test-only, R-P195's form, titles and comments untouched; made in this commit):
 //   src/units/P01/LEDGER.unit.test.ts :159 (P01.O2: the unknown-bucket case's snapshot carries no arrival: its entry
 //   PAID_SOCIAL_ENTRY becomes undefined); src/units/P30/LEDGER.unit.test.ts :419 (P30.X3: the unvisited shopper's key asked
 //   with no arrival: DIRECT_ENTRY becomes {} for the second key); src/units/P77/LEDGER.unit.test.ts :314 (P77.VR3: TODAY
 //   gains '/v1/:tenant/context-table/:page GET,HEAD' and '/v1/:tenant/context-table/:page/:version GET,HEAD' after the
-//   snapshot entry); src/units/W37/T7.unit.test.ts :106-119 and :166-174 (W37.T7: the archived package, its recorded SDK
-//   build options and pinned assets — the form needs a ruling, see the report).
+//   snapshot entry). W37.T7 (R-P372 (3)): the W13.02 evidence package is never re-formed; scripts/stamp-workflow.mjs's
+//   validator accepts an archived package whose recorded SDK targets are a prefix of today's list, complete for its own
+//   list (the builder's, in the grant); no line of src/units/W37/T7.unit.test.ts compares the lists by equality (its
+//   assertions :167, :169, :177, :182, :196, :216 read the digest, the desired stamp, the create step's outcome and its
+//   receipts), so it is not edited. R-P372 (1): the classified-entry condition of C2 stands. (4): kit 02's listen.ts line
+//   citations are the builder's (P68.KT1).
 // R10 SWEEP (the locks the readings meet; R-P363: nothing granted, the listed locks measured under the sketch):
 //   src/units/P01/LEDGER.unit.test.ts :270-271 (P01.O5: `orders` on a slot that is not the declared layout slot refused
 //   422) and src/units/P30/LEDGER.unit.test.ts :555-557 (P30.X6: `contextOnly` on the recently-viewed slot refused 422)

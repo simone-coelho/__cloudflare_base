@@ -311,7 +311,7 @@ const TODAY = [
   '/content/catalog/enrichment/proposals/:id/publish POST', '/sort POST', '/sort/intent POST', '/search POST', '/realtime/ws GET', '/realtime/action POST',
   '/realtime/personalization/:userId GET', '/realtime/reflex GET', '/realtime/session/reset POST', '/realtime/session/:sessionId/preferences POST',
   '/realtime/session/preferences POST', '/realtime/session/:sessionId/analytics GET,HEAD', '/realtime/segments/:userId GET,HEAD,POST',
-  '/realtime/connections/:userId GET,HEAD', '/v1/:tenant/trend GET,HEAD', '/v1/:tenant/decisions/snapshot GET,POST', '/v1/:tenant/identity/session POST',
+  '/realtime/connections/:userId GET,HEAD', '/v1/:tenant/trend GET,HEAD', '/v1/:tenant/decisions/snapshot GET,POST', '/v1/:tenant/context-table/:page GET,HEAD', '/v1/:tenant/context-table/:page/:version GET,HEAD', '/v1/:tenant/identity/session POST',
   '/v1/:tenant/identity/link POST', '/v1/:tenant/identity/detach POST', '/v1/:tenant/identity/resolve POST', '/v1/:tenant/identity/visitor/:visitorId GET,HEAD',
   '/v1/:tenant/identity/shopper/:shopperId GET,HEAD', '/v1/:tenant/identity/events POST', '/v1/:tenant/identity/erase POST', '/v1/:tenant/identity/export POST',
   '/v1/:tenant/audit GET,HEAD', '/v1/:tenant/brands GET,HEAD', '/v1/:tenant/monitor GET,HEAD,POST', '/v1/:tenant/lift GET,HEAD', '/v1/:tenant/lift/rows GET,HEAD',
