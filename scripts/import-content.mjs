@@ -1,8 +1,20 @@
 #!/usr/bin/env node
 /* eslint-env node */
-// scripts/import-content.mjs — the manual import adapter for the demo catalog.
+// scripts/import-content.mjs — the manual import adapter: a customer file, or the demo catalog.
 //
-// Pulls the Meridian content catalog through the worker's own CMS/DAM seam into the NAMED
+// P90 (E15): with --file, loads a customer's export (JSON or CSV) into the NAMED tenant through
+// POST /content/catalog/import, naming its mode (merge by default, or replace) and carrying the two
+// publication headers; --dry-run checks it under the import's own rules and writes nothing:
+//
+//   node scripts/import-content.mjs --scope <tenant> --file <path> [--format json|csv] [--mode merge|replace] [--dry-run]
+//        [--base http://localhost:9100] [--token <jwt>]
+//
+// It prints the answer (revision, changed, removed, skipped, dryRun, the diagnostics) and exits 0 when the import
+// answered 200, 1 when the Worker refused it (its errors printed), and 2 when it refused locally before sending
+// anything (no token for a target that is not a loopback address, an unreadable file, an unknown format or mode, and
+// --mode full, which expires stored pieces and runs only through the API with its guard).
+//
+// Without --file, pulls the Meridian content catalog through the worker's own CMS/DAM seam into the NAMED
 // tenant, and writes a slot document whose slot names and weights match what that catalog was
 // built for, so GET /v1/:scope/decisions/snapshot returns real decisions from real, committed content.
 //
@@ -25,7 +37,32 @@
 // is recovered by running the same command again for the same tenant.
 import { isLoopbackTarget, resolveToolToken, tokenFromArgs } from './lib/tool-token.mjs';
 
-const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
+// P90 (R-P357): the arguments are read against the flags this script knows, before anything else. An unknown flag
+// (a misspelt --dry-run would otherwise write for real), a stray argument, or a flag that takes a value given without
+// one (a following --x counts as none: a trailing --file would otherwise fall through to the demo pull) is refused
+// here, exit 2, before any request. --token keeps tool-token's own reading (tokenFromArgs), which refuses a missing
+// value itself.
+const VALUE_FLAGS = new Set(['--scope', '--base', '--token', '--vertical', '--file', '--format', '--mode']);
+const SWITCHES = new Set(['--dry-run']);
+const FILE_ONLY = ['--format', '--mode', '--dry-run'];
+const given = new Map();
+{
+  const reject = (message) => { console.error(`import-content: ${message}; nothing was sent.`); process.exit(2); };
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    const flag = args[i];
+    if (SWITCHES.has(flag)) { given.set(flag, true); continue; }
+    if (!VALUE_FLAGS.has(flag)) reject(typeof flag === 'string' && flag.startsWith('-') ? `${flag} is not a flag this script knows (--scope, --base, --token, --vertical, --file, --format, --mode, --dry-run)` : `unexpected argument ${JSON.stringify(flag)}`);
+    const value = args[i + 1];
+    if (value === undefined || value.startsWith('--')) {
+      if (flag === '--token') continue;
+      reject(`${flag} needs a value`);
+    }
+    given.set(flag, value); i++;
+  }
+  if (!given.has('--file')) for (const flag of FILE_ONLY) if (given.has(flag)) reject(`${flag} goes with --file (the demo import takes no ${flag})`);
+}
+const arg = (k, d) => (given.has(k) ? given.get(k) : d);
 const base = (arg('--base', 'http://localhost:9100')).replace(/\/+$/, '');
 const scope = arg('--scope');
 if (typeof scope !== 'string' || !scope.trim() || scope.startsWith('--')) {
@@ -33,14 +70,39 @@ if (typeof scope !== 'string' || !scope.trim() || scope.startsWith('--')) {
   process.exit(2);
 }
 const vertical = arg('--vertical', 'retail');
-const token = await resolveToolToken({ token: tokenFromArgs(process.argv), payload: { sub: 'import-content', roles: ['operator'] },
-  expiresIn: '10m', allowMint: isLoopbackTarget(base) });
+/** P90: a refusal before any request: one line naming it, exit 2, no stack trace. */
+const refuse = (message) => { console.error(`import-content: ${message}`); process.exit(2); };
+// P90: the customer file, read and checked before any request.
+const file = arg('--file');
+let upload = null;
+if (file !== undefined) {
+  if (typeof file !== 'string' || !file || file.startsWith('--')) refuse('--file names the export to load; nothing was sent.');
+  const extension = /\.(json|csv)$/i.exec(file)?.[1]?.toLowerCase();
+  const format = String(arg('--format', extension ?? '')).toLowerCase();
+  if (format !== 'json' && format !== 'csv') refuse(`the format must be json or csv (--format, or a .json or .csv file), not "${format}"; nothing was sent.`);
+  const mode = arg('--mode', 'merge');
+  if (mode === 'full') refuse('--mode full expires every stored piece the file leaves out, so this script does not run it: use POST /content/catalog/import?mode=full with its guard expire=<n> (the number of pieces it expires); nothing was sent.');
+  if (mode !== 'merge' && mode !== 'replace') refuse(`--mode must be merge or replace, not "${mode}"; nothing was sent.`);
+  const { readFile } = await import('node:fs/promises');
+  let text;
+  try { text = await readFile(file, 'utf8'); } catch (error) { refuse(`cannot read ${file} (${error.code ?? error.message}); nothing was sent.`); }
+  upload = { format, mode, text, dryRun: given.has('--dry-run') };
+}
+let token;
+try {
+  token = await resolveToolToken({ token: tokenFromArgs(process.argv), payload: { sub: 'import-content', roles: ['operator'] },
+    expiresIn: '10m', allowMint: isLoopbackTarget(base) });
+} catch (error) {
+  refuse(`${error.message} A target that is not a loopback address needs an issued operator token (--token or OPERATOR_TOKEN); nothing was sent.`);
+}
 const auth = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Tenant': scope };
 
 // ── The configuration publication protocol (kit 02 §4) ──────────────────────────────────────────
 const fail = (message) => { console.error(`import-content: ${message}`); process.exit(1); };
-const call = async (method, path, body, headers = {}) => {
-  const response = await fetch(`${base}${path}?scope=${encodeURIComponent(scope)}`, { method, headers: { ...auth, ...headers }, ...(body === undefined ? {} : { body }) });
+/** A query string from its members, in order (plain encoding: the script runs where only the language's own globals are). */
+const queryString = (members) => Object.entries(members).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+const call = async (method, path, body, headers = {}, query = {}) => {
+  const response = await fetch(`${base}${path}?${queryString({ scope, ...query })}`, { method, headers: { ...auth, ...headers }, ...(body === undefined ? {} : { body }) });
   let answer = null;
   try { answer = await response.json(); } catch { answer = null; }
   return { status: response.status, body: answer && typeof answer === 'object' ? answer : {} };
@@ -48,6 +110,8 @@ const call = async (method, path, body, headers = {}) => {
 /** The draft a write goes over: the document in force, its revision N and the set S/H it was read from. */
 const draft = async (kind) => {
   const { status, body } = await call('GET', `/content/${kind}`);
+  // P90 (R-P357): a refused token says so, not that the tenant has no publication.
+  if (status === 401 || status === 403) fail(`${kind}: the Worker refused the operator token (HTTP ${status}${body.code ? ` ${body.code}` : ''}); nothing was written. Use an operator token issued for "${scope}" (--token or OPERATOR_TOKEN).`);
   const set = body.publication;
   if (status >= 400 || !Number.isSafeInteger(body.revision) || body.revision < 1 || !set || !Number.isSafeInteger(set.revision) || set.revision < 1
     || typeof set.digest !== 'string' || !/^[0-9a-f]{64}$/.test(set.digest)) {
@@ -87,6 +151,21 @@ const write = async (method, path, current, body) => {
   }
   return result.body;
 };
+
+// P90 (E15): the customer file, over the catalog draft, its mode named and its two publication headers carried.
+if (upload) {
+  const current = await draft('catalog');
+  const query = { format: upload.format, mode: upload.mode, ...(upload.dryRun ? { dryRun: '1' } : {}) };
+  const path = '/content/catalog/import';
+  const headers = { 'Content-Type': upload.format === 'csv' ? 'text/csv' : 'application/json', 'If-Match': current.ifMatch,
+    'Idempotency-Key': await operationKey(current.revision, [scope, 'POST', `${path}?${queryString(query)}`, current.ifMatch, upload.text]) };
+  const { status, body } = await call('POST', path, upload.text, headers, query);
+  const errors = body.errors ?? (body.error ? [body.error] : undefined);
+  console.log('import:', JSON.stringify({ status, ok: body.ok === true, revision: body.revision, changed: body.changed, removed: body.removed,
+    ...(body.skipped !== undefined ? { skipped: body.skipped, reason: body.reason } : {}), ...(body.dryRun !== undefined ? { dryRun: body.dryRun } : {}),
+    ...(body.diagnostics !== undefined ? { diagnostics: body.diagnostics } : {}), ...(errors ? { errors } : {}) }));
+  process.exit(status === 200 && body.ok === true ? 0 : 1);
+}
 
 // 1. The catalog, through the seam, over the catalog draft.
 const pull = await write('POST', '/content/catalog/pull', await draft('catalog'),

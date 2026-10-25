@@ -165,13 +165,22 @@ test('local target policy uses exact parsed loopback names', () => {
     'http://localhost@example.invalid', 'http://user@localhost', 'file://localhost/path', 'not a URL']) assert.equal(isLoopbackTarget(base), false);
 });
 
+// P90 R10 (R-P347, test-only): import-content refuses a token it cannot use as a local refusal — exit 2 and one output
+// line `import-content: Operator credentials unavailable…` — with nothing sent; every other script throws as before.
+const tokenRefused = (name, result) => {
+  if (name !== 'import-content') { assert.match(result.error?.message ?? '', /Operator credentials unavailable/); return; }
+  assert.match(result.error?.message ?? '', /synthetic exit 2/);
+  assert.equal(result.output.length, 1); assert.match(result.output[0], /^import-content: Operator credentials unavailable/);
+};
+
 for (const [name, sub, roles, lifetime] of family) {
   test(`${name}: unsafe configuration stops before operational or configuration-file effects`, async () => {
     for (const env of [{}, { ...CONFIG, JWT_SECRET: PLACEHOLDER }, { ...CONFIG, JWT_SECRET: 'short' }, { ...CONFIG, JWT_ISSUER: '' },
       { ...CONFIG, JWT_AUDIENCE: '' }, { ...CONFIG, OPERATOR_TOKEN: '' }]) {
       const result = await adapter(name, env, scoped(name));
-      assert.match(result.error?.message ?? '', /Operator credentials unavailable/);
-      assert.deepEqual(result.operations, []); assert.deepEqual(result.reads, []); assert.deepEqual(result.acquired, []); assert.deepEqual(result.output, []);
+      tokenRefused(name, result); // P90 R10 (R-P347)
+      assert.deepEqual(result.operations, []); assert.deepEqual(result.reads, []); assert.deepEqual(result.acquired, []);
+      if (name !== 'import-content') assert.deepEqual(result.output, []); // P90 R10 (R-P347): import-content prints its one refusal line
     }
   });
   test(`${name}: explicit settings preserve claims, lifetime, verifier compatibility and adapter use`, async () => {
@@ -205,11 +214,11 @@ for (const name of ['acceptance-run', 'import-content', 'seed-coach-content']) t
   assert.deepEqual(result.acquired, ['cli-opaque']); assert.equal(result.operations.length, 1);
   for (const args of [['--token'], ['--token', ''], ['--token', '--scope', 'acme']]) {
     const invalid = await adapter(name, { ...CONFIG, OPERATOR_TOKEN: 'env-opaque' }, scoped(name, args));
-    assert.match(invalid.error?.message ?? '', /Operator credentials unavailable/); assert.deepEqual(invalid.operations, []);
+    tokenRefused(name, invalid); assert.deepEqual(invalid.operations, []); // P90 R10 (R-P347)
   }
   for (const base of ['https://localhost.example.invalid', 'https://remote.example.invalid', 'http://localhost@remote.example.invalid']) {
     const invalid = await adapter(name, CONFIG, scoped(name, ['--base', base]));
-    assert.match(invalid.error?.message ?? '', /Operator credentials unavailable/); assert.deepEqual(invalid.operations, []);
+    tokenRefused(name, invalid); assert.deepEqual(invalid.operations, []); // P90 R10 (R-P347)
   }
   assert.equal((await adapter(name, CONFIG, scoped(name, ['--base', 'http://[::1]:9100']))).acquired.length, 1);
 });
