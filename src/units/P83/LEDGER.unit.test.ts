@@ -81,7 +81,7 @@ import {
 } from '../_parity';
 
 const CAROUSEL = 'pdp-carousel';
-const A = 'COA-CH857', B = 'COA-CB925', C = 'COA-CW620';
+const A = 'COA-CH857', B = 'COA-CB925', C = 'COA-CW620', E = 'COA-PE100';
 const image = (id: string, shot: string[], category = 'Handbags', products?: string[]) => ({ id, customerContentId: `TAP-${id.toUpperCase()}`,
   type: 'image', title: id, tags: { category: [category], shot }, slotTypes: [CAROUSEL], lifecycle: { status: 'live' },
   ...(products ? { featuredProductIds: products } : {}) });
@@ -102,6 +102,8 @@ const SCOPED = [
   image('img-a-launch', [LAUNCH], 'Handbags', [A]),
   image('img-b-model', ['on-model'], 'Small Leather Goods', [B]), image('img-b-launch', [LAUNCH, 'on-model'], 'Small Leather Goods', [B]),
   image('img-c-studio', ['studio'], 'Handbags', [C]), image('img-c-flat', ['flat-lay'], 'Handbags', [C]),
+  // Two launch images of one product: the first in catalogue order is not the one her interest ranks first.
+  image('img-e-launch-slg', [LAUNCH], 'Small Leather Goods', [E]), image('img-e-studio', ['studio'], 'Handbags', [E]), image('img-e-launch-bag', [LAUNCH], 'Handbags', [E]),
 ];
 /** The window: from one hour to three hours past the test's own start, so every grant issued at the start stays live. */
 const T0 = Math.floor(Date.now() / 60_000) * 60_000;
@@ -257,6 +259,17 @@ describe('unit:P83.GR2', () => {
         defaultArm: ['img-a-launch', 'img-a-studio', 'img-a-flat'],
       });
       expect.soft(replays, `${host}: P83.GR2 — each decision replays equal (the window read at the decision's own time)`).toEqual(records.map(r => [r.item_id, 200, 'equal']));
+    }, 180_000);
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): of two launch images on one product page, the pin leads with the best-ranked one for her (the handbag), not the first in catalogue order`, async () => {
+      const m = await mount(host, docs(SCOPED, scopedCarousel({ pinnedTag: pinnedTagOf() })));
+      expectPublished(m, 'P83.GR2 — the tag pin publishes');
+      const s = await handbagShopper(m);
+      clockAt(FROM + 60_000);
+      const rail = railOf(await page(m, s, E));
+      expect.soft(rail, `${host}: P83.GR2 — the best-ranked image carrying the tag leads (today the pin is not read)`).toEqual(['img-e-launch-bag', 'img-e-studio', 'img-e-launch-slg']);
     }, 180_000);
   }
 
