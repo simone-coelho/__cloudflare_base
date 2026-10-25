@@ -1113,7 +1113,8 @@
         "wrangler.toml",
         "scripts/import-content.mjs",
         "scripts/lib/tool-token.mjs",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P90 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
