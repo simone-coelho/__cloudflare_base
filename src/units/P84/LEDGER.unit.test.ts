@@ -113,7 +113,7 @@
 //      window, then the minimum's promotion).
 //   P5 The arm (direct path, R-P359): the SDK's first decision request carries `arm`; C2 as R-P363 rules it has `entry`
 //      beside it, which the SDK computes only under tracking consent (core.ts entryOf :482-486), so a brand-new browser's
-//      first request carries no arrival (asserted: absent or blank; READING FOR RULING, the C2/C3 conflict's SDK half). A brand-new browser's head script draws `default` with p = share ×
+//      first request carries no arrival (asserted: absent or blank; RULED R-P366: no disclosure before consent). A brand-new browser's head script draws `default` with p = share ×
 //      (count of `default` in arms) ÷ |arms| (armFor's split), else `personalized`, from crypto.getRandomValues, and
 //      stores { class, tableVersion, saltVersion }; the SDK's first decision request (direct mode, fresh browser) carries
 //      `arm`: the JSON text of { class, tableVersion } (a string, as `entry` is: snapshotContext's allow-list admits string
@@ -170,6 +170,13 @@
 //      slot the inner slots are decided for the shopper") stand: the document carries shot TYPES per context, never
 //      items; CO4 adds the sentence that the carousel's shot order is published per context and leaves those two true.
 //
+// R10 PROPOSED (R-P371; test-only, R-P195's form, titles and comments untouched; measured in scratch, not edited here):
+//   src/units/P01/LEDGER.unit.test.ts :159 (P01.O2: the unknown-bucket case's snapshot carries no arrival: its entry
+//   PAID_SOCIAL_ENTRY becomes undefined); src/units/P30/LEDGER.unit.test.ts :419 (P30.X3: the unvisited shopper's key asked
+//   with no arrival: DIRECT_ENTRY becomes {} for the second key); src/units/P77/LEDGER.unit.test.ts :314 (P77.VR3: TODAY
+//   gains '/v1/:tenant/context-table/:page GET,HEAD' and '/v1/:tenant/context-table/:page/:version GET,HEAD' after the
+//   snapshot entry); src/units/W37/T7.unit.test.ts :106-119 and :166-174 (W37.T7: the archived package, its recorded SDK
+//   build options and pinned assets — the form needs a ruling, see the report).
 // R10 SWEEP (the locks the readings meet; R-P363: nothing granted, the listed locks measured under the sketch):
 //   src/units/P01/LEDGER.unit.test.ts :270-271 (P01.O5: `orders` on a slot that is not the declared layout slot refused
 //   422) and src/units/P30/LEDGER.unit.test.ts :555-557 (P30.X6: `contextOnly` on the recently-viewed slot refused 422)
