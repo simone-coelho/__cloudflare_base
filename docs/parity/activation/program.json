@@ -1366,7 +1366,8 @@
         "packages/sdk/edge-personalization.esm.js",
         "packages/sdk/types/**",
         "packages/sdk/package.json",
-        "src/sdk/wire.ts"
+        "src/sdk/wire.ts",
+        "src/routes/decisions.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P85 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
