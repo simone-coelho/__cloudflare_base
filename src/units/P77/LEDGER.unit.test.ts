@@ -35,7 +35,10 @@
 //     `operatorJwt`: no credential 401; a credential whose memberships do not name the tenant 403 on the customer profile,
 //     W08 C1's witness); the boundary's list is today's but for entries whose path begins `/content/vocabulary/`; every
 //     other kind (`/content/proposals`, `/content/reflex`, an unknown kind) and every other refused route stays refused;
-//     the two new operations are admitted for their own method only. Every entry a mounted path is
+//     the two new operations are admitted for their own method only. A wrong method on them (GET …/approve/1, POST
+//     …/rejections, DELETE /content/vocabulary) answers a 404 that cannot be told from the router's from outside, so the
+//     own-method logic test carries that case and the Worker-level lock's rows for them are a weaker check (R-P292).
+//     Every entry a mounted path is
 //     src/index.api-boundary.test.ts W01.08's own check (run with this batch, not repeated here).
 //   · THE KIT: kit 02's vocabulary section and kit 01's vocabulary paragraph state the routes with no deployment-profile
 //     limit, so no kit sentence changes; the kit leg is a control (green today and after).
@@ -364,7 +367,7 @@ describe('unit:P77.VR3', () => {
         .toEqual(Object.fromEntries(VOCABULARY_CALLS.map(([method, path]) => [`${method} ${path}`, [401, 403]])));
     }, 120_000);
 
-    it(`host (${host}): LOCK — the customer boundary's other refusals stay: another content kind, the demo bootstrap, the Meridian surface, and a vocabulary operation under a method not admitted answer the boundary's 404, even to an operator`, async () => {
+    it(`host (${host}): LOCK — the customer boundary's other refusals stay: another content kind, the demo bootstrap, the Meridian surface, and a vocabulary operation under a method not admitted answer 404 (the boundary's or the router's; the logic test tells them apart), even to an operator`, async () => {
       const s = await stamp(host);
       const calls: Array<[string, string]> = [['GET', '/content/proposals'], ['PUT', '/content/reflex'], ['POST', '/ops/demo-bootstrap/complete'], ['GET', '/meridian/api/state'],
         ['GET', '/content/vocabulary/approve/1'], ['POST', '/content/vocabulary/rejections'], ['DELETE', '/content/vocabulary']];
