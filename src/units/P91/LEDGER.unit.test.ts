@@ -75,6 +75,30 @@
 //   The builder's (R-P332's widened grant): scripts/import-content.mjs :92–93, the demo importer's pull names
 //   `mode: 'replace'`.
 //
+// MEASURED at f38eeca1 (_evidence/parity-step3/S28/specifier/logs/a/, serial, --no-cache, working directory the tree):
+// today 13 RED for the missing behaviour — IM1 (each load read as replace and written, the pull fetching its feed; the kit
+// silent), IM2 (each identical load writing a new revision), IM3 (the switch unknown: the dry run is an import refused 428
+// for its missing Idempotency-Key, or written), IM4 (`full` read as replace; the kind `import-sources` unknown, every caller
+// importing, on the parity mount and on the customer stamp) — and 2 LOCKS GREEN (the validate route); the fix
+// (sketches/p91.py: src/content/import.ts the full mode, the kind and its address check; src/config/publication.ts the
+// optional member and its kind; src/customerBoundary.ts the kind admitted; src/routes/content.ts the ruled order, the
+// guard, the skip, the dry run and the list read; the kit) 15/15 three times; tsc exit 0 on today and under the fix. The
+// wrong fixes, each RED on its own legs and nothing else: `nomodereplace` IM1 ×2; `skipnewrev` and `skipcount` IM2 ×2 each;
+// `drywrites` and `dryvalidate` IM3's dry-run legs ×2 each; `fullnoguard` and `guardnotcompared` IM4's full-export legs ×2
+// each; `allowimportonly` IM4's list legs ×2; `kitleft` the kit leg. The locks read from the whole suite (W19 B1–B3, P82,
+// P38, P02, P08, the content route, import and complements tests, the publication and versioned-store tests, the API
+// boundary): 232/235 today (W19.F1.03, W19.L1.01, W19.S1.01, which now expect the skip: R-P332 (B)) and 234/235 under the
+// fix (the collision below). The whole suite (logs/a/compare.txt): 3945 tests on both trees; failing under the fix alone 1;
+// failing today alone the 13 P91 tests and the three W19 tests above. R-P332 (C), measured: a first re-import over a
+// catalogue an initialization wrote (its version unstamped, `parity-coach-catalogue`) writes once (revision 2,
+// `changed: 0`), and the next identical load is skipped.
+// COLLISION FOUND BY THE COMPARISON (for ruling): src/routes/content.test.ts "W19.01 publishes equivalent JSON CSV pull and
+// direct catalogs with safe merge retries" :607–609 — a JSON import (`/import`), a CSV import (`/import?format=csv`) and a
+// pull, none naming a mode (missed by the provisional sweep: the paths are relative suffixes), each expecting
+// `revision: ++revision`; under the fix the first is refused 400. With the mode named (replace), the JSON import of `feed`
+// over the PUT's `catalog` is identical (its `explore` maps to `exploring`) and is skipped, so its `++revision` needs the
+// R-P332 (B) form (the skip and the revision in force); the CSV import and the pull change the catalogue and still write.
+//
 // HARNESS: src/units/_parity.ts (the mounted app, both shopper hosts, the operator routes), src/units/_parity5.ts (the home
 // page's pieces and documents) and src/units/W08/_customer.ts (the in-process customer stamp, for the allow-list on a customer
 // deployment). Imports from src/units/: ../_parity, ../_parity5, ../W08/_customer.
