@@ -59,7 +59,9 @@
 // DEFERRED, with the reason: the Meridian bundle (public/meridian/engine.bundle.js, generated from contentCompose.ts by
 // node scripts/build-meridian.mjs, outside the ticket's allowedPaths: the lead rules at the build who commits it).
 // TOLD, not a leg (R-P303): a tag pin on the page's declared layout slot is treated exactly as `pinnedPieceIds` is on that
-// slot today; an open-ended tag pin (a window without one of its ends) is not offered — publication refuses it.
+// slot today; an open-ended tag pin (a window without one of its ends) is not offered — publication refuses it. A write
+// is read under governance 3 or later whatever it is marked (parseSlotCatalog), so "governance 3 or later" refuses
+// nothing on a write; a retained document marked earlier ignores the member.
 //
 // NO NEW EXPORT IS IMPORTED: `minimum`, `pinnedTag` and their explain members are read loosely.
 //
@@ -272,7 +274,10 @@ describe('unit:P83.GR2', () => {
     }, 180_000);
   }
 
-  it('host: publication refuses a malformed tag pin by name — beside an item pin, a window whose start is not before its end, a window end that is no date, below governance 3 — and admits a well-formed one', async () => {
+  // A write is read under the current contract (governance 3 or later, src/content/kinds.ts parseSlotCatalog), so a write
+  // marked earlier cannot hold a tag pin below 3; a retained document marked earlier ignores the member, as it ignores every
+  // later member.
+  it('host: publication refuses a malformed tag pin by name — beside an item pin, a window whose start is not before its end, a window end that is no date — and admits a well-formed one', async () => {
     const m = await mount('session', docs(SCOPED, scopedCarousel()));
     expectPublished(m, 'P83.GR2 — the documents publish');
     const put = async (slot: Record<string, unknown>, extra: Record<string, unknown> = {}) => {
@@ -283,9 +288,8 @@ describe('unit:P83.GR2', () => {
       besideAnItemPin: await put(scopedCarousel({ pinnedTag: pinnedTagOf(), pinnedPieceIds: ['img-a-studio'] })),
       startNotBeforeEnd: await put(scopedCarousel({ pinnedTag: pinnedTagOf({ from: WINDOW.to, to: WINDOW.from }) })),
       endNoDate: await put(scopedCarousel({ pinnedTag: pinnedTagOf({ from: WINDOW.from, to: 'next week' }) })),
-      belowGovernance3: await put({ ...scopedCarousel({ pinnedTag: pinnedTagOf() }), scope: undefined }, { governanceVersion: 2, pages: { pdp: [{ ...scopedCarousel({ pinnedTag: pinnedTagOf() }), scope: undefined }] } }),
     }, 'P83.GR2 — each refused by name (today the member is not read: every one is published)').toEqual({
-      besideAnItemPin: [422, 'named'], startNotBeforeEnd: [422, 'named'], endNoDate: [422, 'named'], belowGovernance3: [422, 'named'] });
+      besideAnItemPin: [422, 'named'], startNotBeforeEnd: [422, 'named'], endNoDate: [422, 'named'] });
     expect((await putDocument(m, 'slots', declaredSlots([layoutSlot(), scopedCarousel({ pinnedTag: pinnedTagOf() })]), 'p83 well formed')).status, 'P83.GR2 — a well-formed tag pin publishes').toBe(200);
   }, 120_000);
 });
@@ -338,11 +342,11 @@ describe('unit:P83.GR4', () => {
     const paragraphs = (text: string) => text.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
     const has = (text: string, ...words: Array<string | RegExp>) => paragraphs(text).some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
     expect.soft({
-      kit02Minimum: has(kit02, '`minimum`', 'count', 'within', /enforced|guarantee/i),
-      kit02PinnedTag: has(kit02, '`pinnedTag`', 'window', /inclusive|exclusive/i),
-      kit02Unmet: has(kit02, '`pinnedTag`', 'unmet_tag_pin'),
-      kit03Minimum: has(kit03, '`minimum`', 'count', 'within'),
-      kit03PinnedTag: has(kit03, '`pinnedTag`', 'window'),
+      kit02Minimum: has(kit02, /`minimum[`:]/, 'count', 'within', /enforced|guarantee/i),
+      kit02PinnedTag: has(kit02, /`pinnedTag[`:]/, 'window', /inclusive|exclusive/i),
+      kit02Unmet: has(kit02, /`pinnedTag[`:]/, 'unmet_tag_pin'),
+      kit03Minimum: has(kit03, /`minimum[`:]/, 'count', 'within'),
+      kit03PinnedTag: has(kit03, /`pinnedTag[`:]/, 'window'),
     }, 'P83.GR4 — the kit states both rules (today neither)').toEqual({ kit02Minimum: true, kit02PinnedTag: true, kit02Unmet: true, kit03Minimum: true, kit03PinnedTag: true });
     expect.soft({
       itemPinRefuses: kit03.includes('missing, ineligible or excluded refuses the whole slot (decision D1)'),
