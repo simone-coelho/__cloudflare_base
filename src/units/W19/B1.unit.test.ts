@@ -694,7 +694,9 @@ describe('unit:W19.F2.01', () => {
     ] as const) {
       expect(answer.status, `${label}: an unknown stage word refuses the write`).toBe(422);
       const errors = (answer.errors ?? []).join(' | ');
-      expect(errors, `${label}: the refusal names the piece`).toContain('pieces[0].journeyStageFit');
+      // S24 R10 (amendment 11 P82; granted R-P294 (3)), test-only, R-P195's form: an import's and a pull's refusal names the
+      // record by its position in the file sent and its id (P82's address); the direct PUT keeps the document's pieces[0].
+      expect(errors, `${label}: the refusal names the piece`).toContain(label === 'direct PUT' ? 'pieces[0].journeyStageFit' : `records[0] '${unknown.id}'.journeyStageFit`);
       expect(errors,
         `W19.F2.01 — ${label}: the refusal must name the unusable word 'awareness' the feed sent, not only the accepted vocabulary`)
         .toContain('awareness');

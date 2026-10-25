@@ -13,10 +13,14 @@ import { DEFAULT_SLOTS, SLOTS_KIND } from './kinds';
  * which the request-derived code carries. On a merge the record a feed sent is
  * at one position and the piece it refreshed is at another, so an answer that
  * called them both `pieceIndex` would be saying something untrue.
+ * P82 (E5): on an import's and a pull's answer, a piece warning whose piece a
+ * record of the file sent wrote also names that record (`RecordMembers`); a
+ * PUT, a validation and a read name none.
  */
-type Warning = { code: 'no_nonempty_registered_tags'; pieceIndex: number }
-  | { code: 'unknown_dimension'; pieceIndex: number; dimensionIndex: number; dimension: string; dimensionTruncated: boolean }
-  | { code: 'case_variant_value'; pieceIndex: number; dimensionIndex: number; dimension: string; dimensionTruncated: boolean; values: string[]; valuesTruncated: boolean }
+type RecordMembers = { recordIndex?: number; recordId?: string; recordIdTruncated?: boolean };
+type Warning = ({ code: 'no_nonempty_registered_tags'; pieceIndex: number } & RecordMembers)
+  | ({ code: 'unknown_dimension'; pieceIndex: number; dimensionIndex: number; dimension: string; dimensionTruncated: boolean } & RecordMembers)
+  | ({ code: 'case_variant_value'; pieceIndex: number; dimensionIndex: number; dimension: string; dimensionTruncated: boolean; values: string[]; valuesTruncated: boolean } & RecordMembers)
   | { code: 'ignored_field'; recordIndex: number; field: string; fieldTruncated: boolean }
   // A key the contract does not list on the submitted catalogue DOCUMENT, beside
   // its pieces and its optional authored version label. It belongs to no record,
@@ -25,7 +29,7 @@ type Warning = { code: 'no_nonempty_registered_tags'; pieceIndex: number }
   // A slot type no page of the tenant's own slots document defines. Advisory:
   // the piece is stored whole and refused by nothing; it is simply eligible for
   // no slot this tenant publishes, so nothing will ever serve it.
-  | { code: 'unknown_slot_type'; pieceIndex: number; slotType: string; slotTypeTruncated?: true };
+  | ({ code: 'unknown_slot_type'; pieceIndex: number; slotType: string; slotTypeTruncated?: true } & RecordMembers);
 export interface CatalogDiagnostics {
   schema: 'catalog-registry-diagnostics/v1';
   advisory: true;
@@ -97,6 +101,11 @@ export interface DiagnosedRequest {
    * the catalogue — so a path with no submitted document passes none.
    */
   document?: { value: unknown; accepted: ReadonlySet<string> };
+  /**
+   * P82 (E5), an import's and a pull's only: for each stored piece, the record of the file sent that wrote it (its
+   * position in the file, every entry counted, and its id), or null for a stored piece the file did not carry.
+   */
+  pieceRecords?: ReadonlyArray<{ recordIndex: number; recordId: string } | null>;
 }
 
 const BOUND = 64, VALUES_BOUND = 20, SAMPLE_BOUND = 50;
@@ -192,9 +201,11 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
     };
     catalog.pieces.forEach((piece, pieceIndex) => {
       let nonempty = false;
+      const from = request?.pieceRecords?.[pieceIndex];
+      const record: RecordMembers = from ? { recordIndex: from.recordIndex, recordId: from.recordId.slice(0, BOUND), recordIdTruncated: from.recordId.length > BOUND } : {};
       Object.entries(piece.tags).forEach(([dimension, values], dimensionIndex) => {
         if (!registered.has(dimension)) add({ code: 'unknown_dimension', pieceIndex, dimensionIndex,
-          dimension: dimension.slice(0, BOUND), dimensionTruncated: dimension.length > BOUND });
+          dimension: dimension.slice(0, BOUND), dimensionTruncated: dimension.length > BOUND, ...record });
         else if (values.some(value => value.trim().length > 0)) nonempty = true;
         // Two spellings of one value that differ only by case are two values to
         // every scorer, so one of them is dead taxonomy the feed cannot see.
@@ -211,18 +222,18 @@ export async function catalogDiagnostics(env: Env, tenant: string, catalog: Cont
           const sorted = [...spellings].sort();
           add({ code: 'case_variant_value', pieceIndex, dimensionIndex, dimension: dimension.slice(0, BOUND), dimensionTruncated: dimension.length > BOUND,
             values: sorted.slice(0, VALUES_BOUND).map(value => value.slice(0, BOUND)),
-            valuesTruncated: sorted.length > VALUES_BOUND || sorted.some(value => value.length > BOUND) });
+            valuesTruncated: sorted.length > VALUES_BOUND || sorted.some(value => value.length > BOUND), ...record });
         }
       });
       if (!nonempty && implicitType && !Object.prototype.hasOwnProperty.call(piece.tags, 'contentType') && contentTypeValues(piece)) nonempty = true;
-      if (!nonempty) add({ code: 'no_nonempty_registered_tags', pieceIndex });
+      if (!nonempty) add({ code: 'no_nonempty_registered_tags', pieceIndex, ...record });
       // A slot type no page of the tenant's slots document defines. The piece is
       // still stored whole and refused by nothing — it is simply eligible for no
       // slot this tenant publishes, which is advice, not a refusal.
       if (vocabulary.defined) for (const slotType of piece.slotTypes) {
         if (vocabulary.defined.has(slotType)) continue;
         add({ code: 'unknown_slot_type', pieceIndex, slotType: slotType.slice(0, BOUND),
-          ...(slotType.length > BOUND ? { slotTypeTruncated: true as const } : {}) });
+          ...(slotType.length > BOUND ? { slotTypeTruncated: true as const } : {}), ...record });
       }
     });
     // What the request carried and no stored piece can hold. Appended after the

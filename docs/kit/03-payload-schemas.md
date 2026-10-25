@@ -322,7 +322,7 @@ not normalize registry/case/type aliases, locale, empty-taxonomy policy or produ
 Nothing above is silently dropped. A field or CSV column the table does not list is not stored, and
 the write answer names it as an `ignored_field` warning on the advisory `diagnostics` channel, with
 `recordIndex`, that record's position in the request — not the position of the stored piece a merge
-refreshed, which is a different number. The catalog document itself lists only its `pieces` and an
+refreshed, which is a different number. On an import or a pull an error names the record it refuses as `records[k] '<id>'`: k is the record's position in the file sent, counted from 0 over every entry (an entry that is not a record included, the number `recordIndex` is), and the id is cut to 64 code units with `…` when cut (`records[k]` alone for a record with no id); a PUT and a validation keep addressing the document's own `pieces[i]`. Each warning of the four piece codes whose piece a record of the file wrote also carries `recordIndex`, `recordId` (the id, cut the same way) and `recordIdTruncated` beside the stored `pieceIndex`. The catalog document itself lists only its `pieces` and an
 optional authored `version` label; a key beside those is named as `ignored_document_field`, which
 carries no position because it belongs to no record. How the request carried the catalog is never
 named: a PUT body's `document`, `note` and `publicationChanges`, and a feed export's records key

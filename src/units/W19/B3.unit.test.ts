@@ -638,7 +638,10 @@ describe('unit:W19.F3.06', () => {
     const registry = warningsOf(answer.diagnostics).filter(warning => warning.code === 'unknown_dimension');
     expect(registry,
       'W19.F3.06 — and the stored-catalogue code keeps naming the STORED position, which for this piece is 1')
-      .toEqual([{ code: 'unknown_dimension', pieceIndex: 1, dimensionIndex: 0, dimension: 'occassion', dimensionTruncated: false }]);
+      // S24 R10 (amendment 11 P82; granted R-P294 (3)), test-only, R-P195's form: on an import the piece warning also names
+      // the record that wrote the piece, its position in the file sent and its id (P82.ID3); the stored position is kept.
+      .toEqual([{ code: 'unknown_dimension', pieceIndex: 1, dimensionIndex: 0, dimension: 'occassion', dimensionTruncated: false,
+        recordIndex: 0, recordId: 'second', recordIdTruncated: false }]);
   });
 });
 

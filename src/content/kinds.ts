@@ -1471,7 +1471,7 @@ export function learnPositionLayoutErrors(learn: Pick<LearnConfig, 'slots'>, slo
 // ── P36: the context vocabulary (the learn document's `contextVocabulary`) ──
 
 /** The value a refusal names, printed in full up to a bound, so a long id is still named. */
-function shown(value: unknown): string {
+export function shown(value: unknown): string {
   const text = typeof value === 'string' ? value : JSON.stringify(value) ?? typeof value;
   return `'${[...text.slice(0, 160)].map((ch) => { const code = ch.codePointAt(0)!; return code < 0x20 || (code >= 0x7f && code <= 0x9f) ? ' ' : ch; }).join('')}'${text.length > 160 ? '\u2026' : ''}`;
 }
