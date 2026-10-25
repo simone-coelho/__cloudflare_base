@@ -19,7 +19,7 @@
 // that is missing, ineligible or excluded still refuses the whole slot (P04 decision D1)"; GR4 "Locks and kit: P04, P15 and
 // W20 locks unchanged for item pins and bands; the kit states both rules".
 //
-// THE READINGS THIS FILE RULES (the lead's provisional readings 1-4, made concrete; each named for ratification):
+// THE READINGS THIS FILE RULES (the lead's provisional readings 1-4, made concrete; ratified in R-P303):
 //   · RULE (a), `minimum: { dimension, value, count, within }` on a slot beside `diversity`: the tag is an exact
 //     dimension/value pair, as `excludedTags` names one (no normalization); `count` ≥ 1 and `within` ≤ the slot's `take`
 //     are integers with `count` ≤ `within`; publication refuses anything else by name (`pages.{page}[i].minimum`). Read on
@@ -48,25 +48,24 @@
 //     counts it.
 //   · Untouched (reading 4): `positionPins`, the stored catalogue, the bands and the item-pin sentences of the kit.
 //
-// READINGS THE CODE CONTRADICTS, for the lead: (1) "a value outside the vocabulary … refused at validation as the
-// diversity rule's dimension is" — the diversity rule's dimension is checked as a non-empty string only
-// (src/content/kinds.ts validateSlot, the `diversity` member), against no vocabulary; this file holds rule (a) to the
-// same shape check and asks nothing of a vocabulary. (2) `pinDiagnostics` entries are refusals by the composer's own
-// comment (src/reflex/contentCompose.ts `unreturnedPins`) and the snapshot counts every entry in `refusedCount`
-// (src/routes/decisions.ts); P43's `module_not_returned` already rides the same array as a non-refusal, so the unmet tag
-// pin follows it with a reason of its own.
+// RULED (R-P303, the eleven readings above, as written): (1) rule (a) asks the diversity rule's own shape check, no
+// vocabulary; (2) the snapshot's `refusedCount` and the slot-governance count (src/content/service.ts)
+// keep counting every `pinDiagnostics` entry, the unmet tag pin included, as they count P43's `module_not_returned`
+// today (allowedPaths frozen; an advisory candidate for the owner): the GR3 leg locks only the form (`refusedCount`
+// beside the entries); (3) wording gender-neutral.
 //
 // R10: none found (P04, P15, W20 and P80 run under the sketch; see MEASURED).
 //
 // DEFERRED, with the reason: the Meridian bundle (public/meridian/engine.bundle.js, generated from contentCompose.ts by
 // node scripts/build-meridian.mjs, outside the ticket's allowedPaths: the lead rules at the build who commits it).
-// TOLD, not a leg: a tag pin on the page's declared layout slot is not ruled (the work order names a content slot).
+// TOLD, not a leg (R-P303): a tag pin on the page's declared layout slot is treated exactly as `pinnedPieceIds` is on that
+// slot today; an open-ended tag pin (a window without one of its ends) is not offered — publication refuses it.
 //
 // NO NEW EXPORT IS IMPORTED: `minimum`, `pinnedTag` and their explain members are read loosely.
 //
 // FIXTURE. The parity mount (src/units/_parity.ts) on the demo profile, both shopper hosts: P02's product page (the
 // declared layout slot over the registered modules) and a carousel content slot of images tagged by shot and category,
-// in P80's shape; the shopper who viewed a handbag (her interest ranks the handbag images above the others), or a cold one;
+// in P80's shape; the shopper who viewed a handbag (the visitor's interest ranks the handbag images above the others), or a cold one;
 // the holdout's default arm in a world of its own. The decision's clock is moved with fake Date only.
 //
 // HARNESS: src/units/_parity.ts. Imports from src/units/: ../_parity.
@@ -85,7 +84,7 @@ const A = 'COA-CH857', B = 'COA-CB925', C = 'COA-CW620', E = 'COA-PE100';
 const image = (id: string, shot: string[], category = 'Handbags', products?: string[]) => ({ id, customerContentId: `TAP-${id.toUpperCase()}`,
   type: 'image', title: id, tags: { category: [category], shot }, slotTypes: [CAROUSEL], lifecycle: { status: 'live' },
   ...(products ? { featuredProductIds: products } : {}) });
-/** GR1: four handbag images, then two on-model images of another category (her interest ranks them last, as the catalogue does). */
+/** GR1: four handbag images, then two on-model images of another category (the visitor's interest ranks them last, as the catalogue does). */
 const RAIL = [image('img-flat-1', ['flat-lay']), image('img-studio-2', ['studio']), image('img-detail-3', ['detail']), image('img-flat-4', ['flat-lay']),
   image('img-model-5', ['on-model'], 'Small Leather Goods'), image('img-model-6', ['on-model'], 'Small Leather Goods')];
 const RAIL_WITHOUT_MODELS = RAIL.slice(0, 4);
@@ -102,7 +101,7 @@ const SCOPED = [
   image('img-a-launch', [LAUNCH], 'Handbags', [A]),
   image('img-b-model', ['on-model'], 'Small Leather Goods', [B]), image('img-b-launch', [LAUNCH, 'on-model'], 'Small Leather Goods', [B]),
   image('img-c-studio', ['studio'], 'Handbags', [C]), image('img-c-flat', ['flat-lay'], 'Handbags', [C]),
-  // Two launch images of one product: the first in catalogue order is not the one her interest ranks first.
+  // Two launch images of one product: the first in catalogue order is not the one the visitor's interest ranks first.
   image('img-e-launch-slg', [LAUNCH], 'Small Leather Goods', [E]), image('img-e-studio', ['studio'], 'Handbags', [E]), image('img-e-launch-bag', [LAUNCH], 'Handbags', [E]),
 ];
 /** The window: from one hour to three hours past the test's own start, so every grant issued at the start stays live. */
@@ -128,7 +127,7 @@ async function page(m: Mounted, s: Shopper, anchor?: string): Promise<Snapshot> 
 }
 const railOf = (snap: Snapshot) => snap.decisions.filter(d => d.slot === CAROUSEL).sort((a, b) => a.order - b.order).map(d => d.contentId);
 const show = (snap: { status: number; body: Record<string, unknown> }) => `${snap.status} ${JSON.stringify(snap.body).slice(0, 240)}`;
-/** A shopper who viewed a handbag: her interest ranks the handbag images above every other. */
+/** A shopper who viewed a handbag: the visitor's interest ranks the handbag images above every other. */
 async function handbagShopper(m: Mounted): Promise<Shopper> {
   const s = await shopperOn(m);
   expect((await s.action(VIEW_TABBY_26)).status, `PRECONDITION (${m.host}): the handbag view is accepted`).toBe(200);
@@ -167,7 +166,7 @@ describe('unit:P83.GR1', () => {
       expect.soft(served, `${host}: P83.GR1 — the guarantee on the default arm (today the rule is not read: the catalogue order)`).toEqual(cases.map(([name, , , rail]) => [name, rail]));
     }, 180_000);
 
-    it(`host (${host}): on the personalized arm, her interest ranking the on-model images last and with position bands, the first 2 positions hold an on-model image; the moved decisions name the rule in their records and receipts, and each replays equal`, async () => {
+    it(`host (${host}): on the personalized arm, the visitor's interest ranking the on-model images last and with position bands, the first 2 positions hold an on-model image; the moved decisions name the rule in their records and receipts, and each replays equal`, async () => {
       const bands = [{ from: 1, to: 2, weights: { category: 1 } }, { from: 3, to: 4, weights: { category: 0.5 } }];
       const cases: Array<[string, Record<string, unknown>]> = [['without bands', carousel({ minimum: minimumOf(1, 2) })], ['with bands', carousel({ minimum: minimumOf(1, 2), bands })]];
       const served: Array<[string, string[]]> = [];
@@ -181,7 +180,7 @@ describe('unit:P83.GR1', () => {
         served.push([name, railOf(snap)]);
         if (name === 'with bands') records = await recordsOf(m, s, snap);
       }
-      expect.soft(served, `${host}: P83.GR1 — the guarantee whatever her scores and the bands (today the on-model images are not served at all)`).toEqual([
+      expect.soft(served, `${host}: P83.GR1 — the guarantee whatever the visitor's scores and the bands (today the on-model images are not served at all)`).toEqual([
         ['without bands', ['img-flat-1', 'img-model-5', 'img-studio-2', 'img-detail-3']], ['with bands', ['img-flat-1', 'img-model-5', 'img-studio-2', 'img-detail-3']]]);
       const rule = { count: 1, dimension: 'shot', value: 'on-model', within: 2 };
       expect.soft(records.map(r => [r.item_id, sortedKeys((r.explain as unknown as Record<string, unknown>).minimum ?? null)]),
@@ -263,7 +262,7 @@ describe('unit:P83.GR2', () => {
   }
 
   for (const host of HOSTS) {
-    it(`host (${host}): of two launch images on one product page, the pin leads with the best-ranked one for her (the handbag), not the first in catalogue order`, async () => {
+    it(`host (${host}): of two launch images on one product page, the pin leads with the best-ranked one for the visitor (the handbag), not the first in catalogue order`, async () => {
       const m = await mount(host, docs(SCOPED, scopedCarousel({ pinnedTag: pinnedTagOf() })));
       expectPublished(m, 'P83.GR2 — the tag pin publishes');
       const s = await handbagShopper(m);
@@ -312,6 +311,8 @@ describe('unit:P83.GR3', () => {
       expect.soft({ unmetRail: railOf(unmet), diagnostics, itemPinRail: railOf(refused), itemDiagnostics }, `${host}: P83.GR3 — unmet, nothing refused and the pin named; an item pin refuses as P04 rules`).toEqual({
         unmetRail: ['img-c-studio', 'img-c-flat'], diagnostics: [{ pinnedTag: { dimension: 'shot', value: LAUNCH }, reason: 'unmet_tag_pin', slot: CAROUSEL }],
         itemPinRail: [], itemDiagnostics: [['img-b-model', 'missing_or_ineligible']] });
+      // R-P303 (5): the snapshot's counts keep their form, counting every entry the array carries (as P43's module_not_returned is counted).
+      expect.soft([unmet.body.refusedCount, unmet.body.omittedCount], `${host}: P83.GR3 — LOCK: refusedCount and omittedCount beside the entries, as today`).toEqual([1, 0]);
     }, 180_000);
 
     it(`host (${host}): with the tag pin and the rule (1 on-model image in the first 2) on one slot, the pin takes position 1 and the rule counts it: a launch image that is not on-model brings the on-model image to position 2; one that is on-model brings nothing`, async () => {
