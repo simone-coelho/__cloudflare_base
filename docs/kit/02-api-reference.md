@@ -1696,7 +1696,7 @@ whereas version-1 readers reject stored version 2; either can retain older cache
 Binary rollback after governed publication needs explicit operator configuration restoration or withdrawal first.
 
 A tag pin, `pinnedTag: { dimension, value, window: { from, to } }` on a content slot (governance 3 or later), pins
-the item carrying a tag instead of an item identifier, for a window: from `from` inclusive to `to` exclusive (both
+the item carrying a tag instead of an item identifier, for a window, `from` inclusive, `to` exclusive (both
 ends required, ISO 8601, `from` before `to`; the piece window's own comparison, by the decision's clock), the
 best-ranked eligible candidate carrying the tag (after an anchor scope narrows the candidates, so a carousel shared
 by every product page leads with each page's own item) leads the slot on every arm, authority `pin`, never ranked
