@@ -5,6 +5,7 @@
 
 import { decisionRequiresConsent, dwellMinFor, type Core, type FirstRequest } from './core';
 import { snapshotEntry } from '../services/visit';
+import { HEAD_STATE_KEY } from './identity';
 import type { ActionEnvelope, ContentDecision, DecisionSet, ElementLike, EngineUpdate, LayoutExposure, RenderAcknowledgment, SdkEventType } from './types';
 import type { ServerBootstrap } from './server';
 
@@ -263,7 +264,33 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
     if (matches.length === 1) view(placement(set, matches[0]!), shown);
   }
-  const offConsent = core.onConsentChange(() => { if (!core.trackingAllowed) resetCapture(); if (!permitted(current)) deliver(null, current?.page ?? ''); });
+  const offConsent = core.onConsentChange(() => { if (!core.trackingAllowed) resetCapture(); keepForHead(); if (!permitted(current)) deliver(null, current?.page ?? ''); });
+
+  /**
+   * P84 (E8): what the head script reads before the next paint, kept under `opt_head` beside its own state: the
+   * consent the engine acknowledged (so a page without the server render's hint knows it, and a withdrawal reaches
+   * the next paint) and, from an answer, its experiment (the id names the salt, `<tenant>:<brand>:<salt>`, with the
+   * salt version), from which the head script computes the class of a browser the engine knows.
+   */
+  function keepForHead(experiment?: unknown): void {
+    try {
+      let prior: unknown = null;
+      try { prior = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? 'null'); } catch { prior = null; }
+      const c = core.consent, e = experiment as { id?: unknown; saltVersion?: unknown } | null | undefined;
+      host.storage.set(HEAD_STATE_KEY, JSON.stringify({ ...(prior && typeof prior === 'object' && !Array.isArray(prior) ? prior : {}),
+        ...(e && typeof e.id === 'string' ? { experiment: { id: e.id, saltVersion: typeof e.saltVersion === 'number' ? e.saltVersion : null } } : {}),
+        consent: { personalization: c.tracking && c.personalization, tracking: c.tracking } }));
+    } catch { /* storage unavailable: the head script paints the default row */ }
+  }
+  /** P84 (E8, D2): the class the head script drew for this browser, as the first decision request carries it, or none. */
+  function headDraw(): string | undefined {
+    try {
+      const state = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? 'null') as { arm?: { class?: unknown; tableVersion?: unknown } } | null;
+      const arm = state?.arm;
+      return arm && (arm.class === 'default' || arm.class === 'personalized') && typeof arm.tableVersion === 'string' && arm.tableVersion.length <= 128
+        ? JSON.stringify({ class: arm.class, tableVersion: arm.tableVersion }) : undefined;
+    } catch { return undefined; }
+  }
 
   function admittedCurrent(): DecisionSet | null {
     const candidate = current;
@@ -377,11 +404,15 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const timedOut = () => !!v.expired && !expired;
     try {
       // P13 (H4): a new visitor's session is issued with this decision request, one
-      // call; consent-dependent context (session, channel, entry) is never sent then.
+      // call; consent-dependent context (session, channel) is never sent then.
       const nothingToShow = nothingToShowField(o.nothingToShow);
       // P80: the page view's product (P79) is the anchor product of a slot scoped to it, its variant beside it, within bounds.
       const anchor = anchorSignals(o);
-      const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}), ...anchor } };
+      // P84 (E8, R-P363 C2, R-P366): the arrival, only where a recorded choice already grants tracking (none is
+      // computed before one), and the class the head script drew (D2): the engine mints the identifier into it.
+      const arrival = core.consent.tracking ? snapshotEntry(core.entry) : undefined, drawn = headDraw();
+      const first: FirstRequest = { body: { page: o.page, pageInstance, ...(core.config.brand ? { brand: core.config.brand } : {}), ...(nothingToShow ? { nothingToShow } : {}), ...anchor,
+        ...(arrival ? { entry: arrival } : {}), ...(drawn ? { arm: drawn } : {}) } };
       const pending = core.ready(false, first);
       const generation = core.generation;
       const active = () => owner === intent && generation === core.generation;
@@ -405,6 +436,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         if (!timedOut()) deliver(null, o.page);
         return null;
       }
+      keepForHead((json as { experiment?: unknown }).experiment);
       const set: DecisionSet = {
         page: json.page ?? o.page,
         ...(json.pageInstance ? { pageInstance: json.pageInstance } : {}),

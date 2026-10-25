@@ -91,6 +91,8 @@ export const CUSTOMER_ROUTES: readonly CustomerRoute[] = [
   { path: '/realtime/connections/:userId', methods: read },
   { path: '/v1/:tenant/trend', methods: read },
   { path: '/v1/:tenant/decisions/snapshot', methods: ['GET', 'POST'] },
+  { path: '/v1/:tenant/context-table/:page', methods: read },
+  { path: '/v1/:tenant/context-table/:page/:version', methods: read },
   { path: '/v1/:tenant/identity/session', methods: post },
   { path: '/v1/:tenant/identity/link', methods: post },
   { path: '/v1/:tenant/identity/detach', methods: post },

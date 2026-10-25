@@ -12,6 +12,8 @@ import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { assertShopperSelectors, carryOwnerCustomerId, forwardShopperRequest, parseShopperContext } from '@/identity/sessionAuthority';
 import { anonymousWithConsent } from '@/identity/consentContinuity';
+import type { MintTarget } from '@/identity/sessionCapability';
+import { armClassOf, defaultArmProbability } from '@/sdk/armDraw';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import type { Env } from '@/types/env';
 import { syntheticOperation } from '@/ops/synthetic';
@@ -32,7 +34,7 @@ import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedRe
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
-import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
+import { carriedSaltVersion, documentDigest, pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
 import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, reportPriors, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy, type ReportPriors } from '@/learn/report';
 import { PRIORS_KIND } from '@/learn/priors';
@@ -43,7 +45,7 @@ import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
 import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, toEvidenceFloorOf, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
-import { evidenceFloorOf } from '@/content/decide';
+import { contextTableOf, evidenceFloorOf } from '@/content/decide';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -51,7 +53,7 @@ import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot, Republished, StaleMarker } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
-import { readEnrollmentHealth } from '@/content/holdout';
+import { armFor, readArmDraw, readEnrollmentHealth, recordArmDraw, saltVersionOf, type ArmDrawReason } from '@/content/holdout';
 import type { LearnConfig } from '@/content/types';
 import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
@@ -718,6 +720,8 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   // It is not part of `queueOf`'s pure computation over the published documents:
   // it is a counter read from the operator cache, so it is answered beside it.
   const health = await readEnrollmentHealth(c.env, tenant, now);
+  // P84 (E8, R-P359 Q8): the arm-draw diagnostics, counted and read as the enrollment counter is.
+  const armDraw = await readArmDraw(c.env, tenant, now);
   // W29 U1.01: this answer is the landing page of an operator application, so
   // its `proposals_pending` must not stand alone while every apply and reject
   // is withdrawn (503, below). The withdrawal is reported beside the counts,
@@ -727,7 +731,7 @@ decisionRoutes.get('/:tenant/learn/queue', operatorJwt(), async (c) => {
   // statuses, and the statuses it excludes are stored records, not verified
   // applications — the same two facts `GET learn/proposals` answers.
   return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn,
-    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable, autonomy: AUTONOMY_WITHDRAWN });
+    erasuresPending: tombs.size }), enrollment_anchor_unavailable: health.anchorUnavailable, arm_draw: armDraw, autonomy: AUTONOMY_WITHDRAWN });
 });
 
 /**
@@ -875,6 +879,25 @@ class InvalidEntryContext extends Error {}
  */
 class InvalidNothingToShow extends Error {}
 /**
+ * P84 (E8, D2): the `arm` member a brand-new browser's first decision request
+ * carries, the JSON text of `{ class, tableVersion }` the head script drew
+ * (`class` `default` or `personalized`, `tableVersion` the context table's
+ * version, at most 128 characters), anything else malformed. A REQUEST error,
+ * raised as the entry context's is.
+ */
+class InvalidArmMember extends Error {}
+type ArmClass = 'default' | 'personalized';
+const ARM_MEMBER_LIMIT = 256;
+function armMemberOf(raw: string): { class: ArmClass; tableVersion: string } | null {
+  if (raw.length > ARM_MEMBER_LIMIT) return null;
+  let value: unknown;
+  try { value = JSON.parse(raw); } catch { return null; }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  return Object.keys(v).length === 2 && (v.class === 'default' || v.class === 'personalized') && typeof v.tableVersion === 'string'
+    && v.tableVersion.length >= 1 && v.tableVersion.length <= 128 ? { class: v.class, tableVersion: v.tableVersion } : null;
+}
+/**
  * P80 (R-P264): a named context signal (`ctx.<name>`) outside its bounds — a
  * name outside /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/, a value that is empty or over 64
  * characters, or more than 8 signals — on the query string or in the body. With
@@ -932,6 +955,7 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
       try { if (context.entry.length > ENTRY_QUERY_LIMIT || !validEntry(JSON.parse(context.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
     }
     if (context.nothingToShow !== undefined && nothingToShowOf(context.nothingToShow) === null) throw new InvalidNothingToShow();
+    if (context.arm !== undefined && armMemberOf(context.arm) === null) throw new InvalidArmMember();
     contextSignalsOf(context);
     for (const key of CONSENT_HINTS) {
       const values = query.getAll(key);
@@ -951,20 +975,65 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
     // visitor and no session, and `userId`, `visitorId`, `sessionId` stay refused).
     // P80: and the named context signals `ctx.<name>`, as the query string carries
     // them, under the same bounds (checked with the query's, below).
-    if ((!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId'].includes(key) && !key.startsWith('ctx.'))
+    // P84 (E8, D2): and `arm`, the class a brand-new browser's head script drew.
+    if ((!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId', 'arm'].includes(key) && !key.startsWith('ctx.'))
       // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
       // P80 (R-P264): a context signal's own bounds are its validator's, below, so an overlong one is a request error.
-      || typeof item !== 'string' || (key !== 'nothingToShow' && !key.startsWith('ctx.') && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
+      || typeof item !== 'string' || (key !== 'nothingToShow' && !key.startsWith('ctx.') && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : key === 'arm' ? ARM_MEMBER_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
   }
   if (out.entry !== undefined) {
     try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
   if (out.nothingToShow !== undefined && nothingToShowOf(out.nothingToShow) === null) throw new InvalidNothingToShow();
+  if (out.arm !== undefined && armMemberOf(out.arm) === null) throw new InvalidArmMember();
   contextSignalsOf(out);
   if (out.customerId !== undefined && !isCarriedCustomerId(out.customerId)) throw new SessionAccessError();
   for (const key of CONSENT_HINTS) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new InvalidConsentHint();
   return out;
+}
+
+/**
+ * P84 (E8, D2 mechanism (a), R-P359 Q8): the mint of a brand-new browser's
+ * identifier into the class its page drew before paint. The holdout in force
+ * (the learn document of one pinned set, its salt the brand's where it names
+ * none, as the decision's), the probability `p` that one new identifier's arm
+ * is in the class (`default`: share × its count in the arms ÷ the arms, as
+ * `armFor` splits it; `personalized`: the rest) and the cap of draws: one where
+ * p is 0 or 1 (no draw can change the outcome), else min(4096, ⌈ln 10⁻⁶ ÷
+ * ln(1 − p)⌉), so a class that can be met is missed at most once in a million.
+ * Null where the holdout cannot be read: the identifier is then drawn as without
+ * the member and nothing is claimed for it.
+ */
+interface ArmMint { target: MintTarget; p: number; learnRevision: number }
+async function armMint(env: Env, tenant: string, brand: string, cls: ArmClass): Promise<ArmMint | null> {
+  try {
+    const learn = await readPinnedPublication(env, LEARN_KIND, tenant, await pinPublication(env, tenant, true));
+    const holdout = { ...learn.value.holdout, salt: learn.value.holdout.salt || brand };
+    const pDefault = defaultArmProbability(holdout), p = cls === 'default' ? pDefault : 1 - pDefault;
+    const cap = p <= 0 || p >= 1 ? 1 : Math.min(4096, Math.ceil(Math.log(1e-6) / Math.log(1 - p)));
+    return { target: { accept: (subject) => armClassOf(armFor(subject, holdout)) === cls, cap }, p, learnRevision: learn.revision };
+  } catch { return null; }
+}
+/**
+ * P84: what became of the page's class, said on the first answer as
+ * `armRequest` and, where it was not met, counted for the operator (the learn
+ * queue's `arm_draw`, after the answer, never a synthetic operation's): met
+ * (`honoured: true`), `capped` (not met within the cap), `mismatch` (a share of
+ * 0 or 1 that cannot meet it at all) or `republished` (a learn publication
+ * between the mint's holdout read and the decision's own pin moved the
+ * identifier out of the class, read against the holdout in force after it).
+ */
+async function armOutcome(env: Env, tenant: string, brand: string, cls: ArmClass, mint: ArmMint, subject: string, answeredLearn: unknown): Promise<{ class: ArmClass; honoured: boolean; reason?: ArmDrawReason }> {
+  const after = typeof answeredLearn === 'number' && answeredLearn !== mint.learnRevision ? await armMint(env, tenant, brand, cls) : null;
+  if ((after ?? mint).target.accept(subject)) return { class: cls, honoured: true };
+  return { class: cls, honoured: false, reason: after ? 'republished' : mint.p <= 0 || mint.p >= 1 ? 'mismatch' : 'capped' };
+}
+/** P84: the arm-draw count, after the answer; it can neither fail nor delay a decision. */
+function countArmDraw(c: { env: Env; executionCtx: ExecutionContext }, tenant: string, reason: ArmDrawReason): void {
+  if (syntheticOperation()) return;
+  const counted = recordArmDraw(c.env, tenant, reason, Date.now());
+  try { c.executionCtx.waitUntil(counted); } catch { void counted; }
 }
 
 /**
@@ -1002,10 +1071,19 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
     ...(context.trackingConsent === 'false' ? { tracking: false } : {}),
     ...(context.personalizationEnabled === 'false' ? { personalization: false } : {}),
   }));
-  const session = await anonymousWithConsent(c.env, tenant, hints);
+  // P84 (E8, D2 mechanism (a)): the class the page drew before paint; the identifier is minted into it.
+  const brand = (context.brand ?? '').trim() || tenant;
+  const drawn = context.arm === undefined ? null : armMemberOf(context.arm);
+  const mint = drawn ? await armMint(c.env, tenant, brand, drawn.class) : null;
+  const session = await anonymousWithConsent(c.env, tenant, hints, mint?.target);
   const principal = await verifySessionCapability(c.env, session.capability, tenant);
   const headers = new Headers(c.req.raw.headers);
   headers.set(SHOPPER_HEADER, session.capability);
+  // The member is the mint's alone: the decision is re-entered without it, as a request carrying a session.
+  if (context.arm !== undefined) {
+    text = JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(text) as Record<string, unknown>).filter(([key]) => key !== 'arm')));
+    headers.delete('Content-Length');
+  }
   const answered = await forwardShopperRequest(c.env, new Request(c.req.raw.url, { method: 'POST', headers, body: text }), principal,
     (c.req.raw as Request & { cf?: unknown }).cf);
   // A refusal or a failure is answered as the route answered it, without the
@@ -1019,13 +1097,53 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   const contextKey = answered.headers.get('X-Context-Key');
   if (contextKey) c.header('X-Context-Key', contextKey);
   c.header('Cache-Control', 'no-store');
-  return c.json({ ...body, session });
+  const armRequest = drawn && mint ? await armOutcome(c.env, tenant, brand, drawn.class, mint, session.subject, (body.versions as { learn?: unknown } | undefined)?.learn) : null;
+  if (armRequest?.reason) countArmDraw(c, tenant, armRequest.reason);
+  return c.json({ ...body, session, ...(armRequest ? { armRequest } : {}) });
+});
+/**
+ * P84 (E8; the rendering record's N1, R-P359 Q3 and Q6): GET
+ * /v1/:tenant/context-table/:page[/:version], the page's context table
+ * (`contextTableOf`), shopper-free: no session, no cookie, nothing about a
+ * shopper read or named, behind the site-key gate like every /v1 read on a
+ * customer deployment. Computed on read as a pure function of ONE pinned
+ * publication set (the slots and learn documents in force), its `version` the
+ * SHA-256 of its canonical bytes, so a publication that changes an input moves
+ * it and one that does not leaves it byte for byte. The stable address is
+ * public for a minute; the versioned one, while that version is the one in
+ * force, for a year and immutable, and 404 once it is not. A page without a
+ * declared layout slot has none (404). The server render fetches it and inlines
+ * it for the head script (src/sdk/head.ts).
+ */
+decisionRoutes.get('/:tenant/context-table/:page/:version?', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim(), page = c.req.param('page') ?? '', version = c.req.param('version');
+  const none = (status: 404 | 503, error: string) => { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error }, status); };
+  if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(tenant)) return none(404, 'no context table for that page');
+  let doc: (Awaited<ReturnType<typeof contextTableOf>> & { version: string }) | null = null;
+  try {
+    const pin = await pinPublication(c.env, tenant, true);
+    const [slotsRev, learnRev] = await Promise.all([readPinnedPublication(c.env, SLOTS_KIND, tenant, pin), readPinnedPublication(c.env, LEARN_KIND, tenant, pin)]);
+    const pages = slotsRev.value.pages, learn = learnRev.value;
+    // The salt version as W21 counts it: carried by the learn revision where it names the salt in force, else walked.
+    const salt = learn.holdout.salt || tenant, carried = carriedSaltVersion(learnRev);
+    const table = Object.hasOwn(pages, page) ? contextTableOf(page, pages[page]!, learn, learnRev.revision,
+      carried && carried.salt === salt ? carried.version : await saltVersionOf(c.env, tenant, learnRev.revision, tenant, salt)) : null;
+    if (table) doc = { ...table, version: await documentDigest(table) };
+  } catch (error) {
+    if (error instanceof PublicationError && error.status === 404) return none(404, 'no context table for that page');
+    return none(503, 'Context table unavailable');
+  }
+  if (!doc) return none(404, 'no context table for that page');
+  if (version !== undefined && version !== doc.version) return none(404, 'that version of the context table is no longer in force; read the stable address');
+  c.header('Cache-Control', version === undefined ? 'public, max-age=60' : 'public, max-age=31536000, immutable');
+  return c.json(doc);
 });
 decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionRequest, requireShopper({ forward: false, bodyLimit: 8192, bodyTimeoutMs: 5000 }), async (c, next) => {
   try { await snapshotContext(c.req.raw); }
   catch (error) {
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidArmMember) return c.json({ ok: false, error: 'Invalid arm member' }, 400);
     if (error instanceof InvalidContextSignal) return c.json({ ok: false, error: error.message }, 400);
     if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
@@ -1037,6 +1155,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
   catch (error) {
     if (error instanceof InvalidEntryContext) return c.json({ ok: false, error: 'Invalid entry context' }, 400);
     if (error instanceof InvalidNothingToShow) return c.json({ ok: false, error: 'Invalid nothing-to-show report' }, 400);
+    if (error instanceof InvalidArmMember) return c.json({ ok: false, error: 'Invalid arm member' }, 400);
     if (error instanceof InvalidContextSignal) return c.json({ ok: false, error: error.message }, 400);
     if (error instanceof InvalidConsentHint) return c.json({ ok: false, error: 'Invalid consent hint' }, 400);
     throw error;
@@ -1136,6 +1255,9 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     const key = await sealContextKey(c.env, tenant, out.brand, out.contextKey);
     if (key) c.header('X-Context-Key', key);
   }
+  // P84 (E8, D2): a request carrying a session never changes its arm: a class it names is ignored, said and counted.
+  const ignoredArm = context.arm === undefined ? null : armMemberOf(context.arm);
+  if (ignoredArm) countArmDraw(c, tenant, 'ignored');
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
   // CW31: nothing at all when the shopper withheld tracking consent.
   // Ruling L-R10 (P02 decision D1): exactly the records the serve-time capture
@@ -1157,6 +1279,7 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     // customer can join their own outcome data to the population the shopper was
     // served in. Absent for an unsigned caller, which is no shopper.
     ...(out.experiment ? { experiment: out.experiment } : {}),
+    ...(ignoredArm ? { armRequest: { class: ignoredArm.class, honoured: false, reason: 'ignored' } } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
     // A refused pin has no delivery decision and no ledger row, so without this member
     // the refusal reaches nothing outside the worker: the slot silently falls back to
