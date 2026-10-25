@@ -1251,7 +1251,8 @@
         "packages/sdk/types/**",
         "packages/sdk/package.json",
         "src/identity/consentContinuity.ts",
-        "src/reflex/contentCompose.ts"
+        "src/reflex/contentCompose.ts",
+        "src/routes/content.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P84 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
