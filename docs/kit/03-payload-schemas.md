@@ -263,11 +263,16 @@ revision and answers with `skipped` true (reason `unchanged`) and the revision i
 same rules over the revision its `If-Match` names, with no `Idempotency-Key`, and answers what the import would plus
 `dryRun: true`, writing nothing; `POST /content/catalog/validate` stays the catalog document's own check.
 
-A tenant may publish the optional document `import-sources`, `{ "addresses": [...] }`: 1 to 64 IPv4 or IPv6
-addresses or CIDR ranges, written with `PUT /content/import-sources` like any content document (its first write
-over revision 0). While it is published, the import, the pull and the dry run answer `403`, naming `import-sources`
-and writing nothing, to a caller whose `CF-Connecting-IP` is outside it or absent; `X-Forwarded-For` is never read.
-With none published, every caller is allowed.
+A tenant may publish the optional document `import-sources`, `{ "addresses": [...], "hosts": [...] }`, naming
+`addresses`, `hosts` or both, written with `PUT /content/import-sources` like any content document (its first write
+over revision 0). `addresses` is 1 to 64 IPv4 or IPv6 addresses or CIDR ranges: while it is published, the import, the
+pull and the dry run answer `403`, naming `import-sources` and writing nothing, to a caller whose `CF-Connecting-IP` is
+outside it or absent; `X-Forwarded-For` is never read. `hosts` is 1 to 64 hosts the on-demand pull may fetch from, each
+an exact lowercase hostname or an IP literal as a URL renders it (IPv6 in brackets) with an optional port from 1 to
+65535, never the default port (`:443`, `:80`) and never a scheme, a path or a wildcard: while it is published, a pull
+whose URL host, with its port when the URL names one, is not listed answers `403` naming the host, before anything is
+fetched. A member not published restricts nothing: with no `addresses` every caller is allowed, and with no `hosts`
+the pull reaches any `https:` host.
 
 **How big a catalog may be.** One stored configuration document is limited to 2 MiB of actual UTF-8
 bytes, measured on its canonical form (keys sorted, no insignificant whitespace), and the catalog is
