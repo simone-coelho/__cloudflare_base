@@ -1110,7 +1110,9 @@ describe('unit:W19.S1.02', () => {
     expect(refusal.received, 'W19.S1.02 — and says how many records it read').toBe(2);
     expect(refusal.errors,
       'W19.S1.02 — the refusal names the record and the field in the documented words (BTI guide :233)')
-      .toContain('pieces[1].slotTypes: required non-empty string array');
+      // S24 R10 (amendment 11 P82; granted R-P294 (3)), test-only, R-P195's form: an import's refusal names the record by
+      // its position in the file sent and its id (P82.ID2's address), the field and the words as before.
+      .toContain("records[1] 'has-none'.slotTypes: required non-empty string array");
 
     // 5. …and the same for an empty CSV cell, which is the shape a real feed
     //    fails in. Nothing was published by either refusal.
@@ -1121,7 +1123,7 @@ describe('unit:W19.S1.02', () => {
       { method: 'POST', headers: { ...publicationHeaders(env, auth, 4), 'Content-Type': 'text/csv' }, body: emptyCsv }, env);
     expect(fourth.status, 'W19.S1.02 — a CSV row with a blank slots cell is refused too').toBe(422);
     expect((await fourth.json() as CatalogAnswer).errors,
-      'W19.S1.02 — in the same documented words').toContain('pieces[0].slotTypes: required non-empty string array');
+      'W19.S1.02 — in the same documented words').toContain("records[0] 'csv-has-none'.slotTypes: required non-empty string array"); // S24 R10 (R-P294 (3)): P82's address
     expect(await storedPieces(env), 'W19.S1.02 — and nothing was partially published by either refusal').toEqual(before);
   });
 });
