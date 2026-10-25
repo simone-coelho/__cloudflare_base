@@ -661,8 +661,9 @@ resolves for that cell, and `shotOrder`, the carousel's shot order resolved by t
 `{ mobile, desktop }` and `null` where nothing matches (the page keeps its server order); and `brandRules`, the
 carousel's `minimum` and `pinnedTag` as published. A tenant that publishes a context vocabulary also has
 `channelVocabulary: { revision, channels, rules, visitBuckets }`, which the head script classifies by. The default
-row is `null` throughout. The table carries shot types per context, never items. The head script, `edge-head.js`
-in the SDK package, is built from the engine's own classifier by `node scripts/build-sdk.mjs`, and
+row is `null` throughout. The table carries shot types per context, never items. The head script, `edge-head.js`,
+ships beside the SDK's bundles: in the SDK package, at `/sdk/edge-head.js` and, long-lived and immutable, at
+`/sdk/{version}/edge-head.js`. It is built from the engine's own classifier by `node scripts/build-sdk.mjs`, and
 `node scripts/build-sdk.mjs --check` fails on any byte of it that differs. Your server render inlines it verbatim, so
 its content-security-policy source is `'sha256-…'` of exactly those bytes: the SHA-256 of the file, in base64, which
 the build writes beside each copy as `edge-head.js.csp` (the whole source, `sha256-` and the digest). Build your
@@ -1482,8 +1483,8 @@ it as `armRequest`, `{ class, honoured, reason? }`: honoured, or not with `reaso
 the identifier keeping the arm it drew), `mismatch` (a share of 0 or 1 that cannot meet the class),
 `republished` (a learn publication between the draw and the decision moved the identifier out of it) or `ignored`
 (a request that already carries a session, whose arm never changes and whose answer is as without the member). A
-malformed member is refused `400 'Invalid arm member'`, and on a new browser's first request `401`, writing nothing,
-as every malformed member is. Each reason is counted for your operators on `GET /v1/{tenant}/learn/queue` as
+malformed member is refused `400 'Invalid arm member'` on every path, a new browser's first request included, before
+anything is issued or written. Each reason is counted for your operators on `GET /v1/{tenant}/learn/queue` as
 `arm_draw`, `{ capped, ignored, mismatch, republished }`, a count over thirty days that names no visitor, read as a
 floor as `enrollment_anchor_unavailable` is. Two cases are told and not counted: a page on the session route or a
 session broker gets the engine's own draw, so its head script can paint another class than its first answer's

@@ -33,6 +33,6 @@
   "sizeBudget": {
     "./edge-personalization.esm.js": 107520,
     "./edge-personalization.js": 112640,
-    "./edge-head.js": 16384
+    "./edge-head.js": 30720
   }
 }

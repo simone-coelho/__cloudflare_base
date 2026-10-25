@@ -882,8 +882,9 @@ class InvalidNothingToShow extends Error {}
  * P84 (E8, D2): the `arm` member a brand-new browser's first decision request
  * carries, the JSON text of `{ class, tableVersion }` the head script drew
  * (`class` `default` or `personalized`, `tableVersion` the context table's
- * version, at most 128 characters), anything else malformed. A REQUEST error,
- * raised as the entry context's is.
+ * version, 1 to 128 characters, the whole text at most 256), anything else
+ * malformed. A REQUEST error answered `400 'Invalid arm member'` on every path
+ * (R-P371), a new browser's first request included, before anything is issued.
  */
 class InvalidArmMember extends Error {}
 type ArmClass = 'default' | 'personalized';
@@ -969,26 +970,34 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
   try { value = parseShopperContext(await request.clone().text()); } catch { throw new SessionAccessError(); }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new SessionAccessError();
   const out: Record<string, string> = {};
+  // P84 (E8, D2, R-P371): `arm`, the class a brand-new browser's head script
+  // drew, is admitted as it comes and checked below, after every selector,
+  // tenant and customer-identifier check, so a malformed one is the request
+  // error `InvalidArmMember` (400, on a new browser's first request too).
+  let arm: unknown;
   for (const [key, item] of Object.entries(value)) {
+    if (key === 'arm') { arm = item; continue; }
     // P13 (decision D1): the allow-list gains exactly one key, `customerId`, the
     // customer's identifier the page carried (never a selector: it names no
     // visitor and no session, and `userId`, `visitorId`, `sessionId` stay refused).
     // P80: and the named context signals `ctx.<name>`, as the query string carries
     // them, under the same bounds (checked with the query's, below).
-    // P84 (E8, D2): and `arm`, the class a brand-new browser's head script drew.
-    if ((!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId', 'arm'].includes(key) && !key.startsWith('ctx.'))
+    if ((!['page', 'brand', 'channel', 'entry', 'browsingSessionId', 'trackingConsent', 'personalizationEnabled', 'pageInstance', 'nothingToShow', 'customerId'].includes(key) && !key.startsWith('ctx.'))
       // P31: the report's own bounds are its validator's, below, so an overlong report is a request error.
       // P80 (R-P264): a context signal's own bounds are its validator's, below, so an overlong one is a request error.
-      || typeof item !== 'string' || (key !== 'nothingToShow' && !key.startsWith('ctx.') && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : key === 'arm' ? ARM_MEMBER_LIMIT : 128))) throw new SessionAccessError();
+      || typeof item !== 'string' || (key !== 'nothingToShow' && !key.startsWith('ctx.') && item.length > (key === 'entry' ? ENTRY_QUERY_LIMIT : 128))) throw new SessionAccessError();
     out[key] = item;
   }
   if (out.entry !== undefined) {
     try { if (!validEntry(JSON.parse(out.entry), true)) throw new Error(); } catch { throw new InvalidEntryContext(); }
   }
   if (out.nothingToShow !== undefined && nothingToShowOf(out.nothingToShow) === null) throw new InvalidNothingToShow();
-  if (out.arm !== undefined && armMemberOf(out.arm) === null) throw new InvalidArmMember();
   contextSignalsOf(out);
   if (out.customerId !== undefined && !isCarriedCustomerId(out.customerId)) throw new SessionAccessError();
+  if (arm !== undefined) {
+    if (typeof arm !== 'string' || armMemberOf(arm) === null) throw new InvalidArmMember();
+    out.arm = arm;
+  }
   for (const key of CONSENT_HINTS) if (out[key] !== undefined && out[key] !== 'true' && out[key] !== 'false') throw new InvalidConsentHint();
   return out;
 }
@@ -1066,7 +1075,11 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   try {
     text = await boundedShopperBody(c.req.raw, 8192, 5000);
     context = await snapshotContext(c.req.raw);
-  } catch { throw new SessionAccessError(); }
+  } catch (error) {
+    // P84 (R-P371): a malformed `arm` member is a request error here too, refused before a session is issued.
+    if (error instanceof InvalidArmMember) { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error: 'Invalid arm member' }, 400); }
+    throw new SessionAccessError();
+  }
   const hints = intersectConsent(consentFromCookies(c.req.header('Cookie') ?? null), refusalHints({
     ...(context.trackingConsent === 'false' ? { tracking: false } : {}),
     ...(context.personalizationEnabled === 'false' ? { personalization: false } : {}),

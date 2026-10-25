@@ -598,8 +598,8 @@ before your stylesheets:
 2. `<script type="application/json" id="op-images">` holding the carousel's images in your server's order, each
    `{ "id", "tags", "src", "srcset", "sizes" }`, its `tags` carrying `contentType` and every dimension the table's
    `brandRules` name;
-3. the head script, `edge-head.js` from the SDK package, inline and verbatim; its content-security-policy source
-   is in `edge-head.js.csp` beside it.
+3. the head script, `edge-head.js` (from the SDK package, or the pinned `/sdk/{version}/edge-head.js` your deploy
+   serves), inline and verbatim; its content-security-policy source is in `edge-head.js.csp` beside it in the package.
 
 Set `data-op-consent="personalization"` on the root element when your consent tool holds the shopper's
 personalization choice. It is a hint for the first page: the SDK keeps the engine's own record of the choice for the

@@ -151,12 +151,15 @@ export const CUSTOMER_ASSETS: Readonly<Record<string, string>> = Object.freeze({
   '/operator-session.js': '/operator-session.js',
   '/sdk/edge-personalization.js': '/sdk/edge-personalization.js',
   '/sdk/edge-personalization.esm.js': '/sdk/edge-personalization.esm.js',
-  // The same two bundles under the path that names their version: the copy a
+  // P84: the head script a server render inlines (src/sdk/head.ts), served like the bundles.
+  '/sdk/edge-head.js': '/sdk/edge-head.js',
+  // The same three files under the path that names their version: the copy a
   // page pins. Only this release's version is served; public/_headers makes
-  // these two files long-lived and immutable and leaves the paths above
+  // these files long-lived and immutable and leaves the paths above
   // revalidating. Any other path under /sdk/ never reaches the asset service.
   [`/sdk/${SDK_VERSION}/edge-personalization.js`]: `/sdk/${SDK_VERSION}/edge-personalization.js`,
   [`/sdk/${SDK_VERSION}/edge-personalization.esm.js`]: `/sdk/${SDK_VERSION}/edge-personalization.esm.js`,
+  [`/sdk/${SDK_VERSION}/edge-head.js`]: `/sdk/${SDK_VERSION}/edge-head.js`,
   '/sdk/debug.js': '/sdk/debug.js',
   '/tuning.html': '/tuning.html',
   '/learning.html': '/learning.html',

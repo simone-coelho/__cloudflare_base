@@ -14,7 +14,7 @@ import { parse as parseToml } from 'smol-toml';
 import { safeIdentitySecret, parseIdentitySecrets } from '../src/identity/material.mjs';
 import { readSigningConfig } from '../src/auth/signingConfig.mjs';
 import { bootstrapExactOwner, validateExactOwner } from './operator-seed.mjs';
-import { verifySDK, sdkBuildOptions, sdkOptionsForVersion, sdkVersion, versionedOutput, SDK_TARGETS, SDK_VERSION } from './build-sdk.mjs';
+import { isHeadScript, verifySDK, sdkBuildOptions, sdkOptionsForVersion, sdkVersion, versionedOutput, SDK_TARGETS, SDK_VERSION } from './build-sdk.mjs';
 import { verifyMeridian, meridianBuildOptions } from './build-meridian.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -45,18 +45,30 @@ const LEGACY_ASSETS = ['console/index.html', 'console/shell.js', 'console/views.
   'console/views-measure.js', 'console/views-accounts.js', 'console/views-explore.js', 'operator-session.js',
   'sdk/edge-personalization.js', 'sdk/edge-personalization.esm.js', 'tuning.html', 'learning.html'].sort();
 const UNVERSIONED_ASSETS = [...LEGACY_ASSETS, 'sdk/debug.js'].sort();
-// A release also serves its two SDK bundles under the path that names their
-// version, and uploads the header rules that make exactly those two files
-// long-lived and immutable. The unversioned paths keep the asset default, so a
-// release reaches every page that loads them. Each rule names one file: a
-// wildcard would put the header on whatever else the asset service answers
-// under it, a not-found included.
+// A release also serves its SDK files (its two bundles and, P84, the head
+// script) under the path that names their version, and uploads the header rules
+// that make exactly those files long-lived and immutable. The unversioned paths
+// keep the asset default, so a release reaches every page that loads them. Each
+// rule names one file: a wildcard would put the header on whatever else the
+// asset service answers under it, a not-found included.
 const servedPath = output => output.slice('public/'.length);
-const pinnedSDK = version => SDK_TARGETS.map(target => ({ served: servedPath(target.output), pinned: servedPath(versionedOutput(target, version)) }));
-const customerAssets = version => [...UNVERSIONED_ASSETS, ...pinnedSDK(version).map(sdk => sdk.pinned)].sort();
+// P84: a package made since the head script (src/sdk/head.ts, the third SDK
+// target) carries it as the bundles are carried: under its unversioned path,
+// under the path that names the version with its header rule, and with its
+// build options. An older package has none of the three and keeps the set and
+// the options it was checked with (`head` false below), as an older package
+// without header rules keeps its own.
+const HEAD_ASSET = servedPath(SDK_TARGETS.find(isHeadScript).output);
+const carriesHead = body => Array.isArray(body.assets) && body.assets.some(p => object(p) && p.name === '/' + HEAD_ASSET);
+const sdkTargets = (head = true) => SDK_TARGETS.filter(target => head || !isHeadScript(target));
+const pinnedSDK = (version, head = true) => sdkTargets(head).map(target => ({ served: servedPath(target.output), pinned: servedPath(versionedOutput(target, version)) }));
+const unversionedAssets = (head = true) => head ? [...UNVERSIONED_ASSETS, HEAD_ASSET].sort() : UNVERSIONED_ASSETS;
+const customerAssets = (version, head = true) => [...unversionedAssets(head), ...pinnedSDK(version, head).map(sdk => sdk.pinned)].sort();
 export const ASSETS = customerAssets(sdkVersion());
 const ASSET_HEADERS = 'public/_headers';
-const assetHeaderRules = version => pinnedSDK(version).flatMap(sdk => ['/' + sdk.pinned, '  Cache-Control: public, max-age=31536000, immutable']);
+const assetHeaderRules = (version, head = true) => pinnedSDK(version, head).flatMap(sdk => ['/' + sdk.pinned, '  Cache-Control: public, max-age=31536000, immutable']);
+/** The SDK build options a package records: every target's, an older package's without the head script's. */
+const sdkOptionsOf = (root, version, head = true) => sdkOptionsForVersion(root, version).filter((_, i) => head || !isHeadScript(SDK_TARGETS[i]));
 const headerRules = bytes => bytes.toString('utf8').split('\n').filter(line => line.trim() && !line.trimStart().startsWith('#'));
 const SECRETS = ['JWT_SECRET', 'SDK_KEYS', 'IDENTITY_SALT', 'IDENTITY_SECRETS', 'ALERT_WEBHOOK_URL'];
 const connectorRef = v => typeof v === 'string' && /^CONNECTOR_SECRET_[A-Z0-9_]{1,80}$/.test(v);
@@ -594,13 +606,13 @@ export async function packageArtifact({ root = ROOT, verification, build, profil
 // names the version its own SDK reports, and exactly the header rules for those
 // two paths. An older package has neither and keeps the set it was checked with.
 function artifactAssets(body) {
-  const base = body.assetContract === 'customer-assets-v2' ? UNVERSIONED_ASSETS : LEGACY_ASSETS, rules = body.assetHeaders;
-  if (rules === undefined) return base;
+  const base = body.assetContract === 'customer-assets-v2' ? UNVERSIONED_ASSETS : LEGACY_ASSETS, rules = body.assetHeaders, head = carriesHead(body);
+  if (rules === undefined) { if (head) fail(); return base; }
   const version = body.verification?.native?.sdk?.version;
   if (base !== UNVERSIONED_ASSETS || typeof version !== 'string' || !SDK_VERSION.test(version)
     || !exact(rules, ['name','type','bytes','sha256','base64']) || rules.name !== '_headers' || rules.type !== 'text/plain; charset=utf-8'
-    || !same(headerRules(bytesOf(rules)), assetHeaderRules(version))) fail();
-  return customerAssets(version);
+    || !same(headerRules(bytesOf(rules)), assetHeaderRules(version, head))) fail();
+  return customerAssets(version, head);
 }
 export function validateArtifact(artifact) {
   if (!object(artifact) || artifact.version !== 2 || !SHA.test(artifact.digest)) fail();
@@ -649,13 +661,13 @@ export function validateArtifact(artifact) {
     ||!same(body.tools,proof.basis.filter(p=>p.path.startsWith('node_modules/'))))fail();
   const root=body.buildOptions?.worker?.absWorkingDir;
   if(typeof root!=='string'||!root.startsWith('/')||!same(body.buildOptions,{worker:workerBuildOptions(root),
-    sdk:sdkOptionsForVersion(root,native.sdk.version),meridian:meridianBuildOptions(root)}))fail();
+    sdk:sdkOptionsOf(root,native.sdk.version,carriesHead(body)),meridian:meridianBuildOptions(root)}))fail();
   for(const asset of body.assets){const p=proof.basis.find(p=>p.path==='public'+asset.name);if(!p||p.sha256!==asset.sha256||p.bytes!==asset.bytes)fail();}
   // The uploaded header rule is the file the checks ran against, and each
   // versioned SDK path holds the very bytes its unversioned path serves.
   const rules=body.assetHeaders,rulesPin=proof.basis.find(p=>p.path===ASSET_HEADERS);
   if(rules===undefined?rulesPin!==undefined:!rulesPin||rulesPin.sha256!==rules.sha256||rulesPin.bytes!==rules.bytes)fail();
-  if(rules!==undefined)for(const sdk of pinnedSDK(native.sdk.version)){
+  if(rules!==undefined)for(const sdk of pinnedSDK(native.sdk.version,carriesHead(body))){
     const pinned=body.assets.find(p=>p.name==='/'+sdk.pinned),served=body.assets.find(p=>p.name==='/'+sdk.served);
     if(!pinned||!served||pinned.sha256!==served.sha256||pinned.bytes!==served.bytes)fail();
   }

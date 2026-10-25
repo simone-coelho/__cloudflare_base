@@ -1,2 +1,565 @@
 /* edge-head v0.2.0 — the head script: the carousel's context order before paint (P84). */
-"use strict";(()=>{function Ce(e){let n=2166136261;for(let t=0;t<e.length;t++)n^=e.charCodeAt(t),n=Math.imul(n,16777619);return n>>>0}function xe(e){return e^=e>>>16,e=Math.imul(e,2246822507),e^=e>>>13,e=Math.imul(e,3266489909),e^=e>>>16,e>>>0}var Se=e=>xe(Ce(e));function _e(e,n){return Se(`${n}:${e}`)/4294967296}function L(e){return Math.min(1,Math.max(0,Number.isFinite(e)?e:0))}function U(e,n){let t=L(n.share);if(t<=0)return"personalized";let r=_e(e,n.salt);if(r>=t)return"personalized";let o=n.arms.length?n.arms:["default"],i=Math.min(o.length-1,Math.floor(r/t*o.length));return o[i]??"default"}function z(e){let n=e.arms.length?e.arms:["default"];return L(e.share)*n.filter(t=>t==="default").length/n.length}var B=e=>e==="default"?"default":"personalized";function $(e){return e==="mobile"||e==="desktop"?e:null}function ke(e){let n=(e??"").trim();return n==="?1"?"mobile":n==="?0"?"desktop":null}function Ae(e){let n=(e??"").trim();return/^Mozilla\//.test(n)?/\biPad\b/.test(n)||/\bTablet\b/.test(n)?"desktop":/\b(?:iPhone|iPod)\b/.test(n)?"mobile":/\bAndroid\b/.test(n)?/\bMobile\b/.test(n)?"mobile":"desktop":/Mobi/.test(n)?"mobile":"desktop":null}function F(e){return ke(e.get("Sec-CH-UA-Mobile"))??Ae(e.get("User-Agent"))}var J=1800*1e3,K="entry-channel-v1";function we(e){return e==="same_day"||e==="within_7_days"||e==="8_to_30_days"||e==="30_and_more"?e:null}var Ee=["direct","paid_social","paid_search","email","organic","referral"],Pe=/^[a-z][a-z0-9_]{0,63}$/,R=e=>typeof e=="string"&&Pe.test(e)&&e!=="unknown"&&e!=="any";var v={utmMedium:128,utmSource:256,utmTerm:256,utmCampaign:256,referrer:2048,siteHost:253},G=v.utmCampaign,q=v.utmTerm;function X(e){try{return new URL(e.includes("://")?e:`https://${e}`)}catch{return null}}function Q(e){if(e===""||/[/\\?#@\s]/.test(e))return"";let n=X(e);if(!n||n.pathname!=="/"||n.search!==""||n.hash!==""||n.username!==""||n.password!=="")return"";let t=e.indexOf(":",e.startsWith("[")?e.indexOf("]")+1:0);return t!==-1&&!/^[0-9]+$/.test(e.slice(t+1))?"":n.hostname}function Z(e){return e.endsWith(".")?e.slice(0,-1):e}function ve(e){let n=Q(e);return n!==""&&n.length<=v.siteHost}function Te(e,n){return e==="siteHost"||n&&e==="referrer"}function ee(e,n=!1){return e===void 0?!0:!e||typeof e!="object"||Array.isArray(e)?!1:Object.entries(e).every(([t,r])=>Object.hasOwn(v,t)&&(r===void 0||typeof r=="string"&&r.length<=v[t]&&(!Te(t,n)||r===""||ve(r))))}function ne(e){if(typeof e!="string")return null;let n=e.trim().toLowerCase();return Ee.includes(n)?n:null}function te(e){return typeof e.referrer=="string"&&O(e.siteHost)!==""}function Ve(e,n){if(!ee(e)||!e||!Object.values(e).some(r=>typeof r=="string"))return;if(n)return Re(e,n)??void 0;let t=Xe(e);return t!=="direct"||te(e)?t:void 0}var Y=e=>e.split(/[\s_-]+/).filter(n=>n!=="");function Ie(e,n){let t=f(n.utmMedium),r=f(n.utmSource),o=f(n.utmCampaign);if(e.utmMedium&&(t===""||!e.utmMedium.some(i=>f(i)===t))||e.utmSource&&(r===""||!e.utmSource.some(i=>{let s=f(i);return s===r||!r.includes(".")&&Y(r).includes(s)}))||e.utmCampaign&&(o===""||!e.utmCampaign.some(i=>Y(o).includes(f(i))))||e.untagged===!0&&(t!==""||r!==""||o!==""))return!1;if(e.referrer!==void 0){let i=T(f(n.referrer)),s=O(n.siteHost),l=i!==""&&s!==""&&(i===s||i.endsWith(`.${s}`));if(e.referrer==="none"){if(!te(n)||i!==""&&!l)return!1}else if(e.referrer==="external"){if(i===""||l)return!1}else if(!V(i,e.referrer.map(c=>f(c))))return!1}return!0}function Re(e,n){for(let t of n.rules)if(Ie(t,e))return t.channel;return null}function Oe(e,n){if(!e||!ee(e))return;let t=n.sourcePlatforms,r=i=>t.find(s=>V(i,s.networks.map(l=>f(l))))?.id,o=f(e.utmSource);if(o!=="")if(o.includes(".")){let i=r(T(o));if(i)return i}else for(let i of de(o)){if(!ue.has(i)&&!ce.has(i))continue;let s=t.find(l=>l.networks.some(c=>f(c).split(".")[0]===i))?.id;if(s)return s}return r(T(f(e.referrer)))}function Me(e,n){if(typeof e!="string")return;let t=e.trim().toLowerCase();return n.landingPageTypes.some(r=>r.id===t)?t:void 0}var re=e=>typeof e=="number"&&Number.isSafeInteger(e)&&e>=1;function Ne(e){if(!e||typeof e!="object"||Array.isArray(e))return!1;let n=e,t=re(n.vocabularyRevision);return(n.visitCount===void 0||Number.isSafeInteger(n.visitCount)&&n.visitCount>=1)&&(n.lastVisitAt===void 0||Number.isSafeInteger(n.lastVisitAt)&&n.lastVisitAt>=0)&&(n.vocabularyRevision===void 0||t)&&(n.entryChannel===void 0||ne(n.entryChannel)===n.entryChannel||t&&R(n.entryChannel))&&(n.sourcePlatform===void 0||t&&R(n.sourcePlatform))&&(n.landingPageType===void 0||t&&R(n.landingPageType))&&(n.device===void 0||$(n.device)===n.device)&&(n.recency===void 0||we(n.recency)===n.recency)}var He=e=>e.entryChannel!==void 0&&ne(e.entryChannel)!==e.entryChannel||e.sourcePlatform!==void 0||e.landingPageType!==void 0;function ie(e,n,t,r,o){let i=e&&Ne(e)?e:void 0,s=oe(n,t),l=s?void 0:i,c=o?.vocabulary??null,C={visitCount:De(i?.visitCount,n,t),lastVisitAt:s?t:i?.lastVisitAt??t,entryChannel:l?.entryChannel??Ve(r,c?.vocabulary)},d=l?.sourcePlatform??(c?Oe(r,c.vocabulary):void 0),y=l?.landingPageType??(c?Me(o?.pageType,c.vocabulary):void 0);if(d!==void 0&&(C.sourcePlatform=d),y!==void 0&&(C.landingPageType=y),He(C)){let x=c?.revision??l?.vocabularyRevision;re(x)&&(C.vocabularyRevision=x)}return C}function oe(e,n,t=J){return e==null||!Number.isFinite(e)?!0:n-e>=t}function De(e,n,t,r=J){let o=typeof e=="number"&&Number.isFinite(e)&&e>=1?Math.floor(e):0;return o===0?1:oe(n,t,r)?o+1:o}function Le(e){return e.map((n,t)=>{let r=e[t+1];return r===void 0?`${n}+`:r-1===n?String(n):`${n}-${r-1}`})}function se(e,n,t=Le(n)){if(e==null||!Number.isFinite(e)||e<1)return"unknown";let r=0;for(let o=0;o<n.length;o++)e>=n[o]&&(r=o);return t[r]??"unknown"}function ae(e){let n=typeof e=="number"&&Number.isFinite(e)?Math.floor(e):1;return n<=1?"1":n<=3?"2-3":"4+"}var W=new Set(["cpc","ppc","paidsearch","paid_search","paid-search","sem","search_paid"]),Ue=new Set(["paid_social","paidsocial","paid-social","social_paid","display","banner"]),ze=new Set(["paid","cpm"]),Be=new Set(["email","e-mail","e_mail","newsletter","crm"]),$e=new Set(["organic","organic_search"]),Fe=new Set(["referral","affiliate","partner"]),Ye=new Set(["social","social_media","sm"]),We=new Set(["klaviyo","mailchimp","braze","sfmc","salesforce_marketing_cloud","sendgrid","iterable","newsletter","email"]),le=["google.com","google.ca","google.de","google.fr","google.it","google.es","google.nl","google.be","google.ch","google.at","google.se","google.no","google.dk","google.fi","google.ie","google.pt","google.pl","google.cz","google.sk","google.hu","google.ro","google.bg","google.gr","google.hr","google.si","google.lt","google.lv","google.ee","google.rs","google.ru","google.cl","google.ae","google.co.uk","google.co.in","google.co.jp","google.co.kr","google.co.id","google.co.th","google.co.nz","google.co.za","google.co.il","google.com.au","google.com.br","google.com.mx","google.com.co","google.com.ar","google.com.pe","google.com.tr","google.com.sa","google.com.eg","google.com.ng","google.com.hk","google.com.tw","google.com.sg","google.com.my","google.com.ph","google.com.vn","google.com.ua","yahoo.com","yahoo.ca","yahoo.de","yahoo.es","yahoo.fr","yahoo.it","yahoo.co.jp","yahoo.co.uk","yahoo.com.au","yahoo.com.br","yahoo.com.mx","yandex.com","yandex.ru","yandex.by","yandex.kz","yandex.uz","yandex.com.tr","bing.com","duckduckgo.com","ecosia.org","baidu.com","brave.com","startpage.com"],je=["facebook.com","fb.com","fb.me","meta.com","instagram.com","tiktok.com","pinterest.com","snapchat.com","twitter.com","x.com","t.co","linkedin.com","lnkd.in","reddit.com","youtube.com","threads.net"],ue=new Set(["facebook","fb","meta","instagram","tiktok","pinterest","snapchat","twitter","linkedin","reddit","youtube","threads"]),ce=new Set(["google","bing","yahoo","duckduckgo","yandex","baidu","ecosia","brave","startpage"]),Je={fb:"facebook",ig:"instagram",insta:"instagram",yt:"youtube",ddg:"duckduckgo"};function f(e){return typeof e=="string"?e.trim().toLowerCase():""}function T(e){let n=e===""?null:X(e);return n?Z(n.hostname.toLowerCase()):""}function O(e){return typeof e=="string"?Z(Q(e.trim())):""}var V=(e,n)=>e!==""&&n.some(t=>e===t||e.endsWith(`.${t}`));function de(e){return e.split(/[\s_-]+/).filter(n=>n!=="").map(n=>Je[n]??n)}function ge(e,n,t){return e===""?!1:e.includes(".")?V(T(e),t):de(e).some(r=>n.has(r))}var j=e=>ge(e,ue,je),Ke=e=>ge(e,ce,le);var Ge=512;function qe(e){let n=e.gclid;return typeof n=="string"&&n.trim()!==""&&n.length<=Ge}function Xe(e){let n=f(e.utmMedium),t=f(e.utmSource);if(t===""&&qe(e))return"paid_search";if(n!=="")if(W.has(n)||ze.has(n)){if(j(t))return"paid_social";if(W.has(n)||Ke(t))return"paid_search"}else{if(Ue.has(n))return"paid_social";if(Be.has(n))return"email";if(Fe.has(n))return"referral";if($e.has(n))return"organic";if(Ye.has(n))return j(t)?"paid_social":"referral"}if(t!==""&&We.has(t))return"email";let r=T(f(e.referrer));if(r==="")return"direct";let o=O(e.siteHost);return o!==""&&(r===o||r.endsWith(`.${o}`))?"direct":V(r,le)?"organic":"referral"}var fe="opt_visitor_id",M="opt_head";var cn=3600*24*365;var dn=1800*1e3;function me(e){let n="",t="",r="",o="";try{let i=new URLSearchParams(e.location?.search??"");n=i.get("utm_medium")??"",t=i.get("utm_source")??"",r=i.get("utm_term")??"",r.length>q&&(r=""),o=i.get("utm_campaign")??"",o.length>G&&(o="")}catch{}return{utmMedium:n,utmSource:t,...r?{utmTerm:r}:{},...o?{utmCampaign:o}:{},referrer:e.referrer??"",siteHost:e.location?.hostname??""}}var w=e=>!!e&&typeof e=="object"&&!Array.isArray(e),Qe=e=>e==="default"||e==="personalized";function pe(e,n){try{let t=e.document.getElementById(n);return t?JSON.parse(t.textContent||"null"):null}catch{return null}}function Ze(e){return!w(e)||typeof e.version!="string"||typeof e.classifierVersion!="string"||!Array.isArray(e.rows)||!w(e.holdout)||typeof e.holdout.share!="number"||!Array.isArray(e.holdout.arms)||e.carouselSlot!==null&&typeof e.carouselSlot!="string"?null:e}function en(e){try{let n=JSON.parse(e||"{}");return w(n)?n:{}}catch{return{}}}function ye(e,n){let t=n==="tracking"?"opt_tracking_consent":"opt_personalization_enabled";return e.document.cookie.split(";").some(r=>{let o=r.indexOf("="),i=r.slice(0,o).trim(),s=r.slice(o+1).trim();return o>0&&(i===t?s==="false":i.startsWith("opt_shopper_refusal")&&i.endsWith(`_${n}`)&&s!=="")})}function nn(e){let n=Ze(pe(e,"op-context-table")),t=pe(e,"op-images");if(!n)return;let r=e.document.documentElement,o=Date.now(),i={};try{i=en(e.localStorage.getItem(M))}catch{i={}}let s=(r.getAttribute("data-op-consent")||"").split(/\s+/),l=w(i.consent)?i.consent:null,c=ye(e,"tracking")||l!==null&&l.tracking!==!0,C=!c&&(l!==null||s.includes("tracking")||s.includes("personalization")),d=C&&(l?l.personalization===!0:s.includes("personalization"))&&!ye(e,"personalization"),y=C?tn(e,n,i,o):null;c&&delete i.visit;let x=e.navigator,_=F({get:g=>g==="User-Agent"?x.userAgent:g==="Sec-CH-UA-Mobile"&&x.userAgentData?x.userAgentData.mobile?"?1":"?0":null}),m=n.holdout,S=m.arms.length?m.arms:["default"],p,u=!1,a=null;try{a=e.localStorage.getItem(fe)}catch{a=null}let b=w(i.experiment)&&typeof i.experiment.id=="string"?i.experiment:null,k=g=>typeof g=="number"&&typeof m.saltVersion=="number"&&g!==m.saltVersion,E=()=>{let g=crypto.getRandomValues(new Uint32Array(1))[0]/4294967296<z({share:m.share,arms:S})?"default":"personalized";return i.arm={class:g,saltVersion:m.saltVersion,tableVersion:n.version},g};a&&b?(p=B(U(a,{share:m.share,salt:b.id.split(":").slice(2).join(":"),arms:S})),u=k(b.saltVersion)):w(i.arm)&&Qe(i.arm.class)?(u=k(i.arm.saltVersion),p=u?E():i.arm.class):p=E();let P=d&&p==="personalized"&&!u&&n.classifierVersion===K&&y?.channel&&_?n.rows.find(g=>w(g)&&g.channel===y.channel&&g.visitBucket===y.bucket):void 0;r.setAttribute("data-op-context",P&&y?`${y.channel}|${y.bucket}|${_}`:"default"),r.setAttribute("data-op-arm",p),r.setAttribute("data-op-table",n.version);try{e.localStorage.setItem(M,JSON.stringify(i))}catch{}typeof n.carouselSlot=="string"&&Array.isArray(t)&&rn(e,n,n.carouselSlot,t,P&&_?P.shotOrder[_]:null,o)}function tn(e,n,t,r){let o=n.channelVocabulary,i=o?{revision:o.revision,vocabulary:{channels:o.channels.map(c=>({id:c,name:c})),rules:o.rules,sourcePlatforms:[],landingPageTypes:[],visitBuckets:o.visitBuckets}}:null,s=w(t.visit)?t.visit:null,l=ie(s,s?s.lastSeen:null,r,me({location:e.location,referrer:e.document.referrer}),i?{vocabulary:i}:void 0);return t.visit={...l,lastSeen:r},{channel:l.entryChannel??null,bucket:o?se(l.visitCount,o.visitBuckets):ae(l.visitCount)}}function rn(e,n,t,r,o,i){let s=e.document.documentElement,l=(u,a)=>{let b=r[u]?.tags?.[a];return Array.isArray(b)?b:[]},c=(u,a)=>l(u,a.dimension).includes(a.value),C=u=>{if(!o)return 0;let a=o.length;for(let b of l(u,"contentType")){let k=typeof b=="string"?o.indexOf(b):-1;k>=0&&k<a&&(a=k)}return a},d=r.map((u,a)=>a).sort((u,a)=>C(u)-C(a)||u-a),y=n.brandRules??{},x=new Set,_=y.pinnedTag;if(_&&Date.parse(_.window.from)<=i&&i<Date.parse(_.window.to)){let u=d.find(a=>c(a,_));u!==void 0&&(d=[u,...d.filter(a=>a!==u)],x.add(u))}let m=y.minimum;if(m){let u=Math.min(m.within,d.length),a=m.count-d.slice(0,u).filter(h=>c(h,m)).length,b=d.filter(h=>!x.has(h)),k=d.slice(0,u).filter(h=>!x.has(h)).length,E=b.slice(0,k),P=b.slice(k),g=P.filter(h=>c(h,m)),H=E.filter(h=>!c(h,m)),I=a>0?Math.min(a,g.length,H.length):0;if(I>0){let h=g.slice(0,I),D=new Set(H.slice(-I)),be=[...E.filter(A=>!D.has(A)),...h,...E.filter(A=>D.has(A)),...P.filter(A=>!h.includes(A))],he=0;d=d.map(A=>x.has(A)?A:be[he++])}}d.forEach((u,a)=>s.style.setProperty(`--op-${t}-${u+1}`,String(a+1)));let S=d.length?r[d[0]]:void 0;if(!S||typeof S.src!="string")return;let p=e.document.createElement("link");p.setAttribute("rel","preload"),p.setAttribute("as","image"),p.setAttribute("href",S.src),typeof S.srcset=="string"&&p.setAttribute("imagesrcset",S.srcset),typeof S.sizes=="string"&&p.setAttribute("imagesizes",S.sizes),p.setAttribute("fetchpriority","high"),e.document.head.insertBefore(p,e.document.head.querySelector('link[rel="stylesheet"]'))}var N=globalThis;if(N.document&&N.location)try{nn(N)}catch{}})();
+"use strict";
+(() => {
+  // src/sdk/armDraw.ts
+  function fnv1a(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function mix32(h) {
+    h ^= h >>> 16;
+    h = Math.imul(h, 2246822507);
+    h ^= h >>> 13;
+    h = Math.imul(h, 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  }
+  var hash32 = (s) => mix32(fnv1a(s));
+  function bucketOf(visitorId, salt) {
+    return hash32(`${salt}:${visitorId}`) / 4294967296;
+  }
+  function holdoutShare(share) {
+    return Math.min(1, Math.max(0, Number.isFinite(share) ? share : 0));
+  }
+  function armFor(visitorId, h) {
+    const share = holdoutShare(h.share);
+    if (share <= 0) return "personalized";
+    const b = bucketOf(visitorId, h.salt);
+    if (b >= share) return "personalized";
+    const arms = h.arms.length ? h.arms : ["default"];
+    const idx = Math.min(arms.length - 1, Math.floor(b / share * arms.length));
+    return arms[idx] ?? "default";
+  }
+  function defaultArmProbability(h) {
+    const arms = h.arms.length ? h.arms : ["default"];
+    return holdoutShare(h.share) * arms.filter((a) => a === "default").length / arms.length;
+  }
+  var armClassOf = (arm) => arm === "default" ? "default" : "personalized";
+
+  // src/services/platform.ts
+  function deviceClassOf(value) {
+    return value === "mobile" || value === "desktop" ? value : null;
+  }
+  function deviceFromHint(hint) {
+    const value = (hint ?? "").trim();
+    return value === "?1" ? "mobile" : value === "?0" ? "desktop" : null;
+  }
+  function deviceFromUserAgent(ua) {
+    const value = (ua ?? "").trim();
+    if (!/^Mozilla\//.test(value)) return null;
+    if (/\biPad\b/.test(value) || /\bTablet\b/.test(value)) return "desktop";
+    if (/\b(?:iPhone|iPod)\b/.test(value)) return "mobile";
+    if (/\bAndroid\b/.test(value)) return /\bMobile\b/.test(value) ? "mobile" : "desktop";
+    return /Mobi/.test(value) ? "mobile" : "desktop";
+  }
+  function deviceOf(headers) {
+    return deviceFromHint(headers.get("Sec-CH-UA-Mobile")) ?? deviceFromUserAgent(headers.get("User-Agent"));
+  }
+
+  // src/services/visit.ts
+  var VISIT_GAP_MS = 30 * 60 * 1e3;
+  var CLASSIFIER_VERSION = "entry-channel-v1";
+  function recencyBucketOf(value) {
+    return value === "same_day" || value === "within_7_days" || value === "8_to_30_days" || value === "30_and_more" ? value : null;
+  }
+  var ENTRY_CHANNELS = ["direct", "paid_social", "paid_search", "email", "organic", "referral"];
+  var CONTEXT_ID = /^[a-z][a-z0-9_]{0,63}$/;
+  var isContextId = (v) => typeof v === "string" && CONTEXT_ID.test(v) && v !== "unknown" && v !== "any";
+  var ENTRY_LIMITS = { utmMedium: 128, utmSource: 256, utmTerm: 256, utmCampaign: 256, referrer: 2048, siteHost: 253 };
+  var ENTRY_CAMPAIGN_LIMIT = ENTRY_LIMITS.utmCampaign;
+  var ENTRY_TERM_LIMIT = ENTRY_LIMITS.utmTerm;
+  function parsed(value) {
+    try {
+      return new URL(value.includes("://") ? value : `https://${value}`);
+    } catch {
+      return null;
+    }
+  }
+  function authorityHost(value) {
+    if (value === "" || /[/\\?#@\s]/.test(value)) return "";
+    const url = parsed(value);
+    if (!url) return "";
+    if (url.pathname !== "/" || url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "") return "";
+    const separator = value.indexOf(":", value.startsWith("[") ? value.indexOf("]") + 1 : 0);
+    if (separator !== -1 && !/^[0-9]+$/.test(value.slice(separator + 1))) return "";
+    return url.hostname;
+  }
+  function rootStripped(host) {
+    return host.endsWith(".") ? host.slice(0, -1) : host;
+  }
+  function isHostname(value) {
+    const host = authorityHost(value);
+    return host !== "" && host.length <= ENTRY_LIMITS.siteHost;
+  }
+  function hostField(key, hostOnly) {
+    return key === "siteHost" || hostOnly && key === "referrer";
+  }
+  function validEntry(value, hostOnly = false) {
+    if (value === void 0) return true;
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    return Object.entries(value).every(([key, v]) => Object.hasOwn(ENTRY_LIMITS, key) && (v === void 0 || typeof v === "string" && v.length <= ENTRY_LIMITS[key] && (!hostField(key, hostOnly) || v === "" || isHostname(v))));
+  }
+  function entryChannelOf(value) {
+    if (typeof value !== "string") return null;
+    const channel = value.trim().toLowerCase();
+    return ENTRY_CHANNELS.includes(channel) ? channel : null;
+  }
+  function pageView(entry) {
+    return typeof entry.referrer === "string" && siteOf(entry.siteHost) !== "";
+  }
+  function observedChannel(entry, vocabulary) {
+    if (!validEntry(entry) || !entry || !Object.values(entry).some((v) => typeof v === "string")) return void 0;
+    if (vocabulary) return classifyByVocabulary(entry, vocabulary) ?? void 0;
+    const channel = classifyEntryChannel(entry);
+    return channel !== "direct" || pageView(entry) ? channel : void 0;
+  }
+  var tokensOf = (value) => value.split(/[\s_-]+/).filter((token) => token !== "");
+  function ruleHolds(rule, entry) {
+    const medium = norm(entry.utmMedium), source = norm(entry.utmSource), campaign = norm(entry.utmCampaign);
+    if (rule.utmMedium && (medium === "" || !rule.utmMedium.some((m) => norm(m) === medium))) return false;
+    if (rule.utmSource && (source === "" || !rule.utmSource.some((s) => {
+      const wanted = norm(s);
+      return wanted === source || !source.includes(".") && tokensOf(source).includes(wanted);
+    }))) return false;
+    if (rule.utmCampaign && (campaign === "" || !rule.utmCampaign.some((t) => tokensOf(campaign).includes(norm(t))))) return false;
+    if (rule.untagged === true && (medium !== "" || source !== "" || campaign !== "")) return false;
+    if (rule.referrer !== void 0) {
+      const host = hostOf(norm(entry.referrer)), site = siteOf(entry.siteHost);
+      const sameSite = host !== "" && site !== "" && (host === site || host.endsWith(`.${site}`));
+      if (rule.referrer === "none") {
+        if (!pageView(entry) || host !== "" && !sameSite) return false;
+      } else if (rule.referrer === "external") {
+        if (host === "" || sameSite) return false;
+      } else if (!matches(host, rule.referrer.map((domain) => norm(domain)))) return false;
+    }
+    return true;
+  }
+  function classifyByVocabulary(entry, vocabulary) {
+    for (const rule of vocabulary.rules) if (ruleHolds(rule, entry)) return rule.channel;
+    return null;
+  }
+  function sourcePlatformOf(entry, vocabulary) {
+    if (!entry || !validEntry(entry)) return void 0;
+    const platforms = vocabulary.sourcePlatforms;
+    const byHost = (host) => platforms.find((p) => matches(host, p.networks.map((n) => norm(n))))?.id;
+    const source = norm(entry.utmSource);
+    if (source !== "") {
+      if (source.includes(".")) {
+        const id = byHost(hostOf(source));
+        if (id) return id;
+      } else for (const token of sourceTokens(source)) {
+        if (!SOCIAL_SOURCES.has(token) && !SEARCH_SOURCES.has(token)) continue;
+        const id = platforms.find((p) => p.networks.some((n) => norm(n).split(".")[0] === token))?.id;
+        if (id) return id;
+      }
+    }
+    return byHost(hostOf(norm(entry.referrer)));
+  }
+  function landingPageTypeOf(pageType, vocabulary) {
+    if (typeof pageType !== "string") return void 0;
+    const id = pageType.trim().toLowerCase();
+    return vocabulary.landingPageTypes.some((t) => t.id === id) ? id : void 0;
+  }
+  var vocabularyMark = (v) => typeof v === "number" && Number.isSafeInteger(v) && v >= 1;
+  function validVisitContext(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const v = value;
+    const marked = vocabularyMark(v.vocabularyRevision);
+    return (v.visitCount === void 0 || Number.isSafeInteger(v.visitCount) && v.visitCount >= 1) && (v.lastVisitAt === void 0 || Number.isSafeInteger(v.lastVisitAt) && v.lastVisitAt >= 0) && (v.vocabularyRevision === void 0 || marked) && (v.entryChannel === void 0 || entryChannelOf(v.entryChannel) === v.entryChannel || marked && isContextId(v.entryChannel)) && (v.sourcePlatform === void 0 || marked && isContextId(v.sourcePlatform)) && (v.landingPageType === void 0 || marked && isContextId(v.landingPageType)) && (v.device === void 0 || deviceClassOf(v.device) === v.device) && (v.recency === void 0 || recencyBucketOf(v.recency) === v.recency);
+  }
+  var needsMark = (v) => v.entryChannel !== void 0 && entryChannelOf(v.entryChannel) !== v.entryChannel || v.sourcePlatform !== void 0 || v.landingPageType !== void 0;
+  function liveVisit(previous, lastSeen, now, entry, inputs) {
+    const prior = previous && validVisitContext(previous) ? previous : void 0;
+    const opening = isNewVisit(lastSeen, now);
+    const carried = !opening ? prior : void 0;
+    const published = inputs?.vocabulary ?? null;
+    const out = {
+      visitCount: nextVisitCount(prior?.visitCount, lastSeen, now),
+      lastVisitAt: opening ? now : prior?.lastVisitAt ?? now,
+      entryChannel: carried?.entryChannel ?? observedChannel(entry, published?.vocabulary)
+    };
+    const sourcePlatform = carried?.sourcePlatform ?? (published ? sourcePlatformOf(entry, published.vocabulary) : void 0);
+    const landingPageType = carried?.landingPageType ?? (published ? landingPageTypeOf(inputs?.pageType, published.vocabulary) : void 0);
+    if (sourcePlatform !== void 0) out.sourcePlatform = sourcePlatform;
+    if (landingPageType !== void 0) out.landingPageType = landingPageType;
+    if (needsMark(out)) {
+      const mark = published?.revision ?? carried?.vocabularyRevision;
+      if (vocabularyMark(mark)) out.vocabularyRevision = mark;
+    }
+    return out;
+  }
+  function isNewVisit(lastSeenMs, nowMs, gapMs = VISIT_GAP_MS) {
+    if (lastSeenMs === null || lastSeenMs === void 0 || !Number.isFinite(lastSeenMs)) return true;
+    return nowMs - lastSeenMs >= gapMs;
+  }
+  function nextVisitCount(previous, lastSeenMs, nowMs, gapMs = VISIT_GAP_MS) {
+    const prior = typeof previous === "number" && Number.isFinite(previous) && previous >= 1 ? Math.floor(previous) : 0;
+    if (prior === 0) return 1;
+    return isNewVisit(lastSeenMs, nowMs, gapMs) ? prior + 1 : prior;
+  }
+  function bucketNamesOf(cut) {
+    return cut.map((bound, i) => {
+      const next = cut[i + 1];
+      if (next === void 0) return `${bound}+`;
+      return next - 1 === bound ? String(bound) : `${bound}-${next - 1}`;
+    });
+  }
+  function visitBucketUnder(n, cut, names = bucketNamesOf(cut)) {
+    if (n === null || n === void 0 || !Number.isFinite(n) || n < 1) return "unknown";
+    let at = 0;
+    for (let i = 0; i < cut.length; i++) if (n >= cut[i]) at = i;
+    return names[at] ?? "unknown";
+  }
+  function visitBucket(visitCount) {
+    const n = typeof visitCount === "number" && Number.isFinite(visitCount) ? Math.floor(visitCount) : 1;
+    if (n <= 1) return "1";
+    if (n <= 3) return "2-3";
+    return "4+";
+  }
+  var PAID_SEARCH_MEDIUMS = /* @__PURE__ */ new Set(["cpc", "ppc", "paidsearch", "paid_search", "paid-search", "sem", "search_paid"]);
+  var PAID_SOCIAL_MEDIUMS = /* @__PURE__ */ new Set(["paid_social", "paidsocial", "paid-social", "social_paid", "display", "banner"]);
+  var NETWORK_PAID_MEDIUMS = /* @__PURE__ */ new Set(["paid", "cpm"]);
+  var EMAIL_MEDIUMS = /* @__PURE__ */ new Set(["email", "e-mail", "e_mail", "newsletter", "crm"]);
+  var ORGANIC_MEDIUMS = /* @__PURE__ */ new Set(["organic", "organic_search"]);
+  var REFERRAL_MEDIUMS = /* @__PURE__ */ new Set(["referral", "affiliate", "partner"]);
+  var SOCIAL_MEDIUMS = /* @__PURE__ */ new Set(["social", "social_media", "sm"]);
+  var EMAIL_SOURCES = /* @__PURE__ */ new Set(["klaviyo", "mailchimp", "braze", "sfmc", "salesforce_marketing_cloud", "sendgrid", "iterable", "newsletter", "email"]);
+  var SEARCH_HOSTS = [
+    // google, per market
+    "google.com",
+    "google.ca",
+    "google.de",
+    "google.fr",
+    "google.it",
+    "google.es",
+    "google.nl",
+    "google.be",
+    "google.ch",
+    "google.at",
+    "google.se",
+    "google.no",
+    "google.dk",
+    "google.fi",
+    "google.ie",
+    "google.pt",
+    "google.pl",
+    "google.cz",
+    "google.sk",
+    "google.hu",
+    "google.ro",
+    "google.bg",
+    "google.gr",
+    "google.hr",
+    "google.si",
+    "google.lt",
+    "google.lv",
+    "google.ee",
+    "google.rs",
+    "google.ru",
+    "google.cl",
+    "google.ae",
+    "google.co.uk",
+    "google.co.in",
+    "google.co.jp",
+    "google.co.kr",
+    "google.co.id",
+    "google.co.th",
+    "google.co.nz",
+    "google.co.za",
+    "google.co.il",
+    "google.com.au",
+    "google.com.br",
+    "google.com.mx",
+    "google.com.co",
+    "google.com.ar",
+    "google.com.pe",
+    "google.com.tr",
+    "google.com.sa",
+    "google.com.eg",
+    "google.com.ng",
+    "google.com.hk",
+    "google.com.tw",
+    "google.com.sg",
+    "google.com.my",
+    "google.com.ph",
+    "google.com.vn",
+    "google.com.ua",
+    // yahoo, per market
+    "yahoo.com",
+    "yahoo.ca",
+    "yahoo.de",
+    "yahoo.es",
+    "yahoo.fr",
+    "yahoo.it",
+    "yahoo.co.jp",
+    "yahoo.co.uk",
+    "yahoo.com.au",
+    "yahoo.com.br",
+    "yahoo.com.mx",
+    // yandex, per market
+    "yandex.com",
+    "yandex.ru",
+    "yandex.by",
+    "yandex.kz",
+    "yandex.uz",
+    "yandex.com.tr",
+    // the single-domain networks
+    "bing.com",
+    "duckduckgo.com",
+    "ecosia.org",
+    "baidu.com",
+    "brave.com",
+    "startpage.com"
+  ];
+  var SOCIAL_HOSTS = [
+    "facebook.com",
+    "fb.com",
+    "fb.me",
+    "meta.com",
+    "instagram.com",
+    "tiktok.com",
+    "pinterest.com",
+    "snapchat.com",
+    "twitter.com",
+    "x.com",
+    "t.co",
+    "linkedin.com",
+    "lnkd.in",
+    "reddit.com",
+    "youtube.com",
+    "threads.net"
+  ];
+  var SOCIAL_SOURCES = /* @__PURE__ */ new Set(["facebook", "fb", "meta", "instagram", "tiktok", "pinterest", "snapchat", "twitter", "linkedin", "reddit", "youtube", "threads"]);
+  var SEARCH_SOURCES = /* @__PURE__ */ new Set(["google", "bing", "yahoo", "duckduckgo", "yandex", "baidu", "ecosia", "brave", "startpage"]);
+  var SOURCE_ALIASES = { fb: "facebook", ig: "instagram", insta: "instagram", yt: "youtube", ddg: "duckduckgo" };
+  function norm(v) {
+    return typeof v === "string" ? v.trim().toLowerCase() : "";
+  }
+  function hostOf(referrer) {
+    const url = referrer === "" ? null : parsed(referrer);
+    return url ? rootStripped(url.hostname.toLowerCase()) : "";
+  }
+  function siteOf(value) {
+    return typeof value === "string" ? rootStripped(authorityHost(value.trim())) : "";
+  }
+  var matches = (host, domains) => host !== "" && domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+  function sourceTokens(source) {
+    return source.split(/[\s_-]+/).filter((token) => token !== "").map((token) => SOURCE_ALIASES[token] ?? token);
+  }
+  function declaresNetwork(source, names, hosts) {
+    if (source === "") return false;
+    return source.includes(".") ? matches(hostOf(source), hosts) : sourceTokens(source).some((token) => names.has(token));
+  }
+  var declaresSocial = (source) => declaresNetwork(source, SOCIAL_SOURCES, SOCIAL_HOSTS);
+  var declaresSearch = (source) => declaresNetwork(source, SEARCH_SOURCES, SEARCH_HOSTS);
+  var GCLID_LIMIT = 512;
+  function autoTagged(signals) {
+    const id = signals.gclid;
+    return typeof id === "string" && id.trim() !== "" && id.length <= GCLID_LIMIT;
+  }
+  function classifyEntryChannel(signals) {
+    const medium = norm(signals.utmMedium);
+    const source = norm(signals.utmSource);
+    if (source === "" && autoTagged(signals)) return "paid_search";
+    if (medium !== "") {
+      if (PAID_SEARCH_MEDIUMS.has(medium) || NETWORK_PAID_MEDIUMS.has(medium)) {
+        if (declaresSocial(source)) return "paid_social";
+        if (PAID_SEARCH_MEDIUMS.has(medium) || declaresSearch(source)) return "paid_search";
+      } else if (PAID_SOCIAL_MEDIUMS.has(medium)) return "paid_social";
+      else if (EMAIL_MEDIUMS.has(medium)) return "email";
+      else if (REFERRAL_MEDIUMS.has(medium)) return "referral";
+      else if (ORGANIC_MEDIUMS.has(medium)) return "organic";
+      else if (SOCIAL_MEDIUMS.has(medium)) return declaresSocial(source) ? "paid_social" : "referral";
+    }
+    if (source !== "" && EMAIL_SOURCES.has(source)) return "email";
+    const host = hostOf(norm(signals.referrer));
+    if (host === "") return "direct";
+    const site = siteOf(signals.siteHost);
+    if (site !== "" && (host === site || host.endsWith(`.${site}`))) return "direct";
+    if (matches(host, SEARCH_HOSTS)) return "organic";
+    return "referral";
+  }
+
+  // src/sdk/identity.ts
+  var DEFAULT_VISITOR_KEY = "opt_visitor_id";
+  var HEAD_STATE_KEY = "opt_head";
+  var YEAR_SECONDS = 60 * 60 * 24 * 365;
+  var DEFAULT_SESSION_IDLE_MS = 30 * 60 * 1e3;
+  function entrySignals(host) {
+    let utmMedium = "", utmSource = "", utmTerm = "", utmCampaign = "";
+    try {
+      const usp = new URLSearchParams(host.location?.search ?? "");
+      utmMedium = usp.get("utm_medium") ?? "";
+      utmSource = usp.get("utm_source") ?? "";
+      utmTerm = usp.get("utm_term") ?? "";
+      if (utmTerm.length > ENTRY_TERM_LIMIT) utmTerm = "";
+      utmCampaign = usp.get("utm_campaign") ?? "";
+      if (utmCampaign.length > ENTRY_CAMPAIGN_LIMIT) utmCampaign = "";
+    } catch {
+    }
+    return {
+      utmMedium,
+      utmSource,
+      ...utmTerm ? { utmTerm } : {},
+      ...utmCampaign ? { utmCampaign } : {},
+      referrer: host.referrer ?? "",
+      siteHost: host.location?.hostname ?? ""
+    };
+  }
+
+  // src/sdk/head.ts
+  var record = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  var isClass = (v) => v === "default" || v === "personalized";
+  function readBlock(page2, id) {
+    try {
+      const el = page2.document.getElementById(id);
+      return el ? JSON.parse(el.textContent || "null") : null;
+    } catch {
+      return null;
+    }
+  }
+  function tableOf(v) {
+    if (!record(v) || typeof v.version !== "string" || typeof v.classifierVersion !== "string" || !Array.isArray(v.rows) || !record(v.holdout) || typeof v.holdout.share !== "number" || !Array.isArray(v.holdout.arms) || v.carouselSlot !== null && typeof v.carouselSlot !== "string") return null;
+    return v;
+  }
+  function stateOf(raw) {
+    try {
+      const v = JSON.parse(raw || "{}");
+      return record(v) ? v : {};
+    } catch {
+      return {};
+    }
+  }
+  function cookieRefuses(page2, choice) {
+    const own = choice === "tracking" ? "opt_tracking_consent" : "opt_personalization_enabled";
+    return page2.document.cookie.split(";").some((pair) => {
+      const at = pair.indexOf("="), name = pair.slice(0, at).trim(), value = pair.slice(at + 1).trim();
+      return at > 0 && (name === own ? value === "false" : name.startsWith("opt_shopper_refusal") && name.endsWith(`_${choice}`) && value !== "");
+    });
+  }
+  function main(page2) {
+    const table = tableOf(readBlock(page2, "op-context-table")), images = readBlock(page2, "op-images");
+    if (!table) return;
+    const root = page2.document.documentElement, now = Date.now();
+    let state = {};
+    try {
+      state = stateOf(page2.localStorage.getItem(HEAD_STATE_KEY));
+    } catch {
+      state = {};
+    }
+    const hint = (root.getAttribute("data-op-consent") || "").split(/\s+/);
+    const kept = record(state.consent) ? state.consent : null;
+    const refusesTracking = cookieRefuses(page2, "tracking") || kept !== null && kept.tracking !== true;
+    const tracking = !refusesTracking && (kept !== null || hint.includes("tracking") || hint.includes("personalization"));
+    const personalization = tracking && (kept ? kept.personalization === true : hint.includes("personalization")) && !cookieRefuses(page2, "personalization");
+    const cell = tracking ? cellOf(page2, table, state, now) : null;
+    if (refusesTracking) delete state.visit;
+    const nav = page2.navigator;
+    const device = deviceOf({ get: (name) => name === "User-Agent" ? nav.userAgent : name === "Sec-CH-UA-Mobile" && nav.userAgentData ? nav.userAgentData.mobile ? "?1" : "?0" : null });
+    const holdout = table.holdout, arms = holdout.arms.length ? holdout.arms : ["default"];
+    let cls, rotated = false, visitor = null;
+    try {
+      visitor = page2.localStorage.getItem(DEFAULT_VISITOR_KEY);
+    } catch {
+      visitor = null;
+    }
+    const experiment = record(state.experiment) && typeof state.experiment.id === "string" ? state.experiment : null;
+    const moved = (version) => typeof version === "number" && typeof holdout.saltVersion === "number" && version !== holdout.saltVersion;
+    const draw = () => {
+      const drawn = crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296 < defaultArmProbability({ share: holdout.share, arms }) ? "default" : "personalized";
+      state.arm = { class: drawn, saltVersion: holdout.saltVersion, tableVersion: table.version };
+      return drawn;
+    };
+    if (visitor && experiment) {
+      cls = armClassOf(armFor(visitor, { share: holdout.share, salt: experiment.id.split(":").slice(2).join(":"), arms }));
+      rotated = moved(experiment.saltVersion);
+    } else if (record(state.arm) && isClass(state.arm.class)) {
+      rotated = moved(state.arm.saltVersion);
+      cls = rotated ? draw() : state.arm.class;
+    } else cls = draw();
+    const row = personalization && cls === "personalized" && !rotated && table.classifierVersion === CLASSIFIER_VERSION && cell?.channel && device ? table.rows.find((r) => record(r) && r.channel === cell.channel && r.visitBucket === cell.bucket) : void 0;
+    root.setAttribute("data-op-context", row && cell ? `${cell.channel}|${cell.bucket}|${device}` : "default");
+    root.setAttribute("data-op-arm", cls);
+    root.setAttribute("data-op-table", table.version);
+    try {
+      page2.localStorage.setItem(HEAD_STATE_KEY, JSON.stringify(state));
+    } catch {
+    }
+    if (typeof table.carouselSlot === "string" && Array.isArray(images)) paint(page2, table, table.carouselSlot, images, row && device ? row.shotOrder[device] : null, now);
+  }
+  function cellOf(page2, table, state, now) {
+    const cv = table.channelVocabulary;
+    const vocabulary = cv ? {
+      revision: cv.revision,
+      vocabulary: { channels: cv.channels.map((id) => ({ id, name: id })), rules: cv.rules, sourcePlatforms: [], landingPageTypes: [], visitBuckets: cv.visitBuckets }
+    } : null;
+    const prior = record(state.visit) ? state.visit : null;
+    const visit = liveVisit(prior, prior ? prior.lastSeen : null, now, entrySignals({ location: page2.location, referrer: page2.document.referrer }), vocabulary ? { vocabulary } : void 0);
+    state.visit = { ...visit, lastSeen: now };
+    return { channel: visit.entryChannel ?? null, bucket: cv ? visitBucketUnder(visit.visitCount, cv.visitBuckets) : visitBucket(visit.visitCount) };
+  }
+  function paint(page2, table, slot, images, shots, now) {
+    const root = page2.document.documentElement;
+    const valuesOf = (n, dimension) => {
+      const v = images[n]?.tags?.[dimension];
+      return Array.isArray(v) ? v : [];
+    };
+    const tagged = (n, rule) => valuesOf(n, rule.dimension).includes(rule.value);
+    const rank = (n) => {
+      if (!shots) return 0;
+      let best = shots.length;
+      for (const value of valuesOf(n, "contentType")) {
+        const at = typeof value === "string" ? shots.indexOf(value) : -1;
+        if (at >= 0 && at < best) best = at;
+      }
+      return best;
+    };
+    let order = images.map((_, n) => n).sort((a, b) => rank(a) - rank(b) || a - b);
+    const rules = table.brandRules ?? {}, fixed = /* @__PURE__ */ new Set();
+    const pin = rules.pinnedTag;
+    if (pin && Date.parse(pin.window.from) <= now && now < Date.parse(pin.window.to)) {
+      const lead2 = order.find((n) => tagged(n, pin));
+      if (lead2 !== void 0) {
+        order = [lead2, ...order.filter((n) => n !== lead2)];
+        fixed.add(lead2);
+      }
+    }
+    const minimum = rules.minimum;
+    if (minimum) {
+      const within = Math.min(minimum.within, order.length);
+      const need = minimum.count - order.slice(0, within).filter((n) => tagged(n, minimum)).length;
+      const ranked = order.filter((n) => !fixed.has(n)), kept = order.slice(0, within).filter((n) => !fixed.has(n)).length;
+      const head = ranked.slice(0, kept), tail = ranked.slice(kept);
+      const pool = tail.filter((n) => tagged(n, minimum)), leaving = head.filter((n) => !tagged(n, minimum));
+      const k = need > 0 ? Math.min(need, pool.length, leaving.length) : 0;
+      if (k > 0) {
+        const incoming = pool.slice(0, k), displaced = new Set(leaving.slice(-k));
+        const next = [...head.filter((n) => !displaced.has(n)), ...incoming, ...head.filter((n) => displaced.has(n)), ...tail.filter((n) => !incoming.includes(n))];
+        let j = 0;
+        order = order.map((n) => fixed.has(n) ? n : next[j++]);
+      }
+    }
+    order.forEach((n, at) => root.style.setProperty(`--op-${slot}-${n + 1}`, String(at + 1)));
+    const lead = order.length ? images[order[0]] : void 0;
+    if (!lead || typeof lead.src !== "string") return;
+    const link = page2.document.createElement("link");
+    link.setAttribute("rel", "preload");
+    link.setAttribute("as", "image");
+    link.setAttribute("href", lead.src);
+    if (typeof lead.srcset === "string") link.setAttribute("imagesrcset", lead.srcset);
+    if (typeof lead.sizes === "string") link.setAttribute("imagesizes", lead.sizes);
+    link.setAttribute("fetchpriority", "high");
+    page2.document.head.insertBefore(link, page2.document.head.querySelector('link[rel="stylesheet"]'));
+  }
+  var page = globalThis;
+  if (page.document && page.location) {
+    try {
+      main(page);
+    } catch {
+    }
+  }
+})();
