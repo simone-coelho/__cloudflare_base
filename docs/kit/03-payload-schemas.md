@@ -808,7 +808,7 @@ The exploration mode `adjacent-swap` in the learn document is set only on a page
 slot, with a share from 0 to 1: on that share of the slot's decisions, read from the decision's own
 exploration bucket (the shopper, the slot and the hour), exactly one pair of adjacent positions of the
 slot's ranked order swaps places, the pair chosen from the same bucket among the pairs neither of whose
-positions a pin or an off-limits module holds (and none touching a module under a merchandiser's reject
+positions a pin or an off-limits module holds (and none that would carry an item carrying the slot's `minimum` tag out of its first `within` positions, nor one touching a module under a merchandiser's reject
 or freeze), so the same shopper in the same hour is swapped the same pair; outside the share, at a share
 of 0, and where no pair is free, the slot is served exactly as without the mode. A decision served the
 configured order for the shopper's context is served that order exactly and never swapped, with no

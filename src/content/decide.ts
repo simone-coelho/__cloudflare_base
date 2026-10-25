@@ -1292,7 +1292,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     if (!s || s.layout !== true || s.offLimits || below.has(s.slot) || (i.replayRankingSlots && !i.replayRankingSlots.has(s.slot)) || servedOrder) return null;
     const cfg = learning.exploreOf!(s.slot);
     if (cfg?.mode !== ADJACENT_SWAP) return null;
-    const pairs = served.slice(1).flatMap((d, k) => (d.strategy !== 'tenant-pinned' && served[k]!.strategy !== 'tenant-pinned' ? [k + 1] : []));
+    // P83 (R-P310): the slot's guarantee holds on the served order: a pair that would carry an item carrying its tag
+    // out of its first `within` positions (a carrier at `within`, a non-carrier after it) is no candidate, as a pair
+    // touching a fixed position is none.
+    const rule = s.minimum, carries = (id: string) => rule !== undefined && (byId.get(id)?.tags[rule.dimension] ?? []).includes(rule.value);
+    const pairs = served.slice(1).flatMap((d, k) => (d.strategy !== 'tenant-pinned' && served[k]!.strategy !== 'tenant-pinned'
+      && !(rule && k + 1 === rule.within && carries(served[k]!.contentId) && !carries(d.contentId)) ? [k + 1] : []));
     const controlled = new Set<string>();
     if (learning.controlOf) for (const d of served) if (learning.controlOf(s.slot, d.contentId)) controlled.add(d.contentId);
     // P30: on a context-only layout slot the swap's bucket is hashed on the context and the hour, as its exploration is.
