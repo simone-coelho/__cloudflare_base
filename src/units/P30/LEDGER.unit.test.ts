@@ -416,7 +416,7 @@ describe('unit:P30.X3 (freeze item 10)', () => {
         `${host}: P30.X3 — without the region two regions share a key; with it one region shares a key and two regions do not`).toEqual([true, true, false]);
       const t = await mount(host, { pieces: MODULES, slots: contextOnlySlots(), learn: LEARN });
       precondition(t, 'P30.X3');
-      const buckets = [await keyOf(t, DIRECT_ENTRY, NEW_YORK), await keyOf(t, DIRECT_ENTRY, NEW_YORK, false)];
+      const buckets = [await keyOf(t, DIRECT_ENTRY, NEW_YORK), await keyOf(t, {}, NEW_YORK, false)];
       expect([buckets.every(Boolean), buckets[0] === buckets[1]], `${host}: P30.X3 — a first visit and an unknown visit bucket do not share a key (${JSON.stringify(buckets)})`).toEqual([true, false]);
     }, 120_000);
   }

@@ -2,7 +2,7 @@ import type { Env } from '@/types/env';
 import { consentFromCookies, consentOf, intersectConsent, storedConsent, type Consent } from '@/content/consent';
 import { SessionManager } from '@/services/SessionManager';
 import { shopperObject } from '@/tenancy/objects';
-import { newAnonymousSession, signSessionCapability, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from './sessionCapability';
+import { newAnonymousSession, signSessionCapability, SessionAccessError, SHOPPER_HEADER, type MintTarget, type SessionCapability } from './sessionCapability';
 
 /** Exact owned source only; no cookies, user pointers or forwards select state. */
 export async function ownedConsent(env: Env, principal: SessionCapability, capability: string, cookie?: string | null): Promise<Consent> {
@@ -32,9 +32,12 @@ export async function establishRefusal(env: Env, principal: SessionCapability, c
   return stored;
 }
 
-/** The new grant is not returned until every necessary refusal write succeeds. */
-export async function anonymousWithConsent(env: Env, tenant: string, consent: Consent) {
-  const session = await newAnonymousSession(env, tenant);
+/**
+ * The new grant is not returned until every necessary refusal write succeeds.
+ * P84: `target`, the class a brand-new browser's page drew, is passed to the mint.
+ */
+export async function anonymousWithConsent(env: Env, tenant: string, consent: Consent, target?: MintTarget) {
+  const session = await newAnonymousSession(env, tenant, target);
   {
     const response = await shopperObject(env.SHOPPER_REFLEX, session.subject, tenant).fetch('https://shopper-reflex/identity/activate', {
       method: 'POST', headers: { [SHOPPER_HEADER]: session.capability, 'X-Tenant': tenant, 'Content-Type': 'application/json' }, body: JSON.stringify({ consent }),

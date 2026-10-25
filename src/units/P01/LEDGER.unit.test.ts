@@ -156,7 +156,7 @@ describe('unit:P01.O2', () => {
       expect((await noPersonalization.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status).toBe(200);
       const cases: Array<[string, Shopper, Record<string, string> | undefined]> = [
         ['another context (direct, first visit)', otherContext, undefined],
-        ['an unknown visit bucket', unknownBucket, PAID_SOCIAL_ENTRY],
+        ['an unknown visit bucket', unknownBucket, undefined],
         ['an unknown channel', unknownChannel, undefined],
         ['no personalization consent', noPersonalization, PAID_SOCIAL_ENTRY],
       ];

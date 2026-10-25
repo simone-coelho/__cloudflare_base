@@ -797,6 +797,14 @@ export async function serveContentDecisions(
   const vocabulary = learn.contextVocabulary ?? null;
   const terms = contextTermsOf(vocabulary);
   const visit = projectVisit(shopper.visit, shopper.lastSeen, now, consent.tracking ? r.entry : undefined, vocabulary);
+  // P84 (E8, R-P363 C2 as R-P371/R-P372 narrow it): a shopper with no stored
+  // visit, whose recorded choice grants tracking and whose request's arrival
+  // (`entry`) classifies to a channel, opens her first visit here: her cell
+  // reads visit bucket 1, as the head script's does for a browser with no
+  // stored visit, so her first decision is her context's row. Otherwise (no or
+  // an unrecognised arrival, a stored visit the projection cannot count) the
+  // bucket stays unknown.
+  const arrivingFirst = consent.tracking && !!r.entry && visit.entryChannel !== null && !shopper.visit && (shopper.lastSeen === null || shopper.lastSeen === undefined);
   // P37: first-paint context. The device is the one this request reports; the
   // recency is the visit's — the bucket the visit in progress recorded, or for a
   // visit about to open the bucket its stored last visit gives it. Both read off
@@ -811,7 +819,7 @@ export async function serveContentDecisions(
     // and only a value of the tenant's vocabulary (today's six words) (P36).
     channel: consent.tracking ? visit.entryChannel ?? channelIn(r.channel, terms.published ? terms.channels : null) : null,
     terms,
-    visitNumber: personalized ? visit.visitNumber : null,
+    visitNumber: personalized ? visit.visitNumber ?? (arrivingFirst ? 1 : null) : null,
     // R32(2): the ONE mapping point from the reported vocabulary to the
     // persisted cell token, so the ladder key and every learning statistic keyed
     // on `s=mid` are exactly what they were before C4. `cellFor` records

@@ -52,6 +52,7 @@ function hostOf(referrer) {
 
 // src/sdk/identity.ts
 var DEFAULT_VISITOR_KEY = "opt_visitor_id";
+var HEAD_STATE_KEY = "opt_head";
 var YEAR_SECONDS = 60 * 60 * 24 * 365;
 function writeVisitorId(host, key, id) {
   try {
@@ -1937,6 +1938,32 @@ function createListen(core, opts = {}) {
     if (!core.trackingAllowed) resetCapture();
     if (!permitted(current)) deliver(null, current?.page ?? "");
   });
+  function keepForHead(experiment) {
+    try {
+      let prior = null;
+      try {
+        prior = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? "null");
+      } catch {
+        prior = null;
+      }
+      const c = core.consent, e = experiment;
+      host.storage.set(HEAD_STATE_KEY, JSON.stringify({
+        ...prior && typeof prior === "object" && !Array.isArray(prior) ? prior : {},
+        ...e && typeof e.id === "string" ? { experiment: { id: e.id, saltVersion: typeof e.saltVersion === "number" ? e.saltVersion : null } } : {},
+        consent: { personalization: c.tracking && c.personalization, tracking: c.tracking }
+      }));
+    } catch {
+    }
+  }
+  function headDraw() {
+    try {
+      const state = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? "null");
+      const arm = state?.arm;
+      return arm && (arm.class === "default" || arm.class === "personalized") && typeof arm.tableVersion === "string" && arm.tableVersion.length >= 1 && arm.tableVersion.length <= 128 ? JSON.stringify({ class: arm.class, tableVersion: arm.tableVersion }) : void 0;
+    } catch {
+      return void 0;
+    }
+  }
   function admittedCurrent() {
     const candidate = current;
     if (!candidate) return null;
@@ -2048,7 +2075,16 @@ function createListen(core, opts = {}) {
     try {
       const nothingToShow = nothingToShowField(o.nothingToShow);
       const anchor = anchorSignals(o);
-      const first2 = { body: { page: o.page, pageInstance, ...core.config.brand ? { brand: core.config.brand } : {}, ...nothingToShow ? { nothingToShow } : {}, ...anchor } };
+      const arrival = core.consent.tracking ? snapshotEntry(core.entry) : void 0, drawn = headDraw();
+      const first2 = { body: {
+        page: o.page,
+        pageInstance,
+        ...core.config.brand ? { brand: core.config.brand } : {},
+        ...nothingToShow ? { nothingToShow } : {},
+        ...anchor,
+        ...arrival ? { entry: arrival } : {},
+        ...drawn ? { arm: drawn } : {}
+      } };
       const pending = core.ready(false, first2);
       const generation = core.generation;
       const active = () => owner === intent && generation === core.generation;
@@ -2075,6 +2111,7 @@ function createListen(core, opts = {}) {
         if (!timedOut()) deliver(null, o.page);
         return null;
       }
+      keepForHead(json.experiment);
       const set = {
         page: json.page ?? o.page,
         ...json.pageInstance ? { pageInstance: json.pageInstance } : {},

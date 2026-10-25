@@ -2,6 +2,11 @@
 // One build owns everything generated from src/sdk: the two served bundles, the
 // same bytes under the served path that names their version, and the package in
 // packages/sdk (its bundles, its type declarations and its manifest's version).
+// P84: and the head script (src/sdk/head.ts), a third bundle built like the
+// other two (unminified) and kept in the same three places, with
+// `edge-head.js.csp` beside each copy: the content-security-policy source of
+// those exact bytes, `sha256-<base64 SHA-256>`, for the server render that
+// inlines it. It has no type declarations: nothing imports it.
 // `--check` rebuilds all of it in memory and fails on the first difference.
 import { build as esbuild } from 'esbuild';
 import { Buffer } from 'node:buffer';
@@ -15,7 +20,12 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const SDK_TARGETS = [
   { entry: 'src/sdk/index.ts', output: 'public/sdk/edge-personalization.esm.js', format: 'esm' },
   { entry: 'src/sdk/browser.ts', output: 'public/sdk/edge-personalization.js', format: 'iife' },
+  { entry: 'src/sdk/head.ts', output: 'public/sdk/edge-head.js', format: 'iife' },
 ];
+/** P84: the head script, the target a server render inlines in the page's head rather than a bundle a page loads. */
+export const isHeadScript = target => target.entry === 'src/sdk/head.ts';
+/** P84: the content-security-policy source that admits exactly these inline bytes. */
+const cspOf = bytes => Buffer.from(`sha256-${createHash('sha256').update(bytes).digest('base64')}`);
 /** The package the SDK is distributed in: its manifest is written by hand, the rest is generated. */
 export const SDK_PACKAGE = 'packages/sdk';
 const SDK_TYPES = SDK_PACKAGE + '/types';
@@ -45,7 +55,8 @@ export function sdkOptionsForVersion(root, version) {
     absWorkingDir: root, entryPoints: [target.entry], outfile: target.output, format: target.format,
     bundle: true, platform: 'browser', target: 'es2022', minify: false, sourcemap: false,
     legalComments: 'none', logLevel: 'silent', metafile: true, write: false,
-    banner: { js: `/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */` },
+    banner: { js: isHeadScript(target) ? `/* edge-head v${version} — the head script: the carousel's context order before paint (P84). */`
+      : `/* edge-personalization SDK v${version} — one package: core (identity, transport), emit (four capture paths), listen (decisions). */` },
   }));
 }
 const generated = result => result.outputFiles?.length === 1 && result.outputFiles[0].contents
@@ -72,7 +83,10 @@ export async function buildSDK({ root = ROOT, write = false, build = esbuild, pl
     for (const [i, result] of results.entries()) {
       const bytes = generated(result);
       if (!bytes) throw new Error(`SDK bundle not generated: ${SDK_TARGETS[i].output}`);
-      for (const path of outputsOf(SDK_TARGETS[i], version)) await writeGenerated(root, path, bytes);
+      for (const path of outputsOf(SDK_TARGETS[i], version)) {
+        await writeGenerated(root, path, bytes);
+        if (isHeadScript(SDK_TARGETS[i])) await writeGenerated(root, `${path}.csp`, cspOf(bytes));
+      }
     }
   }
   return results;
@@ -80,7 +94,11 @@ export async function buildSDK({ root = ROOT, write = false, build = esbuild, pl
 export async function verifySDK({ root = ROOT, build = esbuild, plugins = [] } = {}) {
   const results = await buildSDK({ root, build, plugins }), version = sdkVersion(root);
   for (const [i, result] of results.entries()) {
-    for (const path of outputsOf(SDK_TARGETS[i], version)) await requireExact(root, path, generated(result));
+    for (const path of outputsOf(SDK_TARGETS[i], version)) {
+      const bytes = generated(result);
+      await requireExact(root, path, bytes);
+      if (isHeadScript(SDK_TARGETS[i])) await requireExact(root, `${path}.csp`, bytes && cspOf(bytes));
+    }
   }
   return results;
 }
@@ -100,14 +118,14 @@ export async function sdkDeclarations(root = ROOT) {
   const said = diagnostics => diagnostics.map(d => `${d.file ? relative(root, d.file.fileName) + ': ' : ''}${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`).join('\n');
   if (!parsed || parsed.errors.length) throw new Error('SDK declarations unavailable: ' + said(parsed ? parsed.errors : [read.error]));
   const source = resolve(root, 'src');
-  const program = ts.createProgram({ rootNames: SDK_TARGETS.map(target => resolve(root, target.entry)),
+  const program = ts.createProgram({ rootNames: SDK_TARGETS.filter(target => !isHeadScript(target)).map(target => resolve(root, target.entry)),
     options: { ...parsed.options, noEmit: false, declaration: true, emitDeclarationOnly: true, declarationMap: false,
       incremental: false, composite: false, rootDir: source, outDir: source, newLine: ts.NewLineKind.LineFeed } });
   const emitted = new Map();
   const result = program.emit(undefined, (name, text) => emitted.set(relative(root, name).split(sep).join('/'), text), undefined, true);
   const problems = [...program.getOptionsDiagnostics(), ...result.diagnostics];
   if (result.emitSkipped || problems.length) throw new Error('SDK declarations unavailable: ' + said(problems));
-  const declarations = new Map(), pending = SDK_TARGETS.map(target => target.entry.replace(/\.ts$/, '.d.ts'));
+  const declarations = new Map(), pending = SDK_TARGETS.filter(target => !isHeadScript(target)).map(target => target.entry.replace(/\.ts$/, '.d.ts'));
   while (pending.length) {
     const path = pending.pop();
     if (declarations.has(path)) continue;
@@ -199,7 +217,10 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
   if (args.length && (args.length !== 1 || args[0] !== '--check')) throw new Error('Use build-sdk.mjs [--check]');
   const check = args.length === 1, exact = check ? 'exact nonwriting match; ' : '', { log, error } = console;
   const results = check ? await verifySDK() : await buildSDK({ write: true });
-  for (const [i, result] of results.entries()) log(`${SDK_TARGETS[i].output}: ${exact}${Object.values(result.metafile.outputs)[0].bytes} bytes`);
+  for (const [i, result] of results.entries()) {
+    log(`${SDK_TARGETS[i].output}: ${exact}${Object.values(result.metafile.outputs)[0].bytes} bytes`);
+    if (isHeadScript(SDK_TARGETS[i])) log(`${SDK_TARGETS[i].output}.csp: ${exact}the content-security-policy source of those bytes, beside each copy`);
+  }
   const { declarations, report } = check ? await verifyPackage() : await writePackage();
   log(`public/sdk/${sdkVersion()}: ${exact}the same ${results.length} bundles under the version's path`);
   log(`${SDK_TYPES}: ${exact}${declarations} declaration files`);
