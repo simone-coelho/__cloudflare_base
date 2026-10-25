@@ -96,7 +96,7 @@ import { testHost } from '@/sdk/testHost';
 import type { RequestInitLike, ResponseLike } from '@/sdk/types';
 
 import {
-  declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, learned, MODULES, mount, pageInstanceOf, readTree, shopperOn, TENANT,
+  declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, learned, MODULES, mount, pageInstanceOf, putDocument, readTree, shopperOn, TENANT,
   type Answer, type Decision, type Mounted, type Shopper,
 } from '../_parity';
 
@@ -169,10 +169,10 @@ describe('unit:P85.CX1', () => {
         .toEqual([[200, 'admitted', 8], [200, 'admitted', 8]]);
       expect.soft(await at(m, CELL, 'n'), `${host}: P85.CX1 — one exposure per drawn image in the context's cell, the repeat counted once`)
         .toEqual(Object.fromEntries(PAINTED.map(item => [item, 1])));
-      const before = learned(m);
+      const before = await learned(m);
       const fallback = await carouselBeacon(s, { tableVersion: table.version, context: 'default', images: IMAGES.map(p => p.id), pageInstance: pageInstanceOf('p85-cx1-default') });
       await m.drainLedger();
-      const root = (await learned(m))[id(1)]?.n ?? 0, rootBefore = (await before)[id(1)]?.n ?? 0;
+      const root = (await learned(m))[id(1)]?.n ?? 0, rootBefore = before[id(1)]?.n ?? 0;
       expect.soft([answerOf(fallback), Math.round(root - rootBefore)], `${host}: P85.CX1 — the default row admitted, counted at the root (S4)`).toEqual([[200, 'admitted', 8], 1]);
     }, 120_000);
 
@@ -214,7 +214,6 @@ describe('unit:P85.CX1', () => {
       expectPublished(m, 'P85.CX1 — the documents publish');
       const old = await tableOf(m);
       expect(old.status, `${host}: PRECONDITION P84 — the context table answers`).toBe(200);
-      const { putDocument } = await import('../_parity');
       const moved = await putDocument(m, 'slots', { ...SLOTS, pages: { pdp: [layoutSlot(), carousel({ shotOrders: [SHOT_ORDERS[0]] })] } }, 'p85 one order');
       expect(moved.status, `${host}: PRECONDITION — the changed shot orders publish`).toBe(200);
       const current = await tableOf(m);
