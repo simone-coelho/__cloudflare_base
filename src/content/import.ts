@@ -428,7 +428,9 @@ export class HttpJsonSource implements ContentSource {
     if (!/^https?:\/\//i.test(url)) throw new Error('source url must be http(s)');
   }
   async pullExport(): Promise<PulledExport> {
-    const res = await this.fetchImpl(this.url, { headers: { Accept: 'application/json' } });
+    // P90 (E15, R-P344): a redirect is never followed: the 3xx answer itself is the source's answer, and it refuses the pull.
+    const res = await this.fetchImpl(this.url, { headers: { Accept: 'application/json' }, redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) throw new Error(`source answered ${res.status}; redirects are not followed`);
     if (!res.ok) throw new Error(`source responded ${res.status}`);
     const document: unknown = JSON.parse(await readInputText(res.body));
     return { document, ...recordsInJson(document, this.path) };
@@ -479,22 +481,72 @@ export function addressAllowed(list: readonly string[], address: string): boolea
     return true;
   });
 }
-/** The tenant's import-sources list: the caller addresses allowed on the import, the pull and the dry run. */
-export interface ImportSources { addresses: string[] }
+/**
+ * The tenant's import-sources list: `addresses`, the callers allowed on the import, the pull and the dry run (P91); and
+ * `hosts`, the hosts the on-demand pull may fetch from (P90). Either or both; a member absent restricts nothing.
+ */
+export interface ImportSources { addresses?: string[]; hosts?: string[] }
 /** At most this many entries in one list. */
 export const IMPORT_SOURCES_MAX = 64;
+/**
+ * P90 (R-P344): what is wrong with one `hosts` entry, or null: an entry is a host exactly as the URL parser renders it
+ * (a lowercase hostname or an IP literal, IPv6 in brackets) with an optional `:port` from 1 to 65535, never the default
+ * port of https or http (the parser drops it from a URL, so such an entry could never match), and nothing else: no
+ * scheme, path, credentials or wildcard.
+ */
+function hostEntryProblem(entry: unknown): string | null {
+  if (typeof entry !== 'string' || !entry || entry.length > 255) return 'is not a host';
+  if (/:(443|80)$/.test(entry)) return 'names a default port (443 or 80); write the host without it';
+  if (!/^(\[[0-9a-f:.]+\]|[a-z0-9]([a-z0-9.-]*[a-z0-9])?)(:[0-9]{1,5})?$/.test(entry)) return 'is not a lowercase hostname or IP literal with an optional :port (no scheme, path or wildcard)';
+  let url: URL;
+  try { url = new URL(`https://${entry}/`); } catch { return 'is not a host the URL parser reads'; }
+  const rendered = url.port ? `${url.hostname}:${url.port}` : url.hostname;
+  if (rendered !== entry || (url.port !== '' && Number(url.port) < 1)) return 'is not written as the URL parser renders it (lowercase, a port from 1 to 65535)';
+  return null;
+}
+/** P90: whether a URL's host, its hostname and its port exactly as the URL parser gives them, is on the list. */
+export function hostAllowed(list: readonly string[], url: URL): boolean {
+  return list.includes(url.port ? `${url.hostname}:${url.port}` : url.hostname);
+}
+/** P90 (R-P344): the on-demand pull's URL: https, or http on a loopback host only (the same exact names the tools mint for). */
+export function pullUrlOf(value: unknown): URL | null {
+  let url: URL;
+  try { url = new URL(typeof value === 'string' ? value.trim() : ''); } catch { return null; }
+  if (url.username || url.password) return null;
+  return url.protocol === 'https:' || (url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) ? url : null;
+}
 function validateImportSources(candidate: unknown): ValidationResult<ImportSources> {
-  if (!isRecord(candidate) || Object.keys(candidate).some((key) => key !== 'addresses')) return { ok: false, errors: ['import-sources: an object { addresses }'] };
-  const list = candidate.addresses, errors: string[] = [];
-  if (!Array.isArray(list) || list.length < 1 || list.length > IMPORT_SOURCES_MAX) errors.push(`addresses: 1 to ${IMPORT_SOURCES_MAX} IPv4 or IPv6 addresses or CIDR ranges`);
-  else list.forEach((entry, i) => {
-    if (typeof entry !== 'string' || !addressRange(entry)) errors.push(`addresses[${i}]: ${JSON.stringify(entry)?.slice(0, 80) ?? typeof entry} is not an IPv4 or IPv6 address or CIDR range`);
-  });
-  return errors.length ? { ok: false, errors } : { ok: true, value: { addresses: [...(list as string[])] } };
+  if (!isRecord(candidate) || Object.keys(candidate).some((key) => key !== 'addresses' && key !== 'hosts') || (candidate.addresses === undefined && candidate.hosts === undefined)) {
+    return { ok: false, errors: ['import-sources: an object { addresses?, hosts? } naming addresses, hosts or both'] };
+  }
+  const errors: string[] = [], value: ImportSources = {};
+  if (candidate.addresses !== undefined) {
+    const list = candidate.addresses;
+    if (!Array.isArray(list) || list.length < 1 || list.length > IMPORT_SOURCES_MAX) errors.push(`addresses: 1 to ${IMPORT_SOURCES_MAX} IPv4 or IPv6 addresses or CIDR ranges`);
+    else {
+      list.forEach((entry, i) => {
+        if (typeof entry !== 'string' || !addressRange(entry)) errors.push(`addresses[${i}]: ${JSON.stringify(entry)?.slice(0, 80) ?? typeof entry} is not an IPv4 or IPv6 address or CIDR range`);
+      });
+      value.addresses = [...(list as string[])];
+    }
+  }
+  if (candidate.hosts !== undefined) {
+    const list = candidate.hosts;
+    if (!Array.isArray(list) || list.length < 1 || list.length > IMPORT_SOURCES_MAX) errors.push(`hosts: 1 to ${IMPORT_SOURCES_MAX} hostnames or IP literals, each with an optional :port`);
+    else {
+      list.forEach((entry, i) => {
+        const problem = hostEntryProblem(entry);
+        if (problem) errors.push(`hosts[${i}]: ${JSON.stringify(entry)?.slice(0, 80) ?? typeof entry} ${problem}`);
+      });
+      value.hosts = [...(list as string[])];
+    }
+  }
+  return errors.length ? { ok: false, errors } : { ok: true, value };
 }
 /**
- * P91 (E16, R-P330): the optional publication member `import-sources`, `{ addresses: [...] }`. While a tenant publishes
- * one, a caller whose `CF-Connecting-IP` is outside it, or absent, is refused on the import, the pull and the dry run.
+ * P91 (E16, R-P330) and P90 (E15, R-P344): the optional publication member `import-sources`, `{ addresses?, hosts? }`.
+ * With `addresses` published, a caller whose `CF-Connecting-IP` is outside it, or absent, is refused on the import, the
+ * pull and the dry run; with `hosts` published, the pull fetches only from those hosts.
  */
 export const IMPORT_SOURCES_KIND: DocumentKind<ImportSources> = {
   name: 'import-sources',

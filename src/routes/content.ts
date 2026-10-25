@@ -39,7 +39,7 @@ import { invalidateConfigCache, REFLEX_KIND, reflexScopeForTenant } from '@/refl
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
-import { addressAllowed, HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, IMPORT_SOURCES_KIND, isImportMode, parseCsvTable, positionedCandidates, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
+import { addressAllowed, hostAllowed, HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, IMPORT_SOURCES_KIND, isImportMode, parseCsvTable, pullUrlOf, positionedCandidates, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
 import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
@@ -1001,7 +1001,8 @@ function guardOf(c: Context<Ctx>, mode: ImportMode, raw: unknown): number | unde
  */
 async function sourceRefusal(c: Context<Ctx>, scope: string): Promise<Response | null> {
   const { revision } = await readOptionalPublication(c.env, IMPORT_SOURCES_KIND, scope);
-  if (!revision) return null;
+  // P90: a document naming `hosts` alone restricts no caller.
+  if (!revision || !revision.value.addresses) return null;
   const address = (c.req.header('CF-Connecting-IP') ?? '').trim();
   if (address && addressAllowed(revision.value.addresses, address)) return null;
   return c.json({ ok: false, code: 'source_not_allowed', error: address
@@ -1066,9 +1067,11 @@ contentRoutes.post('/catalog/import', async (c) => {
 
 /**
  * POST /content/catalog/pull  { url, path?, mode, expire?, note? }
- * The CMS/DAM seam: the worker fetches a JSON document and imports it. The URL
- * must be http(s); what URLs a tenant may name is a policy for CW1 to bind.
+ * The CMS/DAM seam: the worker fetches a JSON document and imports it.
  * P91 (R-P330): the body is read first, for the mode and the guard it carries; then the order is the import's.
+ * P90 (E15, R-P344): the URL is https (http only on a loopback host) and, with the tenant's import-sources naming
+ * `hosts`, one of those hosts; both are checked before the preconditions, so nothing is fetched or written for a URL
+ * refused; the fetch follows no redirect.
  */
 contentRoutes.post('/catalog/pull', async (c) => {
   const scope = catalogScope(c);
@@ -1077,10 +1080,15 @@ contentRoutes.post('/catalog/pull', async (c) => {
   const mode = body?.mode;
   if (!isImportMode(mode)) return modeRefusal(c);
   const expire = guardOf(c, mode, body?.expire); if (expire instanceof Response) return expire;
+  const target = pullUrlOf(body?.url);
+  if (!target) return c.json({ ok: false, code: 'invalid_url', error: 'url must be an https URL (http only on localhost, 127.0.0.1 or [::1])' }, 400);
+  const { revision: sources } = await readOptionalPublication(c.env, IMPORT_SOURCES_KIND, scope);
+  if (sources?.value.hosts && !hostAllowed(sources.value.hosts, target)) {
+    return c.json({ ok: false, code: 'host_not_allowed', error: `the feed host ${target.host} is outside the hosts of the tenant's import-sources list; nothing was fetched` }, 403);
+  }
   const meta = catalogMeta(c);
   await assertPublicationBase(c.env, CONTENT_KIND, scope, meta);
-  const url = typeof body?.url === 'string' ? body.url.trim() : '';
-  if (!/^https?:\/\//i.test(url)) return c.json({ error: 'url must be http(s)' }, 400);
+  const url = target.href;
   let pulled: PulledExport;
   try {
     pulled = await new HttpJsonSource(url, typeof body?.path === 'string' ? body.path : undefined).pullExport();
