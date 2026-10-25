@@ -1039,15 +1039,17 @@
         },
         {
           "id": "EX3",
-          "kind": "LOCAL",
-          "observable": "(c) A scheduled pull from a URL the customer exposes: on a cron, their token read from a secret and sent as an authentication header, no redirects, an allowed host, once per export, and an alert on failure; today: wrangler.toml:242–243 carries three crons, none a pull, and the scheduled handler (src/index.ts:269) runs none.",
-          "proof": "The P90 acceptance command runs the tests named unit:P90.EX3 in src/units/P90 and they pass."
+          "kind": "DECISION",
+          "observable": "Not built in this ticket (decision D3; built as its own ticket by amendment if the customer chooses it in week 2 after the kickoff): (c) A scheduled pull from a URL the customer exposes: on a cron, their token read from a secret and sent as an authentication header, no redirects, an allowed host, once per export, and an alert on failure; today: wrangler.toml:242–243 carries three crons, none a pull, and the scheduled handler (src/index.ts:269) runs none.",
+          "proof": "Decision D3.",
+          "decisionId": "D3"
         },
         {
           "id": "EX4",
-          "kind": "LOCAL",
-          "observable": "(b) A bucket drop: an object put in the tenant's bucket (by a scoped credential or a presigned upload) is ingested on notification or on a sweep, once per object, and a result object is written back.",
-          "proof": "The P90 acceptance command runs the tests named unit:P90.EX4 in src/units/P90 and they pass."
+          "kind": "DECISION",
+          "observable": "Not built in this ticket (decision D3; built as its own ticket by amendment if the customer chooses it in week 2 after the kickoff): (b) A bucket drop: an object put in the tenant's bucket (by a scoped credential or a presigned upload) is ingested on notification or on a sweep, once per object, and a result object is written back.",
+          "proof": "Decision D3.",
+          "decisionId": "D3"
         },
         {
           "id": "LV1",
@@ -1071,7 +1073,8 @@
         "Sequenced ahead of group B because the first dataset (about 10 November) needs it (R-P247(2)); E15's (b) and (c) wait for the customer's choice inside the ticket, the allow-list and (d) do not.",
         "First: (b) and (c) are built only if Tapestry chooses them in week 2 after the kickoff (amendment 11 §3 decision 4; decision D2); the lead records the customer's choice before batch S34's specification, and if either is not chosen the lead rules its criterion (EX3 or EX4) out of this ticket by an amendment ruling; (d) and the allow-list are built in any case.",
         "Verified at 11782ac0: HttpJsonSource src/content/import.ts:328–345 (Accept JSON, JSON.parse, no authentication header, fetch's default redirect), the pull route src/routes/content.ts:972–990 (the http(s) check :977; the comment 'what URLs a tenant may name is a policy for CW1 to bind' :969–970), wrangler.toml:242–243 (no pull cron), scripts/import-content.mjs demo only (:3–12); the scheduled handler is src/index.ts:269 (closed by unit:P90.EX1–EX4).",
-        "No bucket, secret, cron or credential is created on any deployment by this ticket (amendment 11 §4.5): the build and its tests are local, and wrangler.toml lines are written, not deployed."
+        "No bucket, secret, cron or credential is created on any deployment by this ticket (amendment 11 §4.5): the build and its tests are local, and wrangler.toml lines are written, not deployed.",
+        "R-P341 (2026-10-25): EX3 and EX4 ruled out of this ticket as DECISION criteria on D3 before activation; the specification covers EX1 and EX2 only (batch S29)."
       ],
       "decisions": [
         {
@@ -1085,6 +1088,12 @@
           "status": "RESOLVED",
           "authorityRef": "Amendment 11 §3 decision 4 (approved as a whole by the owner, 2026-10-22)",
           "effect": "Group C's (b) and (c) are built only if Tapestry chooses them (week 2 after the kickoff); (d) before the first dataset; the allow-list on the on-demand pull now."
+        },
+        {
+          "id": "D3",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 11 §3 decision 4 (approved as a whole by the owner, 2026-10-22); R-P341 (_evidence/parity-step3/AMENDMENTS.md)",
+          "effect": "(b) the bucket drop and (c) the scheduled pull are not built in this ticket: the customer's choice comes in week 2 after the kickoff, after the first dataset this ticket is sequenced for, and the strict order would otherwise hold group B behind it; if either is chosen it enters the queue as its own ticket by amendment (R-P245's form). EX3 and EX4 are DECISION criteria on this decision; (d) the manual-upload script and the host allow-list on the on-demand pull are built here."
         }
       ],
       "deferredLiveAcceptance": [
