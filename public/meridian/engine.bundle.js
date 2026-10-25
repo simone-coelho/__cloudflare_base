@@ -1312,6 +1312,7 @@ var HISTORICAL_GOVERNANCE_V1 = /* @__PURE__ */ Symbol("historical-slot-governanc
 var round3 = (n) => Math.round(n * 1e3) / 1e3;
 function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, adjust, explore, historicalPins, historicalGovernance, rankingSlots, settle) {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? "live") === "live");
+  const byIdLive = new Map(live.map((p) => [p.id, p]));
   const rank = new Map(pieces.map((p, i) => [p.id, i]));
   const used = /* @__PURE__ */ new Set();
   const out = [];
@@ -1453,6 +1454,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
   const bandPlacements = [];
   const decideSlot = (slot) => {
     if (offLimits.has(slot)) return;
+    const slotStart = out.length;
     const prefix = prefixes.get(slot);
     if (refusedPrefixes.has(slot)) return;
     if (prefix) for (const p of prefix.pieces) {
@@ -1512,8 +1514,8 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       }
       marksDecided = eligible.some((p) => marks.has(p.id));
     }
-    const rankable = marks ? eligible.filter((p) => !marks.has(p.id)) : eligible;
-    const free = fixedSlot ? Math.max(0, slot.take - prefixLength - pinsAt.size - held.size) : prefix ? remaining : slot.take;
+    let rankable = marks ? eligible.filter((p) => !marks.has(p.id)) : eligible;
+    let free = fixedSlot ? Math.max(0, slot.take - prefixLength - pinsAt.size - held.size) : prefix ? remaining : slot.take;
     const blended = slot.blend === true && adjust !== void 0;
     const rankBase = (pool) => new Map(pool.map((p, i) => [p.id, (pool.length - i) / pool.length]));
     const catalogueBase = blended ? rankBase(eligible) : null;
@@ -1543,9 +1545,34 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       return { p, score, drivers, band };
     };
     const byScoreThenCatalogue = (x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
+    let tagLead = false;
+    if (slot.pinnedTag && !prefix && free > 0) {
+      const tag = slot.pinnedTag, leadBand = wellFormedBands(slot)?.find((band) => band.from <= 1 && band.to >= 1);
+      const best = pinsAt.has(1) || held.has(1) ? void 0 : rankable.filter((p) => (p.tags[tag.dimension] ?? []).includes(tag.value)).map((p) => scoreOf(p, catalogueBase?.get(p.id), leadBand)).sort(byScoreThenCatalogue)[0]?.p;
+      if (best) {
+        rankable = rankable.filter((p) => p.id !== best.id);
+        free -= 1;
+        used.add(best.id);
+        tagLead = true;
+        out.push({
+          contentId: best.id,
+          customerContentId: best.customerContentId,
+          type: best.type,
+          slot: slot.slot,
+          order: order++,
+          score: 0,
+          strategy: "tenant-pinned",
+          explain: {
+            drivers: [],
+            note: `pinned by its tag ${tag.dimension} ${tag.value} from ${tag.window.from} to ${tag.window.to}; ranking never ran for this piece`,
+            pinnedTag: { dimension: tag.dimension, value: tag.value, window: { from: tag.window.from, to: tag.window.to } }
+          }
+        });
+      } else pinDiagnostics.push({ slot: slot.slot, reason: "unmet_tag_pin", pinnedTag: { dimension: tag.dimension, value: tag.value } });
+    }
     const rankUnbanded = () => rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id))).sort(byScoreThenCatalogue);
     const fillPositions = [];
-    for (let position = prefixLength + 1; position <= slot.take && fillPositions.length < free; position++) {
+    for (let position = prefixLength + (tagLead ? 2 : 1); position <= slot.take && fillPositions.length < free; position++) {
       if (!pinsAt.has(position) && !held.has(position)) fillPositions.push(position);
     }
     const bands = wellFormedBands(slot);
@@ -1586,7 +1613,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
     const yielded = [];
     let pendingSkips = [];
     const rankedOut = fixedSlot ? [] : null;
-    const serve = (s, diversity2, note) => {
+    const decisionOf = (s, order2, diversity2, note) => {
       const drivers = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
         drivers.push({
@@ -1598,18 +1625,21 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       }
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       const cold = s.score <= 0;
-      used.add(s.p.id);
-      if (s.band) bandPlacements.push({ slot: slot.slot, contentId: s.p.id, from: s.band.from, to: s.band.to });
-      const decision = {
+      return {
         contentId: s.p.id,
         customerContentId: s.p.customerContentId,
         type: s.p.type,
         slot: slot.slot,
-        order: rankedOut ? -1 : order++,
+        order: order2,
         score: round3(s.score),
         strategy: cold ? "default" : "affinity",
         explain: { drivers: drivers.slice(0, 4), ...note ? { note } : cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {}, ...diversity2 ? { diversity: diversity2 } : {} }
       };
+    };
+    const serve = (s, diversity2, note) => {
+      used.add(s.p.id);
+      if (s.band) bandPlacements.push({ slot: slot.slot, contentId: s.p.id, from: s.band.from, to: s.band.to });
+      const decision = decisionOf(s, rankedOut ? -1 : order++, diversity2, note);
       if (rankedOut) rankedOut.push(decision);
       else out.push(decision);
     };
@@ -1699,7 +1729,7 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
         });
         placements.push({ slot: slot.slot, contentId: p.id, rule: rule2, position, ...rule2 === "off_limits" ? { baseline: slot.order ? "order" : "catalogue" } : {} });
       };
-      for (let position = prefixLength + 1; position <= slot.take; position++) {
+      for (let position = prefixLength + (tagLead ? 2 : 1); position <= slot.take; position++) {
         const pinnedHere = pinsAt.get(position), heldHere = held.get(position);
         if (pinnedHere) place(pinnedHere, "pinned", position);
         else if (heldHere) place(heldHere, "off_limits", position);
@@ -1712,6 +1742,45 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, ad
       if (pinsAt.size || marksDecided) ruled.add(slot);
       if (marksDecided && slot.order) orderBaseline.add(slot);
     }
+    if (slot.minimum && !slot.order) guarantee(slot.minimum, out.slice(slotStart), scored.filter((x) => !used.has(x.p.id)), slotStart, decisionOf);
+  };
+  const guarantee = (rule, served, unserved, start, decisionOf) => {
+    const carries = (id) => (byIdLive.get(id)?.tags[rule.dimension] ?? []).includes(rule.value);
+    const within = Math.min(rule.within, served.length);
+    const need = rule.count - served.slice(0, within).filter((d) => carries(d.contentId)).length;
+    if (need <= 0 || !served.length) return;
+    const fixed = served.map((d) => d.strategy === "tenant-pinned");
+    const ranked = served.filter((_, i) => !fixed[i]);
+    const kept = served.slice(0, within).filter((_, i) => !fixed[i]).length;
+    const head = ranked.slice(0, kept), tail = ranked.slice(kept);
+    const pool = [
+      ...tail.filter((d) => carries(d.contentId)).map((d) => ({ d, from: served.indexOf(d) + 1 })),
+      ...unserved.filter((x) => carries(x.p.id)).map((x) => ({ d: decisionOf(x, -1), from: served.length + 1 + unserved.indexOf(x) }))
+    ];
+    const leaving = head.filter((d) => !carries(d.contentId));
+    const n = Math.min(need, pool.length, leaving.length);
+    if (n <= 0) return;
+    const incoming = pool.slice(0, n), displaced = new Set(leaving.slice(-n)), promoted = new Set(incoming.map((x) => x.d));
+    const next = [
+      ...head.filter((d) => !displaced.has(d)),
+      ...incoming.map((x) => x.d),
+      ...head.filter((d) => displaced.has(d)),
+      ...tail.filter((d) => !promoted.has(d))
+    ].slice(0, ranked.length);
+    for (const d of ranked) if (!next.includes(d)) used.delete(d.contentId);
+    for (const x of incoming) used.add(x.d.contentId);
+    const before = new Map([...served.map((d, i) => [d, i + 1]), ...incoming.map((x) => [x.d, x.from])]);
+    let k = 0;
+    const arranged = served.map((d, i) => fixed[i] ? d : next[k++]);
+    const first = served[0].order;
+    arranged.forEach((d, i) => {
+      d.order = first + i;
+      const from = before.get(d);
+      if (from !== void 0 && from !== i + 1) {
+        d.explain = { ...d.explain, minimum: { count: rule.count, dimension: rule.dimension, from, value: rule.value, within: rule.within } };
+      }
+    });
+    out.splice(start, served.length, ...arranged);
   };
   const settled = (slot, start, orderedBefore) => {
     if (!settle) return;

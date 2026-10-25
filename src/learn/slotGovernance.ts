@@ -80,7 +80,7 @@ export interface UnreturnedPin { count: number; pinnedPieceId: string; within: {
 
 /** What one page load produced, as the decision path reports it. */
 export interface SlotGovernanceOccurrences {
-  refusedPins: ReadonlyArray<{ slot: string; pinnedPieceId: string; reason: string }>;
+  refusedPins: ReadonlyArray<{ slot: string; pinnedPieceId?: string; reason: string }>;
   /** `short_take` (R86(b)): a pinned slot that served and still fell short. */
   shortTakes: ReadonlyArray<{ slot: string; empty: number }>;
   /**
@@ -88,7 +88,7 @@ export interface SlotGovernanceOccurrences {
    * refusals: the inner slot, its pinned piece and, in `within`, the module the
    * layout did not return and the layout slot. Absent reads as none.
    */
-  unreturnedPins?: ReadonlyArray<{ slot: string; pinnedPieceId: string; within?: { module: string; slot: string } }>;
+  unreturnedPins?: ReadonlyArray<{ slot: string; pinnedPieceId?: string; within?: { module: string; slot: string } }>;
 }
 
 /**

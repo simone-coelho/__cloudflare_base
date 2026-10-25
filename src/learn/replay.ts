@@ -267,6 +267,13 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
   const ruled = own(value, 'moduleRules');
   const rule = !offLimits && ruled && served.authority === 'pin' && !pinPosition ? served.explain?.moduleRule as unknown : undefined;
   const fixedPosition = rule !== undefined;
+  // P83 (E6): a slot carrying a tag pin may lead with the item the pin placed — authority `pin`, the pin named on the
+  // record exactly as the revision publishes it, no ranking ordinal and no snapshot — and its ranked positions after
+  // that lead count the ranked positions before them, which the lead does not join; the replay decides the page again
+  // at the decision's own time (the pin's window included) and compares both.
+  const configuredTag = configured.pinnedTag;
+  const recordedTag = served.explain?.pinnedTag as unknown;
+  const tagPin = !offLimits && prefixPolicy && configuredTag !== undefined && served.authority === 'pin' && served.position === ids.length && recordedTag !== undefined;
   // P29 (decision D2): the record of an off-limits declared layout slot, written
   // under the current policies only, holds position 0 for the site's own
   // default, with no ranking ordinal and no snapshot.
@@ -277,15 +284,19 @@ function manifestOf(value: unknown, page: SlotStrategy[], served: DecisionRecord
     if (!identity(served.position) || served.position >= configured.take) return null;
     if (pinPosition) {
       if (served.authority !== 'pin' || served.item_id !== ids[served.position] || own(served, 'ranking_position') || served.versions.lift !== 0 || served.versions.prior !== 0) return null;
+    } else if (tagPin) {
+      if (!object(recordedTag) || !object(recordedTag.window) || recordedTag.dimension !== configuredTag!.dimension || recordedTag.value !== configuredTag!.value
+        || recordedTag.window.from !== configuredTag!.window.from || recordedTag.window.to !== configuredTag!.window.to
+        || own(served, 'ranking_position') || served.versions.lift !== 0 || served.versions.prior !== 0) return null;
     } else if (fixedPosition) {
       if (!object(rule) || Object.keys(rule).sort().join(',') !== 'position,rule' || !identity(rule.position) || rule.position <= ids.length || rule.position > configured.take
         || (rule.rule === 'pinned' ? !(configured.positionPins ?? []).some(pin => pin.pieceId === served.item_id && pin.position === rule.position)
           : rule.rule !== 'off_limits' || !(configured.offLimitsPieceIds ?? []).includes(served.item_id))
         || own(served, 'ranking_position') || served.versions.lift !== 0 || served.versions.prior !== 0) return null;
     } else if (served.authority === 'pin' || !identity(served.ranking_position) || served.ranking_position > 49
-      || (ruled ? served.ranking_position > served.position - ids.length : served.ranking_position !== served.position - ids.length)) return null;
+      || (ruled || configuredTag !== undefined ? served.ranking_position > served.position - ids.length : served.ranking_position !== served.position - ids.length)) return null;
   }
-  if (!pinPosition && !fixedPosition && (target.lift !== served.versions.lift || target.prior !== served.versions.prior)) return null;
+  if (!pinPosition && !fixedPosition && !tagPin && (target.lift !== served.versions.lift || target.prior !== served.versions.prior)) return null;
   return { version: 1, learning: value.learning, candidateLimit: value.candidateLimit, slots: rows,
     ...(own(value, 'exploration') ? { exploration: 'supported-only' as const } : {}),
     ...(own(value, 'pins') ? { pins: value.pins as NonNullable<Manifest['pins']> } : {}),
