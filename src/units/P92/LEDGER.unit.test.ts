@@ -79,12 +79,15 @@ const MARKET_US = piece('story.market-us', { category: ['Bags'], locale: ['en_us
 const MARKET_CA = piece('story.market-ca', { category: ['Bags'], locale: ['en_ca'] });
 /** Unknown input: a dimension no registry names, which still warns. */
 const DOWNTOWN = piece('story.downtown', { category: ['Bags'], styleWorld: ['downtown'] });
-/** A record tagged only with a gate: nothing on it can match an interest (reading 1 (c)). */
+/** A record tagged only with a gate: nothing on it can match an interest (reading 1 (c)), read under a registry with no content
+ * format (no `contentType` dimension), where its type is no fallback format either (the diagnostics count the fallback). */
 const ONLY_MARKET = piece('story.only-market', { locale: ['en_us'] });
 const DOCS = { pieces: [...HOME_PIECES], slots: homeSlots(), learn: homeLearn() };
 /** The registry in force without the member (a tenant that registers no gate) and with `styleWorld` added as a gate. */
 const { [GATES]: _registered, ...WITHOUT_GATES } = REFLEX_DOCUMENT as unknown as Record<string, unknown>; void _registered;
 const WITH_STYLE_GATE = { ...WITHOUT_GATES, version: 'p92-style-gate', [GATES]: ['journeyStage', 'locale', 'styleWorld'] };
+/** The registry in force without its content-format dimension (its gates, if any, kept). */
+const NO_FORMAT = { ...REFLEX_DOCUMENT, version: 'p92-no-format', dimensions: REFLEX_DOCUMENT.dimensions.filter(d => d.key !== 'contentType') };
 
 const preconditions = async (m: Mounted) => {
   const base = await loadDocument(m, 'catalog');
@@ -150,7 +153,7 @@ describe('unit:P92.RG1', () => {
   });
 
   for (const host of HOSTS) {
-    it(`host (${host}): a JSON and a CSV import of records tagged journeyStage:post_purchase and locale raise no unknown_dimension for them; a dimension no registry names still warns, and a record tagged only with a gate is still named no_nonempty_registered_tags (LOCK)`, async () => {
+    it(`host (${host}): a JSON and a CSV import of records tagged journeyStage:post_purchase and locale raise no unknown_dimension for them; a dimension no registry names still warns, and a record tagged only with a gate is still named no_nonempty_registered_tags (LOCK, R-P316 (3))`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P92.RG1 — the tenant documents publish');
       const json = await importJson(m, [AFTER_ORDER, MARKET_US, MARKET_CA, DOWNTOWN, ONLY_MARKET]);
@@ -162,9 +165,14 @@ describe('unit:P92.RG1', () => {
       for (const [name, answer] of [['JSON', json], ['CSV', csv]] as Array<[string, Answer]>) {
         expect.soft([unknownDimensions(answer), countsOf(answer).unknown_dimension],
           `${host}: P92.RG1 — ${name}: the one unknown_dimension is the dimension no registry names (today journeyStage and locale warn too)`).toEqual([[['story.downtown', 'styleWorld']], 1]);
-        expect.soft(warningsOf(answer).filter(w => w.code === 'no_nonempty_registered_tags').map(w => w.recordId),
-          `${host}: P92.RG1 — ${name}: LOCK — a record tagged only with a gate has nothing an interest can match`).toEqual(['story.only-market']);
       }
+      // R-P316 (3): a gate value is not a nonblank registered tag (read where the type supplies no fallback format).
+      const bare = await mount(host, { ...DOCS, reflex: NO_FORMAT });
+      expectPublished(bare, 'P92.RG1 — a registry with no content-format dimension publishes');
+      const onlyGate = await importJson(bare, [ONLY_MARKET, MARKET_US]);
+      expect(onlyGate.status, `${host}: PRECONDITION — the import is accepted (${show(onlyGate)})`).toBe(200);
+      expect.soft(warningsOf(onlyGate).filter(w => w.code === 'no_nonempty_registered_tags').map(w => w.recordId),
+        `${host}: P92.RG1 — LOCK: a record tagged only with a gate has nothing an interest can match; the US record's category does`).toEqual(['story.only-market']);
     }, 120_000);
 
     it(`host (${host}): the registration is the registry document's: a registry that registers no gate warns for journeyStage and locale as today (LOCK), and one that registers styleWorld as a gate raises nothing for it`, async () => {
@@ -262,8 +270,8 @@ describe('unit:P92.RG2', () => {
         expect(answer.status, `${host}: PRECONDITION — ${name}: the write is accepted (${show(answer)})`).toBe(200);
         expect.soft({ ignored: warningsOf(answer).filter(w => w.code === 'ignored_field').map(w => [w.recordIndex, w.field]),
           stored: stored ? { id: stored.id, purpose_later: Object.hasOwn(stored, 'purpose_later') ? 'stored' : 'not stored' } : 'the record is not stored' },
-        `${host}: P92.RG2 — ${name}: purpose_later accepted and ignored (today named ignored_field); notes still named at its record (LOCK)`).toEqual({
-          ignored: [[1, 'notes']], stored: { id: AFTER_ORDER.id, purpose_later: 'not stored' } });
+        `${host}: P92.RG2 — ${name}: purpose_later accepted and ignored (today named ignored_field); notes still named at its record (LOCK: a CSV column is carried by every row)`).toEqual({
+          ignored: name === 'CSV' ? [[0, 'notes'], [1, 'notes']] : [[1, 'notes']], stored: { id: AFTER_ORDER.id, purpose_later: 'not stored' } });
       }
       // R-P316 (5): a direct PUT keeps the validator's closed field set: the record at position 4 of the request is named.
       const put = await putDocument(json, 'catalog', { version: 'p92-put', pieces: [...HOME_PIECES, WITH_PURPOSE] }, 'p92 put');
