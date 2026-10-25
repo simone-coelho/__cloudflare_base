@@ -37,7 +37,32 @@
 // is recovered by running the same command again for the same tenant.
 import { isLoopbackTarget, resolveToolToken, tokenFromArgs } from './lib/tool-token.mjs';
 
-const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
+// P90 (R-P357): the arguments are read against the flags this script knows, before anything else. An unknown flag
+// (a misspelt --dry-run would otherwise write for real), a stray argument, or a flag that takes a value given without
+// one (a following --x counts as none: a trailing --file would otherwise fall through to the demo pull) is refused
+// here, exit 2, before any request. --token keeps tool-token's own reading (tokenFromArgs), which refuses a missing
+// value itself.
+const VALUE_FLAGS = new Set(['--scope', '--base', '--token', '--vertical', '--file', '--format', '--mode']);
+const SWITCHES = new Set(['--dry-run']);
+const FILE_ONLY = ['--format', '--mode', '--dry-run'];
+const given = new Map();
+{
+  const reject = (message) => { console.error(`import-content: ${message}; nothing was sent.`); process.exit(2); };
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    const flag = args[i];
+    if (SWITCHES.has(flag)) { given.set(flag, true); continue; }
+    if (!VALUE_FLAGS.has(flag)) reject(typeof flag === 'string' && flag.startsWith('-') ? `${flag} is not a flag this script knows (--scope, --base, --token, --vertical, --file, --format, --mode, --dry-run)` : `unexpected argument ${JSON.stringify(flag)}`);
+    const value = args[i + 1];
+    if (value === undefined || value.startsWith('--')) {
+      if (flag === '--token') continue;
+      reject(`${flag} needs a value`);
+    }
+    given.set(flag, value); i++;
+  }
+  if (!given.has('--file')) for (const flag of FILE_ONLY) if (given.has(flag)) reject(`${flag} goes with --file (the demo import takes no ${flag})`);
+}
+const arg = (k, d) => (given.has(k) ? given.get(k) : d);
 const base = (arg('--base', 'http://localhost:9100')).replace(/\/+$/, '');
 const scope = arg('--scope');
 if (typeof scope !== 'string' || !scope.trim() || scope.startsWith('--')) {
@@ -61,7 +86,7 @@ if (file !== undefined) {
   const { readFile } = await import('node:fs/promises');
   let text;
   try { text = await readFile(file, 'utf8'); } catch (error) { refuse(`cannot read ${file} (${error.code ?? error.message}); nothing was sent.`); }
-  upload = { format, mode, text, dryRun: process.argv.includes('--dry-run') };
+  upload = { format, mode, text, dryRun: given.has('--dry-run') };
 }
 let token;
 try {
@@ -85,6 +110,8 @@ const call = async (method, path, body, headers = {}, query = {}) => {
 /** The draft a write goes over: the document in force, its revision N and the set S/H it was read from. */
 const draft = async (kind) => {
   const { status, body } = await call('GET', `/content/${kind}`);
+  // P90 (R-P357): a refused token says so, not that the tenant has no publication.
+  if (status === 401 || status === 403) fail(`${kind}: the Worker refused the operator token (HTTP ${status}${body.code ? ` ${body.code}` : ''}); nothing was written. Use an operator token issued for "${scope}" (--token or OPERATOR_TOKEN).`);
   const set = body.publication;
   if (status >= 400 || !Number.isSafeInteger(body.revision) || body.revision < 1 || !set || !Number.isSafeInteger(set.revision) || set.revision < 1
     || typeof set.digest !== 'string' || !/^[0-9a-f]{64}$/.test(set.digest)) {
