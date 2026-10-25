@@ -46,7 +46,8 @@
 //   · `holdout: { share, arms, saltVersion }`; the head script's default-class probability by the engine's own function
 //     (share ÷ |arms| per arm, holdout.ts armFor), byte-exact through the build.
 //   · the head script inlined by the server render; the build writes `edge-head.js.csp` (base64 SHA-256 of the committed
-//     bytes, checked by --check); the kit states the computation, never a literal hash; budget 8192 bytes.
+//     bytes, checked by --check); the kit states the computation, never a literal hash; budget 8192 bytes (R-P364: 16,384
+//     raw minified bytes, as the SDK's budgets are counted; one byte-exact classifier).
 //   · the mint's cap min(4096, ceil(ln(1e-6)/ln(1−p))) with a counted diagnostic (cap reached, mismatch, a learn publish
 //     between the holdout read at the mint and the decision's pin).
 //   · `shotOrders: [{ context, order }]` on a content slot in P01's context form, refused by name on the layout slot and
@@ -88,7 +89,8 @@
 //      every shotOrder null and brandRules {}.
 //   P4 The head script: src/sdk/head.ts → `public/sdk/edge-head.js` (IIFE), its copies `public/sdk/0.2.0/edge-head.js` and
 //      `packages/sdk/edge-head.js` (a third SDK_TARGETS entry in scripts/build-sdk.mjs), each with `edge-head.js.csp`
-//      beside it holding `sha256-<base64 SHA-256 of the bytes>`; packages/sdk/package.json exports it with sizeBudget 8192.
+//      beside it holding `sha256-<base64 SHA-256 of the bytes>`; packages/sdk/package.json exports it with sizeBudget 16384
+//      (R-P364: the sketch's head is 12,609 bytes minified, the classifier with its vocabulary path 7,463 of them).
 //      Its inputs, written by the server render in the head before it: `<script type="application/json"
 //      id="op-context-table">` (the document) and `<script type="application/json" id="op-images">` (the carousel's image
 //      list in the server order: [{ id, tags: { contentType?, <each brand-rule dimension>? }, src, srcset?, sizes? }]).
@@ -142,6 +144,10 @@
 //      first answer is the default arm's (C3) whatever its entry. These tests measure the first-decision lock on a new
 //      shopper whose choice is recorded before her first decision (shopperOn, the session path), assert that the direct
 //      path's first request carries `entry`, and do not assert the carousel of a no-choice first answer.
+//      RULED (R-P364): this form stands, and a second lock covers the no-choice case: a brand-new browser without a
+//      recorded choice gets the holdout default from the engine (its first answer on the direct path, its entry on the
+//      request) and the head script, with no recorded consent, paints the default row: the same order. No assertion
+//      claims a context row for a first answer without a choice.
 //   C3 (accepted) A brand-new browser has no recorded choice on the engine at its first request (personalization takes an explicit
 //      instruction, src/content/consent.ts personalizes()), so its first answer's experiment.arm is the ineligible
 //      assignment, not the page's class; these tests assert the class on the identifier (armFor(subject, salt)) and on
@@ -171,6 +177,8 @@
 // NEW EXPORT IMPORTED: CLASSIFIER_VERSION from src/services/visit.ts (P3); RED on its absence where named.
 //
 // The fixture's site is shop.example.invalid; no test reaches the network (the head script's double loads nothing).
+// GRANT (R-P364, 1c7efb72): src/routes/content.ts is in P84's allowedPaths (vocabularyRefusals: the slots door reads the
+// approval in effect for the shot values).
 // DEFERRED / RESIDUAL: the learn-publish race between the mint's holdout read and the decision's pin is specified as a
 // counted reason (`republished`) but not provoked here; LV1.
 //
@@ -431,6 +439,22 @@ describe('unit:P84.CO1', () => {
         expectedDocument({ carouselSlot: null, brandRules: {}, rows: EXPECTED_ROWS.map(r => ({ ...r, shotOrder: both(null) })) })]);
     }, 120_000);
 
+    it(`host (${host}): the no-choice lock (R-P364) — a brand-new browser without a recorded choice: the engine's first answer on the direct path, its paid-social entry on the request, serves the holdout default (arm default, the server order within the brand rules), and the head script, no consent recorded, paints the default row: the same order`, async () => {
+      const m = await mount(host, docsWith({ learn: learnOf({ ...HOLDOUT, share: 0 }) }));
+      expectPublished(m, 'P84.CO1 — the documents publish');
+      const response = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
+        headers: { 'X-Tenant': TENANT, 'Content-Type': 'application/json', ...deviceHeaders('mobile') },
+        body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance: pageInstanceOf('p84-no-choice'), 'ctx.anchor': A, entry: JSON.stringify(PAID_SOCIAL) }) }));
+      const first = await response.json().catch(() => ({})) as Record<string, unknown>;
+      await m.drain();
+      const table = await tableAt(m, 'pdp');
+      const paint = runHead({ url: urlWith({ utm_medium: 'paid_social', utm_source: 'instagram' }), userAgent: MOBILE_UA, table: table.status === 200 ? table.body : TABLE,
+        images: HEAD_IMAGES, consent: false });
+      expect.soft({ engine: [response.status, first.arm ?? null, railOf(first)], paint: [paint.error ?? paint.context, paint.order] },
+        `${host}: P84.CO1 — without a recorded choice the engine and the page agree on the default (today there is no head script)`).toEqual({
+        engine: [200, 'default', ids(1, 3, 2, 4, 5, 6, 7, 8)], paint: ['default', ids(1, 3, 2, 4, 5, 6, 7, 8)] });
+    }, 120_000);
+
     it(`host (${host}): a tenant publishing a context vocabulary (P36, C4) has it in the document as channelVocabulary { revision, channels, rules, visitBuckets }, and the rows are its channel ids × its cut's buckets (1, 2-4, 5+), the shot orders authored in its terms`, async () => {
       const m = await mount(host, docsWith({ learn: learnDocument({ [CAROUSEL]: { measurementBasis: 'rendered-v1', reward: 'click' } }, { holdout: HOLDOUT, contextVocabulary: CHANNEL_VOCABULARY }),
         slots: slotsOf({ shotOrders: VOCAB_SHOT_ORDERS }) }));
@@ -663,7 +687,7 @@ function engineCell(c: ArrivalCase): { context: string; visit: Record<string, un
 const storedVisit = (prior: ArrivalCase['prior']) => prior ? { opt_head: JSON.stringify({ visit: prior }) } : {};
 
 describe('unit:P84.CO2', () => {
-  it('logic: the head script is built by scripts/build-sdk.mjs from src/sdk/head.ts (a third SDK target, IIFE, with its two copies), its bundle reads src/services/visit.ts; `node scripts/build-sdk.mjs --check` exits 0 and names it; each copy carries edge-head.js.csp = sha256-<base64 SHA-256 of its bytes>; the package exports it within an 8192-byte budget; on a copy of the tree one byte off in any copy or its .csp fails the check by name', async () => {
+  it('logic: the head script is built by scripts/build-sdk.mjs from src/sdk/head.ts (a third SDK target, IIFE, with its two copies), its bundle reads src/services/visit.ts; `node scripts/build-sdk.mjs --check` exits 0 and names it; each copy carries edge-head.js.csp = sha256-<base64 SHA-256 of its bytes>; the package exports it within a 16,384-byte budget (R-P364); on a copy of the tree one byte off in any copy or its .csp fails the check by name', async () => {
     const build = await import(/* @vite-ignore */ new URL('../../../scripts/build-sdk.mjs', import.meta.url).href) as {
       SDK_TARGETS: Array<{ entry: string; output: string; format: string }>;
       buildSDK: (o: { root: string }) => Promise<Array<{ metafile: { inputs: Record<string, unknown>; outputs: Record<string, { inputs: Record<string, unknown> }> } }>>;
@@ -681,8 +705,8 @@ describe('unit:P84.CO2', () => {
     expect.soft(csp, 'P84.CO2 — three copies, each with its content-security-policy hash beside it').toEqual(copies.map(path => [path, 'its hash']));
     const manifest = JSON.parse(readTree('packages/sdk/package.json')) as { exports?: unknown; sizeBudget?: Record<string, number> };
     const bytes = existsSync(join(ROOT, 'packages/sdk/edge-head.js')) ? readFileSync(join(ROOT, 'packages/sdk/edge-head.js')).length : -1;
-    expect.soft([JSON.stringify(manifest.exports ?? {}).includes('./edge-head.js'), manifest.sizeBudget?.['./edge-head.js'], bytes > 0 && bytes <= 8192],
-      'P84.CO2 — the package exports the head script with its 8192-byte budget, and it is within it').toEqual([true, 8192, true]);
+    expect.soft([JSON.stringify(manifest.exports ?? {}).includes('./edge-head.js'), manifest.sizeBudget?.['./edge-head.js'], bytes > 0 && bytes <= 16384],
+      'P84.CO2 — the package exports the head script with its 16,384-byte budget (R-P364), and it is within it').toEqual([true, 16384, true]);
     if (!target) return;
     const results = await build.buildSDK({ root: ROOT });
     const head = results[build.SDK_TARGETS.indexOf(target)];
