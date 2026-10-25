@@ -604,12 +604,17 @@ describe('/content routes', () => {
     const remote = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ content: feed })));
     try {
       for (const [suffix, method, body, expected] of [
-        ['', 'PUT', { document: catalog }, catalog], ['/import', 'POST', feed, catalog],
-        ['/import?format=csv', 'POST', csv, { pieces: [csvPromoted, rival] }],
-        ['/pull', 'POST', { url: 'https://synthetic.invalid/catalog', path: 'content' }, catalog],
+        // P91 R10 (R-P334): the three loads name their mode (replace).
+        ['', 'PUT', { document: catalog }, catalog], ['/import?mode=replace', 'POST', feed, catalog],
+        ['/import?format=csv&mode=replace', 'POST', csv, { pieces: [csvPromoted, rival] }],
+        ['/pull', 'POST', { url: 'https://synthetic.invalid/catalog', path: 'content', mode: 'replace' }, catalog],
       ] as const) {
         const response = await request(suffix, method, body); expect(response.status).toBe(200);
-        expect(await response.json()).toMatchObject({ ok: true, revision: ++revision });
+        // P91 R10 (R-P334, E16): the JSON import of `feed` over the PUT's catalogue is identical (`explore` reads as
+        // `exploring`), so it is skipped and answers the revision in force; the CSV import and the pull change the catalogue
+        // and write the next revision. `revision` follows the revision in force, so each step's If-Match names it.
+        if (suffix === '/import?mode=replace') expect(await response.json()).toMatchObject({ ok: true, skipped: true, reason: 'unchanged', revision });
+        else expect(await response.json()).toMatchObject({ ok: true, revision: ++revision });
         expect((await current()).value.pieces).toEqual(expected.pieces);
       }
       expect(remote).toHaveBeenCalledTimes(1);
