@@ -39,7 +39,7 @@ import { invalidateConfigCache, REFLEX_KIND, reflexScopeForTenant } from '@/refl
 import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
-import { HttpJsonSource, assemble, candidatesFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, recordsInJson, type ImportMode, type PulledExport } from '@/content/import';
+import { HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, parseCsvTable, positionedCandidates, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
 import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
@@ -877,28 +877,36 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
 async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode, note: string, source: object, meta: WriteMeta,
   document?: { value: unknown; accepted: ReadonlySet<string> }) {
   const scope = catalogScope(c);
-  const incoming = candidatesFrom(records);
+  const { pieces: incoming, positions } = positionedCandidates(records); // P82: each candidate's position in the file sent
   if (incoming.length === 0) return c.json({ ok: false, errors: ['no records found in the import'] }, 422);
   // P31 (R-P59 (4)): the eligibility rules the import writes, against the
   // tenant's context vocabulary and cut in force, at the one door the JSON and
   // CSV imports and the pull all pass through.
   const vocabulary = await catalogueVocabularyRefusals(c, scope, { pieces: incoming });
-  if (vocabulary) return c.json({ ok: false, errors: vocabulary.errors, received: records.length }, vocabulary.status);
+  if (vocabulary) return c.json({ ok: false, errors: recordAddressed(vocabulary.errors, incoming, positions), received: records.length }, vocabulary.status);
   // The catalogue this operation was published over, so `changed` is measured
   // against the stored values. The mutator runs for every publication; an
   // exact-request retry serves a retained answer without running it, and the
   // revision it declared is the base that answer was measured against.
   let base: ContentCatalog | undefined;
+  // P82 (E5): the assembled pieces and, beside them, the position in the file sent of the record each came from.
+  let placed: { pieces: unknown[]; positions: (number | null)[] } | undefined;
+  const addressed = (errors: string[]) => placed ? recordAddressed(errors, placed.pieces, placed.positions) : errors;
   let result;
   try {
     // P38 (VA2): the assembled catalogue under the vocabulary in effect in the set it is published over.
     result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode }, { ...meta, note },
-      (current, set) => { base = current; return governedOver(c.env, scope, set, { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), ...assemble(current, incoming, mode) }); });
+      (current, set) => {
+        base = current;
+        const assembled = assembleFrom(current, incoming, mode);
+        placed = { pieces: assembled.pieces, positions: assembled.origins.map(j => j === null ? null : positions[j]!) };
+        return governedOver(c.env, scope, set, { ...(carriedVersion(current) ? { version: carriedVersion(current) } : {}), pieces: assembled.pieces });
+      });
   } catch (error) {
-    if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: error.errors, received: records.length }, 422);
+    if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: addressed(error.errors), received: records.length }, 422);
     throw error;
   }
-  if (!result.ok) return c.json({ ok: false, errors: result.errors, received: records.length }, 422);
+  if (!result.ok) return c.json({ ok: false, errors: addressed(result.errors), received: records.length }, 422);
   const before = base !== undefined ? { catalog: base, basis: 'stored' as const } : await publishedOver(c.env, scope, meta.expectedRevision);
   const measured = before.basis === 'stored';
   return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: result.revision.value.pieces.length,
@@ -907,7 +915,7 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
     changedBasis: before.basis,
     revision: result.revision.revision, publication: result.revision.publication, version: result.revision.value.version ?? '',
     diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision,
-      { records, accepted: FEED_FIELDS, ...(document ? { document } : {}) }) });
+      { records, accepted: FEED_FIELDS, ...(document ? { document } : {}), pieceRecords: storedPieceRecords(result.revision.value, incoming, positions) }) });
 }
 
 /**
