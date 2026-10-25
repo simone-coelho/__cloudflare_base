@@ -18,7 +18,7 @@
 // sentence of what the module is for, written for the engine and never shown on the page"), 06-tagging-guide.md:19–20
 // ("Without it the engine falls back to the record's rendering kind, such as `image`, as its format").
 //
-// THE READINGS (the lead's provisional readings of the brief, S27; the member name is the specifier's proposal, for ruling):
+// THE READINGS (the lead's provisional readings of the brief, S27, as the specifier proposed them; ruled R-P316, all seven):
 //   1  A REGISTERED TAG THAT IS NOT AN INTEREST. The reflex registry document (`PUT /config/reflex`, src/reflex/core.ts
 //      ReflexConfig; validated by src/reflex/configStore.ts validateReflexConfig) gains the optional member
 //      `gateDimensions`: a list of tag dimension keys registered as gates. Proposed and read loosely here (no new export):
@@ -38,7 +38,8 @@
 //      DEFAULT_REFLEX_CONFIG) carries `gateDimensions` naming `journeyStage` and `locale`, its `dimensions` unchanged.
 //   2  `purpose_later` is accepted and ignored on a JSON import, a CSV import and a pull: nothing stored, no
 //      `ignored_field`; any other field the contract does not list is still named `ignored_field` with its `recordIndex`.
-//      A direct PUT or a validation (the validator's own closed field set, never the feed's) is unchanged (TOLD).
+//      A direct PUT or a validation keeps the validator's own closed field set and still names it `ignored_field`
+//      (R-P316 (5): a lock, and the kit's `purpose_later` row says so).
 //   3  A record with no `contentType` tag takes its `type` as its format where the registry's `contentType` dimension is
 //      not derived and the catalogue has not retired the fallback (src/content/typeAffinity.ts contentTypeValues;
 //      src/reflex/contentTelemetry.ts resolvedContentTouches): a lock, as the tagging guide says, and both conditions shown.
@@ -246,7 +247,7 @@ describe('unit:P92.RG2', () => {
   const WITH_PURPOSE = { ...AFTER_ORDER, purpose_later: 'Reassures a shopper who has just ordered, with care for the bag.' };
   const WITH_NOTES = { ...MARKET_US, notes: 'internal: legal checked' };
   for (const host of HOSTS) {
-    it(`host (${host}): a JSON import, a CSV import and a pull carrying purpose_later store the record without it and name no ignored_field for it; another field the contract does not list is still named ignored_field with its recordIndex (LOCK)`, async () => {
+    it(`host (${host}): a JSON import, a CSV import and a pull carrying purpose_later store the record without it and name no ignored_field for it; another field the contract does not list is still named ignored_field with its recordIndex, and a direct PUT still names purpose_later ignored_field (LOCKS, R-P316 (5))`, async () => {
       const answers: Array<[string, Answer, Record<string, unknown> | undefined]> = [];
       const json = await mount(host, DOCS); expectPublished(json, 'P92.RG2 — the tenant documents publish');
       const a = await importJson(json, [WITH_PURPOSE, WITH_NOTES]);
@@ -264,12 +265,16 @@ describe('unit:P92.RG2', () => {
         `${host}: P92.RG2 — ${name}: purpose_later accepted and ignored (today named ignored_field); notes still named at its record (LOCK)`).toEqual({
           ignored: [[1, 'notes']], stored: { id: AFTER_ORDER.id, purpose_later: 'not stored' } });
       }
+      // R-P316 (5): a direct PUT keeps the validator's closed field set: the record at position 4 of the request is named.
+      const put = await putDocument(json, 'catalog', { version: 'p92-put', pieces: [...HOME_PIECES, WITH_PURPOSE] }, 'p92 put');
+      expect.soft([put.status, warningsOf(put).filter(w => w.code === 'ignored_field').map(w => [w.recordIndex, w.field])],
+        `${host}: P92.RG2 — LOCK: a direct PUT still names purpose_later as ignored_field`).toEqual([200, [[4, 'purpose_later']]]);
     }, 120_000);
   }
 
-  it('logic: kit 03\'s field table and its ignored_field paragraph state purpose_later accepted and ignored; kit 02\'s ignored_field sentence stands (LOCK)', () => {
+  it('logic: kit 03\'s field table and its ignored_field paragraph state purpose_later accepted and ignored on import and pull, and still named ignored_field on a direct PUT; kit 02\'s ignored_field sentence stands (LOCK)', () => {
     const kit02 = KIT02(), kit03 = KIT03();
-    expect.soft({ fieldRow: row(kit03, 'purpose_later', /accepted and ignored/i, /not stored/i), ignoredParagraph: has(kit03, 'Nothing above is silently dropped', '`purpose_later`') },
+    expect.soft({ fieldRow: row(kit03, 'purpose_later', /accepted and ignored/i, /not stored/i, /PUT/, /`ignored_field`/), ignoredParagraph: has(kit03, 'Nothing above is silently dropped', '`purpose_later`') },
       'P92.RG2 — the kit states purpose_later (today it does not)').toEqual({ fieldRow: true, ignoredParagraph: true });
     expect(kit02.includes('`ignored_field` means the request carried a field (JSON) or column (CSV) the published contract does not list'),
       'P92.RG2 — LOCK: the ignored_field sentence stands').toBe(true);
