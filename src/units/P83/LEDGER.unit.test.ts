@@ -53,9 +53,16 @@
 // vocabulary; (2) the snapshot's `refusedCount` and the slot-governance count (src/content/service.ts)
 // keep counting every `pinDiagnostics` entry, the unmet tag pin included, as they count P43's `module_not_returned`
 // today (allowedPaths frozen; an advisory candidate for the owner): the GR3 leg locks only the form (`refusedCount`
-// beside the entries); (3) wording gender-neutral.
+// beside the entries); (3) wording gender-neutral. R-P309 (the review of 61925cae): four assertions added, none changed —
+// GR3 the rule asking more than the span's unpinned positions never moves the pinned item; GR4 the kit's window ends
+// and "enforced, not weighted" bound as phrases; GR2 a window missing one of its ends refused by name; GR1 the
+// receipt of an item the rule moved down. R-P310, R-P312: on the declared layout slot the P05 adjacent swap keeps the
+// guarantee on the served order: a pair at the span's edge (the carrier at `within`, a non-carrier after it) is left out
+// of the swap's candidate pairs, as a pair touching a pinned position is, so the swap lands on another free pair; with
+// no free pair left the slot serves its ranked order and no record carries an exploration member.
 //
-// R10: none (P04, P15, W20, P80, P38 and the content, decide and receipt tests unchanged under the sketch; the whole suite below).
+// R10: none (P05, P04, P15, W20, P80, P38 and the content, decide and receipt tests unchanged under the sketch; the whole suite
+// below).
 //
 // DEFERRED, with the reason: the Meridian bundle (public/meridian/engine.bundle.js, generated from contentCompose.ts by
 // node scripts/build-meridian.mjs, outside the ticket's allowedPaths: the lead rules at the build who commits it).
@@ -75,35 +82,44 @@
 // in P80's shape; the shopper who viewed a handbag (the visitor's interest ranks the handbag images above the others), or a cold one;
 // the holdout's default arm in a world of its own. The decision's clock is moved with fake Date only.
 //
-// MEASURED at eb364d21 (_evidence/parity-step3/S25/specifier/logs/d/, serial, --no-cache, working directory the tree):
+// MEASURED at 07f46147 (_evidence/parity-step3/S25/specifier/logs/f/, serial, --no-cache, working directory the tree):
 // 17 RED for the missing behaviour — GR1 (the rule not read: the catalogue order on the default arm, the on-model images
-// not served on the personalized arm, no `minimum` on a record or a receipt, every malformed rule and the rule beside
-// orders published), GR2 (the launch image never leads, no `pinnedTag` on a record or a receipt, the best-ranked launch
-// image not chosen, every malformed pin published), GR3 (no unmet entry and no `refusedCount`; the pin and the rule
-// together not applied), GR4 (the kit silent); the locks inside them GREEN (P04's item-pin refusal, the orders alone
-// published, the item-pin and band sentences). NEGATIVE CONTROLS (sketches/p83.py, never committed): the fix —
-// src/content/kinds.ts (both members published; the rule refused beside orders), src/content/decide.ts (the tag pin
-// passed only inside its window by the decision's clock, both members onto the record, the unmet pin named after the
-// refusals), src/reflex/contentCompose.ts (the tag pin and the guarantee in `decideSlot`), src/learn/receipts.ts (both
-// members and their `why`), src/learn/replay.ts (a tag-pinned position and the ranked positions after it) and the kit —
-// 17/17 four times, tsc clean; `ordersadmitted` (the rule admitted beside orders) turns GR1's publication leg RED; at
-// eb176a88 (logs/b/, legs the later head left as they were) `weighted` (a score boost) GR1's four host legs, `wholetake`
-// (the whole take counted) GR1's four and GR3's two-rules leg, `outsidewindow` GR2's window leg, `refuseunmet` GR3's
-// unmet leg, `firstbycatalogue` GR2's best-ranked leg, `silentreceipt` GR1's and GR2's record legs, `kitleft` GR4, each
-// on both hosts where the leg runs on both. P04, P15, W20, P80, P38, src/content/decide.test.ts, src/learn/receipts.test.ts
-// and src/routes/content.test.ts: 168/168 on today and under the fix (logs/a/). The whole suite at eb176a88 (logs/c/,
-// compare.txt): 3926 tests on both trees, no test failing under the fix alone; the 17 P83 tests the only difference. The
-// 61 failing on both trees, their cause not measured here: P82's specification (7, its product not on this branch) and
-// 54 in src/demos/kit/root.worker.test.ts, P45-P47, P51-P53, W19 B1-B3, W39 and W40 (LEDGER, P6).
+// not served on the personalized arm, no `minimum` on a record or a receipt, the moved-down item's receipt included, the
+// adjacent swap moving the first position and swapping the only pair, every malformed rule and the rule beside orders
+// published), GR2 (the launch image never leads, no `pinnedTag` on a record or a receipt, the best-ranked launch image not
+// chosen, every malformed pin published, a window missing an end included), GR3 (no unmet entry and no `refusedCount`;
+// the pin and the rule together not applied, the rule asking 2 in the first 2 included), GR4 (the kit silent); the locks
+// inside them GREEN (P04's item-pin refusal, the orders alone published, the item-pin and band sentences). NEGATIVE
+// CONTROLS (sketches/p83.py, never committed): the fix — src/content/kinds.ts (both members published; the rule refused
+// beside orders), src/content/decide.ts (the tag pin passed only inside its window by the decision's clock, both members
+// onto the record, the unmet pin named after the refusals, the adjacent swap's edge pair left out of its candidates),
+// src/reflex/contentCompose.ts (the tag pin and the guarantee in `decideSlot`, a pinned decision never moved),
+// src/learn/receipts.ts (both members and their `why`), src/learn/replay.ts (a tag-pinned position and the ranked
+// positions after it) and the kit (the window's ends in order, the rule enforced, never weighted) — 17/17 three times,
+// tsc clean; the reviewer's controls (S25/reviewer-spec/sketches/ctl-p83.py, after the fix): `evictpinned` (the guarantee
+// moves a pinned decision) turns GR3's both-rules leg RED, `kitwrong` (both rules stated backwards) GR4; the wrong fixes:
+// `swapkept` (the swap ignoring the span, the round-1 build's behaviour) GR1's personalized leg, `openended` (a window
+// without `to` published as open-ended) GR2's publication leg, `receiptmovedin` (the rule on the receipt of a moved-in
+// item only) GR1's personalized leg, `ordersadmitted` GR1's publication leg, `weighted` (a score boost) GR1's four host
+// legs and GR3's both-rules leg, `wholetake` (the whole take counted) the same six, `outsidewindow` GR2's window leg,
+// `refuseunmet` GR3's unmet leg, `firstbycatalogue` GR2's best-ranked leg, `silentreceipt` GR1's and GR2's record legs,
+// `kitleft` GR4, each on both hosts where the leg runs on both. tsc on today: exit 0. P05, P04, P15, W20, P80, P38,
+// src/content/decide.test.ts, src/learn/receipts.test.ts and src/routes/content.test.ts: 186/186 on today and under the
+// fix (logs/f/). The whole suite at eb176a88 (logs/c/, compare.txt; the later heads add P83 assertions only, and the
+// sketch's swap edit acts only on a slot carrying `minimum`): 3926 tests on both trees, no test failing under the fix
+// alone; the 17 P83 tests the only difference. The 61 failing on both trees, their cause not measured here: P82's
+// specification (7, its product not on this branch) and 54 in src/demos/kit/root.worker.test.ts, P45-P47, P51-P53, W19
+// B1-B3, W39 and W40 (LEDGER, P6).
 //
 // HARNESS: src/units/_parity.ts. Imports from src/units/: ../_parity.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DecisionRecord } from '@/content/types';
+import { bucketOf, hourKeyOf } from '@/learn/explore';
 
 import {
-  BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, M, MODULES, mount, pageInstanceOf, putDocument, readTree, receiptsOf, replayOf,
+  BRAND, declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, M, MODULES, mount, PAGE_VIEW, PAID_SOCIAL_ENTRY, recentSlot, pageInstanceOf, putDocument, readTree, receiptsOf, replayOf,
   shopperOn, storedDecisions, TENANT, VIEW_TABBY_26, type Decision, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
 
@@ -132,6 +148,10 @@ const SCOPED = [
   // Two launch images of one product: the first in catalogue order is not the one the visitor's interest ranks first.
   image('img-e-launch-slg', [LAUNCH], 'Small Leather Goods', [E]), image('img-e-studio', ['studio'], 'Handbags', [E]), image('img-e-launch-bag', [LAUNCH], 'Handbags', [E]),
 ];
+/** R-P309 (1): a product whose launch image is not on-model, with two on-model images and one other, in a world of its own. */
+const G = 'COA-PG200';
+const SPAN = [image('img-g-flat', ['flat-lay'], 'Handbags', [G]), image('img-g-model-1', ['on-model'], 'Small Leather Goods', [G]),
+  image('img-g-model-2', ['on-model'], 'Small Leather Goods', [G]), image('img-g-launch', [LAUNCH], 'Handbags', [G])];
 /** The window: from one hour to three hours past the test's own start, so every grant issued at the start stays live. */
 const T0 = Math.floor(Date.now() / 60_000) * 60_000;
 const FROM = T0 + 3_600_000, TO = T0 + 3 * 3_600_000;
@@ -194,7 +214,7 @@ describe('unit:P83.GR1', () => {
       expect.soft(served, `${host}: P83.GR1 — the guarantee on the default arm (today the rule is not read: the catalogue order)`).toEqual(cases.map(([name, , , rail]) => [name, rail]));
     }, 180_000);
 
-    it(`host (${host}): on the personalized arm, the visitor's interest ranking the on-model images last and with position bands, the first 2 positions hold an on-model image; the moved decisions name the rule in their records and receipts, and each replays equal`, async () => {
+    it(`host (${host}): on the personalized arm, the visitor's interest ranking the on-model images last and with position bands, the first 2 positions hold an on-model image; the moved decisions name the rule in their records and receipts, and each replays equal; on the declared layout slot the adjacent swap never breaks the guarantee on the served order (R-P310)`, async () => {
       const bands = [{ from: 1, to: 2, weights: { category: 1 } }, { from: 3, to: 4, weights: { category: 0.5 } }];
       const cases: Array<[string, Record<string, unknown>]> = [['without bands', carousel({ minimum: minimumOf(1, 2) })], ['with bands', carousel({ minimum: minimumOf(1, 2), bands })]];
       const served: Array<[string, string[]]> = [];
@@ -217,10 +237,68 @@ describe('unit:P83.GR1', () => {
       const receipts = (await receiptsOf(m!, s!.subject)).filter(x => x.slot === CAROUSEL);
       expect.soft(receipts.filter(x => x.item === 'img-model-5').map(x => [sortedKeys(x.minimum ?? null), ((x.why ?? []) as string[]).some(w => w.includes('on-model')) ? 'a why names the tag' : 'no why names the tag']),
         `${host}: P83.GR1 — the receipt carries the rule as the record does, and says why`).toEqual([[{ ...rule, from: 5 }, 'a why names the tag']]);
+      // R-P309 (4): an item the rule moved down carries it on its receipt as on its record.
+      expect.soft(receipts.filter(x => x.item === 'img-studio-2').map(x => [sortedKeys(x.minimum ?? null), ((x.why ?? []) as string[]).some(w => w.includes('on-model')) ? 'a why names the tag' : 'no why names the tag']),
+        `${host}: P83.GR1 — the receipt of an item the rule moved down carries the rule and the position it held without it, and says why`).toEqual([[{ ...rule, from: 2 }, 'a why names the tag']]);
       const replays: unknown[][] = [];
       for (const r of records) { const replay = await replayOf(m!, r.decision_id); replays.push([r.item_id, replay.status, replay.body.classification ?? replay.body.reason ?? null]); }
       expect.soft(replays, `${host}: P83.GR1 — each decision replays equal`).toEqual(records.map(r => [r.item_id, 200, 'equal']));
-    }, 180_000);
+
+      // R-P310, R-P312: the P05 adjacent swap (share 1) on the declared layout slot with the rule 1 Tabby module in the first
+      // 1. A shopper with no signal ranks the modules in catalogue order (P05's COLD: grid.1, reco.1, reco.2, editorial.1); the
+      // rule brings reco.2 (line Tabby) to position 1, grid.1 at once after: the guaranteed order. A pair at the span's edge
+      // (the carrier at `within`, a non-carrier after it) is left out of the swap's candidate pairs, as a pair touching a
+      // pinned position is today, so the swap lands on another free pair; with no free pair left the slot serves its ranked
+      // order and no record carries an exploration member. The pair is chosen from the decision's own bucket (visitor,
+      // slot, hour; src/learn/explore.ts explorationPick): the shopper drawn here has a bucket below 1/3, which picks
+      // (1, 2) when every pair is a candidate.
+      const GUARANTEED = [M.reco2, M.grid, M.reco1, M.editorial];
+      const tabbyFirst = { dimension: 'line', value: 'Tabby', count: 1, within: 1 };
+      const swapLearn = learnDocument({ [LAYOUT]: { measurementBasis: 'rendered-v1', reward: 'click', exploration: { mode: 'adjacent-swap', share: 1, floor: 50 } } });
+      const at = (Math.floor(Date.now() / 3_600_000) + 1) * 3_600_000 + 60_000;
+      const bucket = (x: Shopper) => Math.round(bucketOf(x.subject, LAYOUT, hourKeyOf(at)) * 1000) / 1000;
+      /** A shopper of `w` whose bucket in the leg's hour lies in [lo, hi], after a page view (as P05's shoppers). */
+      const drawn = async (w: Mounted, lo: number, hi: number): Promise<Shopper> => {
+        for (let draw = 0; draw < 60; draw++) {
+          const x = await shopperOn(w), b = bucket(x);
+          if (b >= lo && b <= hi) {
+            expect((await x.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the page view is accepted`).toBe(200);
+            return x;
+          }
+        }
+        return expect.unreachable(`${host}: PRECONDITION — none of sixty shoppers has a bucket in [${lo}, ${hi}]`);
+      };
+      /** The layout slot as served, and each of its records as [item, explored, the swap's positions or null], the page acknowledged. */
+      const servedLayout = async (w: Mounted, x: Shopper, name: string): Promise<[string[], unknown[]]> => {
+        const snap = await page(w, x);
+        expect(snap.status, `${host}: PRECONDITION — ${name}: the page is answered (${show(snap)})`).toBe(200);
+        const layout = snap.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
+        for (const d of layout) expect((await x.ack(snap, d)).status, `${host}: PRECONDITION — ${name}: ${d.contentId} is acknowledged`).toBe(200);
+        await w.drainLedger();
+        const layoutRecords = storedDecisions(w, x.subject).filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+        return [layout.map(d => d.contentId), layoutRecords.map(r => [r.item_id, r.explored,
+          ((r.explain as unknown as Record<string, unknown>).exploration as { positions?: unknown } | undefined)?.positions ?? null])];
+      };
+      const four = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ minimum: tabbyFirst }), recentSlot()]), learn: swapLearn });
+      const two = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ take: 2, minimum: tabbyFirst }), recentSlot()]), learn: swapLearn });
+      expectPublished(four, 'P83.GR1 (R-P310) — the rule and the adjacent swap at share 1 on the declared layout slot publish');
+      expectPublished(two, 'P83.GR1 (R-P310) — the rule and the adjacent swap at share 1 on a take-2 declared layout slot publish');
+      const x4 = await drawn(four, 0.02, 0.31), x2 = await drawn(two, 0.02, 0.98);
+      clockAt(at);
+      const [order4, records4] = await servedLayout(four, x4, 'take 4'), [order2, records2] = await servedLayout(two, x2, 'take 2');
+      vi.useRealTimers();
+      // (a, c) whatever free pair swapped: position 1 keeps the module the guarantee placed there, exactly one adjacent pair
+      // after it is exchanged, and the two records of that pair, and no other, name it.
+      const moved = order4.map((id, i) => id === GUARANTEED[i] ? null : i + 1).filter((i): i is number => i !== null);
+      const oneSwapAfterTheSpan = moved.length === 2 && moved[0]! >= 2 && moved[1] === moved[0]! + 1
+        && order4[moved[0]! - 1] === GUARANTEED[moved[1]! - 1] && order4[moved[1]! - 1] === GUARANTEED[moved[0]! - 1];
+      const named = records4.filter(r => (r as unknown[])[2] !== null).map(r => JSON.stringify((r as unknown[])[2]));
+      expect.soft({ first: order4.slice(0, 1), oneSwapAfterTheSpan, theRecordsNameIt: named.length === 2 && named.every(v => v === JSON.stringify(moved)) },
+        `${host}: P83.GR1 (R-P312 a, c) — the swap never moves the module the guarantee placed in the first position: it lands on a free pair after it, whose records name it (served ${JSON.stringify(order4)}, records ${JSON.stringify(records4)})`).toEqual({
+        first: [M.reco2], oneSwapAfterTheSpan: true, theRecordsNameIt: true });
+      expect.soft([order2, records2], `${host}: P83.GR1 (R-P312 b) — with the edge pair the only pair, the slot serves its ranked order and no record carries an exploration member`).toEqual([
+        [M.reco2, M.grid], [[M.reco2, false, null], [M.grid, false, null]]]);
+    }, 240_000);
   }
 
   it('host: publication refuses a malformed rule by name — a count over the span, a span over the take, a count below 1, a missing tag, a rule beside per-context orders (R-P307) — and admits a well-formed one', async () => {
@@ -311,7 +389,7 @@ describe('unit:P83.GR2', () => {
   // A write is read under the current contract (governance 3 or later, src/content/kinds.ts parseSlotCatalog), so a write
   // marked earlier cannot hold a tag pin below 3; a retained document marked earlier ignores the member, as it ignores every
   // later member.
-  it('host: publication refuses a malformed tag pin by name — beside an item pin, a window whose start is not before its end, a window end that is no date — and admits a well-formed one', async () => {
+  it('host: publication refuses a malformed tag pin by name — beside an item pin, a window whose start is not before its end, a window end that is no date, a window missing one of its ends (R-P309) — and admits a well-formed one', async () => {
     const m = await mount('session', docs(SCOPED, scopedCarousel()));
     expectPublished(m, 'P83.GR2 — the documents publish');
     const put = async (slot: Record<string, unknown>, extra: Record<string, unknown> = {}) => {
@@ -324,6 +402,11 @@ describe('unit:P83.GR2', () => {
       endNoDate: await put(scopedCarousel({ pinnedTag: pinnedTagOf({ from: WINDOW.from, to: 'next week' }) })),
     }, 'P83.GR2 — each refused by name (today the member is not read: every one is published)').toEqual({
       besideAnItemPin: [422, 'named'], startNotBeforeEnd: [422, 'named'], endNoDate: [422, 'named'] });
+    // R-P309 (3): a window missing one of its ends is never open-ended: refused by name.
+    expect.soft({
+      toMissing: await put(scopedCarousel({ pinnedTag: { dimension: 'shot', value: LAUNCH, window: { from: WINDOW.from } } })),
+      fromMissing: await put(scopedCarousel({ pinnedTag: { dimension: 'shot', value: LAUNCH, window: { to: WINDOW.to } } })),
+    }, 'P83.GR2 — a window missing one of its ends refused by name, never read as open-ended').toEqual({ toMissing: [422, 'named'], fromMissing: [422, 'named'] });
     expect((await putDocument(m, 'slots', declaredSlots([layoutSlot(), scopedCarousel({ pinnedTag: pinnedTagOf() })]), 'p83 well formed')).status, 'P83.GR2 — a well-formed tag pin publishes').toBe(200);
   }, 120_000);
 });
@@ -353,7 +436,7 @@ describe('unit:P83.GR3', () => {
       expect.soft([unmet.body.refusedCount, unmet.body.omittedCount], `${host}: P83.GR3 — LOCK: refusedCount and omittedCount beside the entries, as today`).toEqual([1, 0]);
     }, 180_000);
 
-    it(`host (${host}): with the tag pin and the rule (1 on-model image in the first 2) on one slot, the pin takes position 1 and the rule counts it: a launch image that is not on-model brings the on-model image to position 2; one that is on-model brings nothing`, async () => {
+    it(`host (${host}): with the tag pin and the rule (1 on-model image in the first 2) on one slot, the pin takes position 1 and the rule counts it: a launch image that is not on-model brings the on-model image to position 2; one that is on-model brings nothing; a rule asking more than the span's unpinned positions never moves the pinned item (R-P309)`, async () => {
       const m = await mount(host, docs(SCOPED, scopedCarousel({ pinnedTag: pinnedTagOf(), minimum: minimumOf(1, 2) })));
       expectPublished(m, 'P83.GR3 — both rules publish on one slot');
       const s = await shopperOn(m);
@@ -362,6 +445,16 @@ describe('unit:P83.GR3', () => {
       vi.useRealTimers();
       expect.soft({ a, b }, `${host}: P83.GR3 — the pin first, then the guarantee counting it`).toEqual({
         a: ['img-a-launch', 'img-a-model', 'img-a-studio'], b: ['img-b-launch', 'img-b-model'] });
+      // R-P309 (1), R-P303 (2) "never a pinned item": 2 on-model images asked in the first 2 beside a launch image that is not
+      // on-model. The pinned image keeps position 1; one on-model image follows it (the span's one unpinned position), the
+      // image it displaced at once after; the second on-model image is not served (take 3).
+      const n = await mount(host, docs([...SCOPED, ...SPAN], scopedCarousel({ pinnedTag: pinnedTagOf(), minimum: minimumOf(2, 2) })));
+      expectPublished(n, 'P83.GR3 — both rules publish, the rule asking 2 in the first 2');
+      const u = await shopperOn(n);
+      clockAt(FROM + 60_000);
+      const g = railOf(await page(n, u, G));
+      vi.useRealTimers();
+      expect.soft(g, `${host}: P83.GR3 — the pinned item keeps position 1 when the rule asks more than the span's other positions hold`).toEqual(['img-g-launch', 'img-g-model-1', 'img-g-flat']);
     }, 180_000);
   }
 });
@@ -387,5 +480,13 @@ describe('unit:P83.GR4', () => {
       prefixExclusive: kit02.includes('It is mutually exclusive with scalar `pinnedPieceId`, even with [].'),
       bandsSection: kit02.includes('### Position bands (`bands`)'),
     }, 'P83.GR4 — LOCK: the item-pin and band sentences stand').toEqual({ itemPinRefuses: true, prefixExclusive: true, bandsSection: true });
+    // R-P309 (2): the sentences' meaning, not their keywords: the window's ends in that order, and the rule enforced, not
+    // weighted (`enforced` itself not negated), in the passage naming each member, in both kits.
+    const ends = /`?from`? inclusive, `?to`? exclusive/i, enforced = /(?<!\b(?:never|not)\s)\benforced(?:,|;|\sand)?\s(?:never|not)\s(?:a\s)?weighted\b/i;
+    expect.soft({
+      kit02Ends: has(kit02, /`pinnedTag[`:]/, ends), kit03Ends: has(kit03, /`pinnedTag[`:]/, ends),
+      kit02Enforced: has(kit02, /`minimum[`:]/, enforced), kit03Enforced: has(kit03, /`minimum[`:]/, enforced),
+    }, 'P83.GR4 — the kit says the window runs from inclusive to exclusive and the rule is enforced, not weighted (today neither)').toEqual({
+      kit02Ends: true, kit03Ends: true, kit02Enforced: true, kit03Enforced: true });
   });
 });
