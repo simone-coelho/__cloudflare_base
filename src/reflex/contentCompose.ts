@@ -60,6 +60,16 @@ export interface ContentSlotSpec {
    */
   diversity?: { dimension: string; max: number };
   /**
+   * P83 (E6): a guarantee, enforced and never weighted: after the slot's pins and its ranking, at least `count` items
+   * carrying the tag stand in its first `within` positions whenever that many are eligible (all of them when fewer are).
+   */
+  minimum?: { dimension: string; value: string; count: number; within: number };
+  /**
+   * P83 (E6): the tag pin, passed by the caller only while its window is in effect: the best-ranked eligible candidate
+   * carrying the tag leads the slot; with none, the slot decides as without it and the pin is named, refusing nothing.
+   */
+  pinnedTag?: { dimension: string; value: string; window: { from: string; to: string } };
+  /**
    * P01: a configured module order the caller resolved for THIS decision (the
    * shopper's context, an arm that personalizes). When the slot's exploration
    * picks nothing, the slot serves exactly these modules, in this order, after
@@ -244,6 +254,10 @@ export interface ContentDecision {
     note?: string;
     /** CW33: the slot's diversity rule touched this position. */
     diversity?: { dimension: string; max: number; skipped: string[]; relaxed: boolean; sentence: string };
+    /** P83: the slot's guarantee moved this position; `from` is the position (from 1) it held without the rule. */
+    minimum?: { count: number; dimension: string; from: number; value: string; within: number };
+    /** P83: the slot's tag pin placed this item at its first position, in the pin's window. */
+    pinnedTag?: { dimension: string; value: string; window: { from: string; to: string } };
   };
   /**
    * P26 (decision D1): this decision is of an inner content slot — the slot
@@ -271,14 +285,19 @@ export type HistoricalGovernance = typeof HISTORICAL_GOVERNANCE | typeof HISTORI
 
 export interface PinDiagnostic {
   slot: string;
-  pinnedPieceId: string;
+  /** The item pin's piece; absent on a tag pin's entry (P83), which names its tag instead. */
+  pinnedPieceId?: string;
+  /** P83: on an `unmet_tag_pin` entry alone, the tag the pin named. */
+  pinnedTag?: { dimension: string; value: string };
   /**
-   * Why the pin served nothing. P43 (R-P78): `module_not_returned` is the one
-   * reason that refuses nothing — the pin of an inner content slot whose module
-   * the layout did not return stayed reserved page-wide, so its piece is served
-   * nowhere on that page view.
+   * Why the pin served nothing. P43 (R-P78): `module_not_returned` refuses
+   * nothing — the pin of an inner content slot whose module the layout did not
+   * return stayed reserved page-wide, so its piece is served nowhere on that
+   * page view. P83: `unmet_tag_pin` refuses nothing either — a tag pin in its
+   * window that no eligible candidate carrying the tag satisfied; the slot was
+   * decided as without it.
    */
-  reason: 'invalid_take' | 'missing_or_ineligible' | 'slot_type' | 'duplicate_pin' | 'module_not_returned' | SlotConstraintReason;
+  reason: 'invalid_take' | 'missing_or_ineligible' | 'slot_type' | 'duplicate_pin' | 'module_not_returned' | 'unmet_tag_pin' | SlotConstraintReason;
   ownerSlot?: string;
   pinIndex?: number;
   /** P04: the refused position pin's position, counted from 1; absent on prefix and scalar pins. */
@@ -378,6 +397,7 @@ export function composeContentDetailed(
   settle?: SettleHook,
 ): ComposeContentResult {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
+  const byIdLive = new Map(live.map((p) => [p.id, p] as const));
   // "Catalogue order" is the document's order: the merchandiser's, not the ids'. Ties, and the cold
   // case where every score is zero, resolve to the first eligible piece as the catalog lists them.
   const rank = new Map(pieces.map((p, i) => [p.id, i]));
@@ -513,6 +533,7 @@ export function composeContentDetailed(
   /** One slot of the page, decided: what it serves is added to `out` in its position order. */
   const decideSlot = (slot: ContentSlotSpec): void => {
     if (offLimits.has(slot)) return;
+    const slotStart = out.length;
     const prefix = prefixes.get(slot);
     if (refusedPrefixes.has(slot)) return;
     if (prefix) for (const p of prefix.pieces) {
@@ -572,9 +593,9 @@ export function composeContentDetailed(
       marksDecided = eligible.some((p) => marks.has(p.id));
     }
     // The ranking pool: what the slot could serve, its off-limits modules removed.
-    const rankable = marks ? eligible.filter((p) => !marks.has(p.id)) : eligible;
+    let rankable = marks ? eligible.filter((p) => !marks.has(p.id)) : eligible;
     // The positions ranking fills: the take less the prefix, the position pins and the held modules.
-    const free = fixedSlot ? Math.max(0, slot.take - prefixLength - pinsAt.size - held.size) : prefix ? remaining : slot.take;
+    let free = fixedSlot ? Math.max(0, slot.take - prefixLength - pinsAt.size - held.size) : prefix ? remaining : slot.take;
     // P28 (decision D1): on a slot that opted into the layout blend, each
     // candidate's rank base R = (M − i) / M over a baseline of M modules, i
     // counted from 0 (so the first module's R is 1). The slot's own baseline is
@@ -612,6 +633,23 @@ export function composeContentDetailed(
     };
     const byScoreThenCatalogue = (x: { p: ContentPieceLike; score: number }, y: { p: ContentPieceLike; score: number }) =>
       y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id);
+    // P83 (E6): the tag pin in effect (the caller passes it only inside its window): the best-ranked eligible candidate
+    // carrying the tag, ranked as the slot's first position ranks (its band's weights when a band covers it), leads the
+    // slot and is never ranked again nor explored; the other positions rank as without it. With none (or with the
+    // slot's first position already fixed by a pin or a held module), the slot decides as without it and the pin is
+    // named, refusing nothing. A slot with a pinned prefix or a scalar pin carries none (publication refuses both).
+    let tagLead = false;
+    if (slot.pinnedTag && !prefix && free > 0) {
+      const tag = slot.pinnedTag, leadBand = wellFormedBands(slot)?.find((band) => band.from <= 1 && band.to >= 1);
+      const best = pinsAt.has(1) || held.has(1) ? undefined : rankable.filter((p) => (p.tags[tag.dimension] ?? []).includes(tag.value))
+        .map((p) => scoreOf(p, catalogueBase?.get(p.id), leadBand)).sort(byScoreThenCatalogue)[0]?.p;
+      if (best) {
+        rankable = rankable.filter((p) => p.id !== best.id); free -= 1; used.add(best.id); tagLead = true;
+        out.push({ contentId: best.id, customerContentId: best.customerContentId, type: best.type, slot: slot.slot, order: order++, score: 0, strategy: 'tenant-pinned',
+          explain: { drivers: [], note: `pinned by its tag ${tag.dimension} ${tag.value} from ${tag.window.from} to ${tag.window.to}; ranking never ran for this piece`,
+            pinnedTag: { dimension: tag.dimension, value: tag.value, window: { from: tag.window.from, to: tag.window.to } } } });
+      } else pinDiagnostics.push({ slot: slot.slot, reason: 'unmet_tag_pin', pinnedTag: { dimension: tag.dimension, value: tag.value } });
+    }
     const rankUnbanded = () => rankable.map((p) => scoreOf(p, catalogueBase?.get(p.id))).sort(byScoreThenCatalogue);
     // P15 (decision D1): the positions the ranking fills — the take after the
     // prefix, less the positions a pin or a held module fixes — each ranked with
@@ -619,7 +657,7 @@ export function composeContentDetailed(
     // without its bands (R-P34), so they rank it only where exploration could
     // pick instead and the slot would then serve its own, banded, decision.
     const fillPositions: number[] = [];
-    for (let position = prefixLength + 1; position <= slot.take && fillPositions.length < free; position++) {
+    for (let position = prefixLength + (tagLead ? 2 : 1); position <= slot.take && fillPositions.length < free; position++) {
       if (!pinsAt.has(position) && !held.has(position)) fillPositions.push(position);
     }
     const bands = wellFormedBands(slot);
@@ -681,7 +719,7 @@ export function composeContentDetailed(
     // first and placed around the fixed ones below, so every decision of the
     // slot is numbered in position order; any other slot is served as before.
     const rankedOut: ContentDecision[] | null = fixedSlot ? [] : null;
-    const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity'], note?: string) => {
+    const decisionOf = (s: (typeof scored)[number], order: number, diversity?: ContentDecision['explain']['diversity'], note?: string): ContentDecision => {
       const drivers: ContentDecision['explain']['drivers'] = [];
       for (let i = 0; i < s.drivers.length; i += 4) {
         drivers.push({ dim: s.drivers[i] as string, value: s.drivers[i + 1] as string,
@@ -689,13 +727,16 @@ export function composeContentDetailed(
       }
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       const cold = s.score <= 0;
+      return { contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
+        slot: slot.slot, order, score: round3(s.score),
+        strategy: cold ? 'default' : 'affinity',
+        explain: { drivers: drivers.slice(0, 4), ...(note ? { note } : cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } };
+    };
+    const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity'], note?: string) => {
       used.add(s.p.id);
       // P15: a module a band ranked, and the positions that band covers.
       if (s.band) bandPlacements.push({ slot: slot.slot, contentId: s.p.id, from: s.band.from, to: s.band.to });
-      const decision: ContentDecision = { contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
-        slot: slot.slot, order: rankedOut ? -1 : order++, score: round3(s.score),
-        strategy: cold ? 'default' : 'affinity',
-        explain: { drivers: drivers.slice(0, 4), ...(note ? { note } : cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } };
+      const decision = decisionOf(s, rankedOut ? -1 : order++, diversity, note);
       if (rankedOut) rankedOut.push(decision); else out.push(decision);
     };
     // P01: the configured order, when the caller resolved one and exploration
@@ -802,7 +843,7 @@ export function composeContentDetailed(
           explain: { drivers: [], note: rule === 'pinned' ? positionPinNote(position) : offLimitsNote(position) } });
         placements.push({ slot: slot.slot, contentId: p.id, rule, position, ...(rule === 'off_limits' ? { baseline: slot.order ? 'order' as const : 'catalogue' as const } : {}) });
       };
-      for (let position = prefixLength + 1; position <= slot.take; position++) {
+      for (let position = prefixLength + (tagLead ? 2 : 1); position <= slot.take; position++) {
         const pinnedHere = pinsAt.get(position), heldHere = held.get(position);
         if (pinnedHere) place(pinnedHere, 'pinned', position);
         else if (heldHere) place(heldHere, 'off_limits', position);
@@ -811,6 +852,50 @@ export function composeContentDetailed(
       if (pinsAt.size || marksDecided) ruled.add(slot);
       if (marksDecided && slot.order) orderBaseline.add(slot);
     }
+    if (slot.minimum && !slot.order) guarantee(slot.minimum, out.slice(slotStart), scored.filter((x) => !used.has(x.p.id)), slotStart, decisionOf);
+  };
+  /**
+   * P83 (E6): the slot's guarantee, after its pins and its ranking (bands, exploration and the diversity rule
+   * included): when its first `within` positions hold fewer than `count` items carrying the tag, the best-ranked items
+   * carrying it that the slot ranked below them (served further down, else not served) come into those positions, the
+   * lowest-ranked items there not carrying it leaving, until `count` are there or none is left. A fixed position (a
+   * pinned prefix, the tag pin's lead, a position pin, a held off-limits module) counts when its item carries the tag
+   * and never moves; only the slot's ranked decisions are rearranged around them: the first `within` keep their rank
+   * order (kept, then incoming), the displaced follow at once, then the rest of the take. A decision whose position
+   * the rule changed carries `explain.minimum`, `from` its position without the rule.
+   */
+  const guarantee = (rule: NonNullable<ContentSlotSpec['minimum']>, served: ContentDecision[], unserved: ReadonlyArray<{ p: ContentPieceLike; score: number; drivers: Array<string | number>; band: SlotBand | undefined }>,
+    start: number, decisionOf: (s: { p: ContentPieceLike; score: number; drivers: Array<string | number>; band: SlotBand | undefined }, order: number) => ContentDecision): void => {
+    const carries = (id: string) => (byIdLive.get(id)?.tags[rule.dimension] ?? []).includes(rule.value);
+    const within = Math.min(rule.within, served.length);
+    const need = rule.count - served.slice(0, within).filter((d) => carries(d.contentId)).length;
+    if (need <= 0 || !served.length) return;
+    const fixed = served.map((d) => d.strategy === 'tenant-pinned');
+    const ranked = served.filter((_, i) => !fixed[i]);
+    const kept = served.slice(0, within).filter((_, i) => !fixed[i]).length;
+    const head = ranked.slice(0, kept), tail = ranked.slice(kept);
+    const pool = [...tail.filter((d) => carries(d.contentId)).map((d) => ({ d, from: served.indexOf(d) + 1 })),
+      ...unserved.filter((x) => carries(x.p.id)).map((x) => ({ d: decisionOf(x, -1), from: served.length + 1 + unserved.indexOf(x) }))];
+    const leaving = head.filter((d) => !carries(d.contentId));
+    const n = Math.min(need, pool.length, leaving.length);
+    if (n <= 0) return;
+    const incoming = pool.slice(0, n), displaced = new Set(leaving.slice(-n)), promoted = new Set(incoming.map((x) => x.d));
+    const next = [...head.filter((d) => !displaced.has(d)), ...incoming.map((x) => x.d), ...head.filter((d) => displaced.has(d)),
+      ...tail.filter((d) => !promoted.has(d))].slice(0, ranked.length);
+    for (const d of ranked) if (!next.includes(d)) used.delete(d.contentId);
+    for (const x of incoming) used.add(x.d.contentId);
+    const before = new Map<ContentDecision, number>([...served.map((d, i) => [d, i + 1] as const), ...incoming.map((x) => [x.d, x.from] as const)]);
+    let k = 0;
+    const arranged = served.map((d, i) => (fixed[i] ? d : next[k++]!));
+    const first = served[0]!.order;
+    arranged.forEach((d, i) => {
+      d.order = first + i;
+      const from = before.get(d);
+      if (from !== undefined && from !== i + 1) {
+        d.explain = { ...d.explain, minimum: { count: rule.count, dimension: rule.dimension, from, value: rule.value, within: rule.within } };
+      }
+    });
+    out.splice(start, served.length, ...arranged);
   };
   /**
    * P05 through `settle`: once a slot has served, and before any slot after it
