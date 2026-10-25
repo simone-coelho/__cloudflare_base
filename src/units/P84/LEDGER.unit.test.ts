@@ -1,8 +1,8 @@
 // src/units/P84/LEDGER.unit.test.ts
 // P84 under the Closure Ledger: the tests for the LOCAL criteria CO1-CO4 of the P84 work order (the activation programme
 // of amendment 11, group B, ticket P84 "The context order for the carousel before paint", E8; batch S30). LV1 is a
-// deferred live row and gets no test. PROVISIONAL: the shapes marked PROPOSED are the specifier's, to the brief and its
-// amendments (R-P359); every line marked RULING is for the lead before the legs are measured.
+// deferred live row and gets no test. The shapes below were proposed at the provisional (e0f84f10) and RATIFIED by
+// R-P363, which also ruled C2 and C4 (below); a line marked RULING is for the lead.
 //
 // THE REQUIREMENT, verbatim (docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md, section 2,
 // E8):
@@ -52,7 +52,7 @@
 //   · `shotOrders: [{ context, order }]` on a content slot in P01's context form, refused by name on the layout slot and
 //     elsewhere; hash32/bucketOf/armFor may move to src/sdk/head.ts with holdout.ts importing them.
 //
-// PROPOSED SHAPES (each asserted below; RULING where marked):
+// THE SHAPES (proposed at e0f84f10, ratified by R-P363; each asserted below):
 //   P1 The slot rule. `shotOrders: [{ context: { channel, visitBuckets, device? }, order: [contentType values] }]` on a slot
 //      of a page whose declared layout slot exists, other than that layout slot; the context is P01's exactly (src/content/
 //      types.ts OrderContext: `channel` a channel word or `any`, `visitBuckets` a non-empty list or `any`, `device` optional;
@@ -80,8 +80,11 @@
 //      is null throughout. `holdout` from the learn document in force (saltVersion as W21 counts it). `brandRules` the
 //      carousel slot's P83 rules as published. `classifierVersion` = CLASSIFIER_VERSION (a NEW export of src/services/
 //      visit.ts, the version the head script carries; a document naming another makes the script paint the default row).
-//      RULING: `version` = the SHA-256 hex of the document's canonical JSON (keys sorted, no white space) without
-//      `version`. A page with no declared layout slot 404; on a page whose slots carry no shot orders, carouselSlot is null,
+//      `version` = the SHA-256 hex of the document's canonical JSON (keys sorted, no white space) without `version`.
+//      C4 (R-P363): a tenant publishing a context vocabulary (P36) has it in the document as `channelVocabulary: {
+//      revision, channels, rules, visitBuckets }` (the learn revision that published it, its channel ids in order, its
+//      classification rules as published, its cut); the rows are then its channel ids × its cut's bucket names (cell.ts
+//      bucketNamesOf); absent for a tenant without one. A page with no declared layout slot 404; on a page whose slots carry no shot orders, carouselSlot is null,
 //      every shotOrder null and brandRules {}.
 //   P4 The head script: src/sdk/head.ts → `public/sdk/edge-head.js` (IIFE), its copies `public/sdk/0.2.0/edge-head.js` and
 //      `packages/sdk/edge-head.js` (a third SDK_TARGETS entry in scripts/build-sdk.mjs), each with `edge-head.js.csp`
@@ -95,21 +98,23 @@
 //      `<link rel="preload" as="image" href imagesrcset imagesizes fetchpriority="high">` for the leading image, before
 //      the first stylesheet link. It hides nothing, fetches nothing, sends nothing and writes no cookie. Its state in
 //      first-party storage under `opt_head`: { visit: { visitCount, lastVisitAt, entryChannel?, lastSeen }, arm?: { class,
-//      tableVersion, saltVersion }, experiment?: { id, saltVersion } } (RULING: the key and members).
+//      tableVersion, saltVersion }, experiment?: { id, saltVersion } }.
 //      The cell: liveVisit + visitBucket (src/services/visit.ts) over the stored visit and the page's entry (the SDK's
 //      entrySignals form: utm_medium/utm_source/utm_campaign/utm_term, document.referrer, location.hostname) — the cell
-//      the engine records at the page's first event; the device by deviceOf over navigator's user agent (no device: the
-//      default row). The default row: the holdout class, no recorded personalization consent (RULING: the root's
-//      `data-op-consent` naming `personalization`, which the page's consent adapter writes before the script; the SDK's
-//      refusal cookie `opt_personalization_enabled=false` overrides it), an unknown channel, a classifier version other
+//      the engine records (C1), classified by the document's `channelVocabulary` where it carries one (C4: liveVisit with
+//      that vocabulary, visitBucketOf with its cut); the device by deviceOf over navigator's user agent (no device: the
+//      default row). The default row: the holdout class, no recorded personalization consent (the root's
+//      `data-op-consent` naming `personalization`, the server render's optional hint; the SDK's refusal cookie
+//      `opt_personalization_enabled=false` overrides it), an unknown channel, a classifier version other
 //      than its own, a salt version other than the stored one (one paint, the stored class re-derived next time). The
 //      brand rules apply on every row, the default included, exactly as the engine applies them (P83's tag pin within its
 //      window, then the minimum's promotion).
-//   P5 The arm (direct path, R-P359): a brand-new browser's head script draws `default` with probability p = share ×
+//   P5 The arm (direct path, R-P359): the SDK's first decision request carries `entry` (snapshotEntry of the arrival it
+//      already computes, C2 as R-P363 rules it) beside `arm`. A brand-new browser's head script draws `default` with p = share ×
 //      (count of `default` in arms) ÷ |arms| (armFor's split), else `personalized`, from crypto.getRandomValues, and
 //      stores { class, tableVersion, saltVersion }; the SDK's first decision request (direct mode, fresh browser) carries
-//      `arm`: the JSON text of { class, tableVersion } (RULING: a string, as `entry` is — snapshotContext's allow-list
-//      admits string values only, decisions.ts :954-957); the engine mints `vis-` identifiers (newAnonymousSession with a
+//      `arm`: the JSON text of { class, tableVersion } (a string, as `entry` is: snapshotContext's allow-list admits string
+//      values only, decisions.ts :954-957); the engine mints `vis-` identifiers (newAnonymousSession with a
 //      target, through anonymousWithConsent) until armFor(subject, holdout) is in the class (`personalized` = any arm but
 //      `default`), at most min(4096, ceil(ln(1e-6)/ln(1−p))) draws, p the class's probability; p 0 or 1: one draw. The
 //      answer carries `armRequest: { class, honoured, reason? }` (reason `capped` | `mismatch` | `ignored`); the learn
@@ -119,36 +124,41 @@
 //      { share, arms, salt }), the salt read from the stored experiment.id (`<tenant>:<brand>:<salt>`), which the SDK
 //      stores from every answer's `experiment`.
 //
-// READINGS THE CODE CONTRADICTS (for ruling):
-//   C1 The brief's lock "the script's classifier output equals visitArrival's channel": visitArrival answers device and
-//      recency only (src/services/visit.ts :427-436); the channel and the visit number are liveVisit's (:378) and
-//      projectVisit's (:404), the bucket visitBucket's (:492). These tests lock the script to liveVisit + visitBucket.
+// READINGS THE CODE CONTRADICTED, AS R-P363 RULES THEM:
+//   C1 (accepted) The brief's lock "the script's classifier output equals visitArrival's channel": visitArrival answers
+//      device and recency only (src/services/visit.ts :427-436); the channel and the visit number are liveVisit's (:378)
+//      and projectVisit's (:404), the bucket visitBucket's (:492). These tests lock the script to liveVisit + visitBucket.
 //   C2 A brand-new shopper's decision before any event reads the visit bucket `unknown` (projectVisit's visitNumber is
 //      null for a shopper with no stored count, :404-414; cellFor → visitBucketOf(null) = 'unknown', src/content/cell.ts
 //      :100), and configuredOrderFor matches no context on an unknown bucket (decide.ts :745-749); the direct path's first
 //      request carries no entry (src/sdk/listen.ts :382-384: "consent-dependent context (session, channel, entry) is never
-//      sent then"). So the engine's FIRST answer to a brand-new browser is decided for no context, whatever the page
-//      painted. These tests measure the lock from the page's first event on (a page_view carrying the entry opens visit 1
-//      of the context, then the decision), as the carousel design note §4 has the engine's own order apply "at the next
-//      page view". RULING: or the engine reads a never-seen shopper as visit 1 with the request's entry.
-//   C3 A brand-new browser has no recorded choice on the engine at its first request (personalization takes an explicit
+//      sent then"). RULED (R-P363): the direct path's first request carries `entry` beside `arm`, and the engine reads a
+//      never-seen shopper (no stored visit) as visit bucket first with the request's entry, so the row-equals-answer lock
+//      holds from the FIRST decision: these tests measure it on a new shopper's first decision, no event before it.
+//      READING FOR RULING (C2 against C3): the decision path reads the entry and personalizes only under a recorded
+//      choice (service.ts :782 personalizes(consent), :791 the entry under consent.tracking; consent.ts storedConsent
+//      :139-146: a stored state with no instruction is tracking and personalization false), and hints only withdraw
+//      (consent.ts refusalHints :117). A brand-new browser's direct-path first request has no recorded choice, so its
+//      first answer is the default arm's (C3) whatever its entry. These tests measure the first-decision lock on a new
+//      shopper whose choice is recorded before her first decision (shopperOn, the session path), assert that the direct
+//      path's first request carries `entry`, and do not assert the carousel of a no-choice first answer.
+//   C3 (accepted) A brand-new browser has no recorded choice on the engine at its first request (personalization takes an explicit
 //      instruction, src/content/consent.ts personalizes()), so its first answer's experiment.arm is the ineligible
 //      assignment, not the page's class; these tests assert the class on the identifier (armFor(subject, salt)) and on
 //      the first answer after her choice, and `armRequest` on the first answer.
-//   C4 A tenant with a published context vocabulary (P36) classifies by its own rules and cut (classifyByVocabulary,
-//      contextTermsOf): the document then needs the rules and the cut for the script to derive the same cell. Not
-//      specified here (the parity tenant publishes none). RULING: the document carries `contextVocabulary: { revision,
-//      rules, channels, visitBuckets }` when one is in force, or the script paints the default row for such a tenant.
-//   C5 A recognised shopper's anchor is the earliest linked browser (holdout.ts enrollmentAnchorOf :255), which the head
+//   C4 (ruled, R-P363) A tenant with a published context vocabulary (P36) classifies by its own rules and cut
+//      (classifyByVocabulary, contextTermsOf): the document carries it as `channelVocabulary` (P3) and the head script's
+//      classifier takes it as input, the same function with the same rules as the engine.
+//   C5 (accepted, a counted mismatch, told) A recognised shopper's anchor is the earliest linked browser (holdout.ts enrollmentAnchorOf :255), which the head
 //      script cannot see: on another browser its computed class can differ from the engine's (a residual, counted as a
 //      mismatch by the engine).
-//   C6 The rows are per device (mobile, desktop): a request reporting no device matches only contexts naming none
+//   C6 (accepted) The rows are per device (mobile, desktop): a request reporting no device matches only contexts naming none
 //      (types.ts OrderContext; decide.ts :752); the script paints the default row when it can read no device.
-//   C7 Kit 01 :629-631 ("cache the module order, never an inner slot's items") and kit 02 :1960 ("On a context-only layout
+//   C7 (accepted) Kit 01 :629-631 ("cache the module order, never an inner slot's items") and kit 02 :1960 ("On a context-only layout
 //      slot the inner slots are decided for the shopper") stand: the document carries shot TYPES per context, never
 //      items; CO4 adds the sentence that the carousel's shot order is published per context and leaves those two true.
 //
-// R10 SWEEP (the locks the readings meet; none needs a grant on these shapes):
+// R10 SWEEP (the locks the readings meet; R-P363: nothing granted, the listed locks measured under the sketch):
 //   src/units/P01/LEDGER.unit.test.ts :270-271 (P01.O5: `orders` on a slot that is not the declared layout slot refused
 //   422) and src/units/P30/LEDGER.unit.test.ts :555-557 (P30.X6: `contextOnly` on the recently-viewed slot refused 422)
 //   HOLD: `shotOrders` is its own member and both refusals stay (CO1 asserts them as controls). To measure under the
@@ -160,6 +170,7 @@
 //
 // NEW EXPORT IMPORTED: CLASSIFIER_VERSION from src/services/visit.ts (P3); RED on its absence where named.
 //
+// The fixture's site is shop.example.invalid; no test reaches the network (the head script's double loads nothing).
 // DEFERRED / RESIDUAL: the learn-publish race between the mint's holdout read and the decision's pin is specified as a
 // counted reason (`republished`) but not provoked here; LV1.
 //
@@ -186,6 +197,7 @@ vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
 import { initializePublicationSet, invalidatePublicationCache, type PublicationBaseline } from '@/config/publication';
 import { invalidateCache, type DocumentKind } from '@/config/versionedStore';
+import { visitBucketOf } from '@/content/cell';
 import { armFor } from '@/content/holdout';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import type { HoldoutConfig } from '@/content/types';
@@ -201,13 +213,13 @@ import { authorityLocks } from '@/sdk/testHost';
 import type { RequestInitLike, ResponseLike } from '@/sdk/types';
 import { deviceOf } from '@/services/platform';
 // CLASSIFIER_VERSION is a NEW export (P3); the rest are today's.
-import { CLASSIFIER_VERSION, liveVisit, visitBucket, type ChannelSignals, type VisitContext } from '@/services/visit';
+import { CLASSIFIER_VERSION, liveVisit, snapshotEntry, visitBucket, type ChannelSignals, type ContextVocabulary, type VisitContext } from '@/services/visit';
 import { tenantMiddleware } from '@/tenancy/middleware';
 import type { Env } from '@/types/env';
 
 import {
   asOperator, BRAND, declaredSlots, errorsOf, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, loadDocument, M, MODULES, mount,
-  PAGE_VIEW, pageInstanceOf, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, type Decision, type Mounted, type Shopper,
+  pageInstanceOf, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, type Decision, type Mounted, type Shopper,
 } from '../_parity';
 import { putKind } from '../_parity5';
 import { customerStamp, SDK_KEY, TENANT as CUSTOMER_TENANT, type Stamp } from '../W08/_customer';
@@ -223,7 +235,7 @@ const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
 const CAROUSEL = 'pdp-carousel';
 const A = 'COA-CH857', B = 'COA-CB925';
-const SITE = 'www.coach.com';
+const SITE = 'shop.example.invalid';
 interface Image { id: string; customerContentId: string; type: string; title: string; tags: Record<string, string[]>; slotTypes: string[];
   lifecycle: { status: string }; featuredProductIds: string[] }
 const image = (n: number, contentType: string[] | null, product = A, extra: Record<string, string[]> = {}): Image => ({
@@ -292,6 +304,32 @@ const DEFAULT_ROW = { layout: both(null), shotOrder: both(null) };
 const expectedDocument = (over: Record<string, unknown> = {}) => ({ page: 'pdp', layoutSlot: LAYOUT, carouselSlot: CAROUSEL, classifierVersion: CLASSIFIER_VERSION,
   holdout: { arms: ['default'], saltVersion: 1, share: 0.2 }, default: DEFAULT_ROW, rows: EXPECTED_ROWS, brandRules: { minimum: MINIMUM }, ...over });
 
+/**
+ * C4: a tenant's published context vocabulary (P36): its channel ids (the brand split of paid search), its rules (first
+ * that holds), no platform or landing-page type, and its own cut [1, 2, 5] (buckets 1, 2-4, 5+).
+ */
+const CHANNEL_VOCABULARY: ContextVocabulary = {
+  channels: [{ id: 'paid_social', name: 'Paid social' }, { id: 'paid_search_brand', name: 'Paid search (brand)' },
+    { id: 'paid_search_nonbrand', name: 'Paid search (non-brand)' }, { id: 'email', name: 'Email' }, { id: 'direct', name: 'Direct' }],
+  rules: [
+    { channel: 'email', utmMedium: ['email', 'newsletter'] },
+    { channel: 'paid_social', utmMedium: ['paid_social'] },
+    { channel: 'paid_search_brand', utmMedium: ['cpc'], utmCampaign: ['brand'] },
+    { channel: 'paid_search_nonbrand', utmMedium: ['cpc'] },
+    { channel: 'direct', untagged: true, referrer: 'none' },
+  ],
+  sourcePlatforms: [], landingPageTypes: [], visitBuckets: [1, 2, 5],
+};
+const VOCAB_BUCKETS = ['1', '2-4', '5+'];
+const VOCAB_SHOT_ORDERS = [
+  { context: { channel: 'paid_search_brand', visitBuckets: ['1', '2-4'] }, order: ['detail', 'on_model'] },
+  { context: { channel: 'any', visitBuckets: ['5+'] }, order: ['studio'] },
+];
+const VOCAB_ROWS = CHANNEL_VOCABULARY.channels.map(c => c.id).flatMap(channel => VOCAB_BUCKETS.map(bucket => ({ channel, visitBucket: bucket,
+  layout: channel === 'paid_social' && bucket === '1' ? both(LAYOUT_PS) : channel === 'email' ? { desktop: LAYOUT_EMAIL, mobile: null } : both(null),
+  shotOrder: channel === 'paid_search_brand' && bucket !== '5+' ? both(['detail', 'on_model']) : bucket === '5+' ? both(['studio']) : both(null) })));
+const CHANNEL_VOCABULARY_MEMBER = { revision: 1, channels: CHANNEL_VOCABULARY.channels.map(c => c.id), rules: CHANNEL_VOCABULARY.rules, visitBuckets: [1, 2, 5] };
+
 /** Canonical JSON: keys sorted at every level, no white space (P3's digest input). */
 const canonical = (value: unknown): string => Array.isArray(value) ? `[${value.map(canonical).join(',')}]`
   : value && typeof value === 'object' ? `{${Object.keys(value as Record<string, unknown>).sort().map(k => `${JSON.stringify(k)}:${canonical((value as Record<string, unknown>)[k])}`).join(',')}}`
@@ -328,12 +366,10 @@ async function pdpPage(m: Mounted, s: Shopper, device: 'mobile' | 'desktop', bod
   return { status: response.status, body: answer, rail: railOf(answer) };
 }
 const railOf = (body: Record<string, unknown>) => ((body.decisions ?? []) as Decision[]).filter(d => d.slot === CAROUSEL).sort((a, b) => a.order - b.order).map(d => d.contentId);
-/** A new shopper whose first event, a page view carrying the arrival (or none), opened visit 1 (C2). */
-async function arrived(m: Mounted, entry: Record<string, string> | null): Promise<Shopper> {
+/** A new shopper's FIRST decision (C2 as ruled): her choice recorded (shopperOn), no event before it, the arrival on the request. */
+async function firstDecision(m: Mounted, entry: Record<string, string> | null, device: 'mobile' | 'desktop') {
   const s = await shopperOn(m);
-  const viewed = await s.action(PAGE_VIEW, entry ?? undefined);
-  expect(viewed.status, `PRECONDITION (${m.host}): her first page view is accepted (${JSON.stringify(viewed.body).slice(0, 160)})`).toBe(200);
-  return s;
+  return pdpPage(m, s, device, entry ? { entry: JSON.stringify(entry) } : {});
 }
 
 // ===========================================================================
@@ -395,7 +431,16 @@ describe('unit:P84.CO1', () => {
         expectedDocument({ carouselSlot: null, brandRules: {}, rows: EXPECTED_ROWS.map(r => ({ ...r, shotOrder: both(null) })) })]);
     }, 120_000);
 
-    it(`host (${host}): the lock — for a new shopper whose first page view carries the arrival, the engine's carousel is the document's row for her cell and device within the brand rules (paid social on mobile, email on desktop, paid search on desktop), the server order where her cell has no row (paid social on desktop, an unknown arrival), and the server order on the holdout's default arm; images of one shot type in server order, the untagged and the unnamed shot after them, the other product's image never`, async () => {
+    it(`host (${host}): a tenant publishing a context vocabulary (P36, C4) has it in the document as channelVocabulary { revision, channels, rules, visitBuckets }, and the rows are its channel ids × its cut's buckets (1, 2-4, 5+), the shot orders authored in its terms`, async () => {
+      const m = await mount(host, docsWith({ learn: learnDocument({ [CAROUSEL]: { measurementBasis: 'rendered-v1', reward: 'click' } }, { holdout: HOLDOUT, contextVocabulary: CHANNEL_VOCABULARY }),
+        slots: slotsOf({ shotOrders: VOCAB_SHOT_ORDERS }) }));
+      expectPublished(m, 'P84.CO1 — the vocabulary tenant\'s documents publish (shot orders in its terms)');
+      const table = await tableAt(m, 'pdp');
+      expect.soft([table.status, withoutVersion(table.body)], `${host}: P84.CO1 — the document carries the tenant's vocabulary and its grid (today no such route: ${shown(table)})`).toEqual([200,
+        expectedDocument({ channelVocabulary: CHANNEL_VOCABULARY_MEMBER, rows: VOCAB_ROWS })]);
+    }, 120_000);
+
+    it(`host (${host}): the lock from the first decision — for a new shopper (her choice recorded, no event yet) whose first decision carries the arrival, the engine's carousel is the document's row for her cell and device within the brand rules (paid social on mobile, email on desktop, paid search on desktop), the server order where her cell has no row (paid social on desktop, an unknown arrival), and the server order on the holdout's default arm; images of one shot type in server order, the untagged and the unnamed shot after them, the other product's image never`, async () => {
       const m = await mount(host, docsWith({ learn: learnOf({ ...HOLDOUT, share: 0 }) }));
       expectPublished(m, 'P84.CO1 — the documents publish');
       const table = await tableAt(m, 'pdp');
@@ -413,14 +458,14 @@ describe('unit:P84.CO1', () => {
       ];
       const served: Array<[string, string[]]> = [];
       for (const [name, entry, device] of cases) {
-        const page = await pdpPage(m, await arrived(m, entry), device);
+        const page = await firstDecision(m, entry, device);
         expect(page.status, `${host}: PRECONDITION — ${name}: the page is answered (${JSON.stringify(page.body).slice(0, 200)})`).toBe(200);
         served.push([name, page.rail]);
       }
-      expect.soft(served, `${host}: P84.CO1 — the engine's carousel for a new shopper is her context's row within the brand rules (today the shot orders are not read: the server order)`).toEqual(cases.map(([name, , , rail]) => [name, rail]));
+      expect.soft(served, `${host}: P84.CO1 — the engine's first decision for a new shopper is her context's row within the brand rules (today the shot orders are not read and her first decision has no visit bucket: the server order)`).toEqual(cases.map(([name, , , rail]) => [name, rail]));
       const holdout = await mount(host, docsWith({ learn: learnOf({ ...HOLDOUT, share: 1 }) }));
       expectPublished(holdout, 'P84.CO1 — the holdout-only documents publish');
-      const control = await pdpPage(holdout, await arrived(holdout, PAID_SOCIAL), 'mobile');
+      const control = await firstDecision(holdout, PAID_SOCIAL, 'mobile');
       expect.soft([control.status, control.rail], `${host}: P84.CO1 — on the holdout's default arm the server order within the brand rules, whatever the row`).toEqual([200, ids(1, 3, 2, 4, 5, 6, 7, 8)]);
     }, 180_000);
   }
@@ -525,7 +570,7 @@ const LAUNCH_HEAD_IMAGES = [...IMAGES, LAUNCH_IMAGE].map(headImage);
 /** The document as a server render would inline it: P3's members with their version. */
 const tableDocument = (over: Record<string, unknown> = {}) => { const doc = expectedDocument(over); return { ...doc, version: sha256Hex(canonical(doc)) }; };
 const TABLE = tableDocument();
-const PRODUCT_URL = 'https://www.coach.com/products/tabby-shoulder-bag-26';
+const PRODUCT_URL = 'https://shop.example.invalid/products/tabby-shoulder-bag-26';
 class NoFetch extends ResourceLoader { override fetch() { return null; } }
 
 interface HeadOptions { url: string; referrer?: string; userAgent?: string; table: unknown; images: HeadImage[]; storage?: Record<string, string>;
@@ -603,7 +648,7 @@ const ARRIVALS: ArrivalCase[] = [
   { name: 'an Android tablet (desktop)', q: { utm_medium: 'email', utm_source: 'newsletter' }, referrer: '', ua: 'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', prior: null },
   { name: 'a return two days later on a paid search click (visit 2)', q: { utm_medium: 'cpc', utm_source: 'bing' }, referrer: 'https://www.bing.com/', ua: DESKTOP_UA,
     prior: { visitCount: 1, lastVisitAt: NOW - 2 * DAY, entryChannel: 'email', lastSeen: NOW - 2 * DAY } },
-  { name: 'a reload inside the visit keeps the visit\'s channel (visit 4)', q: {}, referrer: 'https://www.coach.com/bags', ua: MOBILE_UA,
+  { name: 'a reload inside the visit keeps the visit\'s channel (visit 4)', q: {}, referrer: 'https://shop.example.invalid/bags', ua: MOBILE_UA,
     prior: { visitCount: 4, lastVisitAt: NOW - 20 * MINUTE, entryChannel: 'paid_social', lastSeen: NOW - 10 * MINUTE } },
   { name: 'thirty minutes idle opens visit 3', q: {}, referrer: '', ua: MOBILE_UA, prior: { visitCount: 2, lastVisitAt: NOW - 2 * 60 * MINUTE, entryChannel: 'organic', lastSeen: NOW - 30 * MINUTE } },
   { name: 'no browser in the user agent (no device: the default row)', q: { utm_medium: 'email', utm_source: 'newsletter' }, referrer: '', ua: 'curl/8.7.1', prior: null },
@@ -666,6 +711,28 @@ describe('unit:P84.CO2', () => {
       .toEqual(ARRIVALS.map(c => [c.name, engineCell(c).visit]));
   });
 
+  it('sdk: with the tenant\'s channelVocabulary in the document (C4) the built script classifies by its rules and cut, as liveVisit does with that vocabulary and visitBucketOf with its cut — the brand split by campaign, a non-brand click, typed in, an arrival no rule names (the default row), a third visit in bucket 2-4', () => {
+    const table = tableDocument({ channelVocabulary: CHANNEL_VOCABULARY_MEMBER, rows: VOCAB_ROWS });
+    const cases: ArrivalCase[] = [
+      { name: 'cpc on the brand campaign', q: { utm_medium: 'cpc', utm_source: 'google', utm_campaign: 'brand_spring' }, referrer: 'https://www.google.com/', ua: DESKTOP_UA, prior: null },
+      { name: 'cpc on another campaign', q: { utm_medium: 'cpc', utm_source: 'google', utm_campaign: 'tote_launch' }, referrer: 'https://www.google.com/', ua: DESKTOP_UA, prior: null },
+      { name: 'typed in', q: {}, referrer: '', ua: MOBILE_UA, prior: null },
+      { name: 'an untagged search click no rule names (unknown: the default row)', q: {}, referrer: 'https://www.google.com/', ua: MOBILE_UA, prior: null },
+      { name: 'a third visit by email', q: { utm_medium: 'email', utm_source: 'newsletter' }, referrer: '', ua: DESKTOP_UA,
+        prior: { visitCount: 2, lastVisitAt: NOW - 3 * DAY, entryChannel: 'paid_social', vocabularyRevision: 1, lastSeen: NOW - 3 * DAY } },
+    ];
+    const published = { revision: 1, vocabulary: CHANNEL_VOCABULARY };
+    const expected = cases.map(c => {
+      const prior = c.prior ? { visitCount: c.prior.visitCount, lastVisitAt: c.prior.lastVisitAt, entryChannel: c.prior.entryChannel, vocabularyRevision: c.prior.vocabularyRevision } : null;
+      const visit = liveVisit(prior, c.prior?.lastSeen ?? null, NOW, entryOf(c.q, c.referrer), { vocabulary: published });
+      const device = deviceFor(c.ua);
+      return [c.name, visit.entryChannel && device ? `${visit.entryChannel}|${visitBucketOf(visit.visitCount, [1, 2, 5])}|${device}` : 'default'];
+    });
+    const runs = cases.map(c => [c.name, runHead({ url: urlWith(c.q), referrer: c.referrer, userAgent: c.ua, table, images: HEAD_IMAGES, storage: storedVisit(c.prior), now: NOW })] as const);
+    expect.soft(runs.map(([name, run]) => [name, run.error]).filter(([, e]) => e), 'P84.CO2 — the head script runs').toEqual([]);
+    expect.soft(runs.map(([name, run]) => [name, run.context]), 'P84.CO2 — the tenant\'s own classification and cut, as the engine\'s').toEqual(expected);
+  });
+
   it('sdk: the row it applies — the cell\'s on a recorded consent; the default row for the holdout class, for no recorded consent, for the SDK\'s refusal cookie, for a classifier version not its own and, for one paint, for a rotated salt version; it names the table version it applied', () => {
     const ps = { url: urlWith({ utm_medium: 'paid_social', utm_source: 'instagram' }), userAgent: MOBILE_UA, images: HEAD_IMAGES, now: NOW };
     const arm = (cls: string, saltVersion = 1) => ({ opt_head: JSON.stringify({ arm: { class: cls, saltVersion, tableVersion: TABLE.version } }) });
@@ -714,7 +781,7 @@ describe('unit:P84.CO2', () => {
   });
 
   for (const host of HOSTS) {
-    it(`host (${host}): the lock — with the launch rule in its window, the head script's paint for a brand-new browser (the table from the stable address, the image list in server order) equals the engine's carousel for the same arrival and device after her first page view, for paid social on mobile, email on desktop and paid search on desktop`, async () => {
+    it(`host (${host}): the lock — with the launch rule in its window, the head script's paint for a brand-new browser (the table from the stable address, the image list in server order) equals the engine's first decision for the same arrival and device (her choice recorded, no event yet), for paid social on mobile, email on desktop and paid search on desktop`, async () => {
       const m = await mount(host, docsWith({ pieces: [...MODULES, ...IMAGES, LAUNCH_IMAGE, WALLET], learn: learnOf({ ...HOLDOUT, share: 0 }),
         slots: slotsOf({ take: 9, shotOrders: SHOT_ORDERS, pinnedTag: PINNED_TAG }) }));
       expectPublished(m, 'P84.CO2 — the documents with the launch rule publish');
@@ -728,7 +795,7 @@ describe('unit:P84.CO2', () => {
       ];
       const outcomes: Array<[string, string[], string[]]> = [];
       for (const [name, entry, q, device] of arrivals) {
-        const engine = await pdpPage(m, await arrived(m, entry), device);
+        const engine = await firstDecision(m, entry, device);
         expect(engine.status, `${host}: PRECONDITION — ${name}: the page is answered`).toBe(200);
         const paint = runHead({ url: urlWith(q), userAgent: device === 'mobile' ? MOBILE_UA : DESKTOP_UA, table: table.body, images: LAUNCH_HEAD_IMAGES });
         outcomes.push([name, paint.order, engine.rail]);
@@ -780,9 +847,10 @@ const identityApp = new Hono<{ Bindings: Env }>();
 identityApp.use('*', tenantMiddleware());
 identityApp.route('/v1', identityRoutes);
 /** The SDK over the mounted app as a new browser (no session), its first-party storage as the head script left it; every call recorded. */
+const LANDING = { href: `${PRODUCT_URL}?utm_medium=paid_social&utm_source=instagram`, host: SITE, hostname: SITE, protocol: 'https:', search: '?utm_medium=paid_social&utm_source=instagram' };
 function freshSdk(m: Mounted, stored: Record<string, string>) {
   const calls: Array<{ call: string; session: boolean; body: Record<string, unknown> | null; answer: Record<string, unknown> }> = [];
-  const host = memoryHost({ acquireAuthorityLock: authorityLocks(), uuid: () => crypto.randomUUID(), now: () => Date.now(),
+  const host = memoryHost({ acquireAuthorityLock: authorityLocks(), uuid: () => crypto.randomUUID(), now: () => Date.now(), location: LANDING, referrer: '',
     fetch: async (url: string, init?: RequestInitLike): Promise<ResponseLike> => {
       const target = new URL(url);
       const request = new Request(`https://shop.invalid${target.pathname}${target.search}`, { method: init?.method ?? 'GET',
@@ -864,7 +932,7 @@ describe('unit:P84.CO3', () => {
         `${host}: P84.CO3 — ignored with a diagnostic (today the member is refused 401)`).toEqual({ status: 200, arm: armFor(s.subject, holdout), armRequest: { class: other, honoured: false, reason: 'ignored' }, counted: 1 });
     }, 120_000);
 
-    it(`sdk (${host}): the SDK's first decision request on the direct path carries arm, the JSON text of the class and table version the head script stored, the issued identifier lands in it, and the SDK keeps the answer's experiment for the head script; a browser with no stored draw sends no arm member (lock)`, async () => {
+    it(`sdk (${host}): the SDK's first decision request on the direct path carries entry (the arrival it computes, C2 as ruled) and arm, the JSON text of the class and table version the head script stored; the issued identifier lands in that class, and the SDK keeps the answer's experiment for the head script; a browser with no stored draw sends no arm member (lock)`, async () => {
       const holdout = holdoutOf(0.3);
       const m = await mount(host, docsWith({ learn: learnOf({ ...holdout }) }));
       expectPublished(m, 'P84.CO3 — the documents publish');
@@ -877,10 +945,14 @@ describe('unit:P84.CO3', () => {
         const subject = (first?.answer.session as { subject?: string } | undefined)?.subject ?? null;
         const experiment = first?.answer.experiment as { id?: string; saltVersion?: number | null } | undefined;
         const stored = JSON.parse(drawn.host.storage.get('opt_head') ?? 'null') as { experiment?: unknown } | null;
+        const entry = first?.body?.entry;
         expect.soft({ first: first ? 'sent' : `no first request: ${drawn.calls.map(c => c.call).join(', ')}`, arm: typeof text === 'string' ? JSON.parse(text) as unknown : text ?? null,
+          entry: typeof entry === 'string' ? JSON.parse(entry) as unknown : entry ?? null,
           minted: subject ? classOf(armFor(subject, holdout)) : null, kept: stored?.experiment ?? null },
-        `${host}: P84.CO3 — the stored draw rides the first request and is honoured; the answer's experiment is kept (today the SDK sends no arm)`).toEqual({ first: 'sent',
-          arm: { class: 'default', tableVersion: version }, minted: 'default', kept: experiment ? { id: experiment.id, saltVersion: experiment.saltVersion } : 'an answer carrying experiment' });
+        `${host}: P84.CO3 — the stored draw and the arrival ride the first request and the draw is honoured; the answer's experiment is kept (today the SDK sends neither)`).toEqual({ first: 'sent',
+          arm: { class: 'default', tableVersion: version },
+          entry: JSON.parse(snapshotEntry({ utmMedium: 'paid_social', utmSource: 'instagram', referrer: '', siteHost: SITE }) ?? 'null') as unknown,
+          minted: 'default', kept: experiment ? { id: experiment.id, saltVersion: experiment.saltVersion } : 'an answer carrying experiment' });
       } finally { drawn.destroy(); }
       const plain = freshSdk(m, {});
       try {
