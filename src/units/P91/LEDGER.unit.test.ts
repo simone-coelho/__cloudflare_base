@@ -56,12 +56,20 @@
 //     `{ version?, pieces }` only): a stored catalogue carrying the marker never equals an import's assembled document,
 //     so it is never skipped, and an import un-retires the fallback. Observed, not P91's.
 //
+// R-P337 (the spec review at aa5b04c0): three legs added, none changed — IM1's order leg (on the import and the pull, a
+// load with neither mode nor preconditions is refused 400 naming the modes, not 428; a caller outside the list with no
+// preconditions 403, not 428; a caller outside the list with no mode 403, the list before the mode; nothing written); IM2's
+// reorder LOCK (a replace whose file holds the same pieces in reverse order writes a new revision and the stored order
+// follows the file: green today, the skip compares order); the kit leg binds kit 02's import row and kit 03's sentence to
+// "mode is required, a load without one is refused 400" (today's `mode=replace\|merge` row locked RED).
+//
 // THE R10s (granted by name in R-P332; test-only, R-P195's form; the lines named at the base 92a7132e):
 //   A. The mode named (every other assertion unchanged): src/routes/content.test.ts :546 (`?mode=replace`), :551 and :564
 //     (pull body `mode: 'replace'`), :840, :845, :849 (`&mode=replace`), :855 and :858 (pull body), :950 and :951 (the
 //     pull body `{"url":"https://cms.example/feed","mode":"replace"}`, so each still measures its 428 and its 400 under the
-//     ruled order), :961, :964, :969 (pull body), :1008 (the two import lanes `?mode=replace`, `&mode=replace`), :1019 and
-//     :1021 (the oversized import's path `?mode=replace` and the third entry's suffix `&scope=other`), :1040
+//     ruled order), :961, :964, :969 (pull body), :1008 (the two import lanes `?mode=replace`, `&mode=replace`), :1019
+//     (the third entry's suffix `?scope=other` → `&scope=other`, which R-P332 named as :1021's; corrected per R-P337) and
+//     :1021 (the oversized import's path `?mode=replace`), :1040
 //     (`?mode=replace`), :1047 and :1051 (pull body), :1056 and :1058 (`?mode=replace` on the import and its exact retry);
 //     src/units/W19/B2.unit.test.ts :670–672 (W19.L1.01's two imports `mode=replace`, its pull body), :701, :973–974
 //     (W19.S1.01's import and pull), :977 (its path built with `&` after a `?`), :1062, :1112, :1129 (`mode=replace`).
@@ -203,6 +211,32 @@ describe('unit:P91.IM1', () => {
       expect.soft(await inForce(m), `${host}: P91.IM1 — nothing written: the catalogue, its revision and its publication as before`).toEqual(before);
       expect.soft(feedCalls, `${host}: P91.IM1 — a pull refused so fetches nothing (today it fetches the feed)`).toBe(0);
     }, 120_000);
+
+    it(`host (${host}): the order (R-P330 Q5) — on the import and the pull, a load naming no mode and carrying no preconditions is refused 400 naming the modes, not 428; with an import-sources list published, a caller outside it carrying no preconditions is refused 403 naming import-sources, not 428, and one naming no mode 403 (the list before the mode); nothing written`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P91.IM1 — the tenant documents publish');
+      const catalogue = async () => { const d = await inForce(m); return { revision: d.revision, pieces: d.pieces }; };
+      const before = await catalogue();
+      const pullBody = (extra: Record<string, unknown>) => ({ url: 'https://cms.example.invalid/p91-feed.json', path: 'content', ...extra });
+      const bare = [
+        ['import, no mode, no preconditions', await asOperator(m, 'POST', `/content/catalog/import?scope=${TENANT}`, [piece('story.order')], {})],
+        ['pull, no mode, no preconditions', await asOperator(m, 'POST', `/content/catalog/pull?scope=${TENANT}`, pullBody({}), {})],
+      ] as Array<[string, Answer]>;
+      const listed = await putKind(m, 'import-sources', { addresses: ['203.0.113.7'] }, 'p91 order list');
+      const outside = { 'CF-Connecting-IP': '192.0.2.1' };
+      const named = (a: Answer) => errorsOf(a).some(e => e.includes('import-sources')) ? 'names import-sources' : `does not (${show(a)})`;
+      const fenced = [
+        ['import, outside, no preconditions', await asOperator(m, 'POST', `/content/catalog/import?scope=${TENANT}&mode=merge`, [piece('story.order')], outside)],
+        ['pull, outside, no preconditions', await asOperator(m, 'POST', `/content/catalog/pull?scope=${TENANT}`, pullBody({ mode: 'merge' }), outside)],
+        ['import, outside, no mode', await asOperator(m, 'POST', `/content/catalog/import?scope=${TENANT}`, [piece('story.order')], { ...await preconditions(m), ...outside })],
+        ['pull, outside, no mode', await asOperator(m, 'POST', `/content/catalog/pull?scope=${TENANT}`, pullBody({}), { ...await preconditions(m), ...outside })],
+      ] as Array<[string, Answer]>;
+      expect.soft({ bare: bare.map(([name, a]) => [name, a.status, namesModes(a)]), listed: listed.status, fenced: fenced.map(([name, a]) => [name, a.status, named(a)]) },
+        `${host}: P91.IM1 — the allow-list, then the mode, then the preconditions (today the preconditions come first: 428)`).toEqual({
+        bare: bare.map(([name]) => [name, 400, 'names merge, replace and full']), listed: 200,
+        fenced: fenced.map(([name]) => [name, 403, 'names import-sources']) });
+      expect.soft(await catalogue(), `${host}: P91.IM1 — nothing written: the catalogue and its revision as before`).toEqual(before);
+    }, 120_000);
   }
 
   // The kit (kit 02's import and pull rows, kit 03's import paragraph and the allow-list), for the four behaviours.
@@ -219,6 +253,14 @@ describe('unit:P91.IM1', () => {
       kit03Sources: has('`import-sources`', '`CF-Connecting-IP`', '403'),
     }, 'P91 — the kit states the four behaviours (today it states none, and the pull\'s mode is optional)').toEqual({
       importRow: [true, true, true, true], pullRow: [false, true], kit03Loads: true, kit03Sources: true });
+    // R-P337: the mode is required, in kit 02's import row and in kit 03's sentence, and a load without one is refused 400;
+    // today's row naming the mode as one of two words (`mode=replace\|merge`) is locked RED.
+    expect.soft({
+      importRowRequired: /`mode` is required/.test(importRow) && /without one[^|]*refused 400/.test(importRow),
+      importRowToday: importRow.includes('mode=replace\\|merge&path='),
+      kit03Required: has('Every load names its mode', /without one[^.]*refused 400/),
+    }, 'P91 — the kit says the mode is required and a load without one is refused 400 (today: optional, read as replace)').toEqual({
+      importRowRequired: true, importRowToday: false, kit03Required: true });
   });
 });
 
@@ -250,6 +292,18 @@ describe('unit:P91.IM2', () => {
       const edited = await importJson(m, [{ ...stored[0], title: `${String(stored[0]!.title)}, revised` }], { mode: 'merge' });
       expect.soft([edited.status, edited.body.revision, edited.body.changed, edited.body.skipped ?? 'no skipped member'],
         `${host}: P91.IM2 — a one-field change writes the next revision`).toEqual([200, before.revision + 1, 1, 'no skipped member']);
+    }, 120_000);
+
+    it(`host (${host}): LOCK (R-P337) — a replace whose file holds the stored pieces in reverse order is not unchanged: it writes the next revision and the stored order follows the file`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P91.IM2 — the tenant documents publish');
+      const first = await importJson(m, [piece('story.new-one')], { mode: 'merge' });
+      expect(first.status, `${host}: PRECONDITION — the first load writes (${show(first)})`).toBe(200);
+      const before = await inForce(m), stored = await storedPieces(m);
+      const reversed = [...stored].reverse();
+      const answer = await importJson(m, reversed, { mode: 'replace' });
+      expect.soft([answer.status, answer.body.revision, answer.body.skipped ?? 'no skipped member', (await storedPieces(m)).map(p => p.id)],
+        `${host}: P91.IM2 — LOCK: the order is part of the catalogue`).toEqual([200, before.revision + 1, 'no skipped member', reversed.map(p => p.id)]);
     }, 120_000);
   }
 });
