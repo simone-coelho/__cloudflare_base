@@ -200,6 +200,17 @@ export interface SlotStrategy {
   /** CW33 (BTIE D11): at most `max` pieces sharing one value of `dimension` in this slot; a piece over the limit yields to the next, and is served after all when nothing else is eligible. */
   diversity?: DiversityRule;
   /**
+   * P83 (E6): a guarantee, enforced and never weighted: on every arm the engine ranks, at least `count` items carrying
+   * the tag stand in the slot's first `within` positions whenever that many are eligible (all of them when fewer are).
+   */
+  minimum?: MinimumRule;
+  /**
+   * P83 (E6): a pin naming a tag and a window instead of an item: from `window.from` (inclusive) to `window.to`
+   * (exclusive), by the decision's clock, the best-ranked eligible candidate carrying the tag leads the slot; outside
+   * the window the slot decides as without it, and with no candidate carrying it the slot decides as without it too.
+   */
+  pinnedTag?: TagPin;
+  /**
    * W16 C3: this slot's contextual seed rule set. Published and versioned with
    * the slot itself, because a rule's weight and the slot's dimension weight are
    * arithmetically coupled and must move as one revision. Absent or empty means
@@ -459,6 +470,10 @@ export interface OrderContext {
 export interface ConfiguredOrder { context: OrderContext; modules: string[] }
 
 export interface DiversityRule { dimension: string; max: number }
+/** P83 (E6): at least `count` items carrying the tag `dimension`/`value` in the first `within` positions. */
+export interface MinimumRule { dimension: string; value: string; count: number; within: number }
+/** P83 (E6): the tag pin: the item carrying the tag `dimension`/`value` leads from `window.from` (inclusive) to `window.to` (exclusive), ISO 8601. */
+export interface TagPin { dimension: string; value: string; window: { from: string; to: string } }
 /** A slot's preference for the pieces that complete the request's anchor product; `weight` in the engine's 0..1 rule range. */
 export interface ComplementsRule { weight: number }
 
@@ -1168,6 +1183,10 @@ export interface DecisionRecord {
     fatigue?: { served: number; windowHours: number; applied: number; sentence: string };
     /** CW33: the slot's diversity rule touched this position: the pieces that yielded to it, or that it was served despite (`relaxed`). */
     diversity?: { dimension: string; max: number; skipped: string[]; relaxed: boolean; sentence: string };
+    /** P83: the slot's guarantee moved this position: the rule and the position (from 1) the item held without it. */
+    minimum?: { count: number; dimension: string; from: number; value: string; within: number };
+    /** P83: the slot's tag pin placed this item at its first position, in its window. */
+    pinnedTag?: TagPin;
     /**
      * W20 G2 (R86(c)): this position's slot is pinned, served what it could and
      * still fell short of its `take`, leaving `empty` positions to the site's

@@ -101,6 +101,10 @@ export interface Receipt {
   suppressions?: Suppression[];
   /** P80: the anchor product (and variant) the slot was scoped to, exactly as the record carries it; one `why` sentence names it. */
   scope?: { anchor: string; variant?: string };
+  /** P83: the slot's guarantee moved this position (in, or down), and the position it held without the rule; one `why` sentence names the tag. */
+  minimum?: { count: number; dimension: string; from: number; value: string; within: number };
+  /** P83: the slot's tag pin placed this item first, in its window; the pin's `why` sentence names the tag and the window. */
+  pinnedTag?: { dimension: string; value: string; window: { from: string; to: string } };
   /**
    * P11 (decisions D1, D2): the page's evidence floor shrank the learned
    * estimate of this decision toward the slot's rate — the page, the floor, the
@@ -370,7 +374,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   // P10: a slot decided below the signal floor says so before any term, with both
   // numbers, so no sentence after it is read as a claim about the shopper's own interests.
   if (e.signalFloor) why.push(signalFloorSentence(e.signalFloor));
-  if (r.authority === 'pin') why.push(e.moduleRule ? moduleRuleSentence(r, e.moduleRule) : 'Pinned by the merchandiser for this slot; the engine never ranked it.');
+  if (r.authority === 'pin') why.push(e.pinnedTag ? `Pinned by its tag ${e.pinnedTag.dimension} ${e.pinnedTag.value}, from ${e.pinnedTag.window.from} (inclusive) to ${e.pinnedTag.window.to} (exclusive): the best-ranked item carrying it leads this slot in that window; the engine never ranked it.`
+    : e.moduleRule ? moduleRuleSentence(r, e.moduleRule) : 'Pinned by the merchandiser for this slot; the engine never ranked it.');
   else if (r.arm === 'default') why.push(`The site's own defaults, no personalization: this shopper is in the holdout's default arm.`);
   else if (e.blend) {
     // P28 (decision D1, R-P42): the layout blend ranked this position, so the
@@ -445,6 +450,8 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
   if (e.suppressions?.length) why.push(suppressionSentence(e.suppressions));
   // P80: the slot's candidates were limited to the anchor product's own pieces.
   if (e.scope) why.push(`The slot is scoped to the anchor product ${e.scope.anchor}${e.scope.variant ? ` and its variant ${e.scope.variant}` : ''}: only the pieces linked to it were candidates.`);
+  // P83: the slot's guarantee moved this position, read after the terms that ranked it.
+  if (e.minimum) why.push(`Brand rule: at least ${e.minimum.count} item${e.minimum.count === 1 ? '' : 's'} tagged ${e.minimum.dimension} ${e.minimum.value} in the first ${e.minimum.within} position${e.minimum.within === 1 ? '' : 's'}, enforced; it moved this piece from position ${e.minimum.from}.`);
   // W20 G2 (R86(c)): the shortfall is a fact about the SLOT, not about the
   // ranking of this piece, so it is read out for a pinned position exactly as
   // for a ranked one — the way every other block on `explain` is read out.
@@ -468,6 +475,9 @@ export function receiptOf(r: DecisionRecord, names: Names): Receipt {
     ...(e.layoutReason ? { layoutReason: layoutReasonOf(e.layoutReason) } : {}),
     ...(e.suppressions?.length ? { suppressions: e.suppressions.map((s) => ({ action: s.action, dimension: s.dimension, expiresAt: s.expiresAt, value: s.value })) } : {}),
     ...(e.scope ? { scope: { anchor: e.scope.anchor, ...(e.scope.variant ? { variant: e.scope.variant } : {}) } } : {}),
+    // P83: the guarantee and the tag pin, keys sorted, exactly as the record carries them.
+    ...(e.minimum ? { minimum: { count: e.minimum.count, dimension: e.minimum.dimension, from: e.minimum.from, value: e.minimum.value, within: e.minimum.within } } : {}),
+    ...(e.pinnedTag ? { pinnedTag: { dimension: e.pinnedTag.dimension, value: e.pinnedTag.value, window: { from: e.pinnedTag.window.from, to: e.pinnedTag.window.to } } } : {}),
     ...(e.lift?.evidenceFloor ? { evidenceFloor: { floor: e.lift.evidenceFloor.floor, lacking: e.lift.evidenceFloor.lacking, n: e.lift.evidenceFloor.n, page: e.lift.evidenceFloor.page } } : {}),
     // P15: the band this position was ranked in, keys sorted.
     ...(e.band ? { band: { from: e.band.from, to: e.band.to } } : {}),

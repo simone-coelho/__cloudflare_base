@@ -16,7 +16,7 @@ import { arrivedFromNetwork, entryChannelOf, isContextId, type ChannelSignals, t
 import { contextCellOf, contextKeyOf, defaultContextKeyOf, TODAY_TERMS, type ContextTerms } from './cell';
 import type { DeviceClass, PlatformWord } from '@/services/platform';
 import { audienceKey, suppressionsInForce, type Suppression } from '@/reflex/core';
-import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, type EligibilityContext } from './lifecycle';
+import { cellEligibility, isEligibleAt, isLiveAt, matchesEligibility, windowBounds, type EligibilityContext } from './lifecycle';
 import { DEFAULT_STATS, levelKeys, liftFor, pooledLevelKeys, underEvidenceFloor, type LiftSnapshot } from '@/learn/stats';
 import { ADJACENT_SWAP, EXPLORATION_RULES, explorationPick, HISTORICAL_EXPLORATION, HISTORICAL_EXPLORATION_RULES, type ExplorationRules, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
@@ -368,7 +368,16 @@ function formatReadsOf(slot: SlotStrategy): SlotStrategy {
 }
 
 /** The composer's view of the page's slot strategies, as the decision builds it. */
-function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins, typeFallback?: TypeFallbackMarker): DecisionSlotSpec[] {
+/**
+ * P83 (E6): whether a tag pin's window is in effect at `nowMs`, by the piece window's own comparison (`isLiveAt`): from
+ * `from` inclusive to `to` exclusive.
+ */
+function tagPinInEffect(pin: NonNullable<SlotStrategy['pinnedTag']>, nowMs: number): boolean {
+  const { from, to } = windowBounds({ window: pin.window });
+  return from !== null && to !== null && nowMs >= from && nowMs < to;
+}
+
+function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPins, typeFallback?: TypeFallbackMarker, nowMs?: number): DecisionSlotSpec[] {
   return slots.map((s) => ({
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
@@ -382,6 +391,11 @@ function slotSpecs(slots: readonly SlotStrategy[], historicalPins?: HistoricalPi
     ...(s.allowedTypes ? { allowedTypes: s.allowedTypes } : {}),
     // CW33: the slot's diversity rule, applied by the composer at the take.
     ...(s.diversity ? { diversity: s.diversity } : {}),
+    // P83: the slot's guarantee, enforced by the composer after its pins and its ranking.
+    ...(s.minimum ? { minimum: { dimension: s.minimum.dimension, value: s.minimum.value, count: s.minimum.count, within: s.minimum.within } } : {}),
+    // P83: the slot's tag pin, under the current pin policy only and only while its window is in effect by the decision's clock.
+    ...(!historicalPins && s.pinnedTag && nowMs !== undefined && tagPinInEffect(s.pinnedTag, nowMs)
+      ? { pinnedTag: { dimension: s.pinnedTag.dimension, value: s.pinnedTag.value, window: { from: s.pinnedTag.window.from, to: s.pinnedTag.window.to } } } : {}),
     // P32: the catalogue retired the type fallback, so the slot's gates match the own contentType tag alone.
     ...(typeFallback ? { typeFallback } : {}),
     // P15: the slot's position bands, each ranking its positions with its own weights.
@@ -875,7 +889,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   // refuses is unchanged.
   // P32 (decision D3): the catalogue's marker, read off the input the caller holds; nothing here can fail.
   const retiredFallback = i.typeFallback === TYPE_FALLBACK_RETIRED;
-  const specs: DecisionSlotSpec[] = slotSpecs(i.slots, historicalPins, retiredFallback ? TYPE_FALLBACK_RETIRED : undefined)
+  const specs: DecisionSlotSpec[] = slotSpecs(i.slots, historicalPins, retiredFallback ? TYPE_FALLBACK_RETIRED : undefined, i.nowMs)
     .map((spec) => configured.has(spec.slot) ? { ...spec, order: [...configured.get(spec.slot)!.modules] } : spec)
     .map((spec) => complementsOf.has(spec.slot) ? { ...spec, prefer: { test: completesAnchor, bonus: complementsOf.get(spec.slot)!, label: anchor } } : spec)
     .map((spec) => blends.has(spec.slot) ? { ...spec, blend: true as const } : spec)
@@ -1289,7 +1303,12 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     swapped.set(s.slot, { ...pick, positions: pick.positions });
     return pick.positions;
   } : undefined;
-  const { decisions, candidates, pinDiagnostics, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands, undecided: undecidedSlots, unreturnedPins } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots, settle);
+  const { decisions, candidates, pinDiagnostics: composedPins, ordered, moduleRules, ruled, orderBaseline, bands: rankedInBands, undecided: undecidedSlots, unreturnedPins } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore, historicalPins, historicalGovernance, i.replayRankingSlots, settle);
+  // P83 (E6): an unmet tag pin refuses nothing: it is held apart from the refusals every rule below reads (a slot named
+  // there was refused whole), and named on the answer after them.
+  const unmetTagPins = (composedPins ?? []).filter((d) => d.reason === 'unmet_tag_pin');
+  const refusals = unmetTagPins.length ? (composedPins ?? []).filter((d) => d.reason !== 'unmet_tag_pin') : null;
+  const pinDiagnostics = refusals ? (refusals.length ? refusals : undefined) : composedPins;
   // P26 (decision D1): the inner content slots the layout did not return the module of. Not decided:
   // no record, no manifest row, no diagnostic and no page-level input is written for any of them,
   // except (P43, R-P78) the `module_not_returned` pin entry naming each pin such a slot kept reserved.
@@ -1578,7 +1597,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
   const layoutBaselines = new Map<string, { order: string[]; sequence: readonly string[] }>();
   // P31 (R-P59 (2)): a slot whose every refused pin names a module the withholding removed, refused as missing or ineligible.
   const refusedByWithholding = (slot: string) => (pinDiagnostics ?? []).filter((d) => d.slot === slot)
-    .every((d) => d.reason === 'missing_or_ineligible' && withheldBy.has(d.pinnedPieceId));
+    .every((d) => d.reason === 'missing_or_ineligible' && d.pinnedPieceId !== undefined && withheldBy.has(d.pinnedPieceId));
   if (!historicalPins && historicalGovernance === undefined) {
     // P26: what the page served before the layout slot is read in the order the page was decided in, so an
     // inner content slot, decided after its layout wherever the document lists it, is never before it.
@@ -2027,6 +2046,9 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
         ...(freshOf.has(key) ? { freshness: { ...freshOf.get(key)!, sentence: freshSentence(freshOf.get(key)!) } } : {}),
         ...(fatigueOf.has(key) ? { fatigue: { ...fatigueOf.get(key)!, sentence: fatigueSentence(fatigueOf.get(key)!) } } : {}),
         ...(d.explain.diversity ? { diversity: d.explain.diversity } : {}),
+        // P83: the slot's guarantee moved this position, and the slot's tag pin placed this one, keys sorted.
+        ...(d.explain.minimum ? { minimum: { count: d.explain.minimum.count, dimension: d.explain.minimum.dimension, from: d.explain.minimum.from, value: d.explain.minimum.value, within: d.explain.minimum.within } } : {}),
+        ...(d.explain.pinnedTag ? { pinnedTag: { dimension: d.explain.pinnedTag.dimension, value: d.explain.pinnedTag.value, window: { from: d.explain.pinnedTag.window.from, to: d.explain.pinnedTag.window.to } } } : {}),
         // W20 G2: the slot fell short of its take, on every record it did write.
         ...(shortTakeOf.has(d.slot) ? { shortTake: { ...shortTakeOf.get(d.slot)! } } : {}),
         // P01: a position the configured order set (a pinned one keeps its pin authority).
@@ -2089,7 +2111,7 @@ export function decideContent(i: DecideInput, historical?: typeof HISTORICAL_EXP
     tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
     regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
-    decisions, records, ...(pinDiagnosticsOut ? { pinDiagnostics: pinDiagnosticsOut } : {}),
+    decisions, records, ...(pinDiagnosticsOut || unmetTagPins.length ? { pinDiagnostics: [...(pinDiagnosticsOut ?? []), ...unmetTagPins] } : {}),
     ...(shortTakes.length ? { shortTakes } : {}),
     ...(seedDiagnosticsOut.length ? { seedDiagnostics: seedDiagnosticsOut } : {}),
     ...(constraintDiagnostics ? { constraintDiagnostics } : {}),
