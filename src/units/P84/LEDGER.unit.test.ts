@@ -199,6 +199,11 @@
 // R-P379 (the fix-round review at 72aa84ed): the browser stand-in finishes the page's run before anything is read (the load
 // event, every held timer, frame and idle callback, the microtasks between) and counts every element the run adds beyond the
 // one image preload, and every @import or url( in added style text or a style attribute.
+// R-P383 (the fix-round-2 review at 27d18255): one mechanism and one static check — a MutationObserver on the document from
+// before the script to the end of the run counts, gross, every node added beyond the one image preload and every change to
+// a URL-bearing attribute or url( in a style; after load the page's end (pagehide, visibilitychange, beforeunload) is
+// fired; callbacks still held after the last round are an error; and the built bytes name no send, timer, listener, markup
+// writer, observer or dynamic import.
 // NEW EXPORT IMPORTED: CLASSIFIER_VERSION from src/services/visit.ts (P3); RED on its absence where named.
 //
 // The fixture's site is shop.example.invalid; no test reaches the network (the head script's double loads nothing).
@@ -681,8 +686,13 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
     };
   }
   for (const name of ['WebSocket', 'EventSource']) Object.defineProperty(w, name, { configurable: true, value: function () { count(); throw new Error('the head script opens no connection'); } });
-  const sourcedBefore = Array.from(w.document.querySelectorAll('[src], [srcset], [data]')).length;
-  const linksBefore = Array.from(w.document.head.querySelectorAll('link')).length;
+  // R-P383 (1): every change to the document from before the script runs to the end of the run, gross: each node added and
+  // each change to a URL-bearing attribute (src, srcset, href, data, poster, action, imagesrcset; url( in a style).
+  interface Mutation { type: string; target: unknown; attributeName: string | null; addedNodes: ArrayLike<unknown> }
+  const mutations: Mutation[] = [];
+  const Observer = (w as unknown as { MutationObserver: new (cb: (records: Mutation[]) => void) => { observe(n: unknown, o: Record<string, boolean>): void; takeRecords(): Mutation[]; disconnect(): void } }).MutationObserver;
+  const observer = new Observer(records => { mutations.push(...records); });
+  observer.observe(w.document, { childList: true, attributes: true, characterData: true, subtree: true });
   // R-P379: the page's run is finished before anything is read — its timers (whatever their delay), frames and idle
   // callbacks are held and run after the load event, the microtasks between them drained, so a deferred send is counted.
   const held: Array<() => void> = [];
@@ -690,7 +700,6 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
   for (const name of ['setTimeout', 'setInterval', 'requestAnimationFrame', 'requestIdleCallback']) {
     Object.defineProperty(w, name, { configurable: true, value: (fn: unknown, _delay?: unknown, ...args: unknown[]) => hold(fn, ...(name === 'requestAnimationFrame' ? [0] : args)) });
   }
-  const elementsBefore = Array.from(w.document.querySelectorAll('*')).length;
   const random = o.random ?? 0.999;
   w.Math.random = () => random;
   Object.defineProperty(w, 'crypto', { configurable: true, value: { randomUUID: () => crypto.randomUUID(),
@@ -699,14 +708,25 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
   let error: string | null = null;
   try { w.eval(readFileSync(HEAD_FILE, 'utf8')); } catch (e) { error = `the head script threw: ${(e as Error).message}`; }
   const events = w as unknown as { dispatchEvent(e: unknown): boolean; Event: new (type: string) => unknown; document: { dispatchEvent(e: unknown): boolean } };
-  try { events.document.dispatchEvent(new events.Event('DOMContentLoaded')); events.dispatchEvent(new events.Event('load')); } catch (e) { error ??= `the page's load threw: ${(e as Error).message}`; }
-  for (let round = 0; round < 50; round++) {
+  const drain = async () => {
+    for (let round = 0; round < 1000 && held.length; round++) {
+      await new Promise(resolve => setImmediate(resolve));
+      for (const run of held.splice(0)) { try { run(); } catch { /* a deferred callback's own failure */ } }
+    }
     await new Promise(resolve => setImmediate(resolve));
-    const due = held.splice(0);
-    if (!due.length) break;
-    for (const run of due) { try { run(); } catch { /* a deferred callback's own failure */ } }
-  }
-  await new Promise(resolve => setImmediate(resolve));
+  };
+  try { events.document.dispatchEvent(new events.Event('DOMContentLoaded')); events.dispatchEvent(new events.Event('load')); } catch (e) { error ??= `the page's load threw: ${(e as Error).message}`; }
+  await drain();
+  // R-P383 (2): the page's life ends: pagehide, visibilitychange (hidden) and beforeunload, and whatever they schedule.
+  try {
+    Object.defineProperty(w.document, 'visibilityState', { configurable: true, value: 'hidden' });
+    events.dispatchEvent(new events.Event('pagehide')); events.document.dispatchEvent(new events.Event('visibilitychange')); events.dispatchEvent(new events.Event('beforeunload'));
+  } catch (e) { error ??= `the page's end threw: ${(e as Error).message}`; }
+  await drain();
+  // R-P383 (3): a callback still held after the last round is an error, never dropped.
+  if (held.length) error ??= `the head script left ${held.length} callbacks pending after 1000 rounds`;
+  mutations.push(...observer.takeRecords());
+  observer.disconnect();
   const root = w.document.documentElement;
   const positions = o.images.map((_, n) => root.style.getPropertyValue(`--op-${CAROUSEL}-${n + 1}`).trim());
   const order = o.images.map((img, n) => ({ id: img.id, at: Number(positions[n]) })).filter(x => Number.isInteger(x.at) && x.at >= 1).sort((a, b) => a.at - b.at).map(x => x.id);
@@ -717,17 +737,25 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
   const firstPreload = links.findIndex(l => l.getAttribute('rel') === 'preload'), firstStylesheet = links.findIndex(l => l.getAttribute('rel') === 'stylesheet');
   const otherStyles = Array.from({ length: root.style.length }, (_, i) => root.style.item(i)).filter(name => !name.startsWith('--op-'));
   const hidden = Array.from(w.document.querySelectorAll('[hidden], body [style]')).length;
-  // Sourced elements the run added, and the links it added beyond exactly one image preload of a listed image source.
-  sent += Math.max(0, Array.from(w.document.querySelectorAll('[src], [srcset], [data]')).length - sourcedBefore);
+  // R-P383 (1): gross — each node added beyond exactly one image preload of a listed image source (that link's own
+  // attributes excepted), each change to a URL-bearing attribute, each url( or @import in a style attribute or in text added.
   const sources = new Set(o.images.map(i => i.src));
-  const added = links.length - linksBefore;
-  const allowed = preloads.filter(l => l.as === 'image' && sources.has(l.href ?? '')).length >= 1 ? 1 : 0;
-  sent += Math.max(0, added - allowed);
-  // R-P379: every element the run added beyond that one preload, and every stylesheet request in style text or a style attribute.
-  sent += Math.max(0, Array.from(w.document.querySelectorAll('*')).length - elementsBefore - allowed);
-  const styleText = [...Array.from(w.document.querySelectorAll('style')).map(e => (e as unknown as { textContent: string | null }).textContent ?? ''),
-    ...Array.from(w.document.querySelectorAll('[style]')).map(e => (e as unknown as DomElement).getAttribute('style') ?? '')].join('\n');
-  sent += (styleText.match(/@import|url\(/gi) ?? []).length;
+  const allowedPreload = links.find(l => l.getAttribute('rel') === 'preload' && attr(l, 'as', 'as') === 'image' && sources.has(attr(l, 'href', 'href') ?? '')) ?? null;
+  let preloadSeen = false;
+  const urlIn = (text: string | null | undefined) => (String(text ?? '').match(/@import|url\(/gi) ?? []).length;
+  for (const record of mutations) {
+    if (record.type === 'childList') {
+      for (const node of Array.from(record.addedNodes) as Array<{ nodeType: number; textContent?: string | null }>) {
+        if (node === allowedPreload && !preloadSeen) { preloadSeen = true; continue; }
+        if (node.nodeType === 1) count(); else sent += urlIn(node.textContent);
+      }
+    } else if (record.type === 'attributes') {
+      if (record.target === allowedPreload) continue;
+      const name = (record.attributeName ?? '').toLowerCase();
+      if (/^(src|srcset|href|data|poster|action|imagesrcset)$/.test(name)) count();
+      else if (name === 'style') sent += urlIn((record.target as DomElement).getAttribute('style'));
+    } else if (record.type === 'characterData') sent += urlIn((record.target as { data?: string }).data);
+  }
   let stored: Record<string, unknown> | null = null;
   try { stored = JSON.parse(w.localStorage.getItem('opt_head') ?? 'null') as Record<string, unknown> | null; } catch { stored = null; }
   return { error, context: root.getAttribute('data-op-context'), arm: root.getAttribute('data-op-arm'), table: root.getAttribute('data-op-table'), positions, order, preloads,
@@ -893,6 +921,16 @@ describe('unit:P84.CO2', () => {
       'P84.CO2 — exactly one preload, naming the image that leads').toEqual(cases.map(([name, , order]) => [name, 1, `https://images.example.invalid/${order[0]}.jpg`]));
     expect.soft({ preload: first![1].preloads[0] ?? null, before: first![1].preloadBeforeStylesheet }, 'P84.CO2 — the preload matches the slide and comes before the stylesheet')
       .toEqual({ preload: { as: 'image', href: lead.src, imagesrcset: lead.srcset, imagesizes: lead.sizes, fetchpriority: 'high' }, before: true });
+    // R-P383 (4): the built bytes name no send, timer, listener, markup writer, observer or dynamic import.
+    const built = existsSync(HEAD_FILE) ? readFileSync(HEAD_FILE, 'utf8') : '';
+    // Call and constructor forms, word-bounded and case-sensitive (R-P383's precision): the preload's own `fetchpriority`,
+    // `imagesrcset`, `imagesizes` and `as="image"` name none of them.
+    const FORBIDDEN = [/\bfetch\s*\(/, /\bnew\s+XMLHttpRequest\b/, /\bsendBeacon\s*\(/, /\bnew\s+WebSocket\b/, /\bnew\s+EventSource\b/, /\bnew\s+Image\b/,
+      /\.innerHTML\b/, /\.outerHTML\b/, /\binsertAdjacentHTML\s*\(/, /\bsetAttributeNS\s*\(/, /\baddEventListener\s*\(/, /\bsetTimeout\s*\(/, /\bsetInterval\s*\(/,
+      /\brequestAnimationFrame\s*\(/, /\brequestIdleCallback\s*\(/, /\bpostMessage\s*\(/, /\bnew\s+MutationObserver\b/, /\bimport\s*\(/, /\bqueueMicrotask\s*\(/,
+      /\bdocument\.write(ln)?\s*\(/, /\bon(load|pagehide|beforeunload|visibilitychange|unload)\s*=[^=]/];
+    expect.soft([built ? 'built' : 'not built', FORBIDDEN.filter(token => token.test(built)).map(token => token.source)],
+      'P84.CO2 — sends nothing: the built head script names no send, timer, listener, markup writer, observer or dynamic import').toEqual(['built', []]);
     expect.soft(cases.map(([name, run]) => [name, run.otherStyles, run.hidden, run.sent, run.cookieWritten]),
       'P84.CO2 — it writes custom properties only, hides nothing, sends nothing and writes no cookie').toEqual(cases.map(([name]) => [name, [], 0, 0, false]));
   });
