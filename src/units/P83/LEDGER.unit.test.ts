@@ -22,7 +22,8 @@
 // THE READINGS THIS FILE RULES (the lead's provisional readings 1-4, made concrete; ratified in R-P303):
 //   · RULE (a), `minimum: { dimension, value, count, within }` on a slot beside `diversity`: the tag is an exact
 //     dimension/value pair, as `excludedTags` names one (no normalization); `count` ≥ 1 and `within` ≤ the slot's `take`
-//     are integers with `count` ≤ `within`; publication refuses anything else by name (`pages.{page}[i].minimum`). Read on
+//     are integers with `count` ≤ `within`; publication refuses anything else by name (`pages.{page}[i].minimum`), and the
+//     rule beside per-context `orders` (P01: a slot serving an order is not ranked; R-P307). Read on
 //     every governance version, as `diversity` is. Enforced on every arm that ranks (the holdout's default arm included),
 //     after the slot's pins and its ranking (bands, exploration and the diversity rule included): when the first `within`
 //     positions hold fewer than `count` items carrying the tag, the best-ranked eligible items carrying it that the slot
@@ -59,7 +60,11 @@
 // DEFERRED, with the reason: the Meridian bundle (public/meridian/engine.bundle.js, generated from contentCompose.ts by
 // node scripts/build-meridian.mjs, outside the ticket's allowedPaths: the lead rules at the build who commits it).
 // TOLD, not a leg (R-P303): a tag pin on the page's declared layout slot is treated exactly as `pinnedPieceIds` is on that
-// slot today; an open-ended tag pin (a window without one of its ends) is not offered — publication refuses it. A write
+// slot today; an open-ended tag pin (a window without one of its ends) is not offered — publication refuses it. On the
+// declared layout slot the guarantee treats its fixed positions (prefix pins, position pins, off-limits modules) as it
+// treats a prefix pin — counted when they carry the tag, never moved — and never fills an off-limits position (R-P306,
+// told, no leg); whether an order is served exactly or blended is the learn document's dial, invisible at slots
+// publication (R-P307), so no blend or exact-order leg is written. A write
 // is read under governance 3 or later whatever it is marked (parseSlotCatalog), so "governance 3 or later" refuses
 // nothing on a write; a retained document marked earlier ignores the member.
 //
@@ -77,7 +82,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DecisionRecord } from '@/content/types';
 
 import {
-  BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, pageInstanceOf, putDocument, readTree, receiptsOf, replayOf,
+  BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, M, MODULES, mount, pageInstanceOf, putDocument, readTree, receiptsOf, replayOf,
   shopperOn, storedDecisions, TENANT, VIEW_TABBY_26, type Decision, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
 
@@ -197,7 +202,7 @@ describe('unit:P83.GR1', () => {
     }, 180_000);
   }
 
-  it('host: publication refuses a malformed rule by name — a count over the span, a span over the take, a count below 1, a missing tag — and admits a well-formed one', async () => {
+  it('host: publication refuses a malformed rule by name — a count over the span, a span over the take, a count below 1, a missing tag, a rule beside per-context orders (R-P307) — and admits a well-formed one', async () => {
     const m = await mount('session', docs(RAIL, carousel()));
     expectPublished(m, 'P83.GR1 — the documents publish');
     const put = async (minimum: unknown) => {
@@ -207,8 +212,14 @@ describe('unit:P83.GR1', () => {
     expect.soft({
       countOverSpan: await put(minimumOf(3, 2)), spanOverTake: await put(minimumOf(1, 5)), countBelowOne: await put(minimumOf(0, 2)),
       missingTag: await put({ count: 1, within: 2 }),
+      besideOrders: await (async () => {
+        // R-P307: a slot serving per-context orders (P01, the declared layout slot) is not ranked, so it carries no guarantee.
+        const answer = await putDocument(m, 'slots', declaredSlots([layoutSlot({ orders: [{ context: { channel: 'paid_social', visitBuckets: ['1'] }, modules: [M.grid] }],
+          minimum: minimumOf(1, 2) }), carousel()]), 'p83 minimum beside orders');
+        return [answer.status, ((answer.body.errors ?? []) as unknown[]).some(e => String(e).includes('.minimum')) ? 'named' : `not named (${JSON.stringify(answer.body).slice(0, 200)})`];
+      })(),
     }, 'P83.GR1 — each refused by name (today the member is not read: every one is published)').toEqual({
-      countOverSpan: [422, 'named'], spanOverTake: [422, 'named'], countBelowOne: [422, 'named'], missingTag: [422, 'named'] });
+      countOverSpan: [422, 'named'], spanOverTake: [422, 'named'], countBelowOne: [422, 'named'], missingTag: [422, 'named'], besideOrders: [422, 'named'] });
     expect((await putDocument(m, 'slots', declaredSlots([layoutSlot(), carousel({ minimum: minimumOf(1, 2) })]), 'p83 well formed')).status, 'P83.GR1 — a well-formed rule publishes').toBe(200);
   }, 120_000);
 });
