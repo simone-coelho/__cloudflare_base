@@ -119,10 +119,10 @@ async function tableOf(m: Mounted): Promise<{ status: number; version: string; r
 /** The beacon as the SDK sends it (S1), through POST /realtime/action. */
 const carouselBeacon = (s: Shopper, data: Record<string, unknown>): Promise<Answer> =>
   s.action({ type: 'carousel_exposure', data: { page: 'pdp', slot: CAROUSEL, arm: 'personalized', ...data } });
-/** What every statistics object holds for an item at one level key, summed (P30's read): `n` exposures, `s` credits. */
+/** What the carousel's statistics object holds for an item at one level key (P30's read, on the carousel slot's object alone): `n` exposures, `s` credits. */
 async function at(m: Mounted, key: string, field: 'n' | 's'): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
-  for (const name of [...m.stats.keys()].sort()) {
+  for (const name of [...m.stats.keys()].sort().filter(n => n.endsWith(`:${CAROUSEL}`))) {
     const response = await m.env.LEARN_STATS!.get(m.env.LEARN_STATS!.idFromName(name)).fetch('https://learn/snapshot', { method: 'POST' });
     const body = await response.json().catch(() => ({})) as { snapshot?: { items?: Record<string, Record<string, { n: number; s: number }>> } | null };
     for (const [item, cells] of Object.entries(body.snapshot?.items ?? {})) if (cells[key]) out[item] = Math.round((out[item] ?? 0) + cells[key]![field]);
