@@ -109,9 +109,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DecisionRecord } from '@/content/types';
+import { bucketOf, hourKeyOf } from '@/learn/explore';
 
 import {
-  BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, M, MODULES, mount, pageInstanceOf, putDocument, readTree, receiptsOf, replayOf,
+  BRAND, declaredSlots, expectPublished, HOSTS, LAYOUT, layoutSlot, learnDocument, M, MODULES, mount, PAGE_VIEW, PAID_SOCIAL_ENTRY, recentSlot, pageInstanceOf, putDocument, readTree, receiptsOf, replayOf,
   shopperOn, storedDecisions, TENANT, VIEW_TABBY_26, type Decision, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
 
@@ -206,7 +207,7 @@ describe('unit:P83.GR1', () => {
       expect.soft(served, `${host}: P83.GR1 — the guarantee on the default arm (today the rule is not read: the catalogue order)`).toEqual(cases.map(([name, , , rail]) => [name, rail]));
     }, 180_000);
 
-    it(`host (${host}): on the personalized arm, the visitor's interest ranking the on-model images last and with position bands, the first 2 positions hold an on-model image; the moved decisions name the rule in their records and receipts, and each replays equal`, async () => {
+    it(`host (${host}): on the personalized arm, the visitor's interest ranking the on-model images last and with position bands, the first 2 positions hold an on-model image; the moved decisions name the rule in their records and receipts, and each replays equal; on the declared layout slot the adjacent swap never breaks the guarantee on the served order (R-P310)`, async () => {
       const bands = [{ from: 1, to: 2, weights: { category: 1 } }, { from: 3, to: 4, weights: { category: 0.5 } }];
       const cases: Array<[string, Record<string, unknown>]> = [['without bands', carousel({ minimum: minimumOf(1, 2) })], ['with bands', carousel({ minimum: minimumOf(1, 2), bands })]];
       const served: Array<[string, string[]]> = [];
@@ -235,7 +236,62 @@ describe('unit:P83.GR1', () => {
       const replays: unknown[][] = [];
       for (const r of records) { const replay = await replayOf(m!, r.decision_id); replays.push([r.item_id, replay.status, replay.body.classification ?? replay.body.reason ?? null]); }
       expect.soft(replays, `${host}: P83.GR1 — each decision replays equal`).toEqual(records.map(r => [r.item_id, 200, 'equal']));
-    }, 180_000);
+
+      // R-P310, R-P312: the P05 adjacent swap (share 1) on the declared layout slot with the rule 1 Tabby module in the first
+      // 1. A shopper with no signal ranks the modules in catalogue order (P05's COLD: grid.1, reco.1, reco.2, editorial.1); the
+      // rule brings reco.2 (line Tabby) to position 1, grid.1 at once after: the guaranteed order. A pair at the span's edge
+      // (the carrier at `within`, a non-carrier after it) is left out of the swap's candidate pairs, as a pair touching a
+      // pinned position is today, so the swap lands on another free pair; with no free pair left the slot serves its ranked
+      // order and no record carries an exploration member. The pair is chosen from the decision's own bucket (visitor,
+      // slot, hour; src/learn/explore.ts explorationPick): the shopper drawn here has a bucket below 1/3, which picks
+      // (1, 2) when every pair is a candidate.
+      const GUARANTEED = [M.reco2, M.grid, M.reco1, M.editorial];
+      const tabbyFirst = { dimension: 'line', value: 'Tabby', count: 1, within: 1 };
+      const swapLearn = learnDocument({ [LAYOUT]: { measurementBasis: 'rendered-v1', reward: 'click', exploration: { mode: 'adjacent-swap', share: 1, floor: 50 } } });
+      const at = (Math.floor(Date.now() / 3_600_000) + 1) * 3_600_000 + 60_000;
+      const bucket = (x: Shopper) => Math.round(bucketOf(x.subject, LAYOUT, hourKeyOf(at)) * 1000) / 1000;
+      /** A shopper of `w` whose bucket in the leg's hour lies in [lo, hi], after a page view (as P05's shoppers). */
+      const drawn = async (w: Mounted, lo: number, hi: number): Promise<Shopper> => {
+        for (let draw = 0; draw < 60; draw++) {
+          const x = await shopperOn(w), b = bucket(x);
+          if (b >= lo && b <= hi) {
+            expect((await x.action(PAGE_VIEW, PAID_SOCIAL_ENTRY)).status, `${host}: PRECONDITION — the page view is accepted`).toBe(200);
+            return x;
+          }
+        }
+        return expect.unreachable(`${host}: PRECONDITION — none of sixty shoppers has a bucket in [${lo}, ${hi}]`);
+      };
+      /** The layout slot as served, and each of its records as [item, explored, the swap's positions or null], the page acknowledged. */
+      const servedLayout = async (w: Mounted, x: Shopper, name: string): Promise<[string[], unknown[]]> => {
+        const snap = await page(w, x);
+        expect(snap.status, `${host}: PRECONDITION — ${name}: the page is answered (${show(snap)})`).toBe(200);
+        const layout = snap.decisions.filter(d => d.slot === LAYOUT).sort((a, b) => a.order - b.order);
+        for (const d of layout) expect((await x.ack(snap, d)).status, `${host}: PRECONDITION — ${name}: ${d.contentId} is acknowledged`).toBe(200);
+        await w.drainLedger();
+        const layoutRecords = storedDecisions(w, x.subject).filter(r => r.slot === LAYOUT).sort((a, b) => a.position - b.position);
+        return [layout.map(d => d.contentId), layoutRecords.map(r => [r.item_id, r.explored,
+          ((r.explain as unknown as Record<string, unknown>).exploration as { positions?: unknown } | undefined)?.positions ?? null])];
+      };
+      const four = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ minimum: tabbyFirst }), recentSlot()]), learn: swapLearn });
+      const two = await mount(host, { pieces: MODULES, slots: declaredSlots([layoutSlot({ take: 2, minimum: tabbyFirst }), recentSlot()]), learn: swapLearn });
+      expectPublished(four, 'P83.GR1 (R-P310) — the rule and the adjacent swap at share 1 on the declared layout slot publish');
+      expectPublished(two, 'P83.GR1 (R-P310) — the rule and the adjacent swap at share 1 on a take-2 declared layout slot publish');
+      const x4 = await drawn(four, 0.02, 0.31), x2 = await drawn(two, 0.02, 0.98);
+      clockAt(at);
+      const [order4, records4] = await servedLayout(four, x4, 'take 4'), [order2, records2] = await servedLayout(two, x2, 'take 2');
+      vi.useRealTimers();
+      // (a, c) whatever free pair swapped: position 1 keeps the module the guarantee placed there, exactly one adjacent pair
+      // after it is exchanged, and the two records of that pair, and no other, name it.
+      const moved = order4.map((id, i) => id === GUARANTEED[i] ? null : i + 1).filter((i): i is number => i !== null);
+      const oneSwapAfterTheSpan = moved.length === 2 && moved[0]! >= 2 && moved[1] === moved[0]! + 1
+        && order4[moved[0]! - 1] === GUARANTEED[moved[1]! - 1] && order4[moved[1]! - 1] === GUARANTEED[moved[0]! - 1];
+      const named = records4.filter(r => (r as unknown[])[2] !== null).map(r => JSON.stringify((r as unknown[])[2]));
+      expect.soft({ first: order4.slice(0, 1), oneSwapAfterTheSpan, theRecordsNameIt: named.length === 2 && named.every(v => v === JSON.stringify(moved)) },
+        `${host}: P83.GR1 (R-P312 a, c) — the swap never moves the module the guarantee placed in the first position: it lands on a free pair after it, whose records name it (served ${JSON.stringify(order4)}, records ${JSON.stringify(records4)})`).toEqual({
+        first: [M.reco2], oneSwapAfterTheSpan: true, theRecordsNameIt: true });
+      expect.soft([order2, records2], `${host}: P83.GR1 (R-P312 b) — with the edge pair the only pair, the slot serves its ranked order and no record carries an exploration member`).toEqual([
+        [M.reco2, M.grid], [[M.reco2, false, null], [M.grid, false, null]]]);
+    }, 240_000);
   }
 
   it('host: publication refuses a malformed rule by name — a count over the span, a span over the take, a count below 1, a missing tag, a rule beside per-context orders (R-P307) — and admits a well-formed one', async () => {
