@@ -204,6 +204,10 @@
 // a URL-bearing attribute or url( in a style; after load the page's end (pagehide, visibilitychange, beforeunload) is
 // fired; callbacks still held after the last round are an error; and the built bytes name no send, timer, listener, markup
 // writer, observer or dynamic import.
+// R-P387 (the fix-round-3 review at 91fd2006; the clause's final form): beside the observer, the stand-in counts every
+// element the head script creates (attached or not) beyond the one preload and every navigation, window.open or form
+// submission jsdom reports as not implemented; the static list gains setAttributeNode(, new Audio, new Option, eval(,
+// new Function, Function( and document.write.
 // NEW EXPORT IMPORTED: CLASSIFIER_VERSION from src/services/visit.ts (P3); RED on its absence where named.
 //
 // The fixture's site is shop.example.invalid; no test reaches the network (the head script's double loads nothing).
@@ -628,7 +632,8 @@ const TABLE = tableDocument();
 const PRODUCT_URL = 'https://shop.example.invalid/products/tabby-shoulder-bag-26';
 /** The repository types jsdom minimally (src/console/jsdom.d.ts: JSDOM, its window a record); the parts used here, typed locally. */
 type Loader = new (options: { userAgent: string }) => { fetch(url: string, options: unknown): unknown };
-const { JSDOM, ResourceLoader } = jsdom as unknown as { JSDOM: typeof jsdom.JSDOM; ResourceLoader: Loader };
+type Console = new () => { on(event: string, listener: (e: Error) => void): unknown };
+const { JSDOM, ResourceLoader, VirtualConsole } = jsdom as unknown as { JSDOM: typeof jsdom.JSDOM; ResourceLoader: Loader; VirtualConsole: Console };
 /** A subresource loader that loads nothing: no head-script run reaches the network. */
 class NoFetch extends ResourceLoader { override fetch() { return null; } }
 interface DomElement { getAttribute(name: string): string | null; style: { length: number; item(i: number): string; getPropertyValue(name: string): string } }
@@ -652,7 +657,11 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
     + `<script type="application/json" id="op-images">${JSON.stringify(o.images)}</script>`
     + '<link rel="stylesheet" href="/css/site.css"></head><body><div class="pdp-carousel">'
     + o.images.map(i => `<figure data-op-slot="${CAROUSEL}" data-op-content="${i.id}"><img src="${i.src}" alt=""></figure>`).join('') + '</div></body></html>';
-  const dom = new JSDOM(html, { url: o.url, ...(o.referrer ? { referrer: o.referrer } : {}), runScripts: 'outside-only',
+  // R-P387: every navigation, window.open or form submission the double cannot perform is reported as "Not implemented".
+  let notImplemented = 0;
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', (e: Error) => { if (/^Not implemented/.test(e.message)) notImplemented += 1; });
+  const dom = new JSDOM(html, { url: o.url, ...(o.referrer ? { referrer: o.referrer } : {}), runScripts: 'outside-only', virtualConsole,
     resources: new NoFetch({ userAgent: o.userAgent ?? DESKTOP_UA }) });
   const w = dom.window as unknown as HeadWindow;
   for (const [k, v] of Object.entries(o.storage ?? {})) w.localStorage.setItem(k, v);
@@ -699,6 +708,17 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
   const hold = (fn: unknown, ...args: unknown[]) => { if (typeof fn === 'function') held.push(() => (fn as (...a: unknown[]) => void)(...args)); return held.length; };
   for (const name of ['setTimeout', 'setInterval', 'requestAnimationFrame', 'requestIdleCallback']) {
     Object.defineProperty(w, name, { configurable: true, value: (fn: unknown, _delay?: unknown, ...args: unknown[]) => hold(fn, ...(name === 'requestAnimationFrame' ? [0] : args)) });
+  }
+  // R-P387: every element the head script creates, attached or not (createElement, createElementNS, Image, Audio, Option).
+  const created: string[] = [];
+  const documentProto = win.Document?.prototype as Record<string, (...a: unknown[]) => unknown> | undefined;
+  if (documentProto) for (const name of ['createElement', 'createElementNS']) {
+    const make = documentProto[name]!;
+    documentProto[name] = function (this: unknown, ...args: unknown[]) { created.push(String(args[name === 'createElement' ? 0 : 1]).toLowerCase()); return make.apply(this, args); };
+  }
+  for (const name of ['Image', 'Audio', 'Option']) {
+    const Made = win[name] as unknown as (new (...a: unknown[]) => unknown) | undefined;
+    if (Made) Object.defineProperty(w, name, { configurable: true, value: function (...args: unknown[]) { created.push(name.toLowerCase()); return new Made(...args); } });
   }
   const random = o.random ?? 0.999;
   w.Math.random = () => random;
@@ -756,6 +776,9 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
       else if (name === 'style') sent += urlIn((record.target as DomElement).getAttribute('style'));
     } else if (record.type === 'characterData') sent += urlIn((record.target as { data?: string }).data);
   }
+  // R-P387 (the clause's final form): beside the observer, every element created beyond the one preload and every
+  // navigation the double reports as not implemented.
+  sent += notImplemented + Math.max(0, created.length - (allowedPreload ? 1 : 0));
   let stored: Record<string, unknown> | null = null;
   try { stored = JSON.parse(w.localStorage.getItem('opt_head') ?? 'null') as Record<string, unknown> | null; } catch { stored = null; }
   return { error, context: root.getAttribute('data-op-context'), arm: root.getAttribute('data-op-arm'), table: root.getAttribute('data-op-table'), positions, order, preloads,
@@ -928,7 +951,8 @@ describe('unit:P84.CO2', () => {
     const FORBIDDEN = [/\bfetch\s*\(/, /\bnew\s+XMLHttpRequest\b/, /\bsendBeacon\s*\(/, /\bnew\s+WebSocket\b/, /\bnew\s+EventSource\b/, /\bnew\s+Image\b/,
       /\.innerHTML\b/, /\.outerHTML\b/, /\binsertAdjacentHTML\s*\(/, /\bsetAttributeNS\s*\(/, /\baddEventListener\s*\(/, /\bsetTimeout\s*\(/, /\bsetInterval\s*\(/,
       /\brequestAnimationFrame\s*\(/, /\brequestIdleCallback\s*\(/, /\bpostMessage\s*\(/, /\bnew\s+MutationObserver\b/, /\bimport\s*\(/, /\bqueueMicrotask\s*\(/,
-      /\bdocument\.write(ln)?\s*\(/, /\bon(load|pagehide|beforeunload|visibilitychange|unload)\s*=[^=]/];
+      /\bdocument\.write/, /\bon(load|pagehide|beforeunload|visibilitychange|unload)\s*=[^=]/,
+      /\bsetAttributeNode\s*\(/, /\bnew\s+Audio\b/, /\bnew\s+Option\b/, /\beval\s*\(/, /\bnew\s+Function\b/, /\bFunction\s*\(/];
     expect.soft([built ? 'built' : 'not built', FORBIDDEN.filter(token => token.test(built)).map(token => token.source)],
       'P84.CO2 — sends nothing: the built head script names no send, timer, listener, markup writer, observer or dynamic import').toEqual(['built', []]);
     expect.soft(cases.map(([name, run]) => [name, run.otherStyles, run.hidden, run.sent, run.cookieWritten]),
