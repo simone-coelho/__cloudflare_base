@@ -62,6 +62,8 @@ export const CUSTOMER_ROUTES: readonly CustomerRoute[] = [
   { path: '/content/:kind/revisions/:n', methods: read },
   { path: '/content/:kind/validate', methods: post },
   { path: '/content/:kind/rollback/:n', methods: post },
+  { path: '/content/vocabulary/approve/:n', methods: post }, // P77 (R-P291): the vocabulary's own two; `:kind` admits it below
+  { path: '/content/vocabulary/rejections', methods: read },
   { path: '/content/catalog/import', methods: post },
   { path: '/content/catalog/pull', methods: post },
   { path: '/content/catalog/publication', methods: read },
@@ -127,7 +129,7 @@ export const CUSTOMER_ROUTES: readonly CustomerRoute[] = [
 
 const routes = CUSTOMER_ROUTES.map(route => ({ ...route,
   pattern: new RegExp('^' + route.path.split('/').map(part => {
-    if (part === ':kind') return '(?:catalog|slots|learn|priors)';
+    if (part === ':kind') return '(?:catalog|slots|learn|priors|vocabulary)';
     if (part === ':decision') return '(?:apply|reject)';
     return part.startsWith(':') ? '[^/\\\\%]+' : part;
   }).join('/') + '$'),
