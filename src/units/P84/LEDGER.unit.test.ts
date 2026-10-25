@@ -191,6 +191,11 @@
 //   404), src/units/W21/B1.unit.test.ts :1502 and src/units/W29/B1.unit.test.ts :458 (the learn queue's members),
 //   src/sdk/*.test.ts (the first request's body), src/units/P13 (the direct path).
 //
+// R-P376 (the spec review at 61cd88de): the cap's value pinned at p = 0.5 (20 draws) through the mint's own identifier source
+// (crypto.randomUUID inside newAnonymousSession, spied so every mint draw misses); the browser stand-in counts every attempt
+// to send (image, script, frame and media sources by property or attribute, sockets, event streams, sourced elements and
+// links the run adds, exactly one image preload of a listed image source excepted); the CO3 SDK leg's first two mint draws
+// miss the class drawn.
 // NEW EXPORT IMPORTED: CLASSIFIER_VERSION from src/services/visit.ts (P3); RED on its absence where named.
 //
 // The fixture's site is shop.example.invalid; no test reaches the network (the head script's double loads nothing).
@@ -652,6 +657,29 @@ function runHead(o: HeadOptions): HeadRun {
   const xhr = w.XMLHttpRequest.prototype as unknown as { open: (...a: unknown[]) => void };
   const open = xhr.open;
   xhr.open = function (this: unknown, ...args: unknown[]) { count(); open.apply(this, args); };
+  // R-P376 (2): every other way a page sends: a source set on an image, script, frame or media element (property or
+  // attribute), a socket or an event stream opened; inserted links and sourced elements are counted after the run.
+  const win = w as unknown as Record<string, { prototype?: object } | undefined>;
+  for (const [type, props] of [['HTMLImageElement', ['src', 'srcset']], ['HTMLScriptElement', ['src']], ['HTMLIFrameElement', ['src']],
+    ['HTMLSourceElement', ['src', 'srcset']], ['HTMLMediaElement', ['src']], ['HTMLEmbedElement', ['src']], ['HTMLObjectElement', ['data']]] as const) {
+    const proto = win[type]?.prototype;
+    if (!proto) continue;
+    for (const prop of props) {
+      const d = Object.getOwnPropertyDescriptor(proto, prop);
+      if (d?.set) { const set = d.set; Object.defineProperty(proto, prop, { ...d, set(this: unknown, v: unknown) { count(); set.call(this, v); } }); }
+    }
+  }
+  const element = win.Element?.prototype as { setAttribute: (name: string, value: string) => void } | undefined;
+  if (element) {
+    const setAttribute = element.setAttribute;
+    element.setAttribute = function (this: { tagName?: string }, name: string, value: string) {
+      if (/^(src|srcset|data)$/i.test(name) && /^(IMG|SCRIPT|IFRAME|SOURCE|AUDIO|VIDEO|EMBED|OBJECT)$/.test(this.tagName ?? '')) count();
+      setAttribute.call(this, name, value);
+    };
+  }
+  for (const name of ['WebSocket', 'EventSource']) Object.defineProperty(w, name, { configurable: true, value: function () { count(); throw new Error('the head script opens no connection'); } });
+  const sourcedBefore = Array.from(w.document.querySelectorAll('[src], [srcset], [data]')).length;
+  const linksBefore = Array.from(w.document.head.querySelectorAll('link')).length;
   const random = o.random ?? 0.999;
   w.Math.random = () => random;
   Object.defineProperty(w, 'crypto', { configurable: true, value: { randomUUID: () => crypto.randomUUID(),
@@ -669,6 +697,12 @@ function runHead(o: HeadOptions): HeadRun {
   const firstPreload = links.findIndex(l => l.getAttribute('rel') === 'preload'), firstStylesheet = links.findIndex(l => l.getAttribute('rel') === 'stylesheet');
   const otherStyles = Array.from({ length: root.style.length }, (_, i) => root.style.item(i)).filter(name => !name.startsWith('--op-'));
   const hidden = Array.from(w.document.querySelectorAll('[hidden], body [style]')).length;
+  // Sourced elements the run added, and the links it added beyond exactly one image preload of a listed image source.
+  sent += Math.max(0, Array.from(w.document.querySelectorAll('[src], [srcset], [data]')).length - sourcedBefore);
+  const sources = new Set(o.images.map(i => i.src));
+  const added = links.length - linksBefore;
+  const allowed = preloads.filter(l => l.as === 'image' && sources.has(l.href ?? '')).length >= 1 ? 1 : 0;
+  sent += Math.max(0, added - allowed);
   let stored: Record<string, unknown> | null = null;
   try { stored = JSON.parse(w.localStorage.getItem('opt_head') ?? 'null') as Record<string, unknown> | null; } catch { stored = null; }
   return { error, context: root.getAttribute('data-op-context'), arm: root.getAttribute('data-op-arm'), table: root.getAttribute('data-op-table'), positions, order, preloads,
@@ -892,6 +926,25 @@ async function chosenArm(m: Mounted, session: NonNullable<FirstAnswer['session']
   return body.experiment?.arm ?? null;
 }
 const armDraw = async (m: Mounted) => ((await asOperator(m, 'GET', `/v1/${TENANT}/learn/queue?brand=${BRAND}`)).body.arm_draw ?? null) as Record<string, number> | null;
+/**
+ * R-P376 (1), (3): the identifier source as the mint uses it today (`vis-${crypto.randomUUID()}`, src/identity/
+ * sessionCapability.ts newAnonymousSession), spied: the first `misses` draws made inside newAnonymousSession return
+ * identifiers whose arm is NOT in `cls` (any number: every such draw); every other draw is the platform's own. Returns the
+ * spy and the count of draws made inside newAnonymousSession.
+ */
+function missingMints(cls: 'default' | 'personalized', holdout: HoldoutConfig, misses: number) {
+  const real = crypto.randomUUID.bind(crypto);
+  const pool = Array.from({ length: 8 * misses + 64 }, () => real()).filter(u => classOf(armFor(`vis-${u}`, holdout)) !== cls);
+  const state = { mints: 0 };
+  const spy = vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
+    const limit = Error.stackTraceLimit; Error.stackTraceLimit = 64;
+    const stack = new Error().stack ?? ''; Error.stackTraceLimit = limit;
+    if (!/newAnonymousSession/.test(stack)) return real();
+    state.mints += 1;
+    return state.mints <= misses ? pool[state.mints - 1]! : real();
+  });
+  return { spy, state };
+}
 /** The identifiers one first request mints, counted as calls of crypto.randomUUID while it runs (P5: one per draw beside the request's own). */
 async function counted(m: Mounted, member?: { class: string; tableVersion: string }): Promise<{ answer: FirstAnswer; uuids: number }> {
   const spy = vi.spyOn(crypto, 'randomUUID');
@@ -969,6 +1022,20 @@ describe('unit:P84.CO3', () => {
         outcomes.push({ share, unmet: [unmet.answer.status, unmet.uuids === baseline.uuids ? 'one mint' : `${unmet.uuids} against ${baseline.uuids}`, unmet.answer.body.armRequest ?? null],
           met: [met.answer.status, met.uuids === baseline.uuids ? 'one mint' : `${met.uuids} against ${baseline.uuids}`, met.answer.body.armRequest ?? null], counted: await armDraw(m) });
       }
+      // R-P376 (1): the cap's value — at p = 0.5 min(4096, ceil(ln(1e-6)/ln(0.5))) = 20 draws; every draw inside the mint misses,
+      // so a default draw mints exactly 20 identifiers where a request without the member mints 1 (the session's own id beside them).
+      const half = await mount(host, docsWith({ learn: learnOf({ ...holdoutOf(0.5) }) }));
+      expectPublished(half, 'P84.CO3 — the even holdout publishes');
+      const halfVersion = versionOf(await tableAt(half, 'pdp')) || 'p84-no-table-today';
+      const plainDraws = missingMints('default', holdoutOf(0.5), 64);
+      let plainMints = -1;
+      try { await firstRequest(half); plainMints = plainDraws.state.mints; } finally { plainDraws.spy.mockRestore(); }
+      const cappedDraws = missingMints('default', holdoutOf(0.5), 64);
+      let halfCapped: FirstAnswer | null = null, cappedMints = -1;
+      try { halfCapped = await firstRequest(half, { class: 'default', tableVersion: halfVersion }); cappedMints = cappedDraws.state.mints; } finally { cappedDraws.spy.mockRestore(); }
+      expect.soft({ draws: cappedMints - plainMints, armRequest: halfCapped?.body.armRequest ?? null },
+        `${host}: P84.CO3 — at p = 0.5 the cap is 20 draws, 19 beyond the one a request without the member makes (R-P359 (Q8))`).toEqual({
+        draws: 19, armRequest: { class: 'default', honoured: false, reason: 'capped' } });
       expect.soft(outcomes, `${host}: P84.CO3 — a share of 0 or 1 draws without redrawing`).toEqual([
         { share: 0, unmet: [200, 'one mint', { class: 'default', honoured: false, reason: 'mismatch' }], met: [200, 'one mint', { class: 'personalized', honoured: true }], counted: { capped: 0, ignored: 0, mismatch: 1, republished: 0 } },
         { share: 1, unmet: [200, 'one mint', { class: 'personalized', honoured: false, reason: 'mismatch' }], met: [200, 'one mint', { class: 'default', honoured: true }], counted: { capped: 0, ignored: 0, mismatch: 1, republished: 0 } },
@@ -1011,6 +1078,8 @@ describe('unit:P84.CO3', () => {
       expectPublished(m, 'P84.CO3 — the documents publish');
       const version = versionOf(await tableAt(m, 'pdp')) || 'p84-no-table-today';
       const drawn = freshSdk(m, { opt_head: JSON.stringify({ arm: { class: 'default', saltVersion: 1, tableVersion: version } }) });
+      // R-P376 (3): the mint's first two draws miss the class drawn, so a mint that keeps its first draw fails here every time.
+      const pinned = missingMints('default', holdout, 2);
       try {
         await drawn.listen.refresh({ page: 'pdp' } as Parameters<typeof drawn.listen.refresh>[0]);
         const first = firstCall(drawn.calls);
@@ -1029,7 +1098,7 @@ describe('unit:P84.CO3', () => {
           arm: { class: 'default', tableVersion: version },
           entry: 'no arrival before a choice',
           minted: 'default', kept: experiment ? { id: experiment.id, saltVersion: experiment.saltVersion } : 'an answer carrying experiment' });
-      } finally { drawn.destroy(); }
+      } finally { pinned.spy.mockRestore(); drawn.destroy(); }
       const plain = freshSdk(m, {});
       try {
         await plain.listen.refresh({ page: 'pdp' } as Parameters<typeof plain.listen.refresh>[0]);
