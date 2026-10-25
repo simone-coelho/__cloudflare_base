@@ -72,6 +72,9 @@
 // DEFERRED: LV1 (both hosts and a customer-profile stamp for the script and the pull); the pack's sentences are the
 // documents lane's. TOLD: (b) and (c) are not built (D3).
 //
+// R-P357 (the delivery review): EX1's refusal leg adds three local refusals (a trailing --file with no path, a misspelt
+// --dryrun, an unknown --scopes: exit 2, one import-content: line, nothing sent) and a bogus token named with its 401 (exit 1);
+// R-P358 adds --mode merge and --dry-run given without --file to the same refusals.
 // R-P349 (the spec review at 39a520fa): four assertions added, none changed — EX1's loading leg shows the Idempotency-Key
 // derived from the request (two identical dry runs over one draft send one key, another file another key, a later draft its
 // own N); EX2's scheme leg adds the 303 and 308 answers; EX2's hosts leg shows the scheme before the host list (an http: URL
@@ -271,7 +274,7 @@ describe('unit:P90.EX1', () => {
       } finally { await server.close(); }
     }, 180_000);
 
-    it(`host (${host}): a refused record is printed with exit 1; a local refusal exits 2 before any request, printed as import-content: with no stack trace — a non-loopback target with no token (signing material present), an unreadable file, an unknown format, an unknown mode, --mode full (naming the API and its guard)`, async () => {
+    it(`host (${host}): a refused record is printed with exit 1; a local refusal exits 2 before any request, printed as import-content: with no stack trace — a non-loopback target with no token (signing material present), an unreadable file, an unknown format, an unknown mode, --mode full (naming the API and its guard), an unknown flag or a flag without its value (R-P357), a file's flag without --file (R-P358); a refused token named with its 401`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P90.EX1 — the tenant documents publish');
       const server = await behind(m);
@@ -298,6 +301,25 @@ describe('unit:P90.EX1', () => {
         expect.soft(locals.map(([name, run]) => local(name, run)), `${host}: P90.EX1 — each refused locally, exit 2, before any request`).toEqual(locals.map(([name]) => [name, 2, 0,
           'import-content: …', 'no stack trace', name === 'a non-loopback target, no token' ? 'names the token' : name === '--mode full' ? 'names the API and its guard' : 'named']));
         expect.soft([server.received().length - from, (await draftOf(m)).revision], `${host}: P90.EX1 — the server received nothing from the local refusals, and nothing was written`).toEqual([0, before.revision]);
+        // R-P357: a flag the script does not know, or one given without its value, is refused locally (exit 2, one
+        // import-content: line, no stack trace, nothing sent) — never read as absent or ignored.
+        const before357 = server.received().length;
+        const flags: Array<[string, Run]> = [
+          ['--file given last with no path', await runScript(['--scope', TENANT, '--base', server.base, '--token', m.operatorToken, '--file'], server.base)],
+          ['--dryrun (misspelt) beside a valid --file', await runScript(['--scope', TENANT, '--base', server.base, '--token', m.operatorToken, '--file', json, '--dryrun'], server.base)],
+          ['an unknown --scopes beside --scope', await runScript(['--scope', TENANT, '--scopes', 'x', '--base', server.base, '--token', m.operatorToken, '--file', json], server.base)],
+          // R-P358: a file's flag without --file is refused (a forgotten --file would otherwise run the demo pull).
+          ['--mode merge without --file', await runScript(['--scope', TENANT, '--base', server.base, '--token', m.operatorToken, '--mode', 'merge'], server.base)],
+          ['--dry-run without --file', await runScript(['--scope', TENANT, '--base', server.base, '--token', m.operatorToken, '--dry-run'], server.base)],
+        ];
+        expect.soft({ flags: flags.map(([name, run]) => [name, run.code, run.fetches.length, run.stderr.split('\n').filter(l => l.startsWith('import-content:')).length,
+          /\n\s+at /.test(run.stderr) ? 'a stack trace' : 'no stack trace']), received: server.received().length - before357, revision: (await draftOf(m)).revision },
+        `${host}: P90.EX1 — an unknown flag or a flag without its value is refused locally (today it is ignored or read as absent)`).toEqual({
+          flags: flags.map(([name]) => [name, 2, 0, 1, 'no stack trace']), received: 0, revision: before.revision });
+        // R-P357: a refused operator token is named with its status on the draft read (exit 1), not as an uninitialized tenant.
+        const bogus = await runScript(['--scope', TENANT, '--base', server.base, '--token', 'p90-bogus-operator-token', '--file', json], server.base);
+        expect.soft([bogus.code, /operator token/i.test(`${bogus.stdout}\n${bogus.stderr}`) && /\b401\b/.test(`${bogus.stdout}\n${bogus.stderr}`) ? 'names the refused token and 401' : `does not (${bogus.stderr.slice(0, 200)})`],
+          `${host}: P90.EX1 — a refused token is named with its status`).toEqual([1, 'names the refused token and 401']);
       } finally { await server.close(); }
     }, 180_000);
   }
