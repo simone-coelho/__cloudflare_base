@@ -278,7 +278,11 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     const set = admittedCurrent(), matches = pick(set, slot, contentId, decisionId);
     if (matches.length === 1) view(placement(set, matches[0]!), shown);
   }
-  const offConsent = core.onConsentChange(() => { if (!core.trackingAllowed) resetCapture(); if (!permitted(current)) deliver(null, current?.page ?? ''); });
+  const offConsent = core.onConsentChange(() => {
+    // P89 (R-P459 S5): a consent leaving tracking or personalization off removes the kept shot order.
+    const c = core.consent; if (!c.tracking || !c.personalization) dropShots();
+    if (!core.trackingAllowed) resetCapture(); if (!permitted(current)) deliver(null, current?.page ?? '');
+  });
 
   /**
    * P84 (E8): what the head script reads before the next paint, kept under `opt_head` beside its own state, from a
@@ -297,6 +301,40 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         ...(e && typeof e.id === 'string' ? { experiment: { id: e.id, saltVersion: typeof e.saltVersion === 'number' ? e.saltVersion : null } } : {}),
         consent: { personalization: c.tracking && c.personalization, tracking: c.tracking } }));
     } catch { /* storage unavailable: the head script paints the default row */ }
+  }
+  /** P89: the head script's state as kept, or none. */
+  function headState(): Record<string, unknown> {
+    try { const v: unknown = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? 'null'); return v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {}; } catch { return {}; }
+  }
+  /** P89: the shot order kept for the head script, or none. */
+  function keptShots(state: Record<string, unknown>): { subject?: unknown; anonymous?: unknown; ts?: unknown } | null {
+    const v = state.shots; return v && typeof v === 'object' && !Array.isArray(v) ? v as { subject?: unknown; anonymous?: unknown; ts?: unknown } : null;
+  }
+  function keepHead(state: Record<string, unknown>): void {
+    try { host.storage.set(HEAD_STATE_KEY, JSON.stringify(state)); } catch { /* storage unavailable: the next landing paints the context's row */ }
+  }
+  /**
+   * P89 (E14, R-P459 S3): the shopper's shot order a set carries (`shotOrder`), kept under `opt_head` as `shots`
+   * (`{ tenant, subject, anonymous, order, ts }`) for the head script's next paint, bound to the visitor it was decided
+   * for: written only while tracking and personalization are allowed, never over a newer one of the same visitor (the
+   * set's `ts`); null or an empty order removes it, a set without the member leaves it.
+   */
+  function keepShots(set: { shotOrder?: unknown; ts?: unknown } | null | undefined): void {
+    if (!set || set.shotOrder === undefined) return;
+    const state = headState(), kept = keptShots(state), c = core.consent, subject = core.visitorId;
+    const ts = typeof set.ts === 'number' && Number.isFinite(set.ts) ? set.ts : 0;
+    const order = Array.isArray(set.shotOrder) ? set.shotOrder.filter((v): v is string => typeof v === 'string').slice(0, 16) : [];
+    const allowed = c.tracking && c.personalization && !!subject;
+    if (allowed && kept && kept.subject === subject && typeof kept.ts === 'number' && kept.ts > ts) return;
+    if (allowed && order.length) state.shots = { tenant: core.config.tenant, subject, anonymous: core.anonId === subject, order, ts };
+    else if (kept) delete state.shots;
+    else return;
+    keepHead(state);
+  }
+  /** P89 (R-P459 S5): remove the kept shot order. */
+  function dropShots(): void {
+    const state = headState();
+    if (keptShots(state)) { delete state.shots; keepHead(state); }
   }
   /** P84 (E8, D2): the class the head script drew for this browser, as the first decision request carries it, or none. */
   function headDraw(): string | undefined {
@@ -386,7 +424,19 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     deliver(set, set.page);
   }
 
-  const offDecisions = core.on('decisions', (set) => { if (!set.pageInstance || !pageInstance || set.pageInstance === pageInstance) apply(set); }); // P81: another page view's pushed set is not drawn
+  // P81: another page view's pushed set is not drawn; P89: its shot order, the shopper's, is kept all the same.
+  const offDecisions = core.on('decisions', (set) => { keepShots(set); if (!set.pageInstance || !pageInstance || set.pageInstance === pageInstance) apply(set); });
+  // P89 (R-P459 S5): a sign-in rebinds an anonymous visitor's kept order to the person (the first answer under the
+  // person, newer, corrects it); any other identity than the one it was kept for removes it; an event naming the
+  // visitor it was kept for (a page load's own bootstrap) changes nothing.
+  const offIdentity = core.on('identity', (change) => {
+    const state = headState(), kept = keptShots(state);
+    if (!kept || kept.subject === change.visitorId) return;
+    if (change.reason === 'identified' && kept.anonymous === true && kept.subject === change.previous) {
+      state.shots = { ...kept, subject: change.visitorId, anonymous: core.anonId === change.visitorId };
+    } else delete state.shots;
+    keepHead(state);
+  });
   const offGeneration = core.on('generation', () => {
     cachedView = null; exposed.clear();
     const page = current?.page ?? absence?.page ?? '';
@@ -453,6 +503,8 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         return null;
       }
       keepForHead((json as { experiment?: unknown }).experiment);
+      keepShots(json as { shotOrder?: unknown; ts?: unknown });
+      const shots = (json as { shotOrder?: unknown }).shotOrder;
       const set: DecisionSet = {
         page: json.page ?? o.page,
         ...(json.pageInstance ? { pageInstance: json.pageInstance } : {}),
@@ -461,6 +513,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
         ...(json.config_label ? { config_label: json.config_label } : {}),
         ...(typeof json.ts === 'number' ? { ts: json.ts } : {}),
         decisions: json.decisions as ContentDecision[],
+        ...(shots === null || Array.isArray(shots) ? { shotOrder: shots === null ? null : shots.filter((v): v is string => typeof v === 'string') } : {}),
       };
       // A late snapshot after the timeout is still applied: absence first, then
       // the decision when it arrives. The page never waited.
@@ -698,6 +751,6 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     else if (joined && (status === 'reconnecting' || status === 'closed' || status === 'error')) lost = true;
   });
   const timer = opts.refreshMs === undefined ? undefined : host.setInterval(() => { if (selected) void refresh(); }, Math.max(1_000, Math.min(300_000, opts.refreshMs)));
-  function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); exposed.clear(); cachedView = null; content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
+  function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); exposed.clear(); cachedView = null; content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); offIdentity(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
   return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, carouselExposure, destroy };
 }

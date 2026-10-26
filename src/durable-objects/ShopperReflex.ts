@@ -51,7 +51,7 @@
 
 import { actionOf, moduleEngagementTouches, resolvedContentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import { liveVisit, mergeVisits, projectVisit, recencyBucketOf, validEntry, validVisitContext, visitArrival, visitBucket, visitContextMembers, type VisitContext, type VisitInputs } from '@/services/visit';
-import { deviceClassOf } from '@/services/platform';
+import { deviceClassOf, deviceOf, type DeviceClass } from '@/services/platform';
 import { bufferedEventAllowed, bufferedInterest, validBufferedAction } from '@/reflex/bufferedAction';
 import type { Env } from '@/types/env';
 import { BoundaryStorageUnavailable, SyntheticObjectBoundary, SyntheticUnavailable } from '@/ops/synthetic';
@@ -4246,8 +4246,11 @@ export class ShopperReflex {
         // The publication set the decision was pinned under: the operation already holds the decision's own pin, so this
         // reads it again from the serving cache, with no read of the store (R-P273: kept with the view always).
         const publication = await this.publicationOf(ownerEnvironment(this, this.env), principal.tenant);
+        // P89 (R-P470 C1): the device class the request stated (client hint, else user agent), kept so a re-decision is
+        // decided for the same device; only the class is kept, never the headers.
+        const device = deviceOf(headers);
         const view: PushView = { url: selected, body: keptBody(body), cf: coarseRequestCF(cf), principal, // R-P286: no consent member
-          pageInstance: set.pageInstance, offered: await offeredDigest(set), ...(publication !== undefined ? { publication } : {}) };
+          pageInstance: set.pageInstance, offered: await offeredDigest(set), ...(publication !== undefined ? { publication } : {}), ...(device ? { device } : {}) };
         await this.writePush({ version: 1, ...(state?.socket ? { socket: true, socketGrant: state.socketGrant } : {}), view });
       } else if (!QUIET_ACTIONS.has(String(type))) {
         const state = await this.readPush();
@@ -4317,7 +4320,9 @@ export class ShopperReflex {
       }
       const principal = current ?? view.principal;
       const signed = await signSessionCapability(this.env, principal);
-      const headers = new Headers({ 'Content-Type': 'application/json', 'X-Tenant': principal.tenant, [SHOPPER_HEADER]: signed.capability });
+      const headers = new Headers({ 'Content-Type': 'application/json', 'X-Tenant': principal.tenant, [SHOPPER_HEADER]: signed.capability,
+        // P89 (R-P470 C1): the page view's device class as its request stated it, so the push decides for the same device.
+        ...(view.device ? { 'Sec-CH-UA-Mobile': view.device === 'mobile' ? '?1' : '?0' } : {}) });
       // (no Cookie: the consent in force decides, R-P281)
       const request = new Request(view.url, { method: 'POST', headers, body: view.body });
       Object.defineProperty(request, 'cf', { value: view.cf });
@@ -4764,10 +4769,12 @@ function json(body: unknown, status = 200): Response {
 const PUSH_VIEW_KEY = 'pushView';
 /** P81: the open page view as kept (see `pushState`). */
 interface PushView { url: string; body: string; cf: { country?: string; regionCode?: string }; principal: SessionCapability;
-  pageInstance: string; offered: string; publication?: string }
+  pageInstance: string; offered: string; publication?: string;
+  /** P89 (R-P470 C1): the device class the page view's request stated, absent where it stated none. */
+  device?: DeviceClass }
 interface PushState { version: 1; socket?: true; socketGrant?: string; view?: PushView }
-/** P81: the actions that change no decision (the SDK asks nothing after them either). */
-const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure']);
+/** P81: the actions that change no decision (the SDK asks nothing after them either); P89 (R-P459 O8): P85's carousel beacon among them. */
+const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure', 'carousel_exposure']);
 /** P81: the digest of what a decision set offers, per slot in order: a page view's set is pushed again only when it changes. */
 /**
  * P81 (R-P286): the decision request's body as kept: every admitted member (page, brand, pageInstance, channel, entry,
@@ -4782,6 +4789,9 @@ function keptBody(body: string): string {
 }
 const CONSENT_BODY_HINTS = new Set(['trackingConsent', 'personalizationEnabled']);
 async function offeredDigest(set: Record<string, unknown>): Promise<string> {
-  const offered = JSON.stringify(((set.decisions ?? []) as Array<{ slot?: unknown; contentId?: unknown }>).map((d) => [d.slot, d.contentId]));
+  // P89 (R-P459 S2): with the shopper's shot order where the set carries one, so a change in the order alone is pushed;
+  // a set without the member digests exactly as before.
+  const pairs = ((set.decisions ?? []) as Array<{ slot?: unknown; contentId?: unknown }>).map((d) => [d.slot, d.contentId]);
+  const offered = JSON.stringify(set.shotOrder === undefined ? pairs : [pairs, set.shotOrder]);
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(offered)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 }

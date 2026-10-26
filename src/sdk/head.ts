@@ -29,6 +29,10 @@
 // personalization consent, under the SDK's refusal cookies, for an arrival or
 // a device it cannot classify, for a table naming another classifier version
 // and, for one paint, when the published salt version has moved.
+// P89 (E14): the shopper's own shot order the SDK keeps under `opt_head`
+// (`shots`, from the engine's answers and pushes) leads the carousel's order,
+// ahead of the row's values, under the row's own gate and only for the visitor
+// this browser carries, for 30 days from its decision; a refusal drops it.
 import { armClassOf, armFor, defaultArmProbability } from './armDraw';
 import { DEFAULT_VISITOR_KEY, entrySignals, HEAD_STATE_KEY } from './identity';
 import { deviceOf, type DeviceClass } from '../services/platform';
@@ -51,7 +55,10 @@ interface HeadState {
   arm?: { class: Class; saltVersion: number | null; tableVersion: string };
   experiment?: { id: string; saltVersion: number | null };
   consent?: { tracking: boolean; personalization: boolean };
+  shots?: { subject?: unknown; order?: unknown; ts?: unknown };
 }
+/** P89: how long a kept shot order is applied after its decision: the choice's own lifetime. */
+const SHOTS_MS = 30 * 86_400_000;
 
 /**
  * The parts of a page the head script touches, typed here rather than taken
@@ -156,8 +163,16 @@ function main(page: Page): void {
   root.setAttribute('data-op-context', row && cell ? `${cell.channel}|${cell.bucket}|${device}` : 'default');
   root.setAttribute('data-op-arm', cls);
   root.setAttribute('data-op-table', table.version);
+  // P89: the shopper's own order, kept for this browser's visitor and decided within 30 days, under the row's own gate
+  // (with or without a row): its values lead, then the row's other values; a refusal drops it.
+  const shots = state.shots, own = personalization && cls === 'personalized' && !rotated && record(shots) && visitor && shots.subject === visitor
+    && typeof shots.ts === 'number' && now - shots.ts <= SHOTS_MS && Array.isArray(shots.order) ? shots.order.filter((v): v is string => typeof v === 'string') : [];
+  if (refusesTracking || cookieRefuses(page, 'personalization') || (kept && kept.personalization !== true)) delete state.shots;
   try { page.localStorage.setItem(HEAD_STATE_KEY, JSON.stringify(state)); } catch { /* storage unavailable: nothing is kept */ }
-  if (typeof table.carouselSlot === 'string' && Array.isArray(images)) paint(page, table, table.carouselSlot, images as HeadImage[], row && device ? row.shotOrder[device] : null, now);
+  const rowShots = row && device ? row.shotOrder[device] : null;
+  if (typeof table.carouselSlot === 'string' && Array.isArray(images)) {
+    paint(page, table, table.carouselSlot, images as HeadImage[], own.length ? [...own, ...(rowShots ?? []).filter((v) => !own.includes(v))] : rowShots, now);
+  }
 }
 
 /** The arrival's cell (its channel, null where no rule names it, and its visit bucket); keeps the visit as `liveVisit` leaves it. */

@@ -1345,6 +1345,9 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     ...(out.experiment ? { experiment: out.experiment } : {}),
     ...(ignoredArm ? { armRequest: { class: ignoredArm.class, honoured: false, reason: 'ignored' } } : {}),
     versions: out.versions, config_label: out.config_label, decisions: out.decisions,
+    // P89 (E14, R-P459 S2): the shopper's own shot order on a page whose context table names a carousel (null where
+    // none is carried); absent elsewhere, so every other answer is as before. A pushed set is this answer.
+    ...(out.shotOrder !== undefined ? { shotOrder: out.shotOrder } : {}),
     // A refused pin has no delivery decision and no ledger row, so without this member
     // the refusal reaches nothing outside the worker: the slot silently falls back to
     // the site's own default. The decision set already names each refusal (slot, pinned

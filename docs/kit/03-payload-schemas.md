@@ -68,7 +68,7 @@ the value, the second by sending a different column.
 
 ## The decision
 
-One item in snapshot `decisions[]`; the set carries its original `pageInstance`. The engine also sends the open page view's set over the socket as a `content_decisions` frame whenever it differs from what the page view last received; the answer to the page's own request is never also sent.
+One item in snapshot `decisions[]`; the set carries its original `pageInstance`. The engine also sends the open page view's set over the socket as a `content_decisions` frame whenever it differs from what the page view last received; the answer to the page's own request is never also sent. On a page whose context table names a carousel the set also carries `shotOrder`, the shopper's own shot order (`null` where none is carried), and a change in it alone is sent too.
 
 | Field | Meaning |
 |---|---|
@@ -834,10 +834,11 @@ The optional document `layouts` (`PUT /content/layouts`) lists, per page of the 
 (`any`, `mobile` or `desktop`), the module orders a per-context order on that page may publish: each approved layout
 is exactly `{ modules }`, 1 to 50 distinct module ids in order; `version` is 1 when present. A device key other than
 the three, an empty list, a repeated module, two identical layouts under one device or any other member is refused
-422 naming the page, the device and the layout's index; the catalogue is not checked here. On a page the document
+422 naming the page, the device and the layout's index; a top-level member outside the schema, or a `version` other
+than 1, is refused 422 naming that member. The catalogue is not checked here. On a page the document
 names, an order's `modules` must equal, position by position, one of the page's `any` layouts or, for a context
 naming `mobile` or `desktop`, one of that device's layouts; an order naming no device matches the `any` layouts
-alone. In the example, a mobile shopper's order may be any of the three layouts, any other order one of the first
+alone. In the example, an order whose context names `mobile` may be any of the three layouts, any other order one of the first
 two. A page the document does not name, and a tenant without the document, keep every order as before, and the
 carousel's shot orders are outside the rule.
 
@@ -1232,7 +1233,7 @@ decides the slot in the same context.
   "governanceVersion": 4,
   "pages": { "pdp": [
     { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 } },
-    { "slot": "pdp-carousel", "take": 8, "weights": { "category": 1 }, "scope": "anchor",
+    { "slot": "pdp-carousel", "take": 8, "weights": { "category": 1, "contentType": 0.5 }, "scope": "anchor",
       "minimum": { "dimension": "contentType", "value": "on_model", "count": 1, "within": 2 },
       "shotOrders": [
         { "context": { "channel": "paid_social", "visitBuckets": ["1"], "device": "mobile" }, "order": ["on_model", "detail", "studio"] },
@@ -1258,7 +1259,12 @@ declared layout slot alone, as the context-only switch does. On an arm that pers
 the first place any of its own `tags.contentType` values holds in `order`, after every listed one when it holds
 none, then in catalogue order, and the slot's `pinnedTag` and `minimum` apply after it unchanged. A shopper with no
 signal yet (every score equal) is therefore served the context's order exactly, which is the row the page's context
-table publishes; the holdout's `default` arm keeps the slot's own order. A page whose carousel the head script ordered
+table publishes; the holdout's `default` arm keeps the slot's own order. The shopper's own shot order exists only
+where the carousel weighs `contentType` (its `weights` or a band's above 0, as in the example): every answer of the
+page then carries `shotOrder`, the slot's published shot values the shopper's own interest ranks above 0, most
+interest first, ties by the context's order, at most 16 (`null` when none is carried), which the SDK keeps for the
+head script's next paint. A carousel that weighs no `contentType` ranks no shot type by the shopper's interest, so
+it carries `null`. A page whose carousel the head script ordered
 before paint reports its painted images with one `carousel_exposure` per page view ([event
 payloads](#event-payloads-by-type)): each painted image is one exposure in the carousel's learning of the context the
 table version in force carries, at its channel and visit bucket (the device is no learning level), on a carousel
@@ -2171,6 +2177,6 @@ and ODP audiences) never appear in `dims` because of a restoration.
 | `connected` | `{ connectionId, userId, timestamp }` |
 | `personalization_update` | `{ userId, timestamp, data: { segments[], decisions{}, featureVariables{}, recommendations[], sortOrder[], journeyStage, affinity: { dims, audiences, changed[], odpConfirmed[], applied? } } }`. `applied` itemises the action, the product type and the weight the event applied, only while the registry declares `productTypeWeights` (Action weights per product type, above). `journeyStage` is one of `exploring`, `thinking`, `deciding`: the stage of the shopper's CURRENT VISIT, derived from the visit's own counters against the `journey` thresholds published on your reflex configuration document. It starts again at `exploring` in a new visit and after the purchase that reached `deciding`. With no `journey` block published the engine's compiled default decides (`thinking` at the third interaction of the visit, `deciding` at the first purchase), so the stage still moves and the pooled learning key still spreads across `s=early`, `s=mid` and `s=late` rather than collapsing onto `s=early`; `sources.journey` on a decision names that default and its `revision: 0`. |
 | `segment_update` | The same shape, on a membership change alone |
-| `content_decisions` | Sent by the engine for the open page view whenever its decisions differ from what the page view last received (never the answer to the page's own request; never without personalization consent). A decision set exactly as the snapshot route answers it: `{ page, pageInstance, arm, versions, config_label, decisions[], ts }` |
+| `content_decisions` | Sent by the engine for the open page view whenever its decisions or, on a carousel page, the shopper's shot order differ from what the page view last received (never the answer to the page's own request; never without personalization consent). A decision set exactly as the snapshot route answers it: `{ page, pageInstance, arm, versions, config_label, decisions[], ts, shotOrder? }` |
 | `audience_published` | `{ userId, data: { timestamp, source, audienceWentLive: { key, name } } }` |
 | `odp_receipt` | `{ userId, data: { receiptId, status, ts, source } }`: the customer data platform's answer to a forwarded event |
