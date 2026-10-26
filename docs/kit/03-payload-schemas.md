@@ -1123,6 +1123,41 @@ which the switched slot was decided for its context carries `inputs.context_only
 class and the admitted region it was decided with (keys sorted, each only when there was one), so its replay
 decides the slot in the same context.
 
+### Shot orders
+
+```json
+{
+  "governanceVersion": 4,
+  "pages": { "pdp": [
+    { "slot": "pdp-modules", "take": 4, "layout": true, "weights": { "line": 1 } },
+    { "slot": "pdp-carousel", "take": 8, "weights": { "category": 1 }, "scope": "anchor",
+      "minimum": { "dimension": "contentType", "value": "on_model", "count": 1, "within": 2 },
+      "shotOrders": [
+        { "context": { "channel": "paid_social", "visitBuckets": ["1"], "device": "mobile" }, "order": ["on_model", "detail", "studio"] },
+        { "context": { "channel": "any", "visitBuckets": ["4+"] }, "order": ["studio"] }
+      ] }
+  ] }
+}
+```
+
+`shotOrders` lists the carousel's shot order per context, `{ context, order }`, on one content slot of a page that
+declares a layout slot, and publication refuses it on the declared layout slot itself, on a page without one and on
+a second slot of the page (`pages.{page}[i].shotOrders`, naming the slot). The context is a per-context order's
+(`channel` a channel word or `any`, `visitBuckets` a non-empty list or `any`, `device` optional), refused as an
+order's is: a channel or bucket outside the tenant's terms, two orders for one context, two contexts that match one
+shopper with equal specificity. `order` is 1 to 16 distinct `contentType` values, the shot types the carousel leads
+with, in order. Where the vocabulary in effect governs `contentType`, each value must be one of its ids (a synonym is
+refused naming its id; `422` naming the order, its position and the value); otherwise each value is a content
+format in its canonical form (1 to 64 characters, no surrounding space, no control character or angle bracket, not
+`__proto__`, `prototype` or `constructor`), never checked against the catalogue's current values: a shot type no
+image carries simply leads with nothing. It is a version-4 member like the per-context orders, which stay on the
+declared layout slot alone, as the context-only switch does. On an arm that personalizes, the context's order
+(the most specific match, a tie deciding nothing) breaks ties between candidates of equal score: an image ranks by
+the first place any of its own `tags.contentType` values holds in `order`, after every listed one when it holds
+none, then in catalogue order, and the slot's `pinnedTag` and `minimum` apply after it unchanged. A shopper with no
+signal yet (every score equal) is therefore served the context's order exactly, which is the row the page's context
+table publishes; the holdout's `default` arm keeps the slot's own order.
+
 ## The learn document
 
 What the learning may do, per brand and per slot. Every field has a default; a document names only

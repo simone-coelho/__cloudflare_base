@@ -7,11 +7,11 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { isRewardType, REWARD_TYPES, type RewardType } from '@/ledger/records';
-import { TYPE_FALLBACK_RETIRED, typeFallbackRetired } from './typeAffinity';
+import { isLearnableValue, TYPE_FALLBACK_RETIRED, typeFallbackRetired } from './typeAffinity';
 import { TODAY_TERMS, type ContextTerms } from './cell';
 import { ELIGIBILITY_SIGNALS } from './lifecycle';
 
@@ -483,6 +483,8 @@ const carriesOrders = (s: unknown): boolean => isRecord(s) && s.orders !== undef
 /** P04: a slot member `positionPins` or `offLimitsPieceIds` that carries something: anything but absent or an empty list. */
 const carriesList = (s: unknown, key: 'positionPins' | 'offLimitsPieceIds'): boolean => isRecord(s) && s[key] !== undefined && !(Array.isArray(s[key]) && s[key].length === 0);
 const carriesModuleRules = (s: unknown): boolean => carriesList(s, 'positionPins') || carriesList(s, 'offLimitsPieceIds');
+/** P84: a slot member `shotOrders` that carries something: anything but absent or an empty list. */
+const carriesShotOrders = (s: unknown): boolean => isRecord(s) && s.shotOrders !== undefined && !(Array.isArray(s.shotOrders) && s.shotOrders.length === 0);
 /** P30: a slot member `contextOnly`, whatever it carries (a switch that is off is still authored on the slot). */
 const carriesContextOnly = (s: unknown): boolean => isRecord(s) && s.contextOnly !== undefined;
 /** P26: a slot member `inner` that carries something: anything but absent or an empty object. */
@@ -514,35 +516,7 @@ export function validateOrders(candidate: unknown, take: number, terms: SlotTerm
     const at = `[${index}]`;
     if (!isRecord(raw) || !hasExactly(raw, ['context', 'modules'])) { errors.push(`${at}: an order is { context, modules } and nothing else`); return; }
     const before = errors.length;
-    let channel: OrderContext['channel'] | null = null, visitBuckets: OrderContext['visitBuckets'] | null = null;
-    let device: OrderContext['device'];
-    const context = raw.context;
-    // P37: a context may also name a device, beside or instead of (with `any`) a channel and a visit bucket.
-    if (!isRecord(context) || !(hasExactly(context, ['channel', 'visitBuckets']) || hasExactly(context, ['channel', 'device', 'visitBuckets']))) {
-      errors.push(`${at}.context: { channel, visitBuckets } and optionally device, and nothing else`);
-    } else {
-      if (Object.hasOwn(context, 'device')) {
-        const d = deviceClassOf(context.device);
-        if (d) device = d;
-        else errors.push(`${at}.context.device: ${quoted(context.device)} is not a device class (${DEVICE_CLASSES.join(' | ')}; a tablet counts as desktop); omit it to match every device`);
-      }
-      const c = context.channel;
-      // P36 (R-P46): the tenant's channel ids and the names of its published cut.
-      if (c === 'any' || channelInTerms(c, terms)) channel = c as OrderContext['channel'];
-      else errors.push(`${at}.context.channel: ${quoted(c)} is not ${channelWords(terms)} or any; a shopper whose channel is unknown matches no context`);
-      const b = context.visitBuckets;
-      if (b === 'any') visitBuckets = 'any';
-      else if (!Array.isArray(b) || b.length === 0) errors.push(`${at}.context.visitBuckets: a non-empty list of visit buckets (${bucketWords(terms)}), or any`);
-      else {
-        const seen = new Set<string>();
-        Array.from(b).forEach((v: unknown, k) => {
-          if (!bucketInTerms(v, terms)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is not a visit bucket (${bucketWords(terms)}); a shopper whose visit is unknown matches no context`);
-          else if (seen.has(v as string)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is listed twice`);
-          else seen.add(v as string);
-        });
-        if (errors.length === before) visitBuckets = [...b] as string[];
-      }
-    }
+    const context = orderContextOf(raw.context, at, terms, errors);
     const modules = raw.modules;
     if (!Array.isArray(modules) || modules.length < 1 || modules.length > take) {
       errors.push(`${at}.modules: 1 to ${take} module ids (the slot's take); an order may list fewer modules than take, never more`);
@@ -554,10 +528,91 @@ export function validateOrders(candidate: unknown, take: number, terms: SlotTerm
         else seen.add(id);
       });
     }
-    if (errors.length === before && channel && visitBuckets) {
-      // Keys in sorted order, as every member a replay compares is built; a device only when named.
-      orders.push({ context: { channel, ...(device ? { device } : {}), visitBuckets }, modules: [...(modules as string[])] });
+    if (errors.length === before && context) orders.push({ context, modules: [...(modules as string[])] });
+  });
+  return errors.length ? { ok: false, errors } : { ok: true, value: orders };
+}
+
+/**
+ * P01 (decision D1): an order's context, `{ channel, visitBuckets }` and, P37,
+ * optionally `device`, structurally against the tenant's terms; each error is a
+ * suffix of `at`. Null when the context is refused. Keys in sorted order, as
+ * every member a replay compares is built; a device only when named. P84: the
+ * shot orders on a page's carousel name their contexts in this same form.
+ */
+function orderContextOf(context: unknown, at: string, terms: SlotTerms, errors: string[]): OrderContext | null {
+  const before = errors.length;
+  let channel: OrderContext['channel'] | null = null, visitBuckets: OrderContext['visitBuckets'] | null = null;
+  let device: OrderContext['device'];
+  // P37: a context may also name a device, beside or instead of (with `any`) a channel and a visit bucket.
+  if (!isRecord(context) || !(hasExactly(context, ['channel', 'visitBuckets']) || hasExactly(context, ['channel', 'device', 'visitBuckets']))) {
+    errors.push(`${at}.context: { channel, visitBuckets } and optionally device, and nothing else`);
+  } else {
+    if (Object.hasOwn(context, 'device')) {
+      const d = deviceClassOf(context.device);
+      if (d) device = d;
+      else errors.push(`${at}.context.device: ${quoted(context.device)} is not a device class (${DEVICE_CLASSES.join(' | ')}; a tablet counts as desktop); omit it to match every device`);
     }
+    const c = context.channel;
+    // P36 (R-P46): the tenant's channel ids and the names of its published cut.
+    if (c === 'any' || channelInTerms(c, terms)) channel = c as OrderContext['channel'];
+    else errors.push(`${at}.context.channel: ${quoted(c)} is not ${channelWords(terms)} or any; a shopper whose channel is unknown matches no context`);
+    const b = context.visitBuckets;
+    if (b === 'any') visitBuckets = 'any';
+    else if (!Array.isArray(b) || b.length === 0) errors.push(`${at}.context.visitBuckets: a non-empty list of visit buckets (${bucketWords(terms)}), or any`);
+    else {
+      const seen = new Set<string>();
+      Array.from(b).forEach((v: unknown, k) => {
+        if (!bucketInTerms(v, terms)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is not a visit bucket (${bucketWords(terms)}); a shopper whose visit is unknown matches no context`);
+        else if (seen.has(v as string)) errors.push(`${at}.context.visitBuckets[${k}]: ${quoted(v)} is listed twice`);
+        else seen.add(v as string);
+      });
+      if (errors.length === before) visitBuckets = [...b] as string[];
+    }
+  }
+  return errors.length === before && channel && visitBuckets ? { channel, ...(device ? { device } : {}), visitBuckets } : null;
+}
+
+// ── P84: per-context shot orders on a page's carousel ───────────────────────
+
+/** At most this many shot types in one order (kit 03 § shotOrders). */
+const SHOT_ORDER_MAX = 16;
+
+/**
+ * P84 (E8, R-P363): one slot's per-context shot orders, structurally: each
+ * `{ context, order }`, the context in P01's form (`orderContextOf`) and the
+ * order 1 to 16 distinct `contentType` values, each in the content format's
+ * canonical grammar (`isLearnableValue`: 1 to 64 UTF-16 units, no surrounding
+ * space, no control character or angle bracket, not `__proto__`, `prototype`
+ * or `constructor`). Never against the catalogue's current values: a shot type
+ * no image carries simply orders nothing. Whether a vocabulary in effect
+ * governs `contentType` is the publishing route's check (`vocabularyRefusals`,
+ * src/routes/content.ts); the rules that relate the orders to the page are
+ * authoring rules in `validateSlotCatalog`. Errors are suffixes of the slot's
+ * `shotOrders` address.
+ */
+export function validateShotOrders(candidate: unknown, terms: SlotTerms = TODAY_TERMS): ValidationResult<ShotOrder[]> {
+  if (!Array.isArray(candidate)) return { ok: false, errors: [': must be an array of { context, order } shot orders'] };
+  const errors: string[] = [];
+  if (candidate.length > ORDERS_MAX) errors.push(`: at most ${ORDERS_MAX} shot orders`);
+  const orders: ShotOrder[] = [];
+  Array.from(candidate).forEach((raw: unknown, index) => {
+    const at = `[${index}]`;
+    if (!isRecord(raw) || !hasExactly(raw, ['context', 'order'])) { errors.push(`${at}: a shot order is { context, order } and nothing else`); return; }
+    const before = errors.length;
+    const context = orderContextOf(raw.context, at, terms, errors);
+    const order = raw.order;
+    if (!Array.isArray(order) || order.length < 1 || order.length > SHOT_ORDER_MAX) {
+      errors.push(`${at}.order: 1 to ${SHOT_ORDER_MAX} contentType values, the shot types in the order the carousel leads with them`);
+    } else {
+      const seen = new Set<string>();
+      Array.from(order).forEach((value: unknown, k) => {
+        if (!isLearnableValue(value)) errors.push(`${at}.order[${k}]: ${quoted(value)} is not a contentType value (1 to 64 characters, no surrounding space, control character or angle bracket, not __proto__, prototype or constructor)`);
+        else if (seen.has(value)) errors.push(`${at}.order[${k}]: ${quoted(value)} is repeated; a shot order names each shot type once`);
+        else seen.add(value);
+      });
+    }
+    if (errors.length === before && context) orders.push({ context, order: [...(order as string[])] });
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: orders };
 }
@@ -568,6 +623,10 @@ export const contextSpecificity = (context: OrderContext): number =>
 /** The buckets a context matches: `any` is every bucket of the tenant's cut (today's buckets where no tenant is in hand). */
 const bucketsOf = (context: OrderContext, terms: SlotTerms = TODAY_TERMS): string[] =>
   context.visitBuckets === 'any' ? [...(terms === 'grammar' ? VISIT_BUCKET_WORDS : terms.buckets)] : [...context.visitBuckets];
+/** Two contexts that name the same shoppers in the same words: one context authored twice. */
+const sameContext = (a: OrderContext, b: OrderContext, terms: SlotTerms = TODAY_TERMS): boolean =>
+  a.channel === b.channel && bucketsOf(a, terms).length === bucketsOf(b, terms).length && bucketsOf(a, terms).every(v => bucketsOf(b, terms).includes(v))
+  && (a.visitBuckets === 'any') === (b.visitBuckets === 'any') && a.device === b.device;
 const contextWords = (context: OrderContext): string =>
   `channel ${quoted(context.channel)}, visit buckets ${context.visitBuckets === 'any' ? quoted('any') : context.visitBuckets.join(' | ')}${context.device === undefined ? '' : `, device ${quoted(context.device)}`}`;
 /** A shopper both contexts match, in words, or null when no shopper can match both. */
@@ -779,14 +838,38 @@ function orderAuthoringErrors(page: string, index: number, slot: SlotStrategy, p
     }
     for (let j = 0; j < k; j++) {
       const a = orders[j]!.context, b = order.context;
-      const same = a.channel === b.channel && bucketsOf(a, terms).length === bucketsOf(b, terms).length && bucketsOf(a, terms).every(v => bucketsOf(b, terms).includes(v))
-        && (a.visitBuckets === 'any') === (b.visitBuckets === 'any') && a.device === b.device;
-      if (same) { errors.push(`${at}[${k}].context: two orders for one context (${contextWords(b)}); orders[${j}] already sets it`); continue; }
+      if (sameContext(a, b, terms)) { errors.push(`${at}[${k}].context: two orders for one context (${contextWords(b)}); orders[${j}] already sets it`); continue; }
       const shared = sharedShopper(a, b, terms);
       if (shared !== null && contextSpecificity(a) === contextSpecificity(b)) {
         errors.push(`${at}[${k}].context: ${contextWords(b)} and orders[${j}] (${contextWords(a)}) both match one shopper (${shared}) with equal specificity ${contextSpecificity(b)}; the most specific context must decide, so make one more specific or remove one`);
       }
     }
+  });
+  return errors;
+}
+
+/** P84 (E8): the authoring rules of a page's shot orders (see `validateSlotCatalog`). */
+function shotOrderAuthoringErrors(page: string, pageSlots: readonly SlotStrategy[], terms: SlotTerms = TODAY_TERMS): string[] {
+  const errors: string[] = [], declared = pageSlots.some((s) => s.layout === true);
+  let carrier: string | null = null;
+  pageSlots.forEach((slot, index) => {
+    const orders = slot.shotOrders;
+    if (!orders?.length) return;
+    const at = `pages.${page}[${index}].shotOrders`;
+    if (slot.layout === true) { errors.push(`${at}: slot '${slot.slot}' is the declared layout slot of page '${page}'; shot orders are set on the page's carousel, a content slot beside it`); return; }
+    if (!declared) { errors.push(`${at}: page '${page}' declares no layout slot (layout: true), so slot '${slot.slot}' carries no shot order; the context table is published only for a page with one`); return; }
+    if (carrier !== null) { errors.push(`${at}: slot '${slot.slot}' is a second slot of page '${page}' carrying shot orders; slot '${carrier}' carries them, and a page has one carousel`); return; }
+    carrier = slot.slot;
+    orders.forEach((order, k) => {
+      for (let j = 0; j < k; j++) {
+        const a = orders[j]!.context, b = order.context;
+        if (sameContext(a, b, terms)) { errors.push(`${at}[${k}].context: two shot orders for one context (${contextWords(b)}); shotOrders[${j}] already sets it`); continue; }
+        const shared = sharedShopper(a, b, terms);
+        if (shared !== null && contextSpecificity(a) === contextSpecificity(b)) {
+          errors.push(`${at}[${k}].context: ${contextWords(b)} and shotOrders[${j}] (${contextWords(a)}) both match one shopper (${shared}) with equal specificity ${contextSpecificity(b)}; the most specific context must decide, so make one more specific or remove one`);
+        }
+      }
+    });
   });
   return errors;
 }
@@ -1124,6 +1207,20 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
       errors.push(`${at}.contextOnly: the context-only layout switch needs governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces it; this document is marked governanceVersion ${earlyMark}`);
     }
   }
+  // P84 (E8): the carousel's per-context shot orders, a version-4 member like
+  // P01's orders. An empty list carries nothing and is not kept; on which slot
+  // of which page they may stand are authoring rules of `validateSlotCatalog`,
+  // never reinterpreted on a read.
+  let shotOrders: ShotOrder[] | undefined;
+  if (carriesShotOrders(s)) {
+    if (governance >= LAYOUT_GOVERNANCE_VERSION) {
+      const checked = validateShotOrders(s.shotOrders, terms);
+      if (!checked.ok) for (const error of checked.errors) errors.push(`${at}.shotOrders${error}`);
+      else shotOrders = checked.value;
+    } else if (earlyMark !== null) {
+      errors.push(`${at}.shotOrders: per-context shot orders need governanceVersion ${LAYOUT_GOVERNANCE_VERSION}, the version that introduces them; this document is marked governanceVersion ${earlyMark}`);
+    }
+  }
   // P15 (decision D1): the slot's position bands, read under every governance
   // version like the seed rules (no revision written before this build carries
   // them). Absent means none; any list, an empty one included, must be
@@ -1161,6 +1258,7 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     ...(signalFloor !== undefined ? { signalFloor } : {}),
     ...(positionPins ? { positionPins } : {}), ...(offLimitsPieceIds ? { offLimitsPieceIds } : {}),
     ...(contextOnly ? { contextOnly } : {}),
+    ...(shotOrders ? { shotOrders } : {}),
     ...(bands ? { bands } : {}),
     ...(inner ? { inner } : {}),
   };
@@ -1182,8 +1280,9 @@ function parseSlotCatalog(candidate: unknown, current = false, terms: SlotTerms 
   // carrying them is read under version 4 and refused there if misplaced.
   // P04: as are position pins and off-limits marks.
   // P26: as are a layout slot's inner content slots.
+  // P84: as are a carousel's shot orders.
   const declares = current && !marked && isRecord(candidate.pages)
-    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s) || carriesContextOnly(s) || carriesInner(s)));
+    && Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => declaresLayout(s) || carriesOrders(s) || carriesModuleRules(s) || carriesContextOnly(s) || carriesInner(s) || carriesShotOrders(s)));
   const governance = mark === LAYOUT_GOVERNANCE_VERSION || declares ? LAYOUT_GOVERNANCE_VERSION : current || mark === 3 ? 3 : mark === 2 ? 2 : marked ? 1 : 0;
   const earlyMark = current && (mark === 1 || mark === 2 || mark === 3) ? mark : null;
   if (candidate.version !== undefined && !isStr(candidate.version)) errors.push('version: string when present');
@@ -1292,6 +1391,12 @@ export function validateSlotCatalog(candidate: unknown, terms: SlotTerms = TODAY
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     slots.forEach((slot, index) => errors.push(...innerAuthoringErrors(page, index, slot, slots)));
   }
+  // P84 (E8, R-P363): shot orders stand on one content slot of a page with a
+  // declared layout slot (the page's carousel, which the context table names),
+  // one order per context and no two contexts matching one shopper with equal
+  // specificity, so P01's rule always resolves one order; refused by name where
+  // they are authored (a retained document is never reinterpreted).
+  for (const [page, slots] of Object.entries(checked.value.pages)) errors.push(...shotOrderAuthoringErrors(page, slots, terms));
   for (const [page, slots] of Object.entries(checked.value.pages)) {
     const owners = new Map<string, string>();
     for (const slot of slots) {
@@ -1380,7 +1485,7 @@ export const DEFAULT_SLOTS: SlotCatalog = {
 export function slotsNameContext(candidate: unknown): boolean {
   if (!isRecord(candidate) || !isRecord(candidate.pages)) return false;
   return Object.values(candidate.pages).some(list => Array.isArray(list) && list.some(s => isRecord(s)
-    && (carriesOrders(s) || (Array.isArray(s.seeds) && s.seeds.some(r => isRecord(r) && ['entry_channel', 'source_platform', 'landing_page_type'].includes(String(r.signal)))))));
+    && (carriesOrders(s) || carriesShotOrders(s) || (Array.isArray(s.seeds) && s.seeds.some(r => isRecord(r) && ['entry_channel', 'source_platform', 'landing_page_type'].includes(String(r.signal)))))));
 }
 
 export const SLOTS_KIND: DocumentKind<SlotCatalog> = {
