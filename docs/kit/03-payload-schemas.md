@@ -24,6 +24,7 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `content_dwell` | the same, plus `ms`, milliseconds on screen; the SDK sends it only after the slot's minimum on screen, its own in `dwellMinMsBySlot` (for example 30000 on an editorial slot), else `dwellMinMs`, one second |
 | `product_dwell` | `productId` and `dwellMs`, the milliseconds on the product page, sent once per product view past 20 seconds, plus the registry's attributes when the brand scores them from the event. `product_dwell` with its `dwellMs` feeds the visit's dwell counter (`category_dwell_ms`), counts as an interaction and weighs 0 unless the registry publishes a weight |
 | `layout_exposure` | The per-view beacon of a cached layout, sent by the SDK (`client.listen.layoutExposure`) once per page view and only under tracking consent: `contextKey` (the `X-Context-Key` the cached layout was answered under), `page`, `slot`, `modules` (the module ids drawn, in drawn order, at most 50, each once) and `pageInstance`. It is answered by the route before either shopper host, so it builds no interest, is no signal and no interaction of the visit and writes no outcome record; it adds one exposure per drawn module to the learning of the context its key names, and nothing without tracking consent, with a key the engine did not issue or for a page view already counted ([the context-only layout switch](#the-context-only-layout-switch)) |
+| `carousel_exposure` | The per-view beacon of a carousel the head script ordered before paint, sent by the SDK once per page view and only under tracking consent: `tableVersion` (the context table's version it applied), `context` (`<channel>|<visitBucket>|<device>` or `default`), `page`, `slot` (the carousel slot), `images` (the image ids in painted order, at most 50, each once), `arm` (the class the page painted) and `pageInstance`, from `client.listen.carouselExposure`. It is answered by the route before either shopper host, so it builds no interest, is no signal and no interaction of the visit and writes no outcome record; it adds one exposure per painted image to the carousel's learning of its context for the table version in force and an arm the engine itself assigns that learns, and nothing otherwise ([shot orders](#shot-orders)) |
 | `custom` | `event`, the real name, plus anything |
 
 The event conventions, each a `custom` event weighing 0 until the tenant's registry publishes a weight for its
@@ -180,7 +181,7 @@ One per reward-bearing event, written after the response.
 
 | Field | Meaning |
 |---|---|
-| `outcome_id` | `{tenant}:{time in base 36}:{visitor}:{event}`, then `:n1:{eventId}` when the event carried its nonce, as every outcome the action route records does (`src/ledger/records.ts:411`); the time is the one the engine admitted the event at, the time in the id of the event's behaviour record. The answer to the action that recorded the outcome names this id as `outcome.recordId`, beside `behavior`, on both hosts, once the outcome is durably admitted; it is named on the answer and never added to the record (`src/routes/realtime.ts:393`, `:398`) |
+| `outcome_id` | `{tenant}:{time in base 36}:{visitor}:{event}`, then `:n1:{eventId}` when the event carried its nonce, as every outcome the action route records does (`src/ledger/records.ts:411`); the time is the one the engine admitted the event at, the time in the id of the event's behaviour record. The answer to the action that recorded the outcome names this id as `outcome.recordId`, beside `behavior`, on both hosts, once the outcome is durably admitted; it is named on the answer and never added to the record (`src/routes/realtime.ts:408`, `:413`) |
 | `type` | The reward type the event maps to |
 | `event` | The wire event name, so a custom reward keeps its own |
 | `item_id`, `slot` | The content id and slot the event named, when it did |
@@ -269,7 +270,7 @@ over revision 0). `addresses` is 1 to 64 IPv4 or IPv6 addresses or CIDR ranges: 
 pull and the dry run answer `403`, naming `import-sources` and writing nothing, to a caller whose `CF-Connecting-IP` is
 outside it or absent; `X-Forwarded-For` is never read. `hosts` is 1 to 64 hosts the on-demand pull may fetch from, each
 an exact lowercase hostname or an IP literal as a URL renders it (IPv6 in brackets) with an optional port from 1 to
-65535, never the default port (`:443`, `:80`) and never a scheme, a path or a wildcard: while it is published, a pull
+65535, never the default port (`:458`, `:80`) and never a scheme, a path or a wildcard: while it is published, a pull
 whose URL host, with its port when the URL names one, is not listed answers `403` naming the host, before anything is
 fetched. A member not published restricts nothing: with no `addresses` every caller is allowed, and with no `hosts`
 the pull reaches any `https:` host.
@@ -1156,7 +1157,11 @@ declared layout slot alone, as the context-only switch does. On an arm that pers
 the first place any of its own `tags.contentType` values holds in `order`, after every listed one when it holds
 none, then in catalogue order, and the slot's `pinnedTag` and `minimum` apply after it unchanged. A shopper with no
 signal yet (every score equal) is therefore served the context's order exactly, which is the row the page's context
-table publishes; the holdout's `default` arm keeps the slot's own order.
+table publishes; the holdout's `default` arm keeps the slot's own order. A page whose carousel the head script ordered
+before paint reports its painted images with one `carousel_exposure` per page view ([event
+payloads](#event-payloads-by-type)): each painted image is one exposure in the carousel's learning of the context the
+table version in force carries, at its channel and visit bucket (the device is no learning level), on a carousel
+measured on `rendered-v1`.
 
 ## The learn document
 
