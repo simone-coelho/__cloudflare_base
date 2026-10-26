@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P84",
+  "workOrderHash": "sha256:1b54eb4ab08675762fa9982f61d207c80643a4333ef0cefaa337a1c7c3d11f97",
+  "artifact": {
+    "revision": "2afd5458f6c9a6d4190048d576cbd711fb3fe180",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p84-joined-r6 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p84-build at c7c27c2f (f6bf47d3, db0eaf3a, 62bd999d, d643a34d, 950bcede, 6d93ae78 and c7c27c2f the merges of the S30 spec 103c7058, 61cd88de, 72aa84ed, 27d18255, 91fd2006, 025cdb62 and 31bbb25e; 8a3da225 the mechanism; 8f850c45 the kit; 7ffb6e8d lock fixes; d07745ee a withdrawal and e5b73846 its reversal; 11bf902d and 3e244492 the R-P371 and R-P372 corrections: src/content/kinds.ts, types.ts and src/routes/content.ts give a content slot of a page with a declared layout slot a shotOrders rule in P01's context form, one to sixteen distinct contentType values per context, refused 422 by name on the layout slot, on a page without one, on a second slot, for a channel outside the six words, duplicate contexts, equal-specificity ties or a value outside the vocabulary in effect for contentType where one governs it; src/content/decide.ts and src/reflex/contentCompose.ts tie-break a cold shopper's carousel by the context's row so the engine's first answer equals the published row; src/routes/decisions.ts serves the per-context document under /v1/TENANT/context-table/PAGE (the tenant and the page in the path) at a stable address (public, max-age 60) and a versioned address (public, immutable, 404 once the version is no longer in force), computed on read as a pure function of the pinned set, naming no shopper, with version the SHA-256 hex of its canonical bytes, the layouts and shot orders per device for the six channels and three visit buckets, the default row, holdout share, arms and salt version, the classifier version and the tenant's channel vocabulary where one is published; the direct path's first decision request carries arm as the JSON text of class and tableVersion and the engine mints the new vis- identifier into that class by redrawing until armFor lands there, capped at min(4096, ceil(ln(1e-6)/ln(1-p))) with a counted arm_draw diagnostic for a cap, a mismatch, a learn publish between the read and the pin or a known browser's member, answering armRequest with class, honoured and reason, the arm staying a pure function of anchor and salt (src/identity/sessionCapability.ts, consentContinuity.ts, src/content/holdout.ts, src/sdk/armDraw.ts); a malformed arm answers 400 on every path; src/services/visit.ts and src/content/cell.ts read a never-seen shopper as visit bucket first only when the request carries an entry that classifies to a channel under a recorded tracking choice; src/sdk/head.ts builds to edge-head.js in the three SDK places (unminified like the SDK bundles, 25,709 bytes against the 30,720 budget W40.P3's rule gives, a CSP sidecar edge-head.js.csp beside each) and reads the inert blocks op-context-table and op-images, classifies the arrival with the engine's own classifier and the tenant's vocabulary, picks the row for the cell or the default row for the holdout class, no recorded consent, no device, another classifier version or a rotated salt version, orders the image list by the shot order within P83's brand rules, writes data-op-context, data-op-arm and data-op-table and one custom property per image position, and one preload for the leading image with fetchpriority high, fetching nothing; src/sdk/listen.ts and identity.ts send arm and keep the last answer's experiment in opt_head; scripts/build-sdk.mjs gains the third target, scripts/stamp-workflow.mjs carries every SDK target alike with validateArtifact accepting an archived package whose recorded targets are a prefix of today's, public/_headers and src/customerBoundary.ts serve the head as a customer asset; kits 01, 02 and 03 state the document, its addresses and caching, the head script with its sidecar and the server render's image list as its input, the arm member and the direct-path limit of the before-paint guarantee, shotOrders and the vocabulary rule, with kit 02's citations moved). Specification 61cd88de + 72aa84ed + 27d18255 + 91fd2006 + 025cdb62 + 31bbb25e (34 tests; test-only R10s P01.O2 :159, P30.X3 :419, P77.VR3 :314, R-P372). N4 by mechanism (a), the lead's default under the owner's rule (R-P356).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S30/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S30/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P84/implementer/REPORT.md",
+      "git commits on rem/p84-joined-r6 up to 2afd5458"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P84 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "S30/reviewer-p84/logs/w-p84-run1.json"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S30/gate-r6/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P84/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-26T02:39:11.532Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
