@@ -1714,7 +1714,7 @@
     {
       "id": "P88",
       "title": "Approved layouts enforced as a publication rule (N2) (**amendment 11, E13, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
