@@ -361,8 +361,8 @@ const PART_DIGEST = /^[0-9a-f]{64}$/;
  * each product's part (`{ digest, records }`), which only a catalogue declaring
  * product slots carries. Neither: today's catalogue.
  */
-function catalogManifestMembers(candidate: Record<string, unknown>, errors: string[]): Pick<ContentCatalog, 'productSlots' | 'products'> {
-  const out: Pick<ContentCatalog, 'productSlots' | 'products'> = {};
+function catalogManifestMembers(candidate: Record<string, unknown>, errors: string[]): Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex'> {
+  const out: Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex'> = {};
   if (candidate.productSlots !== undefined) {
     const slots = candidate.productSlots;
     if (!Array.isArray(slots) || slots.length < 1 || slots.length > 64 || !slots.every(isCatalogueName) || new Set(slots).size !== slots.length) {
@@ -387,6 +387,15 @@ function catalogManifestMembers(candidate: Record<string, unknown>, errors: stri
       }
       out.products = index;
     }
+  }
+  // R-P424: the id index the loads read, `{ digest, records }`, carried only beside the part index.
+  if (candidate.idIndex !== undefined) {
+    const pointer = candidate.idIndex;
+    if (candidate.productSlots === undefined) errors.push('idIndex: an id index is carried only by a catalogue that declares productSlots');
+    else if (!isRecord(pointer) || Object.keys(pointer).length !== 2 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
+      || typeof pointer.records !== 'number' || !Number.isSafeInteger(pointer.records) || pointer.records < 1) {
+      errors.push('idIndex: { digest: the SHA-256 of the id index (64 lowercase hex), records: how many part records it lists (1 or more) }');
+    } else out.idIndex = { digest: pointer.digest, records: pointer.records };
   }
   return out;
 }

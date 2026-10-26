@@ -119,6 +119,12 @@ export interface ContentCatalog {
   productSlots?: string[];
   /** P86: the manifest's index, product id → its part's digest and record count; present only with `productSlots`. */
   products?: Record<string, CatalogPartPointer>;
+  /**
+   * P86 (R-P424): the revision's id index — the digest of the object listing
+   * every part record's id and its product, and how many it lists — present
+   * when the manifest has parts. Only the loads read it, never a decision.
+   */
+  idIndex?: CatalogPartPointer;
   pieces: ContentPiece[];
 }
 /** P86: a product's pointer: the SHA-256 of its part's canonical `{ product, pieces }` and the number of its records. */

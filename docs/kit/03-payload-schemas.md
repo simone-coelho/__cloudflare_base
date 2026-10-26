@@ -328,13 +328,37 @@ GET→PUT round trip keeps every part); a pointer the revision in force does not
 the product, and a PUT that leaves a product's pointer out removes that product's part from the catalog, as
 a PUT that leaves a piece out removes it.
 
+**One id lives in one place.** Every load checks each record it carries against the file, the shared pieces
+and the revision's id index: one immutable object per revision, beside the parts and named by the manifest's
+`idIndex` (`{ "digest": "<64 hex>", "records": <count> }`), listing every part record's id with its product,
+sorted by id. Only the loads read it (the import, the pull, a validation, a PUT and a rollback's check that
+its objects are held), never a page's decision. A record moves between products only in a load that carries
+both products, the one it leaves and the one it joins, in one file (the old part drops it and the new part
+holds it), or once the product it leaves has been replaced without it. A record the index lists under another
+product the load does not carry is refused `422` with `code: "record_moved"`, naming both products, and so is
+a PUT that keeps the old product's pointer while it routes the record to the new one. In a nightly load sent in
+chunks, a `record_moved` means the chunk of the product the record leaves comes later in the sequence: send
+that chunk first, or both products in one file. A shared piece whose id a part record holds is refused `422`
+with `code: "id_in_part"`, and a part record whose id a shared piece holds `422` with `code: "id_shared"`,
+each naming the id and the product. `replace` and `full` rebuild the index entries of the products they name,
+a PUT builds the index from its document and the pointers it keeps, and a rollback brings back the old
+revision's index with its parts. The index has its own limit of 8 MiB: a load whose index would pass it is
+refused `413` with `code: "id_index_too_large"`, naming it and writing nothing. Each load reads the index once
+and writes a new one when its records change, up to a few MB; a page reads none.
+
+A load that names a product whose part the store no longer holds answers `503` with `code: "part_unavailable"`,
+whatever its mode, `replace` included, and so does that product's page and its per-product read; other
+products are unaffected. Only a PUT, which leaves that product's pointer out (or sends its records instead of
+its pointer), or a rollback to a revision whose parts are all held, clears it.
+
 The manifest rides one 2 MiB publication beside its set, so its index holds roughly 15,000 to 20,000 products
 at product ids of the usual length; a load whose manifest would pass that is refused `413` with
 `code: "manifest_too_large"`, writing nothing, no part included. A two-level index (256 fixed buckets of
 pointers behind the manifest) is the next step for a larger range and is not built. A part is kept while
 any stored revision's manifest names it: under the tenant's `configuration` retention setting, the purge
-that removes a revision removes the parts no stored revision names, and a rollback to a revision whose part
-the store no longer holds is refused `410`, naming the product.
+that removes a revision removes the parts and the id indexes no stored revision names, never one uploaded
+less than 15 minutes ago (a load in flight may have just written it), and a rollback to a revision whose part
+or id index the store no longer holds is refused `410` with `code: "part_missing"`, naming the product.
 
 A product page reads only its own product's records: its decision reads the manifest and, when the page has a
 slot declared `scope: 'anchor'` and the request names an indexed product as `ctx.anchor`, that product's one

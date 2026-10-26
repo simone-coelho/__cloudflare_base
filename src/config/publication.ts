@@ -175,14 +175,14 @@ export function publicationMeta(headers: Headers, actor: string, note?: string, 
   const meta = { actor, note, operationId, expectedRevision: Number(parsed[1]), expectedPublication: { revision: Number(parsed[2]), digest: parsed[3] } };
   publicationPreconditions(meta, false, creation); return meta;
 }
-async function readObject(storage: R2Bucket, key: string): Promise<{ value: unknown; etag: string; bytes: number } | null> {
+async function readObject(storage: R2Bucket, key: string, max = PUBLICATION_MAX_BYTES): Promise<{ value: unknown; etag: string; bytes: number } | null> {
   try {
     const result = await storage.get(key); if (result === null) return null;
-    required(result && text(result.etag, 256) && integer(result.size) && result.size > 0 && result.size <= PUBLICATION_MAX_BYTES && result.body);
+    required(result && text(result.etag, 256) && integer(result.size) && result.size > 0 && result.size <= max && result.body);
     const reader = result.body.getReader(), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
     let bytes = 0, raw = '';
     try {
-      for (;;) { const part = await reader.read(); if (part.done) break; bytes += part.value.byteLength; required(bytes <= PUBLICATION_MAX_BYTES); raw += decoder.decode(part.value, { stream: true }); }
+      for (;;) { const part = await reader.read(); if (part.done) break; bytes += part.value.byteLength; required(bytes <= max); raw += decoder.decode(part.value, { stream: true }); }
       raw += decoder.decode(); required(bytes === result.size);
     } catch (error) { void reader.cancel().catch(() => undefined); throw error; } finally { reader.releaseLock(); }
     return { value: JSON.parse(raw), etag: result.etag, bytes };
@@ -618,14 +618,22 @@ async function createExact(storage: R2Bucket, key: string, value: unknown): Prom
 // body is, and it is kept while any stored revision's manifest names it
 // (`purgeByPolicy` removes the parts only purged revisions named).
 
-/** P86: the parts of a revision value: the content manifest's part digests, none for any other kind. */
-export function attachmentsOf(kind: string, value: unknown): string[] {
+/**
+ * P86: the objects a revision value names beside its body, by key under the
+ * member's scope: the content manifest's parts and its id index (R-P424); none
+ * for any other kind.
+ */
+export function attachmentsOf(kind: string, value: unknown, scope: string): string[] {
   if (kind !== 'content' || !value || typeof value !== 'object') return [];
-  const products = (value as { products?: unknown }).products;
-  if (!products || typeof products !== 'object' || Array.isArray(products)) return [];
-  return Object.values(products as Record<string, { digest?: unknown }>).map(pointer => pointer?.digest).filter((d): d is string => typeof d === 'string' && HASH.test(d));
+  const { products, idIndex } = value as { products?: unknown; idIndex?: { digest?: unknown } };
+  const parts = products && typeof products === 'object' && !Array.isArray(products)
+    ? Object.values(products as Record<string, { digest?: unknown }>).map(pointer => pointer?.digest).filter((d): d is string => typeof d === 'string' && HASH.test(d)).map(d => partKey(scope, d))
+    : [];
+  const index = idIndex && typeof idIndex.digest === 'string' && HASH.test(idIndex.digest) ? [idIndexKey(scope, idIndex.digest)] : [];
+  return [...parts, ...index];
 }
 const partKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/part/' + digest + '.json';
+const idIndexKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/index/' + digest + '.json';
 /** P86: one product's part, `{ product, pieces }`, as it is stored. */
 export interface CatalogPart { product: string; pieces: unknown[] }
 function validPart(value: unknown): value is CatalogPart {
@@ -685,6 +693,74 @@ export async function catalogPartStored(env: Env, scope: string, hash: string): 
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
   if (!HASH.test(hash)) return false;
   try { return (await storage.head(partKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+}
+
+// ── P86 (R-P424, amending R-P407 (5)): the catalogue's id index ────────────────
+//
+// One immutable, content-addressed object per manifest revision with parts:
+// every part record's id and the product whose part holds it, `{ entries:
+// [[id, product], …] }` sorted by id (the shared pieces are in the manifest
+// itself). The manifest names it (`idIndex`), and it is written with the
+// store's exact-create before the publication reserves the head, as a part is.
+// Only the loads read it — the import, the pull, the validation, the PUT and a
+// rollback's existence check — never a decision. Its own limit is 8 MiB; it is
+// kept while a stored revision names it and purged with the parts.
+
+/** P86 (R-P424): the id index's own ceiling. */
+export const ID_INDEX_MAX_BYTES = 8 * 1024 * 1024;
+/** P86 (R-P424): the id index as it is stored: each part record's id and its product, sorted by id. */
+export interface CatalogIdIndex { entries: Array<[string, string]> }
+/**
+ * P86 (R-P424): the index value of a map of id → product, its digest and its
+ * record count, refused 413 `id_index_too_large` naming it past 8 MiB. Nothing
+ * is written.
+ */
+export async function catalogIdIndexOf(ids: ReadonlyMap<string, string>): Promise<{ value: CatalogIdIndex; digest: string; records: number }> {
+  const value: CatalogIdIndex = { entries: [...ids.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)) };
+  const bytes = encoder.encode(canonical(value)).byteLength;
+  if (bytes > ID_INDEX_MAX_BYTES) {
+    throw new PublicationError(`The catalogue's id index would be ${bytes} bytes for ${value.entries.length} part records, past its 8 MiB limit; nothing was written`, 413, 'id_index_too_large');
+  }
+  return { value, digest: await digest(value), records: value.entries.length };
+}
+/** P86 (R-P424): write the id index with the store's exact-create (a retry writes the same key; other bytes there are a conflict). */
+export async function writeCatalogIdIndex(env: Env, scope: string, value: CatalogIdIndex): Promise<string> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), raw = canonical(value);
+  if (encoder.encode(raw).byteLength > ID_INDEX_MAX_BYTES) throw new PublicationError('The catalogue\'s id index is past its 8 MiB limit; nothing was written', 413, 'id_index_too_large');
+  const hash = await digest(value), key = idIndexKey(home, hash);
+  if (await put(storage, key, raw)) return hash;
+  const found = await readObject(storage, key, ID_INDEX_MAX_BYTES); if (!found || canonical(found.value) !== raw) throw conflict();
+  return hash;
+}
+function validIdIndex(value: unknown): value is CatalogIdIndex {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 1) return false;
+  const entries = (value as CatalogIdIndex).entries;
+  if (!Array.isArray(entries)) return false;
+  let last: string | null = null;
+  for (const entry of entries) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string' || typeof entry[1] !== 'string' || (last !== null && !(last < entry[0]))) return false;
+    last = entry[0];
+  }
+  return true;
+}
+/**
+ * P86 (R-P424): the id index a manifest names, as id → product: one read of
+ * its object, whose canonical value must hash to its digest. One the store does
+ * not hold, or holds otherwise, is refused 503 `id_index_unavailable`.
+ */
+export async function readCatalogIdIndex(env: Env, scope: string, hash: string): Promise<Map<string, string>> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  const refused = () => new PublicationError('The catalogue\'s id index is unavailable, so the load cannot be checked against the records the parts hold; nothing was written', 503, 'id_index_unavailable');
+  if (!HASH.test(hash)) throw refused();
+  const found = await readObject(storage, idIndexKey(home, hash), ID_INDEX_MAX_BYTES);
+  if (!found || !validIdIndex(found.value) || await digest(found.value) !== hash) throw refused();
+  return new Map(found.value.entries);
+}
+/** P86 (R-P424): whether the store holds an id index, by one HEAD of its object (a rollback's existence check). */
+export async function catalogIdIndexStored(env: Env, scope: string, hash: string): Promise<boolean> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (!HASH.test(hash)) return false;
+  try { return (await storage.head(idIndexKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
 }
 async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promise<void>): Promise<PublicationPin> {
   const pending = loaded.head.pending; required(pending); const set = pending.set;
@@ -1126,13 +1202,25 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       await storage.delete(revisionKey(ref.kind, ref.scope, n));
       if (parts.length) { const held = orphaned.get(ref) ?? new Set<string>(); for (const part of parts) held.add(part); orphaned.set(ref, held); }
     }
-    // P86: a part is kept while any stored revision of its member names it; the
-    // parts only purged revisions named are removed, within the same work budget.
+    // P86: a part (or an id index) is kept while any stored revision of its member
+    // names it; those only purged revisions named are removed, within the same work
+    // budget, and (R-P424) never one uploaded less than 15 minutes ago: a load in
+    // flight may have written that very object for the head it is about to reserve.
     for (const [ref, parts] of orphaned) {
       for (const n of await storedRevisions(storage, work, ref)) for (const part of await revisionAttachments(storage, work, ref, n)) parts.delete(part);
-      for (const part of parts) { spend(work); await storage.delete(partKey(ref.scope, part)); }
+      for (const key of parts) { if (await uploadedBefore(storage, work, key, now - ATTACHMENT_GRACE_MS)) { spend(work); await storage.delete(key); } }
     }
   } catch { /* whatever this publication did not reach stays retained */ }
+}
+/** P86 (R-P424): the pending-publication grace: an attachment younger than this is never purged. */
+const ATTACHMENT_GRACE_MS = 15 * 60_000;
+/** P86 (R-P424): whether the object was uploaded before `cutoff`, by its listed upload time; an object not listed, or listed without a time, is not. */
+async function uploadedBefore(storage: R2Bucket, work: PurgeWork, key: string, cutoff: number): Promise<boolean> {
+  spend(work);
+  const page = await storage.list({ prefix: key, limit: 1 }) as unknown as { objects?: Array<{ key?: unknown; uploaded?: unknown }> };
+  const found = Array.isArray(page?.objects) ? page.objects.find(object => object?.key === key) : undefined;
+  const at = found?.uploaded instanceof Date ? found.uploaded.getTime() : NaN;
+  return Number.isFinite(at) && at < cutoff;
 }
 /** P86: whether a purge has parts to consider: a content candidate, and at least one part object of the scope. */
 async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, refs: Ref[]): Promise<boolean> {
@@ -1141,14 +1229,14 @@ async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, ref
   const page = await storage.list({ prefix: partKey(scope, '').slice(0, -'.json'.length), limit: 1 }) as unknown as Listed;
   return Array.isArray(page?.objects) && page.objects.length > 0;
 }
-/** P86: the parts one stored revision's value names (`attachmentsOf`); none for a kind without parts, without a read. */
+/** P86: the keys of the parts and the id index one stored revision's value names (`attachmentsOf`); none for a kind without parts, without a read. */
 async function revisionAttachments(storage: R2Bucket, work: PurgeWork, ref: Ref, n: number): Promise<string[]> {
   if (ref.kind !== 'content') return [];
   spend(work);
   const found = await readObject(storage, revisionKey(ref.kind, ref.scope, n));
   if (!found) return [];
   if ((work.bytes += found.bytes) > PURGE_BYTES) throw new PurgeStopped();
-  return attachmentsOf(ref.kind, (found.value as { value?: unknown } | null)?.value);
+  return attachmentsOf(ref.kind, (found.value as { value?: unknown } | null)?.value, ref.scope);
 }
 /**
  * W38 B4 with W21 E1.07: may this member's old revisions be purged without
