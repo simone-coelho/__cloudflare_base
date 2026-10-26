@@ -31,8 +31,8 @@
     "README.md"
   ],
   "sizeBudget": {
-    "./edge-personalization.esm.js": 107520,
-    "./edge-personalization.js": 112640,
+    "./edge-personalization.esm.js": 112640,
+    "./edge-personalization.js": 117760,
     "./edge-head.js": 30720
   }
 }

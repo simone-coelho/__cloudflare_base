@@ -7,7 +7,7 @@
 import type { Env } from '@/types/env';
 import { afterOwnerAnswer, assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { carriedSaltVersion, PublicationError, pinPublication, publicationScope, readOptionalPinnedPublication, readPinnedPublication, readPublication } from '@/config/publication';
+import { carriedSaltVersion, documentDigest, PublicationError, pinPublication, publicationScope, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
 import { extractTouches, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
@@ -21,10 +21,11 @@ import { deviceClassOf, platformWordOf, type DeviceClass, type PlatformWord } fr
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, isCatalogueName, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND, VOCABULARY_APPROVAL_KIND, vocabularyTableOf, type VocabularyTable } from './kinds';
-import { enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable } from './holdout';
+import { armFor, enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable, recordArmDraw, saltVersionOf } from './holdout';
+import { armClassOf } from '@/sdk/armDraw';
 import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { contextOnlyLayoutSlot, contextOnlySlots, decideContent, evidenceFloorOf, layoutBlendOf, slotConversionsOf } from './decide';
+import { contextOnlyLayoutSlot, contextOnlySlots, contextTableOf, decideContent, evidenceFloorOf, layoutBlendOf, slotConversionsOf, type ContextTableDocument } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { elapsedMs, fanDecisions, fanLayoutExposure, identityPage, learningReadBudgets, liftKey, liftWitnessVerdict, readRingWithOutcome, recordLearningReads, reportLearningIncomplete, servedCounts, type LearningReceipt, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
@@ -1359,4 +1360,143 @@ export async function admitLayoutExposure(env: Env, input: { tenant: string; bra
     config, subject, pageInstance: beacon.pageInstance, modules: beacon.modules,
     cell: { channel: context.channel, visit_bucket: context.visitBucket, region: null, affinity: null, stage: 'unknown' }, at: now });
   return { answer: { exposure: 'admitted', modules: beacon.modules.length }, work };
+}
+
+/** P84 (E8): a page's context table with its `version`, the SHA-256 of the canonical bytes of the rest. */
+export type ContextTableInForce = ContextTableDocument & { version: string };
+/** P85 (R-P393 Q4): the tables already computed, by pinned-set identity and page; a new set never matches an old entry. */
+const contextTables = new Map<string, ContextTableInForce | null>();
+const CONTEXT_TABLES_HELD = 64;
+/**
+ * P84 (E8), P85 (R-P393 Q3): the context table of a page in force — the
+ * document `contextTableOf` builds from ONE pinned publication set (its slots
+ * and learn documents, the salt version as W21 counts it: carried by the learn
+ * revision where it names the salt in force, else walked), with its `version` —
+ * or null where the slots name no such page or the page declares no layout
+ * slot. The one computation the table's route (src/routes/decisions.ts) and
+ * the carousel beacon's admission (`admitCarouselExposure`) read, so a beacon
+ * is admitted for exactly the version a page could fetch. Held per pinned-set
+ * identity and page, once its salt version is known. Throws what the
+ * publication throws.
+ */
+export async function contextTableInForce(env: Env, tenant: string, page: string, pinned?: PublicationPin): Promise<ContextTableInForce | null> {
+  const pin = pinned ?? await pinPublication(env, tenant, true);
+  const key = `${pin.scope}\u0000${pin.revision}\u0000${pin.digest}\u0000${page}`;
+  const held = contextTables.get(key);
+  if (held !== undefined) return held;
+  const [slotsRev, learnRev] = await Promise.all([readPinnedPublication(env, SLOTS_KIND, tenant, pin), readPinnedPublication(env, LEARN_KIND, tenant, pin)]);
+  const pages = slotsRev.value.pages, learn = learnRev.value;
+  let doc: ContextTableInForce | null = null;
+  if (Object.hasOwn(pages, page)) {
+    const salt = learn.holdout.salt || tenant, carried = carriedSaltVersion(learnRev);
+    const table = contextTableOf(page, pages[page]!, learn, learnRev.revision,
+      carried && carried.salt === salt ? carried.version : await saltVersionOf(env, tenant, learnRev.revision, tenant, salt));
+    if (table) doc = { ...table, version: await documentDigest(table) };
+  }
+  // An unknown salt version may be a walk that failed midway: computed again next time rather than held.
+  if (doc === null || doc.holdout.saltVersion !== null) {
+    if (contextTables.size >= CONTEXT_TABLES_HELD) contextTables.delete(contextTables.keys().next().value!);
+    contextTables.set(key, doc);
+  }
+  return doc;
+}
+
+/** P85 (E9): the class a page claims it painted (`data-op-arm`), as the beacon carries it. */
+export type CarouselArmClaim = 'personalized' | 'default' | 'no_learning';
+/**
+ * P85 (E9): the data of a `carousel_exposure` beacon: the context table's
+ * version and the context the head script applied, the page, the carousel slot,
+ * the images in painted order, the page view and the class the page claims.
+ */
+export interface CarouselExposureBeacon { tableVersion: string; context: string; page: string; slot: string; images: string[]; pageInstance: string; arm: CarouselArmClaim }
+/** P85: why a well-formed beacon added nothing. */
+export type CarouselExposureRefusal = 'tracking_refused' | 'stale_table' | 'unknown_context' | 'not_carousel' | 'unknown_image' | 'not_learning' | 'not_measured' | 'unavailable';
+export type CarouselExposureAnswer = ({ exposure: 'admitted'; images: number } | { exposure: 'ignored'; reason: CarouselExposureRefusal }) & { armClaimed: CarouselArmClaim };
+
+/** P85: a beacon's data read strictly — at most 50 distinct images, as a slot takes — or null when it is not one. */
+export function carouselExposureBeaconOf(data: Record<string, unknown>): CarouselExposureBeacon | null {
+  const { tableVersion, context, page, slot, images, pageInstance, arm } = data;
+  if (typeof tableVersion !== 'string' || !tableVersion || tableVersion.length > 128 || typeof context !== 'string' || !context || context.length > CONTEXT_KEY_MAX
+    || !isCatalogueName(page) || !isCatalogueName(slot) || !isEventNonce(pageInstance) || (arm !== 'personalized' && arm !== 'default' && arm !== 'no_learning')
+    || !Array.isArray(images) || images.length < 1 || images.length > 50
+    || !images.every(id => typeof id === 'string' && id.length > 0 && id.length <= 256) || new Set(images).size !== images.length) return null;
+  return { tableVersion, context, page, slot, images: [...images] as string[], pageInstance, arm };
+}
+
+/**
+ * P85 (E9; R-P382, R-P393): the per-view beacon of a carousel the head script
+ * ordered before paint (src/sdk/head.ts). It adds one exposure per drawn image
+ * to its context's learning (`fanLayoutExposure`, after the answer, P30's
+ * form) only when every condition holds, and nothing otherwise:
+ *   · the shopper's tracking consent, as the action route resolved it;
+ *   · the context table version in force for the page (`contextTableInForce`,
+ *     the version a page fetching the table now reads; a page cached before a
+ *     publication sends a replaced version for up to the stable address's
+ *     minute, `stale_table`), its carousel slot the beacon's;
+ *   · a context that version carries: a row's channel and visit bucket with a
+ *     device class, or `default`, recorded as an unknown context is (the cell
+ *     at the root and the `c=unknown` level);
+ *   · the carousel measured on `rendered-v1` (P02 decision D1);
+ *   · images of the published catalogue that name the slot, no more than its take;
+ *   · the ENGINE's own arm for the shopper personalizing: her assignment as the
+ *     decision draws it (personalization consent, `armFor` over her enrollment
+ *     anchor and the salt in force), never the page's claim; an anchor that
+ *     cannot be read is `not_learning` (fail closed). The claim is answered as
+ *     `armClaimed`, and a claim whose class differs from the engine's is
+ *     counted for the operator (P84's `arm_draw`, `mismatch`);
+ *   · a retention policy in force for online learning.
+ * It reads only the published documents, through one pinned set, and the
+ * shopper's enrollment anchor; it writes nothing about the shopper: no state,
+ * no ring, no ledger row. A repeat for the same page view is counted once by
+ * the statistics object's journal. Credit reaches an image only through the
+ * engine's own decision for it on that page view, as a layout module's does.
+ * Never throws.
+ */
+export async function admitCarouselExposure(env: Env, input: { tenant: string; stateTenant: TenantId; brand: string; subject: string;
+  consent: { tracking: boolean; personalization: boolean }; beacon: CarouselExposureBeacon; now: number }):
+  Promise<{ answer: CarouselExposureAnswer; work: Promise<unknown> | null }> {
+  const { tenant, brand, subject, beacon, now } = input, armClaimed = beacon.arm;
+  const ignored = (reason: CarouselExposureRefusal, work: Promise<unknown> | null = null) => ({ answer: { exposure: 'ignored' as const, reason, armClaimed }, work });
+  if (!input.consent.tracking) return ignored('tracking_refused');
+  let catalog: ContentCatalog, slots: SlotCatalog, learn: LearnConfig, table: ContextTableInForce | null;
+  try {
+    const pin = await pinPublication(env, tenant, true);
+    const [catalogRev, slotsRev, learnRev] = await Promise.all([readPinnedPublication(env, CONTENT_KIND, tenant, pin),
+      readPinnedPublication(env, SLOTS_KIND, tenant, pin), readPinnedPublication(env, LEARN_KIND, tenant, pin)]);
+    catalog = catalogRev?.value ?? EMPTY_CATALOG; slots = slotsRev?.value ?? { pages: {} }; learn = learnRev?.value ?? DEFAULT_LEARN;
+    table = await contextTableInForce(env, tenant, beacon.page, pin);
+  } catch (error) {
+    if (error instanceof SessionAccessError) throw error;
+    return ignored('unavailable');
+  }
+  if (!table || beacon.tableVersion !== table.version) return ignored('stale_table');
+  if (beacon.slot !== table.carouselSlot) return ignored('not_carousel');
+  const [channel, bucket, device, ...rest] = beacon.context.split('|');
+  const cell = beacon.context === 'default' ? { channel: 'unknown', visit_bucket: 'unknown' }
+    : rest.length === 0 && (device === 'mobile' || device === 'desktop') && table.rows.some(row => row.channel === channel && row.visitBucket === bucket)
+      ? { channel: channel!, visit_bucket: bucket! } : null;
+  if (!cell) return ignored('unknown_context');
+  const config = slotLearnConfigOf(learn)(beacon.slot);
+  if ((config.measurementBasis ?? 'served-v1') !== 'rendered-v1') return ignored('not_measured');
+  const spec = (slots.pages[beacon.page] ?? []).find(slot => slot.slot === beacon.slot);
+  const pieces = new Set(catalog.pieces.filter(piece => piece.slotTypes.includes(beacon.slot)).map(piece => piece.id));
+  if (!spec || beacon.images.length > spec.take || !beacon.images.every(id => pieces.has(id))) return ignored('unknown_image');
+  // The engine's own arm: none without personalization consent (she is served the site's defaults) or with an
+  // anchor it cannot read (fail closed); else the decision's draw over her anchor and the salt in force.
+  if (!input.consent.personalization) return ignored('not_learning');
+  let engineArm: ReturnType<typeof armFor> | null = null;
+  try {
+    const anchor = await enrollmentAnchorOf(env, input.stateTenant, subject);
+    if (!anchor.unavailable) engineArm = armFor(anchor.anchor, { ...learn.holdout, salt: learn.holdout.salt || brand });
+  } catch { engineArm = null; }
+  if (engineArm === null) return ignored('not_learning');
+  const counted = armClassOf(armClaimed) !== armClassOf(engineArm) && !syntheticOperation() ? recordArmDraw(env, tenant, 'mismatch', now) : null;
+  if (engineArm !== 'personalized') return ignored('not_learning', counted);
+  try { requireRetention(env, captureRetention(env, tenant, now, now).online, tenant, 'online', now); }
+  catch { return ignored('unavailable', counted); }
+  const scoped = new Set(pageScopedSlotNames(slots));
+  const fanned = fanLayoutExposure(env, { tenant, brand, slot: beacon.slot, page: identityPage(scoped, beacon.slot, beacon.page), viewPage: beacon.page,
+    config, subject, pageInstance: beacon.pageInstance, modules: beacon.images,
+    cell: { ...cell, region: null, affinity: null, stage: 'unknown' }, at: now });
+  return { answer: { exposure: 'admitted', images: beacon.images.length, armClaimed }, work: counted ? Promise.all([fanned, counted]) : fanned };
 }

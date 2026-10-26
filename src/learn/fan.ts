@@ -1264,7 +1264,8 @@ const LAYOUT_EXPOSURE_PURPOSE = 'layout-exposure/v1';
  * visit bucket, nothing of the shopper's (stage unknown, no region, no interest)
  * — so they land at level 2 (channel and visit bucket) and the coarser levels,
  * whatever the device. The caller admitted the beacon (src/content/service.ts
- * `admitLayoutExposure`). Each row's identity is the page view's own — the
+ * `admitLayoutExposure`; P85: `admitCarouselExposure`, the painted images of a
+ * carousel the head script ordered before paint, counted the same way). Each row's identity is the page view's own — the
  * shopper, the page, the slot, the position drawn and the page instance — with
  * no module or key in it, so the object's applied-delivery journal (W22 D1.02)
  * recognises any repeat for the same page view and counts it once; the subject

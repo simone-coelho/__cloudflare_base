@@ -6,7 +6,7 @@
 import { decisionRequiresConsent, dwellMinFor, type Core, type FirstRequest } from './core';
 import { snapshotEntry } from '../services/visit';
 import { HEAD_STATE_KEY } from './identity';
-import type { ActionEnvelope, ContentDecision, DecisionSet, ElementLike, EngineUpdate, LayoutExposure, RenderAcknowledgment, SdkEventType } from './types';
+import type { ActionEnvelope, CarouselExposure, ContentDecision, DecisionSet, ElementLike, EngineUpdate, LayoutExposure, RenderAcknowledgment, SdkEventType } from './types';
 import type { ServerBootstrap } from './server';
 
 export interface HydrateOptions {
@@ -136,6 +136,19 @@ export interface Listen {
    * or not sent, never rejects.
    */
   layoutExposure(beacon: LayoutExposure): Promise<void>;
+  /**
+   * P85 (E9): the per-view beacon of a carousel the head script ordered before
+   * paint (src/sdk/head.ts): the context table's version and the context it
+   * applied (`data-op-table`, `data-op-context`), the page, the carousel slot,
+   * the image ids in painted order and the class it painted (`data-op-arm`).
+   * Sent as one `carousel_exposure` action, once per page view and slot (the
+   * page view as `layoutExposure` reads it), only under the shopper's tracking
+   * consent and never in listen-only mode; it asks for no decisions. The engine
+   * counts the images only for the table version in force and a context it
+   * carries, on an arm that learns by its own assignment. Resolves when sent or
+   * not sent, never rejects.
+   */
+  carouselExposure(beacon: CarouselExposure): Promise<void>;
   destroy(): void;
 }
 
@@ -630,17 +643,38 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== 'object') return;
     const { contextKey, page, slot } = beacon, modules: unknown[] = Array.isArray(beacon.modules) ? beacon.modules : [];
     if (typeof contextKey !== 'string' || !contextKey || contextKey.length > 512 || typeof page !== 'string' || !page || typeof slot !== 'string' || !slot
-      || !modules.length || modules.length > 50 || !modules.every(id => typeof id === 'string' && id.length > 0) || new Set(modules).size !== modules.length) return;
-    // The page view: the one a snapshot of this page (and product) opened, else the cached page's own, opened by
-    // its first report. P79: a layout drawn for another product belongs to that product's own page view.
-    const productId = typeof beacon.productId === 'string' && beacon.productId ? beacon.productId : undefined;
+      || !distinctIds(modules)) return;
+    const instance = exposedOnce(page, slot, beacon.productId);
+    if (instance) await core.send('layout_exposure', { contextKey, page, slot, modules: [...modules] as string[], pageInstance: instance });
+  }
+
+  async function carouselExposure(beacon: CarouselExposure): Promise<void> {
+    if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== 'object') return;
+    const { tableVersion, context, page, slot, arm } = beacon, images: unknown[] = Array.isArray(beacon.images) ? beacon.images : [];
+    if (typeof tableVersion !== 'string' || !tableVersion || tableVersion.length > 128 || typeof context !== 'string' || !context || context.length > 256
+      || typeof page !== 'string' || !page || typeof slot !== 'string' || !slot || typeof arm !== 'string' || !arm || !distinctIds(images)) return;
+    const instance = exposedOnce(page, slot, beacon.productId);
+    if (instance) await core.send('carousel_exposure', { tableVersion, context, page, slot, images: [...images] as string[], arm, pageInstance: instance });
+  }
+
+  /** 1 to 50 distinct non-empty ids, as a slot takes. */
+  function distinctIds(ids: unknown[]): boolean {
+    return ids.length > 0 && ids.length <= 50 && ids.every(id => typeof id === 'string' && id.length > 0) && new Set(ids).size === ids.length;
+  }
+  /**
+   * The page view a per-view beacon belongs to, or none when this page view and slot already sent one: the one a
+   * snapshot of this page (and product) opened, else the cached page's own, opened by its first report. P79: a page
+   * drawn for another product belongs to that product's own page view.
+   */
+  function exposedOnce(page: string, slot: string, product: unknown): string | null {
+    const productId = typeof product === 'string' && product ? product : undefined;
     const instance = pageInstance && selected?.page === page && (productId === undefined || selected.productId === productId) ? pageInstance
       : cachedView?.page === page && cachedView.productId === productId ? cachedView.instance : (cachedView = { page, productId, instance: host.uuid() }).instance;
     const once = JSON.stringify([instance, slot]);
-    if (exposed.has(once)) return;
+    if (exposed.has(once)) return null;
     if (exposed.size >= 256) exposed.delete(exposed.values().next().value!);
     exposed.add(once);
-    await core.send('layout_exposure', { contextKey, page, slot, modules: [...modules] as string[], pageInstance: instance });
+    return instance;
   }
 
   function hold(slot: string): () => void {
@@ -649,8 +683,8 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     return () => { holds.delete(token); };
   }
 
-  // P30: nor does the cached layout's beacon, which reports what a cache drew.
-  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure'].includes(event.type) && core.socketStatus !== 'connected') follow(); });
+  // P30: nor does the cached layout's beacon, which reports what a cache drew; P85: nor the carousel's, what the head script painted.
+  const offSent = core.on('sent', event => { if (!['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure', 'carousel_exposure'].includes(event.type) && core.socketStatus !== 'connected') follow(); });
   // P81: a socket open asks nothing again; the engine pushes the page view's changes. P74 (R-P311): a socket connected
   // again after it was lost (closed, reconnecting or in error after this view's first connection) asks once, since the
   // engine dropped the page view it pushes to with the shopper's last socket; a first open asks nothing, an open during
@@ -662,5 +696,5 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
   });
   const timer = opts.refreshMs === undefined ? undefined : host.setInterval(() => { if (selected) void refresh(); }, Math.max(1_000, Math.min(300_000, opts.refreshMs)));
   function destroy(): void { destroyed = true; ++intent; resetCapture(); host.clearTimeout(pageView.deadline); holds.clear(); exposed.clear(); cachedView = null; content.release(); offSent(); offSocket(); offConsent(); offDecisions(); offGeneration(); if (timer !== undefined) host.clearInterval(timer); slotSubs.clear(); setSubs.clear(); current = null; absence = null; }
-  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, destroy };
+  return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, carouselExposure, destroy };
 }

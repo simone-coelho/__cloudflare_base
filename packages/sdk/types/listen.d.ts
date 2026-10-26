@@ -1,5 +1,5 @@
 import { type Core } from './core.js';
-import type { ContentDecision, DecisionSet, ElementLike, EngineUpdate, LayoutExposure, RenderAcknowledgment, SdkEventType } from './types.js';
+import type { CarouselExposure, ContentDecision, DecisionSet, ElementLike, EngineUpdate, LayoutExposure, RenderAcknowledgment, SdkEventType } from './types.js';
 export interface HydrateOptions {
     page: string;
     /**
@@ -99,6 +99,19 @@ export interface Listen {
      * or not sent, never rejects.
      */
     layoutExposure(beacon: LayoutExposure): Promise<void>;
+    /**
+     * P85 (E9): the per-view beacon of a carousel the head script ordered before
+     * paint (src/sdk/head.ts): the context table's version and the context it
+     * applied (`data-op-table`, `data-op-context`), the page, the carousel slot,
+     * the image ids in painted order and the class it painted (`data-op-arm`).
+     * Sent as one `carousel_exposure` action, once per page view and slot (the
+     * page view as `layoutExposure` reads it), only under the shopper's tracking
+     * consent and never in listen-only mode; it asks for no decisions. The engine
+     * counts the images only for the table version in force and a context it
+     * carries, on an arm that learns by its own assignment. Resolves when sent or
+     * not sent, never rejects.
+     */
+    carouselExposure(beacon: CarouselExposure): Promise<void>;
     destroy(): void;
 }
 export interface ListenOptions {
