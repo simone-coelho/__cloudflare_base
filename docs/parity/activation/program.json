@@ -1906,7 +1906,15 @@
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
         "packages/sdk/types/**",
-        "packages/sdk/package.json"
+        "packages/sdk/package.json",
+        "src/sdk/head.ts",
+        "public/sdk/edge-head.js",
+        "public/sdk/edge-head.js.csp",
+        "public/sdk/0.2.0/edge-head.js",
+        "public/sdk/0.2.0/edge-head.js.csp",
+        "packages/sdk/edge-head.js",
+        "packages/sdk/edge-head.js.csp",
+        "src/routes/decisions.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P89 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
