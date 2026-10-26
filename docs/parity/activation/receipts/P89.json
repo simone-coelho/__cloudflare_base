@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P89",
+  "workOrderHash": "sha256:89e4248ff4fdbaece75086c79ffc6375a8ef7c0b9b0da13d5884bb6ba5eaa1a8",
+  "artifact": {
+    "revision": "2d63adb60898fe1b451019b263e119021feafb9c",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p89-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p89-build at 752f92ba (5bf701de, 5373efa9 and 752f92ba the merges of the S36 spec 20a0054f, aa13d66c and 5fb48ed5 (e78a2f96 their base); 7b4ef024 and 0b587b76 the merges of rem/integration with P76 and P88; 81d61553 the mechanism and the regenerated SDK bundles, 0bf96e8a and 1f2d02a1 the P76 and P88 kit corrections, fa809185 the push re-decision keeping the page view's device (R-P470), ea54b90d and 71a54699 the stamp workflow's package-step typecheck at 3,072 MB with archived packages keeping their recorded form (R-P472, R-P473), the kits: src/content/service.ts computes the shopper's shot order on a page whose context table names a carousel (the shopper's own contentType interest values that a published shot order of the slot names, by interest descending, ties by the request's row then by code unit, at most 16; absent without a carousel; null on the default arm, below the signal floor, when the slot weighs no contentType or with no positive interest); src/routes/decisions.ts carries it as the decision set's shotOrder member, so every content_decisions frame carries it on both hosts, and src/durable-objects/ShopperReflex.ts pushes on P81's triggers when the offered pairs or the order differ and treats the carousel beacon as a quiet action; src/sdk/listen.ts and types.ts keep the latest order in first-party storage as opt_head.shots naming its tenant, subject, anonymous flag, order and time, written from answers and from decisions frames before the page-view filter under tracking and personalization consent only, kept only when newer, removed by a null or empty order, bounded to thirty days; src/sdk/head.ts applies the stored order before paint on the next page view and the next first landing, first under the row's own gate and only for the visitor the browser carries, then the row's values, then the server order, the pin and the minimum after, and never a carousel on screen; src/sdk/core.ts rebinds an anonymous stored order to the signed-in shopper at identification so the first answer under the person corrects it, and removes it on another identity, a sign-out or a consent change leaving tracking or personalization off, clearing nothing on the bootstrap event; the SDK bundles and declarations regenerated within their budgets with no budget change; kits 01, 02 and 03 state the carried order, its storage, its corrections, the hold on the carousel slot, the refresh after a sign-in without a live connection and the contentType weight a carousel needs).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S36/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S36/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P89/implementer/REPORT.md",
+      "git commits on rem/p89-joined up to 2d63adb6"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P89 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S36/reviewer-p89/logs/w-p89-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S36/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P89/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-26T22:54:16.438Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
