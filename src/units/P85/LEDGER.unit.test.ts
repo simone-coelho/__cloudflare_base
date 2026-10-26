@@ -147,13 +147,14 @@ async function at(m: Mounted, key: string, field: 'n' | 's'): Promise<Record<str
 }
 const CELL = 'c=paid_social|v=1';
 /**
- * R-P398: a RECOGNISED shopper (a canonical `sh_` id, a recognised session) with her own explicit choice through the real
- * route — the shopper whose enrollment anchor is read from the identity projection (src/content/holdout.ts
- * enrollmentAnchorOf), unlike `shopperOn`'s anonymous browser, which is its own anchor.
+ * R-P398: a RECOGNISED shopper — a canonical `sh_` id as the session's subject, issued as W21.E1.08's harness issues it
+ * (src/units/W21/B2.unit.test.ts shopperOn: the capability's kind anonymous, the subject a shopper id) — with her own
+ * explicit choice through the real route: the shopper whose enrollment anchor is read from the identity projection
+ * (src/content/holdout.ts enrollmentAnchorOf, isShopperId), unlike `shopperOn`'s browser, which is its own anchor.
  */
 async function recognisedOn(m: Mounted): Promise<Pick<Shopper, 'action'> & { subject: string }> {
   const subject = `sh_${crypto.randomUUID().replace(/-/g, '')}`;
-  const grant = await issueSessionCapability(m.env, { tenant: TENANT, subject, sessionId: `s-${crypto.randomUUID()}`, kind: 'recognized' });
+  const grant = await issueSessionCapability(m.env, { tenant: TENANT, subject, sessionId: `s-${crypto.randomUUID()}`, kind: 'anonymous' });
   const call = async (path: string, body: unknown): Promise<Answer> => {
     const response = await m.fetch(new Request(`https://shop.invalid${path}`, { method: 'POST',
       headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: grant.capability, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
