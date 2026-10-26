@@ -1360,7 +1360,7 @@ it('W12.02 real native source delivery, both hosts and tenants preserve customer
     expect(await send({ w12: 'schema' })).toEqual({ ok: false });
     const database = await native.getD1Database('DB');
     await database.exec('CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)');
-    for (const name of ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql']) {
+    for (const name of ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql', '0014_operator_catalog_import.sql']) {
       // D1.exec treats lines as statements; flatten comments/formatting while
       // keeping the migration's complete SQL (including its trigger) intact.
       await database.exec(readFileSync(resolve('migrations/product', name), 'utf8').replace(/^\s*--.*$/gm, '').replace(/\s+/g, ' ').trim());

@@ -167,7 +167,7 @@ describe('W12.01 actual monitor results', () => {
       EVENT_QUEUE: { send: customerIO, sendBatch: customerIO },
       STORAGE: { head: async (key: string) => { expect(key).toBe('monitor-probe'); return null; }, get: customerIO, put: customerIO },
       DB: { prepare: (query: string) => ({ all: async () => ({ success: true, results: query.includes('sqlite_master') ? PRODUCT_SCHEMA
-        : ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql'].map(name => ({ name })) }) }) },
+        : ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql', '0014_operator_catalog_import.sql'].map(name => ({ name })) }) }) },
       LEARN_STATS: { idFromName: (name: string) => name, get: (id: string) => ({ fetch: async (url: string, init?: RequestInit) => {
         snapshots.push(`${id} ${init?.method ?? 'GET'} ${url}`);
         return new Response('{}', { status: 404 });

@@ -575,8 +575,8 @@ test('W15 protected OIDC desired state is disabled by default and rejects incomp
 });
 
 test('W15 current security schema and transactional restore retain links but never resurrect federated sessions or browser secrets',async()=>{
-  const artifact=await fixtureArtifact();assert.equal(artifact.schemaContract,'operator-oidc-v2');assert.equal(artifact.migrations.length,4);
-  assert.equal(artifact.migrations.at(-1).name,'0013_operator_oidc.sql');assert.equal(SECURITY_TABLES.length,11);
+  const artifact=await fixtureArtifact();assert.equal(artifact.schemaContract,'operator-catalog-import-v3');assert.equal(artifact.migrations.length,5);
+  assert.equal(artifact.migrations.at(-1).name,'0014_operator_catalog_import.sql');assert.equal(SECURITY_TABLES.length,11);
   for(const mutate of [v=>delete v.schemaContract,v=>v.migrations.pop(),v=>v.schemaContract='unknown']){
     const bad=clone(artifact);mutate(bad);rehash(bad);assert.throws(()=>validateArtifact(bad));
   }
