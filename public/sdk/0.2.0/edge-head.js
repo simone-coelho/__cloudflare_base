@@ -412,6 +412,7 @@
   }
 
   // src/sdk/head.ts
+  var SHOTS_MS = 30 * 864e5;
   var record = (v) => !!v && typeof v === "object" && !Array.isArray(v);
   var isClass = (v) => v === "default" || v === "personalized";
   function readBlock(page2, id) {
@@ -485,11 +486,16 @@
     root.setAttribute("data-op-context", row && cell ? `${cell.channel}|${cell.bucket}|${device}` : "default");
     root.setAttribute("data-op-arm", cls);
     root.setAttribute("data-op-table", table.version);
+    const shots = state.shots, own = personalization && cls === "personalized" && !rotated && record(shots) && visitor && shots.subject === visitor && typeof shots.ts === "number" && now - shots.ts <= SHOTS_MS && Array.isArray(shots.order) ? shots.order.filter((v) => typeof v === "string") : [];
+    if (refusesTracking || cookieRefuses(page2, "personalization") || kept && kept.personalization !== true) delete state.shots;
     try {
       page2.localStorage.setItem(HEAD_STATE_KEY, JSON.stringify(state));
     } catch {
     }
-    if (typeof table.carouselSlot === "string" && Array.isArray(images)) paint(page2, table, table.carouselSlot, images, row && device ? row.shotOrder[device] : null, now);
+    const rowShots = row && device ? row.shotOrder[device] : null;
+    if (typeof table.carouselSlot === "string" && Array.isArray(images)) {
+      paint(page2, table, table.carouselSlot, images, own.length ? [...own, ...(rowShots ?? []).filter((v) => !own.includes(v))] : rowShots, now);
+    }
   }
   function cellOf(page2, table, state, now) {
     const cv = table.channelVocabulary;

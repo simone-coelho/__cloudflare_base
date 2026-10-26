@@ -259,6 +259,12 @@ export interface DecisionSet {
     config_label?: string;
     decisions: ContentDecision[];
     ts?: number;
+    /**
+     * P89 (E14): on a page whose context table names a carousel, the shopper's own shot order (the carousel's shot
+     * values the shopper's interest ranks, most interest first), or null where none is carried; absent elsewhere. The
+     * SDK keeps it for the head script's next paint; it never reorders a carousel already on screen.
+     */
+    shotOrder?: string[] | null;
 }
 export interface RenderAcknowledgment {
     version: 1;
