@@ -820,6 +820,27 @@ host-internal member that no public answer carries. A slot without `layout`, and
 1, 2 or 3, decides and replays exactly as before; the receipts of a page that declares a layout slot
 carry the page-manifest marker `inputs.replay.layout: "declared-slot-v1"`.
 
+#### Approved layouts
+
+```json
+{ "version": 1,
+  "pages": { "pdp": {
+    "any": [ { "modules": ["module.PDP.editorial.1", "module.PDP.grid.1", "module.PDP.ugc.1", "module.PDP.reco.1"] },
+             { "modules": ["module.PDP.ugc.1", "module.PDP.grid.1"] } ],
+    "mobile": [ { "modules": ["module.PDP.grid.1", "module.PDP.ugc.1"] } ] } } }
+```
+
+The optional document `layouts` (`PUT /content/layouts`) lists, per page of the slots document and per device key
+(`any`, `mobile` or `desktop`), the module orders a per-context order on that page may publish: each approved layout
+is exactly `{ modules }`, 1 to 50 distinct module ids in order; `version` is 1 when present. A device key other than
+the three, an empty list, a repeated module, two identical layouts under one device or any other member is refused
+422 naming the page, the device and the layout's index; the catalogue is not checked here. On a page the document
+names, an order's `modules` must equal, position by position, one of the page's `any` layouts or, for a context
+naming `mobile` or `desktop`, one of that device's layouts; an order naming no device matches the `any` layouts
+alone. In the example, a mobile shopper's order may be any of the three layouts, any other order one of the first
+two. A page the document does not name, and a tenant without the document, keep every order as before, and the
+carousel's shot orders are outside the rule.
+
 #### Per-context orders
 
 ```json
@@ -866,27 +887,6 @@ order is never served on the holdout's `default` arm, to a shopper without perso
 on a decision on which the slot's exploration picks; those shoppers, and every shopper no context
 matches, receive the slot's own decision. A slot without `orders`, and every stored document marked
 1, 2 or 3, decides and replays exactly as before.
-
-#### Approved layouts
-
-```json
-{ "version": 1,
-  "pages": { "pdp": {
-    "any": [ { "modules": ["module.PDP.editorial.1", "module.PDP.grid.1", "module.PDP.ugc.1", "module.PDP.reco.1"] },
-             { "modules": ["module.PDP.ugc.1", "module.PDP.grid.1"] } ],
-    "mobile": [ { "modules": ["module.PDP.grid.1", "module.PDP.ugc.1"] } ] } } }
-```
-
-The optional document `layouts` (`PUT /content/layouts`) lists, per page of the slots document and per device key
-(`any`, `mobile` or `desktop`), the module orders a per-context order on that page may publish: each approved layout
-is exactly `{ modules }`, 1 to 50 distinct module ids in order; `version` is 1 when present. A device key other than
-the three, an empty list, a repeated module, two identical layouts under one device or any other member is refused
-422 naming the page, the device and the layout's index; the catalogue is not checked here. On a page the document
-names, an order's `modules` must equal, position by position, one of the page's `any` layouts or, for a context
-naming `mobile` or `desktop`, one of that device's layouts; an order naming no device matches the `any` layouts
-alone. In the example, a mobile shopper's order may be any of the three layouts, any other order one of the first
-two. A page the document does not name, and a tenant without the document, keep every order as before, and the
-carousel's shot orders are outside the rule.
 
 #### Position pins and off-limits modules
 

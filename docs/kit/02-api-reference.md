@@ -506,7 +506,7 @@ served elsewhere on the page) is passed over and never replaced, so the order is
 the slot never falls back to its own ranking for that shopper. A position the order set keeps the
 `score`, `strategy` and drivers its own ranking arithmetic computed, and its `explain.note` says that the
 configured order placed it. Where the tenant has published approved layouts for the page
-([the approved layouts](#the-approved-layouts-contentlayouts)), an order is published only as one of the page's
+([the approved layouts](#the-approved-layouts-layouts)), an order is published only as one of the page's
 approved layouts for its device: `PUT /content/slots`, its validate, a slots rollback and a slots member of
 `publicationChanges` refuse any other order with `422`, each error naming the page, the order's context and its
 modules, and nothing is written.
@@ -1618,7 +1618,7 @@ Four documents per brand, each with the same seven routes. `kind` is `catalog`, 
 `priors`; `scope` is the brand. A fifth, optional document, the attribute vocabulary (`kind` `vocabulary`),
 has the same routes and an approval of its own ([below](#the-attribute-vocabulary-contentvocabulary)). Two more
 optional documents have the same routes: the import-sources list (`kind` `import-sources`) and the approved
-layouts (`kind` `layouts`, [below](#the-approved-layouts-contentlayouts)). Any other `kind` is refused `404`:
+layouts (`kind` `layouts`, [below](#the-approved-layouts-layouts)). Any other `kind` is refused `404`:
 `kind must be catalog, slots, learn, priors, vocabulary, import-sources or layouts`.
 
 | Route | Auth | Does |
@@ -2362,15 +2362,14 @@ as before, term for term.
 - The rejection report: `GET /content/vocabulary/rejections?scope=` (operator) answers `{ effectiveRevision, since, rejections: { <attribute>: { <value>: count } }, omitted }`, per governed attribute each value the ingest refused under the revision in effect and how many events carried it, counted from the first refusal under that revision for at most 30 days (a new approval starts a new report; `omitted` counts refusals past 64 attributes or 256 values of one attribute). It names no shopper, session or event; it is a per-tenant diagnostic count kept in the operator cache, best effort under concurrent writes, written beside the event's other work so it can never fail an event. A report that cannot be read answers 503, never an empty report.
 - What does not change: nothing is written into a shopper's own record; decisions, their records, receipts and replays read interest and catalogue tags exactly as before, which under a vocabulary in effect carry the ids.
 
-### The approved layouts (`/content/layouts`)
+### The approved layouts (`layouts`)
 
 A tenant can publish, per page, the module orders a merchandiser may set on the page's declared layout slot: the
 optional document `layouts`, written with `PUT /content/layouts` and read with the routes every content document
 has (history, revisions, validate, rollback, and as a member of `publicationChanges`), with no deployment
 ([schema](./03-payload-schemas.md#approved-layouts)). The first publication set of a tenant
 (`POST /content/publication/initialize`) never creates it.
-
-- The document: `{ version?: 1, pages: { <page>: { any?, mobile?, desktop?: [{ modules: [<module id>, …] }] } } }`: per page (the page's name in the slots document), per device key, the approved layouts, each an ordered list of 1 to 50 distinct module ids; a page listing only `any` approves the same layouts for every device.
+- The document: `{ version?: 1, pages: { <page>: { any?, mobile?, desktop?: [{ modules: [<module id>, …] }] } } }`: per page (the page's name in the slots document), per device key, the approved layouts, each one's `modules` an ordered list of 1 to 50 distinct module ids; a page listing only `any` approves the same layouts for every device.
 - Refusals: `PUT /content/layouts` and `POST /content/layouts/validate` refuse with 422, writing no revision, each error naming the page, the device and the layout's index: a device key other than `any`, `mobile` or `desktop`, an empty list, a module id repeated within a layout, two identical layouts under one device, and a member outside the schema. The catalogue is not read at this publication: the slots publication checks an order's modules against it, as before.
 - The read: `GET /content/layouts?scope=` answers `revision` (0 when none is stored), `publication`, `source` (`stored` or `absent`), `actor`, `note`, `at` and `document` (null when none is stored). The first `PUT` names `If-Match: "0/{set revision}/{set digest}"`: no revision is stored yet.
 - The rule: at the slots document's publication (`PUT /content/slots`, its validate, a slots rollback, a slots member of `publicationChanges`), each per-context order (`orders`) on a page the document names must list, as a sequence, one of the page's approved layouts for the order's device: a context naming `mobile` or `desktop` matches that device's layouts and the page's `any` layouts, and a context naming no device the `any` layouts alone. The layouts read are the ones in the publication set the slots document is published over, or those the same request publishes. Any other order refuses the whole publication with `422`, each error naming the page, the order's context and its modules, and nothing is written; an approved order publishes exactly as before.
