@@ -34,7 +34,7 @@ import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedRe
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
-import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
+import { pinPublication, readCatalogPart, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
 import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, reportPriors, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy, type ReportPriors } from '@/learn/report';
 import { PRIORS_KIND } from '@/learn/priors';
@@ -512,6 +512,7 @@ decisionRoutes.get('/:tenant/lift/rows', operatorWrites(), async (c) => {
   const rows = rowsOf(snapshot, names, learn.slots?.[slot]?.items, level, item);
   const cut = pageRows(rows, { level, item, q, sort, dir, offset, limit });
   if (!searching) cut.rows = namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item)));
+  cut.rows = unresolvedRows(catalog, cut.rows);
   const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level, item, q, sort, dir, limit, ...(page ? { p: page } : {}) });
   // W25 V1.01: the grid states WHICH prior document its numbers were built with,
   // so an export a data scientist downloads can be reconciled against the
@@ -666,9 +667,11 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   // clause W25 added. What is bounded is the NAME join: the list is cut to the
   // page first, and only the page's ids are looked up, because the order this
   // list is in (least observed first, then id) does not depend on a name.
-  const catalogue = new Set(catalog.pieces.map((p) => p.id));
+  // P86 (S10): a catalogue with parts cannot say which part carries an id no row names an anchor for, so its rows are
+  // kept and each id the shared pieces do not carry is named unresolved; without parts, W25's rule as before.
+  const catalogue = catalog.products ? undefined : new Set(catalog.pieces.map((p) => p.id));
   const cut = pageOf(exploringRows(snapshot, NO_NAMES, floor, catalogue, evidenceFloor?.floor), cur ? cur.o : 0, limit);
-  cut.rows = namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item)));
+  cut.rows = unresolvedRows(catalog, namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item))));
   const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level: 'exploring', limit, ...(page ? { p: page } : {}) });
   return c.json({ ok: true, tenant, brand, slot, ...at, version: snapshot.version, published: true, ...effective, floor, ...floored, total: cut.total, offset: cut.offset, limit: cut.limit, rows: cut.rows, cursor });
 });
@@ -757,7 +760,7 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
     const page = pageOf(ring, cur ? cur.o : 0, limit);
     // W32 S1.01 (F32 §4 item 5): the receipts this page carries name at most
     // `limit` pieces, so the catalogue is asked for those and no more.
-    const names = catalogNames(catalog, page.rows.map((r) => r.item_id));
+    const names = catalogNames(await withRecordParts(c.env, tenant, catalog, page.rows), page.rows.map((r) => r.item_id));
     const cursor = page.next === null ? null : encodeCursor({ v: 0, o: page.next, level: 'exploring', limit });
     return c.json({ ok: true, tenant, visitor_id: visitorId, total: page.total, offset: page.offset, limit: page.limit, receipts: page.rows.map((r) => receiptOf(r, names)), cursor });
   } catch { return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); } });
@@ -765,6 +768,35 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
   catch { return c.json({ ok: false, error: HISTORY_UNAVAILABLE }, 503); }
   return response;
 });
+
+/**
+ * P86 (R-P407 (5), S10): the learn routes' rows over a catalogue with parts. A
+ * row carries no anchor, so an id the shared pieces do not carry cannot be
+ * resolved to a part: it is kept and named `unresolved: true`, its title and
+ * customer id null. A catalogue without parts: the rows as they were.
+ */
+function unresolvedRows<T extends { item: string }>(catalog: ContentCatalog, rows: T[]): T[] {
+  if (!catalog.products) return rows;
+  const shared = new Set(catalog.pieces.map((p) => p.id));
+  return rows.map((row) => shared.has(row.item) ? row : { ...row, unresolved: true });
+}
+/**
+ * P86 (R-P407 (5)): the receipts' names over a catalogue with parts: each
+ * record whose item the shared pieces do not carry names the anchor it was
+ * decided for (P80's scope), and that anchor's part is read — at most one part
+ * per anchor on the page, never a content-id index. A part that cannot be read
+ * leaves those names out, as an id the catalogue does not carry is.
+ */
+async function withRecordParts(env: Env, tenant: string, catalog: ContentCatalog, records: ReadonlyArray<{ item_id: string; inputs?: { anchor?: unknown } }>): Promise<ContentCatalog> {
+  if (!catalog.products) return catalog;
+  const shared = new Set(catalog.pieces.map((p) => p.id)), anchors = new Set<string>();
+  for (const r of records) if (!shared.has(r.item_id) && typeof r.inputs?.anchor === 'string' && catalog.products[r.inputs.anchor]) anchors.add(r.inputs.anchor);
+  const pieces = [...catalog.pieces];
+  for (const anchor of anchors) {
+    try { pieces.push(...((await readCatalogPart(env, tenant, catalog.products[anchor]!.digest)).pieces as ContentCatalog['pieces'])); } catch { /* names left out */ }
+  }
+  return { ...catalog, pieces };
+}
 
 /**
  * GET /v1/:tenant/lift?slot=hero[&brand=][&page=][&version=]
@@ -1244,7 +1276,13 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     // P13 (decision D1): the customer's identifier the POST body carried (validated above), written beside
     // visitor_id on the records under tracking consent and read by nothing that decides.
     ...(c.req.method === 'POST' && context.customerId !== undefined ? { customerId: context.customerId } : {}),
+  }).catch((error: unknown) => {
+    if (error instanceof PublicationError && error.code === 'part_unavailable') return null;
+    throw error;
   });
+  // P86 (R-P412 (2), R-P415): the page's anchor names a catalogue part that cannot be read (lost, or a body
+  // that is not its digest's): the page fails 503 `part_unavailable`, never served from the shared pieces alone.
+  if (out === null) return c.json({ ok: false, error: 'Catalogue part unavailable', code: 'part_unavailable' }, 503);
   // P13 (R-P66 item 2): under the tracking consent the decision was made with, the
   // carried identifier is handed to the shopper's own object for the browser's
   // link answer, after the decision, which it never reads; a failure changes

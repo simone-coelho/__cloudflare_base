@@ -24,7 +24,7 @@ The `data` object of `POST /realtime/action`, by `type`.
 | `content_dwell` | the same, plus `ms`, milliseconds on screen; the SDK sends it only after the slot's minimum on screen, its own in `dwellMinMsBySlot` (for example 30000 on an editorial slot), else `dwellMinMs`, one second |
 | `product_dwell` | `productId` and `dwellMs`, the milliseconds on the product page, sent once per product view past 20 seconds, plus the registry's attributes when the brand scores them from the event. `product_dwell` with its `dwellMs` feeds the visit's dwell counter (`category_dwell_ms`), counts as an interaction and weighs 0 unless the registry publishes a weight |
 | `layout_exposure` | The per-view beacon of a cached layout, sent by the SDK (`client.listen.layoutExposure`) once per page view and only under tracking consent: `contextKey` (the `X-Context-Key` the cached layout was answered under), `page`, `slot`, `modules` (the module ids drawn, in drawn order, at most 50, each once) and `pageInstance`. It is answered by the route before either shopper host, so it builds no interest, is no signal and no interaction of the visit and writes no outcome record; it adds one exposure per drawn module to the learning of the context its key names, and nothing without tracking consent, with a key the engine did not issue or for a page view already counted ([the context-only layout switch](#the-context-only-layout-switch)) |
-| `carousel_exposure` | The per-view beacon of a carousel the head script ordered before paint, sent by the SDK once per page view and only under tracking consent: `tableVersion` (the context table's version it applied), `context` (`<channel>|<visitBucket>|<device>` or `default`), `page`, `slot` (the carousel slot), `images` (the image ids in painted order, at most 50, each once), `arm` (the class the page painted) and `pageInstance`, from `client.listen.carouselExposure`. It is answered by the route before either shopper host, so it builds no interest, is no signal and no interaction of the visit and writes no outcome record; it adds one exposure per painted image to the carousel's learning of its context for the table version in force and an arm the engine itself assigns that learns, and nothing otherwise ([shot orders](#shot-orders)) |
+| `carousel_exposure` | The per-view beacon of a carousel the head script ordered before paint, sent by the SDK once per page view and only under tracking consent: `tableVersion` (the context table's version it applied), `context` (`<channel>|<visitBucket>|<device>` or `default`), `page`, `slot` (the carousel slot), `images` (the image ids in painted order, at most 50, each once), `arm` (the class the page painted), `pageInstance` and, where the page view names a product, `product` (the part a catalog in parts holds the images in), from `client.listen.carouselExposure`. It is answered by the route before either shopper host, so it builds no interest, is no signal and no interaction of the visit and writes no outcome record; it adds one exposure per painted image to the carousel's learning of its context for the table version in force and an arm the engine itself assigns that learns, and nothing otherwise ([shot orders](#shot-orders)) |
 | `custom` | `event`, the real name, plus anything |
 
 The event conventions, each a `custom` event weighing 0 until the tenant's registry publishes a weight for its
@@ -276,11 +276,11 @@ fetched. A member not published restricts nothing: with no `addresses` every cal
 the pull reaches any `https:` host.
 
 **How big a catalog may be.** One stored configuration document is limited to 2 MiB of actual UTF-8
-bytes, measured on its canonical form (keys sorted, no insignificant whitespace), and the catalog is
-one such document per scope. Measured against the piece shape this repository's own shipped catalog
-uses — about 671 canonical bytes for an average piece and 820 for its largest — that envelope holds
-**up to 2,000 content pieces per scope** with room to spare: about 1.3 MiB at the shipped average
-shape, and about 1.6 MiB even if every piece were as large as the largest shipped one.
+bytes, measured on its canonical form (keys sorted, no insignificant whitespace). A catalog that declares
+no product slots is stored as one such document. Measured against the piece shape this repository's own
+shipped catalog uses — about 671 canonical bytes for an average piece and 820 for its largest — that
+envelope holds **up to 2,000 content pieces per scope** with room to spare: about 1.3 MiB at the shipped
+average shape, and about 1.6 MiB even if every piece were as large as the largest shipped one.
 `GET /content/catalog` answers the two numbers for your catalog as they stand, as
 `envelope: { pieces, bytes, limitBytes }` beside the document (the other document kinds answer
 `bytes` and `limitBytes` without `pieces`), and the console's History screen shows them on the
@@ -289,8 +289,86 @@ A write that would store a document over the ceiling is refused with `413` and
 `code: "document_too_large"`; a request body over the 2 MiB input bound is refused before that, with
 `413` and `code: "input_budget_exceeded"` naming the `budget`, the `limit` and the `observed`
 size; either way nothing is stored. This is a measured application envelope, not a deployed-capacity,
-latency or SLO commitment: a larger corpus is a conversation about sharding the catalog, not a number
-to raise here.
+latency or SLO commitment. A range larger than one document (one image record per image across every
+product) is stored in parts, below.
+
+**The catalog in parts: a manifest and one part per product.** A catalog that declares `productSlots`
+(the slot types whose records are product-scoped, for example `["pdp-carousel"]`, written by a PUT of the
+catalog and kept by every load) is stored as a manifest: `pieces` holds the shared pieces (modules, heroes,
+every piece that is not product-scoped), and `products` indexes one part per product,
+`{ "<productId>": { "digest": "<64 hex>", "records": <count> } }`. Each part is one immutable object
+holding that product's records, `{ product, pieces }`, at most 2 MiB, addressed by the SHA-256 of its
+canonical bytes, which is the digest its pointer names; it is written before the publication commits, so a
+load whose part cannot be written commits nothing and leaves nothing pending. The catalog stays one document
+with one revision, one `If-Match` and one rollback: the manifest's digest covers every part's, so a change
+to any record moves N, S and H.
+
+Routing, on the import, the pull and the PUT: a record whose `slotTypes` are all in `productSlots` and which
+names `featuredProductIds` goes to the part of its first id; every other piece is shared. Write a two-id
+record in the canonical order [product, variant]: one written variant-first is routed to its first id as
+written (the variant's own part, where the product's page does not find it), and the import's and the pull's
+diagnostics warn `variant_first`, naming the record, while the load is accepted. A pooled piece stays
+shared: a record that would go to a part and declares `pooled: true` is refused `422`, naming the record and
+`pooled`. Send each product record with its `slotTypes` and `featuredProductIds` in every load, since those
+fields route it.
+
+The modes act per product. `merge` upserts by id inside the parts of the products the file names and in the
+shared pieces. `replace` and `full` replace each named product's part whole (`full` keeping that product's
+left-out records expired, with `expire` counted over the named products), and act on the shared pieces only
+when the file carries a shared piece; every product the file does not name keeps its part, so a whole range
+arrives as several loads, each within the input bound. The skip compares the manifest's digest, a dry run
+writes nothing, no part included, and the answer's `pieces` counts the shared pieces and every part's
+records.
+
+`GET /content/catalog` answers the manifest, `envelope.pieces` counting the shared pieces and every part's
+records, `envelope.bytes` the manifest's own size and `envelope.products` the number of parts;
+`GET /content/catalog?scope=<tenant>&product=<productId>` answers one product's part, and `404` naming a
+product the manifest does not index. A PUT carries the manifest's `products` pointers as it read them (a
+GET→PUT round trip keeps every part); a pointer the revision in force does not hold is refused `422` naming
+the product, and a PUT that leaves a product's pointer out removes that product's part from the catalog, as
+a PUT that leaves a piece out removes it.
+
+**One id lives in one place.** Every load checks each record it carries against the file, the shared pieces
+and the revision's id index: one immutable object per revision, beside the parts and named by the manifest's
+`idIndex` (`{ "digest": "<64 hex>", "records": <count> }`, present whenever `products` indexes a part), mapping
+every part record's id, expired ones included, to its product. Only the loads read it (the import, the pull, a validation, a PUT and a rollback's check that
+its objects are held), never a page's decision. A record moves between products only in a load that carries
+both products, the one it leaves and the one it joins, in one file (the old part drops it and the new part
+holds it), or once the source product, the one it leaves, has been replaced without it. A record the index
+lists under another product the load does not carry is refused `422` with `code: "record_moved"`, naming both
+products (the source and the new one), and so is
+a PUT that keeps the old product's pointer while it routes the record to the new one. In a nightly load sent in
+chunks, a `record_moved` means the chunk of the product the record leaves comes later in the sequence: send
+that chunk first, or both products in one file. A shared piece whose id a part record holds is refused `422`
+with `code: "id_in_part"`, and a part record whose id a shared piece holds `422` with `code: "id_shared"`,
+each naming the id and the product. `replace` and `full` rebuild the index entries of the products they name,
+a PUT builds the index from its document and the pointers it keeps, and a rollback brings back the old
+revision's index with its parts. The index has its own limit of 8 MiB: a load whose index would pass it is
+refused `413` with `code: "id_index_too_large"`, naming it and writing nothing. Each load reads the index once
+and writes a new one when its records change, up to a few MB; a page reads none.
+
+A load that names a product whose part is lost (the store no longer holds it) answers `503` with `code: "part_unavailable"`,
+whatever its mode, `replace` included, and so does that product's page and its per-product read; other
+products are unaffected. Only a PUT, which leaves that product's pointer out (or sends its records instead of
+its pointer), or a rollback to a revision whose parts are all held, clears it.
+
+The manifest rides one 2 MiB publication beside its set, so its index holds roughly 15,000 to 20,000 products
+at product ids of the usual length; a load whose manifest would pass that is refused `413` with
+`code: "manifest_too_large"`, writing nothing, no part included. A two-level index (256 fixed buckets of
+pointers behind the manifest) is the next step for a larger range and is not built. A part is kept while
+any stored revision's manifest names it: under the tenant's `configuration` retention setting, the purge
+that removes a revision removes the parts and the id indexes no stored revision names, never one uploaded
+less than 15 minutes ago (a load in flight may have just written it), and a rollback to a revision whose part
+or id index the store no longer holds is refused `410` with `code: "part_missing"`, naming the product.
+
+A product page reads only its own product's records: its decision reads the manifest and, when the page has a
+slot declared `scope: 'anchor'` and the request names an indexed product as `ctx.anchor`, that product's one
+part, held per isolate by its digest; a page with no such slot, no anchor or an anchor no part holds reads no
+part, and the scoped slot decides as it does with no candidates. So a product page's decision work does not
+grow with the range. A replay and a receipt resolve a record's part through the anchor it records, a click
+on a part-held image resolves through the decision it names when that decision is the clicking shopper's own
+(a decision id naming another shopper resolves nothing, reads no other shopper's decisions, and the click
+teaches only its own values), and the learn screens name a row whose item no shared piece carries `unresolved`.
 
 **What serving a catalog of that size costs.** Measured, not estimated: the whole path one decision
 set takes — the published catalog read from storage, parsed and validated, then the shopper, trend,

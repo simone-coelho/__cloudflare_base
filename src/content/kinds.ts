@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+import type { CatalogPartPointer, ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { isRewardType, REWARD_TYPES, type RewardType } from '@/ledger/records';
@@ -343,10 +343,85 @@ function contentCatalog(candidate: unknown, stored: boolean, terms: SlotTerms = 
   const seen = new Set<string>();
   const pieces: ContentPiece[] = [];
   candidate.pieces.forEach((p, i) => { const v = validatePiece(p, i, seen, errors, stored, terms); if (v) pieces.push(v); });
+  const manifest = catalogManifestMembers(candidate, errors);
   if (errors.length) return { ok: false, errors };
   return { ok: true, value: { ...(isStr(candidate.version) ? { version: candidate.version } : {}),
-    ...(candidate.typeFallback === TYPE_FALLBACK_RETIRED ? { typeFallback: TYPE_FALLBACK_RETIRED } : {}), pieces } };
+    ...(candidate.typeFallback === TYPE_FALLBACK_RETIRED ? { typeFallback: TYPE_FALLBACK_RETIRED } : {}), ...manifest, pieces } };
 }
+
+// ── P86 (E10, design A, R-P405): the catalogue as a manifest of per-product parts ──
+
+/** P86: a product id as a manifest indexes it: a featured product id (1 to 256 characters, no control character). */
+// eslint-disable-next-line no-control-regex
+const isProductId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 256 && v.trim() === v && !/[\u0000-\u001f\u007f]/.test(v);
+const PART_DIGEST = /^[0-9a-f]{64}$/;
+/**
+ * P86: the manifest's own members, read strictly: `productSlots`, the distinct
+ * slot names whose records are product-scoped, and `products`, the index of
+ * each product's part (`{ digest, records }`), which only a catalogue declaring
+ * product slots carries. Neither: today's catalogue.
+ */
+function catalogManifestMembers(candidate: Record<string, unknown>, errors: string[]): Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex'> {
+  const out: Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex'> = {};
+  if (candidate.productSlots !== undefined) {
+    const slots = candidate.productSlots;
+    if (!Array.isArray(slots) || slots.length < 1 || slots.length > 64 || !slots.every(isCatalogueName) || new Set(slots).size !== slots.length) {
+      errors.push('productSlots: 1 to 64 distinct slot names whose records are product-scoped (each in its product\'s part)');
+    } else out.productSlots = [...slots] as string[];
+  }
+  if (candidate.products !== undefined) {
+    const products = candidate.products;
+    if (candidate.productSlots === undefined) errors.push('products: a part index is carried only by a catalogue that declares productSlots');
+    else if (!isRecord(products)) errors.push('products: an object of product id → { digest, records }');
+    else {
+      const index: Record<string, CatalogPartPointer> = {};
+      for (const product of Object.keys(products).sort()) {
+        const pointer = products[product];
+        if (!isProductId(product)) { errors.push(`products: ${quoted(product)} is not a product id (1 to 256 characters, no surrounding space or control character)`); continue; }
+        if (!isRecord(pointer) || Object.keys(pointer).length !== 2 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
+          || typeof pointer.records !== 'number' || !Number.isSafeInteger(pointer.records) || pointer.records < 1) {
+          errors.push(`products['${product}']: { digest: the SHA-256 of its part (64 lowercase hex), records: the part's record count (1 or more) }`);
+          continue;
+        }
+        index[product] = { digest: pointer.digest, records: pointer.records };
+      }
+      out.products = index;
+    }
+  }
+  // R-P424: the id index the loads read, `{ digest, records }`, carried only beside the part index.
+  if (candidate.idIndex !== undefined) {
+    const pointer = candidate.idIndex;
+    if (candidate.productSlots === undefined) errors.push('idIndex: an id index is carried only by a catalogue that declares productSlots');
+    else if (!isRecord(pointer) || Object.keys(pointer).length !== 2 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
+      || typeof pointer.records !== 'number' || !Number.isSafeInteger(pointer.records) || pointer.records < 1) {
+      errors.push('idIndex: { digest: the SHA-256 of the id index (64 lowercase hex), records: how many part records it lists (1 or more) }');
+    } else out.idIndex = { digest: pointer.digest, records: pointer.records };
+  }
+  return out;
+}
+
+/**
+ * P86: the product a piece belongs to under the catalogue's product slots — the
+ * FIRST of its `featuredProductIds` when every one of its `slotTypes` is a
+ * product slot — or null when it is a shared piece.
+ */
+export function partProductOf(piece: { slotTypes?: unknown; featuredProductIds?: unknown }, productSlots: ReadonlySet<string>): string | null {
+  const slotTypes = piece.slotTypes, products = piece.featuredProductIds;
+  if (!productSlots.size || !Array.isArray(slotTypes) || !slotTypes.length || !slotTypes.every(slot => typeof slot === 'string' && productSlots.has(slot))) return null;
+  if (!Array.isArray(products)) return null;
+  const first = products.map(id => typeof id === 'string' ? id.trim() : '').find(Boolean);
+  return first && isProductId(first) ? first : null;
+}
+/** P86: a two-id record written variant-first: its first id is its second followed by `-` and more (the loader's warning, `variant_first`). */
+export function variantFirst(piece: { featuredProductIds?: unknown }): boolean {
+  const products = Array.isArray(piece.featuredProductIds) ? piece.featuredProductIds.map(id => typeof id === 'string' ? id.trim() : '').filter(Boolean) : [];
+  return products.length >= 2 && products[0]!.length > products[1]!.length + 1 && products[0]!.startsWith(`${products[1]}-`);
+}
+/** P86: the parts a catalogue value indexes (none for today's catalogue). */
+export const catalogProducts = (catalog: Pick<ContentCatalog, 'products'> | null | undefined): Record<string, CatalogPartPointer> => catalog?.products ?? {};
+/** P86: the catalogue's pieces, the shared ones and every part's records, counted from the manifest. */
+export const catalogPieceCount = (catalog: Pick<ContentCatalog, 'pieces' | 'products'>): number =>
+  catalog.pieces.length + Object.values(catalog.products ?? {}).reduce((n, pointer) => n + pointer.records, 0);
 
 export const EMPTY_CATALOG: ContentCatalog = { version: 'content-empty', pieces: [] };
 
