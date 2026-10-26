@@ -1591,7 +1591,9 @@
         "docs/kit/02-api-reference.md",
         "scripts/stamp-workflow.mjs",
         "src/ops/monitor.ts",
-        "existing lock lines by name per R-P418 (specifier): scripts/stamp-workflow.test.mjs, src/ops/monitor.test.ts and those the sweep names"
+        "existing lock lines by name per R-P418 (specifier): scripts/stamp-workflow.test.mjs, src/ops/monitor.test.ts and those the sweep names",
+        "docs/deployment/01-deploy.md (the last product migration and the package contract named)",
+        "docs/10-d1-schema.md (the same)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P87 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
