@@ -119,6 +119,7 @@ const SLOTS = { ...declaredSlots([]), pages: { pdp: [layoutSlot(), carousel()] }
 const learnOf = (reward = 'click', holdout?: Record<string, unknown>) =>
   learnDocument({ [CAROUSEL]: { measurementBasis: 'rendered-v1', reward } }, holdout ? { holdout } : {});
 const DOCS = { pieces: [...MODULES, ...IMAGES, WALLET], slots: SLOTS, learn: learnOf() };
+const docsWith = (over: { slots?: unknown; learn?: unknown }) => ({ ...DOCS, ...over });
 /** The paint P84's head script makes for paid social on mobile: on_model, detail, studio, flat_lay, then the rest. */
 const PAINTED = [id(3), id(5), id(4), id(1), id(6), id(2), id(7), id(8)];
 
