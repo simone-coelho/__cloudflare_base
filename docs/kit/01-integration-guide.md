@@ -161,12 +161,13 @@ receive known absence too; a subscription before any delivery stays silent. A su
 remains a set, with `[]` for each slot. Measured on the acceptance pair (both shopper hosts), by release
 c6d33c73 (lane L15) and 92a7132e (lane L17): a new visitor's first answer, through the first request, took
 0.3–2.7 s, and 10 of 24 passed 1.5 s; the first answer of a page view that already holds a session took
-about 0.45 s typically; the session route alone (`POST /v1/{tenant}/identity/session`) took about 1.3 s
+about 0.45 s typically on 92a7132e (lane L17) at light load, while on c6d33c73 under the lane's burst the same
+answers had medians near 1.9–2.5 s; the session route alone (`POST /v1/{tenant}/identity/session`) took about 1.3 s
 typically and up to 3.1 s from a browser. The hosted stamps are not yet measured for this. At the deadline
 every subscriber has the page's defaults, and the engine's late answer then paints when it arrives. A
 returning browser takes the session route first, inside the same deadline. A cross-origin page also pays
 the browser's preflight before its calls (up to 1.4 s measured), which a page served through your server
-bridge (`bridge.snapshot`) avoids.
+bridge (`bridge.snapshot`) avoids, and so does a page served from the same origin.
 
 **Holding a layout for the page view.** `const release = client.listen.hold('layout')` holds that slot as it
 was last delivered, for the page view in progress. A later answer of the same page view (after an
@@ -714,5 +715,5 @@ On a separately authorized staging origin, complete these before M5 with the agr
 | `sessionBroker` | absent | Same-origin POST broker for the server-first-paint path |
 | `heartbeatMs` | 25000 | Socket keepalive |
 | `reconnectMs` | 3000 | Socket reconnect delay |
-| `hydrateTimeoutMs` | 1500 | The page view's first-decision deadline, after which defaults stand: measured from its first snapshot request, never restarted by a re-ask; another page, channel or product (`productId`) is a new page view with its own deadline, a variant switch (`variantId`) is not. Measured on the acceptance pair: a new visitor's first answer 0.3–2.7 s, the first answer of a page view holding a session about 0.45 s typically; the hosted stamps are not yet measured (section 3, the deadline paragraph) |
+| `hydrateTimeoutMs` | 1500 | The page view's first-decision deadline, after which defaults stand: measured from its first snapshot request, never restarted by a re-ask; another page, channel or product (`productId`) is a new page view with its own deadline, a variant switch (`variantId`) is not. Measured on the acceptance pair: a new visitor's first answer 0.3–2.7 s, the first answer of a page view holding a session about 0.45 s typically on release 92a7132e (lane L17) at light load (medians near 1.9–2.5 s on c6d33c73 under the lane's burst); the hosted stamps are not yet measured (section 3, the deadline paragraph) |
 | `visitorIdKey` | `opt_visitor_id` | Storage key for the visitor id |
