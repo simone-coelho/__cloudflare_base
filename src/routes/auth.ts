@@ -21,7 +21,7 @@ import {
   type AuditEntry, type UserRecord,
 } from '@/auth/accounts';
 import type { AccountPatch, CurrentHumanActor, SessionRow } from '@/auth/store';
-import { authorityFor, customerAuthority, stampOwner, type AuthorityActor, type Membership, type ServiceCredential } from '@/auth/authority';
+import { authorityFor, customerAuthority, SERVICE_ROLES, stampOwner, type AuthorityActor, type Membership, type ServiceCredential } from '@/auth/authority';
 import { tenantConfig } from '@/tenancy/middleware';
 import { isValidTenantId } from '@/tenancy/tenant';
 import { assertFederationSession, callbackOIDC, completeOIDC, federationInput, federationStatus, oidcBody, oidcCookie, provisionFederation, startOIDC } from '@/auth/oidc';
@@ -301,8 +301,9 @@ auth.delete('/users/:id', admin, async (c) => {
 const MemberSchema = z.object({ accountId: z.string().min(1).max(200), role: z.enum(['operator', 'admin']).default('operator') }).strict();
 const MemberPatch = z.object({ role: z.enum(['operator', 'admin']).optional(), disabled: z.boolean().optional(),
   regrant: z.literal(true).optional() }).strict().refine(v => Object.keys(v).length > 0);
+// P87 (E11): a machine credential may also be `catalog-import`, held to the catalogue import; a membership never is.
 const ServiceSchema = z.object({ id: z.string().uuid(), subject: z.string().min(1).max(200).refine(s => s.trim() === s),
-  role: z.enum(['operator', 'admin']).default('operator'), expiresAt: z.number().int().positive().refine(Number.isSafeInteger),
+  role: z.enum(SERVICE_ROLES).default('operator'), expiresAt: z.number().int().positive().refine(Number.isSafeInteger),
   replaces: z.string().uuid().optional() }).strict();
 const conflict = () => ({ error: 'Authority changed or operation already exists. Reload before retrying.' });
 const publicCredential = ({ tokenHash: _hash, ...row }: ServiceCredential) => row;

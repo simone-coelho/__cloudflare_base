@@ -5,10 +5,17 @@ import { assertFederationSession, federationGate } from './oidc';
 import { storeFor } from './accounts';
 
 export type TenantRole = 'operator' | 'admin';
-export interface TenantGrant { tenant: string; role: TenantRole; revision: string }
-export interface Membership extends TenantGrant { accountId: string; disabled: boolean; removed: boolean; updatedAt: number }
+/**
+ * P87 (E11): the roles a service credential is registered with. `catalog-import` holds a machine to the catalogue
+ * import alone (src/middleware/operatorAuth.ts admits it only on the routes that opt in); it is never a membership role.
+ */
+export const SERVICE_ROLES = ['operator', 'admin', 'catalog-import'] as const;
+export type ServiceRole = (typeof SERVICE_ROLES)[number];
+export const CATALOG_IMPORT_ROLE = 'catalog-import' satisfies ServiceRole;
+export interface TenantGrant { tenant: string; role: ServiceRole; revision: string }
+export interface Membership extends TenantGrant { role: TenantRole; accountId: string; disabled: boolean; removed: boolean; updatedAt: number }
 export interface ServiceCredential {
-  id: string; subject: string; tenant: string; role: TenantRole; tokenHash: string;
+  id: string; subject: string; tenant: string; role: ServiceRole; tokenHash: string;
   expiresAt: number; createdAt: number; createdBy: string; revokedAt: number | null;
 }
 export interface AuthorityActor { id: string; sid: string; accountRevision: number; owner: boolean; tenant: string; membershipRevision?: string; federation?: import('./store').FederationSession }
@@ -34,6 +41,7 @@ export function stampOwner(env: Pick<Env, 'STAMP_OWNER_SUBJECTS'>, subject: stri
   } catch { return false; }
 }
 const role = (value: unknown): value is TenantRole => value === 'operator' || value === 'admin';
+const serviceRole = (value: unknown): value is ServiceRole => (SERVICE_ROLES as readonly unknown[]).includes(value);
 const unavailable = () => new Error('Operator authority unavailable');
 function memberRow(r: Record<string, unknown>): Membership {
   if (typeof r.account_id !== 'string' || !r.account_id || !isValidTenantId(r.tenant) || !role(r.role)
@@ -44,7 +52,7 @@ function memberRow(r: Record<string, unknown>): Membership {
 }
 function credentialRow(r: Record<string, unknown>): ServiceCredential {
   if (typeof r.id !== 'string' || !r.id || typeof r.subject !== 'string' || !r.subject.trim()
-    || !isValidTenantId(r.tenant) || !role(r.role) || typeof r.token_hash !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(r.token_hash)
+    || !isValidTenantId(r.tenant) || !serviceRole(r.role) || typeof r.token_hash !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(r.token_hash)
     || !Number.isSafeInteger(r.expires_at) || !Number.isSafeInteger(r.created_at) || typeof r.created_by !== 'string'
     || (r.revoked_at !== null && !Number.isSafeInteger(r.revoked_at))) throw unavailable();
   return { id: r.id, subject: r.subject, tenant: r.tenant, role: r.role, tokenHash: r.token_hash,

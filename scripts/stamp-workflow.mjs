@@ -33,13 +33,21 @@ const digest = v => sha256(canonical(v));
 const same = (a, b) => canonical(a) === canonical(b);
 const exact = (v, keys) => object(v) && same(Object.keys(v).sort(), [...keys].sort());
 const LEGACY_MIGRATIONS = ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql'];
-export const MIGRATIONS = [...LEGACY_MIGRATIONS, '0013_operator_oidc.sql'];
+const OIDC_MIGRATIONS = [...LEGACY_MIGRATIONS, '0013_operator_oidc.sql'];
+// P87 (E11): 0014 admits the catalogue-only service-credential role. A package
+// names its schema contract; one built before 0014 (operator-oidc-v2, 0010–0013)
+// still validates and migrates exactly as it did, each list's hashes pinned.
+export const MIGRATIONS = [...OIDC_MIGRATIONS, '0014_operator_catalog_import.sql'];
 const LEGACY_MIGRATION_HASHES = ['7ae6cd7d5d84f70533b3501ec93a9b4d40e360229ec95577f8ed1e92fc858d55','d279d332fbc0fdbdcfe5ad1dad2cb8347a056ee85ea9b975127dd3cf40e2074c','63143e1690f1be2bb331b547cf8d48716d6583fcefacf3353c9274075fd187b7'];
-const MIGRATION_HASHES = [...LEGACY_MIGRATION_HASHES, 'e1552f65360331264bbb49c2ae896356a349fa75416c797a430a637ef19b5067'];
+const OIDC_MIGRATION_HASHES = [...LEGACY_MIGRATION_HASHES, 'e1552f65360331264bbb49c2ae896356a349fa75416c797a430a637ef19b5067'];
+const MIGRATION_HASHES = [...OIDC_MIGRATION_HASHES, '0a250d3776f00dbcdea5d5812996e15b779462b390f2b5b5a6fdf503738ef5ca'];
+const SCHEMA_CONTRACT = 'operator-catalog-import-v3';
+const SCHEMA_CONTRACTS = { 'operator-oidc-v2': [OIDC_MIGRATIONS, OIDC_MIGRATION_HASHES], [SCHEMA_CONTRACT]: [MIGRATIONS, MIGRATION_HASHES] };
 const LEGACY_SECURITY_TABLES = ['operator_accounts', 'operator_sessions', 'operator_audit', 'operator_memberships', 'operator_service_credentials', 'operator_recovery_requests'];
 export const SECURITY_TABLES = [...LEGACY_SECURITY_TABLES, 'operator_oidc_links', 'operator_oidc_epoch', 'operator_oidc_transactions', 'operator_oidc_sessions', 'operator_oidc_completions'];
-const oidcSchema = artifact => artifact.schemaContract === 'operator-oidc-v2';
-const migrationsFor = artifact => oidcSchema(artifact) ? MIGRATIONS : LEGACY_MIGRATIONS;
+const oidcSchema = artifact => typeof artifact.schemaContract === 'string' && Object.hasOwn(SCHEMA_CONTRACTS, artifact.schemaContract);
+const migrationsFor = artifact => oidcSchema(artifact) ? SCHEMA_CONTRACTS[artifact.schemaContract][0] : LEGACY_MIGRATIONS;
+const migrationHashesFor = artifact => oidcSchema(artifact) ? SCHEMA_CONTRACTS[artifact.schemaContract][1] : LEGACY_MIGRATION_HASHES;
 const securityTablesFor = artifact => oidcSchema(artifact) ? SECURITY_TABLES : LEGACY_SECURITY_TABLES;
 const LEGACY_ASSETS = ['console/index.html', 'console/shell.js', 'console/views.js', 'console/views-config.js',
   'console/views-measure.js', 'console/views-accounts.js', 'console/views-explore.js', 'operator-session.js',
@@ -591,7 +599,7 @@ export async function packageArtifact({ root = ROOT, verification, build, profil
   for(const asset of assets)if(sha256(await readFile(resolve(root,'public',asset.name.slice(1))))!==asset.sha256)fail();
   if(sha256(await readFile(resolve(root,'wrangler.toml')))!==sha256(configBytes))fail();
   if(!same(checks.basis,await verificationBasis(root)))fail();
-  const artifact = { version: 2, assetContract: 'customer-assets-v2', schemaContract: 'operator-oidc-v2', main: 'worker.mjs', modules, assets, assetHeaders, migrations, sourcePins, barriers,
+  const artifact = { version: 2, assetContract: 'customer-assets-v2', schemaContract: SCHEMA_CONTRACT, main: 'worker.mjs', modules, assets, assetHeaders, migrations, sourcePins, barriers,
     compatibility_date: config.compatibility_date, compatibility_flags: config.compatibility_flags, doMigrations: config.migrations,
     config: pin('wrangler.toml', configBytes),configuration:blob('wrangler.toml',configBytes,'application/toml'),
     basisInventory:blob('verification-basis.json',Buffer.from(canonical(checks.basis.map(p=>p.path))),'application/json'),
@@ -624,10 +632,10 @@ export function validateArtifact(artifact) {
   if (digest(body) !== hash || body.main !== 'worker.mjs' || !Array.isArray(body.modules) || body.modules.length !== 1
     || body.modules[0].name !== body.main || body.modules[0].type !== 'application/javascript+module'
     || body.assetContract !== undefined && body.assetContract !== 'customer-assets-v2'
-    || body.schemaContract !== undefined && body.schemaContract !== 'operator-oidc-v2'
+    || body.schemaContract !== undefined && !oidcSchema(body)
     || !Array.isArray(body.assets) || !same(body.assets.map(x => x.name).sort(), artifactAssets(body).map(x => '/' + x))
     || body.assets.some(p=>p.type!==(p.name.endsWith('.html')?'text/html; charset=utf-8':'application/javascript'))
-    || !same(body.migrations.map(x => x.name), migrationsFor(body)) || !same(body.migrations.map(x=>x.sha256),oidcSchema(body)?MIGRATION_HASHES:LEGACY_MIGRATION_HASHES) || !Array.isArray(body.doMigrations)
+    || !same(body.migrations.map(x => x.name), migrationsFor(body)) || !same(body.migrations.map(x=>x.sha256),migrationHashesFor(body)) || !Array.isArray(body.doMigrations)
     || !same(body.doMigrations.map(x => x.tag), ['v1','v2','v3','v4','v5','v6','v7'])
     || !Array.isArray(body.barriers) || !same(body.barriers,securityClosure(body.sourcePins,body.assetContract))) fail();
   for (const part of [...body.modules, ...body.assets, ...body.migrations]) bytesOf(part);
