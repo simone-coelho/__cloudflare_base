@@ -393,8 +393,8 @@ function catalogManifestMembers(candidate: Record<string, unknown>, errors: stri
     const pointer = candidate.idIndex;
     if (candidate.productSlots === undefined) errors.push('idIndex: an id index is carried only by a catalogue that declares productSlots');
     else if (!isRecord(pointer) || Object.keys(pointer).length !== 2 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
-      || typeof pointer.records !== 'number' || !Number.isSafeInteger(pointer.records) || pointer.records < 1) {
-      errors.push('idIndex: { digest: the SHA-256 of the id index (64 lowercase hex), records: how many part records it lists (1 or more) }');
+      || typeof pointer.records !== 'number' || !Number.isSafeInteger(pointer.records) || pointer.records < 0) {
+      errors.push('idIndex: { digest: the SHA-256 of the id index (64 lowercase hex), records: how many part records it lists (0 or more) }');
     } else out.idIndex = { digest: pointer.digest, records: pointer.records };
   }
   return out;

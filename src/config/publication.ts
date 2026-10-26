@@ -633,7 +633,7 @@ export function attachmentsOf(kind: string, value: unknown, scope: string): stri
   return [...parts, ...index];
 }
 const partKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/part/' + digest + '.json';
-const idIndexKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/index/' + digest + '.json';
+const idIndexKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/ids/' + digest + '.json';
 /** P86: one product's part, `{ product, pieces }`, as it is stored. */
 export interface CatalogPart { product: string; pieces: unknown[] }
 function validPart(value: unknown): value is CatalogPart {
@@ -697,10 +697,11 @@ export async function catalogPartStored(env: Env, scope: string, hash: string): 
 
 // ── P86 (R-P424, amending R-P407 (5)): the catalogue's id index ────────────────
 //
-// One immutable, content-addressed object per manifest revision with parts:
-// every part record's id and the product whose part holds it, `{ entries:
-// [[id, product], …] }` sorted by id (the shared pieces are in the manifest
-// itself). The manifest names it (`idIndex`), and it is written with the
+// One immutable, content-addressed object per manifest revision with product
+// slots: every part record's id (expired ones included) and the product whose
+// part holds it, `{ ids: { "<id>": "<product id>" } }` (the shared pieces are in
+// the manifest itself), stored at `content/ids/<digest>.json` under the scope,
+// its digest that of its canonical value. The manifest names it (`idIndex`), and it is written with the
 // store's exact-create before the publication reserves the head, as a part is.
 // Only the loads read it — the import, the pull, the validation, the PUT and a
 // rollback's existence check — never a decision. Its own limit is 8 MiB; it is
@@ -708,20 +709,20 @@ export async function catalogPartStored(env: Env, scope: string, hash: string): 
 
 /** P86 (R-P424): the id index's own ceiling. */
 export const ID_INDEX_MAX_BYTES = 8 * 1024 * 1024;
-/** P86 (R-P424): the id index as it is stored: each part record's id and its product, sorted by id. */
-export interface CatalogIdIndex { entries: Array<[string, string]> }
+/** P86 (R-P424): the id index as it is stored: each part record's id and its product (canonical JSON sorts the ids). */
+export interface CatalogIdIndex { ids: Record<string, string> }
 /**
  * P86 (R-P424): the index value of a map of id → product, its digest and its
  * record count, refused 413 `id_index_too_large` naming it past 8 MiB. Nothing
  * is written.
  */
 export async function catalogIdIndexOf(ids: ReadonlyMap<string, string>): Promise<{ value: CatalogIdIndex; digest: string; records: number }> {
-  const value: CatalogIdIndex = { entries: [...ids.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)) };
+  const value: CatalogIdIndex = { ids: Object.fromEntries(ids) };
   const bytes = encoder.encode(canonical(value)).byteLength;
   if (bytes > ID_INDEX_MAX_BYTES) {
-    throw new PublicationError(`The catalogue's id index would be ${bytes} bytes for ${value.entries.length} part records, past its 8 MiB limit; nothing was written`, 413, 'id_index_too_large');
+    throw new PublicationError(`The catalogue's id index would be ${bytes} bytes for ${ids.size} part records, past its 8 MiB limit; nothing was written`, 413, 'id_index_too_large');
   }
-  return { value, digest: await digest(value), records: value.entries.length };
+  return { value, digest: await digest(value), records: ids.size };
 }
 /** P86 (R-P424): write the id index with the store's exact-create (a retry writes the same key; other bytes there are a conflict). */
 export async function writeCatalogIdIndex(env: Env, scope: string, value: CatalogIdIndex): Promise<string> {
@@ -734,14 +735,8 @@ export async function writeCatalogIdIndex(env: Env, scope: string, value: Catalo
 }
 function validIdIndex(value: unknown): value is CatalogIdIndex {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 1) return false;
-  const entries = (value as CatalogIdIndex).entries;
-  if (!Array.isArray(entries)) return false;
-  let last: string | null = null;
-  for (const entry of entries) {
-    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string' || typeof entry[1] !== 'string' || (last !== null && !(last < entry[0]))) return false;
-    last = entry[0];
-  }
-  return true;
+  const ids = (value as CatalogIdIndex).ids;
+  return !!ids && typeof ids === 'object' && !Array.isArray(ids) && Object.values(ids).every(product => typeof product === 'string');
 }
 /**
  * P86 (R-P424): the id index a manifest names, as id → product: one read of
@@ -754,7 +749,7 @@ export async function readCatalogIdIndex(env: Env, scope: string, hash: string):
   if (!HASH.test(hash)) throw refused();
   const found = await readObject(storage, idIndexKey(home, hash), ID_INDEX_MAX_BYTES);
   if (!found || !validIdIndex(found.value) || await digest(found.value) !== hash) throw refused();
-  return new Map(found.value.entries);
+  return new Map(Object.entries(found.value.ids));
 }
 /** P86 (R-P424): whether the store holds an id index, by one HEAD of its object (a rollback's existence check). */
 export async function catalogIdIndexStored(env: Env, scope: string, hash: string): Promise<boolean> {

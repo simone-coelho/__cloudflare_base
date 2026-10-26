@@ -330,8 +330,8 @@ a PUT that leaves a piece out removes it.
 
 **One id lives in one place.** Every load checks each record it carries against the file, the shared pieces
 and the revision's id index: one immutable object per revision, beside the parts and named by the manifest's
-`idIndex` (`{ "digest": "<64 hex>", "records": <count> }`), listing every part record's id with its product,
-sorted by id. Only the loads read it (the import, the pull, a validation, a PUT and a rollback's check that
+`idIndex` (`{ "digest": "<64 hex>", "records": <count> }`, present whenever `products` is), mapping every part
+record's id, expired ones included, to its product. Only the loads read it (the import, the pull, a validation, a PUT and a rollback's check that
 its objects are held), never a page's decision. A record moves between products only in a load that carries
 both products, the one it leaves and the one it joins, in one file (the old part drops it and the new part
 holds it), or once the product it leaves has been replaced without it. A record the index lists under another
