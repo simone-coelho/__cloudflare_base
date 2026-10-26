@@ -575,8 +575,8 @@ test('W15 protected OIDC desired state is disabled by default and rejects incomp
 });
 
 test('W15 current security schema and transactional restore retain links but never resurrect federated sessions or browser secrets',async()=>{
-  const artifact=await fixtureArtifact();assert.equal(artifact.schemaContract,'operator-oidc-v2');assert.equal(artifact.migrations.length,4);
-  assert.equal(artifact.migrations.at(-1).name,'0013_operator_oidc.sql');assert.equal(SECURITY_TABLES.length,11);
+  const artifact=await fixtureArtifact();assert.equal(artifact.schemaContract,'operator-catalog-import-v3');assert.equal(artifact.migrations.length,5);
+  assert.equal(artifact.migrations.at(-1).name,'0014_operator_catalog_import.sql');assert.equal(SECURITY_TABLES.length,11);
   for(const mutate of [v=>delete v.schemaContract,v=>v.migrations.pop(),v=>v.schemaContract='unknown']){
     const bad=clone(artifact);mutate(bad);rehash(bad);assert.throws(()=>validateArtifact(bad));
   }
@@ -661,7 +661,7 @@ test('W14 asset-contract retains genuinely verified older W13 bytes without rela
   assert.equal(archived.assetContract,undefined);assert.equal(archived.assets.length,12);assert.ok(!archived.barriers.some(pin=>pin.path==='src/routes/search.ts'));
   const forged=clone(archived);forged.assetContract='customer-assets-v2';rehash(forged);assert.throws(()=>validateArtifact(forged));
   const current=await fixtureArtifact();assert.equal(current.assetContract,'customer-assets-v2');
-  assert.equal(current.schemaContract,'operator-oidc-v2');
+  assert.equal(current.schemaContract,'operator-catalog-import-v3');
   const f=fixture();try{const db=d1Queries(f.api,ACCOUNT,DBID,memoryStore());await migrateProduct(db,current);await assert.rejects(migrateProduct(db,archived));}finally{f.close();}
   for(const change of [value=>value.assets=value.assets.filter(asset=>asset.name!=='/sdk/debug.js'),value=>value.assets.find(asset=>asset.name==='/sdk/debug.js').base64=Buffer.from('tampered').toString('base64'),value=>value.barriers=value.barriers.filter(pin=>pin.path!=='src/routes/search.ts')]){
     const bad=clone(current);change(bad);rehash(bad);assert.throws(()=>validateArtifact(bad));

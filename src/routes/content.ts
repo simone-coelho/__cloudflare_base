@@ -51,7 +51,7 @@ import { ConnectorUnavailable } from '@/connectors/model';
 import { catalogDiagnostics } from '@/content/catalogDiagnostics';
 import { slotConstraintDiagnostics, slotDiagnostics } from '@/content/slotDiagnostics';
 
-type Ctx = { Bindings: Env; Variables: TenantVariables & { auth: AuthContext } };
+type Ctx = { Bindings: Env; Variables: TenantVariables & { auth: AuthContext; catalogImportRoute?: boolean } };
 export const contentRoutes = new Hono<Ctx>();
 /** W38.04: the one representation of an input refusal, named, on every consuming route. */
 const inputRefusal = (c: Context<Ctx>, error: InputError) => c.json({ ok: false, error: error.message, code: error.code,
@@ -64,10 +64,27 @@ contentRoutes.onError((error, c) => {
   if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
   throw error;
 });
+/**
+ * P87 (E11): the eight routes of the catalogue import a `catalog-import` service credential is admitted to, marked
+ * before `operatorJwt` runs (every other operator route refuses that credential there, before its handler): GET the
+ * document, its history, a revision and the catalogue's publication; POST validate, import, pull and the catalogue's
+ * publication recover. A kind, in the path or in `?kind=`, is read as `kindOf` reads every kind, lower-cased, so another
+ * spelling answers the credential as it answers an operator; HEAD is the GET route Hono serves it as.
+ */
+function catalogImportRoute(c: Context<Ctx>): boolean {
+  const [root, name = '', ...rest] = c.req.path.split('/').slice(1), method = c.req.method === 'HEAD' ? 'GET' : c.req.method;
+  if (root !== 'content' || name.toLowerCase() !== 'catalog') return false;
+  const kinds = c.req.queries('kind'), catalogueTarget = !kinds || (kinds.length === 1 && kinds[0]!.toLowerCase() === 'catalog');
+  const at = (...tail: string[]) => rest.length === tail.length && tail.every((part, i) => (part === '*' ? rest[i] !== '' : rest[i] === part));
+  if (method === 'GET') return at() || at('history') || at('revisions', '*') || (at('publication') && catalogueTarget);
+  if (method === 'POST') return at('validate') || at('import') || at('pull') || (at('publication', 'recover') && catalogueTarget);
+  return false;
+}
 // Reads and validation require access authentication too; enforced operations
 // additionally bind the operator and document scope to the canonical tenant.
 contentRoutes.use('*', async (c, next) => {
   c.header('Cache-Control', 'no-store');
+  if (catalogImportRoute(c)) c.set('catalogImportRoute', true);
   return operatorJwt()(c, next);
 });
 contentRoutes.use('*', async (c, next) => {

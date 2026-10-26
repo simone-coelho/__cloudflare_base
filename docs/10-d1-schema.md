@@ -6,12 +6,12 @@ This is the operating note for a **local** database and worker store, for a fres
 
 | Set | Files | Applied to the local database |
 |---|---|---|
-| Product | `migrations/product/0010_operator_accounts.sql` … `0013_operator_oidc.sql` (operator accounts, audit, authority, OIDC) | by default |
-| Demo | the demo chain `migrations/0001_d1_init.sql` … `0013_operator_oidc.sql`, then the demo seeds `migrations/seed/seed_001.sql` … `seed_010.sql` and `seed_011_geo.sql` | only when demo data is requested explicitly |
+| Product | `migrations/product/0010_operator_accounts.sql` … `0014_operator_catalog_import.sql` (operator accounts, audit, authority, OIDC, the catalogue-only machine credential role) | by default |
+| Demo | the demo chain `migrations/0001_d1_init.sql` … `0014_operator_catalog_import.sql`, then the demo seeds `migrations/seed/seed_001.sql` … `seed_010.sql` and `seed_011_geo.sql` | only when demo data is requested explicitly |
 
 The default `DB` declaration in `wrangler.toml` names `migrations_dir = "migrations/product"`, the same directory the staging and production declarations name, so `npx wrangler d1 migrations apply coach-demo-db --local` and `node scripts/init-local.mjs` give a local database the product schema only and no demo table.
 
-`migrations/0010_operator_accounts.sql` … `0013_operator_oidc.sql` are the historical duplicates of the four product files, kept so the demo chain stays complete. They must stay byte-identical to their product copies: `scripts/init-local.mjs` refuses to run when one differs, and the W39 acceptance test (`src/units/W39/LEDGER.unit.test.ts`) fails.
+`migrations/0010_operator_accounts.sql` … `0014_operator_catalog_import.sql` are the historical duplicates of the five product files, kept so the demo chain stays complete. They must stay byte-identical to their product copies: `scripts/init-local.mjs` refuses to run when one differs, and the W39 acceptance test (`src/units/W39/LEDGER.unit.test.ts`) fails.
 
 ## Requesting demo data
 
@@ -21,9 +21,9 @@ Demo data is requested explicitly, for the local database only:
 node scripts/init-local.mjs --scope coach --demo-data
 ```
 
-The demo path applies **`migrations/*.sql` in filename order (0001 through 0013), then `migrations/seed/*.sql` in filename order (`seed_001.sql` through `seed_010.sql`, then `seed_011_geo.sql`)**:
+The demo path applies **`migrations/*.sql` in filename order (0001 through 0014), then `migrations/seed/*.sql` in filename order (`seed_001.sql` through `seed_010.sql`, then `seed_011_geo.sql`)**:
 
-1. Each demo-chain migration runs once and is recorded in the `d1_migrations` table, the table `wrangler d1 migrations apply` keeps, so the two tools agree on what ran. The four product members of the chain run from their identical product copies; a migration already recorded (for example the product ones, when the database was first set up without demo data) is skipped. Requested on a database that already holds the product schema, the demo migrations 0001 through 0009 run after the product ones; they touch disjoint tables, and the resulting schema is the same as the chain applied in order.
+1. Each demo-chain migration runs once and is recorded in the `d1_migrations` table, the table `wrangler d1 migrations apply` keeps, so the two tools agree on what ran. The five product members of the chain run from their identical product copies; a migration already recorded (for example the product ones, when the database was first set up without demo data) is skipped. Requested on a database that already holds the product schema, the demo migrations 0001 through 0009 run after the product ones; they touch disjoint tables, and the resulting schema is the same as the chain applied in order.
 2. Then every demo seed runs, in order, on every request. The seeds are written to be repeated (next section).
 
 No command in this repository applies the demo chain or the demo seeds to a deployed database, and they are never to be applied there by hand: the retired `scripts/seed-d1.mjs` generator refuses to run, and the customer stamp applies product migrations only.

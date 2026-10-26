@@ -8,7 +8,7 @@
 
 import type { Env } from '@/types/env';
 import { runSynthetic } from './synthetic';
-// Exact create/alter result of product migrations 0010–0013. Read-only
+// Exact create/alter result of product migrations 0010–0014. Read-only
 // sqlite_master comparison includes columns, constraints, indexes and trigger.
 export const PRODUCT_SCHEMA = [
   {
@@ -117,7 +117,7 @@ export const PRODUCT_SCHEMA = [
     "type": "table",
     "name": "operator_service_credentials",
     "tbl_name": "operator_service_credentials",
-    "sql": "CREATE TABLE operator_service_credentials ( id TEXT PRIMARY KEY, subject TEXT NOT NULL, tenant TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('operator', 'admin')), token_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL, created_by TEXT NOT NULL, revoked_at INTEGER )"
+    "sql": "CREATE TABLE \"operator_service_credentials\" ( id TEXT PRIMARY KEY, subject TEXT NOT NULL, tenant TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('operator', 'admin', 'catalog-import')), token_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL, created_by TEXT NOT NULL, revoked_at INTEGER )"
   },
   {
     "type": "table",
@@ -162,7 +162,7 @@ export async function checkProductSchema(env: Env): Promise<void> {
   const actual = result.results.filter(row => PRODUCT_SCHEMA.some(expected => expected.name === row.name)).map(row => ({ ...row, sql: row.sql.replace(/\s+/g, ' ').trim() }));
   if (JSON.stringify(actual) !== JSON.stringify(PRODUCT_SCHEMA)) throw new Error('Schema unavailable');
   const migrations = await env.DB.prepare('SELECT name FROM d1_migrations ORDER BY id LIMIT 128').all<{ name: string }>();
-  if (!migrations.success || migrations.results.length >= 128 || ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql'].some(name => !migrations.results.some(row => row.name === name))) throw new Error('Migrations unavailable');
+  if (!migrations.success || migrations.results.length >= 128 || ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql', '0014_operator_catalog_import.sql'].some(name => !migrations.results.some(row => row.name === name))) throw new Error('Migrations unavailable');
 }
 import { serveContentDecisions } from '@/content/service';
 import { tenantConfig } from '@/tenancy/middleware';
