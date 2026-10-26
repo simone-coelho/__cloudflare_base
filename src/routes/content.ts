@@ -215,8 +215,9 @@ function idsAfter(inForce: ReadonlyMap<string, string>, kept: (product: string) 
   for (const [product, pieces] of parts) for (const piece of pieces) { const id = (piece as { id?: unknown } | null)?.id; if (typeof id === 'string') ids.set(id, product); }
   return ids;
 }
-/** R-P424: the id index a manifest's parts make (nothing written): its pointer for the manifest and its value for the write; a manifest has one exactly when it has `products`. */
+/** R-P424: the id index a manifest's parts make (nothing written): its pointer for the manifest and its value for the write; none without a part. */
 async function idIndexFor(ids: ReadonlyMap<string, string>): Promise<{ pointer?: CatalogPartPointer; value?: CatalogIdIndex }> {
+  if (!ids.size) return {};
   const built = await catalogIdIndexOf(ids);
   return { pointer: { digest: built.digest, records: built.records }, value: built.value };
 }

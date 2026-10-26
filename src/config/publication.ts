@@ -697,8 +697,8 @@ export async function catalogPartStored(env: Env, scope: string, hash: string): 
 
 // ── P86 (R-P424, amending R-P407 (5)): the catalogue's id index ────────────────
 //
-// One immutable, content-addressed object per manifest revision with product
-// slots: every part record's id (expired ones included) and the product whose
+// One immutable, content-addressed object per manifest revision with a part:
+// every part record's id (expired ones included) and the product whose
 // part holds it, `{ ids: { "<id>": "<product id>" } }` (the shared pieces are in
 // the manifest itself), stored at `content/ids/<digest>.json` under the scope,
 // its digest that of its canonical value. The manifest names it (`idIndex`), and it is written with the

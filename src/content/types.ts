@@ -122,7 +122,7 @@ export interface ContentCatalog {
   /**
    * P86 (R-P424): the revision's id index — the digest of the object listing
    * every part record's id and its product, and how many it lists — present
-   * exactly when `products` is. Only the loads read it, never a decision.
+   * exactly when `products` indexes a part. Only the loads read it, never a decision.
    */
   idIndex?: CatalogPartPointer;
   pieces: ContentPiece[];

@@ -330,12 +330,13 @@ a PUT that leaves a piece out removes it.
 
 **One id lives in one place.** Every load checks each record it carries against the file, the shared pieces
 and the revision's id index: one immutable object per revision, beside the parts and named by the manifest's
-`idIndex` (`{ "digest": "<64 hex>", "records": <count> }`, present whenever `products` is), mapping every part
-record's id, expired ones included, to its product. Only the loads read it (the import, the pull, a validation, a PUT and a rollback's check that
+`idIndex` (`{ "digest": "<64 hex>", "records": <count> }`, present whenever `products` indexes a part), mapping
+every part record's id, expired ones included, to its product. Only the loads read it (the import, the pull, a validation, a PUT and a rollback's check that
 its objects are held), never a page's decision. A record moves between products only in a load that carries
 both products, the one it leaves and the one it joins, in one file (the old part drops it and the new part
-holds it), or once the product it leaves has been replaced without it. A record the index lists under another
-product the load does not carry is refused `422` with `code: "record_moved"`, naming both products, and so is
+holds it), or once the source product, the one it leaves, has been replaced without it. A record the index
+lists under another product the load does not carry is refused `422` with `code: "record_moved"`, naming both
+products (the source and the new one), and so is
 a PUT that keeps the old product's pointer while it routes the record to the new one. In a nightly load sent in
 chunks, a `record_moved` means the chunk of the product the record leaves comes later in the sequence: send
 that chunk first, or both products in one file. A shared piece whose id a part record holds is refused `422`
@@ -346,7 +347,7 @@ revision's index with its parts. The index has its own limit of 8 MiB: a load wh
 refused `413` with `code: "id_index_too_large"`, naming it and writing nothing. Each load reads the index once
 and writes a new one when its records change, up to a few MB; a page reads none.
 
-A load that names a product whose part the store no longer holds answers `503` with `code: "part_unavailable"`,
+A load that names a product whose part is lost (the store no longer holds it) answers `503` with `code: "part_unavailable"`,
 whatever its mode, `replace` included, and so does that product's page and its per-product read; other
 products are unaffected. Only a PUT, which leaves that product's pointer out (or sends its records instead of
 its pointer), or a rollback to a revision whose parts are all held, clears it.
