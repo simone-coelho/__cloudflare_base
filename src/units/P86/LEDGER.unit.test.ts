@@ -1,0 +1,613 @@
+// src/units/P86/LEDGER.unit.test.ts
+// P86 under the Closure Ledger (programme `tapestry-parity-activation`, amendment 11, item E10): the tests for the LOCAL
+// criteria CS1–CS3 of the P86 work order (docs/parity/activation/program.json). LV1 is a deferred live row and gets no test.
+//
+// THE REQUIREMENT, verbatim (docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:87–91, E10):
+//   "#### E10 · Catalogue size beyond the test scope
+//    - **Authority:** the kit's catalogue limit (about 2,000 pieces, 2 MiB per catalogue document); one item per image
+//      across the whole product range exceeds it.
+//    - **Done when:** a design decision first (per-product scoping of image records, sharding by product range, or a
+//      larger store), then the build; the test scope fits today and the first dataset is sized with Tapestry after the
+//      first test.
+//    - **Relates to:** E2. **Needed by:** the full range, after the first test. Design first; then within a day or two."
+// DECISION D2 AS RULED (R-P405, _evidence/parity-step3/AMENDMENTS.md): design A, per-product scoping as a manifest with
+// immutable per-product parts (the analyst's note _evidence/parity-step3/S32/analyst/E10-DESIGN.md §2 A3, §6). Its shapes:
+//   "`content` stays ONE member with ONE revision. Its value becomes a manifest: today's shape (`version`, `typeFallback`,
+//    and `pieces` = the shared pieces …), plus an optional `products: {"<productId>": {digest, records}}` and a
+//    declaration of the product-scoped slot types (for example `productSlots: ["pdp-carousel"]`)"; "Each product's image
+//    records are one immutable, content-addressed part object (`config-publication/v1/<scope>/content/part/<sha256>.json`),
+//    ≤ 2 MiB"; "A manifest without `products` is today's catalogue"; "A piece whose `slotTypes` are all product-scoped and
+//    which names `featuredProductIds` goes to its product's part; every other piece is shared"; R-P405: "a two-id record
+//    routes by its product id, the first id"; "reads ONE part only when the page has an anchor-scoped slot and
+//    `ctx.anchor` names an indexed product (the part cached per isolate by digest)"; "P91's modes per product"; "the skip
+//    on the manifest digest, the dry run assembling the touched parts"; "a manifest that would exceed its cap is refused
+//    413 by name, and the two-level index (256 fixed buckets) is recorded as the next step"; "a part is kept while any
+//    revision in the publication's kept history references it and purged with the revision purge".
+//
+// THE SHAPES THIS FILE PROPOSES (provisional; the lead rules them at the spec's receipt):
+//   S1 The manifest, as `GET /content/catalog` answers it in `document`: `{ version, typeFallback?, productSlots, pieces,
+//      products }` — `pieces` the shared pieces only; `productSlots` the slot names declared product-scoped (written by a
+//      PUT of the catalogue, kept by every load); `products` `{ "<productId>": { digest: <64 lowercase hex>, records:
+//      <the part's record count> } }`. A catalogue that declares no `productSlots` carries neither member and is today's
+//      document, every piece shared, no part written (the locks). `productSlots` is the catalogue's own declaration, not
+//      derived from the slots document's `scope: 'anchor'`.
+//   S2 A part: the R2 object `config-publication/v1/<scope>/content/part/<digest>.json`, its body the canonical JSON of
+//      `{ product, pieces }` (the stored pieces, defaults applied as an import applies them), `documentDigest` of that
+//      value the `<digest>` of its key and of the manifest's pointer; at most 2 MiB; written before the pending head is
+//      reserved (reading 3 below), so a load whose part cannot be written commits nothing and leaves nothing pending.
+//   S3 Routing on the import, the pull and the PUT: a piece whose `slotTypes` are all in `productSlots` and which names
+//      `featuredProductIds` goes to the part of its FIRST id; every other piece is shared; such a piece declaring
+//      `pooled: true` is refused 422 naming it (`records[k] '<id>'`, P82's address, on a load) and `pooled`. A PUT may
+//      carry `products` pointers equal to those of the revision its If-Match names (a GET→PUT round trip keeps every
+//      part); any other pointer is refused 422 naming the product.
+//   S4 The modes per product (reading 1 below): `merge` upserts inside the parts the file touches and the shared pieces;
+//      `replace` and `full` replace each product the file names, whole (`full` keeping that product's left-out records
+//      expired, `expire` counted over the named products), and the shared pieces only when the file carries one; every
+//      other product untouched. The skip: the stamped manifest's digest equals the stored one (it covers every part
+//      digest). The dry run writes nothing, no part included. The import answer's `pieces` and the GET's
+//      `envelope.pieces` count shared + parts; `envelope.bytes` is the manifest's; `envelope.products` the index's size.
+//   S5 The cap: a load whose manifest (its index) would pass 2 MiB is refused 413 `code: 'manifest_too_large'`, nothing
+//      written (no part either); the two-level index is the next step, not built.
+//   S6 The per-product read: `GET /content/catalog?scope=<tenant>&product=<productId>` → 200 `{ scope, kind, source,
+//      revision, publication, product, digest, document: { product, pieces }, envelope }`; a product the manifest does
+//      not index → 404 naming it. (Not `/content/catalog/products/<id>`: reading 6.)
+//   S7 The decision: pin, the manifest, and ONE part only for a page with a slot declared `scope: 'anchor'` whose request
+//      names an indexed `ctx.anchor`; `shared ∪ part` enters `decideContent`; the part cache is keyed as the publication
+//      cache is (backing binding, scope) and by digest, and `invalidatePublicationCache` clears it.
+//   S8 THE READ COUNTER (CS2): the R2 `get` calls on the mount's bucket under `config-publication/`, each classed (head,
+//      set, `<kind> revision`, `part <digest>`) with its object size; the parsed records are the manifest's shared pieces
+//      plus the records of the parts read. THE GENERATOR: N products `COA-R00001…`, one image record each, four
+//      categories, two lines and every seventh tagged on a dimension no registry maps; one load, inside INPUT_MAX_RECORDS
+//      and INPUT_MAX_BYTES (asserted); N = 50 and N = 5,000; every part at most 2 MiB.
+//
+// READINGS THE CODE OR THE NOTE CONTRADICTS (each needs a ruling; the tests follow the proposal):
+//   1 The brief: "`replace` and `full` apply to the products the file names and the shared pieces"; R-P405 and the note
+//     name the products only. Literally, a replace of one product's images would empty the shared pieces (the page's
+//     modules). Proposed (S4): the shared pieces only when the file carries one.
+//   2 The first-id rule narrows P80: decide.ts's inScope (`ids.includes(anchor) && …`, :920–923) admits `[variant,
+//     product]` in either order, but a routed `[variant, product]` record lands in the variant's part and is no longer a
+//     candidate on the product's page. The routing leg shows it; the kit states it.
+//   3 "Written … BEFORE the head CAS … the same way `finish` writes revision bodies": `finish` is also the recovery path,
+//     and the pending head carries only the manifest, so a part written inside `finish` cannot be rewritten by a recovery.
+//     Proposed (S2): before the pending head is reserved; the leg checks a failed part write leaves nothing pending.
+//   4 The pending head embeds the manifest's envelope beside the set (publication.ts publishSet, `next`; loadHead), so
+//     the head's 2 MiB is met before the manifest's; the refusal names the manifest whichever check fires (S5).
+//   5 Readers keyed by a content id alone cannot find a part from the manifest (it maps products, not content ids):
+//     telemetry (contentTelemetry.ts resolvedContentTouches, moduleEngagementTouches), the learn routes' joins and
+//     catalogue sets (decisions.ts: `catalogNames` on the lift rows, `new Set(catalog.pieces.map(p => p.id))` in the
+//     slots index, exploring and queue). Options: (a) a publish-time content-id → product index in fixed buckets, one
+//     more read per lookup; (b) each reader resolves through an anchor it holds (receipts: the record's scope; replay:
+//     `inputs.anchor`; telemetry: the acknowledged decision). Legs here: replay and receipts (the anchor held), telemetry
+//     (mechanism-agnostic, at most one part read per click); the learn routes: no leg until ruled.
+//   6 The brief's address `GET /content/catalog/products/<productId>` is not admitted by the customer boundary
+//     (src/customerBoundary.ts CUSTOMER_ROUTES, outside the grant) and adding it collides with P77.VR3's pinned list
+//     (src/units/P77/LEDGER.unit.test.ts TODAY :297–326, asserted :335). `?product=` on `GET /content/{kind}` is admitted
+//     today (the `:kind` entry) and needs no R10: proposed (S6).
+//   7 The PUT round trip (S3) is not in the note: without it a merchandiser's GET→PUT of the manifest drops or cannot
+//     validate the parts.
+//   8 The kit 02 :1790 sentence "Each immutable member, set and head is limited to 2 MiB UTF-8 each" gains the part.
+//
+// THE R10 SWEEP (src/**/*.test.ts, scripts/**): no test declares `productSlots`, reads a catalogue's `products`, a
+// `content/part/` key, a `product=` read or `manifest_too_large`; no test pins kit 03's size paragraph (:277–292: "the
+// catalog is one such document per scope", "a conversation about sharding the catalog") or kit 02 :1790; W32.E1.01
+// (src/units/W32/B1.unit.test.ts :306–310, :355) reads `envelope` on a catalogue without parts (unchanged under S4).
+// Collisions arise only from choices this file does not make: the brief's per-product path (P77.VR3, reading 6), and a
+// purge that lists parts on every publication (W38 B4's storage-call counts; to be measured by the whole-suite comparison).
+//
+// DEFERRALS AND RESIDUALS: the two-level index (R-P405 (1), told); the ingest vocabulary's publish-time summary (service.ts
+// tenantCatalogVocabulary; no leg); the kit 03 cost table (:294–326, predates P80/P84/P91, not re-run); the part purge
+// (R-P405 (4): the kit leg states it, no leg measures it — W38 B4's fixture can carry one if the lead wants it); the
+// learn routes of reading 5; a scoped slot not declared in `productSlots` keeps its records shared (no consistency check).
+//
+// NO NEW EXPORT IS IMPORTED: the manifest, the part, the read and the refusal are read loosely through the routes and the
+// mount's bucket.
+//
+// MEASURED: not yet (HOLD VITEST; the provisional is committed unmeasured).
+//
+// HARNESS: src/units/_parity.ts (the mounted application, both hosts, the operator routes, the bucket double). Imports from
+// src/units/: ../_parity.
+
+import { describe, expect, it, vi } from 'vitest';
+
+import { INPUT_MAX_BYTES, INPUT_MAX_RECORDS } from '@/config/input';
+import { documentBytes, documentDigest, invalidatePublicationCache, PUBLICATION_MAX_BYTES } from '@/config/publication';
+import type { DecisionRecord } from '@/content/types';
+import { SHOPPER_HEADER } from '@/identity/sessionCapability';
+
+import {
+  asOperator, BRAND, declaredSlots, errorsOf, expectPublished, HOSTS, layoutSlot, learnDocument, loadDocument, M, MODULES, mount, pageInstanceOf,
+  putDocument, readTree, receiptsOf, recentSlot, replayOf, servedIn, servePage, shopperOn, storedDecisions, TENANT, UnitR2,
+  type Answer, type Decision, type Documents, type Host, type LoadedSlots, type Mounted, type Shopper, type Snapshot,
+} from '../_parity';
+
+// ===========================================================================
+// The fixture: P80's anchor product and images, three products of a range, and a generated range.
+// ===========================================================================
+
+const CAROUSEL = 'pdp-carousel', COMPLETE = 'pdp-complete-the-look';
+/** P80's anchor (Tabby Shoulder Bag 26, Handbags) and its colours; the wallet (Small Leather Goods, another category); the
+ * quilted bag (Handbags); a product the catalogue does not carry; Tabby 20, a product no image names. */
+const A = 'COA-CH857', B = 'COA-CB925', C = 'COA-CW620', UNKNOWN = 'COA-ZZ999', UNINDEXED = 'COA-CY201';
+const BLACK = 'COA-CH857-BLACK', CHALK = 'COA-CH857-CHALK';
+const CATEGORY: Record<string, string> = { [A]: 'Handbags', [B]: 'Small Leather Goods', [C]: 'Handbags', [UNKNOWN]: 'Small Leather Goods' };
+const SHOTS = ['on-model', 'studio', 'detail', 'flat-lay'] as const;
+const slug = (product: string) => product.toLowerCase().replace(/^coa-/, '');
+type Rec = Record<string, unknown> & { id: string; title: string };
+
+/** One image record (the carousel note's shot tags; its format as `contentType`). */
+const image = (id: string, products: string[] | undefined, category: string, shot: string, extra: Record<string, unknown> = {}): Rec => ({ id,
+  customerContentId: `TAP-${id.toUpperCase()}`, type: shot, title: `${id} (${shot})`,
+  tags: { category: [category], line: ['Tabby'], shot: [shot], contentType: [shot] }, slotTypes: [CAROUSEL], lifecycle: { status: 'live' },
+  ...(products ? { featuredProductIds: products } : {}), ...extra });
+/** P80's carousel images of the anchor, two of them colour-specific. */
+const ANCHOR_IMAGES = [
+  image('img-ch857-1', [A], 'Handbags', 'on-model'), image('img-ch857-2', [A], 'Handbags', 'studio'),
+  image('img-ch857-black-3', [A, BLACK], 'Handbags', 'detail'), image('img-ch857-chalk-4', [A, CHALK], 'Handbags', 'detail'),
+];
+/** The wallet's image, an image of a product the catalogue does not carry, and a brand image naming no product (shared). */
+const OTHER_IMAGES = [image('img-cb925-1', [B], 'Small Leather Goods', 'on-model'), image('img-zz999-1', [UNKNOWN], 'Small Leather Goods', 'on-model'),
+  image('img-brand-1', undefined, 'Small Leather Goods', 'flat-lay')];
+/** What the scoped carousel serves the anchor with its Black variant (P80's matching rule). */
+const SERVED_FOR_BLACK = ['img-ch857-1', 'img-ch857-2', 'img-ch857-black-3'];
+/** Four small records of a product, for the modes. */
+const fourOf = (product: string): Rec[] => [1, 2, 3, 4].map(i => image(`img-${slug(product)}-s${i}`, [product], CATEGORY[product]!, SHOTS[i % 4]!));
+
+/** CS1's bulk record, about 700 canonical bytes (kit 03 :280 measures 671 for the shipped average piece). */
+const FILLER = 'Photographed in natural light on a neutral sweep; the frame shows the hardware, the stitching and the lining as a '
+  + 'shopper sees them in the boutique, cropped for the carousel and checked against the master colour reference.';
+const bulk = (product: string, n: number): Rec => {
+  const frame = String(n).padStart(4, '0'), shot = SHOTS[n % 4]!;
+  return { id: `img-${slug(product)}-${frame}`, customerContentId: `TAP-IMG-${product}-${frame}`, type: shot, title: `${product} image ${frame}, ${shot}`,
+    excerpt: `${FILLER} (${product}, frame ${frame})`, art: `https://images.example.invalid/catalog/${product}/${frame}.jpg`,
+    tags: { category: [CATEGORY[product]!], line: ['Tabby'], shot: [shot], contentType: [shot], ...(n % 7 === 0 ? { styleWorld: ['downtown'] } : {}) },
+    slotTypes: [CAROUSEL], lifecycle: { status: 'live' }, featuredProductIds: n % 10 === 0 ? [product, `${product}-V${n % 3}`] : [product] };
+};
+const BULK = 1200;
+const bulkOf = (product: string) => Array.from({ length: BULK }, (_, i) => bulk(product, i + 1));
+
+/** The generator (S8): `count` products of a range, one image record each. */
+const RANGE_CATEGORIES = ['Handbags', 'Small Leather Goods', 'Shoes', 'Ready-to-Wear'];
+const rangeProduct = (k: number) => `COA-R${String(k).padStart(5, '0')}`;
+const rangeRecords = (count: number): Rec[] => Array.from({ length: count }, (_, i) => {
+  const k = i + 1, shot = SHOTS[k % 4]!;
+  return { id: `img-r${String(k).padStart(5, '0')}-1`, customerContentId: `TAP-IMG-R${String(k).padStart(5, '0')}-1`, type: shot, title: `Range product ${k}, ${shot}`,
+    tags: { category: [RANGE_CATEGORIES[k % 4]!], line: [k % 3 ? 'Tabby' : 'Willow'], shot: [shot], ...(k % 7 === 0 ? { styleWorld: ['downtown'] } : {}) },
+    slotTypes: [CAROUSEL], lifecycle: { status: 'live' }, featuredProductIds: [rangeProduct(k)] };
+});
+
+const carouselSlot = { slot: CAROUSEL, take: 7, weights: { category: 1, line: 0.5 }, scope: 'anchor' };
+const LEARN = learnDocument({ [CAROUSEL]: { measurementBasis: 'rendered-v1', reward: 'click' } });
+/** The tenant as mounted: the modules shared, the carousel declared scoped, and (CS2) a cart page with no scoped slot. */
+const DOCS = { pieces: [...MODULES], slots: declaredSlots([layoutSlot(), carouselSlot]), learn: LEARN };
+const DOCS_WITH_CART = { ...DOCS, slots: { version: 'parity-coach-slots', governanceVersion: 4, pages: { pdp: [layoutSlot(), carouselSlot], cart: [recentSlot()] } } };
+const MODULE_IDS = MODULES.map(p => p.id);
+
+// ===========================================================================
+// The operator's harness (P91's): the loads, the reads, the bucket.
+// ===========================================================================
+
+const show = (a: Answer) => `${a.status} ${JSON.stringify(a.body).slice(0, 300)}`;
+const sorted = (ids: string[]) => [...ids].sort();
+const preconditions = async (m: Mounted) => {
+  const base = await loadDocument(m, 'catalog');
+  return { 'If-Match': `"${base.revision}/${base.publication.revision}/${base.publication.digest}"`, 'Idempotency-Key': `${base.revision}:${crypto.randomUUID()}` };
+};
+const q = (members: Record<string, string>) => new URLSearchParams({ scope: TENANT, ...members }).toString();
+const importJson = async (m: Mounted, records: unknown[], members: Record<string, string>, headers?: Record<string, string>) =>
+  asOperator(m, 'POST', `/content/catalog/import?${q(members)}`, records, headers ?? await preconditions(m));
+const FEED_URL = 'https://cms.example.invalid/p86-feed.json';
+/** `POST /content/catalog/pull` of a feed `{ content: records }` answered by a stub of its URL (no network). */
+async function pull(m: Mounted, records: unknown[], members: Record<string, unknown>): Promise<Answer> {
+  const original = globalThis.fetch;
+  const stub = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input instanceof Request ? input.url : input) === FEED_URL ? new Response(JSON.stringify({ content: records }), { headers: { 'Content-Type': 'application/json' } }) : original(input, init));
+  try { return await asOperator(m, 'POST', `/content/catalog/pull?scope=${TENANT}`, { url: FEED_URL, path: 'content', ...members }, await preconditions(m)); }
+  finally { stub.mockRestore(); }
+}
+/** The catalogue declared product-scoped on the carousel (S1), over the given shared pieces. */
+async function declareProductSlots(m: Mounted, pieces: unknown[] = MODULES): Promise<void> {
+  const put = await putDocument(m, 'catalog', { version: 'p86-catalogue', productSlots: [CAROUSEL], pieces }, 'p86 product slots');
+  expect(put.status, `PRECONDITION (${m.host}): the catalogue declaring its product slots is published (${show(put)})`).toBe(200);
+}
+/** The manifest's index, or `{}` where it has none (today). */
+const productsOf = (d: LoadedSlots) => (d.document.products ?? {}) as Record<string, { digest?: unknown; records?: unknown }>;
+const sharedOf = (d: LoadedSlots) => ((d.document.pieces ?? []) as Array<{ id: string }>).map(p => p.id);
+const digestOf = (d: LoadedSlots, product: string) => String(productsOf(d)[product]?.digest ?? `no pointer for ${product}`);
+const PART = /^config-publication\/v1\/coach\/content\/part\/([0-9a-f]{64})\.json$/;
+const partKey = (digest: string) => `config-publication/v1/${TENANT}/content/part/${digest}.json`;
+const partKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => PART.test(k)).sort();
+/** A product's part as stored, read through its pointer: its record ids, or what is missing. */
+function partOf(m: Mounted, d: LoadedSlots, product: string): { ids: string[]; value: Record<string, unknown> | null; bytes: number; missing: string | null } {
+  const digest = digestOf(d, product), raw = m.storage.objects.get(partKey(digest));
+  if (raw === undefined) return { ids: [], value: null, bytes: 0, missing: `no part object for ${product} (${digest})` };
+  const value = JSON.parse(raw) as Record<string, unknown>;
+  return { ids: sorted(((value.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value, bytes: new TextEncoder().encode(raw).byteLength, missing: null };
+}
+/** S6: the per-product read. */
+const productRead = (m: Mounted, product: string) => asOperator(m, 'GET', `/content/catalog?scope=${TENANT}&product=${encodeURIComponent(product)}`);
+const readIds = (a: Answer) => sorted((((a.body.document as { pieces?: unknown } | undefined)?.pieces ?? []) as Array<{ id: string }>).map(p => p.id));
+
+/** S8: the R2 reads one operation makes under `config-publication/`, each key with its object's size. */
+interface Read { key: string; bytes: number }
+async function counted<T>(m: Mounted, run: () => Promise<T>): Promise<{ result: T; reads: Read[] }> {
+  const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.get, reads: Read[] = [];
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
+    const found = await original.call(m.storage, key);
+    if (key.startsWith('config-publication/')) reads.push({ key, bytes: found?.size ?? 0 });
+    return found;
+  } });
+  try { return { result: await run(), reads }; } finally { Reflect.deleteProperty(bucket, 'get'); }
+}
+const partReads = (reads: Read[]) => reads.filter(r => PART.test(r.key));
+const classOf = (key: string): string => {
+  const part = PART.exec(key); if (part) return `part ${part[1]}`;
+  if (/\/head\.json$/.test(key)) return 'head';
+  if (/\/set\/[0-9]+\.json$/.test(key)) return 'set';
+  const revision = /^config-publication\/v1\/[^/]+\/([^/]+)\/rev\/[0-9]+\.json$/.exec(key);
+  return revision ? `${revision[1]} revision` : key;
+};
+const classes = (reads: Read[]) => reads.map(r => classOf(r.key)).sort();
+
+/** The decision request with the page's ctx signals on the GET's query string (P80's form). */
+async function snapshotOf(m: Mounted, s: Shopper, page: string, signals: Record<string, string>, label: string): Promise<Snapshot> {
+  const pageInstance = pageInstanceOf(label);
+  const ctx = Object.entries(signals).map(([name, value]) => `&ctx.${name}=${encodeURIComponent(value)}`).join('');
+  const response = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot?page=${page}&brand=${BRAND}&pageInstance=${pageInstance}${ctx}`,
+    { method: 'GET', headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability } }));
+  const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+  await m.drain();
+  return { status: response.status, body, page, pageInstance, decisions: (body.decisions ?? []) as Decision[] };
+}
+const carousel = (snapshot: Snapshot) => sorted(servedIn(snapshot, CAROUSEL));
+
+/** A tenant with the range of `n` generated products and P80's images loaded in one merge load (CS2). */
+async function rangeTenant(host: Host, n: number, documents: Documents = DOCS_WITH_CART): Promise<Mounted> {
+  const m = await mount(host, documents);
+  expectPublished(m, 'P86.CS2 — the tenant documents publish');
+  await declareProductSlots(m);
+  const records = [...ANCHOR_IMAGES, ...OTHER_IMAGES, ...rangeRecords(n)];
+  // The generator's bounds (S8): one load within the import's own caps (src/config/input.ts, unchanged).
+  expect([records.length <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(records)).byteLength < INPUT_MAX_BYTES],
+    `PRECONDITION: the range of ${n} products is one load within ${INPUT_MAX_RECORDS} records and ${INPUT_MAX_BYTES} bytes`).toEqual([true, true]);
+  const loaded = await importJson(m, records, { mode: 'merge' });
+  expect(loaded.status, `PRECONDITION (${host}): the range of ${n} products loads (${show(loaded)})`).toBe(200);
+  return m;
+}
+
+// ===========================================================================
+// unit:P86.CS1 — the range is accepted in several loads, each product one immutable part behind one catalogue revision
+// ===========================================================================
+
+describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
+  for (const host of HOSTS) {
+    it(`host (${host}): three merge loads of ${BULK} image records each (A and B imported, C pulled; more than one 2 MiB document holds) are each one revision; each product's records are one part of at most 2 MiB at its content address, the manifest's pointer; the manifest holds the shared pieces, productSlots and the index, under the cap and smaller than any part; GET /content/catalog answers it; the per-product read answers each product's records; the answer's pieces and the envelope count shared + parts`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      const range = { [A]: bulkOf(A), [B]: bulkOf(B), [C]: bulkOf(C) };
+      expect(documentBytes({ pieces: [...MODULES, ...range[A]!, ...range[B]!, ...range[C]!] }), 'PRECONDITION: the three products\' records exceed one 2 MiB document')
+        .toBeGreaterThan(PUBLICATION_MAX_BYTES);
+      const base = (await loadDocument(m, 'catalog')).revision;
+      const loads: Array<[string, Answer]> = [
+        ['import A', await importJson(m, range[A]!, { mode: 'merge' })],
+        ['import B', await importJson(m, range[B]!, { mode: 'merge' })],
+        ['pull C', await pull(m, range[C]!, { mode: 'merge' })],
+      ];
+      expect.soft(loads.map(([name, a]) => [name, a.status, a.body.revision, a.body.pieces]),
+        `${host}: P86.CS1 — each load one revision, its pieces shared + parts (today the third is refused 413 document_too_large: ${loads.map(([n, a]) => `${n} ${show(a)}`).join(' | ').slice(0, 400)})`)
+        .toEqual([['import A', 200, base + 1, MODULES.length + BULK], ['import B', 200, base + 2, MODULES.length + 2 * BULK], ['pull C', 200, base + 3, MODULES.length + 3 * BULK]]);
+      const manifest = await loadDocument(m, 'catalog');
+      const index = productsOf(manifest);
+      expect.soft({ productSlots: manifest.document.productSlots ?? 'no productSlots', shared: sorted(sharedOf(manifest)),
+        products: Object.fromEntries(Object.entries(index).map(([p, v]) => [p, [/^[0-9a-f]{64}$/.test(String(v.digest)), v.records]])) },
+      `${host}: P86.CS1 — the manifest: productSlots, the shared pieces only, one pointer per product (today one document of every record)`).toEqual({
+        productSlots: [CAROUSEL], shared: sorted(MODULE_IDS), products: { [A]: [true, BULK], [B]: [true, BULK], [C]: [true, BULK] } });
+      const parts = [A, B, C].map(p => [p, partOf(m, manifest, p)] as const);
+      expect.soft(parts.map(([p, part]) => [p, part.missing ?? 'stored', part.ids.length, part.value?.product ?? null,
+        part.value ? Object.keys(part.value).sort() : null, part.bytes > 0 && part.bytes <= PUBLICATION_MAX_BYTES]),
+      `${host}: P86.CS1 — each product's records one part { product, pieces } of at most 2 MiB at its pointer's address`).toEqual(
+        [A, B, C].map(p => [p, 'stored', BULK, p, ['pieces', 'product'], true]));
+      const addressed: Array<[string, boolean]> = [];
+      for (const [p, part] of parts) addressed.push([p, part.value !== null && await documentDigest(part.value) === digestOf(manifest, p)]);
+      expect.soft(addressed, `${host}: P86.CS1 — each part content-addressed: the digest of its value is its key's and the pointer's`).toEqual([[A, true], [B, true], [C, true]]);
+      expect.soft(parts.map(([p, part]) => [p, part.ids]), `${host}: P86.CS1 — each part holds exactly its product's records`).toEqual(
+        [A, B, C].map(p => [p, sorted(range[p]!.map(r => r.id))]));
+      const manifestBytes = documentBytes(manifest.document);
+      expect.soft([manifestBytes < PUBLICATION_MAX_BYTES, manifestBytes < Math.min(...parts.map(([, part]) => part.bytes || Infinity))],
+        `${host}: P86.CS1 — the manifest (${manifestBytes} bytes) under the cap and smaller than any part`).toEqual([true, true]);
+      const read = await asOperator(m, 'GET', `/content/catalog?scope=${TENANT}`);
+      const envelope = (read.body.envelope ?? {}) as Record<string, unknown>;
+      expect.soft([read.status, envelope.pieces, envelope.bytes, envelope.products ?? 'no products count'],
+        `${host}: P86.CS1 — the envelope: the catalogue's pieces (shared + parts), the manifest's bytes, the index's size`).toEqual(
+        [200, MODULES.length + 3 * BULK, manifestBytes, 3]);
+      const reads: Array<[string, number, unknown, unknown, unknown, string[]]> = [];
+      for (const p of [A, B, C]) { const a = await productRead(m, p); reads.push([p, a.status, a.body.product ?? null, a.body.digest ?? null, a.body.revision ?? null, readIds(a)]); }
+      expect.soft(reads, `${host}: P86.CS1 — the per-product read answers each product's records at the revision in force (today the whole catalogue, no product)`).toEqual(
+        [A, B, C].map(p => [p, 200, p, digestOf(manifest, p), manifest.revision, sorted(range[p]!.map(r => r.id))]));
+    }, 300_000);
+
+    it(`host (${host}): routing — on a PUT and on an import, a record whose slotTypes are all product slots and which names featuredProductIds goes to the part of its FIRST id ([${A}, ${BLACK}] to ${A}; [${BLACK}, ${A}] to ${BLACK}); a record naming no product, or with a slot that is not a product slot, stays shared; a product the catalogue does not carry is indexed as any other; a GET→PUT round trip of the manifest keeps every part`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      const reversed = image('img-ch857-black-r', [BLACK, A], 'Handbags', 'detail');
+      const twoSlots = image('img-ch857-look', [A], 'Handbags', 'on-model', { slotTypes: [CAROUSEL, COMPLETE] });
+      const [a1, a2, , a4] = ANCHOR_IMAGES as [Rec, Rec, Rec, Rec];
+      await declareProductSlots(m, [...MODULES, a1, a2, reversed, twoSlots, ...OTHER_IMAGES]);
+      const afterPut = await loadDocument(m, 'catalog');
+      const merged = await importJson(m, [a4], { mode: 'merge' });
+      expect(merged.status, `${host}: PRECONDITION — the merge of ${a4.id} is accepted (${show(merged)})`).toBe(200);
+      const manifest = await loadDocument(m, 'catalog');
+      expect.soft({ shared: sorted(sharedOf(manifest)), products: Object.keys(productsOf(manifest)).sort(),
+        parts: Object.fromEntries([A, BLACK, B, UNKNOWN].map(p => [p, partOf(m, manifest, p).missing ?? partOf(m, manifest, p).ids])) },
+      `${host}: P86.CS1 — routed by the first id; the rest shared (today every record in the one document, no index)`).toEqual({
+        shared: sorted([...MODULE_IDS, twoSlots.id, 'img-brand-1']), products: sorted([A, BLACK, B, UNKNOWN]),
+        parts: { [A]: sorted([a1.id, a2.id, a4.id]), [BLACK]: [reversed.id], [B]: ['img-cb925-1'], [UNKNOWN]: ['img-zz999-1'] } });
+      expect.soft(digestOf(afterPut, A) !== digestOf(manifest, A) && digestOf(afterPut, B) === digestOf(manifest, B),
+        `${host}: P86.CS1 — the merge touched ${A}'s part alone (a new part for it, ${B}'s pointer unchanged)`).toBe(true);
+      // The merchandiser's round trip: the manifest as read, one module retitled, PUT back.
+      const edited = { ...manifest.document, pieces: ((manifest.document.pieces ?? []) as Rec[]).map(p => p.id === M.editorial ? { ...p, title: 'A styling story, revised' } : p) };
+      const put = await putDocument(m, 'catalog', edited, 'p86 round trip');
+      const after = await loadDocument(m, 'catalog');
+      expect.soft([put.status, after.revision, JSON.stringify(productsOf(after)) === JSON.stringify(productsOf(manifest)) && Object.keys(productsOf(after)).length === 4,
+        ((after.document.pieces ?? []) as Rec[]).find(p => p.id === M.editorial)?.title ?? null],
+      `${host}: P86.CS1 — the GET→PUT round trip is one revision and keeps every part's pointer (${show(put)})`).toEqual([200, manifest.revision + 1, true, 'A styling story, revised']);
+    }, 120_000);
+
+    it(`host (${host}): a record that would go to a part and declares pooled: true is refused 422 naming it by its record address and pooled; nothing written (no revision, no part)`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      const before = await loadDocument(m, 'catalog'), stored = partKeys(m);
+      const pooled = image('img-ch857-pooled', [A], 'Handbags', 'studio', { pooled: true });
+      const refused = await importJson(m, [ANCHOR_IMAGES[0]!, pooled], { mode: 'merge' });
+      const named = errorsOf(refused).some(e => e.includes(`records[1] '${pooled.id}'`) && e.includes('pooled'));
+      expect.soft([refused.status, named ? 'names the record and pooled' : `does not (${show(refused)})`],
+        `${host}: P86.CS1 — a pooled piece stays shared, so one routed to a part is refused (today it is written)`).toEqual([422, 'names the record and pooled']);
+      expect.soft([(await loadDocument(m, 'catalog')).revision, partKeys(m)], `${host}: P86.CS1 — nothing written`).toEqual([before.revision, stored]);
+    }, 120_000);
+
+    it(`host (${host}): the modes per product — replace of ${B}'s records replaces ${B}'s part alone; full of ${C}'s records expires ${C}'s left-out record behind expire counted over ${C} alone (another number refused 409 naming 1); ${A} and the shared pieces untouched`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      const loaded = await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' });
+      expect(loaded.status, `${host}: PRECONDITION — the three products load (${show(loaded)})`).toBe(200);
+      const start = await loadDocument(m, 'catalog');
+      const [b1, b2] = fourOf(B) as [Rec, Rec];
+      const replaced = await importJson(m, [b1, { ...b2, title: `${b2.title}, reshot` }], { mode: 'replace' });
+      const afterReplace = await loadDocument(m, 'catalog');
+      expect.soft({ status: replaced.status, pieces: replaced.body.pieces, shared: sorted(sharedOf(afterReplace)), b: partOf(m, afterReplace, B).ids,
+        bTitle: ((partOf(m, afterReplace, B).value?.pieces ?? []) as Rec[]).find(p => p.id === b2.id)?.title ?? null,
+        untouched: [digestOf(afterReplace, A) === digestOf(start, A), digestOf(afterReplace, C) === digestOf(start, C)] },
+      `${host}: P86.CS1 — replace names ${B} alone (today it replaces the whole catalogue: ${show(replaced)})`).toEqual({
+        status: 200, pieces: MODULES.length + 4 + 2 + 4, shared: sorted(MODULE_IDS), b: sorted([b1.id, b2.id]), bTitle: `${b2.title}, reshot`, untouched: [true, true] });
+      const c = fourOf(C);
+      const wrong = await importJson(m, c.slice(0, 3), { mode: 'full', expire: '13' });
+      expect.soft([wrong.status, wrong.body.expire ?? null], `${host}: P86.CS1 — full's guard counted over ${C} alone: 13 refused 409 naming 1 (${show(wrong)})`).toEqual([409, 1]);
+      const full = await importJson(m, c.slice(0, 3), { mode: 'full', expire: '1' });
+      const afterFull = await loadDocument(m, 'catalog');
+      const cPieces = (partOf(m, afterFull, C).value?.pieces ?? []) as Array<{ id: string; lifecycle?: { status?: string } }>;
+      expect.soft({ status: full.status, c: cPieces.map(p => [p.id, p.lifecycle?.status ?? 'live']), shared: sorted(sharedOf(afterFull)),
+        untouched: [digestOf(afterFull, A) === digestOf(start, A), digestOf(afterFull, B) === digestOf(afterReplace, B)] },
+      `${host}: P86.CS1 — full keeps ${C}'s left-out record expired; ${A}, ${B} and the shared pieces untouched (${show(full)})`).toEqual({
+        status: 200, c: [[c[0]!.id, 'live'], [c[1]!.id, 'live'], [c[2]!.id, 'live'], [c[3]!.id, 'expired']], shared: sorted(MODULE_IDS), untouched: [true, true] });
+    }, 120_000);
+
+    it(`host (${host}): the skip and the dry run — an identical merge of ${A}'s records is skipped (the manifest digest unchanged); a one-field change to one record writes one revision, moving N, S and H, ${A}'s pointer alone; a dry run of a new product writes nothing, no part included`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      const loaded = await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' });
+      expect(loaded.status, `${host}: PRECONDITION — the three products load (${show(loaded)})`).toBe(200);
+      const start = await loadDocument(m, 'catalog'), parts = partKeys(m);
+      const same = await importJson(m, fourOf(A), { mode: 'merge' });
+      expect.soft([same.status, same.body.skipped ?? 'no skipped member', same.body.revision, Object.keys(productsOf(start)).sort()],
+        `${host}: P86.CS1 — the identical load skipped at the revision in force (${show(same)})`).toEqual([200, true, start.revision, sorted([A, B, C])]);
+      const { 'If-Match': ifMatch } = await preconditions(m);
+      const dry = await importJson(m, fourOf(UNKNOWN), { mode: 'merge', dryRun: '1' }, { 'If-Match': ifMatch! });
+      const afterDry = await loadDocument(m, 'catalog');
+      expect.soft([dry.status, dry.body.dryRun ?? 'no dryRun member', dry.body.pieces, afterDry.revision, partKeys(m), Object.keys(productsOf(afterDry)).sort()],
+        `${host}: P86.CS1 — the dry run answers the assembled count and writes nothing (${show(dry)})`).toEqual(
+        [200, true, MODULES.length + 16, start.revision, parts, sorted([A, B, C])]);
+      const [a1] = fourOf(A) as [Rec];
+      const edited = await importJson(m, [{ ...a1, title: `${a1.title}, retouched` }], { mode: 'merge' });
+      const after = await loadDocument(m, 'catalog');
+      expect.soft({ status: edited.status, N: after.revision, S: after.publication.revision, H: after.publication.digest !== start.publication.digest,
+        pointers: [digestOf(after, A) !== digestOf(start, A), digestOf(after, B) === digestOf(start, B), digestOf(after, C) === digestOf(start, C)] },
+      `${host}: P86.CS1 — a change inside a part is a change of the catalogue (${show(edited)})`).toEqual({
+        status: 200, N: start.revision + 1, S: start.publication.revision + 1, H: true, pointers: [true, true, true] });
+    }, 120_000);
+
+    it(`host (${host}): one If-Match and one rollback for the whole catalogue — a load over a stale base is refused 409 whatever product it names; a rollback to the revision after ${A}'s load is one revision whose manifest indexes ${A} alone at its pointer then, ${B} read 404 naming it`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      expect((await importJson(m, fourOf(A), { mode: 'merge' })).status, `${host}: PRECONDITION — ${A} loads`).toBe(200);
+      const afterA = await loadDocument(m, 'catalog'), stale = await preconditions(m);
+      expect((await importJson(m, fourOf(B), { mode: 'merge' })).status, `${host}: PRECONDITION — ${B} loads`).toBe(200);
+      expect((await importJson(m, fourOf(C), { mode: 'merge' })).status, `${host}: PRECONDITION — ${C} loads`).toBe(200);
+      const head = await loadDocument(m, 'catalog');
+      const refused = await importJson(m, fourOf(UNKNOWN), { mode: 'merge' }, stale);
+      expect.soft(refused.status, `${host}: P86.CS1 — a stale base refused for a product no later load touched (${show(refused)})`).toBe(409);
+      const back = await asOperator(m, 'POST', `/content/catalog/rollback/${afterA.revision}?scope=${TENANT}`, {}, await preconditions(m));
+      const after = await loadDocument(m, 'catalog');
+      const b = await productRead(m, B), a = await productRead(m, A);
+      expect.soft({ status: back.status, revision: after.revision, products: Object.keys(productsOf(after)), a: digestOf(after, A) === digestOf(afterA, A) && /^[0-9a-f]{64}$/.test(digestOf(after, A)),
+        aRead: [a.status, readIds(a)], bRead: [b.status, errorsOf(b).some(e => e.includes(B)) ? `names ${B}` : `does not (${show(b)})`] },
+      `${host}: P86.CS1 — the rollback writes ${A}'s manifest forward (today no index: ${show(back)})`).toEqual({
+        status: 200, revision: head.revision + 1, products: [A], a: true, aRead: [200, sorted(fourOf(A).map(r => r.id))], bRead: [404, `names ${B}`] });
+    }, 120_000);
+
+    it(`host (${host}): a part is written before the pending head — a load whose part cannot be written answers 503 and leaves the catalogue in force and nothing pending, so the next load is accepted`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      expect((await importJson(m, fourOf(A), { mode: 'merge' })).status, `${host}: PRECONDITION — ${A} loads`).toBe(200);
+      const before = await loadDocument(m, 'catalog');
+      const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.put;
+      Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
+        if (PART.test(key)) throw new Error('P86 fixture: the part write fails');
+        return original.call(m.storage, key, raw, options);
+      } });
+      let failed: Answer;
+      try { failed = await importJson(m, fourOf(B), { mode: 'merge' }); } finally { Reflect.deleteProperty(bucket, 'put'); }
+      const unchanged = await loadDocument(m, 'catalog');
+      expect.soft([failed.status, unchanged.revision, unchanged.publication, Object.keys(productsOf(unchanged))],
+        `${host}: P86.CS1 — nothing committed (today no part is written and the load commits: ${show(failed)})`).toEqual([503, before.revision, before.publication, [A]]);
+      const retried = await importJson(m, fourOf(B), { mode: 'merge' });
+      const after = await loadDocument(m, 'catalog');
+      expect.soft([retried.status, Object.keys(productsOf(after)).sort(), partOf(m, after, B).missing ?? 'stored'],
+        `${host}: P86.CS1 — nothing left pending: the next load is accepted and writes ${B}'s part (${show(retried)})`).toEqual([200, sorted([A, B]), 'stored']);
+    }, 120_000);
+
+    it(`host (${host}): the cap — a load whose manifest index would pass 2 MiB is refused 413 manifest_too_large, nothing written (no revision, no part); the load before it, 60% of the cap, indexes its products`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      // 64-character product ids (the anchor's own bound); the per-load count from the proposed pointer's size (S1).
+      const productOf = (k: number) => `COA-CAP-${String(k).padStart(8, '0')}-`.padEnd(64, 'X');
+      const entry = documentBytes({ [productOf(1)]: { digest: 'f'.repeat(64), records: 1 } }) - 1;
+      const perLoad = Math.ceil(0.6 * PUBLICATION_MAX_BYTES / entry);
+      const recordsFrom = (from: number) => Array.from({ length: perLoad }, (_, i) => ({ id: `c${String(from + i).padStart(8, '0')}`, type: 'on-model', title: 't',
+        slotTypes: [CAROUSEL], featuredProductIds: [productOf(from + i)] }));
+      const first = recordsFrom(1), second = recordsFrom(1 + perLoad);
+      expect([perLoad <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(first)).byteLength < INPUT_MAX_BYTES],
+        `PRECONDITION: ${perLoad} records per load within the import's caps`).toEqual([true, true]);
+      const one = await importJson(m, first, { mode: 'merge' });
+      const afterOne = await loadDocument(m, 'catalog'), parts = partKeys(m);
+      expect.soft([one.status, Object.keys(productsOf(afterOne)).length, parts.length],
+        `${host}: P86.CS1 — the first load indexes its ${perLoad} products (${show(one)})`).toEqual([200, perLoad, perLoad]);
+      const two = await importJson(m, second, { mode: 'merge' });
+      expect.soft([two.status, two.body.code ?? null, (await loadDocument(m, 'catalog')).revision, partKeys(m).length],
+        `${host}: P86.CS1 — the second refused by name, nothing written (today: ${show(two)})`).toEqual([413, 'manifest_too_large', afterOne.revision, parts.length]);
+    }, 600_000);
+
+    it(`host (${host}): LOCK — a catalogue that declares no product slots is today's document: its images shared, no index, no part object; the anchor's page reads no part; a load over the import's caps refused 413 as today`, async () => {
+      const m = await mount(host, { ...DOCS, pieces: [...MODULES, ...ANCHOR_IMAGES, ...OTHER_IMAGES] });
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      const merged = await importJson(m, [image('img-ch857-5', [A], 'Handbags', 'studio')], { mode: 'merge' });
+      const d = await loadDocument(m, 'catalog');
+      expect.soft([merged.status, Object.keys(d.document).sort(), sharedOf(d).includes('img-ch857-5'), partKeys(m)],
+        `${host}: P86.CS1 — today's document (${show(merged)})`).toEqual([200, ['pieces', 'version'], true, []]);
+      const s = await shopperOn(m);
+      invalidatePublicationCache();
+      const page = await counted(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-lock'));
+      expect.soft([page.result.status, carousel(page.result), partReads(page.reads).length], `${host}: P86.CS1 — P80's carousel, no part read`).toEqual(
+        [200, SERVED_FOR_BLACK, 0]);
+      const over = await importJson(m, Array.from({ length: INPUT_MAX_RECORDS + 1 }, (_, i) => ({ id: `x${i}` })), { mode: 'merge' });
+      expect.soft([over.status, over.body.code ?? null, (await loadDocument(m, 'catalog')).revision], `${host}: P86.CS1 — over the caps as today (${show(over)})`).toEqual(
+        [413, 'input_budget_exceeded', d.revision]);
+    }, 120_000);
+  }
+});
+
+// ===========================================================================
+// unit:P86.CS2 — a product page's decision reads the manifest and one part; its work does not grow with the range
+// ===========================================================================
+
+/** One product page measured (S8): the operator's per-product read cold, then the decision for the anchor and its Black
+ * variant cold, then the same page warm. */
+async function measured(m: Mounted) {
+  const s = await shopperOn(m);
+  const manifest = await loadDocument(m, 'catalog');
+  invalidatePublicationCache();
+  const operator = await counted(m, () => productRead(m, A));
+  invalidatePublicationCache();
+  const cold = await counted(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-cold'));
+  const warm = await counted(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-warm'));
+  return { cold, warm, operator, manifest };
+}
+
+describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
+  for (const host of HOSTS) {
+    it(`host (${host}): with a range of N = 50 and of N = 5,000 products, the anchor's page reads the manifest and ONE part — the anchor's, at the same address at both sizes — and serves P80's carousel; its reads are the same at both sizes; the manifest it parses holds the shared pieces only; warm, it reads no part; the operator's per-product read reads that one part`, async () => {
+      const at: Record<number, Awaited<ReturnType<typeof measured>>> = {};
+      for (const n of [50, 5000]) at[n] = await measured(await rangeTenant(host, n));
+      for (const n of [50, 5000]) {
+        const { cold, warm, operator, manifest } = at[n]!;
+        const anchorPart = partKey(digestOf(manifest, A));
+        expect.soft({ status: cold.result.status, served: carousel(cold.result), parts: partReads(cold.reads).map(r => r.key), shared: sorted(sharedOf(manifest)),
+          indexed: Object.keys(productsOf(manifest)).length, warm: [carousel(warm.result), partReads(warm.reads).length], operator: partReads(operator.reads).map(r => r.key) },
+        `${host}: P86.CS2 — N = ${n}: the manifest and the anchor's part alone (today the whole range in one document, no part: ${classes(cold.reads).join(', ')})`).toEqual({
+          status: 200, served: SERVED_FOR_BLACK, parts: [anchorPart], shared: sorted([...MODULE_IDS, 'img-brand-1']), indexed: n + 3,
+          warm: [SERVED_FOR_BLACK, 0], operator: [anchorPart] });
+      }
+      const [small, large] = [at[50]!, at[5000]!];
+      expect.soft({ reads: classes(large.cold.reads), partBytes: partReads(large.cold.reads).map(r => r.bytes) },
+        `${host}: P86.CS2 — the decision's reads and the part it parses are the same at N = 5,000 as at N = 50`).toEqual({
+        reads: classes(small.cold.reads), partBytes: partReads(small.cold.reads).map(r => r.bytes) });
+    }, 600_000);
+
+    it(`host (${host}): no part is read where none is needed — a page naming no anchor, a variant alone, or an anchor the manifest does not index (${UNINDEXED}) decides the scoped carousel empty (P80 AS2) and reads no part; a page with no scoped slot reads no part though it names the anchor`, async () => {
+      const m = await rangeTenant(host, 50);
+      const indexed = await loadDocument(m, 'catalog');
+      expect(Object.keys(productsOf(indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      const s = await shopperOn(m);
+      const cases: Array<[string, string, Record<string, string>]> = [['no anchor', 'pdp', {}], ['a variant alone', 'pdp', { variant: BLACK }],
+        ['an anchor not indexed', 'pdp', { anchor: UNINDEXED }], ['a page with no scoped slot', 'cart', { anchor: A }]];
+      const seen: unknown[] = [];
+      for (const [name, page, signals] of cases) {
+        invalidatePublicationCache();
+        const { result, reads } = await counted(m, () => snapshotOf(m, s, page, signals, 'p86-cs2-none'));
+        seen.push([name, result.status, page === 'cart' ? servedIn(result, 'pdp-recent') : carousel(result), partReads(reads).length]);
+      }
+      expect.soft(seen, `${host}: P86.CS2 — the scoped carousel empty and no part read; the cart's own slot served`).toEqual([
+        ['no anchor', 200, [], 0], ['a variant alone', 200, [], 0], ['an anchor not indexed', 200, [], 0], ['a page with no scoped slot', 200, [M.recent], 0]]);
+    }, 300_000);
+
+    it(`host (${host}): every reader resolves the anchor's part — each carousel decision replays equal; its receipt names the image's title; a click on an image teaches its own catalogue format reading at most one part`, async () => {
+      const m = await rangeTenant(host, 50);
+      const indexed = await loadDocument(m, 'catalog');
+      expect(Object.keys(productsOf(indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      const s = await shopperOn(m);
+      const page = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-readers');
+      const images = page.decisions.filter(d => d.slot === CAROUSEL);
+      expect(sorted(images.map(d => d.contentId)), `${host}: PRECONDITION — the anchor's carousel is served (${page.status})`).toEqual(SERVED_FOR_BLACK);
+      for (const d of images) expect((await s.ack(page, d)).status, `${host}: PRECONDITION — ${d.contentId} is acknowledged`).toBe(200);
+      await m.drainLedger();
+      const records = storedDecisions(m, s.subject).filter((r: DecisionRecord) => r.slot === CAROUSEL);
+      expect(records.length, `${host}: PRECONDITION — the carousel's records are stored`).toBe(images.length);
+      const replays: unknown[] = [];
+      for (const r of records) { const replay = await replayOf(m, r.decision_id); replays.push([r.item_id, replay.status, replay.body.classification ?? replay.body.reason ?? null]); }
+      expect.soft(replays, `${host}: P86.CS2 — replay reads the record's anchor's part`).toEqual(records.map(r => [r.item_id, 200, 'equal']));
+      const titles = new Map(ANCHOR_IMAGES.map(r => [r.id, r.title]));
+      const receipts = (await receiptsOf(m, s.subject)).filter(x => x.slot === CAROUSEL);
+      expect.soft(receipts.map(x => [x.item, x.title ?? null]), `${host}: P86.CS2 — the receipts route names each image as it names a shared piece`).toEqual(
+        receipts.map(x => [x.item, titles.get(String(x.item)) ?? 'not an anchor image']));
+      const clicked = images.find(d => d.contentId === 'img-ch857-1')!;
+      const click = await counted(m, () => s.click(page, clicked));
+      expect.soft([click.result.status, partReads(click.reads).length <= 1 ? 'at most one part read' : `${partReads(click.reads).length} part reads`],
+        `${host}: P86.CS2 — the click is accepted reading at most one part`).toEqual([200, 'at most one part read']);
+      const set = await servePage(m, s, 'pdp');
+      const taught = ((set.records[0]?.inputs?.affinity ?? {}) as Record<string, Record<string, number>>).contentType ?? {};
+      expect.soft(Object.keys(taught).sort(), `${host}: P86.CS2 — the click teaches the image's own format (its catalogue tag, read from its part)`).toEqual(['on-model']);
+    }, 300_000);
+  }
+});
+
+// ===========================================================================
+// unit:P86.CS3 — the kit states the manifest, the parts and their limits
+// ===========================================================================
+
+describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
+  it('logic: kit 03 states the manifest (`productSlots`, `products`), the parts, the routing by the first id, the modes per product, the cap\'s refusal `manifest_too_large` with the two-level index next, and part retention under the purge; kit 02 states the per-product read on GET /content/{kind} and the part beside the 2 MiB limits; today\'s one-document sentences are gone', () => {
+    const kit02 = readTree('docs/kit/02-api-reference.md'), kit03 = readTree('docs/kit/03-payload-schemas.md');
+    const paragraphs = (text: string) => text.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
+    const has = (text: string, ...words: Array<string | RegExp>) => paragraphs(text).some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
+    const flat03 = kit03.replace(/\s+/g, ' ');
+    const getRow = kit02.split('\n').find(line => line.startsWith('| `GET /content/{kind}?scope=`')) ?? '';
+    const limits = paragraphs(kit02).find(p => p.startsWith('Configuration PUT/PATCH, import, pull')) ?? '';
+    expect.soft({
+      manifest: has(kit03, '`productSlots`', '`products`', /\bpart\b/),
+      routing: has(kit03, '`featuredProductIds`', '`productSlots`', /\bfirst id\b/),
+      modes: has(kit03, '`merge`', '`replace`', '`full`', /\bpart\b/),
+      cap: has(kit03, '`manifest_too_large`', /two-level/),
+      retention: has(kit03, /\bparts?\b/, /\bpurge/),
+      oneDocument: flat03.includes('the catalog is one such document per scope'),
+      sharding: flat03.includes('a larger corpus is a conversation about sharding the catalog'),
+      perProductRead: getRow.includes('product='),
+      partLimit: /\bparts?\b/.test(limits),
+    }, 'P86.CS3 — the kit states design A (today it states one catalogue document per scope and sharding as a conversation)').toEqual({
+      manifest: true, routing: true, modes: true, cap: true, retention: true, oneDocument: false, sharding: false, perProductRead: true, partLimit: true });
+  });
+});
