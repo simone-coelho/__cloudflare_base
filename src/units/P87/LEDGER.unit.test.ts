@@ -58,6 +58,10 @@
 //   lower-case `:kind`), so the leg runs where the route is served, the demo profile.                → SC1's segment leg
 //   (b) On the demo profile a token carrying catalog-import among other roles (['operator','catalog-import']) is held to the
 //   eight routes: the catalogue role restricts.                                                      → SC2's mixed-roles leg
+// R-P435 (the spec review at 11bc6017): G1, the mixed-roles leg runs two tokens, ['operator','catalog-import'] and
+//   ['catalog-import','admin']; G2, the kit leg requires the eight routes inside one sentence that names catalog-import and admits
+//   them. Ruled residual, no leg: a wrong-case segment on the literal paths (import, pull, publication, recover) matches no route;
+//   the credential is refused 403 at the gate before the router's 404 (an operator's 404).
 //
 // WHAT THE CODE OR THE BRIEF CONTRADICTS (told):
 //   · Kit lines: the ticket cites kit 02 :2359/:2361 (stale); at 91e3a6e8 the machine-credential paragraph is :2469 (the brief's
@@ -114,6 +118,9 @@
 //     (logs/a/today-probe.log, every hard expect made soft in a scratch copy): only the membership LOCK clause and the probes' reads
 //     LOCK are green; every other clause RED for the missing credential.
 //   the sketch (sketches/p87.py on 91e3a6e8): 18/18 four times (logs/a/fix-1..3.log, fix-probe2.log); tsc exit 0 on the sketch tree.
+//   round 4 (R-P435, logs/r4/): the sketch 21/21 twice (fix-1..2.log); today 19 RED and the 2 LOCK legs green (today.log); the
+//     reviewer's controls each RED on its own leg alone — lastrole, adminoverride and firstrole the mixed-roles leg, kitrefused
+//     the kit leg (c-*.log).
 //   round 3 (R-P431, logs/r3/): the sketch 21/21 twice (fix-1..2.log), the mark reading the :kind segment lower-cased; today 19 RED
 //     and the 2 LOCK legs green (today.log; the segment leg's admission clause and the mixed-roles leg's LOCK clause green today,
 //     their refusals RED); the reviewer's controls each RED on its own leg alone — kitnopubread the kit leg (the publication read
@@ -578,22 +585,24 @@ describe('unit:P87.SC2', () => {
   }
 
   // R-P431 (b): the catalogue role restricts — a token carrying it among other roles is held as one carrying it alone.
-  it("demo profile, AUTH_MODE enforced (session and do): a service token minted with roles ['operator', 'catalog-import'] is held to the eight routes as one carrying catalog-import alone — the catalogue read as an operator token reads it and an import attributed to its subject admitted, every other operator request refused 403 catalog_credential before any store call", async () => {
-    for (const host of HOSTS) {
+  // R-P435 G1: in either place among the roles, beside operator or beside admin (so neither the first nor the last role
+  // alone decides, and admin does not override it).
+  it("demo profile, AUTH_MODE enforced (session and do): service tokens minted with roles ['operator', 'catalog-import'] and ['catalog-import', 'admin'] are each held to the eight routes as one carrying catalog-import alone — the catalogue read as an operator token reads it and an import attributed to its subject admitted, every other operator request refused 403 catalog_credential before any store call", async () => {
+    for (const [host, roles] of HOSTS.flatMap(h => [['operator', ROLE], [ROLE, 'admin']].map(r => [h, r] as const))) {
       const s = await stamp(host, 'demo', 'enforced'); ready(s);
-      const mixed = await mintService(SUBJECTS.catalog, ['operator', ROLE]), operator = await mintService(SUBJECTS.operator, ['operator', 'admin']);
+      const mixed = await mintService(SUBJECTS.catalog, [...roles]), operator = await mintService(SUBJECTS.operator, ['operator', 'admin']);
       const asMixed = await s.call('GET', '/content/catalog', { token: mixed }), asOperator = await s.call('GET', '/content/catalog', { token: operator });
       const p1 = await pre(s, 'catalog', operator);
       const imported = await s.call('POST', '/content/catalog/import?mode=merge&format=json', { token: mixed, body: [piece('p87.mixed')], headers: p1.headers });
       const doc = await s.call('GET', '/content/catalog', { token: operator });
       expect.soft({ read: asMixed.status, sameAsOperator: canonical(asMixed.body) === canonical(asOperator.body), imported: imported.status, actor: doc.body.actor, revision: doc.body.revision },
-        `${host}: P87.SC2 (R-P431 (b)) — LOCK: the mixed-roles token reads the catalogue as the operator token does and imports, attributed to its subject (${show(imported)})`)
+        `${host}, roles ${JSON.stringify(roles)}: P87.SC2 (R-P431 (b)) — LOCK: the mixed-roles token reads the catalogue as the operator token does and imports, attributed to its subject (${show(imported)})`)
         .toEqual({ read: 200, sameAsOperator: true, imported: 200, actor: SUBJECTS.catalog, revision: p1.revision + 1 });
       const requests = await otherOperatorRequests(s, operator, { edge: true, demo: true });
       const answers: Answer[] = [];
       for (const r of requests) answers.push(await s.call(r.method, r.path, { ...r.opts, token: mixed }));
       expect.soft(requests.map((r, i) => refusalRow(r, answers[i]!, true)),
-        `${host}: P87.SC2 (R-P431 (b)) — the token carrying catalog-import among other roles is held to the eight routes: each other operator request answers 403 catalog_credential with no store call`)
+        `${host}, roles ${JSON.stringify(roles)}: P87.SC2 (R-P431 (b), R-P435 G1) — the token carrying catalog-import among other roles is held to the eight routes: each other operator request answers 403 catalog_credential with no store call`)
         .toEqual(requests.map(r => refused(r, true)));
     }
   });
@@ -750,15 +759,19 @@ describe('unit:P87.SC3', () => {
     const paragraph = kit.find(line => line.startsWith('Customer machine credentials are independently registered')) ?? '';
     const migration = kit.find(line => line.startsWith('Apply additive migration')) ?? '';
     const sentences = (text: string) => text.split(/(?<=[.;])\s+(?=[A-Z`(])/);
+    /** The routes the best of the admitting sentences leaves unstated; all eight when no sentence admits. */
+    const admittedIn = (admitting: string[]) => admitting.map(text => KIT_ROUTES.filter(([, stated]) => !stated.test(text)).map(([route]) => route))
+      .sort((a, b) => a.length - b.length)[0] ?? KIT_ROUTES.map(([route]) => route);
     expect.soft({
       paragraph: paragraph ? 'found' : 'missing',
       role: paragraph.includes('`catalog-import`'),
-      routesNotStated: KIT_ROUTES.filter(([, stated]) => !stated.test(paragraph)).map(([route]) => route),
+      // R-P435 G2: the eight routes stated as ADMITTED — inside one sentence naming catalog-import and saying it admits them.
+      routesNotStatedAsAdmitted: admittedIn(sentences(paragraph).filter(s => s.includes('catalog-import') && /admit/i.test(s))),
       refusal: /\b403\b/.test(paragraph) && paragraph.includes('catalog_credential'),
       narrowing: sentences(paragraph).some(s => /replac/i.test(s) && s.includes('catalog-import') && /\boperator\b/.test(s)),
       migration: sentences(migration).some(s => s.includes('0012') && s.includes('0013') && s.includes('0014')),
-    }, 'P87.SC3 — kit 02 states the catalogue credential, the eight routes (each with its method; the publication read and recover with kind catalog), the 403 catalog_credential refusal, the narrowing replacement, and names migration 0014 (today it names operator and admin roles only, and migration 0012 alone)')
-      .toEqual({ paragraph: 'found', role: true, routesNotStated: [], refusal: true, narrowing: true, migration: true });
+    }, 'P87.SC3 — kit 02 states the catalogue credential, the eight routes it admits (in one sentence naming catalog-import that admits them; each with its method; the publication read and recover with kind catalog), the 403 catalog_credential refusal, the narrowing replacement, and names migration 0014 (today it names operator and admin roles only, and migration 0012 alone)')
+      .toEqual({ paragraph: 'found', role: true, routesNotStatedAsAdmitted: [], refusal: true, narrowing: true, migration: true });
   });
 
   for (const host of HOSTS) {
