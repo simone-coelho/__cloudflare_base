@@ -87,7 +87,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { issueSessionCapability, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { signAssertion } from '@/identity/assertion';
+import { SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { identityRoutes } from '@/routes/identity';
+import { tenantMiddleware } from '@/tenancy/middleware';
+import type { TenantId } from '@/tenancy/tenant';
+import type { Env } from '@/types/env';
+import { Hono } from 'hono';
 import { createCore } from '@/sdk/core';
 import { createListen } from '@/sdk/listen';
 import { testHost } from '@/sdk/testHost';
@@ -147,26 +153,37 @@ async function at(m: Mounted, key: string, field: 'n' | 's'): Promise<Record<str
 }
 const CELL = 'c=paid_social|v=1';
 /**
- * R-P398: a RECOGNISED shopper — a canonical `sh_` id as the session's subject, issued as W21.E1.08's harness issues it
- * (src/units/W21/B2.unit.test.ts shopperOn: the capability's kind anonymous, the subject a shopper id) — with her own
- * explicit choice through the real route: the shopper whose enrollment anchor is read from the identity projection
- * (src/content/holdout.ts enrollmentAnchorOf, isShopperId), unlike `shopperOn`'s browser, which is its own anchor.
+ * R-P398: a RECOGNISED shopper — a browser with her explicit choice (`shopperOn`) linked to an account through the route
+ * production mounts (`POST /v1/:tenant/identity/link`, the site's signed assertion; src/units/P10/LEDGER.unit.test.ts
+ * P10.F1's harness), her requests then carrying the recognised session the link answers: a canonical `sh_` subject,
+ * whose enrollment anchor the engine reads from the identity projection (src/content/holdout.ts enrollmentAnchorOf).
  */
 async function recognisedOn(m: Mounted): Promise<Pick<Shopper, 'action'> & { subject: string }> {
-  const subject = `sh_${crypto.randomUUID().replace(/-/g, '')}`;
-  const grant = await issueSessionCapability(m.env, { tenant: TENANT, subject, sessionId: `s-${crypto.randomUUID()}`, kind: 'anonymous' });
-  const call = async (path: string, body: unknown): Promise<Answer> => {
-    const response = await m.fetch(new Request(`https://shop.invalid${path}`, { method: 'POST',
-      headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: grant.capability, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
-    const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+  const browser = await shopperOn(m);
+  const identity = new Hono<{ Bindings: Env }>();
+  identity.use('*', tenantMiddleware());
+  identity.route('/v1', identityRoutes);
+  const pending: Promise<unknown>[] = [];
+  const exp = Math.floor(Date.now() / 1000) + 300, account = `account-p85-${crypto.randomUUID().slice(0, 8)}`;
+  const assertion = await signAssertion('parity-identity-material', TENANT as TenantId, browser.subject, account, exp);
+  const response = await identity.fetch(new Request(`https://shop.invalid/v1/${TENANT}/identity/link`, { method: 'POST',
+    headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: browser.grant.capability, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visitorId: browser.subject, accountId: account, source: 'login', exp, assertion }) }),
+  m.env, { waitUntil: (p: Promise<unknown>) => { pending.push(p); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
+  const body = await response.json().catch(() => ({})) as { shopperId?: string; session?: { capability?: string; sessionId?: string } };
+  await Promise.allSettled(pending);
+  await m.drain();
+  expect([response.status, typeof body.session?.capability, typeof body.shopperId], `PRECONDITION (${m.host}): the browser's link to an account is accepted (${JSON.stringify(body).slice(0, 200)})`)
+    .toEqual([200, 'string', 'string']);
+  const capability = body.session!.capability!, subject = body.shopperId!;
+  return { subject, action: async (event: { type: string; data: Record<string, unknown> }) => {
+    const answer = await m.fetch(new Request('https://shop.invalid/realtime/action', { method: 'POST',
+      headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: capability, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...event, source: 'sdk', userId: subject, sessionId: body.session!.sessionId ?? browser.grant.sessionId, timestamp: Date.now(), eventId: crypto.randomUUID() }) }));
+    const out = { status: answer.status, body: await answer.json().catch(() => ({})) as Record<string, unknown> };
     await m.drain();
-    return answer;
-  };
-  const chosen = await call(`/realtime/session/${grant.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
-    choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: grant.grantId, iat: grant.iat, exp: grant.exp } });
-  expect(chosen.status, `PRECONDITION (${m.host}): the recognised shopper's explicit choice is accepted (${JSON.stringify(chosen.body).slice(0, 160)})`).toBe(200);
-  return { subject, action: (event: { type: string; data: Record<string, unknown> }) => call('/realtime/action', { ...event, source: 'sdk', userId: subject,
-    sessionId: grant.sessionId, timestamp: Date.now(), eventId: crypto.randomUUID() }) };
+    return out;
+  } };
 }
 /** W21.E1.08's form (src/units/W21/B2.unit.test.ts): the identity projection's reads fail on the sessions and the cache stores. */
 function identityReadsFail(m: Mounted): void {
