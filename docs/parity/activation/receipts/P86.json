@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P86",
+  "workOrderHash": "sha256:bae0dc939df12801e8feb011ed7e46d3cb5579687bf72cabd999a4a49e14a815",
+  "artifact": {
+    "revision": "499a48b017b51084c820618d9e1aaf0d505a81a1",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p86-joined-r2 merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p86-build at 4b50de29 (76c112a8, 48c7ad08, 3cd53cb9 and ec9070d1 the merges of the S32 spec 59729524, 0ff67749, 9eff5182 and 0e0d651d; 9b72dbae the mechanism and the regenerated SDK bundles and types; fa8a8920 kit 02 and kit 03 and the citation remap; b5073fce the telemetry actor constraint; c571fbb8 the part_unavailable 503 at the snapshot route; 686698d7, 6e204102 and 4b50de29 the id index of R-P424: src/content/kinds.ts and src/content/types.ts give the catalogue a manifest form under its one revision, one If-Match and one rollback (the shared pieces, a products index of product id to digest and record count, and productSlots), each product's image records one immutable content-addressed part of at most 2 MiB written through the store's exact-create before the pending head is reserved (src/config/publication.ts), the manifest digest covering every part digest, parts kept while a kept revision references them and the purge bounded and never deleting an object uploaded less than 15 minutes ago; the manifest references one content-addressed id index object per revision (idIndex: digest and record count; the object at content/ids/, the id of every part record mapped to its product), written before the pending head like a part, kept and purged with the parts, read by loads only and never on the decision path, capped at 8 MiB with 413 id_index_too_large; src/routes/content.ts routes a record by its first id with a variant_first diagnostic, refuses a pooled piece inside a part, applies merge, replace and full per product and touches the shared pieces only when the file carries one, skips on the manifest digest, writes nothing on a dry run, answers 413 manifest_too_large at the one-level index cap naming the manifest, serves the per-product read GET /content/catalog?scope=&product= and the PUT round trip carrying the If-Match'd revision's pointers (a PUT omitting a product removes its part), refuses a rollback whose part is lost with 410 after one HEAD per pointer, a record moving between products with 422 record_moved naming both products unless the file carries both (then the old part drops it and the new holds it), a shared piece reusing a part record's id with 422 id_in_part and a part record reusing a shared id with 422 id_shared; src/content/service.ts reads the manifest and one part for a product page through its anchor with a separate 8 MiB part cache cleared by invalidatePublicationCache, no part without an anchor, and the snapshot route (src/routes/decisions.ts) answers 503 part_unavailable with no fallback to the shared pieces when the part cannot be read; src/learn/replay.ts and the receipt, replay and learn routes resolve a part-held content id through an anchor and name an unanchored one unresolved; src/reflex/contentTelemetry.ts resolves a click only through the acting shopper's own ring, the actor passed from src/durable-objects/ShopperReflex.ts, src/services/RealtimeSegmentEngine.ts and src/reflex/bufferedAction.ts, a foreign decision id resolving nothing and reading no ring; src/sdk/listen.ts and src/sdk/types.ts give P85's carousel beacon an optional product, which the beacon's admission in src/content/service.ts requires on a parted tenant (product_required); kit 03 states the manifest, the parts, the first-id rule and the canonical order, the per-product modes, the 413 and the two-level index as the next step, part retention, the record-move rule and the two collision refusals, the id index as a per-revision load-side object, the lost-part operator fact and how a click resolves; kit 02 states the envelope, the per-product read, the part beside the member and the beacon's product; the SDK bundles and declarations regenerated within their budgets (esm 108,058 of 112,640, iife 113,449 of 117,760, the head script and Meridian unchanged); a tenant without productSlots behaves exactly as today).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S32/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S32/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P86/implementer/REPORT.md",
+      "git commits on rem/p86-joined-r2 up to 499a48b0"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P86 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S32/reviewer-p86/logs/r2-w-p86-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S32/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P86/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-26T12:06:50.563Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -21,6 +21,7 @@ import { isEventNonce, isEventTimestamp } from '@/events/actionTypes';
 import { isOffLimitsLayoutRecord, validDecisionMeasurement } from '@/ledger/records';
 import type { ContentCatalog, DecisionInputs, DecisionRecord, LearnConfig, SlotCatalog, SlotStrategy } from '@/content/types';
 import { liftArchiveKey } from './fan';
+import { withAnchorPart } from '@/content/service';
 import { DEFAULT_STATS, type LiftSnapshot } from './stats';
 
 export interface ReplayDiff { field: string; served: unknown; replayed: unknown }
@@ -381,10 +382,15 @@ async function replayAdmitted(env: Env, served: DecisionRecord, deps: ReplayDeps
     v.learn > 0 ? deps.doc<LearnConfig>(LEARN_KIND, scope, v.learn) : Promise.resolve(DEFAULT_LEARN),
   ]); } catch (error) { return fail(served, error instanceof ReplayDependencyError ? error.message : 'recorded configuration dependency could not be read'); }
   requireRetention(env, served.retention?.ledger, served.tenant, 'ledger');
-  const [catalog, slots, learn] = documents;
-  if (!catalog) return fail(served, `catalog revision ${v.catalog} is not in the store`);
+  const [manifestOrCatalog, slots, learn] = documents;
+  if (!manifestOrCatalog) return fail(served, `catalog revision ${v.catalog} is not in the store`);
   if (!slots) return fail(served, `slots revision ${v.slots} is not in the store`);
   if (!learn) return fail(served, `learn revision ${v.learn} is not in the store`);
+  // P86 (R-P405, R-P407 (5)): a catalogue with parts is replayed with the part the record's anchor names, as its
+  // decision read it (`withAnchorPart`): the record keeps the anchor (`inputs.anchor`), so no content-id index is needed.
+  let catalog: ContentCatalog;
+  try { catalog = await withAnchorPart(env, scope, manifestOrCatalog, slots.pages[served.page] ?? [], typeof served.inputs.anchor === 'string' ? served.inputs.anchor : undefined); }
+  catch { return fail(served, `the part of product ${JSON.stringify(String(served.inputs.anchor)).slice(0, 80)} named by catalog revision ${v.catalog} is not in the store`); }
   // P29 (decision D2): the record of an off-limits declared layout slot names no
   // module and measures nothing — it is recorded served-v1 whatever its slot's
   // basis — and is replayed by deciding the page again and comparing the

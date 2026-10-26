@@ -142,11 +142,12 @@ export interface Listen {
    * applied (`data-op-table`, `data-op-context`), the page, the carousel slot,
    * the image ids in painted order and the class it painted (`data-op-arm`).
    * Sent as one `carousel_exposure` action, once per page view and slot (the
-   * page view as `layoutExposure` reads it), only under the shopper's tracking
-   * consent and never in listen-only mode; it asks for no decisions. The engine
-   * counts the images only for the table version in force and a context it
-   * carries, on an arm that learns by its own assignment. Resolves when sent or
-   * not sent, never rejects.
+   * page view as `layoutExposure` reads it; P86: its `productId`, when given,
+   * sent as `product`, the part a catalogue with parts holds the images in),
+   * only under the shopper's tracking consent and never in listen-only mode; it
+   * asks for no decisions. The engine counts the images only for the table
+   * version in force and a context it carries, on an arm that learns by its
+   * own assignment. Resolves when sent or not sent, never rejects.
    */
   carouselExposure(beacon: CarouselExposure): Promise<void>;
   destroy(): void;
@@ -654,7 +655,9 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     if (typeof tableVersion !== 'string' || !tableVersion || tableVersion.length > 128 || typeof context !== 'string' || !context || context.length > 256
       || typeof page !== 'string' || !page || typeof slot !== 'string' || !slot || typeof arm !== 'string' || !arm || !distinctIds(images)) return;
     const instance = exposedOnce(page, slot, beacon.productId);
-    if (instance) await core.send('carousel_exposure', { tableVersion, context, page, slot, images: [...images] as string[], arm, pageInstance: instance });
+    // P86 (R-P409 (1)): the page view's product rides the beacon, so a catalogue with parts reads that product's part.
+    const product = typeof beacon.productId === 'string' && beacon.productId ? beacon.productId : undefined;
+    if (instance) await core.send('carousel_exposure', { tableVersion, context, page, slot, images: [...images] as string[], arm, pageInstance: instance, ...(product ? { product } : {}) });
   }
 
   /** 1 to 50 distinct non-empty ids, as a slot takes. */
