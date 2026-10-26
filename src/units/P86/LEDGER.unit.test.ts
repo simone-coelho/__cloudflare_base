@@ -118,8 +118,33 @@
 // NO NEW EXPORT IS IMPORTED: the manifest, the part, the read and the refusal are read loosely through the routes and the
 // mount's bucket.
 //
-// MEASURED: not yet. The provisional abbe8da5 and R-P407's application (the variant_first case of the routing leg, the
-// retention leg, the learn-routes leg, the kit's canonical order) are committed unmeasured under HOLD VITEST.
+// R-P412, R-P413 (from the build at fa8a8920), two legs added: (1) telemetry resolves a part-held content id only through
+// the acting shopper's own ring — a click naming another visitor's decision id, one unknown to her ring, or none, reads no
+// part and no other shopper's ring or key, recognizes nothing (`signals.recognized` false) and teaches no catalogue format,
+// while the visitor whose decision it is learns her image's format (no counter exists or is built: R-P413); (2) the
+// anchor's part unreadable (lost, or a body that is not its digest's) fails the product page 503 `part_unavailable`, never
+// decided from the shared pieces alone. Also ruled, no leg: a record moving between products is refused 422.
+//
+// MEASURED (_evidence/parity-step3/S32/specifier/logs/, serial, --no-cache, one worker, the tree its working directory;
+// sketches/p86.py; trees under scratch/): at this file's tree (20fab871, a-today) 38 RED for the missing behaviour and the
+// two LOCK legs GREEN; the R-P409 (1) legs RED at PRECONDITION P85 there (the beacon is refused 400 'Invalid action
+// event'; the SDK has no carouselExposure). On the P85 join 7dd77ce8 (c-today): the same 38 RED, the beacon legs now for
+// the missing behaviour (a beacon naming no product admitted where product_required is expected; the SDK sends no
+// `product`). The sketch (fix: src/config/publication.ts the part, its cache, the cap's name, the parts before the
+// reservation, the purge, missingCatalogueParts; src/content/kinds.ts, types.ts; src/routes/content.ts the parted import,
+// pull and PUT, ?product=, the envelope, the rollback's part check; src/content/service.ts the one-part read and the
+// beacon's product; src/learn/replay.ts; src/reflex/contentTelemetry.ts the own-ring resolution; src/routes/decisions.ts
+// the receipts, the learn routes, the snapshot's part_unavailable; src/sdk/listen.ts the beacon's product; the kit) 40/40
+// three times; tsc exit 0 on the sketch tree. The wrong fixes, each RED on its own legs (both hosts): wholerange (every
+// part read) the N leg, the no-part leg and the part_unavailable leg; embedded (no routing) 36; secondid 14; skipshared
+// 22; pooledpart, replaceall, sharedreplace, partafter, pendingpart, capdoc, replayshared, receiptsshared, learnshared,
+// anyanchor, nocache, nopurge, purgeall, novariantwarn, beaconshared, putkeep, rollbackblind, telemetryforeign (any
+// visitor's ring), partfallback (an unreadable part decided from the shared pieces) 2 each, on their own leg;
+// telemetryshared 4 (the readers leg and the R-P412 leg); kitleft and sdknoproduct 1 each. The whole suite (R-P248) on the
+// P85 join (logs/s32f-compare.txt): 4071 tests today, 4075 under the sketch; failing under the sketch alone only the five
+// generated-SDK checks (P34.T5, P60.SD3, P84.CO2, W40.P3 ×2: the sketch changes src/sdk/listen.ts and rebuilds no bundle; the
+// builder's regenerated bundles, granted at b8d7198a, are exact); failing today alone only P86's own; 50 failing on both
+// trees are the scratch layout (the .mjs suites, root.worker, and the console legs reading the base commit through git).
 //
 // HARNESS: src/units/_parity.ts (the mounted application, both hosts, the operator routes, the bucket double). Imports from
 // src/units/: ../_parity.
