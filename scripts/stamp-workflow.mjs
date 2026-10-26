@@ -457,6 +457,11 @@ export const LOCAL_CHECK_COMMANDS = [
   'node --max-old-space-size=3072 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=3072 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false',
   "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W13|W11[.]02 Meridian' --maxWorkers=1 --minWorkers=1",
 ];
+// R-P473 (R-P372's form): an archived package keeps the typecheck form it recorded. The earlier forms a package may
+// carry in place of the current one, a closed list; a new package records the current form (LOCAL_CHECK_COMMANDS).
+const EARLIER_TYPECHECK_COMMANDS = [
+  'node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false',
+];
 export const NODE_CHECK_COMMAND = 'node --test scripts/stamp-workflow.test.mjs scripts/seed-d1.test.mjs scripts/identity-material.test.mjs scripts/operator-seed.test.mjs scripts/lib/tool-token.test.mjs scripts/remediation/board.test.mjs';
 const PROOF_FILES = ['.eslintrc.json', 'package.json', 'package-lock.json', '.github/workflows/ci.yml',
   'tsconfig.json', 'src/sdk/tsconfig.json', 'vitest.config.ts', 'wrangler.toml',
@@ -651,7 +656,8 @@ export function validateArtifact(artifact) {
     ||new Set(proof.basis.map(p=>p.path)).size!==proof.basis.length||PROOF_FILES.some(path=>!proof.basis.some(p=>p.path===path))
     ||!/^v22\./.test(proof.runtime?.node)||!SHA.test(proof.runtime?.executable?.sha256))fail();
   const commands=proof.profile==='ci-v1'?[...LOCAL_CHECK_COMMANDS.slice(0,2),'npm test']:LOCAL_CHECK_COMMANDS;
-  if(!Array.isArray(proof.checks)||!same(proof.checks.map(c=>c.command),commands))fail();
+  const recorded=Array.isArray(proof.checks)?proof.checks.map(c=>c.command):null;
+  if(!recorded||!(same(recorded,commands)||EARLIER_TYPECHECK_COMMANDS.some(earlier=>same(recorded,commands.map((command,i)=>i===1?earlier:command)))))fail();
   const checkedBasis=validateAssetReuse(body,proof);
   let previousEnd=0;
   for(const check of proof.checks){
