@@ -1140,7 +1140,7 @@
     {
       "id": "P84",
       "title": "The context order for the carousel before paint: the published table and the head script carry shot orders (N1, N3), the arm known before paint (N4) (**amendment 11, E8, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
