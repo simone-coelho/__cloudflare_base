@@ -62,6 +62,8 @@
 //   ['catalog-import','admin']; G2, the kit leg requires the eight routes inside one sentence that names catalog-import and admits
 //   them. Ruled residual, no leg: a wrong-case segment on the literal paths (import, pull, publication, recover) matches no route;
 //   the credential is refused 403 at the gate before the router's 404 (an operator's 404).
+// R-P437 (the spec review at 284e1b15): H1, the kit leg's admitting sentence must not be a denial (no `not`, `never` or `no` in
+//   it). The last textual round by ruling: beyond H1 the prose's meaning belongs to the delivery review.
 //
 // WHAT THE CODE OR THE BRIEF CONTRADICTS (told):
 //   · Kit lines: the ticket cites kit 02 :2359/:2361 (stale); at 91e3a6e8 the machine-credential paragraph is :2469 (the brief's
@@ -118,6 +120,8 @@
 //     (logs/a/today-probe.log, every hard expect made soft in a scratch copy): only the membership LOCK clause and the probes' reads
 //     LOCK are green; every other clause RED for the missing credential.
 //   the sketch (sketches/p87.py on 91e3a6e8): 18/18 four times (logs/a/fix-1..3.log, fix-probe2.log); tsc exit 0 on the sketch tree.
+//   round 5 (R-P437, logs/r5/): the sketch 21/21 twice (fix-1..2.log); today 19 RED and the 2 LOCK legs green (today.log); the
+//     reviewer's control kitnotadmitted RED on the kit leg alone (c-kitnotadmitted.log).
 //   round 4 (R-P435, logs/r4/): the sketch 21/21 twice (fix-1..2.log); today 19 RED and the 2 LOCK legs green (today.log); the
 //     reviewer's controls each RED on its own leg alone — lastrole, adminoverride and firstrole the mixed-roles leg, kitrefused
 //     the kit leg (c-*.log).
@@ -766,7 +770,8 @@ describe('unit:P87.SC3', () => {
       paragraph: paragraph ? 'found' : 'missing',
       role: paragraph.includes('`catalog-import`'),
       // R-P435 G2: the eight routes stated as ADMITTED — inside one sentence naming catalog-import and saying it admits them.
-      routesNotStatedAsAdmitted: admittedIn(sentences(paragraph).filter(s => s.includes('catalog-import') && /admit/i.test(s))),
+      // R-P437 H1: an admitting sentence, not a denial (no `not`, `never` or `no` in it).
+      routesNotStatedAsAdmitted: admittedIn(sentences(paragraph).filter(s => s.includes('catalog-import') && /admit/i.test(s) && !/\b(?:not|never|no)\b/i.test(s))),
       refusal: /\b403\b/.test(paragraph) && paragraph.includes('catalog_credential'),
       narrowing: sentences(paragraph).some(s => /replac/i.test(s) && s.includes('catalog-import') && /\boperator\b/.test(s)),
       migration: sentences(migration).some(s => s.includes('0012') && s.includes('0013') && s.includes('0014')),
