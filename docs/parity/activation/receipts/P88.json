@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P88",
+  "workOrderHash": "sha256:f914459b5dbf78c2b0e42779c86fe23f384a1ece43c24b743fa13bf763a29dce",
+  "artifact": {
+    "revision": "87fa1807c9a2211194e42557634ee713703e8b8e",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p88-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p88-build at 32347c93 (e4e92487, e01816c2 and 32347c93 the merges of the S35 spec b9081326, 4cb1a6a7 and 116f7cc6; the join carrying rem/integration with P76; 77971145 and 1edd50f7 the mechanism and the kits: src/content/kinds.ts and src/content/types.ts give the configuration set an optional member, the layouts document (pages, each with the approved module orders per device: any, mobile or desktop; each layout one to fifty distinct module ids; refused 422 by name for a device outside the three words, an empty or duplicate-bearing list, two identical layouts under one device, a version other than 1 or a member outside the schema; the catalogue unchecked at its publication), absent until published, its first PUT over revision 0, with history, revisions, validate and rollback, a member of publicationChanges, never written by initialize (src/config/publication.ts), admitted on a customer stamp by src/customerBoundary.ts; src/routes/content.ts enforces the rule inside the publication's candidate step over the set being published, for the slots PUT as primary or related member and the slots rollback, with the validate reading the set only when the candidate carries orders: every order's modules must equal, as a sequence, one approved layout of the slot's page for the order's device (a device-named context matches its device's list plus any, a device-less context any only), else 422 naming the page, the context and the modules with nothing written; a page the document does not name, a tenant without the document and the shot orders are unchanged; a stale If-Match answers 409 as today; a layouts publication dropping a used layout is accepted and the next slots validate reports it; nothing changes on the shopper serving path; kit 02 names the document, its route, the refusals and the rule; kit 03 states the schema beside the slot document).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S35/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S35/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P88/implementer/REPORT.md",
+      "git commits on rem/p88-joined up to 87fa1807"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P88 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S35/reviewer-p88/logs/w-p88-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S35/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P88/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-26T18:40:02.139Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
