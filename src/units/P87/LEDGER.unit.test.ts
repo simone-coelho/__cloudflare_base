@@ -42,10 +42,13 @@
 //   8  Locks (W16, W19 B1–B3, W21 B2, W25, W28–W31, W36, W37 (+FIX2), P35, P82, P90, P91, P84/P85/P86, the auth, claims,
 //      API-boundary, monitor, stamp-workflow, operator-seed, signing-config and configStore suites, W40 P3/P4; the console).
 //
-// THE NAMES THIS SPECIFICATION RULES (the brief leaves them open; the C-items below need them; ratify or rename at receipt):
-//   the migration `0014_operator_catalog_import.sql` (0010–0013 are `operator_*`); the package's third schema contract
-//   `operator-catalog-import-v3`. The refusal's `code` is the brief's (`catalog_credential`); its sentence is the builder's
-//   (one fixed string naming the catalogue credential: /catalog/i and /credential/i).
+// THE NAMES THIS SPECIFICATION RULES (ratified, R-P425): the migration `0014_operator_catalog_import.sql` (0010–0013 are
+//   `operator_*`); the package's third schema contract `operator-catalog-import-v3`. The refusal's `code` is the brief's
+//   (`catalog_credential`); its sentence is the builder's (one fixed string naming the catalogue credential: /catalog/i, /credential/i).
+// R-P425, the kind's case: the publication route reads `kind` lower-cased (src/routes/content.ts publicationTarget → kindOf), so
+//   `?kind=CATALOG` (any case) is the catalogue: GET /content/catalog/publication and its recover admit the catalogue credential
+//   exactly as they admit an operator's; a kind naming another member, in any case, stays refused.     → SC1's kind leg
+//   HEAD stays as today (no leg).
 //
 // WHAT THE CODE OR THE BRIEF CONTRADICTS (told):
 //   · Kit lines: the ticket cites kit 02 :2359/:2361 (stale); at 91e3a6e8 the machine-credential paragraph is :2469 (the brief's
@@ -79,9 +82,9 @@
 //       migrations applied before `{ w12: 'schema' }` expects `{ ok: true }`. Under the sketch without it: `{ ok: false }`; with it
 //       green; RED today (the file does not exist yet). :1295, src/routes/auth.test.ts :73, src/middleware/auth.claims-boundary.test.ts
 //       :756–800 and scripts/operator-seed.test.mjs :223–245 stay green under the sketch: untouched.
-//   R10 (NOT granted; the lead's ruling): scripts/stamp-workflow.test.mjs :664 (W14 asset-contract retains genuinely verified older
-//       W13 bytes …) `assert.equal(current.schemaContract,'operator-oidc-v2');` pins the contract of today's package: RED under the
-//       sketch; with `'operator-catalog-import-v3'` the suite is 23/23 under the sketch. Nothing else in the sweep pins the role
+//   C4  (R10 granted by name, R-P425) scripts/stamp-workflow.test.mjs :664 (W14 asset-contract retains genuinely verified older W13
+//       bytes …): `assert.equal(current.schemaContract,'operator-oidc-v2');` → `'operator-catalog-import-v3'`. RED today (the
+//       package is today's), the suite 23/23 under the sketch. Nothing else in the sweep pins the role
 //       enum, the CHECK, the migration list, the operator gate's answer or the contract (grep of every *.test.ts/*.test.mjs for the
 //       credential route, `role IN`, `0013_operator_oidc`, `operator-oidc-v2`, `MIGRATIONS`, operatorAuth/operatorJwt).
 //
@@ -89,7 +92,7 @@
 // RESIDUALS (owed, told): applying 0014 to any database is separate operational authority (kit 02's migration sentence); the
 //   OH and Vantage demo deploys stop at the demo kit's database step until 0014 is applied there (above); the console's
 //   membership role select and any console form for a catalogue credential are untouched (an open owner decision); HEAD on the
-//   eight GET routes and `?kind=CATALOG` are unruled (the sketch refuses both); the IT pack's security-pack sentence ("the export
+//   eight GET routes stays as today with no leg (R-P425); the IT pack's security-pack sentence ("the export
 //   job's credential holds the operator role") is the documents lane's (Windows checkout); the open-mode demo paths with no
 //   operator gate admit any caller, as today.
 //
@@ -102,12 +105,16 @@
 //     (logs/a/today-probe.log, every hard expect made soft in a scratch copy): only the membership LOCK clause and the probes' reads
 //     LOCK are green; every other clause RED for the missing credential.
 //   the sketch (sketches/p87.py on 91e3a6e8): 18/18 four times (logs/a/fix-1..3.log, fix-probe2.log); tsc exit 0 on the sketch tree.
+//   round 2 (R-P425, logs/r2/): the kind leg added and the sketch reading the kind lower-cased — the sketch 19/19 three times
+//     (fix-1..3.log); today 17 RED (the kind leg at registration) and the 2 LOCK legs green (today.log); `kindexact` (the kind
+//     compared exactly) RED on the kind leg alone, `kindignored` on the kind leg's refusal, the matrix and the demo legs; the
+//     stamp-workflow suite 23/23 under the sketch with C4 (fix-stamp-workflow.log).
 //   the wrong fixes (sketches/p87.py:<variant>, logs/a/w-*.log), each RED on its own legs only (the package leg run where the
 //   wrong fix is the package's): see the report's table.
 //   the locks (logs/b/): the 34 files of reading 8 548/548 today; 547/548 under the sketch before C3, 72/72 (api-boundary) with it;
 //     the sweep's 10 extra files equal on both trees (W39 needs git: W39.H2 2/2 under the sketch in a git-initialised copy);
-//     operator-seed green on both; stamp-workflow 22/23 today (C1 RED by design) and 22/23 under the sketch (:664, R10), 23/23 with
-//     the R10 line; W40.P3/P4 4/4 on both (the deploy leg packages and creates with 0014 under the sketch).
+//     operator-seed green on both; stamp-workflow 22/23 today (C1 RED by design) and 22/23 under the sketch before C4, 23/23 with
+//     it; W40.P3/P4 4/4 on both (the deploy leg packages and creates with 0014 under the sketch).
 //
 // HARNESS: ./_stamp.ts (the real Worker on the customer and the demo profile over node:sqlite D1, both shopper hosts, every store
 // call logged). Imports from src/units/: ./_stamp, ../_parity (UnitKV, UnitR2). No new export is imported.
@@ -411,6 +418,39 @@ describe('unit:P87.SC1', () => {
         .toEqual({ elsewhere: 403, revoke: 200, revoked: 401, brief: 201, fresh: 200, expired: 401 });
     });
   }
+
+  // R-P425: the publication route reads its `kind` lower-cased (src/routes/content.ts publicationTarget → kindOf), so a
+  // catalogue named in another case is the catalogue, for this credential as for an operator's; another member stays refused.
+  it('hosts (session and do): the catalogue publication read and recover admit the catalogue credential with the kind in any case (?kind=CATALOG, ?kind=Catalog), answering as they answer an operator credential, a pending publication recovered; a kind naming another member (?kind=SLOTS, ?kind=Learn) is still refused 403 catalog_credential before any store call', async () => {
+    for (const host of HOSTS) {
+      const s = await stamp(host); ready(s);
+      const catalogue = await register(s, ROLE, SUBJECTS.catalog), operator = await register(s, 'operator', SUBJECTS.operator);
+      expect(registeredRow(catalogue), `${host}: P87.SC1 — the catalogue credential registers (today: ${show(catalogue.answer)})`).toEqual({ status: 201, role: ROLE, token: 'a signed token' });
+      expect(operator.answer.status, `${host}: PRECONDITION — an operator credential registers (${show(operator.answer)})`).toBe(201);
+      const reads: Array<{ request: string; status: number; asOperator: string }> = [];
+      for (const kind of ['CATALOG', 'Catalog']) {
+        const path = `/content/catalog/publication?kind=${kind}`;
+        const c = await s.call('GET', path, { token: catalogue.token }), o = await s.call('GET', path, { token: operator.token });
+        reads.push({ request: `GET ${path}`, status: c.status, asOperator: c.status === o.status && canonical(c.body) === canonical(o.body) ? 'the operator credential\'s answer' : `operator ${show(o)}; catalogue ${show(c)}` });
+      }
+      const p1 = await pre(s, 'catalog', operator.token);
+      s.rec.failPut = key => { if (/\/content\/rev\/\d+\.json$/.test(key)) { s.rec.failPut = null; return true; } return false; };
+      const lost = await s.call('POST', '/content/catalog/import?mode=merge&format=json', { token: catalogue.token, body: [piece('p87.case')], headers: p1.headers });
+      s.rec.failPut = null;
+      const state = await s.call('GET', '/content/catalog/publication?kind=CATALOG', { token: catalogue.token, headers: p1.headers });
+      const recovered = await s.call('POST', '/content/catalog/publication/recover?kind=Catalog', { token: catalogue.token, headers: p1.headers });
+      const doc = await s.call('GET', '/content/catalog', { token: operator.token });
+      expect.soft({ reads, lost: lost.status, state: state.body.state ?? show(state), recovered: recovered.status, revision: recovered.body.revision ?? null, actor: doc.body.actor, piece: pieceIds(doc).includes('p87.case') },
+        `${host}: P87.SC1 (R-P425) — ?kind=CATALOG and ?kind=Catalog read and recover the catalogue publication with the catalogue credential, as with an operator credential (${show(recovered)})`)
+        .toEqual({ reads: ['CATALOG', 'Catalog'].map(kind => ({ request: `GET /content/catalog/publication?kind=${kind}`, status: 200, asOperator: 'the operator credential\'s answer' })),
+          lost: 503, state: 'pending', recovered: 200, revision: p1.revision + 1, actor: SUBJECTS.catalog, piece: true });
+      const others: Ask[] = [req('GET', '/content/catalog/publication?kind=SLOTS'), req('POST', '/content/catalog/publication/recover?kind=Learn', { headers: (await pre(s, 'learn', operator.token)).headers })];
+      const answers: Answer[] = [];
+      for (const r of others) answers.push(await s.call(r.method, r.path, { ...r.opts, token: catalogue.token }));
+      expect.soft(others.map((r, i) => refusalRow(r, answers[i]!, false)), `${host}: P87.SC2 (R-P425) — a kind naming another member, in any case, is refused 403 catalog_credential before any store call`)
+        .toEqual(others.map(r => refused(r, false)));
+    }
+  });
 });
 
 // ===========================================================================
