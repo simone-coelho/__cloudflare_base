@@ -118,8 +118,33 @@
 // NO NEW EXPORT IS IMPORTED: the manifest, the part, the read and the refusal are read loosely through the routes and the
 // mount's bucket.
 //
-// MEASURED: not yet. The provisional abbe8da5 and R-P407's application (the variant_first case of the routing leg, the
-// retention leg, the learn-routes leg, the kit's canonical order) are committed unmeasured under HOLD VITEST.
+// R-P412, R-P413 (from the build at fa8a8920), two legs added: (1) telemetry resolves a part-held content id only through
+// the acting shopper's own ring — a click naming another visitor's decision id, one unknown to her ring, or none, reads no
+// part and no other shopper's ring or key, recognizes nothing (`signals.recognized` false) and teaches no catalogue format,
+// while the visitor whose decision it is learns her image's format (no counter exists or is built: R-P413); (2) the
+// anchor's part unreadable (lost, or a body that is not its digest's) fails the product page 503 `part_unavailable`, never
+// decided from the shared pieces alone. Also ruled, no leg: a record moving between products is refused 422.
+//
+// MEASURED (_evidence/parity-step3/S32/specifier/logs/, serial, --no-cache, one worker, the tree its working directory;
+// sketches/p86.py; trees under scratch/): at this file's tree (20fab871, a-today) 38 RED for the missing behaviour and the
+// two LOCK legs GREEN; the R-P409 (1) legs RED at PRECONDITION P85 there (the beacon is refused 400 'Invalid action
+// event'; the SDK has no carouselExposure). On the P85 join 7dd77ce8 (c-today): the same 38 RED, the beacon legs now for
+// the missing behaviour (a beacon naming no product admitted where product_required is expected; the SDK sends no
+// `product`). The sketch (fix: src/config/publication.ts the part, its cache, the cap's name, the parts before the
+// reservation, the purge, missingCatalogueParts; src/content/kinds.ts, types.ts; src/routes/content.ts the parted import,
+// pull and PUT, ?product=, the envelope, the rollback's part check; src/content/service.ts the one-part read and the
+// beacon's product; src/learn/replay.ts; src/reflex/contentTelemetry.ts the own-ring resolution; src/routes/decisions.ts
+// the receipts, the learn routes, the snapshot's part_unavailable; src/sdk/listen.ts the beacon's product; the kit) 40/40
+// three times; tsc exit 0 on the sketch tree. The wrong fixes, each RED on its own legs (both hosts): wholerange (every
+// part read) the N leg, the no-part leg and the part_unavailable leg; embedded (no routing) 36; secondid 14; skipshared
+// 22; pooledpart, replaceall, sharedreplace, partafter, pendingpart, capdoc, replayshared, receiptsshared, learnshared,
+// anyanchor, nocache, nopurge, purgeall, novariantwarn, beaconshared, putkeep, rollbackblind, telemetryforeign (any
+// visitor's ring), partfallback (an unreadable part decided from the shared pieces) 2 each, on their own leg;
+// telemetryshared 4 (the readers leg and the R-P412 leg); kitleft and sdknoproduct 1 each. The whole suite (R-P248) on the
+// P85 join (logs/s32f-compare.txt): 4071 tests today, 4075 under the sketch; failing under the sketch alone only the five
+// generated-SDK checks (P34.T5, P60.SD3, P84.CO2, W40.P3 ×2: the sketch changes src/sdk/listen.ts and rebuilds no bundle; the
+// builder's regenerated bundles, granted at b8d7198a, are exact); failing today alone only P86's own; 50 failing on both
+// trees are the scratch layout (the .mjs suites, root.worker, and the console legs reading the base commit through git).
 //
 // HARNESS: src/units/_parity.ts (the mounted application, both hosts, the operator routes, the bucket double). Imports from
 // src/units/: ../_parity.
@@ -268,6 +293,19 @@ const classOf = (key: string): string => {
 };
 const classes = (reads: Read[]) => reads.map(r => classOf(r.key)).sort();
 
+/** R-P413: the reads one operation makes that name another shopper — R2 keys and decision-ring objects carrying her subject — and its part reads. */
+async function foreignReads<T>(m: Mounted, other: string, run: () => Promise<T>): Promise<{ result: T; foreign: string[]; parts: number }> {
+  const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.get, foreign: string[] = [];
+  const rings = m.env.DECISION_RING as unknown as { get: (name: string) => unknown }, ringGet = rings.get;
+  let parts = 0;
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
+    if (key.includes(other)) foreign.push(`R2 ${key}`);
+    if (PART.test(key)) parts++;
+    return original.call(m.storage, key);
+  } });
+  rings.get = (name: string) => { if (String(name).includes(other)) foreign.push(`ring ${String(name)}`); return ringGet(name); };
+  try { return { result: await run(), foreign, parts }; } finally { Reflect.deleteProperty(bucket, 'get'); rings.get = ringGet; }
+}
 /** The decision request with the page's ctx signals on the GET's query string (P80's form). */
 async function snapshotOf(m: Mounted, s: Shopper, page: string, signals: Record<string, string>, label: string): Promise<Snapshot> {
   const pageInstance = pageInstanceOf(label);
@@ -730,6 +768,50 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
       expect.soft({ rows: [rows.status, named(rows)], exploring: [exploring.status, named(exploring)] },
         `${host}: P86.CS2 — each image kept and named unresolved on both routes (lift rows: ${show(rows)}; exploring: ${show(exploring)})`).toEqual({
         rows: [200, expected], exploring: [200, expected] });
+    }, 300_000);
+
+    it(`host (${host}): R-P412 (1), R-P413 — a content click naming a decision id that is not in the acting shopper's own ring (another visitor's, or one unknown) or naming none resolves no part, teaches only the event's own values (no catalogue format, signals.recognized false) and reads no other shopper's ring or key; her own decision's click resolves its part`, async () => {
+      const m = await rangeTenant(host, 50);
+      expect(Object.keys(productsOf(await loadDocument(m, 'catalog'))), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      const x = await shopperOn(m), y = await shopperOn(m);
+      const page = await snapshotOf(m, x, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-foreign');
+      const images = page.decisions.filter(d => d.slot === CAROUSEL);
+      expect(sorted(images.map(d => d.contentId)), `${host}: PRECONDITION — her carousel is served (${page.status})`).toEqual(SERVED_FOR_BLACK);
+      for (const d of images) expect((await x.ack(page, d)).status, `${host}: PRECONDITION — ${d.contentId} is acknowledged`).toBe(200);
+      await m.drainLedger();
+      const clicked = images.find(d => d.contentId === 'img-ch857-1')!, foreignId = String(clicked.decisionId);
+      const segments = foreignId.split(':');
+      const unknownId = [...segments.slice(0, 2), y.subject, ...segments.slice(3, -1), crypto.randomUUID()].join(':');
+      const clicks: Array<[string, Decision]> = [['another visitor\'s decision', clicked], ['a decision unknown to her ring', { ...clicked, decisionId: unknownId }],
+        ['no decision', { ...clicked, decisionId: undefined }]];
+      const seen: unknown[] = [];
+      for (const [name, d] of clicks) {
+        const { result, foreign, parts } = await foreignReads(m, x.subject, () => y.click(page, d));
+        seen.push([name, result.status, (result.body.signals as { recognized?: unknown } | undefined)?.recognized ?? 'no signals member', parts, foreign]);
+      }
+      expect.soft(seen, `${host}: P86.CS2 — unresolved: no part read, nothing recognized, no read naming another shopper`).toEqual(
+        clicks.map(([name]) => [name, 200, false, 0, []]));
+      const ofY = ((await servePage(m, y, 'pdp')).records[0]?.inputs?.affinity ?? {}) as Record<string, Record<string, number>>;
+      const own = await x.click(page, clicked);
+      const ofX = ((await servePage(m, x, 'pdp')).records[0]?.inputs?.affinity ?? {}) as Record<string, Record<string, number>>;
+      expect.soft({ y: Object.keys(ofY.contentType ?? {}), x: [own.status, (own.body.signals as { recognized?: unknown } | undefined)?.recognized ?? 'no signals member', Object.keys(ofX.contentType ?? {})] },
+        `${host}: P86.CS2 — her clicks taught no catalogue format; the visitor whose decision it is learns her image's own format`).toEqual({ y: [], x: [200, true, ['on-model']] });
+    }, 300_000);
+
+    it(`host (${host}): R-P412 (2) — the anchor's part unreadable (lost, or a body that is not its digest's) fails the product page's decision 503 part_unavailable and never serves the shared pieces alone; a page that reads no part is served as before`, async () => {
+      const m = await rangeTenant(host, 50);
+      const manifest = await loadDocument(m, 'catalog'), key = partKey(digestOf(manifest, A));
+      expect(m.storage.objects.has(key), `${host}: PRECONDITION — ${A}'s part is stored (today there is none)`).toBe(true);
+      const s = await shopperOn(m);
+      const outcome = (page: Snapshot) => [page.status, JSON.stringify(page.body).includes('part_unavailable') ? 'names part_unavailable' : `does not (${JSON.stringify(page.body).slice(0, 160)})`, carousel(page)];
+      m.storage.objects.delete(key); invalidatePublicationCache();
+      const lost = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-lost');
+      const plain = await snapshotOf(m, s, 'pdp', {}, 'p86-cs2-plain');
+      m.storage.objects.set(key, m.storage.objects.get(partKey(digestOf(manifest, B)))!); invalidatePublicationCache();
+      const forged = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-forged');
+      expect.soft({ lost: outcome(lost), forged: outcome(forged), plain: [plain.status, servedIn(plain, 'pdp-modules').length > 0, carousel(plain)] },
+        `${host}: P86.CS2 — 503 part_unavailable, no fallback; the page without an anchor served`).toEqual({
+        lost: [503, 'names part_unavailable', []], forged: [503, 'names part_unavailable', []], plain: [200, true, []] });
     }, 300_000);
 
     it(`host (${host}): R-P409 (1) — P85's carousel beacon: on a parted tenant a beacon naming its product (\`product\`) reads that one part and is admitted; one naming none is ignored product_required; on a tenant without parts the member changes nothing (both admitted)`, async () => {
