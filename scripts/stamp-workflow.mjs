@@ -454,7 +454,7 @@ function confirmed(value) { if (value?.unconfirmed) fail(); return value; }
 // boundary; this is not a remote signature, trusted CI observation or release approval.
 export const LOCAL_CHECK_COMMANDS = [
   'npm run lint',
-  'node --max-old-space-size=1536 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false',
+  'node --max-old-space-size=3072 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node --max-old-space-size=3072 node_modules/typescript/bin/tsc -p src/sdk --noEmit --incremental false --composite false',
   "node node_modules/vitest/vitest.mjs run src/console/console.render.test.ts -t 'W13|W11[.]02 Meridian' --maxWorkers=1 --minWorkers=1",
 ];
 export const NODE_CHECK_COMMAND = 'node --test scripts/stamp-workflow.test.mjs scripts/seed-d1.test.mjs scripts/identity-material.test.mjs scripts/operator-seed.test.mjs scripts/lib/tool-token.test.mjs scripts/remediation/board.test.mjs';
