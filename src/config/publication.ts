@@ -9,7 +9,7 @@ export const PUBLICATION_CACHE_MS = 30_000;
 const LIMIT = 50, MEMBERS = 16, CACHE_ENTRIES = 32, CACHE_BYTES = 8 * 1024 * 1024;
 const encoder = new TextEncoder(), HASH = /^[0-9a-f]{64}$/;
 const OPERATION = /^(0|[1-9][0-9]*):[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval', 'import-sources']);
+const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval', 'import-sources', 'layouts']);
 /**
  * P38: the members a coherent set may lack and a publication may ADD. A tenant
  * that never published a vocabulary has a set without one, and that set stays
@@ -19,7 +19,8 @@ const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposal
  * every other member uses. No other member can be created or removed this way.
  */
 // P91 (E16): the tenant's import-sources list is optional too: a tenant that publishes none allows every caller.
-const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval', 'import-sources']);
+// P88 (E13): and its approved layouts: a tenant that publishes none keeps every per-context order as before.
+const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval', 'import-sources', 'layouts']);
 /**
  * P48 (R-P78, R-P82 (4)): the two members a committed set lacks only because
  * the demo bootstrap created it with four, by kind name, with the name an
@@ -347,6 +348,7 @@ async function kindFor(name: string): Promise<DocumentKind<unknown>> {
     case 'vocabulary': return (await import('@/content/kinds')).VOCABULARY_KIND as unknown as DocumentKind<unknown>;
     case 'vocabulary-approval': return (await import('@/content/kinds')).VOCABULARY_APPROVAL_KIND as unknown as DocumentKind<unknown>;
     case 'import-sources': return (await import('@/content/import')).IMPORT_SOURCES_KIND as unknown as DocumentKind<unknown>;
+    case 'layouts': return (await import('@/content/kinds')).LAYOUTS_KIND as unknown as DocumentKind<unknown>;
     default: throw unavailable();
   }
 }
