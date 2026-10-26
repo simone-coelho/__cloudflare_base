@@ -118,6 +118,16 @@
 // NO NEW EXPORT IS IMPORTED: the manifest, the part, the read and the refusal are read loosely through the routes and the
 // mount's bucket.
 //
+// R-P416 (the specification review at 0ff67749, fix round 2), test-only: (1) the retention leg's last load retouches A again,
+// so the previous kept revision alone names A's second part: it survives the purge and a rollback to that revision is
+// accepted (a purge consulting the head manifest alone is RED); (2) a merge changing one shared piece alone on a parted
+// catalogue writes one revision, every pointer unchanged, and the same file again is skipped (a skip comparing the product
+// index alone is RED); (3) a replace carrying one shared piece and B's records leaves exactly that shared piece and B's new
+// part, and a full carrying a shared piece counts the left-out shared piece in `expire` (replace/full merging the shared
+// pieces is RED); the residual closed: the N = 50 and N = 5,000 anchor pages read exactly the head, the set, the content,
+// slots, learn and reflex revisions and the anchor's part, once each. MEASURED (logs/s32i-*): 44/44 under the sketch on both
+// hosts; each control RED on its own leg alone on both hosts (sketches/p86.py purgehead, skipindex, sharedmerge); today 42
+// RED and the two locks green; the build's head c571fbb8 44/44 on a scratch copy.
 // R-P412, R-P413 (from the build at fa8a8920), two legs added: (1) telemetry resolves a part-held content id only through
 // the acting shopper's own ring — a click naming another visitor's decision id, one unknown to her ring, or none, reads no
 // part and no other shopper's ring or key, recognizes nothing (`signals.recognized` false) and teaches no catalogue format,
@@ -464,6 +474,56 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         status: 200, c: [[c[0]!.id, 'live'], [c[1]!.id, 'live'], [c[2]!.id, 'live'], [c[3]!.id, 'expired']], shared: sorted(MODULE_IDS), untouched: [true, true] });
     }, 120_000);
 
+    it(`host (${host}): R-P416 (2) — the skip covers the shared pieces: on a parted catalogue a merge changing one shared piece alone (a module retitled) writes one revision, every product pointer unchanged and the new title stored; the same file again is skipped`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      const loaded = await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' });
+      expect(loaded.status, `${host}: PRECONDITION — the three products load (${show(loaded)})`).toBe(200);
+      const start = await loadDocument(m, 'catalog');
+      expect(Object.keys(productsOf(start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
+      const editorialModule = MODULES.find(p => p.id === M.editorial)!, retitled = [{ ...editorialModule, title: 'A styling story, retitled' }];
+      const written = await importJson(m, retitled, { mode: 'merge' });
+      const after = await loadDocument(m, 'catalog');
+      const again = await importJson(m, retitled, { mode: 'merge' });
+      const afterAgain = await loadDocument(m, 'catalog');
+      expect.soft({ written: [written.status, written.body.skipped ?? 'no skipped member', after.revision], pointers: JSON.stringify(productsOf(after)) === JSON.stringify(productsOf(start)),
+        title: ((after.document.pieces ?? []) as Rec[]).find(p => p.id === M.editorial)?.title ?? null,
+        again: [again.status, again.body.skipped ?? 'no skipped member', afterAgain.revision] },
+      `${host}: P86.CS1 — the shared change written once, then skipped (${show(written)})`).toEqual({
+        written: [200, 'no skipped member', start.revision + 1], pointers: true, title: 'A styling story, retitled', again: [200, true, start.revision + 1] });
+    }, 120_000);
+
+    it(`host (${host}): R-P416 (3) — replace and full act on the shared pieces when the file carries one: a replace carrying one shared piece and ${B}'s records leaves exactly that shared piece and ${B}'s new part, ${A} and ${C} untouched; a full carrying a shared piece and ${C}'s records counts the left-out shared piece in expire and keeps it expired`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      const loaded = await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' });
+      expect(loaded.status, `${host}: PRECONDITION — the three products load (${show(loaded)})`).toBe(200);
+      const start = await loadDocument(m, 'catalog');
+      expect(Object.keys(productsOf(start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
+      const editorial = { ...MODULES.find(p => p.id === M.editorial)!, title: 'A styling story, replaced' }, grid = MODULES.find(p => p.id === M.grid)!;
+      const [b1, b2] = fourOf(B) as [Rec, Rec];
+      const replaced = await importJson(m, [editorial, b1, b2], { mode: 'replace' });
+      const afterReplace = await loadDocument(m, 'catalog');
+      expect.soft({ status: replaced.status, pieces: replaced.body.pieces, shared: sharedOf(afterReplace),
+        title: ((afterReplace.document.pieces ?? []) as Rec[]).find(p => p.id === M.editorial)?.title ?? null, b: partOf(m, afterReplace, B).ids,
+        untouched: [digestOf(afterReplace, A) === digestOf(start, A), digestOf(afterReplace, C) === digestOf(start, C)] },
+      `${host}: P86.CS1 — the shared pieces replaced by the one the file carries, ${B} replaced, ${A} and ${C} untouched (${show(replaced)})`).toEqual({
+        status: 200, pieces: 1 + 4 + 2 + 4, shared: [M.editorial], title: 'A styling story, replaced', b: sorted([b1.id, b2.id]), untouched: [true, true] });
+      const c = fourOf(C);
+      const wrong = await importJson(m, [grid, ...c.slice(0, 3)], { mode: 'full', expire: '1' });
+      expect.soft([wrong.status, wrong.body.expire ?? null], `${host}: P86.CS1 — full counts the left-out shared piece with ${C}'s: 1 refused 409 naming 2 (${show(wrong)})`).toEqual([409, 2]);
+      const full = await importJson(m, [grid, ...c.slice(0, 3)], { mode: 'full', expire: '2' });
+      const afterFull = await loadDocument(m, 'catalog');
+      const status = (pieces: unknown) => ((pieces ?? []) as Array<{ id: string; lifecycle?: { status?: string } }>).map(p => [p.id, p.lifecycle?.status ?? 'live']);
+      expect.soft({ status: full.status, shared: status(afterFull.document.pieces), c: status(partOf(m, afterFull, C).value?.pieces),
+        untouched: [digestOf(afterFull, A) === digestOf(start, A), digestOf(afterFull, B) === digestOf(afterReplace, B)] },
+      `${host}: P86.CS1 — full keeps the left-out shared piece and ${C}'s left-out record expired (${show(full)})`).toEqual({
+        status: 200, shared: [[M.grid, 'live'], [M.editorial, 'expired']], c: [[c[0]!.id, 'live'], [c[1]!.id, 'live'], [c[2]!.id, 'live'], [c[3]!.id, 'expired']],
+        untouched: [true, true] });
+    }, 120_000);
+
     it(`host (${host}): the skip and the dry run — an identical merge of ${A}'s records is skipped (the manifest digest unchanged); a one-field change to one record writes one revision, moving N, S and H, ${A}'s pointer alone; a dry run of a new product writes nothing, no part included`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
@@ -531,7 +591,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         `${host}: P86.CS1 — nothing left pending: the next load is accepted and writes ${B}'s part (${show(retried)})`).toEqual([200, sorted([A, B]), 'stored']);
     }, 120_000);
 
-    it(`host (${host}): retention (R-P407 (9)) — under a configuration retention setting, the purge that removes a revision removes the parts no kept revision references and keeps every part a kept revision references`, async () => {
+    it(`host (${host}): retention (R-P407 (9)) — under a configuration retention setting, the purge that removes a revision removes the parts no kept revision references and keeps every part a kept revision references, the previous revision's own included (R-P416 (1): a rollback to it is accepted)`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       // The tenant's configuration-revision setting (W38 B4), at its smallest admitted duration: every revision older than
@@ -542,7 +602,8 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       await declareProductSlots(m);
       const [a1] = fourOf(A) as [Rec];
       const pointers: Array<Record<string, string>> = [];
-      for (const records of [fourOf(A), [{ ...a1, title: `${a1.title}, retouched` }], fourOf(B), fourOf(C)]) {
+      // R-P416 (1): the last load retouches A again, so the previous kept revision alone names A's second part.
+      for (const records of [fourOf(A), [{ ...a1, title: `${a1.title}, retouched` }], fourOf(B), [{ ...a1, title: `${a1.title}, retouched again` }]]) {
         const loaded = await importJson(m, records, { mode: 'merge' });
         expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
         const d = await loadDocument(m, 'catalog');
@@ -552,12 +613,19 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const head = await loadDocument(m, 'catalog');
       const purged = await asOperator(m, 'GET', `/content/catalog/revisions/${head.revision - 3}?scope=${TENANT}`);
       expect(purged.status, `${host}: PRECONDITION — the revision of ${A}'s first load was purged under the setting (${show(purged)})`).toBe(410);
-      // Kept: the current and the previous revision; their manifests reference A's retouched part, B's and C's.
+      // Kept: the current and the previous revision. The current names A's third part and B's; the previous alone names
+      // A's second part (the first retouch), which a purge consulting only the current manifest would remove.
       const kept = sorted([...new Set([...Object.values(pointers[3] ?? {}), ...Object.values(pointers[2] ?? {})])].map(partKey));
+      const previousA = partKey(pointers[2]?.[A] ?? 'no pointer'), currentA = partKey(pointers[3]?.[A] ?? 'no pointer');
       const read = await productRead(m, A);
-      expect.soft({ parts: partKeys(m), firstA: m.storage.objects.has(partKey(pointers[0]?.[A] ?? 'no pointer')), read: [read.status, readIds(read)] },
-        `${host}: P86.CS1 — the parts are exactly those a kept revision references (today no part is written)`).toEqual({
-        parts: kept.length === 3 ? kept : ['three referenced parts expected', ...kept], firstA: false, read: [200, sorted(fourOf(A).map(r => r.id))] });
+      expect.soft({ parts: partKeys(m), firstA: m.storage.objects.has(partKey(pointers[0]?.[A] ?? 'no pointer')),
+        previousA: [previousA !== currentA, m.storage.objects.has(previousA)], read: [read.status, readIds(read)] },
+        `${host}: P86.CS1 — the parts are exactly those a kept revision references, the previous revision's part of ${A} kept (today no part is written)`).toEqual({
+        parts: kept.length === 3 ? kept : ['three referenced parts expected', ...kept], firstA: false, previousA: [true, true], read: [200, sorted(fourOf(A).map(r => r.id))] });
+      const back = await asOperator(m, 'POST', `/content/catalog/rollback/${head.revision - 1}?scope=${TENANT}`, {}, await preconditions(m));
+      const after = await loadDocument(m, 'catalog');
+      expect.soft([back.status, after.revision, digestOf(after, A) === pointers[2]?.[A], digestOf(after, B) === pointers[2]?.[B]],
+        `${host}: P86.CS1 — a rollback to the previous kept revision is accepted, its parts all held (${show(back)})`).toEqual([200, head.revision + 1, true, true]);
     }, 120_000);
 
     it(`host (${host}): R-P409 (2) — a PUT of the manifest that leaves a product's pointer out removes that product (as a PUT that leaves a piece out removes it): one revision, the others' pointers kept`, async () => {
@@ -697,6 +765,12 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
         `${host}: P86.CS2 — N = ${n}: the manifest and the anchor's part alone (today the whole range in one document, no part: ${classes(cold.reads).join(', ')})`).toEqual({
           status: 200, served: SERVED_FOR_BLACK, parts: [anchorPart], shared: sorted([...MODULE_IDS, 'img-brand-1']), indexed: n + 3,
           warm: [SERVED_FOR_BLACK, 0], operator: [anchorPart] });
+      }
+      // R-P416 (residual): the exact read list — the head, the set, the four members and the anchor's one part — at each size.
+      for (const n of [50, 5000]) {
+        const { cold, manifest } = at[n]!;
+        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the set, the content, slots, learn and reflex revisions and the anchor's part, once each`)
+          .toEqual(sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision', `part ${digestOf(manifest, A)}`]));
       }
       const [small, large] = [at[50]!, at[5000]!];
       expect.soft({ reads: classes(large.cold.reads), partBytes: partReads(large.cold.reads).map(r => r.bytes) },
