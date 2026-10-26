@@ -1813,7 +1813,7 @@
     {
       "id": "P89",
       "title": "The shopper's shot order carried between page views and into the next first landing, with corrections after sign-in (**amendment 11, E14, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
