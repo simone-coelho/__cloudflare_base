@@ -636,7 +636,7 @@ painted place. Order the carousel with them (`order: var(--op-pdp-carousel-3)` o
 also adds one `<link rel="preload" as="image" fetchpriority="high">` for the image that leads, before your first
 stylesheet. It hides nothing, fetches nothing, sends nothing and writes no cookie; its state is first-party storage
 under `opt_head`, the visit kept only under tracking consent. Where the SDK kept the shopper's own shot order for the
-visitor this browser carries (the live channel, §6), that order leads, before the context's row, under the row's own
+visitor this browser carries (the live channel, §6), that order ranks before the context's row, under the row's own
 gate. It paints the default row, your server order within
 the brand rules, for the holdout's default class, without a recorded personalization choice, for an arrival or a
 device it cannot classify, for a table naming another classifier version, and once after the experiment's salt
