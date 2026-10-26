@@ -454,7 +454,7 @@ interface CacheEntry { handle: object; binding: object; scope: string; at: numbe
 const cache = new Set<CacheEntry>(); let cacheBytes = 0, cacheEpoch = {};
 const fresh = (at: number, now: number) => Number.isFinite(now) && now >= at && now - at < PUBLICATION_CACHE_MS;
 function remove(entry: CacheEntry): void { if (cache.delete(entry)) cacheBytes -= entry.bytes; }
-export function invalidatePublicationCache(): void { cache.clear(); cacheBytes = 0; cacheEpoch = {}; }
+export function invalidatePublicationCache(): void { cache.clear(); cacheBytes = 0; cacheEpoch = {}; partCache.clear(); partCacheBytes = 0; }
 function invalidateScope(storage: R2Bucket, scope: string): void {
   const binding = storageIdentity(storage);
   for (const entry of cache) if (entry.binding === binding && entry.scope === scope) remove(entry);
@@ -603,6 +603,88 @@ async function put(storage: R2Bucket, key: string, body: string, etag?: string):
 async function createExact(storage: R2Bucket, key: string, value: unknown): Promise<void> {
   const body = serialized(value); if (await put(storage, key, body)) return;
   const found = await readObject(storage, key); if (!found || canonical(found.value) !== body) throw conflict();
+}
+
+// ── P86 (E10, design A, R-P405): the catalogue's per-product parts ─────────────
+//
+// A catalogue whose value is a manifest (`products`, src/content/types.ts) keeps
+// each product's records in one immutable, content-addressed part object beside
+// the revision bodies: its key names the digest of its canonical value, so the
+// manifest's pointer, the key and the bytes are one fact. A part is written
+// with the store's exact-create by the catalogue's door BEFORE the publication
+// reserves the head (the candidate step of `publishSet`), never inside `finish`,
+// so a load whose part cannot be written commits nothing and leaves nothing
+// pending; a retry writes the same key. A part is at most 2 MiB, as a revision
+// body is, and it is kept while any stored revision's manifest names it
+// (`purgeByPolicy` removes the parts only purged revisions named).
+
+/** P86: the parts of a revision value: the content manifest's part digests, none for any other kind. */
+export function attachmentsOf(kind: string, value: unknown): string[] {
+  if (kind !== 'content' || !value || typeof value !== 'object') return [];
+  const products = (value as { products?: unknown }).products;
+  if (!products || typeof products !== 'object' || Array.isArray(products)) return [];
+  return Object.values(products as Record<string, { digest?: unknown }>).map(pointer => pointer?.digest).filter((d): d is string => typeof d === 'string' && HASH.test(d));
+}
+const partKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/part/' + digest + '.json';
+/** P86: one product's part, `{ product, pieces }`, as it is stored. */
+export interface CatalogPart { product: string; pieces: unknown[] }
+function validPart(value: unknown): value is CatalogPart {
+  return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 2
+    && typeof (value as CatalogPart).product === 'string' && Array.isArray((value as CatalogPart).pieces);
+}
+/**
+ * P86: the parts read on this isolate, by backing binding, scope and digest. A
+ * part is immutable, so an entry never goes stale; the cache is bounded by the
+ * canonical bytes it holds (8 MiB, beside the publication cache's own 8 MiB),
+ * the oldest leaving first, and `invalidatePublicationCache` clears it.
+ */
+const PART_CACHE_BYTES = 8 * 1024 * 1024;
+const partCache = new Map<string, { binding: object; value: CatalogPart; bytes: number }>(); let partCacheBytes = 0;
+function partCacheKey(storage: R2Bucket, scope: string, digest: string): string { void storage; return scope + '\u0000' + digest; }
+function rememberPart(storage: R2Bucket, scope: string, digest: string, value: CatalogPart, bytes: number): void {
+  if (bytes > PART_CACHE_BYTES) return;
+  const key = partCacheKey(storage, scope, digest), binding = storageIdentity(storage), held = partCache.get(key);
+  if (held) { partCache.delete(key); partCacheBytes -= held.bytes; }
+  while (partCacheBytes + bytes > PART_CACHE_BYTES && partCache.size) { const [oldest, entry] = partCache.entries().next().value!; partCache.delete(oldest); partCacheBytes -= entry.bytes; }
+  partCache.set(key, { binding, value, bytes }); partCacheBytes += bytes;
+}
+/**
+ * P86: write one product's part with the store's exact-create and answer its
+ * digest. Refused 413 `part_too_large` past 2 MiB; a part already stored with
+ * the same bytes is the same part (a retry), any other bytes a conflict.
+ */
+export async function writeCatalogPart(env: Env, scope: string, part: CatalogPart): Promise<string> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), value = freeze(structuredClone(part)) as CatalogPart;
+  if (encoder.encode(canonical(value)).byteLength > PUBLICATION_MAX_BYTES) {
+    throw new PublicationError(`The part of product ${JSON.stringify(part.product).slice(0, 80)} exceeds 2 MiB`, 413, 'part_too_large');
+  }
+  const hash = await digest(value);
+  await createExact(storage, partKey(home, hash), value);
+  rememberPart(storage, home, hash, value, encoder.encode(canonical(value)).byteLength);
+  return hash;
+}
+/**
+ * P86: one part by its digest: from this isolate's part cache, else one read of
+ * its object, whose canonical value must hash to the digest it is named by.
+ * A part the store does not hold, or holds otherwise, is refused 503
+ * `part_unavailable`, naming the digest.
+ */
+export async function readCatalogPart(env: Env, scope: string, hash: string): Promise<CatalogPart> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (!HASH.test(hash)) throw new PublicationError('Invalid catalogue part digest', 503, 'part_unavailable');
+  const held = partCache.get(partCacheKey(storage, home, hash));
+  if (held && held.binding === storageIdentity(storage)) return held.value;
+  const found = await readObject(storage, partKey(home, hash));
+  if (!found || !validPart(found.value) || await digest(found.value) !== hash) throw new PublicationError(`Catalogue part ${hash} unavailable`, 503, 'part_unavailable');
+  const value = freeze(found.value) as CatalogPart;
+  rememberPart(storage, home, hash, value, found.bytes);
+  return value;
+}
+/** P86: whether the store holds a part, by one HEAD of its object (a rollback's check of every pointer). */
+export async function catalogPartStored(env: Env, scope: string, hash: string): Promise<boolean> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (!HASH.test(hash)) return false;
+  try { return (await storage.head(partKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
 }
 async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promise<void>): Promise<PublicationPin> {
   const pending = loaded.head.pending; required(pending); const set = pending.set;
@@ -1029,6 +1111,9 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       }
     }
     const start = candidates.length ? (set.revision * PURGE_CANDIDATES) % candidates.length : 0;
+    // P86: the parts the purged revisions named, by member; removed below where no stored revision still names them.
+    // A scope that holds no part at all (one listing) reads no revision for them.
+    const orphaned = new Map<Ref, Set<string>>(), parted = await holdsParts(storage, work, scope, candidates.map(c => c.ref));
     for (let i = 0; i < Math.min(PURGE_CANDIDATES, candidates.length); i++) {
       const { ref, n, next } = candidates[(start + i) % candidates.length]!;
       // Its successor's publication is when it stopped being in force; where that
@@ -1036,10 +1121,34 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       const born = await revisionTime(storage, work, ref, n), superseded = ref.index.find(entry => entry.revision === n + 1)?.at ?? await revisionTime(storage, work, ref, next);
       if (born === null || superseded === null || now - superseded <= durationMs) continue;
       if (await namedByStoredManifest(storage, work, ledger, scope, ref.kind, n, born, superseded)) continue;
+      const parts = parted ? await revisionAttachments(storage, work, ref, n) : [];
       spend(work);
       await storage.delete(revisionKey(ref.kind, ref.scope, n));
+      if (parts.length) { const held = orphaned.get(ref) ?? new Set<string>(); for (const part of parts) held.add(part); orphaned.set(ref, held); }
+    }
+    // P86: a part is kept while any stored revision of its member names it; the
+    // parts only purged revisions named are removed, within the same work budget.
+    for (const [ref, parts] of orphaned) {
+      for (const n of await storedRevisions(storage, work, ref)) for (const part of await revisionAttachments(storage, work, ref, n)) parts.delete(part);
+      for (const part of parts) { spend(work); await storage.delete(partKey(ref.scope, part)); }
     }
   } catch { /* whatever this publication did not reach stays retained */ }
+}
+/** P86: whether a purge has parts to consider: a content candidate, and at least one part object of the scope. */
+async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, refs: Ref[]): Promise<boolean> {
+  if (!refs.some(ref => ref.kind === 'content')) return false;
+  spend(work);
+  const page = await storage.list({ prefix: partKey(scope, '').slice(0, -'.json'.length), limit: 1 }) as unknown as Listed;
+  return Array.isArray(page?.objects) && page.objects.length > 0;
+}
+/** P86: the parts one stored revision's value names (`attachmentsOf`); none for a kind without parts, without a read. */
+async function revisionAttachments(storage: R2Bucket, work: PurgeWork, ref: Ref, n: number): Promise<string[]> {
+  if (ref.kind !== 'content') return [];
+  spend(work);
+  const found = await readObject(storage, revisionKey(ref.kind, ref.scope, n));
+  if (!found) return [];
+  if ((work.bytes += found.bytes) > PURGE_BYTES) throw new PurgeStopped();
+  return attachmentsOf(ref.kind, (found.value as { value?: unknown } | null)?.value);
 }
 /**
  * W38 B4 with W21 E1.07: may this member's old revisions be purged without

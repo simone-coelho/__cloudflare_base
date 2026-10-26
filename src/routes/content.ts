@@ -30,7 +30,8 @@ import { stampOwner } from '@/auth/authority';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type Revision, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, completePublicationSet, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
-  readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationPin } from '@/config/publication';
+  readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationPin,
+  catalogPartStored, readCatalogPart, writeCatalogPart, type CatalogPart } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
@@ -40,7 +41,8 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { addressAllowed, hostAllowed, HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, IMPORT_SOURCES_KIND, isImportMode, parseCsvTable, pullUrlOf, positionedCandidates, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
-import type { ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
+import type { CatalogPartPointer, ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
+import { catalogPieceCount, partProductOf, variantFirst } from '@/content/kinds';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
@@ -131,6 +133,111 @@ async function governedOver(env: Env, scope: string, set: PublicationPin, candid
   if (!governed.ok) throw new VocabularyRefusal(governed.errors);
   return governed.value;
 }
+
+// ── P86 (E10, design A, R-P405, R-P407, R-P409): the catalogue's per-product parts at its doors ──
+//
+// A catalogue that declares `productSlots` is stored as a manifest: its shared
+// pieces, its product slots and an index of one immutable part per product
+// (src/config/publication.ts `writeCatalogPart`). Every door that publishes the
+// catalogue — a PUT (alone or with related members), an import, a pull, a
+// rollback — routes the records here, inside the publication's candidate step,
+// so each part is written before the head is reserved and a refusal writes
+// nothing. A catalogue declaring no product slots is today's document, untouched.
+
+/**
+ * A catalogue's pieces routed under its product slots: the shared pieces, each
+ * product's records in their order, and the refusals (a pooled record that
+ * would go to a part: pooled evidence is one record across every page, which a
+ * part read on one product's page would split), addressed `pieces[i]` in the
+ * list given, so an import names the record of the file sent.
+ */
+function routedPieces(pieces: readonly ContentPiece[], productSlots: readonly string[], offset = 0):
+  { shared: ContentPiece[]; parts: Map<string, ContentPiece[]>; errors: string[] } {
+  const slots = new Set(productSlots), shared: ContentPiece[] = [], parts = new Map<string, ContentPiece[]>(), errors: string[] = [];
+  pieces.forEach((piece, i) => {
+    const product = partProductOf(piece, slots);
+    if (product === null) { shared.push(piece); return; }
+    if (piece.pooled === true) {
+      errors.push(`pieces[${offset + i}]: ${JSON.stringify(piece.id).slice(0, 80)} is a record of product ${JSON.stringify(product).slice(0, 80)}'s part (every slot type a product slot), so it cannot be pooled: a pooled piece stays shared`);
+      return;
+    }
+    parts.set(product, [...(parts.get(product) ?? []), piece]);
+  });
+  return { shared, parts, errors };
+}
+/** The manifest a catalogue publishes: its own members, the shared pieces and the index, products in key order. */
+function manifestOf(catalog: Pick<ContentCatalog, 'version' | 'typeFallback' | 'productSlots'>, shared: ContentPiece[], index: Record<string, CatalogPartPointer>): ContentCatalog {
+  return { ...(catalog.version !== undefined ? { version: catalog.version } : {}), ...(catalog.typeFallback ? { typeFallback: catalog.typeFallback } : {}),
+    productSlots: [...(catalog.productSlots ?? [])], pieces: shared, products: Object.fromEntries(Object.keys(index).sort().map(product => [product, index[product]!])) };
+}
+/**
+ * The cap (S5): the manifest rides the pending head beside the set, both under
+ * the store's 2 MiB, so a manifest whose index would leave no room for them is
+ * refused 413 `manifest_too_large`, naming it, before any part is written; the
+ * two-level index (256 fixed buckets) is the recorded next step.
+ */
+function manifestCap(manifest: ContentCatalog, set: PublicationPin): void {
+  const bytes = documentBytes(manifest), reserve = documentBytes(set) + 4096;
+  if (bytes + reserve > PUBLICATION_MAX_BYTES) {
+    throw new PublicationError(`The catalogue manifest would be ${bytes} bytes for ${Object.keys(manifest.products ?? {}).length} products, past what one 2 MiB publication holds beside its set; nothing was written (a two-level index is the next step)`, 413, 'manifest_too_large');
+  }
+}
+/** Each part's pointer: the digest of its canonical `{ product, pieces }` and its record count. Nothing is written. */
+async function partPointers(parts: ReadonlyMap<string, ContentPiece[]>): Promise<Record<string, CatalogPartPointer>> {
+  const out: Record<string, CatalogPartPointer> = {};
+  for (const [product, pieces] of parts) out[product] = { digest: await documentDigest({ product, pieces } satisfies CatalogPart), records: pieces.length };
+  return out;
+}
+/** Store each part with the store's exact-create (eight at a time), before the publication reserves the head. */
+async function writeParts(env: Env, scope: string, parts: ReadonlyMap<string, ContentPiece[]>): Promise<void> {
+  const entries = [...parts.entries()];
+  for (let i = 0; i < entries.length; i += 8) await Promise.all(entries.slice(i, i + 8).map(([product, pieces]) => writeCatalogPart(env, scope, { product, pieces })));
+}
+/** The 413 the store raises for the content member's head, named as the manifest's (R-P407 (4)). */
+function namedManifest(error: unknown): unknown {
+  return error instanceof PublicationError && error.code === 'document_too_large'
+    ? new PublicationError('The catalogue manifest is past what one 2 MiB publication holds beside its set; nothing was written (a two-level index is the next step)', 413, 'manifest_too_large')
+    : error;
+}
+/**
+ * A PUT's catalogue (alone or as a related member), under the vocabulary in
+ * effect and, where it declares product slots, routed: its records into their
+ * products' parts, its `products` pointers carried only as the revision in
+ * force holds them (the GET→PUT round trip keeps every part; any other pointer
+ * is refused naming the product), a product it names neither by a pointer nor
+ * by a record removed, as a piece it leaves out is (R-P409 (2)).
+ */
+async function catalogueOverPut(env: Env, scope: string, current: ContentCatalog | undefined, set: PublicationPin, document: unknown, seen?: { manifest: boolean }): Promise<unknown> {
+  const governed = await governedOver(env, scope, set, document);
+  const checked = CONTENT_KIND.validate(governed);
+  if (!checked.ok || !checked.value.productSlots) return governed;
+  const catalog = checked.value, stored = current?.products ?? {}, errors: string[] = [];
+  for (const [product, pointer] of Object.entries(catalog.products ?? {})) {
+    const held = stored[product];
+    if (!held || held.digest !== pointer.digest || held.records !== pointer.records) {
+      errors.push(`products['${product.slice(0, 80)}']: names no part the revision in force holds for that product; a PUT carries a product's pointer only as it reads it, and its records otherwise`);
+    }
+  }
+  const routed = routedPieces(catalog.pieces, catalog.productSlots!);
+  errors.push(...routed.errors);
+  if (errors.length) throw new VocabularyRefusal(errors);
+  const manifest = manifestOf(catalog, routed.shared, { ...(catalog.products ?? {}), ...await partPointers(routed.parts) });
+  if (seen) seen.manifest = true;
+  manifestCap(manifest, set);
+  await writeParts(env, scope, routed.parts);
+  return manifest;
+}
+/** A rollback's catalogue: the kept revision forward, refused 410 naming every product whose part the store no longer holds (one HEAD each). */
+async function catalogueOverRollback(env: Env, scope: string, set: PublicationPin, value: unknown): Promise<unknown> {
+  const products = value && typeof value === 'object' ? (value as ContentCatalog).products ?? {} : {};
+  const missing: string[] = [];
+  for (const [product, pointer] of Object.entries(products)) if (!await catalogPartStored(env, scope, pointer.digest)) missing.push(product);
+  if (missing.length) {
+    throw new PublicationError(`The revision names parts the store no longer holds, so it cannot be rolled forward: ${missing.map(p => JSON.stringify(p)).join(', ')}; nothing was written`, 410, 'part_missing');
+  }
+  return governedOver(env, scope, set, value);
+}
+
 /**
  * W32 E1.01 (F32 §2.4-§2.6, §4 item 8, §6.2): the size of the document this
  * answer carries, against the ceiling it is stored under.
@@ -155,8 +262,9 @@ async function governedOver(env: Env, scope: string, set: PublicationPin, candid
  */
 function documentEnvelopeOf(kind: DocumentKind<unknown>, value: unknown): { envelope?: DocumentEnvelope } {
   try {
-    const pieces = kind.name === CONTENT_KIND.name && value !== null && typeof value === 'object' && Array.isArray((value as ContentCatalog).pieces)
-      ? { pieces: (value as ContentCatalog).pieces.length } : {};
+    // P86: a manifest's pieces are its shared pieces and every part's records; `products` the index's size.
+    const catalog = kind.name === CONTENT_KIND.name && value !== null && typeof value === 'object' && Array.isArray((value as ContentCatalog).pieces) ? value as ContentCatalog : null;
+    const pieces = catalog ? { pieces: catalogPieceCount(catalog), ...(catalog.products ? { products: Object.keys(catalog.products).length } : {}) } : {};
     return { envelope: { ...pieces, bytes: documentBytes(value), limitBytes: PUBLICATION_MAX_BYTES } };
   } catch { return {}; }
 }
@@ -704,6 +812,15 @@ contentRoutes.get('/:kind', async (c) => {
   }
   const rev = await readPublication(c.env, k.kind, scope);
   const value = rev ? rev.value : k.fallback;
+  // P86 (S6): `?product=` reads one product's part of the catalogue in force, through its manifest pointer.
+  const product = c.req.query('product');
+  if (product !== undefined && k.kind.name === CONTENT_KIND.name) {
+    const pointer = rev ? (rev.value as ContentCatalog).products?.[product] : undefined;
+    if (!pointer) return c.json({ ok: false, error: `product ${JSON.stringify(product.slice(0, 256))} has no part in the catalogue in force` }, 404);
+    const part = await readCatalogPart(c.env, scope, pointer.digest);
+    return c.json({ scope, kind: k.kind.name, source: 'stored', revision: rev!.revision, publication: rev!.publication, product, digest: pointer.digest,
+      document: { product: part.product, pieces: part.pieces }, envelope: { pieces: part.pieces.length, bytes: documentBytes(part), limitBytes: PUBLICATION_MAX_BYTES } });
+  }
   return c.json({ scope, kind: k.kind.name, source: rev ? 'stored' : 'compiled-default', revision: rev?.revision ?? 0,
     publication: rev?.publication, actor: rev?.actor ?? null, note: rev?.note ?? null, at: rev?.at ?? null, document: value,
     ...documentEnvelopeOf(k.kind, value),
@@ -839,8 +956,11 @@ contentRoutes.put('/:kind', async (c) => {
   }
   // P38 (VA2): a catalogue document, primary or related, is published under the
   // vocabulary in effect in the set it is published over; any other document as it came.
+  // P86: and, where it declares product slots, routed into its parts before the head is reserved.
+  const seen = { manifest: false };
   const governedMember = (kind: DocumentKind<unknown>, document: unknown) => kind.name === CONTENT_KIND.name
-    ? (_base: unknown, set: PublicationPin) => governedOver(c.env, scope, set, document) : () => document;
+    ? (base: unknown, set: PublicationPin) => catalogueOverPut(c.env, scope, base as ContentCatalog | undefined, set, document, seen) : () => document;
+  const named = (error: unknown) => { throw seen.manifest ? namedManifest(error) : error; };
   let result;
   if (related !== undefined) {
     if (!Array.isArray(related) || related.length > 5) throw new PublicationError('Invalid related publication members', 422, 'invalid_document');
@@ -881,7 +1001,7 @@ contentRoutes.put('/:kind', async (c) => {
     // document this request publishes or else the one in force.
     const blends = await requestBlendRefusals(c, scope, members);
     if (blends) return c.json({ ok: false, errors: blends.errors }, blends.status);
-    result = await publishSet(c.env, changes, { ...meta, note });
+    result = await publishSet(c.env, changes, { ...meta, note }).catch(named);
   } else {
     // P01 (R-P24): a slots document published alone is checked against the catalogue in force.
     const orders = await requestOrderRefusals(c, scope, [{ kind: k.kind, document: candidate, at: null }]);
@@ -891,7 +1011,7 @@ contentRoutes.put('/:kind', async (c) => {
     if (blends) return c.json({ ok: false, errors: blends.errors }, blends.status);
     // P38: the catalogue through the same replace a write makes, under the vocabulary in effect.
     result = k.kind.name === CONTENT_KIND.name
-      ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate))
+      ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate)).catch(named)
       : await write(c.env, k.kind, scope, candidate, { ...meta, note });
   }
   return result.ok
@@ -914,7 +1034,7 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
   // request, the note and the body read are versionedStore.rollback's own.
   const result = k.kind.name === CONTENT_KIND.name
     ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
-      async (_base: unknown, set: PublicationPin) => governedOver(c.env, scope, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null))
+      async (_base: unknown, set: PublicationPin) => catalogueOverRollback(c.env, scope, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null))
     : await rollback(c.env, k.kind, scope, n, rollbackMeta);
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '',
@@ -934,6 +1054,99 @@ class HeldLoad extends Error {
   constructor(readonly held: 'unchanged' | 'dry-run' | 'expire', readonly candidate: ContentCatalog | null, readonly expiring = 0) { super(held); }
 }
 
+/**
+ * P86 (S4, R-P407 (1)): a load over a catalogue with product slots. Each record
+ * of the file routes by its own `slotTypes` and FIRST `featuredProductIds`; the
+ * mode applies per product — `merge` upserts inside the parts the file names,
+ * `replace` and `full` replace each named product's part (`full` keeping its
+ * left-out records expired, `expire` counted over the named products) — and to
+ * the shared pieces only when the file carries one. Every other product keeps
+ * its pointer. Only the named products' parts are read: the work is the file's,
+ * never the range's. The assembled records go through the vocabulary in effect
+ * and the validator as one list (so a refusal names the record of the file
+ * sent), then each product's records become one part. Answers the manifest and
+ * the parts to write, or the invalid document for the validator to refuse.
+ */
+async function assembleParted(env: Env, scope: string, current: ContentCatalog, set: PublicationPin, incoming: Record<string, unknown>[], positions: readonly number[],
+  mode: ImportMode, opts: { expire?: number }, sink: { placed?: { pieces: unknown[]; positions: (number | null)[] }; touched?: { before: ContentCatalog; after: ContentCatalog } }):
+  Promise<{ manifest?: ContentCatalog; parts: Map<string, ContentPiece[]>; document?: unknown }> {
+  const slots = new Set(current.productSlots ?? []), sharedIn: number[] = [], productIn = new Map<string, number[]>();
+  incoming.forEach((piece, j) => {
+    const product = partProductOf(piece, slots);
+    if (product === null) sharedIn.push(j); else productIn.set(product, [...(productIn.get(product) ?? []), j]);
+  });
+  const segments: Array<{ product: string | null; stored: ContentPiece[]; pieces: unknown[]; origins: (number | null)[] }> = [];
+  const actsOnShared = sharedIn.length > 0;
+  const shared = actsOnShared ? assembleFrom(current, sharedIn.map(j => incoming[j]!), mode) : { pieces: current.pieces as unknown[], origins: current.pieces.map(() => null) };
+  segments.push({ product: null, stored: actsOnShared ? current.pieces : [], pieces: shared.pieces, origins: shared.origins.map(o => o === null ? null : sharedIn[o]!) });
+  for (const [product, at] of productIn) {
+    const pointer = current.products?.[product];
+    const stored = pointer ? (await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[] : [];
+    const assembled = assembleFrom({ pieces: stored }, at.map(j => incoming[j]!), mode);
+    segments.push({ product, stored, pieces: assembled.pieces, origins: assembled.origins.map(o => o === null ? null : at[o]!) });
+  }
+  if (mode === 'full') {
+    const expiring = segments.reduce((n, segment) => n + (segment.product === null && !actsOnShared ? 0 : segment.origins.filter(o => o === null).length), 0);
+    if (opts.expire !== expiring) throw new HeldLoad('expire', null, expiring);
+  }
+  const combined = segments.flatMap(segment => segment.pieces);
+  sink.placed = { pieces: combined, positions: segments.flatMap(segment => segment.origins.map(o => o === null ? null : positions[o]!)) };
+  const version = carriedVersion(current);
+  const governed = await governedOver(env, scope, set, { ...(version ? { version } : {}), pieces: combined }) as { pieces: unknown[] };
+  const checked = CONTENT_KIND.validate({ ...(version ? { version } : {}), pieces: governed.pieces });
+  if (!checked.ok) return { parts: new Map(), document: { ...(version ? { version } : {}), pieces: governed.pieces } };
+  // Each product's records as validated, in their segment; a record whose validated fields route it elsewhere, and a pooled
+  // record in a part, are refused by their position in the list (the record of the file sent).
+  const errors: string[] = [], parts = new Map<string, ContentPiece[]>(), before: ContentPiece[] = [], after: ContentPiece[] = [];
+  let sharedPieces: ContentPiece[] = current.pieces, offset = 0;
+  for (const segment of segments) {
+    const pieces = checked.value.pieces.slice(offset, offset + segment.pieces.length);
+    if (segment.product === null) {
+      if (actsOnShared) {
+        const routed = routedPieces(pieces, [...slots], offset);
+        errors.push(...routed.errors);
+        for (const [product] of routed.parts) errors.push(`pieces[${offset + pieces.findIndex(p => partProductOf(p, slots) === product)}]: routes to product ${JSON.stringify(product).slice(0, 80)}'s part, but was loaded as a shared piece; send it with its slotTypes and featuredProductIds`);
+        sharedPieces = pieces;
+      }
+    } else {
+      const routed = routedPieces(pieces, [...slots], offset);
+      errors.push(...routed.errors);
+      pieces.forEach((piece, i) => {
+        const product = partProductOf(piece, slots);
+        if (product !== null && product !== segment.product) errors.push(`pieces[${offset + i}]: routes to product ${JSON.stringify(product).slice(0, 80)}'s part, but was loaded into ${JSON.stringify(segment.product).slice(0, 80)}'s; send it with its slotTypes and featuredProductIds`);
+        else if (product === null) errors.push(`pieces[${offset + i}]: is a shared piece once assembled, but was loaded into product ${JSON.stringify(segment.product).slice(0, 80)}'s part; send it with its slotTypes and featuredProductIds`);
+      });
+      parts.set(segment.product, pieces);
+    }
+    if (segment.product !== null || actsOnShared) { before.push(...segment.stored); after.push(...pieces); }
+    offset += segment.pieces.length;
+  }
+  if (errors.length) throw new VocabularyRefusal(errors);
+  sink.touched = { before: { pieces: before }, after: { pieces: after } };
+  const manifest = manifestOf({ ...(version ? { version } : {}), ...(current.typeFallback ? { typeFallback: current.typeFallback } : {}), productSlots: current.productSlots },
+    sharedPieces, { ...(current.products ?? {}), ...await partPointers(parts) });
+  return { manifest, parts };
+}
+/**
+ * P86 (S9, R-P407 (2)): on a catalogue with product slots, an import's and a pull's diagnostics name each routed
+ * two-id record written variant-first (its first id is its second followed by `-` and more): it is routed to its
+ * first id as written, the load accepted; the canonical order is [product, variant].
+ */
+function withVariantFirst<T extends { warnings: unknown[] | null; warningCount?: number | null; counts?: Record<string, number> | null }>(diagnostics: T,
+  catalog: ContentCatalog, incoming: readonly Record<string, unknown>[], positions: readonly number[]): T {
+  if (!catalog.productSlots) return diagnostics;
+  const slots = new Set(catalog.productSlots), BOUND = 64;
+  const warnings = incoming.flatMap((piece, j) => partProductOf(piece, slots) !== null && variantFirst(piece) ? [(() => {
+    const id = typeof piece.id === 'string' ? piece.id : '';
+    return { code: 'variant_first' as const, recordIndex: positions[j]!, recordId: id.slice(0, BOUND), recordIdTruncated: id.length > BOUND,
+      product: partProductOf(piece, slots)! };
+  })()] : []);
+  if (!warnings.length) return diagnostics;
+  return { ...diagnostics, warnings: [...(diagnostics.warnings ?? []), ...warnings],
+    ...(typeof diagnostics.warningCount === 'number' ? { warningCount: diagnostics.warningCount + warnings.length } : {}),
+    ...(diagnostics.counts ? { counts: { ...diagnostics.counts, variant_first: warnings.length } } : {}) };
+}
+
 async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode, note: string, source: object, meta: WriteMeta,
   document?: { value: unknown; accepted: ReadonlySet<string> }, opts: { dryRun?: boolean; expire?: number } = {}) {
   const scope = catalogScope(c);
@@ -951,9 +1164,15 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
   let base: ContentCatalog | undefined;
   // P82 (E5): the assembled pieces and, beside them, the position in the file sent of the record each came from.
   let placed: { pieces: unknown[]; positions: (number | null)[] } | undefined;
+  // P86: on a catalogue with parts, the records the load read and wrote (the shared pieces it acted on and the parts
+  // of the products it named), before and after, for the answer's counts and diagnostics.
+  let touched: { before: ContentCatalog; after: ContentCatalog } | undefined;
   const addressed = (errors: string[]) => placed ? recordAddressed(errors, placed.pieces, placed.positions) : errors;
-  const diagnosed = (catalog: ContentCatalog, revision: number | null) => catalogDiagnostics(c.env, scope, catalog, revision,
-    { records, accepted: FEED_FIELDS, ...(document ? { document } : {}), pieceRecords: storedPieceRecords(catalog, incoming, positions) });
+  const diagnosed = async (catalog: ContentCatalog, revision: number | null) => {
+    const view = touched ? { ...catalog, pieces: touched.after.pieces } : catalog;
+    return withVariantFirst(await catalogDiagnostics(c.env, scope, view, revision,
+      { records, accepted: FEED_FIELDS, ...(document ? { document } : {}), pieceRecords: storedPieceRecords(view, incoming, positions) }), catalog, incoming, positions);
+  };
   let result;
   try {
     // P38 (VA2): the assembled catalogue under the vocabulary in effect in the set it is published over.
@@ -961,6 +1180,19 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
       { ...meta, note },
       async (current, set) => {
         base = current;
+        // P86: a catalogue with product slots assembles per product (`assembleParted`).
+        if (current.productSlots) {
+          const sink: Parameters<typeof assembleParted>[8] = {};
+          let parted: Awaited<ReturnType<typeof assembleParted>>;
+          try { parted = await assembleParted(c.env, scope, current, set, incoming, positions, mode, opts, sink); }
+          finally { placed = sink.placed; touched = sink.touched; }
+          if (!parted.manifest) return parted.document;
+          if (await documentDigest(CONTENT_KIND.stamp!(parted.manifest, meta.expectedRevision!)) === await documentDigest(current)) throw new HeldLoad('unchanged', current);
+          if (opts.dryRun) throw new HeldLoad('dry-run', parted.manifest);
+          manifestCap(parted.manifest, set);
+          await writeParts(c.env, scope, parted.parts);
+          return parted.manifest;
+        }
         const assembled = assembleFrom(current, incoming, mode);
         placed = { pieces: assembled.pieces, positions: assembled.origins.map(j => j === null ? null : positions[j]!) };
         // P91: the full export's guard, compared with what the assembly expires, before anything is written.
@@ -979,6 +1211,7 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
       });
   } catch (error) {
     if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: addressed(error.errors), received: records.length }, 422);
+    if (base?.productSlots && error instanceof PublicationError && error.code === 'document_too_large') throw namedManifest(error);
     if (error instanceof HeldLoad) {
       if (error.held === 'expire') {
         return c.json({ ok: false, error: `mode=full expires ${error.expiring} stored piece${error.expiring === 1 ? '' : 's'} the file leaves out; expire=${opts.expire} names another number, so nothing was written`,
@@ -986,8 +1219,9 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
       }
       // The skip and the dry run: nothing was written, so the answer names the revision in force.
       const stored = base!, shown = error.held === 'unchanged' ? stored : error.candidate!;
-      return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: shown.pieces.length,
-        changed: error.held === 'unchanged' ? 0 : changedPieces(stored, shown), removed: error.held === 'unchanged' ? 0 : removedPieces(stored, shown),
+      const compared = touched && error.held !== 'unchanged' ? touched : { before: stored, after: shown };
+      return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: catalogPieceCount(shown),
+        changed: error.held === 'unchanged' ? 0 : changedPieces(compared.before, compared.after), removed: error.held === 'unchanged' ? 0 : removedPieces(compared.before, compared.after),
         changedBasis: 'stored' as const,
         ...(error.held === 'unchanged' ? { skipped: true, reason: 'unchanged' } : {}), ...(opts.dryRun ? { dryRun: true } : {}),
         revision: meta.expectedRevision, publication: meta.expectedPublication, version: stored.version ?? '',
@@ -998,9 +1232,10 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
   if (!result.ok) return c.json({ ok: false, errors: addressed(result.errors), received: records.length }, 422);
   const before = base !== undefined ? { catalog: base, basis: 'stored' as const } : await publishedOver(c.env, scope, meta.expectedRevision);
   const measured = before.basis === 'stored';
-  return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: result.revision.value.pieces.length,
-    changed: measured ? changedPieces(before.catalog, result.revision.value) : null,
-    removed: measured ? removedPieces(before.catalog, result.revision.value) : null,
+  const compared = touched ?? { before: before.catalog, after: result.revision.value };
+  return c.json({ ok: true, scope, mode, received: records.length, imported: incoming.length, pieces: catalogPieceCount(result.revision.value),
+    changed: measured ? changedPieces(compared.before, compared.after) : null,
+    removed: measured ? removedPieces(compared.before, compared.after) : null,
     changedBasis: before.basis,
     revision: result.revision.revision, publication: result.revision.publication, version: result.revision.value.version ?? '',
     diagnostics: await diagnosed(result.revision.value, result.revision.revision) });

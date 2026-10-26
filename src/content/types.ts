@@ -109,8 +109,20 @@ export interface ContentCatalog {
    * fallback holds exactly as before. Publication refuses any other value.
    */
   typeFallback?: 'retired';
+  /**
+   * P86 (E10, design A, R-P405): the slot types whose records are product-scoped.
+   * A catalogue that declares them is a manifest: `pieces` holds the shared
+   * pieces only, and every record whose `slotTypes` are all product slots and
+   * which names `featuredProductIds` lives in the part of its FIRST product id
+   * (`products`). Absent: today's catalogue, every piece shared.
+   */
+  productSlots?: string[];
+  /** P86: the manifest's index, product id → its part's digest and record count; present only with `productSlots`. */
+  products?: Record<string, CatalogPartPointer>;
   pieces: ContentPiece[];
 }
+/** P86: a product's pointer: the SHA-256 of its part's canonical `{ product, pieces }` and the number of its records. */
+export interface CatalogPartPointer { digest: string; records: number }
 
 /**
  * P38: one value of an attribute in the tenant's published vocabulary. `id` is
@@ -161,6 +173,8 @@ export interface VocabularyApproval {
  */
 export interface DocumentEnvelope {
   pieces?: number;
+  /** P86: the number of products a catalogue manifest indexes (its parts); absent for today's catalogue. */
+  products?: number;
   bytes: number;
   limitBytes: number;
 }

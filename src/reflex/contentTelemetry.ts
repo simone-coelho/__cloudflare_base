@@ -38,6 +38,9 @@ import { admittedTouches, extractTouches, moduleEngagementWeightOf, sanitizeEven
 import type { Env } from '@/types/env';
 import { readRevision } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_SLOTS, SLOTS_KIND } from '@/content/kinds';
+import type { ContentCatalog, ContentPiece } from '@/content/types';
+import { readCatalogPart } from '@/config/publication';
+import { readRing } from '@/learn/fan';
 import { contentTypeValues, isLearnableValue, typeFallbackRetired } from '@/content/typeAffinity';
 
 /**
@@ -116,6 +119,28 @@ export function contentTouches(data: Record<string, unknown>, config: ReflexConf
   return vocabulary ? admittedTouches(touches, vocabulary) : touches;
 }
 
+/**
+ * P86 (R-P407 (5), R-P409): a content id the shared pieces do not carry, in a
+ * catalogue with parts, resolved through the decision the engagement names: its
+ * id names the shopper whose ring holds it (`<tenant>:<ts>:<visitor>:…`, the
+ * decision's own key), and that ring entry names the products its piece
+ * features, the first being the part it lives in. One ring read and at most one
+ * part read, only for a part-held id; no content-id index. Unresolved (no such
+ * entry, another item, no part, a read that fails): undefined, and the touches
+ * are the event's own, as for any id the catalogue does not carry.
+ */
+async function partPieceOf(env: Env, tenant: string, catalog: ContentCatalog, id: string, decisionId: unknown): Promise<ContentPiece | undefined> {
+  if (!catalog.products || typeof decisionId !== 'string') return undefined;
+  const [owner, , visitor] = decisionId.split(':');
+  if (owner !== tenant || !visitor) return undefined;
+  try {
+    const entry = (await readRing(env, tenant, visitor))?.find(candidate => candidate.id === decisionId && candidate.item === id);
+    const pointer = entry?.products?.[0] === undefined ? undefined : catalog.products[entry.products[0]];
+    if (!pointer) return undefined;
+    return ((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[]).find(candidate => candidate.id === id);
+  } catch { return undefined; }
+}
+
 /** Held catalog tags are dimension-keyed, not raw source attributes. Read errors
  * must propagate before callers apply affinity or fan the same touches out.
  * The piece's OWN format tags are the catalogue speaking about itself, so they
@@ -133,7 +158,7 @@ export async function resolvedContentTouches(env: Env, tenant: string, data: Rec
   if (dimension.derive) return contentTouches(data, config, vocabulary).filter(touch => touch.dim !== 'contentType');
   const catalog = await readRevision(env, CONTENT_KIND, tenant).catch(() => { throw new Error('Content catalog unavailable'); });
   if (!catalog) throw new Error('Content catalog unavailable');
-  const piece = catalog.value.pieces.find(candidate => candidate.id === id);
+  const piece = catalog.value.pieces.find(candidate => candidate.id === id) ?? await partPieceOf(env, tenant, catalog.value, id, data.decisionId);
   if (!piece) return contentTouches(data, config, vocabulary);
   const touches = contentTouches(data, config, vocabulary).filter(touch => touch.dim !== 'contentType');
   for (const value of contentTypeValues(piece, typeFallbackRetired(catalog.value)) ?? []) touches.push({ dim: 'contentType', value });
