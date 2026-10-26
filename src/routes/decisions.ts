@@ -17,7 +17,7 @@ import { armClassOf, defaultArmProbability } from '@/sdk/armDraw';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import type { Env } from '@/types/env';
 import { syntheticOperation } from '@/ops/synthetic';
-import { sealContextKey, serveContentDecisions } from '@/content/service';
+import { contextTableInForce, sealContextKey, serveContentDecisions, type ContextTableInForce } from '@/content/service';
 import { requireRetention, type RetentionStamp } from '@/retention';
 import { ENTRY_QUERY_LIMIT, validEntry, type ChannelSignals } from '@/services/visit';
 import { deviceOf, platformOf } from '@/services/platform';
@@ -34,7 +34,7 @@ import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedRe
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
-import { carriedSaltVersion, documentDigest, pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
+import { pinPublication, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
 import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, reportPriors, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy, type ReportPriors } from '@/learn/report';
 import { PRIORS_KIND } from '@/learn/priors';
@@ -45,7 +45,7 @@ import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
 import { LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
 import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, toEvidenceFloorOf, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
-import { contextTableOf, evidenceFloorOf, type ContextTableDocument } from '@/content/decide';
+import { evidenceFloorOf } from '@/content/decide';
 import { receiptOf } from '@/learn/receipts';
 import { emptySlotGovernance, observeSlotGovernance, SLOT_GOVERNANCE_SCOPE, type SlotGovernance, type SlotGovernanceScope } from '@/learn/slotGovernance';
 import { queueOf } from '@/learn/queue';
@@ -53,7 +53,7 @@ import { DEFAULT_EXPLORE, effectiveExploration } from '@/learn/explore';
 import type { ContentCatalog, EnrollmentProvenance, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot, Republished, StaleMarker } from '@/learn/stats';
 import { invalidateLiftCache } from '@/content/service';
-import { armFor, readArmDraw, readEnrollmentHealth, recordArmDraw, saltVersionOf, type ArmDrawReason } from '@/content/holdout';
+import { armFor, readArmDraw, readEnrollmentHealth, recordArmDraw, type ArmDrawReason } from '@/content/holdout';
 import type { LearnConfig } from '@/content/types';
 import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
@@ -1117,7 +1117,7 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
 /**
  * P84 (E8; the rendering record's N1, R-P359 Q3 and Q6): GET
  * /v1/:tenant/context-table/:page[/:version], the page's context table
- * (`contextTableOf`), shopper-free: no session, no cookie, nothing about a
+ * (`contextTableInForce`, src/content/service.ts), shopper-free: no session, no cookie, nothing about a
  * shopper read or named, behind the site-key gate like every /v1 read on a
  * customer deployment. Computed on read as a pure function of ONE pinned
  * publication set (the slots and learn documents in force), its `version` the
@@ -1132,17 +1132,9 @@ const contextTable = createMiddleware<{ Bindings: Env; Variables: TenantVariable
   const tenant = (c.req.param('tenant') ?? '').trim(), page = c.req.param('page') ?? '', version = c.req.param('version');
   const none = (status: 404 | 503, error: string) => { c.header('Cache-Control', 'no-store'); return c.json({ ok: false, error }, status); };
   if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(tenant)) return none(404, 'no context table for that page');
-  let doc: (ContextTableDocument & { version: string }) | null = null;
-  try {
-    const pin = await pinPublication(c.env, tenant, true);
-    const [slotsRev, learnRev] = await Promise.all([readPinnedPublication(c.env, SLOTS_KIND, tenant, pin), readPinnedPublication(c.env, LEARN_KIND, tenant, pin)]);
-    const pages = slotsRev.value.pages, learn = learnRev.value;
-    // The salt version as W21 counts it: carried by the learn revision where it names the salt in force, else walked.
-    const salt = learn.holdout.salt || tenant, carried = carriedSaltVersion(learnRev);
-    const table = Object.hasOwn(pages, page) ? contextTableOf(page, pages[page]!, learn, learnRev.revision,
-      carried && carried.salt === salt ? carried.version : await saltVersionOf(c.env, tenant, learnRev.revision, tenant, salt)) : null;
-    if (table) doc = { ...table, version: await documentDigest(table) };
-  } catch (error) {
+  let doc: ContextTableInForce | null = null;
+  // P85 (R-P393 Q3): the one computation the carousel beacon's admission reads too (src/content/service.ts).
+  try { doc = await contextTableInForce(c.env, tenant, page); } catch (error) {
     if (error instanceof PublicationError && error.status === 404) return none(404, 'no context table for that page');
     return none(503, 'Context table unavailable');
   }

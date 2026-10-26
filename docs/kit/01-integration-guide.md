@@ -586,6 +586,18 @@ of it. The engine adds one exposure per drawn module to that context's learning 
 device is no learning level), and adds nothing for a beacon sent without tracking consent, with a key it did not
 issue, or repeated for the same page view. Only a layout slot measured on `rendered-v1` counts it.
 
+A carousel the head script ordered before paint (below) is counted the same way: call
+`client.listen.carouselExposure({ tableVersion, context, page, slot, images, arm })` once per page view, with the
+values the head script wrote on the root element (`data-op-table`, `data-op-context` and `data-op-arm`), the page,
+the carousel slot and the image ids in painted order. The SDK sends it as the `carousel_exposure` action only under
+the shopper's tracking consent, once per page view and slot, and asks for no decisions because of it. The engine
+adds one exposure per painted image to that context's learning when the table version is the one in force, the
+context is one that version carries and its own assignment of the shopper is an arm that learns (the page's `arm` is
+reported, never trusted); it adds nothing otherwise. A page cached from the table's stable address before a
+publication carries a version no longer in force for up to a minute, and its beacons count nothing (`stale_table`).
+A click or an add to bag on a painted image is credited only through the engine's own decision for that image on
+that page view (the decision set the SDK takes after paint), as a cached layout's module is.
+
 ### The carousel before paint: the context table and the head script
 
 On a page with a declared layout slot, your server render can paint the carousel in the shopper's context before
