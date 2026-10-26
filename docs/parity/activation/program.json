@@ -1619,7 +1619,7 @@
     {
       "id": "P76",
       "title": "First-answer time on the hosted stamps (P76 candidate) (**amendment 11, E12, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
