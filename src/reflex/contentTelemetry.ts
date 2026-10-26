@@ -120,21 +120,25 @@ export function contentTouches(data: Record<string, unknown>, config: ReflexConf
 }
 
 /**
- * P86 (R-P407 (5), R-P409): a content id the shared pieces do not carry, in a
- * catalogue with parts, resolved through the decision the engagement names: its
- * id names the shopper whose ring holds it (`<tenant>:<ts>:<visitor>:…`, the
- * decision's own key), and that ring entry names the products its piece
- * features, the first being the part it lives in. One ring read and at most one
- * part read, only for a part-held id; no content-id index. Unresolved (no such
- * entry, another item, no part, a read that fails): undefined, and the touches
- * are the event's own, as for any id the catalogue does not carry.
+ * P86 (R-P407 (5), R-P409, R-P412): a content id the shared pieces do not carry,
+ * in a catalogue with parts, resolved through the decision the engagement names,
+ * and only through the acting shopper's own: the decision id
+ * (`<tenant>:<ts>:<visitor>:…`, the decision's own key) must name this tenant and
+ * the actor, so the one ring read is the actor's own ring and no other shopper's
+ * is ever read. That ring entry names the products its piece features, the first
+ * being the part it lives in. One ring read and at most one part read, only for
+ * a part-held id; no content-id index. Unresolved (no actor, a decision id of
+ * another tenant or another shopper, no such entry, another item, no part, a read
+ * that fails): undefined, and the touches are the event's own, as for any id the
+ * catalogue does not carry.
  */
-async function partPieceOf(env: Env, tenant: string, catalog: ContentCatalog, id: string, decisionId: unknown): Promise<ContentPiece | undefined> {
-  if (!catalog.products || typeof decisionId !== 'string') return undefined;
+async function partPieceOf(env: Env, tenant: string, catalog: ContentCatalog, id: string, decisionId: unknown,
+  actor: string | undefined): Promise<ContentPiece | undefined> {
+  if (!catalog.products || typeof decisionId !== 'string' || typeof actor !== 'string' || actor === '') return undefined;
   const [owner, , visitor] = decisionId.split(':');
-  if (owner !== tenant || !visitor) return undefined;
+  if (owner !== tenant || visitor !== actor) return undefined;
   try {
-    const entry = (await readRing(env, tenant, visitor))?.find(candidate => candidate.id === decisionId && candidate.item === id);
+    const entry = (await readRing(env, tenant, actor))?.find(candidate => candidate.id === decisionId && candidate.item === id);
     const pointer = entry?.products?.[0] === undefined ? undefined : catalog.products[entry.products[0]];
     if (!pointer) return undefined;
     return ((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[]).find(candidate => candidate.id === id);
@@ -147,9 +151,12 @@ async function partPieceOf(env: Env, tenant: string, catalog: ContentCatalog, id
  * are appended after the event's values have answered to the vocabulary.
  * P32 (decision D3): under the catalogue's `typeFallback: 'retired'` marker a
  * piece without its own `contentType` tag has no format to teach; without the
- * marker its safe `type` still supplies one, exactly as before. */
+ * marker its safe `type` still supplies one, exactly as before.
+ * P86 (R-P412): `actor` is the acting shopper (the event's own, session-bound
+ * `userId`); only her own decisions resolve a part-held id, and without it none
+ * does. */
 export async function resolvedContentTouches(env: Env, tenant: string, data: Record<string, unknown>, config: ReflexConfig,
-  vocabulary?: CatalogVocabulary): Promise<Touch[]> {
+  vocabulary?: CatalogVocabulary, actor?: string): Promise<Touch[]> {
   const dimension = config.dimensions.find(spec => spec.key === 'contentType');
   if (!dimension) return contentTouches(data, config, vocabulary);
   if (!Object.prototype.hasOwnProperty.call(data, 'contentId')) return contentTouches(data, config, vocabulary);
@@ -158,7 +165,7 @@ export async function resolvedContentTouches(env: Env, tenant: string, data: Rec
   if (dimension.derive) return contentTouches(data, config, vocabulary).filter(touch => touch.dim !== 'contentType');
   const catalog = await readRevision(env, CONTENT_KIND, tenant).catch(() => { throw new Error('Content catalog unavailable'); });
   if (!catalog) throw new Error('Content catalog unavailable');
-  const piece = catalog.value.pieces.find(candidate => candidate.id === id) ?? await partPieceOf(env, tenant, catalog.value, id, data.decisionId);
+  const piece = catalog.value.pieces.find(candidate => candidate.id === id) ?? await partPieceOf(env, tenant, catalog.value, id, data.decisionId, actor);
   if (!piece) return contentTouches(data, config, vocabulary);
   const touches = contentTouches(data, config, vocabulary).filter(touch => touch.dim !== 'contentType');
   for (const value of contentTypeValues(piece, typeFallbackRetired(catalog.value)) ?? []) touches.push({ dim: 'contentType', value });

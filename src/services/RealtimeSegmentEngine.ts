@@ -580,7 +580,7 @@ export class RealtimeSegmentEngine {
         return { ...answer(null), dropped: 'unknown_product' };
       }
       const resolvedTouches = reflexOn && contentEvent
-        ? await resolvedContentTouches(this.env, this.tenant, placing, reflexConfig, vocabulary) : null;
+        ? await resolvedContentTouches(this.env, this.tenant, placing, reflexConfig, vocabulary, event.userId) : null;
       // P38 (DI-9): a content piece's own tags on a governed attribute answer to the same table.
       const contentEventTouches = resolvedTouches && governed ? governedTouches(resolvedTouches, governed, reflexConfig) : resolvedTouches;
       // P32 (decision D2): a module engagement's own tags, at the registry's

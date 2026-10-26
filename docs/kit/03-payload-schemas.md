@@ -341,8 +341,9 @@ slot declared `scope: 'anchor'` and the request names an indexed product as `ctx
 part, held per isolate by its digest; a page with no such slot, no anchor or an anchor no part holds reads no
 part, and the scoped slot decides as it does with no candidates. So a product page's decision work does not
 grow with the range. A replay and a receipt resolve a record's part through the anchor it records, a click
-on a part-held image resolves through the decision it names, and the learn screens name a row whose item no
-shared piece carries `unresolved`.
+on a part-held image resolves through the decision it names when that decision is the clicking shopper's own
+(a decision id naming another shopper resolves nothing, reads no other shopper's decisions, and the click
+teaches only its own values), and the learn screens name a row whose item no shared piece carries `unresolved`.
 
 **What serving a catalog of that size costs.** Measured, not estimated: the whole path one decision
 set takes — the published catalog read from storage, parsed and validated, then the shopper, trend,

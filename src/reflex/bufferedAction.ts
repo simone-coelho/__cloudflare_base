@@ -85,7 +85,7 @@ export async function bufferedInterest(env: Env, tenant: string, event: ActionEv
     ? await tenantCatalogVocabulary(env, tenant, cfg, catalog as unknown as CatalogVocabularySource | null)
     : EMPTY_VOCABULARY;
   const placed = placeEvent(eventData, heldProduct, cfg, vocabulary);
-  const touches = contentEvent ? await resolvedContentTouches(env, tenant, eventData, cfg, vocabulary) : placed.touches;
+  const touches = contentEvent ? await resolvedContentTouches(env, tenant, eventData, cfg, vocabulary, event.userId) : placed.touches;
   const signals: RecognitionSignals = contentEvent
     ? { recognized: touches.length > 0, unrecognized: [] } : placed.signals;
   if (!touches.length) return { ...unchanged, signals };
