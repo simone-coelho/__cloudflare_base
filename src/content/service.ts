@@ -7,7 +7,7 @@
 import type { Env } from '@/types/env';
 import { afterOwnerAnswer, assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { carriedSaltVersion, documentDigest, PublicationError, pinPublication, publicationScope, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
+import { carriedSaltVersion, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
 import { extractTouches, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
@@ -32,7 +32,7 @@ import { recordSlotGovernance } from '@/learn/slotGovernance';
 import { EXTERNAL_POLICY_REASON, externalModelPolicy } from '@/learn/external';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ExternalTerm } from './types';
-import type { ContentCatalog, ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, LearnConfig, LearningRead, LearningReadBudgets, LiftAsOf, LiftReadOutcome, RingReadOutcome, SlotCatalog } from './types';
+import type { ContentCatalog, ContentDecisionSet, ContentPiece, EnrollmentProvenance, HoldoutConfig, LayoutDiagnostic, LearnConfig, LearningRead, LearningReadBudgets, LiftAsOf, LiftReadOutcome, RingReadOutcome, SlotCatalog, SlotStrategy } from './types';
 import { captureRetention, requireRetention, RetentionUnavailable } from '@/retention';
 import { recoverDecisions, recoveryDigest } from '@/ledger/recovery';
 import { enqueueDecisions } from '@/ledger/enqueue';
@@ -483,6 +483,9 @@ export async function tenantCatalogVocabulary(
         for (const [dim, tagged] of Object.entries(piece.tags ?? {})) if (!governed?.attributes.has(dim)) for (const value of tagged) name(dim, value);
         for (const id of piece.featuredProductIds ?? []) ids.add(id);
       }
+      // P86: a catalogue with parts names its products by its index; their records' tag values are read from no part here
+      // (the publish-time summary is a recorded residual), so a value only a part carries names no vocabulary entry.
+      for (const id of Object.keys(catalog.products ?? {})) ids.add(id);
     }
   } catch (error) {
     if (!(error instanceof PublicationError)) throw error;
@@ -753,9 +756,11 @@ export async function serveContentDecisions(
     }
     throw error;
   });
-  const catalog = catalogRev?.value ?? EMPTY_CATALOG;
   // Authoring defaults are not permission to select when hard controls cannot be read.
   const slotsDoc: SlotCatalog = slotsRev?.value ?? { pages: {} };
+  // P86 (E10, R-P405): the candidates are the catalogue's shared pieces and, for a page with a slot scoped to its anchor
+  // (P80) whose request names a product the manifest indexes, that ONE product's part; every other page reads no part.
+  const catalog = await withAnchorPart(env, scope, catalogRev?.value ?? EMPTY_CATALOG, slotsDoc.pages[r.page] ?? [], r.context?.anchor);
   const learn = learnRev?.value ?? DEFAULT_LEARN;
   const cfg = cfgRev.config;
   const configRevision = cfgRev.revision;
@@ -1362,6 +1367,24 @@ export async function admitLayoutExposure(env: Env, input: { tenant: string; bra
   return { answer: { exposure: 'admitted', modules: beacon.modules.length }, work };
 }
 
+/**
+ * P86 (E10, design A, R-P405): the catalogue a decision ranks: the manifest's
+ * shared pieces, joined by the records of ONE part — the product the request's
+ * anchor names — only when the page holds a slot scoped to its anchor and the
+ * manifest indexes that product. A page with no such slot, a request naming no
+ * anchor and an anchor no part holds read nothing more, and the scoped slot
+ * decides as P80 decides it without candidates. The part is read through the
+ * per-isolate part cache; one the store cannot produce fails the decision as an
+ * unreadable catalogue does, never a silent narrower one. A catalogue without
+ * parts is answered unchanged.
+ */
+export async function withAnchorPart(env: Env, scope: string, catalog: ContentCatalog, pageSlots: readonly SlotStrategy[], anchor: string | undefined): Promise<ContentCatalog> {
+  const pointer = catalog.products && typeof anchor === 'string' && pageSlots.some(slot => slot.scope === 'anchor') ? catalog.products[anchor] : undefined;
+  if (!pointer) return catalog;
+  const part = await readCatalogPart(env, scope, pointer.digest);
+  return { ...catalog, pieces: [...catalog.pieces, ...(part.pieces as ContentPiece[])] };
+}
+
 /** P84 (E8): a page's context table with its `version`, the SHA-256 of the canonical bytes of the rest. */
 export type ContextTableInForce = ContextTableDocument & { version: string };
 /** P85 (R-P393 Q4): the tables already computed, by pinned-set identity and page; a new set never matches an old entry. */
@@ -1408,19 +1431,22 @@ export type CarouselArmClaim = 'personalized' | 'default' | 'no_learning';
  * version and the context the head script applied, the page, the carousel slot,
  * the images in painted order, the page view and the class the page claims.
  */
-export interface CarouselExposureBeacon { tableVersion: string; context: string; page: string; slot: string; images: string[]; pageInstance: string; arm: CarouselArmClaim }
+export interface CarouselExposureBeacon { tableVersion: string; context: string; page: string; slot: string; images: string[]; pageInstance: string; arm: CarouselArmClaim;
+  /** P86 (R-P409 (1)): the page view's product, which names the part a catalogue with parts holds the carousel's images in. */
+  product?: string }
 /** P85: why a well-formed beacon added nothing. */
-export type CarouselExposureRefusal = 'tracking_refused' | 'stale_table' | 'unknown_context' | 'not_carousel' | 'unknown_image' | 'not_learning' | 'not_measured' | 'unavailable';
+export type CarouselExposureRefusal = 'tracking_refused' | 'stale_table' | 'unknown_context' | 'not_carousel' | 'unknown_image' | 'not_learning' | 'not_measured' | 'unavailable' | 'product_required';
 export type CarouselExposureAnswer = ({ exposure: 'admitted'; images: number } | { exposure: 'ignored'; reason: CarouselExposureRefusal }) & { armClaimed: CarouselArmClaim };
 
 /** P85: a beacon's data read strictly — at most 50 distinct images, as a slot takes — or null when it is not one. */
 export function carouselExposureBeaconOf(data: Record<string, unknown>): CarouselExposureBeacon | null {
-  const { tableVersion, context, page, slot, images, pageInstance, arm } = data;
+  const { tableVersion, context, page, slot, images, pageInstance, arm, product } = data;
   if (typeof tableVersion !== 'string' || !tableVersion || tableVersion.length > 128 || typeof context !== 'string' || !context || context.length > CONTEXT_KEY_MAX
     || !isCatalogueName(page) || !isCatalogueName(slot) || !isEventNonce(pageInstance) || (arm !== 'personalized' && arm !== 'default' && arm !== 'no_learning')
     || !Array.isArray(images) || images.length < 1 || images.length > 50
-    || !images.every(id => typeof id === 'string' && id.length > 0 && id.length <= 256) || new Set(images).size !== images.length) return null;
-  return { tableVersion, context, page, slot, images: [...images] as string[], pageInstance, arm };
+    || !images.every(id => typeof id === 'string' && id.length > 0 && id.length <= 256) || new Set(images).size !== images.length
+    || (product !== undefined && (typeof product !== 'string' || !product || product.length > 256))) return null;
+  return { tableVersion, context, page, slot, images: [...images] as string[], pageInstance, arm, ...(typeof product === 'string' ? { product } : {}) };
 }
 
 /**
@@ -1479,7 +1505,18 @@ export async function admitCarouselExposure(env: Env, input: { tenant: string; s
   const config = slotLearnConfigOf(learn)(beacon.slot);
   if ((config.measurementBasis ?? 'served-v1') !== 'rendered-v1') return ignored('not_measured');
   const spec = (slots.pages[beacon.page] ?? []).find(slot => slot.slot === beacon.slot);
-  const pieces = new Set(catalog.pieces.filter(piece => piece.slotTypes.includes(beacon.slot)).map(piece => piece.id));
+  // P86 (R-P409 (1)): where the carousel's images are product records of a catalogue with parts, the beacon names its
+  // page view's product and that ONE part is read; without it the images cannot be found (`product_required`).
+  let candidates = catalog.pieces;
+  if (catalog.products && catalog.productSlots?.includes(beacon.slot)) {
+    if (beacon.product === undefined) return ignored('product_required');
+    const pointer = catalog.products[beacon.product];
+    if (pointer) {
+      try { candidates = [...candidates, ...((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[])]; }
+      catch (error) { if (error instanceof SessionAccessError) throw error; return ignored('unavailable'); }
+    }
+  }
+  const pieces = new Set(candidates.filter(piece => piece.slotTypes.includes(beacon.slot)).map(piece => piece.id));
   if (!spec || beacon.images.length > spec.take || !beacon.images.every(id => pieces.has(id))) return ignored('unknown_image');
   // The engine's own arm: none without personalization consent (she is served the site's defaults) or with an
   // anchor it cannot read (fail closed); else the decision's draw over her anchor and the salt in force.

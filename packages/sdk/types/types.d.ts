@@ -177,7 +177,10 @@ export interface CarouselExposure {
     slot: string;
     images: string[];
     arm: string;
-    /** P79: the product of the page view the carousel was painted for (`HydrateOptions.productId`); kept by the SDK, not sent. */
+    /**
+     * P79: the product of the page view the carousel was painted for (`HydrateOptions.productId`). P86: sent as the
+     * beacon's `product`, which names the part a catalogue with parts holds the carousel's images in.
+     */
     productId?: string;
 }
 /**

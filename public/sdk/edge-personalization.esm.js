@@ -2355,7 +2355,8 @@ function createListen(core, opts = {}) {
     const { tableVersion, context, page, slot, arm } = beacon, images = Array.isArray(beacon.images) ? beacon.images : [];
     if (typeof tableVersion !== "string" || !tableVersion || tableVersion.length > 128 || typeof context !== "string" || !context || context.length > 256 || typeof page !== "string" || !page || typeof slot !== "string" || !slot || typeof arm !== "string" || !arm || !distinctIds(images)) return;
     const instance = exposedOnce(page, slot, beacon.productId);
-    if (instance) await core.send("carousel_exposure", { tableVersion, context, page, slot, images: [...images], arm, pageInstance: instance });
+    const product = typeof beacon.productId === "string" && beacon.productId ? beacon.productId : void 0;
+    if (instance) await core.send("carousel_exposure", { tableVersion, context, page, slot, images: [...images], arm, pageInstance: instance, ...product ? { product } : {} });
   }
   function distinctIds(ids) {
     return ids.length > 0 && ids.length <= 50 && ids.every((id) => typeof id === "string" && id.length > 0) && new Set(ids).size === ids.length;

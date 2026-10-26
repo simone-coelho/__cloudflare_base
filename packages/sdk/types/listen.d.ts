@@ -105,11 +105,12 @@ export interface Listen {
      * applied (`data-op-table`, `data-op-context`), the page, the carousel slot,
      * the image ids in painted order and the class it painted (`data-op-arm`).
      * Sent as one `carousel_exposure` action, once per page view and slot (the
-     * page view as `layoutExposure` reads it), only under the shopper's tracking
-     * consent and never in listen-only mode; it asks for no decisions. The engine
-     * counts the images only for the table version in force and a context it
-     * carries, on an arm that learns by its own assignment. Resolves when sent or
-     * not sent, never rejects.
+     * page view as `layoutExposure` reads it; P86: its `productId`, when given,
+     * sent as `product`, the part a catalogue with parts holds the images in),
+     * only under the shopper's tracking consent and never in listen-only mode; it
+     * asks for no decisions. The engine counts the images only for the table
+     * version in force and a context it carries, on an arm that learns by its
+     * own assignment. Resolves when sent or not sent, never rejects.
      */
     carouselExposure(beacon: CarouselExposure): Promise<void>;
     destroy(): void;
