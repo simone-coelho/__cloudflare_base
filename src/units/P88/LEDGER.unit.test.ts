@@ -65,6 +65,10 @@
 //   then).
 // R-P450 (the lead at b9081326, before the review): (1) the combined request's leg in AL2 (both hosts, both documents primary);
 //   (2) `version` other than 1 refused 422 as a member outside the schema (AL1's refusal leg).
+// R-P456 (the spec review at 4cb1a6a7): the unapproved-order leg approves a three-module layout and adds the order that extends
+//   it by one module (within the slot's take) and an order whose module id differs only in case (both spellings registered in the
+//   catalogue, so only the rule refuses it); the approved-order leg adds a layouts page key differing only in case (PDP), which
+//   does not name the page pdp.
 //
 // MEASURED (_evidence/parity-step3/S35/specifier/logs/, serial, --no-cache, one worker, the scratch tree its working directory
 // and root; trees built by mk.sh from 124d0916 with this file):
@@ -81,6 +85,9 @@
 //   round 2 (R-P450, logs/r2/): the sketch 20/20 twice (fix-1.log, fix-2.log); today 20 RED (today.log), the new leg at the
 //     layouts PRECONDITION and, behind it (w-norule.log), RED for the missing rule; the wrong fix `storedincombined` (the rule
 //     reading the stored layouts in a combined request) RED on the combined leg alone, `versionunchecked` on the refusal leg alone.
+//   round 3 (R-P456, logs/r3/): the sketch 20/20 twice (fix-1.log, fix-2.log); today 20 RED (today.log); the reviewer's controls
+//     (S35/reviewer-spec/sketches/ctl-p88.py over p88.py) each RED on its own leg alone, both hosts — extension and caseins the
+//     unapproved-order leg, pageloose the approved-order leg; setcompare and norule RED as before (w-setcompare.log, w-norule-r2.log).
 //   the locks of reading 5 (logs/b/): 17 files 244/244 today; under the sketch 244/244 (fix-locks-r2.log; P37.DV3 failed once
 //     under the machine's load in the first run and passed alone, logs/b/fix-p37-alone.log); W40.P3/P4 4/4 on the sketch.
 //
@@ -274,14 +281,25 @@ describe('unit:P88.AL2', () => {
       await publishLayouts(m, layouts({ home: { any: [['module.HOME.hero.1']] } }), 'p88 another page');
       const unnamed = await putSlots(m, withOrders([{ context: PAID_SOCIAL_FIRST, modules: ORDER_B }]), 'p88 unnamed page');
       expect.soft(unnamed.status, `${host}: P88.AL2 — an order on a page the layouts document does not name publishes as today (${show(unnamed)})`).toBe(200);
+      // R-P456 (2): a page key in another case is another page: `PDP` does not name `pdp`, so pdp keeps today's behaviour.
+      await publishLayouts(m, layouts({ [PAGE.toUpperCase()]: { any: [ORDER_A] } }), 'p88 another case');
+      const otherCase = await putSlots(m, withOrders([{ context: PAID_SOCIAL_FIRST, modules: ORDER_C }]), 'p88 page in another case');
+      expect.soft(otherCase.status, `${host}: P88.AL2 (R-P456) — a layouts page key differing only in case (PDP) does not name the page pdp: its order publishes as today (${show(otherCase)})`).toBe(200);
     });
 
-    it(`host (${host}): an order that is not one of its page's approved layouts — other modules, the approved modules in another order, a prefix of an approved layout — is refused 422 naming the page, the context and the modules, writing nothing, by PUT /content/slots, by its validate, and as a slots member of publicationChanges; an approved one validates`, async () => {
-      const m = await mount(host, BASE);
+    it(`host (${host}): an order that is not one of its page's approved layouts — other modules, the approved modules in another order, a prefix of an approved layout, an approved layout followed by one more module, a module id differing from the approved one only in case — is refused 422 naming the page, the context and the modules, writing nothing, by PUT /content/slots, by its validate, and as a slots member of publicationChanges; an approved one validates`, async () => {
+      // R-P456 (2): the catalogue registers both spellings, so only the rule can refuse the case-variant id.
+      const GRID_IN_ANOTHER_CASE = M.grid.replace('grid', 'Grid');
+      const variant = { ...(MODULES.find(piece => piece.id === M.grid)!), id: GRID_IN_ANOTHER_CASE, customerContentId: 'TAP-PDP-GRID-1-CASE-VARIANT' };
+      const m = await mount(host, { ...BASE, pieces: [...MODULES, variant] });
       expectPublished(m, 'P88.AL2 — the product page publishes');
-      await publishLayouts(m, layouts({ [PAGE]: { any: [ORDER_A] } }));
+      // R-P456 (1): the approved layout is three modules, so the four-module order that extends it is within the slot's take of 4.
+      const APPROVED = ORDER_A.slice(0, 3);
+      await publishLayouts(m, layouts({ [PAGE]: { any: [APPROVED] } }));
       const before = await slotsState(m);
-      const outside: Array<[string, string[]]> = [['other modules', ORDER_B], ['the approved modules in another order', [...ORDER_A].reverse()], ['a prefix of the approved layout', ORDER_A.slice(0, 2)]];
+      const outside: Array<[string, string[]]> = [['other modules', ORDER_B], ['the approved modules in another order', [...APPROVED].reverse()],
+        ['a prefix of the approved layout', APPROVED.slice(0, 2)], ['the approved layout followed by one more module', ORDER_A],
+        ['a module id differing only in case', APPROVED.map(id => id === M.grid ? GRID_IN_ANOTHER_CASE : id)]];
       const rows: Array<Record<string, unknown>> = [];
       for (const [name, modules] of outside) {
         const document = withOrders([{ context: PAID_SOCIAL_FIRST, modules }]);
@@ -295,7 +313,7 @@ describe('unit:P88.AL2', () => {
       expect.soft(rows, `${host}: P88.AL2 — each refused 422 naming page, context and modules (PUT, validate, publicationChanges)`)
         .toEqual(outside.map(([name]) => ({ case: name, put: REFUSED(), validate: REFUSED(), member: REFUSED() })));
       expect.soft({ slots: after, learn: learnAfter.body.revision }, `${host}: P88.AL2 — nothing written`).toEqual({ slots: before, learn: 1 });
-      const approved = await call(m, 'POST', '/content/slots/validate', { document: withOrders([{ context: PAID_SOCIAL_FIRST, modules: ORDER_A }]) });
+      const approved = await call(m, 'POST', '/content/slots/validate', { document: withOrders([{ context: PAID_SOCIAL_FIRST, modules: APPROVED }]) });
       expect.soft([approved.status, approved.body.valid ?? null], `${host}: P88.AL2 — the approved order validates (${show(approved)})`).toEqual([200, true]);
     });
 
