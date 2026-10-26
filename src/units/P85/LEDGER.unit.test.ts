@@ -72,6 +72,8 @@
 // recorded as the engine records an unknown context (the cell { channel: unknown, visit_bucket: unknown }: the root and
 // the c=unknown level); these tests read the root. src/routes/decisions.ts is granted (adb14184) for the shared
 // table-version helper.
+// R-P398 (the spec review at 405ddca8): the fail-closed rule pinned — a recognised shopper whose anchor cannot be read is
+// `not_learning` (W21.E1.08's harness form: the identity projection's reads failing on the sessions and cache stores).
 // GRANT (R-P386, 24a45d6d): src/sdk/wire.ts is in P85's allowedPaths — the SDK's wire table sends an unlisted type as
 // `custom`, so `carousel_exposure` needs its entry (src/sdk/wire.ts :35). MEASURED (s31b, 7e32d3a8): under the sketch the
 // SDK bundles grow past their recorded budgets (edge-personalization.esm.js 108,329 of 107,520 bytes, edge-personalization.js
@@ -85,6 +87,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { issueSessionCapability, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { createCore } from '@/sdk/core';
 import { createListen } from '@/sdk/listen';
 import { testHost } from '@/sdk/testHost';
@@ -130,7 +133,7 @@ async function tableOf(m: Mounted): Promise<{ status: number; version: string; r
   return { status: response.status, version: typeof body.version === 'string' ? body.version : '', rows: Array.isArray(body.rows) ? body.rows : [] };
 }
 /** The beacon as the SDK sends it (S1), through POST /realtime/action. */
-const carouselBeacon = (s: Shopper, data: Record<string, unknown>): Promise<Answer> =>
+const carouselBeacon = (s: Pick<Shopper, 'action'>, data: Record<string, unknown>): Promise<Answer> =>
   s.action({ type: 'carousel_exposure', data: { page: 'pdp', slot: CAROUSEL, arm: 'personalized', ...data } });
 /** What the carousel's statistics object holds for an item at one level key (P30's read, on the carousel slot's object alone): `n` exposures, `s` credits. */
 async function at(m: Mounted, key: string, field: 'n' | 's'): Promise<Record<string, number>> {
@@ -143,6 +146,34 @@ async function at(m: Mounted, key: string, field: 'n' | 's'): Promise<Record<str
   return Object.fromEntries(Object.entries(out).filter(([, n]) => n !== 0));
 }
 const CELL = 'c=paid_social|v=1';
+/**
+ * R-P398: a RECOGNISED shopper (a canonical `sh_` id, a recognised session) with her own explicit choice through the real
+ * route — the shopper whose enrollment anchor is read from the identity projection (src/content/holdout.ts
+ * enrollmentAnchorOf), unlike `shopperOn`'s anonymous browser, which is its own anchor.
+ */
+async function recognisedOn(m: Mounted): Promise<Pick<Shopper, 'action'> & { subject: string }> {
+  const subject = `sh_${crypto.randomUUID().replace(/-/g, '')}`;
+  const grant = await issueSessionCapability(m.env, { tenant: TENANT, subject, sessionId: `s-${crypto.randomUUID()}`, kind: 'recognized' });
+  const call = async (path: string, body: unknown): Promise<Answer> => {
+    const response = await m.fetch(new Request(`https://shop.invalid${path}`, { method: 'POST',
+      headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: grant.capability, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+    const answer = { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+    await m.drain();
+    return answer;
+  };
+  const chosen = await call(`/realtime/session/${grant.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
+    choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: grant.grantId, iat: grant.iat, exp: grant.exp } });
+  expect(chosen.status, `PRECONDITION (${m.host}): the recognised shopper's explicit choice is accepted (${JSON.stringify(chosen.body).slice(0, 160)})`).toBe(200);
+  return { subject, action: (event: { type: string; data: Record<string, unknown> }) => call('/realtime/action', { ...event, source: 'sdk', userId: subject,
+    sessionId: grant.sessionId, timestamp: Date.now(), eventId: crypto.randomUUID() }) };
+}
+/** W21.E1.08's form (src/units/W21/B2.unit.test.ts): the identity projection's reads fail on the sessions and the cache stores. */
+function identityReadsFail(m: Mounted): void {
+  for (const store of [m.env.SESSIONS, m.cache] as unknown as Array<{ get: (key: string, type?: string) => Promise<unknown> }>) {
+    const get = store.get.bind(store);
+    store.get = async (key: string, type?: string) => { if (key.startsWith('identity:shopper:')) throw new Error('identity store unavailable'); return get(key, type); };
+  }
+}
 const answerOf = (a: Answer) => [a.status, a.body.exposure ?? null, a.body.reason ?? a.body.images ?? null];
 
 // ===========================================================================
@@ -238,6 +269,19 @@ describe('unit:P85.CX1', () => {
       const personalizedClaimingDefault = await outcome(learnOf(), 'default');
       expect.soft({ holdoutClaimingPersonalized, personalizedClaimingDefault }, `${host}: P85.CX1 — the engine's arm, never the page's claim, decides; the disagreement counted`).toEqual({
         holdoutClaimingPersonalized: [200, 'ignored', 'not_learning', 'personalized', 1, 0], personalizedClaimingDefault: [200, 'admitted', 8, 'default', 1, 8] });
+    }, 120_000);
+
+    it(`host (${host}): fail closed (R-P393, R-P398) — a recognised shopper whose enrollment anchor cannot be read (her identity projection's reads fail) is ignored not_learning, nothing counted, though the page claims personalized and the holdout share is 0`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P85.CX1 — the documents publish');
+      const table = await tableOf(m);
+      expect(table.status, `${host}: PRECONDITION P84 — the context table answers`).toBe(200);
+      const s = await recognisedOn(m);
+      identityReadsFail(m);
+      const answer = await carouselBeacon(s, { tableVersion: table.version, context: 'paid_social|1|mobile', images: PAINTED, pageInstance: pageInstanceOf('p85-cx1-unavailable') });
+      await m.drainLedger();
+      expect.soft([...answerOf(answer), Object.keys(await at(m, CELL, 'n')).length], `${host}: P85.CX1 — an unavailable anchor is not learning (fail closed), nothing counted`)
+        .toEqual([200, 'ignored', 'not_learning', 0]);
     }, 120_000);
 
     it(`host (${host}): the version in force only (S3) — after a slots publication moves the version, a beacon naming the replaced version is ignored stale_table at once and the new version is admitted`, async () => {
