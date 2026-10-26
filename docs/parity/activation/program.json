@@ -1485,7 +1485,10 @@
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
         "packages/sdk/types/**",
-        "packages/sdk/package.json"
+        "packages/sdk/package.json",
+        "src/durable-objects/ShopperReflex.ts",
+        "src/services/RealtimeSegmentEngine.ts",
+        "src/reflex/bufferedAction.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P86 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
