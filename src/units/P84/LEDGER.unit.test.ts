@@ -766,7 +766,7 @@ async function runHead(o: HeadOptions): Promise<HeadRun> {
   for (const record of mutations) {
     if (record.type === 'childList') {
       for (const node of Array.from(record.addedNodes) as Array<{ nodeType: number; textContent?: string | null }>) {
-        if (node === allowedPreload && !preloadSeen) { preloadSeen = true; continue; }
+        if ((node as unknown) === (allowedPreload as unknown) && !preloadSeen) { preloadSeen = true; continue; }
         if (node.nodeType === 1) count(); else sent += urlIn(node.textContent);
       }
     } else if (record.type === 'attributes') {
