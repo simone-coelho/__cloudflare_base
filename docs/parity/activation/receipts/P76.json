@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P76",
+  "workOrderHash": "sha256:60178cab94a5382eb66ab2c62cdbc0998e4a11f1a0d52b7a2a17edca7f277e99",
+  "artifact": {
+    "revision": "cf680a000fe62864c20539544ee3a8b58809d76c",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p76-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p76-build at 76eb4719 (30ac5d50, 141e2093, 7bbe59e0 and 76eb4719 the merges of the S34 spec d5e0cbc1, 38aaa12d, b9fdbead and b8333b8f; ff26f1f8 the measurement and the kit: src/routes/decisions.ts gives the first-request door's Server-Timing its own entries beside the forwarded snapshot's five stages (documents, shopper, trend, lift, decide, unchanged): session for the issue, activation and verify of the new shopper's session that the door awaits, the forward's remainder so the entries add up to the door's time, arm only when the page drew a class, and total, and carries the same entries in the door answer's sources.timings because a cross-origin page cannot read the header; a page view that already holds a session is unchanged; no decision, budget or read changes (the 600 ms lift and ring budgets, the statistics object's keep-warm and the session-first door stand; no latency change is part of this ticket); kit 02's door paragraph names every entry and says the stages are the forwarded decision's, and its budget sentence now states that the lift's key-value snapshot read is under no budget; kit 01's deadline paragraph and hydrateTimeoutMs row state the first-answer times measured on the acceptance pair by release (a new visitor's first answer and a page view holding a session, with the session route's own time), that the stamps are not yet measured, that at the deadline every subscriber receives the page's defaults and the engine's late answer then paints, that a returning browser's session route runs inside the same deadline, and that a cross-origin page also pays a preflight which a page served through the customer's server bridge avoids).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S34/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S34/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P76/implementer/REPORT.md",
+      "git commits on rem/p76-joined up to cf680a00"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P76 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S34/reviewer-p76/logs/w-p76-run1.json"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S34/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P76/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-26T17:16:12.119Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -1101,6 +1101,7 @@ function countArmDraw(c: { env: Env; executionCtx: ExecutionContext }, tenant: s
  */
 const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: TenantVariables }>(async (c, next) => {
   if (c.req.method !== 'POST' || capabilityToken(c.req.raw) !== null) return next();
+  const doorStarted = performance.now();
   const tenant = shopperTenant(c.env, c.req.raw, c.get('tenant'));
   if ((c.req.param('tenant') ?? '') !== tenant) throw new SessionAccessError();
   let text: string, context: Record<string, string>;
@@ -1119,9 +1120,13 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   // P84 (E8, D2 mechanism (a)): the class the page drew before paint; the identifier is minted into it.
   const brand = (context.brand ?? '').trim() || tenant;
   const drawn = context.arm === undefined ? null : armMemberOf(context.arm);
+  const mintStarted = performance.now();
   const mint = drawn ? await armMint(c.env, tenant, brand, drawn.class) : null;
+  let armMs = performance.now() - mintStarted;
+  const sessionStarted = performance.now();
   const session = await anonymousWithConsent(c.env, tenant, hints, mint?.target);
   const principal = await verifySessionCapability(c.env, session.capability, tenant);
+  const sessionMs = performance.now() - sessionStarted;
   const headers = new Headers(c.req.raw.headers);
   headers.set(SHOPPER_HEADER, session.capability);
   // The member is the mint's alone: the decision is re-entered without it, as a request carrying a session.
@@ -1129,22 +1134,36 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
     text = JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(text) as Record<string, unknown>).filter(([key]) => key !== 'arm')));
     headers.delete('Content-Length');
   }
+  const forwardStarted = performance.now();
   const answered = await forwardShopperRequest(c.env, new Request(c.req.raw.url, { method: 'POST', headers, body: text }), principal,
     (c.req.raw as Request & { cf?: unknown }).cf);
   // A refusal or a failure is answered as the route answered it, without the
   // session: the SDK then takes the session route as before.
   if (answered.status !== 200) return answered;
   const body = await answered.json().catch(() => null) as Record<string, unknown> | null;
+  const forwardMs = performance.now() - forwardStarted;
   if (!body || body.ok !== true) return c.json({ ok: false, error: 'Snapshot unavailable' }, 503);
-  const timing = answered.headers.get('Server-Timing');
-  if (timing) c.header('Server-Timing', timing);
   // P30 (decision D2): the first decision set's context key, as the route answered it.
   const contextKey = answered.headers.get('X-Context-Key');
   if (contextKey) c.header('X-Context-Key', contextKey);
   c.header('Cache-Control', 'no-store');
+  const outcomeStarted = performance.now();
   const armRequest = drawn && mint ? await armOutcome(c.env, tenant, brand, drawn.class, mint, session.subject, (body.versions as { learn?: unknown } | undefined)?.learn) : null;
+  armMs += performance.now() - outcomeStarted;
   if (armRequest?.reason) countArmDraw(c, tenant, armRequest.reason);
-  return c.json({ ...body, session, ...(armRequest ? { armRequest } : {}) });
+  // P76 (E12, R-P438): the first request names its own time beside the forwarded decision's five stages, in whole
+  // milliseconds, in Server-Timing and in sources.timings (a cross-origin page cannot read the header): `session` (the
+  // issue, the activation on the new shopper's object and the verify), `forward` (the forward's round trip less those
+  // stages), `arm` (only when the page drew a class: its mint and outcome) and `total`, the first request's whole time,
+  // which the others add up to but for the request's own reading of its body.
+  const sources = (body.sources ?? {}) as { timings?: Record<string, number> };
+  const stages = sources.timings ?? {};
+  const stageMs = Object.values(stages).reduce((sum, ms) => sum + (Number.isFinite(ms) ? ms : 0), 0);
+  const own: Record<string, number> = { session: Math.round(sessionMs), forward: Math.max(0, Math.round(forwardMs - stageMs)),
+    ...(drawn ? { arm: Math.round(armMs) } : {}), total: Math.round(performance.now() - doorStarted) };
+  const timing = answered.headers.get('Server-Timing');
+  c.header('Server-Timing', [timing, ...Object.entries(own).map(([name, ms]) => `${name};dur=${ms}`)].filter(Boolean).join(', '));
+  return c.json({ ...body, sources: { ...sources, timings: { ...stages, ...own } }, session, ...(armRequest ? { armRequest } : {}) });
 });
 /**
  * P84 (E8; the rendering record's N1, R-P359 Q3 and Q6): GET
