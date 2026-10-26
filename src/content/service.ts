@@ -25,7 +25,7 @@ import { armFor, enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, record
 import { armClassOf } from '@/sdk/armDraw';
 import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
-import { contextOnlyLayoutSlot, contextOnlySlots, contextTableOf, decideContent, evidenceFloorOf, layoutBlendOf, slotConversionsOf, type ContextTableDocument } from './decide';
+import { contextOnlyLayoutSlot, contextOnlySlots, contextTableOf, decideContent, evidenceFloorOf, layoutBlendOf, shotOrderFor, slotConversionsOf, type ContextTableDocument } from './decide';
 import { blendAffinity, blendPriors, lambdaFor, readContextTrend, readTrend, regionKeyOf, sharesWithin } from '@/reflex/regionTrend';
 import { elapsedMs, fanDecisions, fanLayoutExposure, identityPage, learningReadBudgets, liftKey, liftWitnessVerdict, readRingWithOutcome, recordLearningReads, reportLearningIncomplete, servedCounts, type LearningReceipt, type SlotLearnConfig } from '@/learn/fan';
 import { recordSlotGovernance } from '@/learn/slotGovernance';
@@ -704,6 +704,8 @@ export function demoAssertedRegion(env: Pick<Env, 'DEPLOYMENT_PROFILE'>, asserte
 export async function serveContentDecisions(
   env: Env, r: ServeRequest,
 ): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void>; /** CW31: false when tracking is withheld, and nothing about this request may be written. */ write: boolean;
+  /** P89 (E14): the shopper's own shot order on a page whose context table names a carousel (`shopperShotOrder`); absent elsewhere. */
+  shotOrder?: string[] | null;
   /**
    * Ruling L-R10 (P02 decision D1): the records the serve-time capture took, the
    * only ones a caller may write to the ledger when `write` holds — every record
@@ -1214,11 +1216,15 @@ export async function serveContentDecisions(
     }
     return { ...decision, decisionId: record.decision_id };
   }));
+  // P89 (E14, R-P459 S1): the shopper's own shot order for the page's carousel, read off what is already held (the
+  // shopper's own view, the slots document, the cell and the device): absent on a page without a carousel.
+  const shotOrder = shopperShotOrder(slots, ownView, arm, below, cell, device);
   return {
     ...set,
     ...(enrollment ? { experiment: enrollment } : {}),
     ...(layoutDiagnostics.length ? { layoutDiagnostics } : {}),
     decisions,
+    ...(shotOrder !== undefined ? { shotOrder } : {}),
     afterResponse,
     ownerDrain,
     write: consent.tracking && servedCapture,
@@ -1239,6 +1245,36 @@ export async function serveContentDecisions(
       budgets,
     },
   };
+}
+
+/** P89: the most values a shopper's shot order carries. */
+const SHOT_ORDER_MAX = 16;
+/**
+ * P89 (E14, R-P459 S1): the shopper's own shot order on a page whose context
+ * table names a carousel (the first non-layout slot carrying shot orders, beside
+ * a declared layout slot, as `contextTableOf` names it): the `contentType`
+ * values of the shopper's own interest (suppressions already removed, never a
+ * prior) with interest above 0 that one of the slot's published shot orders
+ * names, by interest descending, ties by their place in the row for this
+ * request, then by code unit, at most 16. Absent (undefined) where the page has
+ * no carousel; null on the default arm, below the signal floor, for a carousel
+ * that weighs no `contentType` (neither its weights nor a band's above 0), or
+ * with no such value. Pure: it reads what the decision already holds.
+ */
+export function shopperShotOrder(slots: readonly SlotStrategy[], view: { dims?: Record<string, Record<string, number>> } | null,
+  arm: string, below: ReadonlyMap<string, unknown>, cell: { channel: string; visit_bucket: string }, device: DeviceClass | null): string[] | null | undefined {
+  const carousel = slots.some((s) => s.layout === true) ? slots.find((s) => s.layout !== true && (s.shotOrders?.length ?? 0) > 0) : undefined;
+  if (!carousel) return undefined;
+  const weighs = (weights?: Record<string, number>) => (weights?.contentType ?? 0) > 0;
+  if (arm === 'default' || carousel.offLimits || below.has(carousel.slot) || !(weighs(carousel.weights) || (carousel.bands ?? []).some((band) => weighs(band.weights)))) return null;
+  const published = new Set((carousel.shotOrders ?? []).flatMap((order) => order.order));
+  const row = shotOrderFor(carousel, cell, device) ?? [];
+  const place = (value: string) => { const at = row.indexOf(value); return at < 0 ? row.length : at; };
+  const order = Object.entries(view?.dims?.contentType ?? {})
+    .filter(([value, interest]) => published.has(value) && typeof interest === 'number' && interest > 0)
+    .sort(([a, x], [b, y]) => y - x || place(a) - place(b) || (a < b ? -1 : a > b ? 1 : 0))
+    .slice(0, SHOT_ORDER_MAX).map(([value]) => value);
+  return order.length ? order : null;
 }
 
 // ── P30 (decision D2): the context key, sealed, and the per-view beacon ──────

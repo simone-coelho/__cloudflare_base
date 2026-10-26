@@ -4766,8 +4766,8 @@ const PUSH_VIEW_KEY = 'pushView';
 interface PushView { url: string; body: string; cf: { country?: string; regionCode?: string }; principal: SessionCapability;
   pageInstance: string; offered: string; publication?: string }
 interface PushState { version: 1; socket?: true; socketGrant?: string; view?: PushView }
-/** P81: the actions that change no decision (the SDK asks nothing after them either). */
-const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure']);
+/** P81: the actions that change no decision (the SDK asks nothing after them either); P89 (R-P459 O8): P85's carousel beacon among them. */
+const QUIET_ACTIONS = new Set(['content_impression', 'content_dwell', 'content_viewable', 'layout_exposure', 'carousel_exposure']);
 /** P81: the digest of what a decision set offers, per slot in order: a page view's set is pushed again only when it changes. */
 /**
  * P81 (R-P286): the decision request's body as kept: every admitted member (page, brand, pageInstance, channel, entry,
@@ -4782,6 +4782,9 @@ function keptBody(body: string): string {
 }
 const CONSENT_BODY_HINTS = new Set(['trackingConsent', 'personalizationEnabled']);
 async function offeredDigest(set: Record<string, unknown>): Promise<string> {
-  const offered = JSON.stringify(((set.decisions ?? []) as Array<{ slot?: unknown; contentId?: unknown }>).map((d) => [d.slot, d.contentId]));
+  // P89 (R-P459 S2): with the shopper's shot order where the set carries one, so a change in the order alone is pushed;
+  // a set without the member digests exactly as before.
+  const pairs = ((set.decisions ?? []) as Array<{ slot?: unknown; contentId?: unknown }>).map((d) => [d.slot, d.contentId]);
+  const offered = JSON.stringify(set.shotOrder === undefined ? pairs : [pairs, set.shotOrder]);
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(offered)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 }

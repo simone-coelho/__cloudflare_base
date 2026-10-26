@@ -1937,6 +1937,8 @@ function createListen(core, opts = {}) {
     if (matches.length === 1) view(placement(set, matches[0]), shown);
   }
   const offConsent = core.onConsentChange(() => {
+    const c = core.consent;
+    if (!c.tracking || !c.personalization) dropShots();
     if (!core.trackingAllowed) resetCapture();
     if (!permitted(current)) deliver(null, current?.page ?? "");
   });
@@ -1955,6 +1957,43 @@ function createListen(core, opts = {}) {
         consent: { personalization: c.tracking && c.personalization, tracking: c.tracking }
       }));
     } catch {
+    }
+  }
+  function headState() {
+    try {
+      const v = JSON.parse(host.storage.get(HEAD_STATE_KEY) ?? "null");
+      return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+    } catch {
+      return {};
+    }
+  }
+  function keptShots(state) {
+    const v = state.shots;
+    return v && typeof v === "object" && !Array.isArray(v) ? v : null;
+  }
+  function keepHead(state) {
+    try {
+      host.storage.set(HEAD_STATE_KEY, JSON.stringify(state));
+    } catch {
+    }
+  }
+  function keepShots(set) {
+    if (!set || set.shotOrder === void 0) return;
+    const state = headState(), kept = keptShots(state), c = core.consent, subject = core.visitorId;
+    const ts = typeof set.ts === "number" && Number.isFinite(set.ts) ? set.ts : 0;
+    const order = Array.isArray(set.shotOrder) ? set.shotOrder.filter((v) => typeof v === "string").slice(0, 16) : [];
+    const allowed = c.tracking && c.personalization && !!subject;
+    if (allowed && kept && kept.subject === subject && typeof kept.ts === "number" && kept.ts > ts) return;
+    if (allowed && order.length) state.shots = { tenant: core.config.tenant, subject, anonymous: core.anonId === subject, order, ts };
+    else if (kept) delete state.shots;
+    else return;
+    keepHead(state);
+  }
+  function dropShots() {
+    const state = headState();
+    if (keptShots(state)) {
+      delete state.shots;
+      keepHead(state);
     }
   }
   function headDraw() {
@@ -2040,7 +2079,16 @@ function createListen(core, opts = {}) {
     deliver(set, set.page);
   }
   const offDecisions = core.on("decisions", (set) => {
+    keepShots(set);
     if (!set.pageInstance || !pageInstance || set.pageInstance === pageInstance) apply(set);
+  });
+  const offIdentity = core.on("identity", (change) => {
+    const state = headState(), kept = keptShots(state);
+    if (!kept || kept.subject === change.visitorId) return;
+    if (change.reason === "identified" && kept.anonymous === true && kept.subject === change.previous) {
+      state.shots = { ...kept, subject: change.visitorId, anonymous: core.anonId === change.visitorId };
+    } else delete state.shots;
+    keepHead(state);
   });
   const offGeneration = core.on("generation", () => {
     cachedView = null;
@@ -2114,6 +2162,8 @@ function createListen(core, opts = {}) {
         return null;
       }
       keepForHead(json.experiment);
+      keepShots(json);
+      const shots = json.shotOrder;
       const set = {
         page: json.page ?? o.page,
         ...json.pageInstance ? { pageInstance: json.pageInstance } : {},
@@ -2121,7 +2171,8 @@ function createListen(core, opts = {}) {
         ...json.versions ? { versions: json.versions } : {},
         ...json.config_label ? { config_label: json.config_label } : {},
         ...typeof json.ts === "number" ? { ts: json.ts } : {},
-        decisions: json.decisions
+        decisions: json.decisions,
+        ...shots === null || Array.isArray(shots) ? { shotOrder: shots === null ? null : shots.filter((v2) => typeof v2 === "string") } : {}
       };
       const epoch = deliver(set, set.page);
       const accepted = admittedCurrent();
@@ -2407,6 +2458,7 @@ function createListen(core, opts = {}) {
     offConsent();
     offDecisions();
     offGeneration();
+    offIdentity();
     if (timer !== void 0) host.clearInterval(timer);
     slotSubs.clear();
     setSubs.clear();

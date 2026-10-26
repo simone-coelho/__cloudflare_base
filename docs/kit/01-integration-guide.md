@@ -419,7 +419,7 @@ write is exactly as before ([API reference](./02-api-reference.md#the-second-odp
 | Frame | When | What to do |
 |---|---|---|
 | `personalization_update` | after a shopper's own action, and when the platform re-evaluates | `client.on('update', (u) => …)`: segments, module decisions, the interest vector |
-| `content_decisions` | the engine sends the open page view's decision set whenever it changes from what the page view last received (after an admitted action, a buffered delivery or a publication change); never the answer to the page's own request, never an unchanged set | applied through `listen` like the first snapshot, under the page view's holds; your slot subscribers fire again |
+| `content_decisions` | the engine sends the open page view's decision set whenever it changes from what the page view last received (after an admitted action, a buffered delivery or a publication change), and whenever the shopper's shot order changes; on a carousel page it carries `shotOrder`; never the answer to the page's own request, never an unchanged set | applied through `listen` like the first snapshot, under the page view's holds; your slot subscribers fire again |
 | `audience_published` | a merchandiser published an audience the shopper qualifies for | `client.on('audience', …)` |
 | `odp_receipt` | the customer data platform acknowledged an event | `client.on('receipt', (r, { via }) => …)` |
 
@@ -433,6 +433,8 @@ eviction and bypass can admit echoes; clock rollback can suppress valid updates,
 causal sequence nor exactly-once delivery. Superseded update listeners stop, and `core.send()` returns
 `null` for rejected/superseded updates without undoing independent sent/receipt acknowledgments.
 With a connected socket the engine sends `content_decisions` whenever the open page view's decisions change, and the SDK asks nothing again on an acknowledged interaction or a reconnect; a set naming another page view is not drawn. The page's first list, a refresh the page calls, and every page without a connected socket are asked over HTTPS (`POST` snapshot); snapshots alone create no exposure.
+
+The shopper's shot order travels with the decisions. On a page whose carousel weighs `contentType`, every answer and every pushed set carries `shotOrder`: the carousel's shot values the shopper's own interest ranks, most interest first (`null` when none is carried). The SDK keeps it in first-party storage under `opt_head`, for the visitor this browser carries, only while tracking and personalization are allowed, and the head script applies it at the next page view and the next first landing; it is never applied to the carousel already on screen, so hold the carousel slot for the page view. A sign-in rebinds a visitor's kept order to the person, and the first answer under the person corrects it: with a live connection the SDK's own request after the reconnect brings it; call `listen.refresh()` after `identify()` when the page has no live connection. A sign-out, another person or a refusal removes it, and a browser whose storage was cleared lands as a new shopper does.
 
 ## 7. Content: what the engine chooses from
 
@@ -624,7 +626,9 @@ or `default`), `data-op-arm` and `data-op-table`, and one custom property per im
 painted place. Order the carousel with them (`order: var(--op-pdp-carousel-3)` on the third image's element). It
 also adds one `<link rel="preload" as="image" fetchpriority="high">` for the image that leads, before your first
 stylesheet. It hides nothing, fetches nothing, sends nothing and writes no cookie; its state is first-party storage
-under `opt_head`, the visit kept only under tracking consent. It paints the default row, your server order within
+under `opt_head`, the visit kept only under tracking consent. Where the SDK kept the shopper's own shot order for the
+visitor this browser carries (the live channel, §6), that order leads, before the context's row, under the row's own
+gate. It paints the default row, your server order within
 the brand rules, for the holdout's default class, without a recorded personalization choice, for an arrival or a
 device it cannot classify, for a table naming another classifier version, and once after the experiment's salt
 changes. The engine's own first decision for a shopper whose choice is recorded orders the carousel by the same
