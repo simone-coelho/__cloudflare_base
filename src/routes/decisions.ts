@@ -1276,7 +1276,13 @@ decisionRoutes.on(['GET', 'POST'], '/:tenant/decisions/snapshot', firstDecisionR
     // P13 (decision D1): the customer's identifier the POST body carried (validated above), written beside
     // visitor_id on the records under tracking consent and read by nothing that decides.
     ...(c.req.method === 'POST' && context.customerId !== undefined ? { customerId: context.customerId } : {}),
+  }).catch((error: unknown) => {
+    if (error instanceof PublicationError && error.code === 'part_unavailable') return null;
+    throw error;
   });
+  // P86 (R-P412 (2), R-P415): the page's anchor names a catalogue part that cannot be read (lost, or a body
+  // that is not its digest's): the page fails 503 `part_unavailable`, never served from the shared pieces alone.
+  if (out === null) return c.json({ ok: false, error: 'Catalogue part unavailable', code: 'part_unavailable' }, 503);
   // P13 (R-P66 item 2): under the tracking consent the decision was made with, the
   // carried identifier is handed to the shopper's own object for the browser's
   // link answer, after the decision, which it never reads; a failure changes
