@@ -18,9 +18,11 @@
  * ingests. Three are P40's: the viewable impression
  * (`content_viewable`, weighing 0 beside the render acknowledgement), the video
  * view (`video_view`, a content action) and the product dwell (`product_dwell`,
- * carrying `dwellMs`). The last is P30's: the per-view beacon of a cached
- * layout (`layout_exposure`), which the action route answers itself before any
- * host, so it never reaches the shopper's state (src/routes/realtime.ts).
+ * carrying `dwellMs`). Then P30's: the per-view beacon of a cached layout
+ * (`layout_exposure`), which the action route answers itself before any host,
+ * so it never reaches the shopper's state (src/routes/realtime.ts); and P85's,
+ * the per-view beacon of a carousel the head script ordered before paint
+ * (`carousel_exposure`), answered the same way.
  */
 export const ACTION_EVENT_TYPES = [
   // The original five.
@@ -31,7 +33,7 @@ export const ACTION_EVENT_TYPES = [
   // actionOf() reads both, so its wire table can flip whenever it likes.
   'purchase', 'content_impression', 'content_click', 'content_dwell', 'video_complete',
   'content_viewable', 'video_view', 'product_dwell',
-  'layout_exposure',
+  'layout_exposure', 'carousel_exposure',
 ] as const;
 
 export type ActionEventType = (typeof ACTION_EVENT_TYPES)[number];

@@ -145,9 +145,11 @@ export interface ResponseLike {
  * `video_view` the video watched for three seconds, `product_dwell` a product
  * page held past its dwell threshold (`productId`, `dwellMs`). P30:
  * `layout_exposure` is the per-view beacon of a cached layout, sent by
- * `listen.layoutExposure` (`LayoutExposure`).
+ * `listen.layoutExposure` (`LayoutExposure`). P85: `carousel_exposure` is the
+ * per-view beacon of a carousel ordered before paint, sent by
+ * `listen.carouselExposure` (`CarouselExposure`).
  */
-export type SdkEventType = 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase' | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete' | 'content_viewable' | 'video_view' | 'product_dwell' | 'email_open' | 'form_submit' | 'button_click' | 'custom' | 'layout_exposure';
+export type SdkEventType = 'page_view' | 'product_view' | 'add_to_cart' | 'wishlist_add' | 'purchase' | 'content_impression' | 'content_click' | 'content_dwell' | 'video_complete' | 'content_viewable' | 'video_view' | 'product_dwell' | 'email_open' | 'form_submit' | 'button_click' | 'custom' | 'layout_exposure' | 'carousel_exposure';
 /**
  * P30 (decision D2): what a page drawn from a cached layout reports, once per
  * page view: the `X-Context-Key` the cached layout was answered under, the page,
@@ -159,6 +161,23 @@ export interface LayoutExposure {
     slot: string;
     modules: string[];
     /** P79: the product of the page view the cached layout was drawn for (`HydrateOptions.productId`); kept by the SDK, not sent. */
+    productId?: string;
+}
+/**
+ * P85 (E9): what a page whose carousel the head script ordered before paint
+ * (src/sdk/head.ts) reports, once per page view: the context table's version it
+ * applied (`data-op-table`), the context it applied (`data-op-context`:
+ * `<channel>|<visitBucket>|<device>`, or `default`), the page, the carousel
+ * slot, the image ids in painted order and the class it painted (`data-op-arm`).
+ */
+export interface CarouselExposure {
+    tableVersion: string;
+    context: string;
+    page: string;
+    slot: string;
+    images: string[];
+    arm: string;
+    /** P79: the product of the page view the carousel was painted for (`HydrateOptions.productId`); kept by the SDK, not sent. */
     productId?: string;
 }
 /**

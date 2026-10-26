@@ -133,7 +133,8 @@
     content_viewable: { type: "content_viewable" },
     video_view: { type: "video_view" },
     product_dwell: { type: "product_dwell" },
-    layout_exposure: { type: "layout_exposure" }
+    layout_exposure: { type: "layout_exposure" },
+    carousel_exposure: { type: "carousel_exposure" }
   };
   function toWire(type, data) {
     const m = WIRE[type] ?? WIRE.custom;
@@ -162,7 +163,8 @@
     "content_viewable",
     "video_view",
     "product_dwell",
-    "layout_exposure"
+    "layout_exposure",
+    "carousel_exposure"
   ];
   var ACTION_EVENT_TYPE_SET = new Set(ACTION_EVENT_TYPES);
   var isEventNonce = (value) => typeof value === "string" && value.length >= 1 && value.length <= 128 && !/[^A-Za-z0-9_-]/.test(value);
@@ -2345,14 +2347,28 @@
     async function layoutExposure(beacon) {
       if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== "object") return;
       const { contextKey, page, slot } = beacon, modules = Array.isArray(beacon.modules) ? beacon.modules : [];
-      if (typeof contextKey !== "string" || !contextKey || contextKey.length > 512 || typeof page !== "string" || !page || typeof slot !== "string" || !slot || !modules.length || modules.length > 50 || !modules.every((id) => typeof id === "string" && id.length > 0) || new Set(modules).size !== modules.length) return;
-      const productId = typeof beacon.productId === "string" && beacon.productId ? beacon.productId : void 0;
+      if (typeof contextKey !== "string" || !contextKey || contextKey.length > 512 || typeof page !== "string" || !page || typeof slot !== "string" || !slot || !distinctIds(modules)) return;
+      const instance = exposedOnce(page, slot, beacon.productId);
+      if (instance) await core.send("layout_exposure", { contextKey, page, slot, modules: [...modules], pageInstance: instance });
+    }
+    async function carouselExposure(beacon) {
+      if (destroyed || core.config.listenOnly || !core.trackingAllowed || !beacon || typeof beacon !== "object") return;
+      const { tableVersion, context, page, slot, arm } = beacon, images = Array.isArray(beacon.images) ? beacon.images : [];
+      if (typeof tableVersion !== "string" || !tableVersion || tableVersion.length > 128 || typeof context !== "string" || !context || context.length > 256 || typeof page !== "string" || !page || typeof slot !== "string" || !slot || typeof arm !== "string" || !arm || !distinctIds(images)) return;
+      const instance = exposedOnce(page, slot, beacon.productId);
+      if (instance) await core.send("carousel_exposure", { tableVersion, context, page, slot, images: [...images], arm, pageInstance: instance });
+    }
+    function distinctIds(ids) {
+      return ids.length > 0 && ids.length <= 50 && ids.every((id) => typeof id === "string" && id.length > 0) && new Set(ids).size === ids.length;
+    }
+    function exposedOnce(page, slot, product) {
+      const productId = typeof product === "string" && product ? product : void 0;
       const instance = pageInstance && selected?.page === page && (productId === void 0 || selected.productId === productId) ? pageInstance : cachedView?.page === page && cachedView.productId === productId ? cachedView.instance : (cachedView = { page, productId, instance: host.uuid() }).instance;
       const once = JSON.stringify([instance, slot]);
-      if (exposed.has(once)) return;
+      if (exposed.has(once)) return null;
       if (exposed.size >= 256) exposed.delete(exposed.values().next().value);
       exposed.add(once);
-      await core.send("layout_exposure", { contextKey, page, slot, modules: [...modules], pageInstance: instance });
+      return instance;
     }
     function hold(slot) {
       const token = {};
@@ -2362,7 +2378,7 @@
       };
     }
     const offSent = core.on("sent", (event) => {
-      if (!["content_impression", "content_dwell", "content_viewable", "layout_exposure"].includes(event.type) && core.socketStatus !== "connected") follow();
+      if (!["content_impression", "content_dwell", "content_viewable", "layout_exposure", "carousel_exposure"].includes(event.type) && core.socketStatus !== "connected") follow();
     });
     let joined = false, lost = false;
     const offSocket = core.on("socket", (status) => {
@@ -2397,7 +2413,7 @@
       current = null;
       absence = null;
     }
-    return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, destroy };
+    return { hydrate, refresh, hold, adopt, subscribe, onDecisions, apply, current: admittedCurrent, rendered, outcome, visible, layoutExposure, carouselExposure, destroy };
   }
 
   // src/sdk/identify.ts

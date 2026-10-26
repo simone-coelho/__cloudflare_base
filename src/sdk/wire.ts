@@ -8,7 +8,8 @@
 // Content interactions and the conversion event travelled that way until CW3
 // (2026-09-03) made them first-class on both sides. A contract test parses every
 // row through the real schema. P40's three rows (the viewable impression, the
-// video view, the product dwell) were first-class on both sides from the start.
+// video view, the product dwell) were first-class on both sides from the start,
+// as were P30's and P85's per-view beacons.
 
 import type { SdkEventType } from './types';
 
@@ -33,6 +34,7 @@ export const WIRE: Record<SdkEventType, WireMapping> = {
   video_view: { type: 'video_view' },
   product_dwell: { type: 'product_dwell' },
   layout_exposure: { type: 'layout_exposure' },
+  carousel_exposure: { type: 'carousel_exposure' },
 };
 
 /** The wire type and the payload, with the real event name kept where it is not the type. */

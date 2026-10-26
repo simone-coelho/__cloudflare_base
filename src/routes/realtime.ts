@@ -35,7 +35,7 @@ import { captureBehaviorCarrying } from '@/ledger/behavior';
 import { recoveryJSON, type OutcomeRecoveryInput } from '@/ledger/recovery';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
 import { redeemRenderOffer } from '@/content/renderOffer';
-import { admitLayoutExposure, layoutExposureBeaconOf } from '@/content/service';
+import { admitCarouselExposure, admitLayoutExposure, carouselExposureBeaconOf, layoutExposureBeaconOf } from '@/content/service';
 
 const realtimeRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 for (const path of ['/ws', '/action', '/personalization/:userId', '/reflex', '/session/reset', '/session/preferences', '/session/:sessionId/preferences', '/session/:sessionId/analytics', '/segments/:userId', '/connections/:userId']) {
@@ -219,6 +219,21 @@ realtimeRoutes.post('/action', async (c) => {
     // of the context its key names (src/content/service.ts `admitLayoutExposure`),
     // after the answer; without it, or with a key the engine did not issue,
     // nothing at all. The brand is the action's own, as an outcome's is.
+    // P85 (E9): the per-view beacon of a carousel the head script ordered before
+    // paint, answered here the same way: under the tracking consent just resolved
+    // it only counts the painted images' exposures in the carousel's learning of
+    // the context the table version in force carries, on an arm that learns by
+    // the engine's own assignment (src/content/service.ts `admitCarouselExposure`).
+    if (validatedEvent.type === 'carousel_exposure') {
+      const beacon = carouselExposureBeaconOf(actionEvent.data);
+      if (!beacon) return c.json({ error: 'Invalid carousel exposure' }, 400);
+      const named = actionEvent.data.brand;
+      const brand = typeof named === 'string' && named.trim() ? named.trim() : c.get('tenant');
+      const { answer, work } = await admitCarouselExposure(c.env, { tenant: c.get('tenant'), stateTenant: c.get('tenant'), brand, subject: shopperPrincipal(c.req.raw).subject,
+        consent: { tracking: captureConsent.tracking, personalization: captureConsent.personalization }, beacon, now: engineNow });
+      if (work) { try { c.executionCtx.waitUntil(work); } catch { void work; } }
+      return c.json({ success: true, ...answer });
+    }
     if (validatedEvent.type === 'layout_exposure') {
       const beacon = layoutExposureBeaconOf(actionEvent.data);
       if (!beacon) return c.json({ error: 'Invalid layout exposure' }, 400);
