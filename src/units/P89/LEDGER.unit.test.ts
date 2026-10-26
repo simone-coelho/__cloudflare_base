@@ -47,10 +47,12 @@
 //     src/content/typeAffinity.ts contentTypeValues), clicked three, two and one times: one image's values are of equal
 //     interest (one event each time); expected by interest, each group by the request's row then code unit, cut at
 //     sixteen, so the least-interest value the row leads with is cut.
-//   · The push legs run a desktop browser: P81's kept page view keeps the request's body and coarse location but not its
-//     device headers (ShopperReflex.ts `pushChanged` re-signs a request of Content-Type, X-Tenant and the capability), so
-//     a re-decision of a mobile page view loses P84's mobile row and re-orders the carousel's equal-score images (measured,
-//     reported as a contradiction); on desktop no row matches on either side, and the order alone changes.
+//   · The push: P81's kept page view keeps the request's body and coarse location; under R-P470 (C1 below, ruled into
+//     P89) it keeps the request's device class too, and the re-decision is re-signed with it, so a mobile page view keeps
+//     P84's mobile row on a push. The R-P470 leg drives a mobile and a desktop browser in one world: one click on the
+//     image tagged flat_lay and on_model makes their interest equal, so the request's row breaks the tie (mobile:
+//     on_model first; desktop, where no row names a desktop order: code unit); a page_view action changes nothing and
+//     pushes nothing; the click on the lifestyle piece changes the order alone. The other push legs run desktop.
 //   · The head script's `data-op-context` keeps today's meaning: the cell's row by channel and bucket names the context on
 //     desktop too (`paid_social|1|desktop`), though that row names no desktop order.
 //   · The SDK's `ts` is the set's `ts`; `subject` is the SDK's visitor id at receipt; `anonymous` whether it is the
@@ -91,6 +93,12 @@
 //     script"; kit 02's trigger reads "a change in that order alone is sent"; the stored value named `opt_head.shots`).
 //     Re-formed on the reading, each still false on today's kits and under kitleft (so4probe); kit 01's paragraph also
 //     names the rebind and the first answer under the person (reading 6). The final bytes: r3-lane.log.
+//   · Round 3 (R-P470, one leg per host, 22 tests): the sketch extended in ShopperReflex.ts (+4/-3: `deviceOf`; the view's
+//     `device`, `deviceOf(headers)` of the decision request, in `dispatchAndPush`; `PushView.device`; `pushChanged`
+//     re-signs with `Sec-CH-UA-Mobile` for that class), in scratch/c-fix: r4-fix-1..2.log. Today, r4-today.log; the
+//     round-2 sketch, which re-signs without the device, r4-b-fix.log; the wrong fixes nodevice (the class kept, the
+//     re-decision re-signed without it) and devicemobile (re-signed mobile for every view), r4-z-nodevice.log and
+//     r4-z-devicemobile.log; the push locks P81, P84, P85, P86 under the extended sketch, r4-locks-fix.log.
 //
 // R10 SWEEP (grep of src/**/*.test.ts for exact answer keys, `opt_head` contents, the push digest, the quiet actions,
 // the beacon's re-decision and the kit sentences the ruling changes): no collision. realtime.sdkContract (:6385) and
@@ -99,14 +107,14 @@
 // `opt_head.experiment` and `.visit` only, :878, :1178); P85 (:348) counts the SDK's requests after the beacon, not the
 // engine's push; no test reads kit 03's shot-orders example or its frame-table row. Measured by the lock runs above.
 //
-// CONTRADICTIONS (for the lead): (C1, measured: S36/specifier/logs/probe1.log, probe2.log) P81's kept page view keeps the
-// request's body and coarse location but not its device headers (ShopperReflex.ts `pushChanged` re-signs a request of
-// Content-Type, X-Tenant and the capability), so the re-decision of a mobile page view loses P84's mobile row: on a
-// mobile probe the pushed set re-ordered the carousel's equal-score images against the first answer (img-ch857-2 before
-// -3), and S1's tie by the request's row is computed without the row on a push, so a mobile page view's order can change
-// on the push alone. Pre-existing (P81 x P84); the push legs here run desktop; inside P89's grant, not ruled. (C2,
-// R-P459 noticed) `setVisitorId` keeps no visitor id and its `identity` event is dropped; the order is removed on its
-// consent change instead.
+// CONTRADICTIONS: (C1, measured: S36/specifier/logs/probe1.log, probe2.log; RULED INTO P89, R-P470) P81's kept page
+// view keeps the request's body and coarse location but not its device headers (ShopperReflex.ts `pushChanged`
+// re-signs a request of Content-Type, X-Tenant and the capability), so the re-decision of a mobile page view loses
+// P84's mobile row: on a mobile probe the pushed set re-ordered the carousel's equal-score images against the first
+// answer (img-ch857-2 before -3), and S1's tie by the request's row is computed without the row on a push, so a mobile
+// page view's order can change on the push alone. Pre-existing (P81 x P84), inside P89's grant: the R-P470 leg requires
+// the device kept. (C2, R-P459 noticed) `setVisitorId` keeps no visitor id and its `identity` event is dropped; the
+// order is removed on its consent change instead.
 //
 // DEFERRED: LV1 (both hosts, live). RESIDUALS (told, R-P459): the carried order is the shopper's own interest only
 // (priors, learned lift, exploration, other dimensions are not carried, so a painted order can differ from the engine's
@@ -310,7 +318,7 @@ const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const pushes = (socket: NativeSocket) => socket.frames.filter(f => f.type === 'content_decisions');
 const pairsOf = (decisions: unknown) => ((decisions ?? []) as Array<{ slot: string; contentId: string }>).map(d => `${d.slot}:${d.contentId}`);
 
-async function nativeWorld<T>(host: Host, work: (w: { browser: () => Promise<NativeBrowser>; publishSlots: (document: unknown) => Promise<Answer> }) => Promise<T>): Promise<T> {
+async function nativeWorld<T>(host: Host, work: (w: { browser: (device?: 'mobile' | 'desktop') => Promise<NativeBrowser>; publishSlots: (document: unknown) => Promise<Answer> }) => Promise<T>): Promise<T> {
   const bundle = await (nativeBundle ??= bundleNativeWorker(NATIVE_WRAPPER, 'p89-ledger-native'));
   const directory = nativeScratchDirectory('p89-ledger-native-');
   const policy = { id: 'p89-native-policy', revision: 1, durationMs: 3650 * 86_400_000, basis: 'admitted', renewal: 'new-record-only' };
@@ -342,12 +350,12 @@ async function nativeWorld<T>(host: Host, work: (w: { browser: () => Promise<Nat
       return operator('PUT', `/content/slots?scope=${TENANT}`, { document, note: 'p89' },
         { 'If-Match': `"${String(base.body.revision)}/${publication.revision}/${publication.digest}"`, 'Idempotency-Key': `${String(base.body.revision)}:${crypto.randomUUID()}` });
     };
-    const browser = async (): Promise<NativeBrowser> => {
+    const browser = async (device: 'mobile' | 'desktop' = 'desktop'): Promise<NativeBrowser> => {
       const g = await fixture('/grant', { tenant: TENANT }) as unknown as { capability: string; subject: string; sessionId: string; grantId: string; iat: number; exp: number };
-      // A desktop browser: P81's kept page view keeps the request's body and coarse location, not its device headers, so a
-      // re-decision of a mobile page view loses P84's mobile row (reported to the lead); on desktop no row matches either way.
+      // Desktop unless a leg names the device: P81's kept page view keeps the request's body and coarse location and, under
+      // R-P470, its device class; the R-P470 leg drives both devices, the others a desktop browser (no row on either side).
       const call = async (path: string, body?: unknown) => parsed(await runtime.fetch(`https://shop.invalid${path}`, { method: body === undefined ? 'GET' : 'POST',
-        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: g.capability, 'Content-Type': 'application/json', ...deviceHeaders('desktop') }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }));
+        headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: g.capability, 'Content-Type': 'application/json', ...deviceHeaders(device) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }));
       const chose = await call(`/realtime/session/${g.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
         choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: g.grantId, iat: g.iat, exp: g.exp } });
       expect(chose.status, `PRECONDITION (${host} native): the shopper's explicit choice`).toBe(200);
@@ -398,6 +406,32 @@ describe('unit:P89.SO1 (R-P459 S2, O8) — the push, both hosts in workerd', () 
         expect.soft(pushes(socket).length - settled, `${host}: P89.SO1 — nothing changed, nothing pushed`).toBe(0);
       });
     }, 180_000);
+
+    it(`host (${host}, native): R-P470 — the push keeps the page view's device: on a mobile page view an action that changes nothing pushes nothing, and a click that changes the shopper's order alone is pushed with the first answer's carousel (P84's mobile row kept) and the order's tie broken by that row (on_model before flat_lay); a desktop page view as before (the tie by code unit)`, async () => {
+      await nativeWorld(host, async w => {
+        const tie = (order: unknown) => Array.isArray(order) ? order.filter(v => v === 'on_model' || v === 'flat_lay') : `shotOrder ${JSON.stringify(order)}`;
+        const seen: Record<string, unknown> = {};
+        for (const device of ['mobile', 'desktop'] as const) {
+          const b = await w.browser(device), socket = await b.socket();
+          // One click on the image tagged both flat_lay and on_model gives them equal interest: the request's row breaks the tie.
+          for (const [piece, times] of [[STUDIO, 3], [DETAIL, 2], [PAIR, 1]] as const) for (let i = 0; i < times; i++) expect((await nativeClick(b, piece)).status, `${host}: PRECONDITION — the click`).toBe(200);
+          const first = await b.ask(pageInstanceOf(`p89-${device}`));
+          expect(first.status, `${host}: PRECONDITION — the ${device} page view's answer (${show(first)})`).toBe(200);
+          const before = pushes(socket).length;
+          expect((await b.act(PAGE_VIEW)).status, `${host}: PRECONDITION — the page view action`).toBe(200);
+          await pause(1500);
+          const quiet = pushes(socket).length - before;
+          expect((await nativeClick(b, LIFESTYLE, 'cart-recs', 'cart')).status, `${host}: PRECONDITION — the click on the lifestyle piece`).toBe(200);
+          await socket.waitFor(() => pushes(socket).length > before + quiet);
+          const frame = pushes(socket)[before + quiet];
+          seen[device] = { first: tie(first.body.shotOrder), quiet, pushed: frame ? { same: JSON.stringify(pairsOf(frame.decisions)) === JSON.stringify(pairsOf(first.body.decisions)),
+            tie: tie(frame.shotOrder), lifestyle: Array.isArray(frame.shotOrder) && frame.shotOrder.includes('lifestyle') } : 'no frame' };
+        }
+        expect.soft(seen, `${host}: P89.SO1 (R-P470) — the re-decision keeps the page view's device: nothing pushed without a change, the pushed carousel the first answer's, the tie by the device's row (today the device is lost: a mobile page view's re-decision drops P84's mobile row)`).toEqual({
+          mobile: { first: ['on_model', 'flat_lay'], quiet: 0, pushed: { same: true, tie: ['on_model', 'flat_lay'], lifestyle: true } },
+          desktop: { first: ['flat_lay', 'on_model'], quiet: 0, pushed: { same: true, tie: ['flat_lay', 'on_model'], lifestyle: true } } });
+      });
+    }, 240_000);
 
     it(`host (${host}, native): O8 — a carousel beacon is a quiet action: with a publication change pending on the open page view, a \`carousel_exposure\` pushes nothing, and the next admitted action pushes the changed set`, async () => {
       await nativeWorld(host, async w => {
