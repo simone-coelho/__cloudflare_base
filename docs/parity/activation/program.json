@@ -1393,7 +1393,7 @@
     {
       "id": "P86",
       "title": "Catalogue size beyond the test scope (**amendment 11, E10, 2026-10-22**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
