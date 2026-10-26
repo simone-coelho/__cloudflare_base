@@ -89,6 +89,19 @@
 //     withdrawn: no customer-boundary change, P77.VR3 untouched.
 //   7 The PUT round trip as S3. 8 Kit 02 :1790's limits sentence names the part. 9 A purged revision's parts are removed
 //     when no kept revision references them (S11), in this file's own leg; the kit states the retention.
+// R-P409 (from the builder's plan, S32/builder-p86/REPORT-prepared.md), three legs added:
+//   (1) P85's carousel beacon on a parted tenant carries an optional `product` (the SDK sends the beacon's `productId` as
+//       `product`; src/sdk/listen.ts, types.ts, src/routes/realtime.ts and the SDK bundles granted, b8d7198a): with it the
+//       admission reads that one part and admits; without it, on a parted tenant, `ignored` with the new reason
+//       `product_required`; on a tenant without parts the member changes nothing (a lock; P85's own legs stay green).
+//       P85 is not in this file's tree (20fab871): each beacon leg asserts P85's beacon first as PRECONDITION P85 and is
+//       measured behind it on a scratch copy of the P85 join 7dd77ce8 (R-P6).
+//   (2) A PUT that leaves a product's pointer out removes that product (as a PUT that leaves a piece out removes it); the
+//       kit says so.
+//   (3) A rollback to a kept manifest whose parts the store lost is refused 410, naming every product whose part is
+//       missing, after checking every pointer (one HEAD per part); nothing is written.
+//   Ruled, no leg: telemetry resolves a part-held content id through the acknowledged decision's ring record (one ring
+//   read, only when the id is not shared); the part cache is separate, 8 MiB.
 //
 // THE R10 SWEEP (src/**/*.test.ts, scripts/**): no test declares `productSlots`, reads a catalogue's `products`, a
 // `content/part/` key, a `product=` read or `manifest_too_large`; no test pins kit 03's size paragraph (:277–292: "the
@@ -117,6 +130,9 @@ import { INPUT_MAX_BYTES, INPUT_MAX_RECORDS } from '@/config/input';
 import { documentBytes, documentDigest, invalidatePublicationCache, PUBLICATION_MAX_BYTES } from '@/config/publication';
 import type { DecisionRecord } from '@/content/types';
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { createCore } from '@/sdk/core';
+import { createListen } from '@/sdk/listen';
+import { testHost } from '@/sdk/testHost';
 
 import {
   asOperator, BRAND, declaredSlots, errorsOf, expectPublished, HOSTS, layoutSlot, learnDocument, loadDocument, M, MODULES, mount, pageInstanceOf,
@@ -288,7 +304,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
-      const range = { [A]: bulkOf(A), [B]: bulkOf(B), [C]: bulkOf(C) };
+      const range: Record<string, Rec[]> = { [A]: bulkOf(A), [B]: bulkOf(B), [C]: bulkOf(C) };
       expect(documentBytes({ pieces: [...MODULES, ...range[A]!, ...range[B]!, ...range[C]!] }), 'PRECONDITION: the three products\' records exceed one 2 MiB document')
         .toBeGreaterThan(PUBLICATION_MAX_BYTES);
       const base = (await loadDocument(m, 'catalog')).revision;
@@ -506,6 +522,48 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         parts: kept.length === 3 ? kept : ['three referenced parts expected', ...kept], firstA: false, read: [200, sorted(fourOf(A).map(r => r.id))] });
     }, 120_000);
 
+    it(`host (${host}): R-P409 (2) — a PUT of the manifest that leaves a product's pointer out removes that product (as a PUT that leaves a piece out removes it): one revision, the others' pointers kept`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      const loaded = await importJson(m, [...fourOf(A), ...fourOf(B)], { mode: 'merge' });
+      expect(loaded.status, `${host}: PRECONDITION — ${A} and ${B} load (${show(loaded)})`).toBe(200);
+      const before = await loadDocument(m, 'catalog');
+      const { [B]: _dropped, ...kept } = productsOf(before); void _dropped;
+      const put = await putDocument(m, 'catalog', { ...before.document, products: kept }, 'p86 drop a product');
+      const after = await loadDocument(m, 'catalog');
+      const b = await productRead(m, B), a = await productRead(m, A);
+      expect.soft({ status: put.status, revision: after.revision, products: Object.keys(productsOf(after)), a: [digestOf(after, A) === digestOf(before, A) && /^[0-9a-f]{64}$/.test(digestOf(after, A)), a.status, readIds(a)],
+        b: [b.status, errorsOf(b).some(e => e.includes(B)) ? `names ${B}` : `does not (${show(b)})`] },
+      `${host}: P86.CS1 — ${B} removed, ${A} kept (${show(put)})`).toEqual({
+        status: 200, revision: before.revision + 1, products: [A], a: [true, 200, sorted(fourOf(A).map(r => r.id))], b: [404, `names ${B}`] });
+    }, 120_000);
+
+    it(`host (${host}): R-P409 (3) — a rollback to a kept manifest whose parts are missing from the store is refused 410 naming every product whose part is missing, nothing written; with the parts back it is accepted`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      await declareProductSlots(m);
+      expect((await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' })).status, `${host}: PRECONDITION — three products load`).toBe(200);
+      const kept = await loadDocument(m, 'catalog');
+      const [a1] = fourOf(A) as [Rec], [b1] = fourOf(B) as [Rec];
+      expect((await importJson(m, [{ ...a1, title: `${a1.title}, v2` }, { ...b1, title: `${b1.title}, v2` }], { mode: 'merge' })).status,
+        `${host}: PRECONDITION — ${A} and ${B} change`).toBe(200);
+      const head = await loadDocument(m, 'catalog');
+      // A store fault outside the purge: the kept revision's parts of A and B are lost.
+      const lost = [A, B].map(p => [partKey(digestOf(kept, p)), m.storage.objects.get(partKey(digestOf(kept, p)))] as const);
+      expect(lost.every(([, raw]) => raw !== undefined), `${host}: PRECONDITION — the kept revision's parts of ${A} and ${B} are stored (today there are none)`).toBe(true);
+      for (const [key] of lost) m.storage.objects.delete(key);
+      const refused = await asOperator(m, 'POST', `/content/catalog/rollback/${kept.revision}?scope=${TENANT}`, {}, await preconditions(m));
+      const names = (a: Answer) => [A, B, C].filter(p => errorsOf(a).some(e => e.includes(p)));
+      expect.soft([refused.status, names(refused), (await loadDocument(m, 'catalog')).revision],
+        `${host}: P86.CS1 — refused 410 naming ${A} and ${B}, not ${C}; nothing written (${show(refused)})`).toEqual([410, [A, B], head.revision]);
+      for (const [key, raw] of lost) await m.storage.put(key, raw!);
+      const back = await asOperator(m, 'POST', `/content/catalog/rollback/${kept.revision}?scope=${TENANT}`, {}, await preconditions(m));
+      const after = await loadDocument(m, 'catalog');
+      expect.soft([back.status, after.revision, [A, B, C].map(p => digestOf(after, p) === digestOf(kept, p))],
+        `${host}: P86.CS1 — with the parts back the rollback writes the kept manifest forward (${show(back)})`).toEqual([200, head.revision + 1, [true, true, true]]);
+    }, 120_000);
+
     it(`host (${host}): the cap — a load whose manifest index would pass 2 MiB is refused 413 manifest_too_large, nothing written (no revision, no part); the load before it, 60% of the cap, indexes its products`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
@@ -538,8 +596,8 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const s = await shopperOn(m);
       invalidatePublicationCache();
       const page = await counted(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-lock'));
-      expect.soft([page.result.status, carousel(page.result), partReads(page.reads).length], `${host}: P86.CS1 — P80's carousel, no part read`).toEqual(
-        [200, SERVED_FOR_BLACK, 0]);
+      expect.soft([page.result.status, carousel(page.result), partReads(page.reads).length], `${host}: P86.CS1 — P80's carousel with the merged image, no part read`).toEqual(
+        [200, sorted([...SERVED_FOR_BLACK, 'img-ch857-5']), 0]);
       const over = await importJson(m, Array.from({ length: INPUT_MAX_RECORDS + 1 }, (_, i) => ({ id: `x${i}` })), { mode: 'merge' });
       expect.soft([over.status, over.body.code ?? null, (await loadDocument(m, 'catalog')).revision], `${host}: P86.CS1 — over the caps as today (${show(over)})`).toEqual(
         [413, 'input_budget_exceeded', d.revision]);
@@ -563,6 +621,30 @@ async function measured(m: Mounted) {
   const warm = await counted(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-warm'));
   return { cold, warm, operator, manifest };
 }
+
+// ---------------------------------------------------------------------------
+// R-P409 (1): P85's carousel beacon on a parted tenant. P85 (E9) is not in this specification's tree (cut from 20fab871):
+// each of these legs first asserts P85's beacon as PRECONDITION P85, and is measured behind it on a scratch copy of the
+// P85 join (R-P6). P85's shapes: the action `carousel_exposure` with data { tableVersion, context, page, slot, images,
+// pageInstance, arm } answered { exposure: 'admitted', images } or { exposure: 'ignored', reason }; `listen.carouselExposure`.
+// ---------------------------------------------------------------------------
+
+/** P84's carousel (per-context shot orders) and P85's measurement, unscoped as P85's own fixture has it. */
+const P85_CAROUSEL = { slot: CAROUSEL, take: 8, weights: { category: 1 }, shotOrders: [
+  { context: { channel: 'paid_social', visitBuckets: ['1'], device: 'mobile' }, order: ['on-model', 'detail', 'studio', 'flat-lay'] }] };
+const P85_DOCS = { pieces: [...MODULES], slots: { ...declaredSlots([]), pages: { pdp: [layoutSlot(), P85_CAROUSEL] } }, learn: LEARN };
+/** The anchor's eight carousel images (P85's count), one colour-specific. */
+const BEACON_IMAGES = Array.from({ length: 8 }, (_, i) => image(`img-ch857-b${i + 1}`, i === 7 ? [A, BLACK] : [A], 'Handbags', SHOTS[i % 4]!));
+/** The context table's version in force (P84's GET /v1/<tenant>/context-table/<page>). */
+async function tableVersionOf(m: Mounted): Promise<string> {
+  const response = await m.fetch(new Request(`https://shop.invalid/v1/${TENANT}/context-table/pdp`, { headers: { 'X-Tenant': TENANT } }));
+  const body = await response.json().catch(() => ({})) as { version?: unknown };
+  return typeof body.version === 'string' ? body.version : `no table (${response.status})`;
+}
+/** P85's beacon through POST /realtime/action, the default context (counted as an unknown context is), the images in their order. */
+const beaconOf = (s: Shopper, version: string, extra: Record<string, unknown> = {}) => s.action({ type: 'carousel_exposure', data: { tableVersion: version,
+  context: 'default', page: 'pdp', slot: CAROUSEL, images: BEACON_IMAGES.map(r => r.id), arm: 'personalized', pageInstance: pageInstanceOf('p86-beacon'), ...extra } });
+const beaconAnswer = (a: Answer) => [a.status, a.body.exposure ?? null, a.body.reason ?? a.body.images ?? null];
 
 describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
   for (const host of HOSTS) {
@@ -649,7 +731,47 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
         `${host}: P86.CS2 — each image kept and named unresolved on both routes (lift rows: ${show(rows)}; exploring: ${show(exploring)})`).toEqual({
         rows: [200, expected], exploring: [200, expected] });
     }, 300_000);
+
+    it(`host (${host}): R-P409 (1) — P85's carousel beacon: on a parted tenant a beacon naming its product (\`product\`) reads that one part and is admitted; one naming none is ignored product_required; on a tenant without parts the member changes nothing (both admitted)`, async () => {
+      const plain = await mount(host, { ...P85_DOCS, pieces: [...MODULES, ...BEACON_IMAGES] });
+      expectPublished(plain, 'P86.CS2 — the tenant without parts publishes');
+      const shopper = await shopperOn(plain), version = await tableVersionOf(plain);
+      const first = await beaconOf(shopper, version);
+      expect(beaconAnswer(first), `${host}: PRECONDITION P85 — P85's carousel beacon is admitted on a tenant without parts (P85 is not in this tree until it lands: ${show(first)})`)
+        .toEqual([200, 'admitted', 8]);
+      const named = await beaconOf(shopper, version, { product: A });
+      expect.soft(beaconAnswer(named), `${host}: P86.CS2 — LOCK: on a tenant without parts the product member changes nothing`).toEqual([200, 'admitted', 8]);
+      const m = await mount(host, P85_DOCS);
+      expectPublished(m, 'P86.CS2 — the parted tenant publishes');
+      await declareProductSlots(m);
+      const loaded = await importJson(m, BEACON_IMAGES, { mode: 'merge' });
+      expect(loaded.status, `${host}: PRECONDITION — the anchor's images load (${show(loaded)})`).toBe(200);
+      const s = await shopperOn(m), parted = await tableVersionOf(m), manifest = await loadDocument(m, 'catalog');
+      invalidatePublicationCache();
+      const withProduct = await counted(m, () => beaconOf(s, parted, { product: A }));
+      const without = await beaconOf(s, parted);
+      expect.soft({ named: beaconAnswer(withProduct.result), parts: partReads(withProduct.reads).map(r => r.key), unnamed: beaconAnswer(without) },
+        `${host}: P86.CS2 — the named product's one part read and admitted; unnamed, product_required (today every image is a shared piece: ${show(without)})`).toEqual({
+        named: [200, 'admitted', 8], parts: [partKey(digestOf(manifest, A))], unnamed: [200, 'ignored', 'product_required'] });
+    }, 120_000);
   }
+
+  it('sdk: R-P409 (1) — the real SDK sends the page view\'s product with P85\'s carousel beacon as `product` when the beacon names its productId, and no product member when it names none', async () => {
+    const f = testHost({ responses: () => ({ success: true }) });
+    const core = createCore({ tenant: TENANT, source: 'coach-pdp' }, f.host);
+    const listen = createListen(core) as unknown as Record<string, unknown>;
+    expect(await core.ready(), 'PRECONDITION: the client is ready').toBe(true);
+    const send = listen.carouselExposure as ((beacon: Record<string, unknown>) => Promise<unknown>) | undefined;
+    expect(typeof send, 'PRECONDITION P85 — the SDK offers listen.carouselExposure (P85 is not in this tree until it lands)').toBe('function');
+    const beacon = { tableVersion: 'a'.repeat(64), context: 'paid_social|1|mobile', page: 'pdp', slot: CAROUSEL, images: BEACON_IMAGES.map(r => r.id), arm: 'personalized' };
+    await send!({ ...beacon, productId: A });
+    await send!({ ...beacon, page: 'pdp-quickview' });
+    for (let i = 0; i < 8; i++) await new Promise(r => setTimeout(r, 5));
+    const sent = f.calls.filter(c => c.url.endsWith('/action')).map(c => JSON.parse(c.init!.body!) as { type: string; data: Record<string, unknown> })
+      .filter(e => e.type === 'carousel_exposure').map(e => [e.data.page, Object.hasOwn(e.data, 'product') ? e.data.product : 'no product member']);
+    expect.soft(sent, 'P86.CS2 — the product sent with the beacon that names it, none with the beacon that does not (today it is kept and not sent)').toEqual(
+      [['pdp', A], ['pdp-quickview', 'no product member']]);
+  });
 });
 
 // ===========================================================================
@@ -668,14 +790,15 @@ describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
       manifest: has(kit03, '`productSlots`', '`products`', /\bpart\b/),
       routing: has(kit03, '`featuredProductIds`', '`productSlots`', /\bfirst id\b/),
       variantFirst: has(kit03, '`variant_first`', /\[product, variant\]/),
+      putRemoves: has(kit03, '`products`', /\bPUT\b/, /\bpointer\b/, /\bremoves?\b/),
       modes: has(kit03, '`merge`', '`replace`', '`full`', /\bpart\b/),
-      cap: has(kit03, '`manifest_too_large`', /two-level/),
+      cap: has(kit03, /\bmanifest_too_large\b/, /two-level/),
       retention: has(kit03, /\bparts?\b/, /\bpurge/),
       oneDocument: flat03.includes('the catalog is one such document per scope'),
       sharding: flat03.includes('a larger corpus is a conversation about sharding the catalog'),
       perProductRead: getRow.includes('product='),
       partLimit: /\bparts?\b/.test(limits),
     }, 'P86.CS3 — the kit states design A (today it states one catalogue document per scope and sharding as a conversation)').toEqual({
-      manifest: true, routing: true, variantFirst: true, modes: true, cap: true, retention: true, oneDocument: false, sharding: false, perProductRead: true, partLimit: true });
+      manifest: true, routing: true, variantFirst: true, putRemoves: true, modes: true, cap: true, retention: true, oneDocument: false, sharding: false, perProductRead: true, partLimit: true });
   });
 });
