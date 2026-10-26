@@ -2,12 +2,122 @@
 // P87 under the Closure Ledger (programme `tapestry-parity-activation`, amendment 11, item E11): the tests for the LOCAL
 // criteria SC1–SC3 of the P87 work order (docs/parity/activation/program.json). LV1 is a deferred live row and gets no test.
 //
-// HEADER: written in full after the measurement (see the bottom of the specification commit).
+// THE REQUIREMENT, verbatim (docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:93–98, E11):
+//   "#### E11 · A catalogue-only service credential
+//    - **Authority:** the IT pack (`docs/tapestry-packs/3-it-and-integration/01-export-mechanisms.md`, `05-security-pack.md`).
+//    - **Done when:** a service credential can be limited to the catalogue import, so that the credential Tapestry's IT holds
+//      cannot publish slots, learning or priors.
+//    - **Starts from:** `src/auth/authority.ts` (roles `operator` and `admin` on the whole tenant).
+//    - **Needed by:** the production export job, January. Half a day."
+//
+// THE READINGS (the lead's, provisional, SPEC-BRIEF-P87.md; each shown by the leg named):
+//   1  SC1, the role. A third service-credential role `catalog-import`, registered only through POST /auth/service-credentials,
+//      listed, replaced and revoked as the other two; a replacement may change the role (an operator credential narrowed by a
+//      `catalog-import` one naming it in `replaces`, the old revoked atomically). Never a membership role: POST and PATCH
+//      /auth/memberships with it 400 as today; operator_memberships' CHECK, GET /auth/authority's tenantRole and the human
+//      roles (src/auth/accounts.ts ROLES, src/auth/store.ts Role) unchanged.                          → SC1 first leg, SC3 schema leg
+//   2  SC1, what it admits: exactly GET /content/catalog, /history, /revisions/:n, GET /content/catalog/publication (kind
+//      catalog), POST /content/catalog/validate, /import, /pull, /publication/recover (kind catalog), on its own tenant, as an
+//      operator credential (same answers; the revision's actor its subject; catalogMeta.authorize admitting it; P91's
+//      import-sources and P90's pull rules unchanged; revoked or expired 401).                         → SC1 second leg
+//   3  SC2: every other request through the operator gate answers 403 `{ error: <one fixed sentence>, code: 'catalog_credential' }`
+//      before the handler (PUT /content/catalog and the rollback included; every other kind; the publication read and recover of
+//      another kind; enrichment; POST /content/publication/initialize; /config/*; learning, ledger, identity operator routes;
+//      the audience writes; the edge-access operator paths; the demo doors where mounted). "Before the handler" two ways: a
+//      request a handler answers 400/404/428 for an operator credential answers 403 for this one, and no store is read or
+//      written past the credential lookup.                                                              → SC2 legs
+//   4  The gate's one place is operatorJwt (the nested re-checks included): a `catalog-import` grant is admitted only where the
+//      route opted in (a mark on the context the eight content routes set), in every AUTH_MODE and profile — on the demo
+//      profile from the token's `roles`. hasOperatorGrant unchanged; operator and admin credentials unchanged.
+//                                                                                                       → SC2 demo legs, SC3 lock legs
+//   5  The schema: migrations/0014_<name>.sql and migrations/product/0014_<name>.sql byte-identical, forward-only and additive
+//      in 0013's form, extending operator_service_credentials.role's CHECK to the three roles and nothing else; every row kept;
+//      foreign_key_check empty; operator_memberships untouched; credentialRow reads the role; kit 02's migration sentence names
+//      0014 beside 0012 and 0013.                                                                       → SC3 schema and kit legs
+//   6  The migration list's consumers: the customer package carries 0014 last with its hash pinned under a third schema
+//      contract, a package built before 0014 (four migrations under operator-oidc-v2) still validating and migrating as today;
+//      src/ops/monitor.ts PRODUCT_SCHEMA after 0014 and 0014 required; the demo kit's list unchanged.  → SC3 package and monitor legs
+//   7  SC3, the kit: kit 02's machine-credential paragraph names the role, the eight routes, the 403 refusal by name and the
+//      narrowing replacement; the migration sentence gains 0014.                                        → SC3 kit leg
+//   8  Locks (W16, W19 B1–B3, W21 B2, W25, W28–W31, W36, W37 (+FIX2), P35, P82, P90, P91, P84/P85/P86, the auth, claims,
+//      API-boundary, monitor, stamp-workflow, operator-seed, signing-config and configStore suites, W40 P3/P4; the console).
+//
+// THE NAMES THIS SPECIFICATION RULES (the brief leaves them open; the C-items below need them; ratify or rename at receipt):
+//   the migration `0014_operator_catalog_import.sql` (0010–0013 are `operator_*`); the package's third schema contract
+//   `operator-catalog-import-v3`. The refusal's `code` is the brief's (`catalog_credential`); its sentence is the builder's
+//   (one fixed string naming the catalogue credential: /catalog/i and /credential/i).
+//
+// WHAT THE CODE OR THE BRIEF CONTRADICTS (told):
+//   · Kit lines: the ticket cites kit 02 :2359/:2361 (stale); at 91e3a6e8 the machine-credential paragraph is :2469 (the brief's
+//     line) and the migration sentence :2471 (the brief says :2472). Reading 5 has the sentence name 0014 "beside 0012 and 0013":
+//     today it names 0012 alone ("Apply additive migration0012 … after0010/0011"), and 0013 is named nowhere in kit 02. The kit
+//     leg requires one sentence naming 0012, 0013 and 0014.
+//   · Reading 6, "the demo kit's own list (scripts/demo-kit/lib/host.mjs) is unchanged": host.mjs keeps no list; its database step
+//     reads the committed `migrations/` directory (`git ls-tree HEAD migrations/`; wrangler.oh.toml and wrangler.vantage.toml
+//     `migrations_dir = "migrations"`) and stops a demo deploy while any committed migration is unapplied on the shared demo
+//     database (host.mjs database(): "the remote is missing what the worker needs"). The top-level copy of 0014 that reading 5
+//     requires (and scripts/stamp-workflow.test.mjs :455 requires for every name of MIGRATIONS) therefore stops the next OH and
+//     Vantage hosted deploys at that step until the owner applies 0014 to the demo database (a cloud change). Told, not tested.
+//   · Reading 3's `models/reference` (and `learn/generation`) are not customer routes (src/customerBoundary.ts CUSTOMER_ROUTES):
+//     on the customer profile they answer 404 at the boundary, before any gate, for every credential; the demo legs carry them.
+//   · Reading 3, "every other request through the operator gate": with AUTH_MODE open (the demo profile only) the edge-access
+//     reads (/v1/:tenant/lift…, /realtime/*) and /operator/audiences, /operator/audiences/publish (also suggest, insights,
+//     events/*) pass no operator gate for any credential (src/middleware/edgeAccess.ts sdkKey and operatorWrites are
+//     pass-through when open); the open-mode demo legs leave them out, the enforced ones carry them.
+//   · Reading 6's grant names scripts/stamp-workflow.test.mjs :577–579; :664 (unit "W14 asset-contract retains genuinely verified
+//     older W13 bytes", `assert.equal(current.schemaContract,'operator-oidc-v2')`) pins the contract too: R10 below.
+//   · The ticket's allowedPaths do not name scripts/stamp-workflow.mjs or src/ops/monitor.ts (reading 6 adds them).
+//   · P86's legs (reading 8) are not in this tree: src/units/P86 is absent at 91e3a6e8 (its join pending).
+//
+// THE R10 SWEEP (lock lines the change moves; reading 6 grants the first three by name; each the smallest change):
+//   C1  scripts/stamp-workflow.test.mjs :578–579 (W15 current security schema …): `'operator-oidc-v2'` → `'operator-catalog-import-v3'`,
+//       `migrations.length,4` → `5`, the last name `'0013_operator_oidc.sql'` → `'0014_operator_catalog_import.sql'`. RED today (the
+//       package carries four), green under the sketch.
+//   C2  src/ops/monitor.test.ts :170 (the D1 double's migration history): `'0014_operator_catalog_import.sql'` appended. Green
+//       today and under the sketch (without it the sketch answers `Migrations unavailable`).
+//   C3  src/index.api-boundary.test.ts :1363 (W12.02, the native schema check): `'0014_operator_catalog_import.sql'` appended to the
+//       migrations applied before `{ w12: 'schema' }` expects `{ ok: true }`. Under the sketch without it: `{ ok: false }`; with it
+//       green; RED today (the file does not exist yet). :1295, src/routes/auth.test.ts :73, src/middleware/auth.claims-boundary.test.ts
+//       :756–800 and scripts/operator-seed.test.mjs :223–245 stay green under the sketch: untouched.
+//   R10 (NOT granted; the lead's ruling): scripts/stamp-workflow.test.mjs :664 (W14 asset-contract retains genuinely verified older
+//       W13 bytes …) `assert.equal(current.schemaContract,'operator-oidc-v2');` pins the contract of today's package: RED under the
+//       sketch; with `'operator-catalog-import-v3'` the suite is 23/23 under the sketch. Nothing else in the sweep pins the role
+//       enum, the CHECK, the migration list, the operator gate's answer or the contract (grep of every *.test.ts/*.test.mjs for the
+//       credential route, `role IN`, `0013_operator_oidc`, `operator-oidc-v2`, `MIGRATIONS`, operatorAuth/operatorJwt).
+//
+// DEFERRED: LV1 (both shopper hosts and a customer-profile stamp, the released artifact; the batched live acceptance).
+// RESIDUALS (owed, told): applying 0014 to any database is separate operational authority (kit 02's migration sentence); the
+//   OH and Vantage demo deploys stop at the demo kit's database step until 0014 is applied there (above); the console's
+//   membership role select and any console form for a catalogue credential are untouched (an open owner decision); HEAD on the
+//   eight GET routes and `?kind=CATALOG` are unruled (the sketch refuses both); the IT pack's security-pack sentence ("the export
+//   job's credential holds the operator role") is the documents lane's (Windows checkout); the open-mode demo paths with no
+//   operator gate admit any caller, as today.
+//
+// MEASURED (_evidence/parity-step3/S33/specifier/logs/, serial, --no-cache, one worker, the scratch tree its working directory and
+// root; trees built by mk.sh: src, scripts, migrations, docs/kit archived, public and node_modules hard-linked):
+//   today (91e3a6e8 + this file, logs/a/today.log): 16 RED for the missing behaviour, 2 GREEN (the SC3 LOCK legs). SC1 and SC2's
+//     customer legs: the role refused at registration, 400 "Explicit credential ID, subject, role and future expiry are required";
+//     SC2's demo legs: the minted catalog-import token admitted to every operator route (its LOCK clause green); SC3: no 0014 file,
+//     the package carrying 0010–0013 under operator-oidc-v2, the monitor without 0014, kit 02 silent. Behind the first RED
+//     (logs/a/today-probe.log, every hard expect made soft in a scratch copy): only the membership LOCK clause and the probes' reads
+//     LOCK are green; every other clause RED for the missing credential.
+//   the sketch (sketches/p87.py on 91e3a6e8): 18/18 four times (logs/a/fix-1..3.log, fix-probe2.log); tsc exit 0 on the sketch tree.
+//   the wrong fixes (sketches/p87.py:<variant>, logs/a/w-*.log), each RED on its own legs only (the package leg run where the
+//   wrong fix is the package's): see the report's table.
+//   the locks (logs/b/): the 34 files of reading 8 548/548 today; 547/548 under the sketch before C3, 72/72 (api-boundary) with it;
+//     the sweep's 10 extra files equal on both trees (W39 needs git: W39.H2 2/2 under the sketch in a git-initialised copy);
+//     operator-seed green on both; stamp-workflow 22/23 today (C1 RED by design) and 22/23 under the sketch (:664, R10), 23/23 with
+//     the R10 line; W40.P3/P4 4/4 on both (the deploy leg packages and creates with 0014 under the sketch).
+//
+// HARNESS: ./_stamp.ts (the real Worker on the customer and the demo profile over node:sqlite D1, both shopper hosts, every store
+// call logged). Imports from src/units/: ./_stamp, ../_parity (UnitKV, UnitR2). No new export is imported.
 
 import { describe, expect, it, vi } from 'vitest';
 
-// The customer stamp loads the real Worker (src/index.ts); the module doubles its harness names (src/units/P91/LEDGER.unit.test.ts).
-vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the Agents router is not on these paths'); } }));
+// The stamps load the real Worker (src/index.ts); the module doubles of src/units/P91/LEDGER.unit.test.ts, except that the Agents
+// router answers nothing (undefined) as it does for any path outside /agents/*: with AUTH_MODE open the Worker asks it first
+// (src/index.ts fetch), and none of these units calls an agent path.
+vi.mock('agents', () => ({ routeAgentRequest: async () => undefined }));
 vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
 vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 // The package step's three check commands (scripts/stamp-workflow.mjs LOCAL_CHECK_COMMANDS: the release lint, both
@@ -21,8 +131,14 @@ vi.mock('node:child_process', async importOriginal => {
     : real.spawnSync(command, [...(args ?? [])], options as Parameters<typeof real.spawnSync>[2])) as typeof real.spawnSync;
   return { ...real, default: { ...real, spawnSync }, spawnSync };
 });
+// scripts/stamp-workflow.mjs expectedSchema reads `await import('node:sqlite')`, a specifier the test runner's module loader
+// cannot resolve (it strips the `node:` prefix that this built-in requires); the double is Node's own module, required.
+vi.mock('node:sqlite', async () => {
+  const { createRequire } = await import('node:module');
+  return createRequire(import.meta.url)('node:sqlite') as object;
+});
 
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 
 import { ROLES } from '@/auth/accounts';
 import { d1Authority } from '@/auth/authority';
@@ -206,7 +322,7 @@ describe('unit:P87.SC1', () => {
       const after = await listed(s);
       const oldUse = await s.call('GET', '/content/catalog', { token: operator.token }), newUse = await s.call('GET', '/content/catalog', { token: narrowed.token });
       const newSlots = await s.call('GET', '/content/slots', { token: narrowed.token });
-      expect.soft({ status: narrowed.answer.status, role: after.get(narrowed.id)?.role ?? null, revokedAt: after.get(narrowed.id)?.revokedAt ?? 'missing',
+      expect.soft({ status: narrowed.answer.status, role: after.get(narrowed.id)?.role ?? null, revokedAt: after.has(narrowed.id) ? after.get(narrowed.id)!.revokedAt : 'missing',
         oldRevoked: typeof after.get(operator.id)?.revokedAt, oldToken: oldUse.status, newToken: newUse.status, newOnSlots: [newSlots.status, newSlots.body.code ?? null] },
       `${host}: P87.SC1 — POST /auth/service-credentials {role: 'catalog-import', replaces: <operator credential>} narrows it: the new is active with the role, the old revoked and refused 401, the new admitted to the catalogue and refused the slots (${show(narrowed.answer)})`)
         .toEqual({ status: 201, role: ROLE, revokedAt: null, oldRevoked: 'number', oldToken: 401, newToken: 200, newOnSlots: [403, REFUSAL_CODE] });
@@ -276,9 +392,12 @@ describe('unit:P87.SC1', () => {
       const p4 = await pre(s, 'catalog', operator.token);
       const outside = await s.call('POST', '/content/catalog/import?mode=merge&format=json', { token: catalogue.token, body: [piece('p87.outside')], headers: { ...p4.headers, 'CF-Connecting-IP': '198.51.100.7' } });
       const inside = await s.call('POST', '/content/catalog/import?mode=merge&format=json', { token: catalogue.token, body: [piece('p87.inside')], headers: { ...p4.headers, 'CF-Connecting-IP': '203.0.113.9' } });
-      expect.soft({ list: list.status, outside: [outside.status, outside.body.code ?? null], inside: inside.status },
-        `${host}: P87.SC1 — P91's import-sources list applies to the catalogue credential as to any caller (${show(list)}; ${show(outside)}; ${show(inside)})`)
-        .toEqual({ list: 200, outside: [403, 'source_not_allowed'], inside: 200 });
+      const p5 = await pre(s, 'catalog', operator.token);
+      const offLoopback = await withFeed([piece('p87.off')], () => s.call('POST', '/content/catalog/pull', { token: catalogue.token,
+        body: { url: 'http://cms.example.invalid/p87-feed.json', path: 'content', mode: 'merge' }, headers: { ...p5.headers, 'CF-Connecting-IP': '203.0.113.9' } }));
+      expect.soft({ list: list.status, outside: [outside.status, outside.body.code ?? null], inside: inside.status, offLoopback: [offLoopback.status, offLoopback.body.code ?? null] },
+        `${host}: P87.SC1 — P91's import-sources list and P90's pull rules apply to the catalogue credential as to any caller (${show(list)}; ${show(outside)}; ${show(inside)}; ${show(offLoopback)})`)
+        .toEqual({ list: 200, outside: [403, 'source_not_allowed'], inside: 200, offLoopback: [400, 'invalid_url'] });
 
       // Its own tenant only; revoked or expired, 401 as today.
       const elsewhere = await s.call('GET', '/content/catalog', { token: catalogue.token, tenant: OTHER_TENANT });
@@ -446,15 +565,16 @@ describe('unit:P87.SC3', () => {
 
   it(`logic: the customer stamp's package (scripts/stamp-workflow.mjs packageArtifact) carries ${MIGRATION_0014} last, under the schema contract ${SCHEMA_CONTRACT_0014}, its bytes pinned by hash; a package built before 0014 (four migrations under operator-oidc-v2) still validates and migrates a database as today, and the new package migrates that database forward to 0014`, async () => {
     const artifact = await packageArtifact() as unknown as Package;
-    const bytes = readBytes(`migrations/product/${MIGRATION_0014}`);
+    const file = new URL(`migrations/product/${MIGRATION_0014}`, ROOT), bytes = existsSync(file) ? readBytes(`migrations/product/${MIGRATION_0014}`) : null;
     expect({ contract: artifact.schemaContract ?? null, migrations: artifact.migrations.map(m => m.name), last: artifact.migrations.at(-1)?.sha256 ?? null },
       `P87.SC3 — the package step carries the 0014 migration last with its hash (today: ${artifact.migrations.map(m => m.name).join(', ')} under ${artifact.schemaContract})`)
-      .toEqual({ contract: SCHEMA_CONTRACT_0014, migrations: ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql', MIGRATION_0014], last: sha256(bytes) });
+      .toEqual({ contract: SCHEMA_CONTRACT_0014, migrations: ['0010_operator_accounts.sql', '0011_operator_audit_tenant.sql', '0012_operator_authority.sql', '0013_operator_oidc.sql', MIGRATION_0014],
+        last: bytes ? sha256(bytes) : `the sha256 of migrations/product/${MIGRATION_0014}` });
 
     // The hash is pinned: a 0014 whose bytes differ, its source pin and basis agreeing with them, is refused.
     const path = `migrations/product/${MIGRATION_0014}`;
     const tampered = reform(artifact, p => {
-      const last = p.migrations.at(-1)!; Object.assign(last, blob(last.name, Buffer.concat([bytes, Buffer.from('\n-- p87: bytes the pinned hash does not name\n')]), last.type));
+      const last = p.migrations.at(-1)!; Object.assign(last, blob(last.name, Buffer.concat([bytes!, Buffer.from('\n-- p87: bytes the pinned hash does not name\n')]), last.type));
       for (const pins of pinLists(p)) for (const pin of pins) if (pin.path === path) Object.assign(pin, { bytes: last.bytes, sha256: last.sha256 });
     });
     expect.soft(await attempt(() => validateArtifact(tampered)), 'P87.SC3 — a package whose 0014 bytes are not the pinned ones is refused').toBe('refused: Stamp workflow unavailable');
