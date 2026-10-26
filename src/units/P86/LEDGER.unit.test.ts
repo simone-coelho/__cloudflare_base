@@ -24,7 +24,7 @@
 //    413 by name, and the two-level index (256 fixed buckets) is recorded as the next step"; "a part is kept while any
 //    revision in the publication's kept history references it and purged with the revision purge".
 //
-// THE SHAPES THIS FILE PROPOSES (provisional; the lead rules them at the spec's receipt):
+// THE SHAPES, RATIFIED (R-P407, on the provisional abbe8da5; S9–S11 added by R-P407's rulings):
 //   S1 The manifest, as `GET /content/catalog` answers it in `document`: `{ version, typeFallback?, productSlots, pieces,
 //      products }` — `pieces` the shared pieces only; `productSlots` the slot names declared product-scoped (written by a
 //      PUT of the catalogue, kept by every load); `products` `{ "<productId>": { digest: <64 lowercase hex>, records:
@@ -59,50 +59,54 @@
 //      plus the records of the parts read. THE GENERATOR: N products `COA-R00001…`, one image record each, four
 //      categories, two lines and every seventh tagged on a dimension no registry maps; one load, inside INPUT_MAX_RECORDS
 //      and INPUT_MAX_BYTES (asserted); N = 50 and N = 5,000; every part at most 2 MiB.
+//   S9 `variant_first`: on an import's or a pull's answer, `diagnostics.warnings` carries `{ code: 'variant_first',
+//      recordIndex, recordId, … }` (P82's record members) for each two-id record whose first id is its second followed by
+//      `-` and more; the record is routed to its first id and the load is accepted.
+//   S10 The learn routes (`/lift/rows`, `/learn/exploring`): in a catalogue with parts, a row whose item the shared pieces
+//      do not carry and which names no anchor is kept and named `unresolved: true` (its title and customer id null); W25's
+//      rule (an id the catalogue does not carry is never offered) stays as it is for a catalogue without parts.
+//   S11 The purge (W38 B4's `purgeByPolicy`, under the tenant's `configuration` retention setting): when it removes a
+//      revision, it removes that revision's parts that no kept revision's manifest references, and only those.
 //
-// READINGS THE CODE OR THE NOTE CONTRADICTS (each needs a ruling; the tests follow the proposal):
-//   1 The brief: "`replace` and `full` apply to the products the file names and the shared pieces"; R-P405 and the note
-//     name the products only. Literally, a replace of one product's images would empty the shared pieces (the page's
-//     modules). Proposed (S4): the shared pieces only when the file carries one.
-//   2 The first-id rule narrows P80: decide.ts's inScope (`ids.includes(anchor) && …`, :920–923) admits `[variant,
-//     product]` in either order, but a routed `[variant, product]` record lands in the variant's part and is no longer a
-//     candidate on the product's page. The routing leg shows it; the kit states it.
-//   3 "Written … BEFORE the head CAS … the same way `finish` writes revision bodies": `finish` is also the recovery path,
-//     and the pending head carries only the manifest, so a part written inside `finish` cannot be rewritten by a recovery.
-//     Proposed (S2): before the pending head is reserved; the leg checks a failed part write leaves nothing pending.
-//   4 The pending head embeds the manifest's envelope beside the set (publication.ts publishSet, `next`; loadHead), so
-//     the head's 2 MiB is met before the manifest's; the refusal names the manifest whichever check fires (S5).
-//   5 Readers keyed by a content id alone cannot find a part from the manifest (it maps products, not content ids):
-//     telemetry (contentTelemetry.ts resolvedContentTouches, moduleEngagementTouches), the learn routes' joins and
-//     catalogue sets (decisions.ts: `catalogNames` on the lift rows, `new Set(catalog.pieces.map(p => p.id))` in the
-//     slots index, exploring and queue). Options: (a) a publish-time content-id → product index in fixed buckets, one
-//     more read per lookup; (b) each reader resolves through an anchor it holds (receipts: the record's scope; replay:
-//     `inputs.anchor`; telemetry: the acknowledged decision). Legs here: replay and receipts (the anchor held), telemetry
-//     (mechanism-agnostic, at most one part read per click); the learn routes: no leg until ruled.
-//   6 The brief's address `GET /content/catalog/products/<productId>` is not admitted by the customer boundary
-//     (src/customerBoundary.ts CUSTOMER_ROUTES, outside the grant) and adding it collides with P77.VR3's pinned list
-//     (src/units/P77/LEDGER.unit.test.ts TODAY :297–326, asserted :335). `?product=` on `GET /content/{kind}` is admitted
-//     today (the `:kind` entry) and needs no R10: proposed (S6).
-//   7 The PUT round trip (S3) is not in the note: without it a merchandiser's GET→PUT of the manifest drops or cannot
-//     validate the parts.
-//   8 The kit 02 :1790 sentence "Each immutable member, set and head is limited to 2 MiB UTF-8 each" gains the part.
+// THE READINGS, RULED (R-P407), where the code or the note left them open:
+//   1 `replace` and `full` act on the products the file names and on the shared pieces ONLY when the file carries a shared
+//     piece (the brief's "and the shared pieces" read so; literally, a replace of one product's images would empty the
+//     page's modules).
+//   2 The first id routes. The kit states the canonical order [product, variant]; a two-id record written variant-first
+//     is routed to its first id as written, and the import warns `variant_first` (S9, a diagnostic, never a refusal) when
+//     the first id extends the second as a variant form (`<product>-<variant>`); P80's either-order scope filter
+//     (decide.ts inScope, :920–923) is unchanged inside the part read. A routed `[variant, product]` record therefore
+//     lands in the variant's part and is no candidate on the product's page: the routing leg shows it.
+//   3 Parts are written before the pending head's reservation, never inside `finish` (the recovery path: the pending head
+//     carries only the manifest, so a recovery could not rewrite a part).
+//   4 The pending head embeds the manifest's envelope beside the set (publication.ts publishSet, `next`), so the head's
+//     2 MiB is met before the manifest's; the refusal names the manifest whichever check fires (S5).
+//   5 Content-id readers resolve through an anchor they hold, never a content-id index: the receipts through the record's
+//     scope, the replay through `inputs.anchor`, telemetry through the acknowledged decision; the learn routes in
+//     decisions.ts read the shared pieces, resolve a part for a record that carries its anchor, and name a content id
+//     with no anchor as unresolved (S10).
+//   6 The per-product read is `?product=` on `GET /content/{kind}` (S6); the brief's `/content/catalog/products/<id>` is
+//     withdrawn: no customer-boundary change, P77.VR3 untouched.
+//   7 The PUT round trip as S3. 8 Kit 02 :1790's limits sentence names the part. 9 A purged revision's parts are removed
+//     when no kept revision references them (S11), in this file's own leg; the kit states the retention.
 //
 // THE R10 SWEEP (src/**/*.test.ts, scripts/**): no test declares `productSlots`, reads a catalogue's `products`, a
 // `content/part/` key, a `product=` read or `manifest_too_large`; no test pins kit 03's size paragraph (:277–292: "the
 // catalog is one such document per scope", "a conversation about sharding the catalog") or kit 02 :1790; W32.E1.01
 // (src/units/W32/B1.unit.test.ts :306–310, :355) reads `envelope` on a catalogue without parts (unchanged under S4).
-// Collisions arise only from choices this file does not make: the brief's per-product path (P77.VR3, reading 6), and a
-// purge that lists parts on every publication (W38 B4's storage-call counts; to be measured by the whole-suite comparison).
+// The brief's withdrawn path would have collided with P77.VR3 (reading 6); a purge that lists parts on every publication
+// could move W38 B4's bounded purge work (to be measured by the whole-suite comparison).
 //
 // DEFERRALS AND RESIDUALS: the two-level index (R-P405 (1), told); the ingest vocabulary's publish-time summary (service.ts
-// tenantCatalogVocabulary; no leg); the kit 03 cost table (:294–326, predates P80/P84/P91, not re-run); the part purge
-// (R-P405 (4): the kit leg states it, no leg measures it — W38 B4's fixture can carry one if the lead wants it); the
-// learn routes of reading 5; a scoped slot not declared in `productSlots` keeps its records shared (no consistency check).
+// tenantCatalogVocabulary; no leg); the kit 03 cost table (:294–326, predates P80/P84/P91, not re-run); the learn routes
+// other than the two S10 names (`/learn/slots` evidence, `/learn/queue`) follow the same rule and get no leg of their own;
+// a scoped slot not declared in `productSlots` keeps its records shared (no consistency check is ruled).
 //
 // NO NEW EXPORT IS IMPORTED: the manifest, the part, the read and the refusal are read loosely through the routes and the
 // mount's bucket.
 //
-// MEASURED: not yet (HOLD VITEST; the provisional is committed unmeasured).
+// MEASURED: not yet. The provisional abbe8da5 and R-P407's application (the variant_first case of the routing leg, the
+// retention leg, the learn-routes leg, the kit's canonical order) are committed unmeasured under HOLD VITEST.
 //
 // HARNESS: src/units/_parity.ts (the mounted application, both hosts, the operator routes, the bucket double). Imports from
 // src/units/: ../_parity.
@@ -326,7 +330,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         [A, B, C].map(p => [p, 200, p, digestOf(manifest, p), manifest.revision, sorted(range[p]!.map(r => r.id))]));
     }, 300_000);
 
-    it(`host (${host}): routing — on a PUT and on an import, a record whose slotTypes are all product slots and which names featuredProductIds goes to the part of its FIRST id ([${A}, ${BLACK}] to ${A}; [${BLACK}, ${A}] to ${BLACK}); a record naming no product, or with a slot that is not a product slot, stays shared; a product the catalogue does not carry is indexed as any other; a GET→PUT round trip of the manifest keeps every part`, async () => {
+    it(`host (${host}): routing — on a PUT and on an import, a record whose slotTypes are all product slots and which names featuredProductIds goes to the part of its FIRST id ([${A}, ${BLACK}] to ${A}; [${BLACK}, ${A}] to ${BLACK}); a record naming no product, or with a slot that is not a product slot, stays shared; a product the catalogue does not carry is indexed as any other; an import warns variant_first for a record written variant-first and accepts it; a GET→PUT round trip of the manifest keeps every part`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       const reversed = image('img-ch857-black-r', [BLACK, A], 'Handbags', 'detail');
@@ -344,13 +348,26 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         parts: { [A]: sorted([a1.id, a2.id, a4.id]), [BLACK]: [reversed.id], [B]: ['img-cb925-1'], [UNKNOWN]: ['img-zz999-1'] } });
       expect.soft(digestOf(afterPut, A) !== digestOf(manifest, A) && digestOf(afterPut, B) === digestOf(manifest, B),
         `${host}: P86.CS1 — the merge touched ${A}'s part alone (a new part for it, ${B}'s pointer unchanged)`).toBe(true);
+      // R-P407 (2): written variant-first, a record is routed to its first id as written and the import warns variant_first
+      // (S9) — only where the first id extends the second as a variant form; never a refusal.
+      const chalkFirst = image('img-ch857-chalk-r', [CHALK, A], 'Handbags', 'detail');
+      const productFirst = image('img-ch857-black-5', [A, BLACK], 'Handbags', 'detail');
+      const twoProducts = image('img-cb925-with-ch857', [B, A], 'Small Leather Goods', 'on-model');
+      const warned = await importJson(m, [productFirst, chalkFirst, twoProducts], { mode: 'merge' });
+      const afterWarn = await loadDocument(m, 'catalog');
+      const warnings = (((warned.body.diagnostics as { warnings?: unknown } | undefined)?.warnings ?? []) as Array<Record<string, unknown>>)
+        .filter(w => w.code === 'variant_first').map(w => [w.recordIndex, w.recordId]);
+      expect.soft({ status: warned.status, warnings, parts: Object.fromEntries([A, CHALK, B].map(p => [p, partOf(m, afterWarn, p).missing ?? partOf(m, afterWarn, p).ids])) },
+        `${host}: P86.CS1 — the variant-first record routed to its first id and warned; the product-first and the two-product records not warned (${show(warned)})`).toEqual({
+        status: 200, warnings: [[1, chalkFirst.id]],
+        parts: { [A]: sorted([a1.id, a2.id, a4.id, productFirst.id]), [CHALK]: [chalkFirst.id], [B]: sorted(['img-cb925-1', twoProducts.id]) } });
       // The merchandiser's round trip: the manifest as read, one module retitled, PUT back.
-      const edited = { ...manifest.document, pieces: ((manifest.document.pieces ?? []) as Rec[]).map(p => p.id === M.editorial ? { ...p, title: 'A styling story, revised' } : p) };
+      const edited = { ...afterWarn.document, pieces: ((afterWarn.document.pieces ?? []) as Rec[]).map(p => p.id === M.editorial ? { ...p, title: 'A styling story, revised' } : p) };
       const put = await putDocument(m, 'catalog', edited, 'p86 round trip');
       const after = await loadDocument(m, 'catalog');
-      expect.soft([put.status, after.revision, JSON.stringify(productsOf(after)) === JSON.stringify(productsOf(manifest)) && Object.keys(productsOf(after)).length === 4,
+      expect.soft([put.status, after.revision, JSON.stringify(productsOf(after)) === JSON.stringify(productsOf(afterWarn)) && Object.keys(productsOf(after)).length === 5,
         ((after.document.pieces ?? []) as Rec[]).find(p => p.id === M.editorial)?.title ?? null],
-      `${host}: P86.CS1 — the GET→PUT round trip is one revision and keeps every part's pointer (${show(put)})`).toEqual([200, manifest.revision + 1, true, 'A styling story, revised']);
+      `${host}: P86.CS1 — the GET→PUT round trip is one revision and keeps every part's pointer (${show(put)})`).toEqual([200, afterWarn.revision + 1, true, 'A styling story, revised']);
     }, 120_000);
 
     it(`host (${host}): a record that would go to a part and declares pooled: true is refused 422 naming it by its record address and pooled; nothing written (no revision, no part)`, async () => {
@@ -458,6 +475,35 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const after = await loadDocument(m, 'catalog');
       expect.soft([retried.status, Object.keys(productsOf(after)).sort(), partOf(m, after, B).missing ?? 'stored'],
         `${host}: P86.CS1 — nothing left pending: the next load is accepted and writes ${B}'s part (${show(retried)})`).toEqual([200, sorted([A, B]), 'stored']);
+    }, 120_000);
+
+    it(`host (${host}): retention (R-P407 (9)) — under a configuration retention setting, the purge that removes a revision removes the parts no kept revision references and keeps every part a kept revision references`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P86.CS1 — the tenant documents publish');
+      // The tenant's configuration-revision setting (W38 B4), at its smallest admitted duration: every revision older than
+      // the current and the previous one, superseded before this publication, is purged when nothing names it.
+      const retention = JSON.parse(String(m.env.RETENTION)) as { version: number; tenants: Record<string, Record<string, unknown>> };
+      retention.tenants[TENANT]!.configuration = { id: 'p86-configuration-revisions', revision: 1, durationMs: 1, basis: 'occurred', renewal: 'new-record-only' };
+      m.env.RETENTION = JSON.stringify(retention);
+      await declareProductSlots(m);
+      const [a1] = fourOf(A) as [Rec];
+      const pointers: Array<Record<string, string>> = [];
+      for (const records of [fourOf(A), [{ ...a1, title: `${a1.title}, retouched` }], fourOf(B), fourOf(C)]) {
+        const loaded = await importJson(m, records, { mode: 'merge' });
+        expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
+        const d = await loadDocument(m, 'catalog');
+        pointers.push(Object.fromEntries(Object.entries(productsOf(d)).map(([p, v]) => [p, String(v.digest)])));
+        await new Promise(resolve => setTimeout(resolve, 5));
+      }
+      const head = await loadDocument(m, 'catalog');
+      const purged = await asOperator(m, 'GET', `/content/catalog/revisions/${head.revision - 3}?scope=${TENANT}`);
+      expect(purged.status, `${host}: PRECONDITION — the revision of ${A}'s first load was purged under the setting (${show(purged)})`).toBe(410);
+      // Kept: the current and the previous revision; their manifests reference A's retouched part, B's and C's.
+      const kept = sorted([...new Set([...Object.values(pointers[3] ?? {}), ...Object.values(pointers[2] ?? {})])].map(partKey));
+      const read = await productRead(m, A);
+      expect.soft({ parts: partKeys(m), firstA: m.storage.objects.has(partKey(pointers[0]?.[A] ?? 'no pointer')), read: [read.status, readIds(read)] },
+        `${host}: P86.CS1 — the parts are exactly those a kept revision references (today no part is written)`).toEqual({
+        parts: kept.length === 3 ? kept : ['three referenced parts expected', ...kept], firstA: false, read: [200, sorted(fourOf(A).map(r => r.id))] });
     }, 120_000);
 
     it(`host (${host}): the cap — a load whose manifest index would pass 2 MiB is refused 413 manifest_too_large, nothing written (no revision, no part); the load before it, 60% of the cap, indexes its products`, async () => {
@@ -582,6 +628,27 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
       const taught = ((set.records[0]?.inputs?.affinity ?? {}) as Record<string, Record<string, number>>).contentType ?? {};
       expect.soft(Object.keys(taught).sort(), `${host}: P86.CS2 — the click teaches the image's own format (its catalogue tag, read from its part)`).toEqual(['on-model']);
     }, 300_000);
+
+    it(`host (${host}): the learn routes (R-P407 (5), S10) — the carousel's lift rows and its exploring rows keep each image the shared pieces do not carry, named unresolved: true, title null (no anchor on a row)`, async () => {
+      const m = await rangeTenant(host, 50);
+      const indexed = await loadDocument(m, 'catalog');
+      expect(Object.keys(productsOf(indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      const s = await shopperOn(m);
+      const page = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-learn');
+      const images = page.decisions.filter(d => d.slot === CAROUSEL);
+      expect(sorted(images.map(d => d.contentId)), `${host}: PRECONDITION — the anchor's carousel is served (${page.status})`).toEqual(SERVED_FOR_BLACK);
+      for (const d of images) expect((await s.ack(page, d)).status, `${host}: PRECONDITION — ${d.contentId} is rendered`).toBe(200);
+      await m.drainLedger();
+      const published = await asOperator(m, 'POST', `/v1/${TENANT}/learn/publish`, { slot: CAROUSEL });
+      expect(published.status, `${host}: PRECONDITION — the carousel's lift snapshot is published (${show(published)})`).toBe(200);
+      const named = (a: Answer) => sorted(((a.body.rows ?? []) as Array<Record<string, unknown>>).map(r => JSON.stringify([r.item, r.title ?? null, r.unresolved ?? 'no unresolved member'])));
+      const rows = await asOperator(m, 'GET', `/v1/${TENANT}/lift/rows?slot=${CAROUSEL}`);
+      const exploring = await asOperator(m, 'GET', `/v1/${TENANT}/learn/exploring?slot=${CAROUSEL}`);
+      const expected = sorted(SERVED_FOR_BLACK.map(id => JSON.stringify([id, null, true])));
+      expect.soft({ rows: [rows.status, named(rows)], exploring: [exploring.status, named(exploring)] },
+        `${host}: P86.CS2 — each image kept and named unresolved on both routes (lift rows: ${show(rows)}; exploring: ${show(exploring)})`).toEqual({
+        rows: [200, expected], exploring: [200, expected] });
+    }, 300_000);
   }
 });
 
@@ -590,7 +657,7 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
 // ===========================================================================
 
 describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
-  it('logic: kit 03 states the manifest (`productSlots`, `products`), the parts, the routing by the first id, the modes per product, the cap\'s refusal `manifest_too_large` with the two-level index next, and part retention under the purge; kit 02 states the per-product read on GET /content/{kind} and the part beside the 2 MiB limits; today\'s one-document sentences are gone', () => {
+  it('logic: kit 03 states the manifest (`productSlots`, `products`), the parts, the routing by the first id with the canonical order [product, variant] and the `variant_first` warning, the modes per product, the cap\'s refusal `manifest_too_large` with the two-level index next, and part retention under the purge; kit 02 states the per-product read on GET /content/{kind} and the part beside the 2 MiB limits; today\'s one-document sentences are gone', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md'), kit03 = readTree('docs/kit/03-payload-schemas.md');
     const paragraphs = (text: string) => text.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
     const has = (text: string, ...words: Array<string | RegExp>) => paragraphs(text).some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
@@ -600,6 +667,7 @@ describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
     expect.soft({
       manifest: has(kit03, '`productSlots`', '`products`', /\bpart\b/),
       routing: has(kit03, '`featuredProductIds`', '`productSlots`', /\bfirst id\b/),
+      variantFirst: has(kit03, '`variant_first`', /\[product, variant\]/),
       modes: has(kit03, '`merge`', '`replace`', '`full`', /\bpart\b/),
       cap: has(kit03, '`manifest_too_large`', /two-level/),
       retention: has(kit03, /\bparts?\b/, /\bpurge/),
@@ -608,6 +676,6 @@ describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
       perProductRead: getRow.includes('product='),
       partLimit: /\bparts?\b/.test(limits),
     }, 'P86.CS3 — the kit states design A (today it states one catalogue document per scope and sharding as a conversation)').toEqual({
-      manifest: true, routing: true, modes: true, cap: true, retention: true, oneDocument: false, sharding: false, perProductRead: true, partLimit: true });
+      manifest: true, routing: true, variantFirst: true, modes: true, cap: true, retention: true, oneDocument: false, sharding: false, perProductRead: true, partLimit: true });
   });
 });
