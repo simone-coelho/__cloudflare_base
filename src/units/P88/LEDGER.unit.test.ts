@@ -49,8 +49,8 @@
 //   · src/routes/content.test.ts W20.02 (":363", the slots validate's exact storage-call count, and the slots validate under a
 //     storage fault in "W20.02 preserves slot activation and rollback …") constrains the build: the slots validate reads the
 //     layouts document only for a candidate carrying orders (the sketch's first form, which read it always, turned both RED).
-//   · A request whose publicationChanges carry both a layouts member and a slots member: which layouts its slots are checked
-//     against is unruled; the sketch uses the request's own layouts member (R-P24's analogy); no leg.
+//   · A request whose publicationChanges carry both a layouts member and a slots member: ruled by R-P450 (1) — the slots' orders
+//     are checked against the request's own layouts member (the set being published), whichever document is the primary.
 //   · On a customer stamp the boundary refuses a `:kind` segment outside its lower-case list (404, every kind), as today.
 //
 // THE R10 SWEEP: no test pins the kind list, the boundary pattern, the optional-member set, the unknown-kind sentence or the
@@ -62,7 +62,9 @@
 // RESIDUALS (owed, told): the console's display of the approved set (N2's console part, outside E13); the strict form (refusing
 //   every order on a tenant or page without a layouts document) is the owner's call; applying the rule to orders already
 //   published happens only at their slots document's next publication (a dropped layout leaves the served order in force until
-//   then); the `version` member admits 1 or absent (no leg on another value).
+//   then).
+// R-P450 (the lead at b9081326, before the review): (1) the combined request's leg in AL2 (both hosts, both documents primary);
+//   (2) `version` other than 1 refused 422 as a member outside the schema (AL1's refusal leg).
 //
 // MEASURED (_evidence/parity-step3/S35/specifier/logs/, serial, --no-cache, one worker, the scratch tree its working directory
 // and root; trees built by mk.sh from 124d0916 with this file):
@@ -76,6 +78,9 @@
 //   the wrong fixes (logs/a2/w-*.log), each RED on its own legs only: initrequired and noboundary the customer leg; dupsaccepted
 //     and devicesunchecked the refusal leg; latestlayouts the set-pin leg; setcompare the refusal leg; anyreversed the device
 //     leg; shotorders and nodocrefused the no-document/shot leg; kitleft the kit leg (each ×2 hosts where hosted).
+//   round 2 (R-P450, logs/r2/): the sketch 20/20 twice (fix-1.log, fix-2.log); today 20 RED (today.log), the new leg at the
+//     layouts PRECONDITION and, behind it (w-norule.log), RED for the missing rule; the wrong fix `storedincombined` (the rule
+//     reading the stored layouts in a combined request) RED on the combined leg alone, `versionunchecked` on the refusal leg alone.
 //   the locks of reading 5 (logs/b/): 17 files 244/244 today; under the sketch 244/244 (fix-locks-r2.log; P37.DV3 failed once
 //     under the machine's load in the first run and passed alone, logs/b/fix-p37-alone.log); W40.P3/P4 4/4 on the sketch.
 //
@@ -211,6 +216,8 @@ describe('unit:P88.AL1', () => {
         ['a member outside the schema, in a layout', { pages: { [PAGE]: { any: [{ modules: ORDER_A, weight: 2 }] } } }, [PAGE, 'any', '[0]']],
         // At the top there is no page, device or index to name: refused 422 with its errors.
         ['a member outside the schema, at the top', { pages: { [PAGE]: { any: [{ modules: ORDER_A }] } }, approvedBy: 'p88' }, []],
+        // R-P450 (2): `version` is 1 or absent; any other value is outside the schema.
+        ['a version other than 1', { version: 2, pages: { [PAGE]: { any: [{ modules: ORDER_A }] } } }, []],
       ];
       const head = await readKind(m, 'layouts');
       const rows: Array<Record<string, unknown>> = [];
@@ -342,6 +349,37 @@ describe('unit:P88.AL2', () => {
       expect.soft({ drop: drop.status, report: refusedNaming(report, PAID_SOCIAL_FIRST, ORDER_C), cleared: cleared2.status, rollback: refusedNaming(back, PAID_SOCIAL_FIRST, ORDER_C), unchanged: after.revision === before.revision },
         `${host}: P88.AL2 — the drop is accepted; validate reports the order; the rollback to it is refused 422 naming it and writes nothing (${show(back)})`)
         .toEqual({ drop: 200, report: REFUSED(), cleared: 200, rollback: REFUSED(), unchanged: true });
+    });
+
+    // R-P450 (1): one request publishing a layouts member and a slots member checks the slots' orders against the request's own
+    // layouts member (the set being published), whichever of the two is the primary document.
+    it(`host (${host}): a publicationChanges request carrying a layouts member and a slots member checks the orders against the request's own layouts member — an order the new member drops is refused 422 although the stored layouts approve it, nothing written; an order only the new member approves publishes — with either document the primary`, async () => {
+      const m = await mount(host, BASE);
+      expectPublished(m, 'P88.AL2 — the product page publishes');
+      await publishLayouts(m, layouts({ [PAGE]: { any: [ORDER_A] } }));
+      const state = async () => ({ slots: await slotsState(m), layouts: (await readKind(m, 'layouts')).body.revision });
+      const together = async (primary: 'slots' | 'layouts', slots: unknown, approved: unknown) => {
+        const head = await readKind(m, primary);
+        return primary === 'slots'
+          ? call(m, 'PUT', '/content/slots', { document: slots, note: 'p88 together', publicationChanges: [{ kind: 'layouts', document: approved }] }, authored(head))
+          : call(m, 'PUT', '/content/layouts', { document: approved, note: 'p88 together', publicationChanges: [{ kind: 'slots', document: slots }] }, authored(head));
+      };
+      const rows: Array<Record<string, unknown>> = [];
+      // Each round: the stored layouts approve `stored` alone; the request's member drops it (refused), then approves `fresh` alone.
+      for (const [primary, stored, fresh] of [['slots', ORDER_A, ORDER_B], ['layouts', ORDER_B, ORDER_C]] as const) {
+        const before = await state();
+        const dropped = await together(primary, withOrders([{ context: PAID_SOCIAL_FIRST, modules: stored }]), layouts({ [PAGE]: { any: [fresh] } }));
+        const unchanged = JSON.stringify(await state()) === JSON.stringify(before);
+        const approvedHere = await together(primary, withOrders([{ context: PAID_SOCIAL_FIRST, modules: fresh }]), layouts({ [PAGE]: { any: [fresh] } }));
+        const after = await state();
+        rows.push({ primary, dropped: refusedNaming(dropped, PAID_SOCIAL_FIRST, [...stored]), unchanged, approved: approvedHere.status,
+          published: [after.slots.orders, after.layouts === Number(before.layouts) + 1] });
+      }
+      expect.soft(rows, `${host}: P88.AL2 (R-P450) — the request's own layouts member decides its slots' orders`)
+        .toEqual([
+          { primary: 'slots', dropped: REFUSED(), unchanged: true, approved: 200, published: [[{ context: PAID_SOCIAL_FIRST, modules: ORDER_B }], true] },
+          { primary: 'layouts', dropped: REFUSED(), unchanged: true, approved: 200, published: [[{ context: PAID_SOCIAL_FIRST, modules: ORDER_C }], true] },
+        ]);
     });
 
     it(`host (${host}): a tenant that never published a layouts document publishes every order as today (LOCK); with a layouts document the carousel's shot orders (P84) are outside the rule`, async () => {
