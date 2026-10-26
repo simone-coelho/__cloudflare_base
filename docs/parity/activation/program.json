@@ -1514,7 +1514,7 @@
     {
       "id": "P87",
       "title": "A catalogue-only service credential (**amendment 11, E11, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
