@@ -1280,7 +1280,7 @@
     {
       "id": "P85",
       "title": "An exposure record for a carousel drawn before paint (**amendment 11, E9, 2026-10-22**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md",
