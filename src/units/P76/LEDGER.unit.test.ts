@@ -82,6 +82,13 @@
 // budgetsoft 1, each on its own leg alone; the seven wrong fixes RED as before (kitleft now 4: the no-class legs read kit 02);
 // the build's head 141e2093 8/8 on a scratch copy.
 //
+// R-P452 (the review at b9fdbead, round 3, the last textual round), test-only: G1 the door's built names (FA1) and FA2's list
+// are looked for in the sentence of kit 02's first-request paragraph that names `Server-Timing` (the paragraph's other
+// sentences say `session` for the issued-session body member); G2 no sentence may say that either, both, each, every, all or
+// the two reads are aborted. MEASURED (logs/r3-*): today 6 RED, the locks green; the sketch 8/8 twice; the reviewer's
+// kitnosession and kitotherpara 3 RED each (the no-class legs and kit 02's leg), budgeteach and budgetsoft 1 each (kit 02's
+// leg), kitnoforward 2; the build's head 141e2093 8/8 on a scratch copy.
+//
 // NO NEW EXPORT IS IMPORTED. HARNESS: src/units/_parity.ts (the mounted application, both hosts). Imports from src/units/:
 // ../_parity.
 
@@ -152,6 +159,14 @@ async function door(m: Mounted, cls?: 'default' | 'personalized', slowBody = fal
   await m.drain();
   return { status: response.status, header: response.headers.get('Server-Timing'), body: answer, measured };
 }
+/**
+ * R-P452 G1: the sentence(s) of kit 02's first-request paragraph that name `Server-Timing` — where the door's entries are
+ * described (the paragraph's other sentences say `session` for the issued-session body member).
+ */
+function timingSentence(): string {
+  const first = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('**A new visitor\'s first request.**')) ?? '';
+  return first.split(/(?<=[.!?])\s+(?=[A-Z*`])/).filter(sentence => sentence.includes('Server-Timing')).join(' ');
+}
 /** `Server-Timing` as name → duration (ms). */
 const entriesOf = (header: string | null): Record<string, number> => Object.fromEntries((header ?? '').split(',').map(s => s.trim()).filter(Boolean)
   .map(s => [s.split(';')[0]!.trim(), Number(/dur=([0-9.]+)/.exec(s)?.[1] ?? NaN)]));
@@ -194,9 +209,10 @@ describe('unit:P76.FA1 (R-P438)', () => {
       const body = timingsOf(a);
       expect.soft({ names: sorted(Object.keys(body)), values: Object.entries(entries).filter(([name, ms]) => Math.abs((body[name] ?? NaN) - ms) > 1).map(([name]) => name) },
         `${host}: P76.FA1 — the body's sources.timings carries the same entries and values (${JSON.stringify(body)})`).toEqual({ names: sorted(names), values: [] });
-      // R-P448 F4: kit 02 names every entry the door answers, the remainder's name and the five stages included.
-      const first = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('**A new visitor\'s first request.**')) ?? '';
-      expect.soft(names.filter(name => !first.includes(`\`${name}\``)), `${host}: P76.FA2 — kit 02's first-request paragraph names every entry of the door's Server-Timing`).toEqual([]);
+      // R-P448 F4, R-P452 G1: kit 02's sentence that names Server-Timing names every entry the door answers, the remainder's
+      // name and the five stages included.
+      const described = timingSentence();
+      expect.soft(names.filter(name => !described.includes(`\`${name}\``)), `${host}: P76.FA2 — kit 02's Server-Timing sentence names every entry of the door's Server-Timing (${described.slice(0, 120)})`).toEqual([]);
     }, 120_000);
 
     it(`host (${host}): a first request whose page drew a class (P84's member) names \`arm\` in the header and in sources.timings, with no hold (at least 0 ms) and with the mint's publication reads held ${MINT} ms each (at least ${MINT} ms), beside \`session\`, the remainder and \`total\`; the entries still add up`, async () => {
@@ -270,12 +286,13 @@ describe('unit:P76.FA2 (R-P438)', () => {
     expect(first, 'PRECONDITION: kit 02 carries the first-request paragraph').not.toBe('');
     const flat = text.replace(/\s+/g, ' ');
     expect.soft({
-      door: ['Server-Timing', '`session`', '`arm`', '`total`'].filter(word => !first.includes(word)),
+      door: ['Server-Timing', '`session`', '`arm`', '`total`'].filter(word => !timingSentence().includes(word)),
       body: /`sources\.timings`|`timings`/.test(first),
       forwarded: /forwarded decision/i.test(first),
       // R-P448 F5: no sentence says either or both reads are aborted, and a clause saying neither holds the answer past
       // its budget names its subjects, the ring read and the witness call.
-      bounded: /\b(?:either|both) reads? (?:is |are )?aborted|\bboth reads are aborted/i.test(flat)
+      // R-P452 G2: nor that each, every, all or the two reads are.
+      bounded: /\b(?:either|both|each|every|all|the two) reads? (?:is |are )?aborted/i.test(flat)
         || flat.split(/[.;]/).some(clause => /\bneither\b[^.;]*\bholds? the answer past/i.test(clause) && !(/\bring\b/.test(clause) && /\bwitness\b/.test(clause))),
       unbounded: all.some(p => /key-value|\bKV\b/.test(p) && /snapshot read/.test(p) && /under no budget|not under (?:any|a) budget|outside (?:every|any) budget|no budget bounds/i.test(p)),
     }, 'P76.FA2 — kit 02 names the door\'s entries and corrects :409–410 (today it names neither and claims both reads bounded)').toEqual({
