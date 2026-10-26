@@ -57,6 +57,19 @@
 // mixing a door answer (2162 ms) with two answers of page views holding a session (1920, 4821 ms), corrected by the kit's
 // numbers; the preflight lives in src/index.ts (outside the grant).
 //
+// MEASURED (_evidence/parity-step3/S34/specifier/logs/, serial, --no-cache, one worker, the tree its working directory and
+// root; the sketch sketches/p76.py, trees under scratch/): today in the worktree (46f1a348) 6 RED for the missing behaviour
+// (the door names the five stages alone: no `session`, remainder, `arm` or `total`; the kits silent and kit 02 claiming
+// both reads bounded) and the two LOCK legs GREEN (a-today.log). The sketch — src/routes/decisions.ts firstDecisionRequest
+// (the door's start, the mint timed as `arm`, the issue, activation and verify as `session`, the forward's round trip less
+// the forwarded stages as `forward`, `total`; the header copy replaced by the stages and the door's entries; the same
+// entries in sources.timings), kit 01's deadline paragraph and `hydrateTimeoutMs` row, kit 02's first-request paragraph and
+// :408–409 — 8/8 three times (b-fix-1..3). The wrong fixes, each RED on its own legs: mintonly (`session` timing the verify
+// alone) and noremainder and nobody the four FA1 door legs; renamed and armalways the two no-class legs; kitleft the two FA2
+// legs; budgetleft kit 02's leg. The whole suite (compare.txt): 4097 tests on each tree; failing under the sketch alone
+// none; failing today alone P76's six; 50 failing on both are the scratch layout (the .mjs suites, root.worker, the console
+// legs reading a base commit through git, W39/W40's deploy and bundle legs). Every named lock green on both trees.
+//
 // NO NEW EXPORT IS IMPORTED. HARNESS: src/units/_parity.ts (the mounted application, both hosts). Imports from src/units/:
 // ../_parity.
 
