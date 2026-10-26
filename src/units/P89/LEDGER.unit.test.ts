@@ -65,6 +65,13 @@
 //   · Every removal is measured against the order kept just before it (never vacuous): a sign-out, another person (the
 //     stored order not anonymous: no rebind), a personalization refusal, a tracking refusal, and `setVisitorId`, whose
 //     consent becomes unknown (its own `identity` event is dropped by the current-identity guard, R-P459 noticed).
+//   · R-P475: "never the priors" and "suppressions removed" are read against a regional prior in force (P07's form: the
+//     learn document's `regional` block, kBlend 100, and the tenant's global snapshot sharing `contentType` between detail
+//     and lifestyle) and a suppression in force (P39's form: the reflex document's `suppression.actions.remove_from_cart`,
+//     a remove_from_cart naming studio). The prior is shown in force by a shopper with no interest, whose carousel it
+//     leads with the detail image; that shopper's member stays null. A change of the order to null with the pairs
+//     unchanged is a change (the shot orders republished so that none names the shopper's values, desktop, no row on
+//     either side). Kit 01's head-script paragraph is the one naming `data-op-context` and the `--op-` properties.
 //   · Leg names: `host (<host>)` the mounted application in process; `host (<host>, native)` workerd with a real socket
 //     (P81's form); `sdk` the real SDK; `sdk (head script)` the built head script under jsdom (P84's `sdk` legs);
 //     `logic` the kit.
@@ -99,6 +106,15 @@
 //     round-2 sketch, which re-signs without the device, r4-b-fix.log; the wrong fixes nodevice (the class kept, the
 //     re-decision re-signed without it) and devicemobile (re-signed mobile for every view), r4-z-nodevice.log and
 //     r4-z-devicemobile.log; the push locks P81, P84, P85, P86 under the extended sketch, r4-locks-fix.log.
+//   · Round 4 (R-P475, 24 tests: one in-process leg per host for F1 and F2, F3 inside the desktop push leg, F4 inside
+//     SO4): today 24/24 RED (r5-today.log); the extended sketch 24/24 twice (r5-fix-1..2.log); the reviewer's controls
+//     (S36/reviewer-spec/bin/controls.py over the extended sketch): withpriors and withsuppressed RED on the F1/F2 leg
+//     alone, both hosts; kitheadelsewhere RED on SO4 alone; digestnonull 24/24 green (r5-y-<control>.log): it pushes the
+//     change of an order to null as the sketch does (its digest goes from the pairs with the order to the pairs alone, so
+//     it differs) and parts from the sketch only between an absent member and null, which no reading rules. The leg's
+//     own wrong fix framenonull (the push frame drops a null member, as if absent: the SDK would keep the old order) is
+//     RED on the desktop push leg alone, both hosts (r5-z-framenonull.log). The builder's head 71a54699: 24/24
+//     (r5-l-build.log).
 //
 // R10 SWEEP (grep of src/**/*.test.ts for exact answer keys, `opt_head` contents, the push digest, the quiet actions,
 // the beacon's re-decision and the kit sentences the ruling changes): no collision. realtime.sdkContract (:6385) and
@@ -136,6 +152,7 @@ import { describe, expect, it } from 'vitest';
 
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { EMPTY_PRIORS } from '@/learn/priors';
+import { REGION_GENERATION, trendKey } from '@/reflex/regionTrend';
 import { RETENTION_CATEGORIES } from '@/retention';
 import { createCore } from '@/sdk/core';
 import { createIdentity } from '@/sdk/identify';
@@ -223,8 +240,42 @@ const SHOTS_A = image('img-ch857-sa', MANY.slice(0, 8)), SHOTS_B = image('img-ch
 const MANY_EXPECTED = ['shot-05', 'shot-04', 'shot-03', 'shot-02', 'shot-01', 'shot-06', 'shot-07', 'shot-08',
   'shot-12', 'shot-11', 'shot-10', 'shot-09', 'shot-13', 'shot-14', 'shot-15', 'shot-16'];
 
+/**
+ * R-P475 F1, F2 — the shopper's OWN interest (reading 1: suppressions removed, never the priors). A regional prior in force
+ * (P07's form: the learn document's `regional` block and the tenant's published global snapshot) whose `contentType` shares
+ * fall on detail, which the taught shopper holds, and on lifestyle, a published shot (the organic order) no shopper here
+ * touched; and the tenant's suppression settings (P39's form) naming `remove_from_cart`, which suppresses for the shopper
+ * every registry value it carries.
+ */
+const PRIOR_SHARE = { contentType: { detail: 0.5, lifestyle: 0.5 } };
+const OWN_DOCS = { ...DOCS, learn: learnDocument({ [CAROUSEL]: { measurementBasis: 'rendered-v1', reward: 'click' } }, { regional: { enabled: true, kBlend: 100, minEvents: 1 } }),
+  reflex: { ...REFLEX_DOCUMENT, suppression: { actions: { remove_from_cart: {} } } } };
+async function publishPrior(m: Mounted): Promise<void> {
+  const now = Date.now();
+  await m.cache.put(trendKey(TENANT, '*'), JSON.stringify({ generation: REGION_GENERATION, tenant: TENANT, region: '*', level: 'global', events: 500, updatedAt: now, version: now,
+    r: { contentType: { detail: 5, lifestyle: 5 } }, share: PRIOR_SHARE }));
+}
+
 describe('unit:P89.SO1 (R-P459 S1, S2, O8)', () => {
   for (const host of HOSTS) {
+    it(`host (${host}): R-P475 — the member is the shopper's own interest: a regional prior in force on detail and on lifestyle (a published shot the shopper never touched) neither enters the member nor moves it, and leaves a shopper with no interest at null although it leads that shopper's carousel; a suppression in force on studio (remove_from_cart, P39's form) takes studio out`, async () => {
+      const m = await mount(host, OWN_DOCS);
+      expectPublished(m, 'P89.SO1 — the documents with the regional prior and the suppression settings publish');
+      await publishPrior(m);
+      const own = await shopperOn(m), cold = await shopperOn(m), suppressing = await shopperOn(m);
+      await taught(m, own);
+      await taught(m, suppressing);
+      expect((await suppressing.action({ type: 'custom', data: { event: 'remove_from_cart', contentType: 'studio' } }, PAID_SOCIAL_ENTRY)).status,
+        `${host}: PRECONDITION — the remove_from_cart naming studio is accepted`).toBe(200);
+      const pages = { own: await pdpPage(m, own, 'mobile'), cold: await pdpPage(m, cold, 'mobile'), suppressed: await pdpPage(m, suppressing, 'mobile') };
+      expect(Object.values(pages).map(p => p.status), `${host}: PRECONDITION — the pages are answered (${show(pages.cold)})`).toEqual([200, 200, 200]);
+      const lead = ((pages.cold.body.decisions ?? []) as Array<{ slot: string; contentId: string }>).find(d => d.slot === CAROUSEL)?.contentId ?? 'no carousel decision';
+      expect(lead, `${host}: PRECONDITION — the prior is in force: it leads the carousel of the shopper with no interest with the detail image`).toBe(DETAIL.id);
+      expect.soft({ own: shotOrderOf(pages.own.body), cold: shotOrderOf(pages.cold.body), suppressed: shotOrderOf(pages.suppressed.body) },
+        `${host}: P89.SO1 — the shopper's own interest: never the prior's values or weights, a suppressed value left out (today no member)`).toEqual({
+        own: ['studio', 'detail', 'on_model', 'flat_lay'], cold: null, suppressed: ['detail', 'on_model', 'flat_lay'] });
+    }, 180_000);
+
     it(`host (${host}): on the carousel page the answer carries \`shotOrder\`: the shopper's own published \`contentType\` interests by interest (studio, detail), the tie by the request's row on mobile (on_model, flat_lay) and by code unit on desktop where no published order matches (flat_lay, on_model), \`video\` left out (no published order names it); a page without a carousel carries no member`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P89.SO1 — the product page with its carousel weighing contentType publishes');
@@ -386,7 +437,7 @@ const nativeClick = (b: NativeBrowser, piece: Piece, slot = CAROUSEL, page = 'pd
 
 describe('unit:P89.SO1 (R-P459 S2, O8) — the push, both hosts in workerd', () => {
   for (const host of HOSTS) {
-    it(`host (${host}, native): with the page view open on a socket, a click that changes the shopper's shot order alone (on a cart piece of the shot \`lifestyle\`: a published shot no carousel image carries) is pushed as a \`content_decisions\` frame carrying the new \`shotOrder\` and the same offered pairs; an action that changes neither pushes nothing`, async () => {
+    it(`host (${host}, native): with the page view open on a socket, a click that changes the shopper's shot order alone (on a cart piece of the shot \`lifestyle\`: a published shot no carousel image carries) is pushed as a \`content_decisions\` frame carrying the new \`shotOrder\` and the same offered pairs; an action that changes neither pushes nothing; the order become null with the pairs unchanged (R-P475) is pushed carrying \`shotOrder: null\``, async () => {
       await nativeWorld(host, async w => {
         const b = await w.browser(), socket = await b.socket();
         for (const [piece, times] of [[STUDIO, 3], [DETAIL, 2]] as const) for (let i = 0; i < times; i++) expect((await nativeClick(b, piece)).status, `${host}: PRECONDITION — the click`).toBe(200);
@@ -404,6 +455,18 @@ describe('unit:P89.SO1 (R-P459 S2, O8) — the push, both hosts in workerd', () 
         expect((await b.act(PAGE_VIEW)).status, `${host}: PRECONDITION — the page view action`).toBe(200);
         await pause(1500);
         expect.soft(pushes(socket).length - settled, `${host}: P89.SO1 — nothing changed, nothing pushed`).toBe(0);
+        // R-P475 F3: a change of the order to null with the pairs unchanged is a change. The slots republished with shot
+        // orders that name none of the shopper's values (studio, detail, lifestyle); the one row stays mobile-only, so the
+        // desktop carousel is ordered as before. The next admitted action re-decides the page view.
+        const republished = await w.publishSlots(slotsWith({ shotOrders: [{ context: { channel: 'paid_social', visitBuckets: ['1'], device: 'mobile' }, order: ['on_model', 'flat_lay'] }] }));
+        expect(republished.status, `${host}: PRECONDITION — the shot orders republish (${show(republished)})`).toBe(200);
+        const beforeNull = pushes(socket).length;
+        expect((await b.act(PAGE_VIEW)).status, `${host}: PRECONDITION — the next admitted action`).toBe(200);
+        await socket.waitFor(() => pushes(socket).length > beforeNull);
+        const nulled = pushes(socket)[beforeNull];
+        expect.soft(nulled ? { shotOrder: Object.hasOwn(nulled, 'shotOrder') ? nulled.shotOrder : 'no shotOrder member',
+          same: JSON.stringify(pairsOf(nulled.decisions)) === JSON.stringify(pairsOf(first.body.decisions)) } : 'no frame',
+        `${host}: P89.SO1 — the order become null, the pairs unchanged, is pushed carrying shotOrder null`).toEqual({ shotOrder: null, same: true });
       });
     }, 180_000);
 
@@ -806,8 +869,9 @@ describe('unit:P89.SO4 (R-P459 S6)', () => {
       kit01Row: /shot order/i.test(row(kit01)) && row(kit01).includes('`shotOrder`'),
       kit01Carried: has(kit01, '`opt_head`', /next page view/i, /first landing/i, /\bhold/i, /sign-in|`identify\(\)`/, /rebound|rebind/i, /first answer/i, /`listen\.refresh\(\)` after `identify\(\)`/, /sign-out|`logout\(\)`/, /refus/i,
         /storage[^.]*cleared|cleared storage/i),
-      // The head script's own paragraph (kit 01 §3, the one that names `data-op-context`), however it names the script.
-      kit01Head: has(kit01, /head script|`data-op-context`/i, /(?:shopper's own|their own|the shopper's) (?:shot )?order/i, /before the (?:context's )?row|ahead of the (?:context's )?row/i),
+      // R-P475 F4: the head script's own paragraph (kit 01 §3: the one that names `data-op-context` and the `--op-` custom
+      // properties it writes), however it names the script; the sentence anywhere else does not count.
+      kit01Head: has(kit01, '`data-op-context`', '`--op-', /(?:shopper's own|their own|the shopper's) (?:shot )?order/i, /before the (?:context's )?row|ahead of the (?:context's )?row/i),
       kit02Frame: has(kit02, '`content_decisions`', '`shotOrder`', /shot order changes|order alone|change in (?:the|that|its|the shopper's) (?:shot )?order|whenever the shopper's shot order/i),
       kit02Member: has(kit02, '`shotOrder`', /\bnull\b/, /carousel/i, /contentType/),
       kit02Head: has(kit02, /head script/i, /`(?:opt_head\.)?shots`/, /subject|visitor/i, /30 days/),
