@@ -1437,7 +1437,8 @@
       "remainingWork": [
         "First: a design decision (E10): per-product scoping of image records, sharding by product range, or a larger store; the lead records the choice under the owner's authority in AMENDMENTS.md before batch S29's specification, and CS1–CS3 are specified to it; the test scope fits today and the first dataset is sized with Tapestry after the first test.",
         "Verified at 11782ac0: the limit is the publication store's (PUBLICATION_MAX_BYTES = 2 MiB, src/config/publication.ts:7), one catalogue document per scope; there is no piece-count cap in code: 'about 2,000 pieces' is kit 03's estimate at the shipped piece shape (:253–262).",
-        "Scoping by product is P80's mechanism; the chosen store must serve P80's filter without reading the whole range (closed by unit:P86.CS2)."
+        "Scoping by product is P80's mechanism; the chosen store must serve P80's filter without reading the whole range (closed by unit:P86.CS2).",
+        "R-P405 (2026-10-25): design A chosen (a manifest with immutable per-product parts, one revision); CS1–CS3 specified to it in batch S32; replay.ts, contentTelemetry.ts and decisions.ts granted so every reader resolves a product part."
       ],
       "decisions": [
         {
@@ -1470,7 +1471,10 @@
         "src/content/import.ts",
         "src/routes/content.ts",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md"
+        "docs/kit/03-payload-schemas.md",
+        "src/learn/replay.ts",
+        "src/reflex/contentTelemetry.ts",
+        "src/routes/decisions.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P86 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
