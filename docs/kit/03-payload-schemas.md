@@ -834,7 +834,8 @@ The optional document `layouts` (`PUT /content/layouts`) lists, per page of the 
 (`any`, `mobile` or `desktop`), the module orders a per-context order on that page may publish: each approved layout
 is exactly `{ modules }`, 1 to 50 distinct module ids in order; `version` is 1 when present. A device key other than
 the three, an empty list, a repeated module, two identical layouts under one device or any other member is refused
-422 naming the page, the device and the layout's index; the catalogue is not checked here. On a page the document
+422 naming the page, the device and the layout's index; a top-level member outside the schema, or a `version` other
+than 1, is refused 422 naming that member. The catalogue is not checked here. On a page the document
 names, an order's `modules` must equal, position by position, one of the page's `any` layouts or, for a context
 naming `mobile` or `desktop`, one of that device's layouts; an order naming no device matches the `any` layouts
 alone. In the example, an order whose context names `mobile` may be any of the three layouts, any other order one of the first
