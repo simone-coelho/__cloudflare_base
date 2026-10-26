@@ -49,6 +49,15 @@
 //   `?kind=CATALOG` (any case) is the catalogue: GET /content/catalog/publication and its recover admit the catalogue credential
 //   exactly as they admit an operator's; a kind naming another member, in any case, stays refused.     → SC1's kind leg
 //   HEAD stays as today (no leg).
+// R-P431 (the spec review at e4b8b5a8): F1, the kit leg names each of the eight routes with its method and its end, the
+//   publication read and recover with the kind catalog beside them; F2, the schema leg refuses values outside the three
+//   ('owner', 'reader', 'Operator', 'ADMIN', 'Catalog-Import', 'catalog_import', 'catalog-import ', '') and reads the role
+//   column's CHECK as listing exactly the three. (a) A path segment in another case (GET /content/CATALOG, /content/Catalog/history)
+//   is read as kindOf reads it, lower-cased: the credential's mark admits it exactly as an operator's route does; another kind
+//   in any case stays refused. The customer boundary answers 404 to such a segment for every credential (CUSTOMER_ROUTES'
+//   lower-case `:kind`), so the leg runs where the route is served, the demo profile.                → SC1's segment leg
+//   (b) On the demo profile a token carrying catalog-import among other roles (['operator','catalog-import']) is held to the
+//   eight routes: the catalogue role restricts.                                                      → SC2's mixed-roles leg
 //
 // WHAT THE CODE OR THE BRIEF CONTRADICTS (told):
 //   · Kit lines: the ticket cites kit 02 :2359/:2361 (stale); at 91e3a6e8 the machine-credential paragraph is :2469 (the brief's
@@ -105,6 +114,12 @@
 //     (logs/a/today-probe.log, every hard expect made soft in a scratch copy): only the membership LOCK clause and the probes' reads
 //     LOCK are green; every other clause RED for the missing credential.
 //   the sketch (sketches/p87.py on 91e3a6e8): 18/18 four times (logs/a/fix-1..3.log, fix-probe2.log); tsc exit 0 on the sketch tree.
+//   round 3 (R-P431, logs/r3/): the sketch 21/21 twice (fix-1..2.log), the mark reading the :kind segment lower-cased; today 19 RED
+//     and the 2 LOCK legs green (today.log; the segment leg's admission clause and the mixed-roles leg's LOCK clause green today,
+//     their refusals RED); the reviewer's controls each RED on its own leg alone — kitnopubread the kit leg (the publication read
+//     not stated), checkwide2 the schema leg ('reader' accepted); the new wrong fixes `segmentexact` the segment leg alone,
+//     `rolesexact` the mixed-roles leg alone; the earlier wrong fixes RED on their legs as before (w-*.log); the stamp-workflow
+//     suite 23/23 under the sketch (fix-stamp-workflow.log).
 //   round 2 (R-P425, logs/r2/): the kind leg added and the sketch reading the kind lower-cased — the sketch 19/19 three times
 //     (fix-1..3.log); today 17 RED (the kind leg at registration) and the 2 LOCK legs green (today.log); `kindexact` (the kind
 //     compared exactly) RED on the kind leg alone, `kindignored` on the kind leg's refusal, the matrix and the demo legs; the
@@ -164,9 +179,20 @@ const SCHEMA_CONTRACT_0014 = 'operator-catalog-import-v3';
 /** The role (reading 1) and the refusal's code (reading 3). */
 const ROLE = 'catalog-import' as string;
 const REFUSAL_CODE = 'catalog_credential';
-/** The eight routes the role admits (reading 2), as kit 02 names them. */
-const ADMITTED_PATHS = ['/content/catalog', '/content/catalog/history', '/content/catalog/revisions/', '/content/catalog/publication',
-  '/content/catalog/validate', '/content/catalog/import', '/content/catalog/pull', '/content/catalog/publication/recover'] as const;
+/**
+ * The eight routes the role admits (reading 2), as kit 02 must name them: each with its method and ending where its path
+ * ends (R-P431 F1: a route is never satisfied by a longer one), the publication read and recover with the kind catalog beside them.
+ */
+const KIT_ROUTES: ReadonlyArray<readonly [string, RegExp]> = [
+  ['GET /content/catalog', /GET \/content\/catalog(?![/\w-])/],
+  ['GET /content/catalog/history', /GET \/content\/catalog\/history(?![/\w-])/],
+  ['GET /content/catalog/revisions/{n}', /GET \/content\/catalog\/revisions\/[{:<]?\w+/],
+  ['GET /content/catalog/publication (kind catalog)', /GET \/content\/catalog\/publication(?![/\w-])[^.;]{0,60}?\bkind\W{0,3}catalog\b/i],
+  ['POST /content/catalog/validate', /POST \/content\/catalog\/validate(?![/\w-])/],
+  ['POST /content/catalog/import', /POST \/content\/catalog\/import(?![/\w-])/],
+  ['POST /content/catalog/pull', /POST \/content\/catalog\/pull(?![/\w-])/],
+  ['POST /content/catalog/publication/recover (kind catalog)', /POST \/content\/catalog\/publication\/recover(?![/\w-])[^.;]{0,60}?\bkind\W{0,3}catalog\b/i],
+];
 
 // ── Requests ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -451,6 +477,31 @@ describe('unit:P87.SC1', () => {
         .toEqual(others.map(r => refused(r, false)));
     }
   });
+
+  // R-P431 (a): the document routes read their `:kind` segment as kindOf reads it, lower-cased (src/routes/content.ts kindOf),
+  // so the catalogue named in another case is the catalogue for this credential as for an operator's. On the customer profile
+  // the boundary answers 404 to a segment outside its lower-case list (src/customerBoundary.ts, CUSTOMER_ROUTES' `:kind`), for
+  // every credential and before any gate; the profile that serves the route is the demo profile.
+  it("demo profile, AUTH_MODE enforced (session and do): the document routes read the kind segment lower-cased — GET /content/CATALOG, GET /content/Catalog/history, GET /content/CATALOG/revisions/1 and POST /content/Catalog/validate admit the catalogue token exactly as they admit an operator's; another kind in any case (GET /content/SLOTS, GET /content/Learn/history, POST /content/Priors/validate) is refused 403 catalog_credential before any store call", async () => {
+    for (const host of HOSTS) {
+      const s = await stamp(host, 'demo', 'enforced'); ready(s);
+      const catalogue = await mintService(SUBJECTS.catalog, [ROLE]), operator = await mintService(SUBJECTS.operator, ['operator', 'admin']);
+      const admitted: Ask[] = [req('GET', '/content/CATALOG'), req('GET', '/content/Catalog/history'), req('GET', '/content/CATALOG/revisions/1'),
+        req('POST', '/content/Catalog/validate', { body: { document: { pieces: [piece('p87.case-validate')] } } })];
+      const rows: Array<{ request: string; status: number; asOperator: string }> = [];
+      for (const r of admitted) {
+        const c = await s.call(r.method, r.path, { ...r.opts, token: catalogue }), o = await s.call(r.method, r.path, { ...r.opts, token: operator });
+        rows.push({ request: r.request, status: c.status, asOperator: c.status === o.status && canonical(c.body) === canonical(o.body) ? 'the operator token\'s answer' : `operator ${show(o)}; catalogue ${show(c)}` });
+      }
+      expect.soft(rows, `${host}: P87.SC1 (R-P431 (a)) — the catalogue named in another case in the path is the catalogue: admitted as the operator token is`)
+        .toEqual(admitted.map(r => ({ request: r.request, status: 200, asOperator: 'the operator token\'s answer' })));
+      const others: Ask[] = [req('GET', '/content/SLOTS'), req('GET', '/content/Learn/history'), req('POST', '/content/Priors/validate', { body: { document: { rows: [] } } })];
+      const answers: Answer[] = [];
+      for (const r of others) answers.push(await s.call(r.method, r.path, { ...r.opts, token: catalogue }));
+      expect.soft(others.map((r, i) => refusalRow(r, answers[i]!, true)), `${host}: P87.SC2 (R-P431 (a)) — another kind named in any case is refused 403 catalog_credential before any store call`)
+        .toEqual(others.map(r => refused(r, true)));
+    }
+  });
 });
 
 // ===========================================================================
@@ -525,6 +576,27 @@ describe('unit:P87.SC2', () => {
       });
     }
   }
+
+  // R-P431 (b): the catalogue role restricts — a token carrying it among other roles is held as one carrying it alone.
+  it("demo profile, AUTH_MODE enforced (session and do): a service token minted with roles ['operator', 'catalog-import'] is held to the eight routes as one carrying catalog-import alone — the catalogue read as an operator token reads it and an import attributed to its subject admitted, every other operator request refused 403 catalog_credential before any store call", async () => {
+    for (const host of HOSTS) {
+      const s = await stamp(host, 'demo', 'enforced'); ready(s);
+      const mixed = await mintService(SUBJECTS.catalog, ['operator', ROLE]), operator = await mintService(SUBJECTS.operator, ['operator', 'admin']);
+      const asMixed = await s.call('GET', '/content/catalog', { token: mixed }), asOperator = await s.call('GET', '/content/catalog', { token: operator });
+      const p1 = await pre(s, 'catalog', operator);
+      const imported = await s.call('POST', '/content/catalog/import?mode=merge&format=json', { token: mixed, body: [piece('p87.mixed')], headers: p1.headers });
+      const doc = await s.call('GET', '/content/catalog', { token: operator });
+      expect.soft({ read: asMixed.status, sameAsOperator: canonical(asMixed.body) === canonical(asOperator.body), imported: imported.status, actor: doc.body.actor, revision: doc.body.revision },
+        `${host}: P87.SC2 (R-P431 (b)) — LOCK: the mixed-roles token reads the catalogue as the operator token does and imports, attributed to its subject (${show(imported)})`)
+        .toEqual({ read: 200, sameAsOperator: true, imported: 200, actor: SUBJECTS.catalog, revision: p1.revision + 1 });
+      const requests = await otherOperatorRequests(s, operator, { edge: true, demo: true });
+      const answers: Answer[] = [];
+      for (const r of requests) answers.push(await s.call(r.method, r.path, { ...r.opts, token: mixed }));
+      expect.soft(requests.map((r, i) => refusalRow(r, answers[i]!, true)),
+        `${host}: P87.SC2 (R-P431 (b)) — the token carrying catalog-import among other roles is held to the eight routes: each other operator request answers 403 catalog_credential with no store call`)
+        .toEqual(requests.map(r => refused(r, true)));
+    }
+  });
 });
 
 // ===========================================================================
@@ -559,6 +631,13 @@ const workflowDb = (db: Sqlite) => ({
   async read(sql: string, params: unknown[] = []) { return db.prepare(sql).all(...params); },
   async write(_key: string, sql: string) { db.exec('BEGIN'); try { db.exec(sql); db.exec('COMMIT'); } catch (error) { db.exec('ROLLBACK'); throw error; } return []; },
 });
+/** Role values outside the three, each a case, a spelling or a word away from one of them. */
+const OUTSIDE_ROLES = ['owner', 'reader', 'Operator', 'ADMIN', 'Catalog-Import', 'catalog_import', 'catalog-import ', ''];
+/** The values the role column's `CHECK (role IN (…))` lists, sorted; a sentence when the column has no such CHECK. */
+function roleCheck(tableSql: string): string[] | string {
+  const list = /\brole\s+TEXT\s+NOT\s+NULL\s+CHECK\s*\(\s*role\s+IN\s*\(([^)]*)\)\s*\)/i.exec(tableSql)?.[1];
+  return list === undefined ? `no CHECK (role IN (…)) on the role column: ${tableSql.slice(0, 200)}` : [...list.matchAll(/'([^']*)'/g)].map(m => m[1]!).sort();
+}
 const attempt = async (run: () => unknown) => { try { await run(); return 'accepted'; } catch (error) { return `refused: ${(error as Error).message}`; } };
 
 describe('unit:P87.SC3', () => {
@@ -589,12 +668,19 @@ describe('unit:P87.SC3', () => {
     expect.soft(snapshot(), 'P87.SC3 — 0014 keeps every credential row, every column, every table and the index on (tenant, created_at); operator_memberships is untouched').toEqual(before);
     const insert = (role: string, id: string) => attempt(() => db.prepare('INSERT INTO operator_service_credentials (id,subject,tenant,role,token_hash,expires_at,created_at,created_by,revoked_at) VALUES (?,?,?,?,?,?,?,?,?)')
       .run(id, 'p87-new-job', TENANT, role, hash(4), 4102444800, at + 4, 'p87-owner', null));
+    // R-P431 F2: "the three roles and nothing else" — values outside them, a case or a spelling away included, are refused.
+    const outsideAccepted = async () => {
+      const accepted: string[] = [];
+      for (const [i, role] of OUTSIDE_ROLES.entries()) if (await insert(role, `00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`) === 'accepted') accepted.push(role);
+      return accepted;
+    };
     expect.soft({ catalogImport: await insert(ROLE, '00000000-0000-4000-8000-000000000004'), operator: await insert('operator', '00000000-0000-4000-8000-000000000005'),
-      admin: await insert('admin', '00000000-0000-4000-8000-000000000006'), other: (await insert('owner', '00000000-0000-4000-8000-000000000007')).startsWith('refused') ? 'refused' : 'accepted',
+      admin: await insert('admin', '00000000-0000-4000-8000-000000000006'), outsideAccepted: await outsideAccepted(),
+      roleCheck: roleCheck(String(db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='operator_service_credentials'").get()?.sql ?? '')),
       membership: (await attempt(() => db.prepare('INSERT INTO operator_memberships VALUES (?,?,?,?,?,?,?)').run('p87-owner', OTHER_TENANT, ROLE, 0, 0, 'p87-m2', at))).startsWith('refused') ? 'refused' : 'accepted',
       foreignKeys: db.prepare('PRAGMA foreign_key_check').all() },
-    'P87.SC3 — the CHECK admits operator, admin and catalog-import and refuses any other role; operator_memberships refuses catalog-import; foreign_key_check is empty')
-      .toEqual({ catalogImport: 'accepted', operator: 'accepted', admin: 'accepted', other: 'refused', membership: 'refused', foreignKeys: [] });
+    'P87.SC3 — the CHECK admits operator, admin and catalog-import and nothing else (no outside value accepted; the role column\'s CHECK lists exactly the three); operator_memberships refuses catalog-import; foreign_key_check is empty')
+      .toEqual({ catalogImport: 'accepted', operator: 'accepted', admin: 'accepted', outsideAccepted: [], roleCheck: ['admin', 'catalog-import', 'operator'], membership: 'refused', foreignKeys: [] });
     const read = await attempt(async () => {
       const row = await d1Authority(d1(db, { calls: [], failSql: null, failPut: null }) as unknown as D1Database).credential('00000000-0000-4000-8000-000000000004');
       if (row?.role !== ROLE) throw new Error(`role read as ${String(row?.role)}`);
@@ -667,13 +753,12 @@ describe('unit:P87.SC3', () => {
     expect.soft({
       paragraph: paragraph ? 'found' : 'missing',
       role: paragraph.includes('`catalog-import`'),
-      routes: ADMITTED_PATHS.filter(path => !paragraph.includes(path)),
-      readOfTheDocument: /GET \/content\/catalog(?![/\w-])/.test(paragraph),
+      routesNotStated: KIT_ROUTES.filter(([, stated]) => !stated.test(paragraph)).map(([route]) => route),
       refusal: /\b403\b/.test(paragraph) && paragraph.includes('catalog_credential'),
       narrowing: sentences(paragraph).some(s => /replac/i.test(s) && s.includes('catalog-import') && /\boperator\b/.test(s)),
       migration: sentences(migration).some(s => s.includes('0012') && s.includes('0013') && s.includes('0014')),
-    }, 'P87.SC3 — kit 02 states the catalogue credential, the eight routes, the 403 catalog_credential refusal, the narrowing replacement, and names migration 0014 (today it names operator and admin roles only, and migration 0012 alone)')
-      .toEqual({ paragraph: 'found', role: true, routes: [], readOfTheDocument: true, refusal: true, narrowing: true, migration: true });
+    }, 'P87.SC3 — kit 02 states the catalogue credential, the eight routes (each with its method; the publication read and recover with kind catalog), the 403 catalog_credential refusal, the narrowing replacement, and names migration 0014 (today it names operator and admin roles only, and migration 0012 alone)')
+      .toEqual({ paragraph: 'found', role: true, routesNotStated: [], refusal: true, narrowing: true, migration: true });
   });
 
   for (const host of HOSTS) {
