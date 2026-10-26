@@ -131,7 +131,7 @@ export const CUSTOMER_ROUTES: readonly CustomerRoute[] = [
 
 const routes = CUSTOMER_ROUTES.map(route => ({ ...route,
   pattern: new RegExp('^' + route.path.split('/').map(part => {
-    if (part === ':kind') return '(?:catalog|slots|learn|priors|vocabulary|import-sources)';
+    if (part === ':kind') return '(?:catalog|slots|learn|priors|vocabulary|import-sources|layouts)';
     if (part === ':decision') return '(?:apply|reject)';
     return part.startsWith(':') ? '[^/\\\\%]+' : part;
   }).join('/') + '$'),

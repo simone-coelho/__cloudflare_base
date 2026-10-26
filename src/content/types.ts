@@ -500,6 +500,15 @@ export interface OrderContext {
  * its keys in sorted order, so a replay compares it by value.
  */
 export interface ConfiguredOrder { context: OrderContext; modules: string[] }
+/** P88 (E13, N2): a device key of a page's approved layouts: `any` (every device) or one device class (P37). */
+export type LayoutDevice = 'any' | DeviceClass;
+/** P88: one approved layout: the module ids a per-context order on its page may list, in order. */
+export interface ApprovedLayout { modules: string[] }
+/**
+ * P88: the approved layouts document, an optional member of the publication set: per page (a slug, as the slots
+ * document names it) and per device key, the layouts a per-context order on that page may publish.
+ */
+export interface LayoutsDocument { version?: 1; pages: Record<string, Partial<Record<LayoutDevice, ApprovedLayout[]>>> }
 /** P84 (E8): one context's carousel shot order, 1 to 16 distinct `contentType` values. */
 export interface ShotOrder { context: OrderContext; order: string[] }
 

@@ -8,7 +8,7 @@ import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
 import type { CatalogPartPointer, ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
-  VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue } from './types';
+  VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue, ApprovedLayout, LayoutDevice, LayoutsDocument } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { isRewardType, REWARD_TYPES, type RewardType } from '@/ledger/records';
 import { isLearnableValue, TYPE_FALLBACK_RETIRED, typeFallbackRetired } from './typeAffinity';
@@ -2310,4 +2310,95 @@ export function governedCatalogue(candidate: unknown, table: VocabularyTable): V
     return mapped ? { ...piece, tags } : piece;
   });
   return errors.length ? { ok: false, errors } : { ok: true, value: { ...candidate, pieces } };
+}
+
+// ── P88 (E13, N2): a page's approved layouts, and the rule a slots publication meets ──
+
+/** The device keys a page's approved layouts are listed under: `any` (every device) and the device classes (P37). */
+export const LAYOUT_DEVICES: readonly LayoutDevice[] = ['any', ...DEVICE_CLASSES];
+/** At most this many modules in one approved layout (an order's own bound: a slot's take is at most 50). */
+const APPROVED_LAYOUT_MAX = 50;
+
+/**
+ * P88 (E13): the approved layouts document, `{ version?: 1, pages: { <page>: { <device>: [{ modules }] } } }`: per page
+ * (a slug, as the slots document names it) and per device key (`any`, `mobile`, `desktop`), the module orders a
+ * per-context order on that page may publish, each 1 to 50 distinct module ids, no layout listed twice under one
+ * device. Every error names the page, the device and the layout's index. The catalogue is not read here: a slots
+ * publication checks its orders' modules against the catalogue, as before.
+ */
+export function validateLayouts(candidate: unknown): ValidationResult<LayoutsDocument> {
+  if (!isRecord(candidate)) return { ok: false, errors: ['layouts: must be an object { version?, pages }'] };
+  const errors: string[] = [];
+  for (const key of Object.keys(candidate)) if (key !== 'version' && key !== 'pages') errors.push(`${key}: not a member of the layouts document (version, pages)`);
+  if (candidate.version !== undefined && candidate.version !== 1) errors.push(`version: ${quoted(candidate.version)} is not 1; omit it or name 1`);
+  if (!isRecord(candidate.pages)) return { ok: false, errors: [...errors, 'pages: required object of page → { any | mobile | desktop: [{ modules }] }'] };
+  const pages: LayoutsDocument['pages'] = {};
+  for (const [page, devices] of Object.entries(candidate.pages)) {
+    if (!SLUG.test(page)) { errors.push(`pages.${page}: page name must be a slug`); continue; }
+    if (!isRecord(devices) || Object.keys(devices).length === 0) { errors.push(`pages.${page}: an object of device (${LAYOUT_DEVICES.join(' | ')}) → approved layouts, naming at least one device`); continue; }
+    const approved: Partial<Record<LayoutDevice, ApprovedLayout[]>> = {};
+    for (const [device, list] of Object.entries(devices)) {
+      const at = `pages.${page}.${device}`;
+      if (!(LAYOUT_DEVICES as readonly string[]).includes(device)) { errors.push(`pages.${page}: ${quoted(device)} is not a device key (${LAYOUT_DEVICES.join(' | ')}; any approves a layout for every device)`); continue; }
+      if (!Array.isArray(list) || list.length === 0) { errors.push(`${at}: a non-empty list of approved layouts, each { modules }`); continue; }
+      const layouts: ApprovedLayout[] = [], listed = new Map<string, number>();
+      Array.from(list).forEach((raw: unknown, i) => {
+        const where = `${at}[${i}]`;
+        if (!isRecord(raw) || !hasExactly(raw, ['modules'])) { errors.push(`${where}: an approved layout is { modules } and nothing else`); return; }
+        const modules = raw.modules;
+        if (!Array.isArray(modules) || modules.length < 1 || modules.length > APPROVED_LAYOUT_MAX) { errors.push(`${where}.modules: 1 to ${APPROVED_LAYOUT_MAX} module ids, in order`); return; }
+        const before = errors.length, seen = new Set<string>();
+        Array.from(modules).forEach((id: unknown, k) => {
+          if (!moduleId(id)) errors.push(`${where}.modules[${k}]: a module id, a string of 1..1024 UTF-16 units`);
+          else if (seen.has(id)) errors.push(`${where}.modules[${k}]: ${quoted(id)} is repeated; an approved layout names each module once`);
+          else seen.add(id);
+        });
+        if (errors.length !== before) return;
+        const key = JSON.stringify(modules), first = listed.get(key);
+        if (first !== undefined) { errors.push(`${where}: the same layout as ${at}[${first}]; a device lists each approved layout once`); return; }
+        listed.set(key, i); layouts.push({ modules: [...(modules as string[])] });
+      });
+      approved[device as LayoutDevice] = layouts;
+    }
+    pages[page] = approved;
+  }
+  return errors.length ? { ok: false, errors } : { ok: true, value: { ...(candidate.version === 1 ? { version: 1 as const } : {}), pages } };
+}
+
+/** P88 (E13): the approved layouts document, an optional member: absent until a tenant publishes one. */
+export const LAYOUTS_KIND: DocumentKind<LayoutsDocument> = {
+  name: 'layouts',
+  publication: 'r2',
+  validate: validateLayouts,
+  // No stamp: a revision is stored and answered exactly as the tenant authored it.
+  versionOf: () => '',
+};
+
+/**
+ * P88 (E13, N2): the rule a slots publication meets. Each per-context order of a page the layouts document names
+ * must list, as a sequence, one of that page's approved layouts for the order's device: a context naming `mobile`
+ * or `desktop` that device's layouts and the page's `any` layouts, a context naming no device the `any` layouts
+ * alone. A page the document does not name, and a tenant with no document (`layouts` null), keep every order as
+ * before. The carousel's shot orders are not module orders and are outside the rule. Each error names the page, the
+ * order's context as it states it and its modules; none for a document whose orders all stand.
+ */
+export function unapprovedOrders(slots: SlotCatalog, layouts: LayoutsDocument | null): string[] {
+  if (!layouts) return [];
+  const errors: string[] = [];
+  for (const [page, list] of Object.entries(slots.pages)) {
+    const approved = Object.hasOwn(layouts.pages, page) ? layouts.pages[page] : undefined;
+    if (!approved) continue;
+    list.forEach((slot, i) => (slot.orders ?? []).forEach((order, k) => {
+      const device = order.context.device;
+      const allowed = [...(approved.any ?? []), ...(device ? approved[device] ?? [] : [])];
+      if (allowed.some(layout => layout.modules.length === order.modules.length && layout.modules.every((id, j) => id === order.modules[j]))) return;
+      errors.push(`pages.${page}[${i}].orders[${k}]: page ${quoted(page)}, context ${contextWords(order.context)}: the order ${order.modules.map(quoted).join(', ')} is not one of the page's approved layouts for ${device ? `device ${quoted(device)} (its ${device} and any layouts)` : 'a context naming no device (its any layouts)'}`);
+    }));
+  }
+  return errors;
+}
+
+/** P88: whether a slots document carries a per-context order anywhere, so a publication without one reads no layouts. */
+export function slotsCarryOrders(slots: SlotCatalog): boolean {
+  return Object.values(slots.pages).some(list => list.some(slot => (slot.orders?.length ?? 0) > 0));
 }

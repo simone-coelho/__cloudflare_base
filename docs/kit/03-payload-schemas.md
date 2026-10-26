@@ -850,7 +850,9 @@ to break (in the example, a paid-social shopper on a first visit is served the f
 shopper on a first visit the second, and every later visit the slot's own decision). `modules` lists 1 to
 `take` distinct module ids, each a piece of the published catalogue that names the slot in its
 `slotTypes`, none excluded from the slot or pinned by another slot of the page, and the slot's pinned
-modules first, each at its pinned position.
+modules first, each at its pinned position. Where the tenant's approved layouts name the page
+([approved layouts](#approved-layouts)), each order's `modules` must also be one of the page's approved layouts for
+the order's device, or the slots publication is refused `422` naming the page, the context and the modules.
 
 The hiding rule: a shopper in an order's context is served exactly its modules, in its order; a module
 the order does not list is not returned in that context, is offered for no render acknowledgement and is
@@ -864,6 +866,27 @@ order is never served on the holdout's `default` arm, to a shopper without perso
 on a decision on which the slot's exploration picks; those shoppers, and every shopper no context
 matches, receive the slot's own decision. A slot without `orders`, and every stored document marked
 1, 2 or 3, decides and replays exactly as before.
+
+#### Approved layouts
+
+```json
+{ "version": 1,
+  "pages": { "pdp": {
+    "any": [ { "modules": ["module.PDP.editorial.1", "module.PDP.grid.1", "module.PDP.ugc.1", "module.PDP.reco.1"] },
+             { "modules": ["module.PDP.ugc.1", "module.PDP.grid.1"] } ],
+    "mobile": [ { "modules": ["module.PDP.grid.1", "module.PDP.ugc.1"] } ] } } }
+```
+
+The optional document `layouts` (`PUT /content/layouts`) lists, per page of the slots document and per device key
+(`any`, `mobile` or `desktop`), the module orders a per-context order on that page may publish: each approved layout
+is exactly `{ modules }`, 1 to 50 distinct module ids in order; `version` is 1 when present. A device key other than
+the three, an empty list, a repeated module, two identical layouts under one device or any other member is refused
+422 naming the page, the device and the layout's index; the catalogue is not checked here. On a page the document
+names, an order's `modules` must equal, position by position, one of the page's `any` layouts or, for a context
+naming `mobile` or `desktop`, one of that device's layouts; an order naming no device matches the `any` layouts
+alone. In the example, a mobile shopper's order may be any of the three layouts, any other order one of the first
+two. A page the document does not name, and a tenant without the document, keep every order as before, and the
+carousel's shot orders are outside the rule.
 
 #### Position pins and off-limits modules
 

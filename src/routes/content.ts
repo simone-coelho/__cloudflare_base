@@ -34,7 +34,7 @@ import { assertPublicationBase, completePublicationSet, documentBytes, initializ
   catalogPartStored, readCatalogPart, writeCatalogPart, type CatalogPart, catalogIdIndexOf, catalogIdIndexStored, readCatalogIdIndex, writeCatalogIdIndex,
   type CatalogIdIndex } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
-  VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf } from '@/content/kinds';
+  VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf, LAYOUTS_KIND, slotsCarryOrders, unapprovedOrders } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
 import { contextTermsOf } from '@/content/cell';
 import { invalidateConfigCache, REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
@@ -42,7 +42,7 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { addressAllowed, hostAllowed, HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, IMPORT_SOURCES_KIND, isImportMode, parseCsvTable, pullUrlOf, positionedCandidates, recordAddress, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
-import type { CatalogPartPointer, ContentCatalog, ContentPiece, DocumentEnvelope, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
+import type { CatalogPartPointer, ContentCatalog, ContentPiece, DocumentEnvelope, LayoutsDocument, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
 import { catalogPieceCount, partProductOf, variantFirst } from '@/content/kinds';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
@@ -60,6 +60,8 @@ contentRoutes.onError((error, c) => {
   if (error instanceof InputError) return inputRefusal(c, error);
   // P38 (VA2): a catalogue publication the vocabulary in effect refuses, raised inside the publication before anything is written.
   if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: error.errors }, 422);
+  // P88 (E13): a slots publication the approved layouts of its set refuse, raised inside the publication before anything is written.
+  if (error instanceof LayoutRefusal) return c.json({ ok: false, errors: error.errors }, 422);
   if (error instanceof LegacyDocumentError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
   if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
   throw error;
@@ -112,13 +114,16 @@ const KINDS: Record<string, { kind: DocumentKind<any>; fallback: any; fromCsv?: 
   // P91 (E16): the tenant's import-sources list, an optional member: absent until published, and then every caller of
   // the import, the pull and the dry run is checked against it.
   'import-sources': { kind: IMPORT_SOURCES_KIND, fallback: null },
+  // P88 (E13, N2): the tenant's approved layouts, an optional member: absent until published, and then every
+  // per-context order on a page it names is published only as one of that page's approved layouts.
+  layouts: { kind: LAYOUTS_KIND, fallback: null },
 };
-const UNKNOWN_KIND = 'kind must be catalog, slots, learn, priors, vocabulary or import-sources';
+const UNKNOWN_KIND = 'kind must be catalog, slots, learn, priors, vocabulary, import-sources or layouts';
 
 function kindOf(name: string | undefined) { return KINDS[(name ?? '').toLowerCase()] ?? null; }
 const isVocabulary = (kind: { name: string }) => kind.name === VOCABULARY_KIND.name;
-/** An optional member of the publication set (P38, P91): absent until its tenant publishes one, its first write over revision 0. */
-const isOptionalMember = (kind: { name: string }) => isVocabulary(kind) || kind.name === IMPORT_SOURCES_KIND.name;
+/** An optional member of the publication set (P38, P91, P88): absent until its tenant publishes one, its first write over revision 0. */
+const isOptionalMember = (kind: { name: string }) => isVocabulary(kind) || kind.name === IMPORT_SOURCES_KIND.name || kind.name === LAYOUTS_KIND.name;
 
 /**
  * P38: the vocabulary's two members, read from ONE pin of the current set: the
@@ -135,6 +140,52 @@ async function vocabularyState(env: Env, scope: string) {
 /** P38: a catalogue publication refused by the vocabulary in effect, raised inside the publication and answered 422. */
 class VocabularyRefusal extends Error {
   constructor(readonly errors: string[]) { super('vocabulary refusal'); }
+}
+/** P88 (E13): a slots publication refused by the approved layouts in effect, raised inside the publication and answered 422. */
+class LayoutRefusal extends Error {
+  constructor(readonly errors: string[]) { super('layout refusal'); }
+}
+/**
+ * P88 (E13, N2): a slots document's candidate step at its publication (a PUT, a rollback, a `publicationChanges`
+ * member). The approved layouts are those this request publishes as a `layouts` member, or else the member of the set
+ * the publication is written over (its pin), so the rule reads the document in effect for exactly that set. A
+ * document carrying no per-context order, or one the slots validator refuses (it names the errors then), passes on
+ * untouched and nothing is read for it.
+ */
+function slotsOverLayouts(env: Env, scope: string, document: unknown, requestLayouts?: unknown) {
+  return async (_base: unknown, set: PublicationPin) => {
+    const checked = SLOTS_KIND.validate(document);
+    if (!checked.ok || !slotsCarryOrders(checked.value)) return document;
+    const own = requestLayouts === undefined ? null : LAYOUTS_KIND.validate(requestLayouts);
+    const layouts = own ? (own.ok ? own.value : null) : (await readOptionalPinnedPublication(env, LAYOUTS_KIND, scope, set))?.value ?? null;
+    const errors = unapprovedOrders(checked.value, layouts);
+    if (errors.length) throw new LayoutRefusal(errors);
+    return document;
+  };
+}
+/**
+ * P88 (E13): the slots validate's answer under the approved layouts in effect now, the same errors a publication
+ * would raise. Fail closed: layouts that cannot be read refuse 503.
+ */
+async function layoutRefusals(c: Context<Ctx>, scope: string, slotsCandidate: unknown): Promise<{ errors: string[]; status: 422 | 503 } | null> {
+  const checked = SLOTS_KIND.validate(slotsCandidate);
+  if (!checked.ok || !slotsCarryOrders(checked.value)) return null;
+  let layouts: LayoutsDocument | null;
+  try { layouts = (await readOptionalPublication(c.env, LAYOUTS_KIND, scope)).revision?.value ?? null; }
+  catch { return { status: 503, errors: ['layouts: the approved layouts in effect are unavailable, so the per-context orders cannot be checked against them'] }; }
+  const errors = unapprovedOrders(checked.value, layouts);
+  return errors.length ? { status: 422, errors } : null;
+}
+/** P88: the layouts document one PUT publishes, the primary document or a `publicationChanges` member, or undefined. */
+function requestLayoutsDocument(primary: DocumentKind<unknown>, candidate: unknown, related: unknown): unknown {
+  if (primary.name === LAYOUTS_KIND.name) return candidate;
+  if (!Array.isArray(related)) return undefined;
+  for (const entry of related as unknown[]) {
+    if (!entry || typeof entry !== 'object') continue;
+    const { kind, document } = entry as { kind?: unknown; document?: unknown };
+    if (typeof kind === 'string' && kindOf(kind)?.kind.name === LAYOUTS_KIND.name) return document;
+  }
+  return undefined;
 }
 /**
  * P38 (VA2): a catalogue document published over `set`, under the vocabulary
@@ -902,8 +953,8 @@ contentRoutes.get('/:kind', async (c) => {
       approval: approval ? { revision: approval.value.revision, actor: approval.actor, note: approval.note, at: approval.at } : null,
       ...(stored ? documentEnvelopeOf(k.kind, stored.value) : {}) });
   }
-  if (k.kind.name === IMPORT_SOURCES_KIND.name) {
-    // P91: absent until published (revision 0), and then the list in force.
+  if (k.kind.name === IMPORT_SOURCES_KIND.name || k.kind.name === LAYOUTS_KIND.name) {
+    // P91, P88: absent until published (revision 0), and then the document in force.
     const { publication, revision: listed } = await readOptionalPublication(c.env, k.kind, scope);
     return c.json({ scope, kind: k.kind.name, source: listed ? 'stored' : 'absent', revision: listed?.revision ?? 0, publication,
       actor: listed?.actor ?? null, note: listed?.note ?? null, at: listed?.at ?? null, document: listed?.value ?? null });
@@ -968,6 +1019,9 @@ contentRoutes.post('/:kind/validate', async (c) => {
     if (vocabulary) return c.json({ valid: false, errors: vocabulary.errors }, vocabulary.status);
     const refused = await orderRefusals(c, scope, candidate);
     if (refused) return c.json({ valid: false, errors: refused.errors }, refused.status);
+    // P88 (E13): each per-context order against the page's approved layouts in effect, as its publication checks it.
+    const layouts = await layoutRefusals(c, scope, candidate);
+    if (layouts) return c.json({ valid: false, errors: layouts.errors }, layouts.status);
   }
   // P28 (R-P31): a dry run of a learn document says what its write would say about a blend.
   if (k.kind.name === LEARN_KIND.name) {
@@ -1071,8 +1125,11 @@ contentRoutes.put('/:kind', async (c) => {
   // vocabulary in effect in the set it is published over; any other document as it came.
   // P86: and, where it declares product slots, routed into its parts before the head is reserved.
   const seen = { manifest: false };
+  // P88 (E13): a slots document, primary or related, meets the approved layouts of the set it is published over.
+  const requestLayouts = requestLayoutsDocument(k.kind, candidate, related);
   const governedMember = (kind: DocumentKind<unknown>, document: unknown) => kind.name === CONTENT_KIND.name
-    ? (base: unknown, set: PublicationPin) => catalogueOverPut(c.env, scope, base as ContentCatalog | undefined, set, document, seen) : () => document;
+    ? (base: unknown, set: PublicationPin) => catalogueOverPut(c.env, scope, base as ContentCatalog | undefined, set, document, seen)
+    : kind.name === SLOTS_KIND.name ? slotsOverLayouts(c.env, scope, document, requestLayouts) : () => document;
   const named = (error: unknown) => { throw seen.manifest ? namedManifest(error) : error; };
   let result;
   if (related !== undefined) {
@@ -1123,7 +1180,8 @@ contentRoutes.put('/:kind', async (c) => {
     const blends = await requestBlendRefusals(c, scope, [{ kind: k.kind, document: candidate, at: null }]);
     if (blends) return c.json({ ok: false, errors: blends.errors }, blends.status);
     // P38: the catalogue through the same replace a write makes, under the vocabulary in effect.
-    result = k.kind.name === CONTENT_KIND.name
+    // P88: a slots document through the same replace a write makes, under the approved layouts of its set.
+    result = k.kind.name === CONTENT_KIND.name || k.kind.name === SLOTS_KIND.name
       ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate)).catch(named)
       : await write(c.env, k.kind, scope, candidate, { ...meta, note });
   }
@@ -1148,7 +1206,11 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
   const result = k.kind.name === CONTENT_KIND.name
     ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
       async (_base: unknown, set: PublicationPin) => catalogueOverRollback(c.env, scope, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null))
-    : await rollback(c.env, k.kind, scope, n, rollbackMeta);
+    // P88 (E13): a slots body rolled forward meets the approved layouts of the set it is published over.
+    : k.kind.name === SLOTS_KIND.name
+      ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
+        async (base: unknown, set: PublicationPin) => slotsOverLayouts(c.env, scope, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null)(base, set))
+      : await rollback(c.env, k.kind, scope, n, rollbackMeta);
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, publication: result.revision.publication, version: k.kind.versionOf?.(result.revision.value) ?? '',
         ...(k.kind.name === 'content' ? { diagnostics: await catalogDiagnostics(c.env, scope, result.revision.value, result.revision.revision) } : {}),
