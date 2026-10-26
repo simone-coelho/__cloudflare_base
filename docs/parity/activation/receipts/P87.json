@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P87",
+  "workOrderHash": "sha256:7b980410cb539f224bbe59237cf3f8f3789a6d5d268d7873b0c673a4ff561ae0",
+  "artifact": {
+    "revision": "27fcd113794c4aa5d8dbd4884e74d295be15e080",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p87-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p87-build at 3144c1c2 (e23e9d1a, 03b5dd9a, 2e65554f, c2e67428 and 176d8caf the merges of the S33 spec 7cb72da6, e4b8b5a8, 11bc6017, 284e1b15 and 5e33d52a; 8dfb952a the merge of rem/integration 46f1a348 with P86; efe0d604, ba00d298, f1f9b5bf and 3144c1c2 the mechanism, the kit and the deployment docs: src/auth/authority.ts gives service credentials a third role, catalog-import, in their row guard while the membership roles stay operator and admin; src/routes/auth.ts registers it through POST /auth/service-credentials (listed, replaced and revoked as the other two, a replacement allowed to narrow a role) and leaves the membership schemas as today; src/middleware/operatorAuth.ts reads the role from the grant on the customer profile and from the token's roles elsewhere and refuses 403 with the code catalog_credential before any handler unless the route set the opt-in mark, the mark surviving the nested re-check, a token carrying the role among others held the same way; src/routes/content.ts marks exactly the eight catalogue routes (the document, history, revision and publication reads and the validate, import, pull and recover, the kind and the path segment read lower-cased as the route reads every kind); migrations/0014_operator_catalog_import.sql and its product copy rebuild operator_service_credentials in 0013's form widening only its role CHECK to the three roles, rows preserved and the index recreated; scripts/stamp-workflow.mjs carries 0014 last with its sha256 pinned under the third schema contract operator-catalog-import-v3 while operator-oidc-v2 keeps its four; src/ops/monitor.ts knows the table after 0014 and requires 0014; kit 02 names the role, the eight routes, the refusal, the narrowing replacement and the migrations 0012, 0013 and 0014; applying 0014 to any database is separate operational authority; docs/deployment/01-deploy.md and docs/10-d1-schema.md name 0014 as the last product migration and operator-catalog-import-v3 as the contract of new packages).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S33/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S33/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P87/implementer/REPORT.md",
+      "git commits on rem/p87-joined up to 27fcd113"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P87 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S33/reviewer-p87/logs/w-p87-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S33/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P87/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-26T14:08:35.061Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
