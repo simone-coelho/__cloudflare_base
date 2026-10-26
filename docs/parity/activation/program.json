@@ -1915,7 +1915,7 @@
         "packages/sdk/edge-head.js",
         "packages/sdk/edge-head.js.csp",
         "src/routes/decisions.ts",
-        "scripts/stamp-workflow.mjs (the package step's typecheck heap limit only, R-P472)"
+        "scripts/stamp-workflow.mjs (the package step's typecheck heap limit and the archived-package rule that accepts the earlier recorded form, R-P472/R-P473)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P89 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
