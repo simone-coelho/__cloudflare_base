@@ -55,21 +55,69 @@
 //     desktop too (`paid_social|1|desktop`), though that row names no desktop order.
 //   · The SDK's `ts` is the set's `ts`; `subject` is the SDK's visitor id at receipt; `anonymous` whether it is the
 //     anonymous identifier. The head script reads `shots.order` and `shots.ts` (the 30-day bound).
+//   · The brand rules after the stored order (P83, unchanged): the tag pin leads; the minimum (one `detail` image within
+//     the first three) brings the best-ordered tagged image in and the lowest-ordered untagged one of the three leaves.
+//   · "No new SDK request" is counted on every call: the SDK double records the calls it answers itself, as testHost
+//     records those it passes through. With a socket the person's first answer comes from P74's re-ask after the
+//     sign-in's reconnect (one snapshot request: P74's behaviour, a precondition); without one only `refresh` brings it.
+//   · Every removal is measured against the order kept just before it (never vacuous): a sign-out, another person (the
+//     stored order not anonymous: no rebind), a personalization refusal, a tracking refusal, and `setVisitorId`, whose
+//     consent becomes unknown (its own `identity` event is dropped by the current-identity guard, R-P459 noticed).
+//   · Leg names: `host (<host>)` the mounted application in process; `host (<host>, native)` workerd with a real socket
+//     (P81's form); `sdk` the real SDK; `sdk (head script)` the built head script under jsdom (P84's `sdk` legs);
+//     `logic` the kit.
 //
-// R10 SWEEP (src/**/*.test.ts): P81's frames are P02's page (no carousel): the member is absent and the digest unchanged;
-// P84's answers gain `shotOrder: null` (its carousel weighs `category` alone; no test asserts its answer's exact keys);
-// realtime.sdkContract's exact answer keys and P61's `ANSWER_MEMBERS` read pages without a carousel (absent: hold); P85's
-// beacon answer is unchanged (only its push consequence, O8); P84's head legs carry no `shots` (paint as today). None
-// needed; measured on both trees under the sketch.
+// MEASURED (round 2, R-P467; logs S36/specifier/logs/, trees S36/specifier/scratch/, one vitest at a time, cache off):
+//   · Today (the product of 441c7908 = e78a2f96): 20/20 RED, each on its own P89 assertion (r2-today-0.log,
+//     r2-today-1.log; the final bytes r3-today.log); the push legs on SO1's own member before the push is measured.
+//   · The sketch (S36/specifier/sketches/p89.py in scratch/b-fix, the SDK bundles rebuilt): 20/20 green, three runs
+//     (r2-fix-0..2.log; the final bytes r3-fix-1..2.log). service.ts `serveContentDecisions` +16/-2 (the member);
+//     routes/decisions.ts +2 (the answer); ShopperReflex.ts `QUIET_ACTIONS` and `offeredDigest` +4/-2; sdk/types.ts +2;
+//     sdk/listen.ts +47/-3 (`keepShots`, `dropShots`, the identity handler, the member on the set); sdk/head.ts +10/-1;
+//     kits 01-03 +19/-7. Bundles within every budget, none moved: esm 110,042 of 112,640, iife 115,519 of 117,760, head
+//     26,274 of 30,720 (mk-b-fix.log).
+//   · The wrong fixes (r2-z-<name>.log; r3-z-<name>.log on the final bytes), each RED on its own legs only: rowonly (the
+//     row alone) SO1 host x6 and native push x2; catalogue (ties by catalogue order) SO1 host x6; unpublished SO1 host
+//     member and null x4; everypage (a member without a carousel) SO1 host member x2; pushskip SO1 native push x2;
+//     beaconloud SO1 native O8 x2; noconsent and viewfilter SO2 sdk frame; noremove and notsrule SO2 sdk answer;
+//     othersubject, defaultrow and nothirty SO2 head gate; overpin and overmin SO2 head order; sdkpaint SO2 head and SDK;
+//     clearall SO3 rebind and bootstrap; keepout, rebindany and nodrop SO3 removals; kitleft SO4.
+//   · The locks (reading 7: P81, P84, P85, P86, realtime.sdkContract, P61, P30, P79, P60, P13, P34, P74, src/sdk/*,
+//     routes/identity, W40), 20 files and 549 tests, today and under the sketch (r2-locks-today.log, r2-locks-fix.log):
+//     548 pass on both; the one failure, W40.P4's deploy leg, fails identically on both trees (a scratch tree is no
+//     checkout, its node_modules a link: the 2026-10-08 gate lesson) and not under the sketch alone.
+//   · The builder's lane 0bf96e8a (scratch/l-lane, this file copied in): 19/20 at first (r2-lane.log), SO4 RED on three
+//     clauses whose patterns refused sentences stating reading 6 (kit 01's head-script paragraph names itself "the
+//     script"; kit 02's trigger reads "a change in that order alone is sent"; the stored value named `opt_head.shots`).
+//     Re-formed on the reading, each still false on today's kits and under kitleft (so4probe); kit 01's paragraph also
+//     names the rebind and the first answer under the person (reading 6). The final bytes: r3-lane.log.
 //
-// DEFERRED: LV1. RESIDUALS (told, R-P459): the carried order is the shopper's own interest only (priors, lift,
-// exploration, other dimensions are not carried); the head reads the default visitor key only; one tenant and brand per
-// origin; a navigation straight after sign-in paints the rebound order until the person's first answer; storage written
-// under consent persists after the tab closes.
+// R10 SWEEP (grep of src/**/*.test.ts for exact answer keys, `opt_head` contents, the push digest, the quiet actions,
+// the beacon's re-decision and the kit sentences the ruling changes): no collision. realtime.sdkContract (:6385) and
+// P61 (`ANSWER_MEMBERS`, :533) read pages without a carousel (the member absent); P81's frames are P02's page (absent, the
+// digest bytes unchanged); P84's carousel weighs `category` alone (`shotOrder: null` in its answers; it reads
+// `opt_head.experiment` and `.visit` only, :878, :1178); P85 (:348) counts the SDK's requests after the beacon, not the
+// engine's push; no test reads kit 03's shot-orders example or its frame-table row. Measured by the lock runs above.
+//
+// CONTRADICTIONS (for the lead): (C1, measured: S36/specifier/logs/probe1.log, probe2.log) P81's kept page view keeps the
+// request's body and coarse location but not its device headers (ShopperReflex.ts `pushChanged` re-signs a request of
+// Content-Type, X-Tenant and the capability), so the re-decision of a mobile page view loses P84's mobile row: on a
+// mobile probe the pushed set re-ordered the carousel's equal-score images against the first answer (img-ch857-2 before
+// -3), and S1's tie by the request's row is computed without the row on a push, so a mobile page view's order can change
+// on the push alone. Pre-existing (P81 x P84); the push legs here run desktop; inside P89's grant, not ruled. (C2,
+// R-P459 noticed) `setVisitorId` keeps no visitor id and its `identity` event is dropped; the order is removed on its
+// consent change instead.
+//
+// DEFERRED: LV1 (both hosts, live). RESIDUALS (told, R-P459): the carried order is the shopper's own interest only
+// (priors, learned lift, exploration, other dimensions are not carried, so a painted order can differ from the engine's
+// later answer); the head reads the default visitor key only; one tenant and brand per origin; a navigation straight
+// after sign-in paints the rebound order until the person's first answer; storage written under consent persists after
+// the tab closes.
 //
 // NO NEW EXPORT IS IMPORTED (`shotOrder` and `shots` are read loosely). HARNESS: src/units/_parity.ts (the mounted
 // application, both hosts), src/units/_native.ts (workerd with a real socket, P81's form), src/sdk/testHost.ts (the SDK
-// legs), jsdom with the built head script (P84's form). Imports from src/units/: ../_parity, ../_native.
+// legs), jsdom with the built head script (P84's form). Imports from src/units/: ../_parity, ../_native. Hosts: `.invalid`
+// only; nothing reaches the network.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -238,7 +286,7 @@ export { ShopperReflex, PersonalizationWebSocket, DecisionRing, LearnStats, Regi
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.hostname !== 'p89-fixture') return worker.fetch(request, env, ctx);
+    if (url.hostname !== 'p89-fixture.invalid') return worker.fetch(request, env, ctx);
     const input = await request.json();
     if (url.pathname === '/publish') {
       const revision = value => ({ revision: 1, at: 1, actor: 'p89-native', note: '', value });
@@ -274,7 +322,7 @@ async function nativeWorld<T>(host: Host, work: (w: { browser: () => Promise<Nat
       RETENTION: JSON.stringify({ version: 1, tenants: { [TENANT]: Object.fromEntries(RETENTION_CATEGORIES.map(category => [category, policy])) } }) } });
   try {
     const fixture = async (path: string, body: unknown) => {
-      const response = await runtime.fetch(`https://p89-fixture${path}`, { method: 'POST', body: JSON.stringify(body) });
+      const response = await runtime.fetch(`https://p89-fixture.invalid${path}`, { method: 'POST', body: JSON.stringify(body) });
       expect(response.status, `PRECONDITION (${host} native): fixture door ${path}`).toBe(200);
       return await response.json() as Record<string, unknown>;
     };
@@ -286,7 +334,7 @@ async function nativeWorld<T>(host: Host, work: (w: { browser: () => Promise<Nat
     };
     const token = await new SignJWT({ sub: 'ops', type: 'service', roles: ['operator', 'admin'] }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('i').setAudience('a')
       .setExpirationTime('2h').sign(new TextEncoder().encode(NATIVE_SECRET));
-    const operator = async (method: string, path: string, body?: unknown, headers: Record<string, string> = {}) => parsed(await runtime.fetch(`https://ops.example${path}`, {
+    const operator = async (method: string, path: string, body?: unknown, headers: Record<string, string> = {}) => parsed(await runtime.fetch(`https://ops.invalid${path}`, {
       method, headers: { 'X-Tenant': TENANT, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...headers }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }));
     const publishSlots = async (document: unknown) => {
       const base = await operator('GET', `/content/slots?scope=${TENANT}`);
@@ -298,7 +346,7 @@ async function nativeWorld<T>(host: Host, work: (w: { browser: () => Promise<Nat
       const g = await fixture('/grant', { tenant: TENANT }) as unknown as { capability: string; subject: string; sessionId: string; grantId: string; iat: number; exp: number };
       // A desktop browser: P81's kept page view keeps the request's body and coarse location, not its device headers, so a
       // re-decision of a mobile page view loses P84's mobile row (reported to the lead); on desktop no row matches either way.
-      const call = async (path: string, body?: unknown) => parsed(await runtime.fetch(`https://shop.example${path}`, { method: body === undefined ? 'GET' : 'POST',
+      const call = async (path: string, body?: unknown) => parsed(await runtime.fetch(`https://shop.invalid${path}`, { method: body === undefined ? 'GET' : 'POST',
         headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: g.capability, 'Content-Type': 'application/json', ...deviceHeaders('desktop') }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }));
       const chose = await call(`/realtime/session/${g.sessionId}/preferences`, { trackingConsent: true, personalizationEnabled: true,
         choice: { id: crypto.randomUUID(), expectedRevision: null, grantId: g.grantId, iat: g.iat, exp: g.exp } });
@@ -308,7 +356,7 @@ async function nativeWorld<T>(host: Host, work: (w: { browser: () => Promise<Nat
       expect((await act(PAGE_VIEW)).status, `PRECONDITION (${host} native): the shopper's page view`).toBe(200);
       const ask = (pageInstance: string) => call(`/v1/${TENANT}/decisions/snapshot`, { page: 'pdp', brand: TENANT, pageInstance, 'ctx.anchor': A, entry: JSON.stringify(PAID_SOCIAL_ENTRY) });
       const socket = async (): Promise<NativeSocket> => {
-        const response = await runtime.fetch(`https://shop.example/realtime/ws?tenant=${TENANT}`, { headers: { Upgrade: 'websocket', 'Sec-WebSocket-Protocol': `shopper-session-v1, ${g.capability}` } });
+        const response = await runtime.fetch(`https://shop.invalid/realtime/ws?tenant=${TENANT}`, { headers: { Upgrade: 'websocket', 'Sec-WebSocket-Protocol': `shopper-session-v1, ${g.capability}` } });
         const ws = (response as unknown as { webSocket?: { accept(): void; addEventListener(type: string, listener: (event: { data: unknown }) => void): void } }).webSocket;
         expect([response.status, Boolean(ws)], `PRECONDITION (${host} native): the socket is upgraded`).toEqual([101, true]);
         const frames: Frame[] = [];
@@ -330,14 +378,14 @@ const nativeClick = (b: NativeBrowser, piece: Piece, slot = CAROUSEL, page = 'pd
 
 describe('unit:P89.SO1 (R-P459 S2, O8) — the push, both hosts in workerd', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): with the page view open on a socket, a click that changes the shopper's shot order alone (on a cart piece of the shot \`lifestyle\`: a published shot no carousel image carries) is pushed as a \`content_decisions\` frame carrying the new \`shotOrder\` and the same offered pairs; an action that changes neither pushes nothing`, async () => {
+    it(`host (${host}, native): with the page view open on a socket, a click that changes the shopper's shot order alone (on a cart piece of the shot \`lifestyle\`: a published shot no carousel image carries) is pushed as a \`content_decisions\` frame carrying the new \`shotOrder\` and the same offered pairs; an action that changes neither pushes nothing`, async () => {
       await nativeWorld(host, async w => {
         const b = await w.browser(), socket = await b.socket();
         for (const [piece, times] of [[STUDIO, 3], [DETAIL, 2]] as const) for (let i = 0; i < times; i++) expect((await nativeClick(b, piece)).status, `${host}: PRECONDITION — the click`).toBe(200);
         const pageInstance = pageInstanceOf('p89-push');
         const first = await b.ask(pageInstance);
         expect([first.status, Array.isArray(first.body.shotOrder) ? 'an order' : `shotOrder ${JSON.stringify(first.body.shotOrder)}`],
-          `${host}: PRECONDITION — the page view's answer carries the shopper's order (today no member: ${show(first)})`).toEqual([200, 'an order']);
+          `${host}: P89.SO1 — the page view's answer carries the shopper's order before the push is measured (today no member: ${show(first)})`).toEqual([200, 'an order']);
         const before = pushes(socket).length;
         expect((await nativeClick(b, LIFESTYLE, 'cart-recs', 'cart')).status, `${host}: PRECONDITION — the click on the lifestyle piece`).toBe(200);
         await socket.waitFor(() => pushes(socket).length > before);
@@ -351,7 +399,7 @@ describe('unit:P89.SO1 (R-P459 S2, O8) — the push, both hosts in workerd', () 
       });
     }, 180_000);
 
-    it(`host (${host}): O8 — a carousel beacon is a quiet action: with a publication change pending on the open page view, a \`carousel_exposure\` pushes nothing, and the next admitted action pushes the changed set`, async () => {
+    it(`host (${host}, native): O8 — a carousel beacon is a quiet action: with a publication change pending on the open page view, a \`carousel_exposure\` pushes nothing, and the next admitted action pushes the changed set`, async () => {
       await nativeWorld(host, async w => {
         const b = await w.browser(), socket = await b.socket();
         const pageInstance = pageInstanceOf('p89-quiet');
@@ -395,6 +443,9 @@ function sdkPage(options: { personalization?: boolean; host?: ReturnType<typeof 
   let next: (pageInstance: string) => Record<string, unknown> = () => ({});
   const passthrough = f.host.fetch;
   f.host.fetch = async (url: string, init?: RequestInitLike): Promise<ResponseLike> => {
+    // Every call this double answers itself is recorded as testHost records the ones it passes through, so a request the
+    // SDK adds (a snapshot re-ask after a sign-in) is counted.
+    if (['/decisions/snapshot', '/identity/link', '/identity/detach', '/realtime/session/preferences'].some(path => url.includes(path))) f.calls.push({ url, init });
     if (url.includes('/decisions/snapshot')) {
       const body = JSON.parse(init?.body ?? '{}') as { page: string; pageInstance: string };
       return respond({ ok: true, page: body.page, pageInstance: body.pageInstance, arm: 'personalized', decisions: [], ...next(body.pageInstance) });
@@ -529,20 +580,23 @@ function runHead(o: { table?: unknown; storage?: Record<string, string>; cookie?
 const visitorStorage = (shots: unknown, over: Record<string, unknown> = {}) => ({ opt_visitor_id: VISITOR, [HEAD_KEY]: headState(shots, over) });
 
 describe('unit:P89.SO2 (R-P459 S4) — the head script', () => {
-  it('head: the shopper\'s stored order paints first under the row\'s gate — on mobile before the row\'s other values (flat_lay, studio, then on_model, detail), on desktop, where the row names no order, alone before the server order — the tag pin applied after it, unchanged; data-op-context keeps its meaning', () => {
+  it('sdk (head script): the shopper\'s stored order paints first under the row\'s gate — on mobile before the row\'s other values (flat_lay, studio, then on_model, detail), on desktop, where the row names no order, alone before the server order — the tag pin and the minimum applied after it, unchanged; data-op-context keeps its meaning', () => {
     const order = ['flat_lay', 'studio'];
     const mobile = runHead({ storage: visitorStorage(shotsFor(order)) });
     const desktop = runHead({ storage: visitorStorage(shotsFor(order)), ua: DESKTOP_UA });
     const pinned = runHead({ storage: visitorStorage(shotsFor(order)), table: headTable({ brandRules: { pinnedTag: { dimension: 'contentType', value: 'detail', window: PIN_WINDOW } } }) });
-    expect([mobile.error, desktop.error, pinned.error], 'PRECONDITION: the head script runs').toEqual([null, null, null]);
-    expect.soft({ mobile: [mobile.order, mobile.context], desktop: [desktop.order, desktop.context], pinned: pinned.order },
+    // P83's minimum (one `detail` image within the first three) applied after the stored order: the lowest-ordered of the
+    // first three without the tag (h6) leaves for the best-ordered image with it (h4).
+    const minimum = runHead({ storage: visitorStorage(shotsFor(order)), table: headTable({ brandRules: { minimum: { dimension: 'contentType', value: 'detail', count: 1, within: 3 } } }) });
+    expect([mobile.error, desktop.error, pinned.error, minimum.error], 'PRECONDITION: the head script runs').toEqual([null, null, null, null]);
+    expect.soft({ mobile: [mobile.order, mobile.context], desktop: [desktop.order, desktop.context], pinned: pinned.order, minimum: minimum.order },
       'P89.SO2 — the stored order first (today the row alone, or the server order)').toEqual({
       mobile: [['h2', 'h1', 'h6', 'h3', 'h5', 'h4', 'h7', 'h8'], 'paid_social|1|mobile'],
       desktop: [['h2', 'h1', 'h6', 'h3', 'h4', 'h5', 'h7', 'h8'], 'paid_social|1|desktop'],
-      pinned: ['h4', 'h2', 'h1', 'h6', 'h3', 'h5', 'h7', 'h8'] });
+      pinned: ['h4', 'h2', 'h1', 'h6', 'h3', 'h5', 'h7', 'h8'], minimum: ['h2', 'h1', 'h4', 'h6', 'h3', 'h5', 'h7', 'h8'] });
   });
 
-  it('head: outside the row\'s gate or the visitor the browser carries, the stored order paints nothing — the holdout\'s class, no recorded consent, a refusal cookie (which also drops the stored order), a moved salt, another visitor\'s order, an order older than 30 days — and a never-seen browser paints as today', () => {
+  it('sdk (head script): outside the row\'s gate or the visitor the browser carries, the stored order paints nothing — the holdout\'s class, no recorded consent, a refusal cookie (which also drops the stored order), a moved salt, another visitor\'s order, an order older than 30 days — and a never-seen browser paints as today', () => {
     const order = ['flat_lay', 'studio'];
     const cases: Array<[string, () => HeadRun, string[]]> = [
       ['the holdout\'s class', () => runHead({ storage: visitorStorage(shotsFor(order)), table: headTable({ holdout: { share: 1, arms: ['default'], saltVersion: 1 } }) }), SERVER_ORDER],
@@ -564,7 +618,7 @@ describe('unit:P89.SO2 (R-P459 S4) — the head script', () => {
 });
 
 describe('unit:P89.SO2 (R-P459 S4) — never a carousel on screen', () => {
-  it('head + sdk: after the head script painted the carousel, a frame carrying another order for the open page view changes no drawn slide — the page\'s custom properties stay as painted — while the order is kept for the next page view', async () => {
+  it('sdk (head script and SDK): after the head script painted the carousel, a frame carrying another order for the open page view changes no drawn slide — the page\'s custom properties stay as painted — while the order is kept for the next page view', async () => {
     const painted = runHead({ storage: visitorStorage(shotsFor(['flat_lay', 'studio'])) });
     expect(painted.error, 'PRECONDITION: the head script runs').toBe(null);
     const root = painted.window.document.documentElement, positions = () => HEAD_IMAGES.map((_, n) => root.style.getPropertyValue(`--op-${CAROUSEL}-${n + 1}`).trim());
@@ -612,32 +666,73 @@ describe('unit:P89.SO3 (R-P459 S5)', () => {
       before: true, rebound: [SHOPPER_ID, ['studio', 'detail']], added: [], corrected: [SHOPPER_ID, ['on_model']] });
   });
 
-  it('sdk: the stored order is removed at a sign-out, at a sign-in as another person when the stored order is not an anonymous visitor\'s (no rebind), and at a refusal of personalization', async () => {
+  it('sdk: with a live connection, the SDK\'s own re-ask after the sign-in\'s reconnect (P74) brings the person\'s first answer, which replaces the rebound order (its `ts` newer); a later frame under the person replaces it again', async () => {
+    const p = sdkPage();
+    expect(await p.core.ready(), 'PRECONDITION: the client is ready').toBe(true);
+    await p.connect();
+    await p.view({ ts: T0 + 10, shotOrder: ['studio', 'detail'] });
+    const asked = () => p.f.calls.filter(c => c.url.includes('/decisions/snapshot')).length;
+    const before = asked(), sockets = p.f.sockets.length;
+    p.answerWith(() => ({ ts: T0 + 20, shotOrder: ['on_model'] }));
+    const linked = await p.identity.identify('acct', { assertion: 'backend-proof', exp: 1_800_000_000 });
+    expect([linked.ok, p.core.visitorId], `PRECONDITION: the sign-in is accepted (${JSON.stringify(linked)})`).toEqual([true, SHOPPER_ID]);
+    await settle();
+    expect(p.f.sockets.length, 'PRECONDITION: the socket is opened again under the person').toBe(sockets + 1);
+    p.f.sockets.at(-1)!.open();
+    await settle();
+    expect(asked() - before, 'PRECONDITION: the SDK\'s own re-ask after the reconnect (P74), one snapshot request').toBe(1);
+    const corrected = p.shots() as { subject?: unknown; order?: unknown; ts?: unknown };
+    const view = p.listen.current()?.pageInstance ?? '';
+    await p.frame({ pageInstance: view, ts: T0 + 30, shotOrder: ['detail'] });
+    const framed = p.shots() as { subject?: unknown; order?: unknown; ts?: unknown };
+    p.destroy();
+    expect.soft({ corrected: [corrected.subject, corrected.order, corrected.ts], framed: [framed.subject, framed.order, framed.ts] },
+      'P89.SO3 — the person\'s first answer, then the person\'s frame, replace the order (today the order is never kept)').toEqual({
+      corrected: [SHOPPER_ID, ['on_model'], T0 + 20], framed: [SHOPPER_ID, ['detail'], T0 + 30] });
+  });
+
+  it('sdk: the stored order is removed at a sign-out, at a sign-in as another person when the stored order is not an anonymous visitor\'s (no rebind), at a refusal of personalization, at a refusal of tracking, and on `setVisitorId`\'s path (its consent becomes unknown) — each order kept before it is removed', async () => {
+    const order = (shots: unknown) => (shots as { order?: unknown }).order ?? shots;
     const out = sdkPage();
     expect(await out.core.ready(), 'PRECONDITION: the client is ready').toBe(true);
     await out.view({ ts: T0 + 10, shotOrder: ['studio'] });
+    const beforeLogout = order(out.shots());
     const signedOut = await out.identity.logout();
     expect(signedOut.ok, `PRECONDITION: the sign-out is accepted (${JSON.stringify(signedOut)})`).toBe(true);
-    const afterLogout = out.shots();
+    const logout = [beforeLogout, out.shots()];
     out.destroy();
     const person = sdkPage();
     expect(await person.core.ready(), 'PRECONDITION: the client is ready').toBe(true);
     expect((await person.identity.identify('acct', { assertion: 'backend-proof', exp: 1_800_000_000 })).ok, 'PRECONDITION: the first sign-in').toBe(true);
     await person.view({ ts: T0 + 20, shotOrder: ['detail'] });
-    const personsOrder = person.shots() as { subject?: unknown; anonymous?: unknown };
+    const personsOrder = person.shots() as { subject?: unknown; anonymous?: unknown; order?: unknown };
     person.linkTo(OTHER_ID);
     expect((await person.identity.identify('acct-2', { assertion: 'backend-proof', exp: 1_800_000_000 })).ok, 'PRECONDITION: the second sign-in, another person').toBe(true);
-    const afterOther = person.shots();
+    const other = [[personsOrder.subject, personsOrder.anonymous, personsOrder.order], person.shots()];
     person.destroy();
-    const refusing = sdkPage();
-    expect(await refusing.core.ready(), 'PRECONDITION: the client is ready').toBe(true);
-    await refusing.view({ ts: T0 + 10, shotOrder: ['studio'] });
-    await refusing.core.postJson('/realtime/session/preferences', { trackingConsent: true, personalizationEnabled: false });
+    const refusals: unknown[] = [];
+    for (const [name, preferences] of [['personalization', { trackingConsent: true, personalizationEnabled: false }], ['tracking', { trackingConsent: false, personalizationEnabled: false }]] as const) {
+      const refusing = sdkPage();
+      expect(await refusing.core.ready(), 'PRECONDITION: the client is ready').toBe(true);
+      await refusing.view({ ts: T0 + 10, shotOrder: ['studio'] });
+      const kept = order(refusing.shots());
+      await refusing.core.postJson('/realtime/session/preferences', preferences);
+      await settle();
+      expect(refusing.core.consent[name], `PRECONDITION: the refusal of ${name} is in force`).toBe(false);
+      refusals.push([name, kept, refusing.shots()]);
+      refusing.destroy();
+    }
+    const setter = sdkPage();
+    expect(await setter.core.ready(), 'PRECONDITION: the client is ready').toBe(true);
+    await setter.view({ ts: T0 + 10, shotOrder: ['studio'] });
+    const beforeSetter = order(setter.shots());
+    setter.core.setVisitorId(OTHER_ID, 'identified');
     await settle();
-    const afterRefusal = refusing.shots();
-    refusing.destroy();
-    expect.soft({ afterLogout, personsOrder: [personsOrder.subject, personsOrder.anonymous], afterOther, afterRefusal },
-      'P89.SO3 — removed at a sign-out, another person and a refusal').toEqual({ afterLogout: 'no shots', personsOrder: [SHOPPER_ID, false], afterOther: 'no shots', afterRefusal: 'no shots' });
+    const setVisitorId = [beforeSetter, setter.shots()];
+    setter.destroy();
+    expect.soft({ logout, other, refusals, setVisitorId }, 'P89.SO3 — each kept order removed at a sign-out, another person, a refusal and setVisitorId (today none is kept)').toEqual({
+      logout: [['studio'], 'no shots'], other: [[SHOPPER_ID, false, ['detail']], 'no shots'],
+      refusals: [['personalization', ['studio'], 'no shots'], ['tracking', ['studio'], 'no shots']], setVisitorId: [['studio'], 'no shots'] });
   });
 
   it('sdk: the bootstrap identity event of the next page load (previous empty) clears nothing — the same visitor\'s order stays for the head script', async () => {
@@ -655,8 +750,9 @@ describe('unit:P89.SO3 (R-P459 S5)', () => {
     await settle();
     const after = reload.shots();
     reload.destroy();
-    expect([reload.core.visitorId, (kept as { order?: unknown }).order ?? kept], 'PRECONDITION: the same visitor, the order kept by the first page (today nothing is kept)').toEqual([visitor, ['studio', 'detail']]);
-    expect.soft({ events: events.map(e => (e as { previous?: unknown }).previous), after }, 'P89.SO3 — the bootstrap event clears nothing').toEqual({ events: [''], after: kept });
+    expect(reload.core.visitorId, 'PRECONDITION: the same visitor on the next page load').toBe(visitor);
+    expect.soft({ kept: (kept as { order?: unknown }).order ?? kept, events: events.map(e => (e as { previous?: unknown }).previous), unchanged: JSON.stringify(after) === JSON.stringify(kept) },
+      'P89.SO3 — the first page kept the order and the bootstrap event clears nothing (today nothing is kept)').toEqual({ kept: ['studio', 'detail'], events: [''], unchanged: true });
   });
 });
 
@@ -674,11 +770,13 @@ describe('unit:P89.SO4 (R-P459 S6)', () => {
     const example = /```json([\s\S]*?)```/.exec(shotSection)?.[1] ?? '';
     expect.soft({
       kit01Row: /shot order/i.test(row(kit01)) && row(kit01).includes('`shotOrder`'),
-      kit01Carried: has(kit01, '`opt_head`', /next page view/i, /first landing/i, /\bhold/i, /sign-in|`identify\(\)`/, /`listen\.refresh\(\)` after `identify\(\)`/, /sign-out|`logout\(\)`/, /refus/i, /storage[^.]*cleared|cleared storage/i),
-      kit01Head: has(kit01, /head script/i, /(?:shopper's own|their own|the shopper's) (?:shot )?order/i, /before the (?:context's )?row|ahead of the (?:context's )?row/i),
-      kit02Frame: has(kit02, '`content_decisions`', '`shotOrder`', /shot order changes|order alone changes|whenever the shopper's shot order/i),
+      kit01Carried: has(kit01, '`opt_head`', /next page view/i, /first landing/i, /\bhold/i, /sign-in|`identify\(\)`/, /rebound|rebind/i, /first answer/i, /`listen\.refresh\(\)` after `identify\(\)`/, /sign-out|`logout\(\)`/, /refus/i,
+        /storage[^.]*cleared|cleared storage/i),
+      // The head script's own paragraph (kit 01 §3, the one that names `data-op-context`), however it names the script.
+      kit01Head: has(kit01, /head script|`data-op-context`/i, /(?:shopper's own|their own|the shopper's) (?:shot )?order/i, /before the (?:context's )?row|ahead of the (?:context's )?row/i),
+      kit02Frame: has(kit02, '`content_decisions`', '`shotOrder`', /shot order changes|order alone|change in (?:the|that|its|the shopper's) (?:shot )?order|whenever the shopper's shot order/i),
       kit02Member: has(kit02, '`shotOrder`', /\bnull\b/, /carousel/i, /contentType/),
-      kit02Head: has(kit02, /head script/i, '`shots`', /subject|visitor/i, /30 days/),
+      kit02Head: has(kit02, /head script/i, /`(?:opt_head\.)?shots`/, /subject|visitor/i, /30 days/),
       kit03Row: row(kit03).includes('shotOrder'),
       kit03Decision: has(kit03, 'One item in snapshot `decisions[]`', '`shotOrder`'),
       kit03Section: /weighs `contentType`|weighs contentType|a `contentType` weight|positive `contentType` weight/i.test(shotSection),
