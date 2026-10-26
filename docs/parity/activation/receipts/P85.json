@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P85",
+  "workOrderHash": "sha256:3d8a0fc16ea1176f7dc7ffa4b6630610d556cddbccc55ed8973be6954e3a644d",
+  "artifact": {
+    "revision": "7dd77ce861df406e00ddb120df02c2c18da01c32",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p85-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p85-build at 0d44262d (d0c564ae the merge of the S31 spec aa12fafa; 681fd16d the mechanism and the regenerated SDK bundles and types; 0d44262d the kit and the citation remap: src/events/actionTypes.ts, src/sdk/types.ts and src/sdk/wire.ts register the action carousel_exposure; src/sdk/listen.ts gains listen.carouselExposure, one send per page view and carousel slot under tracking consent only, asking for no decisions, sharing its page-view and once-only logic with layoutExposure, whose behaviour is unchanged; src/routes/realtime.ts answers the beacon before any host, success with exposure admitted and the image count or exposure ignored with its reason, a malformed beacon 400 Invalid carousel exposure; src/content/service.ts gains admitCarouselExposure, which refuses tracking_refused without tracking consent, unavailable when the pinned set cannot be read or no retention policy is in force, stale_table for any version but the one in force, not_carousel for a slot that is not the table's carousel slot, unknown_context for a context the version does not carry, not_measured for a carousel not on rendered-v1, unknown_image for images that are not the slot's catalogue pieces or more than its take, and not_learning when the shopper has no personalization consent, when her enrollment anchor cannot be read (fail closed) or when the engine's own arm over her anchor and the salt in force is a holdout arm; every answer carries the page's claim as armClaimed and a disagreement between the claim and the engine's class is counted once under P84's arm_draw mismatch; an admitted beacon adds one exposure per drawn image through the layout exposure's fan path into the carousel's own statistics object in the context's channel-and-bucket cell, the default context as the unknown cell, a repeat for the same page view admitted and counted once by the journal; the beacon writes no ring, ledger row or shopper state, so an engagement or outcome is credited only through the engine's own decision for that image on that page view; contextTableInForce in service.ts is the one computation of a page's table version (the salt version carried by the learn revision, else walked, and the version digest), called by P84's route in src/routes/decisions.ts and by the admission, memoised per pinned-set identity and page; src/learn/fan.ts names the carousel caller in its comment; packages/sdk/package.json records the SDK budgets by W40.P3's rule, 112,640 and 117,760 bytes, for bundles of 107,921 and 113,310 bytes; kits 01, 02 and 03 state the beacon, its answer and reasons, the stale-table minute and the payload, with kit 02's citations remapped). Specification aa12fafa (20 tests; no R10). The engine's arm decides not_learning, never the page's claim (R-P393).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S31/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S31/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P85/implementer/REPORT.md",
+      "git commits on rem/p85-joined up to 7dd77ce8"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P85 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "S31/reviewer-p85/logs/w-p85-run1.json"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S31/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P85/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-26T03:57:59.461Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
