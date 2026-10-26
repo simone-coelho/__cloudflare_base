@@ -1474,7 +1474,18 @@
         "docs/kit/03-payload-schemas.md",
         "src/learn/replay.ts",
         "src/reflex/contentTelemetry.ts",
-        "src/routes/decisions.ts"
+        "src/routes/decisions.ts",
+        "src/sdk/listen.ts",
+        "src/sdk/types.ts",
+        "src/routes/realtime.ts",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js",
+        "packages/sdk/edge-personalization.js",
+        "packages/sdk/edge-personalization.esm.js",
+        "packages/sdk/types/**",
+        "packages/sdk/package.json"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P86 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
