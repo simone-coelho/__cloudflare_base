@@ -908,7 +908,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const acceptedBytes = accepted * perLoad * ID_LENGTH;
       const shardNamed = (a: Answer) => errorsOf(a).some(e => new RegExp(`(^|[^0-9a-z])${shard}([^0-9a-z]|$)`).test(e)) ? `names ${shard}` : `does not (${show(a)})`;
       expect.soft({ refused: refused ? [refused.status, refused.body.code ?? errorsOf(refused).join(' ').slice(0, 60), shardNamed(refused)] : 'no load refused',
-        accepted: acceptedBytes > INDEX_CAP - 2 * perLoad * ID_LENGTH && acceptedBytes <= INDEX_CAP ? 'up to the cap' : `${accepted} loads (${acceptedBytes} bytes of ids)`,
+        accepted: acceptedBytes > INDEX_CAP - perLoad * ID_LENGTH && acceptedBytes <= INDEX_CAP ? 'up to the cap' : `${accepted} loads (${acceptedBytes} bytes of ids)`,
         written: [(await loadDocument(m, 'catalog')).revision === before.revision, partKeys(m).length === parts.length, idsKeys(m).length === ids.length] },
       `${host}: P86.CS1 — refused by name at the id shard's 2 MiB, nothing written`).toEqual({ refused: [413, 'id_index_too_large', `names ${shard}`], accepted: 'up to the cap', written: [true, true, true] });
     }, 600_000);

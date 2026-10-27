@@ -469,7 +469,7 @@ describe('unit:P93.CS3 (R-P487 (2), (5); R-P490 (1): the loads and the PUT acros
         `${host}: P93.CS3 — the manifest's own cap, driven by the shared pieces (${show(six)})`).toEqual({ five: [200, true], six: [413, 'manifest_too_large'], written: true });
     }, 900_000);
 
-    it(`host (${host}): the PUT round trip carries index exactly as read and writes no shard and no part; a PUT whose index differs (a shard pointer left out or changed) is refused 422 naming the shard, and a document without index 422 naming index, nothing written; a product leaves only by an explicit removeProducts list (never stored), which also clears a lost part`, async () => {
+    it(`host (${host}): the PUT round trip carries index exactly as read and writes no shard and no part; a PUT whose index differs (a shard pointer left out, changed or added) is refused 422 naming the shard, and a document without index 422 naming index, nothing written; a product leaves only by an explicit removeProducts list (never stored), which also clears a lost part`, async () => {
       const m = await rangeTenant(host, 600);
       const start = await catalogue(m);
       requireSharded(start.view, 'P93.CS3');
@@ -480,6 +480,10 @@ describe('unit:P93.CS3 (R-P487 (2), (5); R-P490 (1): the loads and the PUT acros
       const { [left]: _left, ...rest } = asRead.index.shards; void _left;
       const leftOut = await putDocument(m, 'catalog', { ...asRead, index: { ...asRead.index, shards: rest } }, 'p93 a shard left out');
       const altered = await putDocument(m, 'catalog', { ...asRead, index: { ...asRead.index, shards: { ...asRead.index.shards, [changed]: { ...asRead.index.shards[changed]!, digest: 'f'.repeat(64) } } } }, 'p93 a shard changed');
+      // A pointer ADDED under a bucket the index does not list (a copy of a real pointer, so only the comparison can refuse it).
+      const unlisted = [...Array(256).keys()].map(i => i.toString(16).padStart(2, '0')).find(b => !Object.hasOwn(asRead.index.shards, b));
+      expect(unlisted, `${host}: PRECONDITION — the index of 603 products leaves some bucket unlisted`).toBeDefined();
+      const addedShard = await putDocument(m, 'catalog', { ...asRead, index: { ...asRead.index, shards: { ...asRead.index.shards, [unlisted!]: { ...asRead.index.shards[changed]! } } } }, 'p93 a shard added');
       const { index: _index, ...noIndex } = asRead; void _index;
       const oneLevel = await putDocument(m, 'catalog', noIndex, 'p93 a document without index');
       const refusedAt = await loadDocument(m, 'catalog');
@@ -496,13 +500,14 @@ describe('unit:P93.CS3 (R-P487 (2), (5); R-P490 (1): the loads and the PUT acros
       expect.soft({
         round: [round.result.status, JSON.stringify([one.view.shards, one.view.idShards]) === JSON.stringify([start.view.shards, start.view.idShards]),
           [...touched(round.ops, 'put', 'part'), ...touched(round.ops, 'put', 'shard'), ...touched(round.ops, 'put', 'idshard')]],
-        leftOut: [leftOut.status, named(leftOut, left)], altered: [altered.status, named(altered, changed)], oneLevel: [oneLevel.status, named(oneLevel, 'index')],
+        leftOut: [leftOut.status, named(leftOut, left)], altered: [altered.status, named(altered, changed)], added: [addedShard.status, named(addedShard, unlisted!)],
+        oneLevel: [oneLevel.status, named(oneLevel, 'index')],
         unwritten: refusedAt.revision === one.doc.revision,
         removed: [removed.status, Object.hasOwn(two.view.products, seven), Object.hasOwn(two.view.ids, rangeRecordId(7)), readSeven.status, Object.keys(two.view.products).length],
         cleared: [lostRead.status, cleared.status, Object.hasOwn(three.view.products, eight), Object.hasOwn(three.view.ids, rangeRecordId(8)), readEight.status],
         notStored: [Object.hasOwn(two.doc.document, 'removeProducts'), Object.hasOwn(three.doc.document, 'removeProducts')],
       }, `${host}: P93.CS3 — the index as read, by name otherwise; removal only by removeProducts (${show(leftOut)} | ${show(removed)})`).toEqual({
-        round: [200, true, []], leftOut: [422, `names ${left}`], altered: [422, `names ${changed}`], oneLevel: [422, 'names index'], unwritten: true,
+        round: [200, true, []], leftOut: [422, `names ${left}`], altered: [422, `names ${changed}`], added: [422, `names ${unlisted}`], oneLevel: [422, 'names index'], unwritten: true,
         removed: [200, false, false, 404, Object.keys(one.view.products).length - 1], cleared: [503, 200, false, false, 404], notStored: [false, false] });
     }, 600_000);
   }
@@ -622,7 +627,7 @@ function storedRevisions(m: Mounted): Array<[number, Record<string, unknown>]> {
 
 describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge across shards)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): a rollback checks the shards and id shards the target names that the revision in force does not and the part pointers inside them that differ, never every product; a missing part or shard is refused 410 part_missing naming it, nothing written; past 900 checks the rollback is refused 413 rollback_too_large naming the count, nothing written`, async () => {
+    it(`host (${host}): a rollback checks the shards and id shards the target names that the revision in force does not and the part pointers inside them that differ, never every product; a missing part or shard is refused 410 part_missing naming it, nothing written; a rollback of about 700 checks is accepted, and past 900 checks one is refused 413 rollback_too_large naming the count, nothing written`, async () => {
       const m = await rangeTenant(host, 600);
       const target = await catalogue(m);
       requireSharded(target.view, 'P93.CS5');
@@ -653,6 +658,16 @@ describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge 
         shard: [shardLost.answer.status, shardLost.answer.body.code ?? null, named(shardLost.answer, shardBucket), shardLost.unwritten] },
       `${host}: P93.CS5 — a missing object refused by name (${show(partLost.answer)} | ${show(shardLost.answer)})`).toEqual({
         part: [410, 'part_missing', `names ${rangeProduct(3)}`, true], shard: [410, 'part_missing', `names ${shardBucket}`, true] });
+      // Within 900 checks: a rollback across a reload of 500 products (about 700 checks) is accepted.
+      const mid = await rangeTenant(host, 500);
+      const midTarget = await catalogue(mid);
+      expect((await importJson(mid, rangeRecords(1, 500, ', reloaded'), { mode: 'merge' })).status, `${host}: PRECONDITION — the 500 products reload`).toBe(200);
+      const midCount = checksOf(differing(midTarget.view, (await catalogue(mid)).view)), midHead = await loadDocument(mid, 'catalog');
+      expect(midCount > 100 && midCount <= 900, `${host}: PRECONDITION — the rollback needs between 101 and 900 checks (${midCount})`).toBe(true);
+      const accepted = await asOperator(mid, 'POST', `/content/catalog/rollback/${midTarget.doc.revision}?scope=${TENANT}`, {}, await preconditions(mid));
+      const midAfter = await catalogue(mid);
+      expect.soft([accepted.status, midAfter.doc.revision, JSON.stringify(digestsOf(midAfter.view)) === JSON.stringify(digestsOf(midTarget.view))],
+        `${host}: P93.CS5 — ${midCount} checks, within 900, accepted (${show(accepted)})`).toEqual([200, midHead.revision + 1, true]);
       // Past 900 checks: a rollback across a reload of 1,000 products.
       const big = await rangeTenant(host, 1000);
       const bigTarget = await catalogue(big);
@@ -769,7 +784,7 @@ describe('unit:P93.CS6 (R-P487 (4), (7), R-P490 (2): the reads and the readers t
         product: [200, sorted(ANCHOR_IMAGES.map(r => r.id)), sorted([KEY.shard(pointer.digest), KEY.part(view.products[A]!.digest)])], misses: [404, 404], lost: [503, true] });
     }, 600_000);
 
-    it(`host (${host}): every reader resolves the anchor's part through its shard — each carousel decision replays equal; its receipt names the image's title; the learn routes keep each image named unresolved; a click on her own decision teaches its catalogue format reading at most one shard and one part, another visitor's decision resolves nothing; an event naming a parted product is recognized by the ingest vocabulary`, async () => {
+    it(`host (${host}): every reader resolves the anchor's part through its shard — each carousel decision replays equal; its receipt names the image's title; the learn routes keep each image named unresolved; a click on the shopper's own decision teaches its catalogue format reading at most one shard and one part, another visitor's decision resolves nothing; an event naming a parted product is recognized by the ingest vocabulary`, async () => {
       const m = await rangeTenant(host, 600);
       const { view } = await catalogue(m);
       requireSharded(view, 'P93.CS6');
