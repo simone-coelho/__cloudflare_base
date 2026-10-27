@@ -89,6 +89,7 @@ Numbering is the lead's; the items keep their E numbers here so the review recor
 - **Authority:** the kit's catalogue limit (about 2,000 pieces, 2 MiB per catalogue document); one item per image across the whole product range exceeds it.
 - **Done when:** a design decision first (per-product scoping of image records, sharding by product range, or a larger store), then the build; the test scope fits today and the first dataset is sized with Tapestry after the first test.
 - **Design decision (the board, 2026-10-26):** E2 and E10 are one piece, built before the December test, not after. Image records are stored per product, so a carousel decision reads only the images of the product on the page and never the range. The 2 MiB publication cap stays as the guard for the slots and learning documents only.
+- **The owner's requirement (2026-10-26, evening):** the design must hold and manage 40,000 products or more; no cap at 15,000 to 20,000 products. The built one-level index (the catalogue manifest as one 2 MiB publication document) does not meet it; the sharded index is the work that follows (amendment 12).
 - **Relates to:** E2 (one piece with it). **Needed by:** the December test (moved by the board on 2026-10-26 from "the full range, after the first test"). Design first; then within a day or two.
 
 #### E11 · A catalogue-only service credential
@@ -144,6 +145,7 @@ Numbering is the lead's; the items keep their E numbers here so the review recor
 | 3 | The staging tenant for Coach is parked | "I'm not sure that we need to worry right now about the staging tenant that we can discuss later on" (22 October) |
 | 4 | Order: group A before Tapestry's December test; group B before the first activation; group C's (b) and (c) only if Tapestry chooses them | This lane's proposal, from the plan's dates; the lead sequences within the programme |
 | 5 | E2 and E10 are one piece, built before the December test; image records stored per product so a carousel decision reads only the page's product's images, never the range; the 2 MiB publication cap guards the slots and learning documents only; E10's needed-by moved to the December test | "E2 and E10 are one piece, built before the December test, not after. Image records are stored per product, so a carousel decision reads only the images of the product on the page and never the range. The 2 MiB publication cap stays as the guard for the slots and learning documents only. Record the design decision under E10 in the 22 October amendment and move its 'needed by' to the December test." (the board, 26 October) |
+| 6 | E10's design must hold 40,000 products or more; the one-level index's cap of 15,000 to 20,000 products is refused | "They can have up to 40,000 products or more. You cannot gate it to 20,000. Whatever design we discussed needs to be able to survive and be able to manage 40,000 products or more." (the owner, 26 October, evening) |
 
 ## 4. What the active lead does with this
 
