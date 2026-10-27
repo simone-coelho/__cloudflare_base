@@ -125,10 +125,31 @@ export interface ContentCatalog {
    * exactly when `products` indexes a part. Only the loads read it, never a decision.
    */
   idIndex?: CatalogPartPointer;
+  /**
+   * P93 (E18, R-P487): the sharded index, in place of `products` and `idIndex`:
+   * 256 product shards keyed by the first two hex digits of SHA-256 of the
+   * product id (each naming its products' parts) and 256 id shards keyed the
+   * same way by the record id (each naming the product whose part holds the
+   * record); only non-empty shards listed. Present on a catalogue that declares
+   * `productSlots` once its first publication after P93 has written it.
+   */
+  index?: CatalogIndex;
+  /**
+   * P93 (R-P487 (5)): on a PUT only, the products the PUT removes (each one's
+   * part and its records); never stored. A product is removed by this list
+   * alone, so a PUT that carries `index` as it read it keeps every other one.
+   */
+  removeProducts?: string[];
   pieces: ContentPiece[];
 }
 /** P86: a product's pointer: the SHA-256 of its part's canonical `{ product, pieces }` and the number of its records. */
 export interface CatalogPartPointer { digest: string; records: number }
+/** P93: one product shard's pointer: its object's digest, how many products it indexes and their records. */
+export interface CatalogShardPointer { digest: string; products: number; records: number }
+/** P93: one id shard's pointer: its object's digest and how many part records it lists. */
+export interface CatalogIdShardPointer { digest: string; records: number }
+/** P93: the sharded catalogue index the manifest carries (`key` the scheme the shards are keyed by). */
+export interface CatalogIndex { key: 'sha256-hex2'; shards: Record<string, CatalogShardPointer>; ids: Record<string, CatalogIdShardPointer> }
 
 /**
  * P38: one value of an attribute in the tenant's published vocabulary. `id` is

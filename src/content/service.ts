@@ -7,10 +7,10 @@
 import type { Env } from '@/types/env';
 import { afterOwnerAnswer, assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { carriedSaltVersion, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
+import { carriedSaltVersion, catalogPartPointer, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { ReflexConfigUnavailableError } from '@/reflex/configStore';
-import { extractTouches, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
+import { extractTouches, productReferencesOf, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
   journeyCountersNow, journeySource as journeySourceOf, journeyStageFrom, journeyThresholdsInForce,
@@ -20,7 +20,7 @@ import { channelIn, projectVisit, validEntry, validVisitContext, visitArrival, t
 import { deviceClassOf, platformWordOf, type DeviceClass, type PlatformWord } from '@/services/platform';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
-import { CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, isCatalogueName, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND, VOCABULARY_APPROVAL_KIND, vocabularyTableOf, type VocabularyTable } from './kinds';
+import { catalogParted, CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, isCatalogueName, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND, VOCABULARY_APPROVAL_KIND, vocabularyTableOf, type VocabularyTable } from './kinds';
 import { armFor, enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable, recordArmDraw, saltVersionOf } from './holdout';
 import { armClassOf } from '@/sdk/armDraw';
 import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
@@ -454,7 +454,26 @@ const vocabularyCache = new WeakMap<object, WeakMap<object, VocabularyEntry>>();
  */
 export async function tenantCatalogVocabulary(
   env: Env, tenant: string, config: ReflexConfig, products?: CatalogVocabularySource | null,
+  /** P93 (R-P487 (7)): the event's data, whose product ids are resolved through a sharded catalogue's index shards. */
+  event?: Record<string, unknown>,
 ): Promise<CatalogVocabulary> {
+  const vocabulary = await baseCatalogVocabulary(env, tenant, config, products);
+  const references = event && vocabulary.catalog?.index ? productReferencesOf(event) : [];
+  if (!references.length || !vocabulary.catalog) return vocabulary.value;
+  // P93: a sharded catalogue names its products through its shards: each id the event names that the vocabulary does
+  // not already hold is looked up in its one shard (held per isolate by digest). A shard that cannot be read calls the
+  // id nothing (as an unreadable catalogue publishes no vocabulary), so an outage never turns into refused traffic.
+  const found: string[] = [];
+  for (const id of new Set(references)) {
+    if (vocabulary.value.ids.has(id)) continue;
+    try { if (await catalogPartPointer(env, tenant, vocabulary.catalog, id)) found.push(id); }
+    catch (error) { if (!(error instanceof PublicationError)) throw error; found.push(id); }
+  }
+  return found.length ? { ids: new Set([...vocabulary.value.ids, ...found]), values: vocabulary.value.values } : vocabulary.value;
+}
+async function baseCatalogVocabulary(
+  env: Env, tenant: string, config: ReflexConfig, products?: CatalogVocabularySource | null,
+): Promise<{ value: CatalogVocabulary; catalog?: ContentCatalog }> {
   const ids = new Set<string>();
   const values = new Map<string, Set<string>>();
   const name = (dim: string, value: string) => {
@@ -478,7 +497,7 @@ export async function tenantCatalogVocabulary(
     if (catalog) {
       document = catalog;
       const cached = vocabularyCache.get(document)?.get(productKey);
-      if (cached && cached.tenant === tenant && cached.version === config.version && cached.governed === governed) return cached.value;
+      if (cached && cached.tenant === tenant && cached.version === config.version && cached.governed === governed) return { value: cached.value, catalog };
       for (const piece of catalog.pieces as ReadonlyArray<Pick<ContentPiece, 'tags' | 'featuredProductIds'>>) {
         for (const [dim, tagged] of Object.entries(piece.tags ?? {})) if (!governed?.attributes.has(dim)) for (const value of tagged) name(dim, value);
         for (const id of piece.featuredProductIds ?? []) ids.add(id);
@@ -506,7 +525,7 @@ export async function tenantCatalogVocabulary(
     if (!byProducts) { byProducts = new WeakMap<object, VocabularyEntry>(); vocabularyCache.set(document, byProducts); }
     byProducts.set(productKey, { tenant, version: config.version, governed, value });
   }
-  return value;
+  return { value, ...(cacheable && document !== NO_CONTENT_CATALOG ? { catalog: document as ContentCatalog } : {}) };
 }
 
 // ── P38: the vocabulary in effect, at every ingest door (VA3, D2, DI-9) ──────
@@ -1415,7 +1434,9 @@ export async function admitLayoutExposure(env: Env, input: { tenant: string; bra
  * parts is answered unchanged.
  */
 export async function withAnchorPart(env: Env, scope: string, catalog: ContentCatalog, pageSlots: readonly SlotStrategy[], anchor: string | undefined): Promise<ContentCatalog> {
-  const pointer = catalog.products && typeof anchor === 'string' && pageSlots.some(slot => slot.scope === 'anchor') ? catalog.products[anchor] : undefined;
+  // P93: through the anchor's shard on a sharded catalogue (one read, held per isolate), none for an empty shard.
+  const pointer = catalogParted(catalog) && typeof anchor === 'string' && pageSlots.some(slot => slot.scope === 'anchor')
+    ? await catalogPartPointer(env, scope, catalog, anchor) : undefined;
   if (!pointer) return catalog;
   const part = await readCatalogPart(env, scope, pointer.digest);
   return { ...catalog, pieces: [...catalog.pieces, ...(part.pieces as ContentPiece[])] };
@@ -1544,13 +1565,13 @@ export async function admitCarouselExposure(env: Env, input: { tenant: string; s
   // P86 (R-P409 (1)): where the carousel's images are product records of a catalogue with parts, the beacon names its
   // page view's product and that ONE part is read; without it the images cannot be found (`product_required`).
   let candidates = catalog.pieces;
-  if (catalog.products && catalog.productSlots?.includes(beacon.slot)) {
+  if (catalogParted(catalog) && catalog.productSlots?.includes(beacon.slot)) {
     if (beacon.product === undefined) return ignored('product_required');
-    const pointer = catalog.products[beacon.product];
-    if (pointer) {
-      try { candidates = [...candidates, ...((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[])]; }
-      catch (error) { if (error instanceof SessionAccessError) throw error; return ignored('unavailable'); }
-    }
+    // P93: the product's pointer through its shard on a sharded catalogue, read like its part.
+    try {
+      const pointer = await catalogPartPointer(env, tenant, catalog, beacon.product);
+      if (pointer) candidates = [...candidates, ...((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[])];
+    } catch (error) { if (error instanceof SessionAccessError) throw error; return ignored('unavailable'); }
   }
   const pieces = new Set(candidates.filter(piece => piece.slotTypes.includes(beacon.slot)).map(piece => piece.id));
   if (!spec || beacon.images.length > spec.take || !beacon.images.every(id => pieces.has(id))) return ignored('unknown_image');

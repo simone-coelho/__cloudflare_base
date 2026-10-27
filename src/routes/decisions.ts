@@ -34,7 +34,7 @@ import { liftArchiveKey, liftKey, liftRepublishedKey, liftStaleKey, notAdoptedRe
 import { decideProposal, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { readMonitor, runMonitor } from '@/ops/monitor';
 import type { DocumentKind } from '@/config/versionedStore';
-import { pinPublication, readCatalogPart, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
+import { catalogPartPointer, pinPublication, readCatalogPart, readPinnedPublication, publicationMeta, PublicationError, publish, type PublicationPin } from '@/config/publication';
 import { replayDecision } from '@/learn/replay';
 import { conflictKey, exportReconciliation, readReportView, reportPayloadJson, reportPriors, REPORT_MAX_OBJECTS, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportRowConflict, ReportUnavailableError, ReportRevisionChanged, validateReportPolicies, type ReportPolicy, type ReportPriors } from '@/learn/report';
 import { PRIORS_KIND } from '@/learn/priors';
@@ -43,7 +43,7 @@ import { captureReadConflict, readConflictFiled } from '@/ledger/quarantine';
 const REPORT_CONFLICTS = 8;
 import { ReportTooLarge, runDayReport } from '@/learn/hourly';
 import { datesBetween, WindowRangeError, windowReport } from '@/measure/window';
-import { LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
+import { catalogParted, LEARN_KIND, CONTENT_KIND, isCatalogueName, SLOTS_KIND, slotPagesOf } from '@/content/kinds';
 import { catalogNames, decodeCursor, encodeCursor, exploringRows, namedRows, NO_NAMES, pageOf, pageRows, rowsOf, slotEvidence, slotsIndex, toEvidenceFloorOf, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SlotIndexEntry, type SortKey } from '@/learn/rows';
 import { evidenceFloorOf } from '@/content/decide';
 import { receiptOf } from '@/learn/receipts';
@@ -669,7 +669,7 @@ decisionRoutes.get('/:tenant/learn/exploring', operatorWrites(), async (c) => {
   // list is in (least observed first, then id) does not depend on a name.
   // P86 (S10): a catalogue with parts cannot say which part carries an id no row names an anchor for, so its rows are
   // kept and each id the shared pieces do not carry is named unresolved; without parts, W25's rule as before.
-  const catalogue = catalog.products ? undefined : new Set(catalog.pieces.map((p) => p.id));
+  const catalogue = catalogParted(catalog) ? undefined : new Set(catalog.pieces.map((p) => p.id));
   const cut = pageOf(exploringRows(snapshot, NO_NAMES, floor, catalogue, evidenceFloor?.floor), cur ? cur.o : 0, limit);
   cut.rows = unresolvedRows(catalog, namedRows(cut.rows, catalogNames(catalog, cut.rows.map((r) => r.item))));
   const cursor = cut.next === null ? null : encodeCursor({ v: snapshot.version, o: cut.next, level: 'exploring', limit, ...(page ? { p: page } : {}) });
@@ -776,7 +776,7 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', operatorJwt(), async
  * customer id null. A catalogue without parts: the rows as they were.
  */
 function unresolvedRows<T extends { item: string }>(catalog: ContentCatalog, rows: T[]): T[] {
-  if (!catalog.products) return rows;
+  if (!catalogParted(catalog)) return rows;
   const shared = new Set(catalog.pieces.map((p) => p.id));
   return rows.map((row) => shared.has(row.item) ? row : { ...row, unresolved: true });
 }
@@ -788,12 +788,16 @@ function unresolvedRows<T extends { item: string }>(catalog: ContentCatalog, row
  * leaves those names out, as an id the catalogue does not carry is.
  */
 async function withRecordParts(env: Env, tenant: string, catalog: ContentCatalog, records: ReadonlyArray<{ item_id: string; inputs?: { anchor?: unknown } }>): Promise<ContentCatalog> {
-  if (!catalog.products) return catalog;
+  if (!catalogParted(catalog)) return catalog;
   const shared = new Set(catalog.pieces.map((p) => p.id)), anchors = new Set<string>();
-  for (const r of records) if (!shared.has(r.item_id) && typeof r.inputs?.anchor === 'string' && catalog.products[r.inputs.anchor]) anchors.add(r.inputs.anchor);
+  for (const r of records) if (!shared.has(r.item_id) && typeof r.inputs?.anchor === 'string') anchors.add(r.inputs.anchor);
   const pieces = [...catalog.pieces];
   for (const anchor of anchors) {
-    try { pieces.push(...((await readCatalogPart(env, tenant, catalog.products[anchor]!.digest)).pieces as ContentCatalog['pieces'])); } catch { /* names left out */ }
+    // P93: the anchor's pointer through its shard on a sharded catalogue; a shard or part that cannot be read leaves the names out.
+    try {
+      const pointer = await catalogPartPointer(env, tenant, catalog, anchor);
+      if (pointer) pieces.push(...((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentCatalog['pieces']));
+    } catch { /* names left out */ }
   }
   return { ...catalog, pieces };
 }
