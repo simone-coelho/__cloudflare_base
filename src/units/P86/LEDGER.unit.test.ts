@@ -2,6 +2,19 @@
 // P86 under the Closure Ledger (programme `tapestry-parity-activation`, amendment 11, item E10): the tests for the LOCAL
 // criteria CS1–CS3 of the P86 work order (docs/parity/activation/program.json). LV1 is a deferred live row and gets no test.
 //
+// THE FORM IN FORCE (P93, amendment 12 E18; R-P487, R-P489, R-P490, R-P491): the catalogue's index is SHARDED. The
+// manifest carries `index: { key: 'sha256-hex2', shards: { <hex2>: { digest, products, records } }, ids: { <hex2>:
+// { digest, records } } }` in place of P86's one-level `products` and `idIndex`. A product shard
+// (`config-publication/v1/<scope>/content/shard/<digest>.json`, `{ shard, products }`) points each of its products at its
+// part; an id shard (`.../content/idshard/<digest>.json`, `{ shard, ids }`) names the product whose part holds each part
+// record; a product or a record id falls in the shard named by the first two hex digits of the SHA-256 of its id. A
+// product page reads the head, the set, the four revisions, the anchor's shard and its part (8 reads); a load reads the
+// shards of the products it names and the id shards only of ids whose place can change, and writes only what moved; a PUT
+// carries `index` exactly as read and removes a product only by `removeProducts`; each shard is capped at 2 MiB
+// (`index_shard_too_large`, `id_index_too_large`), the manifest by its shared pieces alone; a one-level catalogue is
+// written sharded by its next publication (src/units/P93). The shapes below are P86's as ruled (one-level), kept as this
+// file's history; its helpers and the legs R-P489/R-P490 name read the sharded form.
+//
 // THE REQUIREMENT, verbatim (docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:87–91, E10):
 //   "#### E10 · Catalogue size beyond the test scope
 //    - **Authority:** the kit's catalogue limit (about 2,000 pieces, 2 MiB per catalogue document); one item per image
@@ -30,7 +43,8 @@
 //      PUT of the catalogue, kept by every load); `products` `{ "<productId>": { digest: <64 lowercase hex>, records:
 //      <the part's record count> } }`. A catalogue that declares no `productSlots` carries neither member and is today's
 //      document, every piece shared, no part written (the locks). `productSlots` is the catalogue's own declaration, not
-//      derived from the slots document's `scope: 'anchor'`.
+//      derived from the slots document's `scope: 'anchor'`. (P93: the manifest carries `index`, the shard pointers, in
+//      place of `products`; the per-product pointers live in the product shards.)
 //   S2 A part: the R2 object `config-publication/v1/<scope>/content/part/<digest>.json`, its body the canonical JSON of
 //      `{ product, pieces }` (the stored pieces, defaults applied as an import applies them), `documentDigest` of that
 //      value the `<digest>` of its key and of the manifest's pointer; at most 2 MiB; written before the pending head is
@@ -47,7 +61,8 @@
 //      digest). The dry run writes nothing, no part included. The import answer's `pieces` and the GET's
 //      `envelope.pieces` count shared + parts; `envelope.bytes` is the manifest's; `envelope.products` the index's size.
 //   S5 The cap: a load whose manifest (its index) would pass 2 MiB is refused 413 `code: 'manifest_too_large'`, nothing
-//      written (no part either); the two-level index is the next step, not built.
+//      written (no part either); the two-level index was the next step (P93 built it as the sharded index: the
+//      manifest no longer grows with the products, and each shard is capped at 2 MiB instead).
 //   S6 The per-product read: `GET /content/catalog?scope=<tenant>&product=<productId>` → 200 `{ scope, kind, source,
 //      revision, publication, product, digest, document: { product, pieces }, envelope }`; a product the manifest does
 //      not index → 404 naming it. (Not `/content/catalog/products/<id>`: reading 6.)
@@ -119,7 +134,8 @@
 // mount's bucket.
 //
 // R-P424 (the delivery review at 28ef79d9; R-P407 (5) amended), specification round 3, test-only. The shapes:
-//   S12 The id index: the manifest's `idIndex: { digest, records }` (present exactly when `products` is) points at one
+//   S12 The id index (P93 replaced it by the 256 id shards under `content/idshard/`, read only for ids whose place can
+//       change): the manifest's `idIndex: { digest, records }` (present exactly when `products` is) points at one
 //       object per revision, `config-publication/v1/<scope>/content/ids/<digest>.json`, the canonical JSON of
 //       `{ ids: { "<id>": "<product id>" } }` — every part record, expired ones included — whose `documentDigest` is its
 //       address; written by exact-create before the pending head, as a part is; read by the loads only (import, pull,
