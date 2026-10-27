@@ -915,3 +915,12 @@ export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE' | 'LEARN_STATS'>)
   first.continuation.waitUntil(task.then(() => undefined, () => undefined));
   return task;
 }
+/**
+ * P94 (R-P503, R-P515): the arm-draw count's records made inside an owner
+ * operation follow its answer through `afterOwnerAnswer`, handed the learn
+ * statistics binding (src/content/holdout.ts `recordArmDraw`). The session
+ * runtime registers the hand-over here, when it loads, so holdout.ts (which the
+ * publication store reaches) imports nothing of this module.
+ */
+import { handArmDrawToOwner } from '@/content/holdout';
+handArmDrawToOwner({ active: env => ownerOperationActive(env as Env), after: work => afterOwnerAnswer(work, 'LEARN_STATS') });

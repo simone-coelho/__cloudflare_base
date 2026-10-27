@@ -10,7 +10,6 @@ import type { Env } from '@/types/env';
 import { IdentityStore } from '@/identity/store';
 import { isShopperId } from '@/identity/shopperId';
 import type { TenantId } from '@/tenancy/tenant';
-import { afterOwnerAnswer, ownerOperationActive } from '@/identity/sessionAuthority';
 import type { Arm, EnrollmentProvenance, HoldoutConfig } from './types';
 
 // P84 (E8, N4): the pure draw lives in src/sdk/armDraw.ts, imported by nothing
@@ -331,6 +330,23 @@ async function armDrawCall(env: Pick<Env, 'LEARN_STATS'>, tenant: string, path: 
   catch { return null; }
   finally { clearTimeout(timer); }
 }
+/**
+ * P94 (R-P503, R-P515): how a record made inside the shopper's owner follows
+ * that owner's answer. The session runtime (src/identity/sessionAuthority.ts)
+ * hands it over when it loads (`handArmDrawToOwner`); this module imports
+ * nothing of that runtime, so no bundle that reaches it — the publication
+ * store's included — carries the session runtime for it. Where the runtime is
+ * not loaded no owner operation can be active, and a record is made directly.
+ */
+export interface ArmDrawOwnerHandOver {
+  /** Whether a call made with `env` runs inside an active owner operation of the same deployment. */
+  active(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'SESSIONS'>>): boolean;
+  /** Registers `work` to start once that operation has answered, outside it, handed the learn statistics binding. */
+  after(work: (env: Pick<Env, 'LEARN_STATS'>) => Promise<unknown>): Promise<void>;
+}
+let armDrawOwner: ArmDrawOwnerHandOver | null = null;
+/** P94: the session runtime's one registration of the owner hand-over (a later registration replaces it). */
+export function handArmDrawToOwner(handOver: ArmDrawOwnerHandOver): void { armDrawOwner = handOver; }
 /** Never throws: an absent, failing or slow counter answers zeros, after at most `ARM_DRAW_READ_BOUND_MS`. */
 export async function readArmDraw(env: Pick<Env, 'LEARN_STATS'>, tenant: string, now: number): Promise<ArmDrawCounts> {
   return await armDrawCall(env, tenant, '/arm-draw/read', { now }) ?? armDrawCountsOf(null);
@@ -342,17 +358,21 @@ export async function readArmDraw(env: Pick<Env, 'LEARN_STATS'>, tenant: string,
  * carrying a session, the carousel beacon) any work the caller hands on is work
  * the owner drains before it answers, and every binding call there is retained
  * (src/identity/sessionAuthority.ts `ownerEffect`); so there the record is
- * handed to `afterOwnerAnswer` with the learn statistics binding instead: it
- * starts once the owner has answered, outside the owner, and the promise
- * returned here settles at once. An owner operation that does not answer, or
- * that refuses the hand-over, records nothing.
+ * handed over (`ArmDrawOwnerHandOver`, the owner's `afterOwnerAnswer`) with the
+ * learn statistics binding instead: it starts once the owner has answered,
+ * outside the owner, and the promise returned here settles at once. An owner
+ * operation that does not answer, or that refuses the hand-over, records nothing.
  */
 export async function recordArmDraw(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'SESSIONS'>>, tenant: string, reason: ArmDrawReason,
   now: number): Promise<void> {
-  const body = { reason, now };
-  if (env.SESSIONS !== undefined && ownerOperationActive(env as Env)) {
-    void afterOwnerAnswer(operator => armDrawCall(operator, tenant, '/arm-draw/record', body), 'LEARN_STATS').catch(() => undefined);
-    return;
+  const body = { reason, now }, owner = armDrawOwner;
+  if (owner && env.SESSIONS !== undefined) {
+    try {
+      if (owner.active(env)) {
+        void owner.after(operator => armDrawCall(operator, tenant, '/arm-draw/record', body)).catch(() => undefined);
+        return;
+      }
+    } catch { return; /* a hand-over that cannot be made loses the record, never the answer */ }
   }
   await armDrawCall(env, tenant, '/arm-draw/record', body);
 }
