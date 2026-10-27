@@ -265,34 +265,114 @@ export async function enrollmentAnchorOf(env: Env, tenant: TenantId, subject: st
  * own pin moved the identifier out of the class) and `ignored` (a request that
  * already carries a session named a class, which never changes its arm). A
  * per-tenant COUNT over a bounded window and nothing else — no visitor id, no
- * session, no class — written after the answer, never able to fail a decision,
- * on the same operator cache as the enrollment counter.
+ * session, no class — written after the answer, never able to fail a decision.
+ *
+ * P94 (E19, R-P485, R-P503): the count is a durable increment, so draws recorded
+ * together are all counted and the operator's read is exact. It is held by the
+ * tenant's own object on the learn statistics binding, named
+ * `arm-draw:v1:<tenant>` (never a slot's name, so it shares no slot's
+ * statistics state), on that object's one storage key and under its serializer
+ * (src/durable-objects/LearnStats.ts `armDraw`). The operator-cache document it
+ * replaces is neither read nor written, so the count starts at zero where this
+ * release first records. A call to the object that cannot be made, fails, or
+ * does not answer within `ARM_DRAW_READ_BOUND_MS` is abandoned with its transport
+ * aborted: a record is then lost and a read answers zeros; neither ever throws.
  */
 export const ARM_DRAW_REASONS = ['capped', 'ignored', 'mismatch', 'republished'] as const;
 export type ArmDrawReason = (typeof ARM_DRAW_REASONS)[number];
 export type ArmDrawCounts = Record<ArmDrawReason, number>;
+/** The name of the tenant's arm-draw object on the learn statistics binding. */
 export const armDrawKey = (tenant: string): string => `arm-draw:v1:${tenant}`;
-interface ArmDrawDocument extends ArmDrawCounts { version: 1; since: number }
-const armDrawDocument = (raw: unknown, now: number): ArmDrawDocument | null => {
+/** P94: how long one call to the tenant's arm-draw object (a read or a record) may take before it is answered without it. */
+export const ARM_DRAW_READ_BOUND_MS = 2_000;
+/** P94: what the tenant's arm-draw object holds on its one storage key. */
+export interface ArmDrawDocument extends ArmDrawCounts { version: 1; since: number }
+/** P94: the four counts of a value, each a non-negative safe integer or else zero, and nothing else of it. */
+export function armDrawCountsOf(value: unknown): ArmDrawCounts {
+  const held = (value !== null && typeof value === 'object' ? value : {}) as Partial<Record<ArmDrawReason, unknown>>;
+  const count = (key: ArmDrawReason) => { const n = held[key]; return typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : 0; };
+  return { capped: count('capped'), ignored: count('ignored'), mismatch: count('mismatch'), republished: count('republished') };
+}
+/**
+ * P94: the window in force at `now`, or null when there is none (nothing held,
+ * a value that is not one, or thirty days or more past its `since`). Only that
+ * horizon ends a window (R4): a `now` before `since` — a caller whose clock is
+ * behind, a record arriving late — is counted in the window in force and never
+ * restarts it, so records made together cannot reset each other's counts.
+ */
+export function armDrawWindow(raw: unknown, now: number): ArmDrawDocument | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const value = raw as Record<string, unknown>;
   if (value.version !== 1 || typeof value.since !== 'number' || !Number.isSafeInteger(value.since)
-    || value.since < 0 || value.since > now || now - value.since >= ENROLLMENT_HEALTH_HORIZON_MS) return null;
-  const count = (key: ArmDrawReason) => { const n = value[key]; return typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : 0; };
-  return { version: 1, since: value.since, capped: count('capped'), ignored: count('ignored'), mismatch: count('mismatch'), republished: count('republished') };
-};
-const countsOf = (doc: ArmDrawDocument | null): ArmDrawCounts =>
-  ({ capped: doc?.capped ?? 0, ignored: doc?.ignored ?? 0, mismatch: doc?.mismatch ?? 0, republished: doc?.republished ?? 0 });
-/** Never throws: an unreadable counter answers zero. */
-export async function readArmDraw(env: Pick<Env, 'CACHE'>, tenant: string, now: number): Promise<ArmDrawCounts> {
-  try { return countsOf(armDrawDocument(await env.CACHE.get(armDrawKey(tenant), 'json'), now)); }
-  catch { return countsOf(null); }
+    || value.since < 0 || now - value.since >= ENROLLMENT_HEALTH_HORIZON_MS) return null;
+  return { version: 1, since: value.since, ...armDrawCountsOf(value) };
 }
-export async function recordArmDraw(env: Pick<Env, 'CACHE'>, tenant: string, reason: ArmDrawReason, now: number): Promise<void> {
-  try {
-    const previous = armDrawDocument(await env.CACHE.get(armDrawKey(tenant), 'json'), now);
-    const next: ArmDrawDocument = { version: 1, since: previous?.since ?? now, ...countsOf(previous) };
-    next[reason] += 1;
-    await env.CACHE.put(armDrawKey(tenant), JSON.stringify(next), { expirationTtl: Math.floor(ENROLLMENT_HEALTH_HORIZON_MS / 1000) });
-  } catch { /* a diagnostic counter never fails a decision, and never retries on the shopper's time */ }
+/**
+ * P94: one call to the tenant's arm-draw object: the counts it answers, or null
+ * when the binding is absent, the call fails or is refused, or it has not
+ * answered within `ARM_DRAW_READ_BOUND_MS` — then its transport is aborted, not
+ * merely raced, so nothing is left waiting on it.
+ */
+async function armDrawCall(env: Pick<Env, 'LEARN_STATS'>, tenant: string, path: '/arm-draw/record' | '/arm-draw/read',
+  body: Record<string, unknown>): Promise<ArmDrawCounts | null> {
+  const namespace = env.LEARN_STATS;
+  if (!namespace) return null;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const bound = new Promise<null>(resolve => { timer = setTimeout(() => { controller.abort(); resolve(null); }, ARM_DRAW_READ_BOUND_MS); });
+  const call = (async () => {
+    const response = await namespace.get(namespace.idFromName(armDrawKey(tenant))).fetch(`https://learn${path}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal });
+    if (!response.ok) { await response.body?.cancel().catch(() => undefined); return null; }
+    return armDrawCountsOf(await response.json());
+  })();
+  try { return await Promise.race([call, bound]); }
+  catch { return null; }
+  finally { clearTimeout(timer); }
+}
+/**
+ * P94 (R-P503, R-P515): how a record made inside the shopper's owner follows
+ * that owner's answer. The session runtime (src/identity/sessionAuthority.ts)
+ * hands it over when it loads (`handArmDrawToOwner`); this module imports
+ * nothing of that runtime, so no bundle that reaches it — the publication
+ * store's included — carries the session runtime for it. Where the runtime is
+ * not loaded no owner operation can be active, and a record is made directly.
+ */
+export interface ArmDrawOwnerHandOver {
+  /** Whether a call made with `env` runs inside an active owner operation of the same deployment. */
+  active(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'SESSIONS'>>): boolean;
+  /** Registers `work` to start once that operation has answered, outside it, handed the learn statistics binding. */
+  after(work: (env: Pick<Env, 'LEARN_STATS'>) => Promise<unknown>): Promise<void>;
+}
+let armDrawOwner: ArmDrawOwnerHandOver | null = null;
+/** P94: the session runtime's one registration of the owner hand-over (a later registration replaces it). */
+export function handArmDrawToOwner(handOver: ArmDrawOwnerHandOver): void { armDrawOwner = handOver; }
+/** Never throws: an absent, failing or slow counter answers zeros, after at most `ARM_DRAW_READ_BOUND_MS`. */
+export async function readArmDraw(env: Pick<Env, 'LEARN_STATS'>, tenant: string, now: number): Promise<ArmDrawCounts> {
+  return await armDrawCall(env, tenant, '/arm-draw/read', { now }) ?? armDrawCountsOf(null);
+}
+/**
+ * Never throws, and never holds the answer it follows (R-P503). Outside the
+ * shopper's owner (the first-request door) the caller hands the returned promise
+ * to the platform's waitUntil after its answer. Inside the owner (a request
+ * carrying a session, the carousel beacon) any work the caller hands on is work
+ * the owner drains before it answers, and every binding call there is retained
+ * (src/identity/sessionAuthority.ts `ownerEffect`); so there the record is
+ * handed over (`ArmDrawOwnerHandOver`, the owner's `afterOwnerAnswer`) with the
+ * learn statistics binding instead: it starts once the owner has answered,
+ * outside the owner, and the promise returned here settles at once. An owner
+ * operation that does not answer, or that refuses the hand-over, records nothing.
+ */
+export async function recordArmDraw(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'SESSIONS'>>, tenant: string, reason: ArmDrawReason,
+  now: number): Promise<void> {
+  const body = { reason, now }, owner = armDrawOwner;
+  if (owner && env.SESSIONS !== undefined) {
+    try {
+      if (owner.active(env)) {
+        void owner.after(operator => armDrawCall(operator, tenant, '/arm-draw/record', body)).catch(() => undefined);
+        return;
+      }
+    } catch { return; /* a hand-over that cannot be made loses the record, never the answer */ }
+  }
+  await armDrawCall(env, tenant, '/arm-draw/record', body);
 }

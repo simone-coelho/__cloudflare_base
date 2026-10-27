@@ -1115,7 +1115,7 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
         rows: [200, expected], exploring: [200, expected] });
     }, 300_000);
 
-    it(`host (${host}): R-P412 (1), R-P413 — a content click naming a decision id that is not in the acting shopper's own ring (another visitor's, or one unknown) or naming none resolves no part, teaches only the event's own values (no catalogue format, signals.recognized false) and reads no other shopper's ring or key; her own decision's click resolves its part`, async () => {
+    it(`host (${host}): R-P412 (1), R-P413 — a content click naming a decision id that is not in the acting shopper's own ring (another visitor's, or one unknown) or naming none resolves no part, teaches only the event's own values (no catalogue format, signals.recognized false) and reads no other shopper's ring or key; the shopper's own decision's click resolves its part`, async () => {
       const m = await rangeTenant(host, 50);
       expect(Object.keys(productsOf(m, await loadDocument(m, 'catalog'))), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
       const x = await shopperOn(m), y = await shopperOn(m);

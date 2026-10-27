@@ -379,13 +379,17 @@ range forward instead).
 
 A catalog stored in parts before this index, with one `products` map and one `idIndex` in its manifest, is
 read by every reader as it is; its next PUT, import, pull or rollback writes the sharded index, every part
-unchanged (at most 512 shard writes), and nothing is asked of the operator. A tenant without `productSlots`
-reads and writes no shard.
+unchanged (at most 512 shard writes), and nothing is asked of the operator. Until that first PUT, import, pull
+or rollback after this release converts it, `GET /content/catalog?shard=` answers an empty shard for every bucket,
+while `?product=` and the product page serve it from the one-level form. A tenant without `productSlots` reads and
+writes no shard.
 
-Send a large range as files of about 200 to 300 products: each request then makes a few hundred storage calls
-(each product's part read and written, and the shards its products fall in). A nightly load in many small
-files rewrites more of the index than the same load in fewer files, since each file rewrites the shards its
-products fall in.
+Send a large range as files of about 200 to 300 products. A request's storage calls grow with its file: a file of
+about 250 products makes about 800 to 900 (its parts read and written, the product shards and id shards it
+touches, and its id-shard reads), one of about 500 products about 1,350, and a 5,000-product file about 6,000.
+Keep files to a few hundred products: the platform's own limit on one request's storage calls is not yet measured
+on the hosted stamps (lane L20). A nightly load in many small files rewrites more of the index than the same load
+in fewer files, since each file rewrites the shards its products fall in.
 
 A product page reads only its own product's records: its decision reads the head, the set, the content, slots,
 learn and reflex revisions and, when the page has a slot declared `scope: 'anchor'` and the request names a

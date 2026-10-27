@@ -897,17 +897,30 @@ export function continueAfterOwnerAnswer<T>(work: (env: Env) => Promise<T>): Pro
  * retained (the owner's drain before its answer does not wait on it) and never
  * serialized (the owner's next request does not queue behind it); it is kept
  * alive by the owner's own waitUntil alone, and runs outside every owner
- * operation. It is handed the operator cache (`CACHE`) and nothing else, so no
- * binding that reaches a shopper's state is reachable from it. Its failure is
- * the caller's to handle; it never reaches the answer.
+ * operation. It is handed the operator cache (`CACHE`) and, only where the work
+ * names it, the learn statistics binding (`LEARN_STATS`: P94, R-P503, the
+ * tenant's arm-draw count), and nothing else, so no binding that reaches a
+ * shopper's state is reachable from it. Its failure is the caller's to handle;
+ * it never reaches the answer.
  */
-export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE'>) => Promise<unknown>): Promise<void> {
+export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE'>) => Promise<unknown>): Promise<void>;
+export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE' | 'LEARN_STATS'>) => Promise<unknown>, handed: 'LEARN_STATS'): Promise<void>;
+export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE' | 'LEARN_STATS'>) => Promise<unknown>, handed?: 'LEARN_STATS'): Promise<void> {
   const first = invocation.getStore();
   if (!first?.active || !first.continuation) return Promise.reject(new SessionAccessError());
   try { recheckOwnerInvocation(first.owner); } catch (error) { return Promise.reject(error); }
-  const operator = { CACHE: first.env.CACHE };
+  const operator: Pick<Env, 'CACHE' | 'LEARN_STATS'> = handed === 'LEARN_STATS' ? { CACHE: first.env.CACHE, LEARN_STATS: first.env.LEARN_STATS } : { CACHE: first.env.CACHE };
   const task = new Promise<boolean>(resolve => { (first.afterAnswer ??= []).push(resolve); })
     .then(answered => (answered ? invocation.exit(() => work(operator)) : undefined)).then(() => undefined);
   first.continuation.waitUntil(task.then(() => undefined, () => undefined));
   return task;
 }
+/**
+ * P94 (R-P503, R-P515): the arm-draw count's records made inside an owner
+ * operation follow its answer through `afterOwnerAnswer`, handed the learn
+ * statistics binding (src/content/holdout.ts `recordArmDraw`). The session
+ * runtime registers the hand-over here, when it loads, so holdout.ts (which the
+ * publication store reaches) imports nothing of this module.
+ */
+import { handArmDrawToOwner } from '@/content/holdout';
+handArmDrawToOwner({ active: env => ownerOperationActive(env as Env), after: work => afterOwnerAnswer(work, 'LEARN_STATS') });
