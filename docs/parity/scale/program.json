@@ -176,7 +176,7 @@
     {
       "id": "P94",
       "title": "Exact `arm_draw` counts (**amendment 12, E19, 2026-10-26**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
