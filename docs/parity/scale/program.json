@@ -22,7 +22,7 @@
     {
       "id": "P93",
       "title": "The catalogue index for 40,000 products and more (**amendment 12, E18, 2026-10-26**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
