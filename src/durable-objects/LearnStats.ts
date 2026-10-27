@@ -1,6 +1,6 @@
 // src/durable-objects/LearnStats.ts
-// One object per tenant, brand and slot. Application budgets bound admission;
-// refusal never evicts evidence or changes the estimator's pooling semantics.
+// One object per tenant, brand and slot, and one per tenant for its arm-draw count (P94). Application budgets bound
+// admission; refusal never evicts evidence or changes the estimator's pooling semantics.
 
 import type { Env } from '@/types/env';
 import { SyntheticObjectBoundary, syntheticOperation } from '@/ops/synthetic';
@@ -20,7 +20,7 @@ import { requireRetention } from '@/retention';
 import { learningEffectId, recoveryDigest, RECOVERY_LIMITS, type LearningEffect, type LearningGeneration } from '@/ledger/recovery';
 import { channelIn } from '@/services/visit';
 import { contextTermsOf, TODAY_TERMS, type ContextTerms } from '@/content/cell';
-
+import { ARM_DRAW_REASONS, armDrawCountsOf, armDrawWindow, type ArmDrawDocument, type ArmDrawReason } from '@/content/holdout';
 const PUBLISH_DELAY_MS = 30_000;
 /**
  * P70 (amendment 9, R-P191, R-P195): the keep-warm heartbeat. After a touch — an answered witness call, an exposure
@@ -712,7 +712,7 @@ export class LearnStats {
         });
         return json({ ok: true, item: b.item, had });
       }
-      return json({ ok: false, error: 'not found' }, 404);
+      return path === '/arm-draw/record' || path === '/arm-draw/read' ? await this.armDraw(path === '/arm-draw/record', await input(request)) : json({ ok: false, error: 'not found' }, 404);
     } catch (error) { return failure(error); }
   }
 
@@ -1994,6 +1994,33 @@ export class LearnStats {
     this.data = null;
     await this.arm();
     return json({ ok: true, recovered: true, digest: after, generation: nextFence.whole });
+  }
+
+  /** P94 (E19): the one storage key of a tenant's arm-draw object (`armDraw`). */
+  private static readonly ARM_DRAW_STORAGE_KEY = 'armDraw';
+  /**
+   * P94 (E19, R-P485): the tenant's arm-draw count, held by its own object of this class, named `arm-draw:v1:<tenant>`
+   * (src/content/holdout.ts `recordArmDraw`, `readArmDraw`), on one storage key read and written under this object's
+   * serializer, so records made together are all counted, and in storage, so the count survives the object starting
+   * again. It loads no slot state, publishes nothing, writes no key-value entry and arms no alarm (P70's keep-warm is a
+   * slot object's); a read writes nothing. A record `{ reason, now }` counts one draw of a known reason and answers the
+   * counts after it (any other reason is refused 400 and nothing is counted); a read `{ now }` answers the counts. The
+   * window runs thirty days from its first record: read past it, the count is zeros; a record past it starts a new
+   * window at its `now`; a record whose `now` precedes the window's start counts in it (`armDrawWindow`). Its two paths,
+   * `/arm-draw/record` and `/arm-draw/read`, are answered after every slot path (`fetchScoped`).
+   */
+  private async armDraw(record: boolean, b: Record<string, unknown>): Promise<Response> {
+    const now = b.now, reason = b.reason;
+    if (!fields(b, record ? ['reason', 'now'] : ['now']) || typeof now !== 'number' || !Number.isSafeInteger(now) || now < 0
+      || (record && !(typeof reason === 'string' && (ARM_DRAW_REASONS as readonly string[]).includes(reason)))) throw invalid();
+    return await this.serialize(async () => {
+      const held = armDrawWindow(await this.state.storage.get(LearnStats.ARM_DRAW_STORAGE_KEY), now);
+      if (!record) return json(armDrawCountsOf(held));
+      const next: ArmDrawDocument = held ?? { version: 1, since: now, ...armDrawCountsOf(null) };
+      next[reason as ArmDrawReason] = Math.min(next[reason as ArmDrawReason] + 1, Number.MAX_SAFE_INTEGER);
+      await this.state.storage.put(LearnStats.ARM_DRAW_STORAGE_KEY, next);
+      return json(armDrawCountsOf(next));
+    });
   }
 
   private serialize<T>(fn: () => Promise<T>): Promise<T> {

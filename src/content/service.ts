@@ -461,8 +461,8 @@ export async function tenantCatalogVocabulary(
   const references = event && vocabulary.catalog?.index ? productReferencesOf(event) : [];
   if (!references.length || !vocabulary.catalog) return vocabulary.value;
   // P93: a sharded catalogue names its products through its shards: each id the event names that the vocabulary does
-  // not already hold is looked up in its one shard (held per isolate by digest). A shard that cannot be read calls the
-  // id nothing (as an unreadable catalogue publishes no vocabulary), so an outage never turns into refused traffic.
+  // not already hold is looked up in its one shard (held per isolate by digest). A shard that cannot be read counts the
+  // id as recognised (the outage rule above: nothing is called unrecognised), so an outage never refuses traffic.
   const found: string[] = [];
   for (const id of new Set(references)) {
     if (vocabulary.value.ids.has(id)) continue;
