@@ -27,6 +27,10 @@
 //   4. Off the shopper's time: the record after the answer under waitUntil, never for a synthetic operation (unchanged
 //      callers); a missing binding, a rejecting fetch or a fetch not answering within ARM_DRAW_READ_BOUND_MS (2,000 ms, a
 //      code constant in holdout.ts) neither fails nor delays a decision, a beacon or the learn queue (200, zeros in the shape).
+//      RULED R-P503 (F1, the bounded wait refused): the two records the shopper's owner holds — a request carrying a session
+//      (ignored) and the carousel beacon (mismatch) — follow the owner's answer through afterOwnerAnswer
+//      (src/identity/sessionAuthority.ts, handing LEARN_STATS beside CACHE and nothing else), so the shopper's answer never
+//      waits on the counter; the first-request door's waitUntil stays; the learn queue's own read stays bounded at 2,000 ms.
 //   5. The kit: kit 02 states `arm_draw` as an exact count of every reason over thirty days naming no visitor; "read as a
 //      floor" leaves that sentence; `enrollment_anchor_unavailable` keeps its own floor sentence.
 // NEW EXPORT IMPORTED: ARM_DRAW_READ_BOUND_MS from src/content/holdout.ts (point 4); RED on its absence where named.
@@ -40,12 +44,13 @@
 //      reason the republication decides are held at a point of the real path: the republished ones at their forward to
 //      the shopper's object (between the mint's holdout read and the decision's pin), the late ones in flight before the
 //      worker (so their mint reads the republished holdout). The republication is the operator's own PUT /content/learn.
-//   R3 "Neither delays": no answer waits on the counter beyond ARM_DRAW_READ_BOUND_MS. The first-request door's record
-//      is after its answer (the platform's waitUntil: the door answers while its record is still unanswered); a request
-//      carrying a session (ignored) and a beacon (mismatch) are answered by the shopper's owner, which drains the work
-//      it retains before it answers (src/identity/sessionAuthority.ts runOwnerOperation, retainOwnerWork; every binding
-//      call inside the owner is retained, ownerEffect), so a hanging counter may hold those answers up to the bound and
-//      no longer. The hanging double honours the request's abort signal, as the platform's transport does.
+//   R3 (as ruled, R-P503) "Neither delays": a decision, a request carrying a session and a beacon wait on the counter
+//      not at all — each answers in its ordinary time (ANSWER_BOUND_MS absolute, NOISE_MS beside its healthy time) while
+//      the counter does not answer, and its record lands after the answer; only the learn queue's read waits, and no
+//      longer than ARM_DRAW_READ_BOUND_MS. The shopper's owner drains the work it retains before it answers
+//      (src/identity/sessionAuthority.ts runOwnerOperation, retainOwnerWork; every binding call inside the owner is
+//      retained, ownerEffect), so a record kept as owner work holds those answers (the wrong fix `retained`). The doubles
+//      honour the request's abort signal, as the platform's transport does.
 //   R4 A record whose `now` is earlier than the window's `since` (two callers' clocks, a record arriving late) is counted
 //      in the window in force, never restarts it: today's `value.since > now` restart (holdout.ts armDrawDocument) would
 //      lose increments under exactly the concurrency AD1 names. Only the horizon restarts the window.
@@ -53,11 +58,17 @@
 //   R6 "Never synthetic" is held by the callers, outside the grant (decisions.ts countArmDraw, service.ts
 //      admitCarouselExposure); no synthetic operation sends an `arm` member or a carousel beacon (src/ops/synthetic.ts
 //      runSynthetic), so no path can make a synthetic draw; AD3's logic leg locks both guards in the callers' source.
-//   R7 A read that finds no draw is not asserted to write nothing (not ruled).
+//   R7 (closed by R-P503) A read writes nothing to the object's storage: on an object with no draw, and past the horizon.
 //
 // LOCKS (R10 sweep, measured under the sketch, nothing to re-form): P84 (src/units/P84/LEDGER.unit.test.ts :1096-1162,
 // arm_draw read through the queue), P85 (src/units/P85/LEDGER.unit.test.ts :274-288), W21 B2 :766-767 and :1024
-// (`enrollment_anchor_unavailable`'s floor sentence, unchanged), P84.CO4 :1230 (/`arm_draw`/ in kit 02, kept).
+// (`enrollment_anchor_unavailable`'s floor sentence, unchanged), P84.CO4 :1230 (/`arm_draw`/ in kit 02, kept); P61.LO3
+// (src/units/P61/LEDGER.unit.test.ts :485, the learning-read count's work reaching `['CACHE']` alone) holds only if
+// afterOwnerAnswer hands LEARN_STATS to the work that asks for it (the sketch: a second parameter, CACHE alone by default);
+// handed to every work it goes RED there (measured, for the lead). P68.KT1 (src/units/P68/LEDGER.unit.test.ts :307-313) holds
+// only while no line the kits cite in LearnStats.ts moves (kit 02 :1269 cites :1365-1366 and :1392-1394, kit 03 :1649 cites
+// :741; kit 03 is outside the grant): the sketch dispatches the two paths on fetch's own line and places its method before
+// `serialize`; a sketch adding lines above :741 turned it RED (measured, for the lead).
 // DEFERRED: LV1 (P84's and P85's live rows on the object host at the next lane, L20).
 // RESIDUALS: the count restarts at the release (the KV document is not carried, ruled); a bounded read answers zeros
 // under failure (the only approximation, ruled); `enrollment_anchor_unavailable` stays a KV floor (not this ticket).
@@ -120,6 +131,8 @@ const HORIZON_MS = 30 * DAY_MS;
 const BOUND_MS = typeof ARM_DRAW_READ_BOUND_MS === 'number' ? ARM_DRAW_READ_BOUND_MS : 2_000;
 /** R3: what an answer may cost beyond its healthy time when it does not wait on the counter (machine noise). */
 const NOISE_MS = 1_000;
+/** R3 (R-P503): an answer in its ordinary time, well under the bound (the harness answers these in 4-13 ms). */
+const ANSWER_BOUND_MS = 500;
 /** R1: the read cache of deployed KV (cacheTtl's default, 60 s). */
 const KV_READ_CACHE_MS = 60_000;
 /** W21 B2's lock (src/units/W21/B2.unit.test.ts :766-767): the enrollment counter's own floor sentence, unchanged. */
@@ -288,6 +301,29 @@ function counterFault(m: Mounted, fault: Fault): { calls: Array<{ path: string; 
   else env.LEARN_STATS = { idFromName: (name: string) => base.idFromName(name), get: (target: DurableObjectId) => String(target) === ARM_DRAW_OBJECT ? faulty : base.get(target) };
   return { calls, restore: () => { for (const fail of held.splice(0)) fail(); env.LEARN_STATS = base; } };
 }
+/**
+ * R-P503: the tenant's arm-draw object answering nothing until `release()`, which hands every call still held to the
+ * object as it was made; a call its caller aborts meanwhile fails as the platform's would; every other object as before.
+ */
+function counterHeld(m: Mounted): { calls: Array<{ path: string; settled: boolean }>; release: () => void } {
+  const env = m.env as unknown as Record<string, unknown>, base = m.env.LEARN_STATS!;
+  const calls: Array<{ path: string; settled: boolean }> = [], opened = gate();
+  const held = { fetch: (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = input instanceof Request ? input.url : String(input), signal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
+    const call = { path: new URL(url).pathname, settled: false };
+    calls.push(call);
+    return new Promise<Response>((resolve, reject) => {
+      signal?.addEventListener('abort', () => { if (!call.settled) { call.settled = true; reject(new DOMException('The operation was aborted.', 'AbortError')); } }, { once: true });
+      void opened.wait.then(async () => {
+        if (call.settled) return;
+        try { const answer = await base.get(base.idFromName(ARM_DRAW_OBJECT)).fetch(input, init); call.settled = true; resolve(answer); }
+        catch (error) { call.settled = true; reject(error); }
+      });
+    });
+  } };
+  env.LEARN_STATS = { idFromName: (name: string) => base.idFromName(name), get: (target: DurableObjectId) => String(target) === ARM_DRAW_OBJECT ? held : base.get(target) };
+  return { calls, release: () => { env.LEARN_STATS = base; opened.open(); } };
+}
 
 // ===========================================================================
 // unit:P94.AD1 — a burst of every reason, issued together, counted in full on both hosts
@@ -409,12 +445,16 @@ describe('unit:P94.AD2', () => {
       expect.soft({ named, classes: /default|personalized|ineligible/.test(words) }, `${host}: P94.AD2 — the count names no visitor, session or class`).toEqual({ named: [], classes: false });
     }, 180_000);
 
-    it(`host (${host}): the object's two paths — POST /arm-draw/record { reason, now } answers the counts after its increment and POST /arm-draw/read { now } answers exactly { capped, ignored, mismatch, republished }; an unknown reason is refused 400 and never counted; forty records issued together are all counted (the increment serialized); the count survives the object starting again over its storage (never in memory only); the thirty-day window — counted a day before the horizon, zeros a day past it, a record past it starting a new window at its now, and a record whose now is earlier than the window's since counted in it (R4); one key, no alarm`, async () => {
+    it(`host (${host}): the object's two paths — POST /arm-draw/record { reason, now } answers the counts after its increment and POST /arm-draw/read { now } answers exactly { capped, ignored, mismatch, republished }; an unknown reason is refused 400 and never counted; forty records issued together are all counted (the increment serialized); the count survives the object starting again over its storage (never in memory only); the thirty-day window — counted a day before the horizon, zeros a day past it, a record past it starting a new window at its now, and a record whose now is earlier than the window's since counted in it (R4); one key, no alarm; a read writes nothing to the object's storage, on an object with no draw and past the horizon (R7)`, async () => {
       const m = await mount(host, docsAt(0));
       expectPublished(m, 'P94.AD2 — the documents publish');
       const T = Date.now();
       const record = (reason: unknown, now: number) => onObject(m, '/arm-draw/record', reason === undefined ? { now } : { reason, now });
       const read = (now: number) => onObject(m, '/arm-draw/read', { now });
+      const registry = () => m.stats.get(ARM_DRAW_OBJECT);
+      const first = await read(T);
+      expect.soft({ read: first, stored: storedOf(registry()) ?? {} }, `${host}: P94.AD2 — an object with no draw reads zeros and its read writes nothing (R7)`)
+        .toEqual({ read: { status: 200, body: ZERO }, stored: {} });
       const sequential = [await record('capped', T), await record('capped', T + 1_000), await record('ignored', T + DAY_MS)];
       expect.soft(sequential, `${host}: P94.AD2 — each record answers the counts after its increment (today the object has no such path: ${show(sequential[0])})`).toEqual([
         { status: 200, body: { ...ZERO, capped: 1 } }, { status: 200, body: { ...ZERO, capped: 2 } }, { status: 200, body: { ...ZERO, capped: 2, ignored: 1 } }]);
@@ -423,7 +463,6 @@ describe('unit:P94.AD2', () => {
       expect.soft({ refused, read: await read(T + 29 * DAY_MS) }, `${host}: P94.AD2 — an unknown reason refused 400, nothing counted; the read a day before the horizon answers the window`)
         .toEqual({ refused: refused.map(([reason]) => [reason, 400]), read: { status: 200, body: { ...ZERO, capped: 2, ignored: 1 } } });
       const burst = await Promise.all(REASONS.flatMap(reason => Array.from({ length: 10 }, (_, k) => record(reason, T + 2 * DAY_MS + k))));
-      const registry = () => m.stats.get(ARM_DRAW_OBJECT);
       expect.soft({ statuses: [...new Set(burst.map(a => a.status))], read: await read(T + 29 * DAY_MS), stored: storedOf(registry()), alarm: await alarmOf(registry()) },
         `${host}: P94.AD2 — forty records issued together all counted, on the one key armDraw, no alarm armed`).toEqual({ statuses: [200],
         read: { status: 200, body: { capped: 12, ignored: 11, mismatch: 10, republished: 10 } },
@@ -433,11 +472,12 @@ describe('unit:P94.AD2', () => {
         .toEqual({ restarted: true, read: { status: 200, body: { capped: 12, ignored: 11, mismatch: 10, republished: 10 } } });
       const past = T + HORIZON_MS + DAY_MS;
       const pastRead = await read(past);
+      const afterPastRead = storedOf(registry());
       const renewed = await record('mismatch', past);
       const lateClock = await record('capped', past - 1_000);
-      expect.soft({ pastRead, renewed, lateClock, read: await read(past), stored: storedOf(registry()) },
-        `${host}: P94.AD2 — the window: zeros a day past thirty days, a record there starts a new window at its now, a record whose now precedes that since counts in it (R4)`)
-        .toEqual({ pastRead: { status: 200, body: ZERO }, renewed: { status: 200, body: { ...ZERO, mismatch: 1 } }, lateClock: { status: 200, body: { ...ZERO, capped: 1, mismatch: 1 } },
+      expect.soft({ pastRead, afterPastRead, renewed, lateClock, read: await read(past), stored: storedOf(registry()) },
+        `${host}: P94.AD2 — the window: zeros a day past thirty days and that read writes nothing (R7), a record there starts a new window at its now, a record whose now precedes that since counts in it (R4)`)
+        .toEqual({ pastRead: { status: 200, body: ZERO }, afterPastRead: { armDraw: { version: 1, since: T, capped: 12, ignored: 11, mismatch: 10, republished: 10 } }, renewed: { status: 200, body: { ...ZERO, mismatch: 1 } }, lateClock: { status: 200, body: { ...ZERO, capped: 1, mismatch: 1 } },
           read: { status: 200, body: { ...ZERO, capped: 1, mismatch: 1 } }, stored: { armDraw: { version: 1, since: past, ...ZERO, capped: 1, mismatch: 1 } } });
     }, 120_000);
 
@@ -473,7 +513,7 @@ describe('unit:P94.AD3', () => {
   for (const host of HOSTS) {
     for (const fault of ['missing', 'rejecting', 'hanging'] as const) {
       const what = fault === 'missing' ? 'the LEARN_STATS binding absent' : fault === 'rejecting' ? 'every call on the arm-draw object rejecting' : 'every call on the arm-draw object never answering';
-      it(`host (${host}): ${what} — a first request (mismatch), a request carrying a session and naming a class (ignored) and a P85 beacon (mismatch) answer as they do with the counter healthy, and the learn queue answers 200 with arm_draw zeros in the shape; ${fault === 'hanging' ? `the first request answers while its record is still unanswered (after the answer), and no answer waits beyond ARM_DRAW_READ_BOUND_MS (2,000 ms, R3)` : 'no answer waits on the counter'}`, async () => {
+      it(`host (${host}): ${what} — a first request (mismatch), a request carrying a session and naming a class (ignored) and a P85 beacon (mismatch) answer as they do with the counter healthy, and the learn queue answers 200 with arm_draw zeros in the shape; ${fault === 'hanging' ? `the first request answers while its record is still unanswered (after the answer); the first request, the request carrying a session and the beacon answer no later than with the counter healthy, and only the learn queue's read waits, no longer than ARM_DRAW_READ_BOUND_MS (2,000 ms, R3 as ruled by R-P503)` : 'no answer waits on the counter'}`, async () => {
         const m = await mount(host, docsAt(0));
         expectPublished(m, 'P94.AD3 — the documents publish');
         const version = await tableVersion(m);
@@ -509,20 +549,46 @@ describe('unit:P94.AD3', () => {
         }
         const allowed = fault === 'hanging' ? BOUND_MS + NOISE_MS : NOISE_MS;
         const late = (name: 'asked' | 'beacon' | 'queue') => faulted![name].ms - healthy[name].ms;
-        expect.soft({ door: faulted!.door.ms - healthy.door.ms <= NOISE_MS, asked: late('asked') <= allowed, beacon: late('beacon') <= allowed, queue: late('queue') <= allowed,
+        expect.soft({ door: faulted!.door.ms - healthy.door.ms <= NOISE_MS, asked: late('asked') <= NOISE_MS, beacon: late('beacon') <= NOISE_MS, queue: late('queue') <= allowed,
           ...(fault === 'hanging' ? { afterTheAnswer: !faulted!.recordSettledAtDoor && broken.calls.some(call => call.path === '/arm-draw/record') } : {}) },
-        `${host}: P94.AD3 — ${what}: the first request no later than healthy (${Math.round(healthy.door.ms)} → ${Math.round(faulted!.door.ms)} ms), the others within ${allowed} ms of healthy (asked ${Math.round(healthy.asked.ms)} → ${Math.round(faulted!.asked.ms)}, beacon ${Math.round(healthy.beacon.ms)} → ${Math.round(faulted!.beacon.ms)}, queue ${Math.round(healthy.queue.ms)} → ${Math.round(faulted!.queue.ms)} ms)`)
+        `${host}: P94.AD3 — ${what}: the first request, the request carrying a session and the beacon within ${NOISE_MS} ms of healthy, the queue within ${allowed} ms (door ${Math.round(healthy.door.ms)} → ${Math.round(faulted!.door.ms)} ms, asked ${Math.round(healthy.asked.ms)} → ${Math.round(faulted!.asked.ms)}, beacon ${Math.round(healthy.beacon.ms)} → ${Math.round(faulted!.beacon.ms)}, queue ${Math.round(healthy.queue.ms)} → ${Math.round(faulted!.queue.ms)} ms)`)
           .toEqual({ door: true, asked: true, beacon: true, queue: true, ...(fault === 'hanging' ? { afterTheAnswer: true } : {}) });
+      }, 120_000);
+    }
+
+    for (const kind of ['ignored', 'mismatch'] as const) {
+      const what = kind === 'ignored' ? 'a decision request carrying her session and naming the other class (ignored)' : 'a P85 carousel beacon whose claimed class differs from the engine\'s arm (mismatch)';
+      it(`host (${host}): R-P503 — under a counter that does not answer until released, ${what} is answered in its ordinary time, within ${ANSWER_BOUND_MS} ms, its record not settled when it answers (the shopper's owner never waits on the counter); once the object answers, the learn queue reads the count`, async () => {
+        const m = await mount(host, docsAt(0));
+        expectPublished(m, 'P94.AD3 — the documents publish');
+        const version = await tableVersion(m);
+        expect(version, `${host}: PRECONDITION P84 — the context table answers its version`).toMatch(/^[a-f0-9]{64}$/);
+        const [s] = await shoppers(m, 1);
+        const held = counterHeld(m);
+        let answered = NO_ANSWER(0), settledAtAnswer = true;
+        try {
+          answered = await send(m, kind === 'ignored' ? askedRequest(s!, 'default', version, 'p94-ad3-held-asked') : beaconRequest(s!, 'default', version, 'p94-ad3-held-beacon'), BOUND_MS + 5_000);
+          settledAtAnswer = held.calls.some(call => call.path === '/arm-draw/record' && call.settled);
+        } finally { held.release(); }
+        await Promise.race([m.drain(), sleep(10_000)]);
+        const counted = await armDrawOf(m);
+        expect.soft({ answer: kind === 'ignored' ? [answered.status, armRequestOf(answered)] : beaconOf(answered), ordinaryTime: answered.ms <= ANSWER_BOUND_MS,
+          recordAfterTheAnswer: !settledAtAnswer && held.calls.some(call => call.path === '/arm-draw/record'), counted },
+        `${host}: P94.AD3 — R-P503: answered in ${Math.round(answered.ms)} ms while the counter held its record (today the record is a KV write the held object never sees; a record kept as owner work holds the answer until the bound and is lost)`)
+          .toEqual({ answer: kind === 'ignored' ? [200, { class: 'default', honoured: false, reason: 'ignored' }] : [200, 'admitted', PAINTED.length, 'default'],
+            ordinaryTime: true, recordAfterTheAnswer: true, counted: { ...ZERO, [kind]: 1 } });
       }, 120_000);
     }
   }
 
-  it('logic: LOCK — the callers stay as they are (outside the grant): the first-request door and the decision route count through countArmDraw, which returns at once for a synthetic operation and hands the record to the platform\'s waitUntil after the answer; the carousel beacon counts its mismatch only outside a synthetic operation (R6)', () => {
+  it('logic: LOCK — never for a synthetic operation (R6): every record of a draw in src/routes/decisions.ts and src/content/service.ts is reached only outside one (decisions.ts countArmDraw returns at once for a synthetic operation; the beacon records its mismatch under !syntheticOperation()), and the first-request door and the decision route still count through countArmDraw, which hands the record to the platform\'s waitUntil', () => {
     const decisions = readFileSync(new URL('src/routes/decisions.ts', ROOT), 'utf8'), service = readFileSync(new URL('src/content/service.ts', ROOT), 'utf8');
-    const countArmDraw = /function countArmDraw\([^)]*\): void \{\s*if \(syntheticOperation\(\)\) return;\s*const counted = recordArmDraw\(c\.env, tenant, reason, Date\.now\(\)\);\s*try \{ c\.executionCtx\.waitUntil\(counted\); \}/;
-    const beacon = /armClassOf\(armClaimed\) !== armClassOf\(engineArm\) && !syntheticOperation\(\) \? recordArmDraw\(env, tenant, 'mismatch', now\) : null/;
-    expect({ countArmDraw: countArmDraw.test(decisions), callers: (decisions.match(/countArmDraw\(c, tenant, /g) ?? []).length, beacon: beacon.test(service) },
-      'P94.AD3 — LOCK: the synthetic guard and the after-the-answer hand-off are the unchanged callers\'').toEqual({ countArmDraw: true, callers: 2, beacon: true });
+    /** Each line calling recordArmDraw (imports aside), with the three lines before it. */
+    const records = (text: string) => text.split('\n').flatMap((line, i, lines) => line.includes('recordArmDraw(') && !/^\s*import\b/.test(line) ? [lines.slice(Math.max(0, i - 3), i + 1).join('\n')] : []);
+    const fromDecisions = records(decisions), fromService = records(service);
+    expect({ decisions: fromDecisions.length > 0 && fromDecisions.every(lines => /syntheticOperation\(\)/.test(lines)), service: fromService.length > 0 && fromService.every(lines => /!syntheticOperation\(\)/.test(lines)),
+      waitUntil: /function countArmDraw\([\s\S]{0,400}?c\.executionCtx\.waitUntil\(counted\)/.test(decisions), callers: (decisions.match(/countArmDraw\(c, tenant, /g) ?? []).length },
+    'P94.AD3 — LOCK: the synthetic guard on every record, the door\'s waitUntil hand-off kept').toEqual({ decisions: true, service: true, waitUntil: true, callers: 2 });
   });
 });
 
