@@ -32,7 +32,7 @@ import { LegacyDocumentError, readIndex, readVersion, rollback, write, type Docu
 import { assertPublicationBase, completePublicationSet, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
   readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationPin,
   catalogPartStored, readCatalogPart, writeCatalogPart, type CatalogPart, catalogIdIndexStored, readCatalogIdIndex,
-  catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard, writeCatalogIdShard, writeCatalogShard,
+  catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardStored, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard, writeCatalogIdShard, writeCatalogShard,
   type CatalogIdShard, type CatalogShard } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf, LAYOUTS_KIND, slotsCarryOrders, unapprovedOrders } from '@/content/kinds';
@@ -496,14 +496,23 @@ async function partedPutPlan(env: Env, scope: string, current: ContentCatalog | 
   for (const product of unknown) if (!await edit.pointer(product)) errors.push(`removeProducts: ${quotedId(product)} names no product the catalogue in force holds`);
   if (errors.length) throw new VocabularyRefusal(errors);
   // The ids each product the PUT changes holds now (its part as stored; a lost part holds none it can name).
-  const known = new Map<string, Set<unknown>>();
+  const known = new Map<string, Set<unknown>>(), lost = new Set<string>();
   const idsOf = async (product: string): Promise<Set<unknown>> => {
     const pointer = await edit.pointer(product);
     if (!pointer) return new Set();
     try { return new Set(((await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[]).map(piece => piece.id)); }
-    catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') return new Set(); throw error; }
+    catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') { lost.add(product); return new Set(); } throw error; }
   };
   for (const product of [...removed, ...routed.parts.keys()]) known.set(product, await idsOf(product));
+  // A removed product whose part is lost names its ids nowhere but the id index in force: they are read from there
+  // (every id shard, or P86's one-level index) and dropped with it, so no id is left naming a product that is gone.
+  const removedLost = [...lost].filter(product => removed.has(product));
+  if (removedLost.length) {
+    const owners: Array<Record<string, string>> = current?.index
+      ? await Promise.all(Object.values(current.index.ids).map(async pointer => (await readCatalogIdShard(env, scope, pointer.digest)).ids))
+      : [Object.fromEntries(await idIndexInForce(env, scope, current))];
+    for (const ids of owners) for (const [id, owner] of Object.entries(ids)) if (removedLost.includes(owner)) known.get(owner)!.add(id);
+  }
   const stale = new Set<string>(), ownerOf = ownerCheck(env, scope, edit, known, stale);
   const keeps = (owner: string) => !removed.has(owner) && !routed.parts.has(owner);
   const shared = new Set(current?.pieces.map(piece => piece.id) ?? []), slots = new Set(catalog.productSlots), collisions: Collision[] = [];
@@ -552,6 +561,8 @@ async function catalogueOverRollback(env: Env, scope: string, current: ContentCa
     checks = shards.length + ids.length;
     if (checks > ROLLBACK_CHECKS) throw rollbackTooLarge(checks);
     for (const [name, pointer] of shards) {
+      // The store is the witness of a shard's existence, never this isolate's shard cache: one HEAD each.
+      if (!await catalogShardStored(env, scope, pointer.digest)) { missing.push(`index shard ${name}`); continue; }
       let shard: CatalogShard;
       try { shard = await readCatalogShard(env, scope, pointer.digest); }
       catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') { missing.push(`index shard ${name}`); continue; } throw error; }
