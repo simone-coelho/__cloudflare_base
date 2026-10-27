@@ -292,16 +292,23 @@ size; either way nothing is stored. This is a measured application envelope, not
 latency or SLO commitment. A range larger than one document (one image record per image across every
 product) is stored in parts, below.
 
-**The catalog in parts: a manifest and one part per product.** A catalog that declares `productSlots`
-(the slot types whose records are product-scoped, for example `["pdp-carousel"]`, written by a PUT of the
-catalog and kept by every load) is stored as a manifest: `pieces` holds the shared pieces (modules, heroes,
-every piece that is not product-scoped), and `products` indexes one part per product,
-`{ "<productId>": { "digest": "<64 hex>", "records": <count> } }`. Each part is one immutable object
-holding that product's records, `{ product, pieces }`, at most 2 MiB, addressed by the SHA-256 of its
-canonical bytes, which is the digest its pointer names; it is written before the publication commits, so a
-load whose part cannot be written commits nothing and leaves nothing pending. The catalog stays one document
-with one revision, one `If-Match` and one rollback: the manifest's digest covers every part's, so a change
-to any record moves N, S and H.
+**The catalog in parts: a manifest, a sharded index and one part per product.** A catalog that declares
+`productSlots` (the slot types whose records are product-scoped, for example `["pdp-carousel"]`, written by a
+PUT of the catalog and kept by every load) is stored as a manifest: `pieces` holds the shared pieces (modules,
+heroes, every piece that is not product-scoped), and `index` names the shards of its product index,
+`{ "key": "sha256-hex2", "shards": { "<hex2>": { "digest": "<64 hex>", "products": <count>, "records": <count> } }, "ids": { "<hex2>": { "digest": "<64 hex>", "records": <count> } } }`.
+A product falls in the shard named by the first two hexadecimal digits of the SHA-256 of its id's UTF-8
+bytes, so the 256 shards share the range evenly whatever form your product ids take. Each product shard is one
+immutable object, `{ shard, products: { "<productId>": { "digest", "records" } } }`, pointing each of its
+products at its part; each id shard, keyed the same way by the record id, is `{ shard, ids: { "<record id>":
+"<productId>" } }`, naming the product whose part holds each part record (expired ones included). Only shards
+that hold something are listed. Each part is one immutable object holding that product's records,
+`{ product, pieces }`, at most 2 MiB, addressed by the SHA-256 of its canonical bytes, which is the digest its
+pointer names. Parts and shards are written before the publication commits, so a load whose part or shard
+cannot be written commits nothing and leaves nothing pending. The catalog stays one document with one revision,
+one `If-Match` and one rollback: the manifest's digest covers every shard's, and every shard's covers its
+parts', so a change to any record moves N, S and H. The manifest stays the size of its shared pieces and at
+most 512 shard pointers (about 50 KB) at 5,000, 40,000 or 100,000 products alike.
 
 Routing, on the import, the pull and the PUT: a record whose `slotTypes` are all in `productSlots` and which
 names `featuredProductIds` goes to the part of its first id; every other piece is shared. Write a two-id
@@ -316,59 +323,83 @@ The modes act per product. `merge` upserts by id inside the parts of the product
 shared pieces. `replace` and `full` replace each named product's part whole (`full` keeping that product's
 left-out records expired, with `expire` counted over the named products), and act on the shared pieces only
 when the file carries a shared piece; every product the file does not name keeps its part, so a whole range
-arrives as several loads, each within the input bound. The skip compares the manifest's digest, a dry run
-writes nothing, no part included, and the answer's `pieces` counts the shared pieces and every part's
-records.
+arrives as several loads, each within the input bound. A load reads the shards of the products it names and
+those products' parts, and the id shards only of the ids whose place can change (a record its product's part
+does not hold yet, a piece newly shared, an id a `replace`, a `full` or a move drops), so a load that only
+retitles records reads no id shard; it writes only the parts and shards whose digest moved, never an
+unchanged part again. The skip compares the manifest's digest, a dry run writes nothing, no part or shard
+included, and the answer's `pieces` counts the shared pieces and every part's records.
 
-`GET /content/catalog` answers the manifest, `envelope.pieces` counting the shared pieces and every part's
-records, `envelope.bytes` the manifest's own size and `envelope.products` the number of parts;
-`GET /content/catalog?scope=<tenant>&product=<productId>` answers one product's part, and `404` naming a
-product the manifest does not index. A PUT carries the manifest's `products` pointers as it read them (a
-GET→PUT round trip keeps every part); a pointer the revision in force does not hold is refused `422` naming
-the product, and a PUT that leaves a product's pointer out removes that product's part from the catalog, as
-a PUT that leaves a piece out removes it.
+`GET /content/catalog` answers the manifest with its `index`, `envelope.pieces` counting the shared pieces and
+every part's records, `envelope.bytes` the manifest's own size and `envelope.products` the number of products
+the index names; it never assembles the whole product list. `GET /content/catalog?scope=<tenant>&shard=<hex2>`
+answers one product shard (`document: { shard, products }`, empty for a shard the index does not list; `400`
+for anything but two lowercase hexadecimal digits), and
+`GET /content/catalog?scope=<tenant>&product=<productId>` answers one product's part through its shard, and
+`404` naming a product the index does not hold. A PUT carries the manifest's `index` exactly as it read it (a
+GET→PUT round trip keeps every part); a shard pointer the revision in force does not hold, or one left out, is
+refused `422` naming the shard. A PUT removes a product only by naming it in `removeProducts: ["<productId>",
+…]`, which removes its part and its records from the catalog; a product the PUT sends records for has its
+part replaced by them.
 
-**One id lives in one place.** Every load checks each record it carries against the file, the shared pieces
-and the revision's id index: one immutable object per revision, beside the parts and named by the manifest's
-`idIndex` (`{ "digest": "<64 hex>", "records": <count> }`, present whenever `products` indexes a part), mapping
-every part record's id, expired ones included, to its product. Only the loads read it (the import, the pull, a validation, a PUT and a rollback's check that
-its objects are held), never a page's decision. A record moves between products only in a load that carries
-both products, the one it leaves and the one it joins, in one file (the old part drops it and the new part
-holds it), or once the source product, the one it leaves, has been replaced without it. A record the index
-lists under another product the load does not carry is refused `422` with `code: "record_moved"`, naming both
-products (the source and the new one), and so is
-a PUT that keeps the old product's pointer while it routes the record to the new one. In a nightly load sent in
-chunks, a `record_moved` means the chunk of the product the record leaves comes later in the sequence: send
-that chunk first, or both products in one file. A shared piece whose id a part record holds is refused `422`
-with `code: "id_in_part"`, and a part record whose id a shared piece holds `422` with `code: "id_shared"`,
-each naming the id and the product. `replace` and `full` rebuild the index entries of the products they name,
-a PUT builds the index from its document and the pointers it keeps, and a rollback brings back the old
-revision's index with its parts. The index has its own limit of 8 MiB: a load whose index would pass it is
-refused `413` with `code: "id_index_too_large"`, naming it and writing nothing. Each load reads the index once
-and writes a new one when its records change, up to a few MB; a page reads none.
+**One id lives in one place.** Every load checks each record whose place can change against the file, the
+shared pieces and the id shards; only the loads read them (the import, the pull, a validation, a PUT and a
+rollback's check that its objects are held), never a page's decision. A record moves between products only in
+a load that carries both products, the one it leaves and the one it joins, in one file (the old part drops it
+and the new part holds it), or once the source product, the one it leaves, has been replaced without it. A
+record the index lists under another product the load does not carry is refused `422` with
+`code: "record_moved"`, naming both products (the source and the new one), and so is a PUT that keeps the old
+product while it routes the record to the new one. In a nightly load sent in chunks, a `record_moved` means
+the chunk of the product the record leaves comes later in the sequence: send that chunk first, or both
+products in one file. A shared piece whose id a part record holds is refused `422` with `code: "id_in_part"`,
+and a part record whose id a shared piece holds `422` with `code: "id_shared"`, each naming the id and the
+product, whichever shard the product falls in. `replace` and `full` rebuild the id entries of the products
+they name, a PUT those of the products it sends or removes, and a rollback brings back the old revision's
+shards with its parts.
 
 A load that names a product whose part is lost (the store no longer holds it) answers `503` with `code: "part_unavailable"`,
 whatever its mode, `replace` included, and so does that product's page and its per-product read; other
-products are unaffected. Only a PUT, which leaves that product's pointer out (or sends its records instead of
-its pointer), or a rollback to a revision whose parts are all held, clears it.
+products are unaffected. Only a PUT, which names that product in `removeProducts` (or sends its records), or a
+rollback to a revision whose parts are all held, clears it.
 
-The manifest rides one 2 MiB publication beside its set, so its index holds roughly 15,000 to 20,000 products
-at product ids of the usual length; a load whose manifest would pass that is refused `413` with
-`code: "manifest_too_large"`, writing nothing, no part included. A two-level index (256 fixed buckets of
-pointers behind the manifest) is the next step for a larger range and is not built. A part is kept while
-any stored revision's manifest names it: under the tenant's `configuration` retention setting, the purge
-that removes a revision removes the parts and the id indexes no stored revision names, never one uploaded
-less than 15 minutes ago (a load in flight may have just written it), and a rollback to a revision whose part
-or id index the store no longer holds is refused `410` with `code: "part_missing"`, naming the product.
+What still bounds the catalog is the size of one object, never the number of products: a part, a product shard
+and an id shard are each at most 2 MiB, refused `413` with `code: "part_too_large"`, `"index_shard_too_large"`
+(naming the shard and its number of products) and `"id_index_too_large"` (naming the id shard), which leaves
+room for roughly 1.5 to 5 million products by the length of their ids; and the manifest rides one 2 MiB
+publication beside its set, which only the shared pieces can fill (`413` with `code: "manifest_too_large"`). A
+refusal writes nothing, no part or shard included. A part or shard is kept while any stored revision names it:
+under the tenant's `configuration` retention setting, the purge resolves a revision's shards and the parts
+behind them before it removes the revision, removes those no stored revision names, never one uploaded less
+than 15 minutes ago (a load in flight may have just written it), and where its work budget runs out leaves the
+revision for the next publication, so an object it has not resolved is never lost to it. A rollback checks the
+shards it would bring back that the revision in force does not name and each part pointer inside them that
+differs: one the store no longer holds is refused `410` with `code: "part_missing"`, naming it, and a rollback
+needing more than 900 such checks is refused `413` with `code: "rollback_too_large"` and their count (load the
+range forward instead).
 
-A product page reads only its own product's records: its decision reads the manifest and, when the page has a
-slot declared `scope: 'anchor'` and the request names an indexed product as `ctx.anchor`, that product's one
-part, held per isolate by its digest; a page with no such slot, no anchor or an anchor no part holds reads no
-part, and the scoped slot decides as it does with no candidates. So a product page's decision work does not
-grow with the range. A replay and a receipt resolve a record's part through the anchor it records, a click
+A catalog stored in parts before this index, with one `products` map and one `idIndex` in its manifest, is
+read by every reader as it is; its next PUT, import, pull or rollback writes the sharded index, every part
+unchanged (at most 512 shard writes), and nothing is asked of the operator. A tenant without `productSlots`
+reads and writes no shard.
+
+Send a large range as files of about 200 to 300 products: each request then makes a few hundred storage calls
+(each product's part read and written, and the shards its products fall in). A nightly load in many small
+files rewrites more of the index than the same load in fewer files, since each file rewrites the shards its
+products fall in.
+
+A product page reads only its own product's records: its decision reads the head, the set, the content, slots,
+learn and reflex revisions and, when the page has a slot declared `scope: 'anchor'` and the request names a
+product as `ctx.anchor`, that product's shard and its one part, eight reads, the same at 50 or 100,000
+products; a warm isolate reads neither the shard nor the part again (each is held per isolate by its digest).
+A page with no such slot, no anchor or an anchor in a shard the index does not list reads no shard, an anchor
+its shard does not hold reads the shard and no part, and the scoped slot decides as it does with no
+candidates. A shard or part the store no longer holds fails the page `503` with `code: "part_unavailable"`,
+never served from the shared pieces alone. So a product page's decision work does not grow with the range. A
+replay and a receipt resolve a record's part through the anchor it records (through its shard), a click
 on a part-held image resolves through the decision it names when that decision is the clicking shopper's own
 (a decision id naming another shopper resolves nothing, reads no other shopper's decisions, and the click
-teaches only its own values), and the learn screens name a row whose item no shared piece carries `unresolved`.
+teaches only its own values), the learn screens name a row whose item no shared piece carries `unresolved`,
+and an event naming a product a part holds is recognized through that product's shard.
 
 **What serving a catalog of that size costs.** Measured, not estimated: the whole path one decision
 set takes — the published catalog read from storage, parsed and validated, then the shopper, trend,
