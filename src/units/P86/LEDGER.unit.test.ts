@@ -284,8 +284,38 @@ async function declareProductSlots(m: Mounted, pieces: unknown[] = MODULES): Pro
   const put = await putDocument(m, 'catalog', { version: 'p86-catalogue', productSlots: [CAROUSEL], pieces }, 'p86 product slots');
   expect(put.status, `PRECONDITION (${m.host}): the catalogue declaring its product slots is published (${show(put)})`).toBe(200);
 }
-/** The manifest's index, or `{}` where it has none (today). */
-const productsOf = (d: LoadedSlots) => (d.document.products ?? {}) as Record<string, { digest?: unknown; records?: unknown }>;
+/**
+ * P93 R10 (R-P487, R-P489): the manifest's index read in either form — P86's one-level `products`, or P93's sharded
+ * `index`, whose product shards (`content/shard/<digest>.json`, `{ shard, products }`) are read back from the bucket
+ * that holds them. Shard objects are content-addressed, so the buckets this file's mounts wrote are searched by key,
+ * newest first (each registered on its first write; a WeakRef, so a finished mount's bucket is released).
+ */
+const BUCKETS: Array<WeakRef<UnitR2>> = [];
+const unitPut = UnitR2.prototype.put;
+UnitR2.prototype.put = function (this: UnitR2, ...args: Parameters<UnitR2['put']>) {
+  if (!BUCKETS.some(ref => ref.deref() === this)) BUCKETS.unshift(new WeakRef(this));
+  return unitPut.apply(this, args);
+};
+const storedAt = (key: string): Record<string, unknown> | null => {
+  for (const ref of BUCKETS) { const raw = ref.deref()?.objects.get(key); if (raw !== undefined) return JSON.parse(raw) as Record<string, unknown>; }
+  return null;
+};
+const SHARD = /^config-publication\/v1\/coach\/content\/shard\/([0-9a-f]{64})\.json$/;
+const shardKey = (digest: string) => `config-publication/v1/${TENANT}/content/shard/${digest}.json`;
+const shardPointersOf = (d: LoadedSlots) => ((d.document.index as { shards?: unknown } | undefined)?.shards ?? null) as Record<string, { digest?: unknown }> | null;
+/** The manifest's index, product → pointer, or `{}` where it has none (today). */
+const productsOf = (d: LoadedSlots) => {
+  const shards = shardPointersOf(d);
+  if (!shards) return (d.document.products ?? {}) as Record<string, { digest?: unknown; records?: unknown }>;
+  const out: Record<string, { digest?: unknown; records?: unknown }> = {};
+  for (const pointer of Object.values(shards)) Object.assign(out, (storedAt(shardKey(String(pointer.digest)))?.products ?? {}) as object);
+  return Object.fromEntries(Object.keys(out).sort().map(p => [p, out[p]!]));
+};
+/** P93 R10: the key of the product shard that holds a product (the sharded form), or what is missing. */
+const shardOf = (d: LoadedSlots, product: string) => Object.values(shardPointersOf(d) ?? {}).map(p => shardKey(String(p.digest)))
+  .find(key => Object.hasOwn((storedAt(key)?.products ?? {}) as object, product)) ?? `no shard holds ${product}`;
+/** P93 R10: the shard bucket of an id: the first two hex digits of the SHA-256 of its UTF-8 bytes (R-P487 (1)). */
+const bucketOfId = async (id: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)))][0]!.toString(16).padStart(2, '0');
 const sharedOf = (d: LoadedSlots) => ((d.document.pieces ?? []) as Array<{ id: string }>).map(p => p.id);
 const digestOf = (d: LoadedSlots, product: string) => String(productsOf(d)[product]?.digest ?? `no pointer for ${product}`);
 const PART = /^config-publication\/v1\/coach\/content\/part\/([0-9a-f]{64})\.json$/;
@@ -298,13 +328,32 @@ function partOf(m: Mounted, d: LoadedSlots, product: string): { ids: string[]; v
   const value = JSON.parse(raw) as Record<string, unknown>;
   return { ids: sorted(((value.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value, bytes: new TextEncoder().encode(raw).byteLength, missing: null };
 }
-/** R-P424 (S12): the id index object — its key, the stored ones, the manifest's pointer and its entries (id → product). */
-const IDS = /^config-publication\/v1\/coach\/content\/ids\/([0-9a-f]{64})\.json$/;
-const idsKey = (digest: string) => `config-publication/v1/${TENANT}/content/ids/${digest}.json`;
+/**
+ * R-P424 (S12), P93 R10: the id index — P86's one object (`content/ids/`) or P93's id shards (`content/idshard/`,
+ * `{ shard, ids }`, named by the manifest's `index.ids`): the stored objects, the manifest's pointers and the entries
+ * (id → product). `digest` names the index as a whole: the one object's digest, or the id-shard pointers as written.
+ */
+const IDS = /^config-publication\/v1\/coach\/content\/(?:ids|idshard)\/([0-9a-f]{64})\.json$/;
+const idsKey = (digest: string) => `config-publication/v1/${TENANT}/content/idshard/${digest}.json`;
 const idsKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => IDS.test(k)).sort();
-const indexPointerOf = (d: LoadedSlots) => (d.document.idIndex ?? null) as { digest?: unknown; records?: unknown } | null;
+/** The id index's pointers: the sharded `index.ids` (hex2 → { digest, records }) or P86's `idIndex`; null where there is none. */
+const indexPointerOf = (d: LoadedSlots) => ((d.document.index as { ids?: unknown } | undefined)?.ids ?? d.document.idIndex ?? null) as Record<string, unknown> | null;
+/** The id shard keys the manifest names (the sharded form). */
+const idShardKeysOf = (d: LoadedSlots) => sorted(Object.values(((d.document.index as { ids?: unknown } | undefined)?.ids ?? {}) as Record<string, { digest?: unknown }>).map(p => idsKey(String(p.digest))));
 function indexOf(m: Mounted, d: LoadedSlots): { digest: string; ids: Record<string, string> | null; value: unknown } {
-  const digest = String(indexPointerOf(d)?.digest ?? 'no idIndex'), raw = m.storage.objects.get(idsKey(digest));
+  const sharded = (d.document.index as { ids?: Record<string, { digest?: unknown }> } | undefined)?.ids;
+  if (sharded) {
+    const ids: Record<string, string> = {};
+    for (const pointer of Object.values(sharded)) {
+      const raw = m.storage.objects.get(idsKey(String(pointer.digest)));
+      if (raw === undefined) return { digest: JSON.stringify(sharded), ids: null, value: null };
+      Object.assign(ids, (JSON.parse(raw) as { ids?: Record<string, string> }).ids ?? {});
+    }
+    const value = { ids: Object.fromEntries(Object.keys(ids).sort().map(id => [id, ids[id]!])) };
+    return { digest: JSON.stringify(sharded), ids: value.ids, value };
+  }
+  const digest = String((d.document.idIndex as { digest?: unknown } | undefined)?.digest ?? 'no idIndex');
+  const raw = m.storage.objects.get(`config-publication/v1/${TENANT}/content/ids/${digest}.json`);
   const value = raw === undefined ? null : JSON.parse(raw) as { ids?: Record<string, string> };
   return { digest, ids: value?.ids ?? null, value };
 }
@@ -658,22 +707,22 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const restore = uploadedAt(m, () => new Date(0));
       await declareProductSlots(m);
       const [a1] = fourOf(A) as [Rec];
-      const pointers: Array<Record<string, string>> = [], indexes: string[] = [];
+      const pointers: Array<Record<string, string>> = [], indexes: string[][] = [];
       // R-P416 (1): the last load retouches A again, so the previous kept revision alone names A's second part.
       for (const records of [fourOf(A), [{ ...a1, title: `${a1.title}, retouched` }], fourOf(B), [{ ...a1, title: `${a1.title}, retouched again` }]]) {
         const loaded = await importJson(m, records, { mode: 'merge' });
         expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
         const d = await loadDocument(m, 'catalog');
         pointers.push(Object.fromEntries(Object.entries(productsOf(d)).map(([p, v]) => [p, String(v.digest)])));
-        indexes.push(String(indexPointerOf(d)?.digest ?? 'no idIndex'));
+        indexes.push(idShardKeysOf(d)); // P93 R10: the id shards this revision names (P86: its one id index object)
         await new Promise(resolve => setTimeout(resolve, 5));
       }
       const head = await loadDocument(m, 'catalog');
       const purged = await asOperator(m, 'GET', `/content/catalog/revisions/${head.revision - 3}?scope=${TENANT}`);
       expect(purged.status, `${host}: PRECONDITION — the revision of ${A}'s first load was purged under the setting (${show(purged)})`).toBe(410);
-      // R-P424: the id index objects are purged with the parts: those the kept revisions reference stay, the others go.
-      expect.soft(idsKeys(m), `${host}: P86.CS1 — the id index objects are exactly those a kept revision references`)
-        .toEqual(sorted([...new Set([indexes[2]!, indexes[3]!])].map(idsKey)));
+      // R-P424, P93 R10: the id shards are purged with the parts: those the kept revisions reference stay, the others go.
+      expect.soft(idsKeys(m), `${host}: P86.CS1 — the id shards are exactly those a kept revision references`)
+        .toEqual(sorted([...new Set([...indexes[2]!, ...indexes[3]!])]));
       // Kept: the current and the previous revision. The current names A's third part and B's; the previous alone names
       // A's second part (the first retouch), which a purge consulting only the current manifest would remove.
       const kept = sorted([...new Set([...Object.values(pointers[3] ?? {}), ...Object.values(pointers[2] ?? {})])].map(partKey));
@@ -690,15 +739,16 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       restore();
     }, 120_000);
 
-    it(`host (${host}): R-P409 (2) — a PUT of the manifest that leaves a product's pointer out removes that product (as a PUT that leaves a piece out removes it): one revision, the others' pointers kept`, async () => {
+    // P93 R10 (R-P487 (5), R-P490 (1), overturning R-P409 (2)): a product leaves the sharded catalogue only by an explicit
+    // `removeProducts` list on the PUT, beside the index as read (before: a PUT leaving the product's pointer out of `products`).
+    it(`host (${host}): R-P409 (2) as amended by R-P487 (5) — a PUT of the manifest as read naming a product in removeProducts removes that product: one revision, the others' pointers kept`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
       const loaded = await importJson(m, [...fourOf(A), ...fourOf(B)], { mode: 'merge' });
       expect(loaded.status, `${host}: PRECONDITION — ${A} and ${B} load (${show(loaded)})`).toBe(200);
       const before = await loadDocument(m, 'catalog');
-      const { [B]: _dropped, ...kept } = productsOf(before); void _dropped;
-      const put = await putDocument(m, 'catalog', { ...before.document, products: kept }, 'p86 drop a product');
+      const put = await putDocument(m, 'catalog', { ...before.document, removeProducts: [B] }, 'p86 drop a product');
       const after = await loadDocument(m, 'catalog');
       const b = await productRead(m, B), a = await productRead(m, A);
       expect.soft({ status: put.status, revision: after.revision, products: Object.keys(productsOf(after)), a: [digestOf(after, A) === digestOf(before, A) && /^[0-9a-f]{64}$/.test(digestOf(after, A)), a.status, readIds(a)],
@@ -732,21 +782,25 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         `${host}: P86.CS1 — with the parts back the rollback writes the kept manifest forward (${show(back)})`).toEqual([200, head.revision + 1, [true, true, true]]);
     }, 120_000);
 
-    it(`host (${host}): R-P424 — the id index: one content-addressed object per revision, written before the pending head (a failing index write answers 503, nothing committed and nothing pending, the next load accepted), referenced by the manifest, holding every part record's id → product; a rollback references the old revision's index`, async () => {
+    // P93 R10 (R-P487 (2)): the id index is sharded — content-addressed id shards named by the manifest's `index.ids`
+    // (before: one `content/ids/` object per revision named by `idIndex`).
+    it(`host (${host}): R-P424 as sharded by R-P487 (2) — the id index: content-addressed id shards, written before the pending head (a failing id shard write answers 503, nothing committed and nothing pending, the next load accepted), named by the manifest's index, holding every part record's id → product; a rollback names the old revision's id shards`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
       const declared = await loadDocument(m, 'catalog');
-      expect.soft([indexPointerOf(declared) ?? 'no idIndex', idsKeys(m)], `${host}: P86.CS1 — no part, no index`).toEqual(['no idIndex', []]);
+      expect.soft([Object.keys(indexPointerOf(declared) ?? {}).length, idsKeys(m)], `${host}: P86.CS1 — no part, no index`).toEqual([0, []]);
       expect((await importJson(m, [...fourOf(A), ...fourOf(B)], { mode: 'merge' })).status, `${host}: PRECONDITION — ${A} and ${B} load`).toBe(200);
       const first = await loadDocument(m, 'catalog'), index = indexOf(m, first);
-      expect.soft({ pointer: [/^[0-9a-f]{64}$/.test(index.digest), indexPointerOf(first)?.records ?? null], stored: idsKeys(m), addressed: index.value !== null && await documentDigest(index.value) === index.digest,
-        ids: index.ids }, `${host}: P86.CS1 — the manifest references its index, the object at its content address holding every part record (today none)`).toEqual({
-        pointer: [true, 8], stored: [idsKey(index.digest)], addressed: true, ids: Object.fromEntries([...fourOf(A).map(r => [r.id, A]), ...fourOf(B).map(r => [r.id, B])].sort()) });
+      const pointers = Object.values(indexPointerOf(first) ?? {}) as Array<{ digest?: unknown; records?: unknown }>, addressed: boolean[] = [];
+      for (const pointer of pointers) { const raw = m.storage.objects.get(idsKey(String(pointer.digest))); addressed.push(raw !== undefined && await documentDigest(JSON.parse(raw)) === pointer.digest); }
+      expect.soft({ pointer: [pointers.length > 0 && pointers.every(p => /^[0-9a-f]{64}$/.test(String(p.digest))), pointers.reduce((n, p) => n + Number(p.records), 0)], stored: idsKeys(m),
+        addressed: addressed.length > 0 && addressed.every(Boolean), ids: index.ids }, `${host}: P86.CS1 — the manifest names its id shards, each at its content address, together holding every part record (today none)`).toEqual({
+        pointer: [true, 8], stored: idShardKeysOf(first), addressed: true, ids: Object.fromEntries([...fourOf(A).map(r => [r.id, A]), ...fourOf(B).map(r => [r.id, B])].sort()) });
       // The index written before the pending head, as a part is: its write failing commits nothing and leaves nothing pending.
       const bucket = m.storage as unknown as Record<string, unknown>, put = UnitR2.prototype.put;
       Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
-        if (IDS.test(key)) throw new Error('P86 fixture: the id index write fails');
+        if (IDS.test(key)) throw new Error('P86 fixture: the id shard write fails');
         return put.call(m.storage, key, raw, options);
       } });
       let failed: Answer;
@@ -808,6 +862,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         inPart: [422, `names id_in_part, ${b2.id}, ${B}`], shared: [422, `names id_shared, ${M.editorial}, ${C}`], written: [start.revision, true, true] });
     }, 120_000);
 
+    // P93 R10 (R-P487 (2), (8)): the index objects of the grace are the id shards (before: the one `content/ids/` object).
     it(`host (${host}): R-P424 — the purge's grace: a part or index object uploaded less than 15 minutes ago is never deleted, though the revision naming it is purged`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
@@ -817,50 +872,54 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const restore = uploadedAt(m, () => new Date());
       await declareProductSlots(m);
       const [a1] = fourOf(A) as [Rec];
-      const firsts: Array<[string, string]> = [];
+      const firsts: Array<[string, string[]]> = [];
       for (const records of [fourOf(A), [{ ...a1, title: `${a1.title}, retouched` }], fourOf(B), [{ ...a1, title: `${a1.title}, retouched again` }]]) {
         const loaded = await importJson(m, records, { mode: 'merge' });
         expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
         const d = await loadDocument(m, 'catalog');
-        firsts.push([partKey(digestOf(d, A)), idsKey(String(indexPointerOf(d)?.digest ?? 'no idIndex'))]);
+        firsts.push([partKey(digestOf(d, A)), idShardKeysOf(d)]);
         await new Promise(resolve => setTimeout(resolve, 5));
       }
       const head = await loadDocument(m, 'catalog');
       const purged = await asOperator(m, 'GET', `/content/catalog/revisions/${head.revision - 3}?scope=${TENANT}`);
       expect(purged.status, `${host}: PRECONDITION — the revision of ${A}'s first load was purged under the setting (${show(purged)})`).toBe(410);
-      expect.soft([m.storage.objects.has(firsts[0]![0]), m.storage.objects.has(firsts[0]![1])],
+      expect.soft([m.storage.objects.has(firsts[0]![0]), firsts[0]![1].length > 0 && firsts[0]![1].every(key => m.storage.objects.has(key))],
         `${host}: P86.CS1 — the first load's part and index, uploaded moments ago, survive the purge of the revision naming them`).toEqual([true, true]);
       restore();
     }, 120_000);
 
-    it(`host (${host}): R-P424 — the id index's own cap: a load whose index would pass 8 MiB is refused 413 id_index_too_large, nothing written; every load before it accepted`, async () => {
+    // P93 R10 (R-P487 (1), (2)): the id index's cap is per id shard, 2 MiB, refused naming the shard (before: one 8 MiB
+    // object); the long record ids are chosen in one shard so the shard grows by about one load's bytes per load.
+    it(`host (${host}): R-P424 as sharded by R-P487 (2) — the id shard's own cap: a load whose id shard would pass 2 MiB is refused 413 id_index_too_large naming the shard, nothing written; every load before it accepted`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
-      // Long record ids, so the index grows by about one load's bytes per load while each part and load stays inside its 2 MiB.
-      const ID_LENGTH = 4000, INDEX_CAP = 8 * 1024 * 1024;
-      const perLoad = Math.floor(0.9 * INPUT_MAX_BYTES / (ID_LENGTH + 220));
-      const loadOf = (k: number) => Array.from({ length: perLoad }, (_, i) => ({ id: `cap-${k}-${i}-`.padEnd(ID_LENGTH, 'x'), customerContentId: `TAP-CAP-${k}-${i}`,
+      const ID_LENGTH = 4000, INDEX_CAP = 2 * 1024 * 1024, perLoad = 300, shard = await bucketOfId('cap-0-'.padEnd(ID_LENGTH, 'x')), sameShard: string[] = [];
+      for (let k = 0; sameShard.length < 3 * perLoad; k++) { const id = `cap-${k}-`.padEnd(ID_LENGTH, 'x'); if (await bucketOfId(id) === shard) sameShard.push(id); }
+      const loadOf = (k: number) => sameShard.slice((k - 1) * perLoad, k * perLoad).map((id, i) => ({ id, customerContentId: `TAP-CAP-${k}-${i}`,
         type: 'on-model', title: 't', tags: {}, slotTypes: [CAROUSEL], lifecycle: { status: 'live' }, featuredProductIds: [`COA-IDX${k}`] }));
       expect([perLoad <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(loadOf(1))).byteLength < INPUT_MAX_BYTES],
         `PRECONDITION: ${perLoad} records per load within the import's caps`).toEqual([true, true]);
       let accepted = 0, refused: Answer | null = null, before = await loadDocument(m, 'catalog'), parts = partKeys(m), ids = idsKeys(m);
-      for (let k = 1; k <= 8 && !refused; k++) {
+      for (let k = 1; k <= 3 && !refused; k++) {
         const answer = await importJson(m, loadOf(k), { mode: 'merge' });
         if (answer.status === 200) { accepted++; before = await loadDocument(m, 'catalog'); parts = partKeys(m); ids = idsKeys(m); } else refused = answer;
       }
       const acceptedBytes = accepted * perLoad * ID_LENGTH;
-      expect.soft({ refused: refused ? [refused.status, refused.body.code ?? errorsOf(refused).join(' ').slice(0, 60)] : 'no load refused',
+      const shardNamed = (a: Answer) => errorsOf(a).some(e => new RegExp(`(^|[^0-9a-z])${shard}([^0-9a-z]|$)`).test(e)) ? `names ${shard}` : `does not (${show(a)})`;
+      expect.soft({ refused: refused ? [refused.status, refused.body.code ?? errorsOf(refused).join(' ').slice(0, 60), shardNamed(refused)] : 'no load refused',
         accepted: acceptedBytes > INDEX_CAP - 2 * perLoad * ID_LENGTH && acceptedBytes <= INDEX_CAP ? 'up to the cap' : `${accepted} loads (${acceptedBytes} bytes of ids)`,
         written: [(await loadDocument(m, 'catalog')).revision === before.revision, partKeys(m).length === parts.length, idsKeys(m).length === ids.length] },
-      `${host}: P86.CS1 — refused by name at the index's 8 MiB, nothing written`).toEqual({ refused: [413, 'id_index_too_large'], accepted: 'up to the cap', written: [true, true, true] });
+      `${host}: P86.CS1 — refused by name at the id shard's 2 MiB, nothing written`).toEqual({ refused: [413, 'id_index_too_large', `names ${shard}`], accepted: 'up to the cap', written: [true, true, true] });
     }, 600_000);
 
-    it(`host (${host}): the cap — a load whose manifest index would pass 2 MiB is refused 413 manifest_too_large, nothing written (no revision, no part); the load before it, 60% of the cap, indexes its products`, async () => {
+    // P93 R10 (R-P487 (1)): the products ride the shards, so the manifest's 2 MiB is reached by the shared pieces alone
+    // (before: the second load of 60% of the cap refused manifest_too_large for its product index).
+    it(`host (${host}): the cap as sharded by R-P487 (1) — the products no longer count toward the manifest's 2 MiB: two loads of 60% of P86's one-level cap each index their products and the manifest stays small; a load whose shared pieces would pass 2 MiB is refused 413 manifest_too_large, nothing written (no revision, no part)`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
-      // 64-character product ids (the anchor's own bound); the per-load count from the proposed pointer's size (S1).
+      // 64-character product ids (the anchor's own bound); the per-load count from P86's one-level pointer's size (S1).
       const productOf = (k: number) => `COA-CAP-${String(k).padStart(8, '0')}-`.padEnd(64, 'X');
       const entry = documentBytes({ [productOf(1)]: { digest: 'f'.repeat(64), records: 1 } }) - 1;
       const perLoad = Math.ceil(0.6 * PUBLICATION_MAX_BYTES / entry);
@@ -870,12 +929,26 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       expect([perLoad <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(first)).byteLength < INPUT_MAX_BYTES],
         `PRECONDITION: ${perLoad} records per load within the import's caps`).toEqual([true, true]);
       const one = await importJson(m, first, { mode: 'merge' });
-      const afterOne = await loadDocument(m, 'catalog'), parts = partKeys(m);
-      expect.soft([one.status, Object.keys(productsOf(afterOne)).length, parts.length],
+      const afterOne = await loadDocument(m, 'catalog');
+      expect.soft([one.status, Object.keys(productsOf(afterOne)).length, partKeys(m).length],
         `${host}: P86.CS1 — the first load indexes its ${perLoad} products (${show(one)})`).toEqual([200, perLoad, perLoad]);
       const two = await importJson(m, second, { mode: 'merge' });
-      expect.soft([two.status, two.body.code ?? null, (await loadDocument(m, 'catalog')).revision, partKeys(m).length],
-        `${host}: P86.CS1 — the second refused by name, nothing written (today: ${show(two)})`).toEqual([413, 'manifest_too_large', afterOne.revision, parts.length]);
+      const afterTwo = await loadDocument(m, 'catalog');
+      expect.soft([two.status, Object.keys(productsOf(afterTwo)).length, documentBytes(afterTwo.document) <= 65536 + documentBytes(afterTwo.document.pieces)],
+        `${host}: P86.CS1 — the second load indexes its products too, the manifest bounded beside its shared pieces (today: ${show(two)})`).toEqual([200, 2 * perLoad, true]);
+      // The shared pieces alone: one piece's stored bytes measured, then two loads of 60% of the cap each.
+      const sharedFrom = (from: number, count: number) => Array.from({ length: count }, (_, i) => ({ id: `s${String(from + i).padStart(8, '0')}`, type: 'flat-lay',
+        title: 'A shared piece'.padEnd(100, '.'), slotTypes: [CAROUSEL] }));
+      expect((await importJson(m, sharedFrom(0, 1), { mode: 'merge' })).status, `${host}: PRECONDITION — one shared piece loads`).toBe(200);
+      const afterProbe = await loadDocument(m, 'catalog'), per = documentBytes(afterProbe.document.pieces) - documentBytes(afterTwo.document.pieces);
+      const count = Math.ceil(0.6 * PUBLICATION_MAX_BYTES / per);
+      expect([count <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(sharedFrom(1, count))).byteLength < INPUT_MAX_BYTES],
+        `PRECONDITION: ${count} shared pieces per load within the import's caps`).toEqual([true, true]);
+      expect((await importJson(m, sharedFrom(1, count), { mode: 'merge' })).status, `${host}: PRECONDITION — the first shared load is accepted`).toBe(200);
+      const afterThree = await loadDocument(m, 'catalog'), parts = partKeys(m);
+      const four = await importJson(m, sharedFrom(1 + count, count), { mode: 'merge' });
+      expect.soft([four.status, four.body.code ?? null, (await loadDocument(m, 'catalog')).revision, partKeys(m).length],
+        `${host}: P86.CS1 — the shared pieces past the manifest's 2 MiB refused by name, nothing written (${show(four)})`).toEqual([413, 'manifest_too_large', afterThree.revision, parts.length]);
     }, 600_000);
 
     it(`host (${host}): LOCK — a catalogue that declares no product slots is today's document: its images shared, no index, no part object; the anchor's page reads no part; a load over the import's caps refused 413 as today`, async () => {
@@ -952,16 +1025,19 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
           status: 200, served: SERVED_FOR_BLACK, parts: [anchorPart], shared: sorted([...MODULE_IDS, 'img-brand-1']), indexed: n + 3,
           warm: [SERVED_FOR_BLACK, 0], operator: [anchorPart] });
       }
-      // R-P416 (residual): the exact read list — the head, the set, the four members and the anchor's one part — at each size.
+      // R-P416 (residual), P93 R10 (R-P487 (9)): the exact read list — the head, the set, the four members, the anchor's
+      // product shard and the anchor's one part — at each size (before: 7 reads, no shard).
       for (const n of [50, 5000]) {
         const { cold, manifest } = at[n]!;
-        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the set, the content, slots, learn and reflex revisions and the anchor's part, once each`)
-          .toEqual(sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision', `part ${digestOf(manifest, A)}`]));
+        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the set, the content, slots, learn and reflex revisions, the anchor's shard and the anchor's part, once each`)
+          .toEqual(sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision', shardOf(manifest, A), `part ${digestOf(manifest, A)}`]));
       }
       const [small, large] = [at[50]!, at[5000]!];
-      expect.soft({ reads: classes(large.cold.reads), partBytes: partReads(large.cold.reads).map(r => r.bytes) },
+      // A shard holds the other products of its bucket, so its address differs between the two ranges: compared by class.
+      const byClass = (reads: Read[]) => classes(reads).map(c => SHARD.test(c) ? 'shard' : c);
+      expect.soft({ reads: byClass(large.cold.reads), partBytes: partReads(large.cold.reads).map(r => r.bytes) },
         `${host}: P86.CS2 — the decision's reads and the part it parses are the same at N = 5,000 as at N = 50`).toEqual({
-        reads: classes(small.cold.reads), partBytes: partReads(small.cold.reads).map(r => r.bytes) });
+        reads: byClass(small.cold.reads), partBytes: partReads(small.cold.reads).map(r => r.bytes) });
     }, 600_000);
 
     it(`host (${host}): no part is read where none is needed — a page naming no anchor, a variant alone, or an anchor the manifest does not index (${UNINDEXED}) decides the scoped carousel empty (P80 AS2) and reads no part; a page with no scoped slot reads no part though it names the anchor`, async () => {
@@ -1121,7 +1197,11 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
 // ===========================================================================
 
 describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
-  it('logic: kit 03 states the manifest (`productSlots`, `products`), the parts, the routing by the first id with the canonical order [product, variant] and the `variant_first` warning, the modes per product, the cap\'s refusal `manifest_too_large` with the two-level index next, and part retention under the purge; kit 02 states the per-product read on GET /content/{kind} and the part beside the 2 MiB limits; today\'s one-document sentences are gone', () => {
+  // P93 R10 (R-P487 (1), (5)): the manifest names its parts through `index` (before: `products`), a PUT removes a product by
+  // `removeProducts` (before: by leaving its pointer out), the id index is the id shards, their cap and the loads reading
+  // them (before: one id index object), and the cap kit 03 names is the shard's (before: manifest_too_large with the
+  // two-level index next). Code names and members are matched as words.
+  it('logic: kit 03 states the manifest (`productSlots`, `index`), the parts, the routing by the first id with the canonical order [product, variant] and the `variant_first` warning, the modes per product, the shard cap\'s refusal `index_shard_too_large`, the PUT\'s `removeProducts`, and part retention under the purge; kit 02 states the per-product read on GET /content/{kind} and the part beside the 2 MiB limits; today\'s one-document sentences are gone', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md'), kit03 = readTree('docs/kit/03-payload-schemas.md');
     const paragraphs = (text: string) => text.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
     const has = (text: string, ...words: Array<string | RegExp>) => paragraphs(text).some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
@@ -1129,16 +1209,16 @@ describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
     const getRow = kit02.split('\n').find(line => line.startsWith('| `GET /content/{kind}?scope=`')) ?? '';
     const limits = paragraphs(kit02).find(p => p.startsWith('Configuration PUT/PATCH, import, pull')) ?? '';
     expect.soft({
-      manifest: has(kit03, '`productSlots`', '`products`', /\bpart\b/),
+      manifest: has(kit03, '`productSlots`', '`index`', /\bpart\b/),
       routing: has(kit03, '`featuredProductIds`', '`productSlots`', /\bfirst id\b/),
       variantFirst: has(kit03, '`variant_first`', /\[product, variant\]/),
-      putRemoves: has(kit03, '`products`', /\bPUT\b/, /\bpointer\b/, /\bremoves?\b/),
+      putRemoves: has(kit03, /`removeProducts\b/, /\bPUT\b/, /\bremoves?\b/),
       moveRule: has(kit03, /\brecord_moved\b/, /\bsource\b/, /\bone file\b|\bsame file\b/),
       collisions: has(kit03, /\bid_in_part\b/, /\bid_shared\b/),
-      idIndex: has(kit03, /\bindex\b/, /\bid_index_too_large\b/, /\bloads?\b/),
+      idIndex: has(kit03, /\bid shards?\b/, /\bid_index_too_large\b/) && has(kit03, /\bid shards\b/, /\bloads\b/),
       lostPart: has(kit03, /\blost\b/, /\b503\b/, /\brollback\b/),
       modes: has(kit03, '`merge`', '`replace`', '`full`', /\bpart\b/),
-      cap: has(kit03, /\bmanifest_too_large\b/, /two-level/),
+      cap: has(kit03, /\bindex_shard_too_large\b/, /\bshard\b/),
       retention: has(kit03, /\bparts?\b/, /\bpurge/),
       oneDocument: flat03.includes('the catalog is one such document per scope'),
       sharding: flat03.includes('a larger corpus is a conversation about sharding the catalog'),
