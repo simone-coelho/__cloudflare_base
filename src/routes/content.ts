@@ -31,8 +31,9 @@ import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type Revision, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, completePublicationSet, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
   readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationPin,
-  catalogPartStored, readCatalogPart, writeCatalogPart, type CatalogPart, catalogIdIndexOf, catalogIdIndexStored, readCatalogIdIndex, writeCatalogIdIndex,
-  type CatalogIdIndex } from '@/config/publication';
+  catalogPartStored, readCatalogPart, writeCatalogPart, type CatalogPart, catalogIdIndexStored, readCatalogIdIndex,
+  catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard, writeCatalogIdShard, writeCatalogShard,
+  type CatalogIdShard, type CatalogShard } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf, LAYOUTS_KIND, slotsCarryOrders, unapprovedOrders } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
@@ -42,8 +43,8 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { addressAllowed, hostAllowed, HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, IMPORT_SOURCES_KIND, isImportMode, parseCsvTable, pullUrlOf, positionedCandidates, recordAddress, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
-import type { CatalogPartPointer, ContentCatalog, ContentPiece, DocumentEnvelope, LayoutsDocument, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
-import { catalogPieceCount, partProductOf, variantFirst } from '@/content/kinds';
+import type { CatalogIndex, CatalogPartPointer, ContentCatalog, ContentPiece, DocumentEnvelope, LayoutsDocument, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
+import { catalogParted, catalogPieceCount, catalogProductCount, partProductOf, variantFirst } from '@/content/kinds';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
 import { generateEnrichment } from '@/content/enrichmentGeneration';
@@ -234,23 +235,22 @@ function routedPieces(pieces: readonly ContentPiece[], productSlots: readonly st
   });
   return { shared, parts, errors };
 }
-/** The manifest a catalogue publishes: its own members, the shared pieces and the index, products in key order, and the id index (R-P424) where it has parts. */
-function manifestOf(catalog: Pick<ContentCatalog, 'version' | 'typeFallback' | 'productSlots'>, shared: ContentPiece[], index: Record<string, CatalogPartPointer>,
-  idIndex?: CatalogPartPointer): ContentCatalog {
+/** The manifest a catalogue publishes: its own members, the shared pieces and (P93) the sharded index. */
+function manifestOf(catalog: Pick<ContentCatalog, 'version' | 'typeFallback' | 'productSlots'>, shared: ContentPiece[], index: CatalogIndex): ContentCatalog {
   return { ...(catalog.version !== undefined ? { version: catalog.version } : {}), ...(catalog.typeFallback ? { typeFallback: catalog.typeFallback } : {}),
-    productSlots: [...(catalog.productSlots ?? [])], pieces: shared, products: Object.fromEntries(Object.keys(index).sort().map(product => [product, index[product]!])),
-    ...(idIndex ? { idIndex } : {}) };
+    productSlots: [...(catalog.productSlots ?? [])], pieces: shared, index };
 }
 /**
- * The cap (S5): the manifest rides the pending head beside the set, both under
- * the store's 2 MiB, so a manifest whose index would leave no room for them is
- * refused 413 `manifest_too_large`, naming it, before any part is written; the
- * two-level index (256 fixed buckets) is the recorded next step.
+ * The cap (S5, P93): the manifest rides the pending head beside the set, both
+ * under the store's 2 MiB, so a manifest whose shared pieces would leave no room
+ * for them is refused 413 `manifest_too_large`, naming it, before any part or
+ * shard is written. Its index is 512 pointers at most, whatever the number of
+ * products: the shared pieces alone drive it.
  */
 function manifestCap(manifest: ContentCatalog, set: PublicationPin): void {
   const bytes = documentBytes(manifest), reserve = documentBytes(set) + 4096;
   if (bytes + reserve > PUBLICATION_MAX_BYTES) {
-    throw new PublicationError(`The catalogue manifest would be ${bytes} bytes for ${Object.keys(manifest.products ?? {}).length} products, past what one 2 MiB publication holds beside its set; nothing was written (a two-level index is the next step)`, 413, 'manifest_too_large');
+    throw new PublicationError(`The catalogue manifest would be ${bytes} bytes (its ${manifest.pieces.length} shared pieces and its index), past what one 2 MiB publication holds beside its set; nothing was written`, 413, 'manifest_too_large');
   }
 }
 /** Each part's pointer: the digest of its canonical `{ product, pieces }` and its record count. Nothing is written. */
@@ -265,33 +265,138 @@ async function writeParts(env: Env, scope: string, parts: ReadonlyMap<string, Co
   for (let i = 0; i < entries.length; i += 8) await Promise.all(entries.slice(i, i + 8).map(([product, pieces]) => writeCatalogPart(env, scope, { product, pieces })));
 }
 /**
- * R-P424 (amending R-P407 (5)): where each part record's id lives, from the id
- * index the manifest in force names — read by a load only (the import, the
- * pull, the validation, the PUT), never by a decision; none for a manifest
- * without parts. A manifest with parts and no index cannot be checked, and is
- * refused 503 `id_index_unavailable`, as an unreadable index is.
+ * R-P424 (amending R-P407 (5)): where each part record's id lives in a one-level
+ * catalogue (P86's form), from the id index its manifest names — read by a load
+ * only, never by a decision; none for a manifest without parts. A manifest with
+ * parts and no index cannot be checked, and is refused 503 `id_index_unavailable`.
  */
 async function idIndexInForce(env: Env, scope: string, current: ContentCatalog | undefined): Promise<Map<string, string>> {
   if (!current?.products || !Object.keys(current.products).length) return new Map();
   if (!current.idIndex) throw new PublicationError('The catalogue names parts but no id index, so the load cannot be checked against the records the parts hold; nothing was written', 503, 'id_index_unavailable');
   return readCatalogIdIndex(env, scope, current.idIndex.digest);
 }
-/** R-P424: the ids after a load: the entries in force of the products it keeps, then every record of the parts it writes. */
-function idsAfter(inForce: ReadonlyMap<string, string>, kept: (product: string) => boolean, parts: ReadonlyMap<string, readonly unknown[]>): Map<string, string> {
-  const ids = new Map<string, string>();
-  for (const [id, product] of inForce) if (kept(product)) ids.set(id, product);
-  for (const [product, pieces] of parts) for (const piece of pieces) { const id = (piece as { id?: unknown } | null)?.id; if (typeof id === 'string') ids.set(id, product); }
-  return ids;
+
+// ── P93 (E18, R-P487): the sharded index at the catalogue's doors ─────────────
+
+/** P93: the index a publication writes: the manifest's `index` and the shard objects whose digest moved. */
+interface BuiltIndex { index: CatalogIndex; shards: CatalogShard[]; idShards: CatalogIdShard[] }
+const own = <T>(record: Record<string, T> | undefined, key: string): T | undefined => record && Object.hasOwn(record, key) ? record[key] : undefined;
+/**
+ * P93: the index a door publishes over, read as little as the door needs and
+ * edited in place: a product's part pointer through its shard, a record id's
+ * owner through its id shard — read only for the ids whose place can change —
+ * each shard read once; then the shards the edits touch rebuilt, and only those
+ * whose digest moved written. Over a one-level catalogue (P86's `products` and
+ * `idIndex`) it reads those instead, and the publication writes the sharded form
+ * whole (at most 256 + 256 shards), every part's digest unchanged: the migration
+ * needs no step of its own.
+ */
+class IndexEdit {
+  private readonly shards = new Map<string, Map<string, CatalogPartPointer>>();
+  private readonly idShards = new Map<string, Map<string, string>>();
+  private readonly pointers = new Map<string, CatalogPartPointer | null>();
+  private readonly owners = new Map<string, string | null>();
+  private oneLevelIds?: Map<string, string>;
+  constructor(private readonly env: Env, private readonly scope: string, private readonly current: ContentCatalog | undefined) {}
+  /** Over a one-level manifest the next publication writes every shard. */
+  private get migrating(): boolean { return !!this.current?.products; }
+  private async productShard(name: string): Promise<Map<string, CatalogPartPointer>> {
+    let held = this.shards.get(name);
+    if (held) return held;
+    held = new Map();
+    const pointer = own(this.current?.index?.shards, name);
+    if (pointer) for (const [product, p] of Object.entries((await readCatalogShard(this.env, this.scope, pointer.digest)).products)) held.set(product, p);
+    this.shards.set(name, held);
+    return held;
+  }
+  private async idShard(name: string): Promise<Map<string, string>> {
+    let held = this.idShards.get(name);
+    if (held) return held;
+    held = new Map();
+    const pointer = own(this.current?.index?.ids, name);
+    if (pointer) for (const [id, product] of Object.entries((await readCatalogIdShard(this.env, this.scope, pointer.digest)).ids)) held.set(id, product);
+    this.idShards.set(name, held);
+    return held;
+  }
+  private async oneLevel(): Promise<Map<string, string>> { return this.oneLevelIds ??= await idIndexInForce(this.env, this.scope, this.current); }
+  /** A product's part pointer, as edited, else as the revision in force names it; none where it has no part. */
+  async pointer(product: string): Promise<CatalogPartPointer | undefined> {
+    if (this.pointers.has(product)) return this.pointers.get(product) ?? undefined;
+    if (this.current?.products) return own(this.current.products, product);
+    if (!this.current?.index) return undefined;
+    return (await this.productShard(await catalogShardName(product))).get(product);
+  }
+  /** The product whose part holds a record id, as edited, else as the index in force lists it; none for an id no part holds. */
+  async owner(id: string): Promise<string | undefined> {
+    if (this.owners.has(id)) return this.owners.get(id) ?? undefined;
+    if (this.current?.products) return (await this.oneLevel()).get(id);
+    if (!this.current?.index) return undefined;
+    return (await this.idShard(await catalogShardName(id))).get(id);
+  }
+  setPointer(product: string, pointer: CatalogPartPointer | null): void { this.pointers.set(product, pointer); }
+  setOwner(id: string, product: string | null): void { this.owners.set(id, product); }
+  /** The index after the edits, and the shard objects whose digest moved (nothing written). */
+  async build(): Promise<BuiltIndex> {
+    const held = this.migrating ? undefined : this.current?.index;
+    const index: CatalogIndex = { key: 'sha256-hex2', shards: { ...(held?.shards ?? {}) }, ids: { ...(held?.ids ?? {}) } };
+    const products = new Map<string, Map<string, CatalogPartPointer | null>>(), ids = new Map<string, Map<string, string | null>>();
+    const into = async <T>(groups: Map<string, Map<string, T>>, key: string, value: T) => {
+      const name = await catalogShardName(key), group = groups.get(name) ?? new Map<string, T>();
+      group.set(key, value); groups.set(name, group);
+    };
+    if (this.migrating) {
+      for (const [product, pointer] of Object.entries(this.current!.products!)) await into(products, product, pointer as CatalogPartPointer | null);
+      for (const [id, product] of await this.oneLevel()) await into(ids, id, product as string | null);
+    }
+    for (const [product, pointer] of this.pointers) await into(products, product, pointer);
+    for (const [id, product] of this.owners) await into(ids, id, product);
+    const shards: CatalogShard[] = [], idShards: CatalogIdShard[] = [];
+    for (const name of [...products.keys()].sort()) {
+      const next = new Map(this.migrating ? [] : await this.productShard(name));
+      for (const [product, pointer] of products.get(name)!) { if (pointer) next.set(product, pointer); else next.delete(product); }
+      if (!next.size) { delete index.shards[name]; continue; }
+      const { value, pointer } = await catalogShardOf(name, next);
+      if (pointer.digest !== own(held?.shards, name)?.digest) shards.push(value);
+      index.shards[name] = pointer;
+    }
+    for (const name of [...ids.keys()].sort()) {
+      const next = new Map(this.migrating ? [] : await this.idShard(name));
+      for (const [id, product] of ids.get(name)!) { if (product) next.set(id, product); else next.delete(id); }
+      if (!next.size) { delete index.ids[name]; continue; }
+      const { value, pointer } = await catalogIdShardOf(name, next);
+      if (pointer.digest !== own(held?.ids, name)?.digest) idShards.push(value);
+      index.ids[name] = pointer;
+    }
+    index.shards = Object.fromEntries(Object.keys(index.shards).sort().map(name => [name, index.shards[name]!]));
+    index.ids = Object.fromEntries(Object.keys(index.ids).sort().map(name => [name, index.ids[name]!]));
+    return { index, shards, idShards };
+  }
 }
-/** R-P424: the id index a manifest's parts make (nothing written): its pointer for the manifest and its value for the write; none without a part. */
-async function idIndexFor(ids: ReadonlyMap<string, string>): Promise<{ pointer?: CatalogPartPointer; value?: CatalogIdIndex }> {
-  if (!ids.size) return {};
-  const built = await catalogIdIndexOf(ids);
-  return { pointer: { digest: built.digest, records: built.records }, value: built.value };
+/** P93: store the shards whose digest moved with the store's exact-create (eight at a time), before the publication reserves the head. */
+async function writeIndex(env: Env, scope: string, built: BuiltIndex): Promise<void> {
+  const writes: Array<() => Promise<string>> = [...built.shards.map(shard => () => writeCatalogShard(env, scope, shard)), ...built.idShards.map(shard => () => writeCatalogIdShard(env, scope, shard))];
+  for (let i = 0; i < writes.length; i += 8) await Promise.all(writes.slice(i, i + 8).map(write => write()));
 }
-/** R-P424: write the id index before the head is reserved, as the parts are, unless the revision in force already names the same one. */
-async function writeIdIndex(env: Env, scope: string, current: ContentCatalog | undefined, built: { pointer?: CatalogPartPointer; value?: CatalogIdIndex }): Promise<void> {
-  if (built.value && built.pointer && built.pointer.digest !== current?.idIndex?.digest) await writeCatalogIdIndex(env, scope, built.value);
+/**
+ * P93: the product whose part holds a record id, checked against that part: the
+ * index's entry, where the owner's part (as the caller read it, else read here)
+ * still holds the id; none for an id no part holds or an entry no part bears out
+ * (a product removed while its part was lost leaves its ids behind; they name
+ * nothing). Only ids whose place can change are looked up, so a retitle reads
+ * no id shard.
+ */
+function ownerCheck(env: Env, scope: string, edit: IndexEdit, known: ReadonlyMap<string, ReadonlySet<unknown>>, stale: Set<string>) {
+  return async (id: string): Promise<string | undefined> => {
+    const owner = await edit.owner(id);
+    if (owner === undefined) return undefined;
+    let holds = known.get(owner)?.has(id);
+    if (holds === undefined) {
+      const pointer = await edit.pointer(owner);
+      holds = !!pointer && ((await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[]).some(piece => piece.id === id);
+    }
+    if (!holds) { stale.add(id); return undefined; }
+    return owner;
+  };
 }
 /**
  * R-P424: a load that would leave one id in two places is refused 422, naming
@@ -315,76 +420,163 @@ const sharedCollision = (at: string, product: string): Collision => ({ code: 'id
 /** The 413 the store raises for the content member's head, named as the manifest's (R-P407 (4)). */
 function namedManifest(error: unknown): unknown {
   return error instanceof PublicationError && error.code === 'document_too_large'
-    ? new PublicationError('The catalogue manifest is past what one 2 MiB publication holds beside its set; nothing was written (a two-level index is the next step)', 413, 'manifest_too_large')
+    ? new PublicationError('The catalogue manifest is past what one 2 MiB publication holds beside its set (its shared pieces drive it); nothing was written', 413, 'manifest_too_large')
     : error;
 }
 /**
  * A PUT's catalogue (alone or as a related member), under the vocabulary in
  * effect and, where it declares product slots, routed: its records into their
- * products' parts, its `products` pointers carried only as the revision in
- * force holds them (the GET→PUT round trip keeps every part; any other pointer
- * is refused naming the product), a product it names neither by a pointer nor
- * by a record removed, as a piece it leaves out is (R-P409 (2)).
+ * products' parts, its `index` carried exactly as the revision in force holds it
+ * (P93; P86's one-level `products` pointers as stored, over a one-level
+ * catalogue), each product named in `removeProducts` removed (R-P487 (5)), the
+ * shards the PUT changes written beside its parts before the head is reserved.
  */
 async function catalogueOverPut(env: Env, scope: string, current: ContentCatalog | undefined, set: PublicationPin, document: unknown, seen?: { manifest: boolean }): Promise<unknown> {
   const governed = await governedOver(env, scope, set, document);
   const checked = CONTENT_KIND.validate(governed);
   if (!checked.ok || !checked.value.productSlots) return governed;
-  const catalog = checked.value, { routed, ids } = await partedPutPlan(env, scope, current, catalog);
-  const idIndex = await idIndexFor(ids);
-  const manifest = manifestOf(catalog, routed.shared, { ...(catalog.products ?? {}), ...await partPointers(routed.parts) }, idIndex.pointer);
+  const catalog = checked.value, plan = await partedPutPlan(env, scope, current, catalog);
+  const manifest = manifestOf(catalog, plan.routed.shared, plan.built.index);
   if (seen) seen.manifest = true;
   manifestCap(manifest, set);
-  await writeParts(env, scope, routed.parts);
-  await writeIdIndex(env, scope, current, idIndex);
+  await writeParts(env, scope, plan.changed);
+  await writeIndex(env, scope, plan.built);
   return manifest;
 }
 /**
  * A PUT's parted document checked against the revision in force, as its write
- * and its validation check it: each carried pointer as the revision in force
- * holds it; the records routed; and (R-P424) no id in two places — a record
- * the index lists under a product the PUT keeps by its pointer is refused
- * `record_moved`, a shared piece whose id such a part holds `id_in_part` (the
- * document's own pieces answer to the validator's one-id rule). Answers the
- * routed records and the ids the new index lists: the kept products' entries
- * (read from the index, only where a pointer is kept) and the routed records.
+ * and its validation check it: the index as the revision in force holds it
+ * (anything else refused naming the shard), or P86's one-level pointers as
+ * stored over a one-level catalogue (where, as there, a product neither pointed
+ * at nor sent is removed); `removeProducts` naming products the catalogue holds
+ * and the PUT does not also send; the records routed; and (R-P424) no id in two
+ * places — a record whose id a product the PUT keeps holds is refused
+ * `record_moved`, a newly shared piece whose id such a part holds `id_in_part`
+ * (the document's own pieces answer to the validator's one-id rule). Answers the
+ * routed records, the parts whose digest moved and the index after the PUT.
  */
 async function partedPutPlan(env: Env, scope: string, current: ContentCatalog | undefined, catalog: ContentCatalog):
-  Promise<{ routed: ReturnType<typeof routedPieces>; ids: Map<string, string> }> {
-  const stored = current?.products ?? {}, errors: string[] = [];
-  for (const [product, pointer] of Object.entries(catalog.products ?? {})) {
-    const held = stored[product];
-    if (!held || held.digest !== pointer.digest || held.records !== pointer.records) {
-      errors.push(`products['${product.slice(0, 80)}']: names no part the revision in force holds for that product; a PUT carries a product's pointer only as it reads it, and its records otherwise`);
+  Promise<{ routed: ReturnType<typeof routedPieces>; changed: Map<string, ContentPiece[]>; built: BuiltIndex }> {
+  const errors: string[] = [], held = current?.index;
+  if (catalog.index) {
+    if (!held && current?.products) errors.push('index: the catalogue in force carries its one-level products index; a PUT carries the index exactly as it reads it');
+    for (const group of ['shards', 'ids'] as const) {
+      const sent = catalog.index[group] as Record<string, unknown>, stored = (held?.[group] ?? {}) as Record<string, unknown>;
+      for (const name of [...new Set([...Object.keys(sent), ...Object.keys(stored)])].sort()) {
+        if (JSON.stringify(own(sent, name) ?? null) !== JSON.stringify(own(stored, name) ?? null)) {
+          errors.push(`index.${group}['${name.slice(0, 16)}']: is not the shard the revision in force holds; a PUT carries the index exactly as it reads it, a product's records to change its part and removeProducts to remove it`);
+        }
+      }
+    }
+  } else if (held && Object.keys(held.shards).length) {
+    errors.push('index: the catalogue in force indexes products in shards; a PUT carries the index exactly as it reads it, a product\'s records to change its part and removeProducts to remove it');
+  }
+  if (catalog.products) {
+    if (held) errors.push('products: the catalogue in force is sharded; a PUT carries its index exactly as it reads it');
+    else for (const [product, pointer] of Object.entries(catalog.products)) {
+      const stored = own(current?.products, product);
+      if (!stored || stored.digest !== pointer.digest || stored.records !== pointer.records) {
+        errors.push(`products['${product.slice(0, 80)}']: names no part the revision in force holds for that product; a PUT carries a product's pointer only as it reads it, and its records otherwise`);
+      }
     }
   }
   const routed = routedPieces(catalog.pieces, catalog.productSlots!);
   errors.push(...routed.errors);
+  for (const product of catalog.removeProducts ?? []) {
+    if (routed.parts.has(product)) errors.push(`removeProducts: ${quotedId(product)} is removed and sent with records in one PUT; send one or the other`);
+  }
   if (errors.length) throw new VocabularyRefusal(errors);
-  const kept = new Set(Object.keys(catalog.products ?? {}).filter(product => !routed.parts.has(product)));
-  const keptIds = idsAfter(kept.size ? await idIndexInForce(env, scope, current) : new Map(), product => kept.has(product), new Map());
-  const slots = new Set(catalog.productSlots), collisions: Collision[] = [];
-  catalog.pieces.forEach((piece, i) => {
-    const owner = keptIds.get(piece.id);
-    if (owner === undefined) return;
-    const product = partProductOf(piece, slots), at = `pieces[${i}] ${quotedId(piece.id)}`;
+  const edit = new IndexEdit(env, scope, current);
+  // The products the PUT removes: by name; and, over a one-level catalogue (P86, R-P409 (2)), each the PUT neither points at nor sends.
+  const removed = new Set(catalog.removeProducts ?? []);
+  if (current?.products && !catalog.index) {
+    for (const product of Object.keys(current.products)) if (!own(catalog.products, product) && !routed.parts.has(product)) removed.add(product);
+  }
+  const unknown = [...(catalog.removeProducts ?? [])];
+  for (const product of unknown) if (!await edit.pointer(product)) errors.push(`removeProducts: ${quotedId(product)} names no product the catalogue in force holds`);
+  if (errors.length) throw new VocabularyRefusal(errors);
+  // The ids each product the PUT changes holds now (its part as stored; a lost part holds none it can name).
+  const known = new Map<string, Set<unknown>>();
+  const idsOf = async (product: string): Promise<Set<unknown>> => {
+    const pointer = await edit.pointer(product);
+    if (!pointer) return new Set();
+    try { return new Set(((await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[]).map(piece => piece.id)); }
+    catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') return new Set(); throw error; }
+  };
+  for (const product of [...removed, ...routed.parts.keys()]) known.set(product, await idsOf(product));
+  const stale = new Set<string>(), ownerOf = ownerCheck(env, scope, edit, known, stale);
+  const keeps = (owner: string) => !removed.has(owner) && !routed.parts.has(owner);
+  const shared = new Set(current?.pieces.map(piece => piece.id) ?? []), slots = new Set(catalog.productSlots), collisions: Collision[] = [];
+  for (const [i, piece] of catalog.pieces.entries()) {
+    const product = partProductOf(piece, slots);
+    if (product === null ? shared.has(piece.id) : known.get(product)?.has(piece.id)) continue;
+    const owner = await ownerOf(piece.id);
+    if (owner === undefined || owner === product || !keeps(owner)) continue;
+    const at = `pieces[${i}] ${quotedId(piece.id)}`;
     collisions.push(product === null ? inPartCollision(at, owner) : movedCollision(at, owner, product));
-  });
+  }
   if (collisions.length) throw collisionRefusal(collisions);
-  return { routed, ids: idsAfter(keptIds, () => true, routed.parts) };
+  // The index's edits: each sent product's pointer where its part's digest moved (only those parts written), each
+  // removed product's pointer gone, and the ids whose place changed.
+  const after = await partPointers(routed.parts), changed = new Map<string, ContentPiece[]>(), sent = new Set<unknown>();
+  for (const pieces of routed.parts.values()) for (const piece of pieces) sent.add(piece.id);
+  for (const [product, pieces] of routed.parts) {
+    const before = await edit.pointer(product), now = after[product]!;
+    if (before?.digest !== now.digest) { edit.setPointer(product, now); changed.set(product, pieces); }
+    for (const piece of pieces) if (!known.get(product)!.has(piece.id)) edit.setOwner(piece.id, product);
+  }
+  for (const product of removed) edit.setPointer(product, null);
+  for (const [product, ids] of known) for (const id of ids) if (typeof id === 'string' && !sent.has(id)) { void product; edit.setOwner(id, null); }
+  for (const id of stale) if (!sent.has(id)) edit.setOwner(id, null);
+  return { routed, changed, built: await edit.build() };
 }
-/** A rollback's catalogue: the kept revision forward, refused 410 naming every product whose part the store no longer holds (one HEAD each). */
-async function catalogueOverRollback(env: Env, scope: string, set: PublicationPin, value: unknown): Promise<unknown> {
-  const products = value && typeof value === 'object' ? (value as ContentCatalog).products ?? {} : {};
-  const idIndex = value && typeof value === 'object' ? (value as ContentCatalog).idIndex : undefined;
-  const missing: string[] = [];
-  for (const [product, pointer] of Object.entries(products)) if (!await catalogPartStored(env, scope, pointer.digest)) missing.push(JSON.stringify(product));
-  // R-P424: the revision's own id index travels with it, so it must be held too.
-  if (idIndex && !await catalogIdIndexStored(env, scope, idIndex.digest)) missing.push('its id index');
+/** P93 (R-P487 (6)): the most objects a rollback's existence check reads or heads. */
+const ROLLBACK_CHECKS = 900;
+const rollbackTooLarge = (count: number) => new PublicationError(`The rollback would check ${count} index shards and parts the revision in force does not name, past the ${ROLLBACK_CHECKS} a rollback checks; nothing was written`, 413, 'rollback_too_large');
+/**
+ * A rollback's catalogue: the kept revision forward. Its existence check covers
+ * what differs from the revision in force (P93, R-P487 (6)): each shard it names
+ * that the revision in force does not, and each part pointer inside those that
+ * differs — refused 410 `part_missing` naming what the store no longer holds,
+ * and 413 `rollback_too_large` past 900 checks. A one-level revision (P86's form)
+ * is checked by its parts that differ and its id index, and written sharded.
+ */
+async function catalogueOverRollback(env: Env, scope: string, current: ContentCatalog | undefined, set: PublicationPin, value: unknown): Promise<unknown> {
+  const target = value && typeof value === 'object' ? value as ContentCatalog : null;
+  if (!target || !catalogParted(target)) return governedOver(env, scope, set, value);
+  const inForce = new IndexEdit(env, scope, current), missing: string[] = [], parts: Array<[string, string]> = [];
+  let checks = 0;
+  if (target.index) {
+    const shards = Object.entries(target.index.shards).filter(([name, pointer]) => own(current?.index?.shards, name)?.digest !== pointer.digest);
+    const ids = Object.entries(target.index.ids).filter(([name, pointer]) => own(current?.index?.ids, name)?.digest !== pointer.digest);
+    checks = shards.length + ids.length;
+    if (checks > ROLLBACK_CHECKS) throw rollbackTooLarge(checks);
+    for (const [name, pointer] of shards) {
+      let shard: CatalogShard;
+      try { shard = await readCatalogShard(env, scope, pointer.digest); }
+      catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') { missing.push(`index shard ${name}`); continue; } throw error; }
+      for (const [product, part] of Object.entries(shard.products)) if ((await inForce.pointer(product))?.digest !== part.digest) parts.push([product, part.digest]);
+    }
+    checks += parts.length;
+    if (checks > ROLLBACK_CHECKS) throw rollbackTooLarge(checks);
+    for (const [name, pointer] of ids) if (!await catalogIdShardStored(env, scope, pointer.digest)) missing.push(`id shard ${name}`);
+  } else {
+    for (const [product, part] of Object.entries(target.products ?? {})) if ((await inForce.pointer(product))?.digest !== part.digest) parts.push([product, part.digest]);
+    checks = parts.length + (target.idIndex ? 1 : 0);
+    if (checks > ROLLBACK_CHECKS) throw rollbackTooLarge(checks);
+    // R-P424: the revision's own id index travels with it, so it must be held too.
+    if (target.idIndex && !await catalogIdIndexStored(env, scope, target.idIndex.digest)) missing.push('its id index');
+  }
+  for (const [product, digest] of parts) if (!await catalogPartStored(env, scope, digest)) missing.push(JSON.stringify(product));
   if (missing.length) {
     throw new PublicationError(`The revision names parts the store no longer holds, so it cannot be rolled forward: ${missing.join(', ')}; nothing was written`, 410, 'part_missing');
   }
-  return governedOver(env, scope, set, value);
+  const governed = await governedOver(env, scope, set, value) as ContentCatalog;
+  if (target.index) return governed;
+  // P93 (R-P487 (7)): a one-level revision is written sharded, its parts unchanged.
+  const built = await new IndexEdit(env, scope, target).build();
+  await writeIndex(env, scope, built);
+  return manifestOf(governed, governed.pieces, built.index);
 }
 
 /**
@@ -413,7 +605,7 @@ function documentEnvelopeOf(kind: DocumentKind<unknown>, value: unknown): { enve
   try {
     // P86: a manifest's pieces are its shared pieces and every part's records; `products` the index's size.
     const catalog = kind.name === CONTENT_KIND.name && value !== null && typeof value === 'object' && Array.isArray((value as ContentCatalog).pieces) ? value as ContentCatalog : null;
-    const pieces = catalog ? { pieces: catalogPieceCount(catalog), ...(catalog.products ? { products: Object.keys(catalog.products).length } : {}) } : {};
+    const pieces = catalog ? { pieces: catalogPieceCount(catalog), ...(catalogParted(catalog) ? { products: catalogProductCount(catalog) } : {}) } : {};
     return { envelope: { ...pieces, bytes: documentBytes(value), limitBytes: PUBLICATION_MAX_BYTES } };
   } catch { return {}; }
 }
@@ -961,10 +1153,19 @@ contentRoutes.get('/:kind', async (c) => {
   }
   const rev = await readPublication(c.env, k.kind, scope);
   const value = rev ? rev.value : k.fallback;
-  // P86 (S6): `?product=` reads one product's part of the catalogue in force, through its manifest pointer.
+  // P93 (R-P487 (4)): `?shard=<two hex digits>` reads one index shard of the catalogue in force, never the whole index.
+  const shard = c.req.query('shard');
+  if (shard !== undefined && k.kind.name === CONTENT_KIND.name) {
+    if (!/^[0-9a-f]{2}$/.test(shard)) return c.json({ ok: false, error: 'shard must be two lowercase hexadecimal digits (00 to ff)' }, 400);
+    const pointer = rev ? own((rev.value as ContentCatalog).index?.shards, shard) : undefined;
+    const document = pointer ? await readCatalogShard(c.env, scope, pointer.digest) : { shard, products: {} };
+    return c.json({ scope, kind: k.kind.name, source: 'stored', revision: rev?.revision ?? 0, publication: rev?.publication, shard, digest: pointer?.digest ?? null,
+      document, envelope: { products: Object.keys(document.products).length, records: pointer?.records ?? 0, bytes: documentBytes(document), limitBytes: PUBLICATION_MAX_BYTES } });
+  }
+  // P86 (S6): `?product=` reads one product's part of the catalogue in force, through its manifest pointer (P93: through its shard).
   const product = c.req.query('product');
   if (product !== undefined && k.kind.name === CONTENT_KIND.name) {
-    const pointer = rev ? (rev.value as ContentCatalog).products?.[product] : undefined;
+    const pointer = rev ? await catalogPartPointer(c.env, scope, rev.value as ContentCatalog, product) : undefined;
     if (!pointer) return c.json({ ok: false, error: `product ${JSON.stringify(product.slice(0, 256))} has no part in the catalogue in force` }, 404);
     const part = await readCatalogPart(c.env, scope, pointer.digest);
     return c.json({ scope, kind: k.kind.name, source: 'stored', revision: rev!.revision, publication: rev!.publication, product, digest: pointer.digest,
@@ -1205,7 +1406,7 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
   // request, the note and the body read are versionedStore.rollback's own.
   const result = k.kind.name === CONTENT_KIND.name
     ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
-      async (_base: unknown, set: PublicationPin) => catalogueOverRollback(c.env, scope, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null))
+      async (base: unknown, set: PublicationPin) => catalogueOverRollback(c.env, scope, base as ContentCatalog | undefined, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null))
     // P88 (E13): a slots body rolled forward meets the approved layouts of the set it is published over.
     : k.kind.name === SLOTS_KIND.name
       ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
@@ -1244,19 +1445,30 @@ class HeldLoad extends Error {
  */
 async function assembleParted(env: Env, scope: string, current: ContentCatalog, set: PublicationPin, incoming: Record<string, unknown>[], positions: readonly number[],
   mode: ImportMode, opts: { expire?: number }, sink: { placed?: { pieces: unknown[]; positions: (number | null)[] }; touched?: { before: ContentCatalog; after: ContentCatalog } }):
-  Promise<{ manifest?: ContentCatalog; parts: Map<string, ContentPiece[]>; idIndex?: { pointer?: CatalogPartPointer; value?: CatalogIdIndex }; document?: unknown }> {
+  Promise<{ manifest?: ContentCatalog; parts: Map<string, ContentPiece[]>; built?: BuiltIndex; document?: unknown }> {
   const slots = new Set(current.productSlots ?? []), sharedIn: number[] = [], productIn = new Map<string, number[]>();
   incoming.forEach((piece, j) => {
     const product = partProductOf(piece, slots);
     if (product === null) sharedIn.push(j); else productIn.set(product, [...(productIn.get(product) ?? []), j]);
   });
-  // R-P424: where each incoming part record already lives (the id index in force). One the index lists under another
-  // product moves only when the file carries that product too — its part then drops it — and is refused otherwise.
-  const inForce = await idIndexInForce(env, scope, current), collisions: Collision[] = [], movedOut = new Map<string, Set<unknown>>();
+  // P93: the stored parts of the products the file names, through their shards (only those shards are read).
+  const edit = new IndexEdit(env, scope, current), stored = new Map<string, ContentPiece[]>(), known = new Map<string, Set<unknown>>();
+  const pointers = new Map<string, CatalogPartPointer | undefined>();
+  for (const product of productIn.keys()) {
+    const pointer = await edit.pointer(product), pieces = pointer ? (await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[] : [];
+    pointers.set(product, pointer); stored.set(product, pieces); known.set(product, new Set(pieces.map(piece => piece.id)));
+  }
+  // R-P424 through the id shards, looked up only for the ids whose place can change (P93): an incoming part record its
+  // product's part does not already hold. One the index lists under another product moves only when the file carries
+  // that product too — its part then drops it — and is refused otherwise.
+  const collisions: Collision[] = [], movedOut = new Map<string, Set<unknown>>(), stale = new Set<string>();
+  const ownerOf = ownerCheck(env, scope, edit, known, stale);
   const at = (j: number) => recordAddress(positions[j]!, incoming[j]!.id);
   for (const [product, from] of productIn) {
     for (const j of from) {
-      const id = incoming[j]!.id, owner = typeof id === 'string' ? inForce.get(id) : undefined;
+      const id = incoming[j]!.id;
+      if (typeof id !== 'string' || known.get(product)!.has(id)) continue;
+      const owner = await ownerOf(id);
       if (owner === undefined || owner === product) continue;
       if (productIn.has(owner)) movedOut.set(owner, (movedOut.get(owner) ?? new Set()).add(id));
       else collisions.push(movedCollision(at(j), owner, product));
@@ -1267,16 +1479,25 @@ async function assembleParted(env: Env, scope: string, current: ContentCatalog, 
   const shared = actsOnShared ? assembleFrom(current, sharedIn.map(j => incoming[j]!), mode) : { pieces: current.pieces as unknown[], origins: current.pieces.map(() => null) };
   segments.push({ product: null, stored: actsOnShared ? current.pieces : [], pieces: shared.pieces, origins: shared.origins.map(o => o === null ? null : sharedIn[o]!) });
   for (const [product, from] of productIn) {
-    const pointer = current.products?.[product], leaving = movedOut.get(product);
-    const stored = pointer ? (await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[] : [];
-    const assembled = assembleFrom({ pieces: leaving ? stored.filter(piece => !leaving.has(piece.id)) : stored }, from.map(j => incoming[j]!), mode);
-    segments.push({ product, stored, pieces: assembled.pieces, origins: assembled.origins.map(o => o === null ? null : from[o]!) });
+    const leaving = movedOut.get(product), held = stored.get(product)!;
+    const assembled = assembleFrom({ pieces: leaving ? held.filter(piece => !leaving.has(piece.id)) : held }, from.map(j => incoming[j]!), mode);
+    segments.push({ product, stored: held, pieces: assembled.pieces, origins: assembled.origins.map(o => o === null ? null : from[o]!) });
   }
-  // R-P424: and no id both shared and in a part once assembled: a shared piece whose id a part holds (the parts it
-  // leaves as they are, as the index lists them, and those it writes), a part record whose id a shared piece holds.
-  const partIds = idsAfter(inForce, product => !productIn.has(product), new Map(segments.flatMap(segment => segment.product === null ? [] : [[segment.product, segment.pieces] as const])));
-  const sharedIds = new Set(shared.pieces.map(piece => (piece as { id?: unknown } | null)?.id));
-  for (const j of sharedIn) { const id = incoming[j]!.id, owner = typeof id === 'string' ? partIds.get(id) : undefined; if (owner !== undefined) collisions.push(inPartCollision(at(j), owner)); }
+  // R-P424: and no id both shared and in a part once assembled: a shared piece whose id a part holds (a part the load
+  // writes, as assembled; any other, through the id shards, for a piece not already shared), a part record whose id a
+  // shared piece holds.
+  const assembledIds = new Map<unknown, string>();
+  for (const segment of segments) if (segment.product !== null) for (const piece of segment.pieces) assembledIds.set((piece as { id?: unknown } | null)?.id, segment.product);
+  const sharedBefore = new Set(current.pieces.map(piece => piece.id)), sharedIds = new Set(shared.pieces.map(piece => (piece as { id?: unknown } | null)?.id));
+  for (const j of sharedIn) {
+    const id = incoming[j]!.id;
+    if (typeof id !== 'string') continue;
+    const written = assembledIds.get(id);
+    if (written !== undefined) { collisions.push(inPartCollision(at(j), written)); continue; }
+    if (sharedBefore.has(id)) continue;
+    const owner = await ownerOf(id);
+    if (owner !== undefined && !productIn.has(owner)) collisions.push(inPartCollision(at(j), owner));
+  }
   for (const [product, from] of productIn) for (const j of from) if (typeof incoming[j]!.id === 'string' && sharedIds.has(incoming[j]!.id)) collisions.push(sharedCollision(at(j), product));
   if (collisions.length) throw collisionRefusal(collisions);
   if (mode === 'full') {
@@ -1317,11 +1538,21 @@ async function assembleParted(env: Env, scope: string, current: ContentCatalog, 
   }
   if (errors.length) throw new VocabularyRefusal(errors);
   sink.touched = { before: { pieces: before }, after: { pieces: after } };
-  // R-P424: the index of this revision: the products the load leaves as they are, from the index in force, and the parts it writes.
-  const idIndex = await idIndexFor(idsAfter(inForce, product => !parts.has(product), parts));
+  // P93: the index's edits — each named product's pointer where its part's digest moved (only those parts are written:
+  // an unchanged part is never put again), and the ids whose place changed (added to a part, or dropped from one); a
+  // retitle changes neither.
+  const now = await partPointers(parts), changed = new Map<string, ContentPiece[]>(), kept = new Set<unknown>();
+  for (const pieces of parts.values()) for (const piece of pieces) kept.add(piece.id);
+  for (const [product, pieces] of parts) {
+    if (pointers.get(product)?.digest !== now[product]!.digest) { edit.setPointer(product, now[product]!); changed.set(product, pieces); }
+    for (const piece of pieces) if (!known.get(product)!.has(piece.id)) edit.setOwner(piece.id, product);
+  }
+  for (const ids of known.values()) for (const id of ids) if (typeof id === 'string' && !kept.has(id)) edit.setOwner(id, null);
+  for (const id of stale) if (!kept.has(id)) edit.setOwner(id, null);
+  const built = await edit.build();
   const manifest = manifestOf({ ...(version ? { version } : {}), ...(current.typeFallback ? { typeFallback: current.typeFallback } : {}), productSlots: current.productSlots },
-    sharedPieces, { ...(current.products ?? {}), ...await partPointers(parts) }, idIndex.pointer);
-  return { manifest, parts, idIndex };
+    sharedPieces, built.index);
+  return { manifest, parts: changed, built };
 }
 /**
  * P86 (S9, R-P407 (2)): on a catalogue with product slots, an import's and a pull's diagnostics name each routed
@@ -1387,7 +1618,7 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
           if (opts.dryRun) throw new HeldLoad('dry-run', parted.manifest);
           manifestCap(parted.manifest, set);
           await writeParts(c.env, scope, parted.parts);
-          if (parted.idIndex) await writeIdIndex(c.env, scope, current, parted.idIndex);
+          if (parted.built) await writeIndex(c.env, scope, parted.built);
           return parted.manifest;
         }
         const assembled = assembleFrom(current, incoming, mode);

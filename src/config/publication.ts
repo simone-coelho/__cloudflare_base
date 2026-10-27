@@ -456,7 +456,7 @@ interface CacheEntry { handle: object; binding: object; scope: string; at: numbe
 const cache = new Set<CacheEntry>(); let cacheBytes = 0, cacheEpoch = {};
 const fresh = (at: number, now: number) => Number.isFinite(now) && now >= at && now - at < PUBLICATION_CACHE_MS;
 function remove(entry: CacheEntry): void { if (cache.delete(entry)) cacheBytes -= entry.bytes; }
-export function invalidatePublicationCache(): void { cache.clear(); cacheBytes = 0; cacheEpoch = {}; partCache.clear(); partCacheBytes = 0; }
+export function invalidatePublicationCache(): void { cache.clear(); cacheBytes = 0; cacheEpoch = {}; partCache.clear(); partCacheBytes = 0; shardCache.clear(); shardCacheBytes = 0; }
 function invalidateScope(storage: R2Bucket, scope: string): void {
   const binding = storageIdentity(storage);
   for (const entry of cache) if (entry.binding === binding && entry.scope === scope) remove(entry);
@@ -620,20 +620,6 @@ async function createExact(storage: R2Bucket, key: string, value: unknown): Prom
 // body is, and it is kept while any stored revision's manifest names it
 // (`purgeByPolicy` removes the parts only purged revisions named).
 
-/**
- * P86: the objects a revision value names beside its body, by key under the
- * member's scope: the content manifest's parts and its id index (R-P424); none
- * for any other kind.
- */
-export function attachmentsOf(kind: string, value: unknown, scope: string): string[] {
-  if (kind !== 'content' || !value || typeof value !== 'object') return [];
-  const { products, idIndex } = value as { products?: unknown; idIndex?: { digest?: unknown } };
-  const parts = products && typeof products === 'object' && !Array.isArray(products)
-    ? Object.values(products as Record<string, { digest?: unknown }>).map(pointer => pointer?.digest).filter((d): d is string => typeof d === 'string' && HASH.test(d)).map(d => partKey(scope, d))
-    : [];
-  const index = idIndex && typeof idIndex.digest === 'string' && HASH.test(idIndex.digest) ? [idIndexKey(scope, idIndex.digest)] : [];
-  return [...parts, ...index];
-}
 const partKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/part/' + digest + '.json';
 const idIndexKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/ids/' + digest + '.json';
 /** P86: one product's part, `{ product, pieces }`, as it is stored. */
@@ -758,6 +744,151 @@ export async function catalogIdIndexStored(env: Env, scope: string, hash: string
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
   if (!HASH.test(hash)) return false;
   try { return (await storage.head(idIndexKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+}
+
+// ── P93 (E18, R-P487): the catalogue's sharded index ───────────────────────────
+//
+// The manifest of a catalogue with product slots names 256 fixed product
+// shards and 256 id shards (`index`, src/content/types.ts), each an immutable,
+// content-addressed object beside the parts: a product shard maps each of its
+// products to its part's pointer, an id shard maps each part record's id to the
+// product whose part holds it. A product falls in the shard named by the first
+// two hex digits of the SHA-256 of its id's UTF-8 bytes, a record id likewise,
+// so the scheme assumes nothing of any id's form. Shards are written with the
+// store's exact-create before the publication reserves the head, as parts are,
+// each at most 2 MiB; the manifest stays the size of its shared pieces and 512
+// pointers whatever the number of products. A product page reads the anchor's
+// shard (held per isolate by digest) and its part; the id shards are read by the
+// loads alone.
+
+/** P93: the shard a product id or a record id falls in: the first two hex digits of the SHA-256 of its UTF-8 bytes. */
+export async function catalogShardName(id: string): Promise<string> {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(id)));
+  return bytes[0]!.toString(16).padStart(2, '0');
+}
+const shardKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/shard/' + digest + '.json';
+const idShardKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/idshard/' + digest + '.json';
+/** P93: a product shard as stored: its name and each product's part pointer. */
+export interface CatalogShard { shard: string; products: Record<string, { digest: string; records: number }> }
+/** P93: an id shard as stored: its name and, for each part record's id, the product whose part holds it. */
+export interface CatalogIdShard { shard: string; ids: Record<string, string> }
+const SHARD_NAME = /^[0-9a-f]{2}$/;
+function validShard(value: unknown): value is CatalogShard {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 2) return false;
+  const { shard, products } = value as CatalogShard;
+  return typeof shard === 'string' && SHARD_NAME.test(shard) && !!products && typeof products === 'object' && !Array.isArray(products)
+    && Object.values(products).every(p => !!p && typeof p === 'object' && typeof p.digest === 'string' && HASH.test(p.digest) && Number.isSafeInteger(p.records) && p.records >= 1);
+}
+function validIdShard(value: unknown): value is CatalogIdShard {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 2) return false;
+  const { shard, ids } = value as CatalogIdShard;
+  return typeof shard === 'string' && SHARD_NAME.test(shard) && !!ids && typeof ids === 'object' && !Array.isArray(ids) && Object.values(ids).every(p => typeof p === 'string');
+}
+/**
+ * P93: the product shards read on this isolate, by scope and digest, apart from
+ * the parts so a large part never evicts them (4 MiB of canonical bytes, the
+ * oldest leaving first); `invalidatePublicationCache` clears it.
+ */
+const SHARD_CACHE_BYTES = 4 * 1024 * 1024;
+const shardCache = new Map<string, { binding: object; value: CatalogShard; bytes: number }>(); let shardCacheBytes = 0;
+function rememberShard(storage: R2Bucket, scope: string, digest: string, value: CatalogShard, bytes: number): void {
+  if (bytes > SHARD_CACHE_BYTES) return;
+  const key = scope + '\u0000' + digest, binding = storageIdentity(storage), held = shardCache.get(key);
+  if (held) { shardCache.delete(key); shardCacheBytes -= held.bytes; }
+  while (shardCacheBytes + bytes > SHARD_CACHE_BYTES && shardCache.size) { const [oldest, entry] = shardCache.entries().next().value!; shardCache.delete(oldest); shardCacheBytes -= entry.bytes; }
+  shardCache.set(key, { binding, value, bytes }); shardCacheBytes += bytes;
+}
+/**
+ * P93: a product shard's value and pointer from its products' part pointers
+ * (nothing written), refused 413 `index_shard_too_large` naming the shard and
+ * its count past 2 MiB.
+ */
+export async function catalogShardOf(shard: string, products: ReadonlyMap<string, { digest: string; records: number }>):
+  Promise<{ value: CatalogShard; pointer: { digest: string; products: number; records: number } }> {
+  const value: CatalogShard = { shard, products: Object.fromEntries([...products].map(([product, p]) => [product, { digest: p.digest, records: p.records }])) };
+  const bytes = encoder.encode(canonical(value)).byteLength;
+  if (bytes > PUBLICATION_MAX_BYTES) {
+    throw new PublicationError(`The catalogue's index shard ${shard} would be ${bytes} bytes for ${products.size} products, past its 2 MiB limit; nothing was written`, 413, 'index_shard_too_large');
+  }
+  let records = 0; for (const p of products.values()) records += p.records;
+  return { value, pointer: { digest: await digest(value), products: products.size, records } };
+}
+/** P93: an id shard's value and pointer (nothing written), refused 413 `id_index_too_large` naming the shard past 2 MiB. */
+export async function catalogIdShardOf(shard: string, ids: ReadonlyMap<string, string>): Promise<{ value: CatalogIdShard; pointer: { digest: string; records: number } }> {
+  const value: CatalogIdShard = { shard, ids: Object.fromEntries(ids) };
+  const bytes = encoder.encode(canonical(value)).byteLength;
+  if (bytes > PUBLICATION_MAX_BYTES) {
+    throw new PublicationError(`The catalogue's id index shard ${shard} would be ${bytes} bytes for ${ids.size} part records, past its 2 MiB limit; nothing was written`, 413, 'id_index_too_large');
+  }
+  return { value, pointer: { digest: await digest(value), records: ids.size } };
+}
+/** P93: write a product shard with the store's exact-create (a retry writes the same key; other bytes there are a conflict). */
+export async function writeCatalogShard(env: Env, scope: string, value: CatalogShard): Promise<string> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), held = freeze(structuredClone(value)) as CatalogShard;
+  const hash = await digest(held);
+  await createExact(storage, shardKey(home, hash), held);
+  rememberShard(storage, home, hash, held, encoder.encode(canonical(held)).byteLength);
+  return hash;
+}
+/** P93: write an id shard with the store's exact-create. */
+export async function writeCatalogIdShard(env: Env, scope: string, value: CatalogIdShard): Promise<string> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), hash = await digest(value);
+  await createExact(storage, idShardKey(home, hash), value);
+  return hash;
+}
+/**
+ * P93: one product shard by its digest: from this isolate's shard cache, else
+ * one read of its object, whose canonical value must hash to its digest. A shard
+ * the store does not hold, or holds otherwise, is refused 503 `part_unavailable`
+ * (a product page is never decided from the shared pieces alone, R-P412 (2)).
+ */
+export async function readCatalogShard(env: Env, scope: string, hash: string): Promise<CatalogShard> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (!HASH.test(hash)) throw new PublicationError('Invalid catalogue shard digest', 503, 'part_unavailable');
+  const held = shardCache.get(home + '\u0000' + hash);
+  if (held && held.binding === storageIdentity(storage)) return held.value;
+  const found = await readObject(storage, shardKey(home, hash));
+  if (!found || !validShard(found.value) || await digest(found.value) !== hash) throw new PublicationError(`Catalogue index shard ${hash} unavailable`, 503, 'part_unavailable');
+  const value = freeze(found.value) as CatalogShard;
+  rememberShard(storage, home, hash, value, found.bytes);
+  return value;
+}
+/** P93: one id shard by its digest (the loads alone read it); one the store does not hold, or holds otherwise, is refused 503 `id_index_unavailable`. */
+export async function readCatalogIdShard(env: Env, scope: string, hash: string): Promise<CatalogIdShard> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  const refused = () => new PublicationError(`The catalogue's id index shard ${hash.slice(0, 64)} is unavailable, so the load cannot be checked against the records the parts hold; nothing was written`, 503, 'id_index_unavailable');
+  if (!HASH.test(hash)) throw refused();
+  const found = await readObject(storage, idShardKey(home, hash));
+  if (!found || !validIdShard(found.value) || await digest(found.value) !== hash) throw refused();
+  return found.value;
+}
+/** P93: whether the store holds a product shard, by one HEAD of its object (a rollback's existence check). */
+export async function catalogShardStored(env: Env, scope: string, hash: string): Promise<boolean> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (!HASH.test(hash)) return false;
+  try { return (await storage.head(shardKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+}
+/** P93: whether the store holds an id shard, by one HEAD of its object. */
+export async function catalogIdShardStored(env: Env, scope: string, hash: string): Promise<boolean> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (!HASH.test(hash)) return false;
+  try { return (await storage.head(idShardKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+}
+/**
+ * P93: a product's part pointer in a catalogue of either form: from the
+ * one-level index, or through its shard (one read, held per isolate by digest);
+ * none where it has no part. A shard the store no longer holds is refused 503
+ * `part_unavailable`.
+ */
+export async function catalogPartPointer(env: Env, scope: string, catalog: { products?: Record<string, { digest: string; records: number }>; index?: { shards: Record<string, { digest: string }> } },
+  product: string): Promise<{ digest: string; records: number } | undefined> {
+  if (catalog.products) return Object.hasOwn(catalog.products, product) ? catalog.products[product] : undefined;
+  const shards = catalog.index?.shards;
+  if (!shards) return undefined;
+  const name = await catalogShardName(product);
+  if (!Object.hasOwn(shards, name)) return undefined;
+  const shard = await readCatalogShard(env, scope, shards[name]!.digest);
+  return Object.hasOwn(shard.products, product) ? shard.products[product] : undefined;
 }
 async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promise<void>): Promise<PublicationPin> {
   const pending = loaded.head.pending; required(pending); const set = pending.set;
@@ -1184,9 +1315,8 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       }
     }
     const start = candidates.length ? (set.revision * PURGE_CANDIDATES) % candidates.length : 0;
-    // P86: the parts the purged revisions named, by member; removed below where no stored revision still names them.
-    // A scope that holds no part at all (one listing) reads no revision for them.
-    const orphaned = new Map<Ref, Set<string>>(), parted = await holdsParts(storage, work, scope, candidates.map(c => c.ref));
+    // P86, P93: a scope that holds no part at all (one listing) reads no revision for its attachments.
+    const parted = await holdsParts(storage, work, scope, candidates.map(c => c.ref)), values = new Map<string, unknown>();
     for (let i = 0; i < Math.min(PURGE_CANDIDATES, candidates.length); i++) {
       const { ref, n, next } = candidates[(start + i) % candidates.length]!;
       // Its successor's publication is when it stopped being in force; where that
@@ -1194,20 +1324,110 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       const born = await revisionTime(storage, work, ref, n), superseded = ref.index.find(entry => entry.revision === n + 1)?.at ?? await revisionTime(storage, work, ref, next);
       if (born === null || superseded === null || now - superseded <= durationMs) continue;
       if (await namedByStoredManifest(storage, work, ledger, scope, ref.kind, n, born, superseded)) continue;
-      const parts = parted ? await revisionAttachments(storage, work, ref, n) : [];
+      // P86, P93 (R-P487 (8)): the objects only this revision names beside its body (its id index or its shards, and the
+      // parts behind them) are resolved against every other stored revision and removed BEFORE the body: a purge that
+      // stops on its budget leaves the body, so the next publication resolves them again and nothing is lost for good.
+      if (parted && ref.kind === 'content') {
+        const value = await revisionValue(storage, work, ref, n, values);
+        if (value) {
+          const others: unknown[] = [];
+          for (const m of await storedRevisions(storage, work, ref)) if (m !== n) { const other = await revisionValue(storage, work, ref, m, values); if (other) others.push(other); }
+          await sweep(storage, work, await orphansOf(storage, work, ref.scope, value, others), now - ATTACHMENT_GRACE_MS);
+        }
+      }
       spend(work);
       await storage.delete(revisionKey(ref.kind, ref.scope, n));
-      if (parts.length) { const held = orphaned.get(ref) ?? new Set<string>(); for (const part of parts) held.add(part); orphaned.set(ref, held); }
-    }
-    // P86: a part (or an id index) is kept while any stored revision of its member
-    // names it; those only purged revisions named are removed, within the same work
-    // budget, and (R-P424) never one uploaded less than 15 minutes ago: a load in
-    // flight may have written that very object for the head it is about to reserve.
-    for (const [ref, parts] of orphaned) {
-      for (const n of await storedRevisions(storage, work, ref)) for (const part of await revisionAttachments(storage, work, ref, n)) parts.delete(part);
-      for (const key of parts) { if (await uploadedBefore(storage, work, key, now - ATTACHMENT_GRACE_MS)) { spend(work); await storage.delete(key); } }
+      values.delete(`${ref.kind}\u0000${n}`);
     }
   } catch { /* whatever this publication did not reach stays retained */ }
+}
+/** P93: a stored content revision's value, read once per purge within its budget (null where it is gone). */
+async function revisionValue(storage: R2Bucket, work: PurgeWork, ref: Ref, n: number, values: Map<string, unknown>): Promise<unknown> {
+  const key = `${ref.kind}\u0000${n}`;
+  if (values.has(key)) return values.get(key);
+  spend(work);
+  const found = await readObject(storage, revisionKey(ref.kind, ref.scope, n));
+  if (found && (work.bytes += found.bytes) > PURGE_BYTES) throw new PurgeStopped();
+  const value = found ? (found.value as { value?: unknown } | null)?.value ?? null : null;
+  values.set(key, value);
+  return value;
+}
+interface IndexedValue { products?: Record<string, { digest?: unknown }>; idIndex?: { digest?: unknown }; index?: { shards?: Record<string, { digest?: unknown }>; ids?: Record<string, { digest?: unknown }> } }
+const ownDigest = (record: Record<string, { digest?: unknown }> | undefined, key: string): string | undefined => {
+  const value = record && typeof record === 'object' && Object.hasOwn(record, key) ? record[key]?.digest : undefined;
+  return typeof value === 'string' && HASH.test(value) ? value : undefined;
+};
+/**
+ * P86, P93: the keys of the objects one revision names beside its body that no
+ * other stored revision names. A one-level revision (P86): each part no other
+ * revision points the same product at, and its id index. A sharded one (P93):
+ * each shard no other revision names under the same name, and, bucket by bucket
+ * (a product's pointer lives in its own shard in every revision), each part
+ * behind such a shard that no other revision points the same product at; each id
+ * shard likewise. A shard another revision names whole is named with every part
+ * behind it, and is not read.
+ */
+async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, value: unknown, others: readonly unknown[]): Promise<string[]> {
+  const v = value as IndexedValue, peers = others as IndexedValue[], orphans: string[] = [], shards = new Map<string, CatalogShard | null>();
+  const shardAt = async (hash: string): Promise<CatalogShard | null> => {
+    if (shards.has(hash)) return shards.get(hash)!;
+    spend(work);
+    const found = await readObject(storage, shardKey(scope, hash));
+    if (found && (work.bytes += found.bytes) > PURGE_BYTES) throw new PurgeStopped();
+    const shard = found && validShard(found.value) ? found.value : null;
+    shards.set(hash, shard);
+    return shard;
+  };
+  const pointedBy = async (peer: IndexedValue, product: string): Promise<string | undefined> => {
+    if (peer.products) return ownDigest(peer.products, product);
+    const hash = ownDigest(peer.index?.shards, await catalogShardName(product));
+    const shard = hash ? await shardAt(hash) : null;
+    return shard ? ownDigest(shard.products, product) : undefined;
+  };
+  const named = async (product: string, hash: string) => { for (const peer of peers) if (await pointedBy(peer, product) === hash) return true; return false; };
+  if (v.products && typeof v.products === 'object') {
+    for (const product of Object.keys(v.products)) { const hash = ownDigest(v.products, product); if (hash && !await named(product, hash)) orphans.push(partKey(scope, hash)); }
+    const hash = typeof v.idIndex?.digest === 'string' && HASH.test(v.idIndex.digest) ? v.idIndex.digest : undefined;
+    if (hash && !peers.some(peer => peer.idIndex?.digest === hash)) orphans.push(idIndexKey(scope, hash));
+  } else if (v.index && typeof v.index === 'object') {
+    for (const name of Object.keys(v.index.shards ?? {})) {
+      const hash = ownDigest(v.index.shards, name);
+      if (!hash || peers.some(peer => ownDigest(peer.index?.shards, name) === hash)) continue;
+      orphans.push(shardKey(scope, hash));
+      const shard = await shardAt(hash);
+      for (const product of Object.keys(shard?.products ?? {})) { const part = ownDigest(shard!.products, product); if (part && !await named(product, part)) orphans.push(partKey(scope, part)); }
+    }
+    for (const name of Object.keys(v.index.ids ?? {})) {
+      const hash = ownDigest(v.index.ids, name);
+      if (hash && !peers.some(peer => ownDigest(peer.index?.ids, name) === hash)) orphans.push(idShardKey(scope, hash));
+    }
+  }
+  return [...new Set(orphans)];
+}
+/**
+ * P93 (R-P487 (8)): remove the objects named, each only when it was uploaded 15
+ * minutes ago or more (R-P424: a load in flight may have written that very
+ * object for the head it is about to reserve). The upload times are read from
+ * the listing — one call per object for a few, else the directory in pages of
+ * 1,000 — and the deletions go 1,000 to a call, all within the purge's budget.
+ */
+async function sweep(storage: R2Bucket, work: PurgeWork, keys: readonly string[], cutoff: number): Promise<void> {
+  const groups = new Map<string, Set<string>>();
+  for (const key of keys) { const dir = key.slice(0, key.lastIndexOf('/') + 1), group = groups.get(dir) ?? new Set<string>(); group.add(key); groups.set(dir, group); }
+  const old: string[] = [];
+  for (const [dir, group] of groups) {
+    if (group.size <= 8) { for (const key of group) if (await uploadedBefore(storage, work, key, cutoff)) old.push(key); continue; }
+    const pending = new Set(group);
+    await eachListed(storage, work, { prefix: dir }, page => {
+      for (const object of page.objects as Array<{ key: string; uploaded?: unknown }>) {
+        if (!pending.delete(object.key)) continue;
+        const at = object.uploaded instanceof Date ? object.uploaded.getTime() : NaN;
+        if (Number.isFinite(at) && at < cutoff) old.push(object.key);
+      }
+      return pending.size === 0;
+    });
+  }
+  for (let i = 0; i < old.length; i += 1000) { spend(work); await storage.delete(old.slice(i, i + 1000)); }
 }
 /** P86 (R-P424): the pending-publication grace: an attachment younger than this is never purged. */
 const ATTACHMENT_GRACE_MS = 15 * 60_000;
@@ -1225,15 +1445,6 @@ async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, ref
   spend(work);
   const page = await storage.list({ prefix: partKey(scope, '').slice(0, -'.json'.length), limit: 1 }) as unknown as Listed;
   return Array.isArray(page?.objects) && page.objects.length > 0;
-}
-/** P86: the keys of the parts and the id index one stored revision's value names (`attachmentsOf`); none for a kind without parts, without a read. */
-async function revisionAttachments(storage: R2Bucket, work: PurgeWork, ref: Ref, n: number): Promise<string[]> {
-  if (ref.kind !== 'content') return [];
-  spend(work);
-  const found = await readObject(storage, revisionKey(ref.kind, ref.scope, n));
-  if (!found) return [];
-  if ((work.bytes += found.bytes) > PURGE_BYTES) throw new PurgeStopped();
-  return attachmentsOf(ref.kind, (found.value as { value?: unknown } | null)?.value, ref.scope);
 }
 /**
  * W38 B4 with W21 E1.07: may this member's old revisions be purged without

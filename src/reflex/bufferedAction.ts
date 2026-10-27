@@ -82,7 +82,7 @@ export async function bufferedInterest(env: Env, tenant: string, event: ActionEv
   const heldProduct = product as unknown as Record<string, unknown> | undefined;
   const contentEvent = isContentAction(action);
   const vocabulary = contentEvent || needsCatalogVocabulary(eventData, heldProduct, cfg)
-    ? await tenantCatalogVocabulary(env, tenant, cfg, catalog as unknown as CatalogVocabularySource | null)
+    ? await tenantCatalogVocabulary(env, tenant, cfg, catalog as unknown as CatalogVocabularySource | null, eventData)
     : EMPTY_VOCABULARY;
   const placed = placeEvent(eventData, heldProduct, cfg, vocabulary);
   const touches = contentEvent ? await resolvedContentTouches(env, tenant, eventData, cfg, vocabulary, event.userId) : placed.touches;
