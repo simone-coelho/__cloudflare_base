@@ -1529,8 +1529,9 @@ the identifier keeping the arm it drew), `mismatch` (a share of 0 or 1 that cann
 (a request that already carries a session, whose arm never changes and whose answer is as without the member). A
 malformed member is refused `400 'Invalid arm member'` on every path, a new browser's first request included, before
 anything is issued or written. Each reason is counted for your operators on `GET /v1/{tenant}/learn/queue` as
-`arm_draw`, `{ capped, ignored, mismatch, republished }`, a count over thirty days that names no visitor, read as a
-floor as `enrollment_anchor_unavailable` is. Two cases are told and not counted: a page on the session route or a
+`arm_draw`, `{ capped, ignored, mismatch, republished }`, an exact count of every reason over thirty days that names
+no visitor; a draw is counted after its answer and never holds it. If the count cannot be read within two seconds,
+the queue answers it as zeros rather than waiting. Two cases are told and not counted: a page on the session route or a
 session broker gets the engine's own draw, so its head script can paint another class than its first answer's
 until the SDK keeps that answer's experiment; and a recognised shopper's arm is her enrollment anchor's (above),
 which a head script on another browser cannot see.
