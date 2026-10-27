@@ -164,7 +164,7 @@ const armMember = (cls: string, tableVersion: string) => JSON.stringify({ class:
 const firstRequest = (cls: string, version: string, label: string) => new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
   headers: { 'X-Tenant': TENANT, 'Content-Type': 'application/json', ...MOBILE },
   body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance: pageInstanceOf(label), 'ctx.anchor': A, arm: armMember(cls, version) }) });
-/** A decision request carrying her session and naming a class (P84: ignored, her arm unchanged). */
+/** A decision request carrying the shopper's session and naming a class (P84: ignored, the shopper's arm unchanged). */
 const askedRequest = (s: Shopper, cls: string, version: string, label: string) => new Request(`https://shop.invalid/v1/${TENANT}/decisions/snapshot`, { method: 'POST',
   headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability, 'Content-Type': 'application/json', ...MOBILE },
   body: JSON.stringify({ page: 'pdp', brand: BRAND, pageInstance: pageInstanceOf(label), 'ctx.anchor': A, arm: armMember(cls, version) }) });
@@ -374,7 +374,7 @@ describe('unit:P94.AD1', () => {
       restoreCache();
       expect([republication.status, parked.n], `${host}: PRECONDITION — the learn republication lands while the ${N} republished requests are parked (${show(republication.body)})`).toEqual([200, N]);
       // What the burst produced, from its own answers: each first answer's armRequest reason, each ignored answer, and each
-      // beacon whose claimed class differs from the engine's own arm for that shopper (armFor over her anchor, P85 R-P393).
+      // beacon whose claimed class differs from the engine's own arm for that shopper (armFor over the shopper's anchor, P85 R-P393).
       const produced: Counts = { ...ZERO };
       for (const a of [...answers!.capped, ...answers!.republished, ...answers!.late, ...answers!.ignored]) {
         const reason = armRequestOf(a)?.reason;
@@ -557,7 +557,7 @@ describe('unit:P94.AD3', () => {
     }
 
     for (const kind of ['ignored', 'mismatch'] as const) {
-      const what = kind === 'ignored' ? 'a decision request carrying her session and naming the other class (ignored)' : 'a P85 carousel beacon whose claimed class differs from the engine\'s arm (mismatch)';
+      const what = kind === 'ignored' ? 'a decision request carrying the shopper\'s session and naming the other class (ignored)' : 'a P85 carousel beacon whose claimed class differs from the engine\'s arm (mismatch)';
       it(`host (${host}): R-P503 — under a counter that does not answer until released, ${what} is answered in its ordinary time, within ${ANSWER_BOUND_MS} ms, its record not settled when it answers (the shopper's owner never waits on the counter); once the object answers, the learn queue reads the count`, async () => {
         const m = await mount(host, docsAt(0));
         expectPublished(m, 'P94.AD3 — the documents publish');
