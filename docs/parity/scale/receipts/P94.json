@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P94",
+  "workOrderHash": "sha256:4c9c3c88cda070ac8962ae1c053bc9da54103c196f8291b9e104f03020ced1bb",
+  "artifact": {
+    "revision": "7cd89a6e79f1401a4cf33c78f0321717a1913d22",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p94-joined-b merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p94-build at 19fe033e (cdd53280 the merge of the S38 spec 10a1f0d8 and 763dff56 (e0e109cf their base); 25876f97 the merge of rem/integration b3a8fd76 with P93; 8936003c the counter on the tenant's own learn statistics object: src/content/holdout.ts and src/durable-objects/LearnStats.ts keep every arm-draw outcome as a durable increment on the object arm-draw:v1:tenant of the existing LEARN_STATS binding, one storage key written under the object's serialization so a burst of concurrent draws is counted in full, the thirty-day window kept, no alarm, no slot state and no key-value document read or written; 6fceb1e1 the owner-path hand-over: src/identity/sessionAuthority.ts lets afterOwnerAnswer hand the statistics binding to work that names it, and recordArmDraw registers its record there inside an active owner operation so a decision carrying a session and a carousel beacon never wait on the counter, the first-request door unchanged after its answer; every call to the counter bounded at two seconds with an abort, a missing, failing or silent counter failing nothing and the learn queue answering zeros in the shape; ed83b421 kit 02 states arm_draw as an exact count of every reason over thirty days; 21edc391 the object's new lines placed so the kits' line citations stay true; bd1ec163 the P93 delivery findings corrected by name: kit 03's chunking paragraph with the measured storage calls, kit 02's removal limit of ten thousand names and the unconverted catalogue's shard read, the ingest vocabulary's shard comment; 19fe033e the hand-over registered by the session runtime when it loads, so the counter's module imports nothing of it and the publication store's import graph stays free of the session runtime and its Node built-ins, the native storage proof building again).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S38/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S38/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P94/implementer/REPORT.md",
+      "git commits on rem/p94-joined-b up to 7cd89a6e"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P94 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S38/reviewer-p94/logs/7cd89a6e/p94-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S38/gate-r4/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P94/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-27T23:38:22.025Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
