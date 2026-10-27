@@ -1427,7 +1427,7 @@ export class ShopperReflex {
       if (principal) retainOwnerWork(counted); else void counted;
     }
     const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, heldProduct, cfg))
-      ? await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null)
+      ? await tenantCatalogVocabulary(this.env, tenant, cfg, surfaceCatalog as unknown as CatalogVocabularySource | null, placing)
       : EMPTY_VOCABULARY;
     const placed = placeEvent(placing, heldProduct, cfg, vocabulary);
     const governedPlacement = governed ? governedTouches(placed.touches, governed, cfg) : null;
@@ -4046,7 +4046,7 @@ export class ShopperReflex {
     const governed = reflexOn && (contentEvent || needsCatalogVocabulary(data, undefined, cfg)) ? await tenantVocabularyInEffect(this.env, tenant) : null;
     const placing = governed ? governedEventData(data, cfg, governed).data : data;
     const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, undefined, cfg))
-      ? await tenantCatalogVocabulary(this.env, tenant, cfg, catalog as unknown as CatalogVocabularySource | null) : EMPTY_VOCABULARY;
+      ? await tenantCatalogVocabulary(this.env, tenant, cfg, catalog as unknown as CatalogVocabularySource | null, placing) : EMPTY_VOCABULARY;
     const placed = placeEvent(placing, undefined, cfg, vocabulary);
     const touches = cfg.eventAttributes === 'event-when-unknown' ? (governed ? governedTouches(placed.touches, governed, cfg) : placed.touches) : [];
     return touches.length === 0 ? 'unknown_product' : null;

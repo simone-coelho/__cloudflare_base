@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { CatalogPartPointer, ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+import type { CatalogIndex, CatalogPartPointer, ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue, ApprovedLayout, LayoutDevice, LayoutsDocument } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { isRewardType, REWARD_TYPES, type RewardType } from '@/ledger/records';
@@ -361,8 +361,8 @@ const PART_DIGEST = /^[0-9a-f]{64}$/;
  * each product's part (`{ digest, records }`), which only a catalogue declaring
  * product slots carries. Neither: today's catalogue.
  */
-function catalogManifestMembers(candidate: Record<string, unknown>, errors: string[]): Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex'> {
-  const out: Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex'> = {};
+function catalogManifestMembers(candidate: Record<string, unknown>, errors: string[]): Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex' | 'index' | 'removeProducts'> {
+  const out: Pick<ContentCatalog, 'productSlots' | 'products' | 'idIndex' | 'index' | 'removeProducts'> = {};
   if (candidate.productSlots !== undefined) {
     const slots = candidate.productSlots;
     if (!Array.isArray(slots) || slots.length < 1 || slots.length > 64 || !slots.every(isCatalogueName) || new Set(slots).size !== slots.length) {
@@ -397,7 +397,61 @@ function catalogManifestMembers(candidate: Record<string, unknown>, errors: stri
       errors.push('idIndex: { digest: the SHA-256 of the id index (64 lowercase hex), records: how many part records it lists (1 or more) }');
     } else out.idIndex = { digest: pointer.digest, records: pointer.records };
   }
+  // P93 (E18, R-P487 (3)): the sharded index, in place of the one-level members.
+  if (candidate.index !== undefined) {
+    if (candidate.productSlots === undefined) errors.push('index: a sharded index is carried only by a catalogue that declares productSlots');
+    else if (candidate.products !== undefined || candidate.idIndex !== undefined) errors.push('index: a catalogue carries the sharded index in place of products and idIndex, never beside them');
+    else {
+      const index = catalogIndexOf(candidate.index, errors);
+      if (index) out.index = index;
+    }
+  }
+  // P93 (R-P487 (5)): the products a PUT removes, by name.
+  if (candidate.removeProducts !== undefined) {
+    const removed = candidate.removeProducts;
+    if (candidate.productSlots === undefined) errors.push('removeProducts: products are removed only from a catalogue that declares productSlots');
+    else if (!Array.isArray(removed) || removed.length > MAX_REMOVED_PRODUCTS || !removed.every(isProductId) || new Set(removed).size !== removed.length) {
+      errors.push(`removeProducts: at most ${MAX_REMOVED_PRODUCTS} distinct product ids (1 to 256 characters, no surrounding space or control character)`);
+    } else if (removed.length) out.removeProducts = [...removed] as string[];
+  }
   return out;
+}
+/** P93: the most products one PUT removes by name. */
+const MAX_REMOVED_PRODUCTS = 10_000;
+const SHARD_NAME = /^[0-9a-f]{2}$/;
+const count = (v: unknown, least: number): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= least;
+/**
+ * P93 (E18): the sharded index read strictly: `key` the scheme (`sha256-hex2`),
+ * `shards` and `ids` maps of two lowercase hex digits to their pointers, each
+ * listed only when its shard is not empty.
+ */
+function catalogIndexOf(value: unknown, errors: string[]): CatalogIndex | null {
+  if (!isRecord(value) || Object.keys(value).some(key => key !== 'key' && key !== 'shards' && key !== 'ids') || value.key !== 'sha256-hex2'
+    || !isRecord(value.shards) || !isRecord(value.ids)) {
+    errors.push("index: { key: 'sha256-hex2', shards: { <two hex digits>: { digest, products, records } }, ids: { <two hex digits>: { digest, records } } }");
+    return null;
+  }
+  const shards: CatalogIndex['shards'] = {}, ids: CatalogIndex['ids'] = {};
+  let valid = true;
+  for (const name of Object.keys(value.shards).sort()) {
+    const pointer = value.shards[name];
+    if (!SHARD_NAME.test(name) || !isRecord(pointer) || Object.keys(pointer).length !== 3 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
+      || !count(pointer.products, 1) || !count(pointer.records, 1)) {
+      errors.push(`index.shards['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the shard (64 lowercase hex), products: 1 or more, records: 1 or more }, under two lowercase hex digits`);
+      valid = false; continue;
+    }
+    shards[name] = { digest: pointer.digest, products: pointer.products as number, records: pointer.records as number };
+  }
+  for (const name of Object.keys(value.ids).sort()) {
+    const pointer = value.ids[name];
+    if (!SHARD_NAME.test(name) || !isRecord(pointer) || Object.keys(pointer).length !== 2 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
+      || !count(pointer.records, 1)) {
+      errors.push(`index.ids['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the id shard (64 lowercase hex), records: 1 or more }, under two lowercase hex digits`);
+      valid = false; continue;
+    }
+    ids[name] = { digest: pointer.digest, records: pointer.records as number };
+  }
+  return valid ? { key: 'sha256-hex2', shards, ids } : null;
 }
 
 /**
@@ -419,9 +473,15 @@ export function variantFirst(piece: { featuredProductIds?: unknown }): boolean {
 }
 /** P86: the parts a catalogue value indexes (none for today's catalogue). */
 export const catalogProducts = (catalog: Pick<ContentCatalog, 'products'> | null | undefined): Record<string, CatalogPartPointer> => catalog?.products ?? {};
-/** P86: the catalogue's pieces, the shared ones and every part's records, counted from the manifest. */
-export const catalogPieceCount = (catalog: Pick<ContentCatalog, 'pieces' | 'products'>): number =>
-  catalog.pieces.length + Object.values(catalog.products ?? {}).reduce((n, pointer) => n + pointer.records, 0);
+/** P86, P93: the catalogue's pieces, the shared ones and every part's records, counted from the manifest (the one-level index or the shard pointers). */
+export const catalogPieceCount = (catalog: Pick<ContentCatalog, 'pieces' | 'products' | 'index'>): number =>
+  catalog.pieces.length + Object.values(catalog.products ?? {}).reduce((n, pointer) => n + pointer.records, 0)
+    + Object.values(catalog.index?.shards ?? {}).reduce((n, pointer) => n + pointer.records, 0);
+/** P93: how many products the manifest indexes (the one-level index or the shard pointers). */
+export const catalogProductCount = (catalog: Pick<ContentCatalog, 'products' | 'index'>): number =>
+  Object.keys(catalog.products ?? {}).length + Object.values(catalog.index?.shards ?? {}).reduce((n, pointer) => n + pointer.products, 0);
+/** P86, P93: whether a catalogue value is a manifest with a product index (one-level or sharded). */
+export const catalogParted = (catalog: Pick<ContentCatalog, 'products' | 'index'> | null | undefined): boolean => !!(catalog?.products || catalog?.index);
 
 export const EMPTY_CATALOG: ContentCatalog = { version: 'content-empty', pieces: [] };
 

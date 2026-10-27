@@ -2,6 +2,19 @@
 // P86 under the Closure Ledger (programme `tapestry-parity-activation`, amendment 11, item E10): the tests for the LOCAL
 // criteria CS1–CS3 of the P86 work order (docs/parity/activation/program.json). LV1 is a deferred live row and gets no test.
 //
+// THE FORM IN FORCE (P93, amendment 12 E18; R-P487, R-P489, R-P490, R-P491): the catalogue's index is SHARDED. The
+// manifest carries `index: { key: 'sha256-hex2', shards: { <hex2>: { digest, products, records } }, ids: { <hex2>:
+// { digest, records } } }` in place of P86's one-level `products` and `idIndex`. A product shard
+// (`config-publication/v1/<scope>/content/shard/<digest>.json`, `{ shard, products }`) points each of its products at its
+// part; an id shard (`.../content/idshard/<digest>.json`, `{ shard, ids }`) names the product whose part holds each part
+// record; a product or a record id falls in the shard named by the first two hex digits of the SHA-256 of its id. A
+// product page reads the head, the set, the four revisions, the anchor's shard and its part (8 reads); a load reads the
+// shards of the products it names and the id shards only of ids whose place can change, and writes only what moved; a PUT
+// carries `index` exactly as read and removes a product only by `removeProducts`; each shard is capped at 2 MiB
+// (`index_shard_too_large`, `id_index_too_large`), the manifest by its shared pieces alone; a one-level catalogue is
+// written sharded by its next publication (src/units/P93). The shapes below are P86's as ruled (one-level), kept as this
+// file's history; its helpers and the legs R-P489/R-P490 name read the sharded form.
+//
 // THE REQUIREMENT, verbatim (docs/parity/authority/amendment-11/BTI-Parity-Amendment-2026-10-22-activation.md:87–91, E10):
 //   "#### E10 · Catalogue size beyond the test scope
 //    - **Authority:** the kit's catalogue limit (about 2,000 pieces, 2 MiB per catalogue document); one item per image
@@ -30,7 +43,8 @@
 //      PUT of the catalogue, kept by every load); `products` `{ "<productId>": { digest: <64 lowercase hex>, records:
 //      <the part's record count> } }`. A catalogue that declares no `productSlots` carries neither member and is today's
 //      document, every piece shared, no part written (the locks). `productSlots` is the catalogue's own declaration, not
-//      derived from the slots document's `scope: 'anchor'`.
+//      derived from the slots document's `scope: 'anchor'`. (P93: the manifest carries `index`, the shard pointers, in
+//      place of `products`; the per-product pointers live in the product shards.)
 //   S2 A part: the R2 object `config-publication/v1/<scope>/content/part/<digest>.json`, its body the canonical JSON of
 //      `{ product, pieces }` (the stored pieces, defaults applied as an import applies them), `documentDigest` of that
 //      value the `<digest>` of its key and of the manifest's pointer; at most 2 MiB; written before the pending head is
@@ -47,7 +61,8 @@
 //      digest). The dry run writes nothing, no part included. The import answer's `pieces` and the GET's
 //      `envelope.pieces` count shared + parts; `envelope.bytes` is the manifest's; `envelope.products` the index's size.
 //   S5 The cap: a load whose manifest (its index) would pass 2 MiB is refused 413 `code: 'manifest_too_large'`, nothing
-//      written (no part either); the two-level index is the next step, not built.
+//      written (no part either); the two-level index was the next step (P93 built it as the sharded index: the
+//      manifest no longer grows with the products, and each shard is capped at 2 MiB instead).
 //   S6 The per-product read: `GET /content/catalog?scope=<tenant>&product=<productId>` → 200 `{ scope, kind, source,
 //      revision, publication, product, digest, document: { product, pieces }, envelope }`; a product the manifest does
 //      not index → 404 naming it. (Not `/content/catalog/products/<id>`: reading 6.)
@@ -119,7 +134,8 @@
 // mount's bucket.
 //
 // R-P424 (the delivery review at 28ef79d9; R-P407 (5) amended), specification round 3, test-only. The shapes:
-//   S12 The id index: the manifest's `idIndex: { digest, records }` (present exactly when `products` is) points at one
+//   S12 The id index (P93 replaced it by the 256 id shards under `content/idshard/`, read only for ids whose place can
+//       change): the manifest's `idIndex: { digest, records }` (present exactly when `products` is) points at one
 //       object per revision, `config-publication/v1/<scope>/content/ids/<digest>.json`, the canonical JSON of
 //       `{ ids: { "<id>": "<product id>" } }` — every part record, expired ones included — whose `documentDigest` is its
 //       address; written by exact-create before the pending head, as a part is; read by the loads only (import, pull,
@@ -284,34 +300,76 @@ async function declareProductSlots(m: Mounted, pieces: unknown[] = MODULES): Pro
   const put = await putDocument(m, 'catalog', { version: 'p86-catalogue', productSlots: [CAROUSEL], pieces }, 'p86 product slots');
   expect(put.status, `PRECONDITION (${m.host}): the catalogue declaring its product slots is published (${show(put)})`).toBe(200);
 }
-/** The manifest's index, or `{}` where it has none (today). */
-const productsOf = (d: LoadedSlots) => (d.document.products ?? {}) as Record<string, { digest?: unknown; records?: unknown }>;
+/**
+ * P93 R10 (R-P487, R-P489; R-P498): the manifest's index read in either form — P86's one-level `products`, or P93's
+ * sharded `index`, whose product shards (`content/shard/<digest>.json`, `{ shard, products }`) are read from the
+ * bucket of the mount the document was loaded from (`m.storage`), deterministically, as `partOf` reads a part.
+ */
+const storedAt = (m: Mounted, key: string): Record<string, unknown> | null => {
+  const raw = m.storage.objects.get(key);
+  return raw === undefined ? null : JSON.parse(raw) as Record<string, unknown>;
+};
+const SHARD = /^config-publication\/v1\/coach\/content\/shard\/([0-9a-f]{64})\.json$/;
+const shardKey = (digest: string) => `config-publication/v1/${TENANT}/content/shard/${digest}.json`;
+const shardPointersOf = (d: LoadedSlots) => ((d.document.index as { shards?: unknown } | undefined)?.shards ?? null) as Record<string, { digest?: unknown }> | null;
+/** The manifest's index, product → pointer, or `{}` where it has none (today). */
+const productsOf = (m: Mounted, d: LoadedSlots) => {
+  const shards = shardPointersOf(d);
+  if (!shards) return (d.document.products ?? {}) as Record<string, { digest?: unknown; records?: unknown }>;
+  const out: Record<string, { digest?: unknown; records?: unknown }> = {};
+  for (const pointer of Object.values(shards)) Object.assign(out, (storedAt(m, shardKey(String(pointer.digest)))?.products ?? {}) as object);
+  return Object.fromEntries(Object.keys(out).sort().map(p => [p, out[p]!]));
+};
+/** P93 R10: the key of the product shard that holds a product (the sharded form), or what is missing. */
+const shardOf = (m: Mounted, d: LoadedSlots, product: string) => Object.values(shardPointersOf(d) ?? {}).map(p => shardKey(String(p.digest)))
+  .find(key => Object.hasOwn((storedAt(m, key)?.products ?? {}) as object, product)) ?? `no shard holds ${product}`;
+/** P93 R10: the shard bucket of an id: the first two hex digits of the SHA-256 of its UTF-8 bytes (R-P487 (1)). */
+const bucketOfId = async (id: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)))][0]!.toString(16).padStart(2, '0');
 const sharedOf = (d: LoadedSlots) => ((d.document.pieces ?? []) as Array<{ id: string }>).map(p => p.id);
-const digestOf = (d: LoadedSlots, product: string) => String(productsOf(d)[product]?.digest ?? `no pointer for ${product}`);
+const digestOf = (m: Mounted, d: LoadedSlots, product: string) => String(productsOf(m, d)[product]?.digest ?? `no pointer for ${product}`);
 const PART = /^config-publication\/v1\/coach\/content\/part\/([0-9a-f]{64})\.json$/;
 const partKey = (digest: string) => `config-publication/v1/${TENANT}/content/part/${digest}.json`;
 const partKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => PART.test(k)).sort();
 /** A product's part as stored, read through its pointer: its record ids, or what is missing. */
 function partOf(m: Mounted, d: LoadedSlots, product: string): { ids: string[]; value: Record<string, unknown> | null; bytes: number; missing: string | null } {
-  const digest = digestOf(d, product), raw = m.storage.objects.get(partKey(digest));
+  const digest = digestOf(m, d, product), raw = m.storage.objects.get(partKey(digest));
   if (raw === undefined) return { ids: [], value: null, bytes: 0, missing: `no part object for ${product} (${digest})` };
   const value = JSON.parse(raw) as Record<string, unknown>;
   return { ids: sorted(((value.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value, bytes: new TextEncoder().encode(raw).byteLength, missing: null };
 }
-/** R-P424 (S12): the id index object — its key, the stored ones, the manifest's pointer and its entries (id → product). */
-const IDS = /^config-publication\/v1\/coach\/content\/ids\/([0-9a-f]{64})\.json$/;
-const idsKey = (digest: string) => `config-publication/v1/${TENANT}/content/ids/${digest}.json`;
+/**
+ * R-P424 (S12), P93 R10: the id index — P86's one object (`content/ids/`) or P93's id shards (`content/idshard/`,
+ * `{ shard, ids }`, named by the manifest's `index.ids`): the stored objects, the manifest's pointers and the entries
+ * (id → product). `digest` names the index as a whole: the one object's digest, or the id-shard pointers as written.
+ */
+const IDS = /^config-publication\/v1\/coach\/content\/(?:ids|idshard)\/([0-9a-f]{64})\.json$/;
+const idsKey = (digest: string) => `config-publication/v1/${TENANT}/content/idshard/${digest}.json`;
 const idsKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => IDS.test(k)).sort();
-const indexPointerOf = (d: LoadedSlots) => (d.document.idIndex ?? null) as { digest?: unknown; records?: unknown } | null;
+/** The id index's pointers: the sharded `index.ids` (hex2 → { digest, records }) or P86's `idIndex`; null where there is none. */
+const indexPointerOf = (d: LoadedSlots) => ((d.document.index as { ids?: unknown } | undefined)?.ids ?? d.document.idIndex ?? null) as Record<string, unknown> | null;
+/** The id shard keys the manifest names (the sharded form). */
+const idShardKeysOf = (d: LoadedSlots) => sorted(Object.values(((d.document.index as { ids?: unknown } | undefined)?.ids ?? {}) as Record<string, { digest?: unknown }>).map(p => idsKey(String(p.digest))));
 function indexOf(m: Mounted, d: LoadedSlots): { digest: string; ids: Record<string, string> | null; value: unknown } {
-  const digest = String(indexPointerOf(d)?.digest ?? 'no idIndex'), raw = m.storage.objects.get(idsKey(digest));
+  const sharded = (d.document.index as { ids?: Record<string, { digest?: unknown }> } | undefined)?.ids;
+  if (sharded) {
+    const ids: Record<string, string> = {};
+    for (const pointer of Object.values(sharded)) {
+      const raw = m.storage.objects.get(idsKey(String(pointer.digest)));
+      if (raw === undefined) return { digest: JSON.stringify(sharded), ids: null, value: null };
+      Object.assign(ids, (JSON.parse(raw) as { ids?: Record<string, string> }).ids ?? {});
+    }
+    const value = { ids: Object.fromEntries(Object.keys(ids).sort().map(id => [id, ids[id]!])) };
+    return { digest: JSON.stringify(sharded), ids: value.ids, value };
+  }
+  const digest = String((d.document.idIndex as { digest?: unknown } | undefined)?.digest ?? 'no idIndex');
+  const raw = m.storage.objects.get(`config-publication/v1/${TENANT}/content/ids/${digest}.json`);
   const value = raw === undefined ? null : JSON.parse(raw) as { ids?: Record<string, string> };
   return { digest, ids: value?.ids ?? null, value };
 }
 /** Every part record's id → its product, read from the parts the manifest points at: what the index must hold. */
 function partEntries(m: Mounted, d: LoadedSlots): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const product of Object.keys(productsOf(d)).sort()) for (const id of partOf(m, d, product).ids) out[id] = product;
+  for (const product of Object.keys(productsOf(m, d)).sort()) for (const id of partOf(m, d, product).ids) out[id] = product;
   return out;
 }
 /** R-P424: the bucket's own `uploaded` member (R2's, on list, head and get), as `when` names it for each key. */
@@ -417,7 +475,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         `${host}: P86.CS1 — each load one revision, its pieces shared + parts (today the third is refused 413 document_too_large: ${loads.map(([n, a]) => `${n} ${show(a)}`).join(' | ').slice(0, 400)})`)
         .toEqual([['import A', 200, base + 1, MODULES.length + BULK], ['import B', 200, base + 2, MODULES.length + 2 * BULK], ['pull C', 200, base + 3, MODULES.length + 3 * BULK]]);
       const manifest = await loadDocument(m, 'catalog');
-      const index = productsOf(manifest);
+      const index = productsOf(m, manifest);
       expect.soft({ productSlots: manifest.document.productSlots ?? 'no productSlots', shared: sorted(sharedOf(manifest)),
         products: Object.fromEntries(Object.entries(index).map(([p, v]) => [p, [/^[0-9a-f]{64}$/.test(String(v.digest)), v.records]])) },
       `${host}: P86.CS1 — the manifest: productSlots, the shared pieces only, one pointer per product (today one document of every record)`).toEqual({
@@ -428,7 +486,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       `${host}: P86.CS1 — each product's records one part { product, pieces } of at most 2 MiB at its pointer's address`).toEqual(
         [A, B, C].map(p => [p, 'stored', BULK, p, ['pieces', 'product'], true]));
       const addressed: Array<[string, boolean]> = [];
-      for (const [p, part] of parts) addressed.push([p, part.value !== null && await documentDigest(part.value) === digestOf(manifest, p)]);
+      for (const [p, part] of parts) addressed.push([p, part.value !== null && await documentDigest(part.value) === digestOf(m, manifest, p)]);
       expect.soft(addressed, `${host}: P86.CS1 — each part content-addressed: the digest of its value is its key's and the pointer's`).toEqual([[A, true], [B, true], [C, true]]);
       expect.soft(parts.map(([p, part]) => [p, part.ids]), `${host}: P86.CS1 — each part holds exactly its product's records`).toEqual(
         [A, B, C].map(p => [p, sorted(range[p]!.map(r => r.id))]));
@@ -443,7 +501,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const reads: Array<[string, number, unknown, unknown, unknown, string[]]> = [];
       for (const p of [A, B, C]) { const a = await productRead(m, p); reads.push([p, a.status, a.body.product ?? null, a.body.digest ?? null, a.body.revision ?? null, readIds(a)]); }
       expect.soft(reads, `${host}: P86.CS1 — the per-product read answers each product's records at the revision in force (today the whole catalogue, no product)`).toEqual(
-        [A, B, C].map(p => [p, 200, p, digestOf(manifest, p), manifest.revision, sorted(range[p]!.map(r => r.id))]));
+        [A, B, C].map(p => [p, 200, p, digestOf(m, manifest, p), manifest.revision, sorted(range[p]!.map(r => r.id))]));
     }, 300_000);
 
     it(`host (${host}): routing — on a PUT and on an import, a record whose slotTypes are all product slots and which names featuredProductIds goes to the part of its FIRST id ([${A}, ${BLACK}] to ${A}; [${BLACK}, ${A}] to ${BLACK}); a record naming no product, or with a slot that is not a product slot, stays shared; a product the catalogue does not carry is indexed as any other; an import warns variant_first for a record written variant-first and accepts it; a GET→PUT round trip of the manifest keeps every part`, async () => {
@@ -457,12 +515,12 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const merged = await importJson(m, [a4], { mode: 'merge' });
       expect(merged.status, `${host}: PRECONDITION — the merge of ${a4.id} is accepted (${show(merged)})`).toBe(200);
       const manifest = await loadDocument(m, 'catalog');
-      expect.soft({ shared: sorted(sharedOf(manifest)), products: Object.keys(productsOf(manifest)).sort(),
+      expect.soft({ shared: sorted(sharedOf(manifest)), products: Object.keys(productsOf(m, manifest)).sort(),
         parts: Object.fromEntries([A, BLACK, B, UNKNOWN].map(p => [p, partOf(m, manifest, p).missing ?? partOf(m, manifest, p).ids])) },
       `${host}: P86.CS1 — routed by the first id; the rest shared (today every record in the one document, no index)`).toEqual({
         shared: sorted([...MODULE_IDS, twoSlots.id, 'img-brand-1']), products: sorted([A, BLACK, B, UNKNOWN]),
         parts: { [A]: sorted([a1.id, a2.id, a4.id]), [BLACK]: [reversed.id], [B]: ['img-cb925-1'], [UNKNOWN]: ['img-zz999-1'] } });
-      expect.soft(digestOf(afterPut, A) !== digestOf(manifest, A) && digestOf(afterPut, B) === digestOf(manifest, B),
+      expect.soft(digestOf(m, afterPut, A) !== digestOf(m, manifest, A) && digestOf(m, afterPut, B) === digestOf(m, manifest, B),
         `${host}: P86.CS1 — the merge touched ${A}'s part alone (a new part for it, ${B}'s pointer unchanged)`).toBe(true);
       // R-P407 (2): written variant-first, a record is routed to its first id as written and the import warns variant_first
       // (S9) — only where the first id extends the second as a variant form; never a refusal.
@@ -481,7 +539,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const edited = { ...afterWarn.document, pieces: ((afterWarn.document.pieces ?? []) as Rec[]).map(p => p.id === M.editorial ? { ...p, title: 'A styling story, revised' } : p) };
       const put = await putDocument(m, 'catalog', edited, 'p86 round trip');
       const after = await loadDocument(m, 'catalog');
-      expect.soft([put.status, after.revision, JSON.stringify(productsOf(after)) === JSON.stringify(productsOf(afterWarn)) && Object.keys(productsOf(after)).length === 5,
+      expect.soft([put.status, after.revision, JSON.stringify(productsOf(m, after)) === JSON.stringify(productsOf(m, afterWarn)) && Object.keys(productsOf(m, after)).length === 5,
         ((after.document.pieces ?? []) as Rec[]).find(p => p.id === M.editorial)?.title ?? null],
       `${host}: P86.CS1 — the GET→PUT round trip is one revision and keeps every part's pointer (${show(put)})`).toEqual([200, afterWarn.revision + 1, true, 'A styling story, revised']);
     }, 120_000);
@@ -511,7 +569,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const afterReplace = await loadDocument(m, 'catalog');
       expect.soft({ status: replaced.status, pieces: replaced.body.pieces, shared: sorted(sharedOf(afterReplace)), b: partOf(m, afterReplace, B).ids,
         bTitle: ((partOf(m, afterReplace, B).value?.pieces ?? []) as Rec[]).find(p => p.id === b2.id)?.title ?? null,
-        untouched: [digestOf(afterReplace, A) === digestOf(start, A), digestOf(afterReplace, C) === digestOf(start, C)] },
+        untouched: [digestOf(m, afterReplace, A) === digestOf(m, start, A), digestOf(m, afterReplace, C) === digestOf(m, start, C)] },
       `${host}: P86.CS1 — replace names ${B} alone (today it replaces the whole catalogue: ${show(replaced)})`).toEqual({
         status: 200, pieces: MODULES.length + 4 + 2 + 4, shared: sorted(MODULE_IDS), b: sorted([b1.id, b2.id]), bTitle: `${b2.title}, reshot`, untouched: [true, true] });
       const c = fourOf(C);
@@ -521,7 +579,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const afterFull = await loadDocument(m, 'catalog');
       const cPieces = (partOf(m, afterFull, C).value?.pieces ?? []) as Array<{ id: string; lifecycle?: { status?: string } }>;
       expect.soft({ status: full.status, c: cPieces.map(p => [p.id, p.lifecycle?.status ?? 'live']), shared: sorted(sharedOf(afterFull)),
-        untouched: [digestOf(afterFull, A) === digestOf(start, A), digestOf(afterFull, B) === digestOf(afterReplace, B)] },
+        untouched: [digestOf(m, afterFull, A) === digestOf(m, start, A), digestOf(m, afterFull, B) === digestOf(m, afterReplace, B)] },
       `${host}: P86.CS1 — full keeps ${C}'s left-out record expired; ${A}, ${B} and the shared pieces untouched (${show(full)})`).toEqual({
         status: 200, c: [[c[0]!.id, 'live'], [c[1]!.id, 'live'], [c[2]!.id, 'live'], [c[3]!.id, 'expired']], shared: sorted(MODULE_IDS), untouched: [true, true] });
       // R-P424: replace and full rebuild the index entries of the products they name.
@@ -536,13 +594,13 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const loaded = await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' });
       expect(loaded.status, `${host}: PRECONDITION — the three products load (${show(loaded)})`).toBe(200);
       const start = await loadDocument(m, 'catalog');
-      expect(Object.keys(productsOf(start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
+      expect(Object.keys(productsOf(m, start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
       const editorialModule = MODULES.find(p => p.id === M.editorial)!, retitled = [{ ...editorialModule, title: 'A styling story, retitled' }];
       const written = await importJson(m, retitled, { mode: 'merge' });
       const after = await loadDocument(m, 'catalog');
       const again = await importJson(m, retitled, { mode: 'merge' });
       const afterAgain = await loadDocument(m, 'catalog');
-      expect.soft({ written: [written.status, written.body.skipped ?? 'no skipped member', after.revision], pointers: JSON.stringify(productsOf(after)) === JSON.stringify(productsOf(start)),
+      expect.soft({ written: [written.status, written.body.skipped ?? 'no skipped member', after.revision], pointers: JSON.stringify(productsOf(m, after)) === JSON.stringify(productsOf(m, start)),
         title: ((after.document.pieces ?? []) as Rec[]).find(p => p.id === M.editorial)?.title ?? null,
         again: [again.status, again.body.skipped ?? 'no skipped member', afterAgain.revision] },
       `${host}: P86.CS1 — the shared change written once, then skipped (${show(written)})`).toEqual({
@@ -556,14 +614,14 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const loaded = await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' });
       expect(loaded.status, `${host}: PRECONDITION — the three products load (${show(loaded)})`).toBe(200);
       const start = await loadDocument(m, 'catalog');
-      expect(Object.keys(productsOf(start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
+      expect(Object.keys(productsOf(m, start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
       const editorial = { ...MODULES.find(p => p.id === M.editorial)!, title: 'A styling story, replaced' }, grid = MODULES.find(p => p.id === M.grid)!;
       const [b1, b2] = fourOf(B) as [Rec, Rec];
       const replaced = await importJson(m, [editorial, b1, b2], { mode: 'replace' });
       const afterReplace = await loadDocument(m, 'catalog');
       expect.soft({ status: replaced.status, pieces: replaced.body.pieces, shared: sharedOf(afterReplace),
         title: ((afterReplace.document.pieces ?? []) as Rec[]).find(p => p.id === M.editorial)?.title ?? null, b: partOf(m, afterReplace, B).ids,
-        untouched: [digestOf(afterReplace, A) === digestOf(start, A), digestOf(afterReplace, C) === digestOf(start, C)] },
+        untouched: [digestOf(m, afterReplace, A) === digestOf(m, start, A), digestOf(m, afterReplace, C) === digestOf(m, start, C)] },
       `${host}: P86.CS1 — the shared pieces replaced by the one the file carries, ${B} replaced, ${A} and ${C} untouched (${show(replaced)})`).toEqual({
         status: 200, pieces: 1 + 4 + 2 + 4, shared: [M.editorial], title: 'A styling story, replaced', b: sorted([b1.id, b2.id]), untouched: [true, true] });
       const c = fourOf(C);
@@ -573,7 +631,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const afterFull = await loadDocument(m, 'catalog');
       const status = (pieces: unknown) => ((pieces ?? []) as Array<{ id: string; lifecycle?: { status?: string } }>).map(p => [p.id, p.lifecycle?.status ?? 'live']);
       expect.soft({ status: full.status, shared: status(afterFull.document.pieces), c: status(partOf(m, afterFull, C).value?.pieces),
-        untouched: [digestOf(afterFull, A) === digestOf(start, A), digestOf(afterFull, B) === digestOf(afterReplace, B)] },
+        untouched: [digestOf(m, afterFull, A) === digestOf(m, start, A), digestOf(m, afterFull, B) === digestOf(m, afterReplace, B)] },
       `${host}: P86.CS1 — full keeps the left-out shared piece and ${C}'s left-out record expired (${show(full)})`).toEqual({
         status: 200, shared: [[M.grid, 'live'], [M.editorial, 'expired']], c: [[c[0]!.id, 'live'], [c[1]!.id, 'live'], [c[2]!.id, 'live'], [c[3]!.id, 'expired']],
         untouched: [true, true] });
@@ -587,19 +645,19 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       expect(loaded.status, `${host}: PRECONDITION — the three products load (${show(loaded)})`).toBe(200);
       const start = await loadDocument(m, 'catalog'), parts = partKeys(m);
       const same = await importJson(m, fourOf(A), { mode: 'merge' });
-      expect.soft([same.status, same.body.skipped ?? 'no skipped member', same.body.revision, Object.keys(productsOf(start)).sort()],
+      expect.soft([same.status, same.body.skipped ?? 'no skipped member', same.body.revision, Object.keys(productsOf(m, start)).sort()],
         `${host}: P86.CS1 — the identical load skipped at the revision in force (${show(same)})`).toEqual([200, true, start.revision, sorted([A, B, C])]);
       const { 'If-Match': ifMatch } = await preconditions(m);
       const dry = await importJson(m, fourOf(UNKNOWN), { mode: 'merge', dryRun: '1' }, { 'If-Match': ifMatch! });
       const afterDry = await loadDocument(m, 'catalog');
-      expect.soft([dry.status, dry.body.dryRun ?? 'no dryRun member', dry.body.pieces, afterDry.revision, partKeys(m), Object.keys(productsOf(afterDry)).sort()],
+      expect.soft([dry.status, dry.body.dryRun ?? 'no dryRun member', dry.body.pieces, afterDry.revision, partKeys(m), Object.keys(productsOf(m, afterDry)).sort()],
         `${host}: P86.CS1 — the dry run answers the assembled count and writes nothing (${show(dry)})`).toEqual(
         [200, true, MODULES.length + 16, start.revision, parts, sorted([A, B, C])]);
       const [a1] = fourOf(A) as [Rec];
       const edited = await importJson(m, [{ ...a1, title: `${a1.title}, retouched` }], { mode: 'merge' });
       const after = await loadDocument(m, 'catalog');
       expect.soft({ status: edited.status, N: after.revision, S: after.publication.revision, H: after.publication.digest !== start.publication.digest,
-        pointers: [digestOf(after, A) !== digestOf(start, A), digestOf(after, B) === digestOf(start, B), digestOf(after, C) === digestOf(start, C)] },
+        pointers: [digestOf(m, after, A) !== digestOf(m, start, A), digestOf(m, after, B) === digestOf(m, start, B), digestOf(m, after, C) === digestOf(m, start, C)] },
       `${host}: P86.CS1 — a change inside a part is a change of the catalogue (${show(edited)})`).toEqual({
         status: 200, N: start.revision + 1, S: start.publication.revision + 1, H: true, pointers: [true, true, true] });
     }, 120_000);
@@ -618,7 +676,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const back = await asOperator(m, 'POST', `/content/catalog/rollback/${afterA.revision}?scope=${TENANT}`, {}, await preconditions(m));
       const after = await loadDocument(m, 'catalog');
       const b = await productRead(m, B), a = await productRead(m, A);
-      expect.soft({ status: back.status, revision: after.revision, products: Object.keys(productsOf(after)), a: digestOf(after, A) === digestOf(afterA, A) && /^[0-9a-f]{64}$/.test(digestOf(after, A)),
+      expect.soft({ status: back.status, revision: after.revision, products: Object.keys(productsOf(m, after)), a: digestOf(m, after, A) === digestOf(m, afterA, A) && /^[0-9a-f]{64}$/.test(digestOf(m, after, A)),
         aRead: [a.status, readIds(a)], bRead: [b.status, errorsOf(b).some(e => e.includes(B)) ? `names ${B}` : `does not (${show(b)})`] },
       `${host}: P86.CS1 — the rollback writes ${A}'s manifest forward (today no index: ${show(back)})`).toEqual({
         status: 200, revision: head.revision + 1, products: [A], a: true, aRead: [200, sorted(fourOf(A).map(r => r.id))], bRead: [404, `names ${B}`] });
@@ -638,11 +696,11 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       let failed: Answer;
       try { failed = await importJson(m, fourOf(B), { mode: 'merge' }); } finally { Reflect.deleteProperty(bucket, 'put'); }
       const unchanged = await loadDocument(m, 'catalog');
-      expect.soft([failed.status, unchanged.revision, unchanged.publication, Object.keys(productsOf(unchanged))],
+      expect.soft([failed.status, unchanged.revision, unchanged.publication, Object.keys(productsOf(m, unchanged))],
         `${host}: P86.CS1 — nothing committed (today no part is written and the load commits: ${show(failed)})`).toEqual([503, before.revision, before.publication, [A]]);
       const retried = await importJson(m, fourOf(B), { mode: 'merge' });
       const after = await loadDocument(m, 'catalog');
-      expect.soft([retried.status, Object.keys(productsOf(after)).sort(), partOf(m, after, B).missing ?? 'stored'],
+      expect.soft([retried.status, Object.keys(productsOf(m, after)).sort(), partOf(m, after, B).missing ?? 'stored'],
         `${host}: P86.CS1 — nothing left pending: the next load is accepted and writes ${B}'s part (${show(retried)})`).toEqual([200, sorted([A, B]), 'stored']);
     }, 120_000);
 
@@ -658,22 +716,22 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const restore = uploadedAt(m, () => new Date(0));
       await declareProductSlots(m);
       const [a1] = fourOf(A) as [Rec];
-      const pointers: Array<Record<string, string>> = [], indexes: string[] = [];
+      const pointers: Array<Record<string, string>> = [], indexes: string[][] = [];
       // R-P416 (1): the last load retouches A again, so the previous kept revision alone names A's second part.
       for (const records of [fourOf(A), [{ ...a1, title: `${a1.title}, retouched` }], fourOf(B), [{ ...a1, title: `${a1.title}, retouched again` }]]) {
         const loaded = await importJson(m, records, { mode: 'merge' });
         expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
         const d = await loadDocument(m, 'catalog');
-        pointers.push(Object.fromEntries(Object.entries(productsOf(d)).map(([p, v]) => [p, String(v.digest)])));
-        indexes.push(String(indexPointerOf(d)?.digest ?? 'no idIndex'));
+        pointers.push(Object.fromEntries(Object.entries(productsOf(m, d)).map(([p, v]) => [p, String(v.digest)])));
+        indexes.push(idShardKeysOf(d)); // P93 R10: the id shards this revision names (P86: its one id index object)
         await new Promise(resolve => setTimeout(resolve, 5));
       }
       const head = await loadDocument(m, 'catalog');
       const purged = await asOperator(m, 'GET', `/content/catalog/revisions/${head.revision - 3}?scope=${TENANT}`);
       expect(purged.status, `${host}: PRECONDITION — the revision of ${A}'s first load was purged under the setting (${show(purged)})`).toBe(410);
-      // R-P424: the id index objects are purged with the parts: those the kept revisions reference stay, the others go.
-      expect.soft(idsKeys(m), `${host}: P86.CS1 — the id index objects are exactly those a kept revision references`)
-        .toEqual(sorted([...new Set([indexes[2]!, indexes[3]!])].map(idsKey)));
+      // R-P424, P93 R10: the id shards are purged with the parts: those the kept revisions reference stay, the others go.
+      expect.soft(idsKeys(m), `${host}: P86.CS1 — the id shards are exactly those a kept revision references`)
+        .toEqual(sorted([...new Set([...indexes[2]!, ...indexes[3]!])]));
       // Kept: the current and the previous revision. The current names A's third part and B's; the previous alone names
       // A's second part (the first retouch), which a purge consulting only the current manifest would remove.
       const kept = sorted([...new Set([...Object.values(pointers[3] ?? {}), ...Object.values(pointers[2] ?? {})])].map(partKey));
@@ -685,23 +743,24 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         parts: kept.length === 3 ? kept : ['three referenced parts expected', ...kept], firstA: false, previousA: [true, true], read: [200, sorted(fourOf(A).map(r => r.id))] });
       const back = await asOperator(m, 'POST', `/content/catalog/rollback/${head.revision - 1}?scope=${TENANT}`, {}, await preconditions(m));
       const after = await loadDocument(m, 'catalog');
-      expect.soft([back.status, after.revision, digestOf(after, A) === pointers[2]?.[A], digestOf(after, B) === pointers[2]?.[B]],
+      expect.soft([back.status, after.revision, digestOf(m, after, A) === pointers[2]?.[A], digestOf(m, after, B) === pointers[2]?.[B]],
         `${host}: P86.CS1 — a rollback to the previous kept revision is accepted, its parts all held (${show(back)})`).toEqual([200, head.revision + 1, true, true]);
       restore();
     }, 120_000);
 
-    it(`host (${host}): R-P409 (2) — a PUT of the manifest that leaves a product's pointer out removes that product (as a PUT that leaves a piece out removes it): one revision, the others' pointers kept`, async () => {
+    // P93 R10 (R-P487 (5), R-P490 (1), overturning R-P409 (2)): a product leaves the sharded catalogue only by an explicit
+    // `removeProducts` list on the PUT, beside the index as read (before: a PUT leaving the product's pointer out of `products`).
+    it(`host (${host}): R-P409 (2) as amended by R-P487 (5) — a PUT of the manifest as read naming a product in removeProducts removes that product: one revision, the others' pointers kept`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
       const loaded = await importJson(m, [...fourOf(A), ...fourOf(B)], { mode: 'merge' });
       expect(loaded.status, `${host}: PRECONDITION — ${A} and ${B} load (${show(loaded)})`).toBe(200);
       const before = await loadDocument(m, 'catalog');
-      const { [B]: _dropped, ...kept } = productsOf(before); void _dropped;
-      const put = await putDocument(m, 'catalog', { ...before.document, products: kept }, 'p86 drop a product');
+      const put = await putDocument(m, 'catalog', { ...before.document, removeProducts: [B] }, 'p86 drop a product');
       const after = await loadDocument(m, 'catalog');
       const b = await productRead(m, B), a = await productRead(m, A);
-      expect.soft({ status: put.status, revision: after.revision, products: Object.keys(productsOf(after)), a: [digestOf(after, A) === digestOf(before, A) && /^[0-9a-f]{64}$/.test(digestOf(after, A)), a.status, readIds(a)],
+      expect.soft({ status: put.status, revision: after.revision, products: Object.keys(productsOf(m, after)), a: [digestOf(m, after, A) === digestOf(m, before, A) && /^[0-9a-f]{64}$/.test(digestOf(m, after, A)), a.status, readIds(a)],
         b: [b.status, errorsOf(b).some(e => e.includes(B)) ? `names ${B}` : `does not (${show(b)})`] },
       `${host}: P86.CS1 — ${B} removed, ${A} kept (${show(put)})`).toEqual({
         status: 200, revision: before.revision + 1, products: [A], a: [true, 200, sorted(fourOf(A).map(r => r.id))], b: [404, `names ${B}`] });
@@ -718,7 +777,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         `${host}: PRECONDITION — ${A} and ${B} change`).toBe(200);
       const head = await loadDocument(m, 'catalog');
       // A store fault outside the purge: the kept revision's parts of A and B are lost.
-      const lost = [A, B].map(p => [partKey(digestOf(kept, p)), m.storage.objects.get(partKey(digestOf(kept, p)))] as const);
+      const lost = [A, B].map(p => [partKey(digestOf(m, kept, p)), m.storage.objects.get(partKey(digestOf(m, kept, p)))] as const);
       expect(lost.every(([, raw]) => raw !== undefined), `${host}: PRECONDITION — the kept revision's parts of ${A} and ${B} are stored (today there are none)`).toBe(true);
       for (const [key] of lost) m.storage.objects.delete(key);
       const refused = await asOperator(m, 'POST', `/content/catalog/rollback/${kept.revision}?scope=${TENANT}`, {}, await preconditions(m));
@@ -728,31 +787,35 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       for (const [key, raw] of lost) await m.storage.put(key, raw!);
       const back = await asOperator(m, 'POST', `/content/catalog/rollback/${kept.revision}?scope=${TENANT}`, {}, await preconditions(m));
       const after = await loadDocument(m, 'catalog');
-      expect.soft([back.status, after.revision, [A, B, C].map(p => digestOf(after, p) === digestOf(kept, p))],
+      expect.soft([back.status, after.revision, [A, B, C].map(p => digestOf(m, after, p) === digestOf(m, kept, p))],
         `${host}: P86.CS1 — with the parts back the rollback writes the kept manifest forward (${show(back)})`).toEqual([200, head.revision + 1, [true, true, true]]);
     }, 120_000);
 
-    it(`host (${host}): R-P424 — the id index: one content-addressed object per revision, written before the pending head (a failing index write answers 503, nothing committed and nothing pending, the next load accepted), referenced by the manifest, holding every part record's id → product; a rollback references the old revision's index`, async () => {
+    // P93 R10 (R-P487 (2)): the id index is sharded — content-addressed id shards named by the manifest's `index.ids`
+    // (before: one `content/ids/` object per revision named by `idIndex`).
+    it(`host (${host}): R-P424 as sharded by R-P487 (2) — the id index: content-addressed id shards, written before the pending head (a failing id shard write answers 503, nothing committed and nothing pending, the next load accepted), named by the manifest's index, holding every part record's id → product; a rollback names the old revision's id shards`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
       const declared = await loadDocument(m, 'catalog');
-      expect.soft([indexPointerOf(declared) ?? 'no idIndex', idsKeys(m)], `${host}: P86.CS1 — no part, no index`).toEqual(['no idIndex', []]);
+      expect.soft([Object.keys(indexPointerOf(declared) ?? {}).length, idsKeys(m)], `${host}: P86.CS1 — no part, no index`).toEqual([0, []]);
       expect((await importJson(m, [...fourOf(A), ...fourOf(B)], { mode: 'merge' })).status, `${host}: PRECONDITION — ${A} and ${B} load`).toBe(200);
       const first = await loadDocument(m, 'catalog'), index = indexOf(m, first);
-      expect.soft({ pointer: [/^[0-9a-f]{64}$/.test(index.digest), indexPointerOf(first)?.records ?? null], stored: idsKeys(m), addressed: index.value !== null && await documentDigest(index.value) === index.digest,
-        ids: index.ids }, `${host}: P86.CS1 — the manifest references its index, the object at its content address holding every part record (today none)`).toEqual({
-        pointer: [true, 8], stored: [idsKey(index.digest)], addressed: true, ids: Object.fromEntries([...fourOf(A).map(r => [r.id, A]), ...fourOf(B).map(r => [r.id, B])].sort()) });
+      const pointers = Object.values(indexPointerOf(first) ?? {}) as Array<{ digest?: unknown; records?: unknown }>, addressed: boolean[] = [];
+      for (const pointer of pointers) { const raw = m.storage.objects.get(idsKey(String(pointer.digest))); addressed.push(raw !== undefined && await documentDigest(JSON.parse(raw)) === pointer.digest); }
+      expect.soft({ pointer: [pointers.length > 0 && pointers.every(p => /^[0-9a-f]{64}$/.test(String(p.digest))), pointers.reduce((n, p) => n + Number(p.records), 0)], stored: idsKeys(m),
+        addressed: addressed.length > 0 && addressed.every(Boolean), ids: index.ids }, `${host}: P86.CS1 — the manifest names its id shards, each at its content address, together holding every part record (today none)`).toEqual({
+        pointer: [true, 8], stored: idShardKeysOf(first), addressed: true, ids: Object.fromEntries([...fourOf(A).map(r => [r.id, A]), ...fourOf(B).map(r => [r.id, B])].sort()) });
       // The index written before the pending head, as a part is: its write failing commits nothing and leaves nothing pending.
       const bucket = m.storage as unknown as Record<string, unknown>, put = UnitR2.prototype.put;
       Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
-        if (IDS.test(key)) throw new Error('P86 fixture: the id index write fails');
+        if (IDS.test(key)) throw new Error('P86 fixture: the id shard write fails');
         return put.call(m.storage, key, raw, options);
       } });
       let failed: Answer;
       try { failed = await importJson(m, fourOf(C), { mode: 'merge' }); } finally { Reflect.deleteProperty(bucket, 'put'); }
       const unchanged = await loadDocument(m, 'catalog');
-      expect.soft([failed.status, unchanged.revision, unchanged.publication, Object.keys(productsOf(unchanged)).sort(), indexOf(m, unchanged).digest],
+      expect.soft([failed.status, unchanged.revision, unchanged.publication, Object.keys(productsOf(m, unchanged)).sort(), indexOf(m, unchanged).digest],
         `${host}: P86.CS1 — nothing committed (${show(failed)})`).toEqual([503, first.revision, first.publication, sorted([A, B]), index.digest]);
       const retried = await importJson(m, fourOf(C), { mode: 'merge' });
       const second = await loadDocument(m, 'catalog');
@@ -760,7 +823,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         .toEqual([200, partEntries(m, second)]);
       const back = await asOperator(m, 'POST', `/content/catalog/rollback/${first.revision}?scope=${TENANT}`, {}, await preconditions(m));
       const rolled = await loadDocument(m, 'catalog');
-      expect.soft([back.status, indexOf(m, rolled).digest === index.digest, Object.keys(productsOf(rolled)).sort()],
+      expect.soft([back.status, indexOf(m, rolled).digest === index.digest, Object.keys(productsOf(m, rolled)).sort()],
         `${host}: P86.CS1 — the rollback references the old revision's index (${show(back)})`).toEqual([200, true, sorted([A, B])]);
     }, 120_000);
 
@@ -770,7 +833,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       await declareProductSlots(m);
       expect((await importJson(m, [...fourOf(A), ...fourOf(B)], { mode: 'merge' })).status, `${host}: PRECONDITION — ${A} and ${B} load`).toBe(200);
       const start = await loadDocument(m, 'catalog');
-      expect(Object.keys(productsOf(start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B]));
+      expect(Object.keys(productsOf(m, start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B]));
       const [a1, a2] = fourOf(A) as [Rec, Rec], moved = { ...a1, featuredProductIds: [B] };
       const before = { parts: partKeys(m), ids: idsKeys(m) };
       const merged = await importJson(m, [moved], { mode: 'merge' });
@@ -793,7 +856,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       await declareProductSlots(m);
       expect((await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' })).status, `${host}: PRECONDITION — three products load`).toBe(200);
       const start = await loadDocument(m, 'catalog');
-      expect(Object.keys(productsOf(start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
+      expect(Object.keys(productsOf(m, start)).sort(), `${host}: PRECONDITION — the catalogue is parted (today it indexes nothing)`).toEqual(sorted([A, B, C]));
       const b2 = (fourOf(B) as [Rec, Rec])[1];
       // A shared piece (a module of the layout slot) reusing B's record id; the file touches no part.
       const sharedReuse = { ...MODULES.find(p => p.id === M.editorial)!, id: b2.id, customerContentId: 'TAP-P86-REUSE' };
@@ -808,6 +871,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         inPart: [422, `names id_in_part, ${b2.id}, ${B}`], shared: [422, `names id_shared, ${M.editorial}, ${C}`], written: [start.revision, true, true] });
     }, 120_000);
 
+    // P93 R10 (R-P487 (2), (8)): the index objects of the grace are the id shards (before: the one `content/ids/` object).
     it(`host (${host}): R-P424 — the purge's grace: a part or index object uploaded less than 15 minutes ago is never deleted, though the revision naming it is purged`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
@@ -817,50 +881,54 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const restore = uploadedAt(m, () => new Date());
       await declareProductSlots(m);
       const [a1] = fourOf(A) as [Rec];
-      const firsts: Array<[string, string]> = [];
+      const firsts: Array<[string, string[]]> = [];
       for (const records of [fourOf(A), [{ ...a1, title: `${a1.title}, retouched` }], fourOf(B), [{ ...a1, title: `${a1.title}, retouched again` }]]) {
         const loaded = await importJson(m, records, { mode: 'merge' });
         expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
         const d = await loadDocument(m, 'catalog');
-        firsts.push([partKey(digestOf(d, A)), idsKey(String(indexPointerOf(d)?.digest ?? 'no idIndex'))]);
+        firsts.push([partKey(digestOf(m, d, A)), idShardKeysOf(d)]);
         await new Promise(resolve => setTimeout(resolve, 5));
       }
       const head = await loadDocument(m, 'catalog');
       const purged = await asOperator(m, 'GET', `/content/catalog/revisions/${head.revision - 3}?scope=${TENANT}`);
       expect(purged.status, `${host}: PRECONDITION — the revision of ${A}'s first load was purged under the setting (${show(purged)})`).toBe(410);
-      expect.soft([m.storage.objects.has(firsts[0]![0]), m.storage.objects.has(firsts[0]![1])],
+      expect.soft([m.storage.objects.has(firsts[0]![0]), firsts[0]![1].length > 0 && firsts[0]![1].every(key => m.storage.objects.has(key))],
         `${host}: P86.CS1 — the first load's part and index, uploaded moments ago, survive the purge of the revision naming them`).toEqual([true, true]);
       restore();
     }, 120_000);
 
-    it(`host (${host}): R-P424 — the id index's own cap: a load whose index would pass 8 MiB is refused 413 id_index_too_large, nothing written; every load before it accepted`, async () => {
+    // P93 R10 (R-P487 (1), (2)): the id index's cap is per id shard, 2 MiB, refused naming the shard (before: one 8 MiB
+    // object); the long record ids are chosen in one shard so the shard grows by about one load's bytes per load.
+    it(`host (${host}): R-P424 as sharded by R-P487 (2) — the id shard's own cap: a load whose id shard would pass 2 MiB is refused 413 id_index_too_large naming the shard, nothing written; every load before it accepted`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
-      // Long record ids, so the index grows by about one load's bytes per load while each part and load stays inside its 2 MiB.
-      const ID_LENGTH = 4000, INDEX_CAP = 8 * 1024 * 1024;
-      const perLoad = Math.floor(0.9 * INPUT_MAX_BYTES / (ID_LENGTH + 220));
-      const loadOf = (k: number) => Array.from({ length: perLoad }, (_, i) => ({ id: `cap-${k}-${i}-`.padEnd(ID_LENGTH, 'x'), customerContentId: `TAP-CAP-${k}-${i}`,
+      const ID_LENGTH = 4000, INDEX_CAP = 2 * 1024 * 1024, perLoad = 300, shard = await bucketOfId('cap-0-'.padEnd(ID_LENGTH, 'x')), sameShard: string[] = [];
+      for (let k = 0; sameShard.length < 3 * perLoad; k++) { const id = `cap-${k}-`.padEnd(ID_LENGTH, 'x'); if (await bucketOfId(id) === shard) sameShard.push(id); }
+      const loadOf = (k: number) => sameShard.slice((k - 1) * perLoad, k * perLoad).map((id, i) => ({ id, customerContentId: `TAP-CAP-${k}-${i}`,
         type: 'on-model', title: 't', tags: {}, slotTypes: [CAROUSEL], lifecycle: { status: 'live' }, featuredProductIds: [`COA-IDX${k}`] }));
       expect([perLoad <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(loadOf(1))).byteLength < INPUT_MAX_BYTES],
         `PRECONDITION: ${perLoad} records per load within the import's caps`).toEqual([true, true]);
       let accepted = 0, refused: Answer | null = null, before = await loadDocument(m, 'catalog'), parts = partKeys(m), ids = idsKeys(m);
-      for (let k = 1; k <= 8 && !refused; k++) {
+      for (let k = 1; k <= 3 && !refused; k++) {
         const answer = await importJson(m, loadOf(k), { mode: 'merge' });
         if (answer.status === 200) { accepted++; before = await loadDocument(m, 'catalog'); parts = partKeys(m); ids = idsKeys(m); } else refused = answer;
       }
       const acceptedBytes = accepted * perLoad * ID_LENGTH;
-      expect.soft({ refused: refused ? [refused.status, refused.body.code ?? errorsOf(refused).join(' ').slice(0, 60)] : 'no load refused',
-        accepted: acceptedBytes > INDEX_CAP - 2 * perLoad * ID_LENGTH && acceptedBytes <= INDEX_CAP ? 'up to the cap' : `${accepted} loads (${acceptedBytes} bytes of ids)`,
+      const shardNamed = (a: Answer) => errorsOf(a).some(e => new RegExp(`(^|[^0-9a-z])${shard}([^0-9a-z]|$)`).test(e)) ? `names ${shard}` : `does not (${show(a)})`;
+      expect.soft({ refused: refused ? [refused.status, refused.body.code ?? errorsOf(refused).join(' ').slice(0, 60), shardNamed(refused)] : 'no load refused',
+        accepted: acceptedBytes > INDEX_CAP - perLoad * ID_LENGTH && acceptedBytes <= INDEX_CAP ? 'up to the cap' : `${accepted} loads (${acceptedBytes} bytes of ids)`,
         written: [(await loadDocument(m, 'catalog')).revision === before.revision, partKeys(m).length === parts.length, idsKeys(m).length === ids.length] },
-      `${host}: P86.CS1 — refused by name at the index's 8 MiB, nothing written`).toEqual({ refused: [413, 'id_index_too_large'], accepted: 'up to the cap', written: [true, true, true] });
+      `${host}: P86.CS1 — refused by name at the id shard's 2 MiB, nothing written`).toEqual({ refused: [413, 'id_index_too_large', `names ${shard}`], accepted: 'up to the cap', written: [true, true, true] });
     }, 600_000);
 
-    it(`host (${host}): the cap — a load whose manifest index would pass 2 MiB is refused 413 manifest_too_large, nothing written (no revision, no part); the load before it, 60% of the cap, indexes its products`, async () => {
+    // P93 R10 (R-P487 (1)): the products ride the shards, so the manifest's 2 MiB is reached by the shared pieces alone
+    // (before: the second load of 60% of the cap refused manifest_too_large for its product index).
+    it(`host (${host}): the cap as sharded by R-P487 (1) — the products no longer count toward the manifest's 2 MiB: two loads of 60% of P86's one-level cap each index their products and the manifest stays small; a load whose shared pieces would pass 2 MiB is refused 413 manifest_too_large, nothing written (no revision, no part)`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
-      // 64-character product ids (the anchor's own bound); the per-load count from the proposed pointer's size (S1).
+      // 64-character product ids (the anchor's own bound); the per-load count from P86's one-level pointer's size (S1).
       const productOf = (k: number) => `COA-CAP-${String(k).padStart(8, '0')}-`.padEnd(64, 'X');
       const entry = documentBytes({ [productOf(1)]: { digest: 'f'.repeat(64), records: 1 } }) - 1;
       const perLoad = Math.ceil(0.6 * PUBLICATION_MAX_BYTES / entry);
@@ -870,12 +938,26 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       expect([perLoad <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(first)).byteLength < INPUT_MAX_BYTES],
         `PRECONDITION: ${perLoad} records per load within the import's caps`).toEqual([true, true]);
       const one = await importJson(m, first, { mode: 'merge' });
-      const afterOne = await loadDocument(m, 'catalog'), parts = partKeys(m);
-      expect.soft([one.status, Object.keys(productsOf(afterOne)).length, parts.length],
+      const afterOne = await loadDocument(m, 'catalog');
+      expect.soft([one.status, Object.keys(productsOf(m, afterOne)).length, partKeys(m).length],
         `${host}: P86.CS1 — the first load indexes its ${perLoad} products (${show(one)})`).toEqual([200, perLoad, perLoad]);
       const two = await importJson(m, second, { mode: 'merge' });
-      expect.soft([two.status, two.body.code ?? null, (await loadDocument(m, 'catalog')).revision, partKeys(m).length],
-        `${host}: P86.CS1 — the second refused by name, nothing written (today: ${show(two)})`).toEqual([413, 'manifest_too_large', afterOne.revision, parts.length]);
+      const afterTwo = await loadDocument(m, 'catalog');
+      expect.soft([two.status, Object.keys(productsOf(m, afterTwo)).length, documentBytes(afterTwo.document) <= 65536 + documentBytes(afterTwo.document.pieces)],
+        `${host}: P86.CS1 — the second load indexes its products too, the manifest bounded beside its shared pieces (today: ${show(two)})`).toEqual([200, 2 * perLoad, true]);
+      // The shared pieces alone: one piece's stored bytes measured, then two loads of 60% of the cap each.
+      const sharedFrom = (from: number, count: number) => Array.from({ length: count }, (_, i) => ({ id: `s${String(from + i).padStart(8, '0')}`, type: 'flat-lay',
+        title: 'A shared piece'.padEnd(100, '.'), slotTypes: [CAROUSEL] }));
+      expect((await importJson(m, sharedFrom(0, 1), { mode: 'merge' })).status, `${host}: PRECONDITION — one shared piece loads`).toBe(200);
+      const afterProbe = await loadDocument(m, 'catalog'), per = documentBytes(afterProbe.document.pieces) - documentBytes(afterTwo.document.pieces);
+      const count = Math.ceil(0.6 * PUBLICATION_MAX_BYTES / per);
+      expect([count <= INPUT_MAX_RECORDS, new TextEncoder().encode(JSON.stringify(sharedFrom(1, count))).byteLength < INPUT_MAX_BYTES],
+        `PRECONDITION: ${count} shared pieces per load within the import's caps`).toEqual([true, true]);
+      expect((await importJson(m, sharedFrom(1, count), { mode: 'merge' })).status, `${host}: PRECONDITION — the first shared load is accepted`).toBe(200);
+      const afterThree = await loadDocument(m, 'catalog'), parts = partKeys(m);
+      const four = await importJson(m, sharedFrom(1 + count, count), { mode: 'merge' });
+      expect.soft([four.status, four.body.code ?? null, (await loadDocument(m, 'catalog')).revision, partKeys(m).length],
+        `${host}: P86.CS1 — the shared pieces past the manifest's 2 MiB refused by name, nothing written (${show(four)})`).toEqual([413, 'manifest_too_large', afterThree.revision, parts.length]);
     }, 600_000);
 
     it(`host (${host}): LOCK — a catalogue that declares no product slots is today's document: its images shared, no index, no part object; the anchor's page reads no part; a load over the import's caps refused 413 as today`, async () => {
@@ -911,7 +993,7 @@ async function measured(m: Mounted) {
   invalidatePublicationCache();
   const cold = await counted(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-cold'));
   const warm = await counted(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-warm'));
-  return { cold, warm, operator, manifest };
+  return { m, cold, warm, operator, manifest };
 }
 
 // ---------------------------------------------------------------------------
@@ -944,30 +1026,33 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
       const at: Record<number, Awaited<ReturnType<typeof measured>>> = {};
       for (const n of [50, 5000]) at[n] = await measured(await rangeTenant(host, n));
       for (const n of [50, 5000]) {
-        const { cold, warm, operator, manifest } = at[n]!;
-        const anchorPart = partKey(digestOf(manifest, A));
+        const { m, cold, warm, operator, manifest } = at[n]!;
+        const anchorPart = partKey(digestOf(m, manifest, A));
         expect.soft({ status: cold.result.status, served: carousel(cold.result), parts: partReads(cold.reads).map(r => r.key), shared: sorted(sharedOf(manifest)),
-          indexed: Object.keys(productsOf(manifest)).length, warm: [carousel(warm.result), partReads(warm.reads).length], operator: partReads(operator.reads).map(r => r.key) },
+          indexed: Object.keys(productsOf(m, manifest)).length, warm: [carousel(warm.result), partReads(warm.reads).length], operator: partReads(operator.reads).map(r => r.key) },
         `${host}: P86.CS2 — N = ${n}: the manifest and the anchor's part alone (today the whole range in one document, no part: ${classes(cold.reads).join(', ')})`).toEqual({
           status: 200, served: SERVED_FOR_BLACK, parts: [anchorPart], shared: sorted([...MODULE_IDS, 'img-brand-1']), indexed: n + 3,
           warm: [SERVED_FOR_BLACK, 0], operator: [anchorPart] });
       }
-      // R-P416 (residual): the exact read list — the head, the set, the four members and the anchor's one part — at each size.
+      // R-P416 (residual), P93 R10 (R-P487 (9)): the exact read list — the head, the set, the four members, the anchor's
+      // product shard and the anchor's one part — at each size (before: 7 reads, no shard).
       for (const n of [50, 5000]) {
-        const { cold, manifest } = at[n]!;
-        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the set, the content, slots, learn and reflex revisions and the anchor's part, once each`)
-          .toEqual(sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision', `part ${digestOf(manifest, A)}`]));
+        const { m, cold, manifest } = at[n]!;
+        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the set, the content, slots, learn and reflex revisions, the anchor's shard and the anchor's part, once each`)
+          .toEqual(sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision', shardOf(m, manifest, A), `part ${digestOf(m, manifest, A)}`]));
       }
       const [small, large] = [at[50]!, at[5000]!];
-      expect.soft({ reads: classes(large.cold.reads), partBytes: partReads(large.cold.reads).map(r => r.bytes) },
+      // A shard holds the other products of its bucket, so its address differs between the two ranges: compared by class.
+      const byClass = (reads: Read[]) => classes(reads).map(c => SHARD.test(c) ? 'shard' : c);
+      expect.soft({ reads: byClass(large.cold.reads), partBytes: partReads(large.cold.reads).map(r => r.bytes) },
         `${host}: P86.CS2 — the decision's reads and the part it parses are the same at N = 5,000 as at N = 50`).toEqual({
-        reads: classes(small.cold.reads), partBytes: partReads(small.cold.reads).map(r => r.bytes) });
+        reads: byClass(small.cold.reads), partBytes: partReads(small.cold.reads).map(r => r.bytes) });
     }, 600_000);
 
     it(`host (${host}): no part is read where none is needed — a page naming no anchor, a variant alone, or an anchor the manifest does not index (${UNINDEXED}) decides the scoped carousel empty (P80 AS2) and reads no part; a page with no scoped slot reads no part though it names the anchor`, async () => {
       const m = await rangeTenant(host, 50);
       const indexed = await loadDocument(m, 'catalog');
-      expect(Object.keys(productsOf(indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      expect(Object.keys(productsOf(m, indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
       const s = await shopperOn(m);
       const cases: Array<[string, string, Record<string, string>]> = [['no anchor', 'pdp', {}], ['a variant alone', 'pdp', { variant: BLACK }],
         ['an anchor not indexed', 'pdp', { anchor: UNINDEXED }], ['a page with no scoped slot', 'cart', { anchor: A }]];
@@ -984,7 +1069,7 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
     it(`host (${host}): every reader resolves the anchor's part — each carousel decision replays equal; its receipt names the image's title; a click on an image teaches its own catalogue format reading at most one part`, async () => {
       const m = await rangeTenant(host, 50);
       const indexed = await loadDocument(m, 'catalog');
-      expect(Object.keys(productsOf(indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      expect(Object.keys(productsOf(m, indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
       const s = await shopperOn(m);
       const page = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-readers');
       const images = page.decisions.filter(d => d.slot === CAROUSEL);
@@ -1012,7 +1097,7 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
     it(`host (${host}): the learn routes (R-P407 (5), S10) — the carousel's lift rows and its exploring rows keep each image the shared pieces do not carry, named unresolved: true, title null (no anchor on a row)`, async () => {
       const m = await rangeTenant(host, 50);
       const indexed = await loadDocument(m, 'catalog');
-      expect(Object.keys(productsOf(indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      expect(Object.keys(productsOf(m, indexed)), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
       const s = await shopperOn(m);
       const page = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-learn');
       const images = page.decisions.filter(d => d.slot === CAROUSEL);
@@ -1032,7 +1117,7 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
 
     it(`host (${host}): R-P412 (1), R-P413 — a content click naming a decision id that is not in the acting shopper's own ring (another visitor's, or one unknown) or naming none resolves no part, teaches only the event's own values (no catalogue format, signals.recognized false) and reads no other shopper's ring or key; her own decision's click resolves its part`, async () => {
       const m = await rangeTenant(host, 50);
-      expect(Object.keys(productsOf(await loadDocument(m, 'catalog'))), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
+      expect(Object.keys(productsOf(m, await loadDocument(m, 'catalog'))), `${host}: PRECONDITION — the manifest indexes ${A} (today it indexes nothing)`).toContain(A);
       const x = await shopperOn(m), y = await shopperOn(m);
       const page = await snapshotOf(m, x, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-foreign');
       const images = page.decisions.filter(d => d.slot === CAROUSEL);
@@ -1060,14 +1145,14 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
 
     it(`host (${host}): R-P412 (2) — the anchor's part unreadable (lost, or a body that is not its digest's) fails the product page's decision 503 part_unavailable and never serves the shared pieces alone; a page that reads no part is served as before`, async () => {
       const m = await rangeTenant(host, 50);
-      const manifest = await loadDocument(m, 'catalog'), key = partKey(digestOf(manifest, A));
+      const manifest = await loadDocument(m, 'catalog'), key = partKey(digestOf(m, manifest, A));
       expect(m.storage.objects.has(key), `${host}: PRECONDITION — ${A}'s part is stored (today there is none)`).toBe(true);
       const s = await shopperOn(m);
       const outcome = (page: Snapshot) => [page.status, JSON.stringify(page.body).includes('part_unavailable') ? 'names part_unavailable' : `does not (${JSON.stringify(page.body).slice(0, 160)})`, carousel(page)];
       m.storage.objects.delete(key); invalidatePublicationCache();
       const lost = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-lost');
       const plain = await snapshotOf(m, s, 'pdp', {}, 'p86-cs2-plain');
-      m.storage.objects.set(key, m.storage.objects.get(partKey(digestOf(manifest, B)))!); invalidatePublicationCache();
+      m.storage.objects.set(key, m.storage.objects.get(partKey(digestOf(m, manifest, B)))!); invalidatePublicationCache();
       const forged = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-forged');
       expect.soft({ lost: outcome(lost), forged: outcome(forged), plain: [plain.status, servedIn(plain, 'pdp-modules').length > 0, carousel(plain)] },
         `${host}: P86.CS2 — 503 part_unavailable, no fallback; the page without an anchor served`).toEqual({
@@ -1094,7 +1179,7 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
       const without = await beaconOf(s, parted);
       expect.soft({ named: beaconAnswer(withProduct.result), parts: partReads(withProduct.reads).map(r => r.key), unnamed: beaconAnswer(without) },
         `${host}: P86.CS2 — the named product's one part read and admitted; unnamed, product_required (today every image is a shared piece: ${show(without)})`).toEqual({
-        named: [200, 'admitted', 8], parts: [partKey(digestOf(manifest, A))], unnamed: [200, 'ignored', 'product_required'] });
+        named: [200, 'admitted', 8], parts: [partKey(digestOf(m, manifest, A))], unnamed: [200, 'ignored', 'product_required'] });
     }, 120_000);
   }
 
@@ -1121,7 +1206,11 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
 // ===========================================================================
 
 describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
-  it('logic: kit 03 states the manifest (`productSlots`, `products`), the parts, the routing by the first id with the canonical order [product, variant] and the `variant_first` warning, the modes per product, the cap\'s refusal `manifest_too_large` with the two-level index next, and part retention under the purge; kit 02 states the per-product read on GET /content/{kind} and the part beside the 2 MiB limits; today\'s one-document sentences are gone', () => {
+  // P93 R10 (R-P487 (1), (5)): the manifest names its parts through `index` (before: `products`), a PUT removes a product by
+  // `removeProducts` (before: by leaving its pointer out), the id index is the id shards, their cap and the loads reading
+  // them (before: one id index object), and the cap kit 03 names is the shard's (before: manifest_too_large with the
+  // two-level index next). Code names and members are matched as words.
+  it('logic: kit 03 states the manifest (`productSlots`, `index`), the parts, the routing by the first id with the canonical order [product, variant] and the `variant_first` warning, the modes per product, the shard cap\'s refusal `index_shard_too_large`, the PUT\'s `removeProducts`, and part retention under the purge; kit 02 states the per-product read on GET /content/{kind} and the part beside the 2 MiB limits; today\'s one-document sentences are gone', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md'), kit03 = readTree('docs/kit/03-payload-schemas.md');
     const paragraphs = (text: string) => text.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
     const has = (text: string, ...words: Array<string | RegExp>) => paragraphs(text).some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
@@ -1129,16 +1218,16 @@ describe('unit:P86.CS3 (D2: design A, R-P405)', () => {
     const getRow = kit02.split('\n').find(line => line.startsWith('| `GET /content/{kind}?scope=`')) ?? '';
     const limits = paragraphs(kit02).find(p => p.startsWith('Configuration PUT/PATCH, import, pull')) ?? '';
     expect.soft({
-      manifest: has(kit03, '`productSlots`', '`products`', /\bpart\b/),
+      manifest: has(kit03, '`productSlots`', '`index`', /\bpart\b/),
       routing: has(kit03, '`featuredProductIds`', '`productSlots`', /\bfirst id\b/),
       variantFirst: has(kit03, '`variant_first`', /\[product, variant\]/),
-      putRemoves: has(kit03, '`products`', /\bPUT\b/, /\bpointer\b/, /\bremoves?\b/),
+      putRemoves: has(kit03, /`removeProducts\b/, /\bPUT\b/, /\bremoves?\b/),
       moveRule: has(kit03, /\brecord_moved\b/, /\bsource\b/, /\bone file\b|\bsame file\b/),
       collisions: has(kit03, /\bid_in_part\b/, /\bid_shared\b/),
-      idIndex: has(kit03, /\bindex\b/, /\bid_index_too_large\b/, /\bloads?\b/),
+      idIndex: has(kit03, /\bid shards?\b/, /\bid_index_too_large\b/) && has(kit03, /\bid shards\b/, /\bloads\b/),
       lostPart: has(kit03, /\blost\b/, /\b503\b/, /\brollback\b/),
       modes: has(kit03, '`merge`', '`replace`', '`full`', /\bpart\b/),
-      cap: has(kit03, /\bmanifest_too_large\b/, /two-level/),
+      cap: has(kit03, /\bindex_shard_too_large\b/, /\bshard\b/),
       retention: has(kit03, /\bparts?\b/, /\bpurge/),
       oneDocument: flat03.includes('the catalog is one such document per scope'),
       sharding: flat03.includes('a larger corpus is a conversation about sharding the catalog'),
