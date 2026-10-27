@@ -562,7 +562,7 @@ export class RealtimeSegmentEngine {
           recordVocabularyRejections(this.env, this.tenant, governed.revision, governing.rejected, now));
       }
       const vocabulary = reflexOn && (contentEvent || needsCatalogVocabulary(placing, heldProduct, reflexConfig))
-        ? await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null)
+        ? await tenantCatalogVocabulary(this.env, this.tenant, reflexConfig, catalogService as unknown as CatalogVocabularySource | null, placing)
         : EMPTY_VOCABULARY;
       // W35 A1 (doc 16 §12 trust & abuse; kit 02): an event naming a product this
       // tenant does not hold, whose every value the catalogue refuses, is dropped

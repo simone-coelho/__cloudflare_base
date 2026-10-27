@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P93",
+  "workOrderHash": "sha256:3a34d011ff4b8c0625393d54bd77dfe892e7b2947ccc118327aea73002308334",
+  "artifact": {
+    "revision": "e20cefda727cd9490de04c445dafb3c75d43a937",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p93-joined-b merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p93-build at c7cbaecb (7e25fffd and c7cbaecb the merges of the S37 spec b7387921, b3c55912 and 2eb97899 (311a6552 their base); 07a7da50 the mechanism, f92ce7c3 the kits, 4be4fc83 the rollback and lost-product fixes (R-P491 F1 and F2), 05135f2b the P86 header comments the mechanism and the kits: src/config/publication.ts and src/content/kinds.ts and types.ts replace the catalogue manifest's one-level product index and its single id index by a sharded index — 256 content-addressed product shards keyed by the first two hex digits of SHA-256 of the product id and 256 id shards keyed the same way by the record id, each written through the store's exact-create before the pending head and at most 2 MiB, the manifest naming the shards and staying about 55 KB at any size; a product page reads the manifest, its product's shard and its product's part and never the range; src/routes/content.ts makes a load read only the shards of the products it names and the id shards of ids whose place can change, write only the shards and parts whose digest moved, keep the skip, the dry run, the per-product modes and the three collision refusals across shards, answer the sharded manifest and a bounded shard read, carry the index as read on the PUT round trip and remove a product only by an explicit list, bound a rollback's existence check by the difference from the revision in force with a named refusal past the bound, and resolve a revision's attachments before deleting its body in a paged purge with the fifteen-minute grace; src/content/service.ts, src/learn/replay.ts, src/routes/decisions.ts and src/reflex/contentTelemetry.ts resolve a part through the shard, telemetry still through the shopper's own ring, and the ingest vocabulary resolves a parted product's ids through the shards; an existing one-level catalogue is rewritten into shards by its next publication with every part digest unchanged and no operator step, a tenant without product slots untouched; verified at forty thousand products on both hosts and a hundred thousand on the session host with the real caps; kits 03 and 02 state the sharded index, the eight-read page, the caps with their refusal names, the removal list, the bounded rollback, the conversion and the chunking advice).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S37/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S37/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P93/implementer/REPORT.md",
+      "git commits on rem/p93-joined-b up to e20cefda"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P93 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S37/reviewer-p93/logs/r2-p93-a.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S37/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P93/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-27T17:18:00.837Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

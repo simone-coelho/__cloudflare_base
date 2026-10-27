@@ -37,9 +37,9 @@
 import { admittedTouches, extractTouches, moduleEngagementWeightOf, sanitizeEventAttributes, type CatalogVocabulary, type ReflexConfig, type Touch } from '@/reflex/core';
 import type { Env } from '@/types/env';
 import { readRevision } from '@/config/versionedStore';
-import { CONTENT_KIND, DEFAULT_SLOTS, SLOTS_KIND } from '@/content/kinds';
+import { catalogParted, CONTENT_KIND, DEFAULT_SLOTS, SLOTS_KIND } from '@/content/kinds';
 import type { ContentCatalog, ContentPiece } from '@/content/types';
-import { readCatalogPart } from '@/config/publication';
+import { catalogPartPointer, readCatalogPart } from '@/config/publication';
 import { readRing } from '@/learn/fan';
 import { contentTypeValues, isLearnableValue, typeFallbackRetired } from '@/content/typeAffinity';
 
@@ -134,12 +134,13 @@ export function contentTouches(data: Record<string, unknown>, config: ReflexConf
  */
 async function partPieceOf(env: Env, tenant: string, catalog: ContentCatalog, id: string, decisionId: unknown,
   actor: string | undefined): Promise<ContentPiece | undefined> {
-  if (!catalog.products || typeof decisionId !== 'string' || typeof actor !== 'string' || actor === '') return undefined;
+  if (!catalogParted(catalog) || typeof decisionId !== 'string' || typeof actor !== 'string' || actor === '') return undefined;
   const [owner, , visitor] = decisionId.split(':');
   if (owner !== tenant || visitor !== actor) return undefined;
   try {
     const entry = (await readRing(env, tenant, actor))?.find(candidate => candidate.id === decisionId && candidate.item === id);
-    const pointer = entry?.products?.[0] === undefined ? undefined : catalog.products[entry.products[0]];
+    // P93: the product's pointer through its shard on a sharded catalogue.
+    const pointer = entry?.products?.[0] === undefined ? undefined : await catalogPartPointer(env, tenant, catalog, entry.products[0]);
     if (!pointer) return undefined;
     return ((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[]).find(candidate => candidate.id === id);
   } catch { return undefined; }
