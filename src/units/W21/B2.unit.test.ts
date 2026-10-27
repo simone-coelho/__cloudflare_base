@@ -982,7 +982,7 @@ describe('unit:W21.E1.07', () => {
     await publishSaltHistory(far, [...Array.from({ length: 26 }, () => SALT_B), SALT_C]);
     invalidateSaltVersions();
     const unknown = await distant.snapshot();
-    expect(unknown.status, 'NR4 — a long history is not a reason to refuse her a page').toBe(200);
+    expect(unknown.status, 'NR4 — a long history is not a reason to refuse the shopper a page').toBe(200);
     expect(unknown.experiment?.saltVersion,
       'P95 (E20) — past the former 24-revision horizon the count is exact: SALT_A, SALT_B, SALT_C — 3, never null and never a smaller number').toBe(3);
     expect(unknown.experiment?.id, 'and `experiment.id` carries the salt itself, so the join key is unaffected')

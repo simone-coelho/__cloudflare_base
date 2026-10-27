@@ -61,6 +61,10 @@
 //   R8 The kit sentences are ruled verbatim (KIT_SALT_EXACT, KIT_PURGE_KEEPS). Kit 03's decision row keeps
 //      unit:W21.C1.06's sentence (src/units/W21/B2.unit.test.ts KIT_SALT_VERSION, outside the grant), so the rule is
 //      ADDED there; W21 B2's KIT_SALT_HORIZON takes KIT_SALT_EXACT's words by the R10, so both files demand one sentence.
+//   R9 (round 2, R-P521) "No constant replaces it" is pinned past any defensive read limit a count might keep (40, 64,
+//      100 earlier revisions): SV2's long leg is a year of daily learn publications, 200 revisions, the salt rotated at 2,
+//      100 and 180, 1-196 stored before the annotation and 197-200 carrying the unknown; its next publication counts 4
+//      reading each of revisions 1-199 once, oldest to newest.
 //
 // R10 BY NAME (the programme's grant, R-P511), before -> after:
 //   src/units/W21/B2.unit.test.ts, unit:W21.E1.07 and KIT_SALT_HORIZON: the constant's 24-revision sentence ->
@@ -71,13 +75,15 @@
 //     { spring-26, null } -> { spring-26, 2 }; with the setting set "purges learn revisions" -> keeps learn revisions 1-26
 //     (catalogue 1 and 2 purged: the purge in force); set equals unset; its title and comment; the header's "Past the
 //     horizon" sentence.
+//   Round 2 (R-P521), by name: W21 B2's E1.07 host leg, the pre-existing "refuse her a page" -> "refuse the shopper a
+//     page" (message text only).
 // LOCKS (measured on the sketch): W21 B1-B3 and LEDGER, W38 LEDGER and FIX1 as amended, W30 FIX1 and P1E1, P84, P89,
 // P30's context key; unit:W21.C1.06's kit 03 sentence and unit:W21.E1.09's kit 02 sentence asserted unchanged in SV5.
 // DEFERRED: LV1 (the pair's l1 after its next learn publication, at the next release, lane L20).
 // RESIDUALS: (1) a tenant whose stored history can never establish the count (a revision purged before its first exact
 // count) reads null for good and, under the setting, keeps every learn revision for good (point 5); (2) the first count
 // of an un-annotated history reads every earlier learn revision on that one publish (unbounded by design, point 2);
-// (3) no test tells "no read horizon" from a horizon above this fixture's 35 revisions (point 2's absence is ruled).
+// (3) no test tells "no read horizon" from a horizon above this fixture's 200 revisions (point 2's absence is ruled; R9).
 //
 // HARNESS: src/units/_parity.ts (the mounted app over the real Durable Object classes, both hosts). Imports from
 // src/units/: ../_parity. Tenant ids only; no network; documents read from this tree (import.meta.url).
@@ -125,6 +131,11 @@ const l1Salt = (n: number) => n === 1 ? SALT_A : n === 2 ? SALT_B : SALT_C;
 const shortSalt = (n: number) => n === 1 ? SALT_A : SALT_B;
 /** R3: the l1 form: 1-26 as stored before the annotation, 27-30 carrying today's past-the-horizon unknown. */
 const l1Form = (n: number): Form => n <= 26 ? 'before' : 'unknown';
+/** R9: a long-lived l1, a year of daily learn publications: SALT_A at 1, SALT_B from 2, SALT_C from 100, SALT_D from 180 (count 4 from 180 on). */
+const LONG_HISTORY = 200;
+const longSalt = (n: number) => n === 1 ? SALT_A : n < 100 ? SALT_B : n < 180 ? SALT_C : SALT_D;
+/** R9: 1-196 as stored before the annotation, 197-200 carrying today's past-the-horizon unknown. */
+const longForm = (n: number): Form => n <= LONG_HISTORY - 4 ? 'before' : 'unknown';
 
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 const exact = (salt: string, version: number): CarriedSalt => ({ salt, version });
@@ -365,6 +376,26 @@ describe('unit:P95.SV2', () => {
       expect({ annotation: (await annotations(m, [32]))[0], olderRead: rotated.read.filter(n => n < 31) },
         `${host}: SV2 (design point 1) — the rotation at revision 32 carries 4 from the revision before alone, reading no older learn revision`)
         .toEqual({ annotation: exact(SALT_D, 4), olderRead: [] });
+    }, LONG_MS);
+
+    it(`host (${host}): a long-lived l1 (R9) — 200 learn revisions, a year of daily publications, the salt rotated at 2, 100 and 180, 1-196 stored before the annotation and 197-200 carrying the unknown — has no read limit: its next learn publication counts over the whole stored history, reading each of revisions 1-199 once, oldest to newest, and carries 4; the context table and the decision read 4 without reading an earlier learn revision`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P95 — the product page and the learn document on SALT_A publish');
+      const store = observe(m);
+      await publishHistory(m, store, LONG_HISTORY, longSalt);
+      await plantLearnHistory(m, longForm);
+      expect(await annotations(m, [1, 99, 100, LONG_HISTORY - 4, LONG_HISTORY - 3, LONG_HISTORY]),
+        `PRECONDITION (${host}): the planted long l1 — revisions 1-196 carry no annotation, 197-200 the unknown on SALT_D`)
+        .toEqual([null, null, null, null, unknownOn(SALT_D), unknownOn(SALT_D)]);
+
+      const next = await publishLearn(m, store, learnOn(SALT_D, LONG_HISTORY + 1));
+      expect({ annotation: (await annotations(m, [LONG_HISTORY + 1]))[0], read: next.read.filter(n => n < LONG_HISTORY) },
+        `${host}: SV2 (design point 2, R2, R9) — with no read limit, the publication of revision 201 counts SALT_A, SALT_B, SALT_C, SALT_D over the whole stored history — 4 — reading each of revisions 1-199 once, oldest to newest (a count that stops after 40 or 100 earlier revisions answers null; one over a recent window, a smaller number)`)
+        .toEqual({ annotation: exact(SALT_D, 4), read: range(1, LONG_HISTORY - 1) });
+      const page = await servePage(m, store, LONG_HISTORY + 1);
+      expect({ ...numbers(page), olderRead: page.olderRead },
+        `${host}: SV2 — from that publication on the context table and the decision read 4, reading no earlier learn revision`)
+        .toEqual({ table: 4, decision: 4, id: idOf(SALT_D), olderRead: { table: [], decision: [] } });
     }, LONG_MS);
 
     it(`host (${host}): the same l1 with learn revision 2 purged under the configuration-revision setting (R4): its next learn publications carry the unknown — null on SALT_C at 31 and on SALT_D at 32, never a smaller number — and the context table, the decision and the outcome stamp read null with the join key naming SALT_D`, async () => {
