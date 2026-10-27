@@ -295,7 +295,7 @@
     {
       "id": "P95",
       "title": "The salt version on long-lived tenants (**amendment 12, E20, 2026-10-26**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
@@ -393,7 +393,8 @@
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "src/units/W21/B2.unit.test.ts (R10 of unit:W21.E1.07's past-the-horizon expectations on a history published with the annotation and of the KIT_SALT_HORIZON sentence at :770–771 only, by the specifier)",
-        "src/units/W38/FIX1.unit.test.ts (R10 of B4.x's past-the-horizon null only, where the derivation chosen makes that stored history exact, by the specifier)"
+        "src/units/W38/FIX1.unit.test.ts (R10 of B4.x's past-the-horizon null only, where the derivation chosen makes that stored history exact, by the specifier)",
+        "src/identity/sessionAuthority.ts (afterOwnerAnswer's docstring lines only, by name, R-P524)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P95 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
