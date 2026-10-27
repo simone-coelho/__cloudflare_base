@@ -267,7 +267,9 @@
         "src/content/holdout.ts",
         "src/durable-objects/LearnStats.ts",
         "docs/kit/02-api-reference.md",
-        "src/identity/sessionAuthority.ts"
+        "src/identity/sessionAuthority.ts",
+        "src/content/service.ts",
+        "docs/kit/03-payload-schemas.md"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P94 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
