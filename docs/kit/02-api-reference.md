@@ -1533,10 +1533,12 @@ the identifier keeping the arm it drew), `mismatch` (a share of 0 or 1 that cann
 malformed member is refused `400 'Invalid arm member'` on every path, a new browser's first request included, before
 anything is issued or written. Each reason is counted for your operators on `GET /v1/{tenant}/learn/queue` as
 `arm_draw`, `{ capped, ignored, mismatch, republished }`, an exact count of every reason over thirty days that names
-no visitor; a draw is counted after its answer and never holds it. If the count cannot be read within two seconds,
+no visitor; a draw is counted after its answer and never holds it, and a draw whose record cannot reach the counter
+(the learn statistics binding missing, the counter's object failing, or no answer within two seconds) is not
+counted; the count restarts at the release that introduced this counter, so no earlier draw is in it. If the count cannot be read within two seconds,
 the queue answers it as zeros rather than waiting. Two cases are told and not counted: a page on the session route or a
 session broker gets the engine's own draw, so its head script can paint another class than its first answer's
-until the SDK keeps that answer's experiment; and a recognised shopper's arm is her enrollment anchor's (above),
+until the SDK keeps that answer's experiment; and a recognised shopper's arm is the shopper's enrollment anchor's (above),
 which a head script on another browser cannot see.
 
 The canonical nightly report groups by the experimental assignment on every path: `ineligible` is its own row, never part of `default`, and a day summed from hours folded before this release answers `armVisitors: null` and names those hours in `coverage.unassignedHours`.
