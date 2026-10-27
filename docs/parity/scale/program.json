@@ -176,7 +176,7 @@
     {
       "id": "P94",
       "title": "Exact `arm_draw` counts (**amendment 12, E19, 2026-10-26**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
@@ -266,7 +266,8 @@
       "allowedPaths": [
         "src/content/holdout.ts",
         "src/durable-objects/LearnStats.ts",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "src/identity/sessionAuthority.ts"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P94 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
