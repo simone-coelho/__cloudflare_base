@@ -10,6 +10,7 @@ import type { Env } from '@/types/env';
 import { IdentityStore } from '@/identity/store';
 import { isShopperId } from '@/identity/shopperId';
 import type { TenantId } from '@/tenancy/tenant';
+import { afterOwnerAnswer, ownerOperationActive } from '@/identity/sessionAuthority';
 import type { Arm, EnrollmentProvenance, HoldoutConfig } from './types';
 
 // P84 (E8, N4): the pure draw lives in src/sdk/armDraw.ts, imported by nothing
@@ -334,7 +335,24 @@ async function armDrawCall(env: Pick<Env, 'LEARN_STATS'>, tenant: string, path: 
 export async function readArmDraw(env: Pick<Env, 'LEARN_STATS'>, tenant: string, now: number): Promise<ArmDrawCounts> {
   return await armDrawCall(env, tenant, '/arm-draw/read', { now }) ?? armDrawCountsOf(null);
 }
-/** Never throws: an absent, failing or slow counter loses the record, after at most `ARM_DRAW_READ_BOUND_MS`. */
-export async function recordArmDraw(env: Pick<Env, 'LEARN_STATS'>, tenant: string, reason: ArmDrawReason, now: number): Promise<void> {
-  await armDrawCall(env, tenant, '/arm-draw/record', { reason, now });
+/**
+ * Never throws, and never holds the answer it follows (R-P503). Outside the
+ * shopper's owner (the first-request door) the caller hands the returned promise
+ * to the platform's waitUntil after its answer. Inside the owner (a request
+ * carrying a session, the carousel beacon) any work the caller hands on is work
+ * the owner drains before it answers, and every binding call there is retained
+ * (src/identity/sessionAuthority.ts `ownerEffect`); so there the record is
+ * handed to `afterOwnerAnswer` with the learn statistics binding instead: it
+ * starts once the owner has answered, outside the owner, and the promise
+ * returned here settles at once. An owner operation that does not answer, or
+ * that refuses the hand-over, records nothing.
+ */
+export async function recordArmDraw(env: Pick<Env, 'LEARN_STATS'> & Partial<Pick<Env, 'SESSIONS'>>, tenant: string, reason: ArmDrawReason,
+  now: number): Promise<void> {
+  const body = { reason, now };
+  if (env.SESSIONS !== undefined && ownerOperationActive(env as Env)) {
+    void afterOwnerAnswer(operator => armDrawCall(operator, tenant, '/arm-draw/record', body), 'LEARN_STATS').catch(() => undefined);
+    return;
+  }
+  await armDrawCall(env, tenant, '/arm-draw/record', body);
 }
