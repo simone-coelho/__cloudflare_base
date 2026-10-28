@@ -95,10 +95,12 @@ export const KEY = {
   idshard: (digest: string) => `${CONTENT}/idshard/${digest}.json`,
   ids: (digest: string) => `${CONTENT}/ids/${digest}.json`,
   revision: (n: number) => `${CONTENT}/rev/${n}.json`,
+  /** P98 R10 (R-P549, R-P551): one load's pack, the content-addressed object its parts and shards live in by byte range. */
+  pack: (digest: string) => `${CONTENT}/pack/${digest}.pack`,
 };
 const CLASSES: Array<[string, RegExp]> = [['part', /\/content\/part\/[0-9a-f]{64}\.json$/], ['shard', /\/content\/shard\/[0-9a-f]{64}\.json$/],
-  ['idshard', /\/content\/idshard\/[0-9a-f]{64}\.json$/], ['ids', /\/content\/ids\/[0-9a-f]{64}\.json$/]];
-/** A key's class: part, shard, idshard, ids (P86's one id index), head, set, `<kind> revision`, else the key itself. */
+  ['idshard', /\/content\/idshard\/[0-9a-f]{64}\.json$/], ['ids', /\/content\/ids\/[0-9a-f]{64}\.json$/], ['pack', /\/content\/pack\/[0-9a-f]{64}\.pack$/]];
+/** A key's class: part, shard, idshard, ids (P86's one id index), pack (P98), head, set, `<kind> revision`, else the key itself. */
 export function classOf(key: string): string {
   for (const [name, pattern] of CLASSES) if (pattern.test(key)) return name;
   if (/\/head\.json$/.test(key)) return 'head';
@@ -109,10 +111,34 @@ export function classOf(key: string): string {
 export const objectKeys = (m: Mounted, cls: string) => sorted([...m.storage.objects.keys()].filter(key => classOf(key) === cls));
 export const bytesOf = (raw: string) => new TextEncoder().encode(raw).byteLength;
 const parsedAt = (m: Mounted, key: string): Record<string, unknown> | null => { const raw = m.storage.objects.get(key); return raw === undefined ? null : JSON.parse(raw) as Record<string, unknown>; };
+/** P98 R10: where an object lives inside a pack (the pack's digest and the object's byte range). */
+export interface Place { pack: string; at: number; bytes: number }
+const packBytes = new Map<string, { raw: string; bytes: Buffer }>();
+/** P98 R10: the value at a place in a stored pack, as the bucket holds it (null where the pack or a JSON value there is missing). */
+const placedAt = (m: Mounted, place: Place): Record<string, unknown> | null => {
+  const key = KEY.pack(place.pack), raw = m.storage.objects.get(key);
+  if (raw === undefined) return null;
+  let held = packBytes.get(key);
+  if (!held || held.raw !== raw) { held = { raw, bytes: Buffer.from(raw, 'utf8') }; packBytes.set(key, held); }
+  try { return JSON.parse(held.bytes.subarray(place.at, place.at + place.bytes).toString('utf8')) as Record<string, unknown>; } catch { return null; }
+};
+/** P98 R10: a pack table's entry as its digest (an entry may be the digest or an object naming it as `digest`). */
+const packDigest = (entry: unknown): string => typeof entry === 'string' ? entry : String((entry as { digest?: unknown } | null)?.digest ?? '');
+/** P98 R10: a pointer's place, its pack named by `table[pointer.pack]`, else by `own` (the shard's own pack); none for an object of its own. */
+const placeOf = (pointer: { pack?: unknown; at?: unknown; bytes?: unknown }, table: readonly unknown[] | undefined, own?: string): Place | undefined => {
+  if (typeof pointer.at !== 'number' || typeof pointer.bytes !== 'number') return undefined;
+  const pack = typeof pointer.pack === 'number' ? packDigest(table?.[pointer.pack]) : own;
+  return pack ? { pack, at: pointer.at, bytes: pointer.bytes } : undefined;
+};
 
-export interface Pointer { digest: string; records: number }
+/** A part's pointer; P98 R10: `place` where the part lives inside a pack (none for a part stored as its own object). */
+export interface Pointer { digest: string; records: number; place?: Place }
 export interface ShardPointer { digest: string; products: number; records: number }
-/** The catalogue's index as stored, in whichever form the manifest carries it; `missing` names an object a pointer names and the store lacks. */
+/**
+ * The catalogue's index as stored, in whichever form the manifest carries it; `missing` names an object a pointer names
+ * and the store lacks (P98 R10: the pack's key where the object lives in a pack); `places` names, for each shard and id
+ * shard pointer that carries a byte range, the pack and range it is read from (P98, R-P549).
+ */
 export interface IndexView {
   form: 'one-level' | 'sharded' | 'none';
   products: Record<string, Pointer>;
@@ -120,22 +146,34 @@ export interface IndexView {
   shards: Record<string, ShardPointer>;
   idShards: Record<string, { digest: string; records: number }>;
   missing: string[];
+  places?: { shards: Record<string, Place>; idShards: Record<string, Place> };
 }
 export function indexOf(m: Mounted, document: Record<string, unknown>): IndexView {
   const view: IndexView = { form: 'none', products: {}, ids: {}, shards: {}, idShards: {}, missing: [] };
-  const index = document.index as { shards?: Record<string, ShardPointer>; ids?: Record<string, { digest: string; records: number }> } | undefined;
+  const index = document.index as { shards?: Record<string, ShardPointer>; ids?: Record<string, { digest: string; records: number }>; packs?: unknown[] } | undefined;
   if (index && typeof index === 'object') {
     view.form = 'sharded'; view.shards = index.shards ?? {}; view.idShards = index.ids ?? {};
-    for (const pointer of Object.values(view.shards)) {
-      const body = parsedAt(m, KEY.shard(pointer.digest));
-      if (!body) { view.missing.push(KEY.shard(pointer.digest)); continue; }
-      Object.assign(view.products, body.products as Record<string, Pointer>);
+    const places: NonNullable<IndexView['places']> = { shards: {}, idShards: {} };
+    for (const [name, pointer] of Object.entries(view.shards)) {
+      // P98 R10: a pointer with a byte range is read from its pack; one without is P93's object of its own.
+      const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, index.packs);
+      if (place) places.shards[name] = place;
+      const body = place ? placedAt(m, place) : parsedAt(m, KEY.shard(pointer.digest));
+      if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.shard(pointer.digest)); continue; }
+      const table = Array.isArray(body.packs) ? body.packs as unknown[] : undefined;
+      for (const [product, p] of Object.entries(body.products as Record<string, Pointer & { pack?: unknown; at?: unknown; bytes?: unknown }>)) {
+        const partPlace = placeOf(p, table, place?.pack);
+        view.products[product] = { digest: p.digest, records: p.records, ...(partPlace ? { place: partPlace } : {}) };
+      }
     }
-    for (const pointer of Object.values(view.idShards)) {
-      const body = parsedAt(m, KEY.idshard(pointer.digest));
-      if (!body) { view.missing.push(KEY.idshard(pointer.digest)); continue; }
+    for (const [name, pointer] of Object.entries(view.idShards)) {
+      const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, index.packs);
+      if (place) places.idShards[name] = place;
+      const body = place ? placedAt(m, place) : parsedAt(m, KEY.idshard(pointer.digest));
+      if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.idshard(pointer.digest)); continue; }
       Object.assign(view.ids, body.ids as Record<string, string>);
     }
+    if (Object.keys(places.shards).length || Object.keys(places.idShards).length) view.places = places;
   } else if (document.products && typeof document.products === 'object') {
     view.form = 'one-level'; view.products = document.products as Record<string, Pointer>;
     const pointer = document.idIndex as { digest?: string } | undefined;
@@ -147,12 +185,18 @@ export function indexOf(m: Mounted, document: Record<string, unknown>): IndexVie
   view.products = Object.fromEntries(Object.keys(view.products).sort().map(p => [p, view.products[p]!]));
   return view;
 }
-/** Every object a revision value names beside its body (either form): its parts, its id index or id shards and its shards. */
+/**
+ * Every object a revision value names beside its body (either form): its parts, its id index or id shards and its
+ * shards, each by the key of the object the store holds it in — P98 R10: the pack's key for one that lives in a pack,
+ * and every pack the manifest's pack table names.
+ */
 export function namedBy(m: Mounted, value: Record<string, unknown>): Set<string> {
   const view = indexOf(m, value), out = new Set<string>();
-  for (const pointer of Object.values(view.products)) out.add(KEY.part(pointer.digest));
-  for (const pointer of Object.values(view.shards)) out.add(KEY.shard(pointer.digest));
-  for (const pointer of Object.values(view.idShards)) out.add(KEY.idshard(pointer.digest));
+  for (const pointer of Object.values(view.products)) out.add(pointer.place ? KEY.pack(pointer.place.pack) : KEY.part(pointer.digest));
+  for (const [name, pointer] of Object.entries(view.shards)) { const place = view.places?.shards[name]; out.add(place ? KEY.pack(place.pack) : KEY.shard(pointer.digest)); }
+  for (const [name, pointer] of Object.entries(view.idShards)) { const place = view.places?.idShards[name]; out.add(place ? KEY.pack(place.pack) : KEY.idshard(pointer.digest)); }
+  const table = (value.index as { packs?: unknown[] } | undefined)?.packs;
+  if (Array.isArray(table)) for (const entry of table) if (packDigest(entry)) out.add(KEY.pack(packDigest(entry)));
   const ids = value.idIndex as { digest?: string } | undefined;
   if (ids?.digest) out.add(KEY.ids(ids.digest));
   return out;
@@ -162,9 +206,9 @@ export function storedRevisionValues(m: Mounted): Array<Record<string, unknown>>
   return [...m.storage.objects.entries()].filter(([key]) => /\/content\/rev\/[0-9]+\.json$/.test(key))
     .map(([, raw]) => (JSON.parse(raw) as { value?: Record<string, unknown> }).value ?? {});
 }
-/** A product's part as stored, read through a pointer. */
+/** A product's part as stored, read through a pointer (P98 R10: from its pack's byte range where it lives in a pack). */
 export function partAt(m: Mounted, pointer: Pointer | undefined): { ids: string[]; value: Record<string, unknown> | null } {
-  const value = pointer ? parsedAt(m, KEY.part(pointer.digest)) : null;
+  const value = pointer ? pointer.place ? placedAt(m, pointer.place) : parsedAt(m, KEY.part(pointer.digest)) : null;
   return { ids: sorted(((value?.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value };
 }
 

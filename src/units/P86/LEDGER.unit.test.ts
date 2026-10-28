@@ -311,18 +311,46 @@ const storedAt = (m: Mounted, key: string): Record<string, unknown> | null => {
 };
 const SHARD = /^config-publication\/v1\/coach\/content\/shard\/([0-9a-f]{64})\.json$/;
 const shardKey = (digest: string) => `config-publication/v1/${TENANT}/content/shard/${digest}.json`;
-const shardPointersOf = (d: LoadedSlots) => ((d.document.index as { shards?: unknown } | undefined)?.shards ?? null) as Record<string, { digest?: unknown }> | null;
+type Placed = { digest?: unknown; pack?: unknown; at?: unknown; bytes?: unknown };
+const shardPointersOf = (d: LoadedSlots) => ((d.document.index as { shards?: unknown } | undefined)?.shards ?? null) as Record<string, Placed> | null;
+/**
+ * P98 R10 (R-P549, R-P551): an object a pointer with a byte range names lives in a pack
+ * (`content/pack/<digest>.pack`), its pack named by the table the pointer indexes (`pack`) or, for a part inside its
+ * shard's own pack, by that shard's place; it is read from the bucket at that range. A pointer with no range names an
+ * object of its own, read as before.
+ */
+const packKey = (digest: string) => `config-publication/v1/${TENANT}/content/pack/${digest}.pack`;
+const packOfEntry = (entry: unknown) => typeof entry === 'string' ? entry : String((entry as { digest?: unknown } | null)?.digest ?? '');
+const packBuffers = new Map<string, { raw: string; bytes: Buffer }>();
+const placedAt = (m: Mounted, pack: string, at: number, bytes: number): Record<string, unknown> | null => {
+  const key = packKey(pack), raw = m.storage.objects.get(key);
+  if (raw === undefined) return null;
+  let held = packBuffers.get(key);
+  if (!held || held.raw !== raw) { held = { raw, bytes: Buffer.from(raw, 'utf8') }; packBuffers.set(key, held); }
+  try { return JSON.parse(held.bytes.subarray(at, at + bytes).toString('utf8')) as Record<string, unknown>; } catch { return null; }
+};
+/** P98 R10: the pack a pointer with a range names (`table[pointer.pack]`, else `own`), or none for an object of its own. */
+const packOf = (pointer: Placed, table: unknown, own?: string): string | undefined =>
+  typeof pointer.at !== 'number' || typeof pointer.bytes !== 'number' ? undefined
+    : typeof pointer.pack === 'number' ? packOfEntry(Array.isArray(table) ? table[pointer.pack] : undefined) || undefined : own;
+const manifestPacks = (d: LoadedSlots) => (d.document.index as { packs?: unknown } | undefined)?.packs;
+/** A manifest pointer's object (a shard or an id shard): from its pack's range, else its own object at `ownKey`. */
+const pointedAt = (m: Mounted, d: LoadedSlots, pointer: Placed, ownKey: string) => {
+  const pack = packOf(pointer, manifestPacks(d));
+  return pack ? placedAt(m, pack, pointer.at as number, pointer.bytes as number) : storedAt(m, ownKey);
+};
 /** The manifest's index, product → pointer, or `{}` where it has none (today). */
 const productsOf = (m: Mounted, d: LoadedSlots) => {
   const shards = shardPointersOf(d);
   if (!shards) return (d.document.products ?? {}) as Record<string, { digest?: unknown; records?: unknown }>;
   const out: Record<string, { digest?: unknown; records?: unknown }> = {};
-  for (const pointer of Object.values(shards)) Object.assign(out, (storedAt(m, shardKey(String(pointer.digest)))?.products ?? {}) as object);
+  for (const pointer of Object.values(shards)) Object.assign(out, (pointedAt(m, d, pointer, shardKey(String(pointer.digest)))?.products ?? {}) as object);
   return Object.fromEntries(Object.keys(out).sort().map(p => [p, out[p]!]));
 };
-/** P93 R10: the key of the product shard that holds a product (the sharded form), or what is missing. */
-const shardOf = (m: Mounted, d: LoadedSlots, product: string) => Object.values(shardPointersOf(d) ?? {}).map(p => shardKey(String(p.digest)))
-  .find(key => Object.hasOwn((storedAt(m, key)?.products ?? {}) as object, product)) ?? `no shard holds ${product}`;
+/** P93 R10: the key of the product shard that holds a product (the sharded form), or what is missing; P98 R10: its pack's key where it lives in a pack. */
+const shardOf = (m: Mounted, d: LoadedSlots, product: string) => Object.values(shardPointersOf(d) ?? {})
+  .filter(p => Object.hasOwn((pointedAt(m, d, p, shardKey(String(p.digest)))?.products ?? {}) as object, product))
+  .map(p => { const pack = packOf(p, manifestPacks(d)); return pack ? packKey(pack) : shardKey(String(p.digest)); })[0] ?? `no shard holds ${product}`;
 /** P93 R10: the shard bucket of an id: the first two hex digits of the SHA-256 of its UTF-8 bytes (R-P487 (1)). */
 const bucketOfId = async (id: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)))][0]!.toString(16).padStart(2, '0');
 const sharedOf = (d: LoadedSlots) => ((d.document.pieces ?? []) as Array<{ id: string }>).map(p => p.id);
@@ -330,9 +358,18 @@ const digestOf = (m: Mounted, d: LoadedSlots, product: string) => String(product
 const PART = /^config-publication\/v1\/coach\/content\/part\/([0-9a-f]{64})\.json$/;
 const partKey = (digest: string) => `config-publication/v1/${TENANT}/content/part/${digest}.json`;
 const partKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => PART.test(k)).sort();
-/** A product's part as stored, read through its pointer: its record ids, or what is missing. */
+/** A product's part as stored, read through its pointer: its record ids, or what is missing (P98 R10: from its pack's range where it lives in a pack). */
 function partOf(m: Mounted, d: LoadedSlots, product: string): { ids: string[]; value: Record<string, unknown> | null; bytes: number; missing: string | null } {
-  const digest = digestOf(m, d, product), raw = m.storage.objects.get(partKey(digest));
+  const digest = digestOf(m, d, product);
+  for (const pointer of Object.values(shardPointersOf(d) ?? {})) {
+    const shard = pointedAt(m, d, pointer, shardKey(String(pointer.digest))), entry = (shard?.products as Record<string, Placed> | undefined)?.[product];
+    const pack = entry ? packOf(entry, shard?.packs, packOf(pointer, manifestPacks(d))) : undefined;
+    if (!entry || !pack) continue;
+    const value = placedAt(m, pack, entry.at as number, entry.bytes as number);
+    if (!value) return { ids: [], value: null, bytes: 0, missing: `no part object for ${product} (${digest})` };
+    return { ids: sorted(((value.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value, bytes: entry.bytes as number, missing: null };
+  }
+  const raw = m.storage.objects.get(partKey(digest));
   if (raw === undefined) return { ids: [], value: null, bytes: 0, missing: `no part object for ${product} (${digest})` };
   const value = JSON.parse(raw) as Record<string, unknown>;
   return { ids: sorted(((value.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value, bytes: new TextEncoder().encode(raw).byteLength, missing: null };
@@ -347,16 +384,17 @@ const idsKey = (digest: string) => `config-publication/v1/${TENANT}/content/idsh
 const idsKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => IDS.test(k)).sort();
 /** The id index's pointers: the sharded `index.ids` (hex2 → { digest, records }) or P86's `idIndex`; null where there is none. */
 const indexPointerOf = (d: LoadedSlots) => ((d.document.index as { ids?: unknown } | undefined)?.ids ?? d.document.idIndex ?? null) as Record<string, unknown> | null;
-/** The id shard keys the manifest names (the sharded form). */
-const idShardKeysOf = (d: LoadedSlots) => sorted(Object.values(((d.document.index as { ids?: unknown } | undefined)?.ids ?? {}) as Record<string, { digest?: unknown }>).map(p => idsKey(String(p.digest))));
+/** The id shard keys the manifest names (the sharded form); P98 R10: its pack's key for an id shard that lives in a pack. */
+const idShardKeysOf = (d: LoadedSlots) => sorted([...new Set(Object.values(((d.document.index as { ids?: unknown } | undefined)?.ids ?? {}) as Record<string, Placed>)
+  .map(p => { const pack = packOf(p, manifestPacks(d)); return pack ? packKey(pack) : idsKey(String(p.digest)); }))]);
 function indexOf(m: Mounted, d: LoadedSlots): { digest: string; ids: Record<string, string> | null; value: unknown } {
   const sharded = (d.document.index as { ids?: Record<string, { digest?: unknown }> } | undefined)?.ids;
   if (sharded) {
     const ids: Record<string, string> = {};
     for (const pointer of Object.values(sharded)) {
-      const raw = m.storage.objects.get(idsKey(String(pointer.digest)));
-      if (raw === undefined) return { digest: JSON.stringify(sharded), ids: null, value: null };
-      Object.assign(ids, (JSON.parse(raw) as { ids?: Record<string, string> }).ids ?? {});
+      const shard = pointedAt(m, d, pointer as Placed, idsKey(String(pointer.digest)));
+      if (shard === null) return { digest: JSON.stringify(sharded), ids: null, value: null };
+      Object.assign(ids, (shard as { ids?: Record<string, string> }).ids ?? {});
     }
     const value = { ids: Object.fromEntries(Object.keys(ids).sort().map(id => [id, ids[id]!])) };
     return { digest: JSON.stringify(sharded), ids: value.ids, value };
