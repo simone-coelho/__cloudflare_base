@@ -42,8 +42,12 @@
   "deferredLiveAcceptance": [
     {
       "id": "LIVE1",
-      "status": "PENDING",
-      "evidence": []
+      "status": "PASS",
+      "evidence": [
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L20/P84.lead-summary.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/L20/records/P84.md",
+        "/home/simonecoelho/rem/_evidence/parity-step3/live/lanes/CONSOLIDATION-L20/REPORT.md"
+      ]
     }
   ]
 }
