@@ -721,14 +721,14 @@ describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect 
         past: { refused: 503, staged: 200, left: 2, stillThere: 0, shardReads: 0, lost: [], bad: [] } });
     }, 600_000);
 
-    it(`host (${host}): a pack the pending set names is never deleted — a second writer reserving between a publication's commit and its purge (its commit then failing) keeps its pack though it is past the grace; recovered, its products read back`, async () => {
+    it(`host (${host}): a pack the pending set names is never deleted — a second writer reserving between a publication's commit and its purge (its revision's exact-create then failing, so only the pending set names its pack) keeps its pack though it is past the grace; recovered, its products read back`, async () => {
       const m = await loadedTenant(host, 300);
       shortRetention(m);
       const restore = uploadedAt(m, minutesAgo(60));
       let other: { stage: Answer; headers: Record<string, string>; pack: string | null } | null = null, inOther = false;
       try {
         const first = await preconditions(m); invalidatePublicationCache();
-        const a = await under(m, () => importOf(m, rangeRecords(400, 20), first), c => inOther && c.head === 'commit' ? 'throw' : undefined, async (call, st) => {
+        const a = await under(m, () => importOf(m, rangeRecords(400, 20), first), c => inOther && c.op === 'put' && c.cls === 'content revision' ? 'throw' : undefined, async (call, st) => {
           if (other || call.head !== 'commit') return;
           inOther = true;
           const before = st.calls.length;
