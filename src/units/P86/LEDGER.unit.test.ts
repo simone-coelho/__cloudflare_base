@@ -1034,12 +1034,12 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
           status: 200, served: SERVED_FOR_BLACK, parts: [anchorPart], shared: sorted([...MODULE_IDS, 'img-brand-1']), indexed: n + 3,
           warm: [SERVED_FOR_BLACK, 0], operator: [anchorPart] });
       }
-      // R-P416 (residual), P93 R10 (R-P487 (9)): the exact read list — the head, the set, the four members, the anchor's
-      // product shard and the anchor's one part — at each size (before: 7 reads, no shard).
+      // R-P416 (residual), P93 R10 (R-P487 (9)), P102 R10 (E27, CR3): the exact read list — the head and the serving copy,
+      // the anchor's product shard and the anchor's one part — at each size (before P102: the set and the four members too).
       for (const n of [50, 5000]) {
         const { m, cold, manifest } = at[n]!;
-        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the set, the content, slots, learn and reflex revisions, the anchor's shard and the anchor's part, once each`)
-          .toEqual(sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision', shardOf(m, manifest, A), `part ${digestOf(m, manifest, A)}`]));
+        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the serving copy, the anchor's shard and the anchor's part, once each`)
+          .toEqual(sorted(['head', `config-publication/v2/${TENANT}/serving.json`, shardOf(m, manifest, A), `part ${digestOf(m, manifest, A)}`]));
       }
       const [small, large] = [at[50]!, at[5000]!];
       // A shard holds the other products of its bucket, so its address differs between the two ranges: compared by class.

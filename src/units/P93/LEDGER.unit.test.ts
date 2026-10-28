@@ -106,8 +106,8 @@ function expectedParts(n: number): Map<string, string[]> {
   for (let k = 1; k <= n; k++) parts.set(rangeProduct(k), [rangeRecordId(k)]);
   return parts;
 }
-/** Reading 2's read list: head, set, the four revisions, the anchor's shard and the anchor's part, once each. */
-const pageReads = (view: IndexView, anchor = A) => sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision',
+/** Reading 2's read list as P102 re-points it (E27, CR3; R10 by name): the head and the serving copy, the anchor's shard and its part, once each. */
+const pageReads = (view: IndexView, anchor = A) => sorted(['head', `config-publication/v2/${TENANT}/serving.json`,
   KEY.shard(view.shards[bucketOf(anchor)]?.digest ?? `no shard for ${anchor}`), KEY.part(view.products[anchor]?.digest ?? `no pointer for ${anchor}`)]);
 const shardOrPart = (reads: string[]) => reads.filter(r => ['shard', 'idshard', 'part'].includes(classOf(r)));
 /** Whether an error of the answer names each word as a word (a shard's two hex digits are not matched inside a number or a digest). */
@@ -286,7 +286,7 @@ describe('unit:P93.CS1 (R-P487: 256 shards by SHA-256 of the product id and of t
 
 describe('unit:P93.CS2 (R-P487 (9): 8 reads at any size)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): at N = 50 and N = 5,000 the anchor's page reads exactly the head, the set, the content, slots, learn and reflex revisions, the anchor's shard and the anchor's part, once each, and serves P80's carousel; warm (the shard and the part cached per isolate by digest) it reads no shard and no part`, async () => {
+    it(`host (${host}): at N = 50 and N = 5,000 the anchor's page reads exactly the head, the serving copy, the anchor's shard and the anchor's part, once each (P102, R-P570 (a)), and serves P80's carousel; warm (the shard and the part cached per isolate by digest) it reads no shard and no part`, async () => {
       const seen: Record<number, unknown> = {}, wanted: Record<number, unknown> = {};
       for (const n of [50, 5000]) {
         const m = await rangeTenant(host, n);
@@ -299,7 +299,7 @@ describe('unit:P93.CS2 (R-P487 (9): 8 reads at any size)', () => {
         seen[n] = { status: cold.result.status, served: carousel(cold.result), reads: readClasses(cold.ops), warm: [carousel(warm.result), shardOrPart(readClasses(warm.ops))] };
         wanted[n] = { status: 200, served: SERVED_FOR_BLACK, reads: pageReads(view), warm: [SERVED_FOR_BLACK, []] };
       }
-      expect.soft(seen, `${host}: P93.CS2 — 8 reads at each size, the same classes`).toEqual(wanted);
+      expect.soft(seen, `${host}: P93.CS2 — 4 reads at each size, the same classes`).toEqual(wanted);
     }, 600_000);
   }
 
@@ -565,7 +565,7 @@ describe('unit:P93.CS4 (R-P487 (9), R-P490 (1), (3): the migration needs no oper
       const read = await productRead(m, A);
       expect.soft({ form: level.view.form, page: [page.result.status, carousel(page.result), readClasses(page.ops)], read: [read.status, readIds(read)] },
         `${host}: P93.CS4 — LOCK: the one-level catalogue served as P86 serves it`).toEqual({
-        form: 'one-level', page: [200, SERVED_FOR_BLACK, sorted(['head', 'set', 'content revision', 'slots revision', 'learn revision', 'reflex revision', KEY.part(parts.get(A)!)])],
+        form: 'one-level', page: [200, SERVED_FOR_BLACK, sorted(['head', `config-publication/v2/${TENANT}/serving.json`, KEY.part(parts.get(A)!)])],
         read: [200, sorted(ANCHOR_IMAGES.map(r => r.id))] });
       const one = rangeProduct(1);
       const imported = await metered(m, async () => importJson(m, rangeRecords(1, 1, ', retitled'), { mode: 'merge' }));
