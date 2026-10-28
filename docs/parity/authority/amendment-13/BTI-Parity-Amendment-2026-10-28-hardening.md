@@ -27,12 +27,17 @@ Amendment 12's first four items are built, receipted and live-accepted (P93–P9
 - **Done when:** the decision routes refuse a malformed `pageInstance` with `400 Invalid page instance` before any work, as they do a malformed `arm`; kit 02 states the format.
 - **Needed by:** before the first activation. Hours.
 
+#### E27 · The first answer's content read
+- **Authority:** P97's root-cause analysis (R-P547) left the customer stamps' first answer bounded by reading the published content; the diagnosis `S44/analyst-stamps-content/DESIGN.md` (R-P553): every first answer on a machine holding nothing reads the published content in three sequential storage trips, the per-isolate memory forgets after 30 s, and a stamp's storage trip costs about 1.7× the pair's. In force under the owner's direction of 28 October (R-P545): every problem fixed at its root cause.
+- **Done when:** a publication's set and documents are kept for as long as memory allows (the head still checked on every decision); the head carries each document's version so a machine holding nothing reads the content in one round, existing tenants backfilled without an operator's publication; a brand-new machine reaches the content in one trip; the per-trip storage time reported so the stamps' slower trip is measured live; the answers identical; the stamps' cold first answer within about 300 ms of server time once P97 ships.
+- **Needed by:** the first activation (January), with P97. Three to four days.
+
 #### Text corrections (no item; by name in whichever ticket next touches the file)
 Kit 03's "distinct salts" rows and gendered experiment rows; `src/content/types.ts:673–674`'s comment; kit 02's other gendered sentences; kit 02's "every other answer carries the platform's `total`" (app answers only; the Worker entry's refusals carry none); the stamps answering 404 for `edge-head.js.csp`; `scripts/latency.mjs:18`; program.json's stale `src/index.ts:67`.
 
 ## 3. The owner's decisions
 | # | Decision | Status |
 |---|---|---|
-| 1 | E25, E23, E24, E26 in force in this order (E25 first, for the December test); the owner may strike any | in force on the owner's message of 28 October, morning: "I'm not seeing any movement, action, or work. Why are we paused? What's the status?" (R-P544) |
+| 1 | E25, E23, E24, E26 in force in this order (E25 first, for the December test), and E27 added on 28 October (R-P553) in its own programme `tapestry-parity-first-paint`; the owner may strike any | in force on the owner's message of 28 October, morning: "I'm not seeing any movement, action, or work. Why are we paused? What's the status?" (R-P544) |
 | 2 | E22's design (amendment 12, P97's DC1): none of (a), (b), (c) as framed — the root cause of the new visitor's record creation found and the first answer redesigned not to wait on it (the record created asynchronously, the profile used later), the safeguards kept by design | the owner, 28 October (R-P545): "What happens during the creation of that record? Does it need to be created synchronously or can it be created asynchronously? … Nothing should take 1.4 seconds." |
 | 3 | The objects refused loads left on the pair's l3 are collected by the redesigned load and purge, not swept by hand | the owner, 28 October (R-P545): "Everything needs to be fixed. Stop proposing … solutions that are papering over or hiding the problem." |
