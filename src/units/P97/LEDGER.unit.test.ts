@@ -27,8 +27,12 @@
 //      new export. Its top-level calls are the activation (/identity/activate) and the forward (/authority/request); a
 //      call it makes to itself inside one of them (the do host's in-object content read, DESIGN §1 6b) is its own.
 //   R2 "Before the answer" is before the Worker's fetch resolves with the door's answer. "Nothing contacted or created"
-//      is measured with every call to the visitor's object held 600 ms from its first contact: no object reached or
-//      created when the answer arrives. The creation is issued by the door's handler under waitUntil, as P84's arm-draw
+//      is measured with every call to the visitor's object held until the answer has arrived (released at 600 ms only so
+//      a door waiting on it ends): no object reached or created when the answer arrives. "As it does with nothing held"
+//      (R-P567, F1): the held answer within 150 ms of the same mount's answer with nothing held, by the caller's measure
+//      and by its `total`, and its `total` its whole time (kit 02 :337: "the first request's whole time"; P76, P96)
+//      within 100 ms of the caller's measure, so no wait may follow the `total` it names; FV2's late leg is bound alike
+//      ("outside the answer's time"). The creation is issued by the door's handler under waitUntil, as P84's arm-draw
 //      count is today (DESIGN §1 step 7; P94 R3): "after the answer" is "the answer does not wait on it"; the leg pins it
 //      as the one object call, issued after the copy's forward answered (a creation fired before the decision and not
 //      awaited is the wrong fix `concurrent`).
@@ -100,6 +104,11 @@
 // and P94 AD1 2 (d2), re-pointed 28/28 (d1), weakened 6 RED (d6); re-pointed on today and on step1, the same six RED on
 // their preconditions until the design lands (d3, d4). The whole suite under the sketch 4245/4272, 272/282 files; its ten
 // failing files fail alike on today's tree (the scratch layout's git legs) but P68 (h-full-sketch, h-full-today).
+// ROUND 2 (R-P567, F1; logs/r2-*): FV1's held leg holds the visitor's object until the answer has arrived and bounds the
+// held answer against the free one and its `total` against its own measure; FV2's late leg is bound alike (3,000 ms gone).
+// The reviewer's controls (its ctl.cjs, copied but for the scratch guard), each RED on FV1's held leg and FV2's late leg
+// on both hosts: boundedwait 4, fixedsleep 4, boundedwait700 6. The sketch 26/26 twice; today 18 RED, 8 GREEN as before;
+// the eight wrong fixes as before (kept 14, dropped 8, writes 2, nofallback 2, leak 4, concurrent 8, consent 4, kitleft 2).
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -131,12 +140,20 @@ const docsAt = (share: number, slots: unknown = declaredSlots([layoutSlot()])) =
 /** P30's context-only page: the declared layout slot switched to context-only, the recently-viewed slot below it. */
 const CONTEXT_ONLY = declaredSlots([layoutSlot({ contextOnly: { enabled: true } }), recentSlot()]);
 const TINY = 1e-9;
-/** The hold of the new visitor's object from its first contact (the design's probe: H = 600 ms). */
+/**
+ * The longest the new visitor's object is held (the design's probe: H = 600 ms). FV1's held leg and FV2's late leg hold it
+ * until the first answer has arrived and release it at H only so that a door waiting on it ends; FV2's creation leg holds
+ * it H from its first contact.
+ */
 const HOLD_MS = 600;
+/**
+ * R-P567 (F1): "as it does with nothing held" — the held first answer within SAME_MS of the same mount's first answer with
+ * nothing held, by the caller's measure and by its `total`; and its `total` its whole time (kit 02 :337, P76, P96),
+ * within WHOLE_MS of the caller's own measure, so no wait follows the `total` it names.
+ */
+const SAME_MS = 150, WHOLE_MS = 100;
 /** FV3: the first answer's activation held before it reaches the object that runs it, and (session host) its restriction's key-value read. */
 const TRIP_MS = 400, RESTRICT_MS = 150;
-/** FV2: how long the first answer may take before the test calls it waiting on the held creation. */
-const WAITED_MS = 3_000;
 const SITE_KEY = 'p97-synthetic-site-key';
 /** The forwarded decision's five stages (W38 B5's names) and the door's own entries (P76). */
 const STAGES = ['documents', 'shopper', 'trend', 'lift', 'decide'];
@@ -433,7 +450,7 @@ async function contextOnly(host: Host): Promise<{ door: Reply; next: Reply; sess
 
 describe('unit:P97.FV1 (E22, R-P547)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): with every call to the new visitor's object held ${HOLD_MS} ms from its first contact, a new visitor's first answer (no class) still answers in less than ${HOLD_MS} ms — Server-Timing \`total\`, sources.timings.total and the caller's own measure — as it does with nothing held; it was decided by today's code on the blank copy (the copy's /identity/activate then /authority/request under the minted session); before the answer no Durable Object was reached or created (the visitor's or any other) and nothing was written to any binding (object storage, the session store, the cache, R2, the queue, D1); its reads are the decision's own (R2's published content and, on the session host only, at most two session-store reads of the minted session's key); the one object call the first request makes is the creation of the visitor's own record, issued after the copy's decision answered; no ledger or learning effect; one \`total\``, async () => {
+    it(`host (${host}): with every call to the new visitor's object held until the first answer has arrived (released at ${HOLD_MS} ms at the latest), a new visitor's first answer (no class) still answers in less than ${HOLD_MS} ms — Server-Timing \`total\`, sources.timings.total and the caller's own measure — and as it does with nothing held: within ${SAME_MS} ms of the same mount's first answer with nothing held, by the caller's measure and by its \`total\`, its \`total\` its whole time (within ${WHOLE_MS} ms of the caller's measure); it was decided by today's code on the blank copy (the copy's /identity/activate then /authority/request under the minted session); before the answer no Durable Object was reached or created (the visitor's or any other) and nothing was written to any binding (object storage, the session store, the cache, R2, the queue, D1); its reads are the decision's own (R2's published content and, on the session host only, at most two session-store reads of the minted session's key); the one object call the first request makes is the creation of the visitor's own record, issued after the copy's decision answered; no ledger or learning effect; one \`total\``, async () => {
       const w = await world(host);
       try {
         const warm = await door(w); await w.drain();
@@ -444,19 +461,24 @@ describe('unit:P97.FV1 (E22, R-P547)', () => {
         expect([free.status, freeTotal < HOLD_MS], `${host}: PRECONDITION — with nothing held the first answer's total is below ${HOLD_MS} ms (${show(free)})`).toEqual([200, true]);
         w.reset();
         const before = { shoppers: w.m.shoppers.size, stats: w.m.stats.size, rings: w.m.rings.size };
-        const ready = new Map<string, Promise<void>>();
-        w.intercept = async call => { if (!ready.has(call.name)) ready.set(call.name, sleep(HOLD_MS)); await ready.get(call.name); };
+        // R-P567: every call to the visitor's object held until the answer has arrived; released at HOLD_MS only so that a
+        // door waiting on the object (today's) ends.
+        const released = gate();
+        w.intercept = async () => { await released.wait; };
+        const safety = setTimeout(released.open, HOLD_MS);
         const a = await door(w);
         const atAnswer = { created: w.m.shoppers.size - before.shoppers, stats: w.m.stats.size - before.stats, rings: w.m.rings.size - before.rings,
           reached: w.objects.filter(c => c.reached === BEFORE).map(c => `${c.binding} ${c.path}`) };
+        released.open(); clearTimeout(safety);
         await w.drain();
         w.intercept = null;
         const session = sessionOf(a);
         expect([a.status, typeof session?.capability], `${host}: PRECONDITION — the held door answers with the issued session (${show(a)})`).toEqual([200, 'string']);
         const total = entriesOf(a.headers.get('Server-Timing')).total ?? NaN, bodyTotal = timingsOf(a).total ?? NaN;
-        expect.soft({ header: total < HOLD_MS, body: bodyTotal < HOLD_MS, measured: a.measured < HOLD_MS },
-          `${host}: P97.FV1 — the first answer does not wait on the visitor's object: held ${HOLD_MS} ms from its first contact, total ${total} (body ${bodyTotal}, measured ${Math.round(a.measured)}) stays below ${HOLD_MS} ms as with nothing held (${freeTotal}); today the door awaits the activation on the brand-new object`)
-          .toEqual({ header: true, body: true, measured: true });
+        expect.soft({ header: total < HOLD_MS, body: bodyTotal < HOLD_MS, measured: a.measured < HOLD_MS,
+          asFree: a.measured - free.measured < SAME_MS && total - freeTotal! < SAME_MS, whole: a.measured - total < WHOLE_MS && free.measured - freeTotal! < WHOLE_MS },
+        `${host}: P97.FV1 — the first answer does not wait on the visitor's object: held until the answer arrives, total ${total} (body ${bodyTotal}, measured ${Math.round(a.measured)}) stays below ${HOLD_MS} ms and as with nothing held (total ${freeTotal}, measured ${Math.round(free.measured)}: within ${SAME_MS} ms), its total its whole time (within ${WHOLE_MS} ms of the measure); today the door awaits the activation on the brand-new object`)
+          .toEqual({ header: true, body: true, measured: true, asFree: true, whole: true });
         expect.soft(atAnswer, `${host}: P97.FV1 — before the answer no Durable Object was reached or created; today the activation creates the visitor's object and writes its grant before the answer`)
           .toEqual({ created: 0, stats: 0, rings: 0, reached: [] });
         expect.soft(copyCallsOf(w, session), `${host}: P97.FV1 — decided by today's code on the blank copy of the visitor's record: its activation, then its forward, under the minted session (today no copy: ${JSON.stringify(w.objects.map(c => c.path))} on the object)`)
@@ -595,19 +617,27 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
       } finally { w.intercept = null; w.stop(); }
     }, 120_000);
 
-    it(`host (${host}): a next request that arrives before the creation answers 200 and stores the grant once; the creation then completes (its activation answered 200) and the record holds exactly one grant`, async () => {
+    it(`host (${host}): the creation is outside the answer's time — with the creation held until the next request has been answered, the first answer arrives as it does with nothing held (within ${SAME_MS} ms of the same mount's first answer with nothing held, its \`total\` its whole time within ${WHOLE_MS} ms); the next request, arriving before the creation, answers 200 and stores the grant once; the creation then completes (its activation answered 200) and the record holds exactly one grant`, async () => {
       const w = await world(host);
       try {
         await door(w); await w.drain(); w.reset();
+        const free = await door(w); await w.drain(); w.reset();
+        const freeTotal = entriesOf(free.headers.get('Server-Timing')).total ?? NaN;
+        expect([free.status, typeof sessionOf(free)?.capability], `${host}: PRECONDITION — with nothing held the door answers (${show(free)})`).toEqual([200, 'string']);
         const held = gate(); const creations: ObjectCall[] = [];
         w.intercept = async call => { if (call.path === '/identity/activate' && creations.length === 0) { creations.push(call); await held.wait; } };
+        // R-P567: released at HOLD_MS only so that a door waiting on the creation (today's) ends.
         const pendingDoor = door(w);
-        const first = await Promise.race([pendingDoor, sleep(WAITED_MS).then(() => null)]);
+        const first = await Promise.race([pendingDoor, sleep(HOLD_MS).then(() => null)]);
         if (!first) held.open();
         const a = first ?? await pendingDoor;
         const session = sessionOf(a);
-        expect([first === null ? `the first answer waited on the held creation (over ${WAITED_MS} ms)` : 'answered', a.status, typeof session?.capability],
+        expect([first === null ? `the first answer waited on the held creation (over ${HOLD_MS} ms)` : 'answered', a.status, typeof session?.capability],
           `${host}: P97.FV2 — the first answer does not wait on the creation (${show(a)})`).toEqual(['answered', 200, 'string']);
+        const total = entriesOf(a.headers.get('Server-Timing')).total ?? NaN;
+        expect.soft({ asFree: a.measured - free.measured < SAME_MS && total - freeTotal < SAME_MS, whole: a.measured - total < WHOLE_MS && free.measured - freeTotal < WHOLE_MS },
+          `${host}: P97.FV2 — outside the answer's time: with the creation held, total ${total} (measured ${Math.round(a.measured)}) as with nothing held (total ${freeTotal}, measured ${Math.round(free.measured)}: within ${SAME_MS} ms), its total its whole time (within ${WHOLE_MS} ms)`)
+          .toEqual({ asFree: true, whole: true });
         const n = await nextSnapshot(w, session!);
         const atNext = heldBy(w, session!);
         held.open();
