@@ -44,30 +44,6 @@ export function setConfigurationRetention(m: Mounted, durationMs: number): void 
   m.env.RETENTION = JSON.stringify(registry);
 }
 
-// ── R2's listing, as the platform's bucket answers it ────────────────────────────────────────────────────────────────
-/**
- * The mount's bucket lists as R2 does (`delimiter` rolls keys up into `delimitedPrefixes`, `startAfter`, an opaque
- * `cursor` that resumes after the last name a page answered, at most `limit` names a page): the in-memory double of
- * ../_parity lists prefixes alone, so the purge's rolled-up listing of the ledger's days and hours (publication.ts
- * decisionsName) finds no day there and no stored decision can name a revision. Installed over whatever the bucket
- * answers now; every object listed as uploaded at time 0, as the double lists it.
- */
-export function listAsR2(m: Mounted): void {
-  Object.defineProperty(m.storage, 'list', { configurable: true, writable: true, value: async (options: { prefix?: string; delimiter?: string; startAfter?: string; cursor?: string; limit?: number } = {}) => {
-    const prefix = options.prefix ?? '', after = options.cursor ?? options.startAfter ?? '', limit = Math.min(options.limit ?? 1000, 1000);
-    const names: Array<{ name: string; rolled: boolean }> = [];
-    for (const key of [...m.storage.objects.keys()].filter(k => k.startsWith(prefix)).sort()) {
-      const cut = options.delimiter ? key.indexOf(options.delimiter, prefix.length) : -1;
-      const name = cut >= 0 ? key.slice(0, cut + options.delimiter!.length) : key;
-      if (name <= after || names.at(-1)?.name === name) continue;
-      names.push({ name, rolled: cut >= 0 });
-    }
-    const page = names.slice(0, limit), truncated = names.length > limit;
-    return { objects: page.filter(n => !n.rolled).map(n => ({ key: n.name, size: Buffer.byteLength(m.storage.objects.get(n.name) ?? '', 'utf8'), uploaded: new Date(0) })),
-      delimitedPrefixes: page.filter(n => n.rolled).map(n => n.name), truncated, ...(truncated ? { cursor: page.at(-1)!.name } : {}) };
-  } });
-}
-
 // ── The meter: every call one operation makes on the mount's bucket ──────────────────────────────────────────────────
 export type OpName = 'get' | 'put' | 'head' | 'list' | 'delete';
 export interface Call { op: OpName; key: string; cls: string; bytes: number; afterCommit: boolean }

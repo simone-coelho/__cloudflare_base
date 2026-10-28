@@ -90,8 +90,9 @@
 //      sentence (P95's KIT_PURGE_KEEPS) narrowed to a count the stored history can still establish, and one added;
 //      P95's KIT_CARRY and KIT_PURGE_NEVER kept.
 //   R10 "Under the purge's other rules" is shown by the previous revision and one learn revision a stored decision names
-//      (a consenting shopper's decision while it was in force, written by the real ledger producer and consumer), both
-//      past the bound and both kept. NR4 is kept: the next learn publication of such a tenant still carries the unknown.
+//      (a consenting shopper's decision while it was in force, written by the real ledger producer and consumer, found by
+//      the purge's rolled-up listing of the ledger's days and hours: the R2 double lists as R2 does, R-P597), both past the
+//      bound and both kept. NR4 is kept: the next learn publication of such a tenant still carries the unknown.
 //   R11 The 15-minute grace (R-P424) stays as P86 CS1 and P93 CS5 lock it: an object inside the grace is not deleted and
 //      its revision's body still goes (a sketch that kept the body instead turned those four legs RED; after P98 no load
 //      writes an object of its own, so the grace no longer touches the objects stored before packs). These legs list
@@ -106,6 +107,10 @@
 //      could not be finished) and the stored learn history can still establish it, the purge keeps every learn revision,
 //      so the next learn publication can count over the whole stored history.'
 //   Its use at :551 (purge.includes(KIT_PURGE_KEEPS)) is unchanged.
+//   src/units/_parity.ts UnitR2.list (R-P597; made here), before → after: a prefix and an offset cursor only, every key an
+//     object (no `delimiter`, no `startAfter`) → R2's listing: the keys after `startAfter`; a key holding `delimiter`
+//     past the prefix rolled up into one `delimitedPrefixes` entry; at most `limit` names a page, objects and prefixes
+//     counted together; an opaque `cursor` resuming after the last name a page answered. Uploads still at time 0.
 //
 // LOCKS (the gate): P93 CS5, P95 SV1–SV5 (as amended by the R10), W38 LEDGER and FIX1 B4.x, W21 B1–B3 and LEDGER, P86,
 // src/config/versionedStore.test.ts, src/config/publication.optionalMember.test.ts, src/routes/content.test.ts, every test
@@ -121,7 +126,7 @@
 // workerd).
 //
 // HARNESS: ../_parity (the mounted application on both hosts), ../P93/_catalog (P86's fixture and generator, the import),
-// ./_purge (the meter, the deletion stop, R2's listing, the planted forms, the objects a revision names in every stored
+// ./_purge (the meter, the deletion stop, the planted forms, the objects a revision names in every stored
 // form, the learn histories). Imports from src/units/: ../_parity, ../P93/_catalog, ./_purge. Tenant ids only; no network; documents
 // read from this tree (import.meta.url).
 
@@ -134,7 +139,7 @@ import { declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODUL
   type Host, type Mounted } from '../_parity';
 import { bucketOf, declareProductSlots, DOCS_WITH_CART, importJson, rangeProduct, rangeRecords, rangeTenant, sorted } from '../P93/_catalog';
 import {
-  afterCommit, cold, contentBodies, getLearn, learnKey, listAsR2, lost, pause, plantLearnHistory, plantRevision, putLearn, range, reached, retainedBaselineTenant, routed,
+  afterCommit, cold, contentBodies, getLearn, learnKey, lost, pause, plantLearnHistory, plantRevision, putLearn, range, reached, retainedBaselineTenant, routed,
   setConfigurationRetention, show, slotsPublication, storedContent, storedLearn, touchedBy, unnamed, validateLearn, type Form,
 } from './_purge';
 
@@ -366,7 +371,6 @@ async function serveDecisionAt(m: Mounted, n: number): Promise<void> {
 async function purgedEarlyTenant(host: Host, h: number, servedAt?: number): Promise<Mounted> {
   const m = await mount(host, DOCS);
   expectPublished(m, 'P99 — the product page and the learn document on SALT_A publish');
-  listAsR2(m);
   await publishLearnHistory(m, 2, h, servedAt);
   await plantLearnHistory(m, (n): Form => n <= h - 2 ? 'before' : 'unknown');
   setConfigurationRetention(m, 3650 * DAY_MS);
@@ -378,7 +382,6 @@ async function purgedEarlyTenant(host: Host, h: number, servedAt?: number): Prom
 /** A tenant whose learn history starts at a retained baseline (revision `floor`), then learn revisions floor+1…h through the route. */
 async function baselineTenant(host: Host, floor: number, h: number, servedAt?: number): Promise<Mounted> {
   const m = await retainedBaselineTenant(host, { ...DOCS, learn: learnOn(SALT_C, floor) }, floor);
-  listAsR2(m);
   await publishLearnHistory(m, floor + 1, h, servedAt);
   expect({ one: await codeOfRead(m, 1), current: await annotationOf(m, h) }, `PRECONDITION (${host}): learn revision 1 predates the retained baseline and the current revision carries the unknown`)
     .toEqual({ one: '409 legacy_history_unavailable', current: unknownOn(SALT_C) });
