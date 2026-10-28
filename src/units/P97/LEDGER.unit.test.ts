@@ -106,6 +106,9 @@
 // DEFERRED: LV1 — lane L21 on the pair's next release: the split read live from the instrumentation (sessionParts and the
 // object's parts; activate − object.op − forward for the first contact), cold and warm, on both pair hosts; the cold
 // first answer's server time at most 300 ms on both; the stamps measured and recorded as lanes L19 and L20 did.
+// RESIDUAL (R-P591 F3): a late activation whose NEWER choice should apply over an OLDER one on the record is not pinned by
+// P97 (a record whose choice always wins passes it); W05.10 (its repeat activation's refusal) and W35.04/W35.08 (a
+// retried detach carrying the source's newer refusal) catch it, in the gate.
 // RESIDUALS (told): the copy is not run in workerd here (DESIGN §8; no native leg is ruled; LV1 runs it); the work
 // order's line references are as of 340cd410/ed7d6bbe; kit 02's "the stages of the decision the new shopper's object
 // made" (in its Server-Timing sentence) is not pinned by FV4 and becomes inexact under the design.
@@ -126,6 +129,13 @@
 // and P94 AD1 2 (d2), re-pointed 28/28 (d1), weakened 6 RED (d6); re-pointed on today and on step1, the same six RED on
 // their preconditions until the design lands (d3, d4). The whole suite under the sketch 4245/4272, 272/282 files; its ten
 // failing files fail alike on today's tree (the scratch layout's git legs) but P68 (h-full-sketch, h-full-today).
+// ROUND 4 (R-P591; logs/r4-*): the record-change leg covers a new key, the key the activation left rewritten, that key
+// deleted and an alarm set; the failure leg the copy's activation and forward rejecting, the activation answering 503
+// and the forward answering 500. The reviewer's controls (ctl3.cjs, guard only changed) RED on their cases, both hosts:
+// keysetcheck (the rewrite, the alarm), putonly (the delete, the alarm), nostatusfallback (the forward's 500); the
+// sketch's own 401 on the activation's 503 (design3-r3.cjs) RED; recordwins 42/42 (the residual above). d06dcc4b and
+// c54f1524 42/42; the sketch (design3.cjs, falling back unless the copy's activation answered 401) 42/42 twice; today
+// 30 RED, 12 GREEN; the round-3 wrong fixes RED as before.
 // ROUND 3 (R-P581, R-P583, R-P585; logs/r3-*, r3c-*, r3d-*): 42 tests. The build as reviewed (the join d37126e0) 8 RED —
 // the consent race ×2, the newer-refusal lock ×2, the failure fallback ×2, the direct-path Accept ×2; c27ca335 2 RED, the
 // direct-path Accept ×2 alone (it applies the older refusal a late activation carries over the Accept); d06dcc4b 42/42;
@@ -663,6 +673,34 @@ const EFFECTS: Array<{ name: string; at: '/identity/activate' | '/authority/requ
     landed: w => w.objects.some(c => c.binding === 'SHOPPER_REFLEX' && c.name === ownName(`vis-${MARK}`)) },
 ];
 
+/**
+ * R-P591 F1: the changes a decision can make to the copy's record beyond what its activation left — each made after the
+ * copy's decision answered 200, so only the door's record check can see it.
+ */
+const RECORD_CHANGES: Array<[string, (storage: DurableObjectStorage) => Promise<string>]> = [
+  ['a new key', async storage => { await storage.put(RECORD_MARK, 1); return 'changed'; }],
+  ['the key the activation left, rewritten with another value', async storage => {
+    const [key, value] = [...(await storage.list())][0] ?? [];
+    if (key === undefined) return 'no key the activation left';
+    await storage.put(key, value && typeof value === 'object' ? { ...value, [RECORD_MARK]: true } : [value, RECORD_MARK]);
+    return 'changed';
+  }],
+  ['the key the activation left, deleted', async storage => {
+    const [key] = [...(await storage.list()).keys()];
+    if (key === undefined) return 'no key the activation left';
+    await storage.delete(key);
+    return 'changed';
+  }],
+  ['an alarm set', async storage => { await storage.setAlarm(Date.now() + 60_000); return 'changed'; }],
+];
+/** R-P581 F6, R-P591 F2: the copy's failures other than its activation's own refusal (a 401 answer): rejections and other answers. */
+const COPY_FAILURES: Array<[string, '/identity/activate' | '/authority/request', (proceed: () => Promise<Response>) => Promise<Response>]> = [
+  ['the copy\'s activation failing outright', '/identity/activate', async () => { throw new Error('P97: the copy\'s activation failed outright'); }],
+  ['the copy\'s decision throwing', '/authority/request', async proceed => { await proceed(); throw new Error('P97: the copy\'s decision threw'); }],
+  ['the copy\'s activation answering 503', '/identity/activate', async () => Response.json({ ok: false, error: 'P97: the copy is unavailable' }, { status: 503 })],
+  ['the copy\'s forward answering 500', '/authority/request', async () => Response.json({ ok: false, error: 'P97: the copy failed' }, { status: 500 })],
+];
+
 describe('unit:P97.FV2 (E22, R-P547)', () => {
   for (const host of HOSTS) {
     it(`host (${host}): the visitor's real record is created right after the answer, outside the answer's time — with the visitor's object held ${HOLD_MS} ms from its first contact, the record does not exist when the answer arrives, and once the work after the answer is drained it holds exactly grantAuthority for the issued grant and nothing else; the visitor's next page view answers 200`, async () => {
@@ -918,38 +956,40 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
       } finally { w.stop(); }
     }, 180_000);
 
-    it(`host (${host}): a decision that changes the copy's record beyond what its activation left (a key the copy's forward stores in its own record) makes the door fall back to today's path: the real activation and forward on the visitor's own object before the answer, under the copy's minted session, the same answer, and one record holding the one grant (R-P581 F2)`, async () => {
-      const w = await world(host);
-      try {
-        await door(w); await w.drain(); w.reset();
-        const shoppers = w.m.shoppers.size;
-        let changed = 'not changed (no copy asked)';
-        w.around = async (call, proceed, _env, copy) => {
-          const answer = await proceed();
-          if (call.path === '/authority/request' && changed.startsWith('not')) { await copy.storage.put(RECORD_MARK, 1); changed = 'changed'; }
-          return answer;
-        };
-        const a = await door(w);
-        const session = sessionOf(a);
-        const copyActivation = w.copies.calls.find(c => c.path === '/identity/activate');
-        const real = w.objects.filter(c => c.binding === 'SHOPPER_REFLEX' && c.stage === BEFORE).slice(0, 2)
-          .map(c => [c.path, c.name === ownName(session?.subject ?? ''), c.capability === session?.capability]);
-        await w.drain();
-        w.around = null;
-        expect.soft({ changed, status: a.status, sameSession: copyActivation?.capability === session?.capability && session !== null, real },
-          `${host}: P97.FV2 — the copy's record changed by its decision: the door falls back to the real activation and forward under the same minted session (${show(a)})`)
-          .toEqual({ changed: 'changed', status: 200, sameSession: true, real: [['/identity/activate', true, true], ['/authority/request', true, true]] });
-        if (session) {
-          const next = await nextSnapshot(w, session); await w.drain();
-          expect.soft({ same: JSON.stringify(contentOf(a.body)) === JSON.stringify(contentOf(next.body)), record: heldBy(w, session), records: w.m.shoppers.size - shoppers },
-            `${host}: P97.FV2 — the copy's record changed: the same answer, one record holding the one grant`)
-            .toEqual({ same: true, record: { keys: ['grantAuthority'], grants: [session.grantId], epoch: session.authorityEpoch }, records: 1 });
-        }
-      } finally { w.stop(); }
-    }, 120_000);
+    it(`host (${host}): any change the copy's decision makes to the copy's record beyond what its activation left — a new key, the key the activation left rewritten with another value, that key deleted, an alarm set — makes the door fall back to today's path: the real activation and forward on the visitor's own object before the answer, under the copy's minted session, the same answer, and one record holding the one grant (R-P581 F2, R-P591 F1)`, async () => {
+      for (const [label, change] of RECORD_CHANGES) {
+        const w = await world(host);
+        try {
+          await door(w); await w.drain(); w.reset();
+          const shoppers = w.m.shoppers.size;
+          let changed = 'not changed (no copy asked)';
+          w.around = async (call, proceed, _env, copy) => {
+            const answer = await proceed();
+            if (call.path === '/authority/request' && changed.startsWith('not')) changed = await change(copy.storage);
+            return answer;
+          };
+          const a = await door(w);
+          const session = sessionOf(a);
+          const copyActivation = w.copies.calls.find(c => c.path === '/identity/activate');
+          const real = w.objects.filter(c => c.binding === 'SHOPPER_REFLEX' && c.stage === BEFORE).slice(0, 2)
+            .map(c => [c.path, c.name === ownName(session?.subject ?? ''), c.capability === session?.capability]);
+          await w.drain();
+          w.around = null;
+          expect.soft({ changed, status: a.status, sameSession: copyActivation?.capability === session?.capability && session !== null, real },
+            `${host}: P97.FV2 — ${label} by the copy's decision: the door falls back to the real activation and forward under the same minted session (${show(a)})`)
+            .toEqual({ changed: 'changed', status: 200, sameSession: true, real: [['/identity/activate', true, true], ['/authority/request', true, true]] });
+          if (session) {
+            const next = await nextSnapshot(w, session); await w.drain();
+            expect.soft({ same: JSON.stringify(contentOf(a.body)) === JSON.stringify(contentOf(next.body)), record: heldBy(w, session), records: w.m.shoppers.size - shoppers },
+              `${host}: P97.FV2 — ${label}: the same answer, one record holding the one grant`)
+              .toEqual({ same: true, record: { keys: ['grantAuthority'], grants: [session.grantId], epoch: session.authorityEpoch }, records: 1 });
+          }
+        } finally { w.stop(); }
+      }
+    }, 240_000);
 
-    it(`host (${host}): a failure on the copy other than its activation's own refusal — the copy's activation failing outright, and the copy's decision throwing — makes the door fall back to today's path and answer 200 with \`session\`: the real activation and forward under the copy's minted session, the same answer, one record holding the one grant (R-P581 F6); the activation's own refusal still answers 401 (FV1)`, async () => {
-      for (const at of ['/identity/activate', '/authority/request'] as const) {
+    it(`host (${host}): a failure on the copy other than its activation's own refusal — the copy's activation failing outright, the copy's decision throwing, the copy's activation answering 503, the copy's forward answering 500 — makes the door fall back to today's path and answer 200 with \`session\`: the real activation and forward under the copy's minted session, the same answer, one record holding the one grant (R-P581 F6, R-P591 F2); the activation's own refusal still answers 401 (FV1)`, async () => {
+      for (const [label, at, fail] of COPY_FAILURES) {
         const w = await world(host);
         try {
           await door(w); await w.drain(); w.reset();
@@ -958,9 +998,7 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
           w.around = async (call, proceed) => {
             if (call.path !== at || !failed.startsWith('not')) return proceed();
             failed = 'failed';
-            if (at === '/identity/activate') throw new Error('P97: the copy\'s activation failed outright');
-            await proceed();
-            throw new Error('P97: the copy\'s decision threw');
+            return fail(proceed);
           };
           const a = await door(w);
           const session = sessionOf(a);
@@ -970,17 +1008,17 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
           await w.drain();
           w.around = null;
           expect.soft({ failed, status: a.status, session: typeof session?.capability, sameSession: copyActivation?.capability === session?.capability && session !== null, real },
-            `${host}: P97.FV2 — the copy failing at ${at}: the door falls back to today's path and answers 200 with the session (${show(a)})`)
+            `${host}: P97.FV2 — ${label}: the door falls back to today's path and answers 200 with the session (${show(a)})`)
             .toEqual({ failed: 'failed', status: 200, session: 'string', sameSession: true, real: [['/identity/activate', true, true], ['/authority/request', true, true]] });
           if (session) {
             const next = await nextSnapshot(w, session); await w.drain();
             expect.soft({ same: JSON.stringify(contentOf(a.body)) === JSON.stringify(contentOf(next.body)), record: heldBy(w, session), records: w.m.shoppers.size - shoppers },
-              `${host}: P97.FV2 — the copy failing at ${at}: the same answer, one record holding the one grant`)
+              `${host}: P97.FV2 — ${label}: the same answer, one record holding the one grant`)
               .toEqual({ same: true, record: { keys: ['grantAuthority'], grants: [session.grantId], epoch: session.authorityEpoch }, records: 1 });
           }
         } finally { w.stop(); }
       }
-    }, 180_000);
+    }, 240_000);
   }
 });
 
