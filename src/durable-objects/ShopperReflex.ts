@@ -705,20 +705,23 @@ export class ShopperReflex {
       return this.serialize(async () => {
         try {
           timer.lap('queue');
-          // P97 (F1, R-P581): an activation is applied once per grant. A grant this record already held before this
-          // activation (adopted by an earlier one, or by a request's forward that reached the record first) is not
-          // activated again with the consent default it was issued under: that carry and the session host's restriction
-          // ran when it was adopted, and a choice made on the record since then stands; the activation answers the
-          // record's consent as it is. An activation that carries an explicit choice (a rotation's newer refusal, W35.04)
-          // is still applied: a refusal it carries is the visitor's own and is never lost.
+          // P97 (F1, R-P581; FV2, R-P583): an activation is applied once per grant, and a consent choice is never
+          // overwritten by an older one. A grant this record already held before this activation (adopted by an earlier
+          // one, or by a request's forward that reached the record first) is not activated again unless the activation
+          // carries an explicit choice no older than the record's own for the same switch: the default the grant was
+          // issued under ran when it was adopted, and a choice made on the record since then stands, the activation
+          // answering the record's consent as it is. A newer explicit choice (a rotation's newer refusal, W05.10, W35.04)
+          // is applied as before; a switch the record chose later than the activation's choice keeps the record's.
           this.adoptedGrant = null;
           await this.assertOwned(principal!, undefined, false, !body.existingOnly);
           timer.lap('grant');
-          const applied = this.adoptedGrant !== principal!.grantId && storedConsent(body.consent).instruction === undefined;
+          const recorded = storedConsent(await this.state.storage.get('consent')), carried = storedConsent(body.consent);
+          const applied = this.adoptedGrant !== principal!.grantId && !CONSENT_SWITCHES.some(key => carried.instruction?.[key] !== undefined
+            && !(recorded.instruction?.[key] && recorded.instruction[key]!.chosenAt > carried.instruction[key]!.chosenAt));
           let consent: Consent;
-          if (applied) consent = storedConsent(await this.state.storage.get('consent'));
+          if (applied) consent = recorded;
           else {
-            consent = carryConsent(body.consent, principal!, storedConsent(await this.state.storage.get('consent')));
+            consent = newerChoicesKept(carryConsent(body.consent, principal!, recorded), recorded, carried);
             await this.scheduleConsentAlarm(consent);
             assertSessionTarget(principal!);
             if (consent.instruction) await this.state.storage.put('consent', consent.instruction);
@@ -4799,6 +4802,23 @@ function safeAttachment(ws: WebSocket): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * P97 (FV2, R-P583): a consent choice is never overwritten by an older one. Of `carried`, the consent an activation
+ * would store, every switch the record (`recorded`) chose later than the activation's own choice (`source`), or chose
+ * when the activation made no choice for it, keeps the record's choice; every other switch is as carried.
+ */
+function newerChoicesKept(carried: Consent, recorded: Consent, source: Consent): Consent {
+  const own = recorded.instruction;
+  if (!carried.instruction || !own) return carried;
+  const next = { ...carried.instruction };
+  let kept = false;
+  for (const key of CONSENT_SWITCHES) {
+    const mine = own[key], theirs = source.instruction?.[key];
+    if (mine && (!theirs || mine.chosenAt > theirs.chosenAt)) { next[key] = { ...mine }; kept = true; }
+  }
+  return kept ? consentInstruction(next) : carried;
 }
 
 function json(body: unknown, status = 200): Response {
