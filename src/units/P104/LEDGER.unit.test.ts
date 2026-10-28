@@ -41,11 +41,12 @@
 //   3 The volumes. A harness holds no 1,000,000-visitor tenant (its state alone is ~38 GB, DESIGN §3), so "at V visitors
 //     a day" is what a step meets at V, as the analyst measured it (DESIGN §5, logs/proto.jsonl V1, V2): a leaf holding
 //     the 48-hour state one leaf holds at V once leaves split above 8 MiB (64·2^k leaves, k the smallest depth keeping a
-//     leaf's state at 879 B a decision, 22 decisions a visitor (DESIGN §2 T1) at most 8 MiB: 10,000 → 64 leaves of
-//     5.76 MiB, 100,000 → 512 of 7.2 MiB, 1,000,000 → 8,192 of 4.5 MiB) with its peak hour (V/12 visitors over the
-//     leaves), pages from a peak hour of 10,000 visitors a day (1/12 of them, ~36 MB, more than 600 objects), the merge
-//     of the 64 depth-0 leaves' partials, the close and the day. The three leaves live in one tenant at depth 0, in three
-//     residue classes of today's visitor hash (FNV-1a, frozen in _fold.ts), reached in one hour of their visitors.
+//     leaf's state at 879 B a decision and 22 decisions a visitor (DESIGN §2 T1) within 8 MiB: 10,000 → 64 leaves of
+//     5.76 MiB, 100,000 → 512 of 7.2 MiB, 1,000,000 → 8,192 of 4.5 MiB), reached over hours 9–12, then its share of the
+//     peak hour (V/12 visitors over the leaves) in hour 13, the peak hour of 10,000 visitors a day over every leaf (1/12 of
+//     them, ~37 MiB, 600+ objects), the merge of the 64 depth-0 leaves' partials, the close and the day. The three leaves
+//     live in one tenant at depth 0, in three residue classes of today's visitor hash (FNV-1a, frozen in _fold.ts).
+//     "Leaves that split as they grow": one residue class carried to ~30 MiB of today's state over nine hours.
 //   4 Parity is pinned against a COMMITTED reference (fixtures/reference.json): today's fold at d5d8581c — buildHour
 //     through the five-minute catch-up — with only its refusal budgets lifted (REPORT_LIMITS, MAX_HOUR_OBJECTS; the
 //     analyst's tree-lifted edit), run on the same records at the same times; never computed at test time, so a build
@@ -59,19 +60,21 @@
 //     off at a storage call (it never returns, nothing after it runs), and the close cut off right after it wrote the
 //     hour aggregate (between the two writes). Two coordinators: every message delivered twice at once and the
 //     five-minute run run twice at once. A newer hour waits: its aggregate is first written after the in-flight hour's.
-//   6 Resume: no ledger object a finished step read is read again after a step is cut off; a filed conflict re-runs only
-//     its leaf: after the operator files it, the hour's ledger is read only at the two objects holding the conflicting
-//     id; the abandoned outputs: twenty minutes after a run with every step cut once, the store holds no more objects
-//     beside the ledger than the same scenario run without faults.
+//   6 Resume: no ledger object a finished step read is read again after a later step reading the hour is cut off at its
+//     second object; a filed conflict re-runs only its leaf: after the operator files it, the hour's ledger is read only at
+//     the two objects holding the conflicting id; abandoned outputs: forty minutes after a run whose first five-minute run
+//     of 14:06 was cut off at its second write, nothing a cut-off step wrote is still stored unless a later step wrote it
+//     again (adopted).
 //   7 A conflict is filed as today: by the operator's custom-policy POST /v1/:tenant/learn/report (src/routes/
 //     decisions.ts:2030–2043, the only surface that files one); the fold never files.
 //   8 The day by slot: GET without `slot` on a day whose grids pass 8 MiB answers 200, its body within 8 MiB, naming every
 //     slot outside `grids` (the slot index; its member name is the builder's); GET ?slot=<slot> answers 200 with that
 //     slot's grid under every policy, and reads at most a quarter of the bytes the day's stored objects hold (ten slots).
 //     A complete day is coverage with no missing and no truncated hour and status not 'incomplete' (report.ts:1247).
-//   9 "A 1,000,000-visitor day from 24 hours": its hours are aggregates at the size content bounds them (T4: ~868 KB,
-//     DESIGN §2), not at a size visitors set; one real hour folded and copied to the other 23 hours, in the shape today
-//     stores (a legacy hour: no operator step, the design §6).
+//   9 "A 1,000,000-visitor day from 24 hours": its hours are aggregates at the size content bounds them, not at a size
+//     visitors set (DESIGN §9); one real hour of T5's wide context (ten slots of ten pieces, 240 finest cells) folded and
+//     copied to the other 23 hours in the shape today stores (a legacy hour: no operator step, the design §6), 24 of them
+//     past 32 MiB of aggregate (today refuses 16 MiB, aggregateBytes; T4 at 868 KB an hour, DESIGN §2).
 //  10 The open hour on the same steps: an open hour of two pages answers `current` in the day's hours.open; a step past
 //     its bound: an open hour holding one visitor with ~30 MB of decisions (a bot; a leaf cannot split one visitor)
 //     answers `refused` with refusal.code 'fold_step_bound' and the refusal naming the step 'leaf' as one of its values
@@ -104,7 +107,7 @@ vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
 import { BRAND, HOSTS, learned, readTree, rounded, shopperOn, TENANT } from '../_parity';
 import {
-  at, DATE, documents, drainQueue, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
+  at, DATE, documents, drainQueue, featuredProduct, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
   retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, stamp, visit, visitorsOf, WIDE, writeLedger,
   type DeliveryPlan, type Fault, type Scenario, type Stamp, type StepRecord,
 } from './_fold';
@@ -147,16 +150,17 @@ function differences(actual: unknown, expected: unknown, path = '$', out: string
 }
 
 /** The scenario's aggregates and day against today's fold (reading 4). */
-async function parity(s: Stamp, name: 'C' | 'M' | 'P', sc: Scenario): Promise<string[]> {
+async function parity(s: Stamp, name: 'C' | 'M' | 'P', sc: Scenario, day = true): Promise<string[]> {
   const found: string[] = [];
   for (const hour of sc.hours) {
     const expected = REF[name].aggregates[String(hour)]!, actual = aggregateOf(s, hour);
     if (actual === null) { found.push(`hour ${hour}: no aggregate (today's fold has one with ${(expected.brands as Json & { coach: Json }).coach.decisions} decisions)`); continue; }
     found.push(...differences(actual, expected, `hour ${hour}`, [], true));
   }
-  const day = await dayOf(s);
-  if (day.status !== 200) found.push(`the day: GET answered ${day.status} ${JSON.stringify(day.body).slice(0, 200)}`);
-  else found.push(...differences(withoutIdentity(day.body.report as Json), REF[name].day, 'the day', [], true));
+  if (!day) return found;
+  const read = await dayOf(s);
+  if (read.status !== 200) found.push(`the day: GET answered ${read.status} ${JSON.stringify(read.body).slice(0, 200)}`);
+  else found.push(...differences(withoutIdentity(read.body.report as Json), REF[name].day, 'the day', [], true));
   return found;
 }
 
@@ -183,12 +187,15 @@ function hourFacts(objects: Map<string, string>, hour: number) {
 }
 function expectHourFolded(s: Stamp, hour: number, facts: ReturnType<typeof hourFacts>, label: string) {
   const agg = aggregateOf(s, hour) as (Json & { objects: number; objectsRead: number; truncated: boolean; brands: Record<string, { decisions: number }> }) | null;
-  expect(agg, `${label}: hour ${hour} (${(facts.bytes / MiB).toFixed(1)} MiB of ledger in ${facts.objects} objects, ${facts.decisions} decisions) has no aggregate: the fold refused it or never finished it`).not.toBeNull();
+  expect(agg === null ? 'no aggregate: refused or never finished' : 'folded', `${label}: hour ${hour} (${(facts.bytes / MiB).toFixed(1)} MiB of ledger in ${facts.objects} objects, ${facts.decisions} decisions) is folded`).toBe('folded');
   expect({ objects: agg!.objects, objectsRead: agg!.objectsRead, truncated: agg!.truncated, decisions: agg!.brands[TENANT]?.decisions },
     `${label}: every object of hour ${hour} is read, in pages, and every decision folded`).toEqual({ objects: facts.objects, objectsRead: facts.objects, truncated: false, decisions: facts.decisions });
 }
 
-/** Reading 3: the three volumes' leaves, the peak hour of a 10,000-visitor day, in one tenant. */
+/**
+ * Reading 3: the three volumes' leaves and the peak hour of a 10,000-visitor day, in one tenant: each leaf's 48-hour state
+ * reached over hours 9 to 12 (a quarter of its visitors an hour), then the peak hour 13 over every leaf.
+ */
 function volumeScenario(registry: ReturnType<typeof retentionRegistry>) {
   const r = rng(104_101);
   const decisionBytes = 879, perVisitor = 22, leafCap = 8 * MiB;
@@ -198,7 +205,7 @@ function volumeScenario(registry: ReturnType<typeof retentionRegistry>) {
     const ids = visitorsOf(`vol${i}`, Math.round(state / (perVisitor * decisionBytes)), 11 + 20 * i);
     return { visitorsPerDay, depth, leaves, state, ids, peak: Math.max(1, Math.round(visitorsPerDay / 12 / leaves)) };
   });
-  const steady = volumes.flatMap(v => v.ids.map(id => visit(registry, id, at(12) + Math.floor(r() * 35 * MIN), perVisitor, r, FULL)));
+  const steady = volumes.flatMap(v => v.ids.map((id, n) => visit(registry, id, at(9 + (n % 4)) + Math.floor(r() * 35 * MIN), perVisitor, r, FULL)));
   const peakVisitors = [...visitorsOf('peak10k', Math.round(10_000 / 12)), ...volumes.flatMap(v => v.ids.slice(0, v.peak))];
   const peak = peakVisitors.map(id => visit(registry, id, at(13) + Math.floor(r() * 35 * MIN), perVisitor, r, FULL, 'peak-'));
   const objects = ledgerObjects(rowsOf(steady), 500, 'b');
@@ -212,34 +219,29 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       const registry = retentionRegistry();
       const s = await stamp(host, documents(), registry, 'P104.RF1 volumes');
       const { volumes, objects } = volumeScenario(registry);
-      const f12 = hourFacts(objects, 12), f13 = hourFacts(objects, 13);
-      expect(f13.objects, 'the fixture: the peak hour is written in more than 600 objects (today\'s MAX_HOUR_OBJECTS, hourly.ts:78)').toBeGreaterThan(600);
-      expect(Math.min(f12.bytes, f13.bytes), 'the fixture: each hour holds more than two pages of ledger').toBeGreaterThan(32 * MiB);
+      const facts = new Map([9, 10, 11, 12, 13].map(h => [h, hourFacts(objects, h)]));
+      expect(facts.get(13)!.objects, 'the fixture: the peak hour is written in more than 600 objects (today\'s MAX_HOUR_OBJECTS, hourly.ts:78)').toBeGreaterThan(600);
+      expect(facts.get(13)!.bytes, 'the fixture: the peak hour holds more than two pages of ledger').toBeGreaterThan(32 * MiB);
       expect(volumes.map(v => [v.visitorsPerDay, v.leaves]), 'the fixture: the geometry of reading 3').toEqual([[10_000, 64], [100_000, 512], [1_000_000, 8192]]);
-      const h13 = new Map([...objects].filter(([k]) => k.startsWith(hourPrefixOf(at(13)))));
-      writeLedger(s, new Map([...objects].filter(([k]) => k.startsWith(hourPrefixOf(at(12))))));
+      const byHour = new Map([9, 10, 11, 12, 13].map(h => [h, new Map([...objects].filter(([k]) => k.startsWith(hourPrefixOf(at(h)))))]));
       objects.clear();
-      await settleAt(s, at(13, 6));
-      writeLedger(s, h13);
-      h13.clear();
-      await settleAt(s, at(14, 6));
-      expectHourFolded(s, 12, f12, `RF1 ${host}`);
-      expectHourFolded(s, 13, f13, `RF1 ${host}`);
+      for (const hour of [9, 10, 11, 12, 13]) { writeLedger(s, byHour.get(hour)!); byHour.get(hour)!.clear(); await settleAt(s, at(hour + 1, 6)); }
+      for (const hour of [9, 10, 11, 12, 13]) expectHourFolded(s, hour, facts.get(hour)!, `RF1 ${host}`);
       expect(bounds(s), `RF1 ${host}: every step holds at most 64 MiB and reads at most a page (16 MiB, 200 objects) of ledger`).toEqual([]);
     }, T);
 
-    it(`RF1 ${host}: a leaf that would pass 8 MiB splits by visitor hash — one residue class growing to ~18 MiB of state folds in steps of at most 64 MiB`, async () => {
+    it(`RF1 ${host}: a leaf that would pass 8 MiB splits by visitor hash — one residue class growing to ~30 MiB of state over nine hours folds in steps of at most 64 MiB`, async () => {
       const registry = retentionRegistry();
       const s = await stamp(host, documents(), registry, 'P104.RF1 split');
       const r = rng(104_102);
-      const ids = visitorsOf('grow', 3 * 318, 37);
-      for (const [n, hour] of [12, 13, 14].entries()) {
-        const objects = ledgerObjects(rowsOf(ids.slice(n * 318, (n + 1) * 318).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL))), 500, 'b');
+      const ids = visitorsOf('grow', 9 * 182, 37);
+      for (const [n, hour] of [6, 7, 8, 9, 10, 11, 12, 13, 14].entries()) {
+        const objects = ledgerObjects(rowsOf(ids.slice(n * 182, (n + 1) * 182).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL))), 500, 'b');
         const facts = hourFacts(objects, hour);
         writeLedger(s, objects);
         objects.clear();
         await settleAt(s, at(hour + 1, 6));
-        expectHourFolded(s, hour, facts, `RF1 ${host} (the class at ~${6 * (n + 1)} MiB of state)`);
+        expectHourFolded(s, hour, facts, `RF1 ${host} (the class at ~${((n + 1) * 4004 * 879 / MiB).toFixed(1)} MiB of today's state)`);
       }
       expect(bounds(s), `RF1 ${host}: no leaf holds more than 8 MiB of state: every step holds at most 64 MiB`).toEqual([]);
     }, T);
@@ -326,28 +328,37 @@ describe('unit:P104.RF2 (E29: on the same records the result equals today\'s fol
 // unit:P104.RF3 — the commit: two conditional writes; no hour lost or counted twice
 // ===========================================================================
 
-/** The close cut off right after it wrote an hour aggregate, once per hour (between the two writes). */
-function betweenTheWrites(): Fault {
-  const armed = new Set<number>(), done = new Set<string>();
+const HOUR_AGGREGATE = /^aggregates\/[^/]+\/\d{4}-\d{2}-\d{2}\/\d{2}\.json$/;
+/**
+ * The commit's two crash points, once per hour: (i) the first queue message to reach an hour's aggregate write is cut
+ * off there on every delivery it gets (whatever it wrote before it stays written; the platform gives the message up
+ * and the five-minute run must find the hour again), and (ii) the first step whose aggregate write lands is cut off
+ * right after it (between the two writes).
+ */
+function commitCrashes(): Fault {
+  const armed = new Set<number>(), landed = new Set<string>(), held = new Map<string, string>();
   return ({ op, key, step }) => {
     if (armed.has(step.index)) { armed.delete(step.index); return 'cut'; }
-    if (op === 'put' && /^aggregates\/[^/]+\/\d{4}-\d{2}-\d{2}\/\d{2}\.json$/.test(key) && !done.has(key)) { done.add(key); armed.add(step.index); }
+    if (op !== 'put' || !HOUR_AGGREGATE.test(key)) return undefined;
+    const message = /^message (m\d+) /.exec(step.label)?.[1];
+    if (message && (!held.has(key) || held.get(key) === message)) { held.set(key, message); return 'cut'; }
+    if (!landed.has(key)) { landed.add(key); armed.add(step.index); }
     return undefined;
   };
 }
 
 describe('unit:P104.RF3 (E29: an hour committed by two conditional writes; no hour lost or counted twice)', () => {
   for (const host of HOSTS) {
-    it(`RF3 ${host}: a crash after every step and between the two writes leaves no hour lost and none counted twice (scenario C: hour 13's rings past today's 3.69 MiB)`, async () => {
+    it(`RF3 ${host}: a crash after every step, before the commit's first write and between its two writes leaves no hour lost and none counted twice (scenario C: hour 13's rings past today's 3.69 MiB)`, async () => {
       const registry = retentionRegistry();
       const s = await stamp(host, documents(), registry, 'P104.RF3 crash');
       const sc = scenarioC(registry);
-      const cut = betweenTheWrites();
+      const cut = commitCrashes();
       const plan: DeliveryPlan = { before: message => (message.attempts === 1 ? { dropAck: true, fault: cut } : { fault: cut }) };
       s.r2.fault = cut;
       await play(s, sc, plan);
       s.r2.fault = null;
-      expect(await parity(s, 'C', sc), `RF3 ${host}: every step run twice and every close cut between its writes, the aggregates and the day equal today's fold (fixtures/reference.json C)`).toEqual([]);
+      expect(await parity(s, 'C', sc), `RF3 ${host}: every step run twice, each hour's first commit given up at its aggregate write and the next cut right after it, the aggregates and the day equal today's fold (fixtures/reference.json C)`).toEqual([]);
       expect(bounds(s), `RF3 ${host}: the commit stages no copy of the state: every step holds at most 64 MiB`).toEqual([]);
     }, T);
 
@@ -381,7 +392,7 @@ describe('unit:P104.RF3 (E29: an hour committed by two conditional writes; no ho
       const firstWrite = (hour: number) => s.r2.journal.findIndex(j => j.op === 'put' && j.key === aggregateKey(DATE, hour));
       expect({ twelve: firstWrite(12) >= 0, thirteenAfterTwelve: firstWrite(13) > firstWrite(12) },
         `RF3 ${host}: hour 13's aggregate is first written after hour 12's commit (journal positions ${firstWrite(12)}, ${firstWrite(13)})`).toEqual({ twelve: true, thirteenAfterTwelve: true });
-      expect(await parity(s, 'C', sc), `RF3 ${host}: and both hours equal today's fold of them in order`).toEqual([]);
+      expect(await parity(s, 'C', sc, false), `RF3 ${host}: and both hours equal today's fold of them in order (the day, built an hour later, decays to its own build time)`).toEqual([]);
     }, T);
   }
 });
@@ -397,25 +408,30 @@ describe('unit:P104.RF4 (E29: a failed run resumes)', () => {
       const sc = scenarioC(registry);
       const s = await stamp(host, documents(), registry, 'P104.RF4 resume');
       const h13 = hourPrefixOf(at(13)) + '/';
-      let cutRead = -1, cutRun = -1;
-      const fault: Fault = ({ op, key, step, n }) => {
+      let cutRead = -1, cutRun = -1, given: string | null = null;
+      const fault: Fault = ({ op, key, step }) => {
         // The first five-minute run of 14:06 is cut off at its second write (whatever it was writing: a plan, a head).
         if (cutRun < 0 && step.kind === 'scheduled' && op === 'put' && Date.now() === at(14, 6) && step.writes.length === 1) { cutRun = step.index; return 'cut'; }
-        void n;
-        // A step reading hour 13's ledger after another one finished reading it is cut off mid-page.
-        if (cutRead >= 0 || op !== 'get' || !key.startsWith(h13)) return undefined;
-        if (step.ledgerObjects >= 5 && s.steps.some(r => r.index < step.index && r.outcome === 'done' && r.ledgerKeys.some(k => k.startsWith(h13)))) { cutRead = step.index; return 'cut'; }
+        if (op !== 'get' || !key.startsWith(h13)) return undefined;
+        // A queue message reading hour 13's ledger after another step finished reading it is cut off at its second object on
+        // every delivery it gets: the platform gives it up, and the five-minute run must find what is missing.
+        const message = /^message (m\d+) /.exec(step.label)?.[1] ?? null;
+        if (given !== null) return message === given && step.ledgerObjects >= 1 ? 'cut' : undefined;
+        if (step.ledgerObjects >= 1 && s.steps.some(r => r.index < step.index && r.outcome === 'done' && r.ledgerKeys.some(k => k.startsWith(h13)))) {
+          cutRead = step.index; given = message ?? `run ${step.index}`; return 'cut';
+        }
         return undefined;
       };
       s.r2.fault = fault;
       await play(s, sc);
       s.r2.fault = null;
+      const resumed = await parity(s, 'C', sc);
       await settleAt(s, at(14, 50)); await settleAt(s, at(14, 55));
-      expect(cutRead, 'PRECONDITION: a step reading hour 13\'s ledger after another one finished was cut off mid-page').toBeGreaterThanOrEqual(0);
+      expect(cutRead >= 0 ? 'cut' : 'never cut', 'PRECONDITION: a step reading hour 13\'s ledger after another one finished was cut off mid-page, on every delivery').toBe('cut');
       const before = new Set(s.steps.filter(r => r.index < cutRead && r.outcome === 'done').flatMap(r => r.ledgerKeys.filter(k => k.startsWith(h13))));
-      const again = s.steps.filter(r => r.index > cutRead).flatMap(r => r.ledgerKeys.filter(k => before.has(k)));
+      const again = s.steps.filter(r => r.index > cutRead && r.outcome === 'done').flatMap(r => r.ledgerKeys.filter(k => before.has(k)));
       expect(again.length, `RF4 ${host}: only the missing steps re-run: ${again.length} reads of hour 13's ledger objects a finished step had already read`).toBe(0);
-      expect(await parity(s, 'C', sc), `RF4 ${host}: the resumed hours equal today's fold`).toEqual([]);
+      expect(resumed, `RF4 ${host}: the resumed hours and their day equal today's fold`).toEqual([]);
       const cut = new Set(s.steps.filter(r => r.outcome === 'cut').map(r => r.index));
       const left = [...new Set(s.r2.journal.filter(j => j.op === 'put' && cut.has(j.step)).map(j => j.key))]
         .filter(key => s.r2.objects.has(key) && !s.r2.journal.some(j => j.key === key && !cut.has(j.step) && j.step > Math.min(...cut) && j.op === 'put'));
@@ -428,7 +444,7 @@ describe('unit:P104.RF4 (E29: a failed run resumes)', () => {
       const s = await stamp(host, documents(), registry, 'P104.RF4 conflict');
       const sc = scenarioC(registry);
       await play(s, sc, {}, at(13, 6));
-      expect(aggregateOf(s, 12), 'PRECONDITION: hour 12 waits on its conflict, unfiled').toBeNull();
+      expect(aggregateOf(s, 12) === null ? 'waits' : 'folded', 'PRECONDITION: hour 12 waits on its conflict while it is not filed, as today (the fold files none)').toBe('waits');
       const filed = s.steps.length;
       await play(s, { ...sc, moments: sc.moments.filter(m => m.at > at(13, 6)) });
       expect(s.answers.find(a => a.method === 'POST')?.status, 'PRECONDITION: the operator\'s custom-policy POST files the conflict (409), as today').toBe(409);
@@ -486,18 +502,18 @@ describe('unit:P104.RF5 (E29: the day summed one hour at a time and stored by sl
       }
     }, T);
 
-    it(`RF5 ${host}: a 1,000,000-visitor day is built complete from 24 hours of ~868 KB aggregates, one hour at a time (today aggregateBytes 17,357,910)`, async () => {
+    it(`RF5 ${host}: a 1,000,000-visitor day is built complete from 24 hours, summed one hour at a time — hours at the size content bounds them (T5's wide hour), 24 of them past today's 16 MiB`, async () => {
       const registry = retentionRegistry();
       const s = await stamp(host, documents(), registry, 'P104.RF5 24 hours');
       const r = rng(104_202);
-      const objects = ledgerObjects(rowsOf(visitorsOf('hour0', 300).map(id => visit(registry, id, at(0) + Math.floor(r() * 35 * MIN), 22, r, FULL))), 500, 'b');
+      const objects = ledgerObjects(rowsOf(visitorsOf('hour0', 80).map(id => visit(registry, id, at(0) + Math.floor(r() * 35 * MIN), 22, r, { ...FULL, context: WIDE }))), 500, 'b');
       const facts = hourFacts(objects, 0);
       writeLedger(s, objects);
       objects.clear();
       await settleAt(s, at(1, 6));
       const body = s.r2.text(aggregateKey(DATE, 0));
-      expect(body, 'PRECONDITION: hour 0 (300 visitors, the T4 hour) is folded').not.toBeNull();
-      expect(Buffer.byteLength(body!), 'the fixture: the hour aggregate is the T4 size, 24 of them past 16 MiB').toBeGreaterThan(16 * MiB / 24);
+      expect(body === null ? 'not folded' : 'folded', 'PRECONDITION: hour 0 (T5\'s wide hour: 80 visitors, ten slots of ten pieces) is folded').toBe('folded');
+      expect(Buffer.byteLength(body!) * 24, 'the fixture: 24 such hours hold more than 32 MiB of aggregate (today refuses 16 MiB: aggregateBytes)').toBeGreaterThan(32 * MiB);
       const hour0 = JSON.parse(body!) as Json & { from: number; to: number };
       const { leafDepth: _depth, ...legacy } = hour0; void _depth;
       for (let h = 1; h < 24; h++) s.r2.seed(aggregateKey(DATE, h), JSON.stringify({ ...legacy, hour: h, from: hour0.from + h * H, to: hour0.to + h * H }));
@@ -593,7 +609,9 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
     it(`RF6 ${host}: one credit rule with P103's money rule — live learning, the hourly fold, the custom-policy day and the rebuild credit a EUR purchase and refuse a GBP one alike`, async () => {
       const registry = retentionRegistry();
       vi.setSystemTime(at(2, 50));
-      const docs = documents({ money: { currency: 'EUR', nonpositive: 'refuse' } }, { 'checkout-upsell': { reward: 'purchase', objective: 'revenue' } });
+      // A horizon of a hundred years (P103's own fixture): decay moves nothing between the live sum and the offline ones taken an hour later.
+      const docs = documents({ money: { currency: 'EUR', nonpositive: 'refuse' }, stats: { n0: 30, tauLearnMs: 3_153_600_000_000, liftMin: 0.5, liftMax: 2, nMin: 30 } },
+        { 'checkout-upsell': { reward: 'purchase', objective: 'revenue' } });
       const s = await stamp(host, docs, registry, 'P104.RF6 money');
       const read = await operator(s, 'GET', '/content/learn');
       const published = JSON.stringify(read.body);
@@ -603,8 +621,10 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       const page = await c.snapshot('checkout');
       const pieces = page.decisions.filter(d => d.slot === 'checkout-upsell');
       vi.setSystemTime(at(3, 2));
-      await c.action({ type: 'purchase', data: { contentId: pieces[0]!.contentId, value: 120, currency: 'EUR', brand: BRAND } });
-      await c.action({ type: 'purchase', data: { contentId: pieces[1]!.contentId, value: 80, currency: 'GBP', brand: BRAND } });
+      const productOf = (contentId: string) => featuredProduct('checkout-upsell', Number(contentId.split('.').pop()));
+      const buy = (contentId: string, value: number, currency: string) => c.action({ type: 'purchase', data: { orderId: `p104-${contentId}`, value, currency,
+        items: [{ productId: productOf(contentId), quantity: 1, price: value }] } });
+      expect([(await buy(pieces[0]!.contentId, 120, 'EUR')).status, (await buy(pieces[1]!.contentId, 80, 'GBP')).status], 'PRECONDITION: both purchases are accepted').toEqual([200, 200]);
       await drainQueue(s, at(3, 2));
       const expected = { [pieces[0]!.contentId]: 120 };
       const live = Object.fromEntries(Object.entries(rounded(await learned(s.m), 's')).filter(([item]) => item.startsWith('checkout-upsell.')));
@@ -663,7 +683,7 @@ describe('unit:P104.RF7 (E29: kit 02 states the envelope)', () => {
     expect({
       perStepBound: has(/64\s?MiB/, /\bstep/i),
       noVolumeLimit: has(/\bstep/i, /(no volume limit|whatever the traffic|any (traffic|volume))/i),
-      bySlot: has(/\?slot=|`slot`/, /\bpart\b|\bparts\b|by slot/i),
+      bySlot: has(/[?&]slot=|`slot`/, /\bpart\b|\bparts\b|by slot/i),
       pastEightMiB: has(/8\s?MiB/, /\b200\b/, /slot/i, /413/),
       coverage: has(/coverage/, /(missing|incomplete)/i),
       openDeferral: /open_fold_deferred/.test(kit),

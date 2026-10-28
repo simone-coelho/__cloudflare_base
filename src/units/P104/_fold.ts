@@ -52,6 +52,9 @@ setFlagsFromString('--expose-gc');
 const collect = runInNewContext('gc') as () => void;
 /** Where a measurement run writes each step's record (the specification's evidence); unset in the acceptance run. */
 const TRACE = process.env.P104_TRACE;
+const PRECISE = process.env.P104_PRECISE === '1' || process.env.P104_PRECISE === '2';
+/** P104_PRECISE=2: every sample collected first, so a step's figure is the live heap it held, garbage left out (slow; evidence only). */
+const LIVE = process.env.P104_PRECISE === '2';
 const heap = (): number => process.memoryUsage().heapUsed;
 
 // ---------------------------------------------------------------------------
@@ -88,10 +91,20 @@ interface Running {
 
 const context = new AsyncLocalStorage<Running>();
 
+/**
+ * The live heap the harness itself holds, taken after a collection at the start
+ * of every settle (`settled`) and of every operator request. Between two
+ * collections the harness only adds to what it holds (records, journal), so a
+ * step's base taken from it never exceeds the heap live at the step's start:
+ * what a step is charged is never less than what it holds.
+ */
+let lastLive = 0;
+export function settled(): void { collect(); lastLive = heap(); }
+
 function sample(run: Running | undefined): void {
   if (!run) return;
   let held = heap() - run.base;
-  if (held > run.record.held && held > run.bound) { collect(); held = heap() - run.base; }
+  if (held > run.record.held && (held > run.bound || LIVE)) { collect(); held = heap() - run.base; }
   if (held > run.record.held) run.record.held = held;
 }
 
@@ -394,8 +407,8 @@ export interface Stamp {
   r2: FoldR2;
   queue: Queued[];
   steps: StepRecord[];
-  /** Every queue message the platform sent, in order (what the five-minute run and the steps enqueued). */
-  sent: unknown[];
+  /** One mark per queue message the platform sent (what the five-minute run and the steps enqueued). */
+  sent: number[];
   /** Every operator request and the status it was answered with. */
   answers: Array<{ method: string; path: string; status: number; at: number }>;
 }
@@ -409,9 +422,9 @@ export async function stamp(host: Host, documents: Documents, registry: ReturnTy
   expectPublished(m, what);
   const r2 = new FoldR2();
   for (const [key, body] of m.storage.objects) r2.seed(key, body, m.storage.metadata.get(key));
-  const queue: Queued[] = [], sent: unknown[] = [];
+  const queue: Queued[] = [], sent: number[] = [];
   let ids = 0;
-  const push = (body: unknown) => { sent.push(body); queue.push({ id: `m${++ids}`, body: structuredClone(body), attempts: 0 }); };
+  const push = (body: unknown) => { sent.push(1); queue.push({ id: `m${++ids}`, body: structuredClone(body), attempts: 0 }); };
   Object.assign(m.env as unknown as Record<string, unknown>, {
     STORAGE: r2, RETENTION: registry.config, LEDGER_RECOVERY_CONFIG: RECOVERY, IDENTITY_SALT: 'p104-synthetic-identity-salt-quarantine-provenance',
     EVENT_QUEUE: { send: async (body: unknown) => { push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) push(message.body); } },
@@ -426,10 +439,11 @@ export async function step<T>(s: Stamp, kind: StepRecord['kind'], label: string,
   const record: StepRecord = { index: s.steps.length, kind, label, held: 0, ledgerBytes: 0, ledgerObjects: 0, otherBytes: 0, ledgerKeys: [], calls: 0, writes: [], outcome: 'done' };
   s.steps.push(record);
   const started = performance.now();
-  collect();
+  // P104_PRECISE (a measurement run's evidence): every step's base taken after a collection, so its figure is what it held alone.
+  if (!lastLive || kind === 'request' || PRECISE) settled();
   let cut!: () => void;
   const cutOff = new Promise<'cut'>(resolve => { cut = () => resolve('cut'); });
-  const running: Running = { record, base: heap(), bound, dead: false, seen: new Set(), cut };
+  const running: Running = { record, base: lastLive, bound, dead: false, seen: new Set(), cut };
   const pending: Promise<unknown>[] = [];
   const ctx = { waitUntil: (p: Promise<unknown>) => { pending.push(p); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext;
   let value: T | undefined;
@@ -439,6 +453,8 @@ export async function step<T>(s: Stamp, kind: StepRecord['kind'], label: string,
     if (result === 'cut') record.outcome = 'cut'; else value = result as T;
   } catch (error) { record.outcome = 'threw'; record.error = error instanceof Error ? error.message : String(error); }
   if (record.outcome !== 'cut') sample(running);
+  // A cut-off step never returns, and what it held stays held: the harness's base is taken again past it.
+  else settled();
   if (TRACE) appendFileSync(TRACE, JSON.stringify({ host: s.host, i: record.index, kind, label, held: +(record.held / MiB).toFixed(1), ledger: +(record.ledgerBytes / MiB).toFixed(2),
     objects: record.ledgerObjects, other: +(record.otherBytes / MiB).toFixed(2), calls: record.calls, outcome: record.outcome, ms: Math.round(performance.now() - started), at: new Date(Date.now()).toISOString() }) + '\n');
   return { record, ...(value !== undefined ? { value } : {}) };
@@ -499,6 +515,7 @@ export async function drainQueue(s: Stamp, at: number, plan: DeliveryPlan = {}, 
 /** Writes that are not the learning report's: the warehouse slice's schedule, which every five-minute run rewrites. */
 const NOISE = /^warehouse\//;
 export async function settleAt(s: Stamp, at: number, plan: DeliveryPlan = {}, runs = 40): Promise<number> {
+  settled();
   for (let i = 1; i <= runs; i++) {
     const before = s.r2.journal.length;
     await fiveMinuteRun(s, at);
@@ -565,9 +582,11 @@ const REWARDS = ['click', 'add_to_bag', 'purchase'] as const;
 export const REWARD_OF: Record<string, string> = Object.fromEntries(SLOTS.map((slot, i) => [slot, REWARDS[i % 3]!]));
 const LINES = ['Tabby', 'Willow', 'Brooklyn', 'Rogue'];
 
+/** The product a piece features (a Coach-shaped product id): a purchase naming it credits the decision that showed the piece. */
+export const featuredProduct = (slot: string, n: number) => `COA-${slot.split('-').map(w => w[0]!.toUpperCase()).join('')}${String(n).padStart(3, '0')}`;
 export function documents(learnExtra: Record<string, unknown> = {}, slotExtra: Record<string, Record<string, unknown>> = {}): Documents {
   const pieces = SLOTS.flatMap(slot => Array.from({ length: 10 }, (_, n) => ({ id: `${slot}.${n}`, customerContentId: `TAP-${slot.toUpperCase()}-${n}`, type: 'editorial',
-    title: `${slot} ${n}`, tags: { line: [LINES[n % 4]!] }, slotTypes: [slot], lifecycle: { status: 'live' } })));
+    title: `${slot} ${n}`, tags: { line: [LINES[n % 4]!] }, slotTypes: [slot], lifecycle: { status: 'live' }, featuredProductIds: [featuredProduct(slot, n)] })));
   const pages: Record<string, unknown[]> = {};
   for (const slot of SLOTS) (pages[PAGE_OF[slot]!] ??= []).push({ slot, take: 4, weights: { line: 1 } });
   return { pieces, slots: { version: 'p104-slots', pages }, learn: { version: 'p104-learn', holdout: { share: 0, salt: 'p104', arms: ['default'] },
@@ -646,7 +665,7 @@ export async function play(s: Stamp, scenario: Scenario, plan: DeliveryPlan = {}
     if (moment.at > until) break;
     vi.setSystemTime(moment.at);
     // Written, then let go: the ledger lives in the store as bytes, not in the test's heap the steps are measured against.
-    if (moment.ledger) { writeLedger(s, moment.ledger); moment.ledger = undefined; }
+    if (moment.ledger) { writeLedger(s, moment.ledger); moment.ledger = undefined; settled(); }
     for (const action of moment.actions ?? []) { await action(s); await drainQueue(s, moment.at, plan); }
     await settleAt(s, moment.at, plan);
   }
