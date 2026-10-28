@@ -1753,7 +1753,9 @@ function namesLegacy(value: unknown): boolean {
   if (v.products && typeof v.products === 'object' && Object.keys(v.products).length) return true;
   if (!v.index || typeof v.index !== 'object') return false;
   if (!Array.isArray(v.index.packs)) return Object.keys(v.index.shards ?? {}).length + Object.keys(v.index.ids ?? {}).length > 0;
-  return v.index.legacy !== 0;
+  // The count, and beside it every manifest pointer read directly: one without a byte range names an object of its own.
+  const own = (group: unknown) => !!group && typeof group === 'object' && Object.values(group as Record<string, { at?: unknown } | null>).some(p => !p || p.at === undefined);
+  return v.index.legacy !== 0 || own(v.index.shards) || own(v.index.ids);
 }
 /** P98: the directories of the objects stored before packs (P86, P93). */
 const LEGACY_DIRECTORIES = ['part', 'shard', 'idshard', 'ids'] as const;
