@@ -1053,7 +1053,8 @@ async function snapshotContext(request: Request): Promise<Record<string, string>
 interface ArmMint { target: MintTarget; p: number; learnRevision: number }
 async function armMint(env: Env, tenant: string, brand: string, cls: ArmClass): Promise<ArmMint | null> {
   try {
-    const learn = await readPinnedPublication(env, LEARN_KIND, tenant, await pinPublication(env, tenant, true));
+    // P102 (R-P555): the draw names its learn member, so a machine holding nothing reads it in its pin's one round.
+    const learn = await readPinnedPublication(env, LEARN_KIND, tenant, await pinPublication(env, tenant, true, { members: [{ kind: LEARN_KIND, scope: tenant }] }));
     const holdout = { ...learn.value.holdout, salt: learn.value.holdout.salt || brand };
     const pDefault = defaultArmProbability(holdout), p = cls === 'default' ? pDefault : 1 - pDefault;
     const cap = p <= 0 || p >= 1 ? 1 : Math.min(4096, Math.ceil(Math.log(1e-6) / Math.log(1 - p)));

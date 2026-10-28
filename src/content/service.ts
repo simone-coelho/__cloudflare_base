@@ -7,9 +7,9 @@
 import type { Env } from '@/types/env';
 import { afterOwnerAnswer, assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { carriedSaltVersion, catalogPartPointer, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin } from '@/config/publication';
+import { carriedSaltVersion, catalogPartPointer, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin, type StorageTrip } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
-import { ReflexConfigUnavailableError } from '@/reflex/configStore';
+import { REFLEX_KIND, ReflexConfigUnavailableError, reflexScopeForTenant } from '@/reflex/configStore';
 import { extractTouches, productReferencesOf, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
 import { SessionManager } from '@/services/SessionManager';
 import {
@@ -253,6 +253,13 @@ export interface DecisionSources {
   consent: Consent & { personalized: boolean };
   /** Milliseconds per stage of this decision: documents, shopper, trend, lift, decide. */
   timings: Record<string, number>;
+  /**
+   * P102 (E27, CR4): the storage trips the `documents` stage waited on, in order, each `{ read, ms }`: what the trip
+   * read (`head`, with `serving copy` where it read the scope's serving copy beside it; `set` with the members it read
+   * beside the set; the members it read by the set's refs; an anchor's `shard`, then its `part`) and its time in whole
+   * milliseconds. A read answered from what the isolate holds makes no trip and is not listed.
+   */
+  trips: StorageTrip[];
   /**
    * P61 (amendment 6, R-P110): how each learning slot's lift read ended, keyed
    * by slot name (sorted): one member for every slot whose lift this decision
@@ -760,8 +767,13 @@ export async function serveContentDecisions(
   const lap = (name: string) => { const t = performance.now(); timings[name] = Math.round(t - mark); mark = t; };
 
   let publicationDigest = '';
+  // P102 (E27): the storage trips this stage waits on, as its pin and the anchor's reads report them (CR4).
+  const trips: StorageTrip[] = [];
   const [catalogRev, slotsRev, learnRev, cfgRev] = await (async () => {
-    const pin = await pinPublication(env, scope, true);
+    // P102 (B, C): the four members this decision reads under its pin, named so that a machine holding nothing reads
+    // them in the pin's own round (the serving copy beside the head, else the set and these members together).
+    const pin = await pinPublication(env, scope, true, { members: [{ kind: CONTENT_KIND, scope }, { kind: SLOTS_KIND, scope }, { kind: LEARN_KIND, scope },
+      { kind: REFLEX_KIND, scope: reflexScopeForTenant(scope) }], trips });
     publicationDigest = pin.digest;
     return Promise.all([
       readPinnedPublication(env, CONTENT_KIND, scope, pin),
@@ -781,7 +793,7 @@ export async function serveContentDecisions(
   const slotsDoc: SlotCatalog = slotsRev?.value ?? { pages: {} };
   // P86 (E10, R-P405): the candidates are the catalogue's shared pieces and, for a page with a slot scoped to its anchor
   // (P80) whose request names a product the manifest indexes, that ONE product's part; every other page reads no part.
-  const catalog = await withAnchorPart(env, scope, catalogRev?.value ?? EMPTY_CATALOG, slotsDoc.pages[r.page] ?? [], r.context?.anchor);
+  const catalog = await withAnchorPart(env, scope, catalogRev?.value ?? EMPTY_CATALOG, slotsDoc.pages[r.page] ?? [], r.context?.anchor, trips);
   const learn = learnRev?.value ?? DEFAULT_LEARN;
   const cfg = cfgRev.config;
   const configRevision = cfgRev.revision;
@@ -1259,6 +1271,7 @@ export async function serveContentDecisions(
       ...(unreadable ? { record: 'unreadable' as const } : {}),
       consent: { ...consent, personalized },
       timings,
+      trips,
       lift,
       ring: ringRead,
       budgets,
@@ -1433,12 +1446,14 @@ export async function admitLayoutExposure(env: Env, input: { tenant: string; bra
  * unreadable catalogue does, never a silent narrower one. A catalogue without
  * parts is answered unchanged.
  */
-export async function withAnchorPart(env: Env, scope: string, catalog: ContentCatalog, pageSlots: readonly SlotStrategy[], anchor: string | undefined): Promise<ContentCatalog> {
+export async function withAnchorPart(env: Env, scope: string, catalog: ContentCatalog, pageSlots: readonly SlotStrategy[], anchor: string | undefined,
+  trips?: StorageTrip[]): Promise<ContentCatalog> {
   // P93: through the anchor's shard on a sharded catalogue (one read, held per isolate), none for an empty shard.
+  // P102 (CR4): each of the two reads that goes to storage is a trip of the decision's documents stage.
   const pointer = catalogParted(catalog) && typeof anchor === 'string' && pageSlots.some(slot => slot.scope === 'anchor')
-    ? await catalogPartPointer(env, scope, catalog, anchor) : undefined;
+    ? await catalogPartPointer(env, scope, catalog, anchor, trips) : undefined;
   if (!pointer) return catalog;
-  const part = await readCatalogPart(env, scope, pointer.digest);
+  const part = await readCatalogPart(env, scope, pointer.digest, trips);
   return { ...catalog, pieces: [...catalog.pieces, ...(part.pieces as ContentPiece[])] };
 }
 
