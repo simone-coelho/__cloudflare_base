@@ -32,7 +32,7 @@
 // second answer moments later. An existing tenant (today's commit) is the head rewritten with its own bytes and no
 // storage metadata and no serving copy, as today's `finish` leaves it.
 //
-// THE READINGS (R1–R8 ratified by R-P570; R9 is R-P570 (b)):
+// THE READINGS (R1–R8 ratified by R-P570; R9 is R-P570 (b); R4, R9 and R10 as R-P580 rules them):
 //   R1 The serving copy's fixed name per scope is the design's (§8): `config-publication/v2/<scope>/serving.json`. The
 //      R10 lists of P93 and P86 name it, so it is one name for the batch.
 //   R2 C's copy is read beside the head by a pin that NAMES its members (the decision's documents stage and the P84 class
@@ -41,8 +41,12 @@
 //      servingCache test's cold lists at :76 and :112 are unchanged, and :88 and :97 hold.
 //   R3 CR4's member is `sources.trips` (R-P570): an array, one entry per storage trip in order, each entry an object
 //      carrying its time as its one number (whole milliseconds) and naming what it read in its text members — `head`,
-//      `set` (with its members), `serving` or `copy`; kit 02 names it.
-//   R4 The bounds (120 ms, 220 ms, 120 ms) are held by the median of three answers, as the design measured (§5).
+//      `set` (with its members), `serving` or `copy`; kit 02 names it. Each trip is bounded on its own duration (from the
+//      injected read time less 2 ms to half a read above it) and the trips add up to no more than the documents stage, one
+//      millisecond of rounding a trip (R-P580 F2).
+//   R4 Each time bound is held by the median of three answers (the design's §5), at the midpoint between n and n + 1
+//      waves: n × 100 ms + 50 ms — one wave ≤ 150 ms (the work order's 120), two waves ≤ 250 ms (its 220) — and the waves
+//      are also counted from the read log (R-P580 F5). This discriminates waves; it does not loosen the target.
 //   R5 "Identical to today's" is compared against the same product reading an existing tenant's publication (no
 //      metadata, no copy): the path today's code takes, three waves.
 //   R6 "The backfill then changes nothing": neither the head (its bytes, metadata and version) nor the serving copy the
@@ -51,9 +55,15 @@
 //      clauses are read in it sentence by sentence.
 //   R8 The backfill rides the tenant's existing five-minute job (src/index.ts, the hourly fold's per-tenant waitUntil):
 //      src/index.api-boundary.test.ts W07.04 (:3496) pins the run's waitUntil count, which one new job per tenant breaks.
-//   R9 The serving copy carries the revision objects' integrity guarantee: a member whose bytes differ from its reference
-//      under the same revision is never served from the copy; with the revision object altered too, the decision is
-//      refused as W20.03 (src/content/consent.test.ts) refuses it — "Configuration publication authority unavailable".
+//   R9 The serving copy carries the revision objects' integrity guarantee for EVERY member it holds (R-P580 F1): a member
+//      whose bytes differ from its reference under the same revision is never served from the copy — the answer comes from
+//      the revision objects, in B's two waves (F4) — and with the member's revision object altered too the read is refused
+//      as W20.03 (src/content/consent.test.ts) refuses it: "Configuration publication authority unavailable". The decision
+//      reads content, slots, learn and reflex; the priors member is read on the learning path (LearnStats priorsFor: a
+//      serving pin, then the optional member), so its leg reads it that way after the decision. Each change keeps the
+//      member's version label, so only its bytes' digest tells it apart.
+//   R10 The copy is altered whatever its layout (R-P580 F3): decoded, walked, the member found by its reference (kind,
+//      scope, revision, digest) as an object or as the JSON text of one, its value changed, its revision and digest kept.
 //
 // R10 BY NAME (the brief S48/SPEC-BRIEF-P102.md; the work order's allowedPaths as amended by R-P570), before → after:
 //   src/config/publication.servingCache.test.ts:128–141 — "keeps the administrative read and the cache expiry as they
@@ -98,7 +108,8 @@ vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the
 vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
 vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
-import { invalidatePublicationCache } from '@/config/publication';
+import { invalidatePublicationCache, pinPublication, readOptionalPinnedPublication } from '@/config/publication';
+import { PRIORS_KIND } from '@/learn/priors';
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import type { Env } from '@/types/env';
 
@@ -274,6 +285,62 @@ function metadataNamesMembers(m: Mounted): string {
   return text === '{}' ? 'no storage metadata on the head' : missing.length ? `metadata ${text.slice(0, 200)} does not name ${missing.map(([k, n]) => `${k} ${n}`).join(', ')}` : 'names every member\'s revision';
 }
 
+/** A member of the committed set: its reference and its revision object's key. */
+interface MemberRef { key: string; kind: string; scope: string; revision: number; digest: string; object: string }
+function refsOf(m: Mounted): MemberRef[] {
+  const head = JSON.parse(m.storage.objects.get(HEAD)!) as { committed: { revision: number } };
+  const set = JSON.parse(m.storage.objects.get(setKey(head.committed.revision))!) as { refs: Record<string, { kind: string; scope: string; revision: number; digest: string }> };
+  return Object.entries(set.refs).map(([key, r]) => ({ key, kind: r.kind, scope: r.scope, revision: r.revision, digest: r.digest,
+    object: `config-publication/v1/${r.scope}/${r.kind}/rev/${r.revision}.json` })).sort((a, b) => a.key.localeCompare(b.key));
+}
+/**
+ * F3 (R-P580): the serving copy altered whatever its layout — decoded, walked, the member found by its reference (an
+ * object, or the JSON text of one, carrying the reference's kind, scope, revision and digest) and its value changed by
+ * `change`, its revision and digest kept. Null where the copy does not decode or holds no such member.
+ */
+function alteredCopy(copy: string | null, ref: MemberRef, change: (value: unknown) => unknown): string | null {
+  if (copy === null) return null;
+  let found = false;
+  const isMember = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v) && Object.hasOwn(v, 'value')
+    && (v as Record<string, unknown>).kind === ref.kind && (v as Record<string, unknown>).scope === ref.scope
+    && (v as Record<string, unknown>).revision === ref.revision && (v as Record<string, unknown>).digest === ref.digest;
+  const walk = (node: unknown): unknown => {
+    if (typeof node === 'string') {
+      let parsed: unknown; try { parsed = JSON.parse(node); } catch { return node; }
+      if (isMember(parsed)) { found = true; return JSON.stringify({ ...parsed, value: change(parsed.value) }); }
+      return node;
+    }
+    if (Array.isArray(node)) return node.map(walk);
+    if (node && typeof node === 'object') {
+      if (isMember(node)) { found = true; return { ...node, value: change(node.value) }; }
+      return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, walk(v)]));
+    }
+    return node;
+  };
+  let root: unknown; try { root = JSON.parse(copy); } catch { return null; }
+  const out = walk(root);
+  return found ? JSON.stringify(out) : null;
+}
+/** W20.03's altered revision object: its value changed, its revision and digest kept. */
+const alteredObject = (text: string, change: (value: unknown) => unknown) => { const v = JSON.parse(text) as Record<string, unknown>; return JSON.stringify({ ...v, value: change(v.value) }); };
+type Doc = Record<string, unknown>;
+/** F1 (R-P580): for each member kind the copy carries, a change of its bytes under the same revision whose effect a reader serving it would show — its version label kept, so only the bytes' digest tells. */
+const ALTER: Record<string, (value: unknown) => unknown> = {
+  content: v => ({ ...(v as Doc), pieces: [...((v as Doc).pieces as unknown[])].reverse() }),
+  slots: v => ({ ...(v as Doc), pages: { ...((v as Doc).pages as Doc), pdp: (((v as Doc).pages as Doc).pdp as Doc[]).map(s => ({ ...s, take: 2 })) } }),
+  learn: v => ({ ...(v as Doc), holdout: { ...((v as Doc).holdout as Doc), salt: 'p102-altered' } }),
+  reflex: v => Object.fromEntries(Object.entries(v as Doc).filter(([k]) => k !== 'journey')),
+  prior: v => ({ ...(v as Doc), version: 'p102-altered-priors' }),
+};
+/** What the decision serves from its documents: the answer, and the documents' labels and journey source it names. */
+const servedOf = (r: Reply) => { const s = (r.body.sources ?? {}) as Record<string, Record<string, unknown> | undefined>;
+  return { answer: answerOf(r), labels: [s.catalog?.version, s.slots?.version, s.learn?.version, s.config?.label], journey: s.journey ?? null }; };
+/** The learning path's serving read of the priors member (src/durable-objects/LearnStats.ts priorsFor: one serving pin, then the optional member). */
+async function priorsRead(m: Mounted): Promise<unknown> {
+  try { return (await readOptionalPinnedPublication(m.env, PRIORS_KIND, TENANT, await pinPublication(m.env, TENANT, true)))?.value ?? null; }
+  catch (error) { return `refused: ${(error as Error).message}`; }
+}
+
 // ---------------------------------------------------------------------------
 // The five-minute scheduled run, through the real Worker's handler.
 // ---------------------------------------------------------------------------
@@ -313,6 +380,8 @@ const tripsShown = (r: Reply) => { const report = tripReport(r); return report.n
 /** A trip's report reduced to what it read (reading R3's words) and its time within [lo, hi]. */
 const tripShape = (trip: Trip, lo: number, hi: number) => ({ head: /head/.test(trip.read), set: /\bset\b/.test(trip.read), copy: /serving|copy/.test(trip.read),
   whole: Number.isInteger(trip.ms), within: trip.ms >= lo && trip.ms <= hi });
+/** F5 (R-P580): a time bound at the midpoint between n and n + 1 waves: n × the injected read time plus half of it. */
+const waveBound = (n: number) => n * G + G / 2;
 
 // ===========================================================================
 // unit:P102.CR1 — fix A: a publication's set and documents held by its identity for as long as memory allows
@@ -326,16 +395,16 @@ describe('unit:P102.CR1 (fix A: held by identity; the head read on every decisio
       const meter = meterOf(m);
       const warm = await door(m, 'p102-cr1-warm');
       expect(warm.status, `${host}: PRECONDITION — the door answers (${show(warm)})`).toBe(200);
-      const idle: Array<{ reads: string[]; documents: number; answer: unknown }> = [];
+      const idle: Array<{ reads: string[]; waves: number; documents: number; answer: unknown }> = [];
       for (let rep = 1; rep <= 3; rep++) {
         const run = await later(61_000 * rep, () => measured(meter, G, () => door(m, `p102-cr1-idle-${rep}`)));
-        idle.push({ reads: readSet(run.reads), documents: documentsOf(run.result), answer: answerOf(run.result) });
+        idle.push({ reads: readSet(run.reads), waves: waves(run.reads).length, documents: documentsOf(run.result), answer: answerOf(run.result) });
       }
       const ancient = await later(400 * 86_400_000, () => measured(meter, 0, () => door(m, 'p102-cr1-ancient')));
-      expect.soft({ reads: idle.map(i => i.reads), answers: idle.map(i => i.answer), ancient: [readSet(ancient.reads), answerOf(ancient.result)] },
+      expect.soft({ reads: idle.map(i => i.reads), waves: idle.map(i => i.waves), answers: idle.map(i => i.answer), ancient: [readSet(ancient.reads), answerOf(ancient.result)] },
         `${host}: P102.CR1 — an idle machine reads the head alone, at 61 s and at 400 days (observed ${JSON.stringify(idle.map(i => i.reads))}; at 400 days ${JSON.stringify(readSet(ancient.reads))}; today the set and the four documents again past 30 s)`).toEqual({
-        reads: [['head'], ['head'], ['head']], answers: idle.map(() => answerOf(warm)), ancient: [['head'], answerOf(warm)] });
-      expect.soft(median(idle.map(i => i.documents)), `${host}: P102.CR1 — an idle machine's documents stage at 100 ms a read, median of ${JSON.stringify(idle.map(i => i.documents))} ms (today about 305)`).toBeLessThanOrEqual(120);
+        reads: [['head'], ['head'], ['head']], waves: [1, 1, 1], answers: idle.map(() => answerOf(warm)), ancient: [['head'], answerOf(warm)] });
+      expect.soft(median(idle.map(i => i.documents)), `${host}: P102.CR1 — an idle machine's documents stage at 100 ms a read, one wave: at most ${waveBound(1)} ms, the midpoint to two (R-P580 F5; the work order's 120), median of ${JSON.stringify(idle.map(i => i.documents))} ms (today about 305)`).toBeLessThanOrEqual(waveBound(1));
     }, 120_000);
 
     it(`host (${host}): the head is still read on every decision, so a publication committed meanwhile is served on the very next one; what is held is cleared by invalidatePublicationCache, never taken by an administrative read, and never answers when the head cannot be read`, async () => {
@@ -392,7 +461,7 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       expect.soft({ waves: cold.map(c => c.waves.length), second: cold.map(c => second(c.waves)), answers: cold.map(c => c.answer) },
         `${host}: P102.CR2 — two waves, the set and the four members together in the second (observed ${JSON.stringify(cold[0]?.waves)}; today three)`).toEqual({
         waves: [2, 2, 2], second: cold.map(() => ['content revision', 'learn revision', 'reflex revision', 'set', 'slots revision']), answers: cold.map(() => answerOf(warm)) });
-      expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR2 — a machine holding nothing, without the copy, at 100 ms a read: median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(220);
+      expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR2 — a machine holding nothing, without the copy, at 100 ms a read, two waves: at most ${waveBound(2)} ms, the midpoint to three (R-P580 F5; the work order's 220), median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(waveBound(2));
     }, 120_000);
 
     it(`host (${host}): the metadata is a hint and never authority — a hint naming absent revisions, a stale slots revision or malformed text gives the answer a true hint gives`, async () => {
@@ -518,52 +587,61 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
       expect.soft({ reads: cold.map(c => c.reads), waves: cold.map(c => c.waves), answers: cold.map(c => c.answer) },
         `${host}: P102.CR3 — the head and the serving copy, one wave (observed ${JSON.stringify(cold[0]?.reads)} in ${cold[0]?.waves} waves; today six objects in three)`).toEqual({
         reads: cold.map(() => ['head', 'serving copy']), waves: [1, 1, 1], answers: cold.map(() => answerOf(warm)) });
-      expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR3 — a machine holding nothing at 100 ms a read: median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(120);
+      expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR3 — a machine holding nothing at 100 ms a read, one wave: at most ${waveBound(1)} ms, the midpoint to two (R-P580 F5; the work order's 120), median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(waveBound(1));
     }, 120_000);
 
-    it(`host (${host}): the copy is used only where it is the head's committed identity and every member matches its ref — a stale copy (the previous publication's), a copy whose slots member was altered, a malformed copy and a missing one each give the answer the true copy gives`, async () => {
-      const m = await mount(host, DOCS);
-      expectPublished(m, 'P102.CR3 — the tenant documents publish');
-      const first = stored(m);
-      expect((await publish(m, 'slots', SLOTS_2, 'p102 cr3 copy')).status, `${host}: PRECONDITION — the second slots document publishes`).toBe(200);
-      const second = stored(m);
-      const ask = async (copy: string | null, label: string) => {
-        if (copy === null) await UnitR2.prototype.delete.call(m.storage, SERVING); else await UnitR2.prototype.put.call(m.storage, SERVING, copy);
-        invalidatePublicationCache();
-        return answerOf(await door(m, `p102-cr3-${label}`));
-      };
-      const truth = await ask(second.copy, 'true');
-      const stale = await ask(first.copy, 'stale');
-      const altered = await ask(second.copy?.replace('"take":3', '"take":4') ?? null, 'altered');
-      const malformed = await ask('{"schema":"not a serving copy"}', 'malformed');
-      const missing = await ask(null, 'missing');
-      expect.soft({ copies: [first.copy !== null, second.copy !== null && second.copy !== first.copy, second.copy?.includes('"take":3') ?? false], slots: (truth.versions as { slots?: unknown } | null)?.slots ?? null },
-        `${host}: P102.CR3 — PRECONDITION: each commit wrote its serving copy (today none)`).toEqual({ copies: [true, true, true], slots: 2 });
-      expect.soft({ stale, altered, malformed, missing }, `${host}: P102.CR3 — a stale, altered, malformed or missing copy changes no answer`).toEqual({ stale: truth, altered: truth, malformed: truth, missing: truth });
-    }, 120_000);
-
-    it(`host (${host}): the serving copy carries the revision objects' integrity guarantee (R-P570 (b)) — a copy whose slots member's bytes are altered under the same revision is not served: with the revision objects intact the answer is theirs, read from them; with the slots revision altered too the decision is refused, as W20.03 refuses it`, async () => {
+    it(`host (${host}): the copy is used only where it is the head's committed identity and every member matches its ref — a stale copy (the previous publication's), a copy whose slots member was altered, a malformed copy and a missing one each give the answer the true copy gives, reading as CR2 in two waves (R-P580 F4)`, async () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P102.CR3 — the tenant documents publish');
       const meter = meterOf(m);
-      expect((await publish(m, 'slots', SLOTS_2, 'p102 cr3 integrity')).status, `${host}: PRECONDITION — the second slots document publishes`).toBe(200);
-      const revisionKey = `config-publication/v1/${TENANT}/slots/rev/2.json`, revision = m.storage.objects.get(revisionKey) ?? '', copy = m.storage.objects.get(SERVING) ?? null;
-      /** The slots member's bytes altered under the same revision and digest (W20.03's altered revision): K = 3 becomes 4. */
-      const BYTES = '"slot":"pdp-modules","take":3', alter = (text: string) => text.split(BYTES).join('"slot":"pdp-modules","take":4');
-      invalidatePublicationCache();
-      const truth = answerOf(await door(m, 'p102-cr3-integrity-true'));
-      if (copy !== null) await UnitR2.prototype.put.call(m.storage, SERVING, alter(copy));
-      invalidatePublicationCache();
-      const intact = await measured(meter, 0, () => door(m, 'p102-cr3-integrity-copy'));
-      await UnitR2.prototype.put.call(m.storage, revisionKey, alter(revision));
-      invalidatePublicationCache();
-      const both = await door(m, 'p102-cr3-integrity-both');
-      expect.soft({ copy: copy !== null && copy.includes(BYTES), revision: revision.includes(BYTES) },
-        `${host}: P102.CR3 — PRECONDITION: the commit wrote its serving copy holding the slots member's bytes (today none)`).toEqual({ copy: true, revision: true });
-      expect.soft({ intact: [answerOf(intact.result), readSet(intact.reads).includes('slots revision')], both: [both.status >= 500, Array.isArray(both.body.decisions), JSON.stringify(both.body).includes('Configuration publication authority unavailable')] },
-        `${host}: P102.CR3 — an altered copy is not served: the intact revision objects answer, or the decision is refused (copy altered: ${show(intact.result)}; both altered: ${show(both)})`).toEqual({
-        intact: [truth, true], both: [true, false, true] });
+      const first = stored(m);
+      expect((await publish(m, 'slots', SLOTS_2, 'p102 cr3 copy')).status, `${host}: PRECONDITION — the second slots document publishes`).toBe(200);
+      const second = stored(m), slots = refsOf(m).find(r => r.kind === 'slots')!;
+      const altered = alteredCopy(second.copy, slots, ALTER.slots!);
+      const ask = async (copy: string | null, label: string) => {
+        if (copy === null) await UnitR2.prototype.delete.call(m.storage, SERVING); else await UnitR2.prototype.put.call(m.storage, SERVING, copy);
+        invalidatePublicationCache();
+        const run = await measured(meter, 20, () => door(m, `p102-cr3-${label}`));
+        return { answer: answerOf(run.result), waves: waves(run.reads).length };
+      };
+      const truth = await ask(second.copy, 'true');
+      const stale = await ask(first.copy, 'stale');
+      const alteredRun = await ask(altered, 'altered');
+      const malformed = await ask('{"schema":"not a serving copy"}', 'malformed');
+      const missing = await ask(null, 'missing');
+      expect.soft({ copies: [first.copy !== null, second.copy !== null && second.copy !== first.copy, altered !== null], slots: (truth.answer.versions as { slots?: unknown } | null)?.slots ?? null },
+        `${host}: P102.CR3 — PRECONDITION: each commit wrote its serving copy, holding the slots member by its reference (today none)`).toEqual({ copies: [true, true, true], slots: 2 });
+      expect.soft({ answers: { stale: stale.answer, altered: alteredRun.answer, malformed: malformed.answer, missing: missing.answer }, waves: [truth.waves, stale.waves, alteredRun.waves, malformed.waves, missing.waves] },
+        `${host}: P102.CR3 — a stale, altered, malformed or missing copy changes no answer and costs one parallel read: B's two waves`).toEqual({
+        answers: { stale: truth.answer, altered: truth.answer, malformed: truth.answer, missing: truth.answer }, waves: [1, 2, 2, 2, 2] });
     }, 120_000);
+
+    it(`host (${host}): the serving copy carries the revision objects' integrity guarantee for every member it holds (R-P570 (b), R-P580 F1) — a member's bytes altered in the copy alone, under the same revision, are never served: the answer is the revision objects', read from them in B's two waves; with the member's revision object altered too the read is refused, as W20.03 refuses it`, async () => {
+      const seen: Record<string, unknown> = {}, wanted: Record<string, unknown> = {};
+      for (const kind of Object.keys(ALTER)) {
+        const m = await mount(host, DOCS);
+        expectPublished(m, `P102.CR3 — the tenant documents publish (${kind})`);
+        const meter = meterOf(m), ref = refsOf(m).find(r => r.kind === kind), copy = stored(m).copy;
+        const altered = ref ? alteredCopy(copy, ref, ALTER[kind]!) : null, object = ref ? m.storage.objects.get(ref.object) ?? null : null;
+        /** The decision's documents stage reads content, slots, learn and reflex; the priors member is read by the learning path (priorsRead). */
+        const decided = kind !== 'prior';
+        invalidatePublicationCache();
+        const truth = decided ? servedOf(await door(m, `p102-cr3-integrity-${kind}-true`)) : await priorsRead(m);
+        if (altered !== null) await UnitR2.prototype.put.call(m.storage, SERVING, altered);
+        invalidatePublicationCache();
+        const alone = await measured(meter, 20, async () => decided ? servedOf(await door(m, `p102-cr3-integrity-${kind}-copy`))
+          : (await door(m, `p102-cr3-integrity-${kind}-copy`), await priorsRead(m)));
+        const readFrom = alone.reads.filter(r => r.cls === `${kind} revision`).length > 0, two = decided ? waves(alone.reads).length : 'n/a';
+        if (object !== null) await UnitR2.prototype.put.call(m.storage, ref!.object, alteredObject(object, ALTER[kind]!));
+        invalidatePublicationCache();
+        const both = decided ? await door(m, `p102-cr3-integrity-${kind}-both`) : null;
+        const refused = decided ? [both!.status >= 500, Array.isArray(both!.body.decisions), JSON.stringify(both!.body).includes('Configuration publication authority unavailable')]
+          : (await door(m, `p102-cr3-integrity-${kind}-both`), [String(await priorsRead(m)).includes('Configuration publication authority unavailable')]);
+        seen[kind] = { held: altered !== null, alone: [alone.result, readFrom, two], refused };
+        wanted[kind] = { held: true, alone: [truth, true, decided ? 2 : 'n/a'], refused: decided ? [true, false, true] : [true] };
+      }
+      expect.soft(seen, `${host}: P102.CR3 — a member altered in the copy alone is not served; altered in its revision object too, refused (held: the copy holds the member by its reference; today no copy)`).toEqual(wanted);
+    }, 300_000);
 
     it(`host (${host}): the copy is at most 1 MiB — a publication whose copy would pass it writes none, and a machine holding nothing then reads the head, then the set and its members (CR2's two waves), answering the new catalogue`, async () => {
       const m = await mount(host, DOCS);
@@ -654,11 +732,15 @@ describe('unit:P102.CR4 (the documents stage\'s storage trips, reported in the b
       await UnitR2.prototype.delete.call(m.storage, SERVING);
       invalidatePublicationCache();
       const bare = (await measured(meter, G, () => door(m, 'p102-cr4-bare'))).result;
-      const shape = (r: Reply) => { const report = tripReport(r); return report.name === null ? tripsShown(r) : report.trips.map(t => tripShape(t, G - 2, documentsOf(r) + 1)); };
+      // F2 (R-P580): each trip bounded on its own duration, near the injected read time (within half a read of it), and the
+      // trips adding up to no more than the documents stage (one whole millisecond of rounding a trip).
+      const shape = (r: Reply) => { const report = tripReport(r); return report.name === null ? tripsShown(r)
+        : { trips: report.trips.map(t => tripShape(t, G - 2, waveBound(1))), sum: report.trips.reduce((n, t) => n + t.ms, 0) <= documentsOf(r) + report.trips.length }; };
       const trip = (head: boolean, set: boolean, copy: boolean) => ({ head, set, copy, whole: true, within: true });
       expect.soft({ cold: shape(cold), held: shape(view), idle: shape(idle), bare: shape(bare) },
         `${host}: P102.CR4 — the trips, in order (cold ${tripsShown(cold)}; held ${tripsShown(view)}; idle ${tripsShown(idle)}; without the copy ${tripsShown(bare)})`).toEqual({
-        cold: [trip(true, false, true)], held: [trip(true, false, false)], idle: [trip(true, false, false)], bare: [{ ...trip(true, false, true) }, trip(false, true, false)] });
+        cold: { trips: [trip(true, false, true)], sum: true }, held: { trips: [trip(true, false, false)], sum: true }, idle: { trips: [trip(true, false, false)], sum: true },
+        bare: { trips: [trip(true, false, true), trip(false, true, false)], sum: true } });
       const report = tripReport(cold), kit = readTree('docs/kit/02-api-reference.md');
       expect.soft(report.name === null ? 'no member' : kit.includes(`sources.${report.name}`) ? 'named' : `sources.${report.name} is not named`,
         `${host}: P102.CR4 — kit 02 names the member`).toBe('named');
