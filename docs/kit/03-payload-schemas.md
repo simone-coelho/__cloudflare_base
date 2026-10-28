@@ -339,9 +339,7 @@ does not hold yet, a piece newly shared, an id a `replace`, a `full` or a move d
 retitles records reads no id shard; it writes only the parts and shards whose digest moved, never an
 unchanged part again, all of them in its one pack, and it reads the objects of each pack in as few ranged reads
 as their places allow. The skip compares the manifest's digest, a dry run writes nothing, no pack included, and
-the answer's `pieces` counts the shared pieces and every part's records. `changed` counts the records whose
-stored value the load created or altered, compared field by field whatever order the fields were written or
-stored in, so a retitle of one product's records answers exactly the records it retitled.
+the answer's `pieces` counts the shared pieces and every part's records. `changed` counts the records whose stored value the load created or altered, compared field by field whatever the order of their fields as written or as stored, so a retitle of one product's records answers exactly the records it retitled.
 
 `GET /content/catalog` answers the manifest with its `index`, `envelope.pieces` counting the shared pieces and
 every part's records, `envelope.bytes` the manifest's own size and `envelope.products` the number of products
@@ -416,7 +414,9 @@ storage latencies measured on the hosted stamps, where it took about 200 seconds
 reading and checking of its records. Each storage read and HEAD, and the write of the pack, the revision and the
 set, is tried a second time within the request when it fails, so one transient failure of the store never
 refuses a load; the publication head is written only by its compare-and-set, read again after a failure, and
-never sent twice blindly.
+never sent twice blindly. The files of about 200 to 300 products earlier releases advised, when a request's storage
+calls grew with its products, are no longer needed: a file of 5,000 products makes no more calls than one of 200 to
+300 products.
 
 **Staged files, published once.** A range of 40,000 products is sent as files of up to 5,000 staged in
 parallel and published once. `POST /content/catalog/stage?scope=<tenant>&mode=…` takes one file, exactly as the
@@ -437,7 +437,7 @@ stamps, to be measured there), and the same 40,000 retitled 152.
 
 **When storage fails.** Two failures of the same storage call answer `503` with
 `code: "publication_unavailable"`, and the answer names the cause and what the store was left in, never a key,
-a body or a credential: `operation` (`get`, `put` or `head`), `object` (the kind of object: `head`, `set`,
+a body or a credential: `operation` (`get`, `put` or `head`), `objectKind` (the kind of object: `head`, `set`,
 `revision`, `pack`, `part`, `shard`, `idshard`), `storageStatus` (the store's own error number, where it gave
 one) and `state`. `state: "nothing_written"`: nothing any revision names was written (at most the load's pack,
 which the purge collects); the catalog in force is unchanged. `state: "pending"`: the publication head holds

@@ -46,7 +46,7 @@ const text = (v: unknown, max: number): v is string => typeof v === 'string' && 
  * P98 (E25, LD4): the storage call a 503 failed on — the call, the kind of object it named and the store's own error
  * number where the store gave one — never its key, a body or a credential.
  */
-export interface StorageCause { operation: 'get' | 'put' | 'head' | 'list' | 'delete'; object: string; storageStatus?: number }
+export interface StorageCause { operation: 'get' | 'put' | 'head' | 'list' | 'delete'; objectKind: string; storageStatus?: number }
 /**
  * P98 (LD4): what a refused write left in the store: `nothing_written` (nothing any revision names; at most a pack no
  * revision names, which the purge collects), `pending` (the head holds the publication's intent: recover it with POST
@@ -64,8 +64,8 @@ export class PublicationError extends Error {
 /** P98 (LD4): the members a 503 that failed on a storage call adds to its answer, beside `error` and `code`; none for any other refusal. */
 export function publicationFailureOf(error: PublicationError): Record<string, unknown> {
   if (!error.failure) return {};
-  const { operation, object, storageStatus } = error.failure;
-  return { operation, object, ...(storageStatus !== undefined ? { storageStatus } : {}), state: error.state ?? 'nothing_written' };
+  const { operation, objectKind, storageStatus } = error.failure;
+  return { operation, objectKind, ...(storageStatus !== undefined ? { storageStatus } : {}), state: error.state ?? 'nothing_written' };
 }
 /** P98 (LD4): the state a storage failure left, set once, by the innermost publication that knows it. */
 function stated(error: unknown, state: PublicationState): unknown {
@@ -106,7 +106,7 @@ function storageFailure(error: unknown, operation?: StorageCause['operation'], k
   if (error instanceof HTTPException && error.status === 401) throw error;
   if (error instanceof PublicationError && error.failure) return error;
   const failure = unavailable();
-  if (operation && key !== undefined) failure.failure = { operation, object: objectKindOf(key), ...storageStatusOf(error) };
+  if (operation && key !== undefined) failure.failure = { operation, objectKind: objectKindOf(key), ...storageStatusOf(error) };
   return failure;
 }
 /** P98 (LD4): the kind of object a storage key names, the only thing of a key a refusal says. */

@@ -283,6 +283,11 @@ interface BuiltIndex { index: CatalogIndex; pack: SealedPack | null }
 const own = <T>(record: Record<string, T> | undefined, key: string): T | undefined => record && Object.hasOwn(record, key) ? record[key] : undefined;
 const partTooLarge = (product: string) => () => new PublicationError(`The part of product ${JSON.stringify(product).slice(0, 80)} exceeds 2 MiB`, 413, 'part_too_large');
 const tableInconsistent = () => new PublicationError('The catalogue\'s pack table does not account for the objects its index reaches; nothing was written', 503, 'publication_unavailable');
+/** P98: run `task` over `items`, at most `width` at a time, each next item started as soon as one finishes. */
+async function pooled<T>(items: readonly T[], task: (item: T) => Promise<unknown>, width = 16): Promise<void> {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(width, items.length) }, async () => { while (next < items.length) await task(items[next++]!); }));
+}
 /** P98 (LD6): a pack under a quarter live, or the fewest live bytes once the table passes 64 packs, is re-homed by a writing load. */
 const COMPACT_LIVE = 0.25, COMPACT_PACKS = 64;
 function compactionVictim(rows: readonly CatalogPackEntry[]): string | undefined {
@@ -456,6 +461,13 @@ class IndexEdit {
       pointers.set(product, { digest: pointer.digest, records: pointer.records, address: newly(at) });
     }
     if (options.writing && !this.migrating) {
+      // P98 (LD6, LD8): a load that writes over an index still naming shards or id shards stored before packs reads each
+      // of them (once, a bounded number at a time) and moves them into its pack, so the loads after the release leave none.
+      if (held && legacy > 0) {
+        const ownObjects = (group: Record<string, { digest: string; pack?: number; at?: number; bytes?: number }>) => Object.keys(group).filter(name => !indexAddress(held, group[name]!));
+        await pooled(ownObjects(held.shards), name => this.productShard(name));
+        await pooled(ownObjects(held.ids), name => this.idShard(name));
+      }
       // P98 (LD8): what this load read of the objects stored before packs moves into its pack, each part keeping its digest.
       for (const [product, part] of this.legacyParts) {
         const now = pointers.has(product) ? pointers.get(product) : await this.pointer(product);
@@ -469,6 +481,7 @@ class IndexEdit {
       if (victim) {
         for (const [name, p] of Object.entries(held!.shards)) if (indexAddress(held!, p)?.pack === victim) forced.add(name);
         for (const [name, p] of Object.entries(held!.ids)) if (indexAddress(held!, p)?.pack === victim) forcedIds.add(name);
+        await this.ahead('ids', forcedIds);
         const names = Object.keys(held!.shards).filter(name => !!indexAddress(held!, held!.shards[name]!));
         await this.ahead('shards', names);
         const moving: Array<[string, ResolvedPartPointer]> = [];
@@ -2214,20 +2227,24 @@ async function stagedPlan(env: Env, scope: string, current: ContentCatalog, ids:
   const sharing = stages.filter(({ directory }) => directory.shared !== null);
   if (sharing.length > 1) overlaps.push(`the shared pieces are loaded by ${sharing.map(({ id }) => stageName(id)).join(' and ')}`);
   if (overlaps.length) throw new PublicationError(`${overlaps.slice(0, 20).join('; ')}${overlaps.length > 20 ? `; and ${overlaps.length - 20} more` : ''}; a product, and the shared pieces, are loaded by one staged file; nothing was written`, 422, 'stage_overlap');
-  // An id in two places, across the stages as within one file.
-  const collisions: Collision[] = [], sentBy = new Map<string, [string, string | null]>();
+  // An id in two places, across the stages as within one file, and named in the order one file names them: the records
+  // moved first, then a shared piece whose id a part record holds, then a part record whose id a shared piece holds.
+  const moved: Collision[] = [], inPart: Collision[] = [], inShared: Collision[] = [], sentBy = new Map<string, [string, string | null]>();
   for (const { directory } of stages) for (const [id, [at, product]] of Object.entries(directory.sent)) {
     const other = sentBy.get(id);
     if (!other) { sentBy.set(id, [at, product]); continue; }
-    if (product !== null && other[1] !== null) collisions.push(movedCollision(at, other[1], product));
-    else if (product === null && other[1] !== null) collisions.push(inPartCollision(at, other[1]));
-    else if (product !== null) collisions.push(sharedCollision(at, product));
+    if (product !== null && other[1] !== null) moved.push(movedCollision(at, other[1], product));
+    else if (product !== null || other[1] !== null) {
+      const [sharedAt, partAt, owner] = product === null ? [at, other[0], other[1]!] : [other[0], at, product];
+      inPart.push(inPartCollision(sharedAt, owner)); inShared.push(sharedCollision(partAt, owner));
+    }
   }
   const leaving = new Map<string, Set<string>>();
   for (const { directory } of stages) for (const move of directory.moves) {
-    if (!carrier.has(move.from)) { collisions.push(movedCollision(move.at, move.from, move.to)); continue; }
+    if (!carrier.has(move.from)) { moved.push(movedCollision(move.at, move.from, move.to)); continue; }
     leaving.set(move.from, (leaving.get(move.from) ?? new Set()).add(move.id));
   }
+  const collisions = [...moved, ...inPart, ...inShared];
   if (collisions.length) throw collisionRefusal(collisions);
   // The index's edits: each staged part where its digest moved (in its stage's pack), each record a stage moves out of
   // a product another stage carries dropped from that product's part, and the ids whose place changed.
