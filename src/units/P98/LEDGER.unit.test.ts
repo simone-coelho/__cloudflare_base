@@ -143,7 +143,7 @@ import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { asOperator, expectPublished, HOSTS, loadDocument, MODULES, mount, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, UnitR2, type Answer, type Host,
   type Mounted } from '../_parity';
 import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, declareProductSlots, DOCS, DOCS_WITH_CART, image, indexOf, KEY, OTHER_IMAGES, preconditions, productRead,
-  rangeProduct, rangeRecordId, rangeRecords, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, withinCaps, type Rec } from '../P93/_catalog';
+  rangeProduct, rangeRecordId, rangeRecords, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, storedRevisionValues, unique, withinCaps, type Rec } from '../P93/_catalog';
 import { stamp } from '../P87/_stamp';
 import { attemptsOf, canonicalJson, failFirst, importOf, leaked, loadedTenant, meter, minutesAgo, objectKindOf, oneLevelTenant, packTable, publishOf, rawImport, reached,
   recoverOf, resolve, revisionOf, shardedTenant, shortRetention, stageOf, statusOf, STORAGE_NUMBER, storedPacks, tally, under, uploadedAt, type Call, type Meter,
@@ -905,6 +905,43 @@ describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect 
         const standalone = [...m.storage.objects.keys()].filter(k => /\/content\/(?:part|shard|idshard|ids)\//.test(k));
         expect.soft({ reloaded: reloaded.status, standalone, bad: resolve(m, (await loadDocument(m, 'catalog')).document).bad, page: (await productRead(m, rangeProduct(50))).status },
           `${host}: P98.LD6 — the objects stored before packs (today they stay: ${standalone.length})`).toEqual({ reloaded: 200, standalone: [], bad: [], page: 200 });
+      } finally { restore(); }
+    }, 300_000);
+
+    // R-P597 (the P99 specifier's finding 1 on 1113cc75, S44/specifier-p99/REPORT-bd3b5410.md): the purge of a revision
+    // stored before packs resolves each object it names against the other stored revisions through their packs — a
+    // pointer into a pack names its object (here a rewritten shard in a pack still naming a part of its own). 53 products
+    // (P93's form, product shards and id shards of their own) so the purge finishes within its budget; P99 owns the purge
+    // of P93's form at scale.
+    it(`host (${host}): LOCK (R-P597) — a revision stored before packs (P93's form, planted) purged beside the revisions the loads write deletes nothing a stored revision names: the current and previous revisions' parts and shards all remain and read back, the parts of their own that a rewritten shard still names among them`, async () => {
+      const records = [...ANCHOR_IMAGES, ...OTHER_IMAGES, ...rangeRecords(1, 50)];
+      const { m } = await shardedTenant(host, records);
+      const planted = await revisionOf(m);
+      const expected = new Map<string, string[]>();
+      for (const r of records) { const product = (r.featuredProductIds as string[] | undefined)?.[0]; if (product) expected.set(product, [...(expected.get(product) ?? []), r.id].sort()); }
+      // The product the loads retouch shares its shard with another, which no load names: that one's part stays an object
+      // of its own, named by the retouched shard of each revision the loads write.
+      const k = Array.from({ length: 50 }, (_, i) => i + 1).find(n => [...expected.keys()].some(q => q !== rangeProduct(n) && bucketOf(q) === bucketOf(rangeProduct(n))));
+      expect(k, 'PRECONDITION: a range product shares its shard with another product').toBeDefined();
+      shortRetention(m);
+      const restore = uploadedAt(m, minutesAgo(60));
+      try {
+        for (let i = 1; i <= 3; i++) {
+          const loaded = await importOf(m, rangeRecords(k!, 1, `, retouch ${i}`));
+          expect(loaded.status, `PRECONDITION (${host}): retouch ${i} of ${rangeProduct(k!)} is accepted (${show(loaded)})`).toBe(200);
+          await new Promise(resolve => setTimeout(resolve, 5));
+        }
+        const head = await loadDocument(m, 'catalog');
+        const at = async (n: number) => (await asOperator(m, 'GET', `/content/catalog/revisions/${n}?scope=${TENANT}`)).status;
+        const named = resolve(m, head.document), lost = storedRevisionValues(m).flatMap(value => resolve(m, value).bad);
+        const reads: string[] = [];
+        for (const [product, ids] of expected) {
+          const read = await productRead(m, product);
+          if (read.status !== 200 || JSON.stringify(readIds(read)) !== JSON.stringify(ids)) reads.push(`${product}: ${read.status} ${JSON.stringify(read.body).slice(0, 80)}`);
+        }
+        expect.soft({ purged: await at(planted), kept: [await at(head.revision - 1), await at(head.revision)], ownParts: named.own.parts > 0, lost: unique(lost), reads },
+          `${host}: P98.LD6 — nothing a stored revision names is purged (${named.own.parts} parts of their own named by the head)`).toEqual({
+          purged: 410, kept: [200, 200], ownParts: true, lost: [], reads: [] });
       } finally { restore(); }
     }, 300_000);
   }
