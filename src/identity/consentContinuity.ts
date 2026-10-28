@@ -79,21 +79,29 @@ export interface SessionParts { mint?: number; activate?: number; object?: Recor
 export async function anonymousWithConsent(env: Env, tenant: string, consent: Consent, target?: MintTarget, parts?: SessionParts) {
   const minting = performance.now();
   const session = await newAnonymousSession(env, tenant, target);
-  {
-    const activating = performance.now();
-    const response = await shopperObject(env.SHOPPER_REFLEX, session.subject, tenant).fetch('https://shopper-reflex/identity/activate', {
-      method: 'POST', headers: { [SHOPPER_HEADER]: session.capability, 'X-Tenant': tenant, 'Content-Type': 'application/json' }, body: JSON.stringify({ consent }),
-    });
-    if (!response.ok) throw new SessionAccessError();
-    const body = await response.json() as { ok?: unknown; consent?: unknown };
-    if (parts) {
-      parts.mint = Math.round(activating - minting);
-      parts.activate = Math.round(performance.now() - activating);
-      parts.object = ownerTimingOf(response.headers.get(OWNER_TIMING_HEADER));
-    }
-    if (body.ok !== true || body.consent === undefined) throw new SessionAccessError();
-    return { ...session, consent: storedConsent(body.consent) };
+  if (parts) parts.mint = Math.round(performance.now() - minting);
+  return activateAnonymous(env, tenant, session, consent, parts);
+}
+
+/**
+ * The activation of an anonymous session already minted: on the session's own shopper object, or (P97, R-P547) on
+ * `owner`, the blank copy of a brand-new visitor's record the first-request door decides on. The same request, the
+ * same checks of its answer; with `parts`, its round trip and the object's own parts are recorded in it.
+ */
+export async function activateAnonymous<S extends { subject: string; capability: string }>(env: Env, tenant: string, session: S, consent: Consent,
+  parts?: SessionParts, owner?: { fetch(input: string, init?: RequestInit): Promise<Response> }): Promise<S & { consent: Consent }> {
+  const activating = performance.now();
+  const response = await (owner ?? shopperObject(env.SHOPPER_REFLEX, session.subject, tenant)).fetch('https://shopper-reflex/identity/activate', {
+    method: 'POST', headers: { [SHOPPER_HEADER]: session.capability, 'X-Tenant': tenant, 'Content-Type': 'application/json' }, body: JSON.stringify({ consent }),
+  });
+  if (!response.ok) throw new SessionAccessError();
+  const body = await response.json() as { ok?: unknown; consent?: unknown };
+  if (parts) {
+    parts.activate = Math.round(performance.now() - activating);
+    parts.object = ownerTimingOf(response.headers.get(OWNER_TIMING_HEADER));
   }
+  if (body.ok !== true || body.consent === undefined) throw new SessionAccessError();
+  return { ...session, consent: storedConsent(body.consent) };
 }
 
 /** A revoked bearer can recover only its exact durable rotation receipt. */

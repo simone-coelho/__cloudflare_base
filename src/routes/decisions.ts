@@ -11,7 +11,8 @@
 import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { assertShopperSelectors, carryOwnerCustomerId, forwardShopperRequest, parseShopperContext } from '@/identity/sessionAuthority';
-import { anonymousWithConsent, type SessionParts } from '@/identity/consentContinuity';
+import { activateAnonymous, type SessionParts } from '@/identity/consentContinuity';
+import { freshOwner, type OwnerStub } from '@/identity/freshOwner';
 import type { MintTarget } from '@/identity/sessionCapability';
 import { armClassOf, defaultArmProbability } from '@/sdk/armDraw';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
@@ -59,7 +60,7 @@ import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
 import { hasOperatorGrant, operatorJwt } from '@/middleware/operatorAuth';
 import { operatorWrites } from '@/middleware/edgeAccess';
-import { boundedShopperBody, requireShopper, shopperPrincipal, shopperTenant, capabilityToken, verifySessionCapability, SessionAccessError, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { boundedShopperBody, requireShopper, shopperPrincipal, shopperTenant, capabilityToken, verifySessionCapability, newAnonymousSession, SessionAccessError, SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { auditedLearningRecovery, auditedSubjectRead, auditedSubjectOperation } from '@/auth/subjectAudit';
 import { storeFor } from '@/auth/accounts';
 
@@ -1106,11 +1107,15 @@ export const answersOwnTotal = (c: Context<{ Variables: OwnTotalVariables }>): b
  * selector, no query), the entry, the nothing-to-show report and the consent
  * hints — and any failure is the same `401` writing nothing. Only then is the
  * session issued, the very grant POST /v1/:tenant/identity/session issues a
- * browser with no capability (`anonymousWithConsent`, with the consent default
+ * browser with no capability (`activateAnonymous`, with the consent default
  * that route gives it: the cookies' and the request's own refusal hints, which
  * can only restrict), and the request is re-entered under it through the
  * shopper's own object, where every existing check of this route runs on it
- * unchanged. The answer is the first decision set with the issued session as
+ * unchanged. P97 (E22, R-P547): for that first answer the shopper's own object
+ * is its blank copy (src/identity/freshOwner.ts), the object's own code over the
+ * empty record a just-minted visitor has, so the answer waits on no object; the
+ * real record is created right after the answer and is the one every later
+ * request enters. The answer is the first decision set with the issued session as
  * `session`, in the shape the session route answers. A request that carries a
  * session, valid or not, never takes this path, so a forged, stale or foreign
  * one is refused `401` as before and a valid one gets no `session` member; a
@@ -1144,14 +1149,25 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   let armMs = performance.now() - mintStarted;
   const sessionStarted = performance.now();
   const parts: SessionParts = {};
-  const session = await anonymousWithConsent(c.env, tenant, hints, mint?.target, parts);
+  const minting = performance.now();
+  const issued = await newAnonymousSession(c.env, tenant, mint?.target);
+  parts.mint = Math.round(performance.now() - minting);
+  // P97 (FV1, FV2; R-P547): the first answer is decided on the blank copy of the brand-new visitor's record
+  // (freshOwner.ts), by the object's own code, contacting, creating and writing nothing; the real record is created
+  // after the answer (below). Whatever the copy refused, it is today's path under the very session just minted.
+  let copy = freshOwner(c.env, tenant, issued.subject);
+  let session: Awaited<ReturnType<typeof activateAnonymous<typeof issued>>> | undefined;
+  if (copy) {
+    try { session = await activateAnonymous(c.env, tenant, issued, hints, parts, copy.stub); }
+    catch (error) { if (!copy.refused()) throw error; }
+    if (session && !copy.refused()) copy.activated();
+    else { copy = null; session = undefined; }
+  }
+  session ??= await activateAnonymous(c.env, tenant, issued, hints, parts);
   const verifyStarted = performance.now();
   const principal = await verifySessionCapability(c.env, session.capability, tenant);
   const verified = performance.now();
   const sessionMs = verified - sessionStarted;
-  // P97 (FV3, R-P547): the session entry's parts, a diagnostic beside sources.timings (never in Server-Timing): the
-  // mint, the activation's round trip, the verify and the shopper object's own parts of the activation.
-  const sessionParts = { mint: parts.mint ?? 0, activate: parts.activate ?? 0, verify: Math.round(verified - verifyStarted), object: parts.object ?? {} };
   const headers = new Headers(c.req.raw.headers);
   headers.set(SHOPPER_HEADER, session.capability);
   // The member is the mint's alone: the decision is re-entered without it, as a request carrying a session.
@@ -1160,8 +1176,17 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
     headers.delete('Content-Length');
   }
   const forwardStarted = performance.now();
-  const answered = await forwardShopperRequest(c.env, new Request(c.req.raw.url, { method: 'POST', headers, body: text }), principal,
-    (c.req.raw as Request & { cf?: unknown }).cf);
+  const forward = (owner?: OwnerStub) => forwardShopperRequest(c.env, new Request(c.req.raw.url, { method: 'POST', headers, body: text }), principal,
+    (c.req.raw as Request & { cf?: unknown }).cf, owner);
+  let answered = await forward(copy?.stub);
+  if (copy && (answered.status !== 200 || !await copy.decided())) {
+    // P97 (FV2): the copy refused an effect, changed the record past what its creation reproduces or did not answer
+    // the decision: today's path, the activation and the forward on the visitor's own object, the same session.
+    copy = null;
+    void answered.body?.cancel().catch(() => undefined);
+    session = await activateAnonymous(c.env, tenant, session, hints, parts);
+    answered = await forward();
+  }
   // A refusal or a failure is answered as the route answered it, without the
   // session: the SDK then takes the session route as before.
   if (answered.status !== 200) return answered;
@@ -1189,8 +1214,18 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
     ...(drawn ? { arm: Math.round(armMs) } : {}), total: Math.round(performance.now() - doorStarted) };
   const timing = answered.headers.get('Server-Timing');
   c.header('Server-Timing', [timing, ...Object.entries(own).map(([name, ms]) => `${name};dur=${ms}`)].filter(Boolean).join(', '));
+  // P97 (FV3, R-P547): the session entry's parts, a diagnostic beside sources.timings (never in Server-Timing): the
+  // mint, the activation's round trip, the verify and the own parts of the object that ran the activation.
+  const sessionParts = { mint: parts.mint ?? 0, activate: parts.activate ?? 0, verify: Math.round(verified - verifyStarted), object: parts.object ?? {} };
   const answer = c.json({ ...body, sources: { ...sources, timings: { ...stages, ...own }, sessionParts }, session, ...(armRequest ? { armRequest } : {}) });
   c.set(OWN_TOTAL, true);
+  if (copy) {
+    // P97 (FV2): the visitor's record, created right after the answer by the same activation, never waited on. A
+    // creation that fails is made by the visitor's next request, whose forward adopts the grant; nothing is lost,
+    // since nothing about a brand-new visitor was stored.
+    const created = activateAnonymous(c.env, tenant, session, hints).then(() => undefined, () => undefined);
+    try { c.executionCtx.waitUntil(created); } catch { void created; }
+  }
   return answer;
 });
 /**
