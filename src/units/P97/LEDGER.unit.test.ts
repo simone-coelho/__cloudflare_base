@@ -66,6 +66,28 @@
 //   R10 P84's cases: honoured at a 0.3 share drawn `default`; mismatch at 0 drawn `default`; capped at one in a billion
 //      drawn `default`; republished at one in a billion drawn `personalized`, the learn document republished at a share
 //      of 1 while the first answer's forward is parked wherever it runs (the copy's, or today the object's).
+//   R11 (R-P581 F1, the work order as amended at 54f1f297) The consent race: the creation held until after the visitor's
+//      explicit choice (both purposes, with its operation) and a tracked product view — the view so that the session host
+//      holds the session's own copy (the session store's record and the record's projection of it); with no request after
+//      the choice there is no such copy (measured on the build). "Changed nothing they recorded": the creation answered
+//      200, the record's consent byte-equal to what the choice stored, its grants the one adopted, the session copy's
+//      preferences as before. "As the choice allows": sources.consent both true and the arm armFor gives the visitor at
+//      the fixture's holdout of 0. Measured on the build (d37126e0): the choice rewritten to refused, its operation gone,
+//      the retry 409, the next decision `default` with both false; the session copies kept their preferences there.
+//   R12 (F2) The record change is a key the copy's forward stores in its own record (./_copy's `copy.storage`) after its
+//      decision answered 200, so only the door's record check can see it.
+//   R13 (F6) A failure on the copy other than its activation's own refusal: its activation's call rejecting outright, and
+//      its forward rejecting after its decision ran. The activation's own refusal is its 401 answer (FV1's leg).
+//   R15 (R-P583) "An explicit refusal" the first request makes: its body's hints and its cookies, both refusing; the
+//      Accept that follows writes the cookies accepting. "Applied as today" with no later choice: what today's door leaves
+//      for a refusing hint (P97.FV5's lock): the record holding its grant alone, the next decision refused, the default arm.
+//   R16 (R-P585) The door's first request cannot carry an explicit choice today: its body's "false" hints and its cookies
+//      reduce to plain values with no stored choice (src/content/consent.ts refusalHints, consentFromCookies). So the
+//      ordering rule is pinned on two paths: the door's (R15) and a late activation of the visitor's own grant reaching
+//      the record through its namespace with a stored refusal choice (W05.10's form) chosen 5 s before the record's
+//      Accept, or with no choice on the record (then stored and answered as today).
+//   R14 (F5) The global `fetch` replaced (each call recorded and refused) and a Cache API (`caches`, absent in Node)
+//      installed (each call recorded) from the first request until its answer.
 //
 // R10 (R-P548, by name; before → after). src/units/P76/LEDGER.unit.test.ts `hold` (P76 FA1's helper, :116–143 →
 // :116–140): a wrapper on the SHOPPER_REFLEX namespace holding the object's /identity/activate ACTIVATE ms and its first
@@ -104,6 +126,14 @@
 // and P94 AD1 2 (d2), re-pointed 28/28 (d1), weakened 6 RED (d6); re-pointed on today and on step1, the same six RED on
 // their preconditions until the design lands (d3, d4). The whole suite under the sketch 4245/4272, 272/282 files; its ten
 // failing files fail alike on today's tree (the scratch layout's git legs) but P68 (h-full-sketch, h-full-today).
+// ROUND 3 (R-P581, R-P583, R-P585; logs/r3-*, r3c-*, r3d-*): 42 tests. The build as reviewed (the join d37126e0) 8 RED —
+// the consent race ×2, the newer-refusal lock ×2, the failure fallback ×2, the direct-path Accept ×2; c27ca335 2 RED, the
+// direct-path Accept ×2 alone (it applies the older refusal a late activation carries over the Accept); d06dcc4b 42/42;
+// today 30 RED, 12 GREEN; the sketch (sketches/design3.cjs: the record check, the fallback on any copy failure but the
+// refusal, the creation applied once per grant, a choice never overwritten by an older one) 42/42 twice. Wrong fixes,
+// each RED on its own legs: olderwins 2 (the direct-path Accept), reactivates 4 (the door race, the newer-refusal lock),
+// norecordcheck 2, failure401 2, fetchcopy 2, cachecopy 2. The reviewer's attacks on the build: recordchange RED ×2 on
+// the record-change leg (26/26 before).
 // ROUND 2 (R-P567, F1; logs/r2-*): FV1's held leg holds the visitor's object until the answer has arrived and bounds the
 // held answer against the free one and its `total` against its own measure; FV2's late leg is bound alike (3,000 ms gone).
 // The reviewer's controls (its ctl.cjs, copied but for the scratch guard), each RED on FV1's held leg and FV2's late leg
@@ -116,6 +146,7 @@ vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the
 vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
 vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
+import { CONSENT_LIFETIME_MS, storedConsent } from '@/content/consent';
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { armClassOf, armFor } from '@/sdk/armDraw';
 import { shopperObjectName } from '@/tenancy/objects';
@@ -124,7 +155,7 @@ import type { Env } from '@/types/env';
 
 import {
   BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, PAGE_VIEW, pageInstanceOf, putDocument, readTree, recentSlot,
-  TENANT, UnitKV, UnitR2, type Host, type Mounted,
+  TENANT, UnitKV, UnitR2, VIEW_TABBY_26, type Host, type Mounted,
 } from '../_parity';
 import { watchCopies, type AroundCopy, type CopyCall, type CopyWatch } from './_copy';
 
@@ -167,6 +198,12 @@ const REFUSED = { tracking: false, personalization: false };
 /** The object's own parts of the activation (R-P547; DESIGN §3), `restrict` the session host's only. */
 const OWNER_PARTS = ['alarm', 'commit', 'consent', 'grant', 'op', 'queue'];
 const MARK = 'p97-copy-effect';
+/** R-P581: the key a decision stores in the copy's own record (a change the creation would not reproduce). */
+const RECORD_MARK = 'p97-decision-change';
+/** R-P581: the visitor's explicit consent choice (both purposes accepted), as the SDK sends it with its operation id. */
+const CHOICE_ID = 'p97-choice-accept';
+/** R-P583: a newer explicit refusal, made after the Accept. */
+const REFUSE_ID = 'p97-choice-refuse';
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 // ---------------------------------------------------------------------------
@@ -192,7 +229,7 @@ interface ObjectCall {
   seq: number; stage: Stage; reached: Stage | null; status: number | null; headers: Headers | null;
 }
 interface Reply { status: number; headers: Headers; body: Record<string, unknown>; measured: number }
-interface Session { capability: string; tenant: string; subject: string; sessionId: string; grantId: string; authorityEpoch: string; consent: unknown }
+interface Session { capability: string; tenant: string; subject: string; sessionId: string; grantId: string; authorityEpoch: string; iat: number; exp: number; consent: unknown }
 
 interface World {
   host: Host;
@@ -274,7 +311,7 @@ async function world(host: Host, documents = docsAt(0)): Promise<World> {
       } };
     } };
   }
-  w.copies = watchCopies(m, async (call, proceed, copyEnv) => {
+  w.copies = watchCopies(m, async (call, proceed, copyEnv, copy) => {
     const at = { start: w.next(), end: null as number | null };
     w.copyAt.set(call, at);
     const activation = call.path === '/identity/activate';
@@ -282,7 +319,7 @@ async function world(host: Host, documents = docsAt(0)): Promise<World> {
       return await (w.around ? w.around(call, async () => {
         if (activation) w.activating += 1;
         try { return await proceed(); } finally { if (activation) w.activating -= 1; }
-      }, copyEnv) : (async () => {
+      }, copyEnv, copy) : (async () => {
         if (activation) w.activating += 1;
         try { return await proceed(); } finally { if (activation) w.activating -= 1; }
       })());
@@ -324,6 +361,35 @@ const nextSnapshot = (w: World, s: Session, headers: Record<string, string> = {}
 /** The visitor's next action (a page view, as the SDK sends it). */
 const nextAction = (w: World, s: Session) => w.send('POST', '/realtime/action', shopperHeaders({ [SHOPPER_HEADER]: s.capability }),
   JSON.stringify({ ...PAGE_VIEW, source: 'sdk', userId: s.subject, sessionId: s.sessionId, timestamp: Date.now(), eventId: crypto.randomUUID() }));
+/**
+ * The visitor's explicit consent choice through the real route (HANDOFF-2026-09-18 §7, consent), with its operation: by
+ * default both purposes accepted on a record holding no choice; `expectedRevision` the revision of the choice it follows.
+ */
+const ACCEPT = { tracking: true, personalization: true }, REFUSE = { tracking: false, personalization: false };
+const chooseConsent = (w: World, s: Session, id: string, choice = ACCEPT, expectedRevision: string | null = null, headers: Record<string, string> = {}) =>
+  w.send('POST', `/realtime/session/${s.sessionId}/preferences`, shopperHeaders({ [SHOPPER_HEADER]: s.capability, ...headers }),
+    JSON.stringify({ trackingConsent: choice.tracking, personalizationEnabled: choice.personalization, choice: { id, expectedRevision, grantId: s.grantId, iat: s.iat, exp: s.exp } }));
+/** R-P583: the consent cookies a site's banner writes, refusing both purposes, and after an Accept accepting both. */
+const COOKIES_REFUSING = 'opt_tracking_consent=false; opt_personalization_enabled=false', COOKIES_ACCEPTING = 'opt_tracking_consent=true; opt_personalization_enabled=true';
+/** A product view the SDK sends (Coach's Tabby Shoulder Bag 26), tracked once the visitor's choice allows it. */
+const viewProduct = (w: World, s: Session, headers: Record<string, string> = {}) => w.send('POST', '/realtime/action', shopperHeaders({ [SHOPPER_HEADER]: s.capability, ...headers }),
+  JSON.stringify({ ...VIEW_TABBY_26, source: 'sdk', userId: s.subject, sessionId: s.sessionId, timestamp: Date.now(), eventId: crypto.randomUUID() }));
+/** The session host's own copy of the visitor's session: the session store's record and the record's projection of it, by their preferences. */
+function sessionCopyOf(w: World, s: Session): { store: unknown; projection: unknown } {
+  const preferencesOf = (text: unknown) => { try { return (JSON.parse(String(text)) as { preferences?: unknown }).preferences ?? null; } catch { return null; } };
+  const stored = [...(w.m.env.SESSIONS as unknown as UnitKV).data.entries()].find(([key]) => key.endsWith(`session:${s.sessionId}`));
+  const projected = [...(recordOf(w, s.subject)?.data.entries() ?? [])].find(([key]) => key.startsWith('sessionProjection:') && key.endsWith(`session:${s.sessionId}`));
+  return { store: stored ? preferencesOf(stored[1]) : null, projection: projected ? preferencesOf((projected[1] as { value?: unknown }).value) : null };
+}
+/** R-P585: a stored refusal of both purposes, chosen at `chosenAt` (an explicit choice an activation can carry, as W05.10's does). */
+const olderRefusal = (s: Session, chosenAt: number) => ({ version: 1 as const, tenant: TENANT, subject: s.subject, revision: 'p97-older-refusal',
+  tracking: { value: false, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS }, personalization: { value: false, chosenAt, expiresAt: chosenAt + CONSENT_LIFETIME_MS } });
+/** R-P585: a late activation of the visitor's own grant carrying `instruction`, reaching the record through its namespace (src/index.api-boundary.test.ts's form). */
+const lateActivation = (w: World, s: Session, instruction: ReturnType<typeof olderRefusal>) => {
+  const ns = w.m.env.SHOPPER_REFLEX;
+  return ns.get(ns.idFromName(ownName(s.subject))).fetch('https://shopper-reflex/identity/activate', { method: 'POST',
+    headers: { [SHOPPER_HEADER]: s.capability, 'X-Tenant': TENANT, 'Content-Type': 'application/json' }, body: JSON.stringify({ consent: storedConsent(instruction) }) });
+};
 /** The session route, POST /v1/{tenant}/identity/session, with the session held (or none: a fresh browser). */
 const sessionRoute = (w: World, s: Session | null) => w.send('POST', `/v1/${TENANT}/identity/session`, shopperHeaders(s ? { [SHOPPER_HEADER]: s.capability } : {}), '{}');
 
@@ -548,6 +614,28 @@ describe('unit:P97.FV1 (E22, R-P547)', () => {
           .toEqual({ asked: ['/identity/activate'], objects: [], created: 0, writes: [] });
       } finally { w.stop(); }
     }, 120_000);
+
+    it(`host (${host}): LOCK — the first answer makes no outbound fetch and no Cache API call (R-P581 F5): with the global fetch and the Cache API watched from the request until its answer, neither is called`, async () => {
+      const w = await world(host);
+      const g = globalThis as unknown as Record<string, unknown>;
+      const realFetch = globalThis.fetch, hadCaches = Object.hasOwn(g, 'caches'), realCaches = g.caches;
+      const restore = () => { globalThis.fetch = realFetch; if (hadCaches) g.caches = realCaches; else Reflect.deleteProperty(g, 'caches'); };
+      try {
+        await door(w); await w.drain(); w.reset();
+        const fetched: string[] = [], cached: string[] = [];
+        const urlOf = (input: unknown) => input instanceof Request ? input.url : String(input);
+        const cache = (name: string): object => new Proxy({}, { get: (_target, property) => typeof property === 'symbol' || property === 'then' ? undefined
+          : async (...args: unknown[]) => { cached.push(`${name}.${String(property)} ${urlOf(args[0])}`); return undefined; } });
+        globalThis.fetch = (async (input: RequestInfo | URL) => { fetched.push(urlOf(input)); throw new TypeError('P97: no outbound fetch from the first answer'); }) as typeof fetch;
+        Object.defineProperty(g, 'caches', { configurable: true, writable: true, value: new Proxy({}, { get: (_target, property) => property === 'default' ? cache('caches.default')
+          : typeof property === 'symbol' || property === 'then' ? undefined : async (...args: unknown[]) => { cached.push(`caches.${String(property)} ${urlOf(args[0])}`); return cache(`caches.open(${urlOf(args[0])})`); } }) });
+        let a: Reply;
+        try { a = await door(w); } finally { restore(); }
+        await w.drain();
+        expect([a.status, typeof sessionOf(a)?.capability], `${host}: PRECONDITION — the door answers (${show(a)})`).toEqual([200, 'string']);
+        expect.soft({ fetched, cached }, `${host}: P97.FV1 — LOCK: no outbound fetch and no Cache API call before the answer`).toEqual({ fetched: [], cached: [] });
+      } finally { restore(); w.stop(); }
+    }, 120_000);
   }
 });
 
@@ -678,6 +766,217 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
             expect.soft({ same: JSON.stringify(contentOf(a.body)) === JSON.stringify(contentOf(next.body)), record: heldBy(w, session) },
               `${host}: P97.FV2 — ${effect.name}: the same answer (the visitor's next page view's content), the record holding the one grant`)
               .toEqual({ same: true, record: { keys: ['grantAuthority'], grants: [session.grantId], epoch: session.authorityEpoch } });
+          }
+        } finally { w.stop(); }
+      }
+    }, 180_000);
+
+    it(`host (${host}): a consent choice made before the record's creation lands outlives it (R-P581 F1) — with the creation held until after the visitor's explicit choice (both purposes accepted) and a tracked product view — the first request making an explicit refusal by its body, an explicit refusal by its cookies (the Accept then writing them accepting), and no hint (R-P583 (a): a choice is never overwritten by an older one): once drained, the creation answered and changed nothing they recorded: the record's consent is the choice (its switches and its operation) and its grant the one adopted; the same choice sent again answers 200; the next decision is as the choice allows (sources.consent both true, the arm the holdout gives the visitor)${host === 'session' ? '; and the session\'s own copy (the session store\'s record and the record\'s projection of it) is not restricted' : ''}`, async () => {
+      const cases: Array<[string, Record<string, unknown>, Record<string, string>, Record<string, string>]> = [
+        ['the first request\'s body refusing explicitly', { trackingConsent: 'false', personalizationEnabled: 'false' }, {}, {}],
+        ['the first request\'s cookies refusing explicitly', {}, { Cookie: COOKIES_REFUSING }, { Cookie: COOKIES_ACCEPTING }],
+        ['the first request\'s body and cookies refusing explicitly', { trackingConsent: 'false', personalizationEnabled: 'false' }, { Cookie: COOKIES_REFUSING }, { Cookie: COOKIES_ACCEPTING }],
+        ['no hints', {}, {}, {}]];
+      for (const [label, hints, firstHeaders, laterHeaders] of cases) {
+        const w = await world(host);
+        try {
+          await door(w); await w.drain(); w.reset();
+          const held = gate(); const creations: ObjectCall[] = [];
+          w.intercept = async call => { if (call.path === '/identity/activate' && creations.length === 0) { creations.push(call); await held.wait; } };
+          const pendingDoor = door(w, hints, undefined, firstHeaders);
+          const first = await Promise.race([pendingDoor, sleep(HOLD_MS).then(() => null)]);
+          if (!first) held.open();
+          const a = first ?? await pendingDoor;
+          const s = sessionOf(a);
+          expect([first === null ? `the first answer waited on the held creation (over ${HOLD_MS} ms)` : 'answered', a.status, typeof s?.capability],
+            `${host}: P97.FV2 — ${label}: the first answer does not wait on the creation (${show(a)})`).toEqual(['answered', 200, 'string']);
+          const choice = await chooseConsent(w, s!, CHOICE_ID, ACCEPT, null, laterHeaders);
+          const viewed = await viewProduct(w, s!, laterHeaders);
+          const chosen = { consent: structuredClone(recordOf(w, s!.subject)?.data.get('consent') ?? null), grants: heldBy(w, s!).grants, copy: sessionCopyOf(w, s!) };
+          const stored = chosen.consent as { tracking?: { value?: unknown }; personalization?: { value?: unknown }; operation?: { id?: unknown } } | null;
+          expect([choice.status, viewed.status, stored?.tracking?.value ?? null, stored?.personalization?.value ?? null, stored?.operation?.id ?? null, chosen.grants],
+            `${host}: PRECONDITION — ${label}: the visitor's choice and product view are answered before the creation, the choice stored with its operation (${JSON.stringify(choice.body).slice(0, 200)})`)
+            .toEqual([200, 200, true, true, CHOICE_ID, [s!.grantId]]);
+          if (host === 'session') expect(chosen.copy, `${host}: PRECONDITION — ${label}: the session's own copy carries the choice before the creation`)
+            .toEqual({ store: expect.objectContaining({ trackingConsent: true, personalizationEnabled: true }), projection: expect.objectContaining({ trackingConsent: true, personalizationEnabled: true }) });
+          held.open(); await w.drain(); w.intercept = null;
+          const after = { creation: creations.map(c => c.status), consent: recordOf(w, s!.subject)?.data.get('consent') ?? null, grants: heldBy(w, s!).grants, ...(host === 'session' ? { copy: sessionCopyOf(w, s!) } : {}) };
+          expect.soft(after, `${host}: P97.FV2 — ${label}: the creation landing after the choice answered and changed nothing it recorded (today's build re-activates: the choice rewritten to refused, its operation lost)`)
+            .toEqual({ creation: [200], consent: chosen.consent, grants: chosen.grants, ...(host === 'session' ? { copy: chosen.copy } : {}) });
+          const retry = await chooseConsent(w, s!, CHOICE_ID, ACCEPT, null, laterHeaders);
+          const next = await nextSnapshot(w, s!, laterHeaders); await w.drain();
+          const consent = (next.body.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+          expect.soft({ retry: retry.status, next: [next.status, consent?.tracking ?? null, consent?.personalization ?? null, next.body.arm ?? null] },
+            `${host}: P97.FV2 — ${label}: the same choice sent again answers 200 and the next decision is as the choice allows (${JSON.stringify(retry.body).slice(0, 160)})`)
+            .toEqual({ retry: 200, next: [200, true, true, armFor(s!.subject, holdoutOf(0))] });
+        } finally { w.stop(); }
+      }
+    }, 240_000);
+
+    it(`host (${host}): an explicit refusal the first request makes, with no later choice, is applied as today when the record's creation lands late (R-P583 (b)) — by its body and by its cookies, the creation held until after the visitor's next page view: once drained, the creation answered, the record holds its grant alone (nothing stored, as today: P97.FV5's hints lock), and the next decision is refused (sources.consent both false) on the default arm`, async () => {
+      for (const [label, hints, headers] of [['the first request\'s body refusing explicitly', { trackingConsent: 'false', personalizationEnabled: 'false' }, {}],
+        ['the first request\'s cookies refusing explicitly', {}, { Cookie: COOKIES_REFUSING }],
+        ['the first request\'s body and cookies refusing explicitly', { trackingConsent: 'false', personalizationEnabled: 'false' }, { Cookie: COOKIES_REFUSING }]] as Array<[string, Record<string, unknown>, Record<string, string>]>) {
+        const w = await world(host);
+        try {
+          await door(w); await w.drain(); w.reset();
+          const held = gate(); const creations: ObjectCall[] = [];
+          w.intercept = async call => { if (call.path === '/identity/activate' && creations.length === 0) { creations.push(call); await held.wait; } };
+          const pendingDoor = door(w, hints, undefined, headers);
+          const first = await Promise.race([pendingDoor, sleep(HOLD_MS).then(() => null)]);
+          if (!first) held.open();
+          const a = first ?? await pendingDoor;
+          const s = sessionOf(a);
+          expect([first === null ? `the first answer waited on the held creation (over ${HOLD_MS} ms)` : 'answered', a.status, typeof s?.capability, s?.consent ?? null],
+            `${host}: P97.FV2 — ${label}: the first answer does not wait on the creation, its session refused (${show(a)})`).toEqual(['answered', 200, 'string', REFUSED]);
+          const page = await nextSnapshot(w, s!, headers);
+          expect(page.status, `${host}: PRECONDITION — ${label}: the visitor's next page view, no choice, is answered before the creation`).toBe(200);
+          held.open(); await w.drain(); w.intercept = null;
+          const next = await nextSnapshot(w, s!, headers); await w.drain();
+          const consent = (next.body.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+          expect.soft({ creation: creations.map(c => c.status), record: heldBy(w, s!).keys, consent: recordOf(w, s!.subject)?.data.get('consent') ?? null,
+            next: [next.status, consent?.tracking ?? null, consent?.personalization ?? null, next.body.arm ?? null] },
+          `${host}: P97.FV2 — ${label}: with no later choice the refusal is applied as today`)
+            .toEqual({ creation: [200], record: ['grantAuthority'], consent: null, next: [200, false, false, 'default'] });
+        } finally { w.stop(); }
+      }
+    }, 180_000);
+
+    it(`host (${host}): a late activation carrying a stored refusal choice older than an Accept already on the record leaves the Accept (R-P585, the direct path) — the record created and the visitor's Accept made, then an activation of the visitor's own grant reaching the record through its namespace with a refusal of both purposes chosen 5 s before the Accept: it answers 200, the record's consent is still the Accept (its switches and its operation), and the same Accept sent again answers 200; the next decision is as the Accept allows`, async () => {
+      const w = await world(host);
+      try {
+        await door(w); await w.drain(); w.reset();
+        const a = await door(w); await w.drain();
+        const s = sessionOf(a);
+        expect([a.status, typeof s?.capability, heldBy(w, s!).keys], `${host}: PRECONDITION — the door answers and the record is created (${show(a)})`).toEqual([200, 'string', ['grantAuthority']]);
+        const older = Date.now() - 5_000;
+        const accepted = await chooseConsent(w, s!, CHOICE_ID);
+        const accept = structuredClone(recordOf(w, s!.subject)?.data.get('consent') ?? null) as { tracking?: { value?: unknown; chosenAt?: number }; operation?: { id?: unknown } } | null;
+        expect([accepted.status, accept?.tracking?.value ?? null, (accept?.tracking?.chosenAt ?? 0) > older, accept?.operation?.id ?? null],
+          `${host}: PRECONDITION — the visitor's Accept is stored with its operation, chosen after the refusal the late activation carries`).toEqual([200, true, true, CHOICE_ID]);
+        const activation = await lateActivation(w, s!, olderRefusal(s!, older));
+        await w.drain();
+        const retry = await chooseConsent(w, s!, CHOICE_ID);
+        const next = await nextSnapshot(w, s!); await w.drain();
+        const consent = (next.body.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+        expect.soft({ activation: activation.status, consent: recordOf(w, s!.subject)?.data.get('consent') ?? null, retry: retry.status,
+          next: [next.status, consent?.tracking ?? null, consent?.personalization ?? null, next.body.arm ?? null] },
+        `${host}: P97.FV2 — the older refusal a late activation carries leaves the newer Accept (c27ca335 applies it over the Accept: ${JSON.stringify(retry.body).slice(0, 120)})`)
+          .toEqual({ activation: 200, consent: accept, retry: 200, next: [200, true, true, armFor(s!.subject, holdoutOf(0))] });
+      } finally { w.stop(); }
+    }, 120_000);
+
+    it(`host (${host}): a late activation carrying a stored refusal choice, with no later choice on the record, is applied as today (R-P585, the direct path) — it answers 200 with the refusal, the record stores it (both switches refused, chosen when the refusal says), and the next decision is refused on the default arm`, async () => {
+      const w = await world(host);
+      try {
+        await door(w); await w.drain(); w.reset();
+        const a = await door(w); await w.drain();
+        const s = sessionOf(a);
+        expect([a.status, typeof s?.capability, heldBy(w, s!).keys], `${host}: PRECONDITION — the door answers and the record is created, holding no choice (${show(a)})`).toEqual([200, 'string', ['grantAuthority']]);
+        const older = Date.now() - 5_000;
+        const activation = await lateActivation(w, s!, olderRefusal(s!, older));
+        const answered = await activation.json().catch(() => ({})) as { consent?: { tracking?: unknown; personalization?: unknown } };
+        await w.drain();
+        const stored = recordOf(w, s!.subject)?.data.get('consent') as { tracking?: { value?: unknown; chosenAt?: unknown }; personalization?: { value?: unknown; chosenAt?: unknown } } | undefined;
+        const next = await nextSnapshot(w, s!); await w.drain();
+        const consent = (next.body.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+        expect.soft({ activation: [activation.status, answered.consent?.tracking ?? null, answered.consent?.personalization ?? null],
+          stored: [stored?.tracking?.value ?? null, stored?.tracking?.chosenAt ?? null, stored?.personalization?.value ?? null, stored?.personalization?.chosenAt ?? null],
+          next: [next.status, consent?.tracking ?? null, consent?.personalization ?? null, next.body.arm ?? null] },
+        `${host}: P97.FV2 — with no later choice on the record the late activation's refusal is stored and answered`)
+          .toEqual({ activation: [200, false, false], stored: [false, older, false, older], next: [200, false, false, 'default'] });
+      } finally { w.stop(); }
+    }, 120_000);
+
+    it(`host (${host}): LOCK — a newer explicit refusal still applies (R-P583 (c)): the visitor accepting, then refusing both purposes by a newer explicit choice before the record's creation lands: once drained, the creation answered and the record's consent is the newer refusal (its switches and its operation), the same refusal sent again answers 200, and the next decision is refused on the default arm (W05.10's repeat activation and W35.04's retried detach are their own locks)`, async () => {
+      const w = await world(host);
+      try {
+        await door(w); await w.drain(); w.reset();
+        const held = gate(); const creations: ObjectCall[] = [];
+        w.intercept = async call => { if (call.path === '/identity/activate' && creations.length === 0) { creations.push(call); await held.wait; } };
+        const pendingDoor = door(w);
+        const first = await Promise.race([pendingDoor, sleep(HOLD_MS).then(() => null)]);
+        if (!first) held.open();
+        const a = first ?? await pendingDoor;
+        const s = sessionOf(a);
+        expect([first === null ? `the first answer waited on the held creation (over ${HOLD_MS} ms)` : 'answered', a.status, typeof s?.capability],
+          `${host}: P97.FV2 — the first answer does not wait on the creation (${show(a)})`).toEqual(['answered', 200, 'string']);
+        const accepted = await chooseConsent(w, s!, CHOICE_ID);
+        const refused = await chooseConsent(w, s!, REFUSE_ID, REFUSE, CHOICE_ID);
+        const newer = structuredClone(recordOf(w, s!.subject)?.data.get('consent') ?? null) as { tracking?: { value?: unknown }; personalization?: { value?: unknown }; operation?: { id?: unknown } } | null;
+        expect([accepted.status, refused.status, newer?.tracking?.value ?? null, newer?.personalization?.value ?? null, newer?.operation?.id ?? null],
+          `${host}: PRECONDITION — the Accept and the newer refusal are answered before the creation, the refusal stored with its operation (${JSON.stringify(refused.body).slice(0, 200)})`)
+          .toEqual([200, 200, false, false, REFUSE_ID]);
+        held.open(); await w.drain(); w.intercept = null;
+        const retry = await chooseConsent(w, s!, REFUSE_ID, REFUSE, CHOICE_ID);
+        const next = await nextSnapshot(w, s!); await w.drain();
+        const consent = (next.body.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+        expect.soft({ creation: creations.map(c => c.status), consent: recordOf(w, s!.subject)?.data.get('consent') ?? null, retry: retry.status,
+          next: [next.status, consent?.tracking ?? null, consent?.personalization ?? null, next.body.arm ?? null] },
+        `${host}: P97.FV2 — LOCK: the newer explicit refusal applies after the late creation (${JSON.stringify(retry.body).slice(0, 160)})`)
+          .toEqual({ creation: [200], consent: newer, retry: 200, next: [200, false, false, 'default'] });
+      } finally { w.stop(); }
+    }, 180_000);
+
+    it(`host (${host}): a decision that changes the copy's record beyond what its activation left (a key the copy's forward stores in its own record) makes the door fall back to today's path: the real activation and forward on the visitor's own object before the answer, under the copy's minted session, the same answer, and one record holding the one grant (R-P581 F2)`, async () => {
+      const w = await world(host);
+      try {
+        await door(w); await w.drain(); w.reset();
+        const shoppers = w.m.shoppers.size;
+        let changed = 'not changed (no copy asked)';
+        w.around = async (call, proceed, _env, copy) => {
+          const answer = await proceed();
+          if (call.path === '/authority/request' && changed.startsWith('not')) { await copy.storage.put(RECORD_MARK, 1); changed = 'changed'; }
+          return answer;
+        };
+        const a = await door(w);
+        const session = sessionOf(a);
+        const copyActivation = w.copies.calls.find(c => c.path === '/identity/activate');
+        const real = w.objects.filter(c => c.binding === 'SHOPPER_REFLEX' && c.stage === BEFORE).slice(0, 2)
+          .map(c => [c.path, c.name === ownName(session?.subject ?? ''), c.capability === session?.capability]);
+        await w.drain();
+        w.around = null;
+        expect.soft({ changed, status: a.status, sameSession: copyActivation?.capability === session?.capability && session !== null, real },
+          `${host}: P97.FV2 — the copy's record changed by its decision: the door falls back to the real activation and forward under the same minted session (${show(a)})`)
+          .toEqual({ changed: 'changed', status: 200, sameSession: true, real: [['/identity/activate', true, true], ['/authority/request', true, true]] });
+        if (session) {
+          const next = await nextSnapshot(w, session); await w.drain();
+          expect.soft({ same: JSON.stringify(contentOf(a.body)) === JSON.stringify(contentOf(next.body)), record: heldBy(w, session), records: w.m.shoppers.size - shoppers },
+            `${host}: P97.FV2 — the copy's record changed: the same answer, one record holding the one grant`)
+            .toEqual({ same: true, record: { keys: ['grantAuthority'], grants: [session.grantId], epoch: session.authorityEpoch }, records: 1 });
+        }
+      } finally { w.stop(); }
+    }, 120_000);
+
+    it(`host (${host}): a failure on the copy other than its activation's own refusal — the copy's activation failing outright, and the copy's decision throwing — makes the door fall back to today's path and answer 200 with \`session\`: the real activation and forward under the copy's minted session, the same answer, one record holding the one grant (R-P581 F6); the activation's own refusal still answers 401 (FV1)`, async () => {
+      for (const at of ['/identity/activate', '/authority/request'] as const) {
+        const w = await world(host);
+        try {
+          await door(w); await w.drain(); w.reset();
+          const shoppers = w.m.shoppers.size;
+          let failed = 'not failed (no copy asked)';
+          w.around = async (call, proceed) => {
+            if (call.path !== at || !failed.startsWith('not')) return proceed();
+            failed = 'failed';
+            if (at === '/identity/activate') throw new Error('P97: the copy\'s activation failed outright');
+            await proceed();
+            throw new Error('P97: the copy\'s decision threw');
+          };
+          const a = await door(w);
+          const session = sessionOf(a);
+          const copyActivation = w.copies.calls.find(c => c.path === '/identity/activate');
+          const real = w.objects.filter(c => c.binding === 'SHOPPER_REFLEX' && c.stage === BEFORE).slice(0, 2)
+            .map(c => [c.path, c.name === ownName(session?.subject ?? ''), c.capability === session?.capability]);
+          await w.drain();
+          w.around = null;
+          expect.soft({ failed, status: a.status, session: typeof session?.capability, sameSession: copyActivation?.capability === session?.capability && session !== null, real },
+            `${host}: P97.FV2 — the copy failing at ${at}: the door falls back to today's path and answers 200 with the session (${show(a)})`)
+            .toEqual({ failed: 'failed', status: 200, session: 'string', sameSession: true, real: [['/identity/activate', true, true], ['/authority/request', true, true]] });
+          if (session) {
+            const next = await nextSnapshot(w, session); await w.drain();
+            expect.soft({ same: JSON.stringify(contentOf(a.body)) === JSON.stringify(contentOf(next.body)), record: heldBy(w, session), records: w.m.shoppers.size - shoppers },
+              `${host}: P97.FV2 — the copy failing at ${at}: the same answer, one record holding the one grant`)
+              .toEqual({ same: true, record: { keys: ['grantAuthority'], grants: [session.grantId], epoch: session.authorityEpoch }, records: 1 });
           }
         } finally { w.stop(); }
       }

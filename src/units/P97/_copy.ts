@@ -36,11 +36,15 @@ export interface CopyCall {
   headers: Headers | null;
 }
 
+/** The copy itself, as a call to it sees it: its own record (the in-memory storage its code runs on). */
+export interface CopyRecord { storage: DurableObjectStorage }
+
 /**
  * Runs one call to the copy. `proceed()` hands the call to the copy itself and resolves with its answer; what `around`
- * resolves with is what the copy's caller receives. `env` is the copy's own environment (the one its code runs on).
+ * resolves with is what the copy's caller receives. `env` is the copy's own environment (the one its code runs on) and
+ * `copy` its own record (P97 R-P581: a change the decision makes to it).
  */
-export type AroundCopy = (call: CopyCall, proceed: () => Promise<Response>, env: Env) => Promise<Response>;
+export type AroundCopy = (call: CopyCall, proceed: () => Promise<Response>, env: Env, copy: CopyRecord) => Promise<Response>;
 
 export interface CopyWatch {
   /** Every call made to a copy while the watch was active, in the order the calls were made. */
@@ -61,8 +65,9 @@ ShopperReflex.prototype.fetch = async function watched(this: ShopperReflex, requ
   watch.calls.push(call);
   // The environment the copy's code runs on (the synthetic boundary's view of the environment it was built with).
   const env = (this as unknown as { rawEnv: Env }).rawEnv;
+  const copy: CopyRecord = { storage: (this as unknown as { state: DurableObjectState }).state.storage };
   try {
-    const answer = await watch.around(call, () => original.call(this, request), env);
+    const answer = await watch.around(call, () => original.call(this, request), env, copy);
     call.status = answer.status;
     call.headers = new Headers(answer.headers);
     return answer;
