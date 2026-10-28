@@ -123,11 +123,11 @@
         "src/content/kinds.ts (the learn document's money member and its validation only)",
         "src/content/types.ts (LearnConfig's money member only)",
         "src/learn/route.ts",
-        "src/ledger/recovery.ts (the outcome's prepare body, its admit call and OutcomeRecoveryInput's money member only; R-P571 (b))",
+        "src/ledger/recovery.ts (OutcomeRecoveryInput's money member; sourceOf leaving the money stamp out of the source digest; runOwnerRecovery's first-admission stamp; the prepare body and admit call only as the stamp needs; R-P571 (b), R-P588)",
         "src/learn/policy.ts",
         "src/learn/fan.ts",
         "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call only)",
-        "src/learn/hourly.ts (the hourly fold's credit only, and its recovery fingerprint naming the money policy where P103's MP3 shows a policy published between a fold's start and its recovery reachable; R-P571 (d))",
+        "src/learn/hourly.ts (the hourly fold's credit only; not its recovery fingerprint, R-P576 R12)",
         "src/learn/report.ts (the raw grids' credit only)",
         "src/durable-objects/LearnStats.ts (the W24 rebuild's call to foldRetainedDay only)",
         "src/sdk/emit.ts",
@@ -138,7 +138,10 @@
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md (the learn document's money member only; R-P571 (c))"
+        "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
+        "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
+        "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money only; R-P588)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
