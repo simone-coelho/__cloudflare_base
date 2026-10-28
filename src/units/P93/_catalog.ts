@@ -9,7 +9,9 @@ import { createHash } from 'node:crypto';
 import { expect, vi } from 'vitest';
 
 import { INPUT_MAX_BYTES, INPUT_MAX_RECORDS } from '@/config/input';
-import { invalidatePublicationCache } from '@/config/publication';
+import { invalidatePublicationCache, publish } from '@/config/publication';
+import { CONTENT_KIND } from '@/content/kinds';
+import type { ContentCatalog } from '@/content/types';
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 
 import { asOperator, BRAND, declaredSlots, expectPublished, layoutSlot, learnDocument, loadDocument, MODULES, mount, pageInstanceOf, putDocument, recentSlot,
@@ -278,16 +280,70 @@ export function packedObjects(m: Mounted, pack: string): Array<{ key: string; at
   if (!held) return [];
   return [...held.objects].filter(([, place]) => place.kind !== null).map(([digest, place]) => ({ key: KEY[place.kind!](digest), at: place.at, bytes: place.bytes }));
 }
+/** P98 R10: the key an object of its own has (a part, a shard or an id shard, by its class and its full digest). */
+const OWN = /\/content\/(part|shard|idshard)\/([0-9a-f]{64})\.json$/;
+/** P98 R10: an object inside a stored pack, by the key it would have as its own: the pack's key, its raw text and the object's place. */
+function inPack(m: Mounted, key: string): { packKey: string; raw: string; at: number; bytes: number } | null {
+  const own = OWN.exec(key);
+  if (!own || m.storage.objects.has(key)) return null;
+  const where = locate(m, own[2]!, key, []);
+  if (!where || where === 'own') return null;
+  return { packKey: KEY.pack(where.pack), raw: m.storage.objects.get(KEY.pack(where.pack))!, at: where.at, bytes: where.bytes };
+}
+/** P98 R10: rewrite one object's bytes where they lie in its pack (its range and the pack's length kept). Answers what to put back. */
+function alterInPack(m: Mounted, key: string, change: (bytes: Buffer) => void): () => void {
+  const found = inPack(m, key);
+  if (!found) return () => undefined;
+  const bytes = Buffer.from(found.raw, 'utf8');
+  change(bytes.subarray(found.at, found.at + found.bytes));
+  m.storage.objects.set(found.packKey, bytes.toString('utf8'));
+  return () => { m.storage.objects.set(found.packKey, found.raw); };
+}
 /**
- * P98 R10 (R-P569 (b)): lose an object as a test loses it: an object of its own is deleted; one inside a pack is lost with
- * the pack that holds it. Answers what to put back.
+ * P98 R10 (R-P569 (b)): lose an object as a test loses it: an object of its own is deleted; one inside a pack has its
+ * bytes lost where they lie (each byte of its range a space; its neighbours, its pack and the pack's length untouched),
+ * for a pack never loses one object alone. Answers what to put back.
  */
 export function loseObject(m: Mounted, key: string): () => void {
-  const at = /\/content\/(part|shard|idshard)\/([0-9a-f]{64})\.json$/.exec(key);
-  const where = m.storage.objects.has(key) ? key : at ? (() => { const s = storedValue(m, at[1] as 'part' | 'shard' | 'idshard', at[2]!); return s.value ? s.key : key; })() : key;
-  const raw = m.storage.objects.get(where);
-  m.storage.objects.delete(where);
-  return () => { if (raw !== undefined) m.storage.objects.set(where, raw); };
+  const raw = m.storage.objects.get(key);
+  if (raw !== undefined) { m.storage.objects.delete(key); return () => { m.storage.objects.set(key, raw); }; }
+  return alterInPack(m, key, bytes => { bytes.fill(0x20); });
+}
+/**
+ * P98 R10 (R-P569 (b)): a body that is not its digest's where the object lies: an object of its own is replaced by
+ * `other`'s stored text (as before packs); one inside a pack keeps its range and length, one character of its first
+ * string value changed (a well-formed value whose digest is another). Answers what to put back.
+ */
+export function forgeObject(m: Mounted, key: string, other: string): () => void {
+  const raw = m.storage.objects.get(key);
+  if (raw !== undefined) { m.storage.objects.set(key, heldRaw(m, other) ?? raw); return () => { m.storage.objects.set(key, raw); }; }
+  return alterInPack(m, key, bytes => {
+    const at = bytes.indexOf('":"', 0, 'utf8') + 3, c = bytes[at];
+    if (at >= 3 && c !== undefined && c >= 0x41 && c <= 0x7a && c !== 0x5c) bytes[at] = c === 0x41 ? 0x42 : 0x41;
+  });
+}
+/**
+ * P98 R10 (R-P569 (b)): the stored text of the object a key names — its object of its own, else (a part, a shard or an
+ * id shard) the bytes a stored pack holds of the object with that digest; null where the store holds it nowhere.
+ */
+export function heldRaw(m: Mounted, key: string): string | null {
+  const raw = m.storage.objects.get(key);
+  if (raw !== undefined) return raw;
+  const own = OWN.exec(key);
+  return own ? storedValue(m, own[1] as 'part' | 'shard' | 'idshard', own[2]!).raw : null;
+}
+/** P98 R10: whether the store holds the object a key names (as its own, or inside a stored pack by that digest). */
+export const held = (m: Mounted, key: string) => heldRaw(m, key) !== null;
+/**
+ * P98 R10 (R-P569 (b)): the keys of one class the store holds — its objects of their own and, for parts, shards and id
+ * shards, each object inside a stored pack, by the key it would have as its own (one key per digest).
+ */
+export function heldKeys(m: Mounted, cls: string): string[] {
+  const out = new Set(objectKeys(m, cls));
+  if (cls === 'part' || cls === 'shard' || cls === 'idshard') {
+    for (const key of objectKeys(m, 'pack')) for (const o of packedObjects(m, /([0-9a-f]{64})\.pack$/.exec(key)![1]!)) if (classOf(o.key) === cls) out.add(o.key);
+  }
+  return sorted(out);
 }
 /** P98 R10 (R-P569 (b)): a shard, an id shard or a part as stored, by its digest: from the pack that holds it, else its own object. */
 export function storedValue(m: Mounted, kind: 'shard' | 'idshard' | 'part', digest: string, prefer: readonly string[] = []): { value: Record<string, unknown> | null; key: string; raw: string | null } {
@@ -296,6 +352,48 @@ export function storedValue(m: Mounted, kind: 'shard' | 'idshard' | 'part', dige
   if (!where) return { value: null, key: own, raw: null };
   const bytes = packObjects(m, where.pack)!.bytes.subarray(where.at, where.at + where.bytes).toString('utf8');
   return { value: JSON.parse(bytes) as Record<string, unknown>, key: KEY.pack(where.pack), raw: bytes };
+}
+/**
+ * P98 R10 (R-P569 (b)): the records stored in P93's form beside the routes, as the release before packs stores them —
+ * each product's part, product shard and id shard an object of its own at its content address (canonical bytes), the
+ * manifest's `index` naming them with no byte range — published over the catalogue in force by the publication
+ * authority (no route writes that form once packs exist). The pieces are the validator's own, routed as the catalogue
+ * routes them (every slot type the carousel and a featured product: that product's part; else shared). Answers each
+ * product's part digest.
+ */
+export async function storedBeforePacks(m: Mounted, records: unknown[], version: string, note: string): Promise<Map<string, string>> {
+  const checked = CONTENT_KIND.validate({ pieces: [...MODULES, ...records] });
+  if (!checked.ok) throw new Error(`P93 fixture: ${checked.errors.slice(0, 3).join('; ')}`);
+  const shared: unknown[] = [], byProduct = new Map<string, unknown[]>();
+  for (const piece of checked.value.pieces) {
+    const product = piece.slotTypes?.every(s => s === CAROUSEL) && piece.featuredProductIds?.[0] ? piece.featuredProductIds[0] : null;
+    if (product === null) shared.push(piece); else byProduct.set(product, [...(byProduct.get(product) ?? []), piece]);
+  }
+  const digests = new Map<string, string>(), shards = new Map<string, Record<string, { digest: string; records: number }>>(), idShards = new Map<string, Record<string, string>>();
+  for (const [product, pieces] of byProduct) {
+    const value = { product, pieces }, digest = digestOfValue(value);
+    await m.storage.put(KEY.part(digest), canonical(value)); digests.set(product, digest);
+    const shard = shards.get(bucketOf(product)) ?? {}; shard[product] = { digest, records: pieces.length }; shards.set(bucketOf(product), shard);
+    for (const piece of pieces as Array<{ id: string }>) { const ids = idShards.get(bucketOf(piece.id)) ?? {}; ids[piece.id] = product; idShards.set(bucketOf(piece.id), ids); }
+  }
+  const sortedOf = <T>(o: Record<string, T>) => Object.fromEntries(Object.keys(o).sort().map(k => [k, o[k]!]));
+  const index = { key: 'sha256-hex2', shards: {} as Record<string, unknown>, ids: {} as Record<string, unknown> };
+  for (const name of [...shards.keys()].sort()) {
+    const value = { shard: name, products: sortedOf(shards.get(name)!) }, digest = digestOfValue(value);
+    await m.storage.put(KEY.shard(digest), canonical(value));
+    index.shards[name] = { digest, products: Object.keys(value.products).length, records: Object.values(value.products).reduce((n, p) => n + p.records, 0) };
+  }
+  for (const name of [...idShards.keys()].sort()) {
+    const value = { shard: name, ids: sortedOf(idShards.get(name)!) }, digest = digestOfValue(value);
+    await m.storage.put(KEY.idshard(digest), canonical(value));
+    index.ids[name] = { digest, records: Object.keys(value.ids).length };
+  }
+  const manifest = { version, productSlots: [CAROUSEL], pieces: shared, index }, base = await loadDocument(m, 'catalog');
+  const written = await publish<ContentCatalog>(m.env, CONTENT_KIND, TENANT, { type: 'replace', candidate: manifest },
+    { actor: 'p93-fixture', note, operationId: `${base.revision}:${crypto.randomUUID()}`, expectedRevision: base.revision, expectedPublication: base.publication }, () => manifest);
+  if (!written.ok) throw new Error(`P93 fixture: the stored form was refused: ${written.errors.slice(0, 3).join('; ')}`);
+  invalidatePublicationCache();
+  return digests;
 }
 /** A product's part as stored, read through a pointer (P98 R10: from its pack's byte range where it lives in a pack). */
 export function partAt(m: Mounted, pointer: Pointer | undefined): { ids: string[]; value: Record<string, unknown> | null } {

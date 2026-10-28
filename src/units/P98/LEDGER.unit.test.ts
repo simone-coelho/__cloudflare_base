@@ -67,7 +67,8 @@
 //      16 minutes ago); elsewhere every object reads as past the grace, which the sketch measured against the locks.
 //   S7 The catalogue-import credential (LD2) is exercised on the parity mount (the demo profile) with a service token
 //      minted with `roles: ['catalog-import']` under the mount's own signing material; the customer profile's boundary
-//      (src/customerBoundary.ts CUSTOMER_ROUTES) is outside the grant and is reported, not tested.
+//      (src/customerBoundary.ts CUSTOMER_ROUTES, granted by R-P569 (c): the two doors only) is driven by LD2's
+//      customer-profile leg through P87's stamp (the real Worker).
 //   S8 load_too_large (LD1): within today's input caps (2 MiB a request) a pack passes 64 MiB only by rewriting large
 //      parts: 36 products whose parts are each about 1.9 MiB, each loaded alone, then one load naming all 36.
 //   S9 "Repeated once" (LD2, LD4) is counted as the consecutive attempts of one call (its operation, key and range): the
@@ -83,29 +84,48 @@
 //      it again (re-send, resend, sent again, resubmit, try or retry the file or load again). Kit 03 may keep a true sentence
 //      naming files of 200 to 300 products (P93.CS7's lock reads one; no R10 on that file is granted).
 //
-// THE R10s (granted by name, R-P551), before → after:
+// THE R10s (granted by name, R-P551, R-P569, R-P578, R-P582), before → after, every expectation unchanged:
 //   src/units/_parity.ts UnitR2 (:171–195): `get(key)` → `get(key, { range })` answers the range's bytes with the
 //     object's size (R2's ranged read); `head(key)` answered `{ key }` → `{ key, etag, size, customMetadata }`. Nothing
 //     else in the double changed (its list still reports `uploaded: new Date(0)`).
-//   src/units/P93/_catalog.ts (:88–220): `KEY.pack` and the `pack` class added; `indexOf` reads a shard and an id shard
-//     pointer with a byte range from its pack, gives each part pointer its `place` (pack and range), reports a missing pack
-//     by its key, and names the places (`places`); `namedBy` names the pack an object lives in, and every pack the table
-//     names; `partAt` reads a part from its place. A pointer without a range reads exactly as before.
-//   src/units/P86/LEDGER.unit.test.ts (:303–390): `productsOf`, `shardOf`, `partOf`, `idShardKeysOf` and `indexOf` read a
-//     pointer with a byte range from its pack (`shardOf` and `idShardKeysOf` then name the pack's key); `partKeys` and
-//     `idsKeys` still list the objects of their own.
+//   src/units/P93/_catalog.ts: `KEY.pack` and the `pack` class; `indexOf` reads a shard and an id shard pointer with a
+//     byte range from its pack (the row `pack` of the manifest's table) and a part pointer from its shard's own pack or the
+//     row `pack` of the shard's `packs`, and names a packed pointer's object by its full digest when the pointer's 32-hex
+//     prefix is that digest's, else by what is wrong (R-P582); `namedBy` names the pack an object lives in and every pack
+//     the table names; `partAt` reads a part at its place; the class meter counts a ranged read of a pack as a read of
+//     each object inside the range, and a pack's PUT as a write of each object inside it; `heldRaw`, `held` and
+//     `heldKeys` read the objects the store holds, of their own or inside a stored pack (by the key each would have as
+//     its own); `loseObject` deletes an object of its own and loses a packed one's bytes where they lie (a pack never loses
+//     one object alone), `forgeObject` gives either a body that is not its digest's; `storedBeforePacks` plants P93's
+//     form. A pointer without a range reads exactly as before.
+//   src/units/P86/LEDGER.unit.test.ts: `productsOf`, `shardOf`, `partOf`, `idShardKeysOf` and `indexOf` read through the
+//     pack (`shardOf` and `idShardKeysOf` name a packed object by the key it would have as its own); `partKeys` and
+//     `idsKeys` list the objects held, of their own or in a pack; the meters `counted`, `foreignReads` and `uploadedAt`
+//     honour the range; the write faults of the part and the id index also fail the pack's PUT; the id index leg names a
+//     packed id shard by its full digest (R-P582); R-P409 (3)'s kept manifest is stored before packs (planted; before:
+//     loaded by the import), its parts lost one by one; R-P412 (2)'s part lost and forged where it lies.
+//   src/units/P93/LEDGER.unit.test.ts: `uploadedAt` honours the range; every object read, counted and lost through
+//     `heldRaw`, `heldKeys` and `loseObject`; the shard write fault also fails the pack's PUT; the purge's attachments
+//     include the packs and its budget fault the pack's DELETE; CS1's 5% in its structural form (R-P578 (a): the manifest
+//     less its pack table within 5% of the 5,000 one less its table, the table at most 65 rows); CS5's rollback leg on
+//     revisions stored before packs (planted; before: loaded by the import), where a rollback checks object by object.
+//   src/units/P77/LEDGER.unit.test.ts VR3's TODAY: '/content/catalog/stage POST' and '/content/catalog/publish POST' after
+//     '/content/catalog/pull POST' (R-P578 (d)).
+//   Retry once (R-P569 (a)), an injected failure also failing its immediate repeat: src/routes/content.test.ts CatalogR2
+//     (:564, :973), src/units/P87/LEDGER.unit.test.ts (:422, :472: two failures of the revision write) and
+//     src/services/telemetry.boundary.test.ts PublicationR2 (:571).
 //
 // DEFERRALS: LV1 (lane L21 on the pair's next release, one pair host at a time: 40,000 products staged in parallel and
 // published once, timed against 30 s; the refusal rate over the lane's loads; a page's cold bytes against 120 KB; l3's
 // objects stored before packs repacked by one full reload and collected).
 // RESIDUALS (told, not tested): heap per request (Node is not workerd; the stage keeps a 5,000-product file's memory, the
-// publish reads no staged part, LD2); the customer profile's boundary for the two new doors (S7); a stage that adopts a
+// publish reads no staged part, LD2); a stage that adopts a
 // pack uploaded long ago and is published past the grace; `replace` and `full` stages; the receipts, telemetry and
 // ingest-vocabulary readers through a pack (P93.CS6 and P85 run them as locks); live ranged-read latency.
 //
 // HARNESS: ../_parity (the mounted application on both hosts), ../P93/_catalog (P86's fixture and generator, the stored
-// forms read back), ./_load (the meter and fault injector, the pack reader, the doors, the stored forms planted). Imports
-// from src/units/: ../_parity, ../P93/_catalog, ./_load.
+// forms read back), ../P87/_stamp (the customer profile's Worker), ./_load (the meter and fault injector, the pack reader,
+// the doors, the stored forms planted). Imports from src/units/: ../_parity, ../P93/_catalog, ../P87/_stamp, ./_load.
 
 import { SignJWT } from 'jose';
 import { describe, expect, it, vi } from 'vitest';

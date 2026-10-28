@@ -90,9 +90,9 @@ import {
   receiptsOf, replayOf, servePage, shopperOn, storedDecisions, TENANT, UnitR2, type Answer, type Host, type Mounted, type Shopper,
 } from '../_parity';
 import {
-  A, ANCHOR_IMAGES, B, BLACK, bucketOf, bytesOf, C, carousel, CAROUSEL, catalogue, classOf, declareProductSlots, DOCS, DOCS_WITH_CART, fourOf, image,
-  importJson, KEY, LEARN, metered, MODULE_IDS, namedBy, objectKeys, OTHER_IMAGES, preconditions, productRead, pull, rangeProduct, rangeRecordId,
-  rangeRecords, rangeTenant, readClasses, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, sorted, touched, unique, UNKNOWN, withinCaps,
+  A, ANCHOR_IMAGES, B, BLACK, bucketOf, bytesOf, C, carousel, CAROUSEL, catalogue, classOf, declareProductSlots, DOCS, DOCS_WITH_CART, fourOf, heldKeys, heldRaw, image,
+  importJson, KEY, LEARN, loseObject, metered, MODULE_IDS, namedBy, objectKeys, OTHER_IMAGES, preconditions, productRead, pull, rangeProduct, rangeRecordId,
+  rangeRecords, rangeTenant, readClasses, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, sorted, storedBeforePacks, touched, unique, UNKNOWN, withinCaps,
   type IndexView, type Op, type Rec,
 } from './_catalog';
 
@@ -121,7 +121,7 @@ function idByListing(prefix: string, view: IndexView, listed: boolean): string {
 }
 /** The bytes of every shard object in force (product shards and id shards). */
 const shardSizes = (m: Mounted, view: IndexView) => [...Object.values(view.shards).map(p => KEY.shard(p.digest)), ...Object.values(view.idShards).map(p => KEY.idshard(p.digest))]
-  .map(key => bytesOf(m.storage.objects.get(key) ?? ''));
+  .map(key => bytesOf(heldRaw(m, key) ?? '')); // P98 R10 (R-P569 (b)): the object as stored, in its pack or as its own
 const digestsOf = (view: IndexView) => Object.fromEntries(Object.entries(view.products).map(([p, v]) => [p, v.digest]));
 const without = (digests: Record<string, string>, ...products: string[]) => Object.fromEntries(Object.entries(digests).filter(([p]) => !products.includes(p)));
 const pause = () => new Promise(resolve => setTimeout(resolve, 5));
@@ -223,10 +223,11 @@ describe('unit:P93.CS1 (R-P487: 256 shards by SHA-256 of the product id and of t
       }
       const shards: Record<string, unknown> = {};
       for (const [bucket, pointer] of Object.entries(view.shards)) {
-        const raw = m.storage.objects.get(KEY.shard(pointer.digest)), body = raw ? JSON.parse(raw) as { shard?: unknown; products?: Record<string, { digest: string; records: number }> } : null;
+        // P98 R10 (R-P569 (b)): each object read as stored, in its pack or as its own (the view names a packed pointer's object by its full digest).
+        const raw = heldRaw(m, KEY.shard(pointer.digest)), body = raw ? JSON.parse(raw) as { shard?: unknown; products?: Record<string, { digest: string; records: number }> } : null;
         const held = body?.products ?? {}, partsHeld: boolean[] = [];
         for (const [product, p] of Object.entries(held)) {
-          const part = m.storage.objects.get(KEY.part(p.digest)), value = part ? JSON.parse(part) as { product?: unknown; pieces?: unknown[] } : null;
+          const part = heldRaw(m, KEY.part(p.digest)), value = part ? JSON.parse(part) as { product?: unknown; pieces?: unknown[] } : null;
           partsHeld.push(value !== null && await documentDigest(value) === p.digest && value.product === product && value.pieces?.length === p.records);
         }
         shards[bucket] = { shard: body?.shard ?? null, products: sorted(Object.keys(held)), counted: [pointer.products, pointer.records],
@@ -234,7 +235,7 @@ describe('unit:P93.CS1 (R-P487: 256 shards by SHA-256 of the product id and of t
       }
       const idShards: Record<string, unknown> = {};
       for (const [bucket, pointer] of Object.entries(view.idShards)) {
-        const raw = m.storage.objects.get(KEY.idshard(pointer.digest)), body = raw ? JSON.parse(raw) as { shard?: unknown; ids?: Record<string, string> } : null;
+        const raw = heldRaw(m, KEY.idshard(pointer.digest)), body = raw ? JSON.parse(raw) as { shard?: unknown; ids?: Record<string, string> } : null;
         idShards[bucket] = { shard: body?.shard ?? null, ids: sorted(Object.keys(body?.ids ?? {})), records: pointer.records,
           addressed: HEX64.test(pointer.digest) && body !== null && await documentDigest(body) === pointer.digest };
       }
@@ -251,7 +252,8 @@ describe('unit:P93.CS1 (R-P487: 256 shards by SHA-256 of the product id and of t
       // Written before the head is reserved: a shard write failing commits nothing and leaves nothing pending.
       const bucket = m.storage as unknown as Record<string, unknown>, put = UnitR2.prototype.put;
       Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
-        if (classOf(key) === 'shard' || classOf(key) === 'idshard') throw new Error('P93 fixture: the shard write fails');
+        // P98 R10 (R-P569 (b)): a shard written inside its load's pack is written by that pack's PUT.
+        if (classOf(key) === 'shard' || classOf(key) === 'idshard' || classOf(key) === 'pack') throw new Error('P93 fixture: the shard write fails');
         return put.call(m.storage, key, raw, options);
       } });
       let failed: Answer;
@@ -337,10 +339,9 @@ describe('unit:P93.CS2 (R-P487 (9): 8 reads at any size)', () => {
         seen.push([name, result.status, page === 'cart' ? 'cart' : carousel(result), shardOrPart(readClasses(ops))]);
       }
       const outcome = async (key: string) => {
-        const raw = m.storage.objects.get(key)!;
-        m.storage.objects.delete(key); invalidatePublicationCache();
+        const restore = loseObject(m, key); invalidatePublicationCache(); // P98 R10 (R-P569 (b)): lost as its own, or its bytes in its pack
         const page = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p93-cs2-lost');
-        m.storage.objects.set(key, raw); invalidatePublicationCache();
+        restore(); invalidatePublicationCache();
         return [page.status, JSON.stringify(page.body).includes('part_unavailable') ? 'names part_unavailable' : `does not (${JSON.stringify(page.body).slice(0, 160)})`, carousel(page)];
       };
       const lostShard = await outcome(KEY.shard(view.shards[bucketOf(A)]!.digest)), lostPart = await outcome(KEY.part(view.products[A]!.digest));
@@ -367,7 +368,8 @@ const recordIdsInTarget = () => capRecordIds ??= (() => {
   const out: string[] = []; for (let k = 0; out.length < 280; k++) { const id = `cap-record-${k}-`.padEnd(8000, 'y'); if (bucketOf(id) === TARGET) out.push(id); } return out;
 })();
 const capRecord = (id: string, product: string) => ({ id, type: 'on-model', title: 't', slotTypes: [CAROUSEL], featuredProductIds: [product] });
-const counts = (m: Mounted) => [objectKeys(m, 'part').length, objectKeys(m, 'shard').length, objectKeys(m, 'idshard').length, objectKeys(m, 'ids').length];
+/** P98 R10 (R-P569 (b)): the objects the store holds, of their own or inside a stored pack. */
+const counts = (m: Mounted) => [heldKeys(m, 'part').length, heldKeys(m, 'shard').length, heldKeys(m, 'idshard').length, objectKeys(m, 'ids').length];
 
 describe('unit:P93.CS3 (R-P487 (2), (5); R-P490 (1): the loads and the PUT across shards)', () => {
   for (const host of HOSTS) {
@@ -415,7 +417,7 @@ describe('unit:P93.CS3 (R-P487 (2), (5); R-P490 (1): the loads and the PUT acros
       const c = fourOf(C);
       const full = await metered(m, async () => importJson(m, c.slice(0, 3), { mode: 'full', expire: '1' }));
       const two = await catalogue(m);
-      const cPart = JSON.parse(m.storage.objects.get(KEY.part(two.view.products[C]?.digest ?? 'none')) ?? '{"pieces":[]}') as { pieces: Array<{ id: string; lifecycle?: { status?: string } }> };
+      const cPart = JSON.parse(heldRaw(m, KEY.part(two.view.products[C]?.digest ?? 'none')) ?? '{"pieces":[]}') as { pieces: Array<{ id: string; lifecycle?: { status?: string } }> };
       expect.soft({
         replace: [replaced.result.status, one.view.products[five]?.records ?? null, one.view.ids[fresh.id] ?? null, Object.hasOwn(one.view.ids, dropped), others(start.view, one.view, [five]),
           touched(replaced.ops, 'get', 'idshard'), sorted((one.doc.document.pieces as Array<{ id: string }>).map(p => p.id))],
@@ -500,7 +502,7 @@ describe('unit:P93.CS3 (R-P487 (2), (5); R-P490 (1): the loads and the PUT acros
       const two = await catalogue(m);
       const readSeven = await productRead(m, seven);
       const lostKey = KEY.part(two.view.products[eight]?.digest ?? 'no pointer');
-      m.storage.objects.delete(lostKey); invalidatePublicationCache();
+      loseObject(m, lostKey); invalidatePublicationCache(); // P98 R10 (R-P569 (b)): lost as its own, or its bytes in its pack
       const lostRead = await productRead(m, eight);
       const cleared = await putDocument(m, 'catalog', { ...(await loadDocument(m, 'catalog')).document, removeProducts: [eight] }, 'p93 clear a lost part');
       const three = await catalogue(m);
@@ -627,6 +629,25 @@ function differing(target: IndexView, inForce: IndexView): { shards: string[]; i
   return { shards: unique(buckets.map(b => KEY.shard(target.shards[b]!.digest))), idShards: unique(idShards), parts: unique(parts), buckets };
 }
 const checksOf = (d: ReturnType<typeof differing>) => d.shards.length + d.idShards.length + d.parts.length;
+/**
+ * P98 R10 (R-P569 (b), R-P578): the range's revisions stored before packs — P93's form, planted beside the routes over a
+ * tenant declaring its product slots — the world where a rollback checks the objects it names one by one (a rollback
+ * across revisions in packs checks one HEAD per pack: unit:P98). `stored` publishes the next revision of the range: the
+ * records held, with `changes` merged in by id.
+ */
+async function rangeStoredBeforePacks(host: Host, n: number): Promise<{ m: Mounted; stored: (changes: Rec[]) => Promise<void> }> {
+  const m = await mount(host, DOCS_WITH_CART);
+  expectPublished(m, 'P93 — the tenant documents publish');
+  await declareProductSlots(m);
+  let held: Rec[] = [...ANCHOR_IMAGES, ...OTHER_IMAGES, ...rangeRecords(1, n)];
+  const stored = async (changes: Rec[]) => {
+    const ids = new Set(changes.map(r => r.id));
+    held = [...held.filter(r => !ids.has(r.id)), ...changes];
+    await storedBeforePacks(m, held, 'p93-range', 'P93 R10: the range stored before packs');
+  };
+  await stored([]);
+  return { m, stored };
+}
 /** The stored content revisions, by number, with their values. */
 function storedRevisions(m: Mounted): Array<[number, Record<string, unknown>]> {
   return [...m.storage.objects.entries()].map(([key, raw]) => [/\/content\/rev\/([0-9]+)\.json$/.exec(key), raw] as const).filter(([match]) => match)
@@ -636,10 +657,11 @@ function storedRevisions(m: Mounted): Array<[number, Record<string, unknown>]> {
 describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge across shards)', () => {
   for (const host of HOSTS) {
     it(`host (${host}): a rollback checks the shards and id shards the target names that the revision in force does not and the part pointers inside them that differ, never every product; a missing part or shard is refused 410 part_missing naming it, nothing written; a rollback of about 700 checks is accepted, and past 900 checks one is refused 413 rollback_too_large naming the count, nothing written`, async () => {
-      const m = await rangeTenant(host, 600);
+      // P98 R10 (R-P569 (b), R-P578): every revision of this leg stored before packs (before: loaded by the import).
+      const { m, stored } = await rangeStoredBeforePacks(host, 600);
       const target = await catalogue(m);
       requireSharded(target.view, 'P93.CS5');
-      expect((await importJson(m, [...rangeRecords(1, 10, ', v2'), ...rangeRecords(601, 5)], { mode: 'merge' })).status, `${host}: PRECONDITION — ten products change and five arrive`).toBe(200);
+      await stored([...rangeRecords(1, 10, ', v2'), ...rangeRecords(601, 5)]); // ten products change and five arrive
       const now = await catalogue(m), expected = differing(target.view, now.view);
       const allowed = new Set([...expected.shards, ...expected.buckets.map(b => KEY.shard(now.view.shards[b]?.digest ?? 'none'))]);
       const back = await metered(m, async () => asOperator(m, 'POST', `/content/catalog/rollback/${target.doc.revision}?scope=${TENANT}`, {}, await preconditions(m)));
@@ -651,7 +673,7 @@ describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge 
       `${host}: P93.CS5 — the check covers the difference (${checksOf(expected)} objects), never the ${Object.keys(target.view.products).length} products (measured: ${seen(back.ops, 'part').length} parts checked)`).toEqual({
         status: 200, parts: expected.parts, idShards: expected.idShards, shardsChecked: [], shardsOutside: [], restored: true });
       // The 410: the target's part of product 3, then the target's shard of product 4's bucket, lost after they changed again.
-      expect((await importJson(m, rangeRecords(1, 10, ', v3'), { mode: 'merge' })).status, `${host}: PRECONDITION — they change again`).toBe(200);
+      await stored(rangeRecords(1, 10, ', v3')); // they change again
       const refusedFor = async (key: string) => {
         const raw = m.storage.objects.get(key)!, head = await loadDocument(m, 'catalog');
         m.storage.objects.delete(key);
@@ -667,9 +689,9 @@ describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge 
       `${host}: P93.CS5 — a missing object refused by name (${show(partLost.answer)} | ${show(shardLost.answer)})`).toEqual({
         part: [410, 'part_missing', `names ${rangeProduct(3)}`, true], shard: [410, 'part_missing', `names ${shardBucket}`, true] });
       // Within 900 checks: a rollback across a reload of 500 products (about 700 checks) is accepted.
-      const mid = await rangeTenant(host, 500);
+      const { m: mid, stored: midStored } = await rangeStoredBeforePacks(host, 500);
       const midTarget = await catalogue(mid);
-      expect((await importJson(mid, rangeRecords(1, 500, ', reloaded'), { mode: 'merge' })).status, `${host}: PRECONDITION — the 500 products reload`).toBe(200);
+      await midStored(rangeRecords(1, 500, ', reloaded')); // the 500 products reload
       const midCount = checksOf(differing(midTarget.view, (await catalogue(mid)).view)), midHead = await loadDocument(mid, 'catalog');
       expect(midCount > 100 && midCount <= 900, `${host}: PRECONDITION — the rollback needs between 101 and 900 checks (${midCount})`).toBe(true);
       const accepted = await asOperator(mid, 'POST', `/content/catalog/rollback/${midTarget.doc.revision}?scope=${TENANT}`, {}, await preconditions(mid));
@@ -677,9 +699,9 @@ describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge 
       expect.soft([accepted.status, midAfter.doc.revision, JSON.stringify(digestsOf(midAfter.view)) === JSON.stringify(digestsOf(midTarget.view))],
         `${host}: P93.CS5 — ${midCount} checks, within 900, accepted (${show(accepted)})`).toEqual([200, midHead.revision + 1, true]);
       // Past 900 checks: a rollback across a reload of 1,000 products.
-      const big = await rangeTenant(host, 1000);
+      const { m: big, stored: bigStored } = await rangeStoredBeforePacks(host, 1000);
       const bigTarget = await catalogue(big);
-      expect((await importJson(big, rangeRecords(1, 1000, ', reloaded'), { mode: 'merge' })).status, `${host}: PRECONDITION — the 1,000 products reload`).toBe(200);
+      await bigStored(rangeRecords(1, 1000, ', reloaded')); // the 1,000 products reload
       const bigNow = await catalogue(big), count = checksOf(differing(bigTarget.view, bigNow.view)), bigHead = await loadDocument(big, 'catalog');
       const tooLarge = await asOperator(big, 'POST', `/content/catalog/rollback/${bigTarget.doc.revision}?scope=${TENANT}`, {}, await preconditions(big));
       expect.soft([count > 900, tooLarge.status, tooLarge.body.code ?? null, countNamed(tooLarge, count), (await loadDocument(big, 'catalog')).revision === bigHead.revision],
@@ -695,7 +717,8 @@ describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge 
         await pause();
       };
       const nameAll = (m: Mounted, into: Set<string>, values = storedRevisions(m).map(([, value]) => value)) => { for (const value of values) for (const key of namedBy(m, value)) into.add(key); return into; };
-      const attachments = (m: Mounted) => [...objectKeys(m, 'part'), ...objectKeys(m, 'shard'), ...objectKeys(m, 'idshard'), ...objectKeys(m, 'ids')];
+      // P98 R10 (R-P569 (b)): and the packs, the objects the parts and shards of a load are stored in (namedBy names a pack by its key).
+      const attachments = (m: Mounted) => [...objectKeys(m, 'part'), ...objectKeys(m, 'shard'), ...objectKeys(m, 'idshard'), ...objectKeys(m, 'ids'), ...objectKeys(m, 'pack')];
       /** Objects no stored revision names (a leak), and objects the current or the previous revision names that are gone (a loss). */
       const state = (m: Mounted) => {
         const named = nameAll(m, new Set()), kept = nameAll(m, new Set(), storedRevisions(m).slice(-2).map(([, value]) => value));
@@ -720,13 +743,13 @@ describe('unit:P93.CS5 (R-P487 (6), (8), R-P490 (4): the rollback and the purge 
       const old = uploadedAt(m, () => new Date(0));
       await declareProductSlots(m);
       for (const records of loadsOf) await loadAndWait(m, records);
-      const clean = { ...state(m), shards: objectKeys(m, 'shard').length > 0 };
+      const clean = { ...state(m), shards: heldKeys(m, 'shard').length > 0 };
       // 3. The budget exhausted at the purge's first deletion of an attachment, once, before it deletes anything.
       const bucket = m.storage as unknown as Record<string, unknown>, saved = Object.getOwnPropertyDescriptor(bucket, 'delete');
       const deleteNow = (bucket.delete as (keys: string | string[]) => Promise<void>).bind(m.storage);
       let faulted = false;
       Object.defineProperty(bucket, 'delete', { configurable: true, writable: true, value: async (keys: string | string[]) => {
-        if (!faulted && [keys].flat().some(key => ['part', 'shard', 'idshard', 'ids'].includes(classOf(key)))) { faulted = true; throw new Error('P93 fixture: the purge\'s budget is exhausted'); }
+        if (!faulted && [keys].flat().some(key => ['part', 'shard', 'idshard', 'ids', 'pack'].includes(classOf(key)))) { faulted = true; throw new Error('P93 fixture: the purge\'s budget is exhausted'); }
         return deleteNow(keys);
       } });
       try { await loadAndWait(m, [{ ...a1, title: `${a1.title}, third retouch` }]); }
@@ -768,7 +791,7 @@ describe('unit:P93.CS6 (R-P487 (4), (7), R-P490 (2): the reads and the readers t
       requireSharded(view, 'P93.CS6');
       const read = await asOperator(m, 'GET', `/content/catalog?scope=${TENANT}`), envelope = (read.body.envelope ?? {}) as Record<string, unknown>;
       const bucket = bucketOf(A), pointer = view.shards[bucket]!, shard = await shardRead(m, bucket);
-      const stored = JSON.parse(m.storage.objects.get(KEY.shard(pointer.digest)) ?? 'null') as unknown;
+      const stored = JSON.parse(heldRaw(m, KEY.shard(pointer.digest)) ?? 'null') as unknown; // P98 R10 (R-P569 (b)): as stored, in its pack or as its own
       const unlisted = [...Array(256).keys()].map(i => i.toString(16).padStart(2, '0')).find(b => !Object.hasOwn(view.shards, b));
       const none = unlisted ? await shardRead(m, unlisted) : null, malformed = await shardRead(m, 'zz');
       const productsOfShard = (a: Answer) => Object.keys(((a.body.document as { products?: object } | undefined)?.products ?? { 'no products member': 1 }));
@@ -776,10 +799,9 @@ describe('unit:P93.CS6 (R-P487 (4), (7), R-P490 (2): the reads and the readers t
       const product = await metered(m, () => productRead(m, A));
       const inListed = idByListing('COA-ABSENT-', view, true), inEmpty = idByListing('COA-EMPTY-', view, false);
       const misses = [(await productRead(m, inListed)).status, (await productRead(m, inEmpty)).status];
-      const lostKey = KEY.part(view.products[rangeProduct(9)]!.digest), raw = m.storage.objects.get(lostKey)!;
-      m.storage.objects.delete(lostKey); invalidatePublicationCache();
+      const restoreLost = loseObject(m, KEY.part(view.products[rangeProduct(9)]!.digest)); invalidatePublicationCache(); // P98 R10 (R-P569 (b))
       const lost = await productRead(m, rangeProduct(9));
-      m.storage.objects.set(lostKey, raw); invalidatePublicationCache();
+      restoreLost(); invalidatePublicationCache();
       const records = ANCHOR_IMAGES.length + 2 + 600;
       expect.soft({ document: [read.status, Object.hasOwn(read.body.document as object, 'products'), Object.hasOwn(read.body.document as object, 'index')],
         envelope: [envelope.pieces ?? null, envelope.products ?? null, envelope.bytes ?? null],
