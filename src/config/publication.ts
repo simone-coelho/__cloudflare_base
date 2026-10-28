@@ -1196,16 +1196,17 @@ async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promi
   for (const document of pending.documents) { await authorize?.(); await createExact(storage, revisionKey(document.kind, document.scope, document.revision), document); }
   await authorize?.();
   await createExact(storage, setKey(set.scope, set.revision), set);
-  // P102 (C): the set's serving copy, before the head names the set, so the copies of successive commits land in the
-  // order their sets commit; a copy that cannot be built or written is not written and never fails the commit.
+  // P102 (C): the set's serving copy, built before the head is written so the head's metadata can say when none fits;
+  // nothing is written for it until the head commits, and a copy that cannot be built or written never fails the commit.
   const copy = await servingCopyOf(storage, set, pending.documents);
-  if (copy.text !== null) { await authorize?.(); await writeServingCopy(storage, set.scope, copy.text, false); }
   const next = await sealed({ schema: 'configuration-head/v1' as const, scope: set.scope, committed: identityOf(set), pending: null });
   // P102 (B): the committed head object names its members' revisions as its storage metadata; its JSON is unchanged.
   await authorize?.(); await put(storage, headKey(set.scope), serialized(next), loaded.etag, headMetadata(set, copy.omitted));
   const after = await requiredHead(storage, set.scope); required(after.head.committed);
   if (after.head.committed.revision < set.revision) throw conflict();
   if (after.head.committed.revision === set.revision && after.head.committed.digest !== set.digest) throw conflict();
+  // P102 (C): written only while the head names exactly this set, so a later commit's copy is not replaced by this one.
+  if (copy.text !== null && after.head.committed.revision === set.revision) { await authorize?.(); await writeServingCopy(storage, set.scope, copy.text, false); }
   return retainedSet(storage, set.scope, identityOf(set));
 }
 /**
