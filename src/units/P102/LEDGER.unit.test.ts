@@ -62,7 +62,7 @@
 //     returns altered, refuses the decision; under C the decision reads the serving copy and never that object. :574
 //     (W28.01) — a fresh decision reads the learn revision object once; under C, zero (the copy).
 //   src/config/publication.servingCache.test.ts:88, :97 — hold under R2; they change only if every serving pin read the copy.
-//   src/units/P93/LEDGER.unit.test.ts:285 (the CS2 title, "reads exactly the head, the set, …") and its "8 reads" message
+//   src/units/P93/LEDGER.unit.test.ts:289 (the CS2 title, "reads exactly the head, the set, …") and its "8 reads" message
 //     (:302) — stale wording; the list itself is re-pointed (pageReads).
 //   P97 (rem/spec-p97 at 3b949187; R-P567 F2): contentOf (:332–342) strips sources.timings and sources.sessionParts only,
 //     so CR4's member differs between the door's answer and the next page view — it must strip CR4's member too; its R4
