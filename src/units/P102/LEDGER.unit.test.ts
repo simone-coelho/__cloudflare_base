@@ -318,7 +318,7 @@ describe('unit:P102.CR1 (fix A: held by identity; the head read on every decisio
       }
       const ancient = await later(400 * 86_400_000, () => measured(meter, 0, () => door(m, 'p102-cr1-ancient')));
       expect.soft({ reads: idle.map(i => i.reads), answers: idle.map(i => i.answer), ancient: [readSet(ancient.reads), answerOf(ancient.result)] },
-        `${host}: P102.CR1 — an idle machine reads the head alone, at 61 s and at 400 days (today the set and the four documents again past 30 s: ${JSON.stringify(idle.map(i => i.reads))}; at 400 days ${JSON.stringify(readSet(ancient.reads))})`).toEqual({
+        `${host}: P102.CR1 — an idle machine reads the head alone, at 61 s and at 400 days (observed ${JSON.stringify(idle.map(i => i.reads))}; at 400 days ${JSON.stringify(readSet(ancient.reads))}; today the set and the four documents again past 30 s)`).toEqual({
         reads: [['head'], ['head'], ['head']], answers: idle.map(() => answerOf(warm)), ancient: [['head'], answerOf(warm)] });
       expect.soft(median(idle.map(i => i.documents)), `${host}: P102.CR1 — an idle machine's documents stage at 100 ms a read, median of ${JSON.stringify(idle.map(i => i.documents))} ms (today about 305)`).toBeLessThanOrEqual(120);
     }, 120_000);
@@ -375,7 +375,7 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       expect.soft({ head: headAsToday(m.storage.objects.get(HEAD) ?? '{}'), metadata: metadataNamesMembers(m) },
         `${host}: P102.CR2 — the committed head's JSON as today, its storage metadata naming each member's revision`).toEqual({ head: HEAD_AS_TODAY, metadata: 'names every member\'s revision' });
       expect.soft({ waves: cold.map(c => c.waves.length), second: cold.map(c => second(c.waves)), answers: cold.map(c => c.answer) },
-        `${host}: P102.CR2 — two waves, the set and the four members together in the second (today three: ${JSON.stringify(cold[0]?.waves)})`).toEqual({
+        `${host}: P102.CR2 — two waves, the set and the four members together in the second (observed ${JSON.stringify(cold[0]?.waves)}; today three)`).toEqual({
         waves: [2, 2, 2], second: cold.map(() => ['content revision', 'learn revision', 'reflex revision', 'set', 'slots revision']), answers: cold.map(() => answerOf(warm)) });
       expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR2 — a machine holding nothing, without the copy, at 100 ms a read: median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(220);
     }, 120_000);
@@ -397,7 +397,7 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       const stale = await ask(first.meta, 'stale');
       const malformed = await ask(Object.fromEntries(Object.keys(second.meta).map(k => [k, 'not json {'])), 'malformed');
       expect.soft({ hinted: Object.keys(second.meta).length > 0 && JSON.stringify(second.meta) !== JSON.stringify(first.meta), slots: (truth.versions as { slots?: unknown } | null)?.slots ?? null },
-        `${host}: P102.CR2 — PRECONDITION: the second commit's head carries metadata of its own (today none: ${JSON.stringify(second.meta)})`).toEqual({ hinted: true, slots: 2 });
+        `${host}: P102.CR2 — PRECONDITION: the second commit's head carries metadata of its own (observed ${JSON.stringify(second.meta)}; today none)`).toEqual({ hinted: true, slots: 2 });
       expect.soft({ absent, stale, malformed }, `${host}: P102.CR2 — a wrong hint changes no answer`).toEqual({ absent: truth, stale: truth, malformed: truth });
     }, 120_000);
 
@@ -472,7 +472,7 @@ describe('unit:P102.CR2 (fix B: the head object\'s member metadata; the five-min
       const next = await door(n, 'p102-cr2-met');
       const rewritten = during as Stored | null;
       expect.soft({ rewrote: rewritten ? rewritten.version > start.version && Object.keys(rewritten.meta).length > 0 : 'the run did not run' },
-        `${host}: PRECONDITION — the five-minute run rewrote the head while the publication was in flight (today no backfill: version ${start.version} → ${rewritten?.version ?? 'n/a'})`).toEqual({ rewrote: true });
+        `${host}: PRECONDITION — the five-minute run rewrote the head while the publication was in flight (head version ${start.version} → ${rewritten?.version ?? 'n/a'}; today no backfill)`).toEqual({ rewrote: true });
       expect.soft({ met: met.status, slots: (next.body.versions as { slots?: unknown } | undefined)?.slots ?? null },
         `${host}: P102.CR2 — the publication that met the rewrite is committed, not refused (${met.status} ${JSON.stringify(met.body).slice(0, 200)})`).toEqual({ met: 200, slots: 2 });
     }, 120_000);
@@ -501,7 +501,7 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
         cold.push({ reads: readSet(run.reads), waves: waves(run.reads).length, documents: documentsOf(run.result), answer: answerOf(run.result) });
       }
       expect.soft({ reads: cold.map(c => c.reads), waves: cold.map(c => c.waves), answers: cold.map(c => c.answer) },
-        `${host}: P102.CR3 — the head and the serving copy, one wave (today: ${JSON.stringify(cold[0]?.reads)} in ${cold[0]?.waves} waves)`).toEqual({
+        `${host}: P102.CR3 — the head and the serving copy, one wave (observed ${JSON.stringify(cold[0]?.reads)} in ${cold[0]?.waves} waves; today six objects in three)`).toEqual({
         reads: cold.map(() => ['head', 'serving copy']), waves: [1, 1, 1], answers: cold.map(() => answerOf(warm)) });
       expect.soft(median(cold.map(c => c.documents)), `${host}: P102.CR3 — a machine holding nothing at 100 ms a read: median of ${JSON.stringify(cold.map(c => c.documents))} ms (today about 307)`).toBeLessThanOrEqual(120);
     }, 120_000);
@@ -554,7 +554,7 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
       const warm = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p102-cr3-page-warm'));
       const shardOrPart = (classes: string[]) => classes.filter(c => /\/content\/(shard|part)\//.test(c));
       expect.soft({ status: cold.result.status, served: carousel(cold.result), reads: readClasses(cold.ops), count: readClasses(cold.ops).length <= 4, warm: shardOrPart(readClasses(warm.ops)) },
-        `${host}: P102.CR3 — the anchored page cold: 4 objects (today 8: ${JSON.stringify(readClasses(cold.ops))})`).toEqual({
+        `${host}: P102.CR3 — the anchored page cold: 4 objects (observed ${JSON.stringify(readClasses(cold.ops))}; today 8)`).toEqual({
         status: 200, served: SERVED_FOR_BLACK, count: true, warm: [],
         reads: sorted(['head', SERVING, KEY.shard(view.shards[bucketOf(A)]?.digest ?? `no shard for ${A}`), KEY.part(view.products[A]?.digest ?? `no pointer for ${A}`)]) });
     }, 300_000);
@@ -577,7 +577,7 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
       const cls = (r: Reply) => [r.status, (r.body.armRequest as { class?: unknown } | undefined)?.class ?? null];
       expect.soft({ answers: [cls(withCopy.result), cls(without.result)] }, `${host}: PRECONDITION — the door mints into the drawn class`).toEqual({ answers: [[200, 'personalized'], [200, 'personalized']] });
       expect.soft({ withCopy: waves(drawOf(withCopy.reads)), without: waves(drawOf(without.reads)) },
-        `${host}: P102.CR3 — the class draw's own reads (today three waves: ${JSON.stringify(waves(drawOf(without.reads)))})`).toEqual({
+        `${host}: P102.CR3 — the class draw's own reads (observed without the copy ${JSON.stringify(waves(drawOf(without.reads)))}; today three waves)`).toEqual({
         withCopy: [['head', 'serving copy']], without: [['head', 'serving copy'], ['learn revision', 'set']] });
     }, 120_000);
 
