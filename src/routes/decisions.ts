@@ -8,7 +8,7 @@
 // records the outcome-learning design records (`records`, doc 22 §3.1). Reads
 // only; never cached; SDK-key authentication arrives with CW10.
 
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { assertShopperSelectors, carryOwnerCustomerId, forwardShopperRequest, parseShopperContext } from '@/identity/sessionAuthority';
 import { anonymousWithConsent } from '@/identity/consentContinuity';
@@ -1082,6 +1082,21 @@ function countArmDraw(c: { env: Env; executionCtx: ExecutionContext }, tenant: s
 }
 
 /**
+ * P96 (E21, R-P526): one `total` on the first request's answer. The platform's timing middleware (src/index.ts,
+ * `hono/timing`) appends its own `total;dur=…;desc="Total Response Time"` to an answer after the route has answered;
+ * the first-request door names its own `total`, the door's whole time (P76), so on the answer that carries it the door
+ * tells the middleware, which then adds nothing there. The mark is a request-scoped context variable under a symbol
+ * private to this module: no header, body or other route can set it, and only the door's own answer carrying its
+ * `total` sets it, after that answer is built. Its reader also asks that no error was answered after it (Hono records
+ * one as `c.error` wherever its error handler replaced the answer), so a door answer an error replaced, every door
+ * refusal and every other route keep the platform's entry exactly as before.
+ */
+const OWN_TOTAL: unique symbol = Symbol('the first-request door answered its own total');
+type OwnTotalVariables = { [OWN_TOTAL]?: true };
+/** Whether this answer is the first-request door's, which names its own `total` (read by src/index.ts's timing middleware). */
+export const answersOwnTotal = (c: Context<{ Variables: OwnTotalVariables }>): boolean => c.error === undefined && c.get(OWN_TOTAL) === true;
+
+/**
  * P13 (H4, decision D1): a new visitor's first decision is served on the first
  * request. A POST to the decision request that carries no shopper session at
  * all (no `X-Shopper-Session`, no socket protocol) is the one call a new
@@ -1103,7 +1118,7 @@ function countArmDraw(c: { env: Env; executionCtx: ExecutionContext }, tenant: s
  * at the edge. Nothing about the customer's identifier selects anything here:
  * the session is a fresh anonymous visitor's, whatever the body carries.
  */
-const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: TenantVariables }>(async (c, next) => {
+const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: TenantVariables & OwnTotalVariables }>(async (c, next) => {
   if (c.req.method !== 'POST' || capabilityToken(c.req.raw) !== null) return next();
   const doorStarted = performance.now();
   const tenant = shopperTenant(c.env, c.req.raw, c.get('tenant'));
@@ -1159,7 +1174,8 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   // milliseconds, in Server-Timing and in sources.timings (a cross-origin page cannot read the header): `session` (the
   // issue, the activation on the new shopper's object and the verify), `forward` (the forward's round trip less those
   // stages), `arm` (only when the page drew a class: its mint and outcome) and `total`, the first request's whole time,
-  // which the others add up to but for the request's own reading of its body.
+  // which the others add up to but for the request's own reading of its body. P96: the platform's own `total` is not
+  // added beside it (answersOwnTotal above), so each name is on the answer once, the header's entries the body's.
   const sources = (body.sources ?? {}) as { timings?: Record<string, number> };
   const stages = sources.timings ?? {};
   const stageMs = Object.values(stages).reduce((sum, ms) => sum + (Number.isFinite(ms) ? ms : 0), 0);
@@ -1167,7 +1183,9 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
     ...(drawn ? { arm: Math.round(armMs) } : {}), total: Math.round(performance.now() - doorStarted) };
   const timing = answered.headers.get('Server-Timing');
   c.header('Server-Timing', [timing, ...Object.entries(own).map(([name, ms]) => `${name};dur=${ms}`)].filter(Boolean).join(', '));
-  return c.json({ ...body, sources: { ...sources, timings: { ...stages, ...own } }, session, ...(armRequest ? { armRequest } : {}) });
+  const answer = c.json({ ...body, sources: { ...sources, timings: { ...stages, ...own } }, session, ...(armRequest ? { armRequest } : {}) });
+  c.set(OWN_TOTAL, true);
+  return answer;
 });
 /**
  * P84 (E8; the rendering record's N1, R-P359 Q3 and Q6): GET

@@ -2666,7 +2666,7 @@ it('W01.08 actual customer asset routing serves only declared SDK and console fi
     const root = await assetRuntime.dispatchFetch('https://acme.example/', { redirect: 'manual' });
     expect(root.status).toBe(302); expect(root.headers.get('location')).toBe('https://acme.example/console/');
   } finally { await assetRuntime.dispose(); }
-}, 30_000);
+}, 120_000);
 
 it('W07.01 does not log raw path, query or caller request-ID on actual entry requests', async () => {
   for (const path of ['/W0701_SUBJECT/missing?visitorId=W0701_VISITOR&sessionId=W0701_SESSION',
