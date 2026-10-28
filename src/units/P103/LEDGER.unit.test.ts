@@ -117,8 +117,11 @@
 // W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
 // the sketch (S50/specifier/logs/full-sketch.json) fails only on files that fail alike on an unchanged scratch copy (no
 // .git, linked node_modules: P45, P46, P47, P51, P52, P53, P87.SC3, W39, W40.P4) and on P68.KT1, whose kit 02 :99
-// citations (src/learn/route.ts :152, :157, :176; src/ledger/recovery.ts :380, :397) a sketch adding lines above them
-// moves: the build keeps those edits line-neutral or re-points the citations in kit 02 (granted). No R10 is needed.
+// citations (src/learn/route.ts :152, :157, :176; src/ledger/recovery.ts :380, :397; and, for R13's mechanism,
+// src/ledger/records.ts :411 and src/routes/realtime.ts :404, whose line must keep `receipt.code === 'accepted'`) a sketch
+// adding lines above them moves: the build keeps those edits line-neutral or re-points the citations in kit 02 (granted).
+// Round 3 (S50/specifier/logs/full-sketch-r3.json) fails only on the same environment files, on P68.KT1 before the two
+// line-neutral edits (then 8/8) and once on P76.FA1's timing under a load average near 40 (then 8/8). No R10 is needed.
 //
 // HARNESS: src/units/_parity.ts (the mounted app over the real Durable Object classes, both hosts; shopperOn, asOperator,
 // putDocument, learned). Imports from src/units/: ../_parity. NEW EXPORTS IMPORTED: none. Tenant ids only; no network.
