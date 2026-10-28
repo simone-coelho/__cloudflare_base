@@ -61,12 +61,15 @@
 //     unavailable' writing nothing (P13's door rule, P80.AS3's R-P264 leg); the malformed arm stays 400 (P84.CO3).
 //   8 PI3 pins the facts in kit 02's pageInstance row of the POST snapshot section, not its words: 1 to 128, letters, digits,
 //     `_` and `-` (or the class A-Za-z0-9_-), a UUID qualifying, 400 'Invalid page instance', the first request named.
+//   9 PI3, R-P590 (the residual of a6690521 ruled IN): kit 02's first-request paragraph (:337, "**A new visitor's first
+//     request.**") names the refusals answered 400 there — a malformed `arm` member and a malformed page-view id — and 401
+//     for every other failure, and none of its sentences still says any failure is 401. The facts, not the words, sentence by
+//     sentence as P97.FV4 splits the paragraph, so they hold beside the sentences P97 rewrites in it (rem/p97-build c54f1524).
 //
 // DEFERRED: LV1 (lane L21, the pair's next release, the stamps read-only: on both pair hosts a session-carrying decision
 // with a spaced pageInstance 400 'Invalid page instance', the same with a UUID 200 with its offers, a first request with a
 // spaced id 400 with no session).
-// RESIDUALS (told, not pinned): kit 02 :337 says of the first request "any failure is `401` and writes nothing", already
-// inexact for `arm` (stated at :1533) and now for pageInstance; the diagnosis's OUT OF SCOPE 1 and 2 (snapshotContext's 401
+// RESIDUALS (told, not pinned): the diagnosis's OUT OF SCOPE 1 and 2 (snapshotContext's 401
 // for an unknown key or another field over 128 characters; redeemRenderOffer's 401 for every acknowledgement mismatch) are
 // other request errors answered as session failures, outside E26; its T5 (clean ids around a rotation) is P95's.
 //
@@ -91,7 +94,12 @@
 // a truthiness guard admitting the empty id — PI1 6; the door answering every typed request error 400 — PI2's door legs;
 // the kit left as today, the format without the refusal, the refusal without the first request — PI3. LOCKS (d-locks-*):
 // P03, P13, P31, P34, P56, P57, P58, P69, P76, P80, P84, P95, P96, W38 (FIX1, LEDGER), src/routes/realtime.sdkContract
-// .test.ts and src/index.api-boundary.test.ts, 17 files 448/448 on today and 448/448 on the sketch.
+// .test.ts and src/index.api-boundary.test.ts, 17 files 448/448 on today and 448/448 on the sketch. R-P590 (reading 9; logs
+// m-*): today RED on the paragraph's four facts; the sketch with kit 02 :337's clause "any failure is `401` and writes
+// nothing" made "a malformed `arm` member is refused `400` `Invalid arm member` and a malformed `pageInstance` `400`
+// `Invalid page instance`, and any other failure `401`, each writing nothing" green, and green on a scratch merge of
+// rem/p97-build c54f1524 with the P101 sketch and that edit; the paragraph naming the 400s beside a kept "any failure is
+// `401`", or naming the arm's 400 alone, RED.
 //
 // NO NEW EXPORT IS IMPORTED. HARNESS: src/units/_parity.ts (the mounted routes over the real ShopperReflex, DecisionRing
 // and LearnStats classes, either shopper host). Imports from src/units/: ../_parity.
@@ -356,5 +364,21 @@ describe('unit:P101.PI3 (E26)', () => {
     };
     expect.soft(facts, `P101.PI3 — the row states the format and the refusal (today: "${row}")`)
       .toEqual({ bound: true, alphabet: true, uuid: true, refusal: true, firstRequest: true });
+  });
+
+  it('logic: R-P590 — kit 02\'s first-request paragraph names the refusals answered 400 on a new visitor\'s first request (a malformed `arm` member, a malformed page-view id) and 401 for every other failure, and no sentence of it still says any failure is 401 (facts, not words, holding beside the sentences P97 rewrites in the paragraph)', () => {
+    const paragraph = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/).map(p => p.split('\n').join(' '))
+      .find(p => p.startsWith('**A new visitor\'s first request.**')) ?? '';
+    expect(paragraph.length > 0, 'PRECONDITION: kit 02 carries the first-request paragraph (docs/kit/02-api-reference.md:337)').toBe(true);
+    /** Sentence by sentence, as P97.FV4 splits the same paragraph. */
+    const sentences = paragraph.split(/(?<=[.!?])\s+(?=[A-Z*`])/);
+    const facts = {
+      arm400: sentences.some(s => /\b400\b/.test(s) && /`arm`|\barm member\b|Invalid arm member/i.test(s)),
+      pageInstance400: sentences.some(s => /\b400\b/.test(s) && /`pageInstance`|\bpage-view id\b|\bpage instance\b/i.test(s)),
+      rest401: sentences.some(s => /\b401\b/.test(s) && /\b(?:any|every|all) other\b|\botherwise\b|\bthe rest\b|\belse\b/i.test(s)),
+      noBlanket401: !sentences.some(s => /\b401\b/.test(s) && /\b(?:any|every|all)\s+(?:failures?|refusals?|errors?)\b/i.test(s)),
+    };
+    expect.soft(facts, `P101.PI3 — the first-request paragraph names its 400 refusals (a malformed arm, a malformed page-view id) and 401 for the rest (today: "${sentences.filter(s => /\b401\b/.test(s)).join(' ').slice(0, 400)}")`)
+      .toEqual({ arm400: true, pageInstance400: true, rest401: true, noBlanket401: true });
   });
 });
