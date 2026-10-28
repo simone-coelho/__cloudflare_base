@@ -582,11 +582,12 @@ const REWARDS = ['click', 'add_to_bag', 'purchase'] as const;
 export const REWARD_OF: Record<string, string> = Object.fromEntries(SLOTS.map((slot, i) => [slot, REWARDS[i % 3]!]));
 const LINES = ['Tabby', 'Willow', 'Brooklyn', 'Rogue'];
 
-/** The product a piece features (a Coach-shaped product id): a purchase naming it credits the decision that showed the piece. */
-export const featuredProduct = (slot: string, n: number) => `COA-${slot.split('-').map(w => w[0]!.toUpperCase()).join('')}${String(n).padStart(3, '0')}`;
+/** Coach products of src/data/coach-catalog.json, one featured by each checkout piece: a purchase naming it credits the decision that showed the piece. */
+const CHECKOUT_PRODUCTS = ['COA-CH857', 'COA-CY201', 'COA-CW620', 'COA-C0772', 'COA-CP149', 'COA-CP150', 'COA-CI032', 'COA-CY919', 'COA-76197', 'COA-CBH23'];
+export const featuredProduct = (slot: string, n: number): string | null => (slot === 'checkout-upsell' ? CHECKOUT_PRODUCTS[n] ?? null : null);
 export function documents(learnExtra: Record<string, unknown> = {}, slotExtra: Record<string, Record<string, unknown>> = {}): Documents {
   const pieces = SLOTS.flatMap(slot => Array.from({ length: 10 }, (_, n) => ({ id: `${slot}.${n}`, customerContentId: `TAP-${slot.toUpperCase()}-${n}`, type: 'editorial',
-    title: `${slot} ${n}`, tags: { line: [LINES[n % 4]!] }, slotTypes: [slot], lifecycle: { status: 'live' }, featuredProductIds: [featuredProduct(slot, n)] })));
+    title: `${slot} ${n}`, tags: { line: [LINES[n % 4]!] }, slotTypes: [slot], lifecycle: { status: 'live' }, ...(featuredProduct(slot, n) ? { featuredProductIds: [featuredProduct(slot, n)!] } : {}) })));
   const pages: Record<string, unknown[]> = {};
   for (const slot of SLOTS) (pages[PAGE_OF[slot]!] ??= []).push({ slot, take: 4, weights: { line: 1 } });
   return { pieces, slots: { version: 'p104-slots', pages }, learn: { version: 'p104-learn', holdout: { share: 0, salt: 'p104', arms: ['default'] },

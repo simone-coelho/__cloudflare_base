@@ -85,15 +85,60 @@
 //     real pages and clicks on both hosts; the carry-in: a click at 00:05 on a decision served at 23:55 the day before;
 //     the ring: a click on a piece shown only in a decision 400 decisions old. The money case publishes P103's member
 //     `money: { currency: 'EUR', nonpositive: 'refuse' }` (P103 MP1) and fails first with PRECONDITION P103 until it reads
-//     back (R-P6).
+//     back (R-P6); its purchases are sent as the data layer sends them (P103's own fixture: orderId, value, margin, currency,
+//     items naming a Coach product a checkout piece features).
 //
-// ONE REPRESENTATION: the tenant (coach) of _fold.ts — ten slots on six pages, three rewards, ten pieces a slot — and the
-// frozen producer record; every scenario's traffic, its times and its operator actions are in _fold.ts (no expected value
-// there). Fixtures: fixtures/reference.json (C, M, P), fixtures/v2-store.json (M's interrupted store), fixtures/old-day.json.
+// ONE REPRESENTATION: the tenant (coach) of _fold.ts — ten slots on six pages, three rewards, ten pieces a slot, the
+// checkout pieces each featuring one Coach product — and the frozen producer record; every scenario's traffic, its times and its operator actions
+// are in _fold.ts (no expected value there). Fixtures: fixtures/reference.json (C, M, P), fixtures/v2-store.json (M's
+// interrupted store), fixtures/old-day.json (a day today's writer stored, and today's two answers for it).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release). RESIDUALS (told): the harness's heap is Node's, not workerd's
-// (UNVERIFIED, DESIGN §9); the volumes are per-step loads (reading 3), not a tenant at depth 7; the cells bound per slot
-// past 4,096 counters is not exercised (the work order does not say whether such a slot is refused or capped).
+// (UNVERIFIED, DESIGN §9); the volumes are per-step loads (reading 3), not a tenant at depth 7; a slot past the live
+// table's 256 items or 4,096 counters is not exercised (the work order does not say whether it is refused or capped);
+// the five-minute run is measured as one step with the monitor and the warehouse slice it shares; a step's figure is
+// the heap sampled at its storage calls, collected only above 64 MiB, so a figure under 64 MiB includes garbage (an
+// upper figure, as the analyst's); queue batches of more than one message, and several invocations in one isolate, are
+// LV1's (each message here is delivered alone).
+//
+// MEASURED (_evidence/parity-step3/S51/specifier/logs/, serial, --no-cache, one worker, env -C the tree, --root the tree;
+// scratch trees built by scratch/bin/mk.sh from d5d8581c; the sketch is scratch/sketch/{stagedFold.ts,apply.py}):
+//   TODAY (f-today: the worktree, d5d8581c + this file): 37 of 39 RED for the missing behaviour, the two LOCK legs green.
+//   RF1 hour 10 of the volumes refused (the rings past 3.69 MiB), the class refused at hour 8, T5's wide hour refused
+//   (cells), the open hour refused rawBytes, the bot named report_budget_exceeded rawBytes not fold_step_bound; RF2 18
+//   differences (hour 13 above a page refused); RF3 13 differences (hour 13 refused), hour 13 never written; RF4 38 and 50
+//   re-reads, the migration's hour 13 refused; RF5 the head counts 0 of 5,060, hour 0 of T5 refused, C's day built [12];
+//   RF6 the custom-policy day credits the 400-decision-old click and not the carried-in one, PRECONDITION P103, the big
+//   rebuild 503; RF7 five of seven sentences absent.
+//   THE SKETCH (f-sketch1, f-sketch2; earlier versions b3–b6): 37 of 39 green, the two money legs RED on PRECONDITION P103
+//   alone; with P103's own sketch beside it (S50/specifier/scratch/sketch/apply.py) the six RF6 legs green (f-money).
+//   Steps: 5,196 in one run, 74 cut off by the faults; every step ≤ 64 MiB, a page ≤ 16.0 MiB and 200 objects.
+//   THE SKETCH, per leg (never committed; files and the code each leg needs):
+//     src/learn/stagedFold.ts (new): RF1–RF4 — the five-minute run plans one hour at a time (a listing cut into pages of
+//       ≤ 16 MiB and ≤ 200 objects, written create-only, the state head naming it in flight; quiet hours of a stateless
+//       tenant closed in place), partition (one pack and its index per page, sections by leaf, rows checked as
+//       ReportRowIdentity checks them and digested), leaf (its sections read by range, de-duplicated by digest in global
+//       order, a conflict filed or raised; today's cleanupShard, foldableRows, hourBrands, foldShard and countMembership
+//       unchanged; a state past 8 MiB split by visitor hash, rows past 8 MiB refused fold_step_bound), merge (≤ 64
+//       partials; within an hour the date's distinct visitors add), close (closeBrands; the aggregate written create-only
+//       or on the plan's etag, then the head CAS), resume (one listing finds the missing outputs), each fan-out sent once
+//       (a create-only marker), unnamed outputs collected after 15 minutes; the open hour on the same steps never moving the
+//       head, its refusal naming its step; RF6 the rebuild of a day past a page planned on the same steps, each leaf folding
+//       its visitors with foldRetainedDay and the day before carried in, the counters applied at the statistics object.
+//     src/learn/hourly.ts: RF1/RF5 the cells bound per slot and policy (256 items, 4,096 counters) in admitHours; RF5
+//       loadHours summing one hour at a time into the running statistics, reportFromHours taking them and refusing no
+//       outputBytes; the open refusal admitting `step`; the internals the steps reuse exported (stagedInternals).
+//     src/learn/report.ts: RF5 a day past 8 MiB stored as today's summary frame, a part index, the head and one part per
+//       slot in one object (a day within 8 MiB byte-for-byte as today), its head and slot parts read by range, the saved
+//       grid rows bounded per slot; RF6 the custom-policy day's ring: the day before carried in, 200 kept (ringAtHour).
+//     src/learn/fan.ts: RF6 foldRetainedDay with the day before carried in and the ring of the hourly fold at the
+//       outcome's hour (the helper ringAtHour, which the sketch placed in policy.ts: the builder keeps it in fan.ts or
+//       report.ts, P104's grant). src/durable-objects/LearnStats.ts: RF6 the rebuild reads the day before; past a page it
+//       plans the staged rebuild and applies its counters on '/rebuild-apply'. src/routes/decisions.ts: RF5 the POST
+//       answering a day past 8 MiB with its head and slot index. src/index.ts: RF1/RF4 the five-minute run calls the
+//       staged run (it only enqueues); the queue consumer runs fold messages (ack, or retry on a throw).
+//       docs/kit/02-api-reference.md: RF7 one paragraph before the aggregate-to-day budgets, which lose "16MiB combined
+//       aggregate JSON". The sketch adds no input cap and no new queue.
 //
 // Imports from src/units/: ../_parity (through ./_fold), ./_fold, ./fixtures/*.json. NO NEW EXPORT IS IMPORTED.
 
@@ -105,7 +150,7 @@ vi.mock('agents', () => ({ routeAgentRequest: async () => { throw new Error('the
 vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
 vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
-import { BRAND, HOSTS, learned, readTree, rounded, shopperOn, TENANT } from '../_parity';
+import { BRAND, HOSTS, learned, PAGE_VIEW, readTree, rounded, shopperOn, TENANT } from '../_parity';
 import {
   at, DATE, documents, drainQueue, featuredProduct, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
   retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, stamp, visit, visitorsOf, WIDE, writeLedger,
@@ -149,7 +194,7 @@ function differences(actual: unknown, expected: unknown, path = '$', out: string
   return out;
 }
 
-/** The scenario's aggregates and day against today's fold (reading 4). */
+/** The scenario's aggregates and its day (built at its last moment) against today's fold (reading 4). */
 async function parity(s: Stamp, name: 'C' | 'M' | 'P', sc: Scenario, day = true): Promise<string[]> {
   const found: string[] = [];
   for (const hour of sc.hours) {
@@ -158,8 +203,9 @@ async function parity(s: Stamp, name: 'C' | 'M' | 'P', sc: Scenario, day = true)
     found.push(...differences(actual, expected, `hour ${hour}`, [], true));
   }
   if (!day) return found;
-  const read = await dayOf(s);
-  if (read.status !== 200) found.push(`the day: GET answered ${read.status} ${JSON.stringify(read.body).slice(0, 200)}`);
+  // The day built from the hours at the scenario's last moment, as the reference's was: its grids decay to that one time.
+  const read = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE }, sc.moments[sc.moments.length - 1]!.at);
+  if (read.status !== 200) found.push(`the day: the canonical build answered ${read.status} ${JSON.stringify(read.body).slice(0, 200)}`);
   else found.push(...differences(withoutIdentity(read.body.report as Json), REF[name].day, 'the day', [], true));
   return found;
 }
@@ -618,11 +664,13 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       expect(published.includes('"money"') && published.includes('"EUR"'), `RF6 ${host}: PRECONDITION P103 — the learn document's money member { currency, nonpositive } (P103.MP1) is published and read back: ${published.slice(0, 160)}`).toBe(true);
       vi.setSystemTime(at(3, 0));
       const c = await shopperOn(s.m);
+      expect((await c.action(PAGE_VIEW)).status, 'PRECONDITION: the shopper\'s page view is accepted').toBe(200);
       const page = await c.snapshot('checkout');
       const pieces = page.decisions.filter(d => d.slot === 'checkout-upsell');
       vi.setSystemTime(at(3, 2));
-      const productOf = (contentId: string) => featuredProduct('checkout-upsell', Number(contentId.split('.').pop()));
-      const buy = (contentId: string, value: number, currency: string) => c.action({ type: 'purchase', data: { orderId: `p104-${contentId}`, value, currency,
+      const productOf = (contentId: string) => featuredProduct('checkout-upsell', Number(contentId.split('.').pop()))!;
+      // As the data layer sends a purchase (P103's own fixture, src/units/P103: orderId, value, margin, currency, items).
+      const buy = (contentId: string, value: number, currency: string) => c.action({ type: 'purchase', data: { orderId: `p104-${contentId}`, value, margin: Math.round(value * 0.4), currency,
         items: [{ productId: productOf(contentId), quantity: 1, price: value }] } });
       expect([(await buy(pieces[0]!.contentId, 120, 'EUR')).status, (await buy(pieces[1]!.contentId, 80, 'GBP')).status], 'PRECONDITION: both purchases are accepted').toEqual([200, 200]);
       await drainQueue(s, at(3, 2));
