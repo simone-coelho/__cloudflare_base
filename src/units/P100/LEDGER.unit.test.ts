@@ -2,6 +2,9 @@
 // P100 under the Closure Ledger: the tests for the LOCAL criteria HN1-HN3 of the P100 work order (the programme
 // tapestry-parity-hardening of amendment 13, ticket P100 "A browser that drew while the salt version was unknown", E24;
 // batch S45). LV1 is a deferred live row and gets no test.
+// ROUND 2 (R-P560, the specification review of 5997a5ae): the number adopted is never 1 (the hosts' two-salt history, R3;
+// HN2's tables 3, 3, 4, R7), each adopting browser lands on it twice before the rotation (R2'), and the browser with a
+// recorded experiment and its identifier under the site's own key joins HN1's fixture (R4).
 //
 // THE REQUIREMENT, verbatim (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md, section 2,
 // E24):
@@ -37,18 +40,26 @@
 //      the number. Its `tableVersion` is not pinned (the engine reads the arm member's `tableVersion` for its form only,
 //      src/routes/decisions.ts armMemberOf); the draw at the rotation stores today's draw form.
 //   R3 "On both hosts": the table each landing reads is that host's own answer to GET /v1/coach/context-table/pdp, and
-//      the null is the platform's own: learn revision 1 as a writer before the salt annotation stored it (P95's R3/R5
-//      form, its digests resealed; kit 02: "read `saltVersion: null` until that tenant next publishes its learn
-//      document"); learn revision 2 (an unrelated edit) reads 1, the rotation at revision 3 reads 2.
-//   R4 "Holds no engine-known experiment" covers a browser carrying the SDK's `opt_visitor_id` with no recorded
-//      experiment (head.ts :152 takes the known-visitor branch only with both), so it is in HN1's fixture.
+//      the null is the platform's own: a two-salt learn history (SALT_A at revision 1, SALT_B at 2) as a writer before
+//      the salt annotation stored it (P95's R3/R5 form, its digests resealed; kit 02: "read `saltVersion: null` until
+//      that tenant next publishes its learn document"); learn revision 3 (an unrelated edit on SALT_B) reads 2 (the
+//      count over the whole stored history), the rotation to SALT_C at revision 4 reads 3. The number adopted is
+//      therefore never 1 (R-P560 (1)): a browser storing a constant, or adopting only the first salt's number, is RED.
+//   R4 "Holds no engine-known experiment" covers both head-script-only browsers beside the one with no identifier at
+//      all (head.ts :152 takes the known-visitor branch only with both `opt_visitor_id` and a recorded experiment): one
+//      carrying the SDK's `opt_visitor_id` with no recorded experiment, and one whose SDK keeps its identifier under
+//      another `visitorIdKey` (kit 01 :719) and records each answer's experiment (src/sdk/listen.ts keepForHead), which
+//      the head script, reading the default key only (head.ts :143), cannot use (R-P560 (2)). Both are in HN1's fixture.
+//   R2' (R-P560 (1)) Every adopting browser lands twice on the adopted number before the rotation: the second landing
+//      neither repaints nor draws (its random source would draw the other class).
 //   R5 A browser holding a number keeps it on a table naming null (an older table a cache still serves at the stable
 //      address, public for a minute): the adoption replaces a held null only (LOCK).
 //   R6 The known-visitor lock: `opt_head.experiment` as the SDK records it from each answer (src/sdk/listen.ts
 //      keepForHead, :295-303), from that host's own decision answers; its paint, its stored experiment and the absence
 //      of a stored draw are as today.
-//   R7 HN2 "regenerated in its three places" is read as: each of the three copies, run in jsdom, adopts a held null and
-//      repaints once at the next rotation; each `.csp` is its copy's digest; `--check` exits 0. The two SDK bundles are
+//   R7 HN2 "regenerated in its three places" is read as: each of the three copies, run in jsdom, adopts a held null (a
+//      hand table naming 3, landed on twice) and repaints once at the next rotation (4, a fresh draw); each `.csp` is its
+//      copy's digest; `--check` exits 0. The two SDK bundles are
 //      pinned by their SHA-256 at 340cd410 in each of their three places (a later ticket that changes src/sdk changes
 //      them lawfully and re-forms these digests by an R10; told).
 //   R8 HN3's sentence is ruled verbatim (KIT_NULL_TAKEN, the same in the three places), as P95's R8 ruled its kit
@@ -96,7 +107,9 @@ const LONG_MS = 120_000;
 const PAGE = 'pdp';
 const CAROUSEL = 'pdp-carousel';
 const PRODUCT = 'COA-CH857', WALLET_PRODUCT = 'COA-CB925';
-const SALT_A = 'p100-salt-a', SALT_B = 'p100-salt-b';
+const SALT_A = 'p100-salt-a', SALT_B = 'p100-salt-b', SALT_C = 'p100-salt-c';
+/** The SDK's `visitorIdKey` option (kit 01 :719) set by a site that keeps the identifier under its own key. */
+const SITE_VISITOR_KEY = 'shop_visitor_id';
 const SHOTS = ['on_model', 'detail', 'studio', 'flat_lay'];
 interface ImagePiece { id: string; customerContentId: string; type: string; title: string; tags: Record<string, string[]>; slotTypes: string[];
   lifecycle: { status: string }; featuredProductIds: string[] }
@@ -170,10 +183,14 @@ async function plantBeforeAnnotation(m: Mounted): Promise<void> {
   cold();
 }
 
-/** The tenant reading a null salt version on this host: published, then learn revision 1 as stored before the annotation. */
+/**
+ * The tenant reading a null salt version on this host (R3): published on SALT_A, rotated to SALT_B at learn revision 2,
+ * then both learn revisions as a writer before the annotation stored them. Its next learn publication counts 2.
+ */
 async function nullTenant(host: Host): Promise<Mounted> {
   const m = await mount(host, DOCS);
   expectPublished(m, 'P100 — the product page (its layout slot, its carousel with shot orders) and the learn document on SALT_A publish');
+  await publishLearn(m, SALT_B, 2);
   await plantBeforeAnnotation(m);
   return m;
 }
@@ -204,9 +221,9 @@ async function publishLearn(m: Mounted, salt: string, n: number): Promise<void> 
 async function personalizedShopper(m: Mounted): Promise<Shopper> {
   for (let k = 0; k < 24; k++) {
     const s = await shopperOn(m);
-    if ([SALT_A, SALT_B].every(salt => classOf(armFor(s.subject, { share: HOLDOUT_SHARE, salt, arms: ['default'] })) === 'personalized')) return s;
+    if ([SALT_B, SALT_C].every(salt => classOf(armFor(s.subject, { share: HOLDOUT_SHARE, salt, arms: ['default'] })) === 'personalized')) return s;
   }
-  throw new Error(`PRECONDITION (${m.host}): no shopper of 24 fell in the personalized class under both salts`);
+  throw new Error(`PRECONDITION (${m.host}): no shopper of 24 fell in the personalized class under SALT_B and SALT_C`);
 }
 /** The experiment the SDK records from the host's own decision answer (src/sdk/listen.ts keepForHead: { id, saltVersion }). */
 async function answeredExperiment(m: Mounted, s: Shopper, id: string, saltVersion: number | null): Promise<{ id: string; saltVersion: number | null }> {
@@ -330,63 +347,80 @@ const KIT02_SALT = '`saltVersion` is 1 for the first salt';
 
 describe('unit:P100.HN1', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): a browser that drew its class while the host's context table read a null salt version, holding no engine-known experiment (no visitor id, or the SDK's visitor id with no recorded experiment), lands on the table naming 1: it keeps its class, paints as that class paints and stores 1 in place of the null, without a repaint; at the rotation (the table naming 2) it paints the default row once and draws its class again; the landing after paints its class's row`, async () => {
+    it(`host (${host}): a browser that drew its class while the host's context table read a null salt version, holding no engine-known experiment (no visitor id; the SDK's visitor id with no recorded experiment; a recorded experiment with the visitor id under the site's own key), lands twice on the table naming 2: it keeps its class, paints as that class paints and stores 2 in place of the null, without a repaint or a draw; at the rotation (the table naming 3) it paints the default row once and draws its class again; the landing after paints its class's row`, async () => {
       const m = await nullTenant(host);
-      const t0 = await tableOn(m, null, 'with learn revision 1 stored before the salt annotation');
+      const t0 = await tableOn(m, null, 'with learn revisions 1 (SALT_A) and 2 (SALT_B) stored before the salt annotation');
+      // R4: the SDK configured with `visitorIdKey` keeps the identifier under the site's key and records each answer's experiment.
+      const siteKeyed = await shopperOn(m);
       const drawnPersonalized = browser(), drawnDefault = browser(), withVisitorId = browser({ opt_visitor_id: 'vis-00000100-0000-4000-8000-000000000006' });
-      const story: Record<'drawnPersonalized' | 'drawnDefault' | 'withVisitorId', Landed[]> = { drawnPersonalized: [], drawnDefault: [], withVisitorId: [] };
+      const withExperiment = browser({ [SITE_VISITOR_KEY]: siteKeyed.subject });
+      const story: Record<'drawnPersonalized' | 'drawnDefault' | 'withVisitorId' | 'withExperiment', Landed[]> = { drawnPersonalized: [], drawnDefault: [], withVisitorId: [], withExperiment: [] };
       const errors: string[] = [];
       const step = async (key: keyof typeof story, b: Browser, landing: string, table: unknown, random: number) => {
         const l = await land(b, landing, table, random);
         if (l.error) errors.push(`${key} ${landing}: ${l.error}`);
         story[key].push(seen(l));
       };
-      const DRAWN = 'drawn while the table read null', NEXT = 'the next landing, the table naming 1', ROTATION = 'the rotation, the table naming 2', AFTER = 'the landing after';
+      const DRAWN = 'drawn while the table read null', NEXT = 'the next landing, the table naming 2', AGAIN = 'again on the table naming 2',
+        ROTATION = 'the rotation, the table naming 3', AFTER = 'the landing after';
 
       await step('drawnPersonalized', drawnPersonalized, DRAWN, t0, DRAWS_PERSONALIZED);
       await step('drawnDefault', drawnDefault, DRAWN, t0, DRAWS_DEFAULT);
       await step('withVisitorId', withVisitorId, DRAWN, t0, DRAWS_PERSONALIZED);
-      await publishLearn(m, SALT_A, 2);
-      const t1 = await tableOn(m, 1, 'after learn revision 2 (an unrelated edit on SALT_A)');
-      // Each landing that must not draw is given the random source that would draw the OTHER class (R2).
-      await step('drawnPersonalized', drawnPersonalized, NEXT, t1, DRAWS_DEFAULT);
-      await step('drawnDefault', drawnDefault, NEXT, t1, DRAWS_PERSONALIZED);
-      await step('withVisitorId', withVisitorId, NEXT, t1, DRAWS_DEFAULT);
+      await step('withExperiment', withExperiment, DRAWN, t0, DRAWS_PERSONALIZED);
+      recordAnswer(withExperiment, await answeredExperiment(m, siteKeyed, idOf(SALT_B), null));
       await publishLearn(m, SALT_B, 3);
-      const t2 = await tableOn(m, 2, 'after the salt rotates at learn revision 3');
+      const t1 = await tableOn(m, 2, 'after learn revision 3 (an unrelated edit on SALT_B), counted over the whole stored history');
+      // Each landing that must not draw is given the random source that would draw the OTHER class (R2, R2').
+      for (const landing of [NEXT, AGAIN]) {
+        await step('drawnPersonalized', drawnPersonalized, landing, t1, DRAWS_DEFAULT);
+        await step('drawnDefault', drawnDefault, landing, t1, DRAWS_PERSONALIZED);
+        await step('withVisitorId', withVisitorId, landing, t1, DRAWS_DEFAULT);
+        await step('withExperiment', withExperiment, landing, t1, DRAWS_DEFAULT);
+        recordAnswer(withExperiment, await answeredExperiment(m, siteKeyed, idOf(SALT_B), 2));
+      }
+      await publishLearn(m, SALT_C, 4);
+      const t2 = await tableOn(m, 3, 'after the salt rotates to SALT_C at learn revision 4');
       await step('drawnPersonalized', drawnPersonalized, ROTATION, t2, DRAWS_PERSONALIZED);
       await step('drawnDefault', drawnDefault, ROTATION, t2, DRAWS_PERSONALIZED);
       await step('withVisitorId', withVisitorId, ROTATION, t2, DRAWS_PERSONALIZED);
+      await step('withExperiment', withExperiment, ROTATION, t2, DRAWS_PERSONALIZED);
+      recordAnswer(withExperiment, await answeredExperiment(m, siteKeyed, idOf(SALT_C), 3));
       await step('drawnPersonalized', drawnPersonalized, AFTER, t2, DRAWS_DEFAULT);
       await step('drawnDefault', drawnDefault, AFTER, t2, DRAWS_DEFAULT);
       await step('withVisitorId', withVisitorId, AFTER, t2, DRAWS_DEFAULT);
+      await step('withExperiment', withExperiment, AFTER, t2, DRAWS_DEFAULT);
 
       expect(errors, `PRECONDITION (${host}): the built head script runs (public/sdk/edge-head.js)`).toEqual([]);
       const personalizedStory = [
         at(DRAWN, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: null }),
-        at(NEXT, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 1 }),
-        at(ROTATION, 'default', 'personalized', 'server', { class: 'personalized', saltVersion: 2 }),
-        at(AFTER, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 2 }),
+        at(NEXT, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 2 }),
+        at(AGAIN, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 2 }),
+        at(ROTATION, 'default', 'personalized', 'server', { class: 'personalized', saltVersion: 3 }),
+        at(AFTER, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 3 }),
       ];
       const today = '(today the held null stays null — src/sdk/head.ts :146 `moved` is false whenever a side is null, and :147-150 write the version only on a fresh draw — so the rotation is missed)';
-      expect.soft(story.drawnPersonalized, `${host}: HN1 — a browser drawn personalized while the table read null keeps its class and its row and stores 1 on the table naming 1 (no draw: its random source would draw default there), paints the default row once at the rotation to 2 and draws again, then paints its row ${today}`)
+      expect.soft(story.drawnPersonalized, `${host}: HN1 — a browser drawn personalized while the table read null keeps its class and its row and stores 2 on the table naming 2, twice without a repaint or a draw (its random source would draw default there), paints the default row once at the rotation to 3 and draws again, then paints its row ${today}`)
         .toEqual(personalizedStory);
-      expect.soft(story.drawnDefault, `${host}: HN1 — a browser drawn default while the table read null keeps the default class and stores 1 on the table naming 1 (no draw: its random source would draw personalized there), paints the default row once at the rotation to 2 and draws its class again (personalized), then paints that class's row ${today}`)
+      expect.soft(story.drawnDefault, `${host}: HN1 — a browser drawn default while the table read null keeps the default class and stores 2 on the table naming 2, twice without a draw (its random source would draw personalized there), paints the default row once at the rotation to 3 and draws its class again (personalized), then paints that class's row ${today}`)
         .toEqual([
           at(DRAWN, 'default', 'default', 'server', { class: 'default', saltVersion: null }),
-          at(NEXT, 'default', 'default', 'server', { class: 'default', saltVersion: 1 }),
-          at(ROTATION, 'default', 'personalized', 'server', { class: 'personalized', saltVersion: 2 }),
-          at(AFTER, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 2 }),
+          at(NEXT, 'default', 'default', 'server', { class: 'default', saltVersion: 2 }),
+          at(AGAIN, 'default', 'default', 'server', { class: 'default', saltVersion: 2 }),
+          at(ROTATION, 'default', 'personalized', 'server', { class: 'personalized', saltVersion: 3 }),
+          at(AFTER, ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 3 }),
         ]);
       expect.soft(story.withVisitorId, `${host}: HN1 (R4) — a browser carrying the SDK's visitor id with no recorded experiment takes the head-script-only branch and behaves exactly so ${today}`)
+        .toEqual(personalizedStory);
+      expect.soft(story.withExperiment, `${host}: HN1 (R4, R-P560 (2)) — a browser whose SDK records each answer's experiment but keeps its visitor id under the site's own key (\`visitorIdKey\`) takes the head-script-only branch and behaves exactly so ${today}`)
         .toEqual(personalizedStory);
     }, LONG_MS);
 
     it(`host (${host}): LOCK — as today: a browser holding a number keeps it on a table naming null (an older table a cache still serves) and repaints once at the rotation; a browser holding null on a table naming null keeps its class, its row and its null; the known-visitor branch reads the experiment the SDK records from each of the host's answers (its class by armFor, the default row once where the recorded salt version and the table's differ) and writes neither a draw nor its experiment`, async () => {
       const m = await nullTenant(host);
-      const t0 = await tableOn(m, null, 'with learn revision 1 stored before the salt annotation');
+      const t0 = await tableOn(m, null, 'with learn revisions 1 (SALT_A) and 2 (SALT_B) stored before the salt annotation');
       const shopper = await personalizedShopper(m);
-      const answer0 = await answeredExperiment(m, shopper, idOf(SALT_A), null);
+      const answer0 = await answeredExperiment(m, shopper, idOf(SALT_B), null);
       const holdsNumber = browser(), holdsNull = browser();
       const known = browser({ opt_visitor_id: shopper.subject });
       recordAnswer(known, answer0);
@@ -400,28 +434,28 @@ describe('unit:P100.HN1', () => {
 
       lock.holdsNull.push(seen(await step(holdsNull, 'drawn while the table read null', t0, DRAWS_PERSONALIZED)));
       lock.holdsNull.push(seen(await step(holdsNull, 'again on a table naming null', t0, DRAWS_DEFAULT)));
-      await publishLearn(m, SALT_A, 2);
-      const t1 = await tableOn(m, 1, 'after learn revision 2 (an unrelated edit on SALT_A)');
-      lock.holdsNumber.push(seen(await step(holdsNumber, 'drawn on the table naming 1', t1, DRAWS_PERSONALIZED)));
-      lock.holdsNumber.push(seen(await step(holdsNumber, 'on an older table a cache still serves, naming null', t0, DRAWS_DEFAULT)));
-      lock.known.push(seenKnown(await step(known, 'holding the answer\'s null, the table naming 1', t1, DRAWS_DEFAULT)));
-      recordAnswer(known, await answeredExperiment(m, shopper, idOf(SALT_A), 1));
       await publishLearn(m, SALT_B, 3);
-      const t2 = await tableOn(m, 2, 'after the salt rotates at learn revision 3');
-      lock.holdsNumber.push(seen(await step(holdsNumber, 'the rotation, the table naming 2', t2, DRAWS_DEFAULT)));
+      const t1 = await tableOn(m, 2, 'after learn revision 3 (an unrelated edit on SALT_B), counted over the whole stored history');
+      lock.holdsNumber.push(seen(await step(holdsNumber, 'drawn on the table naming 2', t1, DRAWS_PERSONALIZED)));
+      lock.holdsNumber.push(seen(await step(holdsNumber, 'on an older table a cache still serves, naming null', t0, DRAWS_DEFAULT)));
+      lock.known.push(seenKnown(await step(known, 'holding the answer\'s null, the table naming 2', t1, DRAWS_DEFAULT)));
+      recordAnswer(known, await answeredExperiment(m, shopper, idOf(SALT_B), 2));
+      await publishLearn(m, SALT_C, 4);
+      const t2 = await tableOn(m, 3, 'after the salt rotates to SALT_C at learn revision 4');
+      lock.holdsNumber.push(seen(await step(holdsNumber, 'the rotation, the table naming 3', t2, DRAWS_DEFAULT)));
       lock.holdsNumber.push(seen(await step(holdsNumber, 'the landing after', t2, DRAWS_PERSONALIZED)));
-      lock.known.push(seenKnown(await step(known, 'holding the answer\'s 1, the table naming 2', t2, DRAWS_DEFAULT)));
-      const answer2 = await answeredExperiment(m, shopper, idOf(SALT_B), 2);
+      lock.known.push(seenKnown(await step(known, 'holding the answer\'s 2, the table naming 3', t2, DRAWS_DEFAULT)));
+      const answer2 = await answeredExperiment(m, shopper, idOf(SALT_C), 3);
       recordAnswer(known, answer2);
-      lock.known.push(seenKnown(await step(known, 'holding the answer\'s 2, the table naming 2', t2, DRAWS_DEFAULT)));
+      lock.known.push(seenKnown(await step(known, 'holding the answer\'s 3, the table naming 3', t2, DRAWS_DEFAULT)));
 
       expect(errors, `PRECONDITION (${host}): the built head script runs (public/sdk/edge-head.js)`).toEqual([]);
-      expect.soft(lock.holdsNumber, `${host}: HN1 LOCK (R5) — a browser holding 1 keeps it on a table naming null, then paints the default row once at the rotation to 2, draws again (default here) and paints that class's row`)
+      expect.soft(lock.holdsNumber, `${host}: HN1 LOCK (R5) — a browser holding 2 keeps it on a table naming null, then paints the default row once at the rotation to 3, draws again (default here) and paints that class's row`)
         .toEqual([
-          at('drawn on the table naming 1', ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 1 }),
-          at('on an older table a cache still serves, naming null', ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 1 }),
-          at('the rotation, the table naming 2', 'default', 'default', 'server', { class: 'default', saltVersion: 2 }),
-          at('the landing after', 'default', 'default', 'server', { class: 'default', saltVersion: 2 }),
+          at('drawn on the table naming 2', ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 2 }),
+          at('on an older table a cache still serves, naming null', ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 2 }),
+          at('the rotation, the table naming 3', 'default', 'default', 'server', { class: 'default', saltVersion: 3 }),
+          at('the landing after', 'default', 'default', 'server', { class: 'default', saltVersion: 3 }),
         ]);
       expect.soft(lock.holdsNull, `${host}: HN1 LOCK — a browser holding null on a table naming null keeps its class, its row and its null`)
         .toEqual([
@@ -430,9 +464,9 @@ describe('unit:P100.HN1', () => {
         ]);
       expect.soft(lock.known, `${host}: HN1 LOCK (R6) — the known visitor's class is armFor(its identifier, the salt its recorded experiment names); it paints the default row once where that experiment's salt version and the table's are two different numbers, and the head script changes neither its recorded experiment nor keeps a draw`)
         .toEqual([
-          { landing: 'holding the answer\'s null, the table naming 1', context: ROW_CONTEXT, arm: 'personalized', order: 'row', held: { experiment: { id: idOf(SALT_A), saltVersion: null }, arm: 'no draw kept' } },
-          { landing: 'holding the answer\'s 1, the table naming 2', context: 'default', arm: 'personalized', order: 'server', held: { experiment: { id: idOf(SALT_A), saltVersion: 1 }, arm: 'no draw kept' } },
-          { landing: 'holding the answer\'s 2, the table naming 2', context: ROW_CONTEXT, arm: 'personalized', order: 'row', held: { experiment: { id: idOf(SALT_B), saltVersion: 2 }, arm: 'no draw kept' } },
+          { landing: 'holding the answer\'s null, the table naming 2', context: ROW_CONTEXT, arm: 'personalized', order: 'row', held: { experiment: { id: idOf(SALT_B), saltVersion: null }, arm: 'no draw kept' } },
+          { landing: 'holding the answer\'s 2, the table naming 3', context: 'default', arm: 'personalized', order: 'server', held: { experiment: { id: idOf(SALT_B), saltVersion: 2 }, arm: 'no draw kept' } },
+          { landing: 'holding the answer\'s 3, the table naming 3', context: ROW_CONTEXT, arm: 'personalized', order: 'row', held: { experiment: { id: idOf(SALT_C), saltVersion: 3 }, arm: 'no draw kept' } },
         ]);
     }, LONG_MS);
   }
@@ -443,18 +477,22 @@ describe('unit:P100.HN1', () => {
 // ===========================================================================
 
 describe('unit:P100.HN2', () => {
-  it('logic: each of the head script\'s three places (public/sdk, public/sdk/0.2.0, packages/sdk) carries the regenerated script — run in jsdom, each copy keeps a class drawn under a null salt version and stores the table\'s 1 without a repaint, then paints the default row once at 2 — beside an `edge-head.js.csp` holding its own digest; `node scripts/build-sdk.mjs --check` exits 0 and names the head script and its .csp', async () => {
+  it('logic: each of the head script\'s three places (public/sdk, public/sdk/0.2.0, packages/sdk) carries the regenerated script — run in jsdom, each copy keeps a class drawn under a null salt version and stores the table\'s 3 without a repaint or a draw on two landings, then paints the default row once at 4 and draws its class again — beside an `edge-head.js.csp` holding its own digest; `node scripts/build-sdk.mjs --check` exits 0 and names the head script and its .csp', async () => {
     const holding = { opt_head: JSON.stringify({ arm: { class: 'personalized', saltVersion: null, tableVersion: handTable(null).version } }) };
-    const runs: Array<[string, Landed, Landed]> = [];
+    const landings: Array<[string, number, number]> = [['first landing, the table naming 3', 3, DRAWS_DEFAULT], ['second landing, the table naming 3', 3, DRAWS_DEFAULT],
+      ['the rotation, the table naming 4', 4, DRAWS_DEFAULT], ['the landing after, the table naming 4', 4, DRAWS_PERSONALIZED]];
+    const runs: Array<[string, ...Landed[]]> = [];
     for (const copy of HEAD_COPIES) {
-      const b = browser(holding);
-      const adopted = await land(b, 'the table naming 1', handTable(1), DRAWS_DEFAULT, copy);
-      const rotated = await land(b, 'the table naming 2', handTable(2), DRAWS_PERSONALIZED, copy);
-      runs.push([copy, seen(adopted), seen(rotated)]);
+      const b = browser(holding), seenHere: Landed[] = [];
+      for (const [landing, saltVersion, random] of landings) seenHere.push(seen(await land(b, landing, handTable(saltVersion), random, copy)));
+      runs.push([copy, ...seenHere]);
     }
-    expect.soft(runs, 'HN2 — every place the head script is kept runs the regenerated script: a held null takes the table\'s number without a repaint, and the next rotation repaints once (today no copy adopts the number: each keeps null and paints its row at 2)')
-      .toEqual(HEAD_COPIES.map(copy => [copy, at('the table naming 1', ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 1 }),
-        at('the table naming 2', 'default', 'personalized', 'server', { class: 'personalized', saltVersion: 2 })]));
+    expect.soft(runs, 'HN2 — every place the head script is kept runs the regenerated script: a held null takes the table\'s number (3) without a repaint or a draw, twice (each landing\'s random source would draw default), and the next rotation (4) repaints once and draws the class again (default here), whose row follows (today no copy adopts the number: each keeps null and paints its row at 4)')
+      .toEqual(HEAD_COPIES.map(copy => [copy,
+        at(landings[0]![0], ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 3 }),
+        at(landings[1]![0], ROW_CONTEXT, 'personalized', 'row', { class: 'personalized', saltVersion: 3 }),
+        at(landings[2]![0], 'default', 'default', 'server', { class: 'default', saltVersion: 4 }),
+        at(landings[3]![0], 'default', 'default', 'server', { class: 'default', saltVersion: 4 })]));
     const first = bytesOf(HEAD_COPIES[0]);
     expect.soft(HEAD_COPIES.map(copy => [copy, bytesOf(copy).equals(first), readFileSync(join(ROOT, `${copy}.csp`), 'utf8') === `sha256-${createHash('sha256').update(bytesOf(copy)).digest('base64')}`]),
       'HN2 — the three copies are one build\'s bytes, each with the content-security-policy source of exactly those bytes beside it')
