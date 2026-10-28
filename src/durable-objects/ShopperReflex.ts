@@ -63,7 +63,7 @@ import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwa
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, settleCarriedOutcome, stripExpiredOwnerRecovery, storedRenderOf, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type CarriedOutcome, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
-import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
+import { consentFromCookies, intersectConsent, intersectConsentDated, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
 import { OWNER_TIMING_HEADER, ownerTimer } from '@/identity/consentContinuity';
@@ -2715,6 +2715,9 @@ export class ShopperReflex {
           }
         }
         const consent = intersectConsent(current, rotation.consent, body.consent);
+        // P97 (R-P605): what the replacement's activation carries is dated by when each refusal was made, so its
+        // never-older rule orders the source's newer refusal after a choice the replacement made earlier.
+        const carried = intersectConsentDated(current, rotation.consent, body.consent);
         // A newer refusal on the source is durable before any replacement response.
         if (JSON.stringify(consent) !== JSON.stringify(rotation.consent) || JSON.stringify(consent) !== JSON.stringify(current)) {
           rotation = { ...rotation, consent };
@@ -2726,7 +2729,7 @@ export class ShopperReflex {
         const target = this.env.SHOPPER_REFLEX.get(this.env.SHOPPER_REFLEX.idFromName(shopperObjectName(source.tenant, replacement.subject)));
         const response = await target.fetch('https://shopper-reflex/identity/activate', {
           method: 'POST', headers: { [SHOPPER_HEADER]: replacement.capability, 'X-Tenant': source.tenant, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ consent, existingOnly: rotation.status === 'complete' }),
+          body: JSON.stringify({ consent: carried, existingOnly: rotation.status === 'complete' }),
         });
         if (!response.ok) throw new SessionAccessError();
         const result = z.object({ ok: z.literal(true), consent: consentSchema }).parse(await response.json());
@@ -2734,7 +2737,8 @@ export class ShopperReflex {
         // replacement itself chose so after every choice the source holds for that switch (its own newer choice, kept by
         // the activation's never-older rule: a second tab's retry after the replacement accepted). Anything else more
         // permissive would be the rotation widening consent, and is refused as before.
-        const sourceChoseAt = (key: (typeof CONSENT_SWITCHES)[number]) => Math.max(current.instruction?.[key]?.chosenAt ?? -Infinity, consent.instruction?.[key]?.chosenAt ?? -Infinity);
+        const sourceChoseAt = (key: (typeof CONSENT_SWITCHES)[number]) => Math.max(current.instruction?.[key]?.chosenAt ?? -Infinity,
+          consent.instruction?.[key]?.chosenAt ?? -Infinity, carried.instruction?.[key]?.chosenAt ?? -Infinity);
         const replacementsOwn = (key: (typeof CONSENT_SWITCHES)[number]) => (result.consent.instruction?.[key]?.chosenAt ?? -Infinity) > sourceChoseAt(key);
         if (CONSENT_SWITCHES.some(key => !consent[key] && result.consent[key] && !replacementsOwn(key))) throw new SessionAccessError();
         if (rotation.status === 'prepared') {
