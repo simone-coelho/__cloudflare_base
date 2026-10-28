@@ -142,8 +142,9 @@ import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 
 import { asOperator, expectPublished, HOSTS, loadDocument, MODULES, mount, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, UnitR2, type Answer, type Host,
   type Mounted } from '../_parity';
-import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, declareProductSlots, DOCS, DOCS_WITH_CART, image, indexOf, KEY, OTHER_IMAGES, preconditions, productRead,
-  rangeProduct, rangeRecordId, rangeRecords, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, storedRevisionValues, unique, withinCaps, type Rec } from '../P93/_catalog';
+import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, classOf, declareProductSlots, DOCS, DOCS_WITH_CART, image, indexOf, KEY, metered, OTHER_IMAGES, preconditions,
+  productRead, rangeProduct, rangeRecordId, rangeRecords, READ_GAP, readAsWanted, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, storedRevisionValues, unique,
+  withinCaps, type Rec } from '../P93/_catalog';
 import { stamp } from '../P87/_stamp';
 import { attemptsOf, canonicalJson, failFirst, importOf, leaked, loadedTenant, meter, minutesAgo, objectKindOf, oneLevelTenant, packTable, publishOf, rawImport, reached,
   recoverOf, resolve, revisionOf, shardedTenant, shortRetention, stageOf, statusOf, STORAGE_NUMBER, storedPacks, tally, under, uploadedAt, type Call, type Meter,
@@ -394,6 +395,25 @@ describe('unit:P98.LD1 (R-P549, R-P551: one pack per load; calls bounded by the 
         tooLarge: [413, 'load_too_large', {}, true], partRefused: [413, 'part_too_large', {}, true], shardRefused: [413, 'index_shard_too_large', {}, true],
         idRefused: [413, 'id_index_too_large', {}, true], manifestRefused: [413, 'manifest_too_large', {}, true] });
     }, 1_800_000);
+
+    // R-P602: each object inside the pack addressed by its byte range — a load reads its parts at their places, merging
+    // neighbours only across gaps of at most 256 KiB (publication.ts PACK_GAP; DESIGN.md §124), so two wanted parts further
+    // apart are two reads, never one read carrying the bytes between them. 2,000 products in one load put products 1 and
+    // 1,001 about 320 KB apart in its pack.
+    it(`host (${host}): R-P602 — at 2,000 products a load retitling two products 1,000 apart reads their parts as two one-part reads of the pack, never one read spanning more than 256 KiB between wanted objects`, async () => {
+      const m = await loadedTenant(host, 2000);
+      const view = indexOf(m, (await loadDocument(m, 'catalog')).document), products = [rangeProduct(1), rangeProduct(1001)];
+      const places = products.map(p => view.products[p]?.place), parts = products.map(p => KEY.part(view.products[p]?.digest ?? `no pointer for ${p}`));
+      const apart = places[0] && places[1] && places[0].pack === places[1].pack ? places[1].at - (places[0].at + places[0].bytes) : null;
+      expect(apart !== null && apart > READ_GAP, `${host}: PRECONDITION — the two parts lie in one pack more than 256 KiB apart (${apart === null ? 'today: no part in a pack' : `${apart} bytes`})`).toBe(true);
+      const wanted = [...unique(products.map(p => KEY.shard(view.shards[bucketOf(p)]?.digest ?? `no shard for ${p}`))), ...parts];
+      const run = await metered(m, () => importOf(m, [...rangeRecords(1, 1, ', retitled'), ...rangeRecords(1001, 1, ', retitled')]));
+      const partReads = run.ranged.filter(r => r.objects.some(o => classOf(o.key) === 'part'))
+        .map(r => ({ parts: r.objects.filter(o => classOf(o.key) === 'part').map(o => o.key), bytes: r.to - r.from }));
+      expect.soft({ status: run.result.status, read: readAsWanted(run, 'part', wanted), reads: partReads.map(r => r.parts).sort(), widest: Math.max(0, ...partReads.map(r => r.bytes)) <= READ_GAP },
+        `${host}: P98.LD1 — the two parts read at their places (${JSON.stringify(partReads.map(r => [r.parts.length, r.bytes]))})`).toEqual({
+        status: 200, read: [...parts].sort(), reads: parts.map(k => [k]).sort(), widest: true });
+    }, 300_000);
   }
 });
 
