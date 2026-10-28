@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-first-paint",
+    "title": "Tapestry parity, the first answer's content read: a machine holding nothing reaches the published content in one trip (amendment 13, E27)",
+    "ticketIds": [
+      "P102"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P102",
+      "title": "The first answer's content read: a machine holding nothing reaches the published content in one trip (**amendment 13, E27, 2026-10-28**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E27 · section 2 of amendment 13, \"Done when\" (P97's root-cause analysis, R-P547; the diagnosis S44/analyst-stamps-content, R-P553; in force under the owner's direction of 28 October, R-P545; section 3 row 1 as amended for E27)",
+        "requirement": "a publication's set and documents are kept for as long as memory allows (the head still checked on every decision); the head carries each document's version so a machine holding nothing reads the content in one round, existing tenants backfilled without an operator's publication; a brand-new machine reaches the content in one trip; the per-trip storage time reported so the stamps' slower trip is measured live; the answers identical; the stamps' cold first answer within about 300 ms of server time once P97 ships."
+      },
+      "outcome": "A decision on a machine holding nothing reaches the tenant's published content in one storage trip, and a machine that read the publication before pays only the head's check at any age, with the same answers and a publication still honoured on the very next read, so the stamps' cold first answer lands within about 300 ms of server time once P97 ships.",
+      "criteria": [
+        {
+          "id": "CR1",
+          "kind": "LOCAL",
+          "observable": "Fix A, on both hosts: a machine that has read a publication's set and documents keeps them, by the identity of that set (its revision and digest) and its backing binding, for as long as memory allows: a later decision that finds the same committed head, at any time after (past 30 s included), reads the head alone. The head is still read and checked on every decision by a new handle (Lane E4), so a publication committed between two decisions is served on the very next one; what is held is bounded in bytes (the least recently used leaving first), cleared by invalidatePublicationCache and by the writers' invalidation, never used by an administrative read, and never answers when the head cannot be read. In the harness at 100 ms a read, an idle machine's documents stage (past 30 s) is at most 120 ms (the design measured 305 ms today, 101–104 ms with A; _evidence/parity-step3/S44/analyst-stamps-content/logs/03-probe-summary.md). Today a serving entry lapses 30 s after the read that made it (PUBLICATION_CACHE_MS, src/config/publication.ts:8; fresh, :455; pinPublication, :482–508), although a set and its documents never change once published, so a decision past 30 s reads the head, the set and the documents again (lane L20: the pair's held page views at 32 s paid 228 and 242 ms).",
+          "proof": "The P102 acceptance command runs the tests named unit:P102.CR1 in src/units/P102/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "CR2",
+          "kind": "LOCAL",
+          "observable": "Fix B, on both hosts: the commit (finish, src/config/publication.ts:899–910, the head written at :905) writes the revision of each member of the committed set as the head object's storage metadata; the head's JSON, its digest and its field set are unchanged (loadHead's checks, :318–337), so code that does not know the metadata reads the head exactly as before (a rollback to older code is safe). A decision on a machine holding nothing names its members (the content, slots, learn and reflex documents, src/content/service.ts:764–771) and reads the set and those members in one round after the head: two storage trips, not three. A member whose revision, digest or index row differs from the set's own ref is read again from the set as today, so the metadata is a hint and never authority (a hint naming absent revisions, a stale revision or malformed text gives the identical answer). Existing tenants' heads gain the metadata without an operator's publication: a one-time backfill off every shopper's time, from the five-minute scheduled run (src/index.ts:282–329), rewrites a committed head that lacks it with the same bytes under a conditional write on its etag, so a publication committed meanwhile wins and the backfill then changes nothing, and a publication that meets the backfill's rewrite of its head is not refused for it; the synthetic monitor's reads answer as today (src/ops/synthetic.ts:211–223). In the harness at 100 ms a read, with A and B and no serving copy, a machine holding nothing spends at most 220 ms in documents (the design measured 307 ms today, 205–211 ms with B). Today a cold decision reads the head (publication.ts:489, loadHead :318–337), then the set (:497, currentSet :409–412), then the four documents together (service.ts:766–771 through publication.ts:528–545): three sequential trips (_evidence/parity-step3/S44/analyst-stamps-content/DESIGN.md §2, REPRODUCED in the harness and in local workerd).",
+          "proof": "The P102 acceptance command runs the tests named unit:P102.CR2 in src/units/P102/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "CR3",
+          "kind": "LOCAL",
+          "observable": "Fix C, on both hosts: a brand-new machine, holding nothing of the tenant, reaches the published content in one storage trip. Every commit also writes one serving copy of the committed set and its members' documents under a fixed name per scope, at most 1 MiB (above it no copy is written and a reader takes CR2's two trips); a decision holding nothing reads the head and that copy together, and uses the copy only where its set digest equals the head's committed identity and every member matches its ref in the set, else reads as CR2 (a stale or missing copy costs one parallel read and never changes an answer); existing tenants' copies are written by CR2's backfill. In the harness at 100 ms a read, a machine holding nothing spends at most 120 ms in documents, in one wave of reads issued together (today 307 ms in three waves; A and B 205–211 ms in two; the design's §8 projects one wave, about A's idle 101–104 ms). P93's anchored product page then reads at most 4 objects cold: the head, the serving copy, the anchor's shard and its part. Today the commit writes nothing beside the head, the set and the revisions (finish, src/config/publication.ts:899–910), and a page reads 8 objects cold (P93 CS2).",
+          "proof": "The P102 acceptance command runs the tests named unit:P102.CR3 in src/units/P102/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "CR4",
+          "kind": "LOCAL",
+          "observable": "Every decision's answer reports the storage trips its documents stage waited on, in whole milliseconds and in order, each by what it read (the head; the set and members, or the serving copy; nothing where it was held), in a body member beside sources.timings that kit 02 names, on the first-request door's answer and on a held session's; Server-Timing and sources.timings are unchanged (P76's five stages and their add-up, P96's one total). The live lane can then split a stamp's time per trip from the number of trips. Today the documents stage is timed only as a whole (src/content/service.ts:757–760, the lap at :795), so the stamps' 275 ms median against the pair's 161 ms was split into trips only by fitting (_evidence/parity-step3/S44/analyst-stamps-content/DESIGN.md §1, §3: about 92 ms a trip on the stamps against 54 ms on the pair, HYPOTHESIS).",
+          "proof": "The P102 acceptance command runs the tests named unit:P102.CR4 in src/units/P102/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "CR5",
+          "kind": "LOCAL",
+          "observable": "LOCK, on both hosts, with A, B and C on: the answers identical to today's (the versions, the decisions, the experiment, the context key) on a cold, an idle and a warm machine and across a publication committed between two decisions; one pinned set per decision, every document validated against it; P93's page (unit:P93.CS2: at most 8 reads cold, the same classes, warm no shard or part, its read list as re-pointed by this ticket's R10 to C's reads); src/config/versionedStore.test.ts (W11.02, in workerd on native R2), src/config/publication.optionalMember.test.ts and src/config/publication.servingCache.test.ts (as re-pointed by the R10); and the 26 lock files the design ran green under A and B, 493 tests (_evidence/parity-step3/S44/analyst-stamps-content/logs/05-locks-AB.log): P13, P76, P84, P30, P96, P86, P80, P81, P85, P36, P60, LANDING, W16 C2, C2b, C3, C4 and C6, W18 B1, W19 B1, B2 and B3, W37 FIX2, FIX3, LEDGER and T7, and P95.",
+          "proof": "The P102 acceptance command runs the tests named unit:P102.CR5 in src/units/P102/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "CR6",
+          "kind": "LOCAL",
+          "observable": "Kit 02's serving sentence (docs/kit/02-api-reference.md:1848) states the read as built: the head checked on every decision, so a publication is honoured on the very next read; a publication's set and documents held by their identity for as long as memory allows; the head's member metadata; the serving copy and its bound; and the per-trip report CR4 adds; \"expire within 30 seconds of the read's start\" is gone (no test pins those words, _evidence/parity-step3/S44/analyst-stamps-content/DESIGN.md §6).",
+          "proof": "The P102 acceptance command runs the tests named unit:P102.CR6 in src/units/P102/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "Lane L21 on the pair and on the stamps (staging and production, the stamps read-only), at the release that carries this ticket and P97: the stamps' cold first answer within about 300 ms of server time (the door's total; projected today 174–502 ms, _evidence/parity-step3/S44/analyst-stamps-content/DESIGN.md §7); the per-trip split recorded from CR4 on both pair hosts and both stamps (how many trips each documents stage made and what each cost), so why a stamp's storage trip costs about 1.7 times the pair's (92 ms against 54 ms, R-P553) is measured live; the stamps' pilot tenant read with its head's member metadata and serving copy present without any operator's publication (the backfill).",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:30–33 (E27), :41 (section 3 row 1), in the integration checkout's working tree (uncommitted at c953c04e)",
+          "description": "Item E27, added on 28 October in its own programme tapestry-parity-first-paint; needed by the first activation (January), with P97; three to four days."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:1006 (R-P545), :1008 (R-P547), :1014 (R-P553)",
+          "description": "The owner's direction (every problem fixed at its root cause); P97's design, which left the stamps' first answer bounded by the content read; the content read diagnosed and fixes A, B and C ruled built, B reaching existing tenants by a backfill, the 30-second test and kit 02 :1848 re-pointed by name, the per-trip timing added, the build after P98."
+        },
+        {
+          "ref": "_evidence/parity-step3/S44/analyst-stamps-content/DESIGN.md (§1 the data, §2 the path, §3 the cause, §4 A and B, §5 measured, §6 locks, §7 the 300 ms target, §8 C); _evidence/parity-step3/S44/analyst-stamps-content/logs (03-probe-summary.md, 04-locks-publication-AB.log, 05-locks-AB.log, 06-P93-CS2-AB.log, 07-workerd-today.json, 07-workerd-patched.json, 08-projection.md, 09-hint.jsonl); _evidence/parity-step3/S44/analyst-stamps-content/tools-kept (patch-sc.mjs, probe.unit.test.ts, hint.unit.test.ts, workerd-probe.mjs)",
+          "description": "REPRODUCED in the harness on both hosts and in local workerd: a cold decision reads the content in three waves; A and B take a cold machine to two waves and an idle one to one, answers identical, the hint never authority, 26 lock files and P93 CS2 green, the 30-second servingCache leg the one red leg. HYPOTHESIS: the live wave model and the stamps' slower trip (about 92 ms against 54 ms); C's one wave (not prototyped). UNVERIFIED: why a stamp's trip is slower, live placement of new objects and edge isolates, R2 custom metadata on the real service."
+        },
+        {
+          "ref": "_evidence/parity-step3/live/lanes/L19/records/P76-timings.md; _evidence/parity-step3/live/lanes/L20/records/P96-timings.md",
+          "description": "The live first answers: documents medians 275 ms on the stamps and 161 ms on the pair; the held page views (77–125 ms within about 20 s on the stamps; 228 and 242 ms at 32 s on the pair)."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/integration diff --quiet 99ddcafc c953c04e -- src docs/kit scripts wrangler.toml (exit 0)",
+          "description": "The design read 99ddcafc; src, the kits, scripts and wrangler.toml are byte-equal there and at rem/integration c953c04e, the revision this work order cites."
+        },
+        {
+          "ref": "src/config/publication.ts:8, :318–337, :409–412, :446–508, :528–545, :899–910; src/content/service.ts:757–795; src/index.ts:271–329; src/ops/synthetic.ts:211–223; src/config/publication.servingCache.test.ts:72–141; src/units/P93/LEDGER.unit.test.ts:108–111, :568; src/units/P86/LEDGER.unit.test.ts:1036–1043; docs/kit/02-api-reference.md:1848",
+          "description": "Today's head, set and member reads, the 30-second serving cache, the commit, the documents stage, the scheduled run, the monitor's head view, the legs that pin today's read lists and expiry, and the kit sentence."
+        },
+        {
+          "ref": "docs/parity/hardening/program.json (P98, ACTIVE); docs/parity/scale/program.json (P97)",
+          "description": "P98 edits src/config/publication.ts and src/content/service.ts (the packs), so this ticket's build follows it; P97 moves the first answer to the edge, which this ticket's live target assumes."
+        }
+      ],
+      "remainingWork": [
+        "Sequencing (R-P553): this ticket's specification proceeds now; its build starts after P98 lands on rem/integration, because both edit src/config/publication.ts and src/content/service.ts, and it builds over P98's pack layout as joined.",
+        "Fix A, the store held by a publication's identity, in src/config/publication.ts beside the serving cache; closed by unit:P102.CR1.",
+        "Fix B, the commit's member metadata, its reader and the decision naming its members (src/config/publication.ts; src/content/service.ts:764), and the one-time backfill of existing tenants' heads from the five-minute scheduled run (src/index.ts:282–329); closed by unit:P102.CR2.",
+        "Fix C, the serving copy written at the commit and read beside the head (src/config/publication.ts), written for existing tenants by the same backfill; closed by unit:P102.CR3.",
+        "The per-trip report of the documents stage (src/config/publication.ts; src/content/service.ts:757–795); closed by unit:P102.CR4.",
+        "Kit 02 :1848; closed by unit:P102.CR6.",
+        "The R10s by name, by the specifier before the build: src/config/publication.servingCache.test.ts:128–141 (the 30-second test re-pointed: past 30 s the head alone, the set and documents held by identity) and, where C changes them, its cold read lists at :76 and :112; P93's cold page read list (src/units/P93/LEDGER.unit.test.ts:108–111, pageReads, and the one-level page list at :568) and P86 CS2's exact cold read list (src/units/P86/LEDGER.unit.test.ts:1036–1043), re-pointed to C's reads.",
+        "The locks hold, closed by unit:P102.CR5 and the program integration gate: the 26 lock files of the design's run, P93 and P86 (as re-pointed), P98 as built, versionedStore (W11.02), publication.optionalMember and publication.servingCache (as re-pointed).",
+        "The P84 class draw's pin before the session (src/routes/decisions.ts:1054–1056) names its learn member so it takes the same one-round read as the documents stage, saving its own trip on a machine holding nothing; closed by unit:P102.CR3 (R-P555)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 3 row 1 (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:41, as amended for E27: \"E27 added on 28 October (R-P553) in its own programme tapestry-parity-first-paint; the owner may strike any\"); R-P553 (_evidence/parity-step3/AMENDMENTS.md:1014), under the owner's direction of 28 October, R-P545 (:1006: \"Every one of those four problems found in last night's testing has a solution. … Everything needs to be fixed.\")",
+          "effect": "E27 enters tapestry-parity-first-paint as P102, its only ticket, needed by the first activation with P97: fixes A, B and C are all built (C is not left as not robustly met), B reaching existing tenants by a one-time backfill and not by an operator's publication on the pilot, and the per-trip timing added so the stamps' slower storage trip is measured live, a question for the lane and not a limit; its specification now, its build after P98 lands; it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair and on the stamps with the released artifact, in lane L21 (the stamps read-only), in the batched live acceptance of the parity programmes, with the per-trip split recorded.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts, the stamps and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/config/publication.ts",
+        "src/content/service.ts (the decision's documents stage: its pin naming its members and its per-trip report)",
+        "src/index.ts (the five-minute scheduled run's backfill call only)",
+        "docs/kit/02-api-reference.md",
+        "src/config/publication.servingCache.test.ts (R10 by name: the 30-second test at :128–141 re-pointed, and the cold read lists at :76 and :112 only where C changes them; by the specifier)",
+        "src/units/P93/LEDGER.unit.test.ts (R10 by name: the cold page read list, pageReads at :108–111 and the one-level page list at :568, re-pointed to C's reads only; and the titles and messages at :289 and :302 that name the read count; by the specifier; R-P570 (a))",
+        "src/units/P86/LEDGER.unit.test.ts (R10 by name: P86 CS2's exact cold read list at :1036–1043 re-pointed to C's reads only; by the specifier)",
+        "src/routes/decisions.ts (only the P84 class draw's pin before the session, :1054–1056, naming its learn member so it takes the same one-round read; R-P555)",
+        "src/index.api-boundary.test.ts (R10 by name: W03.02's put list at :3174–3176 gains the serving copy's put only; by the specifier; R-P570 (a))",
+        "src/routes/content.test.ts (R10 by name: W14.04's object count at :1491 gains one serving copy per tenant only; by the specifier; R-P570 (a))",
+        "src/content/consent.test.ts (R10 by name: W20.04 :384 and W20.03 :447 lose or alter the slots member in the serving copy as well as the revision object, the refusal unchanged; W28.01 :574 counts the learn member's one read from the copy; by the specifier; R-P570 (a))",
+        "src/units/P97/LEDGER.unit.test.ts (R10 by name: contentOf also deletes sources.trips only; by the specifier or P102's builder after P97 joins; R-P570 (d))"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P102 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P102's specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P102's specification review records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: P102's specification review records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
