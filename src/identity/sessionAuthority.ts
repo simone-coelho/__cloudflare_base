@@ -899,9 +899,9 @@ export function continueAfterOwnerAnswer<T>(work: (env: Env) => Promise<T>): Pro
  * alive by the owner's own waitUntil alone, and runs outside every owner
  * operation. It is handed the operator cache (`CACHE`) and, only where the work
  * names it, the learn statistics binding (`LEARN_STATS`: P94, R-P503, the
- * tenant's arm-draw count), and nothing else, so no binding that reaches a
- * shopper's state is reachable from it. Its failure is the caller's to handle;
- * it never reaches the answer.
+ * tenant's arm-draw count; that binding's objects also hold the tenant's slot
+ * statistics), and nothing else. Its failure is the caller's to handle; it
+ * never reaches the answer.
  */
 export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE'>) => Promise<unknown>): Promise<void>;
 export function afterOwnerAnswer(work: (env: Pick<Env, 'CACHE' | 'LEARN_STATS'>) => Promise<unknown>, handed: 'LEARN_STATS'): Promise<void>;

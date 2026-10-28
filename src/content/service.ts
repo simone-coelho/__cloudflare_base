@@ -21,7 +21,7 @@ import { deviceClassOf, platformWordOf, type DeviceClass, type PlatformWord } fr
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
 import { catalogParted, CONTENT_KIND, DEFAULT_LEARN, EMPTY_CATALOG, isCatalogueName, LEARN_KIND, pageScopedSlotNames, SLOTS_KIND, VOCABULARY_APPROVAL_KIND, vocabularyTableOf, type VocabularyTable } from './kinds';
-import { armFor, enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable, recordArmDraw, saltVersionOf } from './holdout';
+import { armFor, enrollmentAnchorOf, enrollmentFor, ineligibleEnrollment, recordAnchorUnavailable, recordArmDraw } from './holdout';
 import { armClassOf } from '@/sdk/armDraw';
 import { cellFor, contextTermsOf, parseContextKey, type CfLike } from './cell';
 import { armUnder, consentOf, consentFromCookies, refusalHints, intersectConsent, storedConsent, personalizes, type Consent } from './consent';
@@ -1450,14 +1450,19 @@ const CONTEXT_TABLES_HELD = 64;
 /**
  * P84 (E8), P85 (R-P393 Q3): the context table of a page in force — the
  * document `contextTableOf` builds from ONE pinned publication set (its slots
- * and learn documents, the salt version as W21 counts it: carried by the learn
- * revision where it names the salt in force, else walked), with its `version` —
- * or null where the slots name no such page or the page declares no layout
- * slot. The one computation the table's route (src/routes/decisions.ts) and
- * the carousel beacon's admission (`admitCarouselExposure`) read, so a beacon
- * is admitted for exactly the version a page could fetch. Held per pinned-set
- * identity and page, once its salt version is known. Throws what the
- * publication throws.
+ * and learn documents, and the salt version the learn revision carries where it
+ * names the salt in force, else the explicit unknown, exactly as the decision
+ * reads it), with its `version` — or null where the slots name no such page or
+ * the page declares no layout slot. The one computation the table's route
+ * (src/routes/decisions.ts) and the carousel beacon's admission
+ * (`admitCarouselExposure`) read, so a beacon is admitted for exactly the
+ * version a page could fetch. Held per pinned-set identity and page. Throws
+ * what the publication throws.
+ *
+ * W21 NR3, P95 (E20): no earlier learn revision is read here, before or behind
+ * the answer. The count is the operator's publish's to establish
+ * (`derivedFor`, src/config/publication.ts); a learn revision that carries none
+ * reads `null` here until the tenant's next learn publication carries one.
  */
 export async function contextTableInForce(env: Env, tenant: string, page: string, pinned?: PublicationPin): Promise<ContextTableInForce | null> {
   const pin = pinned ?? await pinPublication(env, tenant, true);
@@ -1469,15 +1474,13 @@ export async function contextTableInForce(env: Env, tenant: string, page: string
   let doc: ContextTableInForce | null = null;
   if (Object.hasOwn(pages, page)) {
     const salt = learn.holdout.salt || tenant, carried = carriedSaltVersion(learnRev);
-    const table = contextTableOf(page, pages[page]!, learn, learnRev.revision,
-      carried && carried.salt === salt ? carried.version : await saltVersionOf(env, tenant, learnRev.revision, tenant, salt));
+    const table = contextTableOf(page, pages[page]!, learn, learnRev.revision, carried && carried.salt === salt ? carried.version : null);
     if (table) doc = { ...table, version: await documentDigest(table) };
   }
-  // An unknown salt version may be a walk that failed midway: computed again next time rather than held.
-  if (doc === null || doc.holdout.saltVersion !== null) {
-    if (contextTables.size >= CONTEXT_TABLES_HELD) contextTables.delete(contextTables.keys().next().value!);
-    contextTables.set(key, doc);
-  }
+  // Every input, the salt version included, is what this pinned set's sealed
+  // revisions carry, so the table is held whatever its salt version says.
+  if (contextTables.size >= CONTEXT_TABLES_HELD) contextTables.delete(contextTables.keys().next().value!);
+  contextTables.set(key, doc);
   return doc;
 }
 
