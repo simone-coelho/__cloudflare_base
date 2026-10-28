@@ -378,8 +378,9 @@ describe('CW31 consent on the content service', () => {
       // W11 fails closed on a read error: a committed slot revision the store no
       // longer returns is refused, never replaced by an empty or compiled document.
       const read = env.STORAGE.get.bind(env.STORAGE);
+      // P102 (R-P570 (a)): the slots member is lost in the serving copy as well (the copy holds it), the refusal unchanged.
       const lost = vi.spyOn(env.STORAGE, 'get').mockImplementation(async (key: string) =>
-        key === 'config-publication/v1/coach/slots/rev/2.json' ? null : read(key) as never);
+        key === 'config-publication/v1/coach/slots/rev/2.json' || key === 'config-publication/v2/coach/serving.json' ? null : read(key) as never);
       invalidateCache();
       await expect(serve(env, now + 3)).rejects.toThrow('Configuration publication authority unavailable');
       lost.mockRestore();
@@ -428,7 +429,15 @@ describe('CW31 consent on the content service', () => {
       let answer: { text: string } | null | 'outage' | undefined;
       const object = (text: string) => ({ key: slotKey, etag: 'w2003-altered', size: new TextEncoder().encode(text).length,
         body: new Response(text).body, text: async () => text, json: async () => JSON.parse(text) as unknown });
+      // P102 (R-P570 (a)): the serving copy answers as the revision object does — the slots member's bytes altered in it as
+      // well (the copy lost where it does not hold them as stored), lost with it, out with it — the refusal unchanged.
+      const copyKey = 'config-publication/v2/coach/serving.json';
       const store = vi.spyOn(env.STORAGE, 'get').mockImplementation(async (key: string) => {
+        if (key === copyKey && answer !== undefined) {
+          if (answer === 'outage') throw new Error('synthetic slot outage');
+          const copy = await read(key) as { text(): Promise<string> } | null, raw = copy ? await copy.text() : '';
+          return (answer === null || !raw.includes(committed!) ? null : { ...object(raw.split(committed!).join(answer.text)), key: copyKey }) as never;
+        }
         if (key !== slotKey || answer === undefined) return read(key) as never;
         if (answer === 'outage') throw new Error('synthetic slot outage');
         return (answer === null ? null : object(answer.text)) as never;
@@ -566,12 +575,14 @@ describe('CW31 consent on the content service', () => {
       invalidateCache(); invalidateLiftCache();
       const reads = vi.spyOn(env.STORAGE, 'get');
       for (const cached of [false, true]) {
-        const beforeReads = reads.mock.calls.filter(([k]) => k === key).length;
+        // P102 (R-P570 (a)): the learn member's one read on a fresh serve is the serving copy's, which holds it.
+        const learnReads = () => reads.mock.calls.filter(([k]) => k === key || k === 'config-publication/v2/coach/serving.json').length;
+        const beforeReads = learnReads();
         const result = await serve(env, Date.now()); await result.afterResponse;
         expect(result.records.map(r => r.item_id)).toEqual(['a', 'b']);
         expect(result.records.every(r => !r.explored && r.inputs!.replay!.exploration === 'supported-only')).toBe(true);
         expect(result.records[0]!.explain.lift).not.toBeNull();
-        expect(reads.mock.calls.filter(([k]) => k === key).length - beforeReads).toBe(cached ? 0 : 1);
+        expect(learnReads() - beforeReads).toBe(cached ? 0 : 1);
         expect(kv.reads).not.toContain('learn:config:coach:current');
         const target = result.records[1]!;
         expect(await replayDecision(env, JSON.parse(JSON.stringify(target)) as DecisionRecord)).toMatchObject({ ok: true, equal: true });

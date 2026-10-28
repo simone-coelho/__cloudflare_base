@@ -32,18 +32,16 @@
 // second answer moments later. An existing tenant (today's commit) is the head rewritten with its own bytes and no
 // storage metadata and no serving copy, as today's `finish` leaves it.
 //
-// THE READINGS (where the work order leaves a shape open; the lead may re-rule):
+// THE READINGS (R1–R8 ratified by R-P570; R9 is R-P570 (b)):
 //   R1 The serving copy's fixed name per scope is the design's (§8): `config-publication/v2/<scope>/serving.json`. The
 //      R10 lists of P93 and P86 name it, so it is one name for the batch.
 //   R2 C's copy is read beside the head by a pin that NAMES its members (the decision's documents stage and the P84 class
 //      draw) on a machine holding nothing of the tenant under that bucket; a serving read that names none (an event's
 //      vocabulary read, src/config/publication.servingCache.test.ts's actions) reads as today (A and B only). So the
-//      servingCache test's cold lists at :76 and :112 are unchanged, and :88 and :97 hold (they are outside the grant
-//      and change if every serving pin read the copy).
-//   R3 CR4's member: the one member of `sources` beside `timings` whose value is an array, one entry per storage trip in
-//      order, each entry an object carrying its time as its one number (whole milliseconds) and naming what it read in
-//      its text members — `head`, `set` (with its members), `serving` or `copy`. Its name is the builder's; kit 02 names
-//      it as `sources.<name>`.
+//      servingCache test's cold lists at :76 and :112 are unchanged, and :88 and :97 hold.
+//   R3 CR4's member is `sources.trips` (R-P570): an array, one entry per storage trip in order, each entry an object
+//      carrying its time as its one number (whole milliseconds) and naming what it read in its text members — `head`,
+//      `set` (with its members), `serving` or `copy`; kit 02 names it.
 //   R4 The bounds (120 ms, 220 ms, 120 ms) are held by the median of three answers, as the design measured (§5).
 //   R5 "Identical to today's" is compared against the same product reading an existing tenant's publication (no
 //      metadata, no copy): the path today's code takes, three waves.
@@ -53,30 +51,31 @@
 //      clauses are read in it sentence by sentence.
 //   R8 The backfill rides the tenant's existing five-minute job (src/index.ts, the hourly fold's per-tenant waitUntil):
 //      src/index.api-boundary.test.ts W07.04 (:3496) pins the run's waitUntil count, which one new job per tenant breaks.
+//   R9 The serving copy carries the revision objects' integrity guarantee: a member whose bytes differ from its reference
+//      under the same revision is never served from the copy; with the revision object altered too, the decision is
+//      refused as W20.03 (src/content/consent.test.ts) refuses it — "Configuration publication authority unavailable".
 //
-// COLLISIONS OUTSIDE THE GRANT (measured on the sketch, for the lead's ruling; none edited here):
-//   src/index.api-boundary.test.ts:3174–3176 (W03.02) — a publication's exact STORAGE.put list, four puts → five (C's
-//     serving copy after the head's commit).
-//   src/routes/content.test.ts:1491 (W14.04) — the store's exact object count, 22 → 24 (one serving copy per tenant).
-//   src/content/consent.test.ts:384 (W20.04), :447 (W20.03) — a committed slots revision the store no longer returns, or
-//     returns altered, refuses the decision; under C the decision reads the serving copy and never that object. :574
-//     (W28.01) — a fresh decision reads the learn revision object once; under C, zero (the copy).
-//   src/config/publication.servingCache.test.ts:88, :97 — hold under R2; they change only if every serving pin read the copy.
-//   src/units/P93/LEDGER.unit.test.ts:289 (the CS2 title, "reads exactly the head, the set, …") and its "8 reads" message
-//     (:302) — stale wording; the list itself is re-pointed (pageReads).
-//   P97 (rem/spec-p97 at 3b949187; R-P567 F2): contentOf (:332–342) strips sources.timings and sources.sessionParts only,
-//     so CR4's member differs between the door's answer and the next page view — it must strip CR4's member too; its R4
-//     read pin (:474) admits any R2 get under config-publication/, which C's and B's reads are (no change needed).
-//
-// R10 BY NAME (the brief S48/SPEC-BRIEF-P102.md; the work order's allowedPaths), before → after:
+// R10 BY NAME (the brief S48/SPEC-BRIEF-P102.md; the work order's allowedPaths as amended by R-P570), before → after:
 //   src/config/publication.servingCache.test.ts:128–141 — "keeps the administrative read and the cache expiry as they
 //     were": past 30 s [head, set, reflex, content] → "past the serving cache's 30 seconds … the head alone": [head]
 //     (A). :76 and :112 unchanged (R2).
 //   src/units/P93/LEDGER.unit.test.ts:108–111 (pageReads) — head, set, four revisions, shard, part (8) → head, the
 //     serving copy, shard, part (4) (C); :568 (the one-level page) — head, set, four revisions, part (7) → head, the
-//     serving copy, part (3).
+//     serving copy, part (3); :289 and :302 (the CS2 title and message) — "the head, the set, the content, slots,
+//     learn and reflex revisions" and "8 reads" → "the head, the serving copy" and "4 reads".
 //   src/units/P86/LEDGER.unit.test.ts:1036–1043 (P86 CS2's exact cold list) — head, set, four revisions, shard, part →
 //     head, the serving copy, shard, part.
+//   src/index.api-boundary.test.ts:3174–3176 (W03.02) — four puts in order → the same four in order, and the serving
+//     copy's one put (its place in the order not pinned).
+//   src/routes/content.test.ts:1491 (W14.04) — 22 objects → 24 (one serving copy per tenant).
+//   src/content/consent.test.ts W20.04 (:381–383) — the slots revision object lost → it and the serving copy lost; W20.03
+//     (the store double, :432–441) — the slots revision lost, altered or out → the copy answers alike (its slots bytes
+//     altered where it holds them as stored, else lost; out with it); W28.01 (:578–585) — one read of the learn
+//     revision object on a fresh serve → one read of it or of the serving copy. Every refusal and other expectation
+//     unchanged.
+//   LATER (R-P570 (c), (d)): P97's contentOf also deletes `sources.trips` once P97 joins (its read pin :474 unchanged);
+//   the P93/P86 read lists take one re-point round onto P98's join.
+// STALE WORDING NOT GRANTED (told): P93 :32, :200, :284, :287, :306, :312 still say 8 reads or name the set and revisions.
 //
 // DEFERRED: LV1 (lane L21: the stamps' cold first answer within about 300 ms of server time with P97; the per-trip split
 // from CR4 on both pair hosts and both stamps; the stamps' pilot tenant backfilled without a publication).
@@ -304,13 +303,13 @@ function tripOf(entry: unknown): Trip | null {
   if (numbers.length !== 1 || numbers.length + values.filter(v => typeof v === 'string' || Array.isArray(v)).length !== values.length) return null;
   return { ms: numbers[0]!, read: words.join(' ').toLowerCase() };
 }
-/** The member of `sources` beside `timings` that reports the documents stage's trips, or what `sources` holds instead. */
+/** `sources.trips` (R3, R-P570), the documents stage's trips, or what `sources` holds instead. */
 function tripReport(r: Reply): { name: string; trips: Trip[] } | { name: null; members: string[] } {
-  const sources = (r.body.sources ?? {}) as Record<string, unknown>;
-  const found = Object.entries(sources).filter(([name, value]) => name !== 'timings' && Array.isArray(value) && value.length > 0 && value.every(e => tripOf(e) !== null));
-  return found.length === 1 ? { name: found[0]![0], trips: (found[0]![1] as unknown[]).map(e => tripOf(e)!) } : { name: null, members: sorted(Object.keys(sources)) };
+  const sources = (r.body.sources ?? {}) as Record<string, unknown>, value = sources.trips;
+  return Array.isArray(value) && value.length > 0 && value.every(e => tripOf(e) !== null) ? { name: 'trips', trips: value.map(e => tripOf(e)!) }
+    : { name: null, members: sorted(Object.keys(sources)) };
 }
-const tripsShown = (r: Reply) => { const report = tripReport(r); return report.name === null ? `no member of sources reports the trips (sources: ${report.members.join(', ')})` : JSON.stringify(report.trips); };
+const tripsShown = (r: Reply) => { const report = tripReport(r); return report.name === null ? `no sources.trips reporting the trips (sources: ${report.members.join(', ')})` : JSON.stringify(report.trips); };
 /** A trip's report reduced to what it read (reading R3's words) and its time within [lo, hi]. */
 const tripShape = (trip: Trip, lo: number, hi: number) => ({ head: /head/.test(trip.read), set: /\bset\b/.test(trip.read), copy: /serving|copy/.test(trip.read),
   whole: Number.isInteger(trip.ms), within: trip.ms >= lo && trip.ms <= hi });
@@ -541,6 +540,29 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
       expect.soft({ copies: [first.copy !== null, second.copy !== null && second.copy !== first.copy, second.copy?.includes('"take":3') ?? false], slots: (truth.versions as { slots?: unknown } | null)?.slots ?? null },
         `${host}: P102.CR3 — PRECONDITION: each commit wrote its serving copy (today none)`).toEqual({ copies: [true, true, true], slots: 2 });
       expect.soft({ stale, altered, malformed, missing }, `${host}: P102.CR3 — a stale, altered, malformed or missing copy changes no answer`).toEqual({ stale: truth, altered: truth, malformed: truth, missing: truth });
+    }, 120_000);
+
+    it(`host (${host}): the serving copy carries the revision objects' integrity guarantee (R-P570 (b)) — a copy whose slots member's bytes are altered under the same revision is not served: with the revision objects intact the answer is theirs, read from them; with the slots revision altered too the decision is refused, as W20.03 refuses it`, async () => {
+      const m = await mount(host, DOCS);
+      expectPublished(m, 'P102.CR3 — the tenant documents publish');
+      const meter = meterOf(m);
+      expect((await publish(m, 'slots', SLOTS_2, 'p102 cr3 integrity')).status, `${host}: PRECONDITION — the second slots document publishes`).toBe(200);
+      const revisionKey = `config-publication/v1/${TENANT}/slots/rev/2.json`, revision = m.storage.objects.get(revisionKey) ?? '', copy = m.storage.objects.get(SERVING) ?? null;
+      /** The slots member's bytes altered under the same revision and digest (W20.03's altered revision): K = 3 becomes 4. */
+      const BYTES = '"slot":"pdp-modules","take":3', alter = (text: string) => text.split(BYTES).join('"slot":"pdp-modules","take":4');
+      invalidatePublicationCache();
+      const truth = answerOf(await door(m, 'p102-cr3-integrity-true'));
+      if (copy !== null) await UnitR2.prototype.put.call(m.storage, SERVING, alter(copy));
+      invalidatePublicationCache();
+      const intact = await measured(meter, 0, () => door(m, 'p102-cr3-integrity-copy'));
+      await UnitR2.prototype.put.call(m.storage, revisionKey, alter(revision));
+      invalidatePublicationCache();
+      const both = await door(m, 'p102-cr3-integrity-both');
+      expect.soft({ copy: copy !== null && copy.includes(BYTES), revision: revision.includes(BYTES) },
+        `${host}: P102.CR3 — PRECONDITION: the commit wrote its serving copy holding the slots member's bytes (today none)`).toEqual({ copy: true, revision: true });
+      expect.soft({ intact: [answerOf(intact.result), readSet(intact.reads).includes('slots revision')], both: [both.status >= 500, Array.isArray(both.body.decisions), JSON.stringify(both.body).includes('Configuration publication authority unavailable')] },
+        `${host}: P102.CR3 — an altered copy is not served: the intact revision objects answer, or the decision is refused (copy altered: ${show(intact.result)}; both altered: ${show(both)})`).toEqual({
+        intact: [truth, true], both: [true, false, true] });
     }, 120_000);
 
     it(`host (${host}): the copy is at most 1 MiB — a publication whose copy would pass it writes none, and a machine holding nothing then reads the head, then the set and its members (CR2's two waves), answering the new catalogue`, async () => {

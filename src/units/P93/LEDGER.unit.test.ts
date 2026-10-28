@@ -286,7 +286,7 @@ describe('unit:P93.CS1 (R-P487: 256 shards by SHA-256 of the product id and of t
 
 describe('unit:P93.CS2 (R-P487 (9): 8 reads at any size)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): at N = 50 and N = 5,000 the anchor's page reads exactly the head, the set, the content, slots, learn and reflex revisions, the anchor's shard and the anchor's part, once each, and serves P80's carousel; warm (the shard and the part cached per isolate by digest) it reads no shard and no part`, async () => {
+    it(`host (${host}): at N = 50 and N = 5,000 the anchor's page reads exactly the head, the serving copy, the anchor's shard and the anchor's part, once each (P102, R-P570 (a)), and serves P80's carousel; warm (the shard and the part cached per isolate by digest) it reads no shard and no part`, async () => {
       const seen: Record<number, unknown> = {}, wanted: Record<number, unknown> = {};
       for (const n of [50, 5000]) {
         const m = await rangeTenant(host, n);
@@ -299,7 +299,7 @@ describe('unit:P93.CS2 (R-P487 (9): 8 reads at any size)', () => {
         seen[n] = { status: cold.result.status, served: carousel(cold.result), reads: readClasses(cold.ops), warm: [carousel(warm.result), shardOrPart(readClasses(warm.ops))] };
         wanted[n] = { status: 200, served: SERVED_FOR_BLACK, reads: pageReads(view), warm: [SERVED_FOR_BLACK, []] };
       }
-      expect.soft(seen, `${host}: P93.CS2 — 8 reads at each size, the same classes`).toEqual(wanted);
+      expect.soft(seen, `${host}: P93.CS2 — 4 reads at each size, the same classes`).toEqual(wanted);
     }, 600_000);
   }
 
