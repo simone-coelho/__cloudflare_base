@@ -105,13 +105,24 @@
 //      applied to it (no producer passed one before P103). The legs pin the behaviour, not a representation; the sketch
 //      (S50/specifier/scratch/sketch/apply.py) stamps the policy on the outcome record and the one credit rule reads the
 //      stamp, so nothing re-reads a historic learn document (P99's purge of old revisions cannot reach it).
+//   R14 (R-P588) The SDK's retry of an event the platform already took (the same wire body: its first event id and time,
+//      src/routes/realtime.ts:143-146), arriving after a policy publication, is that outcome: credited once, under the
+//      policy it was first taken under, live and in every fold. MP3's four R-P588 legs (both hosts, both paths) retry an
+//      EUR purchase (counted on the unit slot) and an EUR add to bag (refused everywhere) taken under no policy, after EUR
+//      is published, beside a new EUR purchase. Measured: the managed path already takes a retry as its first admission
+//      (src/ledger/recovery.ts runOwnerRecovery :184-187 replays the stored payload; sourceOf :98-99 leaves its processing
+//      stamps out). The direct path does not, with or without money: each delivery carries a fresh `retention` stamp
+//      (captureRetention, src/retention.ts:154, admission time `Date.now()`), which the ledger's logical comparison and the
+//      ring's credited journal both include (src/ledger/delivery.ts LOGICAL_EXCLUDED_FIELDS :111; DecisionRing.ts
+//      creditedDigest :735-739), so today the retry is credited again live and the hour's fold refuses "conflicting rows
+//      under one logical id" (the raw day 500, the rebuild 503). The sketch: the logical comparison leaves out `retention`
+//      and `money` (a retry's processing stamps; the first row read is kept: ledger keys sort by write time, writer.ts :85),
+//      and the ring takes every delivery of an outcome id under the stamp it first saw (a bounded record beside the credited
+//      journal), so an all-refused outcome's retry meets the same refusal (W24.R1.04's words) whatever is published since.
 //
 // DEFERRED: LV1 (lane L21, the pair's next release: a EUR policy published on a pair tenant, an SDK purchase naming EUR
 // credited live and in the day's report; another currency refused by name live and absent from the report).
-// RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6); on the direct path a
-// redelivery of one event straddling a publication (an SDK retry with the same event id) carries the second read's
-// policy: live learning credits the event once, under the first, and the ledger keeps one row of the two, as it keeps one
-// of two `experiment` blocks (src/ledger/delivery.ts LOGICAL_EXCLUDED_FIELDS); no leg drives that redelivery.
+// RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6).
 //
 // LOCKS (MP6 and the gate): W24 B1, B2, LEDGER (R1.02, R1.04, R2, R5), P16, P33, W26, P94, W25, src/sdk/emit.test.ts,
 // W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
@@ -247,14 +258,17 @@ function tapRing(m: Mounted): Map<string, Receipt> {
 }
 
 /** One event through the mounted app, as the SDK sends it, with its own event id so its outcome can be found. */
-async function act(m: Mounted, s: Shopper, event: Event): Promise<{ status: number; eventId: string; body: Record<string, unknown> }> {
+async function act(m: Mounted, s: Shopper, event: Event): Promise<{ status: number; eventId: string; body: Record<string, unknown>; wire: string }> {
   const eventId = crypto.randomUUID();
+  return send(m, s, JSON.stringify({ ...event, source: 'sdk', userId: s.grant.subject, sessionId: s.grant.sessionId, timestamp: Date.now(), eventId }), eventId);
+}
+/** The wire body sent as it is: the SDK's retry of an event carries its first event id and time (src/routes/realtime.ts:143-146). */
+async function send(m: Mounted, s: Shopper, wire: string, eventId: string): Promise<{ status: number; eventId: string; body: Record<string, unknown>; wire: string }> {
   const response = await m.fetch(new Request('https://shop.invalid/realtime/action', { method: 'POST',
-    headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...event, source: 'sdk', userId: s.grant.subject, sessionId: s.grant.sessionId, timestamp: Date.now(), eventId }) }));
+    headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability, 'Content-Type': 'application/json' }, body: wire }));
   const body = await response.json().catch(() => ({})) as Record<string, unknown>;
   await m.drain();
-  return { status: response.status, eventId, body };
+  return { status: response.status, eventId, body, wire };
 }
 
 /** A shopper with her consent, her page view and the home page served in all four slots. */
@@ -262,7 +276,7 @@ async function servedShopper(m: Mounted, label: string): Promise<Shopper> {
   const s = await shopperOn(m);
   expect((await s.action(PAGE_VIEW)).status, `${label}: PRECONDITION — her page view is accepted`).toBe(200);
   const page = await s.snapshot('home');
-  expect(page.decisions.map(d => [d.slot, d.contentId]).sort(), `${label}: PRECONDITION — the home page serves one Tabby story in each of the four slots`)
+  expect(page.decisions.map(d => [d.slot, d.contentId]).sort(), `${label}: PRECONDITION — the home page serves one Tabby story in each of the four slots (answered ${page.status}: ${JSON.stringify(page.body).slice(0, 200)})`)
     .toEqual(SLOTS_IN_ORDER.map(slot => [slot, ITEM[slot]]).sort());
   return s;
 }
@@ -444,7 +458,10 @@ describe('unit:P103.MP3', () => {
     none: { slots: { [HERO]: 295, [STORY]: 118, [TEASER]: 375, [BANNER]: 3 }, credits: 6 },
     EUR: { slots: { [HERO]: 575 + 295, [STORY]: 230 + 118, [TEASER]: 575 + 375, [BANNER]: 3 }, credits: 9 },
   } as const;
-  type Observed = Record<'live' | 'openHour' | 'hourly' | 'raw', { slots: Record<Slot, number>; credits: number | string }> & { rebuild: { slots: Record<Slot, number> } };
+  type Credited = { slots: Record<Slot, number>; credits: number | string };
+  /** Each path's credits, or what it answered instead (a refused day is an observation, never a precondition). */
+  type Observed = Record<'live' | 'openHour' | 'hourly' | 'raw', Credited | string> & { rebuild: { slots: Record<Slot, number> } | string };
+  const refusal = (what: string, answer: Answer) => `${what} answered ${answer.status}: ${JSON.stringify(answer.body).slice(0, 160)}`;
 
   /**
    * One day of the shopper's outcomes taken under `taken` (the policy published when they happen), then, when `folded`
@@ -452,34 +469,49 @@ describe('unit:P103.MP3', () => {
    * open hour's (the five-minute job's foldOpenHours), the closed hour's (catchUp, P05's foldedCredit) and the day it
    * publishes, the raw day (POST /v1/:tenant/learn/report with a custom policy) and the W24 rebuild of every slot.
    */
-  async function dayAlike(host: Host, taken: MoneyPolicy | undefined, folded: MoneyPolicy | undefined, recovery = true): Promise<Observed> {
+  /** The day every MP3 leg but R-P588's takes. */
+  const DAY = (): Event[] => [purchase(575, 230, 'EUR'), purchase(495, 198, 'GBP'), purchase(295, 118), addToBag(575, 'EUR'), addToBag(375), purchase(99, 40, 'EUR', UNKNOWN_PRODUCT)];
+  /** After the publication: the SDK's retries of the day's events (by index, the same wire body) and new events. */
+  interface After { retry: number[]; fresh: Event[] }
+  async function dayAlike(host: Host, taken: MoneyPolicy | undefined, folded: MoneyPolicy | undefined, recovery = true,
+    day: Event[] = DAY(), after: After = { retry: [], fresh: [] }): Promise<Observed> {
     const clock = fixedHour();
     try {
       const m = await mount(host, docs(taken), { recovery });
       expectPublished(m, `P103.MP3 — the home page and a learn document ${taken ? `with the money policy ${taken.currency}` : 'without money'} publish`);
       const answers = tapRing(m);
       const s = await servedShopper(m, `${host}, ${taken?.currency ?? 'none'}`);
-      const day = [purchase(575, 230, 'EUR'), purchase(495, 198, 'GBP'), purchase(295, 118), addToBag(575, 'EUR'), addToBag(375), purchase(99, 40, 'EUR', UNKNOWN_PRODUCT)];
-      const ids: string[] = [];
+      const ids: string[] = [], wires: Array<{ eventId: string; wire: string }> = [];
       for (const event of day) {
         const sent = await act(m, s, event);
         expect(sent.status, `${host}: PRECONDITION — the ${event.type} is accepted: ${JSON.stringify(sent.body).slice(0, 200)}`).toBe(200);
-        ids.push(sent.eventId);
+        ids.push(sent.eventId); wires.push(sent);
       }
       await m.drainLedger();
-      const attributed = ids.map(id => [...answers].find(([outcome]) => outcome.endsWith(`:n1:${id}`))?.[1]?.attributed);
-      const live = { slots: await liveCredits(m), credits: attributed.every(n => typeof n === 'number') ? attributed.reduce((a, b) => a! + b!, 0)! : `ring answers ${JSON.stringify(attributed)}` };
 
       if (JSON.stringify(folded ?? null) !== JSON.stringify(taken ?? null)) {
         const republished = await putDocument(m, 'learn', learnOf(folded), 'p103 policy published after the outcomes, before the fold');
         expect(republished.status, `${host}: PRECONDITION — the policy ${folded?.currency ?? 'removed'} publishes after the outcomes: ${JSON.stringify(republished.body).slice(0, 200)}`).toBe(200);
       }
+      // R-P588: the SDK retries an event the platform already took, with its first event id and time, after the publication.
+      for (const index of after.retry) {
+        const again = await send(m, s, wires[index]!.wire, wires[index]!.eventId);
+        expect(again.status, `${host}: PRECONDITION — the retry of event ${index} is accepted: ${JSON.stringify(again.body).slice(0, 200)}`).toBe(200);
+      }
+      for (const event of after.fresh) {
+        const sent = await act(m, s, event);
+        expect(sent.status, `${host}: PRECONDITION — the new ${event.type} is accepted: ${JSON.stringify(sent.body).slice(0, 200)}`).toBe(200);
+        ids.push(sent.eventId);
+      }
+      await m.drainLedger();
+      // One answer per outcome id (a retry's answer replaces its first's): what live learning credited, once per outcome.
+      const attributed = ids.map(id => [...answers].find(([outcome]) => outcome.endsWith(`:n1:${id}`))?.[1]?.attributed);
+      const live = { slots: await liveCredits(m), credits: attributed.every(n => typeof n === 'number') ? attributed.reduce((a, b) => a! + b!, 0)! : `ring answers ${JSON.stringify(attributed)}` };
       const date = new Date(clock.hourStart).toISOString().slice(0, 10), learn = await learnInForce(m);
       // The open hour: the five-minute job's working fold, exactly as src/index.ts runs it, then the day it published.
       await foldOpenHours(m.env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], TENANT, learn, Date.now(), { start: true, publish: true, budget: RUN_BUDGET }, m.env as never);
       const open = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
-      expect(open.status, `${host}: PRECONDITION — the day the open hour's fold published reads back: ${JSON.stringify(open.body).slice(0, 200)}`).toBe(200);
-      const openHour = reportCredits(open.body.report as DayReport);
+      const openHour = open.status === 200 ? reportCredits(open.body.report as DayReport) : refusal('the day the open hour\'s fold published', open);
       // The hour closed: the five-minute job's catch-up (P05's foldedCredit), until a run folds nothing.
       const failed: unknown[] = [];
       for (let run = 0; run < 40; run++) {
@@ -487,23 +519,22 @@ describe('unit:P103.MP3', () => {
         failed.push(...result.failed, ...result.reports.failed);
         if (!result.built.length) break;
       }
-      expect(failed, `${host}: PRECONDITION — the five-minute job folds the closed hour`).toEqual([]);
       const foldedDay = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
-      expect(foldedDay.status, `${host}: PRECONDITION — the folded day reads back: ${JSON.stringify(foldedDay.body).slice(0, 200)}`).toBe(200);
-      const hourly = reportCredits(foldedDay.body.report as DayReport);
+      const hourly = failed.length ? `the five-minute job's fold refused the hour: ${JSON.stringify(failed).slice(0, 200)}`
+        : foldedDay.status === 200 ? reportCredits(foldedDay.body.report as DayReport) : refusal('the folded day', foldedDay);
       // The raw day: the operator's report over the ledger records (a request with a custom policy).
       const rawDay = await asOperator(m, 'POST', `/v1/${TENANT}/learn/report`, { date, brand: BRAND, policies: [{ name: 'p103-direct', scope: 'session', match: 'direct', credit: 'last' }] });
-      expect(rawDay.status, `${host}: PRECONDITION — the raw day is built: ${JSON.stringify(rawDay.body).slice(0, 200)}`).toBe(200);
-      const raw = reportCredits(rawDay.body.report as DayReport);
+      const raw = rawDay.status === 200 ? reportCredits(rawDay.body.report as DayReport) : refusal('the raw day', rawDay);
       // The W24 rebuild of every slot from the retained day (POST /v1/:tenant/learn/generation { rebuildFrom }).
+      const unbuilt: string[] = [];
       for (const slot of SLOTS_IN_ORDER) {
         const rebuilt = await asOperator(m, 'POST', `/v1/${TENANT}/learn/generation`, { slot, brand: BRAND, rebuildFrom: date });
-        expect(rebuilt.status, `${host}: PRECONDITION — ${slot} is rebuilt from the retained day: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBe(200);
+        if (rebuilt.status !== 200) unbuilt.push(refusal(`the rebuild of ${slot}`, rebuilt));
       }
-      return { live, openHour, hourly, raw, rebuild: { slots: await liveCredits(m) } };
+      return { live, openHour, hourly, raw, rebuild: unbuilt.length ? unbuilt.join('; ') : { slots: await liveCredits(m) } };
     } finally { clock.restore(); }
   }
-  const alike = (expected: (typeof EXPECTED)[keyof typeof EXPECTED]) => ({ live: expected, openHour: expected, hourly: expected, raw: expected, rebuild: { slots: expected.slots } });
+  const alike = (expected: { slots: Record<Slot, number>; credits: number }) => ({ live: expected, openHour: expected, hourly: expected, raw: expected, rebuild: { slots: expected.slots } });
 
   for (const host of HOSTS) for (const policy of ['none', 'EUR'] as const) {
     it(`host (${host}): ${policy === 'none' ? 'with no money policy, an outcome naming a currency is refused' : 'with a policy of EUR, an EUR outcome is credited and a GBP one refused'} alike by live learning, the open hour's fold, the hourly fold, the raw day and the W24 rebuild`, async () => {
@@ -526,6 +557,21 @@ describe('unit:P103.MP3', () => {
       expect(await dayAlike(host, EUR_REFUSE, GBP_REFUSE, path === 'managed recovery'),
         `${host}, ${path}: P103.MP3 (R-P576) — outcomes live learning took under EUR are folded as it took them, though GBP is published before the fold: the EUR outcomes stay credited and the GBP one refused offline as live (a fold reading the policy in force when it runs swaps them)`)
         .toEqual(alike(EXPECTED.EUR));
+    }, 90_000);
+  }
+
+  // R-P588: an SDK retry of an outcome the platform already took, straddling a publication, is the same outcome:
+  // deduplicated, credited once, under its first stamp, live and in every fold. The day: an EUR purchase (575, margin 230)
+  // and an EUR add to bag (575) under no policy (refused on the money slots; the purchase counted on the unit slot), a
+  // purchase naming no currency (295, margin 118) and an add to bag naming none (375); EUR published; the SDK retries the
+  // EUR purchase and the EUR add to bag; a new EUR purchase (495, margin 198) follows, taken under EUR.
+  const RETRIED = { slots: { [HERO]: 295 + 495, [STORY]: 118 + 198, [TEASER]: 375, [BANNER]: 3 }, credits: 1 + 3 + 0 + 1 + 3 };
+  for (const host of HOSTS) for (const path of ['managed recovery', 'direct'] as const) {
+    it(`host (${host}, ${path}): the SDK's retry of outcomes taken under no money policy, sent after EUR is published, is the same outcome — credited once under its first policy, live and in the hour folded, the day read and rebuilt — while a new EUR outcome is credited under EUR`, async () => {
+      const day = [purchase(575, 230, 'EUR'), purchase(295, 118), addToBag(575, 'EUR'), addToBag(375)];
+      expect(await dayAlike(host, undefined, EUR_REFUSE, path === 'managed recovery', day, { retry: [0, 2], fresh: [purchase(495, 198, 'EUR')] }),
+        `${host}, ${path}: P103.MP3 (R-P588) — a retry is the outcome it repeats: the EUR purchase and add to bag stay refused on the money slots and the purchase counts once on the unit slot, live and in every fold, though EUR is in force when the retry arrives; the new EUR purchase is credited 495 and 198`)
+        .toEqual(alike(RETRIED));
     }, 90_000);
   }
 });
