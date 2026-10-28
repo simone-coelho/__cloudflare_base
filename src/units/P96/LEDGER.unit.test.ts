@@ -67,6 +67,23 @@
 // carries the platform's `total` (OT4's sentence says so; not demanded to change); the door's header stays unreadable
 // cross-origin (no Timing-Allow-Origin), as P76 states, outside E21.
 //
+// MEASURED (_evidence/parity-step3/S40/specifier/logs/, serial, --no-cache, one worker, the tree its working directory and
+// root; trees under scratch/ built by mk.sh from 7f304a75, edits in sketches/apply.cjs): today (7f304a75 + this file) 5 RED
+// for the missing behaviour — the four OT1 door legs (`total` twice: the door's `total;dur=<n>` and the platform's
+// `total;dur=<n.n>;desc="Total Response Time"`) and OT4 (no sentence names the platform's entry) — and the six lock legs
+// (OT2, OT3) green (a2-today). THE SKETCH — src/index.ts:67 `app.use('*', timing({ enabled: (c) => !/(?:^|,)\s*total\s*;/
+// .test(c.res.headers.get('Server-Timing') ?? '') }))` (an answer already naming its own `total`, the door's alone, is not
+// given the platform's) and one sentence after kit 02 :337's add-up clause — 11/11 three times (b2-sketch-1..3). THE WRONG
+// FIXES, each RED on its own legs (c2-*): the platform's `total` still appended on the door — OT1 4; the door's `total`
+// renamed — OT1 4, OT2 2 (and P76.FA1 4 RED, d-p76-w2-renamed); the platform's `total` dropped from every answer — OT3 4;
+// dropped only when a class was drawn — OT1's two no-class legs; the body without the remainder (header and
+// sources.timings disagreeing) — OT1 4, OT2 2; the door's header without its own `total`, the platform's in its place —
+// OT1 4 (by the `desc` clause alone where the platform's `14.0` equals the door's `14`), OT2 2; the kit left as today —
+// OT4; the platform's entry dropped on every answer of the decision route — OT3 4; dropped on every POST to the door's
+// address without a session — OT3's two refusal legs. LOCKS on the sketch: P76 8/8 (and 8/8 today), P13 13/13 (H4 6/6),
+// P84 34/34, P30 25/25, W38 LEDGER 11/11 (B5 1/1), src/index.api-boundary.test.ts 72/72 with W01.08's 120 s timeout
+// (R-P527, f-api-boundary-sketch).
+//
 // NO NEW EXPORT IS IMPORTED. HARNESS: src/units/_parity.ts (the mounted environment, both hosts) and the real Worker
 // (src/index.ts). Imports from src/units/: ../_parity.
 
@@ -164,7 +181,7 @@ function expectOneTotal(host: Host, label: string, a: Reply): void {
     twice: [...new Set(names.filter((name, i) => names.indexOf(name) !== i))],
     totalDesc: list.filter(e => e.name === 'total' && e.desc !== null).map(e => e.raw),
     entries: list.map(e => [e.name, e.dur] as [string, number | null]).sort(byEntry),
-  }, `${host}: P96.OT1 — ${label}: Server-Timing names \`total\` once, no name twice, \`total\` without a desc, its entries exactly sources.timings' (today: ${a.header})`).toEqual({
+  }, `${host}: P96.OT1 — ${label}: Server-Timing names \`total\` once, no name twice, \`total\` without a desc, its entries exactly sources.timings' (answered: ${a.header}; sources.timings ${JSON.stringify(timingsOf(a))})`).toEqual({
     total: 1, twice: [], totalDesc: [], entries: (Object.entries(timingsOf(a)) as Array<[string, number | null]>).sort(byEntry) });
 }
 
@@ -289,7 +306,7 @@ describe('unit:P96.OT4 (E21, R-P526)', () => {
       platformEntry: platform.includes('`total`') && /\bdesc\b/.test(platform),
       otherAnswers: /\bother answers?\b|\bevery answer (?:but|except|that is not)\b|\bany answer that is not\b/i.test(platform),
       platformWhole: /\bplatform/i.test(platform) && /\bwhole\b|\bentire\b/i.test(platform),
-    }, `P96.OT4 — kit 02 says which \`total\` to read (today the paragraph names only the door's; the platform's sentence: "${platform.slice(0, 200)}")`).toEqual({
+    }, `P96.OT4 — kit 02 says which \`total\` to read (at 7f304a75 the paragraph names only the door's; the sentence naming the platform's: "${platform.slice(0, 200)}")`).toEqual({
       door: true, platformEntry: true, otherAnswers: true, platformWhole: true });
   });
 });
