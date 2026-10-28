@@ -128,14 +128,24 @@ function storageStatusOf(error: unknown): { storageStatus?: number } {
   return m ? { storageStatus: Number(m[1]) } : {};
 }
 /**
+ * P98 (LD2): the failures the store itself threw (its call, or the body it was streaming), as against an answer that
+ * arrived and was malformed (a wrong size, bytes past the limit, JSON that does not parse), which a second call would
+ * only repeat.
+ */
+const transientFailures = new WeakSet<object>();
+function transientFailure(error: unknown, operation: StorageCause['operation'], key: string): PublicationError {
+  const failure = storageFailure(error, operation, key); transientFailures.add(failure); return failure;
+}
+/**
  * P98 (E25, LD2): a storage call that is safe to repeat — a read, a HEAD, an exact-create — is sent a second time inside
- * the request when the first throws, so one transient failure of the store never refuses a request. An owner refusal
- * (401) is the request's own answer and is never repeated. The head's compare-and-set is never sent through this
- * (`casHead`).
+ * the request when the store throws, so one transient failure never refuses a request; a malformed answer, and an owner
+ * refusal (401, the request's own answer), are never repeated. Every read and HEAD is sent through this; the
+ * exact-creates of a publication only on a catalogue load's path (`PublicationChange.retry`), and the head's
+ * compare-and-set never (`casHead`).
  */
 async function again<T>(call: () => Promise<T>): Promise<T> {
   try { return await call(); }
-  catch (error) { if (error instanceof HTTPException && error.status === 401) throw error; return call(); }
+  catch (error) { if (!transientFailures.has(error as object)) throw error; return call(); }
 }
 const conflict = () => new PublicationError('Publication conflicts with the retained operation or authored revision set', 409, 'publication_conflict');
 function required(condition: unknown): asserts condition { if (!condition) throw unavailable(); }
@@ -238,13 +248,16 @@ function readObject(storage: R2Bucket, key: string, max = PUBLICATION_MAX_BYTES)
   return again(() => readObjectOnce(storage, key, max));
 }
 async function readObjectOnce(storage: R2Bucket, key: string, max: number): Promise<{ value: unknown; etag: string; bytes: number } | null> {
+  let result: R2ObjectBody | null;
+  try { result = await storage.get(key); } catch (error) { throw transientFailure(error, 'get', key); }
   try {
-    const result = await storage.get(key); if (result === null) return null;
+    if (result === null) return null;
     required(result && text(result.etag, 256) && integer(result.size) && result.size > 0 && result.size <= max && result.body);
     const reader = result.body.getReader(), decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
+    const next = async () => { try { return await reader.read(); } catch (error) { throw transientFailure(error, 'get', key); } };
     let bytes = 0, raw = '';
     try {
-      for (;;) { const part = await reader.read(); if (part.done) break; bytes += part.value.byteLength; required(bytes <= max); raw += decoder.decode(part.value, { stream: true }); }
+      for (;;) { const part = await next(); if (part.done) break; bytes += part.value.byteLength; required(bytes <= max); raw += decoder.decode(part.value, { stream: true }); }
       raw += decoder.decode(); required(bytes === result.size);
     } catch (error) { void reader.cancel().catch(() => undefined); throw error; } finally { reader.releaseLock(); }
     return { value: JSON.parse(raw), etag: result.etag, bytes };
@@ -664,19 +677,21 @@ export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, sco
 }
 /** One conditional write, sent once: an exact-create without `etag`, the head's compare-and-set with it. */
 async function put(storage: R2Bucket, key: string, body: string, etag?: string): Promise<boolean> {
+  let result: R2Object | null;
+  try { result = await storage.put(key, body, { onlyIf: etag === undefined ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: etag }, httpMetadata: { contentType: 'application/json' } }); }
+  catch (error) { throw transientFailure(error, 'put', key); }
   try {
-    const result = await storage.put(key, body, { onlyIf: etag === undefined ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: etag }, httpMetadata: { contentType: 'application/json' } });
     if (result === null) return false;
     required(result && result.key === key && text(result.etag, 256) && result.size === encoder.encode(body).byteLength); return true;
   } catch (error) { throw storageFailure(error, 'put', key); }
 }
 /**
  * An immutable object written with the store's exact-create: written, or already there with the same canonical bytes
- * (a retry), else a conflict. P98 (LD2): safe to repeat, so the create is tried twice (`again`); a first attempt that
- * landed and then threw is found by the second as already there, and adopted.
+ * (a retry), else a conflict. P98 (LD2): safe to repeat, so on a catalogue load's path (`retry`) the create is tried
+ * twice (`again`); a first attempt that landed and then threw is found by the second as already there, and adopted.
  */
-async function createExact(storage: R2Bucket, key: string, value: unknown): Promise<void> {
-  const body = serialized(value); if (await again(() => put(storage, key, body))) return;
+async function createExact(storage: R2Bucket, key: string, value: unknown, retry = false): Promise<void> {
+  const body = serialized(value); if (await (retry ? again(() => put(storage, key, body)) : put(storage, key, body))) return;
   const found = await readObject(storage, key); if (!found || canonical(found.value) !== body) throw conflict();
 }
 /**
@@ -763,7 +778,7 @@ export async function catalogPartStored(env: Env, scope: string, hash: string, a
 }
 /** P98 (LD2): whether the store holds an object, by one HEAD, tried twice (`again`). */
 function headStored(storage: R2Bucket, key: string): Promise<boolean> {
-  return again(async () => { try { return (await storage.head(key)) !== null; } catch (error) { throw storageFailure(error, 'head', key); } });
+  return again(async () => { try { return (await storage.head(key)) !== null; } catch (error) { throw transientFailure(error, 'head', key); } });
 }
 
 // ── P86 (R-P424, amending R-P407 (5)): the catalogue's id index ────────────────
@@ -800,7 +815,7 @@ export async function writeCatalogIdIndex(env: Env, scope: string, value: Catalo
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), raw = canonical(value);
   if (encoder.encode(raw).byteLength > ID_INDEX_MAX_BYTES) throw new PublicationError('The catalogue\'s id index is past its 8 MiB limit; nothing was written', 413, 'id_index_too_large');
   const hash = await digest(value), key = idIndexKey(home, hash);
-  if (await again(() => put(storage, key, raw))) return hash;
+  if (await put(storage, key, raw)) return hash;
   const found = await readObject(storage, key, ID_INDEX_MAX_BYTES); if (!found || canonical(found.value) !== raw) throw conflict();
   return hash;
 }
@@ -1046,17 +1061,21 @@ export class PackWriter {
   }
 }
 async function putPack(storage: R2Bucket, key: string, sealed: SealedPack): Promise<boolean> {
+  let result: R2Object | null;
   try {
-    const result = await storage.put(key, sealed.body, { onlyIf: new Headers({ 'If-None-Match': '*' }),
+    result = await storage.put(key, sealed.body, { onlyIf: new Headers({ 'If-None-Match': '*' }),
       httpMetadata: { contentType: 'application/octet-stream' }, customMetadata: { sha256: sealed.digest } });
+  } catch (error) { throw transientFailure(error, 'put', key); }
+  try {
     if (result === null) return false;
     required(result && result.key === key && result.size === sealed.bytes); return true;
   } catch (error) { throw storageFailure(error, 'put', key); }
 }
 function packHead(storage: R2Bucket, key: string): Promise<{ size: number; sha256: string | undefined } | null> {
   return again(async () => {
+    let held: { size?: unknown; customMetadata?: Record<string, string> } | null;
+    try { held = await storage.head(key) as { size?: unknown; customMetadata?: Record<string, string> } | null; } catch (error) { throw transientFailure(error, 'head', key); }
     try {
-      const held = await storage.head(key) as { size?: unknown; customMetadata?: Record<string, string> } | null;
       if (held === null) return null;
       required(held && integer(held.size));
       return { size: held.size as number, sha256: held.customMetadata?.sha256 };
@@ -1094,15 +1113,20 @@ export async function ensurePack(env: Env, scope: string, sealed: SealedPack): P
  */
 async function readPackBytesOnce(storage: R2Bucket, scope: string, pack: string, at: number, bytes: number): Promise<Uint8Array | null> {
   const key = packKey(scope, pack);
+  let result: R2ObjectBody | null;
+  try { result = await storage.get(key, { range: { offset: at, length: bytes } }); } catch (error) { throw transientFailure(error, 'get', key); }
   try {
-    const result = await storage.get(key, { range: { offset: at, length: bytes } });
     if (result === null) return null;
     required(result && result.body && integer(result.size) && result.size >= at + bytes);
     const ranged = (result as { range?: unknown }).range != null, cap = ranged ? bytes : result.size;
     const reader = result.body.getReader(), chunks: Uint8Array[] = [];
     let n = 0;
     try {
-      for (;;) { const part = await reader.read(); if (part.done) break; n += part.value.byteLength; required(n <= cap); chunks.push(part.value); }
+      for (;;) {
+        let part: ReadableStreamReadResult<Uint8Array>;
+        try { part = await reader.read(); } catch (error) { throw transientFailure(error, 'get', key); }
+        if (part.done) break; n += part.value.byteLength; required(n <= cap); chunks.push(part.value);
+      }
     } catch (error) { void reader.cancel().catch(() => undefined); throw error; } finally { reader.releaseLock(); }
     const out = new Uint8Array(n);
     let offset = 0; for (const chunk of chunks) { out.set(chunk, offset); offset += chunk.byteLength; }
@@ -1183,18 +1207,21 @@ export async function readCatalogPacked(env: Env, scope: string, wanted: Iterabl
   return out;
 }
 /** P98 (LD4): how far one publication got, so a storage failure names the state it left. */
-interface Progress { state: PublicationState }
+interface Progress { state: PublicationState; retry?: boolean }
 async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promise<void>, progress?: Progress): Promise<PublicationPin> {
   const pending = loaded.head.pending; required(pending); const set = pending.set;
   if (progress) progress.state = 'pending';
-  for (const document of pending.documents) { await authorize?.(); await createExact(storage, revisionKey(document.kind, document.scope, document.revision), document); }
+  const retry = progress?.retry === true;
+  for (const document of pending.documents) { await authorize?.(); await createExact(storage, revisionKey(document.kind, document.scope, document.revision), document, retry); }
   await authorize?.();
-  await createExact(storage, setKey(set.scope, set.revision), set);
+  await createExact(storage, setKey(set.scope, set.revision), set, retry);
   const next = await sealed({ schema: 'configuration-head/v1' as const, scope: set.scope, committed: identityOf(set), pending: null });
   await authorize?.();
   // P98 (LD2): the commit is the head's compare-and-set, never sent again blindly: one that landed and then threw is
   // found committed by the read of the head that follows.
-  if (await casHead(storage, set.scope, serialized(next), loaded.etag, head => !!head.committed && head.committed.revision >= set.revision) && progress) progress.state = 'committed';
+  const landed = retry ? await casHead(storage, set.scope, serialized(next), loaded.etag, head => !!head.committed && head.committed.revision >= set.revision)
+    : await put(storage, headKey(set.scope), serialized(next), loaded.etag);
+  if (landed && progress) progress.state = 'committed';
   const after = await requiredHead(storage, set.scope); required(after.head.committed);
   if (after.head.committed.revision < set.revision) throw conflict();
   if (after.head.committed.revision === set.revision && after.head.committed.digest !== set.digest) throw conflict();
@@ -1233,6 +1260,12 @@ export interface PublicationChange<T = unknown> {
    * adopted a pack already stored checks it again here, so a pack the purge collected meanwhile is written again.
    */
   reserved?: () => Promise<void>;
+  /**
+   * P98 (E25, LD2): a catalogue load's publication (an import, a pull, the publish of staged files): its revision and
+   * set exact-creates are tried twice and its head writes are read again after a failure (`casHead`), so one transient
+   * failure of the store never refuses it. Any other publication sends each write once, as before.
+   */
+  retry?: boolean;
 }
 /** Several related documents are one intent and become visible in one CAS. */
 export async function publishSet(env: Env, changes: PublicationChange[], meta: WriteMeta): Promise<WriteResult<unknown>> {
@@ -1246,7 +1279,7 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
   }
   return invalidating(storage, scope, async () => {
     // P98 (LD4): a storage failure names the state this publication left the store in.
-    const progress: Progress = { state: 'nothing_written' };
+    const progress: Progress = { state: 'nothing_written', retry: changes.some(change => change.retry === true) };
     try {
       const requestDigest = await digest({ ...preconditions, actor: meta.actor, note: meta.note ?? '', changes: changes.map(c => ({ kind: c.kind.name, scope: c.scope, request: c.request })) });
       const loaded = await requiredHead(storage, scope), previous = await operationAt(storage, loaded, first.kind, first.scope, meta);
@@ -1289,7 +1322,8 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
       const next = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: { set, documents } });
       await meta.authorize?.();
       // P98 (LD2): the reservation is the head's compare-and-set, never sent again blindly (`casHead`).
-      if (!await casHead(storage, scope, serialized(next), loaded.etag, head => head.pending?.set.digest === set.digest)) throw conflict();
+      if (!await (progress.retry ? casHead(storage, scope, serialized(next), loaded.etag, head => head.pending?.set.digest === set.digest)
+        : put(storage, headKey(scope), serialized(next), loaded.etag))) throw conflict();
       progress.state = 'pending';
       const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
       try { for (const change of changes) await change.reserved?.(); }
@@ -1311,14 +1345,14 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
   });
 }
 export async function publish<T>(env: Env, kind: DocumentKind<T>, scope: string, request: unknown, meta: WriteMeta,
-  candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown>, reserved?: () => Promise<void>): Promise<WriteResult<T>> {
+  candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown>, door: Pick<PublicationChange<T>, 'reserved' | 'retry'> = {}): Promise<WriteResult<T>> {
   if (!meta.expectedPublication) {
     const { document, set } = await legacyCommitted(env, kind, scope, meta);
     const requestDigest = await digest({ operationId: meta.operationId, expectedRevision: meta.expectedRevision, actor: meta.actor, note: meta.note ?? '', request });
     if (document.actor !== meta.actor || document.operation.requestDigest !== requestDigest) throw conflict();
     return { ok: true, revision: publicRevision(document, set, kind) };
   }
-  return publishSet(env, [{ kind, scope, request, candidate, ...(reserved ? { reserved } : {}) } as PublicationChange], meta) as Promise<WriteResult<T>>;
+  return publishSet(env, [{ kind, scope, request, candidate, ...door } as PublicationChange], meta) as Promise<WriteResult<T>>;
 }
 /**
  * P38 (decision D1): publish one member under the authored precondition of

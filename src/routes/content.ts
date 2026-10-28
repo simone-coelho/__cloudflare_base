@@ -1648,7 +1648,7 @@ contentRoutes.put('/:kind', async (c) => {
     // P38: the catalogue through the same replace a write makes, under the vocabulary in effect.
     // P88: a slots document through the same replace a write makes, under the approved layouts of its set.
     result = k.kind.name === CONTENT_KIND.name || k.kind.name === SLOTS_KIND.name
-      ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate), reserved).catch(named)
+      ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate), { reserved }).catch(named)
       : await write(c.env, k.kind, scope, candidate, { ...meta, note });
   }
   return result.ok
@@ -1673,7 +1673,7 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
   const result = k.kind.name === CONTENT_KIND.name
     ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
       async (base: unknown, set: PublicationPin) => catalogueOverRollback(c.env, scope, base as ContentCatalog | undefined, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null, held),
-      packReserved(c.env, scope, held))
+      { reserved: packReserved(c.env, scope, held) })
     // P88 (E13): a slots body rolled forward meets the approved layouts of the set it is published over.
     : k.kind.name === SLOTS_KIND.name
       ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
@@ -1930,7 +1930,7 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
           if (opts.dryRun) throw new HeldLoad('dry-run', checked.value);
         }
         return governed;
-      }, packReserved(c.env, scope, held));
+      }, { reserved: packReserved(c.env, scope, held), retry: true });
   } catch (error) {
     if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: addressed(error.errors), received: records.length }, 422);
     if (base?.productSlots && error instanceof PublicationError && error.code === 'document_too_large') throw namedManifest(error);
@@ -2289,7 +2289,7 @@ contentRoutes.post('/catalog/publish', async (c) => {
       // P98: the publish's one pack (the shards and id shards the stages touch), before the head is reserved.
       await writeIndex(c.env, scope, written.built, held);
       return written.manifest;
-    }, stillHeld);
+    }, { reserved: stillHeld, retry: true });
   } catch (error) {
     if (error instanceof PublicationError && error.code === 'document_too_large') throw namedManifest(error);
     if (error instanceof HeldLoad && error.held === 'unchanged' && plan) {
