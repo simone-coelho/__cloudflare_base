@@ -420,7 +420,7 @@
     {
       "id": "P96",
       "title": "One `total` on a door answer (**amendment 12, E21, 2026-10-26**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
