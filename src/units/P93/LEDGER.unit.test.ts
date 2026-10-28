@@ -92,7 +92,7 @@ import {
 import {
   A, ANCHOR_IMAGES, B, BLACK, bucketOf, bytesOf, C, carousel, CAROUSEL, catalogue, classOf, declareProductSlots, DOCS, DOCS_WITH_CART, fourOf, heldKeys, heldRaw, image,
   importJson, KEY, LEARN, loseObject, metered, MODULE_IDS, namedBy, objectKeys, OTHER_IMAGES, preconditions, productRead, pull, rangeProduct, rangeRecordId,
-  rangeRecords, rangeTenant, readClasses, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, sorted, storedBeforePacks, touched, unique, UNKNOWN, withinCaps,
+  rangeRecords, rangeTenant, readAsWanted, readClasses, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, sorted, storedBeforePacks, touched, unique, UNKNOWN, withinCaps,
   type IndexView, type Op, type Rec,
 } from './_catalog';
 
@@ -390,11 +390,19 @@ describe('unit:P93.CS3 (R-P487 (2), (5); R-P490 (1): the loads and the PUT acros
       const dryHeaders = await preconditions(m);
       const dry = await metered(m, async () => importJson(m, rangeRecords(609, 4), { mode: 'merge', dryRun: '1' }, { 'If-Match': dryHeaders['If-Match']! }));
       const puts = (ops: readonly Op[]) => ops.filter(o => o.op === 'put').map(o => o.key);
+      // P98 R10 (R-P599): a load's reads in the ruled form — every object it wants read; any other object read only between
+      // two wanted objects of one read of a pack, each gap at most 256 KiB and each read at most 16 MiB (the build merges
+      // neighbouring places into one ranged read). The objects each load wants: the shards of the products it names and
+      // their parts, and the id shards of ids whose place can change (before: exactly the objects it wants).
+      const wantedOf = (view: IndexView, products: string[], ids: string[]) => [...buckets(products).filter(b => view.shards[b]).map(b => KEY.shard(view.shards[b]!.digest)),
+        ...products.filter(p => view.products[p]).map(p => KEY.part(view.products[p]!.digest)), ...ids.map(bucketOf).filter(b => view.idShards[b]).map(b => KEY.idshard(view.idShards[b]!.digest))];
+      const sixAndSix = Array.from({ length: 12 }, (_, i) => rangeProduct(13 + i));
+      const wanted = { retitle: wantedOf(start.view, twelve, []), half: wantedOf(one.view, sixAndSix, []), added: wantedOf(two.view, newProducts, newIds) };
       expect.soft({
-        retitle: [retitle.result.status, touched(retitle.ops, 'get', 'shard'), touched(retitle.ops, 'get', 'idshard'), touched(retitle.ops, 'get', 'part'),
+        retitle: [retitle.result.status, readAsWanted(retitle, 'shard', wanted.retitle), readAsWanted(retitle, 'idshard', wanted.retitle), readAsWanted(retitle, 'part', wanted.retitle),
           touched(retitle.ops, 'put', 'part'), touched(retitle.ops, 'put', 'shard'), touched(retitle.ops, 'put', 'idshard')],
-        half: [half.result.status, touched(half.ops, 'put', 'part'), touched(half.ops, 'get', 'idshard')],
-        added: [added.result.status, touched(added.ops, 'get', 'idshard'), touched(added.ops, 'put', 'idshard'), newProducts.every(p => three.view.products[p])],
+        half: [half.result.status, touched(half.ops, 'put', 'part'), readAsWanted(half, 'idshard', wanted.half)],
+        added: [added.result.status, readAsWanted(added, 'idshard', wanted.added), touched(added.ops, 'put', 'idshard'), newProducts.every(p => three.view.products[p])],
         nothing: [again.result.status, again.result.body.skipped ?? null, puts(again.ops), dry.result.status, dry.result.body.dryRun ?? null, puts(dry.ops)],
       }, `${host}: P93.CS3 — each load touches only its own shards and moved parts (today the one id index is read whole: ${unique(retitle.ops.filter(o => o.op === 'get').map(o => classOf(o.key))).join(', ')})`).toEqual({
         retitle: [200, unique(buckets(twelve).map(b => KEY.shard(start.view.shards[b]!.digest))), [], unique(twelve.map(p => KEY.part(start.view.products[p]!.digest))),

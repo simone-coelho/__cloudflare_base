@@ -402,10 +402,13 @@ export function partAt(m: Mounted, pointer: Pointer | undefined): { ids: string[
 }
 
 // ── The meter: every call on the mount's bucket ──────────────────────────────────────────────────────────────────────
-export interface Op { op: 'get' | 'put' | 'head' | 'list' | 'delete'; key: string }
+/** A bucket call; P98 R10 (R-P599): `via`, for an object read inside a read of a pack, that read's place in `ranged`. */
+export interface Op { op: 'get' | 'put' | 'head' | 'list' | 'delete'; key: string; via?: number }
+/** P98 R10 (R-P599): one read of a pack — its bytes [from, to) and the objects wholly inside them. */
+export interface RangedRead { pack: string; from: number; to: number; objects: Array<{ key: string; at: number; bytes: number }> }
 /** Every bucket call one operation makes, in order, through whatever the bucket answers with now (an earlier override included). */
-export async function metered<T>(m: Mounted, run: () => Promise<T>): Promise<{ result: T; ops: Op[] }> {
-  const bucket = m.storage as unknown as Record<string, unknown>, ops: Op[] = [], saved = new Map<string, PropertyDescriptor | undefined>();
+export async function metered<T>(m: Mounted, run: () => Promise<T>): Promise<{ result: T; ops: Op[]; ranged: RangedRead[] }> {
+  const bucket = m.storage as unknown as Record<string, unknown>, ops: Op[] = [], ranged: RangedRead[] = [], saved = new Map<string, PropertyDescriptor | undefined>();
   for (const name of ['get', 'put', 'head', 'list', 'delete'] as const) {
     saved.set(name, Object.getOwnPropertyDescriptor(bucket, name));
     const current = (bucket[name] as (...args: unknown[]) => unknown).bind(m.storage);
@@ -415,8 +418,13 @@ export async function metered<T>(m: Mounted, run: () => Promise<T>): Promise<{ r
       const pack = /\/content\/pack\/([0-9a-f]{64})\.pack$/.exec(key)?.[1];
       if (pack && name === 'get') {
         const range = (args[1] as { range?: { offset?: number; length?: number } } | undefined)?.range, inside = packedObjects(m, pack);
-        const from = range?.offset ?? 0, to = range?.length === undefined ? Infinity : from + range.length;
-        if (inside.length) { for (const o of inside) if (o.at >= from && o.at + o.bytes <= to) ops.push({ op: name, key: o.key }); return current(...args); }
+        const from = range?.offset ?? 0, to = range?.length === undefined ? bytesOf(m.storage.objects.get(KEY.pack(pack)) ?? '') : from + range.length;
+        if (inside.length) {
+          const read: RangedRead = { pack, from, to, objects: inside.filter(o => o.at >= from && o.at + o.bytes <= to).sort((x, y) => x.at - y.at) };
+          ranged.push(read);
+          for (const o of read.objects) ops.push({ op: name, key: o.key, via: ranged.length - 1 });
+          return current(...args);
+        }
       }
       const result = await current(...args);
       if (pack && name === 'put' && result) { for (const o of packedObjects(m, pack)) ops.push({ op: name, key: o.key }); return result; }
@@ -424,8 +432,36 @@ export async function metered<T>(m: Mounted, run: () => Promise<T>): Promise<{ r
       return result;
     } });
   }
-  try { return { result: await run(), ops }; }
+  try { return { result: await run(), ops, ranged }; }
   finally { for (const [name, descriptor] of saved) { if (descriptor) Object.defineProperty(bucket, name, descriptor); else Reflect.deleteProperty(bucket, name); } }
+}
+/** P98 R10 (R-P599): the build's bounds on a merged read of a pack (publication.ts PACK_GAP and PACK_SPAN, DESIGN.md §124). */
+export const READ_GAP = 256 * 1024, READ_SPAN = 16 * 1024 * 1024;
+/**
+ * P98 R10 (R-P599, the form ruled for P93.CS3's reads): the objects of one class an operation read, named as a leg that
+ * lists the objects it wants expects them — each wanted object read, and each other object read named with why it is
+ * not allowed, unless every read of it lies between two wanted objects (of `wanted`, any class) of one read of a pack
+ * whose gaps between consecutive wanted objects are each at most READ_GAP and whose bytes are at most READ_SPAN.
+ */
+export function readAsWanted(run: { ops: readonly Op[]; ranged: readonly RangedRead[] }, cls: string, wanted: Iterable<string>): string[] {
+  const want = new Set(wanted), out = new Set<string>(), why = new Map<string, string>();
+  const verdict = (o: Op): string | null => {
+    if (o.via === undefined) return 'read outside a read of a pack';
+    const read = run.ranged[o.via]!, inside = read.objects.filter(x => want.has(x.key)), self = read.objects.find(x => x.key === o.key)!;
+    if (!inside.some(w => w.at + w.bytes <= self.at) || !inside.some(w => self.at + self.bytes <= w.at)) return 'not between two wanted objects of its read';
+    const gap = Math.max(0, ...inside.slice(1).map((w, i) => w.at - (inside[i]!.at + inside[i]!.bytes)));
+    if (gap > READ_GAP) return `a gap of ${gap} bytes between wanted objects of its read`;
+    if (read.to - read.from > READ_SPAN) return `a read of ${read.to - read.from} bytes`;
+    return null;
+  };
+  for (const o of run.ops) {
+    if (o.op !== 'get' || classOf(o.key) !== cls) continue;
+    if (want.has(o.key)) { out.add(o.key); continue; }
+    const v = verdict(o);
+    if (v && !why.has(o.key)) why.set(o.key, v);
+  }
+  for (const [key, v] of why) out.add(`${key} (${v})`);
+  return sorted(out);
 }
 /** The distinct keys of one class an operation touched with one call. */
 export const touched = (ops: readonly Op[], op: Op['op'], cls: string) => unique(ops.filter(o => o.op === op && classOf(o.key) === cls).map(o => o.key));
