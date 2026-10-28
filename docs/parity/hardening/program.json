@@ -277,7 +277,8 @@
         "src/routes/content.ts (the learn advisory channel only: learnAdvisory and its three callers)",
         "src/content/holdout.ts (saltVersionOf only, where the reason the count is unknown is carried from it)",
         "docs/kit/02-api-reference.md",
-        "src/units/P95/LEDGER.unit.test.ts (R10 of KIT_PURGE_KEEPS at :300 and its use at :551 only, if kit 02's sentence it pins changes; by the specifier, by name)"
+        "src/units/P95/LEDGER.unit.test.ts (R10 of KIT_PURGE_KEEPS at :300 and its use at :551 only, if kit 02's sentence it pins changes; by the specifier, by name)",
+        "src/units/_parity.ts (R10 by name: the in-memory R2 double's list honouring delimiter and startAfter as R2 does, so the purge's stored-decision rule is exercised; every test using the double's list swept; by the specifier; R-P597)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P99 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
