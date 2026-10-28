@@ -78,15 +78,25 @@
 //      default, the prepare body and the admit call of src/ledger/recovery.ts resumeOwnerRecovery); the direct path the same
 //      action with 'false' (src/learn/route.ts outcomeToLearning's fanOutcome). The ring's answer is read on the wire, as
 //      unit:W24.R4 reads it; nothing is stubbed.
+//   R10 "LearnConfig names it" (MP1) is read off src/content/types.ts's LearnConfig declaration (an optional `money`
+//      member), the one observable a type has without a compile error today.
+//   R11 The policy rides the outcome's recovery input (src/ledger/recovery.ts OutcomeRecoveryInput, persisted with the
+//      operation), so an alarm that completes the outcome later carries the policy the action prepared; the grant names
+//      recovery.ts's prepare body and admit call, and the input type's member is the carrier both read (for the lead).
 //
 // DEFERRED: LV1 (lane L21, the pair's next release: a EUR policy published on a pair tenant, an SDK purchase naming EUR
 // credited live and in the day's report; another currency refused by name live and absent from the report).
 // RESIDUALS: kit 03's learn-document schema does not list `money` (kit 03 is outside the grant; kit 02 states it); a
 // currency's form (ISO 4217) is not ruled (R1); the meaning of a nonpositive credit is D09 (R3); money priors stay refused
-// (D09, MP6).
+// (D09, MP6); the hourly fold's recovery fingerprint (src/learn/hourly.ts buildHour `configuration`) does not name the
+// policy, so an hour whose fold was interrupted resumes under the policy in force when it resumes.
 //
 // LOCKS (MP6 and the gate): W24 B1, B2, LEDGER (R1.02, R1.04, R2, R5), P16, P33, W26, P94, W25, src/sdk/emit.test.ts,
-// W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts — see the report's R10 list.
+// W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
+// the sketch (S50/specifier/logs/full-sketch.json) fails only on files that fail alike on an unchanged scratch copy (no
+// .git, linked node_modules: P45, P46, P47, P51, P52, P53, P87.SC3, W39, W40.P4) and on P68.KT1, whose kit 02 :99
+// citations (src/learn/route.ts :152, :157, :176; src/ledger/recovery.ts :380, :397) a sketch adding lines above them
+// moves: the build keeps those edits line-neutral or re-points the citations in kit 02 (granted). No R10 is needed.
 //
 // HARNESS: src/units/_parity.ts (the mounted app over the real Durable Object classes, both hosts; shopperOn, asOperator,
 // putDocument, learned). Imports from src/units/: ../_parity. NEW EXPORTS IMPORTED: none. Tenant ids only; no network.
