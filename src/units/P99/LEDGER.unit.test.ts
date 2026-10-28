@@ -92,6 +92,10 @@
 //   R10 "Under the purge's other rules" is shown by the previous revision and one learn revision a stored decision names
 //      (a consenting shopper's decision while it was in force, written by the real ledger producer and consumer), both
 //      past the bound and both kept. NR4 is kept: the next learn publication of such a tenant still carries the unknown.
+//   R11 The 15-minute grace (R-P424) stays as P86 CS1 and P93 CS5 lock it: an object inside the grace is not deleted and
+//      its revision's body still goes (a sketch that kept the body instead turned those four legs RED; after P98 no load
+//      writes an object of its own, so the grace no longer touches the objects stored before packs). These legs list
+//      every object as uploaded at time 0, as the double does, so the grace does not enter them.
 //
 // THE R10 BY NAME (the work order's grant, by the specifier; not edited here — the lead rules it before the build):
 //   src/units/P95/LEDGER.unit.test.ts KIT_PURGE_KEEPS (:300), before → after:
