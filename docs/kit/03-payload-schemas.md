@@ -96,7 +96,7 @@ One per admitted position, available through authenticated operator/ledger readb
 | `customer_id` | Your identifier for the shopper that the decision request carried (`customerId`, passed with `setCustomerId`), beside `visitor_id`, under tracking consent; absent when the request carried none, and never compared by replay |
 | `identity_anchor` | `visitor` when the state hung on the durable id, `session` when only a session was available, `none` when no state could be read |
 | `ts` | Original server decision time; never rewritten to render/replay time |
-| `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`: the experiment this record's arm belongs to, as the decision path answered it. `id` is `{tenant}:{brand}:{salt}`, so rotating the published salt starts a new experiment instead of re-randomising the running one; `saltVersion` counts the distinct salts this tenant has published up to the pinned revision, and is `null` where the published history the platform can read does not reach the first one. `saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number. `anchorGeneration` is the generation of the shopper's persistent enrollment anchor. Written by the producer and delivered unchanged — never re-derived later from a then-current document. `arm` here is the ASSIGNMENT (`personalized`, `default`, `no_learning`, or `ineligible` for a shopper who never consented to personalization and so was never drawn), which is not the same field as the record's own `arm`, the experience served. `reason` says why an assignment is `ineligible` — `personalization_consent` when she has not consented to personalization, `anchor_unavailable` when her enrollment anchor could not be read at that moment — and is absent on a randomised assignment. Absent on records written before enrollment was persistent |
+| `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`: the experiment this record's arm belongs to, as the decision path answered it. `id` is `{tenant}:{brand}:{salt}`, so rotating the published salt starts a new experiment instead of re-randomising the running one; `saltVersion` counts the distinct salts this tenant has published up to the pinned revision, and is `null` where the published history the platform can read does not reach the first one. `saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number. `anchorGeneration` is the generation of the shopper's persistent enrollment anchor. Written by the producer and delivered unchanged — never re-derived later from a then-current document. `arm` here is the ASSIGNMENT (`personalized`, `default`, `no_learning`, or `ineligible` for a shopper who never consented to personalization and so was never drawn), which is not the same field as the record's own `arm`, the experience served. `reason` says why an assignment is `ineligible` — `personalization_consent` when the visitor has not consented to personalization, `anchor_unavailable` when their enrollment anchor could not be read at that moment — and is absent on a randomised assignment. Absent on records written before enrollment was persistent |
 | `measurementBasis` | `served-v1` (also absent legacy metadata) or `rendered-v1`; incompatible counts are not pooled |
 | `rendered` | Rendered-v1 only: `{version:1,eventId,at,pageInstance}` from the original durably admitted renderer signal, not proof of human visibility |
 | `page`, `slot`, `position` | Where it was served, and the rank inside the slot |
@@ -296,15 +296,25 @@ product) is stored in parts, below.
 `productSlots` (the slot types whose records are product-scoped, for example `["pdp-carousel"]`, written by a
 PUT of the catalog and kept by every load) is stored as a manifest: `pieces` holds the shared pieces (modules,
 heroes, every piece that is not product-scoped), and `index` names the shards of its product index,
-`{ "key": "sha256-hex2", "shards": { "<hex2>": { "digest": "<64 hex>", "products": <count>, "records": <count> } }, "ids": { "<hex2>": { "digest": "<64 hex>", "records": <count> } } }`.
+`{ "key": "sha256-hex2", "packs": [ { "digest": "<64 hex>", "objects": <count>, "bytes": <count>, "size": <count> } ], "legacy": <count>, "shards": { "<hex2>": { "digest": "<64 hex>", "products": <count>, "records": <count>, "pack": <place>, "at": <offset>, "bytes": <length> } }, "ids": { "<hex2>": { "digest": "<64 hex>", "records": <count>, "pack": <place>, "at": <offset>, "bytes": <length> } } }`.
 A product falls in the shard named by the first two hexadecimal digits of the SHA-256 of its id's UTF-8
-bytes, so the 256 shards share the range evenly whatever form your product ids take. Each product shard is one
-immutable object, `{ shard, products: { "<productId>": { "digest", "records" } } }`, pointing each of its
+bytes, so the 256 shards share the range evenly whatever form your product ids take. Each product shard is
+`{ shard, products: { "<productId>": { "digest", "records", "at", "bytes" } } }`, pointing each of its
 products at its part; each id shard, keyed the same way by the record id, is `{ shard, ids: { "<record id>":
 "<productId>" } }`, naming the product whose part holds each part record (expired ones included). Only shards
-that hold something are listed. Each part is one immutable object holding that product's records,
-`{ product, pieces }`, at most 2 MiB, addressed by the SHA-256 of its canonical bytes, which is the digest its
-pointer names. Parts and shards are written before the publication commits, so a load whose part or shard
+that hold something are listed. Each part holds that product's records, `{ product, pieces }`, at most 2 MiB,
+and its digest is the SHA-256 of its canonical bytes, which is the digest its pointer names.
+
+**One pack per load.** A load stores what it changes in one object, its pack: the canonical bytes of every
+part whose digest moved and of every shard and id shard it rebuilt, end to end, at
+`content/pack/<SHA-256 of the pack>.pack`. A pointer names the pack and the object's byte range in it: the
+manifest's pointers name a row of its `packs` table by place (`pack`) with the range (`at`, `bytes`), and a
+shard's part pointers carry the range, with `pack` naming the shard's own `packs` list where the part is in
+another pack than the shard. Every object read from a pack is checked against its own digest, as a whole object
+is. The `packs` table names every pack the revision reaches, its parts included, with the objects and bytes of
+it the revision still reaches (`objects`, `bytes`) and its whole size (`size`); `legacy` counts the objects the
+revision reaches that were stored before packs. So a load's storage calls grow with the packs its objects live
+in, never with its number of products. The pack is written before the publication commits, so a load whose pack
 cannot be written commits nothing and leaves nothing pending. The catalog stays one document with one revision,
 one `If-Match` and one rollback: the manifest's digest covers every shard's, and every shard's covers its
 parts', so a change to any record moves N, S and H. The manifest stays the size of its shared pieces and at
@@ -327,8 +337,11 @@ arrives as several loads, each within the input bound. A load reads the shards o
 those products' parts, and the id shards only of the ids whose place can change (a record its product's part
 does not hold yet, a piece newly shared, an id a `replace`, a `full` or a move drops), so a load that only
 retitles records reads no id shard; it writes only the parts and shards whose digest moved, never an
-unchanged part again. The skip compares the manifest's digest, a dry run writes nothing, no part or shard
-included, and the answer's `pieces` counts the shared pieces and every part's records.
+unchanged part again, all of them in its one pack, and it reads the objects of each pack in as few ranged reads
+as their places allow. The skip compares the manifest's digest, a dry run writes nothing, no pack included, and
+the answer's `pieces` counts the shared pieces and every part's records. `changed` counts the records whose
+stored value the load created or altered, compared field by field whatever order the fields were written or
+stored in, so a retitle of one product's records answers exactly the records it retitled.
 
 `GET /content/catalog` answers the manifest with its `index`, `envelope.pieces` counting the shared pieces and
 every part's records, `envelope.bytes` the manifest's own size and `envelope.products` the number of products
@@ -350,8 +363,8 @@ and the new part holds it), or once the source product, the one it leaves, has b
 record the index lists under another product the load does not carry is refused `422` with
 `code: "record_moved"`, naming both products (the source and the new one), and so is a PUT that keeps the old
 product while it routes the record to the new one. In a nightly load sent in chunks, a `record_moved` means
-the chunk of the product the record leaves comes later in the sequence: send that chunk first, or both
-products in one file. A shared piece whose id a part record holds is refused `422` with `code: "id_in_part"`,
+the chunk of the product the record leaves comes later in the sequence: send that chunk first, both
+products in one file, or both files as stages published once. A shared piece whose id a part record holds is refused `422` with `code: "id_in_part"`,
 and a part record whose id a shared piece holds `422` with `code: "id_shared"`, each naming the id and the
 product, whichever shard the product falls in. `replace` and `full` rebuild the id entries of the products
 they name, a PUT those of the products it sends or removes, and a rollback brings back the old revision's
@@ -366,35 +379,77 @@ What still bounds the catalog is the size of one object, never the number of pro
 and an id shard are each at most 2 MiB, refused `413` with `code: "part_too_large"`, `"index_shard_too_large"`
 (naming the shard and its number of products) and `"id_index_too_large"` (naming the id shard), which leaves
 room for roughly 1.5 to 5 million products by the length of their ids; and the manifest rides one 2 MiB
-publication beside its set, which only the shared pieces can fill (`413` with `code: "manifest_too_large"`). A
-refusal writes nothing, no part or shard included. A part or shard is kept while any stored revision names it:
-under the tenant's `configuration` retention setting, the purge resolves a revision's shards and the parts
-behind them before it removes the revision, removes those no stored revision names, never one uploaded less
-than 15 minutes ago (a load in flight may have just written it), and where its work budget runs out leaves the
-revision for the next publication, so an object it has not resolved is never lost to it. A rollback checks the
-shards it would bring back that the revision in force does not name and each part pointer inside them that
-differs: one the store no longer holds is refused `410` with `code: "part_missing"`, naming it, and a rollback
-needing more than 900 such checks is refused `413` with `code: "rollback_too_large"` and their count (load the
-range forward instead).
+publication beside its set, which only the shared pieces can fill (`413` with `code: "manifest_too_large"`). A load whose pack would pass 64 MiB is refused `413` with `code: "load_too_large"`. A refusal writes nothing, no
+pack included. A pack is kept while any stored revision's `packs` table names it: under the tenant's
+`configuration` retention setting, the purge removes a pack only after no stored revision's table names it and
+never one uploaded less than 15 minutes ago (a load in flight may have just written it), reading the tables
+and the listing of packs alone, never a shard; it removes a revision's packs before the revision, and where its
+work budget runs out leaves the revision for the next publication, so an object it has not resolved is never
+lost to it. It deletes nothing while the publication head holds a pending publication, and a load that finds
+its pack already stored checks it again once it holds the head and writes it again if it was collected. The
+pack of a load that was refused after its pack was written, or of a stage never published, is named by no
+revision, and the purge collects it once it is 15 minutes old. A pack the table shows under a quarter live, or
+the one with the fewest live bytes once the table passes 64 packs, has its live objects moved into a later
+load's pack. A rollback checks, by one HEAD each, the packs it would bring back that the revision in force does
+not name, so it counts packs, not parts (and the objects stored before packs that it would bring back, one by
+one): one the store no longer holds is refused `410` with `code: "part_missing"`, naming it, and a rollback
+needing more than 900 such checks is refused `413` with `code: "rollback_too_large"` and their count.
 
 A catalog stored in parts before this index, with one `products` map and one `idIndex` in its manifest, is
-read by every reader as it is; its next PUT, import, pull or rollback writes the sharded index, every part
-unchanged (at most 512 shard writes), and nothing is asked of the operator. Until that first PUT, import, pull
-or rollback after this release converts it, `GET /content/catalog?shard=` answers an empty shard for every bucket,
-while `?product=` and the product page serve it from the one-level form. A tenant without `productSlots` reads and
-writes no shard.
+read by every reader as it is; its next PUT, import, pull or rollback writes the sharded index into one pack,
+every part unchanged, and nothing is asked of the operator. Until that first PUT, import, pull or rollback after
+this release converts it, `GET /content/catalog?shard=` answers an empty shard for every bucket, while
+`?product=` and the product page serve it from the one-level form. A catalog stored before packs, each part and
+each shard an object of its own (a pointer with no range), is served as it is too: the first loads after the
+release read each such shard once, an old part costs one read the first time a load names its product, and each
+load that writes moves into its pack what it read of them, so one full reload leaves nothing stored before packs
+and the purge then collects those objects. A tenant without `productSlots` reads and writes no shard.
 
-Send a large range as files of about 200 to 300 products. A request's storage calls grow with its file: a file of
-about 250 products makes about 800 to 900 (its parts read and written, the product shards and id shards it
-touches, and its id-shard reads), one of about 500 products about 1,350, and a 5,000-product file about 6,000.
-Keep files to a few hundred products: the platform's own limit on one request's storage calls is not yet measured
-on the hosted stamps (lane L20). A nightly load in many small files rewrites more of the index than the same load
-in fewer files, since each file rewrites the shards its products fall in.
+**Loading a large range.** A file carries up to 5,000 products, within the input bounds above (2 MiB and
+10,000 records a request). Its storage calls no longer grow with its products: a load reads the head, the set
+and the revisions it publishes over, the packs holding the shards, parts and id shards it names (a few ranged
+reads each), writes its one pack, and publishes. Measured in the harness at 40,000 products: a load of 100 new
+products makes 26 storage calls, one of 1,000 new products 33, one of 5,000 new or 5,000 changed products 23 to
+25, and the same 5,000-product file sent again (the skip) 13, where before packs a 5,000-product file made about
+6,000. Its time is that of those calls (about 6 to 10 seconds for a 5,000-product file, projected from the
+storage latencies measured on the hosted stamps, where it took about 200 seconds before packs), plus the
+reading and checking of its records. Each storage read and HEAD, and the write of the pack, the revision and the
+set, is tried a second time within the request when it fails, so one transient failure of the store never
+refuses a load; the publication head is written only by its compare-and-set, read again after a failure, and
+never sent twice blindly.
+
+**Staged files, published once.** A range of 40,000 products is sent as files of up to 5,000 staged in
+parallel and published once. `POST /content/catalog/stage?scope=<tenant>&mode=…` takes one file, exactly as the
+import does (`format`, `path`, `mode`, `expire`, the vocabulary, the validator, the refusals of an id in two
+places against the catalog it is staged over), over the catalog revision and set its `If-Match` names (no
+`Idempotency-Key`); it writes one pack holding the parts whose digest moved and the stage's directory,
+publishes nothing, and answers its `stage` id with the file's counts and diagnostics. `POST
+/content/catalog/publish?scope=<tenant>` with `{ "stages": ["<stage id>", …] }` and the import's `If-Match` and
+`Idempotency-Key` publishes them all in one publication: one head reservation and one commit. The publish
+refuses `409` with `code: "stage_stale"` a stage staged over another revision, `410` with
+`code: "stage_missing"` a stage the store no longer holds, `422` with `code: "stage_overlap"` a product (or the
+shared pieces) loaded by two stages, and, across the stages as within one file, `422` with `record_moved`,
+`id_in_part` or `id_shared`: a record a stage moves out of a product another stage carries leaves that product's
+part, and one moved out of a product no stage carries is refused `record_moved`. The parts stay in the stages'
+packs, which the revision's `packs` table names. Measured in the harness: 40,000 products in eight files staged
+in parallel and published once make 135 storage calls in all (about 10 to 15 seconds projected on the hosted
+stamps, to be measured there), and the same 40,000 retitled 152.
+
+**When storage fails.** Two failures of the same storage call answer `503` with
+`code: "publication_unavailable"`, and the answer names the cause and what the store was left in, never a key,
+a body or a credential: `operation` (`get`, `put` or `head`), `object` (the kind of object: `head`, `set`,
+`revision`, `pack`, `part`, `shard`, `idshard`), `storageStatus` (the store's own error number, where it gave
+one) and `state`. `state: "nothing_written"`: nothing any revision names was written (at most the load's pack,
+which the purge collects); the catalog in force is unchanged. `state: "pending"`: the publication head holds
+the load's publication; `POST /content/catalog/publication/recover?scope=<tenant>` with the load's original
+`If-Match` and `Idempotency-Key` finishes it. `state: "committed"`: the load is in force; read the catalog to
+see it.
 
 A product page reads only its own product's records: its decision reads the head, the set, the content, slots,
 learn and reflex revisions and, when the page has a slot declared `scope: 'anchor'` and the request names a
 product as `ctx.anchor`, that product's shard and its one part, eight reads, the same at 50 or 100,000
-products; a warm isolate reads neither the shard nor the part again (each is held per isolate by its digest).
+products, the shard and the part each read by its byte range in its pack (about 105 KB in all at 40,000
+products); a warm isolate reads neither the shard nor the part again (each is held per isolate by its digest).
 A page with no such slot, no anchor or an anchor in a shard the index does not list reads no shard, an anchor
 its shard does not hold reads the shard and no part, and the scoped slot decides as it does with no
 candidates. A shard or part the store no longer holds fails the page `503` with `code: "part_unavailable"`,
