@@ -125,18 +125,19 @@ describe('E4 the serving configuration across a shopper object\'s operations', (
     expect(storage.reads).toEqual([head]);
   });
 
-  it('keeps the administrative read and the cache expiry as they were', async () => {
+  it('keeps the administrative read as it was, and past the serving cache\'s 30 seconds holds the set and documents by identity: the next action reads the head alone', async () => {
     const { storage, env } = await fixture();
     await actionReads(env);
     storage.reads.length = 0;
     await asOwner(env, (fenced) => pinPublication(fenced, tenant));
     expect(storage.reads).toEqual([head, setOf(1)]);
-    // Past the serving cache's lifetime nothing is held: the next action reads everything again.
+    // P102 (E27, CR1; R10 by name): past the serving cache's lifetime the set and the documents are still held by the
+    // publication's identity (they never change once published); the head is read and validated, and nothing else.
     const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 60_000);
     try {
       storage.reads.length = 0;
       await actionReads(env);
-      expect(storage.reads).toEqual([head, setOf(1), documentOf('reflex', 1), documentOf('content', 1)]);
+      expect(storage.reads).toEqual([head]);
     } finally { clock.mockRestore(); }
   });
 });
