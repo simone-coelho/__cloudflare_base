@@ -120,7 +120,7 @@ import { initializePublicationSet, invalidatePublicationCache } from '@/config/p
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 
-import { asOperator, expectPublished, HOSTS, loadDocument, MODULES, mount, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, type Answer, type Host,
+import { asOperator, expectPublished, HOSTS, loadDocument, MODULES, mount, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, UnitR2, type Answer, type Host,
   type Mounted } from '../_parity';
 import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, declareProductSlots, DOCS, DOCS_WITH_CART, image, indexOf, KEY, OTHER_IMAGES, preconditions, productRead,
   rangeProduct, rangeRecordId, rangeRecords, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, withinCaps, type Rec } from '../P93/_catalog';
@@ -508,6 +508,10 @@ describe('unit:P98.LD2 (R-P549 C2: files staged in parallel and published once; 
     it(`host (${host}): R-P569 (c) — on the customer profile (the stamps' boundary) the stage and publish doors admit the catalogue-import credential as on the parity mount; what the customer boundary refuses stays refused (another method or path, another kind's stage, the catalogue PUT with that credential)`, async () => {
       const s = await stamp(host, 'customer');
       expect(s.refused ?? 'ready', `PRECONDITION (${host}): the stamp's tenant has its first publication set (${s.refused})`).toBe('ready');
+      // The stamp's recording double (src/units/P87/_stamp.ts RecordingR2.get) drops a read's range; this leg's own copy honours it.
+      Object.defineProperty(s.storage, 'get', { configurable: true, writable: true, value: (key: string, options?: { range?: { offset?: number; length?: number } }) => {
+        s.rec.calls.push('r2 get ' + key); return UnitR2.prototype.get.call(s.storage, key, options);
+      } });
       const registered = await s.call('POST', '/auth/service-credentials', { body: { id: crypto.randomUUID(), subject: 'p98-load-job', role: 'catalog-import', expiresAt: Math.floor(Date.now() / 1000) + 86_400 } });
       const token = typeof registered.body.token === 'string' ? registered.body.token : '';
       expect([registered.status, token.length > 0], `${host}: PRECONDITION — a catalogue-import credential is registered (${JSON.stringify(registered.body).slice(0, 200)})`).toEqual([201, true]);
