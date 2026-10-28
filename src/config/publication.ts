@@ -224,29 +224,27 @@ export function carriedSaltVersion(revision: object | null | undefined): Carried
   return revision && typeof revision === 'object' ? carried.get(revision) ?? null : null;
 }
 /**
- * The salt walk's own horizon (`SALT_HISTORY_READS`, src/content/holdout.ts): a
- * count is carried forward only where the walk itself could still reach the
- * first revision, so W21 E1.07's unknown past the horizon stays unknown.
- */
-const SALT_CARRY_REVISIONS = 24;
-/**
  * The annotation a document about to be published carries. Learn documents only;
  * every other kind carries nothing, and a count that cannot be established is
  * `null` rather than a smaller number (W21 E1.07, NR4). It never throws, so a
  * derived annotation can never refuse a publication.
  *
- * W38 B4: where the revision before this one carries an exact count, this one's
- * is built from it — the same count, or one more where the effective salt
- * changed, which is exactly what the walk counts — and no earlier revision is
- * read. A purge under the tenant's configuration-revision setting may have
- * removed revisions the walk would need; the count they contributed is already
- * in the annotation the previous revision carries. Past the walk's horizon, and
- * wherever the previous revision carries no exact count, the walk decides as
- * before — and that walk still finds every revision it reads: while the current
- * learn revision carries no exact count (a history published before W21 E1.07,
- * or a walk that could not finish) inside the horizon, the purge removes no
- * learn revision (`saltCountCarried`, below). So the purge never turns an exact
- * count into an unknown.
+ * W38 B4, P95 (E20): the count is stored with each revision and carried. Where
+ * the revision before this one carries an exact count, this one's is built from
+ * it — the same count, or one more where the effective salt changed, which is
+ * exactly what a count over the history gives — whatever the revision number,
+ * and no earlier revision is read. A purge under the tenant's
+ * configuration-revision setting may have removed revisions a count would need;
+ * the count they contributed is already in the annotation the previous revision
+ * carries. Only where the previous revision carries no exact count (a history
+ * published before W21 E1.07, or a count that could not finish) is the count
+ * taken over the whole stored history (`saltVersionOf`, src/content/holdout.ts,
+ * no read horizon), here on the operator's time and never on a shopper's; and
+ * that count finds every revision it reads, because while the current learn
+ * revision carries no exact count the purge removes no learn revision
+ * (`saltCountCarried`, below). So the purge never turns an exact count into an
+ * unknown, and a tenant reading the unknown recovers at its next learn
+ * publication wherever its stored history still establishes the count.
  */
 async function derivedFor(env: Env, kind: DocumentKind<unknown>, scope: string, revision: number, value: unknown,
   previous?: CarriedSalt | null): Promise<{ derived: CarriedSalt } | Record<string, never>> {
@@ -257,7 +255,7 @@ async function derivedFor(env: Env, kind: DocumentKind<unknown>, scope: string, 
     // The published salt, or the brand fallback the decision service applies.
     const salt = typeof holdout?.salt === 'string' && holdout.salt.trim() === holdout.salt && holdout.salt ? holdout.salt : owner;
     if (!text(salt, 256)) return {};
-    if (revision > 1 && revision - 1 <= SALT_CARRY_REVISIONS && previous && integer(previous.version) && previous.version > 0) {
+    if (revision > 1 && previous && integer(previous.version) && previous.version > 0) {
       return { derived: { salt, version: previous.salt === salt ? previous.version : previous.version + 1 } };
     }
     const { saltVersionOf } = await import('@/content/holdout');
@@ -579,9 +577,17 @@ export async function committedPublication(env: Env, scope: string, id: Identity
 export async function publicationHistory<T>(env: Env, kind: DocumentKind<T>, scope: string): Promise<IndexEntry[]> {
   const set = await pinPublication(env, publicationScope(kind, scope)); await readPinnedPublication(env, kind, scope, set); return set.refs[member(kind, scope)].index;
 }
-export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, scope: string, n: number): Promise<Revision<T> | null> {
+/**
+ * Revision `n` of one member, or `null` past the member's committed revision.
+ * `pinned`, where given, is the committed set to read it against (P95: the salt
+ * count reads a whole history under one set, not one head read per revision);
+ * otherwise the head is pinned for this read alone.
+ */
+export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, scope: string, n: number, pinned?: PublicationPin): Promise<Revision<T> | null> {
   if (!integer(n) || n < 1) throw new PublicationError('Revision must be a positive safe integer', 400, 'invalid_revision');
-  const set = await pinPublication(env, publicationScope(kind, scope)), ref = set.refs[member(kind, scope)]; if (!ref) throw absent(env, kind);
+  const set = pinned ?? await pinPublication(env, publicationScope(kind, scope));
+  required(set.scope === publicationScope(kind, scope));
+  const ref = set.refs[member(kind, scope)]; if (!ref) throw absent(env, kind);
   if (n < ref.minRevision) throw new PublicationError('History predates the explicitly retained baseline', 409, 'legacy_history_unavailable');
   if (n > ref.revision) return null;
   const found = await readObject(storageOf(env), revisionKey(kind.name, scope, n));
@@ -1227,10 +1233,10 @@ export async function completePublicationSet(env: Env, scope: string, attributio
  *     aged while it is the one that serves;
  *   · named by no stored replay manifest (below);
  *   · for learning revisions, not needed by the next learn publication's salt
- *     count (W21 E1.07): while the current learn revision carries no exact count
- *     and is within the count's horizon, that publication counts by reading the
- *     history back to the first revision, so no learn revision is purged
- *     (`saltCountCarried`, below).
+ *     count (W21 E1.07, P95): while the current learn revision carries no exact
+ *     count, that publication counts by reading the whole history back to the
+ *     first revision, so no learn revision is purged (`saltCountCarried`,
+ *     below).
  * "Purged" means its immutable body object is deleted. The set, its index rows
  * and every other revision stay as they are; a read of a purged revision
  * answers 410 `revision_purged` (publicationVersion, above).
@@ -1450,13 +1456,12 @@ async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, ref
  * W38 B4 with W21 E1.07: may this member's old revisions be purged without
  * costing the next learn publication its exact salt count? Every kind but
  * learning, yes. A learn revision's count is carried from the current one where
- * that carries an exact count (`derivedFor`); where it carries none — a history
- * published before the annotation existed, or a count a walk could not finish —
- * the next publication walks the history instead, and that walk reaches the
- * first revision only while the current one is within its horizon
- * (SALT_CARRY_REVISIONS, the walk's SALT_HISTORY_READS). There every learn
- * revision is kept. Past the horizon no walk can count, purged or not, so W21's
- * explicit unknown stays unknown and nothing is kept for it.
+ * that carries an exact count (`derivedFor`), whatever its revision number, so
+ * older learn revisions may then go. Where it carries none — a history published
+ * before the annotation existed, or a count that could not finish — the next
+ * publication counts over the whole stored history instead (P95: no read
+ * horizon), so every learn revision is kept until a publication establishes an
+ * exact count again.
  *
  * It reads the current learn revision exactly as that publication will
  * (`readPinnedPublication`, then `carriedSaltVersion`), once per publication,
@@ -1464,7 +1469,7 @@ async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, ref
  * nothing is purged, and the publication it follows is unaffected.
  */
 async function saltCountCarried(env: Env, work: PurgeWork, set: PublicationPin, ref: Ref): Promise<boolean> {
-  if (ref.kind !== 'learn' || ref.revision > SALT_CARRY_REVISIONS) return true;
+  if (ref.kind !== 'learn') return true;
   spend(work);
   const count = carriedSaltVersion(await readPinnedPublication(env, await kindFor(ref.kind), ref.scope, set))?.version;
   return integer(count) && count > 0;

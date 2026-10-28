@@ -72,22 +72,28 @@ export async function outcomeEnrollment(
  * 1 for the first, unchanged by a revision that keeps the salt, and one more on
  * each rotation — which also starts a new experiment id.
  *
- * Cost: nothing at all for a tenant on its first learn revision, and otherwise
- * one bounded walk per (scope, revision) per isolate, cached. The walk reads at
- * most `SALT_HISTORY_READS` earlier revisions.
+ * Who counts: the operator's learn publication, and only where the revision
+ * before it carries no exact count (`derivedFor`, src/config/publication.ts);
+ * every other publication carries the count forward from the revision before.
+ * The serving path never calls this (W21 NR3): a decision, an outcome stamp and
+ * a context table read the annotation the learn revision in force carries.
  *
- * W21 E1.07 (NR4): a history longer than that bound is NOT counted over the
- * window it can see. Counting what is visible made the number go DOWN across a
- * rotation — a tenant whose salt rotated at revisions 2 and 30 read `2` at
- * revision 31 and `1` at revision 60 — and gave two different salts the same
- * count, so a consumer keyed on `(id, saltVersion)` would pool two experiments
- * that never ran together. A count that cannot see the first salt is unknown,
- * and says so with `null`. A walk that cannot finish — an unreadable prior
- * revision, a retained history that starts later — is unknown for the same
- * reason, and is never cached as a number: the next healthy read is exact.
+ * P95 (E20): there is no read horizon. The count reads every earlier learn
+ * revision once, oldest to newest, under one pinned publication set, so a
+ * history of any length the platform still stores counts exactly. Its cost is
+ * one object read per earlier revision, paid once on the operator's time.
+ *
+ * W21 E1.07 (NR4): a count over part of the history is never answered.
+ * Counting a window made the number go DOWN across a rotation — a tenant whose
+ * salt rotated at revisions 2 and 30 read `2` at revision 31 and `1` at
+ * revision 60 — and gave two different salts the same count, so a consumer
+ * keyed on `(id, saltVersion)` would pool two experiments that never ran
+ * together. A count that cannot finish — a revision the store cannot produce,
+ * purged or unreadable, a retained history that starts later — is unknown,
+ * says so with `null`, and is never cached: the next healthy count is exact.
+ * Only an exact count is remembered, per (scope, revision, salt) per isolate.
  */
-const SALT_HISTORY_READS = 24;
-const saltVersions = new Map<string, number | null>();
+const saltVersions = new Map<string, number>();
 export function invalidateSaltVersions(): void { saltVersions.clear(); }
 export async function saltVersionOf(env: Env, scope: string, revision: number, brand: string, salt: string): Promise<number | null> {
   // A first revision has nothing behind it, so nothing is unseen.
@@ -95,30 +101,28 @@ export async function saltVersionOf(env: Env, scope: string, revision: number, b
   const key = `${scope}\u0000${revision}\u0000${salt}`;
   const cached = saltVersions.get(key);
   if (cached !== undefined) return cached;
-  let version = 1, current = salt, reachedFirst = false;
+  // Oldest to newest: one more at each change of the effective salt, starting
+  // from the first revision's, then the salt of `revision` itself.
+  let version = 0, current: string | undefined;
   try {
     const { LEARN_KIND } = await import('./kinds');
-    const { publicationVersion } = await import('@/config/publication');
-    let n = revision - 1, reads = 0;
-    for (; n >= 1 && reads < SALT_HISTORY_READS; n--, reads++) {
-      const prior = await publicationVersion(env, LEARN_KIND, scope, n);
+    const { pinPublication, publicationScope, publicationVersion } = await import('@/config/publication');
+    // One committed set for the whole count: every earlier revision is read
+    // against the same history, and none of them costs a head read of its own.
+    const pinned = await pinPublication(env, publicationScope(LEARN_KIND, scope));
+    for (let n = 1; n < revision; n++) {
+      const prior = await publicationVersion(env, LEARN_KIND, scope, n, pinned);
       // A revision the store cannot produce leaves the count unfinished; it is
-      // not evidence that the history ends here.
+      // not evidence that the history ends, or continues, as its neighbours do.
       if (!prior) return null;
       const priorSalt = prior.value.holdout?.salt || brand;
       if (priorSalt !== current) { version++; current = priorSalt; }
     }
-    // The walk reached the first published revision only if it ran out of
-    // revisions before it ran out of reads.
-    reachedFirst = n < 1;
-  } catch { return null; /* an unreadable history is not a reason to refuse a decision, and not a licence to guess a count */ }
-  // An exact count and the horizon's unknown are both stable for a given
-  // (scope, revision, salt) and may be remembered; only a walk that failed
-  // midway is left uncached, so the next healthy read is exact.
+  } catch { return null; /* an unreadable history is not a reason to refuse a publication, and not a licence to guess a count */ }
+  if (salt !== current) version++;
   if (saltVersions.size >= 256) saltVersions.clear();
-  const answer = reachedFirst ? version : null;
-  saltVersions.set(key, answer);
-  return answer;
+  saltVersions.set(key, version);
+  return version;
 }
 
 /**
