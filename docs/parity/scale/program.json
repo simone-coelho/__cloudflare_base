@@ -420,7 +420,7 @@
     {
       "id": "P96",
       "title": "One `total` on a door answer (**amendment 12, E21, 2026-10-26**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
@@ -504,7 +504,8 @@
       "allowedPaths": [
         "src/routes/decisions.ts",
         "src/index.ts",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "src/index.api-boundary.test.ts (W01.08's own per-test timeout argument only, 30 s to 120 s, by the specifier, by name, R-P527/R-P528)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P96 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
