@@ -703,7 +703,7 @@ carousel's `minimum` and `pinnedTag` as published. A tenant that publishes a con
 `channelVocabulary: { revision, channels, rules, visitBuckets }`, which the head script classifies by. The default
 row is `null` throughout. The table carries shot types per context, never items. The head script, `edge-head.js`,
 ships beside the SDK's bundles: in the SDK package, at `/sdk/edge-head.js` and, long-lived and immutable, at
-`/sdk/{version}/edge-head.js`. Where the SDK has kept the shopper's own shot order (`opt_head.shots`, from the
+`/sdk/{version}/edge-head.js`. A browser that drew its class while the table's `holdout.saltVersion` was `null` keeps that class and, at its first landing on a table that names a number, takes that number without repainting; it paints the default row once at the next change of salt. Where the SDK has kept the shopper's own shot order (`opt_head.shots`, from the
 answers and the pushes, under tracking and personalization), the head script ranks it first, ahead of the row's other
 values, with or without a row: only under the row's own gate (personalization, the `personalized` class, the salt
 unchanged), only when it names the visitor this browser carries (`opt_visitor_id`) and for 30 days from its
@@ -1495,7 +1495,7 @@ none, the publication counts over the whole stored learn history once, and a rev
 produce leaves the count `null`. Decisions, outcomes and the context table read the count the learn
 revision in force carries and never count it themselves. `id` carries the salt itself, so a join
 on the experiment is unaffected either way.
-The annotation is computed when your operator publishes the learn document. A learn document published before this release carries no salt-version annotation, so decisions and outcomes under it read `saltVersion: null` until that tenant next publishes its learn document. `id` is unaffected and still names the salt, so the records of a running experiment join either way.
+The annotation is computed when your operator publishes the learn document. A learn document published before this release carries no salt-version annotation, so decisions and outcomes under it read `saltVersion: null` until that tenant next publishes its learn document. `id` is unaffected and still names the salt, so the records of a running experiment join either way. A browser that drew its class while the table's `holdout.saltVersion` was `null` keeps that class and, at its first landing on a table that names a number, takes that number without repainting; it paints the default row once at the next change of salt.
 
 **Across an identity link the enrollment recorded first wins; the arm is never re-drawn from the new id.**
 The anchor of a recognised shopper is the first browser linked to her, so signing in, signing in on

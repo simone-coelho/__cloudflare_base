@@ -640,7 +640,7 @@ visitor this browser carries (the live channel, §6), that order ranks before th
 gate. It paints the default row, your server order within
 the brand rules, for the holdout's default class, without a recorded personalization choice, for an arrival or a
 device it cannot classify, for a table naming another classifier version, and once after the experiment's salt
-changes. The engine's own first decision for a shopper whose choice is recorded orders the carousel by the same
+changes. A browser that drew its class while the table's `holdout.saltVersion` was `null` keeps that class and, at its first landing on a table that names a number, takes that number without repainting; it paints the default row once at the next change of salt. The engine's own first decision for a shopper whose choice is recorded orders the carousel by the same
 row, so the page and the SDK's answer agree; the arm agrees on the direct path, where the first decision request
 issues the session, while a page on the session route or a session broker gets the engine's own draw.
 
