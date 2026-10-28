@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P95",
+  "workOrderHash": "sha256:1ae2ea600d2e3219cfe151bfcae9dee1fe6071c196789e8592a2afa5526cbe32",
+  "artifact": {
+    "revision": "44f9bbc4f5336a009a82545405dad6eb15e5c99d",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p95-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p95-build at 66fc3f17 (602561c8 the S39 spec, merged first; its rounds ecdbef67 and 602561c8 over c42a7ef4; b0058e9a the mechanism: src/config/publication.ts carries each learn revision's salt count from the revision before whatever its number, one more at each rotation of the effective salt, and keeps every learn revision through a purge while the current one carries no exact count; src/content/holdout.ts counts the whole stored learn history once, oldest to newest, against one pinned publication set and with no read limit where the revision before carries no exact count, answering null where a revision cannot be produced and caching only exact counts; src/content/service.ts makes the page's context table read the stored count or null and never count the history while the shopper waits; e97b80d5 kits 02 and 03 state that the salt version is exact on any learn history the platform still stores and null only where that history cannot establish it, the 24-revision sentence gone; 15f8cdb8 the merge of rem/integration 7f304a75 with P94; 66fc3f17 P94's delivery findings corrected by name: kit 02's arm_draw caveat, a gender-neutral kit 02 sentence, afterOwnerAnswer's docstring).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S39/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S39/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P95/implementer/REPORT.md",
+      "git commits on rem/p95-joined up to 44f9bbc4"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P95 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S39/reviewer-p95/logs/p95-r1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S39/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P95/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-28T01:18:56.069Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
