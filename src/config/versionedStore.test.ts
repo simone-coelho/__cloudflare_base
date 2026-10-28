@@ -18,35 +18,19 @@ import { readRevision, readVersion, readIndex, write, patch, rollback, deepMerge
 
 class PublicationR2 {
   objects = new Map<string, string>(); etags = new Map<string, string>(); calls: string[] = [];
-  puts = 0; afterWrite = false; failReads = false; badMetadata = false;
-  /** The put that fails; setting it (a test's next step) ends any repeat still owed. */
-  private failAt = 0;
-  get failPut(): number { return this.failAt; }
-  set failPut(n: number) { this.failAt = n; this.repeat = null; }
-  // P98 R10 (R-P569 (a), R-P195's form): an injected failure also fails the request's immediate repeat of a call on that object (the
-  // next two calls on it, until it calls another object: a write's one repeat, or a read and its one repeat); every expectation unchanged.
-  repeat: { key: string; left: number } | null = null;
-  /** The repeat is owed only to the request that met the failure: it ends at the next macrotask, or when the test sets the next failure. */
-  private owe(key: string): void { const owed = { key, left: 2 }; this.repeat = owed; setImmediate(() => { if (this.repeat === owed) this.repeat = null; }); }
-  private repeated(key: string): boolean {
-    if (this.repeat && this.repeat.key === key && this.repeat.left > 0) { this.repeat.left--; return true; }
-    if (this.repeat && this.repeat.key !== key) this.repeat = null;
-    return false;
-  }
+  puts = 0; failPut = 0; afterWrite = false; failReads = false; badMetadata = false;
   async get(key: string) {
     this.calls.push('get:' + key); if (this.failReads) throw new Error('Synthetic authority outage');
-    if (this.repeated(key)) throw new Error('Synthetic authority outage (repeated)');
     const raw = this.objects.get(key); if (raw === undefined) return null;
     return { key, etag: this.etags.get(key)!, size: new TextEncoder().encode(raw).length + (this.badMetadata ? 1 : 0), body: new Response(raw).body };
   }
   async put(key: string, raw: string, options: R2PutOptions) {
     this.calls.push('put:' + key); const attempt = ++this.puts;
-    if (this.repeated(key)) throw new Error('Synthetic pre-write outage (repeated)');
-    if (attempt === this.failPut && !this.afterWrite) { this.owe(key); throw new Error('Synthetic pre-write outage'); }
+    if (attempt === this.failPut && !this.afterWrite) throw new Error('Synthetic pre-write outage');
     const conditional = options.onlyIf, exists = this.objects.has(key);
     if (conditional instanceof Headers ? exists : !exists || conditional?.etagMatches !== this.etags.get(key)) return null;
     this.objects.set(key, raw); this.etags.set(key, 'etag-' + attempt);
-    if (attempt === this.failPut) { this.owe(key); throw new Error('Synthetic lost acknowledgement'); }
+    if (attempt === this.failPut) throw new Error('Synthetic lost acknowledgement');
     return { key, etag: this.etags.get(key), size: new TextEncoder().encode(raw).length };
   }
 }

@@ -156,6 +156,14 @@ const placedAt = (m: Mounted, place: Place): Record<string, unknown> | null => {
 };
 /** P98 R10: a pack table's entry as its digest (an entry may be the digest or an object naming it as `digest`). */
 const packDigest = (entry: unknown): string => typeof entry === 'string' ? entry : String((entry as { digest?: unknown } | null)?.digest ?? '');
+/** P98 R10 (R-P578 (c)): a pointer's place: `pack` the row of `table`, else `own` (a part inside its shard's own pack); none for an object of its own. */
+const placeOf = (pointer: { pack?: unknown; at?: unknown; bytes?: unknown }, table: readonly unknown[] | undefined, own?: string): Place | undefined => {
+  if (typeof pointer.at !== 'number' || typeof pointer.bytes !== 'number') return undefined;
+  const pack = typeof pointer.pack === 'number' ? packDigest(table?.[pointer.pack]) : own;
+  return pack ? { pack, at: pointer.at, bytes: pointer.bytes } : undefined;
+};
+/** P98 R10: the SHA-256 of a value's canonical form (a stored object's digest). */
+const digestOfValue = (value: unknown) => createHash('sha256').update(canonical(value), 'utf8').digest('hex');
 /**
  * P98 R10 (R-P569 (b)): where the object a pointer names by its digest is stored: in one of the packs `prefer` names
  * (the revision's table), else as an object of its own at `own`, else in any stored pack; none where it is nowhere.
@@ -194,25 +202,32 @@ export function indexOf(m: Mounted, document: Record<string, unknown>): IndexVie
   if (index && typeof index === 'object') {
     view.form = 'sharded'; view.shards = index.shards ?? {}; view.idShards = index.ids ?? {};
     const places: NonNullable<IndexView['places']> = { shards: {}, idShards: {} };
-    // P98 R10 (R-P569 (b)): each object found by its own digest, in the packs the revision's table names first.
-    const table = (index.packs ?? []).map(packDigest).filter(Boolean);
+    // P98 R10 (R-P569 (b), R-P578 (c)): a manifest pointer into a pack carries `{ pack, at, bytes, … }` (its pack the table's
+    // row) and no digest; the view names it by the digest of the object stored there. A pointer with a digest and no range
+    // is an object of its own; a part pointer inside a shard carries its digest and, in a pack, its range.
+    const table = (index.packs ?? []).map(packDigest);
+    const shards: Record<string, ShardPointer> = {}, idShards: Record<string, { digest: string; records: number }> = {};
     for (const [name, pointer] of Object.entries(view.shards)) {
-      const where = locate(m, pointer.digest, KEY.shard(pointer.digest), table), place = where && where !== 'own' ? where : undefined;
+      const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, table);
       if (place) places.shards[name] = place;
-      const body = place ? placedAt(m, place) : where === 'own' ? parsedAt(m, KEY.shard(pointer.digest)) : null;
-      if (!body) { view.missing.push(KEY.shard(pointer.digest)); continue; }
-      for (const [product, p] of Object.entries(body.products as Record<string, Pointer>)) {
-        const at = locate(m, p.digest, KEY.part(p.digest), table), partPlace = at && at !== 'own' ? at : undefined;
+      const body = place ? placedAt(m, place) : parsedAt(m, KEY.shard(pointer.digest));
+      shards[name] = { ...pointer, digest: pointer.digest ?? (body ? digestOfValue(body) : 'no object at its place') };
+      if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.shard(pointer.digest)); continue; }
+      const own = Array.isArray(body.packs) ? body.packs as unknown[] : undefined;
+      for (const [product, p] of Object.entries(body.products as Record<string, Pointer & { pack?: unknown; at?: unknown; bytes?: unknown }>)) {
+        const partPlace = placeOf(p, own, place?.pack);
         view.products[product] = { digest: p.digest, records: p.records, ...(partPlace ? { place: partPlace } : {}) };
       }
     }
     for (const [name, pointer] of Object.entries(view.idShards)) {
-      const where = locate(m, pointer.digest, KEY.idshard(pointer.digest), table), place = where && where !== 'own' ? where : undefined;
+      const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, table);
       if (place) places.idShards[name] = place;
-      const body = place ? placedAt(m, place) : where === 'own' ? parsedAt(m, KEY.idshard(pointer.digest)) : null;
-      if (!body) { view.missing.push(KEY.idshard(pointer.digest)); continue; }
+      const body = place ? placedAt(m, place) : parsedAt(m, KEY.idshard(pointer.digest));
+      idShards[name] = { ...pointer, digest: pointer.digest ?? (body ? digestOfValue(body) : 'no object at its place') };
+      if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.idshard(pointer.digest)); continue; }
       Object.assign(view.ids, body.ids as Record<string, string>);
     }
+    view.shards = shards; view.idShards = idShards;
     if (Object.keys(places.shards).length || Object.keys(places.idShards).length) view.places = places;
   } else if (document.products && typeof document.products === 'object') {
     view.form = 'one-level'; view.products = document.products as Record<string, Pointer>;

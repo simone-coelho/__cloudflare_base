@@ -154,7 +154,9 @@ function shortRetention(m: Mounted): void {
 // ===========================================================================
 
 interface SizeRow { products: number; largestShard: number; reads: Array<[number, string[]]>; page: [number, string[], string[], string[]]; expectedPage: string[] }
-interface Verification { statuses: number[]; refused: string | null; at: Record<number, SizeRow>; bytes: Record<number, number>; shared: number; seconds: number }
+interface Verification { statuses: number[]; refused: string | null; at: Record<number, SizeRow>; bytes: Record<number, number>; shared: number; seconds: number;
+  /** P98 R10 (R-P578 (a)): the manifest's bytes less its pack table, and the table's rows, at each size. */
+  lessTable: Record<number, number>; tableRows: Record<number, number> }
 const VERIFIED = new Map<Host, Promise<Verification>>();
 const SIZES: Record<Host, number[]> = { session: [40000, 100000], do: [40000] };
 function verified(host: Host): Promise<Verification> {
@@ -166,7 +168,7 @@ async function verification(host: Host, sizes: readonly number[]): Promise<Verif
   const started = Date.now(), chunk = 5000, last = Math.max(...sizes), m = await mount(host, DOCS_WITH_CART);
   expectPublished(m, 'P93 — the tenant documents publish');
   await declareProductSlots(m);
-  const out: Verification = { statuses: [], refused: null, at: {}, bytes: {}, shared: 0, seconds: 0 };
+  const out: Verification = { statuses: [], refused: null, at: {}, bytes: {}, shared: 0, seconds: 0, lessTable: {}, tableRows: {} };
   for (let loaded = 0; loaded < last;) {
     const records = [...(loaded === 0 ? [...ANCHOR_IMAGES, ...OTHER_IMAGES] : []), ...rangeRecords(loaded + 1, chunk)];
     expect(withinCaps(records), `PRECONDITION: the load of products ${loaded + 1}… is within the import's caps`).toBe(true);
@@ -177,6 +179,8 @@ async function verification(host: Host, sizes: readonly number[]): Promise<Verif
     if (loaded !== 5000 && !sizes.includes(loaded)) continue;
     const { doc, view } = await catalogue(m);
     out.bytes[loaded] = documentBytes(doc.document);
+    { const index = (doc.document.index ?? {}) as Record<string, unknown>, { packs, ...rest } = index;
+      out.lessTable[loaded] = documentBytes({ ...doc.document, ...(doc.document.index ? { index: rest } : {}) }); out.tableRows[loaded] = Array.isArray(packs) ? packs.length : 0; }
     if (!sizes.includes(loaded)) continue;
     const reads: Array<[number, string[]]> = [];
     for (const k of [1, Math.floor(loaded / 2), loaded]) { const read = await productRead(m, rangeProduct(k)); reads.push([read.status, readIds(read)]); }
@@ -266,16 +270,19 @@ describe('unit:P93.CS1 (R-P487: 256 shards by SHA-256 of the product id and of t
       sizes: [capacityOf(run, 40000), capacityOf(run, 100000)] },
     `session: P93.CS1 — 100,000 products in 20 loads of 5,000 (${run.seconds} s; today the one-level manifest refuses past about 20,250: ${run.refused})`).toEqual({
       loads: '20 loads, every one 200', sizes: [capacityExpected(40000), capacityExpected(100000)] });
-    const b5 = run.bytes[5000] ?? 0, within = (n: number) => run.bytes[n] !== undefined && Math.abs(run.bytes[n]! - b5) <= 0.05 * b5;
+    // P98 R10 (R-P578 (a)): within 5% in its structural form — the manifest less its pack table against the 5,000 manifest
+    // less its table, and the table at most S5's cap of rows (65), so growth with the catalogue is still caught.
+    const b5 = run.lessTable[5000] ?? 0, within = (n: number) => run.lessTable[n] !== undefined && Math.abs(run.lessTable[n]! - b5) <= 0.05 * b5 && (run.tableRows[n] ?? 0) <= 65;
     expect.soft({ within: [within(40000), within(100000)], bounded: [5000, 40000, 100000].map(n => run.bytes[n] !== undefined && run.bytes[n]! <= 65536 + run.shared) },
       `session: P93.CS1 — the manifest's bytes (${JSON.stringify(run.bytes)}; the shared pieces ${run.shared})`).toEqual({ within: [true, true], bounded: [true, true, true] });
   }, 1_800_000);
 
   it('host (do): reading 8 — the range at N = 40,000 products, loaded in chunks of 5,000: every load 200, every shard at most 2 MiB, the per-product read answers the first, a middle and the last product, the manifest within 5% of its bytes at 5,000 and at most 64 KB beside the shared pieces', async () => {
     const run = await verified('do');
-    const b5 = run.bytes[5000] ?? 0, b40 = run.bytes[40000];
+    // P98 R10 (R-P578 (a)): the 5% in its structural form (the manifest less its pack table; the table at most 65 rows).
+    const b5 = run.lessTable[5000] ?? 0, l40 = run.lessTable[40000], b40 = run.bytes[40000];
     expect.soft({ loads: run.statuses.length === 8 && run.statuses.every(s => s === 200) ? '8 loads, every one 200' : run.statuses.join(' '), size: capacityOf(run, 40000),
-      bytes: [b40 !== undefined && Math.abs(b40 - b5) <= 0.05 * b5, b40 !== undefined && b40 <= 65536 + run.shared] },
+      bytes: [l40 !== undefined && Math.abs(l40 - b5) <= 0.05 * b5 && (run.tableRows[40000] ?? 0) <= 65, b40 !== undefined && b40 <= 65536 + run.shared] },
     `do: P93.CS1 — 40,000 products in 8 loads (${run.seconds} s; bytes ${JSON.stringify(run.bytes)}; today: ${run.refused})`).toEqual({
       loads: '8 loads, every one 200', size: capacityExpected(40000), bytes: [true, true] });
   }, 1_800_000);

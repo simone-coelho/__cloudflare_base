@@ -549,14 +549,9 @@ describe('W07.04 remaining runtime logs and monitor telemetry', () => {
     class PublicationR2 {
       objects = new Map<string, { text: string; etag: string }>();
       count = 0; reads = 0; failures = 0;
-      repeat: string | null = null;
       async get(key: string) {
-        // P98 R10 (R-P569 (a), R-P195's form): an injected failure also fails its immediate repeat (the same read repeated
-        // once inside the request), which is not another read reaching storage; every expectation unchanged.
-        if (this.repeat === key) { this.repeat = null; throw new Error(ERROR); }
-        this.repeat = null;
         this.reads++;
-        if (this.failures > 0) { this.failures--; this.repeat = key; setImmediate(() => { this.repeat = null; }); throw new Error(ERROR); }
+        if (this.failures > 0) { this.failures--; throw new Error(ERROR); }
         const v = this.objects.get(key);
         return v ? { key, etag: v.etag, size: new TextEncoder().encode(v.text).length, body: new Response(v.text).body } : null;
       }
@@ -574,7 +569,6 @@ describe('W07.04 remaining runtime logs and monitor telemetry', () => {
     storage.failures = 2; storage.reads = 0;
     for (let attempt = 0; attempt < 2; attempt++) {
       await expect(read(env, CONTENT_KIND, scope, EMPTY_CATALOG)).rejects.toMatchObject({ status: 503, code: 'publication_unavailable' });
-      await new Promise(resolve => setImmediate(resolve)); // P98 R10 (R-P569 (a)): each attempt its own request
     }
     expect(storage.reads).toBe(2);               // Each failed read reached storage again: no refusal was cached.
     expect(await read(env, CONTENT_KIND, scope, EMPTY_CATALOG)).toEqual(EMPTY_CATALOG);

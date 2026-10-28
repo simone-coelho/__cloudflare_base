@@ -123,7 +123,7 @@ import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 import { asOperator, expectPublished, HOSTS, loadDocument, MODULES, mount, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, type Answer, type Host,
   type Mounted } from '../_parity';
 import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, declareProductSlots, DOCS, DOCS_WITH_CART, image, indexOf, KEY, OTHER_IMAGES, preconditions, productRead,
-  rangeProduct, rangeRecordId, rangeRecords, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, withinCaps, type Rec } from '../P93/_catalog';
+  rangeProduct, rangeRecordId, rangeRecords, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, withinCaps, type Place, type Rec } from '../P93/_catalog';
 import { stamp } from '../P87/_stamp';
 import { attemptsOf, canonicalJson, failFirst, importOf, leaked, loadedTenant, meter, minutesAgo, objectKindOf, oneLevelTenant, packTable, publishOf, rawImport, reached,
   recoverOf, resolve, revisionOf, shardedTenant, shortRetention, stageOf, statusOf, STORAGE_NUMBER, storedPacks, tally, under, uploadedAt, type Call, type Meter,
@@ -572,6 +572,44 @@ describe('unit:P98.LD3 (R-P549: the page reads its shard and part from the pack 
       for (const n of [50, 5000]) rows.push(pageSeen(await pageOf(await loadedTenant(host, n), `p98-page-${n}`)));
       expect.soft(rows, `${host}: P98.LD3 — the page at 50 and 5,000`).toEqual([PAGE_EXPECTED(), PAGE_EXPECTED()]);
     }, 900_000);
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK (R-P578 (b)) — integrity is not traded for size: a stored shard, id shard or part whose bytes are altered (the same length, still JSON) is refused as today, read from a pack by its range as from an object of its own — the anchor's page 503 part_unavailable for its shard (one part pointer's record count altered) and for its part (one title altered); a load needing the id shard 503 id_index_unavailable (one id's product altered)`, async () => {
+      // Today (publication.ts readCatalogShard :851–861, readCatalogPart :674–684, readCatalogIdShard :863–870): each object is
+      // checked against the digest its pointer names; an altered body is refused 503 part_unavailable or id_index_unavailable.
+      const alter = (m: Mounted, key: string, place: Place | undefined, change: (text: string) => string) => {
+        const where = place ? KEY.pack(place.pack) : key, raw = m.storage.objects.get(where);
+        if (raw === undefined) return `no stored object at ${where}`;
+        const bytes = Buffer.from(raw, 'utf8'), at = place?.at ?? 0, length = place?.bytes ?? bytes.length;
+        const before = bytes.subarray(at, at + length).toString('utf8'), after = change(before);
+        if (after === before || Buffer.byteLength(after, 'utf8') !== length) return `the alteration did not apply to ${where}`;
+        bytes.write(after, at, 'utf8'); m.storage.objects.set(where, bytes.toString('utf8')); invalidatePublicationCache();
+        return 'altered';
+      };
+      const page = async (m: Mounted, label: string) => { const s = await shopperOn(m); invalidatePublicationCache(); const p = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, label);
+        return [p.status, JSON.stringify(p.body).includes('part_unavailable')]; };
+      // The anchor's shard: one part pointer's record count.
+      const ms = await loadedTenant(host, 50), vs = indexOf(ms, (await loadDocument(ms, 'catalog')).document), bucket = bucketOf(A);
+      const shard = alter(ms, KEY.shard(vs.shards[bucket]?.digest ?? 'none'), vs.places?.shards[bucket], t => {
+        const i = t.indexOf(`"${A}":{`), j = t.indexOf('}', i), entry = t.slice(i, j);
+        return i < 0 ? t : t.slice(0, i) + entry.replace(/"records":(\d)/, (_, d: string) => `"records":${(Number(d) + 1) % 10}`) + t.slice(j);
+      });
+      const shardPage = await page(ms, 'p98-integrity-shard');
+      // The anchor's part: one title.
+      const mp = await loadedTenant(host, 50), vp = indexOf(mp, (await loadDocument(mp, 'catalog')).document), pointer = vp.products[A];
+      const part = alter(mp, KEY.part(pointer?.digest ?? 'none'), pointer?.place, t => t.replace('(on-model)', '(on-modeL)'));
+      const partPage = await page(mp, 'p98-integrity-part');
+      // An id shard a load reads (the bucket of a new record's id): one id's product.
+      const mi = await loadedTenant(host, 50), vi = indexOf(mi, (await loadDocument(mi, 'catalog')).document);
+      let k = 900; while (!Object.hasOwn(vi.idShards, bucketOf(rangeRecordId(k)))) k++;
+      const idBucket = bucketOf(rangeRecordId(k));
+      const idshard = alter(mi, KEY.idshard(vi.idShards[idBucket]!.digest), vi.places?.idShards[idBucket], t => t.replace(/"(COA-[A-Z0-9-]*)[0-9A-Z]"(?=[,}])/, (whole, stem: string) => `"${stem}${whole.at(-2) === 'X' ? 'Y' : 'X'}"`));
+      const load = await importOf(mi, rangeRecords(k, 1));
+      expect.soft({ shard: [shard, ...shardPage], part: [part, ...partPage], idshard: [idshard, load.status, load.body.code ?? null] },
+        `${host}: P98.LD3 — an altered stored object refused as today (${show(load)})`).toEqual({
+        shard: ['altered', 503, true], part: ['altered', 503, true], idshard: ['altered', 503, 'id_index_unavailable'] });
+    }, 300_000);
   }
 
   it('host (session): at N = 100,000 the anchor\'s page reads at most 8 objects cold and 1 warm, its shard and part each by one ranged read of a pack, and serves P80\'s carousel', async () => {
