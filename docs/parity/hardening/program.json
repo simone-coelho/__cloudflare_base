@@ -1,0 +1,505 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-hardening",
+    "title": "Tapestry parity, hardening what the scale programme's walk found: catalogue loads, the purge at scale, the head script's unknown salt version, the page-view id (amendment 13)",
+    "ticketIds": [
+      "P98",
+      "P99",
+      "P100",
+      "P101"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P98",
+      "title": "Catalogue loads that do not fail at random, and run faster (**amendment 13, E25, 2026-10-28**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E25 · section 2 of amendment 13, \"Done when\" (lane L20's finding, R-P540; the diagnosis S42/analyst-503, R-P543; in force by section 3 row 1, R-P544)",
+        "requirement": "a failed storage call on the load's path is retried once inside the request (bounded, idempotent: exact-creates and reads only); the load's calls run in a bounded pool without batch barriers; the 503 names the operation, the object kind and the storage error's number (never a key or a body) and a `state` — `nothing_written`, `pending` (recover) or `committed`; the `changed` count compares records independent of field order; the purge collects the objects a refused load left once they are older than the grace; kit 02 and kit 03 state the load protocol (file size, client timeout, read the status then recover or re-send); the live walk measures the refusal rate and the time per 5,000 products on both pair hosts, one host at a time."
+      },
+      "outcome": "A catalogue load of the size the customer sends is accepted in storage calls bounded by the index shards it touches and in a bounded time, is never refused for one transient storage failure, answers an exact changed count, says on any refusal what failed and what state it left, and leaves nothing behind that the purge does not collect, while a product page's reads stay bounded.",
+      "criteria": [
+        {
+          "id": "LD1",
+          "kind": "LOCAL",
+          "observable": "A load's storage calls are bounded by the shards it touches, not by its product count, to the target the lead's redesign ruling names (its number is entered in this criterion when the lead amends this work order before the specification). Today a load makes one exact-create per changed product's part (src/routes/content.ts:263–266; src/config/publication.ts:658–668, :611–614), one read per touched product shard and per touched id shard, awaited one product and one id at a time (content.ts:303–320 through :1468–1471 and :1478–1486), and one exact-create per moved shard (content.ts:376–379; publication.ts:832–844): 468 calls for 100 products, 2,018 for 1,000 and 6,044 for 5,000 at 40,000 products (S42/analyst-503/DIAGNOSIS.md §1, REPRODUCED), the writes eight at a time with a barrier after each eight (content.ts:265, :378), so a 5,000-product load is about 1,250 sequential steps (546 reads and 702 write rounds, §2).",
+          "proof": "The P98 acceptance command runs the tests named unit:P98.LD1 in src/units/P98/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LD2",
+          "kind": "LOCAL",
+          "observable": "A 40,000-product file loads within the time the lead's ruling names (entered with LD1's number), on both hosts in the harness with every storage call held a fixed delay, and no load is refused for one transient storage failure: a failed idempotent call on the load's path (a read; an exact-create of content-addressed bytes, where a precondition failure on identical bytes counts as success as today, publication.ts:611–614) is retried inside the request, and the head's compare-and-set (publication.ts:987) and the commit (:905) are never re-sent blindly (a lost race answers 409 as today). Today nothing is retried (grep -n -i \"retry\\|setTimeout\\|timeout\" src/config/publication.ts finds comment lines only: :625, :656, :721, :831, :1014), one failed call refuses the whole load (lane L20: 29 of 193 fill loads refused 503, fitting about 1 failed call in 8,000; R-P540, R-P543), a 5,000-product file took about 200 s live, and one file is capped at 10,000 records and 2 MiB of input (INPUT_MAX_RECORDS and INPUT_MAX_BYTES, src/config/input.ts:2–3, applied at src/content/import.ts:203, :232, :243, :307), so a 40,000-product file is refused 413 input_budget_exceeded before the load starts; src/config/input.ts and src/content/import.ts are outside this grant, which the ruling settles.",
+          "proof": "The P98 acceptance command runs the tests named unit:P98.LD2 in src/units/P98/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LD3",
+          "kind": "LOCAL",
+          "observable": "A product page's reads and bytes stay within the bound the lead's ruling names (entered with LD1's number) at any catalogue size, on both hosts. Today the anchor's page reads the head, the set, the four revisions, the anchor's product shard and its part, 8 reads cold and the head alone warm (P93 CS2; R-P506), through src/content/service.ts:1436–1443 and src/config/publication.ts:889–898 (the shard, :851–861; the part, :674–684); the manifest is 55,939 bytes live at 40,000 products (R-P540) and the largest shard 20,112 bytes in the harness at 40,000 (R-P506).",
+          "proof": "The P98 acceptance command runs the tests named unit:P98.LD3 in src/units/P98/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LD4",
+          "kind": "LOCAL",
+          "observable": "The 503 a load's storage failure answers names its cause and the state it left: the operation, the object's kind, the storage error's status where known, and state, one of nothing_written, pending (recover with POST /content/catalog/publication/recover) and committed, matching the store in each of the diagnosis's scenarios (S42/analyst-503/DIAGNOSIS.md §1: rows 1 to 6a nothing written, rows 6c to 8 the head pending, row 8 after the commit and row 10 committed), and never an object key, a body or a token. Today every storage failure is one answer: storageFailure and required (src/config/publication.ts:79–84) throw unavailable() (:49–50) from every read (:190), every put (:609) and every malformed storage answer, and contentRoutes.onError answers { ok: false, error, code } with no cause and no state (src/routes/content.ts:67), although the publication's own status already tells pending from committed (publicationStatus, publication.ts:1048–1065). LOCK: the absent-member refusals keep their bodies byte for byte (absent, publication.ts:57–63; src/units/P54/LEDGER.unit.test.ts:258–268).",
+          "proof": "The P98 acceptance command runs the tests named unit:P98.LD4 in src/units/P98/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LD5",
+          "kind": "LOCAL",
+          "observable": "The changed count is exact: on both hosts a one-product retitle answers changed equal to the records it changed, on a fresh isolate and on a warm one, in the committed answer and in the dry run. Today changedPieces compares JSON.stringify strings (src/routes/content.ts:1013–1018) of the stored part, read back in canonical key order (src/config/publication.ts:88–93, :674–684) or held in the validator's order by the isolate that wrote it (:665), against the validator's output (content.ts:1522–1551), so a cold isolate counts every record of the product (live: changed 1199 for one retitle, R-P540; harness: 5 of 5 cold and 1 warm, S42/analyst-503/DIAGNOSIS.md §4); the answers at content.ts:1663 and :1676 carry it.",
+          "proof": "The P98 acceptance command runs the tests named unit:P98.LD5 in src/units/P98/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LD6",
+          "kind": "LOCAL",
+          "observable": "A refused load leaves nothing the purge does not collect: the parts, product shards and id shards a refused load stored are removed by the purge once older than the 15-minute grace (ATTACHMENT_GRACE_MS, src/config/publication.ts:1439), and the purge never removes an object that the revision in force, a pending publication or any other stored revision names (P93 CS5's rule, LOCK), nor one that a load in flight has adopted by its exact-create before that load's head reservation settles (an exact-create that finds identical bytes keeps the stored object and its old upload time, publication.ts:611–614, :1441–1447, and the kit's re-send of the same file adopts what the refused attempt stored). Today the purge reaches only the objects a purged revision named (orphansOf, publication.ts:1376–1411) and lists only their directories (sweep, :1420–1437), so an object no revision ever named is never collected (187 objects survived 12 publications, S42/analyst-503/DIAGNOSIS.md §4); the purge runs only after a publication under the tenant's configuration-revision setting (publication.ts:991, :1300–1305).",
+          "proof": "The P98 acceptance command runs the tests named unit:P98.LD6 in src/units/P98/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LD7",
+          "kind": "LOCAL",
+          "observable": "Kits 02 and 03 state the load as built: the file size and the time a load takes, the client timeout, what the 503 of a storage failure names and how to act on each state (read GET /content/catalog/publication, recover if pending, else re-send with fresh preconditions), the exact changed count and the collection of a refused load's objects. Today kit 03 :387–392 advises files of about 200 to 300 products and calls the platform's per-request limit not yet measured (lane L20 met no size refusal up to 5,000 products, R-P540), kit 02 :1831 (the import row) names no storage refusal and :1844 says only that unavailable, corrupt or unconfirmed storage answers 503, and neither kit names publication_unavailable (grep -n publication_unavailable docs/kit/02-api-reference.md docs/kit/03-payload-schemas.md: no line).",
+          "proof": "The P98 acceptance command runs the tests named unit:P98.LD7 in src/units/P98/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "On the pair's next release (lane L21; the stamps read-only), the refusal rate and the time per 5,000-product file measured on each pair host, one host at a time (both pair workers share one bucket, R-P540), against lane L20's 15% (29 of 193 fill loads) and about 200 s per 5,000 products, and LD1 to LD3's numbers read on the live loads; the walk itself deletes nothing on l3 (amendment 13 section 3 row 3, open).",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:9–13 (E25), :36 (section 3 row 1)",
+          "description": "Item E25, entered first in tapestry-parity-hardening; needed by the December test (the customer's 40,000-product loads), two to three days."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:1001 (R-P540), :1004 (R-P543), :1005 (R-P544)",
+          "description": "Lane L20's live loads (15% refused 503 publication_unavailable, nothing written, about 200 s per 5,000 products, changed 1199 for one retitle); the diagnosis ruled a defect of E18's delivery and proposed as amendment 13; amendment 13 in force, the programme opened, P98 = E25 first."
+        },
+        {
+          "ref": "_evidence/parity-step3/S42/analyst-503/DIAGNOSIS.md (§1 the fault matrix, §2 the sequential depth, §3 the estimates, §4 the changed count and the orphans, §5 the kit advice); its logs under S42/analyst-503/logs/ (probe/faults.json, probe/counts-depth.json, probe/changed.json, probe/purge.json, model.txt; the probe src/analyst503.probe.test.ts)",
+          "description": "REPRODUCED in the harness: every injected storage failure answers the same 503 whatever state it leaves; the calls and the sequential depth per load; changed 5 cold and 1 warm for a one-record retitle; 187 objects of a refused load never collected across 12 publications. HYPOTHESIS: the live 503s are random transient storage errors of about 1 call in 8,000. UNVERIFIED: the platform's error under the 503, the platform's cap on parallel calls, the live latency per call."
+        },
+        {
+          "ref": "_evidence/parity-step3/live/lanes/L20/REPORT.md; _evidence/parity-step3/live/lanes/L20/records/P93-call-limit.md",
+          "description": "The live loads on the pair's release r14: no file refused for its size up to 5,000 products, the refusals and the times per file size."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/integration diff --quiet eb6153d6 340cd410 -- src docs/kit scripts (exit 0)",
+          "description": "The two S42 diagnoses read eb6153d6; src, the kits and scripts are byte-equal there and at rem/integration 340cd410, the revision every line cited in this work order is read at."
+        },
+        {
+          "ref": "src/config/publication.ts:49–50, :57–63, :79–84, :179–191, :604–614, :658–668, :832–870, :889–910, :987–992, :1048–1066, :1300–1348, :1376–1447; src/routes/content.ts:67, :263–266, :376–379, :1013–1018, :1457–1551, :1631–1632, :1663, :1676; src/content/service.ts:1436–1443; src/config/input.ts:2–3",
+          "description": "Today's load path, error mapping, changed count, purge, page read and input caps, cited in LD1 to LD6."
+        },
+        {
+          "ref": "docs/parity/scale/program.json (P93); docs/parity/scale/receipts/P93.json; _evidence/parity-step3/AMENDMENTS.md:967 (R-P506)",
+          "description": "E18 as built (DONE_LOCAL at e20cefda, LIVE1 PASS by R-P540): the sharded index whose loads this ticket redesigns, and its locks."
+        }
+      ],
+      "remainingWork": [
+        "First: the lead's ruling on the load's redesign around its root cause (one file of products becoming thousands of storage calls) is recorded in _evidence/parity-step3/AMENDMENTS.md with the numbers LD1 (the call target), LD2 (the time for a 40,000-product file) and LD3 (the page's reads and bytes) name; at that record the lead amends this work order (the numbers entered, the grant widened where the redesign needs it, src/config/input.ts and src/content/import.ts included for LD2's 40,000-product file or LD2 read otherwise, any R10 named) and regenerates its hash before the specification.",
+        "Build the redesigned load in src/config/publication.ts and src/routes/content.ts: its storage calls bounded by the shards it touches, a failed idempotent call retried inside the request, the head's compare-and-set and the commit never re-sent blindly; closed by unit:P98.LD1 and unit:P98.LD2.",
+        "Keep a product page's read path (src/content/service.ts:1436–1443) within the ruling's bound under the redesigned load; closed by unit:P98.LD3.",
+        "Name the cause and the state in the 503 of a storage failure on the load's path (src/config/publication.ts:49–50, :79–84; src/routes/content.ts:67); closed by unit:P98.LD4.",
+        "Count changed independent of field order (src/routes/content.ts:1013–1018); closed by unit:P98.LD5.",
+        "Collect a refused load's objects in the purge past the grace, never a named or adopted one (src/config/publication.ts:1300–1447); closed by unit:P98.LD6.",
+        "State the load as built in kits 02 and 03 (kit 03 :387–392; kit 02 :1831, :1844, :1846); closed by unit:P98.LD7.",
+        "The amendment 13 text corrections in the two kits this ticket touches, by name (amendment 13 :31): kit 02 :337's sentence that every other answer carries the platform's own total (app answers only; the Worker entry's refusals carry none); kit 02's gendered sentences (the lines grep -nwE \"her|she|his|he|him|herself|himself\" docs/kit/02-api-reference.md finds at 340cd410, :136 to :2449); kit 03's experiment rows :99 and :195 (their gendered words, and :99's \"distinct salts\", where a returning salt counts again). A sentence a unit pins verbatim is left as it is and named in the delivery report, since this grant carries no R10: at 340cd410 kit 03 :99's \"distinct salts\" sentence (src/units/W21/B2.unit.test.ts:763; src/units/P95/LEDGER.unit.test.ts:311), kit 03 :195 (src/units/W21/B2.unit.test.ts) and kit 02 :1401 and :1406 (src/units/W41/FIX3.unit.test.ts). Closed by the reviewer reading the changed sentences.",
+        "The locks hold, closed by the program integration gate: P93, P86, P87, W38 (LEDGER and FIX1), src/config/versionedStore.test.ts (W11.02), src/config/publication.optionalMember.test.ts, src/routes/content.test.ts, src/content/import.test.ts, W40 (LEDGER and P6), P48 and P54 (the absent-member refusal byte for byte)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 3 row 1 (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:36: E25, E23, E24, E26 in force in this order, E25 first; the owner may strike any), in force on the owner's message of 28 October, morning; R-P544 (_evidence/parity-step3/AMENDMENTS.md:1005)",
+          "effect": "E25 enters tapestry-parity-hardening as P98, first in strict order, needed by the December test (the customer's 40,000-product loads); it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes, with the live loads one pair host at a time.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/config/publication.ts",
+        "src/routes/content.ts",
+        "src/content/service.ts (the product page's read path)",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P98 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S43 specification review, after the lead's redesign ruling amends this work order (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S43 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S43 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P99",
+      "title": "The purge at scale (**amendment 13, E23, 2026-10-28**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E23 · section 2 of amendment 13, \"Done when\" (P93's delivery review, R-P506; P95's delivery review, R-P531; in force by section 3 row 1, R-P544)",
+        "requirement": "the purge keeps its progress across passes so a large revision is removed over several publications; the latent delete order (shard keys queued before the parts behind them) cannot strand a part; a tenant whose salt count can never be established is told (an advisory on the operator's reads) and its learn revisions purged past a stated bound once the count is null for good, or the owner's alternative."
+      },
+      "outcome": "The purge removes every revision past the tenant's setting however large its load was, without stranding a part, and a tenant whose salt count can never be established is told so and does not keep every learn revision for good.",
+      "criteria": [
+        {
+          "id": "PG1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a tenant under the configuration-revision setting whose catalogue holds 40,000 products and whose stored revisions include loads that each touched all 256 product shards and 256 id shards (eight 5,000-product loads, as P93's delivery review loaded them): once those revisions are past the setting, each is removed, its body and the shards and parts only it names, over a bounded number of later publications, each publication's purge within its own budget (PURGE_OPERATIONS 256 and PURGE_BYTES, src/config/publication.ts:1273–1274, :1281) and its progress kept from one publication to the next; nothing another stored revision names is removed and nothing is left that no stored revision names. Today each publication's purge starts afresh: orphansOf reads every shard a revision names, one budget call each (publication.ts:1376–1386), before sweep lists or deletes anything (:1420–1437), so a revision naming 512 shards exhausts the budget on every pass and is never removed (R-P506 (2): eight such revisions never purged across 20 publications; S37/reviewer-p93/REPORT-e20cefda.md:51).",
+          "proof": "The P99 acceptance command runs the tests named unit:P99.PG1 in src/units/P99/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PG2",
+          "kind": "LOCAL",
+          "observable": "No order of deletions can strand a part: the purge deletes the parts a shard names before that shard, or both in one deletion call, so a purge that stops at any call (its budget, PurgeStopped at src/config/publication.ts:1281, or a failed deletion) leaves every part it has not deleted reachable by the next pass through a stored shard or a stored revision; shown with the purge stopped after each deletion call in turn. Today orphansOf queues a shard's key (publication.ts:1402) before the parts behind it (:1404), sweep groups the keys by directory in that order (:1421–1422) and deletes them 1,000 to a call (:1436), so a stop between the shard directory's call and the part directory's leaves parts whose shard is gone, which the next pass no longer reaches (the shard read answers null, :1381–1383) (R-P506 (3), latent under today's budget; S37/reviewer-p93/REPORT-e20cefda.md:52).",
+          "proof": "The P99 acceptance command runs the tests named unit:P99.PG2 in src/units/P99/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PG3",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a tenant whose salt count can never be established is told and does not keep every learn revision for good: where its stored learn history cannot establish the count, because a learn revision before the current one was purged (410 revision_purged, src/config/publication.ts:597–598) or the history starts at a retained baseline (minRevision above 1, :1135; the count refused 409 legacy_history_unavailable at :591), the operator's learn reads (GET /content/learn and the success answers of PUT /content/learn and POST /content/learn/validate, through the learn advisory channel, src/routes/content.ts:953–970, :1195, :1279, :1404) carry an advisory naming the unknown salt version and why, and under the configuration-revision setting the purge removes that tenant's learn revisions past a bound that is a code constant and that kit 02 states, under the purge's other rules (older than the setting, neither the current nor the previous revision, named by no stored replay manifest; publication.ts:1223–1238). A count that could not finish for a transient storage failure is not one that can never be established: every learn revision is kept until a publication establishes it, as today (P95 SV2 and SV4, LOCK), and a purge never turns an exact count into an unknown (W38 B4, LOCK). Today saltCountCarried answers no for every null count (publication.ts:1471–1475; saltVersionOf answers null for any unfinished count, src/content/holdout.ts:117, :121), so such a tenant keeps every learn revision for good under the setting and is told nothing (R-P531 (2); S39/reviewer-p95/REPORT-44f9bbc4.md:69–70, :86); kit 02 :1844 says the purge keeps every learn revision where the current one carries no exact count.",
+          "proof": "The P99 acceptance command runs the tests named unit:P99.PG3 in src/units/P99/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "On the pair's next release (lane L21; the stamps read-only), on a pair tenant that sets the configuration-revision setting, a revision written by a 5,000-product load and past the setting is removed over later publications, read in GET /content/catalog/history and as 410 revision_purged on its read; whether l3 sets that setting is UNVERIFIED (S42/analyst-503/DIAGNOSIS.md, UNVERIFIED list), and where no pair tenant sets it or the lane holds no authority to publish there, the row is proxied to the PG1 and PG2 unit legs and the record says so; PG3 is proxied to its unit leg unless a pair tenant reads a salt version null for good (l1 reads an exact count, R-P540, R-P542).",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:15–18 (E23), :36 (section 3 row 1)",
+          "description": "Item E23, entered second; needed before the first activation (January), two days."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:967 (R-P506 (2), (3)), :992 (R-P531 (2))",
+          "description": "P93's delivery review: the purge never removes a revision whose load touched all 256 shards under its 256-call budget, and the latent delete order; P95's delivery review: a tenant whose stored history can never establish the salt count keeps every learn revision for good under the setting."
+        },
+        {
+          "ref": "_evidence/parity-step3/S37/reviewer-p93/REPORT-e20cefda.md:51–52; _evidence/parity-step3/S39/reviewer-p95/REPORT-44f9bbc4.md:69–70, :86",
+          "description": "REPRODUCED by the P93 reviewer at 40,000 products (eight 5,000-product revisions never purged across 20 publications); SOURCE-TRACED by the P95 reviewer (the retained baseline at publication.ts:1135 and :591)."
+        },
+        {
+          "ref": "src/config/publication.ts:1219–1348 (the purge and its budget), :1376–1447 (orphansOf, sweep, the grace), :1455–1475 (saltCountCarried), :591, :597–598, :1135; src/content/holdout.ts:98–122 (saltVersionOf); src/routes/content.ts:953–970 (learnAdvisory); docs/kit/02-api-reference.md:1844",
+          "description": "Today's purge, its delete order, its learn-revision rule and the learn advisory channel, cited in PG1 to PG3."
+        },
+        {
+          "ref": "src/units/P93/LEDGER.unit.test.ts:611–628 (unit:P93.CS5); src/units/P95/LEDGER.unit.test.ts:300 (KIT_PURGE_KEEPS), :510–524, :551; src/units/W38/FIX1.unit.test.ts:352–362 (B4.x)",
+          "description": "The legs that pin today's purge: attachments resolved before a body with the budget exhausted mid-purge, and every learn revision kept while the current one carries no exact count (the kit sentence pinned verbatim at :300)."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/integration diff --quiet eb6153d6 340cd410 -- src docs/kit scripts (exit 0)",
+          "description": "The two S42 diagnoses read eb6153d6; src, the kits and scripts are byte-equal there and at rem/integration 340cd410, the revision every line cited in this work order is read at."
+        }
+      ],
+      "remainingWork": [
+        "Keep the purge's progress across publications in src/config/publication.ts (purgeByPolicy, orphansOf, sweep), each publication within its own budget; closed by unit:P99.PG1.",
+        "Delete a shard's parts before the shard, or both in one call; closed by unit:P99.PG2.",
+        "Establish when a tenant's salt count can never be established (src/config/publication.ts derivedFor and saltCountCarried; src/content/holdout.ts saltVersionOf only where the reason is carried from it), tell it on the learn advisory channel (src/routes/content.ts learnAdvisory and its three callers) and purge its learn revisions past the stated bound; state the advisory and the bound in kit 02 (:1844, :1490–1498); closed by unit:P99.PG3.",
+        "The R10 of src/units/P95/LEDGER.unit.test.ts's KIT_PURGE_KEEPS (:300) and its kit leg (:551), only if kit 02's sentence it pins changes, by the specifier before the build.",
+        "The locks hold, closed by the program integration gate: P93 (CS5), P95 (SV1 to SV5, as amended by the R10), P86, W38 (LEDGER and FIX1 B4.x), W21 (B1 to B3 and LEDGER), src/config/versionedStore.test.ts (W11.02), src/config/publication.optionalMember.test.ts, src/routes/content.test.ts, and P98 as built."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 3 row 1 (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:36: E25, E23, E24, E26 in force in this order, E25 first; the owner may strike any), in force on the owner's message of 28 October, morning; R-P544 (_evidence/parity-step3/AMENDMENTS.md:1005)",
+          "effect": "E23 enters tapestry-parity-hardening as P99, second in strict order, needed before the first activation (January); it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/config/publication.ts",
+        "src/routes/content.ts (the learn advisory channel only: learnAdvisory and its three callers)",
+        "src/content/holdout.ts (saltVersionOf only, where the reason the count is unknown is carried from it)",
+        "docs/kit/02-api-reference.md",
+        "src/units/P95/LEDGER.unit.test.ts (R10 of KIT_PURGE_KEEPS at :300 and its use at :551 only, if kit 02's sentence it pins changes; by the specifier, by name)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P99 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S44 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S44 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S44 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P100",
+      "title": "A browser that drew while the salt version was unknown (**amendment 13, E24, 2026-10-28**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E24 · section 2 of amendment 13, \"Done when\" (P95's delivery review, R-P531 (1); in force by section 3 row 1, R-P544)",
+        "requirement": "the head script adopts the table's number when it holds null, without treating that as a rotation; the SDK bundles regenerated within their budgets; the jsdom leg shows the next rotation repainting once."
+      },
+      "outcome": "A browser whose class was drawn while its tenant read an unknown salt version takes the table's number on its next landing without a repaint, so the next salt rotation repaints its default row once, as on any other browser.",
+      "criteria": [
+        {
+          "id": "HN1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, in jsdom with the built head script (public/sdk/edge-head.js, as P84's harness runs it, src/units/P84/LEDGER.unit.test.ts:616), a browser whose stored class was drawn while its tenant read a null salt version (opt_head.arm.saltVersion null) and that holds no engine-known experiment, landing on a page whose context table names a number (holdout.saltVersion): keeps its class and paints as that class paints today, not the default row of a rotation, and stores the table's number in place of the null without treating it as a rotation; at the next salt rotation (the table naming the next number) it paints the default row once and draws its class again, and the landing after paints its class's row. A browser holding a number, a browser holding null on a table that names null, and the known-visitor branch, which reads the experiment the SDK records from each answer (src/sdk/head.ts:152–154; src/sdk/listen.ts:298–301), behave as today (LOCK). Today the head-script-only branch (head.ts:155–158) takes rotated from moved (:146), false whenever either side is null, and rewrites the stored salt version only on a fresh draw (:147–150), so a held null stays null and every later rotation is missed (R-P531 (1); S39/reviewer-p95/REPORT-44f9bbc4.md:65).",
+          "proof": "The P100 acceptance command runs the tests named unit:P100.HN1 in src/units/P100/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "HN2",
+          "kind": "LOCAL",
+          "observable": "node scripts/build-sdk.mjs --check exits 0 with the head script regenerated in its three places and their content-security-policy files (scripts/build-sdk.mjs:20–24, :44–47, :78–104): the head script at most its recorded budget of 30,720 bytes (packages/sdk/package.json:36) and less than 5 KB under it (W40.P3, src/units/W40/LEDGER.unit.test.ts:455), so above 25,600 bytes (26,286 bytes at 340cd410); the two SDK bundles byte-equal to 340cd410's, since no file under src/sdk but the head script's own entry imports src/sdk/head.ts.",
+          "proof": "The P100 acceptance command runs the tests named unit:P100.HN2 in src/units/P100/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "HN3",
+          "kind": "LOCAL",
+          "observable": "Kit 01 (:640–643, the default row painted once after the experiment's salt changes) and kit 02 (the context table's holdout.saltVersion at :696; the salt version paragraph at :1490–1498) state that a browser holding an unknown salt version takes the table's number without repainting and paints the default row once at the next change of salt; kit 01's sentence that P95 pins (KIT01_ROTATED, src/units/P95/LEDGER.unit.test.ts:315) still reads as it does.",
+          "proof": "The P100 acceptance command runs the tests named unit:P100.HN3 in src/units/P100/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "On the pair's next release (lane L21; the stamps read-only), on each pair host, a browser holding opt_head.arm.saltVersion null for l1 (planted in its storage) lands without the default row and holds the table's number afterwards; after one salt rotation on l1 (the lane's own learn publication on its row tenant, as lane L20 made it), its next landing paints the default row once.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:20–23 (E24), :36 (section 3 row 1)",
+          "description": "Item E24, entered third; needed before the first activation, hours."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:992 (R-P531 (1)), :1001 (R-P540)",
+          "description": "P95's delivery review: a held null is never a rotation and is rewritten only on a fresh draw, outside P95's grant; lane L20: the jsdom head script repainting once on l1 after a rotation from an exact number."
+        },
+        {
+          "ref": "_evidence/parity-step3/S39/reviewer-p95/REPORT-44f9bbc4.md:65",
+          "description": "SOURCE-TRACED by the P95 reviewer at src/sdk/head.ts:155–158."
+        },
+        {
+          "ref": "src/sdk/head.ts:145–159, :171; src/sdk/listen.ts:298–301; scripts/build-sdk.mjs:20–24, :44–47, :78–104, :199; packages/sdk/package.json:33–37; wc -c public/sdk/edge-head.js public/sdk/0.2.0/edge-head.js packages/sdk/edge-head.js (26,286 bytes each)",
+          "description": "Today's rotated-paint rule, the SDK's experiment record, the build that writes the head script in three places with a .csp beside each, and its budget."
+        },
+        {
+          "ref": "src/units/P84/LEDGER.unit.test.ts:616; src/units/P95/LEDGER.unit.test.ts:315, :427–450 (unit:P95.SV3); src/units/W40/LEDGER.unit.test.ts:455",
+          "description": "The built head script run in jsdom, the rotated-paint leg from the engine's side and kit 01's pinned sentence, and the budget's 5 KB rule."
+        }
+      ],
+      "remainingWork": [
+        "In src/sdk/head.ts's head-script-only branch (:155–158), take the table's number in place of a held null without a rotation; closed by unit:P100.HN1.",
+        "Regenerate the head script with node scripts/build-sdk.mjs (the six files this grant lists); closed by unit:P100.HN2 and the gate's build-sdk.mjs --check.",
+        "State it in kits 01 and 02; closed by unit:P100.HN3.",
+        "The locks hold, closed by the program integration gate: P84, P85, P89, P95 (SV3 and KIT01_ROTATED), W40 (LEDGER P3 and P4), W37 T7 and the SDK's own tests (src/sdk/*.test.ts)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 3 row 1 (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:36: E25, E23, E24, E26 in force in this order, E25 first; the owner may strike any), in force on the owner's message of 28 October, morning; R-P544 (_evidence/parity-step3/AMENDMENTS.md:1005)",
+          "effect": "E24 enters tapestry-parity-hardening as P100, third in strict order, needed before the first activation (January); it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/sdk/head.ts",
+        "public/sdk/edge-head.js",
+        "public/sdk/edge-head.js.csp",
+        "public/sdk/0.2.0/edge-head.js",
+        "public/sdk/0.2.0/edge-head.js.csp",
+        "packages/sdk/edge-head.js",
+        "packages/sdk/edge-head.js.csp",
+        "docs/kit/01-integration-guide.md",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P100 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S45 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S45 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S45 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P101",
+      "title": "A malformed page-view id answered as what it is (**amendment 13, E26, 2026-10-28**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E26 · section 2 of amendment 13, \"Done when\" (the 401 diagnosis, R-P541; in force by section 3 row 1, R-P544)",
+        "requirement": "the decision routes refuse a malformed `pageInstance` with `400 Invalid page instance` before any work, as they do a malformed `arm`; kit 02 states the format."
+      },
+      "outcome": "A decision request whose page-view id is malformed is refused at once as the request error it is, 400 Invalid page instance, on every decision path, and a valid id is answered as today.",
+      "criteria": [
+        {
+          "id": "PI1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a decision request whose pageInstance is outside 1–128 characters of A-Za-z0-9_- (the empty string, a space, a comma, a slash, or 129 characters) answers 400 { ok: false, error: 'Invalid page instance' } before any work: on GET /v1/{tenant}/decisions/snapshot (the query's pageInstance) and on its POST with a session, nothing decided, nothing captured to the ledger or the ring and no render offer minted; at the first-request door (a POST with no session), before a session is issued or a shopper object created, with Cache-Control no-store as the door answers a malformed arm (src/routes/decisions.ts:1132). Today snapshotContext admits any string up to 128 characters on POST (decisions.ts:1021–1024) and any value on GET (:987–1001), the route decides (:1294) with the id as the offer (:1312), and only the render offer's mint refuses it (src/content/renderOffer.ts:62, by isEventNonce, src/events/actionTypes.ts:45–46), answered 401 Shopper session unavailable (src/identity/sessionAuthority.ts:766–767) after the decision's work, for a shopper with tracking consent on a page with a rendered-v1 slot (src/content/service.ts:1230–1234); the door answers a spaced id 200 with no offer, and its catch answers every other snapshotContext failure 401 (decisions.ts:1130–1133) (S42/analyst-401/DIAGNOSIS.md §1).",
+          "proof": "The P101 acceptance command runs the tests named unit:P101.PI1 in src/units/P101/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PI2",
+          "kind": "LOCAL",
+          "observable": "LOCK, on both hosts: a valid id behaves as today: the SDK's ids (crypto.randomUUID or its base-36 fallback, src/sdk/host.ts:34–36, set at src/sdk/listen.ts:452 and :534; src/sdk/server.ts:165) and a 128-character id of A-Za-z0-9_- get their render offers and their acknowledgements are admitted; a request with no pageInstance answers 200 with no render offer (src/routes/decisions.ts:1312); the five other request errors keep their answers (decisions.ts:1221–1242) and the door's other refusals stay 401 (decisions.ts:1126–1134).",
+          "proof": "The P101 acceptance command runs the tests named unit:P101.PI2 in src/units/P101/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "PI3",
+          "kind": "LOCAL",
+          "observable": "Kit 02's pageInstance row (docs/kit/02-api-reference.md:342) states the format, 1 to 128 letters, digits, _ and - (a UUID qualifies), and the 400 Invalid page instance for any other value, on every decision path including a new visitor's first request; today the row gives no format.",
+          "proof": "The P101 acceptance command runs the tests named unit:P101.PI3 in src/units/P101/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "On the pair's next release (lane L21; the stamps read-only), on both pair hosts, a session-carrying decision with a spaced pageInstance answers 400 Invalid page instance (lane L20's addendum read 401, R-P542), the same with a UUID answers 200 with its offers, and a first request with a spaced id answers 400 with no session.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:25–28 (E26), :36 (section 3 row 1)",
+          "description": "Item E26, entered fourth; needed before the first activation, hours."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:1002 (R-P541), :1003 (R-P542)",
+          "description": "The 401 window diagnosed as the walker's spaced page-view ids, older than the scale programme; the product fact told once and proposed; the live check on both pair hosts (UUID 200, spaced id 401)."
+        },
+        {
+          "ref": "_evidence/parity-step3/S42/analyst-401/DIAGNOSIS.md (§1, §3); S42/analyst-401/logs/probe4-pageinstance-eb6153d6.log, probe5-pageinstance-3dc1b99b.log; S42/analyst-401/probes-kept/pageinstance.unit.test.ts",
+          "description": "REPRODUCED in the harness on both hosts at eb6153d6 and 3dc1b99b: a spaced, comma or path-like id answers 401 on a session-carrying decision and 200 with no offer at the door; SOURCE-TRACED to renderOffer.ts:62 and sessionAuthority.ts:766–767; the proposed fix and its tests T1 to T5."
+        },
+        {
+          "ref": "src/routes/decisions.ts:910–966, :983–1037, :1121–1134, :1221–1242, :1294, :1312; src/content/renderOffer.ts:59–62; src/events/actionTypes.ts:45–46; src/identity/sessionAuthority.ts:766–767; src/content/service.ts:1230–1234; docs/kit/02-api-reference.md:342",
+          "description": "Today's typed request errors, snapshotContext, the door, the route's two catches, the late refusal and the kit row."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/integration diff --quiet eb6153d6 340cd410 -- src docs/kit scripts (exit 0)",
+          "description": "The two S42 diagnoses read eb6153d6; src, the kits and scripts are byte-equal there and at rem/integration 340cd410, the revision every line cited in this work order is read at."
+        }
+      ],
+      "remainingWork": [
+        "Refuse a pageInstance outside 1–128 characters of A-Za-z0-9_- in snapshotContext's two branches (src/routes/decisions.ts:987–1001, :1002–1037) by isEventNonce (src/events/actionTypes.ts:45–46, imported unchanged), answered 400 Invalid page instance in the route's two catches (:1221–1230, :1232–1242) and at the door (:1130–1133); closed by unit:P101.PI1.",
+        "Keep valid ids, the SDK's ids and an absent pageInstance as today; closed by unit:P101.PI2.",
+        "State the format in kit 02 :342; closed by unit:P101.PI3.",
+        "The locks hold, closed by the program integration gate: P13, P57, P03, P56, P58, P69, P34, P84, P76, P95, P96, src/routes/realtime.sdkContract.test.ts and src/index.api-boundary.test.ts."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 3 row 1 (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:36: E25, E23, E24, E26 in force in this order, E25 first; the owner may strike any), in force on the owner's message of 28 October, morning; R-P544 (_evidence/parity-step3/AMENDMENTS.md:1005)",
+          "effect": "E26 enters tapestry-parity-hardening as P101, fourth in strict order, needed before the first activation (January); it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/routes/decisions.ts",
+        "docs/kit/02-api-reference.md"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P101 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending the batch S46 specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: the specification review of batch S46 records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: the specification review of batch S46 records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
