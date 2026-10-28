@@ -64,7 +64,9 @@ import { OpalAgent } from '@/agents/OpalAgent';
 
 const app = new Hono<{ Bindings: Env; Variables: { tenant: TenantId } }>();
 
-app.use('*', timing());
+// The platform's own Server-Timing entry, `total;dur=…;desc="Total Response Time"`, on every answer but the one that
+// names its own `total`: a new visitor's first decision set through the first-request door (P96, E21; src/routes/decisions.ts).
+app.use('*', timing({ enabled: (c) => !answersOwnTotal(c) }));
 app.use('*', requestId());
 app.use('*', secureHeaders());
 
@@ -198,7 +200,7 @@ app.notFound((c) => {
 });
 
 import { meridianRoutes } from '@/demos/meridian/routes';
-import { decisionRoutes } from '@/routes/decisions';
+import { answersOwnTotal, decisionRoutes } from '@/routes/decisions';
 import { MeridianReflex } from '@/demos/meridian/MeridianReflex';
 
 import { RegionTrend } from '@/durable-objects/RegionTrend';
