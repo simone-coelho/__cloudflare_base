@@ -7,7 +7,7 @@
 import type { Env } from '@/types/env';
 import { afterOwnerAnswer, assertOwnerScope, continueAfterOwnerRead, currentOwnerConsent, ownerOperationActive, pinRetention, pinProfileRetention, requireConsentPurpose, ownerBindingIdentity } from '@/identity/sessionAuthority';
 import { assertSessionTarget, SessionAccessError, SHOPPER_HEADER, type SessionCapability } from '@/identity/sessionCapability';
-import { carriedSaltVersion, catalogPartPointer, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin, type StorageTrip } from '@/config/publication';
+import { bypassHeldPublications, carriedSaltVersion, catalogPartPointer, documentDigest, PublicationError, pinPublication, publicationScope, readCatalogPart, readOptionalPinnedPublication, readPinnedPublication, readPublication, type PublicationPin, type StorageTrip } from '@/config/publication';
 import { resolveTenantReflexConfigRevision } from '@/demos/registry';
 import { REFLEX_KIND, ReflexConfigUnavailableError, reflexScopeForTenant } from '@/reflex/configStore';
 import { extractTouches, productReferencesOf, sanitizeEventAttributes, signalsOf, snapshot as reflexSnapshot, suppressionsInForce, withoutSuppressed, type AffinitySnapshot, type CatalogVocabulary, type ReflexConfig, type Suppression, type Touch } from '@/reflex/core';
@@ -42,6 +42,10 @@ import { createRenderOffer } from './renderOffer';
 import { readSigningConfig } from '@/auth/signingConfig.mjs';
 import { isEventNonce } from '@/events/actionTypes';
 import { syntheticOperation } from '@/ops/synthetic';
+
+// P102 (A, R-P606 (4)): the synthetic monitor's reads bypass the publication's held store: each of its runs reads through
+// a bucket of its own, so what it held could never serve again and would only push a tenant's held publication out.
+bypassHeldPublications(() => syntheticOperation() !== undefined);
 
 export interface ServeRequest {
   /** Public snapshots are offers. Only a subsequent authenticated render may capture them. */

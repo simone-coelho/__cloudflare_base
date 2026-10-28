@@ -527,6 +527,16 @@ function heldKey(binding: object, scope: string, id: Identity): string {
   return n + '\u0000' + scope + '\u0000' + id.revision + '\u0000' + id.digest;
 }
 function release(record: Held): void { if (held.get(record.key) === record) { held.delete(record.key); heldBytes -= record.bytes; } }
+/**
+ * P102 (A, R-P606 (4)): operations whose reads take no place in `held`. The synthetic monitor reads through a bucket of
+ * its own on every run, so nothing it held could ever serve again, and holding it would only push a tenant's entries
+ * out; the module that knows a synthetic operation names it here (src/content/service.ts), as the fence names its
+ * wrappers (`nameServingStorage`): this module cannot import it, being bundled for workerd on its own. Such a read
+ * neither takes what is held nor adds to it; everything else it reads is as before.
+ */
+let unheld: () => boolean = () => false;
+export function bypassHeldPublications(predicate: () => boolean): void { unheld = predicate; }
+const bypassing = () => { try { return unheld(); } catch { return true; } };
 /** The record held for a committed identity of this binding, made the most recently used. */
 function heldFor(binding: object, scope: string, id: Identity): Held | undefined {
   const record = held.get(heldKey(binding, scope, id));
@@ -633,8 +643,9 @@ export async function pinPublication(env: Env, scope: string, servingCache = fal
   // most); nothing another binding read is ever served (W19 LG1).
   let known: CacheEntry | undefined;
   if (servingCache && committed) for (const e of cache) if (e.binding === binding && e.scope === scope && e.value.revision === committed.revision && e.value.digest === committed.digest) known = e;
-  // P102 (A): no fresh entry holds the identity: what is held by the identity, if anything.
-  const kept = servingCache && committed && !known ? heldFor(binding, scope, committed) : undefined;
+  // P102 (A): no fresh entry holds the identity: what is held by the identity, if anything (never for a read that bypasses it).
+  const holding = servingCache && !bypassing();
+  const kept = holding && committed && !known ? heldFor(binding, scope, committed) : undefined;
   // P102 (C): nothing held: the serving copy, where it is exactly the committed identity.
   const copied = servingCache && committed && !known && !kept && copy ? await fromServingCopy(copy.value, scope, committed) : null;
   const read = new Map<string, [Revision<unknown>, number]>();
@@ -657,7 +668,7 @@ export async function pinPublication(env: Env, scope: string, servingCache = fal
   const record = servingCache ? lend(binding, value) : undefined;
   if (record) for (const [key, [document, charge]] of read) attach(record, key, document, charge);
   await readMissing(storage, binding, value, named, known?.documents, read, trips);
-  if (record) keep(record, epoch);
+  if (record && holding) keep(record, epoch);
   const bytes = known ? known.bytes : record ? record.setBytes : encoder.encode(serialized(value)).byteLength + 256, now = Date.now();
   if (servingCache && epoch === cacheEpoch && fresh(started, now) && bytes <= CACHE_BYTES) {
     const resident = [...cache].find(e => e.handle === storage && e.scope === scope);
@@ -782,14 +793,45 @@ async function servingCopyOf(storage: R2Bucket, set: PublicationPin, written: re
     return encoder.encode(copy).byteLength <= SERVING_COPY_MAX_BYTES ? { text: copy, omitted: false } : { text: null, omitted: true };
   } catch { return { text: null, omitted: true }; }
 }
-/** Write the serving copy (create-only for the backfill); a failure writes nothing and never fails the caller, but an owner's refusal does. */
-async function writeServingCopy(storage: R2Bucket, scope: string, copy: string, createOnly: boolean): Promise<boolean> {
+/** The copy's storage metadata: the identity of the set it holds, so the backfill can tell a stale copy by one HEAD. */
+const COPY_META = 'set';
+const identityText = (id: Identity) => id.revision + ':' + id.digest;
+/**
+ * Write the serving copy, carrying its set's identity as storage metadata: a commit's unconditionally; the backfill's
+ * only where the scope has none (`'absent'`) or exactly over the stale copy it saw (its etag), never over a copy written
+ * since. A failure writes nothing and never fails the caller, but an owner's refusal does.
+ */
+async function writeServingCopy(storage: R2Bucket, set: PublicationPin, copy: string, over?: 'absent' | { etag: string }): Promise<boolean> {
   try {
-    return await storage.put(servingKey(scope), copy, { ...(createOnly ? { onlyIf: new Headers({ 'If-None-Match': '*' }) } : {}), httpMetadata: { contentType: 'application/json' } }) !== null;
+    const onlyIf = over === undefined ? {} : { onlyIf: over === 'absent' ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: over.etag } };
+    return await storage.put(servingKey(set.scope), copy, { ...onlyIf, httpMetadata: { contentType: 'application/json' }, customMetadata: { [COPY_META]: identityText(identityOf(set)) } }) !== null;
   } catch (error) {
     if (error instanceof HTTPException && error.status === 401) throw error;
     return false;
   }
+}
+/**
+ * The scope's stored serving copy as the backfill sees it: absent (null), or its etag and the identity of the set it
+ * holds (null where that cannot be told: a copy that does not parse or holds no set). One HEAD where the store answers
+ * the copy's metadata and etag; otherwise one read of the copy.
+ */
+async function storedCopy(storage: R2Bucket, scope: string): Promise<{ etag: string; identity: string | null } | null> {
+  const key = servingKey(scope);
+  try {
+    const head = typeof storage.head === 'function' ? await storage.head(key) : undefined;
+    if (head === null) return null;
+    const named = (head as { customMetadata?: Record<string, unknown> } | undefined)?.customMetadata?.[COPY_META];
+    if (head && text(head.etag, 256) && typeof named === 'string') return { etag: head.etag, identity: named };
+    const found = await storage.get(key); if (found === null) return null;
+    required(text(found.etag, 256));
+    if (!integer(found.size) || found.size > SERVING_COPY_MAX_BYTES) return { etag: found.etag, identity: null };
+    let identity: string | null = null;
+    try {
+      const value: unknown = JSON.parse(await found.text()), set = object(value) && object(value.set) ? value.set : null;
+      identity = set && integer(set.revision) && typeof set.digest === 'string' && HASH.test(set.digest) ? identityText({ revision: set.revision, digest: set.digest }) : null;
+    } catch { identity = null; }
+    return { etag: found.etag, identity };
+  } catch (error) { throw storageFailure(error); }
 }
 const identityOf = (set: PublicationPin): Identity => ({ revision: set.revision, digest: set.digest });
 function rowOf<T>(kind: DocumentKind<T>, revision: Revision<T>): IndexEntry {
@@ -1206,7 +1248,7 @@ async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promi
   if (after.head.committed.revision < set.revision) throw conflict();
   if (after.head.committed.revision === set.revision && after.head.committed.digest !== set.digest) throw conflict();
   // P102 (C): written only while the head names exactly this set, so a later commit's copy is not replaced by this one.
-  if (copy.text !== null && after.head.committed.revision === set.revision) { await authorize?.(); await writeServingCopy(storage, set.scope, copy.text, false); }
+  if (copy.text !== null && after.head.committed.revision === set.revision) { await authorize?.(); await writeServingCopy(storage, set, copy.text); }
   return retainedSet(storage, set.scope, identityOf(set));
 }
 /**
@@ -1538,22 +1580,22 @@ export async function completePublicationSet(env: Env, scope: string, attributio
  * metadata under a conditional write on the etag it was read with, so a
  * publication committed meanwhile wins and the run then writes nothing at all;
  * a publication whose reservation meets the rewrite reserves over it
- * (`reserve`). The copy is created only where the scope has none
- * (create-only), so a copy a commit wrote is never replaced. A head that
- * already names its members and a scope that already has its copy (or whose
- * copy the commit found past its bound) cost one read of the head and one HEAD
- * of the copy, and write nothing. It answers what it wrote; a failure writes
- * nothing more and is the caller's to log.
+ * (`reserve`). The copy is created where the scope has none, and a stale copy
+ * (one whose set is not the head's committed identity, or that holds no set it
+ * can tell) is replaced under the etag the run saw, so a copy written since,
+ * by a commit, is never replaced; a set whose copy passes its bound keeps none.
+ * A head that already names its members over a current copy (or whose copy the
+ * commit found past its bound) costs one read of the head and one HEAD of the
+ * copy, and writes nothing. It answers what it wrote; a failure writes nothing
+ * more and is the caller's to log.
  */
 export async function backfillPublication(env: Env, scope: string): Promise<{ head: boolean; copy: boolean }> {
   const nothing = { head: false, copy: false };
   if (!/^[a-z0-9][a-z0-9-]{0,31}$/.test(scope)) return nothing;
   const storage = storageOf(env), loaded = await loadHead(storage, scope);
   if (!loaded || !loaded.head.committed || loaded.head.pending) return nothing;
-  let copyWanted = false;
-  if (!loaded.copyOmitted && typeof storage.head === 'function') {
-    try { copyWanted = (await storage.head(servingKey(scope))) === null; } catch (error) { throw storageFailure(error); }
-  }
+  const stored = loaded.copyOmitted ? undefined : await storedCopy(storage, scope);
+  const copyWanted = stored !== undefined && (stored === null || stored.identity !== identityText(loaded.head.committed));
   if (loaded.hint && !copyWanted) return nothing;
   const set = await currentSet(storage, loaded);
   const copy = copyWanted ? await servingCopyOf(storage, set, []) : { text: null, omitted: false };
@@ -1563,7 +1605,7 @@ export async function backfillPublication(env: Env, scope: string): Promise<{ he
     if (!await put(storage, headKey(scope), loaded.text, loaded.etag, headMetadata(set, omitted))) return nothing;
     head = true;
   }
-  return { head, copy: copy.text !== null && await writeServingCopy(storage, scope, copy.text, true) };
+  return { head, copy: copy.text !== null && await writeServingCopy(storage, set, copy.text, stored ? { etag: stored.etag } : 'absent') };
 }
 
 /*
