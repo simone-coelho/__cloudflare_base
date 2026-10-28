@@ -767,8 +767,10 @@ const KIT_COUNTER_FLOOR =
   '`enrollment_anchor_unavailable` is a lower bound: concurrent anchor failures can collapse into one increment, so read it as a floor and never as an exact count.';
 const KIT_EXPORT_BACKFILL =
   '`record.experiment` on this answer may be carried from the credited decision’s stored block, so it is not always byte-identical to the stored ledger line.';
+// P95 (E20, R10 by name, R-P511): the 24-revision horizon is gone; the kit states the rule instead, in the words
+// src/units/P95/LEDGER.unit.test.ts rules (KIT_SALT_EXACT).
 const KIT_SALT_HORIZON =
-  'The platform reads back at most 24 published learn revisions to count salts; past that horizon `saltVersion` is `null` rather than a smaller number.';
+  '`saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number.';
 
 const kitFile = (file: string) => readFileSync(new URL(`../../../docs/kit/${file}`, import.meta.url), 'utf8');
 
@@ -912,17 +914,17 @@ describe('unit:W21.E1.06', () => {
 
 describe('unit:W21.E1.07', () => {
   it('logic: past the history the platform can read, the salt version is an explicit unknown rather than a smaller number, and a partial walk is never cached as a number', async () => {
-    // NR4: `saltVersionOf` walks at most `SALT_HISTORY_READS = 24` prior
-    // revisions (`src/content/holdout.ts:103-124`), so a tenant with a longer
-    // history is counted over the window it can see: rotations at revisions 2
-    // and 30 read `2` at revision 31 and `1` at revision 60 — the number goes
-    // DOWN, and two different salts both read `1`. A count that cannot see the
-    // first salt is not a smaller count; it is unknown.
+    // NR4: a count over a window — rotations at revisions 2 and 30 read `2` at
+    // revision 31 and `1` at revision 60 — makes the number go DOWN, and two
+    // different salts both read `1`. A count that cannot see the first salt is
+    // not a smaller count; it is unknown. P95 (E20, R10 by name): the count now
+    // reads the whole stored history (`src/content/holdout.ts` saltVersionOf, no
+    // read horizon), so a long history is counted exactly.
     const { saltVersionOf, invalidateSaltVersions } = await import('@/content/holdout');
     const m = await mount('session');
     // Revision 1 is the mount's own SALT_A; the salt rotates at revision 2 and
-    // again at revision 30, so a 24-revision window opened at 30 sees only
-    // SALT_B behind it and can never reach the first salt.
+    // again at revision 30, so a 24-revision window opened at 30 would see only
+    // SALT_B behind it; the whole stored history reaches the first salt.
     await publishSaltHistory(m, [...Array.from({ length: 28 }, () => SALT_B), SALT_C]);
     const env = m.env;
 
@@ -931,7 +933,7 @@ describe('unit:W21.E1.07', () => {
       'inside the window the count is exact: one rotation behind revision 3').toBe(2);
     invalidateSaltVersions();
     expect(await saltVersionOf(env, TENANT, 30, TENANT, SALT_C),
-      'NR4 — revision 30 cannot see revision 1 through a 24-revision window, so the number of salts before it is unknown').toBeNull();
+      'P95 (E20) — revision 30 counts over the whole stored history: SALT_A, SALT_B and SALT_C, 3, never the smaller number a 24-revision window sees').toBe(3);
 
     // A walk that breaks halfway is unknown too, and the unknown is not cached
     // as a number: the next healthy read answers the true count.
@@ -945,7 +947,7 @@ describe('unit:W21.E1.07', () => {
       'NR4 — and the unknown was never cached as a number: the next healthy read is exact').toBe(2);
   });
 
-  it('host: the serving path answers without walking the salt history, states an unknown honestly, and keeps `experiment.id` as the join key', async () => {
+  it('host: the serving path answers without walking the salt history, states the count exactly however long the history, and keeps `experiment.id` as the join key', async () => {
     const m = await mount('session');
     const shopper = await shopperOn(m, ENROLLED_ANON, { tracking: true, personalization: true });
     await republishLearn(m, { holdout: { share: 0.5, salt: SALT_B, arms: ['default'] }, regional: { enabled: false, kBlend: 1, minEvents: 30 }, slots: {} });
@@ -973,22 +975,22 @@ describe('unit:W21.E1.07', () => {
     // behind it. A serve-time storage fault on a prior revision is therefore not
     // an observable of this leg at all (it can only change an answer that walks),
     // and the partial walk stays where it can be seen: the logic leg above.
-    // What the serving path must still say honestly is the HORIZON: past the
-    // revisions the platform can see, the count is an explicit unknown (NR4).
+    // P95 (E20, R10 by name): past the former 24-revision horizon the count is
+    // carried on every publication, so the serving path states it exactly.
     const far = await mount('session');
     const distant = await shopperOn(far, ENROLLED_ANON, { tracking: true, personalization: true });
     await publishSaltHistory(far, [...Array.from({ length: 26 }, () => SALT_B), SALT_C]);
     invalidateSaltVersions();
     const unknown = await distant.snapshot();
-    expect(unknown.status, 'NR4 — a long history is not a reason to refuse her a page').toBe(200);
+    expect(unknown.status, 'NR4 — a long history is not a reason to refuse the shopper a page').toBe(200);
     expect(unknown.experiment?.saltVersion,
-      'NR4 — past the 24 revisions the platform can read, the count of salts before this one is unknown, never a smaller number').toBeNull();
+      'P95 (E20) — past the former 24-revision horizon the count is exact: SALT_A, SALT_B, SALT_C — 3, never null and never a smaller number').toBe(3);
     expect(unknown.experiment?.id, 'and `experiment.id` carries the salt itself, so the join key is unaffected')
       .toBe(`${TENANT}:${TENANT}:${SALT_C}`);
 
-    // The bound is published, not folklore.
+    // The rule is published, not folklore.
     expect(kitFile('02-api-reference.md').includes(KIT_SALT_HORIZON),
-      `R126(c) — docs/kit/02-api-reference.md states the bound: "${KIT_SALT_HORIZON}"`).toBe(true);
+      `R126(c), P95 (E20) — docs/kit/02-api-reference.md states the rule: "${KIT_SALT_HORIZON}"`).toBe(true);
   });
 });
 
