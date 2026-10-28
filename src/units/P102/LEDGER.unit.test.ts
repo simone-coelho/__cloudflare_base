@@ -51,6 +51,22 @@
 //      publication wrote is touched by a five-minute run that lost to it.
 //   R7 Kit 02's serving paragraph is the one that says configuration administration bypasses the serving cache; the
 //      clauses are read in it sentence by sentence.
+//   R8 The backfill rides the tenant's existing five-minute job (src/index.ts, the hourly fold's per-tenant waitUntil):
+//      src/index.api-boundary.test.ts W07.04 (:3496) pins the run's waitUntil count, which one new job per tenant breaks.
+//
+// COLLISIONS OUTSIDE THE GRANT (measured on the sketch, for the lead's ruling; none edited here):
+//   src/index.api-boundary.test.ts:3174–3176 (W03.02) — a publication's exact STORAGE.put list, four puts → five (C's
+//     serving copy after the head's commit).
+//   src/routes/content.test.ts:1491 (W14.04) — the store's exact object count, 22 → 24 (one serving copy per tenant).
+//   src/content/consent.test.ts:384 (W20.04), :447 (W20.03) — a committed slots revision the store no longer returns, or
+//     returns altered, refuses the decision; under C the decision reads the serving copy and never that object. :574
+//     (W28.01) — a fresh decision reads the learn revision object once; under C, zero (the copy).
+//   src/config/publication.servingCache.test.ts:88, :97 — hold under R2; they change only if every serving pin read the copy.
+//   src/units/P93/LEDGER.unit.test.ts:285 (the CS2 title, "reads exactly the head, the set, …") and its "8 reads" message
+//     (:302) — stale wording; the list itself is re-pointed (pageReads).
+//   P97 (rem/spec-p97 at 3b949187; R-P567 F2): contentOf (:332–342) strips sources.timings and sources.sessionParts only,
+//     so CR4's member differs between the door's answer and the next page view — it must strip CR4's member too; its R4
+//     read pin (:474) admits any R2 get under config-publication/, which C's and B's reads are (no change needed).
 //
 // R10 BY NAME (the brief S48/SPEC-BRIEF-P102.md; the work order's allowedPaths), before → after:
 //   src/config/publication.servingCache.test.ts:128–141 — "keeps the administrative read and the cache expiry as they
