@@ -11,7 +11,7 @@
 import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { assertShopperSelectors, carryOwnerCustomerId, forwardShopperRequest, parseShopperContext } from '@/identity/sessionAuthority';
-import { anonymousWithConsent } from '@/identity/consentContinuity';
+import { anonymousWithConsent, type SessionParts } from '@/identity/consentContinuity';
 import type { MintTarget } from '@/identity/sessionCapability';
 import { armClassOf, defaultArmProbability } from '@/sdk/armDraw';
 import { consentFromCookies, intersectConsent, refusalHints } from '@/content/consent';
@@ -1143,9 +1143,15 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   const mint = drawn ? await armMint(c.env, tenant, brand, drawn.class) : null;
   let armMs = performance.now() - mintStarted;
   const sessionStarted = performance.now();
-  const session = await anonymousWithConsent(c.env, tenant, hints, mint?.target);
+  const parts: SessionParts = {};
+  const session = await anonymousWithConsent(c.env, tenant, hints, mint?.target, parts);
+  const verifyStarted = performance.now();
   const principal = await verifySessionCapability(c.env, session.capability, tenant);
-  const sessionMs = performance.now() - sessionStarted;
+  const verified = performance.now();
+  const sessionMs = verified - sessionStarted;
+  // P97 (FV3, R-P547): the session entry's parts, a diagnostic beside sources.timings (never in Server-Timing): the
+  // mint, the activation's round trip, the verify and the shopper object's own parts of the activation.
+  const sessionParts = { mint: parts.mint ?? 0, activate: parts.activate ?? 0, verify: Math.round(verified - verifyStarted), object: parts.object ?? {} };
   const headers = new Headers(c.req.raw.headers);
   headers.set(SHOPPER_HEADER, session.capability);
   // The member is the mint's alone: the decision is re-entered without it, as a request carrying a session.
@@ -1183,7 +1189,7 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
     ...(drawn ? { arm: Math.round(armMs) } : {}), total: Math.round(performance.now() - doorStarted) };
   const timing = answered.headers.get('Server-Timing');
   c.header('Server-Timing', [timing, ...Object.entries(own).map(([name, ms]) => `${name};dur=${ms}`)].filter(Boolean).join(', '));
-  const answer = c.json({ ...body, sources: { ...sources, timings: { ...stages, ...own } }, session, ...(armRequest ? { armRequest } : {}) });
+  const answer = c.json({ ...body, sources: { ...sources, timings: { ...stages, ...own }, sessionParts }, session, ...(armRequest ? { armRequest } : {}) });
   c.set(OWN_TOTAL, true);
   return answer;
 });

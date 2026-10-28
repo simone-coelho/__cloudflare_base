@@ -66,6 +66,7 @@ import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCl
 import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
+import { OWNER_TIMING_HEADER, ownerTimer } from '@/identity/consentContinuity';
 import { IdentityStore, MAX_MERGED_ACCOUNTS, type ShopperRecord } from '@/identity/store';
 import { isShopperId, isSalted, shopperIdFor } from '@/identity/shopperId';
 import { loadTombstone, writeTombstone, resetVisitorRing } from '@/ledger/erasure';
@@ -482,7 +483,9 @@ export class ShopperReflex {
   // ── HTTP surface ────────────────────────────────────────────────────────────
 
   async fetch(request: Request): Promise<Response> {
-    return this.synthetic.run(request, () => this.fetchScoped(request)).catch(error => {
+    // P97 (FV3): the request's arrival, from which the activation's `op` is counted.
+    const arrived = performance.now();
+    return this.synthetic.run(request, () => this.fetchScoped(request, arrived)).catch(error => {
       if (error instanceof SyntheticUnavailable) { const response = json({ ok: false, error: 'Shopper session unavailable' }, 401); response.headers.set('X-Monitor-Refusal', 'boundary'); return response; }
       // Baseline 52 (G10): this object's storage refused the boundary's marker
       // read, so nothing ran. The session host's typed refusal, marked so the
@@ -492,7 +495,7 @@ export class ShopperReflex {
     });
   }
 
-  private async fetchScoped(request: Request): Promise<Response> {
+  private async fetchScoped(request: Request, arrived: number): Promise<Response> {
     const url = new URL(request.url);
     let principal: SessionCapability | undefined;
     let internal: InternalContext | undefined;
@@ -690,20 +693,35 @@ export class ShopperReflex {
     }
     if (request.method === 'POST' && url.pathname === '/identity/activate') {
       if (!principal) return json({ ok: false }, 401);
+      // P97 (FV3, R-P547): the activation times its own parts and answers them in X-Owner-Timing (internal; see
+      // OWNER_TIMING_HEADER): `queue` (the body read and the wait for the object's turn), `grant` (the grant adopted),
+      // `consent` (the consent carried, its alarm and any instruction stored), `restrict` (the session host's
+      // restriction, when it runs), `alarm` (the alarm rescheduled), `commit` (the writes made durable) and `op` (the
+      // whole operation from the request's arrival).
+      const timer = ownerTimer(arrived);
       const body = z.object({ consent: consentSchema, existingOnly: z.boolean().optional() }).strict().parse(await request.json());
       return this.serialize(async () => {
         try {
+          timer.lap('queue');
           await this.assertOwned(principal!, undefined, false, !body.existingOnly);
+          timer.lap('grant');
           const consent = carryConsent(body.consent, principal!, storedConsent(await this.state.storage.get('consent')));
           await this.scheduleConsentAlarm(consent);
           assertSessionTarget(principal!);
           if (consent.instruction) await this.state.storage.put('consent', consent.instruction);
           this.consent = consent;
+          timer.lap('consent');
           if ((this.env.REFLEX_HOST ?? 'session') === 'session' && !personalizes(consent)) {
             await new SessionManager(this.env, { tenant: principal!.tenant, principal }).restrictConsent(principal!.sessionId, consent);
+            timer.lap('restrict');
           }
           await this.scheduleConsentAlarm();
-          return json({ ok: true, consent });
+          timer.lap('alarm');
+          await this.committed();
+          timer.lap('commit');
+          const answer = json({ ok: true, consent });
+          answer.headers.set(OWNER_TIMING_HEADER, timer.header());
+          return answer;
         } catch { this.invalidateMirrors(); return json({ ok: false }, 401); }
       });
     }
@@ -3993,6 +4011,16 @@ export class ShopperReflex {
       () => undefined
     );
     return run;
+  }
+
+  /**
+   * P97 (FV3): the activation's `commit` part: the writes it made, made durable before its answer (`storage.sync()`),
+   * which the platform's output gate otherwise waits for before releasing the answer. Instrumentation only: storage
+   * without `sync` is not waited on, and a failed sync is left to that output gate exactly as without it.
+   */
+  private async committed(): Promise<void> {
+    const storage = this.state.storage as { sync?: () => Promise<void> };
+    try { if (typeof storage.sync === 'function') await storage.sync(); } catch { /* the output gate answers a failed commit as before */ }
   }
 
   /**
