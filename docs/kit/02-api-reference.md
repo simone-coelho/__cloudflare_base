@@ -244,7 +244,7 @@ level; a `default` context is recorded as an unknown context is, at the root and
 condition holds: the shopper's tracking consent; the table version in force for the page, whose carousel slot is
 `slot`; a context that version carries; the carousel measured on `rendered-v1`; images of the published catalogue
 that name the slot, no more than its `take`; the engine's own assignment of the shopper, as its decision draws it
-(her personalization consent, her enrollment anchor and the salt in force), an arm that learns, never the page's
+(the shopper's personalization consent and enrollment anchor, and the salt in force), an arm that learns, never the page's
 claim, and an anchor it cannot read counts nothing; and a retention policy in force for online learning. Only the
 version in force is admitted: a page cached from the table's stable address before a publication sends a replaced
 version for up to a minute (its `max-age`), and those beacons answer `stale_table` and count nothing. The answer is
@@ -1487,9 +1487,9 @@ record kept for her carries `experiment: { id, saltVersion, arm, anchorGeneratio
 re-randomising the running one. The arm is read back from that anchor on every decision; it is
 never re-drawn from whichever id the browser happens to be carrying.
 
-`saltVersion` counts the distinct salts published up to the pinned learn revision, not the revision
-of the document that carries them, so an unrelated edit does not mint a second version of a running
-experiment. `saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number.
+`saltVersion` is 1 for the first salt and one more at each change of salt published up to the pinned learn
+revision, so a salt that returns counts again; it is not the revision of the document that carries the salt,
+so an unrelated edit does not mint a second version of a running experiment. `saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number.
 Each learn publication carries the count from the learn revision before it; where that revision carries
 none, the publication counts over the whole stored learn history once, and a revision the store cannot
 produce leaves the count `null`. Decisions, outcomes and the context table read the count the learn
@@ -1533,9 +1533,10 @@ the identifier keeping the arm it drew), `mismatch` (a share of 0 or 1 that cann
 malformed member is refused `400 'Invalid arm member'` on every path, a new browser's first request included, before
 anything is issued or written. Each reason is counted for your operators on `GET /v1/{tenant}/learn/queue` as
 `arm_draw`, `{ capped, ignored, mismatch, republished }`, an exact count of every reason over thirty days that names
-no visitor; a draw is counted after its answer and never holds it, and a draw whose record cannot reach the counter
-(the learn statistics binding missing, the counter's object failing, or no answer within two seconds) is not
-counted; the count restarts at the release that introduced this counter, so no earlier draw is in it. If the count cannot be read within two seconds,
+no visitor; a draw is counted after its answer and never holds it, a draw whose record cannot reach the counter
+(the learn statistics binding missing or the counter's object failing) is not counted, and a draw whose record
+has no answer within two seconds may not be counted (the counter's object may have applied it before the wait
+ended); the count restarts at the release that introduced this counter, so no earlier draw is in it. If the count cannot be read within two seconds,
 the queue answers it as zeros rather than waiting. Two cases are told and not counted: a page on the session route or a
 session broker gets the engine's own draw, so its head script can paint another class than its first answer's
 until the SDK keeps that answer's experiment; and a recognised shopper's arm is the shopper's enrollment anchor's (above),
