@@ -30,6 +30,7 @@ import { stampOwner } from '@/auth/authority';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type Revision, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, completePublicationSet, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
+  catalogPackHeld, pinPublication, readPinnedPublication, readStageDirectory, STAGE_DIRECTORY_MAX_BYTES,
   readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationChange, type PublicationPin,
   catalogPartStored, readCatalogPart, type CatalogPart, catalogIdIndexStored, readCatalogIdIndex,
   catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardStored, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard,
@@ -70,10 +71,10 @@ contentRoutes.onError((error, c) => {
   throw error;
 });
 /**
- * P87 (E11): the eight routes of the catalogue import a `catalog-import` service credential is admitted to, marked
+ * P87 (E11): the routes of the catalogue import a `catalog-import` service credential is admitted to, marked
  * before `operatorJwt` runs (every other operator route refuses that credential there, before its handler): GET the
- * document, its history, a revision and the catalogue's publication; POST validate, import, pull and the catalogue's
- * publication recover. A kind, in the path or in `?kind=`, is read as `kindOf` reads every kind, lower-cased, so another
+ * document, its history, a revision and the catalogue's publication; POST validate, import, pull, the catalogue's
+ * publication recover and (P98, C2) the stage and the publish of staged files. A kind, in the path or in `?kind=`, is read as `kindOf` reads every kind, lower-cased, so another
  * spelling answers the credential as it answers an operator; HEAD is the GET route Hono serves it as.
  */
 function catalogImportRoute(c: Context<Ctx>): boolean {
@@ -82,7 +83,8 @@ function catalogImportRoute(c: Context<Ctx>): boolean {
   const kinds = c.req.queries('kind'), catalogueTarget = !kinds || (kinds.length === 1 && kinds[0]!.toLowerCase() === 'catalog');
   const at = (...tail: string[]) => rest.length === tail.length && tail.every((part, i) => (part === '*' ? rest[i] !== '' : rest[i] === part));
   if (method === 'GET') return at() || at('history') || at('revisions', '*') || (at('publication') && catalogueTarget);
-  if (method === 'POST') return at('validate') || at('import') || at('pull') || (at('publication', 'recover') && catalogueTarget);
+  // P98 (C2, LD2): the staged files and their one publication are the import's, and admit its credential alike.
+  if (method === 'POST') return at('validate') || at('import') || at('pull') || at('stage') || at('publish') || (at('publication', 'recover') && catalogueTarget);
   return false;
 }
 // Reads and validation require access authentication too; enforced operations
@@ -419,15 +421,17 @@ class IndexEdit {
   place(product: string, part: CatalogPart, pointer: CatalogPartPointer): void {
     this.placed.set(product, part); this.pointers.set(product, { digest: pointer.digest, records: pointer.records });
   }
-  setPointer(product: string, pointer: CatalogPartPointer | null): void { this.placed.delete(product); this.pointers.set(product, pointer); }
+  setPointer(product: string, pointer: ResolvedPartPointer | null): void { this.placed.delete(product); this.pointers.set(product, pointer); }
   setOwner(id: string, product: string | null): void { this.owners.set(id, product); }
+  /** P98 (C2): the record ids whose place this edit changes, and the product each now lives in (null: in none). */
+  ownerEdits(): ReadonlyMap<string, string | null> { return this.owners; }
   /**
    * The index after the edits and the one pack holding every object it placed (nothing written): the parts placed, then
    * — for a load that writes — what it read of the objects stored before packs and the live parts of the one pack it
    * re-homes, then each shard and id shard whose digest moved (or that is re-homed). The manifest's pointers name each
    * object's pack by its row in the pack table, ordered by digest.
    */
-  async build(options: { writing?: boolean } = {}): Promise<BuiltIndex> {
+  async build(options: { writing?: boolean; sizes?: ReadonlyMap<string, number> } = {}): Promise<BuiltIndex> {
     const held = this.held, tabled = !!held?.packs, pack = new PackWriter();
     // The pack table as the revision in force holds it, and the objects it reaches that are stored before packs.
     const live = new Map<string, { objects: number; bytes: number; size: number }>();
@@ -440,7 +444,8 @@ class IndexEdit {
     }
     const count = (address: PackAddress | undefined, sign: 1 | -1) => {
       if (!address) { legacy += sign; return; }
-      const row = live.get(address.pack) ?? { objects: 0, bytes: 0, size: 0 };
+      // P98 (C2): a pack outside the table (a stage's) enters it with the size its HEAD answered.
+      const row = live.get(address.pack) ?? { objects: 0, bytes: 0, size: options.sizes?.get(address.pack) ?? 0 };
       row.objects += sign; row.bytes += sign * address.bytes; live.set(address.pack, row);
     };
     const pointers = new Map(this.pointers), forced = new Set<string>(), forcedIds = new Set<string>();
@@ -1706,7 +1711,8 @@ class HeldLoad extends Error {
  * the parts to write, or the invalid document for the validator to refuse.
  */
 async function assembleParted(env: Env, scope: string, current: ContentCatalog, set: PublicationPin, incoming: Record<string, unknown>[], positions: readonly number[],
-  mode: ImportMode, opts: { expire?: number }, sink: { placed?: { pieces: unknown[]; positions: (number | null)[] }; touched?: { before: ContentCatalog; after: ContentCatalog } }):
+  mode: ImportMode, opts: { expire?: number }, sink: { placed?: { pieces: unknown[]; positions: (number | null)[] }; touched?: { before: ContentCatalog; after: ContentCatalog } },
+  stage?: StageSink):
   Promise<{ manifest?: ContentCatalog; built?: BuiltIndex; document?: unknown; writing?: () => Promise<{ manifest: ContentCatalog; built: BuiltIndex }> }> {
   const slots = new Set(current.productSlots ?? []), sharedIn: number[] = [], productIn = new Map<string, number[]>();
   incoming.forEach((piece, j) => {
@@ -1744,6 +1750,8 @@ async function assembleParted(env: Env, scope: string, current: ContentCatalog, 
       const owner = await ownerOf(id);
       if (owner === undefined || owner === product) continue;
       if (productIn.has(owner)) movedOut.set(owner, (movedOut.get(owner) ?? new Set()).add(id));
+      // P98 (C2): a stage leaves to the publish a record whose product another staged file may carry.
+      else if (stage) stage.moves.push({ id, from: owner, to: product, at: at(j) });
       else collisions.push(movedCollision(at(j), owner, product));
     }
   }
@@ -1823,6 +1831,14 @@ async function assembleParted(env: Env, scope: string, current: ContentCatalog, 
   }
   for (const ids of known.values()) for (const id of ids) if (typeof id === 'string' && !kept.has(id)) edit.setOwner(id, null);
   for (const id of stale) if (!kept.has(id)) edit.setOwner(id, null);
+  if (stage) {
+    // P98 (C2): a stage keeps, for its publish, each named product's part after the load and whether its digest moved,
+    // the record ids whose place it changes, and the shared pieces where the file acts on them; no index is built.
+    for (const [product, pieces] of parts) stage.products.set(product, { part: { product, pieces }, pointer: now[product]!, moved: pointers.get(product)?.digest !== now[product]!.digest });
+    for (const [id, product] of edit.ownerEdits()) stage.owners.set(id, product);
+    stage.shared = actsOnShared ? sharedPieces : null;
+    return {};
+  }
   const members = { ...(version ? { version } : {}), ...(current.typeFallback ? { typeFallback: current.typeFallback } : {}), productSlots: current.productSlots };
   const built = await edit.build();
   // The skip and the dry run read the index above; a load that writes builds it once more (only where it read objects
@@ -2001,6 +2017,31 @@ function dryRunMeta(c: Context<Ctx>): WriteMeta {
   return catalogMeta(c, undefined, false, headers);
 }
 
+/** P91: the file a load carries, as the import reads it: CSV by its header, or JSON by its records' carrier (`?path=`). */
+async function loadedFile(c: Context<Ctx>, format: string): Promise<Response | { records: unknown[]; document?: { value: unknown; accepted: ReadonlySet<string> } }> {
+  if (format === 'csv') {
+    const text = await readInputText(c.req.raw.body);
+    if (!text.trim()) return c.json({ error: 'body must be CSV text' }, 400);
+    const table = parseCsvTable(text);
+    // A header that matches a documented column only when case is ignored is a
+    // typo the boundary can recognise, and reading it as an unknown column
+    // would land every row with that field empty (F27 §5.3). Refused, naming
+    // the column the feed sent and the spelling the contract publishes. The
+    // columns are the feed's own parsed HEADER, so a header-only export and one
+    // whose rows are all blank are refused by exactly the same words as an
+    // export with rows, rather than by reporting that no record was found.
+    const variants = csvColumnCaseVariants(table.columns);
+    if (variants.length) return c.json({ ok: false, errors: variants.map(({ column, expected }) =>
+      `column '${column.slice(0, 64)}': column names are matched exactly; the published contract spells this column '${expected}'`) }, 422);
+    return { records: table.records };
+  }
+  const body = await readInputJson(c.req.raw.body);
+  if (body === null) return c.json({ error: 'body must be JSON' }, 400);
+  const found = recordsInJson(body, c.req.query('path') ?? undefined);
+  return { records: found.records, document: { value: body, accepted: catalogDocumentFields(found.carrier) } };
+}
+const formatOf = (c: Context<Ctx>) => (c.req.query('format') ?? '').toLowerCase() || (c.req.header('content-type')?.includes('csv') ? 'csv' : 'json');
+
 /**
  * POST /content/catalog/import?scope=&format=json|csv&mode=merge|replace|full&expire=&dryRun=1&path=
  * JSON: the body, or its `pieces` / `content` / `items` array, or ?path=a.b.
@@ -2017,33 +2058,249 @@ contentRoutes.post('/catalog/import', async (c) => {
   if (dryRun !== undefined && dryRun !== '1') return c.json({ ok: false, code: 'invalid_dry_run', error: 'dryRun must be 1 (a dry run, which writes nothing) or absent' }, 400);
   const expire = guardOf(c, mode, c.req.query('expire')); if (expire instanceof Response) return expire;
   const meta = dryRun === '1' ? dryRunMeta(c) : catalogMeta(c);
-  const format = (c.req.query('format') ?? '').toLowerCase() || (c.req.header('content-type')?.includes('csv') ? 'csv' : 'json');
+  const format = formatOf(c);
   const note = noteOf(c.req.query('note')) || `${format} import (${mode})`;
-  let records: unknown[];
-  let document: { value: unknown; accepted: ReadonlySet<string> } | undefined;
-  if (format === 'csv') {
-    const text = await readInputText(c.req.raw.body);
-    if (!text.trim()) return c.json({ error: 'body must be CSV text' }, 400);
-    const table = parseCsvTable(text);
-    records = table.records;
-    // A header that matches a documented column only when case is ignored is a
-    // typo the boundary can recognise, and reading it as an unknown column
-    // would land every row with that field empty (F27 §5.3). Refused, naming
-    // the column the feed sent and the spelling the contract publishes. The
-    // columns are the feed's own parsed HEADER, so a header-only export and one
-    // whose rows are all blank are refused by exactly the same words as an
-    // export with rows, rather than by reporting that no record was found.
-    const variants = csvColumnCaseVariants(table.columns);
-    if (variants.length) return c.json({ ok: false, errors: variants.map(({ column, expected }) =>
-      `column '${column.slice(0, 64)}': column names are matched exactly; the published contract spells this column '${expected}'`) }, 422);
-  } else {
-    const body = await readInputJson(c.req.raw.body);
-    if (body === null) return c.json({ error: 'body must be JSON' }, 400);
-    const found = recordsInJson(body, c.req.query('path') ?? undefined);
-    records = found.records;
-    document = { value: body, accepted: catalogDocumentFields(found.carrier) };
+  const file = await loadedFile(c, format); if (file instanceof Response) return file;
+  return importInto(c, file.records, mode, note, { format, path: c.req.query('path') ?? null }, meta, file.document, { dryRun: dryRun === '1', expire });
+});
+
+// ── P98 (E25, R-P549, design C2): files staged in parallel, published once ─────────────────────────────────────────
+//
+// A catalogue of 40,000 products is sent as files of up to 5,000 (today's input caps), each STAGED over the same
+// base — the catalogue revision and set its If-Match names — and in parallel: a stage runs the import's whole
+// assembly for its file (the modes per product, the vocabulary, the validator, the refusals of an id in two places
+// against the base), writes ONE pack holding each part whose digest moved and the stage's directory, and publishes
+// nothing. The PUBLISH then names the stages: it reads each stage's directory (one ranged read), runs the refusals of
+// an id in two places ACROSS them, as across one file, rebuilds the shards and id shards the stages touch into one
+// pack, and commits them all in one compare-and-set. A stage's parts stay in its pack, which the revision's pack table
+// names. A stage never published names nothing, and the pack-aware purge collects it past the grace.
+
+/** P98 (C2): a stage's id, as its answer gives it: its pack's digest, its directory's digest and the directory's place. */
+const STAGE_ID = /^([0-9a-f]{64})\.([0-9a-f]{64})\.(0|[1-9][0-9]{0,9})\.([1-9][0-9]{0,8})$/;
+/** P98 (C2): the most stages one publish names. */
+const MAX_STAGES = 64;
+/** P98 (C2): what a stage keeps of its assembly for the publish (`assembleParted`). */
+interface StageSink {
+  products: Map<string, { part: CatalogPart; pointer: CatalogPartPointer; moved: boolean }>;
+  owners: Map<string, string | null>;
+  moves: Array<{ id: string; from: string; to: string; at: string }>;
+  shared: ContentPiece[] | null;
+}
+/**
+ * P98 (C2): a stage's directory, the last object of its pack: the base it was assembled over, every product the file
+ * names with its part pointer after the load (a range in this pack where its digest moved), the record ids whose place
+ * it changes, every record id the file carries (its address in the file and its product, null for a shared record),
+ * the records it would move from a product the file does not carry, the shared pieces where it acts on them, and the
+ * counts its answer gave.
+ */
+interface StageDirectory {
+  schema: 'catalog-stage/v1'; scope: string; base: { revision: number; publication: { revision: number; digest: string } }; mode: ImportMode;
+  received: number; imported: number; changed: number; removed: number;
+  products: Record<string, { digest: string; records: number; at?: number; bytes?: number }>;
+  owners: Record<string, string | null>;
+  sent: Record<string, [string, string | null]>;
+  moves: Array<{ id: string; from: string; to: string; at: string }>;
+  shared: ContentPiece[] | null;
+}
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+function stageDirectoryOf(value: unknown, scope: string): StageDirectory | null {
+  if (!isObject(value) || value.schema !== 'catalog-stage/v1' || value.scope !== scope || !isObject(value.base) || !isObject(value.products) || !isObject(value.owners)
+    || !isObject(value.sent) || !Array.isArray(value.moves) || !(value.shared === null || Array.isArray(value.shared))) return null;
+  return value as unknown as StageDirectory;
+}
+const stageName = (id: string) => `stage ${id.slice(0, 12)}`;
+const stageMissing = (id: string) => new PublicationError(`${stageName(id)} is not stored (never written, or collected as a stage never published); stage its file again; nothing was written`, 410, 'stage_missing');
+
+/**
+ * POST /content/catalog/stage?scope=&format=json|csv&mode=merge|replace|full&expire=&path=  (P98, C2)
+ * One file of a load, assembled over the base its If-Match names (`"<catalogue revision>/<set revision>/<set digest>"`,
+ * as the import's) and written as one pack; nothing is published. Answers its `stage` id for the publish. The order
+ * is the import's: the authority, the import-sources list, the mode and the guard, then the preconditions.
+ */
+contentRoutes.post('/catalog/stage', async (c) => {
+  const scope = catalogScope(c);
+  const outside = await sourceRefusal(c, scope); if (outside) return outside;
+  const mode = c.req.query('mode');
+  if (!isImportMode(mode)) return modeRefusal(c);
+  if (c.req.query('dryRun') !== undefined) return c.json({ ok: false, code: 'invalid_dry_run', error: 'a stage publishes nothing; a dry run is the import\'s (POST /content/catalog/import?dryRun=1)' }, 400);
+  const expire = guardOf(c, mode, c.req.query('expire')); if (expire instanceof Response) return expire;
+  // A stage carries no Idempotency-Key: its pack is content-addressed and it publishes nothing.
+  const meta = dryRunMeta(c), format = formatOf(c);
+  const file = await loadedFile(c, format); if (file instanceof Response) return file;
+  const { pieces: incoming, positions } = positionedCandidates(file.records);
+  if (incoming.length === 0) return c.json({ ok: false, errors: ['no records found in the import'] }, 422);
+  const vocabulary = await catalogueVocabularyRefusals(c, scope, { pieces: incoming });
+  if (vocabulary) return c.json({ ok: false, errors: recordAddressed(vocabulary.errors, incoming, positions), received: file.records.length }, vocabulary.status);
+  // The base: the set and the catalogue revision the If-Match names, else 409 as a stale import.
+  const set = await pinPublication(c.env, scope), named = meta.expectedPublication!;
+  if (set.revision !== named.revision || set.digest !== named.digest) throw new PublicationError('Publication conflicts with the retained operation or authored revision set', 409, 'publication_conflict');
+  const current = (await readPinnedPublication(c.env, CONTENT_KIND, scope, set));
+  if (current.revision !== meta.expectedRevision) throw new PublicationError('Publication conflicts with the retained operation or authored revision set', 409, 'publication_conflict');
+  if (!current.value.productSlots) {
+    return c.json({ ok: false, code: 'stage_unsupported', error: 'staged files load a catalogue that declares productSlots; load this catalogue with POST /content/catalog/import' }, 422);
   }
-  return importInto(c, records, mode, note, { format, path: c.req.query('path') ?? null }, meta, document, { dryRun: dryRun === '1', expire });
+  const sink: Parameters<typeof assembleParted>[8] = {}, stage: StageSink = { products: new Map(), owners: new Map(), moves: [], shared: null };
+  const addressed = (errors: string[]) => sink.placed ? recordAddressed(errors, sink.placed.pieces, sink.placed.positions) : errors;
+  let parted: Awaited<ReturnType<typeof assembleParted>>;
+  try { parted = await assembleParted(c.env, scope, current.value, set, incoming, positions, mode, { expire }, sink, stage); }
+  catch (error) {
+    if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: addressed(error.errors), received: file.records.length }, 422);
+    if (error instanceof HeldLoad && error.held === 'expire') {
+      return c.json({ ok: false, error: `mode=full expires ${error.expiring} stored piece${error.expiring === 1 ? '' : 's'} the file leaves out; expire=${expire} names another number, so nothing was written`,
+        code: 'expire_mismatch', expire: error.expiring }, 409);
+    }
+    throw error;
+  }
+  if (parted.document !== undefined) {
+    const checked = CONTENT_KIND.validate(parted.document);
+    return c.json({ ok: false, errors: addressed(checked.ok ? ['the staged records do not validate'] : checked.errors), received: file.records.length }, 422);
+  }
+  // The stage's one pack: each part whose digest moved, then its directory.
+  const pack = new PackWriter(), products: StageDirectory['products'] = {}, slots = new Set(current.value.productSlots);
+  for (const [product, { part, pointer, moved }] of stage.products) {
+    if (!moved) { products[product] = { digest: pointer.digest, records: pointer.records }; continue; }
+    const at = await pack.add(part, partTooLarge(product));
+    products[product] = { digest: pointer.digest, records: pointer.records, at: at.at, bytes: at.bytes };
+  }
+  const sent: StageDirectory['sent'] = {};
+  incoming.forEach((piece, j) => { if (typeof piece.id === 'string') sent[piece.id] = [recordAddress(positions[j]!, piece.id), partProductOf(piece, slots)]; });
+  const compared = sink.touched ?? { before: { pieces: [] }, after: { pieces: [] } };
+  const directory: StageDirectory = { schema: 'catalog-stage/v1', scope, base: { revision: current.revision, publication: { revision: set.revision, digest: set.digest } }, mode,
+    received: file.records.length, imported: incoming.length, changed: changedPieces(compared.before, compared.after), removed: removedPieces(compared.before, compared.after),
+    products, owners: Object.fromEntries(stage.owners), sent, moves: stage.moves, shared: stage.shared };
+  const at = await pack.add(directory, () => new PublicationError(`The stage's directory would pass ${STAGE_DIRECTORY_MAX_BYTES} bytes; stage the file in smaller files; nothing was written`, 413, 'load_too_large'), STAGE_DIRECTORY_MAX_BYTES);
+  const sealed = (await pack.seal())!;
+  await writePack(c.env, scope, sealed);
+  const view = { ...current.value, pieces: compared.after.pieces };
+  return c.json({ ok: true, staged: true, scope, mode, stage: `${sealed.digest}.${at.digest}.${at.at}.${at.bytes}`,
+    base: { revision: current.revision, publication: current.publication }, received: directory.received, imported: directory.imported,
+    products: Object.keys(products).length, changed: directory.changed, removed: directory.removed, changedBasis: 'stored' as const,
+    diagnostics: withVariantFirst(await catalogDiagnostics(c.env, scope, view, null,
+      { records: file.records, accepted: FEED_FIELDS, ...(file.document ? { document: file.document } : {}), pieceRecords: storedPieceRecords(view, incoming, positions) }), current.value, incoming, positions) });
+});
+
+/**
+ * P98 (C2): the publication of staged files over the catalogue in force: each stage's pack headed (its size, for the
+ * pack table) and its directory read by one ranged read; every stage over this very base (409 `stage_stale` otherwise);
+ * no product, and no record id, in two stages, and the shared pieces acted on by one stage at most (422 `stage_overlap`,
+ * or the collision an id in two places is in one file: `record_moved`, `id_in_part`, `id_shared`); a record a stage
+ * moves from a product another stage carries leaves that product's part, as in one file, and one moved from a product
+ * no stage carries is refused `record_moved`. Answers the manifest, the built index and the counts.
+ */
+async function stagedPlan(env: Env, scope: string, current: ContentCatalog, ids: readonly string[], expected: { revision: number; publication: { revision: number; digest: string } }):
+  Promise<{ manifest: ContentCatalog; stages: Array<{ id: string; pack: string }>; counts: { received: number; imported: number; changed: number; removed: number };
+    writing: () => Promise<{ manifest: ContentCatalog; built: BuiltIndex }> }> {
+  if (!current.productSlots) throw new PublicationError('staged files load a catalogue that declares productSlots', 422, 'stage_unsupported');
+  const stages: Array<{ id: string; pack: string; directory: StageDirectory }> = [], sizes = new Map<string, number>();
+  for (const id of ids) {
+    const m = STAGE_ID.exec(id)!, pack = m[1]!, held = await catalogPackHeld(env, scope, pack);
+    if (!held) throw stageMissing(id);
+    sizes.set(pack, held.size);
+    const directory = stageDirectoryOf(await readStageDirectory(env, scope, m[2]!, { pack, at: Number(m[3]), bytes: Number(m[4]) }), scope);
+    if (!directory) throw stageMissing(id);
+    if (directory.base.revision !== expected.revision || directory.base.publication.revision !== expected.publication.revision || directory.base.publication.digest !== expected.publication.digest) {
+      throw new PublicationError(`${stageName(id)} was staged over catalogue revision ${directory.base.revision}, not the revision this publish names (${expected.revision}); stage the files again over the catalogue in force; nothing was written`, 409, 'stage_stale');
+    }
+    stages.push({ id, pack, directory });
+  }
+  // No product in two stages, and the shared pieces acted on by one stage at most.
+  const carrier = new Map<string, number>(), overlaps: string[] = [];
+  stages.forEach(({ id, directory }, k) => {
+    for (const product of Object.keys(directory.products)) {
+      const other = carrier.get(product);
+      if (other === undefined) carrier.set(product, k); else overlaps.push(`product ${quotedId(product)} is loaded by ${stageName(stages[other]!.id)} and ${stageName(id)}`);
+    }
+  });
+  const sharing = stages.filter(({ directory }) => directory.shared !== null);
+  if (sharing.length > 1) overlaps.push(`the shared pieces are loaded by ${sharing.map(({ id }) => stageName(id)).join(' and ')}`);
+  if (overlaps.length) throw new PublicationError(`${overlaps.slice(0, 20).join('; ')}${overlaps.length > 20 ? `; and ${overlaps.length - 20} more` : ''}; a product, and the shared pieces, are loaded by one staged file; nothing was written`, 422, 'stage_overlap');
+  // An id in two places, across the stages as within one file.
+  const collisions: Collision[] = [], sentBy = new Map<string, [string, string | null]>();
+  for (const { directory } of stages) for (const [id, [at, product]] of Object.entries(directory.sent)) {
+    const other = sentBy.get(id);
+    if (!other) { sentBy.set(id, [at, product]); continue; }
+    if (product !== null && other[1] !== null) collisions.push(movedCollision(at, other[1], product));
+    else if (product === null && other[1] !== null) collisions.push(inPartCollision(at, other[1]));
+    else if (product !== null) collisions.push(sharedCollision(at, product));
+  }
+  const leaving = new Map<string, Set<string>>();
+  for (const { directory } of stages) for (const move of directory.moves) {
+    if (!carrier.has(move.from)) { collisions.push(movedCollision(move.at, move.from, move.to)); continue; }
+    leaving.set(move.from, (leaving.get(move.from) ?? new Set()).add(move.id));
+  }
+  if (collisions.length) throw collisionRefusal(collisions);
+  // The index's edits: each staged part where its digest moved (in its stage's pack), each record a stage moves out of
+  // a product another stage carries dropped from that product's part, and the ids whose place changed.
+  const edit = new IndexEdit(env, scope, current);
+  await edit.prefetchShards(carrier.keys());
+  for (const { pack, directory } of stages) for (const [product, p] of Object.entries(directory.products)) {
+    if (p.at !== undefined && p.bytes !== undefined) edit.setPointer(product, { digest: p.digest, records: p.records, address: { pack, at: p.at, bytes: p.bytes } });
+  }
+  for (const [product, ids] of leaving) {
+    const pointer = await edit.pointer(product);
+    if (!pointer) continue;
+    const part = await edit.part(pointer), pieces = (part.pieces as ContentPiece[]).filter(piece => !ids.has(piece.id));
+    if (pieces.length === part.pieces.length) continue;
+    edit.place(product, { product, pieces }, { digest: await documentDigest({ product, pieces } satisfies CatalogPart), records: pieces.length });
+  }
+  const owners = new Map<string, string | null>();
+  for (const { directory } of stages) for (const [id, product] of Object.entries(directory.owners)) if (product !== null || !owners.has(id)) owners.set(id, product);
+  await edit.prefetchIdShards(owners.keys());
+  for (const [id, product] of owners) edit.setOwner(id, product);
+  const version = carriedVersion(current), shared = sharing[0]?.directory.shared ?? current.pieces;
+  const members = { ...(version ? { version } : {}), ...(current.typeFallback ? { typeFallback: current.typeFallback } : {}), productSlots: current.productSlots };
+  const counts = { received: 0, imported: 0, changed: 0, removed: 0 };
+  for (const { directory } of stages) for (const key of ['received', 'imported', 'changed', 'removed'] as const) counts[key] += directory[key];
+  // The skip reads the index as the stages leave it; the publish that writes builds it once more (`IndexEdit.build`'s `writing`).
+  const plain = await edit.build({ sizes });
+  const writing = async () => { const built = await edit.build({ writing: true, sizes }); return { manifest: manifestOf(members, shared, built.index), built }; };
+  return { manifest: manifestOf(members, shared, plain.index), stages: stages.map(({ id, pack }) => ({ id, pack })), counts, writing };
+}
+
+/**
+ * POST /content/catalog/publish?scope=  { stages: ["<stage id>", …], note? }  (P98, C2)
+ * The staged files published once, over the catalogue revision and set the If-Match names, with an Idempotency-Key, as
+ * an import is: one head reservation, one commit. A publish whose result is the catalogue in force writes nothing (the
+ * skip). Each stage's pack is headed again once the head is held; one collected meanwhile abandons the reservation and
+ * answers 410 `stage_missing`, nothing written.
+ */
+contentRoutes.post('/catalog/publish', async (c) => {
+  const scope = catalogScope(c);
+  const outside = await sourceRefusal(c, scope); if (outside) return outside;
+  const body = await readInputJson(c.req.raw.body) as { stages?: unknown; note?: unknown } | null;
+  const ids = body?.stages;
+  if (!Array.isArray(ids) || !ids.length || ids.length > MAX_STAGES || !ids.every(id => typeof id === 'string' && STAGE_ID.test(id)) || new Set(ids).size !== ids.length) {
+    return c.json({ ok: false, code: 'invalid_stages', error: `stages must name 1 to ${MAX_STAGES} distinct stage ids, each as POST /content/catalog/stage answered it` }, 400);
+  }
+  const meta = catalogMeta(c), note = noteOf(body?.note) || `publish of ${ids.length} staged file${ids.length === 1 ? '' : 's'}`, held: PackHold = {};
+  let plan: Awaited<ReturnType<typeof stagedPlan>> | undefined, base: ContentCatalog | undefined;
+  const stillHeld = async () => {
+    await packReserved(c.env, scope, held)();
+    for (const stage of plan?.stages ?? []) if (!await catalogPackHeld(c.env, scope, stage.pack)) throw stageMissing(stage.id);
+  };
+  let result;
+  try {
+    result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'publish', stages: ids }, { ...meta, note }, async (current, set) => {
+      base = current;
+      plan = await stagedPlan(c.env, scope, current, ids as string[], { revision: meta.expectedRevision!, publication: meta.expectedPublication! });
+      if (await documentDigest(CONTENT_KIND.stamp!(plan.manifest, meta.expectedRevision!)) === await documentDigest(current)) throw new HeldLoad('unchanged', current);
+      const written = await plan.writing();
+      manifestCap(written.manifest, set);
+      // P98: the publish's one pack (the shards and id shards the stages touch), before the head is reserved.
+      await writeIndex(c.env, scope, written.built, held);
+      return written.manifest;
+    }, stillHeld);
+  } catch (error) {
+    if (error instanceof PublicationError && error.code === 'document_too_large') throw namedManifest(error);
+    if (error instanceof HeldLoad && error.held === 'unchanged' && plan) {
+      return c.json({ ok: true, scope, stages: ids.length, ...plan.counts, changed: 0, removed: 0, changedBasis: 'stored' as const, skipped: true, reason: 'unchanged',
+        pieces: catalogPieceCount(base!), revision: meta.expectedRevision, publication: meta.expectedPublication, version: base!.version ?? '' });
+    }
+    throw error;
+  }
+  if (!result.ok) return c.json({ ok: false, errors: result.errors }, 422);
+  return c.json({ ok: true, scope, stages: ids.length, ...(plan ? { ...plan.counts, changedBasis: 'stored' as const } : { changed: null, removed: null, changedBasis: 'unavailable' as const }),
+    pieces: catalogPieceCount(result.revision.value), revision: result.revision.revision, publication: result.revision.publication, version: result.revision.value.version ?? '' });
 });
 
 /**

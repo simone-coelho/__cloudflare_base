@@ -1029,10 +1029,10 @@ const loadTooLarge = (bytes: number) => new PublicationError(`The load would wri
 export class PackWriter {
   private readonly chunks: string[] = [];
   private size = 0;
-  /** Append one object (refused by `tooLarge` past 2 MiB, and 413 `load_too_large` past the pack's 64 MiB). */
-  async add(value: unknown, tooLarge?: () => PublicationError): Promise<{ at: number; bytes: number; digest: string }> {
+  /** Append one object (refused by `tooLarge` past `limit`, 2 MiB unless named, and 413 `load_too_large` past the pack's 64 MiB). */
+  async add(value: unknown, tooLarge?: () => PublicationError, limit = PUBLICATION_MAX_BYTES): Promise<{ at: number; bytes: number; digest: string }> {
     const raw = canonical(value), bytes = encoder.encode(raw);
-    if (bytes.byteLength > PUBLICATION_MAX_BYTES) throw tooLarge?.() ?? new PublicationError('A catalogue object exceeds 2 MiB', 413, 'document_too_large');
+    if (bytes.byteLength > limit) throw tooLarge?.() ?? new PublicationError('A catalogue object exceeds 2 MiB', 413, 'document_too_large');
     if (this.size + bytes.byteLength > PACK_MAX_BYTES) throw loadTooLarge(this.size + bytes.byteLength);
     const at = this.size; this.chunks.push(raw); this.size += bytes.byteLength;
     return { at, bytes: bytes.byteLength, digest: hex(await crypto.subtle.digest('SHA-256', bytes)) };
@@ -1118,6 +1118,24 @@ async function readPackedValue(storage: R2Bucket, scope: string, address: PackAd
   const bytes = await readPackBytes(storage, scope, address.pack, address.at, address.bytes);
   const value = bytes ? parsedBytes(bytes) : undefined;
   return value === undefined ? null : { value, bytes: address.bytes };
+}
+/** P98 (C2): a stage's directory, at most 8 MiB, the last object of its pack. */
+export const STAGE_DIRECTORY_MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * P98 (C2): a stored pack's size and the digest its metadata names, by one HEAD (tried twice), or null where the store
+ * holds no such pack: the publish of staged files checks each stage's pack this way, and the pack table counts its size.
+ */
+export async function catalogPackHeld(env: Env, scope: string, pack: string): Promise<{ size: number; sha256: string | undefined } | null> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  return HASH.test(pack) ? packHead(storage, packKey(home, pack)) : null;
+}
+/** P98 (C2): a stage's directory by its place in its pack, its canonical value hashing to `hash`; null where the store cannot produce it. */
+export async function readStageDirectory(env: Env, scope: string, hash: string, address: PackAddress): Promise<unknown> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (!HASH.test(hash) || !HASH.test(address.pack) || !integer(address.at) || !whole(address.bytes, 1) || address.bytes > STAGE_DIRECTORY_MAX_BYTES) return null;
+  const bytes = await readPackBytes(storage, home, address.pack, address.at, address.bytes);
+  const value = bytes ? parsedBytes(bytes) : undefined;
+  return value !== undefined && await digest(value) === hash ? freeze(value) : null;
 }
 /** P98: the place a manifest pointer names through the manifest's pack table; none for an object of its own (P93). */
 export function indexAddress(index: { packs?: readonly PackEntry[] }, pointer: PlacedPointer): PackAddress | undefined {
@@ -1274,7 +1292,16 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
       if (!await casHead(storage, scope, serialized(next), loaded.etag, head => head.pending?.set.digest === set.digest)) throw conflict();
       progress.state = 'pending';
       const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
-      for (const change of changes) await change.reserved?.();
+      try { for (const change of changes) await change.reserved?.(); }
+      catch (error) {
+        // P98 (LD6): a door that can no longer keep what its intent names (a staged pack collected meanwhile) abandons
+        // the reservation: the head goes back to the set it was reserved over, by one compare-and-set, never blindly.
+        const back = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: null });
+        try {
+          if (await casHead(storage, scope, serialized(back), reservation.etag, head => head.pending === null && canonical(head.committed) === canonical(identityOf(base)))) progress.state = 'nothing_written';
+        } catch { /* the head may still hold the intent: the failure says so */ }
+        throw error;
+      }
       const committed = await finish(storage, reservation, meta.authorize, progress);
       // W38 B4: only after the new set is committed, and never able to fail it. P98 (LD6): a catalogue publication
       // also sweeps the catalogue's packs (`sweepCatalogue`).
@@ -1630,11 +1657,15 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       // stops on its budget leaves the body, so the next publication resolves them again and nothing is lost for good.
       if (parted && ref.kind === 'content') {
         const value = await revisionValue(storage, work, ref, n, values);
-        // P98 (LD6): a revision with a pack table names packs, which the pack sweep below resolves by the tables alone.
-        if (value && !packTableOf(value)) {
+        if (value) {
           const others: unknown[] = [];
           for (const m of await storedRevisions(storage, work, ref)) if (m !== n) { const other = await revisionValue(storage, work, ref, m, values); if (other) others.push(other); }
-          await sweep(storage, work, await orphansOf(storage, work, ref.scope, value, others), now - ATTACHMENT_GRACE_MS);
+          // P98 (LD6): a revision with a pack table names packs, resolved by the tables alone (no shard is read): each pack
+          // only this revision's table names goes before its body, as P93's attachments do.
+          const table = packTableOf(value);
+          const orphans = table ? table.filter(row => !others.some(other => packTableOf(other)?.some(peer => peer.digest === row.digest))).map(row => packKey(ref.scope, row.digest))
+            : await orphansOf(storage, work, ref.scope, value, others);
+          await sweep(storage, work, orphans, now - ATTACHMENT_GRACE_MS);
         }
       }
       spend(work);
@@ -1790,6 +1821,8 @@ async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, valu
  * 1,000 — and the deletions go 1,000 to a call, all within the purge's budget.
  */
 async function sweep(storage: R2Bucket, work: PurgeWork, keys: readonly string[], cutoff: number): Promise<void> {
+  // P98 (LD6): packs are deleted only while the head holds no pending set (`deleteWhileIdle`).
+  const scope = /^config-publication\/v1\/([^/]+)\/content\/pack\//.exec(keys.find(key => /\/content\/pack\//.test(key)) ?? '')?.[1];
   const groups = new Map<string, Set<string>>();
   for (const key of keys) { const dir = key.slice(0, key.lastIndexOf('/') + 1), group = groups.get(dir) ?? new Set<string>(); group.add(key); groups.set(dir, group); }
   const old: string[] = [];
@@ -1805,6 +1838,7 @@ async function sweep(storage: R2Bucket, work: PurgeWork, keys: readonly string[]
       return pending.size === 0;
     });
   }
+  if (scope) { await deleteWhileIdle(storage, work, scope, old); return; }
   for (let i = 0; i < old.length; i += 1000) { spend(work); await storage.delete(old.slice(i, i + 1000)); }
 }
 /** P86 (R-P424): the pending-publication grace: an attachment younger than this is never purged. */
@@ -1817,12 +1851,15 @@ async function uploadedBefore(storage: R2Bucket, work: PurgeWork, key: string, c
   const at = found?.uploaded instanceof Date ? found.uploaded.getTime() : NaN;
   return Number.isFinite(at) && at < cutoff;
 }
-/** P86: whether a purge has parts to consider: a content candidate, and at least one part object of the scope. */
+/** P86: whether a purge has parts to consider: a content candidate, and at least one part object of the scope; P98: or one pack. */
 async function holdsParts(storage: R2Bucket, work: PurgeWork, scope: string, refs: Ref[]): Promise<boolean> {
   if (!refs.some(ref => ref.kind === 'content')) return false;
-  spend(work);
-  const page = await storage.list({ prefix: partKey(scope, '').slice(0, -'.json'.length), limit: 1 }) as unknown as Listed;
-  return Array.isArray(page?.objects) && page.objects.length > 0;
+  for (const prefix of [partKey(scope, '').slice(0, -'.json'.length), packKey(scope, '').slice(0, -'.pack'.length)]) {
+    spend(work);
+    const page = await storage.list({ prefix, limit: 1 }) as unknown as Listed;
+    if (Array.isArray(page?.objects) && page.objects.length > 0) return true;
+  }
+  return false;
 }
 /**
  * W38 B4 with W21 E1.07: may this member's old revisions be purged without
