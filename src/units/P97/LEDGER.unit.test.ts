@@ -83,6 +83,23 @@
 // RESIDUALS (told): the copy is not run in workerd here (DESIGN §8; no native leg is ruled; LV1 runs it); the work
 // order's line references are as of 340cd410/ed7d6bbe; kit 02's "the stages of the decision the new shopper's object
 // made" (in its Server-Timing sentence) is not pinned by FV4 and becomes inexact under the design.
+// R-P556 (lane L21-pre on the pair's measurement release r15, from 2ca83399): the first contact with the brand-new object is
+// 77–97% of the `session` entry on every first answer, both hosts, cold and warm — the cause FV1 removes from the answer.
+//
+// COLLISION (the R10 sweep, the whole suite measured under the sketch and today): src/units/P68/LEDGER.unit.test.ts
+// unit:P68.KT1 ("kit 02 :99 and :1031: every citation lands on its construct") is RED under the instrumentation commit
+// 2ca83399 alone (measured on its tree): kit 02 :99 and :1031 cite src/durable-objects/ShopperReflex.ts :570, :1948,
+// :1953, :4023 and :4076, lines it moved. No test to re-form: kit 02's citations are inside P97's grant and move with the
+// lines (for the lead and the builder). No other file is RED under the sketch alone.
+// MEASURED (_evidence/parity-step3/S41/specifier/logs/, serial, --no-cache, one worker, each tree its working directory
+// and root; trees under scratch/: today = ed7d6bbe, step1 = 2ca83399, sketch = 2ca83399 + sketches/design.cjs, wf = the
+// wrong fixes): today 18 RED for the missing behaviour (FV1 6, FV2 8, FV3 2, FV4 2) and the 8 lock legs GREEN (FV5 6, FV3's
+// browser-facing lock 2) (j1-today-final); step1 FV3 4/4, the rest RED (j2-step1-final); the sketch 26/26 three times
+// (c2-sketch, e-wf-design, h-full-sketch). The wrong fixes (e-wf-*), each RED on its own legs: kept 14, dropped 8, writes
+// 2, nofallback 2, leak 4, concurrent 8, consent 4, kitleft 2. The R10 under the sketch: the original holds RED P76 FA1 4
+// and P94 AD1 2 (d2), re-pointed 28/28 (d1), weakened 6 RED (d6); re-pointed on today and on step1, the same six RED on
+// their preconditions until the design lands (d3, d4). The whole suite under the sketch 4245/4272, 272/282 files; its ten
+// failing files fail alike on today's tree (the scratch layout's git legs) but P68 (h-full-sketch, h-full-today).
 
 import { describe, expect, it, vi } from 'vitest';
 
