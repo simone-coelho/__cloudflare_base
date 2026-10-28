@@ -1822,11 +1822,22 @@ async function revisionValue(storage: R2Bucket, work: PurgeWork, ref: Ref, n: nu
   values.set(key, value);
   return value;
 }
-interface IndexedValue { products?: Record<string, { digest?: unknown }>; idIndex?: { digest?: unknown }; index?: { shards?: Record<string, { digest?: unknown }>; ids?: Record<string, { digest?: unknown }> } }
+interface IndexedPointer { digest?: unknown; pack?: unknown; at?: unknown; bytes?: unknown }
+interface IndexedValue {
+  products?: Record<string, { digest?: unknown }>; idIndex?: { digest?: unknown };
+  index?: { packs?: Array<{ digest?: unknown } | null>; shards?: Record<string, IndexedPointer>; ids?: Record<string, IndexedPointer> };
+}
 const ownDigest = (record: Record<string, { digest?: unknown }> | undefined, key: string): string | undefined => {
   const value = record && typeof record === 'object' && Object.hasOwn(record, key) ? record[key]?.digest : undefined;
   return typeof value === 'string' && HASH.test(value) ? value : undefined;
 };
+/** P98: a pointer's digest as it names its object: the full digest, or (a pointer into a pack) its first 128 bits. */
+const pointerDigest = (record: Record<string, IndexedPointer> | undefined, key: string): string | undefined => {
+  const value = record && typeof record === 'object' && Object.hasOwn(record, key) ? record[key]?.digest : undefined;
+  return typeof value === 'string' && (HASH.test(value) || PLACED_HASH.test(value)) ? value : undefined;
+};
+/** P98: two digests naming the same object: equal, or one the first 128 bits of the other. */
+const sameObject = (a: string | undefined, b: string | undefined) => !!a && !!b && (a.length >= b.length ? a.startsWith(b) : b.startsWith(a));
 /**
  * P86, P93: the keys of the objects one revision names beside its body that no
  * other stored revision names. A one-level revision (P86): each part no other
@@ -1836,22 +1847,48 @@ const ownDigest = (record: Record<string, { digest?: unknown }> | undefined, key
  * behind such a shard that no other revision points the same product at; each id
  * shard likewise. A shard another revision names whole is named with every part
  * behind it, and is not read.
+ *
+ * P98 (R-P597): every pointer is read pack-aware. Another revision's shard is
+ * read where it lives, its own object or its range in a pack (checked against the
+ * digest its pointer names), so a part a pack revision's shard still points at
+ * without a range is named, as is a shard or id shard whose digest a packed
+ * pointer names by its first 128 bits. A peer's shard that cannot be read, or
+ * reads as another object, establishes nothing: the purge stops there, deleting
+ * nothing more, rather than treat what that shard names as unnamed.
  */
 async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, value: unknown, others: readonly unknown[]): Promise<string[]> {
   const v = value as IndexedValue, peers = others as IndexedValue[], orphans: string[] = [], shards = new Map<string, CatalogShard | null>();
-  const shardAt = async (hash: string): Promise<CatalogShard | null> => {
-    if (shards.has(hash)) return shards.get(hash)!;
+  /**
+   * The shard a revision's index lists under `name`, read where it lives; null where the index lists none. A peer's
+   * (`strict`) that cannot be read stops the purge; the purged revision's own, as before, names no part then.
+   */
+  const shardOf = async (index: IndexedValue['index'], name: string, strict = true): Promise<CatalogShard | null> => {
+    const pointer = index?.shards && Object.hasOwn(index.shards, name) ? index.shards[name] : undefined;
+    const hash = pointerDigest(index?.shards, name);
+    if (!pointer) return null;
+    if (!hash) throw new PurgeStopped();
+    const packed = pointer.at !== undefined, pack = packed ? index?.packs?.[Number(pointer.pack)]?.digest : undefined;
+    const key = packed ? `${String(pack)}@${String(pointer.at)}+${String(pointer.bytes)}` : hash;
+    if (shards.has(key)) return shards.get(key)!;
     spend(work);
-    const found = await readObject(storage, shardKey(scope, hash));
+    let found: { value: unknown; bytes: number } | null;
+    if (packed) {
+      if (typeof pack !== 'string' || !HASH.test(pack) || !integer(pointer.at) || !whole(pointer.bytes, 1)) throw new PurgeStopped();
+      found = await readPackedValue(storage, scope, { pack, at: pointer.at as number, bytes: pointer.bytes as number });
+    } else found = await readObject(storage, shardKey(scope, hash));
     if (found && (work.bytes += found.bytes) > PURGE_BYTES) throw new PurgeStopped();
-    const shard = found && validShard(found.value) ? found.value : null;
-    shards.set(hash, shard);
-    return shard;
+    // What cannot be read, or is not the shard its pointer names, establishes nothing.
+    if (!found || !validShard(found.value) || found.value.shard !== name || !(await digest(found.value)).startsWith(hash)) {
+      if (strict) throw new PurgeStopped();
+      shards.set(key, null); return null;
+    }
+    shards.set(key, found.value);
+    return found.value;
   };
+  /** The digest of the part a peer points `product` at, its own object or a range in a pack alike; none where it names none. */
   const pointedBy = async (peer: IndexedValue, product: string): Promise<string | undefined> => {
     if (peer.products) return ownDigest(peer.products, product);
-    const hash = ownDigest(peer.index?.shards, await catalogShardName(product));
-    const shard = hash ? await shardAt(hash) : null;
+    const shard = await shardOf(peer.index, await catalogShardName(product));
     return shard ? ownDigest(shard.products, product) : undefined;
   };
   const named = async (product: string, hash: string) => { for (const peer of peers) if (await pointedBy(peer, product) === hash) return true; return false; };
@@ -1861,15 +1898,19 @@ async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, valu
     if (hash && !peers.some(peer => peer.idIndex?.digest === hash)) orphans.push(idIndexKey(scope, hash));
   } else if (v.index && typeof v.index === 'object') {
     for (const name of Object.keys(v.index.shards ?? {})) {
+      // Only an object of its own is this revision's to remove; one inside a pack goes with its pack.
       const hash = ownDigest(v.index.shards, name);
-      if (!hash || peers.some(peer => ownDigest(peer.index?.shards, name) === hash)) continue;
+      if (!hash || v.index.shards![name]!.at !== undefined || peers.some(peer => sameObject(pointerDigest(peer.index?.shards, name), hash))) continue;
       orphans.push(shardKey(scope, hash));
-      const shard = await shardAt(hash);
-      for (const product of Object.keys(shard?.products ?? {})) { const part = ownDigest(shard!.products, product); if (part && !await named(product, part)) orphans.push(partKey(scope, part)); }
+      const shard = await shardOf(v.index, name, false);
+      for (const [product, p] of Object.entries(shard?.products ?? {})) {
+        const part = ownDigest(shard!.products, product);
+        if (part && p.at === undefined && !await named(product, part)) orphans.push(partKey(scope, part));
+      }
     }
     for (const name of Object.keys(v.index.ids ?? {})) {
       const hash = ownDigest(v.index.ids, name);
-      if (hash && !peers.some(peer => ownDigest(peer.index?.ids, name) === hash)) orphans.push(idShardKey(scope, hash));
+      if (hash && v.index.ids![name]!.at === undefined && !peers.some(peer => sameObject(pointerDigest(peer.index?.ids, name), hash))) orphans.push(idShardKey(scope, hash));
     }
   }
   return [...new Set(orphans)];
