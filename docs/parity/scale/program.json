@@ -530,51 +530,57 @@
     },
     {
       "id": "P97",
-      "title": "The new visitor's first answer, a design decision (**amendment 12, E22, 2026-10-26**)",
+      "title": "The new visitor's first answer, decided without waiting on the visitor's record (**amendment 12, E22, 2026-10-26; design R-P547, 2026-10-28**)",
       "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
-        "locator": "E22 · section 2 of amendment 12, \"Done when\" (E12's definition R-P438; lane L19's timing split)",
+        "locator": "E22 · section 2 of amendment 12, \"Done when\" (E12's definition R-P438; lane L19's timing split); the owner's design direction of 28 October recorded as amendment 13 section 3 row 2 (R-P545) and the design adopted from the root-cause analysis (R-P547)",
         "requirement": "the owner decides between overlapping the decision with the session issue, changing how a new shopper's session is issued (P13 D1 reopened), or accepting the deadline's defaults for a new visitor's first view; the chosen design built and measured on the stamps."
       },
-      "outcome": "A new visitor's first answer follows the design the owner chooses, built and measured on the stamps against the 1.5 s first-paint deadline.",
+      "outcome": "A new visitor's first answer is decided at once against a blank copy of the brand-new visitor's record and does not wait on creating that record, which is made right after the answer, every safeguard of the first-request door kept, so the first answer's server time on the pair is at most 300 ms.",
       "criteria": [
         {
           "id": "DC1",
           "kind": "DECISION",
-          "observable": "The owner's choice among the three designs, (a) the decision overlapped with the session issue, (b) a new shopper's session issued another way (P13 D1, the session-first door, reopened) or (c) the deadline's defaults accepted for a new visitor's first view, is recorded with the owner's words before this ticket's specification; the lead and the agents do not choose.",
+          "observable": "The owner's choice, recorded with the owner's words before this ticket's specification: none of (a), (b), (c) as framed; the root cause of the new visitor's record creation found and measured and the first answer redesigned not to wait on it (the record created asynchronously, the profile used after the page is delivered), the safeguards kept by design (R-P545, _evidence/parity-step3/AMENDMENTS.md:1006; amendment 13 section 3 row 2); the design adopted from the root-cause analysis (R-P547, :1008; _evidence/parity-step3/S44/analyst-first-answer/DESIGN.md).",
           "proof": "Decision D2.",
           "decisionId": "D2"
         },
         {
           "id": "FV1",
           "kind": "LOCAL",
-          "observable": "If the owner chooses (a): at the first-request door the forwarded decision's work overlaps the session issue, so on both hosts in the harness, with the session issue held S ms and the forwarded decision's stages held F ms, a new visitor's first answer arrives in less than S + F ms, its door entries showing the overlap, and is otherwise the answer today's door gives: the same decision for the same new visitor, the same issued session, the same refusals before anything is issued or written, and P84's class drawn into the minted identifier. Today the door awaits the session issue and its verify (src/routes/decisions.ts:1127–1128) before it forwards the decision (:1138).",
+          "observable": "On both hosts in the harness, a new visitor's first answer at the first-request door is decided by today's own code against a blank in-memory copy of the brand-new visitor's record at the edge, with nothing contacted, created or written before the answer: no Durable Object instance created or fetched (the visitor's or any other), and no write to any binding (object storage, the session store, the cache, R2, the queue, D1); its reads are the decision's own (the published content and, on the session host, the session store's two reads of the just-minted session key). With every call to the new visitor's object held H ms (H = 600 in the design's probe), the first answer's total stays below H, as it does with nothing held. The answer is otherwise today's, field by field (decisions, arm, versions, experiment, sources less timings, session and its consent, armRequest) for no class, a class honoured, a mismatch, capped and republished: the door's refusals still come before anything is issued or written (a malformed arm 400, any other 401, touching nothing), the activation's checks still gate the answer (a refusal on the copy answers 401 with no session, no decision, no object and no write), P84's class is minted into the identifier as today, P30's context key is the same on a context-only page, P96's total is on the answer once, and there is no ledger or learning effect (queue 0, ledger objects 0, rings 0). Today the door awaits the activation on the brand-new object (src/routes/decisions.ts:1145–1148 through src/identity/consentContinuity.ts:39–50 and src/durable-objects/ShopperReflex.ts:691–709) and forwards the decision to it (decisions.ts:1156–1158; src/identity/sessionAuthority.ts:746–758): 1 object created, 21 storage calls on the session host and 19 on the do host, 1 write (grantAuthority, ShopperReflex.ts:2358) and 1 output gate before the answer (_evidence/parity-step3/S44/analyst-first-answer/DESIGN.md §1, REPRODUCED); live, the session entry is 61–86% of every first answer and the creating trip is 518–1,705 ms longer than the next trip to the same object (37–98 ms; lane L20, records/P96-timings.md).",
           "proof": "The P97 acceptance command runs the tests named unit:P97.FV1 in src/units/P97/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
           "id": "FV2",
           "kind": "LOCAL",
-          "observable": "If the owner chooses (b): the design recorded under D2 names the part of today's issue it takes out of a new visitor's wait (the mint, the activation on the new shopper's object at src/identity/consentContinuity.ts:39–50, or the verify); on both hosts in the harness, with that part held H ms, a new visitor's first answer no longer waits those H ms, and every guarantee of P13 D1's session-first door holds: the checks before anything is written, the consent refusals stored before the session is answered, the session usable on the next request, and P84's class drawn into the minted identifier.",
+          "observable": "On both hosts, the real record is created right after the answer (outside the answer's time): once the work after the answer is drained, the visitor's object holds exactly grantAuthority for the issued grant and nothing else. A creation lost or not yet made is made by the visitor's next request, whose forward adopts the missing grant (ShopperReflex.ts:554, :3489–3501, :2341–2364): with the creation lost, the next snapshot, action and session route each answer 200 and adopt, nothing else stored; with the next request arriving before the creation, it answers 200, one grant is stored and the creation then completes. The session is usable on the next request in every case. Any attempted write by the copy (an effect the write-refusing environment refuses) makes the door fall back to today's path, the real activation and forward, with the same minted visitor id and session, and the same answer. Today the record's one lasting write is made before the answer, on the activation (ShopperReflex.ts:696 through :2341–2364), and nothing makes the first answer without it.",
           "proof": "The P97 acceptance command runs the tests named unit:P97.FV2 in src/units/P97/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
           "id": "FV3",
           "kind": "LOCAL",
-          "observable": "If the owner chooses (c): no product change; kit 01's deadline paragraph and the hydrateTimeoutMs row state that a new visitor's first view is painted with the page's defaults when the first answer passes the 1.5 s deadline, as the accepted behaviour, beside the first-answer times measured by release (lane L19: total cold 1,405–1,785 ms on the four targets).",
-          "proof": "The P97 acceptance command runs the tests named unit:P97.FV3 in src/units/P97/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+          "observable": "The instrumentation, permanent: the activation's own answer (ShopperReflex.ts:691–709, whichever object runs it) carries an internal X-Owner-Timing header naming its parts, queue, grant, consent, restrict, alarm, commit (storage.sync()) and op, in whole milliseconds; no answer a browser receives carries X-Owner-Timing (the door, the session route, every decision answer); the first-request door's 200 answer carries sources.sessionParts { mint, activate, verify, object } beside sources.timings, its object member read from that header; Server-Timing and sources.timings are unchanged (P76 FA1's names and their add-up, the header's entries equal to sources.timings, P96's one total), and the session route's answer is unchanged. Today the door times only its own session entry around the issue, the activation and the verify (decisions.ts:1145–1148, :1182–1183) and the object reports nothing of its activation (ShopperReflex.ts:691–709).",
+          "proof": "The P97 acceptance command runs the tests named unit:P97.FV3 in src/units/P97/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
           "id": "FV4",
           "kind": "LOCAL",
-          "observable": "Whatever the design: the door's Server-Timing and sources.timings still name the session issue, the forward and the forwarded stages (P76 FA1) and, under (a), say which parts overlapped; kits 01 and 02 state the design in force for a new visitor's first answer; P13 H4, P84's mint and P30's context key pass (LOCK).",
+          "observable": "Kits 01 and 02 state the design: kit 02's first-request paragraph (docs/kit/02-api-reference.md:337) says that the first answer is decided on a blank copy of the new visitor's record and does not wait on creating the record, which is made right after the answer or by the visitor's next request, in its session sentences (today: \"Then the session is issued ... and the request is answered under it as any decision request is\", and the session entry described as \"the session's issue, its activation on the new shopper's object and its verification\"), and names sources.sessionParts as a diagnostic; kit 01's first-request paragraph (docs/kit/01-integration-guide.md:152) says the first answer does not wait on creating the visitor's record. The sentences the locks read still hold: P76 FA2's Server-Timing sentence naming session, forward, arm, total and the five stages and its \"forwarded decision\" (src/units/P76/LEDGER.unit.test.ts:166–169, :284–292), P96 OT4's total sentence and P13 H5's first-request statement (src/units/P13/LEDGER.unit.test.ts:399–409).",
           "proof": "The P97 acceptance command runs the tests named unit:P97.FV4 in src/units/P97/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "FV5",
+          "kind": "LOCAL",
+          "observable": "LOCK, on both hosts: P13 (H1 to H5; D1's session-first door: every check before anything is written, the visitor's own object the record, entered on every later request), P84 (the mint, honoured, mismatch, capped and republished), P30 (the context key), P96 (one total), P80, P81, P90, P36, P60 and LANDING pass unchanged; P76 and P94 pass with only P76 FA1's and P94 AD1's holds re-pointed to the copy (src/units/P76/LEDGER.unit.test.ts:122–136; src/units/P94/LEDGER.unit.test.ts:342–350); refusing hints, and a cookie claiming consent, store nothing and serve the default arm (src/content/consent.ts:83–86; _evidence/parity-step3/S44/analyst-first-answer/DESIGN.md logs/10-hints.jsonl). The analyst's prototype passed these suites on both hosts (P13 13/13, P84 34/34, P30 25/25, P96 11/11, P80 33/33, P81 46/46, P90 15/15, P36 48/48, P60 18/18, LANDING 10/10; logs/08-locks-edge.log), P76 FA1 (4 legs) and P94 AD1 (2 legs) RED only on their holds.",
+          "proof": "The P97 acceptance command runs the tests named unit:P97.FV5 in src/units/P97/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
           "id": "LV1",
           "kind": "DEFERRED_LIVE",
-          "observable": "The chosen design measured at the next release on the stamps (staging and production) and on both pair hosts, as lane L19 measured it (_evidence/parity-step3/live/lanes/L19/records/P76-timings.md): a new visitor's first answer, cold and warm, read from the door's entries against the 1.5 s first-paint deadline, and the render acknowledgements within the SDK's 5 s deadline.",
+          "observable": "At the next lane on the pair's next release: the split measured live with the instrumentation (sessionParts and the object's parts, read as activate less object.op less forward for the first contact), cold and warm, on both pair hosts; and the cold first answer's server time (the door's total) at most 300 ms on both pair hosts (projected 159 and 215 ms from lane L20, _evidence/parity-step3/S44/analyst-first-answer/DESIGN.md §5). The stamps (staging and production) measured and recorded as lane L19 and L20 measured them (_evidence/parity-step3/live/lanes/L19/records/P76-timings.md); their content-read bound (documents 194–496 ms on the stamps) is a separate item (R-P547; S44/analyst-stamps-content/), not this row.",
           "proof": "The LIVE1 walkthrough record.",
           "deferredAcceptanceId": "LIVE1"
         }
@@ -585,26 +591,36 @@
           "description": "Item E22, entered fifth; needed by the first activation (January); design first, then two to four days."
         },
         {
-          "ref": "_evidence/parity-step3/AMENDMENTS.md:898 (R-P438)",
-          "description": "E12's definition: no FA3, since no general change within the rulings removes the main cause (P13 D1's session-first door; the object's activation); the fix needs a design decision after the stamp measurement, as a separate ticket."
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:1006 (R-P545), :1008 (R-P547); docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:37 (section 3 row 2)",
+          "description": "The owner's direction of 28 October (none of (a), (b), (c) as framed; the root cause found and the first answer not waiting on the record's creation; the safeguards kept by design) and the design adopted from the root-cause analysis, with the instrumentation first and two items after the live split (the session host's KV read for a just-minted session id; the stamps' content-read bound)."
         },
         {
-          "ref": "_evidence/parity-step3/live/lanes/L19/records/P76-timings.md; _evidence/parity-step3/live/lanes/L19/REPORT.md:112–123; _evidence/parity-step3/AMENDMENTS.md:945 (R-P485)",
-          "description": "The split on four targets: the session issue cold 865–1,388 ms and warm medians 941–1,065 ms; total cold 1,405–1,785 ms and warm medians 1,252–1,372 ms against the 1.5 s deadline; acknowledgements within 5 s at light load."
+          "ref": "_evidence/parity-step3/S44/analyst-first-answer/DESIGN.md (§1 every operation of a first request, §2 where the time goes, §3 the instrumentation, §4 the design and its guarantees, §5 the 300 ms target, §7 the tests); its REPORT-analyst.md, logs (01-map-table.txt, 02-guarantees.jsonl, 04-cost-summary.md, 05-locks-today-instrumented.log, 08-locks-edge.log, 09-L20-projection.txt, 10-hints.jsonl) and tools-kept (patch-fa.mjs, probe.unit.test.ts)",
+          "description": "REPRODUCED in the harness on both hosts: creating the record is about 20 reads of an empty record and one lasting write (grantAuthority), 1.3–1.7 ms of work; under the prototype the first answer contacts no object, its content is today's field by field, refusals touch nothing, a lost or late creation is adopted by the next request, a forced write falls back with the same id. HYPOTHESIS: the live cost is mostly the platform's first contact with a brand-new object. UNVERIFIED: the live split, the cost of first access to an idFromName object, the copy in workerd."
+        },
+        {
+          "ref": "_evidence/parity-step3/live/lanes/L20/records/P96-timings.md; _evidence/parity-step3/live/lanes/L19/records/P76-timings.md; _evidence/parity-step3/AMENDMENTS.md:898 (R-P438), :945 (R-P485)",
+          "description": "The live first answers: session 61–86% of total; the next trip to the same object 37–98 ms; the creating trip 518–1,705 ms longer; documents 74–280 ms on the pair and 194–496 ms on the stamps."
         },
         {
           "ref": "docs/parity/delivery-control/program.json (P13, decision D1)",
-          "description": "The session-first door: a new visitor's first decision served on the first request, the decision design (b) reopens."
+          "description": "The session-first door, whose guarantees the design keeps: every check before anything is written, the visitor's own object the record (entered on every later request)."
         },
         {
-          "ref": "src/routes/decisions.ts:1102–1167; src/identity/consentContinuity.ts:39–50",
-          "description": "Today's sequence at the door: the body and context read, P84's mint, the session issue with the activation on the new shopper's object and the verify, then the forward."
+          "ref": "src/routes/decisions.ts:1121–1189, :1335–1342; src/identity/consentContinuity.ts:39–50; src/identity/sessionAuthority.ts:746–758; src/durable-objects/ShopperReflex.ts:473, :484, :554, :691–709, :2341–2364, :3489–3501, :4404–4415; src/content/consent.ts:83–86",
+          "description": "Today's door, the activation on the brand-new object and its one write, the forward's adoption of a missing grant, the session host's read of a never-written session key, and the consent carry that stores nothing for a new visitor."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/integration diff --quiet 340cd410 99ddcafc -- src docs/kit scripts wrangler.toml (exit 0)",
+          "description": "The design read 340cd410; src, the kits, scripts and wrangler.toml are byte-equal there and at rem/integration 99ddcafc, the revision this work order cites."
         }
       ],
       "remainingWork": [
-        "First: the owner's choice among (a), (b) and (c), recorded by the lead with the owner's words in _evidence/parity-step3/AMENDMENTS.md (DC1); at that record the lead amends this work order (the criteria of the designs not chosen struck, the grant narrowed to the chosen design's paths, any R10 named: P76 FA1's add-up under (a), P13 D1's legs under (b)) and regenerates its hash before the specification.",
-        "Build the chosen design (FV1, FV2 or FV3) and state it in the kits (FV4); closed by unit:P97.FV1, unit:P97.FV2, unit:P97.FV3 and unit:P97.FV4 as the amended work order keeps them.",
-        "The locks hold, closed by the program integration gate: P13, P76, P84, P30, P34 and the SDK's own tests."
+        "First: the instrumentation (FV3) on today's door, as its own commit, so it can be deployed to the pair before the redesign and the live split measured (R-P547, instrumentation first; the deploy is the lead's authority): src/durable-objects/ShopperReflex.ts (the activation's parts, :691–709), src/identity/consentContinuity.ts (an optional parts sink, :39–50), src/routes/decisions.ts (sources.sessionParts, :1145–1148, :1186), kit 02 (one sentence); closed by unit:P97.FV3.",
+        "Build the design: the blank in-memory record and its write-refusing environment (src/identity/freshOwner.ts, new), the activation run on a given stub (src/identity/consentContinuity.ts:39–50), forwardShopperRequest taking an optional stub (src/identity/sessionAuthority.ts:746–758), and the door deciding on the copy, creating the real record after the answer and falling back with the same minted session (src/routes/decisions.ts:1145–1158, :1186–1188); closed by unit:P97.FV1 and unit:P97.FV2.",
+        "State the design in kits 01 and 02; closed by unit:P97.FV4.",
+        "The R10 of src/units/P76/LEDGER.unit.test.ts (P76 FA1's holds, the hold helper at :122–136, re-pointed from the object's stubs to the copy; the legs at :185 and :218 otherwise unchanged) and of src/units/P94/LEDGER.unit.test.ts (P94 AD1's hold of the republished forwards at :342–350 re-pointed to the copy; the leg otherwise unchanged), by the specifier, by name, before the build.",
+        "The locks hold, closed by unit:P97.FV5 and the program integration gate: P13, P84, P30, P96, P80, P81, P90, P36, P60, LANDING, P76 and P94 (as amended by the R10), P34 and the SDK's own tests."
       ],
       "decisions": [
         {
@@ -616,42 +632,28 @@
         {
           "id": "D2",
           "status": "RESOLVED",
-          "authorityRef": "Amendment 12 E22 \"Done when\" (docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md:32), in force on the owner's \"what comes next\" of 26 October (R-P488); E12's definition R-P438 (_evidence/parity-step3/AMENDMENTS.md:898), which left the fix to a design decision",
-          "effect": "Design first, then the build: this ticket's specification starts only after the owner's choice among (a) overlapping the decision with the session issue, (b) changing how a new shopper's session is issued (P13 D1 reopened) and (c) accepting the deadline's defaults for a new visitor's first view is recorded with the owner's words; until then the ticket is not started, and when it is next in order without that record it is BLOCKED on the owner."
+          "authorityRef": "The owner's direction of 28 October (verbatim, in part: \"What happens during the creation of that record? Does it need to be created synchronously or can it be created asynchronously? … Nothing should take 1.4 seconds.\"), R-P545 (_evidence/parity-step3/AMENDMENTS.md:1006), recorded as amendment 13 section 3 row 2 (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md:37); the design adopted by R-P547 (_evidence/parity-step3/AMENDMENTS.md:1008) from _evidence/parity-step3/S44/analyst-first-answer/DESIGN.md",
+          "effect": "None of (a), (b), (c) as framed: the first answer is decided by today's own code against a blank in-memory copy of the brand-new record at the edge and the real record is created right after the answer, a lost creation made by the next request and any attempted write on the copy falling back to today's path with the same visitor id; (a) and (c) are struck and P13 D1 is not reopened (the visitor's own object remains the record, entered on every later request); the instrumentation comes first; the session host's KV read for a just-minted session id and the stamps' content-read bound are separate items after the live split."
         }
       ],
       "deferredLiveAcceptance": [
         {
           "id": "LIVE1",
-          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes, with the measurement on the stamps.",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts with the released artifact, in the batched live acceptance of the parity programmes, with the live split read from the instrumentation and the measurement on the stamps recorded.",
           "owner": "deployment owner with the customer acceptance owner",
           "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
         }
       ],
       "allowedPaths": [
-        "src/routes/decisions.ts",
-        "src/identity/sessionCapability.ts",
+        "src/identity/freshOwner.ts (new: the blank in-memory record and its write-refusing environment)",
         "src/identity/consentContinuity.ts",
-        "src/identity/sessionAuthority.ts",
-        "src/durable-objects/ShopperReflex.ts",
-        "src/routes/identity.ts",
-        "src/sdk/core.ts",
-        "src/sdk/listen.ts",
-        "src/sdk/types.ts",
-        "src/sdk/index.ts",
-        "src/sdk/browser.ts",
-        "src/sdk/server.ts",
-        "src/sdk/identity.ts",
-        "public/sdk/0.2.0/edge-personalization.js",
-        "public/sdk/0.2.0/edge-personalization.esm.js",
-        "public/sdk/edge-personalization.js",
-        "public/sdk/edge-personalization.esm.js",
-        "packages/sdk/edge-personalization.js",
-        "packages/sdk/edge-personalization.esm.js",
-        "packages/sdk/types/**",
-        "packages/sdk/package.json",
+        "src/identity/sessionAuthority.ts (forwardShopperRequest's optional stub only)",
+        "src/routes/decisions.ts",
+        "src/durable-objects/ShopperReflex.ts (the activation's X-Owner-Timing instrumentation only)",
         "docs/kit/01-integration-guide.md",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "src/units/P76/LEDGER.unit.test.ts (R10 by name: P76 FA1's holds re-pointed to the copy only, the hold helper at :122–136; by the specifier)",
+        "src/units/P94/LEDGER.unit.test.ts (R10 by name: P94 AD1's hold re-pointed to the copy only, :342–350; by the specifier)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P97 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
