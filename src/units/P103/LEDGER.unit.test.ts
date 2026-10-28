@@ -22,7 +22,9 @@
 // the member when malformed, dropped from a retained revision, named by LearnConfig; MP2 the policy reaching the money
 // rule on every outcome path on both hosts, direct and managed recovery alike; MP3 the money rule inside the one credit
 // rule (src/learn/policy.ts successCreditOf) the ring, foldRetainedDay with the W24 rebuild, the hourly fold and the raw
-// grids read, each with the policy of the learn document it folds under; MP4 the SDK sending a currency only when the
+// grids read, each reading the policy the outcome was decided under, carried on its record from the producer's own learn
+// read (never the learn document in force when it is folded), and an SDK retry the same outcome on either path, before or
+// after a publication (R-P576, R-P588, R-P594); MP4 the SDK sending a currency only when the
 // page's data layer names one, the six bundles regenerated within their budgets; MP5 kit 02's money paragraph as built;
 // MP6 the locks (a unit slot counts every event, no policy refuses as today, priors on money slots refused as today).
 //
@@ -102,14 +104,17 @@
 //      and the day it publishes, the raw day and the W24 rebuild. "The policy live learning took it under" is the one the
 //      outcome's producer read: prepareOutcomeAdmission's learn read at the action on the managed path, outcomeToLearning's
 //      on the direct path. A row recorded before P103 names none and is read under no policy, which is what live learning
-//      applied to it (no producer passed one before P103). The legs pin the behaviour, not a representation; the sketch
-//      (S50/specifier/scratch/sketch/apply.py) stamps the policy on the outcome record and the one credit rule reads the
-//      stamp, so nothing re-reads a historic learn document (P99's purge of old revisions cannot reach it).
+//      applied to it (no producer passed one before P103). The work order rules the carrier (R-P594): the policy rides on
+//      the outcome's record from the producer's own learn read, and every fold reads the record's; the legs observe what is
+//      credited. The sketch (S50/specifier/scratch/sketch/apply.py) does so, and nothing re-reads a historic learn document
+//      (P99's purge of old revisions cannot reach it).
 //   R14 (R-P588) The SDK's retry of an event the platform already took (the same wire body: its first event id and time,
-//      src/routes/realtime.ts:143-146), arriving after a policy publication, is that outcome: credited once, under the
-//      policy it was first taken under, live and in every fold. MP3's four R-P588 legs (both hosts, both paths) retry an
-//      EUR purchase (counted on the unit slot) and an EUR add to bag (refused everywhere) taken under no policy, after EUR
-//      is published, beside a new EUR purchase. Measured: the managed path already takes a retry as its first admission
+//      src/routes/realtime.ts:143-146), before or after a policy publication, is that outcome: credited once live and
+//      folded once, under its first stamp, the hour's fold and the day building as they would without it (R-P594). MP3's
+//      four R-P588 legs (both hosts, both paths) retry an EUR purchase (counted on the unit slot) and an EUR add to bag
+//      (refused everywhere) taken under no policy, after EUR is published, beside a new EUR purchase; a retry before a
+//      publication differs from its first only by its `retention` stamp, which these legs carry too (the wrong fix leaving
+//      `retention` in the logical comparison is RED on them). Measured: the managed path already takes a retry as its first admission
 //      (src/ledger/recovery.ts runOwnerRecovery :184-187 replays the stored payload; sourceOf :98-99 leaves its processing
 //      stamps out). The direct path does not, with or without money: each delivery carries a fresh `retention` stamp
 //      (captureRetention, src/retention.ts:154, admission time `Date.now()`), which the ledger's logical comparison and the
