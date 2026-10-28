@@ -86,6 +86,21 @@
 //      ordering rule is pinned on two paths: the door's (R15) and a late activation of the visitor's own grant reaching
 //      the record through its namespace with a stored refusal choice (W05.10's form) chosen 5 s before the record's
 //      Accept, or with no choice on the record (then stored and answered as today).
+//   R17 (R-P601 N1) Switch by switch: the record's two choices made through the real route (an Accept, then
+//      personalization chosen again 5 ms later), then a late activation of the visitor's grant carrying a tracking
+//      refusal chosen now and a personalization refusal chosen before the record's tracking choice.
+//   R18 (R-P601 N2, the builder's cases) The source refuses both purposes explicitly; its detach or reset; the retry
+//      after the replacement's Accept keeps that choice whole (its operation with it) and recovers the same replacement;
+//      a widening the rotation itself would make is the replacement's activation answer forged permissive by a choice
+//      dated an hour before the source's refusal (the answer rewritten on its way back: no route makes one).
+//   R19 (R-P605) Two browsers linked to one account (P12's backend-signed link; on an enforced stamp only with identity
+//      material of the safe form, so that leg's world carries synthetic material of that form, no credential) give the
+//      account's object two sessions; the refusal the retry carries is the other session's, made after the replacement's
+//      Accept, and the replacement holds it dated when it was made. Detach only: a reset erases the source's record
+//      (eraseWithBarrier), retiring every session linked to it, so no newer choice can follow it (measured: that
+//      session's choice answers 401); the reset is N2's.
+//   R20 (R-P601, R10 by name) src/index.api-boundary.test.ts's __fixture_expired_choice reads the clock once for
+//      chosenAt and expiresAt (two reads a millisecond apart broke the lifetime check, the W07.05 500, R-P598).
 //   R14 (F5) The global `fetch` replaced (each call recorded and refused) and a Cache API (`caches`, absent in Node)
 //      installed (each call recorded) from the first request until its answer.
 //
@@ -99,16 +114,18 @@
 // header reading 3 and "Imports from src/units/: ../_parity"; P94's header R2 ("at their forward to the shopper's
 // object") and its imports line.
 //
+// R10 (R-P601, by name): src/index.api-boundary.test.ts's __fixture_expired_choice (:345), one clock read for chosenAt and
+// expiresAt; every expectation unchanged; the W07.05 block green at the join.
+//
 // HARNESS: src/units/_parity.ts (the mounted environment, both hosts), every request through the real Worker
 // (src/index.ts, P96's form), and ./_copy (the copy). NO NEW EXPORT IS IMPORTED. Imports from src/units/: ../_parity,
-// ./_copy (and, after the R10, src/units/P76 and src/units/P94 import ../P97/_copy).
+// ../_parity3 (the link's material and signature, R-P605), ./_copy (and, after the R10, src/units/P76 and src/units/P94 import ../P97/_copy).
 //
 // DEFERRED: LV1 — lane L21 on the pair's next release: the split read live from the instrumentation (sessionParts and the
 // object's parts; activate − object.op − forward for the first contact), cold and warm, on both pair hosts; the cold
 // first answer's server time at most 300 ms on both; the stamps measured and recorded as lanes L19 and L20 did.
-// RESIDUAL (R-P591 F3): a late activation whose NEWER choice should apply over an OLDER one on the record is not pinned by
-// P97 (a record whose choice always wins passes it); W05.10 (its repeat activation's refusal) and W35.04/W35.08 (a
-// retried detach carrying the source's newer refusal) catch it, in the gate.
+// R-P591 F3, closed in round 5: a record whose choice always wins (the reviewer's recordwins) is now RED on N1's leg
+// and R-P605's; W05.10 and W35.04/W35.08 keep catching it in the gate.
 // RESIDUALS (told): the copy is not run in workerd here (DESIGN §8; no native leg is ruled; LV1 runs it); the work
 // order's line references are as of 340cd410/ed7d6bbe; kit 02's "the stages of the decision the new shopper's object
 // made" (in its Server-Timing sentence) is not pinned by FV4 and becomes inexact under the design.
@@ -129,6 +146,18 @@
 // and P94 AD1 2 (d2), re-pointed 28/28 (d1), weakened 6 RED (d6); re-pointed on today and on step1, the same six RED on
 // their preconditions until the design lands (d3, d4). The whole suite under the sketch 4245/4272, 272/282 files; its ten
 // failing files fail alike on today's tree (the scratch layout's git legs) but P68 (h-full-sketch, h-full-today).
+// ROUND 5 (R-P601, R-P605; logs/r5f-*, r5g-*, r5h-*): 48 tests. N1 (switch by switch), N2 rewritten to the builder's cases
+// (detach and reset; the two-tab retry; a widening dated before the source's refusal), R-P605 (detach). The sketch
+// (design3.cjs: the record's choices kept switch by switch with their operation, the rotation guard counting the
+// replacement's own newer choice, a carried refusal dated when it was made on both sides) 48/48 twice. 0bdff32d and
+// d06dcc4b RED on N2 and R-P605; a33a7b19 RED on R-P605 alone (401); a33a7b19 without newerChoicesKept RED on N1 too;
+// a00395d2 RED on R-P605 alone: 200 and the refusal applied, but the replacement stores it dated at its own Accept
+// (the earliest choice's time), not when the refusal was made. Wrong fixes, each RED on its own legs: nonewerkept,
+// guardstrict, guardoff, olderwins, earliestdate, norecordcheck, failure401, fetchcopy, cachecopy; the reviewer's
+// keysetcheck, putonly, nostatusfallback, and recordwins (now RED on N1 and R-P605). reactivates is no longer RED on the
+// sketch: its per-switch rule keeps a record's choices against the default a creation carries (the join d37126e0 itself
+// stays RED, round 3). The W07.05 block green twice at the joins a33a7b19 and a00395d2 with the fixture R10; the sketch's
+// locks (the SDK contract, W35, consent, P13, P76, P94, P84, P30, P96, P80, P81, LANDING, api-boundary) 432/432.
 // ROUND 4 (R-P591; logs/r4-*): the record-change leg covers a new key, the key the activation left rewritten, that key
 // deleted and an alarm set; the failure leg the copy's activation and forward rejecting, the activation answering 503
 // and the forward answering 500. The reviewer's controls (ctl3.cjs, guard only changed) RED on their cases, both hosts:
@@ -167,6 +196,7 @@ import {
   BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, PAGE_VIEW, pageInstanceOf, putDocument, readTree, recentSlot,
   TENANT, UnitKV, UnitR2, VIEW_TABBY_26, type Host, type Mounted,
 } from '../_parity';
+import { hmacOf, identitySecretOf } from '../_parity3';
 import { watchCopies, type AroundCopy, type CopyCall, type CopyWatch } from './_copy';
 
 // ---------------------------------------------------------------------------
@@ -196,6 +226,8 @@ const SAME_MS = 150, WHOLE_MS = 100;
 /** FV3: the first answer's activation held before it reaches the object that runs it, and (session host) its restriction's key-value read. */
 const TRIP_MS = 400, RESTRICT_MS = 150;
 const SITE_KEY = 'p97-synthetic-site-key';
+/** R-P605: synthetic identity material of the safe form an enforced stamp requires for a backend-signed link (no credential). */
+const LINK_MATERIAL = 'p97SyntheticLinkMaterialAbCdEfGh0123456789', LINK_SALT = 'p97SyntheticIdentitySaltQrStUvWx9876543210';
 /** The forwarded decision's five stages (W38 B5's names) and the door's own entries (P76). */
 const STAGES = ['documents', 'shopper', 'trend', 'lift', 'decide'];
 const DOOR = ['session', 'forward', 'total'];
@@ -214,6 +246,10 @@ const RECORD_MARK = 'p97-decision-change';
 const CHOICE_ID = 'p97-choice-accept';
 /** R-P583: a newer explicit refusal, made after the Accept. */
 const REFUSE_ID = 'p97-choice-refuse';
+/** R-P601: the record's two choices (an Accept, then personalization chosen again) and the replacement session's Accept. */
+const SWITCH_A_ID = 'p97-switch-accept', SWITCH_B_ID = 'p97-switch-personalization', REPLACEMENT_ACCEPT_ID = 'p97-replacement-accept';
+/** R-P601 N2, R-P605: the source's explicit refusal, the other linked session's newer refusal, the account both browsers link to (a synthetic id). */
+const SOURCE_REFUSE_ID = 'p97-source-refuse', OTHER_REFUSE_ID = 'p97-other-refuse', LINKED_ACCOUNT = 'p97-linked-account-0001';
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 // ---------------------------------------------------------------------------
@@ -254,6 +290,8 @@ interface World {
   intercept: ((call: ObjectCall) => Promise<void>) | null;
   /** Runs every call made to a copy (./_copy's around). */
   around: AroundCopy | null;
+  /** Rewrites a SHOPPER_REFLEX object's answer before its caller receives it (R-P601: a widening the detach itself would make). */
+  rewrite: ((call: ObjectCall, answer: Response) => Promise<Response>) | null;
   /** Activations under way, on the copy or on an object (FV3's restriction hold reads it). */
   activating: number;
   /** FV3: hold every session-store read of a session key made while an activation is under way. */
@@ -267,16 +305,18 @@ interface World {
 
 const keyOf = (value: unknown): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(String).join('+') : JSON.stringify(value ?? null) ?? '';
 
-async function world(host: Host, documents = docsAt(0)): Promise<World> {
+async function world(host: Host, documents = docsAt(0), options: { linking?: boolean } = {}): Promise<World> {
   const m = await mount(host, documents);
   expectPublished(m, 'P97 — the tenant documents publish');
-  Object.assign(m.env as unknown as Record<string, unknown>, { AUTH_MODE: 'enforced', SDK_KEYS: `${TENANT}:${SITE_KEY}` });
+  Object.assign(m.env as unknown as Record<string, unknown>, { AUTH_MODE: 'enforced', SDK_KEYS: `${TENANT}:${SITE_KEY}`,
+    // R-P605: an enforced stamp verifies a backend-signed link only with identity material of the safe form (src/identity/material.mjs).
+    ...(options.linking ? { IDENTITY_SECRETS: `${TENANT}:${LINK_MATERIAL}`, IDENTITY_SALT: LINK_SALT } : {}) });
   const app = await loadWorker();
   const pending: Promise<unknown>[] = [];
   const ctx = { waitUntil: (p: Promise<unknown>) => { pending.push(p); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext;
   let counter = 0;
   const w: World = {
-    host, m, stage: AFTER, ops: [], objects: [], copies: { calls: [], stop: () => undefined }, copyAt: new Map(), intercept: null, around: null,
+    host, m, stage: AFTER, ops: [], objects: [], copies: { calls: [], stop: () => undefined }, copyAt: new Map(), intercept: null, around: null, rewrite: null,
     activating: 0, holdRestrict: false, next: () => ++counter,
     send: async () => { throw new Error('unset'); }, drain: async () => undefined, reset: () => undefined, stop: () => undefined,
   };
@@ -314,7 +354,8 @@ async function world(host: Host, documents = docsAt(0)): Promise<World> {
         const activation = call.path === '/identity/activate';
         if (activation) w.activating += 1;
         try {
-          const answer = await stub.fetch(request);
+          let answer = await stub.fetch(request);
+          if (name === 'SHOPPER_REFLEX' && w.rewrite) answer = await w.rewrite(call, answer);
           call.status = answer.status; call.headers = new Headers(answer.headers);
           return answer;
         } finally { if (activation) w.activating -= 1; }
@@ -376,7 +417,7 @@ const nextAction = (w: World, s: Session) => w.send('POST', '/realtime/action', 
  * default both purposes accepted on a record holding no choice; `expectedRevision` the revision of the choice it follows.
  */
 const ACCEPT = { tracking: true, personalization: true }, REFUSE = { tracking: false, personalization: false };
-const chooseConsent = (w: World, s: Session, id: string, choice = ACCEPT, expectedRevision: string | null = null, headers: Record<string, string> = {}) =>
+const chooseConsent = (w: World, s: Session, id: string, choice: Partial<Record<'tracking' | 'personalization', boolean>> = ACCEPT, expectedRevision: string | null = null, headers: Record<string, string> = {}) =>
   w.send('POST', `/realtime/session/${s.sessionId}/preferences`, shopperHeaders({ [SHOPPER_HEADER]: s.capability, ...headers }),
     JSON.stringify({ trackingConsent: choice.tracking, personalizationEnabled: choice.personalization, choice: { id, expectedRevision, grantId: s.grantId, iat: s.iat, exp: s.exp } }));
 /** R-P583: the consent cookies a site's banner writes, refusing both purposes, and after an Accept accepting both. */
@@ -400,6 +441,25 @@ const lateActivation = (w: World, s: Session, instruction: ReturnType<typeof old
   return ns.get(ns.idFromName(ownName(s.subject))).fetch('https://shopper-reflex/identity/activate', { method: 'POST',
     headers: { [SHOPPER_HEADER]: s.capability, 'X-Tenant': TENANT, 'Content-Type': 'application/json' }, body: JSON.stringify({ consent: storedConsent(instruction) }) });
 };
+/** R-P601: a stored refusal of both purposes, tracking chosen at `trackingAt` and personalization at `personalizationAt`. */
+const refusalChosen = (s: Session, trackingAt: number, personalizationAt: number) => ({ version: 1 as const, tenant: TENANT, subject: s.subject, revision: 'p97-refusal-by-switch',
+  tracking: { value: false, chosenAt: trackingAt, expiresAt: trackingAt + CONSENT_LIFETIME_MS },
+  personalization: { value: false, chosenAt: personalizationAt, expiresAt: personalizationAt + CONSENT_LIFETIME_MS } });
+/** A stored choice as the record keeps it, by switch. */
+interface ChoiceRecord { tracking?: { value?: unknown; chosenAt?: number }; personalization?: { value?: unknown; chosenAt?: number }; operation?: { id?: unknown }; revision?: string }
+/** The choice a record holds, read as the object reads it (a stored instruction or a stored consent carrying one). */
+const choiceOf = (w: World, subject: string): ChoiceRecord | null => (storedConsent(recordOf(w, subject)?.data.get('consent')).instruction ?? null) as ChoiceRecord | null;
+/** A detach (POST /v1/{tenant}/identity/detach) or a reset (POST /realtime/session/reset) of the session held; a retry recovers the same replacement (W35.04). */
+const rotate = (w: World, s: Session, operation: 'detach' | 'reset') =>
+  w.send('POST', operation === 'detach' ? `/v1/${TENANT}/identity/detach` : '/realtime/session/reset', shopperHeaders({ [SHOPPER_HEADER]: s.capability }), '{}');
+/** The revision of the choice a session's own consent carries, the one its next choice follows. */
+const revisionOf = (s: Session) => ((s.consent as { instruction?: { revision?: string } } | null)?.instruction?.revision) ?? null;
+/** R-P605: the backend-signed link of a browser to an account (P12's, src/identity/assertion.ts; _parity3's material), through the Worker. */
+async function linkAccount(w: World, s: Session, accountId: string): Promise<Reply> {
+  const exp = Math.floor(Date.now() / 1000) + 600;
+  const assertion = await hmacOf(identitySecretOf(w.m), `${TENANT}\n${s.subject}\n${accountId}\n${exp}`);
+  return w.send('POST', `/v1/${TENANT}/identity/link`, shopperHeaders({ [SHOPPER_HEADER]: s.capability }), JSON.stringify({ visitorId: s.subject, accountId, source: 'login', exp, assertion }));
+}
 /** The session route, POST /v1/{tenant}/identity/session, with the session held (or none: a fresh browser). */
 const sessionRoute = (w: World, s: Session | null) => w.send('POST', `/v1/${TENANT}/identity/session`, shopperHeaders(s ? { [SHOPPER_HEADER]: s.capability } : {}), '{}');
 
@@ -925,6 +985,116 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
           .toEqual({ activation: [200, false, false], stored: [false, older, false, older], next: [200, false, false, 'default'] });
       } finally { w.stop(); }
     }, 120_000);
+
+    it(`host (${host}): consent is judged switch by switch (R-P601 N1) — a record holding a newer personalization choice and an older tracking choice (an Accept, then personalization chosen again) meets a late activation of the visitor's grant carrying a newer tracking refusal and an older personalization refusal: it answers 200, tracking is refused and the record's newer personalization choice is kept as it was chosen; the next decision is refused tracking on the default arm`, async () => {
+      const w = await world(host);
+      try {
+        await door(w); await w.drain(); w.reset();
+        const a = await door(w); await w.drain();
+        const s = sessionOf(a);
+        expect([a.status, typeof s?.capability], `${host}: PRECONDITION — the door answers (${show(a)})`).toEqual([200, 'string']);
+        const accepted = await chooseConsent(w, s!, SWITCH_A_ID);
+        await sleep(5);
+        const again = await chooseConsent(w, s!, SWITCH_B_ID, { personalization: true }, SWITCH_A_ID);
+        const record = structuredClone(recordOf(w, s!.subject)?.data.get('consent') ?? null) as ChoiceRecord | null;
+        const trackingAt = record?.tracking?.chosenAt ?? NaN, personalizationAt = record?.personalization?.chosenAt ?? NaN;
+        expect([accepted.status, again.status, record?.tracking?.value ?? null, record?.personalization?.value ?? null, personalizationAt > trackingAt],
+          `${host}: PRECONDITION — the record holds an older tracking choice and a newer personalization choice (${JSON.stringify(again.body).slice(0, 160)})`).toEqual([200, 200, true, true, true]);
+        const activation = await lateActivation(w, s!, refusalChosen(s!, Date.now(), trackingAt - 5_000));
+        const answered = await activation.json().catch(() => ({})) as { consent?: { tracking?: unknown; personalization?: unknown } };
+        await w.drain();
+        const after = recordOf(w, s!.subject)?.data.get('consent') as ChoiceRecord | undefined;
+        const next = await nextSnapshot(w, s!); await w.drain();
+        const consent = (next.body.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
+        expect.soft({ activation: [activation.status, answered.consent?.tracking ?? null, answered.consent?.personalization ?? null],
+          tracking: after?.tracking?.value ?? null, personalization: after?.personalization ?? null, next: [next.status, consent?.tracking ?? null, next.body.arm ?? null] },
+        `${host}: P97.FV2 — switch by switch: the newer tracking refusal applies, the record's newer personalization choice is kept`)
+          .toEqual({ activation: [200, false, true], tracking: false, personalization: record?.personalization, next: [200, false, 'default'] });
+      } finally { w.stop(); }
+    }, 120_000);
+
+    it(`host (${host}): a detach or a reset retried after its replacement session made a newer, more permissive choice (two tabs signing out at once) answers 200 as the first did, with the same replacement, which keeps its own newer choice; one the replacement's answer widens with a choice older than the source's — a widening the rotation itself would make — is still refused, nothing of the replacement changed (R-P601 N2; the builder's cases: a source that explicitly refused both purposes)`, async () => {
+      for (const operation of ['detach', 'reset'] as const) for (const widening of [false, true]) {
+        const label = `${operation}, ${widening ? 'the replacement\'s answer widened by a choice older than the source\'s' : 'the replacement\'s newer Accept'}`;
+        const w = await world(host);
+        try {
+          await door(w); await w.drain(); w.reset();
+          const a = await door(w); await w.drain();
+          const s = sessionOf(a);
+          const refused = await chooseConsent(w, s!, SOURCE_REFUSE_ID, REFUSE);
+          const sourceAt = (recordOf(w, s!.subject)?.data.get('consent') as ChoiceRecord | undefined)?.tracking?.chosenAt ?? NaN;
+          const first = await rotate(w, s!, operation); await w.drain();
+          const replacement = sessionOf(first);
+          expect([a.status, refused.status, first.status, typeof replacement?.capability, replacement?.subject !== s?.subject],
+            `${host}: PRECONDITION — ${label}: the source refuses explicitly and the first ${operation} answers 200 with a replacement session (${show(first)})`).toEqual([200, 200, 200, 'string', true]);
+          if (!widening) {
+            const accepted = await chooseConsent(w, replacement!, REPLACEMENT_ACCEPT_ID, ACCEPT, revisionOf(replacement!));
+            expect(accepted.status, `${host}: PRECONDITION — ${label}: the replacement accepts (${JSON.stringify(accepted.body).slice(0, 160)})`).toBe(200);
+          }
+          const kept = structuredClone(recordOf(w, replacement!.subject)?.data.get('consent') ?? null);
+          if (widening) {
+            const older = sourceAt - 3_600_000;
+            w.rewrite = async (call, answer) => call.path === '/identity/activate' && call.name === ownName(replacement!.subject)
+              ? Response.json({ ok: true, consent: { ...ACCEPT, instruction: { version: 1, tenant: TENANT, subject: replacement!.subject, revision: 'p97-forged-widening',
+                tracking: { value: true, chosenAt: older, expiresAt: older + CONSENT_LIFETIME_MS }, personalization: { value: true, chosenAt: older, expiresAt: older + CONSENT_LIFETIME_MS } } } })
+              : answer;
+          }
+          const retry = await rotate(w, s!, operation); await w.drain();
+          w.rewrite = null;
+          const again = sessionOf(retry);
+          const next = await nextSnapshot(w, replacement!); await w.drain();
+          const consent = (next.body.sources as { consent?: { tracking?: unknown; personalization?: unknown } } | undefined)?.consent;
+          if (!widening) expect.soft({ retry: retry.status, same: again ? [again.subject, again.sessionId, again.grantId] : null, kept: recordOf(w, replacement!.subject)?.data.get('consent') ?? null,
+            next: [next.status, consent?.tracking ?? null, consent?.personalization ?? null] },
+          `${host}: P97.FV2 — ${label}: the retried ${operation} answers 200 with the same replacement, which keeps its newer choice (${show(retry)})`)
+            .toEqual({ retry: 200, same: [replacement!.subject, replacement!.sessionId, replacement!.grantId], kept, next: [200, true, true] });
+          else expect.soft({ retry: retry.status, session: retry.body.session ?? null, kept: recordOf(w, replacement!.subject)?.data.get('consent') ?? null, next: [next.status, consent?.tracking ?? null] },
+            `${host}: P97.FV2 — ${label}: the retried ${operation} is refused, nothing of the replacement changed (${show(retry)})`)
+            .toEqual({ retry: 401, session: null, kept, next: [200, false] });
+        } finally { w.stop(); }
+      }
+    }, 240_000);
+
+    it(`host (${host}): a source's newer refusal made after the replacement's choice, through another session linked to the source, and carried by the retried detach is applied (R-P605) — two browsers linked to one account (two sessions of the account's object), one session refusing both purposes, its detach, the replacement accepting both, then the other session refusing tracking, then the retry: it answers 200 with the same replacement, the replacement's tracking refused as chosen when that refusal was made, and its own Accept kept on personalization`, async () => {
+      // A reset erases the source's record (eraseWithBarrier), retiring every session linked to it, so no newer choice can
+      // follow it through another linked session (measured: that session's choice answers 401): the reset is N2's.
+      for (const operation of ['detach'] as const) {
+        const w = await world(host, docsAt(0), { linking: true });
+        try {
+          await door(w); await w.drain(); w.reset();
+          const browsers: Session[] = [];
+          for (let k = 0; k < 2; k++) { const d = await door(w); await w.drain(); browsers.push(sessionOf(d)!); }
+          const linked: Session[] = [];
+          for (const browser of browsers) { const l = await linkAccount(w, browser, LINKED_ACCOUNT); await w.drain(); if (sessionOf(l)) linked.push(sessionOf(l)!); }
+          const [first, other] = linked;
+          expect([linked.length, first?.subject === other?.subject, first?.grantId !== other?.grantId],
+            `${host}: PRECONDITION — ${operation}: two browsers linked to one account hold two sessions of the account's object`).toEqual([2, true, true]);
+          const refused = await chooseConsent(w, first!, SOURCE_REFUSE_ID, REFUSE, revisionOf(first!));
+          const sourceRefusedAt = choiceOf(w, first!.subject)?.tracking?.chosenAt ?? NaN;
+          const rotated = await rotate(w, first!, operation); await w.drain();
+          const replacement = sessionOf(rotated);
+          expect([refused.status, rotated.status, typeof replacement?.capability], `${host}: PRECONDITION — ${operation}: the account's session refuses explicitly and its ${operation} answers 200 with a replacement (${show(rotated)})`)
+            .toEqual([200, 200, 'string']);
+          const accepted = await chooseConsent(w, replacement!, REPLACEMENT_ACCEPT_ID, ACCEPT, revisionOf(replacement!));
+          const acceptedChoice = structuredClone(choiceOf(w, replacement!.subject));
+          await sleep(5);
+          const newer = await chooseConsent(w, other!, OTHER_REFUSE_ID, { tracking: false }, choiceOf(w, other!.subject)?.revision ?? null);
+          const newerAt = choiceOf(w, other!.subject)?.tracking?.chosenAt ?? NaN;
+          expect([accepted.status, newer.status, newerAt > (acceptedChoice?.tracking?.chosenAt ?? Infinity)],
+            `${host}: PRECONDITION — ${operation}: the replacement accepts, then the other linked session refuses tracking, later (${JSON.stringify(newer.body).slice(0, 160)})`).toEqual([200, 200, true]);
+          const retry = await rotate(w, first!, operation); await w.drain();
+          const again = sessionOf(retry);
+          const after = choiceOf(w, replacement!.subject);
+          const next = await nextSnapshot(w, replacement!); await w.drain();
+          const consent = (next.body.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
+          expect.soft({ retry: retry.status, same: again ? [again.subject, again.sessionId, again.grantId] : null,
+            tracking: [after?.tracking?.value ?? null, after?.tracking?.chosenAt ?? null], personalization: after?.personalization ?? null, next: [next.status, consent?.tracking ?? null, next.body.arm ?? null] },
+          `${host}: P97.FV2 — ${operation}: the source's newer refusal the retry carries is applied, dated when it was made (${newerAt}; the replacement's Accept at ${acceptedChoice?.tracking?.chosenAt}, the source's first refusal at ${sourceRefusedAt}), the replacement's own Accept kept on personalization (${show(retry)})`)
+            .toEqual({ retry: 200, same: [replacement!.subject, replacement!.sessionId, replacement!.grantId], tracking: [false, newerAt],
+              personalization: acceptedChoice?.personalization ?? null, next: [200, false, 'default'] });
+        } finally { w.stop(); }
+      }
+    }, 240_000);
 
     it(`host (${host}): LOCK — a newer explicit refusal still applies (R-P583 (c)): the visitor accepting, then refusing both purposes by a newer explicit choice before the record's creation lands: once drained, the creation answered and the record's consent is the newer refusal (its switches and its operation), the same refusal sent again answers 200, and the next decision is refused on the default arm (W05.10's repeat activation and W35.04's retried detach are their own locks)`, async () => {
       const w = await world(host);
