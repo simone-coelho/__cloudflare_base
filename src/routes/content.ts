@@ -30,10 +30,11 @@ import { stampOwner } from '@/auth/authority';
 import { isValidTenantId, type TenantVariables } from '@/tenancy/tenant';
 import { LegacyDocumentError, readIndex, readVersion, rollback, write, type DocumentKind, type Revision, type WriteMeta } from '@/config/versionedStore';
 import { assertPublicationBase, completePublicationSet, documentBytes, initializePublicationSet, PUBLICATION_MAX_BYTES, PublicationError, publicationMeta, publicationStatus, publicationScope, publicationVersion, publish, publishAnchored, publishSet, readOptionalPinnedPublication,
-  readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationPin,
-  catalogPartStored, readCatalogPart, writeCatalogPart, type CatalogPart, catalogIdIndexStored, readCatalogIdIndex,
-  catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardStored, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard, writeCatalogIdShard, writeCatalogShard,
-  type CatalogIdShard, type CatalogShard } from '@/config/publication';
+  readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationChange, type PublicationPin,
+  catalogPartStored, readCatalogPart, type CatalogPart, catalogIdIndexStored, readCatalogIdIndex,
+  catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardStored, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard,
+  type CatalogIdShard, type CatalogShard, catalogPackStored, ensurePack, indexAddress, NEW_PACK, PackWriter, publicationFailureOf, readCatalogPacked, resolvedPart, writePack,
+  type PackAddress, type PackedRead, type ResolvedPartPointer, type SealedPack, type StoredPartPointer } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf, LAYOUTS_KIND, slotsCarryOrders, unapprovedOrders } from '@/content/kinds';
 import { readVocabularyRejections } from '@/content/service';
@@ -43,7 +44,7 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { EMPTY_PROPOSALS, PROPOSALS_KIND } from '@/learn/cycle';
 import { cellGrammarFor, EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND, priorUnitErrors, validatePriors } from '@/learn/priors';
 import { addressAllowed, hostAllowed, HttpJsonSource, assembleFrom, catalogDocumentFields, csvColumnCaseVariants, FEED_FIELDS, IMPORT_SOURCES_KIND, isImportMode, parseCsvTable, pullUrlOf, positionedCandidates, recordAddress, recordAddressed, recordsInJson, storedPieceRecords, type ImportMode, type PulledExport } from '@/content/import';
-import type { CatalogIndex, CatalogPartPointer, ContentCatalog, ContentPiece, DocumentEnvelope, LayoutsDocument, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
+import type { CatalogIndex, CatalogPackEntry, CatalogPartPointer, ContentCatalog, ContentPiece, DocumentEnvelope, LayoutsDocument, LearnConfig, SlotCatalog, VocabularyApproval } from '@/content/types';
 import { catalogParted, catalogPieceCount, catalogProductCount, partProductOf, variantFirst } from '@/content/kinds';
 import { captureEnrichment, EnrichmentError, exportEnrichment, readEnrichment, readEnrichmentBody, reviewEnrichment } from '@/content/enrichment';
 import { publishEnrichment } from '@/content/enrichmentPublication';
@@ -64,7 +65,8 @@ contentRoutes.onError((error, c) => {
   // P88 (E13): a slots publication the approved layouts of its set refuse, raised inside the publication before anything is written.
   if (error instanceof LayoutRefusal) return c.json({ ok: false, errors: error.errors }, 422);
   if (error instanceof LegacyDocumentError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
-  if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code }, error.status);
+  // P98 (LD4): a storage failure also names the call, the object's kind, the store's error number and the state it left.
+  if (error instanceof PublicationError) return c.json({ ok: false, error: error.message, code: error.code, ...publicationFailureOf(error) }, error.status);
   throw error;
 });
 /**
@@ -259,11 +261,6 @@ async function partPointers(parts: ReadonlyMap<string, ContentPiece[]>): Promise
   for (const [product, pieces] of parts) out[product] = { digest: await documentDigest({ product, pieces } satisfies CatalogPart), records: pieces.length };
   return out;
 }
-/** Store each part with the store's exact-create (eight at a time), before the publication reserves the head. */
-async function writeParts(env: Env, scope: string, parts: ReadonlyMap<string, ContentPiece[]>): Promise<void> {
-  const entries = [...parts.entries()];
-  for (let i = 0; i < entries.length; i += 8) await Promise.all(entries.slice(i, i + 8).map(([product, pieces]) => writeCatalogPart(env, scope, { product, pieces })));
-}
 /**
  * R-P424 (amending R-P407 (5)): where each part record's id lives in a one-level
  * catalogue (P86's form), from the id index its manifest names — read by a load
@@ -277,35 +274,76 @@ async function idIndexInForce(env: Env, scope: string, current: ContentCatalog |
 }
 
 // ── P93 (E18, R-P487): the sharded index at the catalogue's doors ─────────────
+// ── P98 (E25, R-P549): built into one pack per load ─────────────────────────
 
-/** P93: the index a publication writes: the manifest's `index` and the shard objects whose digest moved. */
-interface BuiltIndex { index: CatalogIndex; shards: CatalogShard[]; idShards: CatalogIdShard[] }
+/** P93: the index a publication writes; P98: and the one pack that holds every object it placed (none where it placed none). */
+interface BuiltIndex { index: CatalogIndex; pack: SealedPack | null }
 const own = <T>(record: Record<string, T> | undefined, key: string): T | undefined => record && Object.hasOwn(record, key) ? record[key] : undefined;
+const partTooLarge = (product: string) => () => new PublicationError(`The part of product ${JSON.stringify(product).slice(0, 80)} exceeds 2 MiB`, 413, 'part_too_large');
+const tableInconsistent = () => new PublicationError('The catalogue\'s pack table does not account for the objects its index reaches; nothing was written', 503, 'publication_unavailable');
+/** P98 (LD6): a pack under a quarter live, or the fewest live bytes once the table passes 64 packs, is re-homed by a writing load. */
+const COMPACT_LIVE = 0.25, COMPACT_PACKS = 64;
+function compactionVictim(rows: readonly CatalogPackEntry[]): string | undefined {
+  let victim: CatalogPackEntry | undefined;
+  for (const row of rows) if (row.bytes / row.size < COMPACT_LIVE && (!victim || row.bytes / row.size < victim.bytes / victim.size)) victim = row;
+  if (!victim && rows.length > COMPACT_PACKS) for (const row of rows) if (!victim || row.bytes < victim.bytes) victim = row;
+  return victim?.digest;
+}
 /**
  * P93: the index a door publishes over, read as little as the door needs and
  * edited in place: a product's part pointer through its shard, a record id's
  * owner through its id shard — read only for the ids whose place can change —
- * each shard read once; then the shards the edits touch rebuilt, and only those
- * whose digest moved written. Over a one-level catalogue (P86's `products` and
- * `idIndex`) it reads those instead, and the publication writes the sharded form
- * whole (at most 256 + 256 shards), every part's digest unchanged: the migration
- * needs no step of its own.
+ * each shard read once; then the shards the edits touch rebuilt. Over a one-level
+ * catalogue (P86's `products` and `idIndex`) it reads those instead, and the
+ * publication writes the sharded form whole (at most 256 + 256 shards), every
+ * part's digest unchanged: the migration needs no step of its own.
+ *
+ * P98 (E25, design C): what it writes is ONE pack — every part whose digest moved
+ * (`place`) and every shard and id shard it rebuilt — and the manifest's pointers
+ * name each object's pack through the pack table and its byte range. What a load
+ * reads it reads ahead, each pack's objects in as few ranged reads as their places
+ * allow (`prefetchShards`, `prefetchParts`, `prefetchIdShards`); an object stored
+ * before packs (P86, P93) is read as its own object, once. The table counts, for
+ * every pack the revision reaches, the objects and bytes of it reached, from the
+ * pointers the edits replace (so no other object is read), and `legacy` counts the
+ * objects reached that are stored before packs. A load that writes (`writing`)
+ * also moves into its pack what it read of the objects stored before packs, and
+ * re-homes the live objects of one pack the table shows under a quarter live (or,
+ * past 64 packs, the one with the fewest live bytes).
  */
 class IndexEdit {
-  private readonly shards = new Map<string, Map<string, CatalogPartPointer>>();
+  private readonly shards = new Map<string, Map<string, ResolvedPartPointer>>();
   private readonly idShards = new Map<string, Map<string, string>>();
-  private readonly pointers = new Map<string, CatalogPartPointer | null>();
+  private readonly pointers = new Map<string, ResolvedPartPointer | null>();
   private readonly owners = new Map<string, string | null>();
+  /** P98: the parts whose digest moved, in the order they are placed in the pack. */
+  private readonly placed = new Map<string, CatalogPart>();
+  /** P98: objects read ahead, by digest. */
+  private readonly fetched = new Map<string, unknown>();
+  /** P98 (LD8): what this load read of the objects stored before packs: shard and id-shard names, and parts by product. */
+  private readonly legacyShards = new Set<string>();
+  private readonly legacyIdShards = new Set<string>();
+  private readonly legacyParts = new Map<string, CatalogPart>();
   private oneLevelIds?: Map<string, string>;
   constructor(private readonly env: Env, private readonly scope: string, private readonly current: ContentCatalog | undefined) {}
   /** Over a one-level manifest the next publication writes every shard. */
   private get migrating(): boolean { return !!this.current?.products; }
-  private async productShard(name: string): Promise<Map<string, CatalogPartPointer>> {
+  /** The sharded index in force (none over a one-level catalogue). */
+  private get held(): CatalogIndex | undefined { return this.migrating ? undefined : this.current?.index; }
+  private where(pointer: { digest: string; pack?: number; at?: number; bytes?: number }): PackAddress | undefined {
+    const index = this.held; return index ? indexAddress(index, pointer) : undefined;
+  }
+  private async productShard(name: string): Promise<Map<string, ResolvedPartPointer>> {
     let held = this.shards.get(name);
     if (held) return held;
     held = new Map();
-    const pointer = own(this.current?.index?.shards, name);
-    if (pointer) for (const [product, p] of Object.entries((await readCatalogShard(this.env, this.scope, pointer.digest)).products)) held.set(product, p);
+    const pointer = own(this.held?.shards, name);
+    if (pointer) {
+      const where = this.where(pointer);
+      const shard = (this.fetched.get(pointer.digest) as CatalogShard | undefined) ?? await readCatalogShard(this.env, this.scope, pointer.digest, where);
+      if (!where) this.legacyShards.add(name);
+      for (const [product, p] of Object.entries(shard.products)) held.set(product, resolvedPart(shard, where, p));
+    }
     this.shards.set(name, held);
     return held;
   }
@@ -313,16 +351,60 @@ class IndexEdit {
     let held = this.idShards.get(name);
     if (held) return held;
     held = new Map();
-    const pointer = own(this.current?.index?.ids, name);
-    if (pointer) for (const [id, product] of Object.entries((await readCatalogIdShard(this.env, this.scope, pointer.digest)).ids)) held.set(id, product);
+    const pointer = own(this.held?.ids, name);
+    if (pointer) {
+      const where = this.where(pointer);
+      const shard = (this.fetched.get(pointer.digest) as CatalogIdShard | undefined) ?? await readCatalogIdShard(this.env, this.scope, pointer.digest, where);
+      if (!where) this.legacyIdShards.add(name);
+      for (const [id, product] of Object.entries(shard.ids)) held.set(id, product);
+    }
     this.idShards.set(name, held);
     return held;
   }
+  /** P98: read ahead, each pack's in as few ranged reads as their places allow, the packed shards of these names not yet read. */
+  private async ahead(group: 'shards' | 'ids', names: Iterable<string>): Promise<void> {
+    const index = this.held;
+    if (!index) return;
+    const wanted = new Map<string, PackedRead>();
+    for (const name of names) {
+      if ((group === 'shards' ? this.shards : this.idShards).has(name)) continue;
+      const pointer = own(index[group], name);
+      if (!pointer || wanted.has(pointer.digest) || this.fetched.has(pointer.digest)) continue;
+      const address = indexAddress(index, pointer);
+      if (address) wanted.set(pointer.digest, { kind: group === 'shards' ? 'shard' : 'idshard', digest: pointer.digest, address });
+    }
+    if (wanted.size) for (const [hash, value] of await readCatalogPacked(this.env, this.scope, wanted.values())) this.fetched.set(hash, value);
+  }
+  private async namesOf(keys: Iterable<string>): Promise<Set<string>> {
+    const names = new Set<string>(); for (const key of keys) names.add(await catalogShardName(key)); return names;
+  }
+  /** P98: read ahead the shards these products fall in. */
+  async prefetchShards(products: Iterable<string>): Promise<void> { await this.ahead('shards', await this.namesOf(products)); }
+  /** P98: read ahead the id shards these record ids fall in. */
+  async prefetchIdShards(ids: Iterable<string>): Promise<void> { await this.ahead('ids', await this.namesOf(ids)); }
+  /** P98: read ahead the packed parts of these pointers (a part stored before packs is read on its own, when needed). */
+  async prefetchParts(pointers: Iterable<ResolvedPartPointer | undefined>): Promise<void> {
+    const wanted: PackedRead[] = [];
+    for (const p of pointers) if (p?.address && !this.fetched.has(p.digest)) wanted.push({ kind: 'part', digest: p.digest, address: p.address });
+    if (wanted.length) for (const [hash, value] of await readCatalogPacked(this.env, this.scope, wanted)) this.fetched.set(hash, value);
+  }
+  /** P98: a product's part, as read ahead, else by its own read (by its range in its pack, or as its own object). */
+  async part(pointer: ResolvedPartPointer): Promise<CatalogPart> {
+    const value = (this.fetched.get(pointer.digest) as CatalogPart | undefined) ?? await readCatalogPart(this.env, this.scope, pointer.digest, pointer.address);
+    if (!pointer.address && !this.migrating) this.legacyParts.set(value.product, value);
+    return value;
+  }
+  /** P98: every id shard in force, the packed ones read ahead together (a removed product's lost part names its ids nowhere else). */
+  async allIdShards(): Promise<Map<string, string>[]> {
+    const names = Object.keys(this.held?.ids ?? {});
+    await this.ahead('ids', names);
+    return Promise.all(names.map(name => this.idShard(name)));
+  }
   private async oneLevel(): Promise<Map<string, string>> { return this.oneLevelIds ??= await idIndexInForce(this.env, this.scope, this.current); }
   /** A product's part pointer, as edited, else as the revision in force names it; none where it has no part. */
-  async pointer(product: string): Promise<CatalogPartPointer | undefined> {
+  async pointer(product: string): Promise<ResolvedPartPointer | undefined> {
     if (this.pointers.has(product)) return this.pointers.get(product) ?? undefined;
-    if (this.current?.products) return own(this.current.products, product);
+    if (this.current?.products) { const p = own(this.current.products, product); return p ? { digest: p.digest, records: p.records } : undefined; }
     if (!this.current?.index) return undefined;
     return (await this.productShard(await catalogShardName(product))).get(product);
   }
@@ -333,50 +415,162 @@ class IndexEdit {
     if (!this.current?.index) return undefined;
     return (await this.idShard(await catalogShardName(id))).get(id);
   }
-  setPointer(product: string, pointer: CatalogPartPointer | null): void { this.pointers.set(product, pointer); }
+  /** P98: a product's part whose digest moved, placed in this load's pack when the index is built. */
+  place(product: string, part: CatalogPart, pointer: CatalogPartPointer): void {
+    this.placed.set(product, part); this.pointers.set(product, { digest: pointer.digest, records: pointer.records });
+  }
+  setPointer(product: string, pointer: CatalogPartPointer | null): void { this.placed.delete(product); this.pointers.set(product, pointer); }
   setOwner(id: string, product: string | null): void { this.owners.set(id, product); }
-  /** The index after the edits, and the shard objects whose digest moved (nothing written). */
-  async build(): Promise<BuiltIndex> {
-    const held = this.migrating ? undefined : this.current?.index;
-    const index: CatalogIndex = { key: 'sha256-hex2', shards: { ...(held?.shards ?? {}) }, ids: { ...(held?.ids ?? {}) } };
-    const products = new Map<string, Map<string, CatalogPartPointer | null>>(), ids = new Map<string, Map<string, string | null>>();
+  /**
+   * The index after the edits and the one pack holding every object it placed (nothing written): the parts placed, then
+   * — for a load that writes — what it read of the objects stored before packs and the live parts of the one pack it
+   * re-homes, then each shard and id shard whose digest moved (or that is re-homed). The manifest's pointers name each
+   * object's pack by its row in the pack table, ordered by digest.
+   */
+  async build(options: { writing?: boolean } = {}): Promise<BuiltIndex> {
+    const held = this.held, tabled = !!held?.packs, pack = new PackWriter();
+    // The pack table as the revision in force holds it, and the objects it reaches that are stored before packs.
+    const live = new Map<string, { objects: number; bytes: number; size: number }>();
+    for (const row of held?.packs ?? []) live.set(row.digest, { objects: row.objects, bytes: row.bytes, size: row.size });
+    let legacy = tabled ? held!.legacy ?? 0 : 0;
+    if (held && !tabled) {
+      // P93's form: every shard, id shard and part is an object of its own.
+      for (const p of Object.values(held.shards)) legacy += 1 + p.products;
+      legacy += Object.keys(held.ids).length;
+    }
+    const count = (address: PackAddress | undefined, sign: 1 | -1) => {
+      if (!address) { legacy += sign; return; }
+      const row = live.get(address.pack) ?? { objects: 0, bytes: 0, size: 0 };
+      row.objects += sign; row.bytes += sign * address.bytes; live.set(address.pack, row);
+    };
+    const pointers = new Map(this.pointers), forced = new Set<string>(), forcedIds = new Set<string>();
+    const newly = (at: { at: number; bytes: number }): PackAddress => ({ pack: NEW_PACK, at: at.at, bytes: at.bytes });
+    for (const [product, part] of this.placed) {
+      const at = await pack.add(part, partTooLarge(product)), pointer = pointers.get(product)!;
+      if (at.digest !== pointer.digest) throw tableInconsistent();
+      pointers.set(product, { digest: pointer.digest, records: pointer.records, address: newly(at) });
+    }
+    if (options.writing && !this.migrating) {
+      // P98 (LD8): what this load read of the objects stored before packs moves into its pack, each part keeping its digest.
+      for (const [product, part] of this.legacyParts) {
+        const now = pointers.has(product) ? pointers.get(product) : await this.pointer(product);
+        if (!now || now.address || now.digest !== await documentDigest(part)) continue;
+        pointers.set(product, { digest: now.digest, records: now.records, address: newly(await pack.add(part, partTooLarge(product))) });
+      }
+      for (const name of this.legacyShards) forced.add(name);
+      for (const name of this.legacyIdShards) forcedIds.add(name);
+      // P98 (LD6): the live objects of one pack the table shows mostly dead, re-homed here.
+      const victim = tabled ? compactionVictim(held!.packs!) : undefined;
+      if (victim) {
+        for (const [name, p] of Object.entries(held!.shards)) if (indexAddress(held!, p)?.pack === victim) forced.add(name);
+        for (const [name, p] of Object.entries(held!.ids)) if (indexAddress(held!, p)?.pack === victim) forcedIds.add(name);
+        const names = Object.keys(held!.shards).filter(name => !!indexAddress(held!, held!.shards[name]!));
+        await this.ahead('shards', names);
+        const moving: Array<[string, ResolvedPartPointer]> = [];
+        for (const name of names) for (const [product, p] of await this.productShard(name)) if (p.address?.pack === victim && !pointers.has(product)) moving.push([product, p]);
+        const read = await readCatalogPacked(this.env, this.scope, moving.map(([, p]) => ({ kind: 'part' as const, digest: p.digest, address: p.address! })));
+        for (const [product, p] of moving) {
+          const part = read.get(p.digest) as CatalogPart | undefined;
+          if (part) pointers.set(product, { digest: p.digest, records: p.records, address: newly(await pack.add(part, partTooLarge(product))) });
+        }
+      }
+    }
+    const products = new Map<string, Map<string, ResolvedPartPointer | null>>(), ids = new Map<string, Map<string, string | null>>();
     const into = async <T>(groups: Map<string, Map<string, T>>, key: string, value: T) => {
       const name = await catalogShardName(key), group = groups.get(name) ?? new Map<string, T>();
       group.set(key, value); groups.set(name, group);
     };
     if (this.migrating) {
-      for (const [product, pointer] of Object.entries(this.current!.products!)) await into(products, product, pointer as CatalogPartPointer | null);
+      for (const [product, pointer] of Object.entries(this.current!.products!)) await into(products, product, { digest: pointer.digest, records: pointer.records } as ResolvedPartPointer | null);
       for (const [id, product] of await this.oneLevel()) await into(ids, id, product as string | null);
     }
-    for (const [product, pointer] of this.pointers) await into(products, product, pointer);
+    for (const [product, pointer] of pointers) await into(products, product, pointer);
     for (const [id, product] of this.owners) await into(ids, id, product);
-    const shards: CatalogShard[] = [], idShards: CatalogIdShard[] = [];
+    for (const name of forced) if (!products.has(name)) products.set(name, new Map());
+    for (const name of forcedIds) if (!ids.has(name)) ids.set(name, new Map());
+    const shardPointers = new Map<string, { digest: string; products: number; records: number; address?: PackAddress }>();
+    const idPointers = new Map<string, { digest: string; records: number; address?: PackAddress }>();
+    for (const [name, p] of Object.entries(held?.shards ?? {})) shardPointers.set(name, { digest: p.digest, products: p.products, records: p.records, address: indexAddress(held!, p) });
+    for (const [name, p] of Object.entries(held?.ids ?? {})) idPointers.set(name, { digest: p.digest, records: p.records, address: indexAddress(held!, p) });
     for (const name of [...products.keys()].sort()) {
-      const next = new Map(this.migrating ? [] : await this.productShard(name));
+      const before = this.migrating ? new Map<string, ResolvedPartPointer>() : await this.productShard(name), next = new Map(before), old = shardPointers.get(name);
       for (const [product, pointer] of products.get(name)!) { if (pointer) next.set(product, pointer); else next.delete(product); }
-      if (!next.size) { delete index.shards[name]; continue; }
-      const { value, pointer } = await catalogShardOf(name, next);
-      if (pointer.digest !== own(held?.shards, name)?.digest) shards.push(value);
-      index.shards[name] = pointer;
+      // The shard as stored: each part where it lives, relative to this load's pack (a part in it carries its range alone).
+      const others: string[] = [], stored = new Map<string, StoredPartPointer>();
+      for (const product of [...next.keys()].sort()) {
+        const p = next.get(product)!;
+        if (!p.address) stored.set(product, { digest: p.digest, records: p.records });
+        else if (p.address.pack === NEW_PACK) stored.set(product, { digest: p.digest, records: p.records, at: p.address.at, bytes: p.address.bytes });
+        else {
+          let i = others.indexOf(p.address.pack); if (i < 0) i = others.push(p.address.pack) - 1;
+          stored.set(product, { digest: p.digest, records: p.records, at: p.address.at, bytes: p.address.bytes, pack: i });
+        }
+      }
+      const built = next.size ? await catalogShardOf(name, stored, others) : null;
+      if (built && old && built.pointer.digest === old.digest && !forced.has(name)) continue;
+      if (old) count(old.address, -1);
+      for (const p of before.values()) count(p.address, -1);
+      if (!built) { shardPointers.delete(name); continue; }
+      for (const p of next.values()) count(p.address, 1);
+      const address = newly(await pack.add(built.value));
+      count(address, 1);
+      shardPointers.set(name, { ...built.pointer, address });
     }
     for (const name of [...ids.keys()].sort()) {
-      const next = new Map(this.migrating ? [] : await this.idShard(name));
+      const next = new Map(this.migrating ? [] : await this.idShard(name)), old = idPointers.get(name);
       for (const [id, product] of ids.get(name)!) { if (product) next.set(id, product); else next.delete(id); }
-      if (!next.size) { delete index.ids[name]; continue; }
-      const { value, pointer } = await catalogIdShardOf(name, next);
-      if (pointer.digest !== own(held?.ids, name)?.digest) idShards.push(value);
-      index.ids[name] = pointer;
+      const built = next.size ? await catalogIdShardOf(name, next) : null;
+      if (built && old && built.pointer.digest === old.digest && !forcedIds.has(name)) continue;
+      if (old) count(old.address, -1);
+      if (!built) { idPointers.delete(name); continue; }
+      const address = newly(await pack.add(built.value));
+      count(address, 1);
+      idPointers.set(name, { ...built.pointer, address });
     }
-    index.shards = Object.fromEntries(Object.keys(index.shards).sort().map(name => [name, index.shards[name]!]));
-    index.ids = Object.fromEntries(Object.keys(index.ids).sort().map(name => [name, index.ids[name]!]));
-    return { index, shards, idShards };
+    const sealed = await pack.seal();
+    if (sealed) {
+      const row = live.get(NEW_PACK)!, same = live.get(sealed.digest);
+      live.delete(NEW_PACK);
+      live.set(sealed.digest, same ? { objects: same.objects + row.objects, bytes: same.bytes + row.bytes, size: sealed.bytes } : { ...row, size: sealed.bytes });
+    }
+    for (const [digest, row] of live) {
+      if (row.objects < 0 || row.bytes < 0 || row.bytes > row.size) throw tableInconsistent();
+      if (row.objects === 0) live.delete(digest);
+    }
+    if (legacy < 0) throw tableInconsistent();
+    const digests = [...live.keys()].sort();
+    const placedFields = (a: PackAddress | undefined) => {
+      if (!a) return {};
+      const at = digests.indexOf(a.pack === NEW_PACK ? sealed!.digest : a.pack);
+      if (at < 0) throw tableInconsistent();
+      return { pack: at, at: a.at, bytes: a.bytes };
+    };
+    const shards = Object.fromEntries([...shardPointers.keys()].sort().map(name => {
+      const p = shardPointers.get(name)!; return [name, { digest: p.digest, products: p.products, records: p.records, ...placedFields(p.address) }];
+    }));
+    const idsOut = Object.fromEntries([...idPointers.keys()].sort().map(name => {
+      const p = idPointers.get(name)!; return [name, { digest: p.digest, records: p.records, ...placedFields(p.address) }];
+    }));
+    // An index written before packs keeps its form until a load places something in a pack.
+    const table = tabled || !!sealed ? { packs: digests.map(digest => ({ digest, ...live.get(digest)! })), legacy } : {};
+    return { index: { key: 'sha256-hex2', ...table, shards, ids: idsOut }, pack: sealed };
   }
 }
-/** P93: store the shards whose digest moved with the store's exact-create (eight at a time), before the publication reserves the head. */
-async function writeIndex(env: Env, scope: string, built: BuiltIndex): Promise<void> {
-  const writes: Array<() => Promise<string>> = [...built.shards.map(shard => () => writeCatalogShard(env, scope, shard)), ...built.idShards.map(shard => () => writeCatalogIdShard(env, scope, shard))];
-  for (let i = 0; i < writes.length; i += 8) await Promise.all(writes.slice(i, i + 8).map(write => write()));
+/**
+ * P98: store a built index's one pack with the store's exact-create, before the publication reserves the head. A pack
+ * already stored with the same bytes is adopted, and `held` remembers it so the door heads it again once it holds the
+ * head (`packReserved`, LD6).
+ */
+async function writeIndex(env: Env, scope: string, built: BuiltIndex, held?: PackHold): Promise<void> {
+  if (!built.pack) return;
+  const outcome = await writePack(env, scope, built.pack);
+  if (held) { held.pack = built.pack; held.adopted = outcome === 'adopted'; }
 }
+/** P98 (LD6): the pack one door wrote, and whether it found it already stored. */
+interface PackHold { pack?: SealedPack; adopted?: boolean }
+/** P98 (LD6): once the head holds the door's publication, an adopted pack is headed again and written again if collected. */
+const packReserved = (env: Env, scope: string, held: PackHold) => async () => { if (held.pack && held.adopted) await ensurePack(env, scope, held.pack); };
+
 /**
  * P93: the product whose part holds a record id, checked against that part: the
  * index's entry, where the owner's part (as the caller read it, else read here)
@@ -385,14 +579,14 @@ async function writeIndex(env: Env, scope: string, built: BuiltIndex): Promise<v
  * nothing). Only ids whose place can change are looked up, so a retitle reads
  * no id shard.
  */
-function ownerCheck(env: Env, scope: string, edit: IndexEdit, known: ReadonlyMap<string, ReadonlySet<unknown>>, stale: Set<string>) {
+function ownerCheck(edit: IndexEdit, known: ReadonlyMap<string, ReadonlySet<unknown>>, stale: Set<string>) {
   return async (id: string): Promise<string | undefined> => {
     const owner = await edit.owner(id);
     if (owner === undefined) return undefined;
     let holds = known.get(owner)?.has(id);
     if (holds === undefined) {
       const pointer = await edit.pointer(owner);
-      holds = !!pointer && ((await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[]).some(piece => piece.id === id);
+      holds = !!pointer && ((await edit.part(pointer)).pieces as ContentPiece[]).some(piece => piece.id === id);
     }
     if (!holds) { stale.add(id); return undefined; }
     return owner;
@@ -431,16 +625,16 @@ function namedManifest(error: unknown): unknown {
  * catalogue), each product named in `removeProducts` removed (R-P487 (5)), the
  * shards the PUT changes written beside its parts before the head is reserved.
  */
-async function catalogueOverPut(env: Env, scope: string, current: ContentCatalog | undefined, set: PublicationPin, document: unknown, seen?: { manifest: boolean }): Promise<unknown> {
+async function catalogueOverPut(env: Env, scope: string, current: ContentCatalog | undefined, set: PublicationPin, document: unknown, seen?: { manifest: boolean }, held?: PackHold): Promise<unknown> {
   const governed = await governedOver(env, scope, set, document);
   const checked = CONTENT_KIND.validate(governed);
   if (!checked.ok || !checked.value.productSlots) return governed;
-  const catalog = checked.value, plan = await partedPutPlan(env, scope, current, catalog);
+  const catalog = checked.value, plan = await partedPutPlan(env, scope, current, catalog, true);
   const manifest = manifestOf(catalog, plan.routed.shared, plan.built.index);
   if (seen) seen.manifest = true;
   manifestCap(manifest, set);
-  await writeParts(env, scope, plan.changed);
-  await writeIndex(env, scope, plan.built);
+  // P98: the PUT's one pack (its parts, shards and id shards), before the head is reserved.
+  await writeIndex(env, scope, plan.built, held);
   return manifest;
 }
 /**
@@ -455,11 +649,17 @@ async function catalogueOverPut(env: Env, scope: string, current: ContentCatalog
  * (the document's own pieces answer to the validator's one-id rule). Answers the
  * routed records, the parts whose digest moved and the index after the PUT.
  */
-async function partedPutPlan(env: Env, scope: string, current: ContentCatalog | undefined, catalog: ContentCatalog):
+async function partedPutPlan(env: Env, scope: string, current: ContentCatalog | undefined, catalog: ContentCatalog, writing = false):
   Promise<{ routed: ReturnType<typeof routedPieces>; changed: Map<string, ContentPiece[]>; built: BuiltIndex }> {
   const errors: string[] = [], held = current?.index;
   if (catalog.index) {
     if (!held && current?.products) errors.push('index: the catalogue in force carries its one-level products index; a PUT carries the index exactly as it reads it');
+    // P98: the pack table and the count of objects stored before packs, exactly as the revision in force holds them.
+    for (const member of ['packs', 'legacy'] as const) {
+      if (JSON.stringify(catalog.index[member] ?? null) !== JSON.stringify(held?.[member] ?? null)) {
+        errors.push(`index.${member}: is not the ${member === 'packs' ? 'pack table' : 'count of objects stored before packs'} the revision in force holds; a PUT carries the index exactly as it reads it`);
+      }
+    }
     for (const group of ['shards', 'ids'] as const) {
       const sent = catalog.index[group] as Record<string, unknown>, stored = (held?.[group] ?? {}) as Record<string, unknown>;
       for (const name of [...new Set([...Object.keys(sent), ...Object.keys(stored)])].sort()) {
@@ -487,6 +687,8 @@ async function partedPutPlan(env: Env, scope: string, current: ContentCatalog | 
   }
   if (errors.length) throw new VocabularyRefusal(errors);
   const edit = new IndexEdit(env, scope, current);
+  // P98: the shards of the products the PUT names, each pack's in as few ranged reads as their places allow.
+  await edit.prefetchShards([...(catalog.removeProducts ?? []), ...routed.parts.keys()]);
   // The products the PUT removes: by name; and, over a one-level catalogue (P86, R-P409 (2)), each the PUT neither points at nor sends.
   const removed = new Set(catalog.removeProducts ?? []);
   if (current?.products && !catalog.index) {
@@ -500,20 +702,23 @@ async function partedPutPlan(env: Env, scope: string, current: ContentCatalog | 
   const idsOf = async (product: string): Promise<Set<unknown>> => {
     const pointer = await edit.pointer(product);
     if (!pointer) return new Set();
-    try { return new Set(((await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[]).map(piece => piece.id)); }
+    try { return new Set(((await edit.part(pointer)).pieces as ContentPiece[]).map(piece => piece.id)); }
     catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') { lost.add(product); return new Set(); } throw error; }
   };
-  for (const product of [...removed, ...routed.parts.keys()]) known.set(product, await idsOf(product));
+  // P98: the parts of the products the PUT names, likewise.
+  const named = [...removed, ...routed.parts.keys()];
+  const before = new Map<string, ResolvedPartPointer | undefined>();
+  for (const product of named) before.set(product, await edit.pointer(product));
+  await edit.prefetchParts(before.values());
+  for (const product of named) known.set(product, await idsOf(product));
   // A removed product whose part is lost names its ids nowhere but the id index in force: they are read from there
   // (every id shard, or P86's one-level index) and dropped with it, so no id is left naming a product that is gone.
   const removedLost = [...lost].filter(product => removed.has(product));
   if (removedLost.length) {
-    const owners: Array<Record<string, string>> = current?.index
-      ? await Promise.all(Object.values(current.index.ids).map(async pointer => (await readCatalogIdShard(env, scope, pointer.digest)).ids))
-      : [Object.fromEntries(await idIndexInForce(env, scope, current))];
-    for (const ids of owners) for (const [id, owner] of Object.entries(ids)) if (removedLost.includes(owner)) known.get(owner)!.add(id);
+    const owners: Array<ReadonlyMap<string, string>> = current?.index ? await edit.allIdShards() : [await idIndexInForce(env, scope, current)];
+    for (const ids of owners) for (const [id, owner] of ids) if (removedLost.includes(owner)) known.get(owner)!.add(id);
   }
-  const stale = new Set<string>(), ownerOf = ownerCheck(env, scope, edit, known, stale);
+  const stale = new Set<string>(), ownerOf = ownerCheck(edit, known, stale);
   const keeps = (owner: string) => !removed.has(owner) && !routed.parts.has(owner);
   const shared = new Set(current?.pieces.map(piece => piece.id) ?? []), slots = new Set(catalog.productSlots), collisions: Collision[] = [];
   for (const [i, piece] of catalog.pieces.entries()) {
@@ -530,18 +735,18 @@ async function partedPutPlan(env: Env, scope: string, current: ContentCatalog | 
   const after = await partPointers(routed.parts), changed = new Map<string, ContentPiece[]>(), sent = new Set<unknown>();
   for (const pieces of routed.parts.values()) for (const piece of pieces) sent.add(piece.id);
   for (const [product, pieces] of routed.parts) {
-    const before = await edit.pointer(product), now = after[product]!;
-    if (before?.digest !== now.digest) { edit.setPointer(product, now); changed.set(product, pieces); }
+    const now = after[product]!;
+    if (before.get(product)?.digest !== now.digest) { edit.place(product, { product, pieces }, now); changed.set(product, pieces); }
     for (const piece of pieces) if (!known.get(product)!.has(piece.id)) edit.setOwner(piece.id, product);
   }
   for (const product of removed) edit.setPointer(product, null);
   for (const [product, ids] of known) for (const id of ids) if (typeof id === 'string' && !sent.has(id)) { void product; edit.setOwner(id, null); }
   for (const id of stale) if (!sent.has(id)) edit.setOwner(id, null);
-  return { routed, changed, built: await edit.build() };
+  return { routed, changed, built: await edit.build({ writing }) };
 }
-/** P93 (R-P487 (6)): the most objects a rollback's existence check reads or heads. */
+/** P93 (R-P487 (6)): the most objects a rollback's existence check reads or heads; P98: a pack counts once, however many objects it holds. */
 const ROLLBACK_CHECKS = 900;
-const rollbackTooLarge = (count: number) => new PublicationError(`The rollback would check ${count} index shards and parts the revision in force does not name, past the ${ROLLBACK_CHECKS} a rollback checks; nothing was written`, 413, 'rollback_too_large');
+const rollbackTooLarge = (count: number) => new PublicationError(`The rollback would check ${count} packs, index shards and parts the revision in force does not name, past the ${ROLLBACK_CHECKS} a rollback checks; nothing was written`, 413, 'rollback_too_large');
 /**
  * A rollback's catalogue: the kept revision forward. Its existence check covers
  * what differs from the revision in force (P93, R-P487 (6)): each shard it names
@@ -549,28 +754,60 @@ const rollbackTooLarge = (count: number) => new PublicationError(`The rollback w
  * differs — refused 410 `part_missing` naming what the store no longer holds,
  * and 413 `rollback_too_large` past 900 checks. A one-level revision (P86's form)
  * is checked by its parts that differ and its id index, and written sharded.
+ *
+ * P98 (E25): an object inside a pack is checked by its pack, one HEAD per pack
+ * the target's table names that the table in force does not, so a rollback
+ * counts packs, not parts: the target's shards are read (each pack's in as few
+ * ranged reads as their places allow) only where it still names objects stored
+ * before packs, which are checked one by one as before.
  */
-async function catalogueOverRollback(env: Env, scope: string, current: ContentCatalog | undefined, set: PublicationPin, value: unknown): Promise<unknown> {
+async function catalogueOverRollback(env: Env, scope: string, current: ContentCatalog | undefined, set: PublicationPin, value: unknown, held?: PackHold): Promise<unknown> {
   const target = value && typeof value === 'object' ? value as ContentCatalog : null;
   if (!target || !catalogParted(target)) return governedOver(env, scope, set, value);
   const inForce = new IndexEdit(env, scope, current), missing: string[] = [], parts: Array<[string, string]> = [];
   let checks = 0;
   if (target.index) {
-    const shards = Object.entries(target.index.shards).filter(([name, pointer]) => own(current?.index?.shards, name)?.digest !== pointer.digest);
-    const ids = Object.entries(target.index.ids).filter(([name, pointer]) => own(current?.index?.ids, name)?.digest !== pointer.digest);
-    checks = shards.length + ids.length;
+    const index = target.index, inForceIndex = current?.index;
+    const shards = Object.entries(index.shards).filter(([name, pointer]) => own(inForceIndex?.shards, name)?.digest !== pointer.digest);
+    const ids = Object.entries(index.ids).filter(([name, pointer]) => own(inForceIndex?.ids, name)?.digest !== pointer.digest);
+    // P98: the packs the target reaches that the revision in force does not (its table's rows, all of them over an
+    // index written before packs), each checked by one HEAD.
+    const heldPacks = new Set((inForceIndex?.packs ?? []).map(row => row.digest));
+    const packs = (index.packs ?? []).map(row => row.digest).filter(pack => !heldPacks.has(pack));
+    // The objects stored before packs that differ: their shards and id shards, one HEAD each, and the part pointers
+    // inside the differing shards (read only where the target still names objects stored before packs).
+    const legacyShards = shards.filter(([, pointer]) => !indexAddress(index, pointer)), legacyIds = ids.filter(([, pointer]) => !indexAddress(index, pointer));
+    checks = packs.length + legacyShards.length + legacyIds.length;
     if (checks > ROLLBACK_CHECKS) throw rollbackTooLarge(checks);
-    for (const [name, pointer] of shards) {
-      // The store is the witness of a shard's existence, never this isolate's shard cache: one HEAD each.
-      if (!await catalogShardStored(env, scope, pointer.digest)) { missing.push(`index shard ${name}`); continue; }
-      let shard: CatalogShard;
-      try { shard = await readCatalogShard(env, scope, pointer.digest); }
-      catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') { missing.push(`index shard ${name}`); continue; } throw error; }
-      for (const [product, part] of Object.entries(shard.products)) if ((await inForce.pointer(product))?.digest !== part.digest) parts.push([product, part.digest]);
+    const packHeld = new Map<string, boolean>();
+    for (const pack of packs) { packHeld.set(pack, await catalogPackStored(env, scope, pack)); if (!packHeld.get(pack)) missing.push(`pack ${pack}`); }
+    if (!index.packs || index.legacy !== 0) {
+      const placed: PackedRead[] = [];
+      for (const [, pointer] of shards) { const address = indexAddress(index, pointer); if (address && packHeld.get(address.pack) !== false) placed.push({ kind: 'shard', digest: pointer.digest, address }); }
+      const read = placed.length ? await readCatalogPacked(env, scope, placed) : new Map<string, unknown>();
+      const found: Array<[CatalogShard, PackAddress | undefined]> = [];
+      for (const [name, pointer] of shards) {
+        const where = indexAddress(index, pointer);
+        if (where && packHeld.get(where.pack) === false) continue;
+        // The store is the witness of a shard's existence, never this isolate's shard cache: one HEAD each (P98: one per pack).
+        if (!where && !await catalogShardStored(env, scope, pointer.digest)) { missing.push(`index shard ${name}`); continue; }
+        let shard: CatalogShard;
+        try { shard = (read.get(pointer.digest) as CatalogShard | undefined) ?? await readCatalogShard(env, scope, pointer.digest, where); }
+        catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') { missing.push(`index shard ${name}`); continue; } throw error; }
+        found.push([shard, where]);
+      }
+      await inForce.prefetchShards(found.flatMap(([shard]) => Object.keys(shard.products)));
+      for (const [shard, where] of found) for (const [product, part] of Object.entries(shard.products)) {
+        if ((await inForce.pointer(product))?.digest === part.digest) continue;
+        const address = resolvedPart(shard, where, part).address;
+        if (!address) { parts.push([product, part.digest]); continue; }
+        if (!packHeld.has(address.pack) && !heldPacks.has(address.pack)) { checks++; packHeld.set(address.pack, await catalogPackStored(env, scope, address.pack)); }
+        if (packHeld.get(address.pack) === false) missing.push(JSON.stringify(product));
+      }
+      checks += parts.length;
+      if (checks > ROLLBACK_CHECKS) throw rollbackTooLarge(checks);
     }
-    checks += parts.length;
-    if (checks > ROLLBACK_CHECKS) throw rollbackTooLarge(checks);
-    for (const [name, pointer] of ids) if (!await catalogIdShardStored(env, scope, pointer.digest)) missing.push(`id shard ${name}`);
+    for (const [name, pointer] of legacyIds) if (!await catalogIdShardStored(env, scope, pointer.digest)) missing.push(`id shard ${name}`);
   } else {
     for (const [product, part] of Object.entries(target.products ?? {})) if ((await inForce.pointer(product))?.digest !== part.digest) parts.push([product, part.digest]);
     checks = parts.length + (target.idIndex ? 1 : 0);
@@ -584,9 +821,9 @@ async function catalogueOverRollback(env: Env, scope: string, current: ContentCa
   }
   const governed = await governedOver(env, scope, set, value) as ContentCatalog;
   if (target.index) return governed;
-  // P93 (R-P487 (7)): a one-level revision is written sharded, its parts unchanged.
+  // P93 (R-P487 (7)): a one-level revision is written sharded, its parts unchanged (P98: its shards in one pack).
   const built = await new IndexEdit(env, scope, target).build();
-  await writeIndex(env, scope, built);
+  await writeIndex(env, scope, built, held);
   return manifestOf(governed, governed.pieces, built.index);
 }
 
@@ -1011,10 +1248,19 @@ function carriedVersion(current: ContentCatalog): string | undefined {
  * neither created nor altered and is not counted here.
  */
 function changedPieces(before: ContentCatalog, after: ContentCatalog): number {
-  const previous = new Map(before.pieces.map((piece: ContentPiece) => [piece.id, JSON.stringify(piece)]));
+  const previous = new Map(before.pieces.map((piece: ContentPiece) => [piece.id, sortedJson(piece)]));
   let changed = 0;
-  for (const piece of after.pieces) if (previous.get(piece.id) !== JSON.stringify(piece)) changed++;
+  for (const piece of after.pieces) if (previous.get(piece.id) !== sortedJson(piece)) changed++;
   return changed;
+}
+/**
+ * P98 (E25, LD5): a piece's value as JSON with every object's keys in sorted order, so two equal pieces compare equal
+ * whatever order their fields were written or read back in: a stored part reads back in canonical key order on a fresh
+ * isolate, where the isolate that validated it holds the validator's order (live: one retitle counted 1,199 changed).
+ */
+function sortedJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) => v && typeof v === 'object' && !Array.isArray(v)
+    ? Object.fromEntries(Object.keys(v as Record<string, unknown>).sort().map(k => [k, (v as Record<string, unknown>)[k]])) : v);
 }
 
 /**
@@ -1168,8 +1414,9 @@ contentRoutes.get('/:kind', async (c) => {
   const shard = c.req.query('shard');
   if (shard !== undefined && k.kind.name === CONTENT_KIND.name) {
     if (!/^[0-9a-f]{2}$/.test(shard)) return c.json({ ok: false, error: 'shard must be two lowercase hexadecimal digits (00 to ff)' }, 400);
-    const pointer = rev ? own((rev.value as ContentCatalog).index?.shards, shard) : undefined;
-    const document = pointer ? await readCatalogShard(c.env, scope, pointer.digest) : { shard, products: {} };
+    const index = rev ? (rev.value as ContentCatalog).index : undefined, pointer = own(index?.shards, shard);
+    // P98: a shard inside a pack is read by its range there.
+    const document = pointer ? await readCatalogShard(c.env, scope, pointer.digest, indexAddress(index!, pointer)) : { shard, products: {} };
     return c.json({ scope, kind: k.kind.name, source: 'stored', revision: rev?.revision ?? 0, publication: rev?.publication, shard, digest: pointer?.digest ?? null,
       document, envelope: { products: Object.keys(document.products).length, records: pointer?.records ?? 0, bytes: documentBytes(document), limitBytes: PUBLICATION_MAX_BYTES } });
   }
@@ -1178,7 +1425,7 @@ contentRoutes.get('/:kind', async (c) => {
   if (product !== undefined && k.kind.name === CONTENT_KIND.name) {
     const pointer = rev ? await catalogPartPointer(c.env, scope, rev.value as ContentCatalog, product) : undefined;
     if (!pointer) return c.json({ ok: false, error: `product ${JSON.stringify(product.slice(0, 256))} has no part in the catalogue in force` }, 404);
-    const part = await readCatalogPart(c.env, scope, pointer.digest);
+    const part = await readCatalogPart(c.env, scope, pointer.digest, pointer.address);
     return c.json({ scope, kind: k.kind.name, source: 'stored', revision: rev!.revision, publication: rev!.publication, product, digest: pointer.digest,
       document: { product: part.product, pieces: part.pieces }, envelope: { pieces: part.pieces.length, bytes: documentBytes(part), limitBytes: PUBLICATION_MAX_BYTES } });
   }
@@ -1336,17 +1583,19 @@ contentRoutes.put('/:kind', async (c) => {
   // P38 (VA2): a catalogue document, primary or related, is published under the
   // vocabulary in effect in the set it is published over; any other document as it came.
   // P86: and, where it declares product slots, routed into its parts before the head is reserved.
-  const seen = { manifest: false };
+  const seen = { manifest: false }, held: PackHold = {};
   // P88 (E13): a slots document, primary or related, meets the approved layouts of the set it is published over.
   const requestLayouts = requestLayoutsDocument(k.kind, candidate, related);
   const governedMember = (kind: DocumentKind<unknown>, document: unknown) => kind.name === CONTENT_KIND.name
-    ? (base: unknown, set: PublicationPin) => catalogueOverPut(c.env, scope, base as ContentCatalog | undefined, set, document, seen)
+    ? (base: unknown, set: PublicationPin) => catalogueOverPut(c.env, scope, base as ContentCatalog | undefined, set, document, seen, held)
     : kind.name === SLOTS_KIND.name ? slotsOverLayouts(c.env, scope, document, requestLayouts) : () => document;
+  // P98 (LD6): the catalogue's pack, where the PUT adopted one already stored, headed again once the head is held.
+  const reserved = packReserved(c.env, scope, held);
   const named = (error: unknown) => { throw seen.manifest ? namedManifest(error) : error; };
   let result;
   if (related !== undefined) {
     if (!Array.isArray(related) || related.length > 5) throw new PublicationError('Invalid related publication members', 422, 'invalid_document');
-    const changes = [{ kind: k.kind, scope, request: { type: 'replace', candidate }, candidate: governedMember(k.kind, candidate) }];
+    const changes: PublicationChange[] = [{ kind: k.kind, scope, request: { type: 'replace', candidate }, candidate: governedMember(k.kind, candidate), reserved }];
     const members: PublishedMember[] = [{ kind: k.kind, document: candidate, at: null }];
     for (const [index, entry] of related.entries()) {
       if (!entry || typeof entry !== 'object' || Object.keys(entry).some(key => !['kind', 'document'].includes(key))) throw new PublicationError('Invalid related document', 422, 'invalid_document');
@@ -1394,7 +1643,7 @@ contentRoutes.put('/:kind', async (c) => {
     // P38: the catalogue through the same replace a write makes, under the vocabulary in effect.
     // P88: a slots document through the same replace a write makes, under the approved layouts of its set.
     result = k.kind.name === CONTENT_KIND.name || k.kind.name === SLOTS_KIND.name
-      ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate)).catch(named)
+      ? await publish(c.env, k.kind, scope, { type: 'replace', candidate }, { ...meta, note }, governedMember(k.kind, candidate), reserved).catch(named)
       : await write(c.env, k.kind, scope, candidate, { ...meta, note });
   }
   return result.ok
@@ -1415,9 +1664,11 @@ contentRoutes.post('/:kind/rollback/:n', async (c) => {
   // P38 (VA2): rolling the catalogue forward to an old body publishes that body
   // under the vocabulary in effect, as every catalogue publication is; the
   // request, the note and the body read are versionedStore.rollback's own.
+  const held: PackHold = {};
   const result = k.kind.name === CONTENT_KIND.name
     ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
-      async (base: unknown, set: PublicationPin) => catalogueOverRollback(c.env, scope, base as ContentCatalog | undefined, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null))
+      async (base: unknown, set: PublicationPin) => catalogueOverRollback(c.env, scope, base as ContentCatalog | undefined, set, (await publicationVersion(c.env, k.kind, scope, n))?.value ?? null, held),
+      packReserved(c.env, scope, held))
     // P88 (E13): a slots body rolled forward meets the approved layouts of the set it is published over.
     : k.kind.name === SLOTS_KIND.name
       ? await publish(c.env, k.kind, scope, { type: 'rollback', toRevision: n }, { ...rollbackMeta, note: rollbackMeta.note ?? `rollback to revision ${n}` },
@@ -1456,24 +1707,35 @@ class HeldLoad extends Error {
  */
 async function assembleParted(env: Env, scope: string, current: ContentCatalog, set: PublicationPin, incoming: Record<string, unknown>[], positions: readonly number[],
   mode: ImportMode, opts: { expire?: number }, sink: { placed?: { pieces: unknown[]; positions: (number | null)[] }; touched?: { before: ContentCatalog; after: ContentCatalog } }):
-  Promise<{ manifest?: ContentCatalog; parts: Map<string, ContentPiece[]>; built?: BuiltIndex; document?: unknown }> {
+  Promise<{ manifest?: ContentCatalog; built?: BuiltIndex; document?: unknown; writing?: () => Promise<{ manifest: ContentCatalog; built: BuiltIndex }> }> {
   const slots = new Set(current.productSlots ?? []), sharedIn: number[] = [], productIn = new Map<string, number[]>();
   incoming.forEach((piece, j) => {
     const product = partProductOf(piece, slots);
     if (product === null) sharedIn.push(j); else productIn.set(product, [...(productIn.get(product) ?? []), j]);
   });
-  // P93: the stored parts of the products the file names, through their shards (only those shards are read).
+  // P93: the stored parts of the products the file names, through their shards (only those shards are read). P98: the
+  // shards first, then the parts, then (below) the id shards of the ids whose place can change, each pack's objects in as
+  // few ranged reads as their places allow.
   const edit = new IndexEdit(env, scope, current), stored = new Map<string, ContentPiece[]>(), known = new Map<string, Set<unknown>>();
-  const pointers = new Map<string, CatalogPartPointer | undefined>();
+  const pointers = new Map<string, ResolvedPartPointer | undefined>();
+  await edit.prefetchShards(productIn.keys());
+  for (const product of productIn.keys()) pointers.set(product, await edit.pointer(product));
+  await edit.prefetchParts(pointers.values());
   for (const product of productIn.keys()) {
-    const pointer = await edit.pointer(product), pieces = pointer ? (await readCatalogPart(env, scope, pointer.digest)).pieces as ContentPiece[] : [];
-    pointers.set(product, pointer); stored.set(product, pieces); known.set(product, new Set(pieces.map(piece => piece.id)));
+    const pointer = pointers.get(product), pieces = pointer ? (await edit.part(pointer)).pieces as ContentPiece[] : [];
+    stored.set(product, pieces); known.set(product, new Set(pieces.map(piece => piece.id)));
+  }
+  {
+    const ids: string[] = [], sharedNow = new Set(current.pieces.map(piece => piece.id));
+    for (const [product, from] of productIn) for (const j of from) { const id = incoming[j]!.id; if (typeof id === 'string' && !known.get(product)!.has(id)) ids.push(id); }
+    for (const j of sharedIn) { const id = incoming[j]!.id; if (typeof id === 'string' && !sharedNow.has(id)) ids.push(id); }
+    await edit.prefetchIdShards(ids);
   }
   // R-P424 through the id shards, looked up only for the ids whose place can change (P93): an incoming part record its
   // product's part does not already hold. One the index lists under another product moves only when the file carries
   // that product too — its part then drops it — and is refused otherwise.
   const collisions: Collision[] = [], movedOut = new Map<string, Set<unknown>>(), stale = new Set<string>();
-  const ownerOf = ownerCheck(env, scope, edit, known, stale);
+  const ownerOf = ownerCheck(edit, known, stale);
   const at = (j: number) => recordAddress(positions[j]!, incoming[j]!.id);
   for (const [product, from] of productIn) {
     for (const j of from) {
@@ -1520,7 +1782,7 @@ async function assembleParted(env: Env, scope: string, current: ContentCatalog, 
   const version = carriedVersion(current);
   const governed = await governedOver(env, scope, set, { ...(version ? { version } : {}), pieces: combined }) as { pieces: unknown[] };
   const checked = CONTENT_KIND.validate({ ...(version ? { version } : {}), pieces: governed.pieces });
-  if (!checked.ok) return { parts: new Map(), document: { ...(version ? { version } : {}), pieces: governed.pieces } };
+  if (!checked.ok) return { document: { ...(version ? { version } : {}), pieces: governed.pieces } };
   // Each product's records as validated, in their segment; a record whose validated fields route it elsewhere, and a pooled
   // record in a part, are refused by their position in the list (the record of the file sent).
   const errors: string[] = [], parts = new Map<string, ContentPiece[]>(), before: ContentPiece[] = [], after: ContentPiece[] = [];
@@ -1552,18 +1814,21 @@ async function assembleParted(env: Env, scope: string, current: ContentCatalog, 
   // P93: the index's edits — each named product's pointer where its part's digest moved (only those parts are written:
   // an unchanged part is never put again), and the ids whose place changed (added to a part, or dropped from one); a
   // retitle changes neither.
-  const now = await partPointers(parts), changed = new Map<string, ContentPiece[]>(), kept = new Set<unknown>();
+  // P98: each part whose digest moved is placed in the load's one pack.
+  const now = await partPointers(parts), kept = new Set<unknown>();
   for (const pieces of parts.values()) for (const piece of pieces) kept.add(piece.id);
   for (const [product, pieces] of parts) {
-    if (pointers.get(product)?.digest !== now[product]!.digest) { edit.setPointer(product, now[product]!); changed.set(product, pieces); }
+    if (pointers.get(product)?.digest !== now[product]!.digest) edit.place(product, { product, pieces }, now[product]!);
     for (const piece of pieces) if (!known.get(product)!.has(piece.id)) edit.setOwner(piece.id, product);
   }
   for (const ids of known.values()) for (const id of ids) if (typeof id === 'string' && !kept.has(id)) edit.setOwner(id, null);
   for (const id of stale) if (!kept.has(id)) edit.setOwner(id, null);
+  const members = { ...(version ? { version } : {}), ...(current.typeFallback ? { typeFallback: current.typeFallback } : {}), productSlots: current.productSlots };
   const built = await edit.build();
-  const manifest = manifestOf({ ...(version ? { version } : {}), ...(current.typeFallback ? { typeFallback: current.typeFallback } : {}), productSlots: current.productSlots },
-    sharedPieces, built.index);
-  return { manifest, parts: changed, built };
+  // The skip and the dry run read the index above; a load that writes builds it once more (only where it read objects
+  // stored before packs or the table asks for a pack to be re-homed: `IndexEdit.build`'s `writing`).
+  const writing = async () => { const final = await edit.build({ writing: true }); return { manifest: manifestOf(members, sharedPieces, final.index), built: final }; };
+  return { manifest: manifestOf(members, sharedPieces, built.index), built, writing };
 }
 /**
  * P86 (S9, R-P407 (2)): on a catalogue with product slots, an import's and a pull's diagnostics name each routed
@@ -1612,6 +1877,7 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
       { records, accepted: FEED_FIELDS, ...(document ? { document } : {}), pieceRecords: storedPieceRecords(view, incoming, positions) }), catalog, incoming, positions);
   };
   let result;
+  const held: PackHold = {};
   try {
     // P38 (VA2): the assembled catalogue under the vocabulary in effect in the set it is published over.
     result = await publish<ContentCatalog>(c.env, CONTENT_KIND, scope, { type: 'import', source, records, mode, ...(opts.expire !== undefined ? { expire: opts.expire } : {}) },
@@ -1627,10 +1893,11 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
           if (!parted.manifest) return parted.document;
           if (await documentDigest(CONTENT_KIND.stamp!(parted.manifest, meta.expectedRevision!)) === await documentDigest(current)) throw new HeldLoad('unchanged', current);
           if (opts.dryRun) throw new HeldLoad('dry-run', parted.manifest);
-          manifestCap(parted.manifest, set);
-          await writeParts(c.env, scope, parted.parts);
-          if (parted.built) await writeIndex(c.env, scope, parted.built);
-          return parted.manifest;
+          const written = await parted.writing!();
+          manifestCap(written.manifest, set);
+          // P98: the load's one pack, before the head is reserved.
+          await writeIndex(c.env, scope, written.built, held);
+          return written.manifest;
         }
         const assembled = assembleFrom(current, incoming, mode);
         placed = { pieces: assembled.pieces, positions: assembled.origins.map(j => j === null ? null : positions[j]!) };
@@ -1647,7 +1914,7 @@ async function importInto(c: Context<Ctx>, records: unknown[], mode: ImportMode,
           if (opts.dryRun) throw new HeldLoad('dry-run', checked.value);
         }
         return governed;
-      });
+      }, packReserved(c.env, scope, held));
   } catch (error) {
     if (error instanceof VocabularyRefusal) return c.json({ ok: false, errors: addressed(error.errors), received: records.length }, 422);
     if (base?.productSlots && error instanceof PublicationError && error.code === 'document_too_large') throw namedManifest(error);

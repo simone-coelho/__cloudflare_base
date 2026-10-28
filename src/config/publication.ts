@@ -42,9 +42,35 @@ const CUSTOMER_COMPLETION_PATH = 'POST /content/publication/complete';
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 const integer = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.length > 0 && v.length <= max && v.trim() === v;
+/**
+ * P98 (E25, LD4): the storage call a 503 failed on — the call, the kind of object it named and the store's own error
+ * number where the store gave one — never its key, a body or a credential.
+ */
+export interface StorageCause { operation: 'get' | 'put' | 'head' | 'list' | 'delete'; object: string; storageStatus?: number }
+/**
+ * P98 (LD4): what a refused write left in the store: `nothing_written` (nothing any revision names; at most a pack no
+ * revision names, which the purge collects), `pending` (the head holds the publication's intent: recover it with POST
+ * /content/catalog/publication/recover, or send the same request again), `committed` (the publication is in force).
+ */
+export type PublicationState = 'nothing_written' | 'pending' | 'committed';
 export class PublicationError extends Error {
+  /** P98 (LD4): the storage call this 503 failed on, when it failed on one. */
+  failure?: StorageCause;
+  /** P98 (LD4): the state the store was left in, set by the publication the failure interrupted. */
+  state?: PublicationState;
   constructor(message: string, readonly status: 400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 428 | 503 = 503,
     readonly code = 'publication_unavailable') { super(message); }
+}
+/** P98 (LD4): the members a 503 that failed on a storage call adds to its answer, beside `error` and `code`; none for any other refusal. */
+export function publicationFailureOf(error: PublicationError): Record<string, unknown> {
+  if (!error.failure) return {};
+  const { operation, object, storageStatus } = error.failure;
+  return { operation, object, ...(storageStatus !== undefined ? { storageStatus } : {}), state: error.state ?? 'nothing_written' };
+}
+/** P98 (LD4): the state a storage failure left, set once, by the innermost publication that knows it. */
+function stated(error: unknown, state: PublicationState): unknown {
+  if (error instanceof PublicationError && error.failure && error.state === undefined) error.state = state;
+  return error;
 }
 const UNAVAILABLE = 'Configuration publication authority unavailable';
 const unavailable = () => new PublicationError(UNAVAILABLE);
@@ -76,9 +102,40 @@ function absent(env: Env, kind: { name: string }): PublicationError {
  * `node:async_hooks`, and this one is bundled for workerd on its own
  * (`src/config/versionedStore.test.ts:410`).
  */
-function storageFailure(error: unknown): PublicationError {
+function storageFailure(error: unknown, operation?: StorageCause['operation'], key?: string): PublicationError {
   if (error instanceof HTTPException && error.status === 401) throw error;
-  return unavailable();
+  if (error instanceof PublicationError && error.failure) return error;
+  const failure = unavailable();
+  if (operation && key !== undefined) failure.failure = { operation, object: objectKindOf(key), ...storageStatusOf(error) };
+  return failure;
+}
+/** P98 (LD4): the kind of object a storage key names, the only thing of a key a refusal says. */
+function objectKindOf(key: string): string {
+  if (/\/head\.json$/.test(key)) return 'head';
+  if (/\/set\/[0-9]+\.json$/.test(key)) return 'set';
+  if (/\/rev\/[0-9]+\.json$/.test(key)) return 'revision';
+  const content = /\/content\/(part|shard|idshard|ids|pack)\//.exec(key);
+  return content ? ({ part: 'part', shard: 'shard', idshard: 'idshard', ids: 'idindex', pack: 'pack' } as Record<string, string>)[content[1]!]! : 'object';
+}
+/**
+ * P98 (LD4): the store's own error number where it gave one: a numeric `status` or `code` on the error, else the R2
+ * error number a binding's message ends with, `(10001)`. Never the message itself, which may carry a key.
+ */
+function storageStatusOf(error: unknown): { storageStatus?: number } {
+  const e = error && typeof error === 'object' ? error as { status?: unknown; code?: unknown; message?: unknown } : null;
+  for (const v of [e?.status, e?.code]) if (typeof v === 'number' && Number.isSafeInteger(v) && v > 0) return { storageStatus: v };
+  const m = typeof e?.message === 'string' ? /\((\d{3,6})\)\s*$/.exec(e.message) : null;
+  return m ? { storageStatus: Number(m[1]) } : {};
+}
+/**
+ * P98 (E25, LD2): a storage call that is safe to repeat — a read, a HEAD, an exact-create — is sent a second time inside
+ * the request when the first throws, so one transient failure of the store never refuses a request. An owner refusal
+ * (401) is the request's own answer and is never repeated. The head's compare-and-set is never sent through this
+ * (`casHead`).
+ */
+async function again<T>(call: () => Promise<T>): Promise<T> {
+  try { return await call(); }
+  catch (error) { if (error instanceof HTTPException && error.status === 401) throw error; return call(); }
 }
 const conflict = () => new PublicationError('Publication conflicts with the retained operation or authored revision set', 409, 'publication_conflict');
 function required(condition: unknown): asserts condition { if (!condition) throw unavailable(); }
@@ -176,7 +233,11 @@ export function publicationMeta(headers: Headers, actor: string, note?: string, 
   const meta = { actor, note, operationId, expectedRevision: Number(parsed[1]), expectedPublication: { revision: Number(parsed[2]), digest: parsed[3] } };
   publicationPreconditions(meta, false, creation); return meta;
 }
-async function readObject(storage: R2Bucket, key: string, max = PUBLICATION_MAX_BYTES): Promise<{ value: unknown; etag: string; bytes: number } | null> {
+/** One object read whole (P98: tried twice, `again`): its value, etag and bytes, or null where the store holds none. */
+function readObject(storage: R2Bucket, key: string, max = PUBLICATION_MAX_BYTES): Promise<{ value: unknown; etag: string; bytes: number } | null> {
+  return again(() => readObjectOnce(storage, key, max));
+}
+async function readObjectOnce(storage: R2Bucket, key: string, max: number): Promise<{ value: unknown; etag: string; bytes: number } | null> {
   try {
     const result = await storage.get(key); if (result === null) return null;
     required(result && text(result.etag, 256) && integer(result.size) && result.size > 0 && result.size <= max && result.body);
@@ -187,7 +248,7 @@ async function readObject(storage: R2Bucket, key: string, max = PUBLICATION_MAX_
       raw += decoder.decode(); required(bytes === result.size);
     } catch (error) { void reader.cancel().catch(() => undefined); throw error; } finally { reader.releaseLock(); }
     return { value: JSON.parse(raw), etag: result.etag, bytes };
-  } catch (error) { throw storageFailure(error); }
+  } catch (error) { throw storageFailure(error, 'get', key); }
 }
 async function sealed<T extends object>(value: T): Promise<T & { digest: string }> { return { ...value, digest: await digest(value) }; }
 async function validDigest(value: Record<string, unknown>): Promise<void> {
@@ -601,30 +662,56 @@ export async function publicationVersion<T>(env: Env, kind: DocumentKind<T>, sco
   const value = await envelope(found.value, kind, scope, n); if (n === ref.revision) required(value.digest === ref.digest);
   return publicRevision(value, set, kind);
 }
+/** One conditional write, sent once: an exact-create without `etag`, the head's compare-and-set with it. */
 async function put(storage: R2Bucket, key: string, body: string, etag?: string): Promise<boolean> {
   try {
     const result = await storage.put(key, body, { onlyIf: etag === undefined ? new Headers({ 'If-None-Match': '*' }) : { etagMatches: etag }, httpMetadata: { contentType: 'application/json' } });
     if (result === null) return false;
     required(result && result.key === key && text(result.etag, 256) && result.size === encoder.encode(body).byteLength); return true;
-  } catch (error) { throw storageFailure(error); }
+  } catch (error) { throw storageFailure(error, 'put', key); }
 }
+/**
+ * An immutable object written with the store's exact-create: written, or already there with the same canonical bytes
+ * (a retry), else a conflict. P98 (LD2): safe to repeat, so the create is tried twice (`again`); a first attempt that
+ * landed and then threw is found by the second as already there, and adopted.
+ */
 async function createExact(storage: R2Bucket, key: string, value: unknown): Promise<void> {
-  const body = serialized(value); if (await put(storage, key, body)) return;
+  const body = serialized(value); if (await again(() => put(storage, key, body))) return;
   const found = await readObject(storage, key); if (!found || canonical(found.value) !== body) throw conflict();
+}
+/**
+ * P98 (E25, LD2): the head's compare-and-set, never sent again blindly. When the write throws, the head is read again:
+ * a head that holds this request's intent (`mine`) is the write having landed; a head another request wrote since is a
+ * lost race (false: 409, as today); only a head still at `etag` is written once more, against that same etag. Where
+ * even that cannot be established, the failure says the publication may be pending (recover it).
+ */
+async function casHead(storage: R2Bucket, scope: string, body: string, etag: string, mine: (head: Head) => boolean): Promise<boolean> {
+  const settle = async (failure: unknown): Promise<'mine' | 'theirs' | 'unchanged'> => {
+    if (failure instanceof HTTPException) throw failure;
+    let now: Loaded | null;
+    try { now = await loadHead(storage, scope); } catch { throw stated(failure, 'pending'); }
+    return now && mine(now.head) ? 'mine' : !now || now.etag !== etag ? 'theirs' : 'unchanged';
+  };
+  try { return await put(storage, headKey(scope), body, etag); }
+  catch (first) {
+    const after = await settle(first);
+    if (after !== 'unchanged') return after === 'mine';
+    try { return await put(storage, headKey(scope), body, etag); }
+    catch (second) { const now = await settle(second); if (now === 'unchanged') throw second; return now === 'mine'; }
+  }
 }
 
 // ── P86 (E10, design A, R-P405): the catalogue's per-product parts ─────────────
 //
 // A catalogue whose value is a manifest (`products`, src/content/types.ts) keeps
-// each product's records in one immutable, content-addressed part object beside
-// the revision bodies: its key names the digest of its canonical value, so the
-// manifest's pointer, the key and the bytes are one fact. A part is written
-// with the store's exact-create by the catalogue's door BEFORE the publication
-// reserves the head (the candidate step of `publishSet`), never inside `finish`,
-// so a load whose part cannot be written commits nothing and leaves nothing
-// pending; a retry writes the same key. A part is at most 2 MiB, as a revision
-// body is, and it is kept while any stored revision's manifest names it
-// (`purgeByPolicy` removes the parts only purged revisions named).
+// each product's records in one immutable, content-addressed part beside the
+// revision bodies, its digest that of its canonical value, so the pointer and the
+// bytes are one fact. A part is at most 2 MiB, as a revision body is. P86 and P93
+// stored each part as an object of its own (`content/part/<digest>.json`), still
+// read as such; P98 (E25) writes every part a load changes inside that load's one
+// pack (below), written by the catalogue's door BEFORE the publication reserves
+// the head (the candidate step of `publishSet`), never inside `finish`, so a load
+// that cannot write commits nothing and leaves nothing pending.
 
 const partKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/part/' + digest + '.json';
 const idIndexKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/ids/' + digest + '.json';
@@ -651,42 +738,32 @@ function rememberPart(storage: R2Bucket, scope: string, digest: string, value: C
   partCache.set(key, { binding, value, bytes }); partCacheBytes += bytes;
 }
 /**
- * P86: write one product's part with the store's exact-create and answer its
- * digest. Refused 413 `part_too_large` past 2 MiB; a part already stored with
- * the same bytes is the same part (a retry), any other bytes a conflict.
- */
-export async function writeCatalogPart(env: Env, scope: string, part: CatalogPart): Promise<string> {
-  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), value = freeze(structuredClone(part)) as CatalogPart;
-  if (encoder.encode(canonical(value)).byteLength > PUBLICATION_MAX_BYTES) {
-    throw new PublicationError(`The part of product ${JSON.stringify(part.product).slice(0, 80)} exceeds 2 MiB`, 413, 'part_too_large');
-  }
-  const hash = await digest(value);
-  await createExact(storage, partKey(home, hash), value);
-  rememberPart(storage, home, hash, value, encoder.encode(canonical(value)).byteLength);
-  return hash;
-}
-/**
  * P86: one part by its digest: from this isolate's part cache, else one read of
  * its object, whose canonical value must hash to the digest it is named by.
  * A part the store does not hold, or holds otherwise, is refused 503
  * `part_unavailable`, naming the digest.
  */
-export async function readCatalogPart(env: Env, scope: string, hash: string): Promise<CatalogPart> {
+export async function readCatalogPart(env: Env, scope: string, hash: string, address?: PackAddress): Promise<CatalogPart> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
   if (!HASH.test(hash)) throw new PublicationError('Invalid catalogue part digest', 503, 'part_unavailable');
   const held = partCache.get(partCacheKey(storage, home, hash));
   if (held && held.binding === storageIdentity(storage)) return held.value;
-  const found = await readObject(storage, partKey(home, hash));
+  // P98: a part inside a pack is one ranged read of its bytes; a part stored before packs (P86, P93) is its own object.
+  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, partKey(home, hash));
   if (!found || !validPart(found.value) || await digest(found.value) !== hash) throw new PublicationError(`Catalogue part ${hash} unavailable`, 503, 'part_unavailable');
   const value = freeze(found.value) as CatalogPart;
   rememberPart(storage, home, hash, value, found.bytes);
   return value;
 }
-/** P86: whether the store holds a part, by one HEAD of its object (a rollback's check of every pointer). */
-export async function catalogPartStored(env: Env, scope: string, hash: string): Promise<boolean> {
+/** P86: whether the store holds a part, by one HEAD of its object (a rollback's check of every pointer); P98: of its pack, for a part inside one. */
+export async function catalogPartStored(env: Env, scope: string, hash: string, address?: PackAddress): Promise<boolean> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (!HASH.test(hash)) return false;
-  try { return (await storage.head(partKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+  if (!HASH.test(hash) || (address && !HASH.test(address.pack))) return false;
+  return headStored(storage, address ? packKey(home, address.pack) : partKey(home, hash));
+}
+/** P98 (LD2): whether the store holds an object, by one HEAD, tried twice (`again`). */
+function headStored(storage: R2Bucket, key: string): Promise<boolean> {
+  return again(async () => { try { return (await storage.head(key)) !== null; } catch (error) { throw storageFailure(error, 'head', key); } });
 }
 
 // ── P86 (R-P424, amending R-P407 (5)): the catalogue's id index ────────────────
@@ -723,7 +800,7 @@ export async function writeCatalogIdIndex(env: Env, scope: string, value: Catalo
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), raw = canonical(value);
   if (encoder.encode(raw).byteLength > ID_INDEX_MAX_BYTES) throw new PublicationError('The catalogue\'s id index is past its 8 MiB limit; nothing was written', 413, 'id_index_too_large');
   const hash = await digest(value), key = idIndexKey(home, hash);
-  if (await put(storage, key, raw)) return hash;
+  if (await again(() => put(storage, key, raw))) return hash;
   const found = await readObject(storage, key, ID_INDEX_MAX_BYTES); if (!found || canonical(found.value) !== raw) throw conflict();
   return hash;
 }
@@ -749,7 +826,7 @@ export async function readCatalogIdIndex(env: Env, scope: string, hash: string):
 export async function catalogIdIndexStored(env: Env, scope: string, hash: string): Promise<boolean> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
   if (!HASH.test(hash)) return false;
-  try { return (await storage.head(idIndexKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+  return headStored(storage, idIndexKey(home, hash));
 }
 
 // ── P93 (E18, R-P487): the catalogue's sharded index ───────────────────────────
@@ -774,16 +851,29 @@ export async function catalogShardName(id: string): Promise<string> {
 }
 const shardKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/shard/' + digest + '.json';
 const idShardKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/idshard/' + digest + '.json';
-/** P93: a product shard as stored: its name and each product's part pointer. */
-export interface CatalogShard { shard: string; products: Record<string, { digest: string; records: number }> }
+/** P93: a product shard as stored: its name and each product's part pointer; P98: and the packs its parts in other packs live in. */
+export interface CatalogShard { shard: string; products: Record<string, StoredPartPointer>; packs?: string[] }
+/**
+ * P98 (E25): a part's pointer as a shard stores it: its digest and records and, for a part inside a pack, its byte range
+ * there (`at`, `bytes`) and — where that pack is not the one the shard itself is stored in — the pack's place in the
+ * shard's `packs`. A pointer without a range names a part stored as an object of its own (P86, P93).
+ */
+export interface StoredPartPointer { digest: string; records: number; at?: number; bytes?: number; pack?: number }
 /** P93: an id shard as stored: its name and, for each part record's id, the product whose part holds it. */
 export interface CatalogIdShard { shard: string; ids: Record<string, string> }
 const SHARD_NAME = /^[0-9a-f]{2}$/;
+const POINTER_FIELDS = new Set(['digest', 'records', 'at', 'bytes', 'pack']);
+const whole = (v: unknown, least: number): v is number => Number.isSafeInteger(v) && (v as number) >= least;
 function validShard(value: unknown): value is CatalogShard {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 2) return false;
-  const { shard, products } = value as CatalogShard;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const keys = Object.keys(value), { shard, products, packs } = value as CatalogShard;
+  if (!(keys.length === 2 || (keys.length === 3 && Object.hasOwn(value, 'packs')))) return false;
+  if (packs !== undefined && !(Array.isArray(packs) && packs.length > 0 && packs.every(p => typeof p === 'string' && HASH.test(p)) && new Set(packs).size === packs.length)) return false;
   return typeof shard === 'string' && SHARD_NAME.test(shard) && !!products && typeof products === 'object' && !Array.isArray(products)
-    && Object.values(products).every(p => !!p && typeof p === 'object' && typeof p.digest === 'string' && HASH.test(p.digest) && Number.isSafeInteger(p.records) && p.records >= 1);
+    && Object.values(products).every(p => !!p && typeof p === 'object' && Object.keys(p).every(key => POINTER_FIELDS.has(key))
+      && typeof p.digest === 'string' && HASH.test(p.digest) && whole(p.records, 1)
+      && (p.at === undefined ? p.bytes === undefined && p.pack === undefined
+        : whole(p.at, 0) && whole(p.bytes, 1) && (p.pack === undefined || (whole(p.pack, 0) && p.pack < (packs?.length ?? 0)))));
 }
 function validIdShard(value: unknown): value is CatalogIdShard {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 2) return false;
@@ -807,11 +897,14 @@ function rememberShard(storage: R2Bucket, scope: string, digest: string, value: 
 /**
  * P93: a product shard's value and pointer from its products' part pointers
  * (nothing written), refused 413 `index_shard_too_large` naming the shard and
- * its count past 2 MiB.
+ * its count past 2 MiB. P98: each pointer as the shard stores it (its range, and
+ * its pack's place in `packs` for a part in another pack than the shard's own).
  */
-export async function catalogShardOf(shard: string, products: ReadonlyMap<string, { digest: string; records: number }>):
+export async function catalogShardOf(shard: string, products: ReadonlyMap<string, StoredPartPointer>, packs: readonly string[] = []):
   Promise<{ value: CatalogShard; pointer: { digest: string; products: number; records: number } }> {
-  const value: CatalogShard = { shard, products: Object.fromEntries([...products].map(([product, p]) => [product, { digest: p.digest, records: p.records }])) };
+  const stored = (p: StoredPartPointer): StoredPartPointer => ({ digest: p.digest, records: p.records,
+    ...(p.at !== undefined && p.bytes !== undefined ? { at: p.at, bytes: p.bytes, ...(p.pack !== undefined ? { pack: p.pack } : {}) } : {}) });
+  const value: CatalogShard = { shard, products: Object.fromEntries([...products].map(([product, p]) => [product, stored(p)])), ...(packs.length ? { packs: [...packs] } : {}) };
   const bytes = encoder.encode(canonical(value)).byteLength;
   if (bytes > PUBLICATION_MAX_BYTES) {
     throw new PublicationError(`The catalogue's index shard ${shard} would be ${bytes} bytes for ${products.size} products, past its 2 MiB limit; nothing was written`, 413, 'index_shard_too_large');
@@ -828,84 +921,266 @@ export async function catalogIdShardOf(shard: string, ids: ReadonlyMap<string, s
   }
   return { value, pointer: { digest: await digest(value), records: ids.size } };
 }
-/** P93: write a product shard with the store's exact-create (a retry writes the same key; other bytes there are a conflict). */
-export async function writeCatalogShard(env: Env, scope: string, value: CatalogShard): Promise<string> {
-  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), held = freeze(structuredClone(value)) as CatalogShard;
-  const hash = await digest(held);
-  await createExact(storage, shardKey(home, hash), held);
-  rememberShard(storage, home, hash, held, encoder.encode(canonical(held)).byteLength);
-  return hash;
-}
-/** P93: write an id shard with the store's exact-create. */
-export async function writeCatalogIdShard(env: Env, scope: string, value: CatalogIdShard): Promise<string> {
-  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), hash = await digest(value);
-  await createExact(storage, idShardKey(home, hash), value);
-  return hash;
-}
 /**
  * P93: one product shard by its digest: from this isolate's shard cache, else
  * one read of its object, whose canonical value must hash to its digest. A shard
  * the store does not hold, or holds otherwise, is refused 503 `part_unavailable`
  * (a product page is never decided from the shared pieces alone, R-P412 (2)).
+ * P98: a shard inside a pack is one ranged read of its bytes there.
  */
-export async function readCatalogShard(env: Env, scope: string, hash: string): Promise<CatalogShard> {
+export async function readCatalogShard(env: Env, scope: string, hash: string, address?: PackAddress): Promise<CatalogShard> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
   if (!HASH.test(hash)) throw new PublicationError('Invalid catalogue shard digest', 503, 'part_unavailable');
   const held = shardCache.get(home + '\u0000' + hash);
   if (held && held.binding === storageIdentity(storage)) return held.value;
-  const found = await readObject(storage, shardKey(home, hash));
+  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, shardKey(home, hash));
   if (!found || !validShard(found.value) || await digest(found.value) !== hash) throw new PublicationError(`Catalogue index shard ${hash} unavailable`, 503, 'part_unavailable');
   const value = freeze(found.value) as CatalogShard;
   rememberShard(storage, home, hash, value, found.bytes);
   return value;
 }
-/** P93: one id shard by its digest (the loads alone read it); one the store does not hold, or holds otherwise, is refused 503 `id_index_unavailable`. */
-export async function readCatalogIdShard(env: Env, scope: string, hash: string): Promise<CatalogIdShard> {
+/** P93: one id shard by its digest (the loads alone read it); one the store does not hold, or holds otherwise, is refused 503 `id_index_unavailable`. P98: by its range, inside a pack. */
+export async function readCatalogIdShard(env: Env, scope: string, hash: string, address?: PackAddress): Promise<CatalogIdShard> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  const refused = () => new PublicationError(`The catalogue's id index shard ${hash.slice(0, 64)} is unavailable, so the load cannot be checked against the records the parts hold; nothing was written`, 503, 'id_index_unavailable');
-  if (!HASH.test(hash)) throw refused();
-  const found = await readObject(storage, idShardKey(home, hash));
-  if (!found || !validIdShard(found.value) || await digest(found.value) !== hash) throw refused();
+  if (!HASH.test(hash)) throw idShardUnavailable(hash);
+  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, idShardKey(home, hash));
+  if (!found || !validIdShard(found.value) || await digest(found.value) !== hash) throw idShardUnavailable(hash);
   return found.value;
 }
-/** P93: whether the store holds a product shard, by one HEAD of its object (a rollback's existence check). */
-export async function catalogShardStored(env: Env, scope: string, hash: string): Promise<boolean> {
+const idShardUnavailable = (hash: string) => new PublicationError(`The catalogue's id index shard ${hash.slice(0, 64)} is unavailable, so the load cannot be checked against the records the parts hold; nothing was written`, 503, 'id_index_unavailable');
+/** P93: whether the store holds a product shard, by one HEAD of its object (a rollback's existence check); P98: of its pack. */
+export async function catalogShardStored(env: Env, scope: string, hash: string, address?: PackAddress): Promise<boolean> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (!HASH.test(hash)) return false;
-  try { return (await storage.head(shardKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+  if (!HASH.test(hash) || (address && !HASH.test(address.pack))) return false;
+  return headStored(storage, address ? packKey(home, address.pack) : shardKey(home, hash));
 }
-/** P93: whether the store holds an id shard, by one HEAD of its object. */
-export async function catalogIdShardStored(env: Env, scope: string, hash: string): Promise<boolean> {
+/** P93: whether the store holds an id shard, by one HEAD of its object; P98: of its pack. */
+export async function catalogIdShardStored(env: Env, scope: string, hash: string, address?: PackAddress): Promise<boolean> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (!HASH.test(hash)) return false;
-  try { return (await storage.head(idShardKey(home, hash))) !== null; } catch (error) { throw storageFailure(error); }
+  if (!HASH.test(hash) || (address && !HASH.test(address.pack))) return false;
+  return headStored(storage, address ? packKey(home, address.pack) : idShardKey(home, hash));
 }
+/** P98: whether the store holds a pack, by one HEAD (a rollback checks each pack the revision it rolls forward to names, once). */
+export async function catalogPackStored(env: Env, scope: string, pack: string): Promise<boolean> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  return HASH.test(pack) && headStored(storage, packKey(home, pack));
+}
+/** P98: the index a reader resolves a part through: its pack table and its shard pointers. */
+export interface CatalogIndexView { packs?: readonly PackEntry[]; shards: Record<string, PlacedPointer> }
 /**
  * P93: a product's part pointer in a catalogue of either form: from the
  * one-level index, or through its shard (one read, held per isolate by digest);
  * none where it has no part. A shard the store no longer holds is refused 503
- * `part_unavailable`.
+ * `part_unavailable`. P98: the shard by its range in its pack, and the part's
+ * place answered with it (`address`), so the reader reads that range alone.
  */
-export async function catalogPartPointer(env: Env, scope: string, catalog: { products?: Record<string, { digest: string; records: number }>; index?: { shards: Record<string, { digest: string }> } },
-  product: string): Promise<{ digest: string; records: number } | undefined> {
-  if (catalog.products) return Object.hasOwn(catalog.products, product) ? catalog.products[product] : undefined;
-  const shards = catalog.index?.shards;
-  if (!shards) return undefined;
+export async function catalogPartPointer(env: Env, scope: string, catalog: { products?: Record<string, { digest: string; records: number }>; index?: CatalogIndexView },
+  product: string): Promise<ResolvedPartPointer | undefined> {
+  if (catalog.products) return Object.hasOwn(catalog.products, product) ? { digest: catalog.products[product]!.digest, records: catalog.products[product]!.records } : undefined;
+  const index = catalog.index, shards = index?.shards;
+  if (!index || !shards) return undefined;
   const name = await catalogShardName(product);
   if (!Object.hasOwn(shards, name)) return undefined;
-  const shard = await readCatalogShard(env, scope, shards[name]!.digest);
-  return Object.hasOwn(shard.products, product) ? shard.products[product] : undefined;
+  const pointer = shards[name]!, where = indexAddress(index, pointer);
+  const shard = await readCatalogShard(env, scope, pointer.digest, where);
+  return Object.hasOwn(shard.products, product) ? resolvedPart(shard, where, shard.products[product]!) : undefined;
 }
-async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promise<void>): Promise<PublicationPin> {
+
+// ── P98 (E25, R-P549, design C): one pack per load ───────────────────────────
+//
+// A load writes ONE immutable, content-addressed object, its pack, at
+// `content/pack/<SHA-256 of its bytes>.pack`: the canonical bytes of every part
+// whose digest moved and of every product shard and id shard it rebuilt, end to
+// end. So a load's storage calls are bounded by the packs its objects live in,
+// never by its product count. A pointer to an object inside a pack names the
+// pack (the manifest through its pack table, a shard through its own `packs`, or
+// by omission the pack the shard itself is in) and the object's byte range; the
+// object keeps its own digest, that of its canonical value, so a ranged read is
+// checked exactly as a whole-object read is. A pointer with no range names a
+// P86 or P93 object of its own, read as before: the catalogues stored before
+// packs need no operator step. The pack is written with the store's
+// exact-create before the publication reserves the head, so a refused load
+// leaves at most that one object, which no revision names and the purge collects.
+
+const packKey = (scope: string, digest: string) => 'config-publication/v1/' + scope + '/content/pack/' + digest + '.pack';
+/** P98 (LD1): the most one load's pack holds; a load past it is refused 413 `load_too_large`, nothing written. */
+export const PACK_MAX_BYTES = 64 * 1024 * 1024;
+/** P98: ranged reads of one pack merge neighbours across gaps of at most 256 KiB, one read at most 16 MiB. */
+const PACK_GAP = 256 * 1024, PACK_SPAN = 16 * 1024 * 1024;
+/** P98: the place of the pack a load is still writing (its digest exists only once it is sealed). */
+export const NEW_PACK = 'new';
+/** P98: where an object lives inside a pack. */
+export interface PackAddress { pack: string; at: number; bytes: number }
+/** P98: a manifest pointer that may carry its pack's place in the pack table and its byte range. */
+export interface PlacedPointer { digest: string; pack?: number; at?: number; bytes?: number }
+/** P98: a part's pointer with its place resolved (none for a part of its own). */
+export interface ResolvedPartPointer { digest: string; records: number; address?: PackAddress }
+/**
+ * P98 (LD6): one row of the manifest's pack table: a pack the revision reaches (its shards and id shards through the
+ * manifest, its parts through the shards), the objects and bytes of it the revision reaches (`objects`, `bytes`), and
+ * its whole size (`size`), so the purge and the compaction act on the table alone and never read a shard.
+ */
+export interface PackEntry { digest: string; objects: number; bytes: number; size: number }
+/** P98: one load's pack, sealed: its bytes as one string, its digest, its byte length and its object count. */
+export interface SealedPack { body: string; digest: string; bytes: number; objects: number }
+const hex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer)).map(n => n.toString(16).padStart(2, '0')).join('');
+const loadTooLarge = (bytes: number) => new PublicationError(`The load would write ${bytes} bytes or more in one pack, past the ${PACK_MAX_BYTES} bytes one load writes; send it in smaller files; nothing was written`, 413, 'load_too_large');
+/** P98: one load's pack as it is assembled: each value's canonical bytes appended, its range and digest answered. */
+export class PackWriter {
+  private readonly chunks: string[] = [];
+  private size = 0;
+  /** Append one object (refused by `tooLarge` past 2 MiB, and 413 `load_too_large` past the pack's 64 MiB). */
+  async add(value: unknown, tooLarge?: () => PublicationError): Promise<{ at: number; bytes: number; digest: string }> {
+    const raw = canonical(value), bytes = encoder.encode(raw);
+    if (bytes.byteLength > PUBLICATION_MAX_BYTES) throw tooLarge?.() ?? new PublicationError('A catalogue object exceeds 2 MiB', 413, 'document_too_large');
+    if (this.size + bytes.byteLength > PACK_MAX_BYTES) throw loadTooLarge(this.size + bytes.byteLength);
+    const at = this.size; this.chunks.push(raw); this.size += bytes.byteLength;
+    return { at, bytes: bytes.byteLength, digest: hex(await crypto.subtle.digest('SHA-256', bytes)) };
+  }
+  get bytes(): number { return this.size; }
+  /** The pack, or null where nothing was appended. */
+  async seal(): Promise<SealedPack | null> {
+    if (!this.size) return null;
+    const body = this.chunks.join(''), raw = encoder.encode(body);
+    return { body, digest: hex(await crypto.subtle.digest('SHA-256', raw)), bytes: raw.byteLength, objects: this.chunks.length };
+  }
+}
+async function putPack(storage: R2Bucket, key: string, sealed: SealedPack): Promise<boolean> {
+  try {
+    const result = await storage.put(key, sealed.body, { onlyIf: new Headers({ 'If-None-Match': '*' }),
+      httpMetadata: { contentType: 'application/octet-stream' }, customMetadata: { sha256: sealed.digest } });
+    if (result === null) return false;
+    required(result && result.key === key && result.size === sealed.bytes); return true;
+  } catch (error) { throw storageFailure(error, 'put', key); }
+}
+function packHead(storage: R2Bucket, key: string): Promise<{ size: number; sha256: string | undefined } | null> {
+  return again(async () => {
+    try {
+      const held = await storage.head(key) as { size?: unknown; customMetadata?: Record<string, string> } | null;
+      if (held === null) return null;
+      required(held && integer(held.size));
+      return { size: held.size as number, sha256: held.customMetadata?.sha256 };
+    } catch (error) { throw storageFailure(error, 'head', key); }
+  });
+}
+/**
+ * P98: write a sealed pack with the store's exact-create, tried twice (`again`). A pack already stored under its digest
+ * with its size and digest in its metadata is the same pack — an earlier attempt that landed, or the same file sent
+ * again over the same base — and is adopted; anything else there is a conflict. Answers which it was, so a request
+ * that adopted a pack heads it again once it holds the head (`ensurePack`, LD6).
+ */
+export async function writePack(env: Env, scope: string, sealed: SealedPack): Promise<'created' | 'adopted'> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), key = packKey(home, sealed.digest);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (await again(() => putPack(storage, key, sealed))) return 'created';
+    const held = await packHead(storage, key);
+    if (held) { if (held.size !== sealed.bytes || held.sha256 !== sealed.digest) throw conflict(); return 'adopted'; }
+    // Collected between the create and the HEAD: written once more.
+  }
+  throw conflict();
+}
+/**
+ * P98 (LD6): a pack a request adopted, checked again once the request holds the head: the purge never deletes while a
+ * pending set is held, so a pack still stored now is kept; one collected in between is written again.
+ */
+export async function ensurePack(env: Env, scope: string, sealed: SealedPack): Promise<void> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  if (await headStored(storage, packKey(home, sealed.digest))) return;
+  await writePack(env, scope, sealed);
+}
+/**
+ * P98: the bytes [at, at + bytes) of a pack by one ranged read, or null where the pack is not stored. A store that
+ * answers a ranged read with the whole object is read whole and the range taken from it.
+ */
+async function readPackBytesOnce(storage: R2Bucket, scope: string, pack: string, at: number, bytes: number): Promise<Uint8Array | null> {
+  const key = packKey(scope, pack);
+  try {
+    const result = await storage.get(key, { range: { offset: at, length: bytes } });
+    if (result === null) return null;
+    required(result && result.body && integer(result.size) && result.size >= at + bytes);
+    const ranged = (result as { range?: unknown }).range != null, cap = ranged ? bytes : result.size;
+    const reader = result.body.getReader(), chunks: Uint8Array[] = [];
+    let n = 0;
+    try {
+      for (;;) { const part = await reader.read(); if (part.done) break; n += part.value.byteLength; required(n <= cap); chunks.push(part.value); }
+    } catch (error) { void reader.cancel().catch(() => undefined); throw error; } finally { reader.releaseLock(); }
+    const out = new Uint8Array(n);
+    let offset = 0; for (const chunk of chunks) { out.set(chunk, offset); offset += chunk.byteLength; }
+    if (n === bytes) return out;
+    required(!ranged && n === result.size);
+    return out.subarray(at, at + bytes);
+  } catch (error) { throw storageFailure(error, 'get', key); }
+}
+const readPackBytes = (storage: R2Bucket, scope: string, pack: string, at: number, bytes: number) => again(() => readPackBytesOnce(storage, scope, pack, at, bytes));
+const parsedBytes = (bytes: Uint8Array): unknown => { try { return JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes)); } catch { return undefined; } };
+async function readPackedValue(storage: R2Bucket, scope: string, address: PackAddress): Promise<{ value: unknown; bytes: number } | null> {
+  if (!HASH.test(address.pack) || !integer(address.at) || !whole(address.bytes, 1) || address.bytes > PUBLICATION_MAX_BYTES) return null;
+  const bytes = await readPackBytes(storage, scope, address.pack, address.at, address.bytes);
+  const value = bytes ? parsedBytes(bytes) : undefined;
+  return value === undefined ? null : { value, bytes: address.bytes };
+}
+/** P98: the place a manifest pointer names through the manifest's pack table; none for an object of its own (P93). */
+export function indexAddress(index: { packs?: readonly PackEntry[] }, pointer: PlacedPointer): PackAddress | undefined {
+  if (pointer.at === undefined || pointer.bytes === undefined || pointer.pack === undefined) return undefined;
+  const pack = index.packs?.[pointer.pack]?.digest;
+  if (typeof pack !== 'string' || !HASH.test(pack)) throw new PublicationError(`Catalogue index object ${pointer.digest} unavailable`, 503, 'part_unavailable');
+  return { pack, at: pointer.at, bytes: pointer.bytes };
+}
+/** P98: a part's pointer read from its shard, resolved against the place the shard itself was read from. */
+export function resolvedPart(shard: CatalogShard, where: PackAddress | undefined, p: StoredPartPointer): ResolvedPartPointer {
+  if (p.at === undefined || p.bytes === undefined) return { digest: p.digest, records: p.records };
+  const pack = p.pack === undefined ? where?.pack : shard.packs?.[p.pack];
+  if (!pack) throw new PublicationError(`Catalogue part ${p.digest} unavailable`, 503, 'part_unavailable');
+  return { digest: p.digest, records: p.records, address: { pack, at: p.at, bytes: p.bytes } };
+}
+/** P98: what a load reads ahead: a part, a product shard or an id shard, by its place. */
+export interface PackedRead { kind: 'part' | 'shard' | 'idshard'; digest: string; address: PackAddress }
+/**
+ * P98: many objects of the catalogue by their places, each pack's in as few ranged reads as their places allow
+ * (neighbours merged across gaps of at most 256 KiB, one read at most 16 MiB), each answered by digest once its value is
+ * the kind named and hashes to its digest. One the store cannot produce is left out, for the caller's own read of it
+ * to refuse by name.
+ */
+export async function readCatalogPacked(env: Env, scope: string, wanted: Iterable<PackedRead>): Promise<Map<string, unknown>> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), out = new Map<string, unknown>(), byPack = new Map<string, PackedRead[]>();
+  for (const w of wanted) {
+    if (!HASH.test(w.address.pack) || !integer(w.address.at) || !whole(w.address.bytes, 1) || w.address.bytes > PUBLICATION_MAX_BYTES) continue;
+    const list = byPack.get(w.address.pack) ?? []; list.push(w); byPack.set(w.address.pack, list);
+  }
+  for (const [pack, list] of byPack) {
+    list.sort((x, y) => x.address.at - y.address.at);
+    for (let i = 0; i < list.length;) {
+      const start = list[i]!.address.at; let end = start + list[i]!.address.bytes, j = i + 1;
+      while (j < list.length && list[j]!.address.at - end <= PACK_GAP && list[j]!.address.at + list[j]!.address.bytes - start <= PACK_SPAN) { end = Math.max(end, list[j]!.address.at + list[j]!.address.bytes); j++; }
+      const bytes = await readPackBytes(storage, home, pack, start, end - start);
+      if (bytes) for (const w of list.slice(i, j)) {
+        if (out.has(w.digest)) continue;
+        const value = parsedBytes(bytes.subarray(w.address.at - start, w.address.at - start + w.address.bytes));
+        const valid = w.kind === 'part' ? validPart(value) : w.kind === 'shard' ? validShard(value) : validIdShard(value);
+        if (valid && await digest(value) === w.digest) out.set(w.digest, freeze(value));
+      }
+      i = j;
+    }
+  }
+  return out;
+}
+/** P98 (LD4): how far one publication got, so a storage failure names the state it left. */
+interface Progress { state: PublicationState }
+async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promise<void>, progress?: Progress): Promise<PublicationPin> {
   const pending = loaded.head.pending; required(pending); const set = pending.set;
+  if (progress) progress.state = 'pending';
   for (const document of pending.documents) { await authorize?.(); await createExact(storage, revisionKey(document.kind, document.scope, document.revision), document); }
   await authorize?.();
   await createExact(storage, setKey(set.scope, set.revision), set);
   const next = await sealed({ schema: 'configuration-head/v1' as const, scope: set.scope, committed: identityOf(set), pending: null });
-  await authorize?.(); await put(storage, headKey(set.scope), serialized(next), loaded.etag);
+  await authorize?.();
+  // P98 (LD2): the commit is the head's compare-and-set, never sent again blindly: one that landed and then threw is
+  // found committed by the read of the head that follows.
+  if (await casHead(storage, set.scope, serialized(next), loaded.etag, head => !!head.committed && head.committed.revision >= set.revision) && progress) progress.state = 'committed';
   const after = await requiredHead(storage, set.scope); required(after.head.committed);
   if (after.head.committed.revision < set.revision) throw conflict();
   if (after.head.committed.revision === set.revision && after.head.committed.digest !== set.digest) throw conflict();
+  if (progress) progress.state = 'committed';
   return retainedSet(storage, set.scope, identityOf(set));
 }
 function sameOperation(set: PublicationPin, kind: { name: string }, scope: string, meta: WriteMeta, requestDigest?: string, actor = true): boolean {
@@ -933,7 +1208,14 @@ export async function assertPublicationBase<T>(env: Env, kind: DocumentKind<T>, 
  * an optional member this publication creates — and the base set itself, so a
  * door can read another member of exactly the set it publishes over.
  */
-export interface PublicationChange<T = unknown> { kind: DocumentKind<T>; scope: string; request: unknown; candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown> }
+export interface PublicationChange<T = unknown> {
+  kind: DocumentKind<T>; scope: string; request: unknown; candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown>;
+  /**
+   * P98 (LD6): run once the head holds this publication's intent and before it is finished — a catalogue door that
+   * adopted a pack already stored checks it again here, so a pack the purge collected meanwhile is written again.
+   */
+  reserved?: () => Promise<void>;
+}
 /** Several related documents are one intent and become visible in one CAS. */
 export async function publishSet(env: Env, changes: PublicationChange[], meta: WriteMeta): Promise<WriteResult<unknown>> {
   // P38: only a write whose first member is optional may name revision 0, and
@@ -945,62 +1227,71 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
     const key = member(change.kind, change.scope); if (publicationScope(change.kind, change.scope) !== scope || seen.has(key)) throw conflict(); seen.add(key);
   }
   return invalidating(storage, scope, async () => {
-    const requestDigest = await digest({ ...preconditions, actor: meta.actor, note: meta.note ?? '', changes: changes.map(c => ({ kind: c.kind.name, scope: c.scope, request: c.request })) });
-    const loaded = await requiredHead(storage, scope), previous = await operationAt(storage, loaded, first.kind, first.scope, meta);
-    if (previous) {
-      if (!sameOperation(previous, first.kind, first.scope, meta, requestDigest) || previous.operation.initialize) throw conflict();
+    // P98 (LD4): a storage failure names the state this publication left the store in.
+    const progress: Progress = { state: 'nothing_written' };
+    try {
+      const requestDigest = await digest({ ...preconditions, actor: meta.actor, note: meta.note ?? '', changes: changes.map(c => ({ kind: c.kind.name, scope: c.scope, request: c.request })) });
+      const loaded = await requiredHead(storage, scope), previous = await operationAt(storage, loaded, first.kind, first.scope, meta);
+      if (previous) {
+        if (!sameOperation(previous, first.kind, first.scope, meta, requestDigest) || previous.operation.initialize) throw conflict();
+        await meta.authorize?.();
+        const set = loaded.head.pending?.set.digest === previous.digest ? await finish(storage, loaded, meta.authorize, progress) : previous;
+        if (set === previous) progress.state = 'committed';
+        return { ok: true, revision: await readPinnedPublication(env, first.kind, first.scope, set) };
+      }
+      if (canonical(loaded.head.committed) !== canonical(meta.expectedPublication) || meta.expectedPublication!.revision === Number.MAX_SAFE_INTEGER) throw conflict();
+      const base = await currentSet(storage, loaded), refs = structuredClone(base.refs), documents: Envelope<unknown>[] = [], at = meta.nowMs ?? Date.now();
+      if (!integer(at)) throw new PublicationError('Invalid publication time', 422, 'invalid_attribution');
+      for (const [i, change] of changes.entries()) {
+        // P38: an optional member the base set does not carry is created at
+        // revision 1; any other absent member is the authority failing, as before.
+        const present = Object.hasOwn(base.refs, member(change.kind, change.scope));
+        if (!present && !OPTIONAL_MEMBERS.has(change.kind.name)) throw absent(env, change.kind);
+        const current = present ? await readPinnedPublication(env, change.kind, change.scope, base) : null, previous = current?.revision ?? 0;
+        if (previous === Number.MAX_SAFE_INTEGER || i === 0 && previous !== meta.expectedRevision) throw conflict();
+        const validated = change.kind.validate(await change.candidate(current?.value as unknown, base)); if (!validated.ok) return validated;
+        const revision = previous + 1, value = change.kind.stamp ? change.kind.stamp(validated.value, revision) : validated.value;
+        // Secondary members retain their numeric IDs; the set operation is their
+        // joint receipt, and no independently writable pointer can expose them.
+        const op = { operationId: i === 0 ? meta.operationId! : previous + ':' + meta.operationId!.split(':')[1], expectedRevision: previous, requestDigest, initialize: false };
+        const document = await envelope(await sealed({ schema: 'catalog-revision/v1' as const, kind: change.kind.name, scope: change.scope,
+          revision, value, actor: meta.actor, note: meta.note ?? '', at, operation: op,
+          // W21 E1.07 (R130): computed on the operator's publish, where the history
+          // is already being read, and never on the shopper's decision.
+          ...(await derivedFor(env, change.kind, change.scope, revision, value, carriedSaltVersion(current))) }), change.kind, change.scope);
+        serialized(document); documents.push(document);
+        const key = member(change.kind, change.scope), old = present ? refs[key] : undefined;
+        refs[key] = old ? { ...old, revision, digest: document.digest, index: [rowOf(change.kind, document), ...old.index].slice(0, LIMIT) }
+          : { kind: change.kind.name, scope: change.scope, revision, digest: document.digest, minRevision: 1, index: [rowOf(change.kind, document)] };
+      }
+      const set = await sealed({ schema: 'configuration-set/v1' as const, scope, revision: base.revision + 1, refs,
+        operation: { operationId: meta.operationId!, expectedRevision: meta.expectedRevision!, requestDigest, initialize: false,
+          kind: first.kind.name, scope: first.scope, actor: meta.actor, note: meta.note ?? '', at, base: identityOf(base) } });
+      await validateSet(set, scope);
+      const next = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: { set, documents } });
       await meta.authorize?.();
-      const set = loaded.head.pending?.set.digest === previous.digest ? await finish(storage, loaded, meta.authorize) : previous;
-      return { ok: true, revision: await readPinnedPublication(env, first.kind, first.scope, set) };
-    }
-    if (canonical(loaded.head.committed) !== canonical(meta.expectedPublication) || meta.expectedPublication!.revision === Number.MAX_SAFE_INTEGER) throw conflict();
-    const base = await currentSet(storage, loaded), refs = structuredClone(base.refs), documents: Envelope<unknown>[] = [], at = meta.nowMs ?? Date.now();
-    if (!integer(at)) throw new PublicationError('Invalid publication time', 422, 'invalid_attribution');
-    for (const [i, change] of changes.entries()) {
-      // P38: an optional member the base set does not carry is created at
-      // revision 1; any other absent member is the authority failing, as before.
-      const present = Object.hasOwn(base.refs, member(change.kind, change.scope));
-      if (!present && !OPTIONAL_MEMBERS.has(change.kind.name)) throw absent(env, change.kind);
-      const current = present ? await readPinnedPublication(env, change.kind, change.scope, base) : null, previous = current?.revision ?? 0;
-      if (previous === Number.MAX_SAFE_INTEGER || i === 0 && previous !== meta.expectedRevision) throw conflict();
-      const validated = change.kind.validate(await change.candidate(current?.value as unknown, base)); if (!validated.ok) return validated;
-      const revision = previous + 1, value = change.kind.stamp ? change.kind.stamp(validated.value, revision) : validated.value;
-      // Secondary members retain their numeric IDs; the set operation is their
-      // joint receipt, and no independently writable pointer can expose them.
-      const op = { operationId: i === 0 ? meta.operationId! : previous + ':' + meta.operationId!.split(':')[1], expectedRevision: previous, requestDigest, initialize: false };
-      const document = await envelope(await sealed({ schema: 'catalog-revision/v1' as const, kind: change.kind.name, scope: change.scope,
-        revision, value, actor: meta.actor, note: meta.note ?? '', at, operation: op,
-        // W21 E1.07 (R130): computed on the operator's publish, where the history
-        // is already being read, and never on the shopper's decision.
-        ...(await derivedFor(env, change.kind, change.scope, revision, value, carriedSaltVersion(current))) }), change.kind, change.scope);
-      serialized(document); documents.push(document);
-      const key = member(change.kind, change.scope), old = present ? refs[key] : undefined;
-      refs[key] = old ? { ...old, revision, digest: document.digest, index: [rowOf(change.kind, document), ...old.index].slice(0, LIMIT) }
-        : { kind: change.kind.name, scope: change.scope, revision, digest: document.digest, minRevision: 1, index: [rowOf(change.kind, document)] };
-    }
-    const set = await sealed({ schema: 'configuration-set/v1' as const, scope, revision: base.revision + 1, refs,
-      operation: { operationId: meta.operationId!, expectedRevision: meta.expectedRevision!, requestDigest, initialize: false,
-        kind: first.kind.name, scope: first.scope, actor: meta.actor, note: meta.note ?? '', at, base: identityOf(base) } });
-    await validateSet(set, scope);
-    const next = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: { set, documents } });
-    await meta.authorize?.();
-    if (!await put(storage, headKey(scope), serialized(next), loaded.etag)) throw conflict();
-    const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
-    const committed = await finish(storage, reservation, meta.authorize);
-    // W38 B4: only after the new set is committed, and never able to fail it.
-    await purgeByPolicy(env, storage, scope, committed);
-    return { ok: true, revision: await readPinnedPublication(env, first.kind, first.scope, committed) };
+      // P98 (LD2): the reservation is the head's compare-and-set, never sent again blindly (`casHead`).
+      if (!await casHead(storage, scope, serialized(next), loaded.etag, head => head.pending?.set.digest === set.digest)) throw conflict();
+      progress.state = 'pending';
+      const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
+      for (const change of changes) await change.reserved?.();
+      const committed = await finish(storage, reservation, meta.authorize, progress);
+      // W38 B4: only after the new set is committed, and never able to fail it. P98 (LD6): a catalogue publication
+      // also sweeps the catalogue's packs (`sweepCatalogue`).
+      await purgeByPolicy(env, storage, scope, committed, documents.find(document => document.kind === 'content')?.value);
+      return { ok: true, revision: await readPinnedPublication(env, first.kind, first.scope, committed) };
+    } catch (error) { throw stated(error, progress.state); }
   });
 }
 export async function publish<T>(env: Env, kind: DocumentKind<T>, scope: string, request: unknown, meta: WriteMeta,
-  candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown>): Promise<WriteResult<T>> {
+  candidate: (base: T, set: PublicationPin) => unknown | Promise<unknown>, reserved?: () => Promise<void>): Promise<WriteResult<T>> {
   if (!meta.expectedPublication) {
     const { document, set } = await legacyCommitted(env, kind, scope, meta);
     const requestDigest = await digest({ operationId: meta.operationId, expectedRevision: meta.expectedRevision, actor: meta.actor, note: meta.note ?? '', request });
     if (document.actor !== meta.actor || document.operation.requestDigest !== requestDigest) throw conflict();
     return { ok: true, revision: publicRevision(document, set, kind) };
   }
-  return publishSet(env, [{ kind, scope, request, candidate } as PublicationChange], meta) as Promise<WriteResult<T>>;
+  return publishSet(env, [{ kind, scope, request, candidate, ...(reserved ? { reserved } : {}) } as PublicationChange], meta) as Promise<WriteResult<T>>;
 }
 /**
  * P38 (decision D1): publish one member under the authored precondition of
@@ -1070,11 +1361,15 @@ export async function recoverPublication<T>(env: Env, kind: DocumentKind<T>, sco
   }
   publicationPreconditions(meta, false, OPTIONAL_MEMBERS.has(kind.name)); const storage = storageOf(env), owner = publicationScope(kind, scope);
   return invalidating(storage, owner, async () => {
-    const loaded = await requiredHead(storage, owner); if (!loaded.head.committed) throw conflict();
-    const operation = await operationAt(storage, loaded, kind, scope, meta, false); if (!operation || operation.operation.initialize) throw conflict();
-    await meta.authorize?.();
-    const set = loaded.head.pending?.set.digest === operation.digest ? await finish(storage, loaded, meta.authorize) : operation;
-    return { ok: true, revision: await readPinnedPublication(env, kind, scope, set) };
+    const progress: Progress = { state: 'nothing_written' };
+    try {
+      const loaded = await requiredHead(storage, owner); if (!loaded.head.committed) throw conflict();
+      const operation = await operationAt(storage, loaded, kind, scope, meta, false); if (!operation || operation.operation.initialize) throw conflict();
+      await meta.authorize?.();
+      const set = loaded.head.pending?.set.digest === operation.digest ? await finish(storage, loaded, meta.authorize, progress) : operation;
+      progress.state = 'committed';
+      return { ok: true, revision: await readPinnedPublication(env, kind, scope, set) };
+    } catch (error) { throw stated(error, progress.state); }
   });
 }
 export interface PublicationBaseline {
@@ -1297,7 +1592,7 @@ async function eachListed(storage: R2Bucket, work: PurgeWork, options: R2ListOpt
 async function purgesConfiguration(env: Env, tenant: string): Promise<boolean> {
   try { return (await import('@/retention')).configurationRetention(env, tenant) !== null; } catch { return false; }
 }
-async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: PublicationPin): Promise<void> {
+async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: PublicationPin, catalogue?: unknown): Promise<void> {
   let durationMs: number;
   try {
     const policy = (await import('@/retention')).configurationRetention(env, scope);
@@ -1335,7 +1630,8 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       // stops on its budget leaves the body, so the next publication resolves them again and nothing is lost for good.
       if (parted && ref.kind === 'content') {
         const value = await revisionValue(storage, work, ref, n, values);
-        if (value) {
+        // P98 (LD6): a revision with a pack table names packs, which the pack sweep below resolves by the tables alone.
+        if (value && !packTableOf(value)) {
           const others: unknown[] = [];
           for (const m of await storedRevisions(storage, work, ref)) if (m !== n) { const other = await revisionValue(storage, work, ref, m, values); if (other) others.push(other); }
           await sweep(storage, work, await orphansOf(storage, work, ref.scope, value, others), now - ATTACHMENT_GRACE_MS);
@@ -1345,7 +1641,83 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
       await storage.delete(revisionKey(ref.kind, ref.scope, n));
       values.delete(`${ref.kind}\u0000${n}`);
     }
+    // P98 (LD6): after a publication of a catalogue with product slots, the catalogue's packs and, once nothing stored
+    // names one, its objects stored before packs.
+    const content = set.refs[member({ name: 'content' }, scope)];
+    if (content && catalogue && typeof catalogue === 'object' && ((catalogue as { index?: unknown }).index || (catalogue as { products?: unknown }).products)) {
+      await sweepCatalogue(storage, work, scope, content, values, now);
+    }
   } catch { /* whatever this publication did not reach stays retained */ }
+}
+/** P98: a catalogue value's pack table, or null for a value without one (no product slots, P86's or P93's form). */
+function packTableOf(value: unknown): PackEntry[] | null {
+  const packs = (value as { index?: { packs?: unknown } } | null)?.index?.packs;
+  return Array.isArray(packs) ? packs.filter((entry): entry is PackEntry => !!entry && typeof entry === 'object' && typeof (entry as PackEntry).digest === 'string') : null;
+}
+/** P98: whether a catalogue value names an object stored before packs (P86's parts and id index, P93's shards and parts, or a pack-table revision's range-less pointers). */
+function namesLegacy(value: unknown): boolean {
+  const v = value as { products?: unknown; index?: { packs?: unknown; legacy?: unknown; shards?: unknown; ids?: unknown } } | null;
+  if (!v || typeof v !== 'object') return false;
+  if (v.products && typeof v.products === 'object' && Object.keys(v.products).length) return true;
+  if (!v.index || typeof v.index !== 'object') return false;
+  if (!Array.isArray(v.index.packs)) return Object.keys(v.index.shards ?? {}).length + Object.keys(v.index.ids ?? {}).length > 0;
+  return v.index.legacy !== 0;
+}
+/** P98: the directories of the objects stored before packs (P86, P93). */
+const LEGACY_DIRECTORIES = ['part', 'shard', 'idshard', 'ids'] as const;
+/**
+ * P98 (E25, LD6): the catalogue's pack-aware sweep, under the configuration retention setting, after the revisions are
+ * purged, within the same budget. Every pack the listing holds that no stored revision's pack table names (a refused
+ * load's or stage's pack, a stage never published, a pack only purged revisions named) is deleted once uploaded
+ * ATTACHMENT_GRACE_MS ago or more; no shard is read. Once no stored revision names an object stored before packs, those
+ * objects (P86's and P93's parts, shards, id shards and id indexes; l3's leftovers among them) are deleted likewise, a
+ * directory at a time. Every deletion call is made only while the head holds no pending set (`deleteWhileIdle`), so a
+ * pack a load or a stage in flight reuses is never collected under it. Stops (keeping everything not yet deleted) on
+ * the budget or any failure.
+ */
+async function sweepCatalogue(storage: R2Bucket, work: PurgeWork, scope: string, ref: Ref, values: Map<string, unknown>, now: number): Promise<void> {
+  const cutoff = now - ATTACHMENT_GRACE_MS, content = 'config-publication/v1/' + scope + '/content/';
+  const uploadedBefore = (object: { uploaded?: unknown }) => { const at = object.uploaded instanceof Date ? object.uploaded.getTime() : NaN; return Number.isFinite(at) && at < cutoff; };
+  const packs = new Map<string, string>();
+  await eachListed(storage, work, { prefix: content + 'pack/' }, page => {
+    for (const object of page.objects as Array<{ key: string; uploaded?: unknown }>) {
+      const m = /^([0-9a-f]{64})\.pack$/.exec(object.key.slice(content.length + 'pack/'.length));
+      if (m && uploadedBefore(object)) packs.set(m[1]!, object.key);
+    }
+  });
+  const legacyHeld: string[] = [];
+  for (const dir of LEGACY_DIRECTORIES) {
+    spend(work);
+    const page = await storage.list({ prefix: content + dir + '/', limit: 1 }) as unknown as Listed;
+    if (Array.isArray(page?.objects) && page.objects.length) legacyHeld.push(dir);
+  }
+  if (!packs.size && !legacyHeld.length) return;
+  // The tables of every stored revision (and whether any still names an object stored before packs).
+  let legacyNamed = false;
+  for (const n of await storedRevisions(storage, work, ref)) {
+    const value = await revisionValue(storage, work, ref, n, values);
+    if (value === null) continue;
+    for (const entry of packTableOf(value) ?? []) packs.delete(entry.digest);
+    if (namesLegacy(value)) legacyNamed = true;
+  }
+  await deleteWhileIdle(storage, work, scope, [...packs.values()]);
+  if (legacyNamed) return;
+  for (const dir of legacyHeld) {
+    const old: string[] = [];
+    await eachListed(storage, work, { prefix: content + dir + '/' }, page => {
+      for (const object of page.objects as Array<{ key: string; uploaded?: unknown }>) if (uploadedBefore(object)) old.push(object.key);
+    });
+    await deleteWhileIdle(storage, work, scope, old);
+  }
+}
+/** P98 (LD6): delete keys 1,000 to a call, each call only while the head holds no pending set (a load or stage in flight may reuse one). */
+async function deleteWhileIdle(storage: R2Bucket, work: PurgeWork, scope: string, keys: readonly string[]): Promise<void> {
+  for (let i = 0; i < keys.length; i += 1000) {
+    spend(work);
+    const head = await readObject(storage, headKey(scope));
+    if (!head || (head.value as { pending?: unknown } | null)?.pending !== null) throw new PurgeStopped();
+    spend(work); await storage.delete(keys.slice(i, i + 1000));
+  }
 }
 /** P93: a stored content revision's value, read once per purge within its budget (null where it is gone). */
 async function revisionValue(storage: R2Bucket, work: PurgeWork, ref: Ref, n: number, values: Map<string, unknown>): Promise<unknown> {
