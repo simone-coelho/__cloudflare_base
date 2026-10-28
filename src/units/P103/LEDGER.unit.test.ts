@@ -45,12 +45,11 @@
 // offline sums, which are compared rounded to whole units of the slot's currency.
 //
 // READINGS (where the sources are silent; for the lead):
-//   R1 "Malformed" (MP1) is read from the MoneyPolicy type and the ring's own reader (DecisionRing.ts moneyPolicyOf):
-//      `money` not an object; `currency` absent, not a string, or empty once trimmed; `nonpositive` absent or any word but
+//   R1 "Malformed" (MP1): `money` not an object; `currency` absent or anything but three upper-case letters A–Z (ruled,
+//      R-P571 (a): `eur` and `EURO` are refused naming `money` and write nothing); `nonpositive` absent or any word but
 //      `refuse` and `credit`; any key but those two. An absent `nonpositive` is malformed rather than defaulted: the
-//      policy's values are the tenant's to publish (E28), so the platform invents none. Whether a currency must be an ISO
-//      4217 code is not determined by any witness and is not tested; the comparison stays the one moneyRefusal makes
-//      (trimmed, case-insensitive).
+//      policy's values are the tenant's to publish (E28), so the platform invents none. The comparison with an outcome's
+//      declared currency stays the one moneyRefusal makes (trimmed, case-insensitive).
 //   R2 "Naming the member" (MP1): every refusal names `money` in `errors[]` (as P36's name `contextVocabulary` and P11's
 //      `evidenceFloors`); nothing is written (the revision in force is unchanged).
 //   R3 "Behave as named" (MP2): under `nonpositive: refuse` an outcome whose value (for `margin`, whose margin) is at or
@@ -73,7 +72,8 @@
 //      and its two fields with their two words, that the tenant publishes its own values, what is refused and named
 //      without and with a policy, that live learning and the report credit the same outcomes, that the SDK sends a
 //      currency only when the data layer names one; the two sentences the work order names are gone, and with them kit 02
-//      :1267's "A money policy cannot be published yet" (the same claim, which the built feature makes false).
+//      :1267's "A money policy cannot be published yet" (the same claim, which the built feature makes false). Kit 03's
+//      learn-document table lists the `money` member with its two fields and their words (ruled, R-P571 (c)).
 //   R9 The managed recovery path is the shopper's `/realtime/action` with LEDGER_RECOVERY_ENABLED 'true' (the harness's
 //      default, the prepare body and the admit call of src/ledger/recovery.ts resumeOwnerRecovery); the direct path the same
 //      action with 'false' (src/learn/route.ts outcomeToLearning's fanOutcome). The ring's answer is read on the wire, as
@@ -81,15 +81,28 @@
 //   R10 "LearnConfig names it" (MP1) is read off src/content/types.ts's LearnConfig declaration (an optional `money`
 //      member), the one observable a type has without a compile error today.
 //   R11 The policy rides the outcome's recovery input (src/ledger/recovery.ts OutcomeRecoveryInput, persisted with the
-//      operation), so an alarm that completes the outcome later carries the policy the action prepared; the grant names
-//      recovery.ts's prepare body and admit call, and the input type's member is the carrier both read (for the lead).
+//      operation), so an alarm that completes the outcome later carries the policy the action prepared (ruled, R-P571 (b):
+//      the grant names OutcomeRecoveryInput's money member).
+//   R12 (R-P571 (d)) A policy published between an hourly fold's start and its recovery CANNOT make the offline credits
+//      differ from live, and the fold's recovery fingerprint must not name the policy. The fold computes every shard and the
+//      hour's aggregate in one pass under the learn document it read at its start (src/index.ts:307 reads it; src/learn/
+//      hourly.ts buildHour :2668 builds the context), then writes the whole result as a plan into shard 0 before anything
+//      else (:2729-2738, `targets` and `aggregate`); a recovery folds nothing again: it checks the fingerprint (:2571-2573)
+//      and replays the stored targets and aggregate (:2574-2600, finishHour), so what it commits is the start's computation
+//      under one policy, never a mixture. Measured on both hosts on the sketch (S50/specifier/scratch/probes/
+//      PROBE-recovery.unit.test.ts; logs probe-recovery-sketch.log): the hour aggregate's put failing once after the plan,
+//      the policy changed (none to EUR, EUR to none), the next run commits the plan and the day reports exactly the live
+//      credits (295/118, 870/348). With the policy named in the fingerprint (probe-recovery-fingerprint.log) the recovery
+//      is refused, "Hourly recovery conflict", the hour stays unfolded and the day reports 0 against live 295/870; the
+//      pending plan in shard 0 also refuses every other hour (:2570). A publication between an hour's outcomes and its
+//      fold's START is a different case: the fold credits under the learn document in force when it runs, as MP3's
+//      wording rules (and as the attribution policies already fold); see RESIDUALS.
 //
 // DEFERRED: LV1 (lane L21, the pair's next release: a EUR policy published on a pair tenant, an SDK purchase naming EUR
 // credited live and in the day's report; another currency refused by name live and absent from the report).
-// RESIDUALS: kit 03's learn-document schema does not list `money` (kit 03 is outside the grant; kit 02 states it); a
-// currency's form (ISO 4217) is not ruled (R1); the meaning of a nonpositive credit is D09 (R3); money priors stay refused
-// (D09, MP6); the hourly fold's recovery fingerprint (src/learn/hourly.ts buildHour `configuration`) does not name the
-// policy, so an hour whose fold was interrupted resumes under the policy in force when it resumes.
+// RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6); an hour's outcomes credited live under one policy and folded after a publication of another are folded
+// under the one in force at the fold (R12; carrying the policy in force on each outcome record would close it, and no
+// witness asks for it).
 //
 // LOCKS (MP6 and the gate): W24 B1, B2, LEDGER (R1.02, R1.04, R2, R5), P16, P33, W26, P94, W25, src/sdk/emit.test.ts,
 // W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
@@ -171,6 +184,8 @@ const MALFORMED: Array<[string, unknown]> = [
   ['a currency that is empty', { currency: '', nonpositive: 'refuse' }],
   ['a currency that is blank', { currency: '   ', nonpositive: 'refuse' }],
   ['a currency that is not a string', { currency: 978, nonpositive: 'refuse' }],
+  ['a currency in lower case (R-P571 (a))', { currency: 'eur', nonpositive: 'refuse' }],
+  ['a currency of four letters (R-P571 (a))', { currency: 'EURO', nonpositive: 'refuse' }],
   ['no currency', { nonpositive: 'refuse' }],
   ['a nonpositive outside the two words', { currency: 'EUR', nonpositive: 'subtract' }],
   ['no nonpositive (never defaulted: the values are the tenant\'s)', { currency: 'EUR' }],
@@ -542,7 +557,7 @@ describe('unit:P103.MP4', () => {
 // ===========================================================================
 
 describe('unit:P103.MP5', () => {
-  it('logic: kit 02 states the learn document\'s money member and its two fields, that the tenant publishes its own values, what is refused and named with and without a policy, that live learning and the report credit the same outcomes, and that the SDK sends a currency only when the data layer names one; the sentences saying none can be published and that the SDK always sends one are gone', () => {
+  it('logic: kit 02 states the learn document\'s money member and its two fields, that the tenant publishes its own values, what is refused and named with and without a policy, that live learning and the report credit the same outcomes, and that the SDK sends a currency only when the data layer names one; the sentences saying none can be published and that the SDK always sends one are gone; kit 03\'s learn-document table lists the money member', () => {
     const text = readTree('docs/kit/02-api-reference.md');
     /** A document's reading units: prose paragraphs, and each table row on its own (unit:W24.R2's idiom). */
     const units = text.split(/\n\s*\n/).flatMap(block => block.trimStart().startsWith('|') ? block.split('\n') : [block]).map(u => u.replace(/\s+/g, ' '));
@@ -550,6 +565,9 @@ describe('unit:P103.MP5', () => {
     const any = (test: (u: string) => boolean) => money.some(test);
     const sentences = money.flatMap(u => u.split(/(?<=[.;])\s+(?=[A-Z`(])/));
     const flat = text.replace(/\s+/g, ' ');
+    const schemas = readTree('docs/kit/03-payload-schemas.md');
+    const learnSection = schemas.slice(schemas.indexOf('\n## The learn document'));
+    const learnTable = learnSection.slice(0, learnSection.indexOf('\n### ')).split('\n').filter(line => line.startsWith('|'));
     const facts = {
       // How to publish it: the learn document's `money` member, its two fields and their two words.
       member: any(u => /`money`/.test(u) && /PUT \/content\/learn|learn document/i.test(u) && /`currency`/.test(u) && /`nonpositive`/.test(u) && /\brefuse\b/.test(u) && /\bcredit\b/.test(u)),
@@ -565,8 +583,12 @@ describe('unit:P103.MP5', () => {
       sdkOnlyWhenNamed: any(u => /\bSDK\b/.test(u) && /data layer/i.test(u) && /currency/i.test(u) && /\bonly when\b|\bonly if\b|names none|names no currency/i.test(u) && !/always carries a currency/.test(u)),
       goneNoneCanBePublished: !/none can be published yet/.test(flat) && !/money policy cannot be published yet/i.test(flat),
       goneSdkAlwaysUsd: !/always carries a currency/.test(flat) && !/`USD` when the data layer names none/.test(flat),
+      // Kit 03's learn-document table (its `## The learn document` section): a row naming the `money` member, its two
+      // fields and their two words (R-P571 (c)).
+      kit03LearnSchema: learnTable.some(row => /^\|\s*`money/.test(row) && /currency/.test(row) && /nonpositive/.test(row) && /\brefuse\b/.test(row) && /\bcredit\b/.test(row)),
     };
-    expect(facts, `P103.MP5 — kit 02's money paragraph states the money policy as built (R8; ${money.length} unit(s) speak of money today)`)
+    expect(learnTable.length, 'PRECONDITION — kit 03 carries the learn document\'s table').toBeGreaterThan(10);
+    expect(facts, `P103.MP5 — kit 02's money paragraph states the money policy as built, and kit 03's learn-document table lists it (R8; ${money.length} unit(s) of kit 02 speak of money today)`)
       .toEqual(Object.fromEntries(Object.keys(facts).map(key => [key, true])));
   });
 });
