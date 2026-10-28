@@ -2730,7 +2730,13 @@ export class ShopperReflex {
         });
         if (!response.ok) throw new SessionAccessError();
         const result = z.object({ ok: z.literal(true), consent: consentSchema }).parse(await response.json());
-        if ((!consent.tracking && result.consent.tracking) || (!consent.personalization && result.consent.personalization)) throw new SessionAccessError();
+        // P97 (N2, R-P601): the replacement's answer may be more permissive than the source on a switch only where the
+        // replacement itself chose so after every choice the source holds for that switch (its own newer choice, kept by
+        // the activation's never-older rule: a second tab's retry after the replacement accepted). Anything else more
+        // permissive would be the rotation widening consent, and is refused as before.
+        const sourceChoseAt = (key: (typeof CONSENT_SWITCHES)[number]) => Math.max(current.instruction?.[key]?.chosenAt ?? -Infinity, consent.instruction?.[key]?.chosenAt ?? -Infinity);
+        const replacementsOwn = (key: (typeof CONSENT_SWITCHES)[number]) => (result.consent.instruction?.[key]?.chosenAt ?? -Infinity) > sourceChoseAt(key);
+        if (CONSENT_SWITCHES.some(key => !consent[key] && result.consent[key] && !replacementsOwn(key))) throw new SessionAccessError();
         if (rotation.status === 'prepared') {
           const complete = { ...rotation, status: 'complete' as const };
           if (rotation.operation === 'reset') await this.eraseWithBarrier({ [key]: complete, consent });
