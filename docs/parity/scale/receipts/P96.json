@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P96",
+  "workOrderHash": "sha256:fd7bb6dcf60d41f6412c66eeeee30c000466a789bd0052d52500467ffa702b47",
+  "artifact": {
+    "revision": "ddea10e7145d871e40f2e87f0a0f5e02ba6439d5",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p96-joined merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p96-build at 53717f81 (2f6d6018 the S40 spec, merged first: the P96 file over 7f304a75 and the W01.08 timeout change by name; f2b0b4e5 the mechanism: src/routes/decisions.ts marks the first-request door's own answer, the one that carries its total, with a request-scoped value under a symbol private to the route, and src/index.ts lets the platform's timing middleware add its own total to every answer but that one, so a new visitor's first answer names each Server-Timing entry once and its entries equal its sources.timings, while every other answer keeps the platform's total with its description exactly as before; 7b7c2b63 the merge of rem/integration fa418fbc with P95; 3212c83f kit 02 says which total is the door's whole time and which is the platform's, its citations into the route following the new lines; 53717f81 P95's delivery findings corrected by name in kit 02: the arm_draw caveat for an unanswered record, the salt version as one more at each change of salt, a gender-neutral sentence).",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S40/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S40/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P96/implementer/REPORT.md",
+      "git commits on rem/p96-joined up to ddea10e7"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P96 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S40/reviewer-p96/logs/vt-p96-r1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S40/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P96/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-28T03:08:26.107Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
