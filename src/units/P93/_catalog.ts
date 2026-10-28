@@ -165,6 +165,17 @@ const placeOf = (pointer: { pack?: unknown; at?: unknown; bytes?: unknown }, tab
 /** P98 R10: the SHA-256 of a value's canonical form (a stored object's digest). */
 const digestOfValue = (value: unknown) => createHash('sha256').update(canonical(value), 'utf8').digest('hex');
 /**
+ * P98 R10 (R-P578 (c), R-P582): the digest a view names a pointer's object by. An object of its own: its pointer's digest.
+ * One in a pack: its pointer carries the first 128 bits (32 hex) of the object's digest, and the view names it by the
+ * full digest of the object stored there when that prefix is its own, else by what is wrong.
+ */
+const named = (digest: string | undefined, place: Place | undefined, body: Record<string, unknown> | null): string => {
+  if (!place) return digest ?? 'no digest';
+  if (!body) return 'no object at its place';
+  const full = digestOfValue(body);
+  return digest === undefined || full.startsWith(digest) ? full : `not the object its pointer names (${digest})`;
+};
+/**
  * P98 R10 (R-P569 (b)): where the object a pointer names by its digest is stored: in one of the packs `prefer` names
  * (the revision's table), else as an object of its own at `own`, else in any stored pack; none where it is nowhere.
  */
@@ -211,7 +222,7 @@ export function indexOf(m: Mounted, document: Record<string, unknown>): IndexVie
       const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, table);
       if (place) places.shards[name] = place;
       const body = place ? placedAt(m, place) : parsedAt(m, KEY.shard(pointer.digest));
-      shards[name] = { ...pointer, digest: pointer.digest ?? (body ? digestOfValue(body) : 'no object at its place') };
+      shards[name] = { ...pointer, digest: named(pointer.digest, place, body) };
       if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.shard(pointer.digest)); continue; }
       const own = Array.isArray(body.packs) ? body.packs as unknown[] : undefined;
       for (const [product, p] of Object.entries(body.products as Record<string, Pointer & { pack?: unknown; at?: unknown; bytes?: unknown }>)) {
@@ -223,7 +234,7 @@ export function indexOf(m: Mounted, document: Record<string, unknown>): IndexVie
       const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, table);
       if (place) places.idShards[name] = place;
       const body = place ? placedAt(m, place) : parsedAt(m, KEY.idshard(pointer.digest));
-      idShards[name] = { ...pointer, digest: pointer.digest ?? (body ? digestOfValue(body) : 'no object at its place') };
+      idShards[name] = { ...pointer, digest: named(pointer.digest, place, body) };
       if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.idshard(pointer.digest)); continue; }
       Object.assign(view.ids, body.ids as Record<string, string>);
     }
