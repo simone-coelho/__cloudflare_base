@@ -113,22 +113,62 @@ export const bytesOf = (raw: string) => new TextEncoder().encode(raw).byteLength
 const parsedAt = (m: Mounted, key: string): Record<string, unknown> | null => { const raw = m.storage.objects.get(key); return raw === undefined ? null : JSON.parse(raw) as Record<string, unknown>; };
 /** P98 R10: where an object lives inside a pack (the pack's digest and the object's byte range). */
 export interface Place { pack: string; at: number; bytes: number }
-const packBytes = new Map<string, { raw: string; bytes: Buffer }>();
+/**
+ * P98 R10 (R-P569 (b)): the objects inside each stored pack, by their own digest. A pack holds the canonical bytes of
+ * its objects end to end (S44/analyst-load/DESIGN.md §4), so each object is found by its JSON value's boundaries and
+ * named by the SHA-256 of its canonical value — whatever encoding the pointers that name it use.
+ */
+const packed = new Map<string, { raw: string; bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> }>();
+const canonical = (v: unknown): string => Array.isArray(v) ? '[' + v.map(canonical).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonical((v as Record<string, unknown>)[k])).join(',') + '}' : JSON.stringify(v);
+function packObjects(m: Mounted, pack: string): { bytes: Buffer; objects: Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }> } | null {
+  const key = KEY.pack(pack), raw = m.storage.objects.get(key);
+  if (raw === undefined) return null;
+  const held = packed.get(key);
+  if (held && held.raw === raw) return held;
+  const bytes = Buffer.from(raw, 'utf8'), objects = new Map<string, Place & { kind: 'part' | 'shard' | 'idshard' | null }>();
+  for (let i = 0; i < bytes.length;) {
+    const open = bytes[i]!;
+    if (open !== 0x7b && open !== 0x5b) { i++; continue; }
+    let depth = 0, inString = false, j = i;
+    for (; j < bytes.length; j++) {
+      const c = bytes[j]!;
+      if (inString) { if (c === 0x5c) j++; else if (c === 0x22) inString = false; continue; }
+      if (c === 0x22) inString = true; else if (c === 0x7b || c === 0x5b) depth++; else if (c === 0x7d || c === 0x5d) { depth--; if (depth === 0) break; }
+    }
+    try {
+      const value = JSON.parse(bytes.subarray(i, j + 1).toString('utf8')) as unknown;
+      const digest = createHash('sha256').update(canonical(value), 'utf8').digest('hex');
+      const v = value as Record<string, unknown>, kind = v && typeof v === 'object' ? 'pieces' in v && 'product' in v ? 'part' : 'products' in v ? 'shard' : 'ids' in v && 'shard' in v ? 'idshard' : null : null;
+      if (!objects.has(digest)) objects.set(digest, { pack, at: i, bytes: j + 1 - i, kind });
+    } catch { /* not a JSON value: skipped */ }
+    i = j + 1;
+  }
+  const entry = { raw, bytes, objects };
+  packed.set(key, entry);
+  return entry;
+}
 /** P98 R10: the value at a place in a stored pack, as the bucket holds it (null where the pack or a JSON value there is missing). */
 const placedAt = (m: Mounted, place: Place): Record<string, unknown> | null => {
-  const key = KEY.pack(place.pack), raw = m.storage.objects.get(key);
-  if (raw === undefined) return null;
-  let held = packBytes.get(key);
-  if (!held || held.raw !== raw) { held = { raw, bytes: Buffer.from(raw, 'utf8') }; packBytes.set(key, held); }
+  const held = packObjects(m, place.pack);
+  if (!held) return null;
   try { return JSON.parse(held.bytes.subarray(place.at, place.at + place.bytes).toString('utf8')) as Record<string, unknown>; } catch { return null; }
 };
 /** P98 R10: a pack table's entry as its digest (an entry may be the digest or an object naming it as `digest`). */
 const packDigest = (entry: unknown): string => typeof entry === 'string' ? entry : String((entry as { digest?: unknown } | null)?.digest ?? '');
-/** P98 R10: a pointer's place, its pack named by `table[pointer.pack]`, else by `own` (the shard's own pack); none for an object of its own. */
-const placeOf = (pointer: { pack?: unknown; at?: unknown; bytes?: unknown }, table: readonly unknown[] | undefined, own?: string): Place | undefined => {
-  if (typeof pointer.at !== 'number' || typeof pointer.bytes !== 'number') return undefined;
-  const pack = typeof pointer.pack === 'number' ? packDigest(table?.[pointer.pack]) : own;
-  return pack ? { pack, at: pointer.at, bytes: pointer.bytes } : undefined;
+/**
+ * P98 R10 (R-P569 (b)): where the object a pointer names by its digest is stored: in one of the packs `prefer` names
+ * (the revision's table), else as an object of its own at `own`, else in any stored pack; none where it is nowhere.
+ */
+const locate = (m: Mounted, digest: string, own: string, prefer: readonly string[]): Place | 'own' | undefined => {
+  for (const pack of prefer) { const at = packObjects(m, pack)?.objects.get(digest); if (at) return at; }
+  if (m.storage.objects.has(own)) return 'own';
+  for (const key of m.storage.objects.keys()) {
+    const pack = /\/content\/pack\/([0-9a-f]{64})\.pack$/.exec(key)?.[1];
+    const at = pack && !prefer.includes(pack) ? packObjects(m, pack)?.objects.get(digest) : undefined;
+    if (at) return at;
+  }
+  return undefined;
 };
 
 /** A part's pointer; P98 R10: `place` where the part lives inside a pack (none for a part stored as its own object). */
@@ -154,23 +194,23 @@ export function indexOf(m: Mounted, document: Record<string, unknown>): IndexVie
   if (index && typeof index === 'object') {
     view.form = 'sharded'; view.shards = index.shards ?? {}; view.idShards = index.ids ?? {};
     const places: NonNullable<IndexView['places']> = { shards: {}, idShards: {} };
+    // P98 R10 (R-P569 (b)): each object found by its own digest, in the packs the revision's table names first.
+    const table = (index.packs ?? []).map(packDigest).filter(Boolean);
     for (const [name, pointer] of Object.entries(view.shards)) {
-      // P98 R10: a pointer with a byte range is read from its pack; one without is P93's object of its own.
-      const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, index.packs);
+      const where = locate(m, pointer.digest, KEY.shard(pointer.digest), table), place = where && where !== 'own' ? where : undefined;
       if (place) places.shards[name] = place;
-      const body = place ? placedAt(m, place) : parsedAt(m, KEY.shard(pointer.digest));
-      if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.shard(pointer.digest)); continue; }
-      const table = Array.isArray(body.packs) ? body.packs as unknown[] : undefined;
-      for (const [product, p] of Object.entries(body.products as Record<string, Pointer & { pack?: unknown; at?: unknown; bytes?: unknown }>)) {
-        const partPlace = placeOf(p, table, place?.pack);
+      const body = place ? placedAt(m, place) : where === 'own' ? parsedAt(m, KEY.shard(pointer.digest)) : null;
+      if (!body) { view.missing.push(KEY.shard(pointer.digest)); continue; }
+      for (const [product, p] of Object.entries(body.products as Record<string, Pointer>)) {
+        const at = locate(m, p.digest, KEY.part(p.digest), table), partPlace = at && at !== 'own' ? at : undefined;
         view.products[product] = { digest: p.digest, records: p.records, ...(partPlace ? { place: partPlace } : {}) };
       }
     }
     for (const [name, pointer] of Object.entries(view.idShards)) {
-      const place = placeOf(pointer as { pack?: unknown; at?: unknown; bytes?: unknown }, index.packs);
+      const where = locate(m, pointer.digest, KEY.idshard(pointer.digest), table), place = where && where !== 'own' ? where : undefined;
       if (place) places.idShards[name] = place;
-      const body = place ? placedAt(m, place) : parsedAt(m, KEY.idshard(pointer.digest));
-      if (!body) { view.missing.push(place ? KEY.pack(place.pack) : KEY.idshard(pointer.digest)); continue; }
+      const body = place ? placedAt(m, place) : where === 'own' ? parsedAt(m, KEY.idshard(pointer.digest)) : null;
+      if (!body) { view.missing.push(KEY.idshard(pointer.digest)); continue; }
       Object.assign(view.ids, body.ids as Record<string, string>);
     }
     if (Object.keys(places.shards).length || Object.keys(places.idShards).length) view.places = places;
@@ -206,6 +246,31 @@ export function storedRevisionValues(m: Mounted): Array<Record<string, unknown>>
   return [...m.storage.objects.entries()].filter(([key]) => /\/content\/rev\/[0-9]+\.json$/.test(key))
     .map(([, raw]) => (JSON.parse(raw) as { value?: Record<string, unknown> }).value ?? {});
 }
+/** P98 R10 (R-P569 (b)): the objects inside a stored pack, each named by the key it would have as an object of its own (its kind read from its value). */
+export function packedObjects(m: Mounted, pack: string): Array<{ key: string; at: number; bytes: number }> {
+  const held = packObjects(m, pack);
+  if (!held) return [];
+  return [...held.objects].filter(([, place]) => place.kind !== null).map(([digest, place]) => ({ key: KEY[place.kind!](digest), at: place.at, bytes: place.bytes }));
+}
+/**
+ * P98 R10 (R-P569 (b)): lose an object as a test loses it: an object of its own is deleted; one inside a pack is lost with
+ * the pack that holds it. Answers what to put back.
+ */
+export function loseObject(m: Mounted, key: string): () => void {
+  const at = /\/content\/(part|shard|idshard)\/([0-9a-f]{64})\.json$/.exec(key);
+  const where = m.storage.objects.has(key) ? key : at ? (() => { const s = storedValue(m, at[1] as 'part' | 'shard' | 'idshard', at[2]!); return s.value ? s.key : key; })() : key;
+  const raw = m.storage.objects.get(where);
+  m.storage.objects.delete(where);
+  return () => { if (raw !== undefined) m.storage.objects.set(where, raw); };
+}
+/** P98 R10 (R-P569 (b)): a shard, an id shard or a part as stored, by its digest: from the pack that holds it, else its own object. */
+export function storedValue(m: Mounted, kind: 'shard' | 'idshard' | 'part', digest: string, prefer: readonly string[] = []): { value: Record<string, unknown> | null; key: string; raw: string | null } {
+  const own = KEY[kind](digest), where = locate(m, digest, own, prefer);
+  if (where === 'own') { const raw = m.storage.objects.get(own) ?? null; return { value: raw === null ? null : JSON.parse(raw) as Record<string, unknown>, key: own, raw }; }
+  if (!where) return { value: null, key: own, raw: null };
+  const bytes = packObjects(m, where.pack)!.bytes.subarray(where.at, where.at + where.bytes).toString('utf8');
+  return { value: JSON.parse(bytes) as Record<string, unknown>, key: KEY.pack(where.pack), raw: bytes };
+}
 /** A product's part as stored, read through a pointer (P98 R10: from its pack's byte range where it lives in a pack). */
 export function partAt(m: Mounted, pointer: Pointer | undefined): { ids: string[]; value: Record<string, unknown> | null } {
   const value = pointer ? pointer.place ? placedAt(m, pointer.place) : parsedAt(m, KEY.part(pointer.digest)) : null;
@@ -222,8 +287,17 @@ export async function metered<T>(m: Mounted, run: () => Promise<T>): Promise<{ r
     const current = (bucket[name] as (...args: unknown[]) => unknown).bind(m.storage);
     Object.defineProperty(bucket, name, { configurable: true, writable: true, value: async (...args: unknown[]) => {
       const first = args[0], key = name === 'list' ? String((first as { prefix?: string } | undefined)?.prefix ?? '') : Array.isArray(first) ? first.join(',') : String(first);
+      // P98 R10 (R-P569 (b)): a read or a write of a pack is a read or a write of each object inside the bytes it moves.
+      const pack = /\/content\/pack\/([0-9a-f]{64})\.pack$/.exec(key)?.[1];
+      if (pack && name === 'get') {
+        const range = (args[1] as { range?: { offset?: number; length?: number } } | undefined)?.range, inside = packedObjects(m, pack);
+        const from = range?.offset ?? 0, to = range?.length === undefined ? Infinity : from + range.length;
+        if (inside.length) { for (const o of inside) if (o.at >= from && o.at + o.bytes <= to) ops.push({ op: name, key: o.key }); return current(...args); }
+      }
+      const result = await current(...args);
+      if (pack && name === 'put' && result) { for (const o of packedObjects(m, pack)) ops.push({ op: name, key: o.key }); return result; }
       ops.push({ op: name, key });
-      return current(...args);
+      return result;
     } });
   }
   try { return { result: await run(), ops }; }

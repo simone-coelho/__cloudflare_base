@@ -210,6 +210,7 @@ import {
   putDocument, readTree, receiptsOf, recentSlot, replayOf, servedIn, servePage, shopperOn, storedDecisions, TENANT, UnitR2,
   type Answer, type Decision, type Documents, type Host, type LoadedSlots, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
+import { packedObjects } from '../P93/_catalog'; // P98 R10 (R-P569 (b)): objects read and lost through their pack
 
 // ===========================================================================
 // The fixture: P80's anchor product and images, three products of a range, and a generated range.
@@ -356,6 +357,8 @@ const bucketOfId = async (id: string) => [...new Uint8Array(await crypto.subtle.
 const sharedOf = (d: LoadedSlots) => ((d.document.pieces ?? []) as Array<{ id: string }>).map(p => p.id);
 const digestOf = (m: Mounted, d: LoadedSlots, product: string) => String(productsOf(m, d)[product]?.digest ?? `no pointer for ${product}`);
 const PART = /^config-publication\/v1\/coach\/content\/part\/([0-9a-f]{64})\.json$/;
+/** P98 R10 (R-P569 (b)): a load's pack, whose objects a ranged read reads. */
+const PACKED = /^config-publication\/v1\/coach\/content\/pack\/([0-9a-f]{64})\.pack$/;
 const partKey = (digest: string) => `config-publication/v1/${TENANT}/content/part/${digest}.json`;
 const partKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => PART.test(k)).sort();
 /** A product's part as stored, read through its pointer: its record ids, or what is missing (P98 R10: from its pack's range where it lives in a pack). */
@@ -420,8 +423,9 @@ function uploadedAt(m: Mounted, when: (key: string) => Date): () => void {
   Object.defineProperty(bucket, 'head', { configurable: true, writable: true, value: async (key: string) => {
     const found = await proto.head.call(m.storage, key); return found ? { ...found, uploaded: when(key) } : null;
   } });
-  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
-    const found = await proto.get.call(m.storage, key); return found ? { ...found, uploaded: when(key) } : null;
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
+    // P98 R10 (R-P569 (b)): the read's range is honoured.
+    const found = await proto.get.call(m.storage, key, options); return found ? { ...found, uploaded: when(key) } : null;
   } });
   return () => { for (const name of ['list', 'head', 'get']) Reflect.deleteProperty(bucket, name); };
 }
@@ -434,9 +438,13 @@ const readIds = (a: Answer) => sorted((((a.body.document as { pieces?: unknown }
 interface Read { key: string; bytes: number }
 async function counted<T>(m: Mounted, run: () => Promise<T>): Promise<{ result: T; reads: Read[] }> {
   const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.get, reads: Read[] = [];
-  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
-    const found = await original.call(m.storage, key);
-    if (key.startsWith('config-publication/')) reads.push({ key, bytes: found?.size ?? 0 });
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
+    const found = await original.call(m.storage, key, options);
+    // P98 R10 (R-P569 (b)): a ranged read of a pack is a read of each object inside the range, of that object's bytes.
+    const inside = PACKED.test(key) && options?.range ? packedObjects(m, PACKED.exec(key)![1]!)
+      .filter(o => o.at >= (options.range!.offset ?? 0) && o.at + o.bytes <= (options.range!.offset ?? 0) + (options.range!.length ?? Infinity)) : [];
+    if (inside.length) for (const o of inside) reads.push({ key: o.key, bytes: o.bytes });
+    else if (key.startsWith('config-publication/')) reads.push({ key, bytes: found?.size ?? 0 });
     return found;
   } });
   try { return { result: await run(), reads }; } finally { Reflect.deleteProperty(bucket, 'get'); }
@@ -456,10 +464,13 @@ async function foreignReads<T>(m: Mounted, other: string, run: () => Promise<T>)
   const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.get, foreign: string[] = [];
   const rings = m.env.DECISION_RING as unknown as { get: (name: string) => unknown }, ringGet = rings.get;
   let parts = 0;
-  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
     if (key.includes(other)) foreign.push(`R2 ${key}`);
-    if (PART.test(key)) parts++;
-    return original.call(m.storage, key);
+    // P98 R10 (R-P569 (b)): a part read from its pack by range counts as a part read.
+    const inside = PACKED.test(key) && options?.range ? packedObjects(m, PACKED.exec(key)![1]!)
+      .filter(o => o.at >= (options.range!.offset ?? 0) && o.at + o.bytes <= (options.range!.offset ?? 0) + (options.range!.length ?? Infinity)) : [];
+    if (PART.test(key)) parts++; else parts += inside.filter(o => PART.test(o.key)).length;
+    return original.call(m.storage, key, options);
   } });
   rings.get = (name: string) => { if (String(name).includes(other)) foreign.push(`ring ${String(name)}`); return ringGet(name); };
   try { return { result: await run(), foreign, parts }; } finally { Reflect.deleteProperty(bucket, 'get'); rings.get = ringGet; }
@@ -728,7 +739,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const before = await loadDocument(m, 'catalog');
       const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.put;
       Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
-        if (PART.test(key)) throw new Error('P86 fixture: the part write fails');
+        if (PART.test(key) || PACKED.test(key)) throw new Error('P86 fixture: the part write fails'); // P98 R10 (R-P569 (b)): a part is written in its load's pack
         return original.call(m.storage, key, raw, options);
       } });
       let failed: Answer;
@@ -847,7 +858,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       // The index written before the pending head, as a part is: its write failing commits nothing and leaves nothing pending.
       const bucket = m.storage as unknown as Record<string, unknown>, put = UnitR2.prototype.put;
       Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
-        if (IDS.test(key)) throw new Error('P86 fixture: the id shard write fails');
+        if (IDS.test(key) || PACKED.test(key)) throw new Error('P86 fixture: the id shard write fails'); // P98 R10 (R-P569 (b)): an id shard is written in its load's pack
         return put.call(m.storage, key, raw, options);
       } });
       let failed: Answer;

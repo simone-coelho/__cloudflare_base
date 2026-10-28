@@ -135,8 +135,9 @@ function uploadedAt(m: Mounted, when: (key: string) => Date): () => void {
   Object.defineProperty(bucket, 'head', { configurable: true, writable: true, value: async (key: string) => {
     const found = await proto.head.call(m.storage, key); return found ? { ...found, uploaded: when(key) } : null;
   } });
-  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
-    const found = await proto.get.call(m.storage, key); return found ? { ...found, uploaded: when(key) } : null;
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
+    // P98 R10 (R-P569 (b)): the read's range is honoured.
+    const found = await proto.get.call(m.storage, key, options); return found ? { ...found, uploaded: when(key) } : null;
   } });
   return () => { for (const name of ['list', 'head', 'get']) Reflect.deleteProperty(bucket, name); };
 }

@@ -108,7 +108,13 @@
 // from src/units/: ../_parity, ../P93/_catalog, ./_load.
 
 import { SignJWT } from 'jose';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The customer profile's leg (LD2, R-P569 (c)) mounts the real Worker through P87's stamp, which needs the module doubles
+// src/units/P87/LEDGER.unit.test.ts registers (the Agents router and the browser binding are on no path these units call).
+vi.mock('agents', () => ({ routeAgentRequest: async () => undefined }));
+vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
+vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
 import { initializePublicationSet, invalidatePublicationCache } from '@/config/publication';
 import { CONTENT_KIND, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
@@ -118,6 +124,7 @@ import { asOperator, expectPublished, HOSTS, loadDocument, MODULES, mount, putDo
   type Mounted } from '../_parity';
 import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, declareProductSlots, DOCS, DOCS_WITH_CART, image, indexOf, KEY, OTHER_IMAGES, preconditions, productRead,
   rangeProduct, rangeRecordId, rangeRecords, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, withinCaps, type Rec } from '../P93/_catalog';
+import { stamp } from '../P87/_stamp';
 import { attemptsOf, canonicalJson, failFirst, importOf, leaked, loadedTenant, meter, minutesAgo, objectKindOf, oneLevelTenant, packTable, publishOf, rawImport, reached,
   recoverOf, resolve, revisionOf, shardedTenant, shortRetention, stageOf, statusOf, STORAGE_NUMBER, storedPacks, tally, under, uploadedAt, type Call, type Meter,
   type Rule } from './_load';
@@ -162,6 +169,8 @@ const pageSeen = (row: PageRow, bytes?: number) => ({ ...row, reads: atMost(row.
 
 interface Scale {
   refused: string | null; page40000: PageRow | null; lost: [number, boolean] | string;
+  /** The manifest at 40,000 in packs: its canonical bytes, its shared pieces' and the packs its table names (R-P569 (b)). */
+  manifest: { bytes: number; shared: number; packs: number } | null;
   at5000: Row | null; at40000: Row | null; new100: Row | null; new1000: Row | null; changed5000: Row | null; skip5000: Row | null;
   newPack: { bad: string[]; partsElsewhere: number; shardsElsewhere: number; rebuilt: number } | null;
   reload: Row | null; rollback: Row | null; restored: boolean | null;
@@ -169,7 +178,7 @@ interface Scale {
 const SCALE = new Map<Host, Promise<Scale>>();
 const scale = (host: Host) => { let run = SCALE.get(host); if (!run) { run = measureScale(host); SCALE.set(host, run); } return run; };
 async function measureScale(host: Host): Promise<Scale> {
-  const out: Scale = { refused: null, page40000: null, lost: 'not measured', at5000: null, at40000: null, new100: null, new1000: null, changed5000: null, skip5000: null,
+  const out: Scale = { refused: null, page40000: null, lost: 'not measured', manifest: null, at5000: null, at40000: null, new100: null, new1000: null, changed5000: null, skip5000: null,
     newPack: null, reload: null, rollback: null, restored: null };
   const m = await mount(host, DOCS_WITH_CART);
   expectPublished(m, 'P98 — the tenant documents publish');
@@ -178,6 +187,8 @@ async function measureScale(host: Host): Promise<Scale> {
     const loaded = await importOf(m, [...(k === 0 ? [...ANCHOR_IMAGES, ...OTHER_IMAGES] : []), ...rangeRecords(1 + 5000 * k, 5000)]);
     if (loaded.status !== 200) { out.refused = `the fill's file ${k + 1} was refused: ${show(loaded)}`; return out; }
   }
+  const filled = (await loadDocument(m, 'catalog')).document;
+  out.manifest = { bytes: Buffer.byteLength(canonicalJson(filled), 'utf8'), shared: Buffer.byteLength(canonicalJson(filled.pieces), 'utf8'), packs: packTable(filled).length };
   out.page40000 = await pageOf(m, `p98-scale-${host}`);
   // A lost pack: the one holding the anchor's part.
   const anchorPack = indexOf(m, (await loadDocument(m, 'catalog')).document).products[A]?.place?.pack;
@@ -494,6 +505,32 @@ describe('unit:P98.LD2 (R-P549 C2: files staged in parallel and published once; 
       expect.soft(resolve(m, (await loadDocument(m, 'catalog')).document).bad, `${host}: P98.LD2 — every object the revision names resolves`).toEqual([]);
     }, 600_000);
 
+    it(`host (${host}): R-P569 (c) — on the customer profile (the stamps' boundary) the stage and publish doors admit the catalogue-import credential as on the parity mount; what the customer boundary refuses stays refused (another method or path, another kind's stage, the catalogue PUT with that credential)`, async () => {
+      const s = await stamp(host, 'customer');
+      expect(s.refused ?? 'ready', `PRECONDITION (${host}): the stamp's tenant has its first publication set (${s.refused})`).toBe('ready');
+      const registered = await s.call('POST', '/auth/service-credentials', { body: { id: crypto.randomUUID(), subject: 'p98-load-job', role: 'catalog-import', expiresAt: Math.floor(Date.now() / 1000) + 86_400 } });
+      const token = typeof registered.body.token === 'string' ? registered.body.token : '';
+      expect([registered.status, token.length > 0], `${host}: PRECONDITION — a catalogue-import credential is registered (${JSON.stringify(registered.body).slice(0, 200)})`).toEqual([201, true]);
+      const base = async (as?: string) => {
+        const d = await s.call('GET', '/content/catalog', { token: as }), publication = (d.body.publication ?? {}) as { revision?: number; digest?: string };
+        return { 'If-Match': `"${String(d.body.revision)}/${publication.revision}/${publication.digest}"`, 'Idempotency-Key': `${String(d.body.revision)}:${crypto.randomUUID()}` };
+      };
+      const declared = await s.call('PUT', '/content/catalog', { body: { document: { version: 'p98-stamp', productSlots: [CAROUSEL], pieces: [] }, note: 'p98 product slots' }, headers: await base() });
+      expect(declared.status, `${host}: PRECONDITION — the catalogue declares its product slots (${JSON.stringify(declared.body).slice(0, 200)})`).toBe(200);
+      const over = await base(token);
+      const staged = await s.call('POST', '/content/catalog/stage?mode=merge', { token, body: rangeRecords(1, 5), headers: over });
+      const published = await s.call('POST', '/content/catalog/publish', { token, body: { stages: [staged.body.stage] }, headers: keyed(over) });
+      const read = await s.call('GET', `/content/catalog?product=${rangeProduct(3)}`, { token });
+      const refused = [];
+      for (const [method, path] of [['GET', '/content/catalog/stage'], ['POST', '/content/catalog/stage/more'], ['POST', '/content/slots/stage'], ['POST', '/content/catalog/publish/more']] as const) {
+        refused.push((await s.call(method, path, { token, body: method === 'POST' ? {} : undefined })).status);
+      }
+      const put = await s.call('PUT', '/content/catalog', { token, body: { document: { version: 'p98-stamp', productSlots: [CAROUSEL], pieces: [] } }, headers: await base(token) });
+      expect.soft({ staged: [staged.status, typeof staged.body.stage === 'string'], published: published.status, read: [read.status, readIds(read)], refused, put: [put.status, put.body.code ?? null] },
+        `${host}: P98.LD2 — the two doors on the customer profile (today the boundary has no stage or publish door: ${staged.status} | ${published.status})`).toEqual({
+        staged: [200, true], published: 200, read: [200, [rangeRecordId(3)]], refused: [404, 404, 404, 404], put: [403, 'catalog_credential'] });
+    }, 300_000);
+
     it(`host (${host}): the stage and publish doors admit the catalogue-import credential as the import does (a PUT with it is still refused 403 catalog_credential)`, async () => {
       const m = await loadedTenant(host, 50), token = await catalogueToken();
       const base = await preconditions(m), as = { Authorization: `Bearer ${token}` };
@@ -521,6 +558,13 @@ describe('unit:P98.LD3 (R-P549: the page reads its shard and part from the pack 
       expect.soft({ page: run.page40000 ? pageSeen(run.page40000, 122880) : 'not measured', lost: run.lost },
         `${host}: P98.LD3 — the page at 40,000 (today its shard and part are objects of their own: ${JSON.stringify(run.page40000)})`).toEqual({
         page: PAGE_EXPECTED(122880), lost: [503, true] });
+    }, 1_800_000);
+
+    it(`host (${host}): R-P569 (b) — at N = 40,000 in packs the manifest every cold page reads stays within 64 KB beside its shared pieces (P93.CS1's delivered bound; the pointers name their pack by the table)`, async () => {
+      const run = await scale(host);
+      expect(run.refused, `${host}: PRECONDITION — 40,000 products load in eight files`).toBeNull();
+      const seen = run.manifest ? { inPacks: run.manifest.packs > 0, beside: atMost(run.manifest.bytes - run.manifest.shared, 65536) } : 'not measured';
+      expect.soft(seen, `${host}: P98.LD3 — the manifest at 40,000 (${JSON.stringify(run.manifest)})`).toEqual({ inPacks: true, beside: 'at most 65536' });
     }, 1_800_000);
 
     it(`host (${host}): at N = 50 and N = 5,000 the anchor's page reads at most 8 objects cold and 1 warm, its shard and part each by one ranged read of a pack, and serves P80's carousel`, async () => {
