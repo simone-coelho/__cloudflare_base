@@ -123,11 +123,11 @@
         "src/content/kinds.ts (the learn document's money member and its validation only)",
         "src/content/types.ts (LearnConfig's money member only)",
         "src/learn/route.ts",
-        "src/ledger/recovery.ts (the outcome's prepare body and admit call only)",
+        "src/ledger/recovery.ts (the outcome's prepare body, its admit call and OutcomeRecoveryInput's money member only; R-P571 (b))",
         "src/learn/policy.ts",
         "src/learn/fan.ts",
         "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call only)",
-        "src/learn/hourly.ts (the hourly fold's credit only)",
+        "src/learn/hourly.ts (the hourly fold's credit only, and its recovery fingerprint naming the money policy where P103's MP3 shows a policy published between a fold's start and its recovery reachable; R-P571 (d))",
         "src/learn/report.ts (the raw grids' credit only)",
         "src/durable-objects/LearnStats.ts (the W24 rebuild's call to foldRetainedDay only)",
         "src/sdk/emit.ts",
@@ -137,7 +137,8 @@
         "public/sdk/0.2.0/edge-personalization.esm.js",
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md (the learn document's money member only; R-P571 (c))"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
