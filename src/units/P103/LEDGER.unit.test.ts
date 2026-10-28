@@ -94,15 +94,24 @@
 //      the policy changed (none to EUR, EUR to none), the next run commits the plan and the day reports exactly the live
 //      credits (295/118, 870/348). With the policy named in the fingerprint (probe-recovery-fingerprint.log) the recovery
 //      is refused, "Hourly recovery conflict", the hour stays unfolded and the day reports 0 against live 295/870; the
-//      pending plan in shard 0 also refuses every other hour (:2570). A publication between an hour's outcomes and its
-//      fold's START is a different case: the fold credits under the learn document in force when it runs, as MP3's
-//      wording rules (and as the attribution policies already fold); see RESIDUALS.
+//      pending plan in shard 0 also refuses every other hour (:2570). Under R13 below no fold reads the money policy from
+//      the learn document at all, so the fingerprint has nothing to name.
+//   R13 (R-P576) A policy published after an hour's outcomes and before its fold must not change what the fold credits:
+//      every offline fold credits an outcome under the policy live learning took it under. MP3's eight R-P576 legs (both
+//      hosts, both outcome paths; none to EUR, EUR to GBP) measure live against the open hour's fold, the closed hour's fold
+//      and the day it publishes, the raw day and the W24 rebuild. "The policy live learning took it under" is the one the
+//      outcome's producer read: prepareOutcomeAdmission's learn read at the action on the managed path, outcomeToLearning's
+//      on the direct path. A row recorded before P103 names none and is read under no policy, which is what live learning
+//      applied to it (no producer passed one before P103). The legs pin the behaviour, not a representation; the sketch
+//      (S50/specifier/scratch/sketch/apply.py) stamps the policy on the outcome record and the one credit rule reads the
+//      stamp, so nothing re-reads a historic learn document (P99's purge of old revisions cannot reach it).
 //
 // DEFERRED: LV1 (lane L21, the pair's next release: a EUR policy published on a pair tenant, an SDK purchase naming EUR
 // credited live and in the day's report; another currency refused by name live and absent from the report).
-// RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6); an hour's outcomes credited live under one policy and folded after a publication of another are folded
-// under the one in force at the fold (R12; carrying the policy in force on each outcome record would close it, and no
-// witness asks for it).
+// RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6); on the direct path a
+// redelivery of one event straddling a publication (an SDK retry with the same event id) carries the second read's
+// policy: live learning credits the event once, under the first, and the ledger keeps one row of the two, as it keeps one
+// of two `experiment` blocks (src/ledger/delivery.ts LOGICAL_EXCLUDED_FIELDS); no leg drives that redelivery.
 //
 // LOCKS (MP6 and the gate): W24 B1, B2, LEDGER (R1.02, R1.04, R2, R5), P16, P33, W26, P94, W25, src/sdk/emit.test.ts,
 // W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
@@ -178,6 +187,8 @@ const docs = (money?: unknown) => ({ pieces: PIECES, slots: SLOTS, learn: learnO
 /** The tenant's own values for the walk (the airline publishes EUR; LV1 names EUR as the lane's value). */
 const EUR_REFUSE: MoneyPolicy = { currency: 'EUR', nonpositive: 'refuse' };
 const EUR_CREDIT: MoneyPolicy = { currency: 'EUR', nonpositive: 'credit' };
+/** R-P576: the policy changed after the outcomes, before the fold. */
+const GBP_REFUSE: MoneyPolicy = { currency: 'GBP', nonpositive: 'refuse' };
 
 /** R1: the malformed money members a new learn document is refused for, naming `money`. */
 const MALFORMED: Array<[string, unknown]> = [
@@ -430,59 +441,88 @@ describe('unit:P103.MP3', () => {
     none: { slots: { [HERO]: 295, [STORY]: 118, [TEASER]: 375, [BANNER]: 3 }, credits: 6 },
     EUR: { slots: { [HERO]: 575 + 295, [STORY]: 230 + 118, [TEASER]: 575 + 375, [BANNER]: 3 }, credits: 9 },
   } as const;
+  type Observed = Record<'live' | 'openHour' | 'hourly' | 'raw', { slots: Record<Slot, number>; credits: number | string }> & { rebuild: { slots: Record<Slot, number> } };
+
+  /**
+   * One day of the shopper's outcomes taken under `taken` (the policy published when they happen), then, when `folded`
+   * differs, another policy published (R-P576: after the hour's outcomes, before its fold), then every offline fold: the
+   * open hour's (the five-minute job's foldOpenHours), the closed hour's (catchUp, P05's foldedCredit) and the day it
+   * publishes, the raw day (POST /v1/:tenant/learn/report with a custom policy) and the W24 rebuild of every slot.
+   */
+  async function dayAlike(host: Host, taken: MoneyPolicy | undefined, folded: MoneyPolicy | undefined, recovery = true): Promise<Observed> {
+    const clock = fixedHour();
+    try {
+      const m = await mount(host, docs(taken), { recovery });
+      expectPublished(m, `P103.MP3 — the home page and a learn document ${taken ? `with the money policy ${taken.currency}` : 'without money'} publish`);
+      const answers = tapRing(m);
+      const s = await servedShopper(m, `${host}, ${taken?.currency ?? 'none'}`);
+      const day = [purchase(575, 230, 'EUR'), purchase(495, 198, 'GBP'), purchase(295, 118), addToBag(575, 'EUR'), addToBag(375), purchase(99, 40, 'EUR', UNKNOWN_PRODUCT)];
+      const ids: string[] = [];
+      for (const event of day) {
+        const sent = await act(m, s, event);
+        expect(sent.status, `${host}: PRECONDITION — the ${event.type} is accepted: ${JSON.stringify(sent.body).slice(0, 200)}`).toBe(200);
+        ids.push(sent.eventId);
+      }
+      await m.drainLedger();
+      const attributed = ids.map(id => [...answers].find(([outcome]) => outcome.endsWith(`:n1:${id}`))?.[1]?.attributed);
+      const live = { slots: await liveCredits(m), credits: attributed.every(n => typeof n === 'number') ? attributed.reduce((a, b) => a! + b!, 0)! : `ring answers ${JSON.stringify(attributed)}` };
+
+      if (JSON.stringify(folded ?? null) !== JSON.stringify(taken ?? null)) {
+        const republished = await putDocument(m, 'learn', learnOf(folded), 'p103 policy published after the outcomes, before the fold');
+        expect(republished.status, `${host}: PRECONDITION — the policy ${folded?.currency ?? 'removed'} publishes after the outcomes: ${JSON.stringify(republished.body).slice(0, 200)}`).toBe(200);
+      }
+      const date = new Date(clock.hourStart).toISOString().slice(0, 10), learn = await learnInForce(m);
+      // The open hour: the five-minute job's working fold, exactly as src/index.ts runs it, then the day it published.
+      await foldOpenHours(m.env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], TENANT, learn, Date.now(), { start: true, publish: true, budget: RUN_BUDGET }, m.env as never);
+      const open = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
+      expect(open.status, `${host}: PRECONDITION — the day the open hour's fold published reads back: ${JSON.stringify(open.body).slice(0, 200)}`).toBe(200);
+      const openHour = reportCredits(open.body.report as DayReport);
+      // The hour closed: the five-minute job's catch-up (P05's foldedCredit), until a run folds nothing.
+      const failed: unknown[] = [];
+      for (let run = 0; run < 40; run++) {
+        const result = await catchUp(m.env.STORAGE as unknown as Parameters<typeof catchUp>[0], TENANT, learn, clock.hourStart + HOUR_MS + 6 * 60_000, {}, m.env as never);
+        failed.push(...result.failed, ...result.reports.failed);
+        if (!result.built.length) break;
+      }
+      expect(failed, `${host}: PRECONDITION — the five-minute job folds the closed hour`).toEqual([]);
+      const foldedDay = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
+      expect(foldedDay.status, `${host}: PRECONDITION — the folded day reads back: ${JSON.stringify(foldedDay.body).slice(0, 200)}`).toBe(200);
+      const hourly = reportCredits(foldedDay.body.report as DayReport);
+      // The raw day: the operator's report over the ledger records (a request with a custom policy).
+      const rawDay = await asOperator(m, 'POST', `/v1/${TENANT}/learn/report`, { date, brand: BRAND, policies: [{ name: 'p103-direct', scope: 'session', match: 'direct', credit: 'last' }] });
+      expect(rawDay.status, `${host}: PRECONDITION — the raw day is built: ${JSON.stringify(rawDay.body).slice(0, 200)}`).toBe(200);
+      const raw = reportCredits(rawDay.body.report as DayReport);
+      // The W24 rebuild of every slot from the retained day (POST /v1/:tenant/learn/generation { rebuildFrom }).
+      for (const slot of SLOTS_IN_ORDER) {
+        const rebuilt = await asOperator(m, 'POST', `/v1/${TENANT}/learn/generation`, { slot, brand: BRAND, rebuildFrom: date });
+        expect(rebuilt.status, `${host}: PRECONDITION — ${slot} is rebuilt from the retained day: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBe(200);
+      }
+      return { live, openHour, hourly, raw, rebuild: { slots: await liveCredits(m) } };
+    } finally { clock.restore(); }
+  }
+  const alike = (expected: (typeof EXPECTED)[keyof typeof EXPECTED]) => ({ live: expected, openHour: expected, hourly: expected, raw: expected, rebuild: { slots: expected.slots } });
 
   for (const host of HOSTS) for (const policy of ['none', 'EUR'] as const) {
     it(`host (${host}): ${policy === 'none' ? 'with no money policy, an outcome naming a currency is refused' : 'with a policy of EUR, an EUR outcome is credited and a GBP one refused'} alike by live learning, the open hour's fold, the hourly fold, the raw day and the W24 rebuild`, async () => {
-      const clock = fixedHour();
-      try {
-        const m = await mount(host, docs(policy === 'EUR' ? EUR_REFUSE : undefined));
-        expectPublished(m, `P103.MP3 — the home page and a learn document ${policy === 'EUR' ? 'with the money policy EUR' : 'without money'} publish`);
-        const answers = tapRing(m);
-        const s = await servedShopper(m, `${host}, ${policy}`);
-        const day = [purchase(575, 230, 'EUR'), purchase(495, 198, 'GBP'), purchase(295, 118), addToBag(575, 'EUR'), addToBag(375), purchase(99, 40, 'EUR', UNKNOWN_PRODUCT)];
-        const ids: string[] = [];
-        for (const event of day) {
-          const sent = await act(m, s, event);
-          expect(sent.status, `${host}: PRECONDITION — the ${event.type} is accepted: ${JSON.stringify(sent.body).slice(0, 200)}`).toBe(200);
-          ids.push(sent.eventId);
-        }
-        await m.drainLedger();
-        const attributed = ids.map(id => [...answers].find(([outcome]) => outcome.endsWith(`:n1:${id}`))?.[1]?.attributed);
-        const live = { slots: await liveCredits(m), credits: attributed.every(n => typeof n === 'number') ? attributed.reduce((a, b) => a! + b!, 0)! : `ring answers ${JSON.stringify(attributed)}` };
+      const taken = policy === 'EUR' ? EUR_REFUSE : undefined;
+      expect(await dayAlike(host, taken, taken),
+        `${host}: P103.MP3 — one credit rule: live learning and every offline fold ${policy === 'none' ? 'refuse each outcome naming a currency on a money slot' : 'credit the EUR outcomes and refuse the GBP one'}, so the report and a rebuild credit exactly what live learning credits (today the offline folds weigh value with no currency check: S47 Engine 18${policy === 'EUR' ? ', and live learning never receives the policy' : ''})`)
+        .toEqual(alike(EXPECTED[policy]));
+    }, 90_000);
+  }
 
-        const date = new Date(clock.hourStart).toISOString().slice(0, 10), learn = await learnInForce(m);
-        // The open hour: the five-minute job's working fold, exactly as src/index.ts runs it, then the day it published.
-        await foldOpenHours(m.env.STORAGE as unknown as Parameters<typeof foldOpenHours>[0], TENANT, learn, Date.now(), { start: true, publish: true, budget: RUN_BUDGET }, m.env as never);
-        const open = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
-        expect(open.status, `${host}: PRECONDITION — the day the open hour's fold published reads back: ${JSON.stringify(open.body).slice(0, 200)}`).toBe(200);
-        const openHour = reportCredits(open.body.report as DayReport);
-        // The hour closed: the five-minute job's catch-up (P05's foldedCredit), until a run folds nothing.
-        const failed: unknown[] = [];
-        for (let run = 0; run < 40; run++) {
-          const result = await catchUp(m.env.STORAGE as unknown as Parameters<typeof catchUp>[0], TENANT, learn, clock.hourStart + HOUR_MS + 6 * 60_000, {}, m.env as never);
-          failed.push(...result.failed, ...result.reports.failed);
-          if (!result.built.length) break;
-        }
-        expect(failed, `${host}: PRECONDITION — the five-minute job folds the closed hour`).toEqual([]);
-        const folded = await asOperator(m, 'GET', `/v1/${TENANT}/learn/report?date=${date}&brand=${BRAND}`);
-        expect(folded.status, `${host}: PRECONDITION — the folded day reads back: ${JSON.stringify(folded.body).slice(0, 200)}`).toBe(200);
-        const hourly = reportCredits(folded.body.report as DayReport);
-        // The raw day: the operator's report over the ledger records (a request with a custom policy).
-        const rawDay = await asOperator(m, 'POST', `/v1/${TENANT}/learn/report`, { date, brand: BRAND, policies: [{ name: 'p103-direct', scope: 'session', match: 'direct', credit: 'last' }] });
-        expect(rawDay.status, `${host}: PRECONDITION — the raw day is built: ${JSON.stringify(rawDay.body).slice(0, 200)}`).toBe(200);
-        const raw = reportCredits(rawDay.body.report as DayReport);
-        // The W24 rebuild of every slot from the retained day (POST /v1/:tenant/learn/generation { rebuildFrom }).
-        for (const slot of SLOTS_IN_ORDER) {
-          const rebuilt = await asOperator(m, 'POST', `/v1/${TENANT}/learn/generation`, { slot, brand: BRAND, rebuildFrom: date });
-          expect(rebuilt.status, `${host}: PRECONDITION — ${slot} is rebuilt from the retained day: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBe(200);
-        }
-        const rebuild = { slots: await liveCredits(m) };
-
-        const expected = EXPECTED[policy];
-        expect({ live, openHour, hourly, raw, rebuild },
-          `${host}: P103.MP3 — one credit rule: live learning and every offline fold ${policy === 'none' ? 'refuse each outcome naming a currency on a money slot' : 'credit the EUR outcomes and refuse the GBP one'}, so the report and a rebuild credit exactly what live learning credits (today the offline folds weigh value with no currency check: S47 Engine 18${policy === 'EUR' ? ', and live learning never receives the policy' : ''})`)
-          .toEqual({ live: expected, openHour: expected, hourly: expected, raw: expected, rebuild: { slots: expected.slots } });
-      } finally { clock.restore(); }
+  // R-P576: a policy published after the hour's outcomes and before its fold. Live learning took each outcome under the
+  // policy in force when it happened; every offline fold must credit exactly that, whatever is published when it runs.
+  for (const host of HOSTS) for (const path of ['managed recovery', 'direct'] as const) {
+    it(`host (${host}, ${path}): outcomes taken under no money policy, then EUR published, then the hour folded, the day read and rebuilt: the report credits what live learning credited`, async () => {
+      expect(await dayAlike(host, undefined, EUR_REFUSE, path === 'managed recovery'),
+        `${host}, ${path}: P103.MP3 (R-P576) — outcomes live learning took with no policy published are folded as it took them, though EUR is published before the fold: the EUR outcomes stay refused offline as they were live (a fold reading the policy in force when it runs credits them)`)
+        .toEqual(alike(EXPECTED.none));
+    }, 90_000);
+    it(`host (${host}, ${path}): outcomes taken under EUR, then the policy changed to GBP, then the hour folded, the day read and rebuilt: the report credits what live learning credited`, async () => {
+      expect(await dayAlike(host, EUR_REFUSE, GBP_REFUSE, path === 'managed recovery'),
+        `${host}, ${path}: P103.MP3 (R-P576) — outcomes live learning took under EUR are folded as it took them, though GBP is published before the fold: the EUR outcomes stay credited and the GBP one refused offline as live (a fold reading the policy in force when it runs swaps them)`)
+        .toEqual(alike(EXPECTED.EUR));
     }, 90_000);
   }
 });
