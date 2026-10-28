@@ -295,7 +295,7 @@
     {
       "id": "P95",
       "title": "The salt version on long-lived tenants (**amendment 12, E20, 2026-10-26**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-12/BTI-Parity-Amendment-2026-10-26-scale.md",
