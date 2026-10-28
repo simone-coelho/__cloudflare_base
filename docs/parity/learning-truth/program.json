@@ -43,7 +43,7 @@
         {
           "id": "MP3",
           "kind": "LOCAL",
-          "observable": "One credit rule: the money rule (moneyRefusal) sits inside the shared credit rule (successCreditOf, src/learn/policy.ts:115–149) that the visitor's ring (src/durable-objects/DecisionRing.ts:626–640), foldRetainedDay (src/learn/fan.ts:1417) with the W24 rebuild that calls it (src/durable-objects/LearnStats.ts:1160–1167), the hourly fold (src/learn/hourly.ts:1351) and the raw grids (src/learn/report.ts:1431) all read, each given the policy published in the learn document it folds under; so online and offline refuse and credit the same outcomes, with no policy (an outcome naming a currency refused everywhere) and with one (credited everywhere in its currency), on both hosts. Today the ring alone applies the rule (DecisionRing.ts:626) and the offline folds weigh value with no currency check (creditWeight, policy.ts:109–113): REPRODUCED, foldRetainedDay credits the EUR purchase the ring refuses (_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18), so the report and a rebuild credit revenue that live learning refused.",
+          "observable": "One credit rule: the money rule (moneyRefusal) sits inside the shared credit rule (successCreditOf, src/learn/policy.ts:115–149) that the visitor's ring (src/durable-objects/DecisionRing.ts:626–640), foldRetainedDay (src/learn/fan.ts:1417) with the W24 rebuild that calls it (src/durable-objects/LearnStats.ts:1160–1167), the hourly fold (src/learn/hourly.ts:1351) and the raw grids (src/learn/report.ts:1431) all read, each reading the policy the outcome was decided under, carried on its record from the producer's own learn read (never the learn document in force when it is folded, R-P576, R-P588); so online and offline refuse and credit the same outcomes, with no policy (an outcome naming a currency refused everywhere) and with one (credited everywhere in its currency), when a policy is published between an hour's outcomes and its fold, and when the SDK retries an outcome (the same event id) on either path, before or after a publication: the retry is the same outcome, credited once live and folded once, under its first stamp, and the hour's fold and the day build as they would without it, on both hosts (R-P594). Today, besides the money rule, a retry on the direct path is a second outcome: its admission stamp differs, so live learning credits it twice and the hour's fold refuses with conflicting rows under one logical id (S50/specifier/REPORT-46cb4300.md). Today the ring alone applies the rule (DecisionRing.ts:626) and the offline folds weigh value with no currency check (creditWeight, policy.ts:109–113): REPRODUCED, foldRetainedDay credits the EUR purchase the ring refuses (_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18), so the report and a rebuild credit revenue that live learning refused.",
           "proof": "The P103 acceptance command runs the tests named unit:P103.MP3 in src/units/P103/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
@@ -123,11 +123,11 @@
         "src/content/kinds.ts (the learn document's money member and its validation only)",
         "src/content/types.ts (LearnConfig's money member only)",
         "src/learn/route.ts",
-        "src/ledger/recovery.ts (the outcome's prepare body and admit call only)",
+        "src/ledger/recovery.ts (OutcomeRecoveryInput's money member; sourceOf leaving the money stamp out of the source digest; runOwnerRecovery's first-admission stamp; the prepare body and admit call only as the stamp needs; R-P571 (b), R-P588)",
         "src/learn/policy.ts",
         "src/learn/fan.ts",
-        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call only)",
-        "src/learn/hourly.ts (the hourly fold's credit only)",
+        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call; the direct /outcome handler evaluating every delivery of an outcome id under the stamp it first saw, a bounded record beside alreadyCredited; R-P594)",
+        "src/learn/hourly.ts (the hourly fold's credit only; not its recovery fingerprint, R-P576 R12)",
         "src/learn/report.ts (the raw grids' credit only)",
         "src/durable-objects/LearnStats.ts (the W24 rebuild's call to foldRetainedDay only)",
         "src/sdk/emit.ts",
@@ -137,7 +137,11 @@
         "public/sdk/0.2.0/edge-personalization.esm.js",
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
+        "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
+        "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
