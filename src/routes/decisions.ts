@@ -1154,12 +1154,13 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   parts.mint = Math.round(performance.now() - minting);
   // P97 (FV1, FV2; R-P547): the first answer is decided on the blank copy of the brand-new visitor's record
   // (freshOwner.ts), by the object's own code, contacting, creating and writing nothing; the real record is created
-  // after the answer (below). Whatever the copy refused, it is today's path under the very session just minted.
+  // after the answer (below). Whatever the copy refused, and any failure of the copy but its activation's own refusal
+  // (F6, R-P581), is today's path under the very session just minted.
   let copy = freshOwner(c.env, tenant, issued.subject);
   let session: Awaited<ReturnType<typeof activateAnonymous<typeof issued>>> | undefined;
   if (copy) {
     try { session = await activateAnonymous(c.env, tenant, issued, hints, parts, copy.stub); }
-    catch (error) { if (!copy.refused()) throw error; }
+    catch (error) { if (copy.activationRefused()) throw error; }
     if (session && !copy.refused()) copy.activated();
     else { copy = null; session = undefined; }
   }
@@ -1178,19 +1179,27 @@ const firstDecisionRequest = createMiddleware<{ Bindings: Env; Variables: Tenant
   const forwardStarted = performance.now();
   const forward = (owner?: OwnerStub) => forwardShopperRequest(c.env, new Request(c.req.raw.url, { method: 'POST', headers, body: text }), principal,
     (c.req.raw as Request & { cf?: unknown }).cf, owner);
-  let answered = await forward(copy?.stub);
-  if (copy && (answered.status !== 200 || !await copy.decided())) {
-    // P97 (FV2): the copy refused an effect, changed the record past what its creation reproduces or did not answer
-    // the decision: today's path, the activation and the forward on the visitor's own object, the same session.
-    copy = null;
-    void answered.body?.cancel().catch(() => undefined);
-    session = await activateAnonymous(c.env, tenant, session, hints, parts);
-    answered = await forward();
+  let answered: Response | undefined, body: Record<string, unknown> | null = null;
+  if (copy) {
+    answered = await forward(copy.stub).catch(() => undefined);
+    if (answered?.status === 200) body = await answered.json().catch(() => null) as Record<string, unknown> | null;
+    if (!answered || answered.status !== 200 || body?.ok !== true || !await copy.decided()) {
+      // P97 (FV2, F6): the copy refused an effect, changed the record past what its creation reproduces, failed or did
+      // not answer the decision: today's path, the activation and the forward on the visitor's own object, the same
+      // session.
+      copy = null;
+      if (answered && body === null) void answered.body?.cancel().catch(() => undefined);
+      session = await activateAnonymous(c.env, tenant, session, hints, parts);
+      answered = undefined;
+    }
   }
-  // A refusal or a failure is answered as the route answered it, without the
-  // session: the SDK then takes the session route as before.
-  if (answered.status !== 200) return answered;
-  const body = await answered.json().catch(() => null) as Record<string, unknown> | null;
+  if (!answered) {
+    answered = await forward();
+    // A refusal or a failure is answered as the route answered it, without the
+    // session: the SDK then takes the session route as before.
+    if (answered.status !== 200) return answered;
+    body = await answered.json().catch(() => null) as Record<string, unknown> | null;
+  }
   const forwardMs = performance.now() - forwardStarted;
   if (!body || body.ok !== true) return c.json({ ok: false, error: 'Snapshot unavailable' }, 503);
   // P30 (decision D2): the first decision set's context key, as the route answered it.

@@ -469,6 +469,8 @@ export class ShopperReflex {
       hibernation wake resets it, but sustained bursts — the abuse case — keep the
       object alive, so the window holds exactly when it matters. */
   private rate = { windowStart: 0, count: 0 };
+  /** P97 (F1): the grant the current operation adopted onto this record, if it adopted one (the activation reads it). */
+  private adoptedGrant: string | null = null;
   private dropped = { rateLimited: 0, unknownProduct: 0, invalid: 0 };
 
   constructor(state: DurableObjectState, env: Env) {
@@ -703,19 +705,31 @@ export class ShopperReflex {
       return this.serialize(async () => {
         try {
           timer.lap('queue');
+          // P97 (F1, R-P581): an activation is applied once per grant. A grant this record already held before this
+          // activation (adopted by an earlier one, or by a request's forward that reached the record first) is not
+          // activated again with the consent default it was issued under: that carry and the session host's restriction
+          // ran when it was adopted, and a choice made on the record since then stands; the activation answers the
+          // record's consent as it is. An activation that carries an explicit choice (a rotation's newer refusal, W35.04)
+          // is still applied: a refusal it carries is the visitor's own and is never lost.
+          this.adoptedGrant = null;
           await this.assertOwned(principal!, undefined, false, !body.existingOnly);
           timer.lap('grant');
-          const consent = carryConsent(body.consent, principal!, storedConsent(await this.state.storage.get('consent')));
-          await this.scheduleConsentAlarm(consent);
-          assertSessionTarget(principal!);
-          if (consent.instruction) await this.state.storage.put('consent', consent.instruction);
+          const applied = this.adoptedGrant !== principal!.grantId && storedConsent(body.consent).instruction === undefined;
+          let consent: Consent;
+          if (applied) consent = storedConsent(await this.state.storage.get('consent'));
+          else {
+            consent = carryConsent(body.consent, principal!, storedConsent(await this.state.storage.get('consent')));
+            await this.scheduleConsentAlarm(consent);
+            assertSessionTarget(principal!);
+            if (consent.instruction) await this.state.storage.put('consent', consent.instruction);
+          }
           this.consent = consent;
           timer.lap('consent');
-          if ((this.env.REFLEX_HOST ?? 'session') === 'session' && !personalizes(consent)) {
+          if (!applied && (this.env.REFLEX_HOST ?? 'session') === 'session' && !personalizes(consent)) {
             await new SessionManager(this.env, { tenant: principal!.tenant, principal }).restrictConsent(principal!.sessionId, consent);
             timer.lap('restrict');
           }
-          await this.scheduleConsentAlarm();
+          if (!applied) await this.scheduleConsentAlarm();
           timer.lap('alarm');
           await this.committed();
           timer.lap('commit');
@@ -2375,6 +2389,7 @@ export class ShopperReflex {
       authority = { version: 1, epoch: grant.authorityEpoch, grants: { [grant.grantId]: grant } };
       try { await this.state.storage.put('grantAuthority', authority); }
       catch (error) { this.invalidateMirrors(); throw error; }
+      this.adoptedGrant = grant.grantId;
     }
     if (authority.epoch !== grant.authorityEpoch
       || JSON.stringify(authority.grants[grant.grantId]) !== JSON.stringify(grant)) throw new SessionAccessError();

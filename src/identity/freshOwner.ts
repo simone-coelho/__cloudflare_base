@@ -39,8 +39,17 @@ export interface OwnerStub { fetch(input: RequestInfo | URL, init?: RequestInit)
 export interface FreshOwner {
   /** The copy, called exactly as the visitor's object is called. */
   readonly stub: OwnerStub;
-  /** Whether the copy refused anything: the door then takes today's path. */
+  /**
+   * Whether the copy refused anything or failed (an operation of its record threw, or a call to it threw): the door then
+   * takes today's path.
+   */
   refused(): boolean;
+  /**
+   * P97 (F6): whether the copy's activation refused the session by its own checks (its 401, the copy having refused
+   * nothing and failed nowhere): the door answers that refusal as today's activation refusal. Any other failure of the
+   * copy is today's path.
+   */
+  activationRefused(): boolean;
   /** The record as the copy's activation left it: what the real record's creation reproduces. */
   activated(): void;
   /**
@@ -116,10 +125,10 @@ interface ListOptions { start?: string; startAfter?: string; end?: string; prefi
  * The blank record in memory: the Durable Object storage operations the object uses, over an empty map. `changed`
  * counts every change to it, so the door can tell a record the decision changed from the one the activation left.
  */
-function memoryStorage(refuse: Refuse) {
+function memoryStorage(refuse: Refuse, failed: (what: string) => void) {
   const data = new Map<string, unknown>();
   let alarm: number | null = null, changes = 0;
-  const operations = {
+  const primitives = {
     async get(key: string | string[]) {
       if (!Array.isArray(key)) return clone(data.get(key));
       return new Map(key.filter(k => data.has(k)).map(k => [k, clone(data.get(k))]));
@@ -150,6 +159,10 @@ function memoryStorage(refuse: Refuse) {
     /** Nothing to make durable: the record is in memory (the activation's `commit` part is then nothing). */
     async sync() { return undefined; },
   };
+  // An operation of the in-memory record that throws (a value it cannot hold, for one) is the copy's failure, not the
+  // object's: it is recorded, so the door takes today's path whatever the object made of it.
+  const operations = Object.fromEntries(Object.entries(primitives).map(([name, operation]) => [name,
+    async (...args: unknown[]) => { try { return await (operation as (...a: unknown[]) => Promise<unknown>)(...args); } catch (error) { failed(`storage.${name}`); throw error; } }])) as typeof primitives;
   const storage = modelled('storage', {
     ...operations,
     async transaction<T>(run: (tx: object) => Promise<T>): Promise<T> {
@@ -170,10 +183,11 @@ function memoryStorage(refuse: Refuse) {
  * the real one) and the read-only environment. Null when it cannot be built: the door then takes today's path.
  */
 export function freshOwner(env: Env, tenant: string, subject: string): FreshOwner | null {
-  const refusals: string[] = [];
+  const refusals: string[] = [], statuses = new Map<string, number>();
   const refuse: Refuse = what => { refusals.push(what); throw new FreshOwnerRefused(what); };
+  const failed = (what: string) => { refusals.push(`${what} failed`); };
   try {
-    const { storage, changed } = memoryStorage(refuse);
+    const { storage, changed } = memoryStorage(refuse, failed);
     const pending: Promise<unknown>[] = [];
     const state = modelled('state', {
       id: env.SHOPPER_REFLEX.idFromName(shopperObjectName(tenant as TenantId, subject)),
@@ -186,8 +200,13 @@ export function freshOwner(env: Env, tenant: string, subject: string): FreshOwne
     const object = new ShopperReflex(state as unknown as DurableObjectState, readOnlyEnvironment(env, refuse));
     let activated = 0;
     return {
-      stub: { fetch: (input, init) => object.fetch(input instanceof Request && init === undefined ? input : new Request(input, init)) },
+      stub: { async fetch(input, init) {
+        const request = input instanceof Request && init === undefined ? input : new Request(input, init), path = new URL(request.url).pathname;
+        try { const answer = await object.fetch(request); statuses.set(path, answer.status); return answer; }
+        catch (error) { failed(path); throw error; }
+      } },
       refused: () => refusals.length > 0,
+      activationRefused: () => refusals.length === 0 && statuses.get('/identity/activate') === 401,
       activated: () => { activated = changed(); },
       async decided() {
         for (let round = 0; pending.length && round < 8; round++) await Promise.allSettled(pending.splice(0));
