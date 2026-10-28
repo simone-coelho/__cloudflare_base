@@ -146,13 +146,14 @@ export interface ContentCatalog {
 export interface CatalogPartPointer { digest: string; records: number }
 /**
  * P98 (E25): where an index object lives inside a pack: the pack's place in the manifest's pack table (`pack`) and the
- * object's byte range there (`at`, `bytes`). A pointer without them names an object of its own (P93).
+ * object's byte range there (`at`, `bytes`), which name it in place of a digest. A pointer without them names an object
+ * of its own by its `digest` (P93).
  */
-export interface CatalogPackPlace { pack?: number; at?: number; bytes?: number }
-/** P93: one product shard's pointer: its object's digest, how many products it indexes and their records; P98: and its place in a pack. */
-export interface CatalogShardPointer extends CatalogPackPlace { digest: string; products: number; records: number }
-/** P93: one id shard's pointer: its object's digest and how many part records it lists; P98: and its place in a pack. */
-export interface CatalogIdShardPointer extends CatalogPackPlace { digest: string; records: number }
+export interface CatalogPackPlace { digest?: string; pack?: number; at?: number; bytes?: number }
+/** P93: one product shard's pointer: its object's digest, how many products it indexes and their records; P98: or, inside a pack, its place there. */
+export interface CatalogShardPointer extends CatalogPackPlace { products: number; records: number }
+/** P93: one id shard's pointer: its object's digest and how many part records it lists; P98: or, inside a pack, its place there. */
+export interface CatalogIdShardPointer extends CatalogPackPlace { records: number }
 /**
  * P98 (E25, LD6): one row of the pack table: a pack this revision reaches (its index objects through the manifest, its
  * parts through the shards), how many of its objects and bytes the revision reaches, and the pack's whole size.

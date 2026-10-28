@@ -941,39 +941,46 @@ export async function catalogIdShardOf(shard: string, ids: ReadonlyMap<string, s
  * one read of its object, whose canonical value must hash to its digest. A shard
  * the store does not hold, or holds otherwise, is refused 503 `part_unavailable`
  * (a product page is never decided from the shared pieces alone, R-P412 (2)).
- * P98: a shard inside a pack is one ranged read of its bytes there.
+ * P98: a shard inside a pack is named by its place, not by a digest (the
+ * manifest's pointer carries the pack's row, the offset and the length alone):
+ * one ranged read of those bytes, which must be a shard of the name the pointer
+ * is listed under, holding the products it counts.
  */
-export async function readCatalogShard(env: Env, scope: string, hash: string, address?: PackAddress): Promise<CatalogShard> {
-  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (!HASH.test(hash)) throw new PublicationError('Invalid catalogue shard digest', 503, 'part_unavailable');
-  const held = shardCache.get(home + '\u0000' + hash);
+export async function readCatalogShard(env: Env, scope: string, hash: string | undefined, address?: PackAddress, name?: string, products?: number): Promise<CatalogShard> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), shown = hash ?? name ?? 'in a pack';
+  if (address ? hash !== undefined && !HASH.test(hash) : !hash || !HASH.test(hash)) throw new PublicationError('Invalid catalogue shard digest', 503, 'part_unavailable');
+  const id = hash ?? placeKey(address!), held = shardCache.get(home + '\u0000' + id);
   if (held && held.binding === storageIdentity(storage)) return held.value;
-  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, shardKey(home, hash));
-  if (!found || !validShard(found.value) || await digest(found.value) !== hash) throw new PublicationError(`Catalogue index shard ${hash} unavailable`, 503, 'part_unavailable');
+  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, shardKey(home, hash!));
+  if (!found || !validShard(found.value) || (hash !== undefined && await digest(found.value) !== hash) || (name !== undefined && found.value.shard !== name)
+    || (products !== undefined && Object.keys(found.value.products).length !== products)) throw new PublicationError(`Catalogue index shard ${shown} unavailable`, 503, 'part_unavailable');
   const value = freeze(found.value) as CatalogShard;
-  rememberShard(storage, home, hash, value, found.bytes);
+  rememberShard(storage, home, id, value, found.bytes);
   return value;
 }
-/** P93: one id shard by its digest (the loads alone read it); one the store does not hold, or holds otherwise, is refused 503 `id_index_unavailable`. P98: by its range, inside a pack. */
-export async function readCatalogIdShard(env: Env, scope: string, hash: string, address?: PackAddress): Promise<CatalogIdShard> {
-  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (!HASH.test(hash)) throw idShardUnavailable(hash);
-  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, idShardKey(home, hash));
-  if (!found || !validIdShard(found.value) || await digest(found.value) !== hash) throw idShardUnavailable(hash);
+/**
+ * P93: one id shard by its digest (the loads alone read it); one the store does not hold, or holds otherwise, is refused
+ * 503 `id_index_unavailable`. P98: by its place inside a pack, an id shard of the name its pointer is listed under.
+ */
+export async function readCatalogIdShard(env: Env, scope: string, hash: string | undefined, address?: PackAddress, name?: string): Promise<CatalogIdShard> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), shown = hash ?? name ?? 'in a pack';
+  if (address ? hash !== undefined && !HASH.test(hash) : !hash || !HASH.test(hash)) throw idShardUnavailable(shown);
+  const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, idShardKey(home, hash!));
+  if (!found || !validIdShard(found.value) || (hash !== undefined && await digest(found.value) !== hash) || (name !== undefined && found.value.shard !== name)) throw idShardUnavailable(shown);
   return found.value;
 }
-const idShardUnavailable = (hash: string) => new PublicationError(`The catalogue's id index shard ${hash.slice(0, 64)} is unavailable, so the load cannot be checked against the records the parts hold; nothing was written`, 503, 'id_index_unavailable');
+const idShardUnavailable = (shown: string) => new PublicationError(`The catalogue's id index shard ${shown.slice(0, 64)} is unavailable, so the load cannot be checked against the records the parts hold; nothing was written`, 503, 'id_index_unavailable');
 /** P93: whether the store holds a product shard, by one HEAD of its object (a rollback's existence check); P98: of its pack. */
-export async function catalogShardStored(env: Env, scope: string, hash: string, address?: PackAddress): Promise<boolean> {
+export async function catalogShardStored(env: Env, scope: string, hash: string | undefined, address?: PackAddress): Promise<boolean> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (!HASH.test(hash) || (address && !HASH.test(address.pack))) return false;
-  return headStored(storage, address ? packKey(home, address.pack) : shardKey(home, hash));
+  if (address ? !HASH.test(address.pack) : !hash || !HASH.test(hash)) return false;
+  return headStored(storage, address ? packKey(home, address.pack) : shardKey(home, hash!));
 }
 /** P93: whether the store holds an id shard, by one HEAD of its object; P98: of its pack. */
-export async function catalogIdShardStored(env: Env, scope: string, hash: string, address?: PackAddress): Promise<boolean> {
+export async function catalogIdShardStored(env: Env, scope: string, hash: string | undefined, address?: PackAddress): Promise<boolean> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (!HASH.test(hash) || (address && !HASH.test(address.pack))) return false;
-  return headStored(storage, address ? packKey(home, address.pack) : idShardKey(home, hash));
+  if (address ? !HASH.test(address.pack) : !hash || !HASH.test(hash)) return false;
+  return headStored(storage, address ? packKey(home, address.pack) : idShardKey(home, hash!));
 }
 /** P98: whether the store holds a pack, by one HEAD (a rollback checks each pack the revision it rolls forward to names, once). */
 export async function catalogPackStored(env: Env, scope: string, pack: string): Promise<boolean> {
@@ -981,7 +988,7 @@ export async function catalogPackStored(env: Env, scope: string, pack: string): 
   return HASH.test(pack) && headStored(storage, packKey(home, pack));
 }
 /** P98: the index a reader resolves a part through: its pack table and its shard pointers. */
-export interface CatalogIndexView { packs?: readonly PackEntry[]; shards: Record<string, PlacedPointer> }
+export interface CatalogIndexView { packs?: readonly PackEntry[]; shards: Record<string, PlacedPointer & { products?: number }> }
 /**
  * P93: a product's part pointer in a catalogue of either form: from the
  * one-level index, or through its shard (one read, held per isolate by digest);
@@ -997,7 +1004,7 @@ export async function catalogPartPointer(env: Env, scope: string, catalog: { pro
   const name = await catalogShardName(product);
   if (!Object.hasOwn(shards, name)) return undefined;
   const pointer = shards[name]!, where = indexAddress(index, pointer);
-  const shard = await readCatalogShard(env, scope, pointer.digest, where);
+  const shard = await readCatalogShard(env, scope, pointer.digest, where, name, pointer.products);
   return Object.hasOwn(shard.products, product) ? resolvedPart(shard, where, shard.products[product]!) : undefined;
 }
 
@@ -1026,8 +1033,14 @@ const PACK_GAP = 256 * 1024, PACK_SPAN = 16 * 1024 * 1024;
 export const NEW_PACK = 'new';
 /** P98: where an object lives inside a pack. */
 export interface PackAddress { pack: string; at: number; bytes: number }
-/** P98: a manifest pointer that may carry its pack's place in the pack table and its byte range. */
-export interface PlacedPointer { digest: string; pack?: number; at?: number; bytes?: number }
+/**
+ * P98 (E25): a manifest pointer: an object of its own by its `digest` (P93), or an object inside a pack by its place
+ * alone — the pack's row in the pack table (`pack`) and its byte range there (`at`, `bytes`) — which names those
+ * immutable bytes as a digest names an object, so the manifest stays the size it was before packs.
+ */
+export interface PlacedPointer { digest?: string; pack?: number; at?: number; bytes?: number }
+/** P98: the key an object inside a pack is held by on this isolate and in a load's read-ahead (its pack and range). */
+export const placeKey = (address: PackAddress) => `${address.pack}@${address.at}+${address.bytes}`;
 /** P98: a part's pointer with its place resolved (none for a part of its own). */
 export interface ResolvedPartPointer { digest: string; records: number; address?: PackAddress }
 /**
@@ -1165,7 +1178,7 @@ export async function readStageDirectory(env: Env, scope: string, hash: string, 
 export function indexAddress(index: { packs?: readonly PackEntry[] }, pointer: PlacedPointer): PackAddress | undefined {
   if (pointer.at === undefined || pointer.bytes === undefined || pointer.pack === undefined) return undefined;
   const pack = index.packs?.[pointer.pack]?.digest;
-  if (typeof pack !== 'string' || !HASH.test(pack)) throw new PublicationError(`Catalogue index object ${pointer.digest} unavailable`, 503, 'part_unavailable');
+  if (typeof pack !== 'string' || !HASH.test(pack)) throw new PublicationError(`Catalogue index object at place ${pointer.pack} unavailable`, 503, 'part_unavailable');
   return { pack, at: pointer.at, bytes: pointer.bytes };
 }
 /** P98: a part's pointer read from its shard, resolved against the place the shard itself was read from. */
@@ -1175,13 +1188,18 @@ export function resolvedPart(shard: CatalogShard, where: PackAddress | undefined
   if (!pack) throw new PublicationError(`Catalogue part ${p.digest} unavailable`, 503, 'part_unavailable');
   return { digest: p.digest, records: p.records, address: { pack, at: p.at, bytes: p.bytes } };
 }
-/** P98: what a load reads ahead: a part, a product shard or an id shard, by its place. */
-export interface PackedRead { kind: 'part' | 'shard' | 'idshard'; digest: string; address: PackAddress }
+/**
+ * P98: what a load reads ahead: a part (by its digest), a product shard or an id shard (by its name, and its digest where
+ * its pointer names one), each at its place.
+ */
+export interface PackedRead { kind: 'part' | 'shard' | 'idshard'; digest?: string; name?: string; address: PackAddress }
+/** P98: the key a read-ahead answers an object by: its digest where named, else its place. */
+export const packedKey = (w: { digest?: string; address: PackAddress }) => w.digest ?? placeKey(w.address);
 /**
  * P98: many objects of the catalogue by their places, each pack's in as few ranged reads as their places allow
- * (neighbours merged across gaps of at most 256 KiB, one read at most 16 MiB), each answered by digest once its value is
- * the kind named and hashes to its digest. One the store cannot produce is left out, for the caller's own read of it
- * to refuse by name.
+ * (neighbours merged across gaps of at most 256 KiB, one read at most 16 MiB), each answered by `packedKey` once its value
+ * is the kind named, hashes to its digest where one is named and carries the shard name where one is named. One the
+ * store cannot produce is left out, for the caller's own read of it to refuse by name.
  */
 export async function readCatalogPacked(env: Env, scope: string, wanted: Iterable<PackedRead>): Promise<Map<string, unknown>> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), out = new Map<string, unknown>(), byPack = new Map<string, PackedRead[]>();
@@ -1196,10 +1214,11 @@ export async function readCatalogPacked(env: Env, scope: string, wanted: Iterabl
       while (j < list.length && list[j]!.address.at - end <= PACK_GAP && list[j]!.address.at + list[j]!.address.bytes - start <= PACK_SPAN) { end = Math.max(end, list[j]!.address.at + list[j]!.address.bytes); j++; }
       const bytes = await readPackBytes(storage, home, pack, start, end - start);
       if (bytes) for (const w of list.slice(i, j)) {
-        if (out.has(w.digest)) continue;
+        const key = packedKey(w);
+        if (out.has(key)) continue;
         const value = parsedBytes(bytes.subarray(w.address.at - start, w.address.at - start + w.address.bytes));
         const valid = w.kind === 'part' ? validPart(value) : w.kind === 'shard' ? validShard(value) : validIdShard(value);
-        if (valid && await digest(value) === w.digest) out.set(w.digest, freeze(value));
+        if (valid && (w.digest === undefined || await digest(value) === w.digest) && (w.name === undefined || (value as { shard?: unknown }).shard === w.name)) out.set(key, freeze(value));
       }
       i = j;
     }

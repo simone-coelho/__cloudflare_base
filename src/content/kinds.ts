@@ -441,29 +441,29 @@ function catalogIndexOf(value: unknown, errors: string[]): CatalogIndex | null {
     return null;
   }
   const packs = tabled ? (value.packs as CatalogPackEntry[]).map(entry => ({ digest: entry.digest, objects: entry.objects, bytes: entry.bytes, size: entry.size })) : [];
-  // P98: a pointer is its own object (its base fields alone) or placed in a pack the table lists (three more).
-  const placedOk = (pointer: Record<string, unknown>, base: number) => Object.keys(pointer).length === base
-    || (Object.keys(pointer).length === base + 3 && count(pointer.pack, 0) && (pointer.pack as number) < packs.length && count(pointer.at, 0) && count(pointer.bytes, 1));
-  const placed = (pointer: Record<string, unknown>) => pointer.at === undefined ? {} : { pack: pointer.pack as number, at: pointer.at as number, bytes: pointer.bytes as number };
+  // P98: a pointer names an object of its own by its digest (its base fields), or one inside a pack the table lists by
+  // its place there alone (the counts, `pack`, `at` and `bytes`, no digest).
+  const ownOk = (pointer: Record<string, unknown>, base: number) => Object.keys(pointer).length === base && typeof pointer.digest === 'string' && PART_DIGEST.test(pointer.digest);
+  const placedOk = (pointer: Record<string, unknown>, base: number) => ownOk(pointer, base)
+    || (Object.keys(pointer).length === base + 2 && pointer.digest === undefined && count(pointer.pack, 0) && (pointer.pack as number) < packs.length && count(pointer.at, 0) && count(pointer.bytes, 1));
+  const placed = (pointer: Record<string, unknown>) => pointer.at === undefined ? { digest: pointer.digest as string } : { pack: pointer.pack as number, at: pointer.at as number, bytes: pointer.bytes as number };
   const shards: CatalogIndex['shards'] = {}, ids: CatalogIndex['ids'] = {};
   let valid = true;
   for (const name of Object.keys(value.shards).sort()) {
     const pointer = value.shards[name];
-    if (!SHARD_NAME.test(name) || !isRecord(pointer) || !placedOk(pointer, 3) || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
-      || !count(pointer.products, 1) || !count(pointer.records, 1)) {
-      errors.push(`index.shards['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the shard (64 lowercase hex), products: 1 or more, records: 1 or more }, under two lowercase hex digits, with pack, at and bytes for a shard inside a pack`);
+    if (!SHARD_NAME.test(name) || !isRecord(pointer) || !placedOk(pointer, 3) || !count(pointer.products, 1) || !count(pointer.records, 1)) {
+      errors.push(`index.shards['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the shard (64 lowercase hex), products: 1 or more, records: 1 or more }, under two lowercase hex digits; inside a pack, { pack, at, bytes, products, records } in place of the digest`);
       valid = false; continue;
     }
-    shards[name] = { digest: pointer.digest, products: pointer.products as number, records: pointer.records as number, ...placed(pointer) };
+    shards[name] = { ...placed(pointer), products: pointer.products as number, records: pointer.records as number };
   }
   for (const name of Object.keys(value.ids).sort()) {
     const pointer = value.ids[name];
-    if (!SHARD_NAME.test(name) || !isRecord(pointer) || !placedOk(pointer, 2) || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
-      || !count(pointer.records, 1)) {
-      errors.push(`index.ids['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the id shard (64 lowercase hex), records: 1 or more }, under two lowercase hex digits, with pack, at and bytes for an id shard inside a pack`);
+    if (!SHARD_NAME.test(name) || !isRecord(pointer) || !placedOk(pointer, 2) || !count(pointer.records, 1)) {
+      errors.push(`index.ids['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the id shard (64 lowercase hex), records: 1 or more }, under two lowercase hex digits; inside a pack, { pack, at, bytes, records } in place of the digest`);
       valid = false; continue;
     }
-    ids[name] = { digest: pointer.digest, records: pointer.records as number, ...placed(pointer) };
+    ids[name] = { ...placed(pointer), records: pointer.records as number };
   }
   return valid ? { key: 'sha256-hex2', ...(tabled ? { packs, legacy: value.legacy as number } : {}), shards, ids } : null;
 }
