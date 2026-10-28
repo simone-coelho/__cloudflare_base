@@ -21,7 +21,7 @@ import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 
 import { asOperator, expectPublished, loadDocument, MODULES, mount, REFLEX_DOCUMENT, TENANT, type Answer, type Documents, type Host, type Mounted } from '../_parity';
-import { bucketOf, CAROUSEL, classOf, KEY, namedBy, objectKeys, sorted } from '../P93/_catalog';
+import { bucketOf, CAROUSEL, classOf, KEY, sorted } from '../P93/_catalog';
 
 // ── Canonical values and digests (the publication's own rule: keys sorted, no insignificant white space) ─────────────
 export function canonicalJson(value: unknown): string {
@@ -134,13 +134,65 @@ export function storedContent(m: Mounted): Array<[number, Record<string, unknown
   return out.sort(([a], [b]) => a - b);
 }
 export const contentBodies = (m: Mounted) => storedContent(m).map(([n]) => n);
-/** The classes of the objects a catalogue revision names beside its body (P86, P93, and P98's packs). */
-export const ATTACHMENT_CLASSES = ['part', 'shard', 'idshard', 'ids', 'pack'] as const;
-export const attachments = (m: Mounted) => ATTACHMENT_CLASSES.flatMap(cls => objectKeys(m, cls));
+/**
+ * The objects a catalogue revision names beside its body, read in every stored form, by the key of the object the store
+ * holds each in: P86's one-level parts and id index; P93's product shards and id shards, each an object of its own named
+ * by its digest, and the parts their pointers name by digest; and P98's packs — a manifest pointer with a byte range
+ * (`at`, `bytes`) lives in the pack its `pack` row of the manifest's table names (with or without a digest beside it), a
+ * part pointer with a range in its shard's own `packs` row or, without one, in the pack its shard lives in; every pack
+ * the table names. Read straight from the bucket (no expected value; the reader of the forms P98's builds wrote at
+ * eafe219d and 1113cc75). `missing` lists the objects a pointer names that the store does not hold.
+ */
+const CONTENT_DIR = `config-publication/v1/${TENANT}/content/`;
+const own = (kind: 'part' | 'shard' | 'idshard' | 'ids', digest: string) => `${CONTENT_DIR}${kind}/${digest}.json`;
+export const packKey = (digest: string) => `${CONTENT_DIR}pack/${digest}.pack`;
+interface Placed { digest?: string; pack?: number; at?: number; bytes?: number }
+const packBodies = new Map<string, { raw: string; bytes: Buffer }>();
+function slice(m: Mounted, pack: string, at: number, bytes: number): Record<string, unknown> | null {
+  const raw = m.storage.objects.get(packKey(pack));
+  if (raw === undefined) return null;
+  let held = packBodies.get(pack);
+  if (!held || held.raw !== raw) { held = { raw, bytes: Buffer.from(raw, 'utf8') }; packBodies.set(pack, held); }
+  try { return JSON.parse(held.bytes.subarray(at, at + bytes).toString('utf8')) as Record<string, unknown>; } catch { return null; }
+}
+const parsed = (m: Mounted, key: string) => { const raw = m.storage.objects.get(key); return raw === undefined ? null : JSON.parse(raw) as Record<string, unknown>; };
+const ranged = (p: Placed) => typeof p.at === 'number' && typeof p.bytes === 'number';
+export function namedObjects(m: Mounted, value: Record<string, unknown>): { keys: Set<string>; missing: string[] } {
+  const keys = new Set<string>(), missing: string[] = [];
+  const index = value.index as { packs?: Array<string | { digest?: string }>; shards?: Record<string, Placed>; ids?: Record<string, Placed> } | undefined;
+  if (index && typeof index === 'object') {
+    const table = (index.packs ?? []).map(row => typeof row === 'string' ? row : String(row?.digest ?? ''));
+    for (const digest of table) if (digest) keys.add(packKey(digest));
+    const open = (kind: 'shard' | 'idshard', p: Placed): { body: Record<string, unknown> | null; key: string; pack?: string } => {
+      if (ranged(p)) { const pack = typeof p.pack === 'number' ? table[p.pack] ?? '' : ''; return { body: pack ? slice(m, pack, p.at!, p.bytes!) : null, key: packKey(pack || 'unnamed'), pack }; }
+      const key = own(kind, String(p.digest)); return { body: parsed(m, key), key };
+    };
+    for (const p of Object.values(index.shards ?? {})) {
+      const { body, key, pack } = open('shard', p);
+      keys.add(key);
+      if (!body) { missing.push(key); continue; }
+      const packs = Array.isArray(body.packs) ? body.packs as string[] : [];
+      for (const part of Object.values((body.products ?? {}) as Record<string, Placed>)) {
+        if (!ranged(part)) { keys.add(own('part', String(part.digest))); continue; }
+        const home = typeof part.pack === 'number' ? packs[part.pack] : pack;
+        keys.add(packKey(home || 'unnamed'));
+      }
+    }
+    for (const p of Object.values(index.ids ?? {})) { const { body, key } = open('idshard', p); keys.add(key); if (!body) missing.push(key); }
+  } else if (value.products && typeof value.products === 'object') {
+    for (const p of Object.values(value.products as Record<string, Placed>)) keys.add(own('part', String(p.digest)));
+    const ids = value.idIndex as Placed | undefined;
+    if (ids?.digest) keys.add(own('ids', ids.digest));
+  }
+  return { keys, missing };
+}
+/** The catalogue's object directories (P86's parts and id indexes, P93's shards and id shards, P98's packs). */
+const ATTACHMENT = new RegExp(`^config-publication/v1/${TENANT}/content/(?:(?:part|shard|idshard|ids)/[0-9a-f]{64}\\.json|pack/[0-9a-f]{64}\\.pack)$`);
+export const attachments = (m: Mounted) => sorted([...m.storage.objects.keys()].filter(key => ATTACHMENT.test(key)));
 /** Every object the named stored revisions reach, through the objects the store still holds (a shard it lacks names nothing). */
 export function reached(m: Mounted, revisions?: readonly number[]): Set<string> {
   const out = new Set<string>();
-  for (const [n, value] of storedContent(m)) if (!revisions || revisions.includes(n)) for (const key of namedBy(m, value)) out.add(key);
+  for (const [n, value] of storedContent(m)) if (!revisions || revisions.includes(n)) for (const key of namedObjects(m, value).keys) out.add(key);
   return out;
 }
 /** Stored objects that no stored revision reaches (a stranded or leaked object). */
@@ -198,16 +250,18 @@ export async function plantRevision(m: Mounted, products: ReadonlyMap<string, un
   }
   return publishManifest(m, { version, productSlots: [CAROUSEL], pieces: shared, index }, `P93's form, before packs: ${version}`);
 }
-/** The shard and id-shard digests a stored revision's index names, by name (either form). */
-export function indexDigests(value: Record<string, unknown>): { shards: Record<string, string>; ids: Record<string, string> } {
-  const index = value.index as { shards?: Record<string, { digest: string }>; ids?: Record<string, { digest: string }> } | undefined;
-  const pick = (group: Record<string, { digest: string }> | undefined) => Object.fromEntries(Object.entries(group ?? {}).map(([name, p]) => [name, p.digest]));
+/** Each product shard and id shard a stored revision's index names, by name, as the pointer names its object (its digest, or its pack and range). */
+export function indexPointers(value: Record<string, unknown>): { shards: Record<string, string>; ids: Record<string, string> } {
+  const index = value.index as { packs?: Array<string | { digest?: string }>; shards?: Record<string, Placed>; ids?: Record<string, Placed> } | undefined;
+  const table = (index?.packs ?? []).map(row => typeof row === 'string' ? row : String(row?.digest ?? ''));
+  const name = (p: Placed) => ranged(p) ? `${typeof p.pack === 'number' ? table[p.pack] : '?'}@${p.at}+${p.bytes}` : String(p.digest);
+  const pick = (group: Record<string, Placed> | undefined) => Object.fromEntries(Object.entries(group ?? {}).map(([n, p]) => [n, name(p)]));
   return { shards: pick(index?.shards), ids: pick(index?.ids) };
 }
-/** How many of the 256 product shards and 256 id shards a revision's index names under a digest the revision before did not. */
+/** How many of the product shards and id shards a revision's index names under an object the revision before did not. */
 export function touchedBy(before: Record<string, unknown>, after: Record<string, unknown>): { shards: number; ids: number } {
-  const a = indexDigests(before), b = indexDigests(after);
-  return { shards: Object.entries(b.shards).filter(([name, d]) => a.shards[name] !== d).length, ids: Object.entries(b.ids).filter(([name, d]) => a.ids[name] !== d).length };
+  const a = indexPointers(before), b = indexPointers(after);
+  return { shards: Object.entries(b.shards).filter(([n, d]) => a.shards[n] !== d).length, ids: Object.entries(b.ids).filter(([n, d]) => a.ids[n] !== d).length };
 }
 
 // ── Learn histories ──────────────────────────────────────────────────────────────────────────────────────────────────

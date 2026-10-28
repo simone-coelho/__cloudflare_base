@@ -26,19 +26,24 @@
 // whose count can never be established keeps every learn revision for good and is told nothing (PG3); kit 02's purge
 // paragraph says the purge keeps every learn revision wherever the current one carries no exact count.
 //
-// P98 (E25, R-P549, R-P551) CHANGES THE STORAGE THESE LEGS PURGE, AND IS JOINED FIRST. Read at rem/spec-p98 65d52397 and
-// rem/p98-build eafe219d: each load stores one pack; a writing load moves the shards and id shards stored before packs
-// into its pack (their parts only when it reads them); a pack revision's purge resolves its packs from the pack tables
-// (no shard read), and the objects stored before packs are collected by listing once no stored revision names one.
+// P98 (E25, R-P549, R-P551) CHANGES THE STORAGE THESE LEGS PURGE, AND IS JOINED FIRST. Read at rem/spec-p98 65d52397
+// (and its round 2, 8da80056) and rem/p98-build eafe219d and 1113cc75: each load stores one pack; a manifest pointer into
+// a pack names its object by the pack's row and a byte range (1113cc75: `{ pack, at, bytes, products, records }`, no
+// digest), an object stored on its own keeps `{ digest, … }`; a writing load moves the shards and id shards stored before
+// packs into its pack (their parts only when it reads them); a pack revision's purge resolves its packs from the pack
+// tables (no shard read), and the objects stored before packs are collected by listing once no stored revision names one.
 // Stored revisions are immutable, so the revisions written before P98's release keep naming 256 product shards and 256 id
 // shards of their own. HOW THESE LEGS BUILD THEM AFTER P98: every PG1 and PG2 leg runs in two forms, (a) loaded through
-// the operator's import route (today P93's form; after P98 P98's packs — the "pack revisions" the brief names) and (b)
-// planted in P93's form (./_purge.ts plantRevision: each part, each product shard and each id shard an object of its own
-// at its content address, the manifest's `index` naming them with no byte range, published by the publication
-// authority's own `publish` — P98's own fixture form for objects stored before packs, S43/_load.ts shardedTenant). (b)
-// is the same on every tree; the later loads of (b) go through the route, so after P98 a planted revision is purged beside
-// the pack revisions a load after the release writes. Measured on a scratch merge of rem/p98-build eafe219d with
-// rem/spec-p98 65d52397 (the harness R10s P98's build reads through): see the report.
+// the operator's import route (today P93's form; after P98 P98's packs — the "pack revisions" the brief names, where
+// these legs are the locks that P98's pack purge keeps the criterion) and (b) planted in P93's form (./_purge.ts
+// plantRevision: each part, each product shard and each id shard an object of its own at its content address, the
+// manifest's `index` naming them with no byte range, published by the publication authority's own `publish` — P98's own
+// fixture form for objects stored before packs, S43/_load.ts shardedTenant). (b) is the same on every tree; its later
+// loads go through the route, so after P98 a planted revision is purged beside the pack revisions a load after the
+// release writes. The objects a revision names are read by ./_purge.ts namedObjects in every stored form (round 2's
+// ../P93/_catalog indexOf finds an object by its digest and so cannot read 1113cc75's place-only pointers: measured on
+// the scratch merge, 458 of 458 shard pointers reported missing). Measured on a scratch merge of rem/p98-build 1113cc75
+// with rem/spec-p98 8da80056 (the harness R10s P98's build reads through): see the report.
 //
 // READINGS (where the work order is silent; for the lead):
 //   R1 "On both hosts": the purge and the learn routes are the operator's path, the same on either shopper host; every
@@ -55,12 +60,14 @@
 //      revision names is removed": after every publication nothing the current or the previous revision reaches is
 //      missing, and at the end nothing any stored revision reaches. "Nothing is left that no stored revision names": the
 //      catalogue's object directories (part, shard, idshard, ids, pack) hold nothing a stored revision does not reach
-//      through objects the store holds (./_purge.ts unnamed, through ../P93/_catalog namedBy, which reads P98's packs once
-//      P98 re-points it).
+//      through objects the store holds (./_purge.ts namedObjects: an object of its own named by its digest, or a pack and
+//      a byte range, as P98's builds eafe219d and 1113cc75 store them; the reader holds no expected value).
 //   R5 PG2's revision: four product shards holding 1,200 products only that revision points at (ids chosen by the bucket
 //      rule, P93's reading 1), more than 1,000 objects, so its removal needs more than one deletion call (R2 deletes at
 //      most 1,000 keys a call) and today's order is reached within today's budget (R-P506 (3): "not reachable under the
-//      budget" otherwise). "Stopped after each deletion call in turn": for k = 1…D, D the deletion calls one unstopped
+//      budget" otherwise). That count is the planted form's PRECONDITION; the route-loaded form after P98 stores the
+//      crowd in packs, whose removal deletes whole packs named by the tables, and is run as the lock that it strands
+//      nothing. "Stopped after each deletion call in turn": for k = 1…D, D the deletion calls one unstopped
 //      purge makes on a twin tenant, every deletion call after the k-th fails (a failed deletion stops the purge); then
 //      every stored object is reachable through a stored shard or a stored revision (PG2's words), nothing the current or
 //      the previous revision reaches is missing, and at most four next publications remove the revision.
@@ -109,9 +116,9 @@
 // at time 0); the time to remove eight revisions is reported, not bounded beyond R2; heap per publication (Node is not
 // workerd).
 //
-// HARNESS: ../_parity (the mounted application on both hosts), ../P93/_catalog (P86's fixture and generator, the stored
-// forms read back — P98's packs once P98 re-points it), ./_purge (the meter, the deletion stop, the planted forms, the
-// learn histories). Imports from src/units/: ../_parity, ../P93/_catalog, ./_purge. Tenant ids only; no network; documents
+// HARNESS: ../_parity (the mounted application on both hosts), ../P93/_catalog (P86's fixture and generator, the import),
+// ./_purge (the meter, the deletion stop, R2's listing, the planted forms, the objects a revision names in every stored
+// form, the learn histories). Imports from src/units/: ../_parity, ../P93/_catalog, ./_purge. Tenant ids only; no network; documents
 // read from this tree (import.meta.url).
 
 import { describe, expect, it } from 'vitest';
@@ -266,11 +273,14 @@ interface Stop { after: number; stranded: string[]; lostKept: string[]; next: { 
 
 describe('unit:P99.PG2', () => {
   for (const host of HOSTS) {
-    for (const [form, build] of [['loaded through the import route', crowdLoaded], ['as stored before P98 (planted)', crowdPlanted]] as const) {
-      it(`host (${host}): a revision ${form} whose four product shards hold 1,200 products only it points at — more than 1,000 objects, so its purge needs more than one deletion call — purged with the purge stopped after each of its deletion calls in turn: every object not yet deleted stays reachable through a stored shard or a stored revision, nothing the current or the previous revision names is removed, and the next publications finish the removal`, async () => {
-        const twin = await build(host);
-        expect({ only: onlyNamedBy(twin).length > 1000, left: unnamed(twin.m) }, `PRECONDITION (${host}): the revision under purge names more than 1,000 objects no other stored revision names, and every stored object is named`)
-          .toEqual({ only: true, left: [] });
+    for (const [form, build, crowded] of [
+      ['loaded through the import route (P93\'s shards before P98, P98\'s packs after it: a pack holds a load\'s parts and shards whole, so this form is the lock that no order strands one there)', crowdLoaded, false],
+      ['as stored before P98 (planted), its four product shards holding 1,200 products only it points at — more than 1,000 objects, so its purge needs more than one deletion call', crowdPlanted, true],
+    ] as const) {
+      it(`host (${host}): the crowded revision ${form} — purged with the purge stopped after each of its deletion calls in turn: every object not yet deleted stays reachable through a stored shard or a stored revision, nothing the current or the previous revision names is removed, and the next publications finish the removal`, async () => {
+        const twin = await build(host), only = onlyNamedBy(twin).length;
+        expect({ only: crowded ? only > 1000 : 'any', left: unnamed(twin.m) }, `PRECONDITION (${host}): every stored object is named${crowded ? `, and the revision under purge names more than 1,000 objects no other stored revision names (${only})` : ` (the revision under purge names ${only} objects only it names)`}`)
+          .toEqual({ only: crowded ? true : 'any', left: [] });
         setConfigurationRetention(twin.m, 1);
         await pause(25);
         const full = afterCommit((await slotsPublication(twin.m, 'twin')).calls);
