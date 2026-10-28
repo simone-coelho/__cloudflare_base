@@ -14,7 +14,7 @@ A real-time personalization and affinity engine that runs at the edge on Cloudfl
 
 ## 2. Which code to audit
 
-- **Repository:** `https://github.com/simone-coelho/__cloudflare_base`
+- **Repository:** `https://github.com/simone-coelho/__cloudflare_base`. This hand-off is on the repository's default branch and on `rem/integration`, at `docs/audit/Engine-Capability-Audit-Handoff.md`.
 - **The engine of record is the branch `rem/integration`.** Its head when this was written was `52f8dfea` (28 October 2026). Audit that branch.
 - **Do not audit the engine from `feature/real-time-personalization`.** That branch carries the sales demos and an engine copy that split off weeks ago: 10 commits on its side against 1,899 on `rem/integration`. Some gaps that exist there are already fixed in the engine of record.
 - Record the commit you audit. The engine changes daily.
@@ -77,7 +77,7 @@ Use these four sources, in this order.
 
 - **The top-level `docs/*.md` and `.docx` files.** Most are sales, demo, customer-facing or working notes. They describe intentions, proposals and talk tracks, not what the code does. Use them only as a pointer to where to look.
 - **`docs/remediation/`.** These are the engineering team's governance and logs. They are useful for history, not for capabilities.
-- **The `docs/airfrance-klm/` gap document.** It was written against the old demo branch. Its verification is `docs/airfrance-klm/OA-Engine-Gaps-Verification-2026-10-28.md`, which is on the demo branch's working tree, not on `rem/integration`.
+- **Any customer demo's gap document.** Those were written against the old demo branch's engine. Their verifications are available from the engineering lead on request; they are not part of this audit.
 
 ## 6. Known gaps and work in flight
 
