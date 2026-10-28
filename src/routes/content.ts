@@ -34,7 +34,7 @@ import { assertPublicationBase, completePublicationSet, documentBytes, initializ
   readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationChange, type PublicationPin,
   catalogPartStored, readCatalogPart, type CatalogPart, catalogIdIndexStored, readCatalogIdIndex,
   catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardStored, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard,
-  type CatalogIdShard, type CatalogShard, catalogPackStored, ensurePack, indexAddress, NEW_PACK, PackWriter, placeKey, publicationFailureOf, readCatalogPacked, resolvedPart, writePack,
+  type CatalogIdShard, type CatalogShard, catalogPackStored, ensurePack, indexAddress, NEW_PACK, PackWriter, placedDigest, placeKey, publicationFailureOf, readCatalogPacked, resolvedPart, writePack,
   type PackAddress, type PackedRead, type ResolvedPartPointer, type SealedPack, type StoredPartPointer } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf, LAYOUTS_KIND, slotsCarryOrders, unapprovedOrders } from '@/content/kinds';
@@ -352,7 +352,7 @@ class IndexEdit {
       const where = this.where(pointer);
       const shard = (this.fetched.get(pointer.digest ?? placeKey(where!)) as CatalogShard | undefined) ?? await readCatalogShard(this.env, this.scope, pointer.digest, where, name, pointer.products);
       if (!where) this.legacyShards.add(name);
-      this.shardDigests.set(name, pointer.digest ?? await documentDigest(shard));
+      this.shardDigests.set(name, pointer.digest?.length === 64 ? pointer.digest : await documentDigest(shard));
       for (const [product, p] of Object.entries(shard.products)) held.set(product, resolvedPart(shard, where, p));
     }
     this.shards.set(name, held);
@@ -367,7 +367,7 @@ class IndexEdit {
       const where = this.where(pointer);
       const shard = (this.fetched.get(pointer.digest ?? placeKey(where!)) as CatalogIdShard | undefined) ?? await readCatalogIdShard(this.env, this.scope, pointer.digest, where, name);
       if (!where) this.legacyIdShards.add(name);
-      this.idShardDigests.set(name, pointer.digest ?? await documentDigest(shard));
+      this.idShardDigests.set(name, pointer.digest?.length === 64 ? pointer.digest : await documentDigest(shard));
       for (const [id, product] of Object.entries(shard.ids)) held.set(id, product);
     }
     this.idShards.set(name, held);
@@ -531,7 +531,7 @@ class IndexEdit {
         }
       }
       const built = next.size ? await catalogShardOf(name, stored, others) : null;
-      if (built && old && built.pointer.digest === (old.digest ?? this.shardDigests.get(name)) && !forced.has(name)) continue;
+      if (built && old && built.pointer.digest === this.shardDigests.get(name) && !forced.has(name)) continue;
       if (old) count(old.address, -1);
       for (const p of before.values()) count(p.address, -1);
       if (!built) { shardPointers.delete(name); continue; }
@@ -544,7 +544,7 @@ class IndexEdit {
       const next = new Map(this.migrating ? [] : await this.idShard(name)), old = idPointers.get(name);
       for (const [id, product] of ids.get(name)!) { if (product) next.set(id, product); else next.delete(id); }
       const built = next.size ? await catalogIdShardOf(name, next) : null;
-      if (built && old && built.pointer.digest === (old.digest ?? this.idShardDigests.get(name)) && !forcedIds.has(name)) continue;
+      if (built && old && built.pointer.digest === this.idShardDigests.get(name) && !forcedIds.has(name)) continue;
       if (old) count(old.address, -1);
       if (!built) { idPointers.delete(name); continue; }
       const address = newly(await pack.add(built.value));
@@ -569,8 +569,9 @@ class IndexEdit {
       if (at < 0) throw tableInconsistent();
       return { pack: at, at: a.at, bytes: a.bytes };
     };
-    // A pointer into a pack names it by its place alone (P98: the row, the offset, the length); one of its own, by its digest.
-    const named = (p: { digest?: string; address?: PackAddress }) => p.address ? placedFields(p.address) : { digest: p.digest! };
+    // A pointer into a pack names it by its place (P98: the row, the offset, the length) and the first 128 bits of its
+    // digest; one of its own, by its full digest.
+    const named = (p: { digest?: string; address?: PackAddress }) => p.address ? { digest: placedDigest(p.digest!), ...placedFields(p.address) } : { digest: p.digest! };
     const shards = Object.fromEntries([...shardPointers.keys()].sort().map(name => {
       const p = shardPointers.get(name)!; return [name, { ...named(p), products: p.products, records: p.records }];
     }));
@@ -814,7 +815,7 @@ async function catalogueOverRollback(env: Env, scope: string, current: ContentCa
     for (const pack of packs) { packHeld.set(pack, await catalogPackStored(env, scope, pack)); if (!packHeld.get(pack)) missing.push(`pack ${pack}`); }
     if (!index.packs || index.legacy !== 0) {
       const placed: PackedRead[] = [];
-      for (const [name, pointer] of shards) { const address = indexAddress(index, pointer); if (address && packHeld.get(address.pack) !== false) placed.push({ kind: 'shard', name, address }); }
+      for (const [name, pointer] of shards) { const address = indexAddress(index, pointer); if (address && packHeld.get(address.pack) !== false) placed.push({ kind: 'shard', digest: pointer.digest, name, address }); }
       const read = placed.length ? await readCatalogPacked(env, scope, placed) : new Map<string, unknown>();
       const found: Array<[CatalogShard, PackAddress | undefined]> = [];
       for (const [name, pointer] of shards) {
@@ -823,7 +824,7 @@ async function catalogueOverRollback(env: Env, scope: string, current: ContentCa
         // The store is the witness of a shard's existence, never this isolate's shard cache: one HEAD each (P98: one per pack).
         if (!where && !await catalogShardStored(env, scope, pointer.digest)) { missing.push(`index shard ${name}`); continue; }
         let shard: CatalogShard;
-        try { shard = (read.get(where ? placeKey(where) : pointer.digest!) as CatalogShard | undefined) ?? await readCatalogShard(env, scope, pointer.digest, where, name, pointer.products); }
+        try { shard = (read.get(pointer.digest!) as CatalogShard | undefined) ?? await readCatalogShard(env, scope, pointer.digest, where, name, pointer.products); }
         catch (error) { if (error instanceof PublicationError && error.code === 'part_unavailable') { missing.push(`index shard ${name}`); continue; } throw error; }
         found.push([shard, where]);
       }
@@ -1448,8 +1449,8 @@ contentRoutes.get('/:kind', async (c) => {
     const index = rev ? (rev.value as ContentCatalog).index : undefined, pointer = own(index?.shards, shard);
     // P98: a shard inside a pack is read by its range there.
     const document = pointer ? await readCatalogShard(c.env, scope, pointer.digest, indexAddress(index!, pointer), shard, pointer.products) : { shard, products: {} };
-    // P98: a shard in a pack is named by its place; its answer names its digest all the same.
-    return c.json({ scope, kind: k.kind.name, source: 'stored', revision: rev?.revision ?? 0, publication: rev?.publication, shard, digest: pointer ? pointer.digest ?? await documentDigest(document) : null,
+    // P98: a shard in a pack is named by the first 128 bits of its digest; its answer names its full digest.
+    return c.json({ scope, kind: k.kind.name, source: 'stored', revision: rev?.revision ?? 0, publication: rev?.publication, shard, digest: pointer ? (pointer.digest?.length === 64 ? pointer.digest : await documentDigest(document)) : null,
       document, envelope: { products: Object.keys(document.products).length, records: pointer?.records ?? 0, bytes: documentBytes(document), limitBytes: PUBLICATION_MAX_BYTES } });
   }
   // P86 (S6): `?product=` reads one product's part of the catalogue in force, through its manifest pointer (P93: through its shard).

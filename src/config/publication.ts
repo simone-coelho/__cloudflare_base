@@ -8,6 +8,8 @@ export const PUBLICATION_MAX_BYTES = 2 * 1024 * 1024;
 export const PUBLICATION_CACHE_MS = 30_000;
 const LIMIT = 50, MEMBERS = 16, CACHE_ENTRIES = 32, CACHE_BYTES = 8 * 1024 * 1024;
 const encoder = new TextEncoder(), HASH = /^[0-9a-f]{64}$/;
+/** P98: the digest a manifest pointer into a pack names its object by: the first 128 bits of the SHA-256 of its canonical value. */
+const PLACED_HASH = /^[0-9a-f]{32}$/;
 const OPERATION = /^(0|[1-9][0-9]*):[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval', 'import-sources', 'layouts']);
 /**
@@ -941,18 +943,19 @@ export async function catalogIdShardOf(shard: string, ids: ReadonlyMap<string, s
  * one read of its object, whose canonical value must hash to its digest. A shard
  * the store does not hold, or holds otherwise, is refused 503 `part_unavailable`
  * (a product page is never decided from the shared pieces alone, R-P412 (2)).
- * P98: a shard inside a pack is named by its place, not by a digest (the
- * manifest's pointer carries the pack's row, the offset and the length alone):
- * one ranged read of those bytes, which must be a shard of the name the pointer
- * is listed under, holding the products it counts.
+ * P98: a shard inside a pack is one ranged read of its place there (the
+ * pack's row, the offset, the length); the manifest's pointer names it by the
+ * first 128 bits of its digest, which its canonical value must hash to, as a
+ * whole object's must to its full digest; it must also be a shard of the name
+ * the pointer is listed under, holding the products it counts.
  */
 export async function readCatalogShard(env: Env, scope: string, hash: string | undefined, address?: PackAddress, name?: string, products?: number): Promise<CatalogShard> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), shown = hash ?? name ?? 'in a pack';
-  if (address ? hash !== undefined && !HASH.test(hash) : !hash || !HASH.test(hash)) throw new PublicationError('Invalid catalogue shard digest', 503, 'part_unavailable');
+  if (!digestNamed(hash, address)) throw new PublicationError('Invalid catalogue shard digest', 503, 'part_unavailable');
   const id = hash ?? placeKey(address!), held = shardCache.get(home + '\u0000' + id);
   if (held && held.binding === storageIdentity(storage)) return held.value;
   const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, shardKey(home, hash!));
-  if (!found || !validShard(found.value) || (hash !== undefined && await digest(found.value) !== hash) || (name !== undefined && found.value.shard !== name)
+  if (!found || !validShard(found.value) || (hash !== undefined && !(await digest(found.value)).startsWith(hash)) || (name !== undefined && found.value.shard !== name)
     || (products !== undefined && Object.keys(found.value.products).length !== products)) throw new PublicationError(`Catalogue index shard ${shown} unavailable`, 503, 'part_unavailable');
   const value = freeze(found.value) as CatalogShard;
   rememberShard(storage, home, id, value, found.bytes);
@@ -964,11 +967,13 @@ export async function readCatalogShard(env: Env, scope: string, hash: string | u
  */
 export async function readCatalogIdShard(env: Env, scope: string, hash: string | undefined, address?: PackAddress, name?: string): Promise<CatalogIdShard> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), shown = hash ?? name ?? 'in a pack';
-  if (address ? hash !== undefined && !HASH.test(hash) : !hash || !HASH.test(hash)) throw idShardUnavailable(shown);
+  if (!digestNamed(hash, address)) throw idShardUnavailable(shown);
   const found = address ? await readPackedValue(storage, home, address) : await readObject(storage, idShardKey(home, hash!));
-  if (!found || !validIdShard(found.value) || (hash !== undefined && await digest(found.value) !== hash) || (name !== undefined && found.value.shard !== name)) throw idShardUnavailable(shown);
+  if (!found || !validIdShard(found.value) || (hash !== undefined && !(await digest(found.value)).startsWith(hash)) || (name !== undefined && found.value.shard !== name)) throw idShardUnavailable(shown);
   return found.value;
 }
+/** P98: an object of its own is named by its full digest; one inside a pack by its full digest or its first 128 bits. */
+const digestNamed = (hash: string | undefined, address: PackAddress | undefined) => !!hash && (HASH.test(hash) || (!!address && PLACED_HASH.test(hash)));
 const idShardUnavailable = (shown: string) => new PublicationError(`The catalogue's id index shard ${shown.slice(0, 64)} is unavailable, so the load cannot be checked against the records the parts hold; nothing was written`, 503, 'id_index_unavailable');
 /** P93: whether the store holds a product shard, by one HEAD of its object (a rollback's existence check); P98: of its pack. */
 export async function catalogShardStored(env: Env, scope: string, hash: string | undefined, address?: PackAddress): Promise<boolean> {
@@ -1034,11 +1039,13 @@ export const NEW_PACK = 'new';
 /** P98: where an object lives inside a pack. */
 export interface PackAddress { pack: string; at: number; bytes: number }
 /**
- * P98 (E25): a manifest pointer: an object of its own by its `digest` (P93), or an object inside a pack by its place
- * alone — the pack's row in the pack table (`pack`) and its byte range there (`at`, `bytes`) — which names those
- * immutable bytes as a digest names an object, so the manifest stays the size it was before packs.
+ * P98 (E25): a manifest pointer: an object of its own by its full `digest` (P93), or an object inside a pack by its
+ * place — the pack's row in the pack table (`pack`) and its byte range there (`at`, `bytes`) — and the first 128 bits
+ * of its digest (`digest`, 32 hex), which its read is checked against, so the manifest stays within its 64 KB.
  */
 export interface PlacedPointer { digest?: string; pack?: number; at?: number; bytes?: number }
+/** P98: the digest a manifest pointer into a pack carries: the first 128 bits of the object's full digest. */
+export const placedDigest = (full: string) => full.slice(0, 32);
 /** P98: the key an object inside a pack is held by on this isolate and in a load's read-ahead (its pack and range). */
 export const placeKey = (address: PackAddress) => `${address.pack}@${address.at}+${address.bytes}`;
 /** P98: a part's pointer with its place resolved (none for a part of its own). */
@@ -1189,8 +1196,9 @@ export function resolvedPart(shard: CatalogShard, where: PackAddress | undefined
   return { digest: p.digest, records: p.records, address: { pack, at: p.at, bytes: p.bytes } };
 }
 /**
- * P98: what a load reads ahead: a part (by its digest), a product shard or an id shard (by its name, and its digest where
- * its pointer names one), each at its place.
+ * P98: what a load reads ahead: a part (by its full digest), a product shard or an id shard (by its name and the first
+ * 128 bits of its digest its manifest pointer names), each at its place; a read-ahead's value must hash to the digest
+ * named (a 32-hex digest naming the first 128 bits), as a whole object's must.
  */
 export interface PackedRead { kind: 'part' | 'shard' | 'idshard'; digest?: string; name?: string; address: PackAddress }
 /** P98: the key a read-ahead answers an object by: its digest where named, else its place. */
@@ -1218,7 +1226,7 @@ export async function readCatalogPacked(env: Env, scope: string, wanted: Iterabl
         if (out.has(key)) continue;
         const value = parsedBytes(bytes.subarray(w.address.at - start, w.address.at - start + w.address.bytes));
         const valid = w.kind === 'part' ? validPart(value) : w.kind === 'shard' ? validShard(value) : validIdShard(value);
-        if (valid && (w.digest === undefined || await digest(value) === w.digest) && (w.name === undefined || (value as { shard?: unknown }).shard === w.name)) out.set(key, freeze(value));
+        if (valid && (w.digest === undefined || (await digest(value)).startsWith(w.digest)) && (w.name === undefined || (value as { shard?: unknown }).shard === w.name)) out.set(key, freeze(value));
       }
       i = j;
     }
