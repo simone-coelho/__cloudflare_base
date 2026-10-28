@@ -296,7 +296,9 @@ product) is stored in parts, below.
 `productSlots` (the slot types whose records are product-scoped, for example `["pdp-carousel"]`, written by a
 PUT of the catalog and kept by every load) is stored as a manifest: `pieces` holds the shared pieces (modules,
 heroes, every piece that is not product-scoped), and `index` names the shards of its product index,
-`{ "key": "sha256-hex2", "packs": [ { "digest": "<64 hex>", "objects": <count>, "bytes": <count>, "size": <count> } ], "legacy": <count>, "shards": { "<hex2>": { "digest": "<64 hex>", "products": <count>, "records": <count>, "pack": <place>, "at": <offset>, "bytes": <length> } }, "ids": { "<hex2>": { "digest": "<64 hex>", "records": <count>, "pack": <place>, "at": <offset>, "bytes": <length> } } }`.
+`{ "key": "sha256-hex2", "packs": [ { "digest": "<64 hex>", "objects": <count>, "bytes": <count>, "size": <count> } ], "legacy": <count>, "shards": { "<hex2>": { "pack": <row>, "at": <offset>, "bytes": <length>, "products": <count>, "records": <count> } }, "ids": { "<hex2>": { "pack": <row>, "at": <offset>, "bytes": <length>, "records": <count> } } }`
+(a shard or id shard stored as an object of its own, before packs, is named by its `"digest"` in place of `pack`, `at`
+and `bytes`).
 A product falls in the shard named by the first two hexadecimal digits of the SHA-256 of its id's UTF-8
 bytes, so the 256 shards share the range evenly whatever form your product ids take. Each product shard is
 `{ shard, products: { "<productId>": { "digest", "records", "at", "bytes" } } }`, pointing each of its
@@ -308,10 +310,12 @@ and its digest is the SHA-256 of its canonical bytes, which is the digest its po
 **One pack per load.** A load stores what it changes in one object, its pack: the canonical bytes of every
 part whose digest moved and of every shard and id shard it rebuilt, end to end, at
 `content/pack/<SHA-256 of the pack>.pack`. A pointer names the pack and the object's byte range in it: the
-manifest's pointers name a row of its `packs` table by place (`pack`) with the range (`at`, `bytes`), and a
-shard's part pointers carry the range, with `pack` naming the shard's own `packs` list where the part is in
-another pack than the shard. Every object read from a pack is checked against its own digest, as a whole object
-is. The `packs` table names every pack the revision reaches, its parts included, with the objects and bytes of
+manifest's pointers name a row of its `packs` table (`pack`) and the range (`at`, `bytes`) in place of a digest,
+which keeps the manifest the size it was before packs (at most 64 KB beside the shared pieces at 40,000
+products), and a shard's part pointers carry the part's digest and its range, with `pack` naming the shard's own
+`packs` list where the part is in another pack than the shard. A part read from a pack is checked against the
+digest its pointer names, as a whole object is, and a shard or id shard against the name and the count its
+pointer gives. The `packs` table names every pack the revision reaches, its parts included, with the objects and bytes of
 it the revision still reaches (`objects`, `bytes`) and its whole size (`size`); `legacy` counts the objects the
 revision reaches that were stored before packs. So a load's storage calls grow with the packs its objects live
 in, never with its number of products. The pack is written before the publication commits, so a load whose pack
