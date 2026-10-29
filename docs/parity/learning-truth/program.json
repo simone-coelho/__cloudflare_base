@@ -122,7 +122,7 @@
       "allowedPaths": [
         "src/content/kinds.ts (the learn document's money member and its validation only)",
         "src/content/types.ts (LearnConfig's money member only)",
-        "src/learn/route.ts",
+        "src/learn/route.ts (as before; and the direct outcome path writing its ledger row with the stamp the ring answered with, so every copy of one outcome carries the stamp live decided it under; R-P620)",
         "src/ledger/recovery.ts (OutcomeRecoveryInput's money member; sourceOf leaving the money stamp out of the source digest; runOwnerRecovery's first-admission stamp; the prepare body and admit call only as the stamp needs; R-P571 (b), R-P588)",
         "src/learn/policy.ts",
         "src/learn/fan.ts",
@@ -141,7 +141,8 @@
         "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
         "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
         "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
-        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)"
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)",
+        "src/units/W24/B2.unit.test.ts (R10 by name: the message at :634 only, saying a fully refused outcome is never credited rather than never written into the credited journal; the assertion unchanged; by the specifier; R-P620)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
