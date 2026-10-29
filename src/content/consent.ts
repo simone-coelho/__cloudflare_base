@@ -81,8 +81,19 @@ export function withConsent<T extends object>(value: T, consent: Consent): T & {
   return Object.defineProperty(value, 'consent', { value: consent, configurable: true, enumerable: false }) as T & { consent: Consent };
 }
 export function carryConsent(source: Consent, scope: { tenant: string; subject: string }, target?: Consent): Consent {
+  return carried(source, scope, target, intersectConsent);
+}
+/**
+ * P97 (R-P614): carryConsent, with a refusal the carry applies kept at the date it was made (intersectConsentDated)
+ * where carryConsent keeps the earliest choice's dates. Used by a shopper object's activation only; every other caller
+ * keeps carryConsent.
+ */
+export function carryConsentDated(source: Consent, scope: { tenant: string; subject: string }, target?: Consent): Consent {
+  return carried(source, scope, target, intersectConsentDated);
+}
+function carried(source: Consent, scope: { tenant: string; subject: string }, target: Consent | undefined, intersect: (...values: Consent[]) => Consent): Consent {
   const original = storedConsent(source);
-  const current = target?.instruction ? intersectConsent(original, target) : original;
+  const current = target?.instruction ? intersect(original, target) : original;
   if (!current.instruction) return { ...REFUSING };
   const next = { ...current.instruction, tenant: scope.tenant, subject: scope.subject, operation: undefined };
   for (const key of CONSENT_SWITCHES) if (next[key]) next[key] = { ...next[key]!, value: current[key] };

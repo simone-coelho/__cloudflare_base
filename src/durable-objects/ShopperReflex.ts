@@ -63,7 +63,7 @@ import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwa
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, settleCarriedOutcome, stripExpiredOwnerRecovery, storedRenderOf, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type CarriedOutcome, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
-import { consentFromCookies, intersectConsent, intersectConsentDated, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
+import { consentFromCookies, intersectConsent, intersectConsentDated, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, carryConsentDated, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
 import { OWNER_TIMING_HEADER, ownerTimer } from '@/identity/consentContinuity';
@@ -721,7 +721,7 @@ export class ShopperReflex {
           let consent: Consent;
           if (applied) consent = recorded;
           else {
-            consent = newerChoicesKept(carryConsent(body.consent, principal!, recorded), recorded, carried);
+            consent = newerChoicesKept(carryConsentDated(body.consent, principal!, recorded), recorded, carried);
             await this.scheduleConsentAlarm(consent);
             assertSessionTarget(principal!);
             if (consent.instruction) await this.state.storage.put('consent', consent.instruction);
