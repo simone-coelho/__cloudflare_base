@@ -139,11 +139,12 @@
         "packages/sdk/edge-personalization.esm.js",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
-        "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
+        "src/ledger/records.ts (OutcomeRecord's money member and the mark of a producer-stamped record only, line-neutral above the lines kit 02 cites; R-P588, R-P653)",
         "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
-        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)",
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money, retention and the stamp's mark; preferredCopy, the one rule every reader of rows sharing a logical id uses — the ring-stamped copy first, then the earliest-born; R-P588, R-P594, R-P629, R-P653)",
         "src/units/W24/B2.unit.test.ts (R10 by name: the message at :634 only, saying a fully refused outcome is never credited rather than never written into the credited journal; the assertion unchanged; by the specifier; R-P620)",
-        "src/ledger/writer.ts (findById choosing the earliest-born copy among rows sharing a logical id only; R-P628)"
+        "src/ledger/writer.ts (findById choosing the earliest-born copy among rows sharing a logical id only; R-P628)",
+        "src/routes/realtime.sdkContract.test.ts (R10 by name: the stub rings at W22.07 :2725, :2766, :2790, W26.02 :6602 and W09.05 :6643 answer with the ring's decision (decidedUnder) as the real ring does, every expectation unchanged; by the specifier; R-P653)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -291,10 +292,11 @@
         "src/index.ts (the five-minute run's enqueue and the queue handler's fold-step messages only)",
         "docs/kit/02-api-reference.md",
         "src/learn/hourly.test.ts (R10 by name: the 8 MiB refusal at :907–910 re-pointed to RF5's by-slot answer only; by the specifier; R-P615)",
-        "src/learn/report.test.ts (R10 by name: the 8 MiB refusal at :379–382 re-pointed to RF5's by-slot answer only; by the specifier; R-P615)",
-        "src/units/W37/LEDGER.unit.test.ts (R10 by name: the workerd configuration at :549–564 declares the queue binding the shipped configuration declares for the fold steps, nothing else; by the specifier; R-P615)",
-        "src/units/W37/FIX2.unit.test.ts (R10 by name: the workerd configuration at :250–281 as W37 LEDGER's; by the specifier; R-P615)",
-        "src/units/P103/LEDGER.unit.test.ts (R10 by name: the legs that call foldOpenHours and catchUp directly drive the five-minute run and drain the fold's queue instead, every expectation unchanged; by the specifier or P104's builder after P103 joins; R-P615)"
+        "src/learn/report.test.ts (R10 by name: the 8 MiB refusal at :379–382 re-pointed to RF5's by-slot answer, and the storage double keeping custom metadata and answering a ranged text() with the requested range as R2 does; by the specifier; R-P615, R-P632)",
+        "src/units/W37/LEDGER.unit.test.ts (R10 by name: the workerd configuration declares the shipped events queue for the fold steps, the wrapper passes batches to the Worker's queue handler, and the fold legs wait, bounded, for the queue's deliveries before reading; every expectation and run limit unchanged; by the specifier; R-P615, R-P632)",
+        "src/units/W37/FIX2.unit.test.ts (R10 by name: as W37 LEDGER's; the run limit unchanged, since a catch-up enqueues every due hour in one run; by the specifier; R-P615, R-P632)",
+        "src/units/P103/LEDGER.unit.test.ts (R10 by name: the legs that call foldOpenHours and catchUp directly drive the five-minute run and drain the fold's queue instead, every expectation unchanged; by the specifier or P104's builder after P103 joins; R-P615)",
+        "src/units/_native.ts (R10 by name: an optional queue pass-through to the Worker's queue handler, absent by default; by the specifier; R-P632)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P104 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
