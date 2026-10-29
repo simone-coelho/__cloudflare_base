@@ -141,7 +141,7 @@
         "src/routes/content.test.ts (R10 by name: W14.04's object count at :1491 gains one serving copy per tenant only; by the specifier; R-P570 (a))",
         "src/content/consent.test.ts (R10 by name: W20.04 :384 and W20.03 :447 lose or alter the slots member in the serving copy as well as the revision object, the refusal unchanged; W28.01 :574 counts the learn member's one read from the copy; by the specifier; R-P570 (a))",
         "src/units/P97/LEDGER.unit.test.ts (R10 by name: contentOf also deletes sources.trips only; by the specifier or P102's builder after P97 joins; R-P570 (c))",
-        "docs/kit/03-payload-schemas.md (the cold product page's measured bytes only, moved with the reads P102 changes; R-P656)",
+        "docs/kit/03-payload-schemas.md (the cold product page's measured bytes and its read count only, moved with the reads P102 changes; R-P656, R-P667)",
         "src/units/P93/_catalog.ts (R10 by name: the helpers naming P98's ranged pack reads, placedReadClasses and placedKey; by the specifier; R-P570 (d))",
         "src/units/P98/LEDGER.unit.test.ts (R10 by name: the serving copy's one put per load in the exact write lists, LD1 :331, LD2 :529, LD8 :1513 and :1529, every other expectation unchanged; by the specifier; R-P669)"
       ],
