@@ -19,7 +19,7 @@
     {
       "id": "P103",
       "title": "Money learning: a money policy that can be published, and one credit rule online and offline (**amendment 13, E28, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
