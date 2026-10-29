@@ -63,7 +63,7 @@ import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwa
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, settleCarriedOutcome, stripExpiredOwnerRecovery, storedRenderOf, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type CarriedOutcome, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
-import { consentFromCookies, intersectConsent, intersectConsentDated, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, carryConsentDated, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
+import { consentFromCookies, intersectConsent, intersectConsentDated, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, carryConsentDated, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentChoice, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
 import { OWNER_TIMING_HEADER, ownerTimer } from '@/identity/consentContinuity';
@@ -717,7 +717,7 @@ export class ShopperReflex {
           timer.lap('grant');
           const recorded = storedConsent(await this.state.storage.get('consent')), carried = storedConsent(body.consent);
           const applied = this.adoptedGrant !== principal!.grantId && !CONSENT_SWITCHES.some(key => carried.instruction?.[key] !== undefined
-            && !(recorded.instruction?.[key] && recorded.instruction[key]!.chosenAt > carried.instruction[key]!.chosenAt));
+            && !(recorded.instruction?.[key] && recordChoiceHolds(recorded.instruction[key]!, carried.instruction[key]!)));
           let consent: Consent;
           if (applied) consent = recorded;
           else {
@@ -2739,7 +2739,13 @@ export class ShopperReflex {
         // permissive would be the rotation widening consent, and is refused as before.
         const sourceChoseAt = (key: (typeof CONSENT_SWITCHES)[number]) => Math.max(current.instruction?.[key]?.chosenAt ?? -Infinity,
           consent.instruction?.[key]?.chosenAt ?? -Infinity, carried.instruction?.[key]?.chosenAt ?? -Infinity);
-        const replacementsOwn = (key: (typeof CONSENT_SWITCHES)[number]) => (result.consent.instruction?.[key]?.chosenAt ?? -Infinity) > sourceChoseAt(key);
+        // R-P618: ordered no more finely than two records' clocks can be trusted (recordChoiceHolds).
+        const sourceChoice = (key: (typeof CONSENT_SWITCHES)[number]) => [current, consent, carried].map(c => c.instruction?.[key])
+          .filter((choice): choice is ConsentChoice => choice !== undefined && choice.chosenAt === sourceChoseAt(key))[0];
+        const replacementsOwn = (key: (typeof CONSENT_SWITCHES)[number]) => {
+          const own = result.consent.instruction?.[key], theirs = sourceChoice(key);
+          return own !== undefined && (theirs === undefined || recordChoiceHolds(own, theirs));
+        };
         if (CONSENT_SWITCHES.some(key => !consent[key] && result.consent[key] && !replacementsOwn(key))) throw new SessionAccessError();
         if (rotation.status === 'prepared') {
           const complete = { ...rotation, status: 'complete' as const };
@@ -4815,9 +4821,28 @@ function safeAttachment(ws: WebSocket): unknown {
 }
 
 /**
- * P97 (FV2, R-P583): a consent choice is never overwritten by an older one. Of `carried`, the consent an activation
- * would store, every switch the record (`recorded`) chose later than the activation's own choice (`source`), or chose
- * when the activation made no choice for it, keeps the record's choice; every other switch is as carried.
+ * P97 (FV2, R-P618): how finely choices made on different records are ordered by their clocks. Two records are Durable
+ * Objects that may run on different machines in different places, each reading its own clock, and a Worker's clock
+ * reads the time of its last I/O rather than the instant a choice is recorded. No platform figure bounds how far two
+ * such clocks may disagree, so this bound is a judgement, not a measurement: one second, far above the milliseconds two
+ * synchronised machines usually differ by and below the time a person takes to make a next choice. Kit 02 states it.
+ */
+const CONSENT_CLOCK_SKEW_MS = 1_000;
+/**
+ * P97 (FV2, R-P618): whether a record's choice (`mine`) holds against a choice for the same switch made on another
+ * record (`theirs`). Within CONSENT_CLOCK_SKEW_MS of each other a refusal and a more permissive choice are not ordered by
+ * their clocks: the refusal holds, whichever reads later. Otherwise the newer choice holds.
+ */
+function recordChoiceHolds(mine: ConsentChoice, theirs: ConsentChoice): boolean {
+  if (mine.value !== theirs.value && Math.abs(mine.chosenAt - theirs.chosenAt) <= CONSENT_CLOCK_SKEW_MS) return mine.value === false;
+  return mine.chosenAt > theirs.chosenAt;
+}
+
+/**
+ * P97 (FV2, R-P583, R-P618): a consent choice is never overwritten by an older one. Of `carried`, the consent an
+ * activation would store, every switch whose record (`recorded`) choice holds against the activation's own choice
+ * (`source`; recordChoiceHolds), or that the record chose when the activation made no choice for it, keeps the record's
+ * choice; every other switch is as carried.
  */
 function newerChoicesKept(carried: Consent, recorded: Consent, source: Consent): Consent {
   const own = recorded.instruction;
@@ -4826,7 +4851,7 @@ function newerChoicesKept(carried: Consent, recorded: Consent, source: Consent):
   let kept = false;
   for (const key of CONSENT_SWITCHES) {
     const mine = own[key], theirs = source.instruction?.[key];
-    if (mine && (!theirs || mine.chosenAt > theirs.chosenAt)) { next[key] = { ...mine }; kept = true; }
+    if (mine && (!theirs || recordChoiceHolds(mine, theirs))) { next[key] = { ...mine }; kept = true; }
   }
   return kept ? consentInstruction(next) : carried;
 }
