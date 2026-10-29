@@ -396,8 +396,8 @@ writing nothing, where the pack is 14 minutes old or more. The pack of a load th
 was written, or of a stage never published, is named by no revision, and the purge collects it once it is 15
 minutes old. A pack the table shows under a quarter live has its live objects moved into the next writing
 load's pack, and each writing load, and each publish of staged files, moves as many more packs, fewest live
-bytes first, as keep the table within 65 packs once its own pack and its stages' packs enter it, so the table
-never passes 65 packs. What it moves that does not fit beside its own objects within 64 MiB goes into further
+bytes first (a publish's stages among them where the table asks for it), as keep the table within 65 packs once
+its own pack and its stages' packs enter it, so the table never passes 65 packs. What it moves that does not fit beside its own objects within 64 MiB goes into further
 packs written in the same publication, each within 64 MiB (and as many more packs moved as keep the table within
 65 with them), so moving them never refuses a load that fits on its own; only where every pack is more than half
 its 64 MiB live could moving them not shorten the table. A load's own parts are always in one pack; the shards
@@ -451,7 +451,8 @@ refuses `409` with `code: "stage_stale"` a stage staged over another revision, `
 shared pieces) loaded by two stages, and, across the stages as within one file, `422` with `record_moved`,
 `id_in_part` or `id_shared`: a record a stage moves out of a product another stage carries leaves that product's
 part, and one moved out of a product no stage carries is refused `record_moved`. The parts stay in the stages'
-packs, which the revision's `packs` table names. Publish a stage within 10 minutes of staging it: the purge may
+packs, which the revision's `packs` table names, except where a publish of many stages over a full table moves
+some into its own packs to keep the table within 65. Publish a stage within 10 minutes of staging it: the purge may
 collect a stage never published from 15 minutes, so the publish refuses a stage stored 10 minutes ago or more
 `410` with `code: "stage_missing"` too, and gives its publication up, writing nothing, where one is 14 minutes
 old once it holds the head. The same file staged over the same base takes the stage's pack while it is younger

@@ -331,11 +331,12 @@ async function pooled<T>(items: readonly T[], task: (item: T) => Promise<unknown
  * that the table does not (a publish's stages) enter it (`need`). Fewest live bytes first, so the fewest bytes move.
  */
 const COMPACT_LIVE = 0.25, PACK_TABLE_CAP = 65;
-function compactionVictims(rows: readonly CatalogPackEntry[], need: number): CatalogPackEntry[] {
+function compactionVictims(rows: readonly CatalogPackEntry[], need: number, entering: readonly CatalogPackEntry[] = []): CatalogPackEntry[] {
   let thin: CatalogPackEntry | undefined;
   for (const row of rows) if (row.bytes / row.size < COMPACT_LIVE && (!thin || row.bytes / row.size < thin.bytes / thin.size)) thin = row;
   const victims = thin ? [thin] : [];
-  for (const row of [...rows].sort((a, b) => a.bytes - b.bytes || (a.digest < b.digest ? -1 : 1))) {
+  // R-P659: where the cap asks for it, a pack entering the table with this write (a publish's stage) is a candidate too.
+  for (const row of [...rows, ...entering].sort((a, b) => a.bytes - b.bytes || (a.digest < b.digest ? -1 : 1))) {
     if (victims.length >= need) break;
     if (row !== thin) victims.push(row);
   }
@@ -525,11 +526,15 @@ class IndexEdit {
     // re-homed go into the write's own pack and, where they do not fit beside its own objects, into the packs after it,
     // each within 64 MiB, so re-homing never refuses a write that fits on its own. Where the write's packs leave the table
     // past 65, as many more are re-homed as bring it back.
-    const rows = held.packs, tabledPacks = new Set(rows.map(row => row.digest)), entering = new Set<string>();
-    for (const p of this.pointers.values()) if (p?.address && !NEW_PLACE.test(p.address.pack) && !tabledPacks.has(p.address.pack)) entering.add(p.address.pack);
-    const need = rows.length + entering.size + 1 - PACK_TABLE_CAP;
+    const rows = held.packs, tabledPacks = new Set(rows.map(row => row.digest)), entering = new Map<string, CatalogPackEntry>();
+    for (const p of this.pointers.values()) {
+      if (!p?.address || NEW_PLACE.test(p.address.pack) || tabledPacks.has(p.address.pack)) continue;
+      const row = entering.get(p.address.pack) ?? { digest: p.address.pack, objects: 0, bytes: 0, size: options.sizes?.get(p.address.pack) ?? 0 };
+      row.objects++; row.bytes += p.address.bytes; row.size = Math.max(row.size, row.bytes); entering.set(p.address.pack, row);
+    }
+    const need = rows.length + entering.size + 1 - PACK_TABLE_CAP, candidates = [...entering.values()];
     // A pack under a quarter live alone (no row needed) moves only where its live objects fit beside the write's own.
-    let victims = compactionVictims(rows, Math.max(need, 0)), spill = need > 0;
+    let victims = compactionVictims(rows, Math.max(need, 0), candidates), spill = need > 0;
     for (;;) {
       let built: BuiltIndex;
       try { built = await this.assemble(options, new Set(victims.map(row => row.digest)), spill); }
@@ -539,7 +544,7 @@ class IndexEdit {
       }
       const after = built.index.packs?.length ?? 0;
       if (after <= PACK_TABLE_CAP) return built;
-      const more = compactionVictims(rows, victims.length + after - PACK_TABLE_CAP);
+      const more = compactionVictims(rows, victims.length + after - PACK_TABLE_CAP, candidates);
       // Every row already re-homed: nothing left to move (each pack more than half its 64 MiB live).
       if (more.length <= victims.length) return built;
       victims = more; spill = true;
@@ -600,6 +605,8 @@ class IndexEdit {
         await this.ahead('shards', names);
         const moving: Array<[string, ResolvedPartPointer]> = [];
         for (const name of names) for (const [product, p] of await this.productShard(name)) if (p.address && victims.has(p.address.pack) && !pointers.has(product)) moving.push([product, p]);
+        // R-P659: and the parts this write names in a pack the cap re-homes as it enters the table (a publish's stage).
+        for (const [product, p] of pointers) if (p?.address && victims.has(p.address.pack)) moving.push([product, p]);
         // Read once across this edit's builds (`build` may re-home more on a second pass).
         const unread = moving.filter(([, p]) => !this.fetched.has(p.digest)).map(([, p]) => ({ kind: 'part' as const, digest: p.digest, address: p.address! }));
         if (unread.length) for (const [hash, value] of await readCatalogPacked(this.env, this.scope, unread)) this.fetched.set(hash, value);
