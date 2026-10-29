@@ -130,7 +130,7 @@
       ],
       "allowedPaths": [
         "src/config/publication.ts",
-        "src/content/service.ts (the decision's documents stage: its pin naming its members and its per-trip report)",
+        "src/content/service.ts (the decision's documents stage: its pin naming its members and its per-trip report; and the one registration that keeps the synthetic monitor's reads out of the held store, bypassHeldPublications, R-P606 (4), R-P613)",
         "src/index.ts (the five-minute scheduled run's backfill call only)",
         "docs/kit/02-api-reference.md",
         "src/config/publication.servingCache.test.ts (R10 by name: the 30-second test at :128–141 re-pointed, and the cold read lists at :76 and :112 only where C changes them; by the specifier)",
