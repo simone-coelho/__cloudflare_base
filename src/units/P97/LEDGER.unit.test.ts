@@ -131,8 +131,8 @@
 // DEFERRED: LV1 — lane L21 on the pair's next release: the split read live from the instrumentation (sessionParts and the
 // object's parts; activate − object.op − forward for the first contact), cold and warm, on both pair hosts; the cold
 // first answer's server time at most 300 ms on both; the stamps measured and recorded as lanes L19 and L20 did.
-// R-P591 F3, closed in round 5: a record whose choice always wins (the reviewer's recordwins) is now RED on N1's leg
-// and R-P605's; W05.10 and W35.04/W35.08 keep catching it in the gate.
+// R-P591 F3 (a carried choice more than the skew bound newer than the record's must apply): pinned by R-P605's case more
+// than the bound after the Accept (round 7; the reviewer's recordwinsbeyondact RED there); W05.10 also catches it in the gate.
 // RESIDUALS (told): the copy is not run in workerd here (DESIGN §8; no native leg is ruled; LV1 runs it); the work
 // order's line references are as of 340cd410/ed7d6bbe; kit 02's "the stages of the decision the new shopper's object
 // made" (in its Server-Timing sentence) is not pinned by FV4 and becomes inexact under the design.
@@ -153,6 +153,12 @@
 // and P94 AD1 2 (d2), re-pointed 28/28 (d1), weakened 6 RED (d6); re-pointed on today and on step1, the same six RED on
 // their preconditions until the design lands (d3, d4). The whole suite under the sketch 4245/4272, 272/282 files; its ten
 // failing files fail alike on today's tree (the scratch layout's git legs) but P68 (h-full-sketch, h-full-today).
+// ROUND 7 (R-P627; logs/r7-*): the skew leg's edges read from the declared constant (a refusal stamped the bound less
+// 100 ms behind the Accept holds; the bound and 100 ms behind leaves the Accept); R-P605's refusal also more than the
+// bound after the Accept (the Accept made bound + 1 s back), so the never-older rule decides it. 50500e94 51/51 twice;
+// the sketch 51/51 twice. The reviewer's build controls (bctl.cjs, guard only changed): skewunused RED on the skew leg
+// ×2, recordwinsbeyondact RED on R-P605 ×2, onesideheld RED ×2, recordwinsbeyond RED ×4; onesidecarried 51/51 (its
+// untested side is unreachable: a carried Accept never widens a held refusal). Wrong fixes RED as before.
 // ROUND 6 (R-P618, R-P622; logs/r6-*, r6c-*): 51 tests. The skew legs (5 ms behind and ahead: the refusal holds; beyond
 // the stated bound before the Accept: the Accept holds), the kit fact naming the bound, and N2's and R-P605's choices
 // placed beyond the bound by a clock moved back (the bound itself never adjusted). 50500e94 (CONSENT_CLOCK_SKEW_MS, one
@@ -514,9 +520,9 @@ async function atClock<T>(when: { offset: number } | { at: number }, run: () => 
 /**
  * R-P605, R-P618: two browsers linked to one account (two sessions of the account's object); the first session refuses
  * both purposes and is detached `shift` ms back in time (that refusal beyond the skew bound before what follows); then
- * the replacement accepts both, on the real clock.
+ * the replacement accepts both, `acceptShift` ms back (the real clock by default).
  */
-async function linkedRotation(w: World, shift: number) {
+async function linkedRotation(w: World, shift: number, acceptShift = 0) {
   const set = await atClock({ offset: -shift }, async () => {
     const browsers: Session[] = [];
     for (let k = 0; k < 2; k++) { const d = await door(w); await w.drain(); browsers.push(sessionOf(d)!); }
@@ -529,7 +535,7 @@ async function linkedRotation(w: World, shift: number) {
     return { linked, first, other, refused, rotated };
   });
   const replacement = set.rotated ? sessionOf(set.rotated) : null;
-  const accepted = replacement ? await chooseConsent(w, replacement, REPLACEMENT_ACCEPT_ID, ACCEPT, revisionOf(replacement)) : null;
+  const accepted = replacement ? await atClock({ offset: -acceptShift }, () => chooseConsent(w, replacement, REPLACEMENT_ACCEPT_ID, ACCEPT, revisionOf(replacement))) : null;
   const acceptedChoice = replacement ? structuredClone(choiceOf(w, replacement.subject)) : null;
   expect([set.linked.length, set.first?.subject === set.other?.subject, set.first?.grantId !== set.other?.grantId, set.refused?.status ?? null, set.rotated?.status ?? null,
     typeof replacement?.capability, accepted?.status ?? null],
@@ -1144,35 +1150,40 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
       }
     }, 240_000);
 
-    it(`host (${host}): a source's newer refusal made after the replacement's choice, through another session linked to the source, and carried by the retried detach is applied (R-P605) — two browsers linked to one account (two sessions of the account's object), one session refusing both purposes, its detach, the replacement accepting both, then the other session refusing tracking, then the retry: it answers 200 with the same replacement, the replacement's tracking refused as chosen when that refusal was made, and its own Accept kept on personalization`, async () => {
+    it(`host (${host}): a source's newer refusal made after the replacement's choice, through another session linked to the source, and carried by the retried detach is applied (R-P605) — two browsers linked to one account (two sessions of the account's object), one session refusing both purposes, its detach, the replacement accepting both, then the other session refusing tracking, inside the stated skew bound after the Accept and more than the bound after it (R-P627 F2: there the never-older rule decides, not the skew rule), then the retry: it answers 200 with the same replacement, the replacement's tracking refused as chosen when that refusal was made, and its own Accept kept on personalization`, async () => {
       // A reset erases the source's record (eraseWithBarrier), retiring every session linked to it, so no newer choice can
       // follow it through another linked session (measured: that session's choice answers 401): the reset is N2's.
       const bound = (await skewBound()).code ?? 0;
-      const w = await world(host, docsAt(0), { linking: true });
-      try {
-        await door(w); await w.drain(); w.reset();
-        const { first, other, replacement, acceptedChoice } = await linkedRotation(w, bound + 2_000);
-        await sleep(5);
-        const newer = await chooseConsent(w, other, OTHER_REFUSE_ID, { tracking: false }, choiceOf(w, other.subject)?.revision ?? null);
-        const newerAt = choiceOf(w, other.subject)?.tracking?.chosenAt ?? NaN;
-        expect([newer.status, newerAt > (acceptedChoice?.tracking?.chosenAt ?? Infinity)],
-          `${host}: PRECONDITION — the other linked session refuses tracking after the replacement's Accept (${JSON.stringify(newer.body).slice(0, 160)})`).toEqual([200, true]);
-        const retry = await rotate(w, first, 'detach'); await w.drain();
-        const again = sessionOf(retry);
-        const after = choiceOf(w, replacement.subject);
-        const next = await nextSnapshot(w, replacement); await w.drain();
-        const consent = (next.body.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
-        expect.soft({ retry: retry.status, same: again ? [again.subject, again.sessionId, again.grantId] : null,
-          tracking: [after?.tracking?.value ?? null, after?.tracking?.chosenAt ?? null], personalization: after?.personalization ?? null, next: [next.status, consent?.tracking ?? null, next.body.arm ?? null] },
-        `${host}: P97.FV2 — detach: the source's newer refusal the retry carries is applied, dated when it was made (${newerAt}; the replacement's Accept at ${acceptedChoice?.tracking?.chosenAt}), the replacement's own Accept kept on personalization (${show(retry)})`)
-          .toEqual({ retry: 200, same: [replacement.subject, replacement.sessionId, replacement.grantId], tracking: [false, newerAt],
-            personalization: acceptedChoice?.personalization ?? null, next: [200, false, 'default'] });
-      } finally { w.stop(); }
-    }, 240_000);
+      for (const [label, shift, acceptShift, beyond] of [['inside the bound', bound + 2_000, 0, false],
+        ['more than the bound after the Accept', 2 * bound + 3_000, bound + 1_000, true]] as Array<[string, number, number, boolean]>) {
+        const w = await world(host, docsAt(0), { linking: true });
+        try {
+          await door(w); await w.drain(); w.reset();
+          const { first, other, replacement, acceptedChoice } = await linkedRotation(w, shift, acceptShift);
+          await sleep(5);
+          const newer = await chooseConsent(w, other, OTHER_REFUSE_ID, { tracking: false }, choiceOf(w, other.subject)?.revision ?? null);
+          const newerAt = choiceOf(w, other.subject)?.tracking?.chosenAt ?? NaN;
+          const gap = newerAt - (acceptedChoice?.tracking?.chosenAt ?? NaN);
+          expect([newer.status, gap > 0, beyond ? gap > bound : gap <= bound],
+            `${host}: PRECONDITION — ${label}: the other linked session refuses tracking ${gap} ms after the replacement's Accept (bound ${bound} ms; ${JSON.stringify(newer.body).slice(0, 160)})`).toEqual([200, true, true]);
+          const retry = await rotate(w, first, 'detach'); await w.drain();
+          const again = sessionOf(retry);
+          const after = choiceOf(w, replacement.subject);
+          const next = await nextSnapshot(w, replacement); await w.drain();
+          const consent = (next.body.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
+          expect.soft({ retry: retry.status, same: again ? [again.subject, again.sessionId, again.grantId] : null,
+            tracking: [after?.tracking?.value ?? null, after?.tracking?.chosenAt ?? null], personalization: after?.personalization ?? null, next: [next.status, consent?.tracking ?? null, next.body.arm ?? null] },
+          `${host}: P97.FV2 — detach, ${label}: the source's newer refusal the retry carries is applied, dated when it was made (${newerAt}; the replacement's Accept at ${acceptedChoice?.tracking?.chosenAt}), the replacement's own Accept kept on personalization (${show(retry)})`)
+            .toEqual({ retry: 200, same: [replacement.subject, replacement.sessionId, replacement.grantId], tracking: [false, newerAt],
+              personalization: acceptedChoice?.personalization ?? null, next: [200, false, 'default'] });
+        } finally { w.stop(); }
+      }
+    }, 300_000);
 
-    it(`host (${host}): choices on different records are ordered no more finely than their clocks can be trusted (R-P618) — in R-P605's world, the other linked session's refusal of tracking made after the replacement's Accept with its record's clock 5 ms behind and 5 ms ahead holds either way (the retried detach answers 200, the replacement's tracking refused, its personalization Accept kept, the next decision refused); a refusal dated clearly beyond the stated bound before the Accept leaves the Accept (the replacement's tracking still its Accept, the next decision as the Accept allows)`, async () => {
+    it(`host (${host}): choices on different records are ordered no more finely than their clocks can be trusted (R-P618) — in R-P605's world, the other linked session's refusal of tracking made after the replacement's Accept with its record's clock 5 ms behind and 5 ms ahead holds either way, and stamped the bound less 100 ms behind the Accept still holds (the retried detach answers 200, the replacement's tracking refused, its personalization Accept kept, the next decision refused); a refusal stamped the bound and 100 ms behind the Accept, or clearly beyond the bound, leaves the Accept (R-P627 F1: the bound read from the declared constant) (the replacement's tracking still its Accept, the next decision as the Accept allows)`, async () => {
       const bound = (await skewBound()).code ?? 0;
       for (const [label, offset, holds] of [['the other record\'s clock 5 ms behind', -5, true], ['the other record\'s clock 5 ms ahead', 5, true],
+        ['the refusal stamped the bound less 100 ms behind the Accept', -(bound - 100), true], ['the refusal stamped the bound and 100 ms behind the Accept', -(bound + 100), false],
         ['the refusal clearly beyond the stated bound, before the Accept', -(bound + 1_000), false]] as Array<[string, number, boolean]>) {
         const w = await world(host, docsAt(0), { linking: true });
         try {
