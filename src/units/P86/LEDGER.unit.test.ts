@@ -454,7 +454,7 @@ const productRead = (m: Mounted, product: string) => asOperator(m, 'GET', `/cont
 const readIds = (a: Answer) => sorted((((a.body.document as { pieces?: unknown } | undefined)?.pieces ?? []) as Array<{ id: string }>).map(p => p.id));
 
 /** S8: the R2 reads one operation makes under `config-publication/`, each key with its object's size. */
-interface Read { key: string; bytes: number }
+interface Read { key: string; bytes: number; /** P102 R10 (R-P570 (d)): an object read inside a ranged read of a pack: `by range <offset>+<length> in <pack key>`. */ range?: string }
 async function counted<T>(m: Mounted, run: () => Promise<T>): Promise<{ result: T; reads: Read[] }> {
   const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.get, reads: Read[] = [];
   Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
@@ -462,7 +462,8 @@ async function counted<T>(m: Mounted, run: () => Promise<T>): Promise<{ result: 
     // P98 R10 (R-P569 (b)): a ranged read of a pack is a read of each object inside the range, of that object's bytes.
     const inside = PACKED.test(key) && options?.range ? packedObjects(m, PACKED.exec(key)![1]!)
       .filter(o => o.at >= (options.range!.offset ?? 0) && o.at + o.bytes <= (options.range!.offset ?? 0) + (options.range!.length ?? Infinity)) : [];
-    if (inside.length) for (const o of inside) reads.push({ key: o.key, bytes: o.bytes });
+    const range = options?.range ? `by range ${options.range.offset ?? 0}+${options.range.length ?? 'end'} in ${key}` : undefined;
+    if (inside.length) for (const o of inside) reads.push({ key: o.key, bytes: o.bytes, range });
     else if (key.startsWith('config-publication/')) reads.push({ key, bytes: found?.size ?? 0 });
     return found;
   } });
@@ -477,6 +478,19 @@ const classOf = (key: string): string => {
   return revision ? `${revision[1]} revision` : key;
 };
 const classes = (reads: Read[]) => reads.map(r => classOf(r.key)).sort();
+/** P102 R10 (R-P570 (d), onto P98's pack reads): the classes, an object read inside a ranged read of a pack named with that read's range and pack. */
+const placedClasses = (reads: Read[]) => reads.map(r => r.range ? `${classOf(r.key)} ${r.range}` : classOf(r.key)).sort();
+/** P102 R10 (R-P570 (d)): where a product's shard and part are read — ` by range <at>+<bytes> in <pack key>` by the pointer's range in its pack, '' for an object of its own. */
+function placesOf(m: Mounted, d: LoadedSlots, product: string): { shard: string; part: string } {
+  for (const pointer of Object.values(shardPointersOf(d) ?? {})) {
+    const shard = pointedAt(m, d, pointer, shardKey(String(pointer.digest))), entry = (shard?.products as Record<string, Placed> | undefined)?.[product];
+    if (!entry) continue;
+    const shardPack = packOf(pointer, manifestPacks(d)), partPack = packOf(entry, shard?.packs, shardPack);
+    const at = (pack: string | undefined, p: Placed) => pack ? ` by range ${String(p.at)}+${String(p.bytes)} in ${packKey(pack)}` : '';
+    return { shard: at(shardPack, pointer), part: at(partPack, entry) };
+  }
+  return { shard: '', part: '' };
+}
 
 /** R-P413: the reads one operation makes that name another shopper — R2 keys and decision-ring objects carrying her subject — and its part reads. */
 async function foreignReads<T>(m: Mounted, other: string, run: () => Promise<T>): Promise<{ result: T; foreign: string[]; parts: number }> {
@@ -1108,11 +1122,12 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
           warm: [SERVED_FOR_BLACK, 0], operator: [anchorPart] });
       }
       // R-P416 (residual), P93 R10 (R-P487 (9)), P102 R10 (E27, CR3): the exact read list — the head and the serving copy,
-      // the anchor's product shard and the anchor's one part — at each size (before P102: the set and the four members too).
+      // the anchor's product shard and the anchor's one part — at each size (before P102: the set and the four members too);
+      // P102 R10 onto P98's pack reads (R-P570 (d)): the shard and the part inside a pack each read by its range in that pack.
       for (const n of [50, 5000]) {
-        const { m, cold, manifest } = at[n]!;
-        expect.soft(classes(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the serving copy, the anchor's shard and the anchor's part, once each`)
-          .toEqual(sorted(['head', `config-publication/v2/${TENANT}/serving.json`, shardOf(m, manifest, A), `part ${digestOf(m, manifest, A)}`]));
+        const { m, cold, manifest } = at[n]!, placed = placesOf(m, manifest, A);
+        expect.soft(placedClasses(cold.reads), `${host}: P86.CS2 — N = ${n}: exactly the head, the serving copy, the anchor's shard and the anchor's part, once each, each in a pack by its range there`)
+          .toEqual(sorted(['head', `config-publication/v2/${TENANT}/serving.json`, shardOf(m, manifest, A) + placed.shard, `part ${digestOf(m, manifest, A)}${placed.part}`]));
       }
       const [small, large] = [at[50]!, at[5000]!];
       // A shard holds the other products of its bucket, so its address differs between the two ranges: compared by class.

@@ -83,22 +83,28 @@
 //     altered where it holds them as stored, else lost; out with it); W28.01 (:578–585) — one read of the learn
 //     revision object on a fresh serve → one read of it or of the serving copy. Every refusal and other expectation
 //     unchanged.
-//   LATER (R-P570 (c), (d)): P97's contentOf also deletes `sources.trips` once P97 joins (its read pin :474 unchanged);
-//   the P93/P86 read lists take one re-point round onto P98's join.
-// STALE WORDING NOT GRANTED (told): P93 :32, :200, :284, :287, :306, :312 still say 8 reads or name the set and revisions.
+//   RE-POINT ROUND (R-P570 (c), (d); the brief S48/SPEC-BRIEF-P102-repoint.md, onto rem/integration 8d6b0dd0 with P97 and
+//   P98): src/units/P97/LEDGER.unit.test.ts `contentOf` also deletes `sources.trips` (reading R4's read pin unchanged);
+//   onto P98's pack reads, a shard or part inside a pack is read by its range in that pack — src/units/P93/_catalog.ts
+//   gains `placedReadClasses` and `placedKey` (test helpers); P93's `pageReads` and its CS1 and CS2 call sites, P93.CS4's
+//   one-level page (its part an object of its own, read as its own), P86.CS2's exact cold list (its meter `counted` notes
+//   a ranged read's range) and this file's CR3 page leg name the shard and the part `<key> by range <at>+<bytes> in <pack>`;
+//   every other expectation unchanged; P93's "8 reads" titles and header say 4.
+//   COLLISION (told, not granted): P93's kit leg (`unit:P93` logic, kits 03 and 02) still requires kit 03 to say the
+//   product page's "8 reads"; P102's four reads make that sentence stale.
 //
 // DEFERRED: LV1 (lane L21: the stamps' cold first answer within about 300 ms of server time with P97; the per-trip split
 // from CR4 on both pair hosts and both stamps; the stamps' pilot tenant backfilled without a publication).
 // RESIDUALS (told, not pinned): the byte bound of what A holds (the work order names no figure) and the writers'
 // invalidation of it (no answer or read shows it in one isolate: a new publication is a new identity); the synthetic
 // monitor's scoped bucket (src/ops/synthetic.ts:211–223) needs a telemetry policy this harness has not, so its reads are
-// left to the gate's src/index.api-boundary.test.ts, which runs it natively; P98 rewrites the shard and part reads into
-// packs, so the P93 helpers this file imports follow P98's R10.
+// left to the gate's src/index.api-boundary.test.ts, which runs it natively. The copy across P98's pack moves and sweep is
+// pinned by CR3's survival leg (the brief's item 4).
 //
 // HARNESS: src/units/_parity.ts and src/units/P93/_catalog.ts (the range tenant, its index and meter); the real Worker's
 // scheduled handler (src/index.ts) for the five-minute run, with the module doubles every suite loading the Worker
 // registers (src/units/P96/LEDGER.unit.test.ts). NO NEW EXPORT IS IMPORTED. Imports from src/units/: ../_parity,
-// ../P93/_catalog.
+// ../P93/_catalog, ../P98/_load (P98's loads, retention and upload times, for CR3's survival leg).
 
 import { createHash } from 'node:crypto';
 
@@ -117,7 +123,11 @@ import {
   asOperator, BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, loadDocument, MODULES, mount, pageInstanceOf, readTree,
   shopperOn, TENANT, UnitR2, type Answer, type Mounted,
 } from '../_parity';
-import { A, BLACK, bucketOf, carousel, catalogue, KEY, metered, rangeTenant, readClasses, SERVED_FOR_BLACK, snapshotOf } from '../P93/_catalog';
+import {
+  A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, catalogue, indexOf, KEY, metered, placedKey, placedReadClasses, rangeProduct, rangeRecords, rangeTenant, readClasses,
+  SERVED_FOR_BLACK, snapshotOf,
+} from '../P93/_catalog';
+import { importOf, loadedTenant, minutesAgo, packTable, resolve, shortRetention, uploadedAt } from '../P98/_load';
 
 const DOCS = { pieces: [...MODULES], slots: declaredSlots([layoutSlot()]), learn: learnDocument() };
 /** CR5: a context-only layout slot, so the answer carries a context key (P30). */
@@ -660,7 +670,7 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
         status: 200, catalogue: 2, waves: 2, second: ['content revision', 'learn revision', 'reflex revision', 'set', 'slots revision'] });
     }, 120_000);
 
-    it(`host (${host}): P93's anchored product page reads at most 4 objects cold — the head, the serving copy, the anchor's shard and its part — and serves P80's carousel; warm it reads no shard and no part`, async () => {
+    it(`host (${host}): P93's anchored product page reads at most 4 objects cold — the head, the serving copy, the anchor's shard and its part, each of these two by its range in its pack (P98) — and serves P80's carousel; warm it reads no shard and no part`, async () => {
       const m = await rangeTenant(host, 50);
       const { view } = await catalogue(m);
       expect(view.form, `${host}: PRECONDITION — the range tenant's catalogue is sharded (P93)`).toBe('sharded');
@@ -669,10 +679,58 @@ describe('unit:P102.CR3 (fix C: one serving copy per commit, read beside the hea
       const cold = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p102-cr3-page-cold'));
       const warm = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p102-cr3-page-warm'));
       const shardOrPart = (classes: string[]) => classes.filter(c => /\/content\/(shard|part)\//.test(c));
-      expect.soft({ status: cold.result.status, served: carousel(cold.result), reads: readClasses(cold.ops), count: readClasses(cold.ops).length <= 4, warm: shardOrPart(readClasses(warm.ops)) },
-        `${host}: P102.CR3 — the anchored page cold: 4 objects (observed ${JSON.stringify(readClasses(cold.ops))}; today 8)`).toEqual({
+      // R-P570 (d), onto P98's pack reads: a shard or part inside a pack is read by its range in that pack (placedKey).
+      expect.soft({ status: cold.result.status, served: carousel(cold.result), reads: placedReadClasses(cold), count: readClasses(cold.ops).length <= 4, warm: shardOrPart(readClasses(warm.ops)) },
+        `${host}: P102.CR3 — the anchored page cold: 4 objects (observed ${JSON.stringify(placedReadClasses(cold))}; today 8)`).toEqual({
         status: 200, served: SERVED_FOR_BLACK, count: true, warm: [],
-        reads: sorted(['head', SERVING, KEY.shard(view.shards[bucketOf(A)]?.digest ?? `no shard for ${A}`), KEY.part(view.products[A]?.digest ?? `no pointer for ${A}`)]) });
+        reads: sorted(['head', SERVING, placedKey(KEY.shard(view.shards[bucketOf(A)]?.digest ?? `no shard for ${A}`), view.places?.shards[bucketOf(A)]),
+          placedKey(KEY.part(view.products[A]?.digest ?? `no pointer for ${A}`), view.products[A]?.place)]) });
+    }, 300_000);
+
+    it(`host (${host}): the serving copy survives P98's pack moves and sweep — after a load re-homes a pack under a quarter live and the anchor's part moves at each retitle, and the publications' purge sweeps the pack the re-homing left, the copy is the committed set's (its content member the revision in force, naming only stored packs) and a machine holding nothing reads the anchored page from the head, the copy, and the shard and the part by their ranges in their packs`, async () => {
+      const m = await loadedTenant(host, 20);
+      // P98.LD6's quarter-live construction: 100 products of large records, 90 of them retitled, then one more load.
+      const heavy = (from: number, suffix = '') => rangeRecords(from, 100, suffix).map(r => ({ ...r, excerpt: `Heavy record ${r.id} `.padEnd(2000, 'h') }));
+      const kept = Array.from({ length: 10 }, (_, i) => rangeProduct(3090 + i));
+      expect((await importOf(m, heavy(3000))).status, `${host}: PRECONDITION — the heavy load`).toBe(200);
+      const quarter = indexOf(m, (await loadDocument(m, 'catalog')).document).products[kept[0]!]?.place?.pack ?? 'no pack';
+      expect((await importOf(m, heavy(3000, ' (p102 most)').slice(0, 90))).status, `${host}: PRECONDITION — 90 of the 100 retitled`).toBe(200);
+      expect((await importOf(m, rangeRecords(3500, 1))).status, `${host}: PRECONDITION — one more load`).toBe(200);
+      const anchorBefore = indexOf(m, (await loadDocument(m, 'catalog')).document).products[A]?.place?.pack ?? 'no pack';
+      // The publications whose purge sweeps (the retention setting at its smallest, every object uploaded an hour ago): each
+      // retitles the anchor's first image, so the anchor's part moves to that load's pack each time.
+      shortRetention(m);
+      const restoreTimes = uploadedAt(m, minutesAgo(60));
+      try {
+        for (let i = 1; i <= 4; i++) {
+          const a = await importOf(m, [{ ...ANCHOR_IMAGES[0]!, title: `${ANCHOR_IMAGES[0]!.title}, p102 retouch ${i}` }]);
+          expect(a.status, `${host}: PRECONDITION — publication ${i} is accepted`).toBe(200);
+        }
+      } finally { restoreTimes(); }
+      await m.drain();
+      const doc = (await loadDocument(m, 'catalog')).document, view = indexOf(m, doc);
+      expect({ moved: kept.every(p => !!view.products[p]?.place && view.products[p]!.place!.pack !== quarter), anchorMoved: view.products[A]?.place?.pack !== anchorBefore,
+        quarterStored: m.storage.objects.has(KEY.pack(quarter)), bad: resolve(m, doc).bad },
+      `${host}: PRECONDITION — P98's moves and sweep: the kept parts re-homed, the anchor's part moved, the pack under a quarter live collected, every object the revision in force names resolved`).toEqual({
+        moved: true, anchorMoved: true, quarterStored: false, bad: [] });
+      // The copy after the sweep: readable, the committed set's, its content member the revision in force's value, naming only stored packs.
+      const copy = m.storage.objects.get(SERVING) ?? null, content = refsOf(m).find(r => r.kind === 'content')!;
+      const identity = (JSON.parse(m.storage.objects.get(HEAD)!) as { committed: { digest: string } }).committed.digest;
+      let held: unknown = 'the copy holds no content member by its reference';
+      alteredCopy(copy, content, value => { held = value; return value; });
+      const inForce = (JSON.parse(m.storage.objects.get(content.object)!) as { value: Record<string, unknown> }).value;
+      const named = held && typeof held === 'object' ? packTable(held as Record<string, unknown>) : [];
+      expect.soft({ copy: copy === null ? 'no serving copy after the sweep' : copy.includes(identity) ? 'the committed set\'s' : 'another set\'s',
+        content: JSON.stringify(held) === JSON.stringify(inForce) ? 'the revision in force' : `not the revision in force (${JSON.stringify(held).slice(0, 120)})`,
+        packs: named.length > 0 && named.every(d => m.storage.objects.has(KEY.pack(d))) ? 'every pack it names stored' : `names ${named.filter(d => !m.storage.objects.has(KEY.pack(d))).length} of ${named.length} packs gone` },
+      `${host}: P102.CR3 — the serving copy after P98's pack moves and sweep (today no copy)`).toEqual({ copy: 'the committed set\'s', content: 'the revision in force', packs: 'every pack it names stored' });
+      const s = await shopperOn(m);
+      invalidatePublicationCache();
+      const cold = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p102-cr3-swept-cold'));
+      expect.soft({ status: cold.result.status, served: carousel(cold.result), reads: placedReadClasses(cold) },
+        `${host}: P102.CR3 — after the sweep a machine holding nothing reads the head, the copy, and the shard and the part by their ranges (observed ${JSON.stringify(placedReadClasses(cold))})`).toEqual({
+        status: 200, served: SERVED_FOR_BLACK, reads: sorted(['head', SERVING, placedKey(KEY.shard(view.shards[bucketOf(A)]?.digest ?? `no shard for ${A}`), view.places?.shards[bucketOf(A)]),
+          placedKey(KEY.part(view.products[A]?.digest ?? `no pointer for ${A}`), view.products[A]?.place)]) });
     }, 300_000);
 
     it(`host (${host}): the P84 class draw's pin before the session joins the one-round read on a machine holding nothing — the head and the copy together, or without the copy the head, then the set and its learn member together (R-P555)`, async () => {
