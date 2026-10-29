@@ -895,7 +895,7 @@ describe('unit:P93.CS6 (R-P487 (4), (7), R-P490 (2): the reads and the readers t
 // ===========================================================================
 
 describe('unit:P93.CS7 (R-P487: the kits)', () => {
-  it('logic: kits 03 and 02 state the sharded index (`index`, `sha256-hex2`, 256 product shards by the SHA-256 of the product id and id shards by the record id), the product page\'s 8 reads, the caps with their 413 names (`index_shard_too_large`, `id_index_too_large`, `manifest_too_large` from the shared pieces, `rollback_too_large` past 900 checks), the `removeProducts` list, the migration needing nothing of the operator, and the chunking advice (files of about 200 to 300 products); kit 02\'s GET row names the `shard=` read; today\'s one-level sentences are gone', () => {
+  it('logic: kits 03 and 02 state the sharded index (`index`, `sha256-hex2`, 256 product shards by the SHA-256 of the product id and id shards by the record id), the product page\'s 4 reads (P102, R-P667), the caps with their 413 names (`index_shard_too_large`, `id_index_too_large`, `manifest_too_large` from the shared pieces, `rollback_too_large` past 900 checks), the `removeProducts` list, the migration needing nothing of the operator, and the chunking advice (files of about 200 to 300 products); kit 02\'s GET row names the `shard=` read; today\'s one-level sentences are gone', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md'), kit03 = readTree('docs/kit/03-payload-schemas.md');
     const paragraphs = (text: string) => text.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
     const has = (text: string, ...words: Array<string | RegExp>) => paragraphs(text).some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
@@ -906,7 +906,7 @@ describe('unit:P93.CS7 (R-P487: the kits)', () => {
       index: has(kit03, /`index`/, /sha256-hex2/, /\b256\b/, /\bshards?\b/),
       productKey: has(kit03, /SHA-256/, /\bshard\b/, /\bproduct\b/),
       idShards: has(kit03, /\bid shards?\b/, /\brecord id\b/, /SHA-256|keyed the same way/),
-      page: has(kit03, /\b(?:8|eight) reads\b/, /\bshard\b/, /\bpart\b/),
+      page: has(kit03, /\b(?:4|four) reads\b/, /\bshard\b/, /\bpart\b/), // P102 R10 (R-P667, by name): before, 8|eight reads
       shardCap: has(kit03, /\bindex_shard_too_large\b/, /\b413\b/, /\bshard\b/),
       idCap: has(kit03, /\bid_index_too_large\b/, /\b413\b/, /\bid shard\b/),
       manifestCap: has(kit03, /\bmanifest_too_large\b/, /\bshared pieces\b/),
