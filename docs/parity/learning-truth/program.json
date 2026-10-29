@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-learning-truth",
+    "title": "Tapestry parity, learning that tells the truth: money learning online and offline, and the report fold at any volume (amendment 13, E28, E29)",
+    "ticketIds": [
+      "P103",
+      "P104"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P103",
+      "title": "Money learning: a money policy that can be published, and one credit rule online and offline (**amendment 13, E28, 2026-10-28**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E28 · section 2 of amendment 13, \"Done when\" (inserted from _evidence/parity-step3/S50/AMENDMENT-13-E28-E29.md; the verification S47/engine, Engine 18, R-P557; in force under the owner's direction, R-P545)",
+        "requirement": "the learn document carries a money policy (`money`: the currency its money counters are in, and what a value at or below zero means), validated when it is published; both outcome producers and the recovery path pass it on; the money rule sits inside the one credit rule that live learning and every offline fold read, so the report credits exactly what live learning credits; the SDK sends a currency only when the page's data layer names one; kit 02 says how to publish the policy. The policy's values are the tenant's to publish; what a starting assumption means for a revenue slot (D09) is not part of this item, and priors on money slots stay as they are."
+      },
+      "outcome": "A tenant publishes its money policy in the learn document, and from then on a revenue or margin slot learns from outcomes in that currency on every path, live and in every offline fold alike, while the SDK no longer invents a currency the page never named.",
+      "criteria": [
+        {
+          "id": "MP1",
+          "kind": "LOCAL",
+          "observable": "The learn document carries a money member, money: { currency, nonpositive } (the existing MoneyPolicy shape, src/learn/fan.ts:622–627: the currency the slot's money counters are in, and nonpositive one of refuse and credit): a new learn document with a well-formed member is published and read back with it; a malformed one (a currency that is not a non-empty code, a nonpositive outside the two words, an unknown key) is refused 422 naming the member; a retained revision that carries a malformed member reads with it dropped, as P36's and P11's members are; LearnConfig names it (src/content/types.ts:856). Today validateLearnConfig (src/content/kinds.ts:1660) and validateRetainedLearn (:1837) keep only the members they know, so a money member is accepted and dropped (_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18, REPRODUCED: ok true, keptMoney false), and no type names it.",
+          "proof": "The P103 acceptance command runs the tests named unit:P103.MP1 in src/units/P103/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "MP2",
+          "kind": "LOCAL",
+          "observable": "On both hosts, the published policy reaches the money rule on every outcome path: outcomeToLearning (src/learn/route.ts:225–229), prepareOutcomeAdmission (:129–132) with the managed recovery's prepare body (src/ledger/recovery.ts:301–304, the plan's digest then covering it) and its admit call (:325), and the ring's outcome body (src/durable-objects/DecisionRing.ts:306, the money field at :142). With a policy of EUR: an outcome naming EUR is credited on a revenue slot and on a margin slot, one naming GBP is refused money_policy_unset naming GBP, and nonpositive refuse and credit each behave as named, through the direct path and with LEDGER_RECOVERY_ENABLED set through the managed recovery path alike. Today no producer passes a policy (route.ts:228 passes none; recovery.ts:325 passes undefined), so with any currency named the ring refuses (moneyRefusal, src/learn/fan.ts:638–656, :648): REPRODUCED through outcomeToLearning, a purchase and an add_to_cart naming EUR leaving both money slots empty (_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18).",
+          "proof": "The P103 acceptance command runs the tests named unit:P103.MP2 in src/units/P103/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "MP3",
+          "kind": "LOCAL",
+          "observable": "One credit rule: the money rule (moneyRefusal) sits inside the shared credit rule (successCreditOf, src/learn/policy.ts:115–149) that the visitor's ring (src/durable-objects/DecisionRing.ts:626–640), foldRetainedDay (src/learn/fan.ts:1417) with the W24 rebuild that calls it (src/durable-objects/LearnStats.ts:1160–1167), the hourly fold (src/learn/hourly.ts:1351) and the raw grids (src/learn/report.ts:1431) all read, each reading the policy the outcome was decided under, carried on its record from the producer's own learn read (never the learn document in force when it is folded, R-P576, R-P588); so online and offline refuse and credit the same outcomes, with no policy (an outcome naming a currency refused everywhere) and with one (credited everywhere in its currency), when a policy is published between an hour's outcomes and its fold, and when the SDK retries an outcome (the same event id) on either path, before or after a publication: the retry is the same outcome, credited once live and folded once, under its first stamp, and the hour's fold and the day build as they would without it, on both hosts (R-P594). Today, besides the money rule, a retry on the direct path is a second outcome: its admission stamp differs, so live learning credits it twice and the hour's fold refuses with conflicting rows under one logical id (S50/specifier/REPORT-46cb4300.md). Today the ring alone applies the rule (DecisionRing.ts:626) and the offline folds weigh value with no currency check (creditWeight, policy.ts:109–113): REPRODUCED, foldRetainedDay credits the EUR purchase the ring refuses (_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18), so the report and a rebuild credit revenue that live learning refused.",
+          "proof": "The P103 acceptance command runs the tests named unit:P103.MP3 in src/units/P103/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "MP4",
+          "kind": "LOCAL",
+          "observable": "The SDK sends a currency only when the page names one: a data-layer purchase whose ecommerce block names no currency is sent with none, and one that names a currency is sent with it unchanged; the bundles regenerated by node scripts/build-sdk.mjs, within their budgets (packages/sdk/package.json:33–37: 117,760 and 112,640 bytes; 115,707 and 110,212 at b11b1643) and W40.P3's rule (src/units/W40/LEDGER.unit.test.ts:455), build-sdk.mjs --check exiting 0. Today the GA4 mapping sends currency: x.currency ?? 'USD' (src/sdk/emit.ts:121), so every purchase the SDK reads carries a currency and, with no policy, every revenue or margin slot refuses it.",
+          "proof": "The P103 acceptance command runs the tests named unit:P103.MP4 in src/units/P103/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "MP5",
+          "kind": "LOCAL",
+          "observable": "Kit 02's money paragraph (docs/kit/02-api-reference.md:1124–1135) states the money policy as built: the learn document's money member and its two fields, that a tenant publishes its own values, what is refused and named with and without a policy, that live learning and the report credit the same outcomes, and that the SDK sends a currency only when the page's data layer names one; its sentences \"none can be published yet\" and \"A purchase the SDK reads from the page's data layer always carries a currency (USD when the data layer names none)\" are gone.",
+          "proof": "The P103 acceptance command runs the tests named unit:P103.MP5 in src/units/P103/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "MP6",
+          "kind": "LOCAL",
+          "observable": "LOCK, on both hosts: a slot whose objective is unit counts every event whatever currency it names (moneyRefusal answers null for unit, src/learn/fan.ts:640); with no money policy published every money slot refuses as today (W24 B1, B2 and LEDGER pass unchanged); imported priors on a money slot are still refused as today (priorUnitErrors, src/learn/priors.ts:264–276; the owner's decision D09 is not part of this ticket); P16's one rule, P33's per-slot attribution, W26's page-scoped statistics and P94's counter pass unchanged.",
+          "proof": "The P103 acceptance command runs the tests named unit:P103.MP6 in src/units/P103/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "Lane L21 on the pair's next release (the stamps read-only): on a pair tenant the lane may publish to, its learn document published with a money policy of EUR (the lane's own value for the walk), an SDK purchase naming EUR credits a revenue slot live (the outcome receipt names no money refusal) and the day's report credits the same outcome; one naming another currency is refused by name live and absent from the report alike.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18 (the claims table, the boundary, the root cause, the remedy and the tests); its REPORT-analyst.md and logs under _evidence/parity-step3/S47/engine/logs/ (probe-*.jsonl, \"E18 producer\")",
+          "description": "REPRODUCED at both trees: the refusal through outcomeToLearning, the validator dropping a money member, foldRetainedDay crediting what the ring refuses; SOURCE-TRACED: no producer passes a policy, the offline folds skip the rule, the SDK's USD default. INTENTIONAL BOUNDARY: the policy's values are the owner row W24.P1.01's, the way to publish was owed and never refused by a ruling."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:1006 (R-P545), :1018 (R-P557), :1022 (R-P561)",
+          "description": "The owner's direction (every problem fixed at its root cause); Engine 18 ruled a defect of the shipped engine and added as E28; the programme tapestry-parity-learning-truth opened with E29."
+        },
+        {
+          "ref": "_evidence/parity-step3/S50/AMENDMENT-13-E28-E29.md (E28, for the lead to insert in docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md)",
+          "description": "The item's authority, done-when and needed-by in the amendment's form."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/integration diff --quiet ed7d6bbe b11b1643 -- src docs/kit scripts wrangler.toml packages public/sdk (exit 0)",
+          "description": "The verification read ed7d6bbe and the fold design read 52f8dfea; src, the kits, scripts, wrangler.toml and the SDK's generated files are byte-equal there and at rem/integration b11b1643, the revision this work order cites."
+        },
+        {
+          "ref": "src/learn/fan.ts:622–656, :1295, :1384–1424; src/learn/policy.ts:100–149; src/durable-objects/DecisionRing.ts:141–160, :306, :600–645; src/learn/route.ts:125–132, :225–229; src/ledger/recovery.ts:298–328; src/learn/hourly.ts:1351; src/learn/report.ts:1431; src/durable-objects/LearnStats.ts:1160–1167; src/content/kinds.ts:1660, :1837; src/content/types.ts:856; src/sdk/emit.ts:110–122; docs/kit/02-api-reference.md:1124–1135",
+          "description": "Today's money rule, the shared credit rule, the ring, the producers, the offline folds, the rebuild, the learn validation and type, the SDK's mapping and the kit paragraph, cited in MP1 to MP6."
+        }
+      ],
+      "remainingWork": [
+        "The money member in the learn document's validation and type (src/content/kinds.ts validateLearnConfig and validateRetainedLearn; src/content/types.ts LearnConfig); closed by unit:P103.MP1.",
+        "The policy passed on every outcome path (src/learn/route.ts outcomeToLearning and prepareOutcomeAdmission; src/ledger/recovery.ts's prepare body and admit call; src/durable-objects/DecisionRing.ts's outcome body); closed by unit:P103.MP2.",
+        "moneyRefusal moved into the one credit rule (src/learn/policy.ts) read by the ring (src/durable-objects/DecisionRing.ts), foldRetainedDay and fanOutcome (src/learn/fan.ts), the W24 rebuild (src/durable-objects/LearnStats.ts, its call only), the hourly fold (src/learn/hourly.ts) and the raw grids (src/learn/report.ts); closed by unit:P103.MP3.",
+        "The SDK's purchase mapping without an invented currency (src/sdk/emit.ts:121) and the bundles regenerated with node scripts/build-sdk.mjs; closed by unit:P103.MP4 and the gate's build-sdk.mjs --check.",
+        "Kit 02 :1124–1135; closed by unit:P103.MP5.",
+        "The specification names any R10 its legs need (none found pinning the USD default or a way to publish; W24 B1, B2 and LEDGER publish no policy and keep refusing), and the lead amends this work order with them before the build.",
+        "The locks hold, closed by unit:P103.MP6 and the program integration gate: W24 (B1, B2, LEDGER), P16, P33, W26, P94, src/sdk/emit.test.ts, W40 (LEDGER P3 and P4) and the learn suites (src/learn/hourly.test.ts, src/learn/report.test.ts, src/learn/objective.test.ts)."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 2 E28 and section 3 row 1 as amended for it (_evidence/parity-step3/S50/AMENDMENT-13-E28-E29.md, for insertion in docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md); R-P557 (_evidence/parity-step3/AMENDMENTS.md:1018: Engine 18 a product defect of the shipped engine, fixed at its cause, added as E28); R-P561 (:1022: the programme tapestry-parity-learning-truth, P103 = E28); under the owner's direction of 28 October, R-P545 (:1006: \"Every one of those four problems found in last night's testing has a solution. … Everything needs to be fixed.\")",
+          "effect": "E28 enters tapestry-parity-learning-truth as P103, first in strict order: the way to publish a money policy is built and the money rule becomes part of the one credit rule online and offline; the policy's values are the tenant's own configuration and the platform invents none; the owner's decision D09 (what a starting assumption means for a revenue slot) is not part of it, and priors on money slots stay as they are; it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/content/kinds.ts (the learn document's money member and its validation only)",
+        "src/content/types.ts (LearnConfig's money member only)",
+        "src/learn/route.ts",
+        "src/ledger/recovery.ts (OutcomeRecoveryInput's money member; sourceOf leaving the money stamp out of the source digest; runOwnerRecovery's first-admission stamp; the prepare body and admit call only as the stamp needs; R-P571 (b), R-P588)",
+        "src/learn/policy.ts",
+        "src/learn/fan.ts",
+        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call; the direct /outcome handler evaluating every delivery of an outcome id under the stamp it first saw, that record kept with the credited journal — bounded, charged, expired, erased, reset and failing as the journal does, preferably within the journal's own write; R-P594, R-P604)",
+        "src/learn/hourly.ts (the hourly fold's credit, and its reading of rows sharing a logical id keeping the earliest-born copy; not its recovery fingerprint, R-P576 R12; R-P604)",
+        "src/learn/report.ts (the raw grids' credit, and their reading of rows sharing a logical id keeping the earliest-born copy; R-P604)",
+        "src/durable-objects/LearnStats.ts (the W24 rebuild's call to foldRetainedDay only)",
+        "src/sdk/emit.ts",
+        "public/sdk/edge-personalization.js",
+        "public/sdk/edge-personalization.esm.js",
+        "public/sdk/0.2.0/edge-personalization.js",
+        "public/sdk/0.2.0/edge-personalization.esm.js",
+        "packages/sdk/edge-personalization.js",
+        "packages/sdk/edge-personalization.esm.js",
+        "docs/kit/02-api-reference.md",
+        "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
+        "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
+        "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P103's specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P103's specification review records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: P103's specification review records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    },
+    {
+      "id": "P104",
+      "title": "The learning report's fold, with a fixed memory bound per step (**amendment 13, E29, 2026-10-28**)",
+      "state": "INACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E29 · section 2 of amendment 13, \"Done when\" (inserted from _evidence/parity-step3/S50/AMENDMENT-13-E28-E29.md; the verification S47/engine, Engine 20, R-P557; the design S49/analyst-report-fold, R-P561; in force under the owner's direction, R-P545)",
+        "requirement": "the hourly fold and the day report work in fixed-size steps (a plan, partition pages, leaves of visitors that split as they grow, a merge tree, a close), every step holding at most 64 MiB whatever the traffic, measured in the harness at 10,000, 100,000 and 1,000,000 visitors a day; on the same records the result equals today's fold; an hour is committed by two conditional writes, so no hour is lost or counted twice and a failed run resumes; the day report is summed one hour at a time and stored by slot, a day whose grids pass 8 MiB answering 200 by slot, never 413; the W24 rebuild folds with the 200-entry ring and the previous day's carry-in, as the hourly fold and live learning do; kit 02 states the envelope."
+      },
+      "outcome": "A tenant's learning report folds every hour and builds every day at any traffic, in steps of a fixed size, with the same numbers today's fold gives, no hour lost, counted twice or left incomplete, and a day read by slot instead of refused 413.",
+      "criteria": [
+        {
+          "id": "RF1",
+          "kind": "LOCAL",
+          "observable": "The bound, on both hosts in the harness: every step of the hourly fold and of the day report (plan, partition, leaf, merge, close, day; the open hour and the custom-policy day taking the same steps — a custom-policy report request whose day is past one page is accepted as a job (202 naming the job and where its day is read: GET /v1/:tenant/learn/report for that day and that policy's digest answers 202 with its progress while the steps run and 200 with the day when they are done; the same day and policy sent again names the same job), and within a page the request answers inline as today; R-P615) holds at most 64 MiB at 10,000, 100,000 and 1,000,000 visitors a day, with fixed inputs per step: a partition page at most 16 MiB and 200 objects; a leaf at most 8 MiB of state and 8 MiB of rows (a leaf that would pass 8 MiB splits by visitor hash, moving only its own visitors); a merge at most 64 partials; a day one hour aggregate and the running total. A step past its bound is refused naming its step (fold_step_bound); every object of an hour is read, in pages, so no hour is truncated; the wide context of the design's T5 folds, the cells bound kept per slot at the live table's capacity (256 items, 4,096 counters, src/durable-objects/LearnStats.ts:38–39) times the policies. Measured on the prototype: at most 56 MiB at all three volumes, a leaf's peak hour 0.2–0.3 s (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §5; _evidence/parity-step3/S49/analyst-report-fold/logs/proto.jsonl V1, V2). Today one request holds the hour's rows twice, all 64 shards' rings and an inline copy of every new shard body under REPORT_LIMITS (src/learn/report.ts:27–31) and the staged-body cap (src/learn/hourly.ts:2716, :2729–2739): an hour refused above about 8,900 decisions (rawBytes, observed 16,938,953), the next hour once the rings pass 3.69 MiB (aggregateBytes), an hour at 40 visitors on cells, and past 600 objects an hour truncated (MAX_HOUR_OBJECTS, hourly.ts:78) (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §2, REPRODUCED).",
+          "proof": "The P104 acceptance command runs the tests named unit:P104.RF1 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RF2",
+          "kind": "LOCAL",
+          "observable": "Parity, on both hosts: on the same records the staged fold at depth 0 equals today's buildHour (src/learn/hourly.ts:2555) value for value and shard for shard: the 64 shard states equal (byte-identical where the state is encoded as today's v2), the hour aggregates and the day reports equal to a relative 1e-15, duplicates counted alike, across two hours with crossing visitors, duplicates spanning pages, a filed conflict, an erasure, an expired stamp, a re-fold of a grown hour and an earlier hour folded after a later one. The prototype matched today's fold on two hours: aggregates to 1.1e-15, all 64 shard states byte-identical after hour 13, the day reports equal, duplicates 200 and 200 (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §4, _evidence/parity-step3/S49/analyst-report-fold/logs/proto.jsonl E1, REPRODUCED).",
+          "proof": "The P104 acceptance command runs the tests named unit:P104.RF2 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RF3",
+          "kind": "LOCAL",
+          "observable": "The commit, on both hosts: an hour is committed by two conditional writes, the hour aggregate (create-only on a first fold, on the etag the plan noted for a re-fold) and then the state head naming the new leaf versions and clearing the in-flight plan; a crash after each step and between the two writes leaves no hour lost and none counted twice; of two concurrent coordinators one wins and the other adopts or stops; a newer hour waits while a plan is in flight. Today the commit stages every new shard body inline in shard zero's pending plan (src/learn/hourly.ts:2729–2739; finishHour, :2258–2275), which is what caps the rings.",
+          "proof": "The P104 acceptance command runs the tests named unit:P104.RF3 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RF4",
+          "kind": "LOCAL",
+          "observable": "Resume, on both hosts: a failed run (a step that throws or is cut off) resumes from the outputs already present, found by one listing per 1,000 outputs, only the missing steps re-run; a filed conflict re-runs only its own leaf (today the whole hour, src/learn/hourly.ts:2117–2128); an abandoned generation's unnamed outputs are collected after a 15-minute grace; a store written by today's code (64 shards, an interrupted v2 plan) is first finished by today's finishHour and cleanupHourlyState and then continued by the staged fold with identical next-hour results.",
+          "proof": "The P104 acceptance command runs the tests named unit:P104.RF4 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RF5",
+          "kind": "LOCAL",
+          "observable": "The day report, on both hosts: summed one hour at a time (measured at most 17 MiB) and stored as today's summary frame, a head and one part per slot, so GET with ?slot= reads only its slot's part; a day whose grids pass 8 MiB (outputBytes) answers 200 with the head and a slot index, grids by slot, never 413; a 1,000,000-visitor day is built complete from 24 hours; an old single-JSON day still reads (src/learn/report.ts:388–398). Today any budget answers 413 (src/routes/decisions.ts:2046–2049), 24 hours of 868 KB aggregates are refused (aggregateBytes 17,357,910), and a refused hour leaves the day 200 with coverage incomplete and the hour missing (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §2 T4, T4b, REPRODUCED).",
+          "proof": "The P104 acceptance command runs the tests named unit:P104.RF5 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RF6",
+          "kind": "LOCAL",
+          "observable": "The W24 rebuild (rebuildFromLedger, src/durable-objects/LearnStats.ts:1160–1167) folds on the same steps with the 200-entry ring (RING_CAP, src/learn/hourly.ts:41) and the previous day's carry-in, as the hourly fold and live learning do, and with the one credit rule (successCreditOf with P103's money rule): the hourly fold, the custom-policy day job and the rebuild credit the same outcomes, the money cases included; rebuilt numbers differ from today's only for a visitor with more than 200 decisions or with decisions the day before. Today foldRetainedDay folds an uncapped one-day ring with no carry-in (src/learn/fan.ts:1395–1403) under the records cap of 50,000 (src/learn/report.ts:27).",
+          "proof": "The P104 acceptance command runs the tests named unit:P104.RF6 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "RF7",
+          "kind": "LOCAL",
+          "observable": "Kit 02 states the report as built: the supported envelope (no volume limit on the fold; the per-step bound), the day read by slot (?slot=) and the 200 by slot past 8 MiB in place of 413, coverage, and the open hour's deferral as today (open_fold_deferred).",
+          "proof": "The P104 acceptance command runs the tests named unit:P104.RF7 in src/units/P104/LEDGER.unit.test.ts and they pass, the program integration gate command exits 0 at the same artifact revision, and the reviewer reads the changed sentences at that revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "Lane L21 on the pair's next release (the stamps read-only): a day of the lane's traffic folded hour by hour with no hour incomplete and the day report answering 200 (by slot where its grids pass 8 MiB); the steps per hour and the hour's wall time recorded on each pair host; the report's credits equal to live learning's on the lane's outcomes (P103's money case included).",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md (§1 the map, §2 where the limits bind, §3 memory with nothing refused, §4 the design, §5 each step at three volumes, §6 migration, §7 tests); _evidence/parity-step3/S49/analyst-report-fold/logs (today.jsonl, lifted.jsonl, proto.jsonl); _evidence/parity-step3/S49/analyst-report-fold/proto-kept (traffic.ts, today.probe.unit.test.ts, lifted.probe.unit.test.ts, proto.equiv.unit.test.ts, proto.volume.unit.test.ts)",
+          "description": "REPRODUCED: today's refusals (rawBytes at 400 visitors an hour, aggregateBytes at 3.69 MiB of rings, cells at 40 visitors, a 24-hour day at aggregateBytes, the day incomplete); the prototype's parity on two hours and each step at most 56 MiB at 10,000, 100,000 and 1,000,000 visitors a day. HYPOTHESIS: the one-request projection (6.9 GB, 69 GB, 690 GB) and the step times at volume. Not prototyped: crash recovery, leaf splits, group runs, the open hour, the raw day and rebuild jobs. UNVERIFIED: workerd figures and real traffic."
+        },
+        {
+          "ref": "_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 20",
+          "description": "The day report's 413 and the second hour's refusal REPRODUCED at both trees; paging the report ruled insufficient."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:1006 (R-P545), :1018 (R-P557), :1022 (R-P561)",
+          "description": "The owner's direction; Engine 20 a product defect, added as E29; the design adopted with the bound, the parity and the commit, and the two technical choices ruled: the rebuild's 200-entry ring and carry-in, and a day past 8 MiB answering 200 by slot."
+        },
+        {
+          "ref": "_evidence/parity-step3/S50/AMENDMENT-13-E28-E29.md (E29, for the lead to insert in docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md)",
+          "description": "The item's authority, done-when and needed-by in the amendment's form."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/integration diff --quiet ed7d6bbe b11b1643 -- src docs/kit scripts wrangler.toml packages public/sdk (exit 0)",
+          "description": "The verification read ed7d6bbe and the fold design read 52f8dfea; src, the kits, scripts, wrangler.toml and the SDK's generated files are byte-equal there and at rem/integration b11b1643, the revision this work order cites."
+        },
+        {
+          "ref": "src/learn/hourly.ts:38–43, :78, :124, :1351, :2061–2128, :2258–2275, :2380–2435, :2555–2739, :2896, :3521, :3892; src/learn/report.ts:27–31, :179–204, :388–398, :480–524; src/learn/fan.ts:1062–1066, :1384–1424; src/durable-objects/LearnStats.ts:38–39, :1160–1167; src/routes/decisions.ts:2046–2049; src/index.ts:282–329, :366",
+          "description": "Today's one-request fold, its budgets, its commit and cleanup, the day report, the ring entry, the rebuild, the route's 413, the five-minute run and the queue consumer, cited in RF1 to RF6."
+        }
+      ],
+      "remainingWork": [
+        "Sequencing: this ticket follows P103 in strict order, and builds over P98's pack and ranged-read code as joined (the partition step writes one content-addressed pack, sections by leaf, read by range).",
+        "The staged fold, a new module (src/learn/stagedFold.ts): plan, partition, leaf (today's foldableRows, hourBrands, foldShard and countMembership unchanged), merge, close, the two-write commit, resume and the collection of abandoned outputs; the leaves splitting per leaf; the migration from today's v2 shards (src/learn/hourly.ts); closed by unit:P104.RF1 to unit:P104.RF4.",
+        "The steps as messages on the existing events queue, enqueued by the five-minute run and consumed by the queue handler (src/index.ts:282–329, :366), with no new queue to provision; closed by unit:P104.RF1 and unit:P104.RF4.",
+        "The open hour and the custom-policy day on the same steps; the ring state v3 (an entry keeping the hourly stamp only, src/learn/fan.ts:1062–1066) and the group runs; closed by unit:P104.RF1 and unit:P104.RF2.",
+        "The day report summed hour by hour and stored by slot, the per-slot cells bound, the reader and the route's 200 by slot (src/learn/report.ts; src/routes/decisions.ts:2046–2049); closed by unit:P104.RF5.",
+        "The W24 rebuild on the same steps with the 200-entry ring and carry-in (src/durable-objects/LearnStats.ts:1160–1167; src/learn/fan.ts:1384–1424); closed by unit:P104.RF6.",
+        "Kit 02; closed by unit:P104.RF7.",
+        "The specification names the R10s its legs need in the suites that pin the one-request fold (candidates found at b11b1643: src/learn/hourly.test.ts, src/learn/openHour.test.ts, src/learn/report.test.ts, src/units/W32/B1.unit.test.ts, src/routes/vantage.test.ts, src/units/W23/LEDGER.unit.test.ts, src/units/P33/LEDGER.unit.test.ts), and the lead amends this work order with them before the build.",
+        "The locks hold, closed by the program integration gate: the learn suites (src/learn/*.test.ts), W23, W24, W26, W27, W32 B1, P33, P94, P103 as built, and P98 as built."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 2 E29 and section 3 row 1 as amended for it (_evidence/parity-step3/S50/AMENDMENT-13-E28-E29.md, for insertion in docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md); R-P557 (_evidence/parity-step3/AMENDMENTS.md:1018: Engine 20 a product defect, fixed at its cause, added as E29); R-P561 (:1022: the design adopted, the rebuild's ring and the day past 8 MiB ruled by the lead, P104 = E29); under the owner's direction of 28 October, R-P545 (:1006: \"Everything needs to be fixed.\")",
+          "effect": "E29 enters tapestry-parity-learning-truth as P104, second in strict order, built to the design of S49/analyst-report-fold: every step at most 64 MiB, parity with today's fold, the two-write commit, resume, the day by slot answering 200 past 8 MiB, and the W24 rebuild on the 200-entry ring with the previous day's carry-in (one ring rule everywhere); it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/learn/stagedFold.ts (new)",
+        "src/learn/hourly.ts",
+        "src/learn/report.ts",
+        "src/learn/fan.ts (the ring entry's state v3 and foldRetainedDay's ring rule only)",
+        "src/durable-objects/LearnStats.ts (the W24 rebuild only)",
+        "src/routes/decisions.ts (the day report's answer by slot and its ?slot= read; the custom-policy report request past a page accepted as a job and its day read by policy digest; R-P615)",
+        "src/index.ts (the five-minute run's enqueue and the queue handler's fold-step messages only)",
+        "docs/kit/02-api-reference.md",
+        "src/learn/hourly.test.ts (R10 by name: the 8 MiB refusal at :907–910 re-pointed to RF5's by-slot answer only; by the specifier; R-P615)",
+        "src/learn/report.test.ts (R10 by name: the 8 MiB refusal at :379–382 re-pointed to RF5's by-slot answer only; by the specifier; R-P615)",
+        "src/units/W37/LEDGER.unit.test.ts (R10 by name: the workerd configuration at :549–564 declares the queue binding the shipped configuration declares for the fold steps, nothing else; by the specifier; R-P615)",
+        "src/units/W37/FIX2.unit.test.ts (R10 by name: the workerd configuration at :250–281 as W37 LEDGER's; by the specifier; R-P615)",
+        "src/units/P103/LEDGER.unit.test.ts (R10 by name: the legs that call foldOpenHours and catchUp directly drive the five-minute run and drain the fold's queue instead, every expectation unchanged; by the specifier or P104's builder after P103 joins; R-P615)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P104 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P104's specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P104's specification review records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: P104's specification review records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}
