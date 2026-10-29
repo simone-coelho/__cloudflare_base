@@ -98,6 +98,7 @@ import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 
 import { BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, pageInstanceOf, readTree, shopperOn, TENANT, UnitR2,
   type Mounted } from '../_parity';
+import { watchCopies } from '../P97/_copy';
 
 const DOCS = { pieces: [...MODULES], slots: declaredSlots([layoutSlot()]), learn: learnDocument() };
 /** The forwarded decision's five stages (src/content/service.ts laps; W38 B5's names). */
@@ -114,26 +115,23 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface Held { seen: string[]; forward: { start: number; end: number } | null }
 /**
- * The analyst's probe wrapper: the shopper object's `/identity/activate` held ACTIVATE ms and the door's forward
- * (`/authority/request`) held FORWARD ms, its own start and end recorded; with `stages`, every publication read made
- * while the forward is under way (the forwarded decision's documents) held STAGE ms; with `mint`, every publication read
- * before the activation starts (the mint's) held MINT ms.
+ * The analyst's probe wrapper, R10 (R-P548): the first answer's activation and forward run on the blank in-memory copy of
+ * the brand-new visitor's record (P97, R-P547), so they are held there (../P97/_copy): the copy's `/identity/activate`
+ * held ACTIVATE ms and the door's forward (`/authority/request`) to it held FORWARD ms, its own start and end recorded;
+ * with `stages`, every publication read made while the forward is under way (the forwarded decision's documents) held
+ * STAGE ms; with `mint`, every publication read before the activation starts (the mint's) held MINT ms. The watch ends
+ * when the held forward has answered.
  */
 function hold(m: Mounted, options: { mint?: boolean; stages?: boolean } = {}): Held {
-  const env = m.env as unknown as Record<string, unknown>, held: Held = { seen: [], forward: null };
-  const ns = env.SHOPPER_REFLEX as { idFromName: (name: string) => unknown; get: (id: unknown) => { fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> } };
+  const held: Held = { seen: [], forward: null };
   let phase: 'mint' | 'session' | 'forward' | 'after' = 'mint';
-  env.SHOPPER_REFLEX = { idFromName: (name: string) => ns.idFromName(name), get: (id: unknown) => {
-    const stub = ns.get(id);
-    return { fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-      const path = new URL(input instanceof Request ? input.url : String(input)).pathname;
-      if (path === '/identity/activate') { phase = 'session'; held.seen.push(path); await sleep(ACTIVATE); return stub.fetch(input, init); }
-      if (path !== '/authority/request' || held.forward) return stub.fetch(input, init);
-      held.seen.push(path); phase = 'forward';
-      const start = performance.now();
-      try { await sleep(FORWARD); return await stub.fetch(input, init); } finally { held.forward = { start, end: performance.now() }; phase = 'after'; }
-    } };
-  } };
+  const watch = watchCopies(m, async ({ path }, proceed) => {
+    if (path === '/identity/activate') { phase = 'session'; held.seen.push(path); await sleep(ACTIVATE); return proceed(); }
+    if (path !== '/authority/request' || held.forward) return proceed();
+    held.seen.push(path); phase = 'forward';
+    const start = performance.now();
+    try { await sleep(FORWARD); return await proceed(); } finally { held.forward = { start, end: performance.now() }; phase = 'after'; watch.stop(); }
+  });
   if (options.mint || options.stages) Object.defineProperty(m.storage, 'get', { configurable: true, writable: true, value: async (key: string) => {
     if (options.mint && phase === 'mint') { held.seen.push(`mint ${key}`); await sleep(MINT); }
     else if (options.stages && phase === 'forward' && key.startsWith('config-publication/')) { held.seen.push(`stage ${key}`); await sleep(STAGE); }

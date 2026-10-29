@@ -91,6 +91,7 @@ import {
   asOperator, BRAND, declaredSlots, expectPublished, HOSTS, layoutSlot, learnDocument, MODULES, mount, pageInstanceOf, putDocument, readTree,
   shopperOn, TENANT, type Mounted, type Registry, type Shopper,
 } from '../_parity';
+import { watchCopies } from '../P97/_copy';
 
 // ---------------------------------------------------------------------------
 // The fixture: P84's product page (the declared layout slot and the carousel with its per-context shot orders), the
@@ -338,17 +339,14 @@ describe('unit:P94.AD1', () => {
       const version = await tableVersion(m);
       expect(version, `${host}: PRECONDITION P84 — the context table answers its version`).toMatch(/^[a-f0-9]{64}$/);
       const asking = await shoppers(m, N), beaconing = await shoppers(m, N);
-      // R2: the republished requests are held at their forward to the shopper's object, after the mint read the holdout.
-      const env = m.env as unknown as Record<string, unknown>, objects = m.env.SHOPPER_REFLEX;
+      // R2: the republished requests are held at their forward, after the mint read the holdout. R10 (R-P548): a first
+      // request's decision runs on the blank in-memory copy of the brand-new visitor's record (P97, R-P547), so its
+      // forward is held there (../P97/_copy).
       const forwards = gate(), parked = { n: 0 };
-      env.SHOPPER_REFLEX = { idFromName: (name: string) => objects.idFromName(name), get: (target: DurableObjectId) => {
-        const stub = objects.get(target);
-        return { fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-          const request = new Request(input, init);
-          if (request.url.endsWith('/authority/request') && (await request.clone().text()).includes(REPUBLISHED)) { parked.n += 1; await forwards.wait; }
-          return stub.fetch(request);
-        } };
-      } };
+      const watch = watchCopies(m, async ({ path, request }, proceed) => {
+        if (path === '/authority/request' && (await request.clone().text()).includes(REPUBLISHED)) { parked.n += 1; await forwards.wait; }
+        return proceed();
+      });
       const late = gate();
       const restoreCache = operatorCacheAsDeployed(m);
       let republication = { status: 0, body: {} as Record<string, unknown> };
@@ -369,7 +367,7 @@ describe('unit:P94.AD1', () => {
         const [afterRepublished, afterLate] = await Promise.all([Promise.all(republished), Promise.all(lateOnes)]);
         answers = { capped: early[0], republished: afterRepublished, late: afterLate, ignored: early[1], beacons: early[2] };
         await m.drain();
-      } finally { env.SHOPPER_REFLEX = objects; forwards.open(); late.open(); }
+      } finally { watch.stop(); forwards.open(); late.open(); }
       const counted = await armDrawOf(m);
       restoreCache();
       expect([republication.status, parked.n], `${host}: PRECONDITION — the learn republication lands while the ${N} republished requests are parked (${show(republication.body)})`).toEqual([200, N]);
