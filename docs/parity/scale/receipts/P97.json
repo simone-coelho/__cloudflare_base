@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P97",
+  "workOrderHash": "sha256:bc42d522007ed62d29e342fd09f8da93c86ecb6d5bcd2aaa81641ad766bb646e",
+  "artifact": {
+    "revision": "f16bd3456cf21d8dfa62b0a373e75fbb03667dd2",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p97-joined-e merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p97-build at a28d936c (the S41 specification merged first and re-merged through round 7, f2a2bfbd). The mechanism: src/identity/freshOwner.ts, the ShopperReflex class over an empty in-memory record with a read-only environment that refuses and records every write, Durable Object call, outbound fetch and Cache API call; src/routes/decisions.ts, the first-request door activating and deciding on that copy and falling back to today's path on any refusal, any change of the copy's record beyond the activation's, or any failure but the activation's own refusal, then creating the real record under waitUntil after the answer; src/identity/consentContinuity.ts and sessionAuthority.ts, the activation and forward taking the copy as their owner. In ShopperReflex.ts: the activation applied once per grant; consent never overwritten by an older choice, switch by switch on each choice's own time; a retried detach answering 200 beside a newer choice on the replacement; a carried refusal keeping the time it was made (consent.ts intersectConsentDated and carryConsentDated beside unchanged intersectConsent and carryConsent); and CONSENT_CLOCK_SKEW_MS of one second, within which a refusal holds between two records. The instrumentation: X-Owner-Timing on the activation's internal answer and sources.sessionParts on the door's answer. Kits 01 and 02 state the design and the bound.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S41/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S41/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P97/implementer/REPORT.md",
+      "git commits on rem/p97-joined-e up to f16bd345"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P97 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S41/reviewer-p97/logs-e/01-P97-run1.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "S41/gate-r5/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P97/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-29T02:27:16.847Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "program": {
+    "id": "tapestry-parity-request-path",
+    "title": "Tapestry parity, nothing on the visitor's path that grows with configuration: the published-audience list read once, never re-read on a timer (amendment 13, E30)",
+    "ticketIds": [
+      "P105"
+    ],
+    "maxActive": 1,
+    "completionPolicy": "LOCAL_WITH_SEPARATE_LIVE",
+    "integrationGateCommand": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "sequencePolicy": {
+      "mode": "STRICT",
+      "grandfatheredDoneTicketIds": []
+    }
+  },
+  "tickets": [
+    {
+      "id": "P105",
+      "title": "The published-audience list: one document in the tenant's configuration publication, read through the action's own pin, never re-read on a timer (**amendment 13, E30, 2026-10-28**)",
+      "state": "ACTIVE",
+      "executionMode": "IMPLEMENTATION",
+      "authority": {
+        "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
+        "locator": "E30 · section 2 of amendment 13, \"Done when\" (inserted from _evidence/parity-step3/S52/E30.draft.md; the cause R-P607, the root-cause design _evidence/parity-step3/S52/analyst-audience/DESIGN.md; in force under the owner's direction, R-P545)",
+        "requirement": "the tenant's published audiences are one document, an optional member of its configuration publication, written by every publish, archive, rename, pin and seed as one set publication, and read by every qualification on both hosts through the pin the action already holds: no audience read while the publication is unchanged and the isolate holds it, one storage read after a change or on a new isolate, at any number of audiences; a write is seen on the next action everywhere, with no timer and no KV propagation window; no write is lost to a concurrent one; a document past 2 MiB is refused by name; an unreadable publication fails qualification and never falls back; existing tenants are moved from their KV records by their first audience write and by the five-minute scheduled run, every page of the list read, and until moved their records are read in one wave; the demo's regeneration is one publication; P61.LO3 passes with the copy's old ten-second line crossed between its rounds."
+      },
+      "outcome": "A visitor's action on either host never waits on the tenant's audience list growing: with 10 or 3,000 published audiences it reads none while nothing changed and one document when something did, an operator's change qualifies on the very next action everywhere, and no published audience is ever silently dropped.",
+      "criteria": [
+        {
+          "id": "AL1",
+          "kind": "LOCAL",
+          "observable": "On both hosts, at 10, 50, 200 and 1,000 published audiences, under the AA2 lever (500 ms on every remote call, src/units/_parity8.ts remoteLatency), customer profile: an action (a view, a buffered action, the render acknowledgement) whose isolate holds the publication makes no audience read and answers within half a call of the same action with no audiences; on an isolate holding nothing it makes exactly one audience read (the member's document) and no KV list or audience get; the reader is every caller of MockSegmentProvider.fetchQualifiedSegments (src/connectors/SegmentProvider.ts:35-36): RealtimeSegmentEngine.ts:716, :1121, :1213, src/reflex/bufferedAction.ts:105, ShopperReflex.ts:815, :1613, :3872. Today listPublished (src/connectors/AudienceStore.ts:75-88) serves its copy only while it is under AUDIENCE_LIST_MS (:25, :76-77) aged from its last re-read (:86), then reads one list (:79) and one get per key awaited in turn (:81-84): REPRODUCED 11, 51, 201 and 1,001 audience calls in as many sequential trips, +5,503 ms at 10 under the lever on both hosts and every action re-reading from 200 up (the re-read outlasting the ten seconds), at 78 ms a call +862 ms, +4,004 ms, 16,042 ms and 79,071 ms (_evidence/parity-step3/S52/analyst-audience/DESIGN.md §2; logs p2-base-l78.log, p2b-base-l500-n10.log).",
+          "proof": "The P105 acceptance command runs the tests named unit:P105.AL1 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "AL2",
+          "kind": "LOCAL",
+          "observable": "Lane E4's guarantee kept and tightened, on both hosts: an audience published, archived, renamed or pinned through this isolate (POST /operator/audiences/publish, src/routes/operator.ts:113-124; rename :441-445; pin :463-467; prune :489-497) qualifies, stops qualifying or reads renamed or pinned on the next action; one committed through another storage handle or binding is seen on the next action that reads the publication head (every operation, src/config/publication.ts:467-469), with no clock moved; nothing reads an audience from KV on the request path once the tenant is moved. Today a write here forgets this isolate's copy (AudienceStore.ts:91-95) and one elsewhere is seen within AUDIENCE_LIST_MS plus KV's own minute (:20-22).",
+          "proof": "The P105 acceptance command runs the tests named unit:P105.AL2 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "AL3",
+          "kind": "LOCAL",
+          "observable": "The writes: each of publish, archive, rename, setPinned and seed is one set publication of the audiences member (publishSet, src/config/publication.ts:938-994, CAS on the head; a conflict retried, bounded), the per-audience KV record written after the commit so get(key) still resolves an archived audience (operator.ts:484-488); two operator writes started together through two stores both survive; the demo's seeding and catalogue regeneration (RealtimeSegmentEngine.ts:337-363, src/reflex/audienceGenerator.ts:182-217) are one publication per pass; a member past 2 MiB is refused 413 document_too_large naming it and nothing changes (publication.ts:7, :100-103; about 3,388 audiences of today's seed size, 619 B each, DESIGN.md §5); a publication that cannot be read fails qualification as an unreadable reflex document does (the session host's action fails; the object host degrades to reflex-only, ShopperReflex.ts:1612-1616) and never falls back to KV. Today a write is one KV put (AudienceStore.ts:97-156) and a list past 1,000 keys is truncated at its first page (:79, cursor never followed): REPRODUCED 995 of 1,000 published returned beside 5 archived, and a 1,001st audience published and never listed (DESIGN.md §2; logs p1-store-base.log, p4-writes-base.log).",
+          "proof": "The P105 acceptance command runs the tests named unit:P105.AL3 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "AL4",
+          "kind": "LOCAL",
+          "observable": "The move, on both hosts: a tenant whose set has no audiences member (the sealed set's own statement, readOptionalPinnedPublication, publication.ts:563-567) is read from its KV records with every page of the list followed and every get issued at once (1,005 keys answer all 1,000 published); its first audience write creates the member from those records in the same publication, and the five-minute scheduled run (src/index.ts:282, running on both profiles :271-273) creates it for every provisioned tenant with no operator; after either, no request path lists KV. Today every tenant reads its records with one list and sequential gets (AudienceStore.ts:79-84).",
+          "proof": "The P105 acceptance command runs the tests named unit:P105.AL4 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "AL5",
+          "kind": "LOCAL",
+          "observable": "LOCK, on both hosts: a tenant qualifies only its own audiences (the member scoped by publicationScope, publication.ts:126-136; the store's tenant the route's, src/connectors/index.ts:31, :40); the default tenant's demo surfaces evaluate only their own audiences (SegmentProvider.ts:43-48); qualification answers the same segments as today on the same audiences and contexts; src/reflex/audienceGenerator.test.ts, src/tenancy/storeIsolation.test.ts, src/demos/brighthour/surface.test.ts, src/reflex/shopperReflex.test.ts and src/routes/realtime.sdkContract.test.ts pass (W22.07's qualification fault moved by its R10 to the member's read).",
+          "proof": "The P105 acceptance command runs the tests named unit:P105.AL5 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "AL6",
+          "kind": "LOCAL",
+          "observable": "P61.LO3 for the right reason, on both hosts: its R-P115 leg (src/units/P61/LEDGER.unit.test.ts:454-464) passes unchanged, and passes with 10.5 s added between the counted round's view and its snapshot (the delivery reviewer's deciding control): the acknowledgement's own calls equal the free round's. Today that control fails on both hosts, the acknowledgement making 53 and 51 own calls where 5 and 3 are expected and taking 26,561 ms (REPRODUCED at a5118d38, DESIGN.md §6, log p3-base-delay.log; R-P603, R-P607); the prototype passes it, 5 and 3 (log p3-proto-delay.log).",
+          "proof": "The P105 acceptance command runs the tests named unit:P105.AL6 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
+          "id": "LV1",
+          "kind": "DEFERRED_LIVE",
+          "observable": "Lane L21 on the pair's next release (the stamps read-only): on a pair tenant the lane may write to, with at least 200 published audiences, an action on each host after more than ten seconds' pause answers within the pair's ordinary action time and its server timing names no audience read; an audience the lane publishes qualifies its visitor on the next action, and one it prunes stops qualifying on the next.",
+          "proof": "The LIVE1 walkthrough record.",
+          "deferredAcceptanceId": "LIVE1"
+        }
+      ],
+      "existingEvidence": [
+        {
+          "ref": "_evidence/parity-step3/S52/analyst-audience/DESIGN.md (the map, the size, the candidates, the design, the prototype's measurements); its logs under _evidence/parity-step3/S52/analyst-audience/logs/ and its probes and prototype under scratch/tools/ (proto.cjs, proto.diff, store.probe.test.ts, harness.probe.test.ts, writes.probe.test.ts, p61ctl.cjs)",
+          "description": "REPRODUCED at a5118d38 on both hosts: 1 + N sequential audience calls on a stale copy, the copy never used from about 128 audiences at 78 ms a call, no single flight, truncation past 1,000 keys, the P61.LO3 control failing 53 and 51; on the prototype 0 audience calls held and 1 cold at every size, the control passing. SOURCE-TRACED: every reader, the writers, the age rule, the customer path through MockSegmentProvider."
+        },
+        {
+          "ref": "_evidence/parity-step3/S41/reviewer-p97/REPORT-p61-lo3.md and its logs-c/, tools-kept-c/",
+          "description": "The cause found by the P97 delivery reviewer: the acknowledgement's 48 extra calls are one list and 47 gets of the audience re-read, at base 69feb765 and at the join alike."
+        },
+        {
+          "ref": "_evidence/parity-step3/AMENDMENTS.md:1006 (R-P545), :1064 (R-P603), :1068 (R-P607)",
+          "description": "The owner's direction (every problem fixed at its cause); P61.LO3's 53 calls in P97's gate; the cause ruled a pre-existing defect of the shipped engine, fixed at its cause as a new item E30."
+        },
+        {
+          "ref": "git -C /home/simonecoelho/rem/analyst-audience rev-parse HEAD (a5118d38cfa4b9cd76d1c189c59743327e11c153)",
+          "description": "The revision every file:line in this work order cites; the lead re-checks them against the revision the specification is cut from (P102's join if it lands first, R-P606)."
+        },
+        {
+          "ref": "src/connectors/AudienceStore.ts:12-27, :75-95, :97-156; src/connectors/SegmentProvider.ts:32-52; src/connectors/index.ts:28-37; src/connectors/config.ts:115; src/services/RealtimeSegmentEngine.ts:337-363, :716, :1121, :1213; src/reflex/bufferedAction.ts:105; src/durable-objects/ShopperReflex.ts:815, :1305, :1613, :3872; src/config/publication.ts:7-23, :100-103, :126-136, :338-352, :467-504, :528-567, :938-994; src/routes/operator.ts:113-159, :441-497; src/index.ts:271-282",
+          "description": "Today's audience store, its readers on both hosts, the customer path, the demo seeding, the publication's members, ceiling, scope, serving cache and set publication, the operator routes and the scheduled run, cited in AL1 to AL6."
+        }
+      ],
+      "remainingWork": [
+        "The audiences kind (one optional member, validated: unique keys, each published with its conditions) in src/connectors/AudienceStore.ts and its registration in src/config/publication.ts (KINDS, OPTIONAL_MEMBERS, kindFor only); closed by unit:P105.AL1 and unit:P105.AL3.",
+        "listPublished read through the operation's pin and the member, absence (the set's statement) told apart from an unreadable publication, no clone of the whole list per call; the ten-second copy, AUDIENCE_LIST_MS and the write counter left only on the unmoved tenant's path or removed; closed by unit:P105.AL1, unit:P105.AL2 and unit:P105.AL3.",
+        "The five writes as set publications with a bounded retry on conflict, a batched apply used by seed and by regenerateCatalogAudiences (src/reflex/audienceGenerator.ts) and ensureAudiencesSeeded (src/services/RealtimeSegmentEngine.ts, its call only), the KV record written after the commit; closed by unit:P105.AL3.",
+        "The move: the unmoved read with the cursor followed and the gets issued together; the member created by the first write and by the five-minute run (src/index.ts, its call only); closed by unit:P105.AL4.",
+        "The specification names the R10s its legs need, for the lead to rule before the build: W01.08 (src/index.api-boundary.test.ts:2557, an exact call list [['CACHE.list','audience:']]), W03.02 (:3198, the publish and read call list), W22.07's qualification fault (src/routes/realtime.sdkContract.test.ts:2803-2812, injected at the KV audience get the moved read never makes) and lane E4's list counts (src/connectors/AudienceStore.memory.test.ts:48, :51, :68, :91, :95), each pinning today's storage location rather than a behaviour (the prototype passed 718 of 721 of the 26 audience-touching files; these three, and E4's file only because its env has no STORAGE, DESIGN.md §6).",
+        "The locks hold, closed by unit:P105.AL5, unit:P105.AL6 and the program integration gate: P61 (all 44), P90, P87, P77, W37, H3, the audience generator, store isolation, the brighthour surface, the shopper reflex and the SDK contract suites, and src/config/publication.optionalMember.test.ts and publication.servingCache.test.ts."
+      ],
+      "decisions": [
+        {
+          "id": "D1",
+          "status": "RESOLVED",
+          "authorityRef": "Amendment 13 section 2 E30 and section 3 row 1 as amended for it (_evidence/parity-step3/S52/E30.draft.md, for insertion in docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md); R-P607 (_evidence/parity-step3/AMENDMENTS.md:1068: the audience list read on the request path a pre-existing defect, fixed at its cause as a new item E30, its root cause and design analysed in S52, then its work order); the design _evidence/parity-step3/S52/analyst-audience/DESIGN.md §5 as the lead adopts it; under the owner's direction of 28 October, R-P545 (:1006: \"Everything needs to be fixed.\")",
+          "effect": "E30 enters tapestry-parity-request-path as P105, built to S52's design: the published audiences one optional member of the tenant's configuration publication, read through the action's own pin and never on a timer, written as one set publication per change, moved from the KV records without an operator; the 2 MiB member ceiling is stated and refused by name; it is sequenced after P102 (E27), which reworks the same publication cache; it leaves the programme only by the owner's word, recorded by amendment."
+        }
+      ],
+      "deferredLiveAcceptance": [
+        {
+          "id": "LIVE1",
+          "description": "Deployed-runtime acceptance of this ticket on both shopper hosts of the acceptance pair with the released artifact, in lane L21 on the pair's next release (the stamps read-only), in the batched live acceptance of the parity programmes.",
+          "owner": "deployment owner with the customer acceptance owner",
+          "proof": "A release-stamped walkthrough record that names the artifact revision, both hosts and the observed result of every LOCAL criterion and of the live rows named in LV1."
+        }
+      ],
+      "allowedPaths": [
+        "src/connectors/AudienceStore.ts",
+        "src/config/publication.ts (the audiences kind in KINDS, OPTIONAL_MEMBERS and kindFor; the serving copy leaving the audiences member out, which a cold machine reads in the same wave as the head and the copy; R-P644)",
+        "src/reflex/audienceGenerator.ts (regeneration's one batched write only)",
+        "src/services/RealtimeSegmentEngine.ts (ensureAudiencesSeeded's batched seed and regeneration call only)",
+        "src/index.ts (the five-minute run's move of each provisioned tenant's audiences, inside the tenant's existing job, and its reconciliation of any KV audience record written after the move into the member; R-P644)",
+        "src/routes/operator.ts (the audience routes' answers only: the store's 413 answered 413 by name, and the operator's audience list read through the publication like every other reader; R-P644)",
+        "src/index.api-boundary.test.ts (R10 by name: W01.08 :2557, :2560, :2573–2574 and W03.02 :3198 gain the tenant's publication head reads only, the KV calls unchanged; by the specifier; R-P644)",
+        "src/routes/realtime.sdkContract.test.ts (R10 by name: W22.07 :2803–2812 injects its fault at the audiences member's read after invalidatePublicationCache(), the expectation unchanged; by the specifier; R-P644)",
+        "src/connectors/AudienceStore.memory.test.ts (R10 by name: :48, :51, :68, :91, :95 test lane E4's behaviours on a tenant holding the member, as written in the P105 header; by the specifier; R-P644)",
+        "src/units/W29/LEDGER.unit.test.ts (R10 by name: W29.R2 :236–239 runs one five-minute run first, then today's detector unchanged; by the specifier; R-P644)",
+        "src/units/P102/LEDGER.unit.test.ts (R10 by name: CR2's legs run one five-minute run before asCommittedToday and expect committed 3 where 2; by the specifier or P105's builder after P102 joins; R-P644)"
+      ],
+      "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
+      "specificationGate": {
+        "specifier": "rem-specifier",
+        "reviewer": "rem-reviewer",
+        "reviewedRevision": "pending P105's specification review (filled by the lead at the review's PASS)",
+        "verdict": "PASS",
+        "evidence": [
+          "pending: P105's specification review records the reviewed revision and the RED/HONEST evidence per criterion"
+        ],
+        "negativeControlEvidence": [
+          "pending: P105's specification review records the sketches that turn each lock RED"
+        ]
+      },
+      "doneWhen": [
+        "The frozen acceptance command of this ticket exits 0 at the recorded artifact revision.",
+        "The program integration gate command exits 0 once at the same artifact revision.",
+        "rem-reviewer, the reviewer named in the specification gate, records PASS on the whole ticket at the same artifact revision.",
+        "Every remaining-work item is closed by a test in the acceptance command, or for a sentence in a document by the reviewer reading the changed sentence at the artifact revision."
+      ],
+      "blockers": []
+    }
+  ]
+}

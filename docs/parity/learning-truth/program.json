@@ -122,11 +122,11 @@
       "allowedPaths": [
         "src/content/kinds.ts (the learn document's money member and its validation only)",
         "src/content/types.ts (LearnConfig's money member only)",
-        "src/learn/route.ts",
+        "src/learn/route.ts (as before; and the direct outcome path writing its ledger row with the stamp the ring answered with, so every copy of one outcome carries the stamp live decided it under; R-P620)",
         "src/ledger/recovery.ts (OutcomeRecoveryInput's money member; sourceOf leaving the money stamp out of the source digest; runOwnerRecovery's first-admission stamp; the prepare body and admit call only as the stamp needs; R-P571 (b), R-P588)",
         "src/learn/policy.ts",
         "src/learn/fan.ts",
-        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call; the direct /outcome handler evaluating every delivery of an outcome id under the stamp it first saw, that record kept with the credited journal — bounded, charged, expired, erased, reset and failing as the journal does, preferably within the journal's own write; R-P594, R-P604)",
+        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call; the direct /outcome handler evaluating every delivery of an outcome id under the stamp it first saw, that record kept with the credited journal — bounded, charged, expired, erased, reset and failing as the journal does, preferably within the journal's own write; refused entries evicted before any credited entry under the journal's caps; R-P594, R-P604, R-P628)",
         "src/learn/hourly.ts (the hourly fold's credit, and its reading of rows sharing a logical id keeping the earliest-born copy; not its recovery fingerprint, R-P576 R12; R-P604)",
         "src/learn/report.ts (the raw grids' credit, and their reading of rows sharing a logical id keeping the earliest-born copy; R-P604)",
         "src/durable-objects/LearnStats.ts (the W24 rebuild's call to foldRetainedDay only)",
@@ -141,7 +141,9 @@
         "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
         "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
         "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
-        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)"
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)",
+        "src/units/W24/B2.unit.test.ts (R10 by name: the message at :634 only, saying a fully refused outcome is never credited rather than never written into the credited journal; the assertion unchanged; by the specifier; R-P620)",
+        "src/ledger/writer.ts (findById choosing the earliest-born copy among rows sharing a logical id only; R-P628)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -289,10 +291,11 @@
         "src/index.ts (the five-minute run's enqueue and the queue handler's fold-step messages only)",
         "docs/kit/02-api-reference.md",
         "src/learn/hourly.test.ts (R10 by name: the 8 MiB refusal at :907–910 re-pointed to RF5's by-slot answer only; by the specifier; R-P615)",
-        "src/learn/report.test.ts (R10 by name: the 8 MiB refusal at :379–382 re-pointed to RF5's by-slot answer only; by the specifier; R-P615)",
-        "src/units/W37/LEDGER.unit.test.ts (R10 by name: the workerd configuration at :549–564 declares the queue binding the shipped configuration declares for the fold steps, nothing else; by the specifier; R-P615)",
-        "src/units/W37/FIX2.unit.test.ts (R10 by name: the workerd configuration at :250–281 as W37 LEDGER's; by the specifier; R-P615)",
-        "src/units/P103/LEDGER.unit.test.ts (R10 by name: the legs that call foldOpenHours and catchUp directly drive the five-minute run and drain the fold's queue instead, every expectation unchanged; by the specifier or P104's builder after P103 joins; R-P615)"
+        "src/learn/report.test.ts (R10 by name: the 8 MiB refusal at :379–382 re-pointed to RF5's by-slot answer, and the storage double keeping custom metadata and answering a ranged text() with the requested range as R2 does; by the specifier; R-P615, R-P632)",
+        "src/units/W37/LEDGER.unit.test.ts (R10 by name: the workerd configuration declares the shipped events queue for the fold steps, the wrapper passes batches to the Worker's queue handler, and the fold legs wait, bounded, for the queue's deliveries before reading; every expectation and run limit unchanged; by the specifier; R-P615, R-P632)",
+        "src/units/W37/FIX2.unit.test.ts (R10 by name: as W37 LEDGER's; the run limit unchanged, since a catch-up enqueues every due hour in one run; by the specifier; R-P615, R-P632)",
+        "src/units/P103/LEDGER.unit.test.ts (R10 by name: the legs that call foldOpenHours and catchUp directly drive the five-minute run and drain the fold's queue instead, every expectation unchanged; by the specifier or P104's builder after P103 joins; R-P615)",
+        "src/units/_native.ts (R10 by name: an optional queue pass-through to the Worker's queue handler, absent by default; by the specifier; R-P632)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P104 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {

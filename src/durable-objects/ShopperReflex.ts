@@ -63,9 +63,10 @@ import { ledgerOperationOwners, executeHeldLedger, executeLedgerOperation, forwa
 import { retentionBirth, externalRetentionBirths, mergeExternalRetention, requireRetention, readRetention, mergeRetention, RetentionUnavailable, type RetentionStamp, type ExternalRetention } from '@/retention';
 import { pinRetention, pinProfileRetention, ownerRetentionDeadline, currentOwnerIdentity, pinRecoveryDeadline } from '@/identity/sessionAuthority';
 import { runOwnerRecovery, resumeOwnerRecovery, disposeOwnerRecovery, recoveryCleanup, retireOwnerRecovery, settleCarriedOutcome, stripExpiredOwnerRecovery, storedRenderOf, authorizeRecoveryBodies, authorizeRecoverySurvivors, recoveryOwnershipProof, RECOVERY_LIMITS, type CarriedOutcome, type OwnerRecovery, type RecoveryInput, type RecoveryOptions } from '@/ledger/recovery';
-import { consentFromCookies, intersectConsent, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentOperation } from '@/content/consent';
+import { consentFromCookies, intersectConsent, intersectConsentDated, refusalHints, storedConsent, personalizes, chooseConsent, consentInstruction, instructionOf, liveInstruction, carryConsent, carryConsentDated, consentDeadline, withConsent, CONSENT_SWITCHES, REFUSING, type Consent, type ConsentChoice, type ConsentOperation } from '@/content/consent';
 import { assertSessionTarget, capabilityToken, verifySessionCapability, shopperTenant, SHOPPER_HEADER, SHOPPER_PROTOCOL, SHOPPER_MAX_AGE, newAnonymousSession, signSessionCapability, issueContinuityProof, continuityDigest, CONTINUITY_RETIRED_HEADER, SessionAccessError, type ContinuityDescriptor, type SessionCapability } from '@/identity/sessionCapability';
 import { shopperObjectName } from '@/tenancy/objects';
+import { OWNER_TIMING_HEADER, ownerTimer } from '@/identity/consentContinuity';
 import { IdentityStore, MAX_MERGED_ACCOUNTS, type ShopperRecord } from '@/identity/store';
 import { isShopperId, isSalted, shopperIdFor } from '@/identity/shopperId';
 import { loadTombstone, writeTombstone, resetVisitorRing } from '@/ledger/erasure';
@@ -468,6 +469,8 @@ export class ShopperReflex {
       hibernation wake resets it, but sustained bursts — the abuse case — keep the
       object alive, so the window holds exactly when it matters. */
   private rate = { windowStart: 0, count: 0 };
+  /** P97 (F1): the grant the current operation adopted onto this record, if it adopted one (the activation reads it). */
+  private adoptedGrant: string | null = null;
   private dropped = { rateLimited: 0, unknownProduct: 0, invalid: 0 };
 
   constructor(state: DurableObjectState, env: Env) {
@@ -482,7 +485,9 @@ export class ShopperReflex {
   // ── HTTP surface ────────────────────────────────────────────────────────────
 
   async fetch(request: Request): Promise<Response> {
-    return this.synthetic.run(request, () => this.fetchScoped(request)).catch(error => {
+    // P97 (FV3): the request's arrival, from which the activation's `op` is counted.
+    const arrived = performance.now();
+    return this.synthetic.run(request, () => this.fetchScoped(request, arrived)).catch(error => {
       if (error instanceof SyntheticUnavailable) { const response = json({ ok: false, error: 'Shopper session unavailable' }, 401); response.headers.set('X-Monitor-Refusal', 'boundary'); return response; }
       // Baseline 52 (G10): this object's storage refused the boundary's marker
       // read, so nothing ran. The session host's typed refusal, marked so the
@@ -492,7 +497,7 @@ export class ShopperReflex {
     });
   }
 
-  private async fetchScoped(request: Request): Promise<Response> {
+  private async fetchScoped(request: Request, arrived: number): Promise<Response> {
     const url = new URL(request.url);
     let principal: SessionCapability | undefined;
     let internal: InternalContext | undefined;
@@ -690,20 +695,50 @@ export class ShopperReflex {
     }
     if (request.method === 'POST' && url.pathname === '/identity/activate') {
       if (!principal) return json({ ok: false }, 401);
+      // P97 (FV3, R-P547): the activation times its own parts and answers them in X-Owner-Timing (internal; see
+      // OWNER_TIMING_HEADER): `queue` (the body read and the wait for the object's turn), `grant` (the grant adopted),
+      // `consent` (the consent carried, its alarm and any instruction stored), `restrict` (the session host's
+      // restriction, when it runs), `alarm` (the alarm rescheduled), `commit` (the writes made durable) and `op` (the
+      // whole operation from the request's arrival).
+      const timer = ownerTimer(arrived);
       const body = z.object({ consent: consentSchema, existingOnly: z.boolean().optional() }).strict().parse(await request.json());
       return this.serialize(async () => {
         try {
+          timer.lap('queue');
+          // P97 (F1, R-P581; FV2, R-P583): an activation is applied once per grant, and a consent choice is never
+          // overwritten by an older one. A grant this record already held before this activation (adopted by an earlier
+          // one, or by a request's forward that reached the record first) is not activated again unless the activation
+          // carries an explicit choice no older than the record's own for the same switch: the default the grant was
+          // issued under ran when it was adopted, and a choice made on the record since then stands, the activation
+          // answering the record's consent as it is. A newer explicit choice (a rotation's newer refusal, W05.10, W35.04)
+          // is applied as before; a switch the record chose later than the activation's choice keeps the record's.
+          this.adoptedGrant = null;
           await this.assertOwned(principal!, undefined, false, !body.existingOnly);
-          const consent = carryConsent(body.consent, principal!, storedConsent(await this.state.storage.get('consent')));
-          await this.scheduleConsentAlarm(consent);
-          assertSessionTarget(principal!);
-          if (consent.instruction) await this.state.storage.put('consent', consent.instruction);
-          this.consent = consent;
-          if ((this.env.REFLEX_HOST ?? 'session') === 'session' && !personalizes(consent)) {
-            await new SessionManager(this.env, { tenant: principal!.tenant, principal }).restrictConsent(principal!.sessionId, consent);
+          timer.lap('grant');
+          const recorded = storedConsent(await this.state.storage.get('consent')), carried = storedConsent(body.consent);
+          const applied = this.adoptedGrant !== principal!.grantId && !CONSENT_SWITCHES.some(key => carried.instruction?.[key] !== undefined
+            && !(recorded.instruction?.[key] && recordChoiceHolds(recorded.instruction[key]!, carried.instruction[key]!)));
+          let consent: Consent;
+          if (applied) consent = recorded;
+          else {
+            consent = newerChoicesKept(carryConsentDated(body.consent, principal!, recorded), recorded, carried);
+            await this.scheduleConsentAlarm(consent);
+            assertSessionTarget(principal!);
+            if (consent.instruction) await this.state.storage.put('consent', consent.instruction);
           }
-          await this.scheduleConsentAlarm();
-          return json({ ok: true, consent });
+          this.consent = consent;
+          timer.lap('consent');
+          if (!applied && (this.env.REFLEX_HOST ?? 'session') === 'session' && !personalizes(consent)) {
+            await new SessionManager(this.env, { tenant: principal!.tenant, principal }).restrictConsent(principal!.sessionId, consent);
+            timer.lap('restrict');
+          }
+          if (!applied) await this.scheduleConsentAlarm();
+          timer.lap('alarm');
+          await this.committed();
+          timer.lap('commit');
+          const answer = json({ ok: true, consent });
+          answer.headers.set(OWNER_TIMING_HEADER, timer.header());
+          return answer;
         } catch { this.invalidateMirrors(); return json({ ok: false }, 401); }
       });
     }
@@ -2357,6 +2392,7 @@ export class ShopperReflex {
       authority = { version: 1, epoch: grant.authorityEpoch, grants: { [grant.grantId]: grant } };
       try { await this.state.storage.put('grantAuthority', authority); }
       catch (error) { this.invalidateMirrors(); throw error; }
+      this.adoptedGrant = grant.grantId;
     }
     if (authority.epoch !== grant.authorityEpoch
       || JSON.stringify(authority.grants[grant.grantId]) !== JSON.stringify(grant)) throw new SessionAccessError();
@@ -2679,6 +2715,9 @@ export class ShopperReflex {
           }
         }
         const consent = intersectConsent(current, rotation.consent, body.consent);
+        // P97 (R-P605): what the replacement's activation carries is dated by when each refusal was made, so its
+        // never-older rule orders the source's newer refusal after a choice the replacement made earlier.
+        const carried = intersectConsentDated(current, rotation.consent, body.consent);
         // A newer refusal on the source is durable before any replacement response.
         if (JSON.stringify(consent) !== JSON.stringify(rotation.consent) || JSON.stringify(consent) !== JSON.stringify(current)) {
           rotation = { ...rotation, consent };
@@ -2690,11 +2729,24 @@ export class ShopperReflex {
         const target = this.env.SHOPPER_REFLEX.get(this.env.SHOPPER_REFLEX.idFromName(shopperObjectName(source.tenant, replacement.subject)));
         const response = await target.fetch('https://shopper-reflex/identity/activate', {
           method: 'POST', headers: { [SHOPPER_HEADER]: replacement.capability, 'X-Tenant': source.tenant, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ consent, existingOnly: rotation.status === 'complete' }),
+          body: JSON.stringify({ consent: carried, existingOnly: rotation.status === 'complete' }),
         });
         if (!response.ok) throw new SessionAccessError();
         const result = z.object({ ok: z.literal(true), consent: consentSchema }).parse(await response.json());
-        if ((!consent.tracking && result.consent.tracking) || (!consent.personalization && result.consent.personalization)) throw new SessionAccessError();
+        // P97 (N2, R-P601): the replacement's answer may be more permissive than the source on a switch only where the
+        // replacement itself chose so after every choice the source holds for that switch (its own newer choice, kept by
+        // the activation's never-older rule: a second tab's retry after the replacement accepted). Anything else more
+        // permissive would be the rotation widening consent, and is refused as before.
+        const sourceChoseAt = (key: (typeof CONSENT_SWITCHES)[number]) => Math.max(current.instruction?.[key]?.chosenAt ?? -Infinity,
+          consent.instruction?.[key]?.chosenAt ?? -Infinity, carried.instruction?.[key]?.chosenAt ?? -Infinity);
+        // R-P618: ordered no more finely than two records' clocks can be trusted (recordChoiceHolds).
+        const sourceChoice = (key: (typeof CONSENT_SWITCHES)[number]) => [current, consent, carried].map(c => c.instruction?.[key])
+          .filter((choice): choice is ConsentChoice => choice !== undefined && choice.chosenAt === sourceChoseAt(key))[0];
+        const replacementsOwn = (key: (typeof CONSENT_SWITCHES)[number]) => {
+          const own = result.consent.instruction?.[key], theirs = sourceChoice(key);
+          return own !== undefined && (theirs === undefined || recordChoiceHolds(own, theirs));
+        };
+        if (CONSENT_SWITCHES.some(key => !consent[key] && result.consent[key] && !replacementsOwn(key))) throw new SessionAccessError();
         if (rotation.status === 'prepared') {
           const complete = { ...rotation, status: 'complete' as const };
           if (rotation.operation === 'reset') await this.eraseWithBarrier({ [key]: complete, consent });
@@ -3996,6 +4048,16 @@ export class ShopperReflex {
   }
 
   /**
+   * P97 (FV3): the activation's `commit` part: the writes it made, made durable before its answer (`storage.sync()`),
+   * which the platform's output gate otherwise waits for before releasing the answer. Instrumentation only: storage
+   * without `sync` is not waited on, and a failed sync is left to that output gate exactly as without it.
+   */
+  private async committed(): Promise<void> {
+    const storage = this.state.storage as { sync?: () => Promise<void> };
+    try { if (typeof storage.sync === 'function') await storage.sync(); } catch { /* the output gate answers a failed commit as before */ }
+  }
+
+  /**
    * P65 (amendment 7, R-P124(3)): the drop the engine decides for the event whose
    * behaviour capture's admission carried an outcome, decided again at the alarm
    * from the carried behaviour record (its type, its typed projection of the
@@ -4756,6 +4818,42 @@ function safeAttachment(ws: WebSocket): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * P97 (FV2, R-P618): how finely choices made on different records are ordered by their clocks. Two records are Durable
+ * Objects that may run on different machines in different places, each reading its own clock, and a Worker's clock
+ * reads the time of its last I/O rather than the instant a choice is recorded. No platform figure bounds how far two
+ * such clocks may disagree, so this bound is a judgement, not a measurement: one second, far above the milliseconds two
+ * synchronised machines usually differ by and below the time a person takes to make a next choice. Kit 02 states it.
+ */
+const CONSENT_CLOCK_SKEW_MS = 1_000;
+/**
+ * P97 (FV2, R-P618): whether a record's choice (`mine`) holds against a choice for the same switch made on another
+ * record (`theirs`). Within CONSENT_CLOCK_SKEW_MS of each other a refusal and a more permissive choice are not ordered by
+ * their clocks: the refusal holds, whichever reads later. Otherwise the newer choice holds.
+ */
+function recordChoiceHolds(mine: ConsentChoice, theirs: ConsentChoice): boolean {
+  if (mine.value !== theirs.value && Math.abs(mine.chosenAt - theirs.chosenAt) <= CONSENT_CLOCK_SKEW_MS) return mine.value === false;
+  return mine.chosenAt > theirs.chosenAt;
+}
+
+/**
+ * P97 (FV2, R-P583, R-P618): a consent choice is never overwritten by an older one. Of `carried`, the consent an
+ * activation would store, every switch whose record (`recorded`) choice holds against the activation's own choice
+ * (`source`; recordChoiceHolds), or that the record chose when the activation made no choice for it, keeps the record's
+ * choice; every other switch is as carried.
+ */
+function newerChoicesKept(carried: Consent, recorded: Consent, source: Consent): Consent {
+  const own = recorded.instruction;
+  if (!carried.instruction || !own) return carried;
+  const next = { ...carried.instruction };
+  let kept = false;
+  for (const key of CONSENT_SWITCHES) {
+    const mine = own[key], theirs = source.instruction?.[key];
+    if (mine && (!theirs || recordChoiceHolds(mine, theirs))) { next[key] = { ...mine }; kept = true; }
+  }
+  return kept ? consentInstruction(next) : carried;
 }
 
 function json(body: unknown, status = 200): Response {
