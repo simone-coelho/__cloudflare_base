@@ -6,6 +6,7 @@ import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
 import { read } from '@/config/versionedStore';
 import { backfillPublication } from '@/config/publication';
+import { moveAudiences } from '@/connectors/AudienceStore';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
 import type { LearnConfig } from '@/content/types';
 import type { TenantId } from '@/tenancy/tenant';
@@ -310,6 +311,9 @@ export default {
             await backfillPublication(env, tenant).then(
               (wrote) => { if (wrote.head || wrote.copy) console.log('publication backfill; head/copy', Number(wrote.head), Number(wrote.copy)); },
               () => { console.error('publication backfill pending'); });
+            // P105 (E30): the tenant's published audiences moved from its KV records into its publication, and any
+            // record an earlier release wrote after the move reconciled into it; inside the tenant's existing job.
+            await moveAudiences(env, tenant).catch(() => { console.error('audience move pending'); });
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
             // Lane E6: the run's storage calls are counted against one budget, the catch-up's
             // RUN_BUDGET: what the catch-up spends, the open hour's folds may not. Each call is

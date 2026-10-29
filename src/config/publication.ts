@@ -11,7 +11,7 @@ const encoder = new TextEncoder(), HASH = /^[0-9a-f]{64}$/;
 /** P98: the digest a manifest pointer into a pack names its object by: the first 128 bits of the SHA-256 of its canonical value. */
 const PLACED_HASH = /^[0-9a-f]{32}$/;
 const OPERATION = /^(0|[1-9][0-9]*):[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval', 'import-sources', 'layouts']);
+const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposals', 'vocabulary', 'vocabulary-approval', 'import-sources', 'layouts', 'audiences']);
 /**
  * P38: the members a coherent set may lack and a publication may ADD. A tenant
  * that never published a vocabulary has a set without one, and that set stays
@@ -22,7 +22,9 @@ const KINDS = new Set(['content', 'slots', 'learn', 'reflex', 'prior', 'proposal
  */
 // P91 (E16): the tenant's import-sources list is optional too: a tenant that publishes none allows every caller.
 // P88 (E13): and its approved layouts: a tenant that publishes none keeps every per-context order as before.
-const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval', 'import-sources', 'layouts']);
+// P105 (E30): and its published audiences (src/connectors/AudienceStore.ts): a tenant whose set has none is
+// read from its KV records until its first audience write or the five-minute run creates the member.
+const OPTIONAL_MEMBERS = new Set(['vocabulary', 'vocabulary-approval', 'import-sources', 'layouts', 'audiences']);
 /**
  * P48 (R-P78, R-P82 (4)): the two members a committed set lacks only because
  * the demo bootstrap created it with four, by kind name, with the name an
@@ -465,6 +467,7 @@ async function kindFor(name: string): Promise<DocumentKind<unknown>> {
     case 'vocabulary-approval': return (await import('@/content/kinds')).VOCABULARY_APPROVAL_KIND as unknown as DocumentKind<unknown>;
     case 'import-sources': return (await import('@/content/import')).IMPORT_SOURCES_KIND as unknown as DocumentKind<unknown>;
     case 'layouts': return (await import('@/content/kinds')).LAYOUTS_KIND as unknown as DocumentKind<unknown>;
+    case 'audiences': return (await import('@/connectors/AudienceStore')).AUDIENCES_KIND as unknown as DocumentKind<unknown>;
     default: throw unavailable();
   }
 }
@@ -818,8 +821,16 @@ async function readMissing(storage: R2Bucket, binding: object, value: Publicatio
  * and its bytes' digest recomputed as the revision object's are. A copy that is
  * stale, altered in any member, malformed, over its bound or missing is not
  * used, and the read takes the set and its members (fix B) as without it.
+ *
+ * P105 (E30, R-P644 (5)): the copy leaves the audiences member out. It grows
+ * with the tenant's published audiences (up to the member's own 2 MiB), and a
+ * decision never reads it, so a tenant with thousands of audiences keeps its
+ * copy, and the one-trip first decision, under the bound; a qualification reads
+ * the member by the set's ref as any other member read.
  */
 export const SERVING_COPY_MAX_BYTES = 1024 * 1024;
+/** P105: the set's refs the serving copy carries: every member but the published audiences. */
+const copiedRefs = (set: PublicationPin) => Object.entries(set.refs).filter(([, ref]) => ref.kind !== 'audiences');
 const SERVING_SCHEMA = 'configuration-serving/v1';
 const servingKey = (scope: string) => root(scope) + '/serving.json';
 /** The scope's serving copy as read, or null where it is absent or cannot be read; a typed owner refusal stays the request's answer. */
@@ -833,8 +844,9 @@ async function fromServingCopy(raw: unknown, scope: string, committed: Identity)
     required(raw.schema === SERVING_SCHEMA && raw.scope === scope && object(raw.set) && object(raw.documents)
       && raw.set.revision === committed.revision && raw.set.digest === committed.digest);
     const set = freeze(await validateSet(raw.set, scope)), stored = raw.documents, documents = new Map<string, [Revision<unknown>, number]>();
-    required(set.revision === committed.revision && set.digest === committed.digest && Object.keys(stored).length === Object.keys(set.refs).length);
-    for (const [key, ref] of Object.entries(set.refs)) {
+    const carried = copiedRefs(set);
+    required(set.revision === committed.revision && set.digest === committed.digest && Object.keys(stored).length === carried.length);
+    for (const [key, ref] of carried) {
       required(Object.hasOwn(stored, key));
       const kind = await kindFor(ref.kind), document = await envelope(stored[key], kind, ref.scope, ref.revision);
       required(matchesRef(kind, document, ref));
@@ -855,7 +867,7 @@ async function servingCopyOf(storage: R2Bucket, set: PublicationPin, written: re
   let documents: Record<string, Envelope<unknown>>;
   try {
     const own = new Map(written.map(document => [member({ name: document.kind }, document.scope), document] as const));
-    documents = Object.fromEntries(await Promise.all(Object.entries(set.refs).map(async ([key, ref]) => {
+    documents = Object.fromEntries(await Promise.all(copiedRefs(set).map(async ([key, ref]) => {
       const kind = await kindFor(ref.kind), document = own.get(key) ?? await retained(storage, kind, ref.scope, ref.revision);
       required(document.revision === ref.revision && matchesRef(kind, document, ref));
       return [key, document] as const;

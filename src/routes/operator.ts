@@ -27,6 +27,7 @@ import insightsData from '@/data/insights.json';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import { z } from 'zod';
 import { operatorJwt } from '@/middleware/operatorAuth';
+import { PublicationError } from '@/config/publication';
 
 const operatorRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
@@ -36,6 +37,11 @@ const operatorRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>()
 // will NOT clobber audiences created live by Opal, so calling this at the start of
 // every handler is safe and keeps the operator console self-bootstrapping.
 // ---------------------------------------------------------------------------
+/** P105: the store refusing the audiences member past its 2 MiB bound, answered 413 by name; null for any other error. */
+function refusedBySize(error: unknown): { error: string; code: string } | null {
+  return error instanceof PublicationError && error.status === 413 ? { error: error.message, code: error.code } : null;
+}
+
 async function ensureSeeded(env: Env, tenant: TenantId = DEFAULT_TENANT): Promise<void> {
   if (env.DEPLOYMENT_PROFILE !== 'demo' || tenant !== DEFAULT_TENANT) return;
   await new KvAudienceStore(env, tenant).seed(SEED_AUDIENCES);
@@ -139,6 +145,7 @@ operatorRoutes.post('/audiences/publish', async (c) => {
     });
   } catch (error) {
     console.error('Error publishing audience');
+    const sized = refusedBySize(error); if (sized) return c.json(sized, 413);
 
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid publish request', details: error.issues }, 400);
@@ -156,7 +163,7 @@ operatorRoutes.post('/audiences/publish', async (c) => {
 operatorRoutes.get('/audiences', async (c) => {
   try {
     await ensureSeeded(c.env, c.get('tenant'));
-    const audiences = await new KvAudienceStore(c.env, c.get('tenant')).listPublished();
+    const audiences = await new KvAudienceStore(c.env, c.get('tenant')).listPublished({ administrative: true });
 
     return c.json({
       success: true,
@@ -450,6 +457,7 @@ operatorRoutes.post('/audiences/:key/rename', audienceWrites, async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
+    const sized = refusedBySize(error); if (sized) return c.json(sized, 413);
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid rename request', details: error.issues }, 400);
     }
@@ -474,6 +482,7 @@ operatorRoutes.post('/audiences/:key/pin', audienceWrites, async (c) => {
       timestamp: Date.now(),
     });
   } catch (error) {
+    const sized = refusedBySize(error); if (sized) return c.json(sized, 413);
     if (error instanceof z.ZodError) {
       return c.json({ error: 'Invalid pin request', details: error.issues }, 400);
     }

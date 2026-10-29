@@ -88,14 +88,14 @@ export class FeatureVariableManager {
     userId: string,
     userAttributes: Record<string, any>,
     featureKeys?: string[],
-    /** Lane E4: the per-event session probes read the remembered override list (OVERRIDES_LIST_MS). */
-    rememberedOverrides = false
+    /** P105 (AL7, R-P652): the per-event session probe reads no override (no route writes one and no answer uses it). */
+    sessionProbe = false
   ): Promise<Record<string, FeatureVariableResult>> {
     const features = featureKeys || this.getDefaultFeatureKeys();
     const results: Record<string, FeatureVariableResult> = {};
 
     // Check for user-specific overrides first
-    const overrides = await this.getUserOverrides(userId, rememberedOverrides);
+    const overrides = sessionProbe ? [] : await this.getUserOverrides(userId);
 
     for (const featureKey of features) {
       const cacheKey = `${userId}:${featureKey}:${JSON.stringify(userAttributes)}`;
