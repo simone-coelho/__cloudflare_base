@@ -41,15 +41,22 @@
 //     valid id's decision there with its render offers (the late refusal's conditions hold in the fixture).
 //   2 The malformed ids: the empty string; a space alone; spaces inside (the live walker's id, R-P541); a comma
 //     (`pdp,COA-CH857`); a slash (the page's path, `/products/tabby-shoulder-bag-26`); 129 characters of the admitted
-//     alphabet (length the only defect). On the GET each is the query's pageInstance, URL-encoded.
+//     alphabet (length the only defect); R-P612 (F1): a valid UUID padded with a space on each side, so a check of the
+//     trimmed id cannot pass. On the GET each is the query's pageInstance, URL-encoded.
 //   3 The 129-character id on the POST and at the door: today the allow-list's generic 128-character bound refuses it 401
 //     before isEventNonce could; PI1 demands 400 'Invalid page instance' for it on every path, so the page-view id's bound is
 //     its own check's (as the nothing-to-show report's and the context signals' are, :1022–1024).
 //   4 PI1's "any decision request": a shopper refusing tracking and a page with no rendered-v1 slot (`home`) are refused
 //     too — the late refusal's conditions are today's defect, not the remedy's scope.
-//   5 Not pinned either way: a non-string pageInstance in the POST body (PI1 reads strings; today the allow-list's 401); a
-//     request carrying a malformed pageInstance beside another malformed field (no order is ruled; every refusal here is
-//     measured alone, its other fields valid); Cache-Control on the session-carrying refusals (PI1 names it at the door).
+//   5 Not pinned either way: a non-string pageInstance in the POST body (PI1 reads strings; today the allow-list's 401);
+//     Cache-Control on the session-carrying refusals (PI1 names it at the door). THE ORDER, RULED (R-P612, F3/F4): the
+//     page-view id is checked at the arm's position on every path — after the selectors, the identity and tenant checks
+//     and the allow-list, right after the arm. So a malformed id beside a malformed arm is the arm's 400 on the GET, the
+//     POST and the door; beside a malformed context signal it is answered the same on the three paths, which can only be
+//     the id's 400 (the door answers a malformed signal 401, P80.AS3's R-P264 leg, PI2), so on the POST the signals are
+//     checked after the arm and the id, as the GET checks them (today the POST checks them before the customer identifier
+//     and the arm, decisions.ts snapshotContext :1031); and an identity field or a tenant selector beside a malformed id
+//     stays the 401 it is today, on the three paths.
 //   6 PI2's SDK ids: a UUID (crypto.randomUUID: the browser host with it, the server bridge, src/sdk/server.ts:165) and the
 //     base-36 fallback, both drawn from the REAL `browserHost().uuid()` (src/sdk/host.ts:34–36; loaded at run time, it is
 //     outside the app typecheck), the fallback with `crypto` stubbed away for that one synchronous call only; a
@@ -60,11 +67,19 @@
 //     `page`, a malformed entry, nothing-to-show report, context-signal name and consent hint — each 401 'Shopper session
 //     unavailable' writing nothing (P13's door rule, P80.AS3's R-P264 leg); the malformed arm stays 400 (P84.CO3).
 //   8 PI3 pins the facts in kit 02's pageInstance row of the POST snapshot section, not its words: 1 to 128, letters, digits,
-//     `_` and `-` (or the class A-Za-z0-9_-), a UUID qualifying, 400 'Invalid page instance', the first request named.
+//     `_` and `-` (or the class A-Za-z0-9_-), a UUID qualifying, 400 'Invalid page instance', the first request named;
+//     R-P612 (F2): the 400 stated for every decision path ("every", "all" or "each" path, route or request), and no `401`
+//     anywhere in the row.
 //   9 PI3, R-P590 (the residual of a6690521 ruled IN): kit 02's first-request paragraph (:337, "**A new visitor's first
 //     request.**") names the refusals answered 400 there — a malformed `arm` member and a malformed page-view id — and 401
 //     for every other failure, and none of its sentences still says any failure is 401. The facts, not the words, sentence by
 //     sentence as P97.FV4 splits the paragraph, so they hold beside the sentences P97 rewrites in it (rem/p97-build c54f1524).
+//     R-P612 (F2, F5), clause by clause (a sentence cut at its commas, semicolons and colons and before "and", "but",
+//     "except", "while", "whereas"): a clause naming the arm carries `400`; every clause naming the page-view id carries no
+//     `401` and one of them `400`; a sentence gives `401` to the rest (a qualifier: other, else, elsewhere, rest,
+//     otherwise, except, unless, apart from, besides, but); and no sentence gives `401` to every failure unqualified ("any",
+//     "every", "all" or "a" failure, refusal or error "is"/"are" `401` with none of those qualifiers in the sentence). So
+//     an "except …" clause and a true sentence about the session's own failures pass; a blanket `401` does not.
 //
 // DEFERRED: LV1 (lane L21, the pair's next release, the stamps read-only: on both pair hosts a session-carrying decision
 // with a spaced pageInstance 400 'Invalid page instance', the same with a UUID 200 with its offers, a first request with a
@@ -100,6 +115,18 @@
 // `Invalid page instance`, and any other failure `401`, each writing nothing" green, and green on a scratch merge of
 // rem/p97-build c54f1524 with the P101 sketch and that edit; the paragraph naming the 400s beside a kept "any failure is
 // `401`", or naming the arm's 400 alone, RED.
+// ROUND 2 (R-P612, the review S46/reviewer-spec/REPORT-b88a6b6b.md; logs r2-*): 18 tests (PI1 8, PI2 8, PI3 2). Today 10 RED
+// (PI1 8, the two PI3 kit legs), the 8 PI2 locks green. THE SKETCH as above, the POST's context-signal check moved after
+// the arm and the page-view id (snapshotContext :1031 → after the id's check, as the GET's), with the :337 edit — 18/18 twice.
+// Every wrong fix above RED on its own legs again, and the reviewer's controls (S46/reviewer-spec/tools/rv.cjs) RED on
+// theirs: the trimmed check — PI1 6 (F1); the row's "but `401` on a new visitor's first request" and the 400 for the
+// first request only — the row leg; :337's page-view id given `401`, in the arm's sentence or its own — the paragraph leg
+// (F2); the GET checking the id before the arm — the order row ×2 (F3); the id checked before the selectors, the tenant
+// check and the allow-list — the order row ×2 and the selector lock ×2 (F4); the door only, no-store dropped, a body or a
+// status differing on the object host, no hyphen, lowercase only, a hyphen required, bound 127, no bound, the second catch
+// only, the door writing first, the row without `_` and `-`. Green as F5 rules: :337's "except …" clause, the true
+// sentence on the session's own failures, and "Elsewhere every failure is `401`" after the 400s (a qualified 401). The
+// P97 merge (c54f1524 + the sketch with the P97 import anchor + both kit edits): P101 18/18; P97, P13, P76, P96 74/74.
 //
 // NO NEW EXPORT IS IMPORTED. HARNESS: src/units/_parity.ts (the mounted routes over the real ShopperReflex, DecisionRing
 // and LearnStats classes, either shopper host). Imports from src/units/: ../_parity.
@@ -133,6 +160,7 @@ const MALFORMED: ReadonlyArray<readonly [string, string]> = [
   ['a comma', 'pdp,COA-CH857'],
   ['a slash (the page\'s path)', '/products/tabby-shoulder-bag-26'],
   ['129 characters', `${LONGEST}x`],
+  ['a valid UUID padded with a space on each side', ` ${crypto.randomUUID()} `],
 ];
 
 /** Counts the calls that reach a shopper's own object, where every decision is made (the namespace's `get` is wrapped once). */
@@ -202,6 +230,11 @@ async function world(host: (typeof HOSTS)[number], what: string) {
 }
 const pdp = (pageInstance?: string, extra: Record<string, string> = {}) =>
   ({ page: 'pdp', brand: BRAND, ...(pageInstance === undefined ? {} : { pageInstance }), ...extra });
+/** The live walker's spaced page-view id (R-P541). */
+const SPACED = 'l20-p95-after the rotation-3e206dc7';
+/** R-P612: the three decision paths — the GET and the POST carrying the shopper's session, and the first-request door. */
+const pathsOf = (capability: string) => [['the GET with a session', { method: 'GET' as const, capability }], ['the POST with a session', { method: 'POST' as const, capability }],
+  ['the first-request door', { method: 'POST' as const }]] as const;
 
 // ===========================================================================
 // unit:P101.PI1 — a malformed page-view id refused 400 'Invalid page instance' before any work, on every decision path
@@ -210,7 +243,7 @@ const pdp = (pageInstance?: string, extra: Record<string, string> = {}) =>
 describe('unit:P101.PI1 (E26)', () => {
   for (const host of HOSTS) {
     for (const method of ['POST', 'GET'] as const) {
-      it(`host (${host}): the ${method} with a session — each malformed pageInstance (the empty string, a space alone, spaces inside, a comma, a slash, 129 characters) answers 400 { ok: false, error: 'Invalid page instance' } before any work, as a malformed arm is refused there: the shopper's own object never reached, nothing written (no decision, no ledger or ring capture, no render offer), for a shopper allowing tracking on the product page, one refusing tracking, and on a page with no rendered-v1 slot`, async () => {
+      it(`host (${host}): the ${method} with a session — each malformed pageInstance (the empty string, a space alone, spaces inside, a comma, a slash, 129 characters, a valid UUID padded with spaces) answers 400 { ok: false, error: 'Invalid page instance' } before any work, as a malformed arm is refused there: the shopper's own object never reached, nothing written (no decision, no ledger or ring capture, no render offer), for a shopper allowing tracking on the product page, one refusing tracking, and on a page with no rendered-v1 slot`, async () => {
         const { m, owner, s, refusing } = await world(host, 'P101.PI1');
         const valid = await decide(m, owner, { method, capability: s.grant.capability, fields: pdp(crypto.randomUUID()) });
         expect([valid.status, offered(valid), valid.owner > 0], `${host}: PRECONDITION — a valid id's ${method} decision is made in the shopper's own object, with its render offers (${shown(valid)})`)
@@ -246,6 +279,19 @@ describe('unit:P101.PI1 (E26)', () => {
       }
       expect.soft(rows, `${host}: P101.PI1 — the door refuses a malformed page-view id 400 'Invalid page instance', no-store, before a session is issued or a shopper object created (today 200 with a session issued and the decision made, or 401 for 129 characters)`)
         .toEqual(rows.map(([label]) => [label, 400, REFUSED, 'no-store', 0, 0, 'nothing written']));
+    }, 120_000);
+
+    it(`host (${host}): R-P612 — the order: the page-view id is checked at the arm's position on every path, right after the arm, so a malformed pageInstance beside a malformed arm is the arm's 400 'Invalid arm member', and beside a malformed context signal it is answered the same on the GET, the POST with a session and the first-request door, the page-view id's 400 'Invalid page instance' (the door answers a malformed signal alone 401, P80.AS3)`, async () => {
+      const { m, owner, s } = await world(host, 'P101.PI1');
+      const rows: Array<[string, string, number, unknown]> = [];
+      for (const [beside, extra] of [['a malformed arm', { arm: 'not json' }], ['a context signal whose name starts with a digit', { 'ctx.9lives': 'black' }]] as const) {
+        for (const [path, how] of pathsOf(s.grant.capability)) {
+          const asked = await decide(m, owner, { ...how, fields: pdp(SPACED, extra) });
+          rows.push([beside, path, asked.status, answerOf(asked.body)]);
+        }
+      }
+      expect.soft(rows, `${host}: P101.PI1 — R-P612: a malformed page-view id beside another malformed member is answered alike on the three paths, at the arm's position (today the id is not checked: the signal's 400 on the GET and the POST, 401 at the door)`)
+        .toEqual(rows.map(([beside, path]) => [beside, path, 400, beside === 'a malformed arm' ? ARM_REFUSED : REFUSED]));
     }, 120_000);
   }
 });
@@ -340,6 +386,19 @@ describe('unit:P101.PI2 (E26; LOCK)', () => {
       expect.soft(rows, `${host}: P101.PI2 — LOCK: the door's other refusals stay 401 writing nothing; the malformed arm stays 400 (decisions.ts:1126–1134)`)
         .toEqual(rows.map(([label]) => label === 'a malformed arm' ? [label, 400, ARM_REFUSED, 0, 'nothing written'] : [label, 401, SESSION_REFUSED, 0, 'nothing written']));
     }, 120_000);
+
+    it(`host (${host}): LOCK (R-P612) — an identity field or a tenant selector beside a malformed pageInstance (the id sent first) is answered 401 'Shopper session unavailable' as today, on the GET and the POST with a session and at the first-request door, writing nothing: the id is checked after the selectors, the identity and tenant checks and the allow-list`, async () => {
+      const { m, owner, s } = await world(host, 'P101.PI2');
+      const rows: Array<[string, string, number, unknown, number, string]> = [];
+      for (const [selector, extra] of [['an identity field (another visitor)', { visitorId: 'vis-00000000-0000-4000-8000-000000000000' }], ['a tenant selector', { tenant: TENANT }]] as const) {
+        for (const [path, how] of pathsOf(s.grant.capability)) {
+          const asked = await decide(m, owner, { ...how, fields: { ...pdp(SPACED), ...extra } });
+          rows.push([selector, path, asked.status, answerOf(asked.body), asked.shoppersCreated, asked.written]);
+        }
+      }
+      expect.soft(rows, `${host}: P101.PI2 — LOCK (R-P612): a selector beside a malformed page-view id stays 401, as today`)
+        .toEqual(rows.map(([selector, path]) => [selector, path, 401, SESSION_REFUSED, 0, 'nothing written']));
+    }, 120_000);
   }
 });
 
@@ -361,22 +420,31 @@ describe('unit:P101.PI3 (E26)', () => {
       uuid: /\bUUID\b/.test(row),
       refusal: /\b400\b/.test(row) && row.includes('Invalid page instance'),
       firstRequest: /\bfirst request\b/i.test(row),
+      // R-P612 (F2): the 400 on every decision path, the first request included, and no 401 anywhere in the row.
+      everyPath: /\b(?:every|all|each)\b[^|]*?\b(?:paths?|routes?|requests?)\b/i.test(row),
+      no401: !/\b401\b/.test(row),
     };
     expect.soft(facts, `P101.PI3 — the row states the format and the refusal (today: "${row}")`)
-      .toEqual({ bound: true, alphabet: true, uuid: true, refusal: true, firstRequest: true });
+      .toEqual({ bound: true, alphabet: true, uuid: true, refusal: true, firstRequest: true, everyPath: true, no401: true });
   });
 
-  it('logic: R-P590 — kit 02\'s first-request paragraph names the refusals answered 400 on a new visitor\'s first request (a malformed `arm` member, a malformed page-view id) and 401 for every other failure, and no sentence of it still says any failure is 401 (facts, not words, holding beside the sentences P97 rewrites in the paragraph)', () => {
+  it('logic: R-P590, R-P612 — kit 02\'s first-request paragraph names the refusals answered 400 on a new visitor\'s first request (a malformed `arm` member; a malformed page-view id, whose clause carries 400 and no 401) and 401 for every other failure, and no sentence of it gives 401 to every failure unqualified (facts, not words, clause by clause, holding beside the sentences P97 rewrites in the paragraph)', () => {
     const paragraph = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/).map(p => p.split('\n').join(' '))
       .find(p => p.startsWith('**A new visitor\'s first request.**')) ?? '';
     expect(paragraph.length > 0, 'PRECONDITION: kit 02 carries the first-request paragraph (docs/kit/02-api-reference.md:337)').toBe(true);
     /** Sentence by sentence, as P97.FV4 splits the same paragraph. */
     const sentences = paragraph.split(/(?<=[.!?])\s+(?=[A-Z*`])/);
+    /** R-P612 (F2): a sentence cut into clauses at its commas, semicolons and colons and before "and", "but", "except", "while", "whereas". */
+    const clauses = sentences.flatMap(s => s.split(/[;,:]|\s(?=(?:and|but|except|while|whereas)\s)/i));
+    const namesArm = (c: string) => /`arm`|\barm member\b|Invalid arm member/i.test(c);
+    const namesId = (c: string) => /`pageInstance`|\bpage-view id\b|\bpage instance\b/i.test(c);
+    /** R-P612 (F5): a sentence that qualifies its 401 (it gives it to the rest, not to every failure). */
+    const qualified = (s: string) => /\b(?:other|else|elsewhere|rest|otherwise|except|unless|apart from|besides|but)\b/i.test(s);
     const facts = {
-      arm400: sentences.some(s => /\b400\b/.test(s) && /`arm`|\barm member\b|Invalid arm member/i.test(s)),
-      pageInstance400: sentences.some(s => /\b400\b/.test(s) && /`pageInstance`|\bpage-view id\b|\bpage instance\b/i.test(s)),
-      rest401: sentences.some(s => /\b401\b/.test(s) && /\b(?:any|every|all) other\b|\botherwise\b|\bthe rest\b|\belse\b/i.test(s)),
-      noBlanket401: !sentences.some(s => /\b401\b/.test(s) && /\b(?:any|every|all)\s+(?:failures?|refusals?|errors?)\b/i.test(s)),
+      arm400: clauses.some(c => namesArm(c) && /\b400\b/.test(c)),
+      pageInstance400: clauses.some(c => namesId(c) && /\b400\b/.test(c)) && !clauses.some(c => namesId(c) && /\b401\b/.test(c)),
+      rest401: sentences.some(s => /\b401\b/.test(s) && qualified(s)),
+      noBlanket401: !sentences.some(s => /\b(?:any|every|all|a)\s+(?:failures?|refusals?|errors?)\s+(?:is|are)\s+(?:refused\s+|answered\s+)?`?401\b/i.test(s) && !qualified(s)),
     };
     expect.soft(facts, `P101.PI3 — the first-request paragraph names its 400 refusals (a malformed arm, a malformed page-view id) and 401 for the rest (today: "${sentences.filter(s => /\b401\b/.test(s)).join(' ').slice(0, 400)}")`)
       .toEqual({ arm400: true, pageInstance400: true, rest401: true, noBlanket401: true });
