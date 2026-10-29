@@ -25,8 +25,9 @@
 //     cron '*/5 * * * *') and its queue consumer (`queue`, batch.queue 'events', the existing events queue the steps are
 //     sent on, wrangler.toml [[queues.consumers]]), and the operator's routes, over src/units/_parity.ts's mounted
 //     environment on BOTH shopper hosts (session and do), with STORAGE replaced by ./_fold.ts's R2 double (ranged
-//     reads, conditional writes, listings with size, etag and upload time) holding the publication set _parity
-//     published. The events queue is captured; every message the platform sends is delivered alone in its batch, in
+//     reads, conditional writes, listings with size, etag and upload time, custom and HTTP metadata only when `include`
+//     names them, as R2's) holding the publication set _parity published. The events queue is captured (a sendBatch of
+//     more than 100 messages refused, as the platform's); every message the platform sends is delivered alone in its batch, in
 //     order (but in RF6's R-P604 leg, where three shopper events are delivered together, as the platform batches up to
 //     max_batch_size = 100), again when its step neither acknowledges it nor finishes (at most three deliveries, max_retries = 2), and
 //     the five-minute run repeats at the frozen time until a run and its queue change no stored object but the
@@ -35,9 +36,10 @@
 //     aggregate at aggregates/<tenant>/<date>/<hh>.json (src/learn/hourly.ts:114 hourKey, its shape kept, the design
 //     §6), the day through GET /v1/:tenant/learn/report — the statistics objects' counters, and what storage was asked.
 //   2 A STEP is one invocation — one queue message, one five-minute run with every waitUntil it schedules, one
-//     operator request with the Durable Object calls it makes. What a step HOLDS is the process's live heap during it,
-//     sampled at every storage call it makes and when it ends, above the heap before it began (collected); a sample above
-//     64 MiB is collected and taken again, so garbage never counts. Its FIXED INPUTS as storage shows them: the ledger
+//     operator request with the Durable Object calls it makes. What a step HOLDS is every byte the process holds during
+//     it — its V8 heap and its ArrayBuffer and Buffer memory (R-P642), less the bytes the R2 doubles keep as the bucket
+//     (each stored body in its own ArrayBuffer) — sampled at every storage call it makes and when it ends, above what was
+//     held before it began (collected); a sample above 64 MiB is collected and taken again, so garbage never counts. Its FIXED INPUTS as storage shows them: the ledger
 //     bytes and objects it reads (keys of the writer's layout, isLearningKey) at most a page, 16 MiB and 200 objects.
 //   3 The volumes. A harness holds no 1,000,000-visitor tenant (its state alone is ~38 GB, DESIGN §3), so "at V visitors
 //     a day" is what a step meets at V, as the analyst measured it (DESIGN §5, logs/proto.jsonl V1, V2): a leaf holding
@@ -47,7 +49,11 @@
 //     peak hour (V/12 visitors over the leaves) in hour 13, the peak hour of 10,000 visitors a day over every leaf (1/12 of
 //     them, ~37 MiB, 600+ objects), the merge of the 64 depth-0 leaves' partials, the close and the day. The three leaves
 //     live in one tenant at depth 0, in three residue classes of today's visitor hash (FNV-1a, frozen in _fold.ts).
-//     "Leaves that split as they grow": one residue class carried to ~30 MiB of today's state over nine hours.
+//     "Leaves that split as they grow": one residue class carried to ~30 MiB of today's state over nine hours, twenty of
+//     its first hour's visitors returning after the splits (a purchase, within the policy's 7-day window), each hour's
+//     credits the witness's (creditedOf). "A merge at most 64 partials": nine classes grown past 8 MiB split, then an
+//     hour with visitors in all 73 leaves; a leaf is a step that reads another step's output by byte range (its sections
+//     of a page's pack, the design §4), and no step reads the outputs of more than 64 of them.
 //   4 Parity is pinned against a COMMITTED reference (fixtures/reference.json): today's fold at d5d8581c — buildHour
 //     through the five-minute catch-up — with only its refusal budgets lifted (REPORT_LIMITS, MAX_HOUR_OBJECTS; the
 //     analyst's tree-lifted edit), run on the same records at the same times, three times identical and identical on the
@@ -55,8 +61,7 @@
 //     day the canonical POST builds from the hours at the scenario's last moment (its grids decay to that one time).
 //     Generation and builtAt are left out; an aggregate or a day may carry top-level members today's does not (the
 //     design's optional leafDepth); every member today's carries is equal, integers exactly, other numbers to a relative
-//     1e-14 (the work order's "relative 1e-15" is the order of the summation-order difference: the analyst measured
-//     1.1e-15 and called it a match). The leaf states are compared through what they decide — every later hour's
+//     1e-15, the work order's. The leaf states are compared through what they decide — every later hour's
 //     aggregate and the day — since their storage is the builder's (ring state v3 is in the work order's own remaining
 //     work).
 //   5 The commit's crash model: a step whose acknowledgement is lost after it finished (delivered again), a step cut
@@ -75,8 +80,8 @@
 //     decisions.ts:2030–2043, the only surface that files one); the fold never files. Past a page that request is a job
 //     (reading 13), which files a read conflict it meets as the inline request does: RF3's newer-hour leg files at 14:20,
 //     on a day of 28 MiB (scenario C's day is within a page at every other filing: 8.6 MiB at 13:20, P's 5.6 MiB).
-//   8 The day by slot: GET without `slot` on a day whose grids pass 8 MiB answers 200, its body within 8 MiB, naming every
-//     slot outside `grids` (the slot index; its member name is the builder's); GET ?slot=<slot> answers 200 with that
+//   8 The day by slot: GET without `slot` on a day whose grids pass 8 MiB answers 200, its body within 8 MiB, carrying
+//     outside `grids` a list of exactly the day's slots (the slot index; its member name is the builder's); GET ?slot=<slot> answers 200 with that
 //     slot's grid under every policy, and reads at most a quarter of the bytes the day's stored objects hold (ten slots).
 //     A complete day is coverage with no missing and no truncated hour and status not 'incomplete' (report.ts:1247).
 //   9 "A 1,000,000-visitor day from 24 hours": its hours are aggregates at the size content bounds them, not at a size
@@ -108,14 +113,24 @@
 //     purchase 120, the retried one nothing (it is taken under its first stamp, P103 R-P588). P104's readers are its
 //     leaves (the hour's, the rebuild's and the custom-policy job's); the raw day's ReportRowIdentity and loadHourRecords
 //     are P103's (R-P604 (3)). Since R-P620 (P103's direct path writes its ledger row with the stamp the ring decided under)
-//     both copies carry the same money stamp, so this leg pins what is credited and no longer which copy is kept: the
-//     copies then differ only in their retention stamps, and no witness names what a fold shows of the lifetime it kept.
+//     both copies carry the same money stamp, so this leg pins what is credited and no longer which copy is kept. Which
+//     copy is kept is pinned by R-P629's case (R-P642 (5); P103's round 7, its R18): the purchase's first delivery, under
+//     no policy, is held on its way to the ring past RING_DECISION_BOUND_MS (P103's constant, read through the module;
+//     PRECONDITION P103 when absent), so the action answers within the bound and its record carries the producer's own
+//     stamp, marked `money_stamped_by: 'producer'`, batched with an event 20 s older so it sorts first; EUR is published,
+//     the SDK's retry reaches the ring first and is decided under EUR (575 credited live, once), then the held delivery is
+//     let through. Every reader of P104's — the open and the closed hour's leaves, the rebuild's, the custom-policy job's
+//     — keeps the ring-stamped copy over the producer-stamped one, then the earliest-born: they credit what live learning
+//     took (575 and the new purchase's 120); a reader keeping the first copy read, or the earliest-born alone, credits 120.
 //
 //  13 R-P615 (RF1, the custom-policy day past a page): a custom-policy request on a day past one page (16 MiB or 200
 //     objects) answers 202, naming the job and where its day is read — read here as a string of the answer naming GET
 //     /v1/:tenant/learn/report with that date in its query (the member and the digest's parameter are the builder's) —
 //     and the same day and policy sent again names the same job (every string of the first answer is in the second);
-//     that GET answers 202 while the job's steps run and 200 with { report } when they are done; within a page the
+//     that GET answers 202 while the job's steps run and 200 with { report } when they are done — read before the steps and
+//     after every delivery of the queue: 202 mid-job, its body reporting progress (the 202 answers change as steps run),
+//     every 200 the day as done — and a job is named by its day and policy: the day before, past a page by its 211
+//     objects, asked with the same policy, is its own job answering its own day; within a page the
 //     request answers inline as today (RF6's ring and money legs). The job's grids under the request's policy, which is
 //     the learning policy's own definition, equal the hourly fold's learning grids of the same day (exposures and credits
 //     per slot, item and level, rounded under a hundred-year horizon; the witness: 2 x 460 clicks and the one carried in).
@@ -132,26 +147,26 @@
 // (UNVERIFIED, DESIGN §9); the volumes are per-step loads (reading 3), not a tenant at depth 7; a slot past the live
 // table's 256 items or 4,096 counters is not exercised (the work order does not say whether it is refused or capped);
 // the five-minute run is measured as one step with the monitor and the warehouse slice it shares; a step's figure is
-// the heap sampled at its storage calls, collected only above 64 MiB, so a figure under 64 MiB includes garbage (an
-// upper figure, as the analyst's); queue batches of more than one message (but RF6's R-P604 batch of three), and several
+// what it holds sampled at its storage calls (heap and ArrayBuffer memory), collected only above 64 MiB, so a figure
+// under 64 MiB includes garbage (an upper figure, as the analyst's); "a merge at most 64 partials" is measured where a
+// tree is needed (73 leaves, reading 3), not at 8,192; queue batches of more than one message (but RF6's R-P604 batch of three), and several
 // invocations in one isolate, are LV1's.
 //
 // MEASURED (_evidence/parity-step3/S51/specifier/logs/, serial, --no-cache, one worker, env -C the tree, --root the tree;
 // scratch trees built by scratch/bin/mk.sh from d5d8581c; the sketch is scratch/sketch/{stagedFold.ts,apply.py}):
-//   TODAY (h3-today, c-today: the worktree + this file): 41 of 45 RED for the missing behaviour; the four LOCK legs green
-//   (RF5's old day, RF4's catch-up). RF1's job leg: the custom-policy day of 20.5 MiB answers 413 rawBytes, not 202.
-//   RF1 hour 10 of the volumes refused (the rings past 3.69 MiB), the class refused at hour 8, T5's wide hour refused
-//   (cells), the open hour refused rawBytes, the bot named report_budget_exceeded rawBytes not fold_step_bound; RF2 18
-//   differences (hour 13 above a page refused); RF3 13 differences (hour 13 refused), hour 13 never written; RF4 38 and 50
-//   re-reads, the migration's hour 13 refused; RF5 the head counts 0 of 5,060, hour 0 of T5 refused, C's day built [12];
-//   RF6 the custom-policy day credits the 400-decision-old click and not the carried-in one, PRECONDITION P103 (the money
-//   leg and R-P604's), the big rebuild 503; RF7 five of seven sentences absent.
-//   THE SKETCH (c-sketch: staged day rebuild kit born job, every due hour chained): 41 of 45 green, the money leg and
-//   R-P604's RED on PRECONDITION P103 alone. With P103's sketch beside it the eight RF6 legs are green on both hosts: its apply.py as of
-//   19:28 (scratch/sketch/p103-apply-1928.py: types kinds records policy ring journalstamp earliest fold hourly report
-//   route-prepare recovery-type recovery-stamp direct delivery; j-both) and as of 20:35, with R-P620's ringanswer
-//   (scratch/sketch/p103-apply-2035.py; h3-p103). Steps: every step ≤ 64 MiB, a
-//   page ≤ 16.0 MiB and 200 objects (f-live: volumes ≤ 23.9 MiB, partitions ≤ 16.4, the day ≤ 32.7, the rebuild ≤ 36).
+//   TODAY (r4-today, r6-rf7-today: the worktree + this file): 45 of 49 RED, the four LOCK legs green (RF5's old day, RF4's
+//   catch-up). Of the 45, the money leg ×2 is a LOCK behind P103 (green with P103 alone, r4-p103only): RED today on its
+//   PRECONDITION P103; the R-P604 and R-P629 legs are RED on PRECONDITION P103 and, behind it (P103 alone), for P104's
+//   own reason (the rebuild of the 19.9 MiB day 503). The rest RED for P104's missing behaviour: RF1 hour 10 of the
+//   volumes refused, the class refused at hour 8, the 73-leaf hour never reached (hour 10 not folded), T5's wide hour
+//   refused (cells), the open hour refused rawBytes, the bot named report_budget_exceeded rawBytes, the job answered 413
+//   rawBytes; RF2 and RF3 the hours above a page refused; RF4 38 and 50 re-reads, the migration's hour 13 refused; RF5
+//   the head counts 0 of 5,060, hour 0 of T5 refused, C's day built [12]; RF6 the custom-policy day crediting the
+//   400-decision-old click, the big rebuild 503; RF7 every fact absent.
+//   THE SKETCH (r5-sketch, r6-rf7-sketch: staged day rebuild kit born job): 43 of 49 green; the money leg, R-P604's and
+//   R-P629's RED on their PRECONDITION P103 alone. With P103's round-7 sketch beside it (scratch/sketch/p103-apply-r7.py,
+//   its apply.py of 22:02: R-P629's bound and producer mark, preferredCopy) the ten RF6 legs are green (r4-p103, r5-p103).
+//   Every step ≤ 64 MiB counting ArrayBuffer and Buffer memory; a page ≤ 16.0 MiB and 200 objects.
 //   THE SKETCH, per leg (never committed; files and the code each leg needs):
 //     src/learn/stagedFold.ts (new): RF1–RF4 — the five-minute run plans the oldest due hour and each close plans the next,
 //       so every due hour is folded in order through the queue without waiting for a run (a listing cut into pages of
@@ -159,12 +174,17 @@
 //       tenant closed in place; a quiet hour of a small state — no ledger object, at most 64 leaves — taking its bounded
 //       steps in the invocation that plans it rather than a queue hop each), partition (one pack and its index per page, sections by leaf, rows checked as
 //       ReportRowIdentity checks them and digested), leaf (its sections read by range, de-duplicated by digest in global
-//       order keeping the earliest-born copy (R-P604: the ledger stamp's bornAt, a tie keeping the first read), a conflict
+//       order keeping a ring-stamped copy over one marked producer-stamped, then the earliest-born (R-P604, R-P629: the
+//       ledger stamp's bornAt, a tie keeping the first read), each leaf logging its accumulator updates (its exposures with
+//       their global positions, its credits) so that a merge that is the hour's only one replays them in today's order —
+//       every exposure in the hour's row order, then the leaves' credits in shard order — and the hour's decayed sums are
+//       today's to the bit (R-P642's 1e-15; summing partials differed by up to 2.5e-15), a conflict
 //       filed or raised; today's cleanupShard, foldableRows, hourBrands, foldShard and countMembership
 //       unchanged; a state past 8 MiB split by visitor hash, rows past 8 MiB refused fold_step_bound), merge (≤ 64
 //       partials; within an hour the date's distinct visitors add), close (closeBrands; the aggregate written create-only
 //       or on the plan's etag, then the head CAS), resume (one listing finds the missing outputs), each fan-out sent once
-//       (a create-only marker), unnamed outputs collected after 15 minutes; the open hour on the same steps never moving the
+//       (a create-only marker, sent in batches of at most 100), unnamed outputs collected after 15 minutes; leaves merged in
+//       today's shard order; the open hour on the same steps never moving the
 //       head, its refusal naming its step; RF6 the rebuild of a day past a page planned on the same steps, each leaf
 //       keeping the earliest-born copy of a row and folding its visitors with foldRetainedDay and the day before carried in,
 //       the counters applied at the statistics object. R-P615 the custom-policy day past a page as a job (reportJob,
@@ -191,38 +211,42 @@
 //       docs/kit/02-api-reference.md: RF7 one paragraph before the aggregate-to-day budgets, which lose "16MiB combined
 //       aggregate JSON". The sketch adds no input cap and no new queue. P103's R-P604 readers (ReportRowIdentity,
 //       loadHourRecords) are P103's sketch's `earliest`, not P104's.
-//   THE WRONG FIXES, each RED on the legs named (logs f-*, g-*, n-*, w-lifted): today's fold with its limits lifted (the
-//     bound met by constants; S51/specifier/scratch/tree-lifted) — RF1 volumes, split, open hour, bot; RF3 crash and order;
-//     RF4 ×3; RF5 by slot (answer 11.7 MB) and 24 hours; RF6 ring, rebuild at volume (the step past 64 MiB); RF7 (green,
-//     as it should be: RF1 wide, RF2, RF3 coordinators, RF5 complete and LOCK); steps but leaves that never split — RF1
-//     split; the head written before the aggregate — RF3 crash; a failed run started again instead of resumed — RF4 resume
-//     (19 re-reads); abandoned outputs never collected — RF4 resume (n-nogc: an orphan plan left); the open hour left on
-//     today's one-request working fold — RF1 open hour, bot; leaves merged as hours are (the larger visitor count) — RF2;
-//     duplicates removed within a page only — RF2; the leaf skipping today's cleanup (erasure, expiry) — RF2; an hour
-//     past a page refused fold_step_bound (the bound met by refusing) — RF1 volumes; the day's hours held together — RF5
-//     24 hours; the day left as today (cells across the day, one JSON, 413) — RF1 wide, RF5 by slot, 24 hours; the
-//     rebuild without the day before, without the 200-entry ring, or fixed alone (the custom-policy day left as today: the
-//     fix on one path only) — RF6 ring; the rebuild left as today — RF6 ×3 that do not wait on P103; kit 02 left as today
-//     — RF7. R-P604, on P103's 19:28 sketch: the leaves keeping the first copy read (the probe-5 fault) — RF6 R-P604 at
-//     the open hour, 575 credited that live learning refused (n-firstread, j-firstread); the earliest-born copy kept in
-//     the hour's leaf only (the fix on one path only) — RF6 R-P604 at the rebuild (n-houronly). On P103's 20:35 sketch
-//     (R-P620) the first-read leaves are green on R-P604's leg (k-firstread): both copies carry the stamp live decided.
-//     R-P615: the custom-policy day left as today (413) — RF1 job (j-nojob); today's raw day with its limits lifted (200
-//     inline, the bound met by constants) — RF1 job (j-lifted); a new job for every request — RF1 job at the repeat
-//     (j-newjob); the job re-run from the head as it stands, not the date's start — RF1 job at the grids (j-headstart).
-//     R-P632: one due hour a five-minute run (round 2's pace) — RF4 catch-up, six runs for six hours (c-onehour).
+//   THE WRONG FIXES (round 4: logs r4-*, the reviewer's controls applied by its rv.py and kitopp.py after the sketch;
+//     earlier rounds' f-*, g-*, n-*, j-*, c-*), each RED on the legs named: today's fold with its limits lifted (the
+//     bound met by constants) — 37 of 49 RED, the 12 green: RF1 wide, RF2, RF3 coordinators, RF5 complete, the four
+//     LOCKs (r4-lifted); 96 MiB held as an ArrayBuffer in every leaf step (abheap) and as a JS array (jsheap) — RF1
+//     volumes; one flat merge (fanin) — RF1 merge tree (73 partials in one step); a split losing the leaf's rings
+//     (splitdrop) — RF1 split (569 of 589 credits); the leaf row bound not enforced (nobound) — RF1 bot; the leaves
+//     reading the first page only (pagetrunc) — RF1 volumes, RF2; the day without its last hour (partialday) — RF5 24
+//     hours, complete; a catch-up newest hour first (reverse) — RF2, RF5 complete; one due hour a run (onehour) — RF4
+//     catch-up; outputs never collected (nogc) — RF4 resume; the day's hours held together (nostream) — RF5 24 hours;
+//     the slot index missing a slot (slotindex) and a stored day missing a slot's part (slotpart) — RF5 by slot; the
+//     job's read answering 200 after its first hour (early200) — RF1 job (every 200 the day as done); the job named
+//     without its day (jobnodate) — RF1 job (the day before answered with the other day); the custom-policy day left as
+//     today (nojob), a new job a request (newjob), the job re-run from the head as it stands (headstart) — RF1 job; the
+//     leaves keeping the first copy read (firstread) — RF6 R-P629 at the open hour (120 for 575 + 120); the preferred
+//     copy kept in the hour's leaves only (houronly) — RF6 R-P629 at the rebuild; the earliest-born copy alone, a
+//     ring-stamped copy not preferred (noringpref) — RF6 R-P629 at the open hour; kit 02's paragraph with every clause
+//     negated (kitopp) — RF7 (r6-rf7-kitopp). Earlier rounds': steps but leaves that never split — RF1 split; the head
+//     written before the aggregate — RF3 crash; a failed run started again — RF4 resume; the open hour left on today's
+//     working fold — RF1 open hour, bot; leaves merged as hours are — RF2; duplicates removed within a page only — RF2;
+//     the leaf skipping today's cleanup — RF2; an hour past a page refused — RF1 volumes; the day left as today — RF1 wide,
+//     RF5; the rebuild without the day before or the 200-entry ring, or fixed alone — RF6 ring; kit 02 left as today — RF7.
 //   LOCKS (the work order's learn suites, W23, W24, W26, W27, W32 B1, P33, P94 and every suite touching the fold, the day
-//     report, the rebuild or the scheduled run: 63 files, scratch/locks-all.txt), round 3 on the whole sketch (staged day
-//     rebuild kit born job, every due hour chained) with the R10 re-forms in place (l4-sketch): 865 of 866 green; P87's
-//     packaging leg fails alike without the sketch (l4-today: the stamp workflow outside a checkout). P103's legs
-//     (rem/spec-p103 73b059ab, round 5 and R-P620; the reviewer's note 8: its MP3 legs are locks for this fold) on P103's
-//     20:35 sketch, alone and with this one (round 2's sketch and the chained one), as committed and re-pointed: 47 of 50
-//     green in every run; the three others are the parts the scratch trees leave out (sdk, kit, kit03; no packages/sdk).
+//     report, the rebuild or the scheduled run: 63 files, scratch/locks-all.txt), round 4 on the whole sketch with the R10
+//     re-forms in place (l5-sketch): 864 of 866 green; P87's packaging leg fails alike without the sketch (l5-today: the
+//     stamp workflow outside a checkout); index.api-boundary's "post-upgrade private delivery on do" failed once in the
+//     sweep and passed 72/72 run alone on the same tree (ab-full-sketch), as on today's (ab-full-today; its W15 leg timed
+//     out once in the sweep's today run). P103's legs (rem/spec-p103 7a5b49ba, the reviewer's note 8: its MP3 legs are
+//     locks for this fold) on P103's round-7 sketch with this one, as committed and re-pointed (the re-point's `failed`
+//     check live: settleMounted returns a run or delivery that threw and a message given up): 49 of 52 green each
+//     (r4-p103legs-*); the three others are the parts the scratch trees leave out (sdk, kit, kit03; no packages/sdk).
 //   R10s (R-P615, R-P632, by name): src/learn/hourly.test.ts W32.03 :908–910 and src/learn/report.test.ts W32.04
 //     :379–382, the 8 MiB refusal re-pointed to RF5's by-slot answer (a day of 2 x 150 items x 20 levels built, not
 //     refused; a canonical day of grids past 8 MiB stored, its answer without a slot within 8 MiB naming every slot, ?slot=
-//     answering the slot's items); report.test.ts's ReportR2 keeps an object's customMetadata and answers a ranged text()
-//     with its range, as R2 does (both RED today on outputBytes, green on the sketch; nothing else in the two files moves).
+//     answering the slot's items; the slot index a list of exactly the day's slots, R-P642 (6)); report.test.ts's ReportR2
+//     keeps an object's customMetadata and answers a ranged text() with its range, as R2 does (R-P632, granted by name):
+//     both RED today on outputBytes, green on the sketch (r5-learn 59/59; r5-today-learn 57/59); nothing else moves.
 //     src/units/W37/LEDGER.unit.test.ts's and FIX2.unit.test.ts's five-minute fold legs (R-P615, R-P632) declare the
 //     shipped events queue (wrangler.toml EVENT_QUEUE → "events", its consumer's four settings) through src/units/_native.ts's
 //     optional pass-through, their wrappers hand a delivered batch to the Worker's queue handler (FIX2's outage holding for
@@ -244,11 +268,14 @@ vi.mock('agents/ai-chat-agent', () => ({ AIChatAgent: class {} }));
 vi.mock('@cloudflare/puppeteer', () => ({ default: {} }));
 
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
+import * as learnRoute from '@/learn/route';
+import type { DecisionRecord } from '@/content/types';
+import type { OutcomeRecord } from '@/ledger/records';
 
 import { BRAND, HOSTS, learned, PAGE_VIEW, putDocument, readTree, rounded, shopperOn, TENANT } from '../_parity';
 import {
-  at, customDay, DATE, documents, drainBatch, drainQueue, featuredProduct, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
-  RAW_POLICY, retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, SMALL, stamp, visit, visitorsOf, WIDE, writeLedger,
+  at, customDay, DATE, documents, drainBatch, drainQueue, drainStepwise, featuredProduct, holdRing, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
+  outcomeRow, RAW_POLICY, REWARD_OF, retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, SMALL, stamp, visit, visitorsOf, WIDE, writeLedger,
   type DeliveryPlan, type Fault, type Scenario, type Stamp, type StepRecord,
 } from './_fold';
 
@@ -267,13 +294,13 @@ async function dayOf(s: Stamp, date = DATE, query = ''): Promise<{ status: numbe
   return operator(s, 'GET', `/v1/${TENANT}/learn/report?date=${date}${query}`);
 }
 
-/** Every difference between what the platform holds and what today's fold held: keys, strings, integers exact; other numbers to a relative 1e-14. */
+/** Every difference between what the platform holds and what today's fold held: keys, strings, integers exact; other numbers to a relative 1e-15 (the work order's). */
 function differences(actual: unknown, expected: unknown, path = '$', out: string[] = [], extraAllowed = false): string[] {
   if (out.length >= 12) return out;
   if (typeof expected === 'number' && typeof actual === 'number') {
     const exact = Number.isInteger(expected) && Number.isInteger(actual) && Math.abs(expected) < 2 ** 31;
     const rel = Math.abs(actual - expected) / Math.max(1, Math.abs(actual), Math.abs(expected));
-    if (exact ? actual !== expected : rel > 1e-14) out.push(`${path}: ${actual} where today's fold has ${expected}`);
+    if (exact ? actual !== expected : rel > 1e-15) out.push(`${path}: ${actual} where today's fold has ${expected}`);
     return out;
   }
   if (expected === null || actual === null || typeof expected !== 'object' || typeof actual !== 'object') {
@@ -307,6 +334,20 @@ async function parity(s: Stamp, name: 'C' | 'M' | 'P', sc: Scenario, day = true)
 
 /** A statistics horizon of a hundred years (P103's fixture): decay moves nothing between sums taken minutes apart. */
 const CENTURY = { n0: 30, tauLearnMs: 3_153_600_000_000, liftMin: 0.5, liftMax: 2, nMin: 30 };
+/**
+ * Witness: the outcomes the learning policy credits among rows the generator made — each outcome names a piece its own
+ * visitor was shown shortly before (two minutes at most, or, for a returning purchase, hours before: within the default
+ * policy's windows, click 30 minutes, add to bag 6 hours, purchase 7 days; src/learn/policy.ts DEFAULT_POLICY), and is
+ * credited once when the piece's slot learns the outcome's reward (REWARD_OF), never otherwise.
+ */
+const creditedOf = (rows: ReadonlyArray<DecisionRecord | OutcomeRecord>) => rows.filter((row): row is OutcomeRecord => 'outcome_id' in row)
+  .filter(o => REWARD_OF[String(o.item_id).split('.')[0]!] === o.type).length;
+/** Every list of strings an answer carries, at any depth. */
+function listsOfStrings(value: unknown, out: string[][] = []): string[][] {
+  if (Array.isArray(value)) { if (value.length && value.every(v => typeof v === 'string')) out.push(value as string[]); else for (const v of value) listsOfStrings(v, out); }
+  else if (value && typeof value === 'object') for (const v of Object.values(value)) listsOfStrings(v, out);
+  return out;
+}
 /** Every string an answer carries, at any depth. */
 function stringsOf(value: unknown, out: string[] = []): string[] {
   if (typeof value === 'string') out.push(value);
@@ -392,20 +433,63 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       expect(bounds(s), `RF1 ${host}: every step holds at most 64 MiB and reads at most a page (16 MiB, 200 objects) of ledger`).toEqual([]);
     }, T);
 
-    it(`RF1 ${host}: a leaf that would pass 8 MiB splits by visitor hash — one residue class growing to ~30 MiB of state over nine hours folds in steps of at most 64 MiB`, async () => {
+    it(`RF1 ${host}: a leaf that would pass 8 MiB splits by visitor hash — one residue class growing to ~30 MiB of state over nine hours folds in steps of at most 64 MiB, and its visitors who return after the splits are credited as before them`, async () => {
       const registry = retentionRegistry();
       const s = await stamp(host, documents(), registry, 'P104.RF1 split');
       const r = rng(104_102);
       const ids = visitorsOf('grow', 9 * 182, 37);
+      // Twenty of hour 6's visitors return at 14:40 and buy what their plp-banner showed them at hour 6 (their third piece;
+      // the slot learns purchases, whose window is 7 days).
+      const returning: OutcomeRecord[] = [];
       for (const [n, hour] of [6, 7, 8, 9, 10, 11, 12, 13, 14].entries()) {
-        const objects = ledgerObjects(rowsOf(ids.slice(n * 182, (n + 1) * 182).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL))), 500, 'b');
+        const visits = ids.slice(n * 182, (n + 1) * 182).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 22, r, FULL));
+        if (hour === 6) for (const [k, v] of visits.slice(0, 20).entries()) returning.push(outcomeRow({ visitor: v.visitor, ts: at(14, 40) + k * 1_000, event: 'purchase', item: v.decisions[2]!.item_id, nonce: `return-${v.visitor}` }, registry));
+        const rows = [...rowsOf(visits), ...(hour === 14 ? returning : [])];
+        const objects = ledgerObjects(rows, 500, 'b');
         const facts = hourFacts(objects, hour);
+        // Witness (creditedOf): the returning visitors' purchases name a piece their rings hold from hour 6.
+        const credited = creditedOf(rows);
         writeLedger(s, objects);
         objects.clear();
         await settleAt(s, at(hour + 1, 6));
         expectHourFolded(s, hour, facts, `RF1 ${host} (the class at ~${((n + 1) * 4004 * 879 / MiB).toFixed(1)} MiB of today's state)`);
+        const agg = aggregateOf(s, hour) as (Json & { brands: Record<string, { policies: Record<string, { credits: number }> }> }) | null;
+        expect(agg?.brands[TENANT]?.policies.learning?.credits, `RF1 ${host}: hour ${hour}'s learning credits are its ${credited} credited outcomes${hour === 14 ? `, the ${returning.length} returning visitors' purchases among them (their rings carried across the splits)` : ''}`).toBe(credited);
       }
       expect(bounds(s), `RF1 ${host}: no leaf holds more than 8 MiB of state: every step holds at most 64 MiB`).toEqual([]);
+    }, T);
+
+    it(`RF1 ${host}: more leaves than one merge may take — 73 leaves holding partials in one hour (nine residue classes split): every leaf's partial merged through a tree of at most 64 partials a merge, every row folded and credited`, async () => {
+      const registry = retentionRegistry();
+      const s = await stamp(host, documents(), registry, 'P104.RF1 merge tree');
+      const r = rng(104_106);
+      // Nine residue classes, sixty visitors each, grow to ~10 MiB of state over hours 6–9 (fifty decisions a visitor an hour).
+      const heavy = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(residue => visitorsOf(`heavy${residue}-`, 60, residue));
+      for (const hour of [6, 7, 8, 9]) {
+        const objects = ledgerObjects(rowsOf(heavy.flat().map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 50, r, FULL))), 500, 'b');
+        writeLedger(s, objects);
+        objects.clear();
+        await settleAt(s, at(hour + 1, 6));
+      }
+      // Hour 10: two new visitors in each of the 64 classes, and two in each half of each class that split.
+      const fresh = [...Array.from({ length: 64 }, (_, residue) => visitorsOf(`all${residue}-`, 2, residue)).flat(),
+        ...[1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap(residue => [...visitorsOf(`half${residue}-`, 2, residue, 128), ...visitorsOf(`half${residue + 64}-`, 2, residue + 64, 128)])];
+      const rows = rowsOf(fresh.map(id => visit(registry, id, at(10) + Math.floor(r() * 35 * MIN), 8, r, FULL)));
+      const objects = ledgerObjects(rows, 500, 'b');
+      const facts = hourFacts(objects, 10), credited = creditedOf(rows);
+      writeLedger(s, objects);
+      objects.clear();
+      const first = s.steps.length;
+      await settleAt(s, at(11, 6));
+      expectHourFolded(s, 10, facts, `RF1 ${host} (hour 10, after the splits)`);
+      const agg = aggregateOf(s, 10) as (Json & { brands: Record<string, { policies: Record<string, { credits: number }> }> }) | null;
+      expect(agg?.brands[TENANT]?.policies.learning?.credits, `RF1 ${host}: hour 10's learning credits are its ${credited} credited outcomes (creditedOf)`).toBe(credited);
+      // A leaf reads its sections of each page's pack by byte range; a merge reads the leaves' partials whole. No step reads
+      // the outputs of more than 64 steps that read other steps' outputs by range (the leaves).
+      const hour10 = s.steps.slice(first), leaves = new Set(hour10.filter(step => step.rangedFromSteps).map(step => step.index));
+      const widest = Math.max(0, ...hour10.map(step => [...step.readFrom].filter(w => leaves.has(w)).length));
+      expect({ leaves: leaves.size > 64, widest: widest <= 64 }, `RF1 ${host}: ${leaves.size} leaf steps in hour 10; the widest step read ${widest} leaves' partials`).toEqual({ leaves: true, widest: true });
+      expect(bounds(s), `RF1 ${host}: every step holds at most 64 MiB`).toEqual([]);
     }, T);
 
     it(`RF1 ${host}: T5's wide context (4 channels x 3 visit buckets x 10 regions, ten slots of ten pieces) folds, the cells bound kept per slot at the live table's capacity`, async () => {
@@ -467,13 +551,14 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       expect(bounds(s), `RF1 ${host}: the refusing step holds at most 64 MiB too`).toEqual([]);
     }, T);
 
-    it(`RF1 ${host}: the custom-policy day past a page is a job on the same steps — 202 naming the job and where its day is read, the same job named again, 202 while its steps run and 200 with its day when they are done, its grids the hourly fold's learning grids, every step at most 64 MiB`, async () => {
+    it(`RF1 ${host}: the custom-policy day past a page is a job on the same steps, named by its day and policy — 202 naming the job and where its day is read, the same job named again, 202 with its progress while its steps run and 200 with the day only once they are done, its grids the hourly fold's learning grids, the day before its own job, every step at most 64 MiB`, async () => {
       const registry = retentionRegistry();
       vi.setSystemTime(at(-1, 50));
       const s = await stamp(host, documents({ stats: CENTURY }), registry, 'P104.RF1 custom-policy job');
       const day = customDay(registry);
-      const facts = hourFacts(day.objects, 12);
-      expect(facts.bytes, 'the fixture: the day holds more than 16 MiB of ledger, past one page').toBeGreaterThan(16 * MiB);
+      const facts = hourFacts(day.objects, 12), before = new Date(at(-1)).toISOString().slice(0, 10);
+      expect({ bytes: facts.bytes > 16 * MiB, before: [...day.previous.keys()].length > 200 }, 'the fixture: the day holds more than 16 MiB of ledger, the day before more than 200 objects: each past one page')
+        .toEqual({ bytes: true, before: true });
       writeLedger(s, day.previous);
       await settleAt(s, at(0, 6));
       writeLedger(s, day.early);
@@ -481,20 +566,37 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       writeLedger(s, day.objects);
       day.objects.clear();
       await settleAt(s, day.settleAt);
-      const ask = () => operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE, policies: [RAW_POLICY] }, day.postAt);
-      const first = await ask();
-      expect(first.status, `RF1 ${host}: the custom-policy day of ${(facts.bytes / MiB).toFixed(1)} MiB is accepted as a job: ${JSON.stringify(first.body).slice(0, 200)}`).toBe(202);
-      const where = locationOf(first.body);
-      expect(where, `RF1 ${host}: the job's answer names where its day is read, GET /v1/${TENANT}/learn/report for ${DATE} (${JSON.stringify(first.body).slice(0, 200)})`)
-        .toMatch(new RegExp(`^/v1/${TENANT}/learn/report\\?(?:.*&)?date=${DATE}(?:&|$)`));
-      const again = await ask();
+      const ask = (date: string) => operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date, policies: [RAW_POLICY] }, day.postAt);
+      const first = await ask(DATE), prior = await ask(before);
+      const where = locationOf(first.body), whereBefore = locationOf(prior.body);
+      const dated = (date: string) => new RegExp(`^/v1/${TENANT}/learn/report\\?(?:.*&)?date=${date}(?:&|$)`);
+      expect({ status: first.status, where: dated(DATE).test(where ?? ''), before: prior.status, whereBefore: dated(before).test(whereBefore ?? '') },
+        `RF1 ${host}: each custom-policy day past a page (${(facts.bytes / MiB).toFixed(1)} MiB; the day before's 211 objects) is accepted as a job naming where its day is read, GET /v1/${TENANT}/learn/report for that day (${JSON.stringify(first.body).slice(0, 200)})`)
+        .toEqual({ status: 202, where: true, before: 202, whereBefore: true });
+      const again = await ask(DATE);
       expect({ status: again.status, unnamed: stringsOf(first.body).filter(x => !stringsOf(again.body).includes(x)) },
         `RF1 ${host}: the same day and policy sent again names the same job (${JSON.stringify(again.body).slice(0, 200)})`).toEqual({ status: 202, unnamed: [] });
-      const running = await operator(s, 'GET', where!, undefined, day.postAt);
-      expect(running.status, `RF1 ${host}: while its steps run, its day answers 202 with its progress: ${JSON.stringify(running.body).slice(0, 200)}`).toBe(202);
+      // The day's job read before its steps run and after every step of the queue, until the queue is empty.
+      const reads: Array<{ status: number; body: Json; delivered: number }> = [];
+      let delivered = 0;
+      const look = async () => { const r = await operator(s, 'GET', where!, undefined, day.postAt); reads.push({ status: r.status, body: r.body, delivered }); };
+      await look();
+      await drainStepwise(s, day.postAt, async () => { delivered++; await look(); });
       await settleAt(s, day.postAt);
       const done = await operator(s, 'GET', where!, undefined, day.postAt);
       expect(done.status, `RF1 ${host}: its steps done, its day answers 200: ${JSON.stringify(done.body).slice(0, 200)}`).toBe(200);
+      const final = JSON.stringify(withoutIdentity(done.body.report as Json));
+      const running = reads.filter(r => r.status === 202), answered = reads.filter(r => r.status === 200);
+      expect({
+        // 202 while its steps run — read before any step and between them — and 200 from the first read after the last of them.
+        statuses: [...new Set(reads.map(r => r.status))].sort(),
+        midJob: running.some(r => r.delivered > 0),
+        // Its progress: the 202 answers report it, so they change as the steps run.
+        progress: new Set(running.map(r => JSON.stringify(r.body))).size > 1,
+        // Each 200 is the day as done, never an answer before the job is complete.
+        everyDayDone: answered.every(r => JSON.stringify(withoutIdentity((r.body.report ?? {}) as Json)) === final),
+      }, `RF1 ${host}: the job's read answers 202 with its progress while the steps run, then 200 with the day (${reads.length} reads over ${delivered} deliveries; 202 bodies ${JSON.stringify(running.slice(0, 3).map(r => r.body)).slice(0, 300)})`)
+        .toEqual({ statuses: [200, 202], midJob: true, progress: true, everyDayDone: true });
       const folded = (await dayOf(s)).body.report as Json & { policies?: Array<{ role: string; credits: number }> };
       const learning = gridsOf(folded, 'learning');
       // Witness: every decision of the day is an exposure; each of the 460 visits' two clicks on a hero, and the click carried in from the day before, is a credit.
@@ -502,7 +604,13 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
         'PRECONDITION: the hourly fold\'s day counts every decision of the day and credits 2 x 460 + 1 clicks').toEqual({ exposures: facts.decisions, credits: 921 });
       expect(gridsOf(done.body.report as Json, RAW_POLICY.name), `RF1 ${host}: the job credits what the hourly fold credits: its grids under the request's policy (the learning policy's own definition) are the learning grids of the hourly fold's day`)
         .toEqual(learning);
-      expect(bounds(s), `RF1 ${host}: every step of the job holds at most 64 MiB and reads at most a page`).toEqual([]);
+      // The day before: its own job, named by its own day; its day that date's, its grids the hourly fold's of that date.
+      const beforeDone = await operator(s, 'GET', whereBefore!, undefined, day.postAt);
+      const beforeFolded = gridsOf((await dayOf(s, before)).body.report as Json, 'learning');
+      expect({ status: beforeDone.status, date: (beforeDone.body.report as Json | undefined)?.date, exposures: exposures(beforeFolded) },
+        `RF1 ${host}: the day before's job answers that day (${JSON.stringify(beforeDone.body).slice(0, 200)})`).toEqual({ status: 200, date: before, exposures: 211 });
+      expect(gridsOf(beforeDone.body.report as Json, RAW_POLICY.name), `RF1 ${host}: the day before's job credits what the hourly fold credits that day`).toEqual(beforeFolded);
+      expect(bounds(s), `RF1 ${host}: every step of the jobs holds at most 64 MiB and reads at most a page`).toEqual([]);
     }, T);
   }
 });
@@ -714,7 +822,10 @@ describe('unit:P104.RF5 (E29: the day summed one hour at a time and stored by sl
       expect((whole.body.report as { counts: { decisions: number } }).counts.decisions, `RF5 ${host}: the head counts the day's ${facts.decisions} decisions (today: hour 12 refused on cells)`).toBe(facts.decisions);
       const text = JSON.stringify(whole.body), head = JSON.stringify({ ...whole.body, report: { ...(whole.body.report as Json), grids: undefined } });
       expect(Buffer.byteLength(text), `RF5 ${host}: the answer without a slot is within 8 MiB (outputBytes)`).toBeLessThanOrEqual(8 * MiB);
-      expect(SLOTS.filter(slot => !head.includes(`"${slot}"`)), `RF5 ${host}: the answer names every slot outside the grids (its slot index)`).toEqual([]);
+      // The slot index (its member is the builder's): a list in the answer, outside the grids, of exactly the day's slots.
+      const lists = listsOfStrings({ ...(whole.body.report as Json), grids: undefined }).map(list => JSON.stringify([...list].sort()));
+      expect(lists.includes(JSON.stringify([...SLOTS].sort())), `RF5 ${host}: the answer carries the slot index, exactly the day's ${SLOTS.length} slots (lists found: ${lists.join(' ').slice(0, 300)})`).toBe(true);
+      void head;
       const stored = [...s.r2.objects.entries()].filter(([k]) => k.startsWith(`reports/${TENANT}/${BRAND}/${DATE}`)).reduce((n, [, v]) => n + v.bytes.length, 0);
       for (const slot of SLOTS) {
         const part = await dayOf(s, DATE, `&slot=${slot}`);
@@ -829,7 +940,7 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       expect(rounded(await learned(s.m), 's'), `RF6 ${host}: the rebuild folds with the 200-entry ring and the previous day's carry-in: the carried-in click credited, the click on the 400-decision-old one not`).toEqual(expected);
     }, T);
 
-    it(`RF6 ${host}: one credit rule with P103's money rule — live learning, the hourly fold, the custom-policy day and the rebuild credit a EUR purchase and refuse a GBP one alike`, async () => {
+    it(`RF6 ${host}: LOCK behind P103 — one credit rule with P103's money rule: live learning, the hourly fold, the custom-policy day and the rebuild credit a EUR purchase and refuse a GBP one alike`, async () => {
       const registry = retentionRegistry();
       vi.setSystemTime(at(2, 50));
       // A horizon of a hundred years (P103's own fixture): decay moves nothing between the live sum and the offline ones taken an hour later.
@@ -941,6 +1052,90 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       expect(bounds(s), `RF6 ${host}: every step holds at most 64 MiB`).toEqual([]);
     }, T);
 
+    it(`RF6 ${host}: R-P629 — a copy stamped by the producer past the ring's bound, sorting first, beside the ring-stamped copy of the same outcome: the open and the closed hour, the rebuild and the custom-policy day's job on a day past a page keep the ring-stamped copy, then the earliest-born, and credit what live learning took`, async () => {
+      // P103's bound on the direct path's wait for the ring's decision (R-P629 (1), its R18), read through the module namespace.
+      const bound = (learnRoute as unknown as Record<string, unknown>).RING_DECISION_BOUND_MS;
+      expect(typeof bound === 'number' && bound > 0 ? 'bounded' : String(bound), `RF6 ${host}: PRECONDITION P103 (R-P629) — the direct path's wait for the ring is bounded by RING_DECISION_BOUND_MS, exported from src/learn/route.ts`).toBe('bounded');
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(1, 50));
+      const docs = documents({ stats: CENTURY }, { 'checkout-upsell': { reward: 'purchase', objective: 'revenue' } });
+      const s = await stamp(host, docs, registry, 'P104.RF6 ring-stamped copy', { recovery: false });
+      const r = rng(104_303);
+      const background = ledgerObjects(rowsOf(visitorsOf('stamp', 460).map(id => visit(registry, id, at(1) + Math.floor(r() * 35 * MIN), 22, r, { ...FULL, slots: SLOTS.filter(x => x !== 'checkout-upsell') }))), 500, 'b');
+      const bytes = hourFacts(background, 1).bytes;
+      expect(bytes, 'the fixture: the day holds more than 16 MiB of ledger').toBeGreaterThan(16 * MiB);
+      writeLedger(s, background);
+      background.clear();
+      await settleAt(s, at(2, 6));
+      vi.setSystemTime(at(3, 0));
+      const c = await shopperOn(s.m);
+      expect((await c.action(PAGE_VIEW)).status, 'PRECONDITION: the shopper\'s page view is accepted').toBe(200);
+      const pieces = (await c.snapshot('checkout')).decisions.filter(d => d.slot === 'checkout-upsell');
+      const productOf = (contentId: string) => featuredProduct('checkout-upsell', Number(contentId.split('.').pop()))!;
+      const send = async (wire: Json) => {
+        const response = await s.m.fetch(new Request('https://shop.invalid/realtime/action', { method: 'POST',
+          headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: c.grant.capability, 'Content-Type': 'application/json' }, body: JSON.stringify(wire) }));
+        await s.m.drain();
+        return response.status;
+      };
+      const event = (type: string, data: Json, timestamp = Date.now()): Json => ({ type, data, source: 'sdk', userId: c.grant.subject, sessionId: c.grant.sessionId, timestamp, eventId: crypto.randomUUID() });
+      const purchaseOf = (contentId: string, value: number) => event('purchase', { orderId: `p104-stamp-${contentId}`, value, margin: Math.round(value * 0.4), currency: 'EUR',
+        items: [{ productId: productOf(contentId), quantity: 1, price: value }] });
+      vi.setSystemTime(at(3, 2));
+      const first = purchaseOf(pieces[0]!.contentId, 575);
+      const older = event('add_to_cart', { productId: productOf(pieces[2]!.contentId), price: 375, quantity: 1 }, (first.timestamp as number) - 20_000);
+      // The purchase's first delivery, under no money policy, is held on its way to the ring past the bound: the action answers
+      // within the bound and its record carries the producer's own stamp; it is batched with an event 20 s older, so its
+      // ledger object sorts before every later one.
+      const hold = holdRing(s.m, first.eventId as string);
+      try {
+        expect(await send(older), 'PRECONDITION: the older event is accepted').toBe(200);
+        const answered = await Promise.race([send(first).then(status => ({ status })),
+          new Promise<string>(resolve => { setTimeout(() => resolve('no answer'), (bound as number) + 500); })]);
+        expect(answered, `PRECONDITION P103 (R-P629): with the ring held, the purchase is answered within the ring's bound (${String(bound)} ms) and 500 ms more`).toEqual({ status: 200 });
+        await drainBatch(s, at(3, 2));
+        vi.setSystemTime(at(3, 3));
+        const published = await putDocument(s.m, 'learn', { ...(docs.learn as Json), money: { currency: 'EUR', nonpositive: 'refuse' } }, 'P104 R-P629: EUR after the first delivery');
+        const read = JSON.stringify((await operator(s, 'GET', '/content/learn')).body);
+        expect({ status: published.status, money: read.includes('"money"') && read.includes('"EUR"') },
+          `RF6 ${host}: PRECONDITION P103 — the learn document's money member is published and read back: ${read.slice(0, 160)}`).toEqual({ status: 200, money: true });
+        // The SDK's retry reaches the ring first and is decided under EUR, then the held delivery is let through.
+        vi.setSystemTime(at(3, 4));
+        const fresh = purchaseOf(pieces[1]!.contentId, 120);
+        expect([await send(first), await send(fresh)], 'PRECONDITION: the retry and a new EUR purchase are accepted').toEqual([200, 200]);
+      } finally { hold.release(); }
+      await hold.done;
+      await drainQueue(s, at(3, 4));
+      // The fixture: the hour's first outcome object holds the producer-stamped copy, a later one the ring-stamped copy.
+      const copies = [...s.r2.objects.keys()].filter(k => k.startsWith(hourPrefixOf(at(3)) + '/') && k.includes('/outcome/')).sort()
+        .flatMap(k => (s.r2.text(k) ?? '').split('\n').filter(Boolean).map(line => JSON.parse(line) as Json).filter(row => row.event_id === first.eventId)
+          .map(row => (row.money_stamped_by === 'producer' ? 'producer' : 'ring')));
+      expect(copies, 'the fixture: two copies of the purchase, the producer-stamped one first in key order (P103 R18 names the mark money_stamped_by)').toEqual(['producer', 'ring']);
+      // Witness (P103 R-P629, its R18): the ring decided the retry first, under EUR, so live learning credited the 575
+      // purchase by its value, once; and the new purchase 120.
+      const expected = { [pieces[0]!.contentId]: 575, [pieces[1]!.contentId]: 120 };
+      const upsell = (held: Record<string, number>) => Object.fromEntries(Object.entries(held).filter(([item]) => item.startsWith('checkout-upsell.')));
+      expect(upsell(rounded(await learned(s.m), 's')), `RF6 ${host}: live learning credits the purchase once, under the stamp the ring decided, and the new one`).toEqual(expected);
+      await settleAt(s, at(3, 30));
+      const open = await dayOf(s, DATE);
+      expect(gridCredits(open.body.report as Json, 'checkout-upsell', 'learning'), `RF6 ${host}: the open hour's fold keeps the ring-stamped copy, not the producer-stamped one read first (${open.status})`).toEqual(expected);
+      await settleAt(s, at(4, 6));
+      const day = await dayOf(s, DATE);
+      expect(gridCredits(day.body.report as Json, 'checkout-upsell', 'learning'), `RF6 ${host}: the closed hour's fold keeps the ring-stamped copy (${day.status})`).toEqual(expected);
+      const rebuilt = await operator(s, 'POST', `/v1/${TENANT}/learn/generation`, { slot: 'checkout-upsell', brand: BRAND, rebuildFrom: DATE }, at(4, 8));
+      expect(rebuilt.status, `RF6 ${host}: the rebuild of a ${(bytes / MiB).toFixed(1)} MiB day is accepted: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBeLessThan(300);
+      await settleAt(s, at(4, 8));
+      expect(upsell(rounded(await learned(s.m), 's')), `RF6 ${host}: the rebuild keeps the ring-stamped copy`).toEqual(expected);
+      const job = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE, policies: [RAW] }, at(4, 10));
+      const where = locationOf(job.body);
+      expect({ status: job.status, where }, `RF6 ${host}: the custom-policy day is a job naming where its day is read: ${JSON.stringify(job.body).slice(0, 200)}`)
+        .toEqual({ status: 202, where: expect.stringMatching(new RegExp(`^/v1/${TENANT}/learn/report\\?(?:.*&)?date=${DATE}(?:&|$)`)) });
+      await settleAt(s, at(4, 10));
+      const jobDay = await operator(s, 'GET', where!, undefined, at(4, 12));
+      expect(gridCredits(jobDay.body.report as Json, 'checkout-upsell', RAW.name), `RF6 ${host}: the custom-policy day's job keeps the ring-stamped copy (${jobDay.status})`).toEqual(expected);
+      expect(bounds(s), `RF6 ${host}: every step holds at most 64 MiB`).toEqual([]);
+    }, T);
+
     it(`RF6 ${host}: a day past today's caps (rawBytes 16 MiB) is rebuilt on the same steps — every exposure and credit counted, every step at most 64 MiB`, async () => {
       const registry = retentionRegistry();
       const s = await stamp(host, documents(), registry, 'P104.RF6 rebuild at volume');
@@ -975,18 +1170,32 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
 // ===========================================================================
 
 describe('unit:P104.RF7 (E29: kit 02 states the envelope)', () => {
-  it('RF7: kit 02 states the per-step bound and no volume limit on the fold, the day read by slot (?slot=), the 200 by slot past 8 MiB in place of 413, coverage, and the open hour\'s deferral (open_fold_deferred)', () => {
+  it('RF7: kit 02 states the per-step bound and no volume limit on the fold, the day read by slot (?slot=), the 200 by slot past 8 MiB in place of 413, coverage, and the open hour\'s deferral (open_fold_deferred), each by a sentence that does not negate it, none said the other way', () => {
     const kit = readTree('docs/kit/02-api-reference.md');
-    const sentences = kit.split(/(?<=[.!?])\s+(?=[A-Z`(])/);
-    const has = (...parts: RegExp[]) => sentences.some(x => parts.every(p => p.test(x)));
-    expect({
-      perStepBound: has(/64\s?MiB/, /\bstep/i),
-      noVolumeLimit: has(/\bstep/i, /(no volume limit|whatever the traffic|any (traffic|volume))/i),
-      bySlot: has(/[?&]slot=|`slot`/, /\bpart\b|\bparts\b|by slot/i),
-      pastEightMiB: has(/8\s?MiB/, /\b200\b/, /slot/i, /413/),
-      coverage: has(/coverage/, /(missing|incomplete)/i),
-      openDeferral: /open_fold_deferred/.test(kit),
+    /** The kit's reading units: prose paragraphs, and each table row on its own (unit:W24.R2's idiom, P103.MP5's). */
+    const units = kit.split(/\n\s*\n/).flatMap(block => block.trimStart().startsWith('|') ? block.split('\n') : [block]).map(u => u.replace(/\s+/g, ' '));
+    // The paragraphs that speak of the report fold's envelope (kit 02's catalog in parts and the rest are not read).
+    const envelope = units.filter(u => /64\s?MiB|[?&]slot=|by slot|open_fold_deferred|fixed-size steps|volume limit|whatever the traffic|stored in parts|part per slot|slot index/i.test(u));
+    const sentences = envelope.flatMap(u => u.split(/(?<=[.;!?])\s+(?=[A-Z`(])/));
+    /** A sentence negating what it says (R-P604 (6), P103.MP5). */
+    const negated = (x: string) => /\b(never|not|cannot|can't|no longer|nor)\b/i.test(x);
+    const says = (test: (x: string) => boolean) => sentences.some(x => test(x) && !negated(x));
+    // Each fact stated by a sentence that does not negate it, and no sentence of the envelope says its opposite.
+    const facts = {
+      perStepBound: says(x => /64\s?MiB/.test(x) && /\bstep/i.test(x) && /\bat most\b|\bholds?\b|\bwithin\b/i.test(x))
+        && !sentences.some(x => /64\s?MiB/.test(x) && /\b(refus|drop|truncat|lost)\w*/i.test(x) && /\b(traffic|hours?|tenant)\b/i.test(x)),
+      noVolumeLimit: sentences.some(x => /no volume limit|whatever the traffic/i.test(x) && /\bfold/i.test(x) && !/\b(never|cannot|can't|no longer)\b/i.test(x))
+        && !sentences.some(x => /\b(traffic|volume|busy)\b/i.test(x) && /\b(refus|drop)\w*/i.test(x) && /\b(fold|hours?|steps?)\b/i.test(x)),
+      bySlot: says(x => /[?&]slot=/.test(x) && /\bparts?\b/i.test(x))
+        && !sentences.some(x => /\bday\b/i.test(x) && /in parts|part per slot|[?&]slot=/i.test(x) && (negated(x) || /only the first|first page/i.test(x))),
+      pastEightMiB: says(x => /8\s?MiB/.test(x) && /\b200\b/.test(x) && /slot/i.test(x) && /in place of 413|instead of 413/.test(x))
+        && !sentences.some(x => /8\s?MiB|by slot/i.test(x) && /\b413\b/.test(x) && !/in place of 413|instead of 413/.test(x)),
+      coverage: says(x => /coverage/.test(x) && /(missing|incomplete|truncated)/i.test(x) && /\bnames?\b|\bsays?\b|\blists?\b/i.test(x))
+        && !sentences.some(x => /coverage/.test(x) && /\b(does not|doesn't|never|cannot) (name|say|list)/i.test(x)),
+      openDeferral: says(x => /open_fold_deferred/.test(x)),
       todaysCombinedBudgetGone: !/16\s?MiB combined aggregate JSON/.test(kit),
-    }, 'RF7: the report as built, in kit 02').toEqual({ perStepBound: true, noVolumeLimit: true, bySlot: true, pastEightMiB: true, coverage: true, openDeferral: true, todaysCombinedBudgetGone: true });
+    };
+    expect(envelope.length, 'PRECONDITION: kit 02 has paragraphs on the report fold').toBeGreaterThan(3);
+    expect(facts, 'RF7: the report as built, in kit 02, sentence by sentence').toEqual(Object.fromEntries(Object.keys(facts).map(key => [key, true])));
   });
 });

@@ -55,7 +55,18 @@ const TRACE = process.env.P104_TRACE;
 const PRECISE = process.env.P104_PRECISE === '1' || process.env.P104_PRECISE === '2';
 /** P104_PRECISE=2: every sample collected first, so a step's figure is the live heap it held, garbage left out (slow; evidence only). */
 const LIVE = process.env.P104_PRECISE === '2';
-const heap = (): number => process.memoryUsage().heapUsed;
+/** Every live R2 double, so the bytes the stores themselves hold are left out of what a step holds. */
+const stores = new Set<WeakRef<FoldR2>>();
+function storeBytes(): number {
+  let n = 0;
+  for (const ref of stores) { const store = ref.deref(); if (store) n += store.bytesHeld; else stores.delete(ref); }
+  return n;
+}
+/**
+ * What the process holds: its V8 heap and its ArrayBuffer and Buffer memory (R-P642: bytes outside the heap count),
+ * less the bytes the R2 doubles keep as the bucket (each stored body in its own ArrayBuffer of its exact length).
+ */
+const heap = (): number => { const m = process.memoryUsage(); return m.heapUsed + m.arrayBuffers - storeBytes(); };
 
 // ---------------------------------------------------------------------------
 // One step's measurement.
@@ -65,13 +76,19 @@ export interface StepRecord {
   index: number;
   kind: 'scheduled' | 'queue' | 'request';
   label: string;
-  /** The live heap the step held above the heap before it, in bytes (peak). */
+  /** The bytes the step held above those held before it, in bytes (peak): heap, ArrayBuffer and Buffer memory alike. */
   held: number;
   /** Bytes and distinct objects of the ledger (the writer's layout) the step read. */
   ledgerBytes: number;
   ledgerObjects: number;
   /** Every other byte the step read from storage. */
   otherBytes: number;
+  /** Reads (gets) of stored objects other than the ledger's. */
+  otherReads: number;
+  /** The steps whose writes this step read (a write outside every step is -1). */
+  readFrom: Set<number>;
+  /** This step read another step's write by a byte range (as a leaf reads its sections of a page's pack), the stored day aside. */
+  rangedFromSteps: boolean;
   /** The ledger keys the step read, in order (each once). */
   ledgerKeys: string[];
   calls: number;
@@ -124,6 +141,15 @@ const unquote = (v: string | null | undefined) => v == null ? v : v.replace(/^W\
 
 export class FoldR2 {
   objects = new Map<string, Stored>();
+  /** The bytes this bucket holds (left out of what a step holds). */
+  bytesHeld = 0;
+  /** The step that last wrote each key (-1 outside every step). */
+  writers = new Map<string, number>();
+  constructor() { stores.add(new WeakRef(this)); }
+  private keep(key: string, stored: Stored): void {
+    this.bytesHeld += stored.bytes.length - (this.objects.get(key)?.bytes.length ?? 0);
+    this.objects.set(key, stored);
+  }
   /** Every write and delete, in order, with the step that made it and the time (the frozen clock) it was made at. */
   journal: Array<{ op: 'put' | 'delete'; key: string; bytes: number; step: number; at: number }> = [];
   fault: Fault | null = null;
@@ -165,6 +191,12 @@ export class FoldR2 {
 
   async get(key: string, options?: { range?: Range; onlyIf?: Conditional }) {
     const blocked = this.enter('get', key); if (blocked) return blocked;
+    const reader = context.getStore();
+    if (reader && !isLearningKey(key)) reader.record.otherReads++;
+    const writer = this.writers.get(key) ?? -1;
+    // A read by range of another step's output (as a leaf reads its sections of a page's pack); the stored day, the report's
+    // public store (reports/…), is read by range by its readers and is never a leaf's input.
+    if (reader && this.objects.has(key)) { reader.record.readFrom.add(writer); if (options?.range && writer >= 0 && !key.startsWith('reports/')) reader.record.rangedFromSteps = true; }
     const s = this.objects.get(key);
     if (!s) return null;
     if (options?.onlyIf && !this.passes(s, options.onlyIf)) return this.meta(key, s);
@@ -214,8 +246,9 @@ export class FoldR2 {
     const http = options?.httpMetadata instanceof Headers ? { contentType: options.httpMetadata.get('content-type') ?? '' } : options?.httpMetadata;
     const stored: Stored = { bytes, etag: `e${(++this.seq).toString(16).padStart(8, '0')}`, uploaded: Date.now(),
       ...(options?.customMetadata ? { customMetadata: { ...options.customMetadata } } : {}), ...(http ? { httpMetadata: { ...http } } : {}) };
-    this.objects.set(key, stored);
+    this.keep(key, stored);
     const run = context.getStore();
+    this.writers.set(key, run?.record.index ?? -1);
     if (run) run.record.writes.push(key);
     this.journal.push({ op: 'put', key, bytes: bytes.length, step: run?.record.index ?? -1, at: Date.now() });
     sample(run);
@@ -225,6 +258,8 @@ export class FoldR2 {
   async delete(keys: string | string[]) {
     for (const key of typeof keys === 'string' ? [keys] : keys) {
       const blocked = this.enter('delete', key); if (blocked) return blocked;
+      const gone = this.objects.get(key);
+      if (gone) this.bytesHeld -= gone.bytes.length;
       if (this.objects.delete(key)) this.journal.push({ op: 'delete', key, bytes: 0, step: context.getStore()?.record.index ?? -1, at: Date.now() });
     }
   }
@@ -243,7 +278,11 @@ export class FoldR2 {
       names = kept;
     }
     const start = Number(options.cursor ?? 0), end = start + limit;
-    return { objects: names.slice(start, end).map(key => this.meta(key, this.objects.get(key)!)), truncated: end < names.length,
+    const include = new Set(options.include ?? []);
+    return { objects: names.slice(start, end).map(key => {
+      const { customMetadata, httpMetadata, ...listed } = this.meta(key, this.objects.get(key)!);
+      return { ...listed, ...(include.has('customMetadata') ? { customMetadata } : {}), ...(include.has('httpMetadata') ? { httpMetadata } : {}) };
+    }), truncated: end < names.length,
       ...(end < names.length ? { cursor: String(end) } : {}), delimitedPrefixes: [...delimited].sort() };
   }
 
@@ -269,12 +308,17 @@ export class FoldR2 {
   text(key: string): string | null { const s = this.objects.get(key); return s ? s.bytes.toString('utf8') : null; }
   /** Write a body directly (a fixture), outside every step. */
   seed(key: string, body: string | Buffer, customMetadata?: Record<string, string>): void {
-    this.objects.set(key, { bytes: typeof body === 'string' ? Buffer.from(body) : body, etag: `e${(++this.seq).toString(16).padStart(8, '0')}`, uploaded: Date.now(),
+    this.keep(key, { bytes: own(typeof body === 'string' ? Buffer.from(body) : body), etag: `e${(++this.seq).toString(16).padStart(8, '0')}`, uploaded: Date.now(),
       ...(customMetadata ? { customMetadata } : {}) });
   }
 }
 
+/** A body in its own ArrayBuffer of its exact length (never a slice of Node's shared pool), so the bucket's bytes are known. */
+function own(bytes: Buffer): Buffer { const copy = Buffer.allocUnsafeSlow(bytes.length); bytes.copy(copy); return copy; }
 async function toBytes(value: string | ArrayBuffer | ArrayBufferView | ReadableStream | Blob | null): Promise<Buffer> {
+  return own(await rawBytes(value));
+}
+async function rawBytes(value: string | ArrayBuffer | ArrayBufferView | ReadableStream | Blob | null): Promise<Buffer> {
   if (value === null) return Buffer.alloc(0);
   if (typeof value === 'string') return Buffer.from(value, 'utf8');
   if (value instanceof ArrayBuffer) return Buffer.from(new Uint8Array(value));
@@ -432,7 +476,11 @@ export async function stamp(host: Host, documents: Documents, registry: ReturnTy
   const push = (body: unknown) => { sent.push(1); queue.push({ id: `m${++ids}`, body: structuredClone(body), attempts: 0 }); };
   Object.assign(m.env as unknown as Record<string, unknown>, {
     STORAGE: r2, RETENTION: registry.config, LEDGER_RECOVERY_CONFIG: RECOVERY, IDENTITY_SALT: 'p104-synthetic-identity-salt-quarantine-provenance',
-    EVENT_QUEUE: { send: async (body: unknown) => { push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) push(message.body); } },
+    // As the platform's queue: sendBatch takes at most BATCH (100) messages (R-P642).
+    EVENT_QUEUE: { send: async (body: unknown) => { push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => {
+      if (messages.length > BATCH) throw new Error(`Queue sendBatch: ${messages.length} messages, more than the ${BATCH} a batch may hold`);
+      for (const message of messages) push(message.body);
+    } },
   });
   return { host, m, env: m.env, r2, queue, steps: [], sent, answers: [] };
 }
@@ -441,7 +489,7 @@ const waitAll = async (pending: Promise<unknown>[]) => { while (pending.length) 
 
 /** Run one step under its measurement. */
 export async function step<T>(s: Stamp, kind: StepRecord['kind'], label: string, run: (ctx: ExecutionContext) => Promise<T>, bound = 64 * MiB): Promise<{ record: StepRecord; value?: T }> {
-  const record: StepRecord = { index: s.steps.length, kind, label, held: 0, ledgerBytes: 0, ledgerObjects: 0, otherBytes: 0, ledgerKeys: [], calls: 0, writes: [], outcome: 'done' };
+  const record: StepRecord = { index: s.steps.length, kind, label, held: 0, ledgerBytes: 0, ledgerObjects: 0, otherBytes: 0, otherReads: 0, readFrom: new Set<number>(), rangedFromSteps: false, ledgerKeys: [], calls: 0, writes: [], outcome: 'done' };
   s.steps.push(record);
   const started = performance.now();
   // P104_PRECISE (a measurement run's evidence): every step's base taken after a collection, so its figure is what it held alone.
@@ -518,7 +566,8 @@ export async function drainQueue(s: Stamp, at: number, plan: DeliveryPlan = {}, 
  * through the Worker's own queue handler (again when not acknowledged, at most DELIVERIES times), repeated until a run
  * changes no stored object but the warehouse slice's schedule. The clock reads `at` during each run and delivery only.
  */
-export async function settleMounted(m: Mounted, at: number, runs = 40): Promise<void> {
+export async function settleMounted(m: Mounted, at: number, runs = 40): Promise<{ failed: string[] }> {
+  const failed: string[] = [];
   const app = await loadWorker(), clock = vi.spyOn(Date, 'now'), prior = clock.getMockImplementation();
   const storage = (m.env as unknown as { STORAGE: { objects: Map<string, string> } }).STORAGE;
   const fingerprint = () => JSON.stringify([...storage.objects].filter(([key]) => !NOISE.test(key)).sort(([a], [b]) => (a < b ? -1 : 1)));
@@ -534,7 +583,7 @@ export async function settleMounted(m: Mounted, at: number, runs = 40): Promise<
   try {
     for (let i = 0; i < runs; i++) {
       const before = fingerprint();
-      await invoke(ctx => app.scheduled({ cron: '*/5 * * * *', scheduledTime: at, noRetry() { /* never */ } }, m.env, ctx));
+      if (!await invoke(ctx => app.scheduled({ cron: '*/5 * * * *', scheduledTime: at, noRetry() { /* never */ } }, m.env, ctx))) failed.push(`the five-minute run ${i + 1} at ${new Date(at).toISOString()} threw`);
       const waiting = m.queued.splice(0).map((body, n) => ({ id: `s${i}-${n}`, body, attempts: 0 }));
       for (let n = 0; n < 20_000 && waiting.length; n++) {
         const message = waiting.shift()!;
@@ -543,11 +592,66 @@ export async function settleMounted(m: Mounted, at: number, runs = 40): Promise<
         const done = await invoke(ctx => app.queue({ queue: 'events', messages: [{ id: message.id, timestamp: new Date(at), body: structuredClone(message.body), attempts: message.attempts,
           ack: () => { acked = true; }, retry: () => { retried = true; } }], ackAll: () => { acked = true; }, retryAll: () => { retried = true; } }, m.env, ctx));
         waiting.push(...m.queued.splice(0).map((body, k) => ({ id: `${message.id}.${n}.${k}`, body, attempts: 0 })));
-        if (!(done && acked && !retried) && message.attempts < DELIVERIES) waiting.push(message);
+        if (!(done && acked && !retried)) { if (message.attempts < DELIVERIES) waiting.push(message); else failed.push(`a fold message given up after ${DELIVERIES} deliveries: ${JSON.stringify(message.body).slice(0, 160)}`); }
       }
       if (fingerprint() === before) break;
     }
   } finally { if (prior) clock.mockImplementation(prior); else clock.mockRestore(); }
+  return { failed };
+}
+
+/**
+ * The queue drained as drainQueue drains it, one message a batch, with `look` run after every delivery (the operator's
+ * reads in the middle of a job's steps); `look` runs outside the delivery and is never one of its steps' work.
+ */
+export async function drainStepwise(s: Stamp, at: number, look: () => Promise<void>, cap = 20_000): Promise<number> {
+  vi.setSystemTime(at);
+  const app = await loadWorker();
+  let n = 0;
+  while (s.queue.length) {
+    if (++n > cap) throw new Error(`the events queue did not drain within ${cap} deliveries`);
+    const message = s.queue.shift()!;
+    message.attempts++;
+    let acked = false, retried = false;
+    const batch = { queue: 'events', messages: [{ id: message.id, timestamp: new Date(at), body: structuredClone(message.body), attempts: message.attempts,
+      ack: () => { acked = true; }, retry: () => { retried = true; } }], ackAll: () => { acked = true; }, retryAll: () => { retried = true; } };
+    const { record } = await step(s, 'queue', `message ${message.id} (delivery ${message.attempts})`, ctx => app.queue(batch, s.env, ctx));
+    if (!(acked && !retried && record.outcome === 'done') && message.attempts < DELIVERIES) s.queue.push(message);
+    vi.setSystemTime(at);
+    await look();
+  }
+  return n;
+}
+
+/**
+ * R-P629 (P103's case, its round 7): the visitor's ring is slow for the first `/outcome` call naming this event — held
+ * until `release`, then sent on unchanged; a caller that aborts the held call is answered with the abort at once, as the
+ * platform's fetch answers it, and the request still reaches the ring on release (a sent request is not recalled).
+ */
+export function holdRing(m: Mounted, eventId: string): { release: () => void; done: Promise<unknown> } {
+  let release!: () => void, delivered!: (p: Promise<unknown>) => void, held = false;
+  const released = new Promise<void>(resolve => { release = resolve; });
+  const done = new Promise<unknown>(resolve => { delivered = p => resolve(p.catch(() => undefined)); });
+  const ring = m.env.DECISION_RING!;
+  (m.env as unknown as Record<string, unknown>).DECISION_RING = { idFromName: (name: string) => ring.idFromName(name),
+    get: (id: DurableObjectId) => ({ fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      if (!held && new URL(request.url).pathname === '/outcome') {
+        const body = await request.clone().text();
+        if ((JSON.parse(body) as { outcome?: { event_id?: string } }).outcome?.event_id === eventId) {
+          held = true;
+          const onward = released.then(() => ring.get(id).fetch(new Request(request.url, { method: request.method, headers: request.headers, body })));
+          delivered(onward);
+          const signal = init?.signal ?? request.signal;
+          return Promise.race([onward, new Promise<never>((_, reject) => {
+            const aborted = () => reject(new DOMException('The operation was aborted.', 'AbortError'));
+            if (signal?.aborted) aborted(); else signal?.addEventListener('abort', aborted, { once: true });
+          })]);
+        }
+      }
+      return ring.get(id).fetch(request);
+    } }) };
+  return { release, done };
 }
 
 /** wrangler.toml [[queues.consumers]] queue "events": max_batch_size = 100. */
@@ -731,6 +835,12 @@ export const RAW_POLICY = { name: 'p104-raw', scope: 'session', match: 'direct',
  * hour (00:06, 01:06, 13:06), then the operator's custom-policy request (RAW_POLICY) at 13:10.
  */
 export function customDay(registry: ReturnType<typeof retentionRegistry>): { previous: Map<string, string>; early: Map<string, string>; objects: Map<string, string>; settleAt: number; postAt: number } {
+  // The day before is past a page too, by its objects: 210 decisions at 23:00–23:49, one object each (a page holds 200).
+  const prior = rng(104_107), before = new Map<string, string>();
+  for (const [n, id] of visitorsOf('prior', 210).entries()) {
+    const ts = at(-1) + n * 14_000, slot = SMALL.slots[n % SMALL.slots.length]!;
+    for (const [key, body] of ledgerObjects([decisionRow({ visitor: id, ts, page: PAGE_OF[slot]!, slot, item: `${slot}.${Math.floor(prior() * SMALL.items)}`, cell: { channel: 'direct', visit_bucket: '1', region: 'US-NY' } }, registry)], 1, `p${n}`)) before.set(key, body);
+  }
   const r = rng(104_106);
   const carry = 'custom-carry', cell = { channel: 'direct', visit_bucket: '1', region: 'US-NY' };
   const later = Array.from({ length: 250 }, (_, k) => {
@@ -738,7 +848,7 @@ export function customDay(registry: ReturnType<typeof retentionRegistry>): { pre
     return decisionRow({ visitor: carry, ts: at(12, 1) + k * 5_000, page: PAGE_OF[slot]!, slot, item: `${slot}.${k % SMALL.items}`, cell }, registry);
   });
   return {
-    previous: ledgerObjects([decisionRow({ visitor: carry, ts: at(-1, 55), page: 'home', slot: 'home-hero', item: 'home-hero.1', cell }, registry)], 500, 'c'),
+    previous: new Map([...before, ...ledgerObjects([decisionRow({ visitor: carry, ts: at(-1, 55), page: 'home', slot: 'home-hero', item: 'home-hero.1', cell }, registry)], 500, 'c')]),
     early: ledgerObjects([outcomeRow({ visitor: carry, ts: at(0, 5), event: 'content_click', item: 'home-hero.1', nonce: `${carry}-click` }, registry)], 500, 'c'),
     objects: ledgerObjects([...rowsOf(visitorsOf('custom', 460).map(id => visit(registry, id, at(12) + Math.floor(r() * 35 * MIN), 22, r, SMALL))), ...later], 500, 'b'),
     settleAt: at(13, 6), postAt: at(13, 10),

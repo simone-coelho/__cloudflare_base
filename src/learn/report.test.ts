@@ -390,8 +390,12 @@ describe('the day report', () => {
     f.storage.objects.delete(f.key);
     expect(await writeCanonicalDay(f.storage, f.ids, canonicalReportJson(wide), { etag: null })).toBe(true);
     const whole = await request('?date=' + f.ids.date), wholeText = await whole.text();
+    // The slot index (its member is the builder's): a list, outside the grids, of exactly the day's slots (R-P642).
+    const lists: string[][] = [];
+    const walk = (v: unknown): void => { if (Array.isArray(v)) { if (v.length && v.every(x => typeof x === 'string')) lists.push(v as string[]); else v.forEach(walk); } else if (v && typeof v === 'object') Object.values(v).forEach(walk); };
+    walk({ ...(JSON.parse(wholeText) as { report?: Record<string, unknown> }).report, grids: undefined });
     expect({ status: whole.status, within: new TextEncoder().encode(wholeText).length <= REPORT_LIMITS.outputBytes,
-      slots: ['hero', 'big', 'wider'].filter(slot => wholeText.includes(JSON.stringify(slot))) }).toEqual({ status: 200, within: true, slots: ['hero', 'big', 'wider'] });
+      index: lists.some(list => JSON.stringify([...list].sort()) === JSON.stringify(['big', 'hero', 'wider'])) }).toEqual({ status: 200, within: true, index: true });
     const bySlot = await request('?date=' + f.ids.date + '&slot=big&limit=500');
     expect(bySlot.status).toBe(200);
     const page = (await bySlot.json()) as { report: DayReport; page: { total: number } };
