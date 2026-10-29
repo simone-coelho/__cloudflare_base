@@ -1114,18 +1114,21 @@ function packHead(storage: R2Bucket, key: string): Promise<PackHeld | null> {
 // P98 (LD6, R-P646): the fence between a load and the purge. The purge deletes a pack no stored revision names once the
 // store took it ATTACHMENT_GRACE_MS (15 minutes) ago or more, deciding from one listing. A request that names a pack
 // already stored (its own landed attempt, the same file sent again, a stage it publishes) therefore takes it only while
-// the store took it less than the grace less PACK_ADOPT_MARGIN_MS ago (10 minutes): a purge cannot list it as
-// collectable until 5 minutes after the request found it, and a request's run is far shorter (a Worker invocation's CPU
-// time is capped at 5 minutes at the platform's highest setting, 30 seconds by default, and a load's work between that
-// HEAD and its reservation is one exact-create and one compare-and-set). Older, the load writes its pack under a fresh
+// the store took it less than the grace less PACK_REUSE_MARGIN_MS ago (R-P656: a 5-minute margin, so within the last
+// 10 minutes): a purge cannot list it as collectable until 5 minutes after the request found it, and the margin is
+// longer than any request the engine serves (a Worker invocation's CPU time is capped at 5 minutes at the platform's
+// highest setting, 30 seconds by default, and a load's work between that HEAD and its reservation is one exact-create
+// and one compare-and-set). Older, the load writes its pack under a fresh
 // key (`freshPack`), which no listing taken before can hold. Once the head holds the request's intent the fence is
 // checked again (`holdPack`): the pack must still be younger than the grace less PACK_CLOCK_MS (one minute, for the
 // store's clock and the Worker's to differ), else the request abandons its reservation and names nothing. A purge that
 // listed the pack before that check therefore found it younger than the grace and keeps it; one that listed it after
 // finds the head holding the request's intent, or its revision committed since the purge's own (`deleteWhileIdle`),
 // and stops. A HEAD that answers no upload time (R2 always answers one) is taken as the moment of the HEAD.
-const PACK_ADOPT_MARGIN_MS = 5 * 60_000, PACK_CLOCK_MS = 60_000;
-const packAdoptable = (uploaded: number, now: number) => now - uploaded < ATTACHMENT_GRACE_MS - PACK_ADOPT_MARGIN_MS;
+/** P98 (R-P656): the reuse margin: a stored pack is reused only while uploaded less than the 15-minute grace less this ago. */
+export const PACK_REUSE_MARGIN_MS = 5 * 60_000;
+const PACK_CLOCK_MS = 60_000;
+const packAdoptable = (uploaded: number, now: number) => now - uploaded < ATTACHMENT_GRACE_MS - PACK_REUSE_MARGIN_MS;
 const packFenced = (uploaded: number, now: number) => now - uploaded < ATTACHMENT_GRACE_MS - PACK_CLOCK_MS;
 /** P98 (R-P646): the same pack's objects at the same places, followed by a value no pointer names, so its digest and key are its own. */
 async function freshPack(sealed: SealedPack): Promise<SealedPack> {
@@ -1747,7 +1750,7 @@ async function eachListed(storage: R2Bucket, work: PurgeWork, options: R2ListOpt
  * published over: a purge running beside it reads a set no later) and a clock later than the purge's: the
  * configuration retention setting set, `n` two or more behind the catalogue revision in force, and its successor
  * published longer ago than the setting's duration (a successor the set's index no longer lists, long ago). When it
- * plans, the rollback reads the clock 5 minutes ahead (`PACK_ADOPT_MARGIN_MS`, the fence's margin); once it holds the
+ * plans, the rollback reads the clock 5 minutes ahead (`PACK_REUSE_MARGIN_MS`, the fence's margin); once it holds the
  * head, one minute ahead (`PACK_CLOCK_MS`): a purge that removes `n` decided so before the rollback reserved, with a
  * clock that read earlier.
  */
@@ -1761,7 +1764,7 @@ export async function catalogueRevisionNameable(env: Env, scope: string, set: Pu
   const ref = set.refs[member({ name: 'content' }, scope)];
   if (!ref || n > ref.revision - 2) return true;
   const successor = ref.index.find(entry => entry.revision === n + 1)?.at;
-  return successor !== undefined && now + (reserved ? PACK_CLOCK_MS : PACK_ADOPT_MARGIN_MS) - successor <= durationMs;
+  return successor !== undefined && now + (reserved ? PACK_CLOCK_MS : PACK_REUSE_MARGIN_MS) - successor <= durationMs;
 }
 /** W38 B4: does this tenant set the configuration-revision retention setting? Never throws. */
 async function purgesConfiguration(env: Env, tenant: string): Promise<boolean> {

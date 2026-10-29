@@ -388,8 +388,9 @@ and the listing of packs alone, never a shard; it removes a revision's packs bef
 work budget runs out leaves the revision for the next publication, so an object it has not resolved is never
 lost to it. It deletes nothing while the publication head holds a pending publication or one committed after
 its own. A load that finds its pack already stored (an attempt of its own that landed, or the same file over
-the same base before it) takes that pack only where the store took it less than 10 minutes ago, and otherwise
-writes its pack under a key of its own, so it never names a pack the purge may already have listed; once it
+the same base before it) takes that pack only where the store took it less than 10 minutes ago (the 15-minute
+grace less a reuse margin of 5 minutes, longer than any request the engine serves), and otherwise writes its
+pack under a fresh key of its own, so it never names a pack the purge may already have listed; once it
 holds the head it checks its pack again (writing it again where it was collected) and gives its publication up,
 writing nothing, where the pack is 14 minutes old or more. The pack of a load that was refused after its pack
 was written, or of a stage never published, is named by no revision, and the purge collects it once it is 15
