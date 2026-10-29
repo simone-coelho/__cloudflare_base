@@ -1070,22 +1070,30 @@ const loadTooLarge = (bytes: number) => new PublicationError(`The load would wri
 export class PackWriter {
   private readonly chunks: string[] = [];
   private size = 0;
-  /** Append one object (refused by `tooLarge` past `limit`, 2 MiB unless named, and 413 `load_too_large` past the pack's 64 MiB). */
+  /**
+   * Append one object (refused by `tooLarge` past `limit`, 2 MiB unless named, and 413 `load_too_large` past the pack's
+   * 64 MiB, less the room a fresh tail takes, so a pack written under a fresh key is within 64 MiB too).
+   */
   async add(value: unknown, tooLarge?: () => PublicationError, limit = PUBLICATION_MAX_BYTES): Promise<{ at: number; bytes: number; digest: string }> {
     const raw = canonical(value), bytes = encoder.encode(raw);
     if (bytes.byteLength > limit) throw tooLarge?.() ?? new PublicationError('A catalogue object exceeds 2 MiB', 413, 'document_too_large');
-    if (this.size + bytes.byteLength > PACK_MAX_BYTES) throw loadTooLarge(this.size + bytes.byteLength);
+    if (this.size + bytes.byteLength > PACK_MAX_BYTES - FRESH_TAIL_ROOM) throw loadTooLarge(this.size + bytes.byteLength);
     const at = this.size; this.chunks.push(raw); this.size += bytes.byteLength;
     return { at, bytes: bytes.byteLength, digest: hex(await crypto.subtle.digest('SHA-256', bytes)) };
   }
   get bytes(): number { return this.size; }
-  /** The pack, or null where nothing was appended. */
-  async seal(): Promise<SealedPack | null> {
+  /**
+   * The pack, or null where nothing was appended; with `fresh` (R-P659: a pack one write fills before its last), followed
+   * by a fresh tail no pointer names, so its digest and key are its own and no stored pack is ever taken for it.
+   */
+  async seal(fresh = false): Promise<SealedPack | null> {
     if (!this.size) return null;
-    const body = this.chunks.join(''), raw = encoder.encode(body);
+    const body = this.chunks.join('') + (fresh ? freshTail() : ''), raw = encoder.encode(body);
     return { body, digest: hex(await crypto.subtle.digest('SHA-256', raw)), bytes: raw.byteLength, objects: this.chunks.length };
   }
 }
+/** R-P646: a value no pointer names, appended to a pack so its digest and key are its own; at most FRESH_TAIL_ROOM bytes. */
+const freshTail = () => canonical({ fresh: crypto.randomUUID() }), FRESH_TAIL_ROOM = 64;
 async function putPack(storage: R2Bucket, key: string, sealed: SealedPack): Promise<boolean> {
   let result: R2Object | null;
   try {
@@ -1132,7 +1140,7 @@ const packAdoptable = (uploaded: number, now: number) => now - uploaded < ATTACH
 const packFenced = (uploaded: number, now: number) => now - uploaded < ATTACHMENT_GRACE_MS - PACK_CLOCK_MS;
 /** P98 (R-P646): the same pack's objects at the same places, followed by a value no pointer names, so its digest and key are its own. */
 async function freshPack(sealed: SealedPack): Promise<SealedPack> {
-  const body = sealed.body + canonical({ fresh: crypto.randomUUID() }), raw = encoder.encode(body);
+  const body = sealed.body + freshTail(), raw = encoder.encode(body);
   return { body, digest: hex(await crypto.subtle.digest('SHA-256', raw)), bytes: raw.byteLength, objects: sealed.objects };
 }
 /** P98: a pack a request wrote or took (`adopted`), and when the store took it (ms, by the Worker's clock where it wrote it). */

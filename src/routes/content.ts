@@ -34,7 +34,7 @@ import { assertPublicationBase, completePublicationSet, documentBytes, initializ
   readOptionalPublication, readPublication, recoverPublication, documentDigest, type PublicationBaseline, type PublicationChange, type PublicationPin,
   catalogPartStored, readCatalogPart, type CatalogPart, catalogIdIndexStored, readCatalogIdIndex,
   catalogIdShardOf, catalogIdShardStored, catalogPartPointer, catalogShardStored, catalogShardName, catalogShardOf, readCatalogIdShard, readCatalogShard,
-  type CatalogIdShard, type CatalogShard, catalogPackStored, catalogueRevisionNameable, holdPack, indexAddress, NEW_PACK, PACK_MAX_BYTES, PackWriter, placedDigest, placeKey, publicationFailureOf,
+  type CatalogIdShard, type CatalogShard, catalogPackStored, catalogueRevisionNameable, holdPack, indexAddress, NEW_PACK, PackWriter, placedDigest, placeKey, publicationFailureOf,
   readCatalogPacked, resolvedPart, stagePackNameable, writePack, type WrittenPack, type PackAddress, type PackedRead, type ResolvedPartPointer, type SealedPack, type StoredPartPointer } from '@/config/publication';
 import { catalogNamesRuleWords, catalogRuleErrors, CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, governedCatalogue, LEARN_KIND, learnBlendLayoutErrors, learnConversionDiagnostics, learnPositionLayoutErrors, type LearnConversionDiagnostics, namesPositionDials, PIECE_FIELDS, slotInnerCatalogueErrors, slotOrderCatalogueErrors, slotsNameContext, SLOTS_KIND, validateSlotCatalog,
   VOCABULARY_APPROVAL_KIND, VOCABULARY_KIND, vocabularyTableOf, LAYOUTS_KIND, slotsCarryOrders, unapprovedOrders } from '@/content/kinds';
@@ -282,7 +282,41 @@ async function idIndexInForce(env: Env, scope: string, current: ContentCatalog |
  * P93: the index a publication writes; P98: and the one pack that holds every object it placed (none where it placed
  * none), and (R-P646) the same index naming that pack by the digest of the fresh pack it was written as instead.
  */
-interface BuiltIndex { index: CatalogIndex; pack: SealedPack | null; rebase: (fresh: SealedPack) => CatalogIndex }
+interface BuiltIndex { index: CatalogIndex; pack: SealedPack | null; extra: SealedPack[]; rebase: (fresh: SealedPack) => CatalogIndex }
+/**
+ * R-P659: the packs one write fills, in order, each within 64 MiB. An object that does not fit in the current pack
+ * starts the next one where the write may spill: the pack it leaves is sealed with a fresh tail (`PackWriter.seal`), so
+ * its digest is final at once and no stored pack is ever taken for it. The last pack is the write's own (`pack`), the
+ * one `writeIndex` may find stored and write under a fresh key. Until the index is named, an object's place names its
+ * pack by position (`new:<k>`).
+ */
+const newPlace = (k: number) => `${NEW_PACK}:${k}`;
+const NEW_PLACE = /^new:(0|[1-9][0-9]*)$/;
+class PackRoll {
+  private writer = new PackWriter();
+  readonly sealed: SealedPack[] = [];
+  /** The position of the pack being filled. */
+  get current(): number { return this.sealed.length; }
+  /** Append to the current pack; where it does not fit and `spill` allows, to the next one (413 `load_too_large` otherwise). */
+  async add(value: unknown, spill: boolean, tooLarge?: () => PublicationError): Promise<{ address: PackAddress; digest: string }> {
+    let at: { at: number; bytes: number; digest: string };
+    try { at = await this.writer.add(value, tooLarge); }
+    catch (error) {
+      if (!spill || !(error instanceof PublicationError) || error.code !== 'load_too_large' || this.writer.bytes === 0) throw error;
+      await this.roll();
+      at = await this.writer.add(value, tooLarge);
+    }
+    return { address: { pack: newPlace(this.current), at: at.at, bytes: at.bytes }, digest: at.digest };
+  }
+  /** Append to the current pack only; null where it does not fit there. */
+  async addHere(value: unknown): Promise<PackAddress | null> {
+    try { const at = await this.writer.add(value); return { pack: newPlace(this.current), at: at.at, bytes: at.bytes }; }
+    catch (error) { if (error instanceof PublicationError && error.code === 'load_too_large' && this.writer.bytes > 0) return null; throw error; }
+  }
+  async roll(): Promise<void> { this.sealed.push((await this.writer.seal(true))!); this.writer = new PackWriter(); }
+  /** The write's own pack: the last, or null where nothing is in it. */
+  finish(): Promise<SealedPack | null> { return this.writer.seal(); }
+}
 const own = <T>(record: Record<string, T> | undefined, key: string): T | undefined => record && Object.hasOwn(record, key) ? record[key] : undefined;
 const partTooLarge = (product: string) => () => new PublicationError(`The part of product ${JSON.stringify(product).slice(0, 80)} exceeds 2 MiB`, 413, 'part_too_large');
 const tableInconsistent = () => new PublicationError('The catalogue\'s pack table does not account for the objects its index reaches; nothing was written', 503, 'publication_unavailable');
@@ -483,31 +517,40 @@ class IndexEdit {
    * re-homes, then each shard and id shard whose digest moved (or that is re-homed). The manifest's pointers name each
    * object's pack by its row in the pack table, ordered by digest.
    */
-  async build(options: { writing?: boolean; sizes?: ReadonlyMap<string, number> } = {}): Promise<BuiltIndex> {
+  async build(options: { writing?: boolean; sizes?: ReadonlyMap<string, number>; spill?: boolean } = {}): Promise<BuiltIndex> {
     const held = this.held;
-    if (!options.writing || this.migrating || !held?.packs) return this.assemble(options, new Set());
-    // The packs to re-home: the table's rows, every pack the edits name that the table does not, and this load's own.
+    if (!options.writing || this.migrating || !held?.packs) return this.assemble(options, new Set(), true);
+    // R-P659: the table never passes 65 rows. The packs to re-home: as many, fewest live bytes first, as keep the table's
+    // rows, every pack the edits name that the table does not (a publish's stages) and this write's own within 65; those
+    // re-homed go into the write's own pack and, where they do not fit beside its own objects, into the packs after it,
+    // each within 64 MiB, so re-homing never refuses a write that fits on its own. Where the write's packs leave the table
+    // past 65, as many more are re-homed as bring it back.
     const rows = held.packs, tabledPacks = new Set(rows.map(row => row.digest)), entering = new Set<string>();
-    for (const p of this.pointers.values()) if (p?.address && p.address.pack !== NEW_PACK && !tabledPacks.has(p.address.pack)) entering.add(p.address.pack);
-    const planned = compactionVictims(rows, rows.length + entering.size + 1 - PACK_TABLE_CAP);
-    if (!planned.length) return this.assemble(options, new Set());
-    try { return await this.assemble(options, new Set(planned.map(row => row.digest))); }
-    catch (error) {
-      if (!(error instanceof PublicationError) || error.code !== 'load_too_large') throw error;
+    for (const p of this.pointers.values()) if (p?.address && !NEW_PLACE.test(p.address.pack) && !tabledPacks.has(p.address.pack)) entering.add(p.address.pack);
+    const need = rows.length + entering.size + 1 - PACK_TABLE_CAP;
+    // A pack under a quarter live alone (no row needed) moves only where its live objects fit beside the write's own.
+    let victims = compactionVictims(rows, Math.max(need, 0)), spill = need > 0;
+    for (;;) {
+      let built: BuiltIndex;
+      try { built = await this.assemble(options, new Set(victims.map(row => row.digest)), spill); }
+      catch (error) {
+        if (spill || !victims.length || !(error instanceof PublicationError) || error.code !== 'load_too_large') throw error;
+        victims = []; continue;
+      }
+      const after = built.index.packs?.length ?? 0;
+      if (after <= PACK_TABLE_CAP) return built;
+      const more = compactionVictims(rows, victims.length + after - PACK_TABLE_CAP);
+      // Every row already re-homed: nothing left to move (each pack more than half its 64 MiB live).
+      if (more.length <= victims.length) return built;
+      victims = more; spill = true;
     }
-    // R-P646: re-homing never makes a load that fits on its own refuse 413 `load_too_large`. Without the packs it
-    // re-homes (refused only where the load itself does not fit), then with as many of them, fewest live bytes first, as
-    // the room its own objects leave holds; where even those do not fit, without them.
-    const alone = await this.assemble(options, new Set()), room = PACK_MAX_BYTES - (alone.pack?.bytes ?? 0), fitting = new Set<string>();
-    let moved = 0;
-    for (const row of [...planned].sort((a, b) => a.bytes - b.bytes)) { if (moved + row.bytes > room) break; fitting.add(row.digest); moved += row.bytes; }
-    if (!fitting.size) return alone;
-    try { return await this.assemble(options, fitting); }
-    catch (error) { if (error instanceof PublicationError && error.code === 'load_too_large') return alone; throw error; }
   }
-  /** The index after the edits, re-homing the live objects of the packs `victims` names (a writing load only). */
-  private async assemble(options: { writing?: boolean; sizes?: ReadonlyMap<string, number> }, victims: ReadonlySet<string>): Promise<BuiltIndex> {
-    const held = this.held, tabled = !!held?.packs, pack = new PackWriter();
+  /**
+   * The index after the edits, re-homing the live objects of the packs `victims` names (a writing load only), into the
+   * packs after the write's own where they do not fit there and `spillVictims` allows (else 413 `load_too_large`).
+   */
+  private async assemble(options: { writing?: boolean; sizes?: ReadonlyMap<string, number>; spill?: boolean }, victims: ReadonlySet<string>, spillVictims: boolean): Promise<BuiltIndex> {
+    const held = this.held, tabled = !!held?.packs, roll = new PackRoll();
     // The pack table as the revision in force holds it, and the objects it reaches that are stored before packs.
     const live = new Map<string, { objects: number; bytes: number; size: number }>();
     for (const row of held?.packs ?? []) live.set(row.digest, { objects: row.objects, bytes: row.bytes, size: row.size });
@@ -524,11 +567,12 @@ class IndexEdit {
       row.objects += sign; row.bytes += sign * address.bytes; live.set(address.pack, row);
     };
     const pointers = new Map(this.pointers), forced = new Set<string>(), forcedIds = new Set<string>();
-    const newly = (at: { at: number; bytes: number }): PackAddress => ({ pack: NEW_PACK, at: at.at, bytes: at.bytes });
+    // The parts placed: a load's own pack holds them all (413 `load_too_large` past 64 MiB); R-P659: a rollback's copy of
+    // the difference (`spill`) fills as many packs as it needs.
     for (const [product, part] of this.placed) {
-      const at = await pack.add(part, partTooLarge(product)), pointer = pointers.get(product)!;
+      const at = await roll.add(part, options.spill === true, partTooLarge(product)), pointer = pointers.get(product)!;
       if (at.digest !== pointer.digest) throw tableInconsistent();
-      pointers.set(product, { digest: pointer.digest, records: pointer.records, address: newly(at) });
+      pointers.set(product, { digest: pointer.digest, records: pointer.records, address: at.address });
     }
     if (options.writing && !this.migrating) {
       // P98 (LD6, LD8): a load that writes over an index still naming shards or id shards stored before packs reads each
@@ -542,7 +586,7 @@ class IndexEdit {
       for (const [product, part] of this.legacyParts) {
         const now = pointers.has(product) ? pointers.get(product) : await this.pointer(product);
         if (!now || now.address || now.digest !== await documentDigest(part)) continue;
-        pointers.set(product, { digest: now.digest, records: now.records, address: newly(await pack.add(part, partTooLarge(product))) });
+        pointers.set(product, { digest: now.digest, records: now.records, address: (await roll.add(part, true, partTooLarge(product))).address });
       }
       for (const name of this.legacyShards) forced.add(name);
       for (const name of this.legacyIdShards) forcedIds.add(name);
@@ -556,10 +600,12 @@ class IndexEdit {
         await this.ahead('shards', names);
         const moving: Array<[string, ResolvedPartPointer]> = [];
         for (const name of names) for (const [product, p] of await this.productShard(name)) if (p.address && victims.has(p.address.pack) && !pointers.has(product)) moving.push([product, p]);
-        const read = await readCatalogPacked(this.env, this.scope, moving.map(([, p]) => ({ kind: 'part' as const, digest: p.digest, address: p.address! })));
+        // Read once across this edit's builds (`build` may re-home more on a second pass).
+        const unread = moving.filter(([, p]) => !this.fetched.has(p.digest)).map(([, p]) => ({ kind: 'part' as const, digest: p.digest, address: p.address! }));
+        if (unread.length) for (const [hash, value] of await readCatalogPacked(this.env, this.scope, unread)) this.fetched.set(hash, value);
         for (const [product, p] of moving) {
-          const part = read.get(p.digest) as CatalogPart | undefined;
-          if (part) pointers.set(product, { digest: p.digest, records: p.records, address: newly(await pack.add(part, partTooLarge(product))) });
+          const part = this.fetched.get(p.digest) as CatalogPart | undefined;
+          if (part) pointers.set(product, { digest: p.digest, records: p.records, address: (await roll.add(part, spillVictims, partTooLarge(product))).address });
         }
       }
     }
@@ -583,24 +629,31 @@ class IndexEdit {
     for (const name of [...products.keys()].sort()) {
       const before = this.migrating ? new Map<string, ResolvedPartPointer>() : await this.productShard(name), next = new Map(before), old = shardPointers.get(name);
       for (const [product, pointer] of products.get(name)!) { if (pointer) next.set(product, pointer); else next.delete(product); }
-      // The shard as stored: each part where it lives, relative to this load's pack (a part in it carries its range alone).
-      const others: string[] = [], stored = new Map<string, StoredPartPointer>();
-      for (const product of [...next.keys()].sort()) {
-        const p = next.get(product)!;
-        if (!p.address) stored.set(product, { digest: p.digest, records: p.records });
-        else if (p.address.pack === NEW_PACK) stored.set(product, { digest: p.digest, records: p.records, at: p.address.at, bytes: p.address.bytes });
-        else {
-          let i = others.indexOf(p.address.pack); if (i < 0) i = others.push(p.address.pack) - 1;
-          stored.set(product, { digest: p.digest, records: p.records, at: p.address.at, bytes: p.address.bytes, pack: i });
+      // The shard as stored in pack `k`: each part where it lives (a part in pack `k` carries its range alone; one in a pack
+      // this write sealed before it, that pack's digest).
+      const shardIn = async (k: number) => {
+        const others: string[] = [], stored = new Map<string, StoredPartPointer>();
+        for (const product of [...next.keys()].sort()) {
+          const p = next.get(product)!, at = p.address ? NEW_PLACE.exec(p.address.pack) : null;
+          if (!p.address) stored.set(product, { digest: p.digest, records: p.records });
+          else if (at && Number(at[1]) === k) stored.set(product, { digest: p.digest, records: p.records, at: p.address.at, bytes: p.address.bytes });
+          else {
+            const pack = at ? roll.sealed[Number(at[1])]?.digest : p.address.pack;
+            if (!pack) throw tableInconsistent();
+            let i = others.indexOf(pack); if (i < 0) i = others.push(pack) - 1;
+            stored.set(product, { digest: p.digest, records: p.records, at: p.address.at, bytes: p.address.bytes, pack: i });
+          }
         }
-      }
-      const built = next.size ? await catalogShardOf(name, stored, others) : null;
+        return next.size ? catalogShardOf(name, stored, others) : null;
+      };
+      let built = await shardIn(roll.current);
       if (built && old && built.pointer.digest === this.shardDigests.get(name) && !forced.has(name)) continue;
       if (old) count(old.address, -1);
       for (const p of before.values()) count(p.address, -1);
       if (!built) { shardPointers.delete(name); continue; }
       for (const p of next.values()) count(p.address, 1);
-      const address = newly(await pack.add(built.value));
+      let address = await roll.addHere(built.value);
+      if (!address) { await roll.roll(); built = (await shardIn(roll.current))!; address = (await roll.addHere(built.value))!; }
       count(address, 1);
       shardPointers.set(name, { ...built.pointer, address });
     }
@@ -611,19 +664,26 @@ class IndexEdit {
       if (built && old && built.pointer.digest === this.idShardDigests.get(name) && !forcedIds.has(name)) continue;
       if (old) count(old.address, -1);
       if (!built) { idPointers.delete(name); continue; }
-      const address = newly(await pack.add(built.value));
+      const { address } = await roll.add(built.value, true);
       count(address, 1);
       idPointers.set(name, { ...built.pointer, address });
     }
-    const sealed = await pack.seal();
+    const sealed = await roll.finish(), extra = roll.sealed, last = newPlace(extra.length);
     if (legacy < 0) throw tableInconsistent();
-    /** The table and the pointers, naming this load's pack by the digest it is stored under (R-P646: a fresh one's, `rebase`). */
+    /**
+     * The table and the pointers, naming each pack this write filled by its digest (R-P659: the packs before its own) and
+     * its own by the digest it is stored under (R-P646: a fresh one's, `rebase`).
+     */
     const indexNaming = (own: SealedPack | null): CatalogIndex => {
       const rows = new Map<string, { objects: number; bytes: number; size: number }>();
       for (const [digest, row] of live) rows.set(digest, { ...row });
+      extra.forEach((pack, k) => {
+        const row = rows.get(newPlace(k)); rows.delete(newPlace(k));
+        if (row) rows.set(pack.digest, { ...row, size: pack.bytes });
+      });
       if (own) {
-        const row = rows.get(NEW_PACK)!, same = rows.get(own.digest);
-        rows.delete(NEW_PACK);
+        const row = rows.get(last)!, same = rows.get(own.digest);
+        rows.delete(last);
         rows.set(own.digest, same ? { objects: same.objects + row.objects, bytes: same.bytes + row.bytes, size: own.bytes } : { ...row, size: own.bytes });
       }
       for (const [digest, row] of rows) {
@@ -633,7 +693,7 @@ class IndexEdit {
       const digests = [...rows.keys()].sort();
       const placedFields = (a: PackAddress | undefined) => {
         if (!a) return {};
-        const at = digests.indexOf(a.pack === NEW_PACK ? own!.digest : a.pack);
+        const k = NEW_PLACE.exec(a.pack), at = digests.indexOf(!k ? a.pack : Number(k[1]) < extra.length ? extra[Number(k[1])]!.digest : own!.digest);
         if (at < 0) throw tableInconsistent();
         return { pack: at, at: a.at, bytes: a.bytes };
       };
@@ -650,7 +710,7 @@ class IndexEdit {
       const table = tabled || !!own ? { packs: digests.map(digest => ({ digest, ...rows.get(digest)! })), legacy } : {};
       return { key: 'sha256-hex2', ...table, shards, ids: idsOut };
     };
-    return { index: indexNaming(sealed), pack: sealed, rebase: fresh => indexNaming(fresh) };
+    return { index: indexNaming(sealed), pack: sealed, extra, rebase: fresh => indexNaming(fresh) };
   }
 }
 /**
@@ -660,15 +720,21 @@ class IndexEdit {
  * the pack was written under a fresh key, the same index naming that key.
  */
 async function writeIndex(env: Env, scope: string, built: BuiltIndex, held?: PackHold): Promise<CatalogIndex> {
+  // R-P659: the packs filled before the write's own, each with its fresh tail (never stored before), then its own.
+  for (const pack of built.extra) {
+    const written = await writePack(env, scope, pack);
+    if (written.pack !== pack) throw tableInconsistent();
+    if (held) (held.written ??= []).push(written);
+  }
   if (!built.pack) return built.index;
   const written = await writePack(env, scope, built.pack);
-  if (held) held.written = written;
+  if (held) (held.written ??= []).push(written);
   return written.pack === built.pack ? built.index : built.rebase(written.pack);
 }
-/** P98 (LD6): the pack one door wrote or adopted, and (R-P646) what else its publication must still be able to name once it holds the head. */
-interface PackHold { written?: WrittenPack; fence?: () => Promise<void> }
-/** P98 (LD6, R-P646): once the head holds the door's publication, the fence: its pack (`holdPack`), and whatever else the door names. */
-const packReserved = (env: Env, scope: string, held: PackHold) => async () => { if (held.written) await holdPack(env, scope, held.written); await held.fence?.(); };
+/** P98 (LD6): the packs one door wrote or adopted, and (R-P646) what else its publication must still be able to name once it holds the head. */
+interface PackHold { written?: WrittenPack[]; fence?: () => Promise<void> }
+/** P98 (LD6, R-P646): once the head holds the door's publication, the fence: its packs (`holdPack`), and whatever else the door names. */
+const packReserved = (env: Env, scope: string, held: PackHold) => async () => { for (const written of held.written ?? []) await holdPack(env, scope, written); await held.fence?.(); };
 
 /**
  * P93: the product whose part holds a record id, checked against that part: the
@@ -1003,7 +1069,7 @@ async function rollbackOfDifference(env: Env, scope: string, current: ContentCat
     for (const [id, product] of owners) if (held.get(id) !== product) edit.setOwner(id, product);
     for (const id of held.keys()) if (!owners.has(id)) edit.setOwner(id, null);
   }
-  return edit.build({ writing: true });
+  return edit.build({ writing: true, spill: true });
 }
 
 /**

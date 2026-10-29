@@ -396,17 +396,20 @@ writing nothing, where the pack is 14 minutes old or more. The pack of a load th
 was written, or of a stage never published, is named by no revision, and the purge collects it once it is 15
 minutes old. A pack the table shows under a quarter live has its live objects moved into the next writing
 load's pack, and each writing load, and each publish of staged files, moves as many more packs, fewest live
-bytes first, as keep the table within 65 packs once its own pack and its stages' packs enter it. A load moves
-only packs whose live objects fit beside its own within its 64 MiB, so
-moving them never refuses a load that fits on its own; where even the smallest does not fit, the table passes
-65 packs until a later load moves them. A rollback checks, by one HEAD each, the packs it would bring back that the revision in force does
+bytes first, as keep the table within 65 packs once its own pack and its stages' packs enter it, so the table
+never passes 65 packs. What it moves that does not fit beside its own objects within 64 MiB goes into further
+packs written in the same publication, each within 64 MiB (and as many more packs moved as keep the table within
+65 with them), so moving them never refuses a load that fits on its own; only where every pack is more than half
+its 64 MiB live could moving them not shorten the table. A load's own parts are always in one pack; the shards
+and id shards it rebuilds follow them into a further pack only where they do not fit beside them. A rollback checks, by one HEAD each, the packs it would bring back that the revision in force does
 not name, so it counts packs, not parts (and the objects stored before packs that it would bring back, one by
 one): one the store no longer holds is refused `410` with `code: "part_missing"`, naming it, and a rollback
 needing more than 900 such checks is refused `413` with `code: "rollback_too_large"` and their count. Under the
 `configuration` retention setting, a rollback to a revision the purge may remove while it runs (two or more
 behind the revision in force and replaced longer ago than the setting, within 5 minutes) names nothing only
 that revision names: it reads the shards, id shards and parts of the revision that differ from the revision in
-force and writes them into its own pack, as a load of the difference; any other rollback names what the
+force and writes them into packs of its own (as many as the difference needs, each within 64 MiB, so it is never
+refused for its size), as a load of the difference; any other rollback names what the
 revision names, and gives its publication up, writing nothing (`409`), where the revision passes the setting
 before the rollback holds the head.
 
