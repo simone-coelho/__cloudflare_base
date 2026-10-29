@@ -419,7 +419,7 @@ describe('unit:P87.SC1', () => {
 
       // A publication left pending by a storage failure, read and recovered with the catalogue credential.
       const p3 = await pre(s, 'catalog', operator.token);
-      s.rec.failPut = key => { if (/\/content\/rev\/\d+\.json$/.test(key)) { s.rec.failPut = null; return true; } return false; };
+      { let failed = 0; s.rec.failPut = key => { if (/\/content\/rev\/\d+\.json$/.test(key)) { if (++failed === 2) s.rec.failPut = null; return true; } return false; }; } // P98 R10 (R-P569 (a)): the failure and its immediate repeat
       const lost = await s.call('POST', '/content/catalog/import?mode=merge&format=json', { token: catalogue.token, body: [piece('p87.recovered')], headers: p3.headers });
       s.rec.failPut = null;
       const state = await s.call('GET', '/content/catalog/publication?kind=catalog', { token: catalogue.token, headers: p3.headers });
@@ -471,7 +471,7 @@ describe('unit:P87.SC1', () => {
         reads.push({ request: `GET ${path}`, status: c.status, asOperator: c.status === o.status && canonical(c.body) === canonical(o.body) ? 'the operator credential\'s answer' : `operator ${show(o)}; catalogue ${show(c)}` });
       }
       const p1 = await pre(s, 'catalog', operator.token);
-      s.rec.failPut = key => { if (/\/content\/rev\/\d+\.json$/.test(key)) { s.rec.failPut = null; return true; } return false; };
+      { let failed = 0; s.rec.failPut = key => { if (/\/content\/rev\/\d+\.json$/.test(key)) { if (++failed === 2) s.rec.failPut = null; return true; } return false; }; } // P98 R10 (R-P569 (a)): the failure and its immediate repeat
       const lost = await s.call('POST', '/content/catalog/import?mode=merge&format=json', { token: catalogue.token, body: [piece('p87.case')], headers: p1.headers });
       s.rec.failPut = null;
       const state = await s.call('GET', '/content/catalog/publication?kind=CATALOG', { token: catalogue.token, headers: p1.headers });

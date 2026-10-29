@@ -7,7 +7,7 @@
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
 import { ENTRY_TERM_LIMIT, entryChannelOf, entryNetworkOf, isContextId, RECENCY_BUCKETS, recencyBucketOf, type ContextVocabulary } from '@/services/visit';
 import { DEVICE_CLASSES, deviceClassOf, platformWordOf } from '@/services/platform';
-import type { CatalogIndex, CatalogPartPointer, ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
+import type { CatalogIndex, CatalogPackEntry, CatalogPartPointer, ComplementsRule, ConfiguredOrder, ContentCatalog, ContextOnlySwitch, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, MinimumRule, TagPin, OrderContext, PositionBand, PositionPin, SeedRule, ShotOrder, SignalFloor, SlotCatalog, SlotStrategy, StageRule, StageWord,
   VocabularyApproval, VocabularyAttribute, VocabularyDocument, VocabularyValue, ApprovedLayout, LayoutDevice, LayoutsDocument } from './types';
 import { compileSlotConstraints, slotPins } from './slotConstraints';
 import { isRewardType, REWARD_TYPES, type RewardType } from '@/ledger/records';
@@ -423,36 +423,52 @@ const count = (v: unknown, least: number): v is number => typeof v === 'number' 
 /**
  * P93 (E18): the sharded index read strictly: `key` the scheme (`sha256-hex2`),
  * `shards` and `ids` maps of two lowercase hex digits to their pointers, each
- * listed only when its shard is not empty.
+ * listed only when its shard is not empty. P98 (E25): with, together, the pack
+ * table (`packs`: one row per pack the revision reaches, by digest in order, each
+ * with the objects and bytes of it reached and its size) and `legacy` (the
+ * objects reached that were stored before packs); a pointer into a pack carries
+ * its row's place (`pack`) and its byte range (`at`, `bytes`), and one without
+ * them names an object of its own.
  */
 function catalogIndexOf(value: unknown, errors: string[]): CatalogIndex | null {
-  if (!isRecord(value) || Object.keys(value).some(key => key !== 'key' && key !== 'shards' && key !== 'ids') || value.key !== 'sha256-hex2'
-    || !isRecord(value.shards) || !isRecord(value.ids)) {
-    errors.push("index: { key: 'sha256-hex2', shards: { <two hex digits>: { digest, products, records } }, ids: { <two hex digits>: { digest, records } } }");
+  const tabled = isRecord(value) && (value.packs !== undefined || value.legacy !== undefined);
+  const entryOk = (entry: unknown): entry is CatalogPackEntry => isRecord(entry) && Object.keys(entry).length === 4 && typeof entry.digest === 'string' && PART_DIGEST.test(entry.digest)
+    && count(entry.objects, 1) && count(entry.bytes, 1) && count(entry.size, 1) && (entry.bytes as number) <= (entry.size as number);
+  if (!isRecord(value) || Object.keys(value).some(key => !INDEX_KEYS.has(key)) || value.key !== 'sha256-hex2' || !isRecord(value.shards) || !isRecord(value.ids)
+    || (tabled && (!Array.isArray(value.packs) || !value.packs.every(entryOk) || !count(value.legacy, 0)
+      || !value.packs.every((entry, i, all) => i === 0 || (all[i - 1] as CatalogPackEntry).digest < (entry as CatalogPackEntry).digest)))) {
+    errors.push("index: { key: 'sha256-hex2', shards: { <two hex digits>: { digest, products, records } }, ids: { <two hex digits>: { digest, records } } }, with packs: [{ digest, objects, bytes, size }] in digest order and legacy: 0 or more together, or neither");
     return null;
   }
+  const packs = tabled ? (value.packs as CatalogPackEntry[]).map(entry => ({ digest: entry.digest, objects: entry.objects, bytes: entry.bytes, size: entry.size })) : [];
+  // P98: a pointer names an object of its own by its full digest (its base fields), or one inside a pack the table lists
+  // by its place there (`pack`, `at`, `bytes`) and the first 128 bits of its digest (32 lowercase hex).
+  const placedOk = (pointer: Record<string, unknown>, base: number) => typeof pointer.digest === 'string' && (Object.keys(pointer).length === base
+    ? PART_DIGEST.test(pointer.digest)
+    : Object.keys(pointer).length === base + 3 && /^[0-9a-f]{32}$/.test(pointer.digest) && count(pointer.pack, 0) && (pointer.pack as number) < packs.length && count(pointer.at, 0) && count(pointer.bytes, 1));
+  const placed = (pointer: Record<string, unknown>) => pointer.at === undefined ? { digest: pointer.digest as string }
+    : { digest: pointer.digest as string, pack: pointer.pack as number, at: pointer.at as number, bytes: pointer.bytes as number };
   const shards: CatalogIndex['shards'] = {}, ids: CatalogIndex['ids'] = {};
   let valid = true;
   for (const name of Object.keys(value.shards).sort()) {
     const pointer = value.shards[name];
-    if (!SHARD_NAME.test(name) || !isRecord(pointer) || Object.keys(pointer).length !== 3 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
-      || !count(pointer.products, 1) || !count(pointer.records, 1)) {
-      errors.push(`index.shards['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the shard (64 lowercase hex), products: 1 or more, records: 1 or more }, under two lowercase hex digits`);
+    if (!SHARD_NAME.test(name) || !isRecord(pointer) || !placedOk(pointer, 3) || !count(pointer.products, 1) || !count(pointer.records, 1)) {
+      errors.push(`index.shards['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the shard (64 lowercase hex), products: 1 or more, records: 1 or more }, under two lowercase hex digits; inside a pack, { digest: its first 128 bits (32 lowercase hex), pack, at, bytes, products, records }`);
       valid = false; continue;
     }
-    shards[name] = { digest: pointer.digest, products: pointer.products as number, records: pointer.records as number };
+    shards[name] = { ...placed(pointer), products: pointer.products as number, records: pointer.records as number };
   }
   for (const name of Object.keys(value.ids).sort()) {
     const pointer = value.ids[name];
-    if (!SHARD_NAME.test(name) || !isRecord(pointer) || Object.keys(pointer).length !== 2 || typeof pointer.digest !== 'string' || !PART_DIGEST.test(pointer.digest)
-      || !count(pointer.records, 1)) {
-      errors.push(`index.ids['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the id shard (64 lowercase hex), records: 1 or more }, under two lowercase hex digits`);
+    if (!SHARD_NAME.test(name) || !isRecord(pointer) || !placedOk(pointer, 2) || !count(pointer.records, 1)) {
+      errors.push(`index.ids['${String(name).slice(0, 16)}']: { digest: the SHA-256 of the id shard (64 lowercase hex), records: 1 or more }, under two lowercase hex digits; inside a pack, { digest: its first 128 bits (32 lowercase hex), pack, at, bytes, records }`);
       valid = false; continue;
     }
-    ids[name] = { digest: pointer.digest, records: pointer.records as number };
+    ids[name] = { ...placed(pointer), records: pointer.records as number };
   }
-  return valid ? { key: 'sha256-hex2', shards, ids } : null;
+  return valid ? { key: 'sha256-hex2', ...(tabled ? { packs, legacy: value.legacy as number } : {}), shards, ids } : null;
 }
+const INDEX_KEYS = new Set(['key', 'shards', 'ids', 'packs', 'legacy']);
 
 /**
  * P86: the product a piece belongs to under the catalogue's product slots — the
@@ -1834,6 +1850,16 @@ export function validateContextVocabulary(raw: unknown): ValidationResult<Contex
   return { ok: true, value: structuredClone(raw) as unknown as ContextVocabulary };
 }
 
+/** P103: the learn document's money member, `{ currency, nonpositive }`: every error names `money`. */
+function moneyPolicyErrors(m: unknown): string[] {
+  if (!isRecord(m)) return [`money: ${shown(m)} is not a money policy; an object { currency, nonpositive }`];
+  const errors: string[] = [];
+  for (const key of Object.keys(m)) if (key !== 'currency' && key !== 'nonpositive') errors.push(`money.${key}: not a member of the money policy (currency, nonpositive)`);
+  if (typeof m.currency !== 'string' || !/^[A-Z]{3}$/.test(m.currency)) errors.push(`money.currency: ${shown(m.currency)} is not a currency code of three upper-case letters`);
+  if (m.nonpositive !== 'refuse' && m.nonpositive !== 'credit') errors.push(`money.nonpositive: ${shown(m.nonpositive)} is not refuse or credit`);
+  return errors;
+}
+
 function validateRetainedLearn(candidate: unknown, historical = true): ValidationResult<LearnConfig> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['learn: must be an object'] };
@@ -1948,6 +1974,12 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
     if (!refused.length) evidenceFloors = Object.fromEntries(Object.entries(candidate.evidenceFloors as Record<string, number>));
     else if (!historical) errors.push(...refused);
   }
+  let money: LearnConfig['money'];
+  if (candidate.money !== undefined) {
+    const refused = moneyPolicyErrors(candidate.money);
+    if (!refused.length) money = { currency: (candidate.money as Record<string, string>).currency!, nonpositive: (candidate.money as Record<string, 'refuse' | 'credit'>).nonpositive! };
+    else if (!historical) errors.push(...refused);
+  }
   let slots: LearnConfig['slots'];
   if (candidate.slots !== undefined) {
     if (!isRecord(candidate.slots)) errors.push('slots: object of slot → dials');
@@ -2055,6 +2087,7 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       ...(slots ? { slots } : {}),
       ...(contextVocabulary ? { contextVocabulary } : {}),
       ...(evidenceFloors ? { evidenceFloors } : {}),
+      ...(money ? { money } : {}),
     },
   };
 }

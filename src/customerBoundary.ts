@@ -66,6 +66,8 @@ export const CUSTOMER_ROUTES: readonly CustomerRoute[] = [
   { path: '/content/vocabulary/rejections', methods: read },
   { path: '/content/catalog/import', methods: post },
   { path: '/content/catalog/pull', methods: post },
+  { path: '/content/catalog/stage', methods: post }, // P98 (C2): a file staged, published by the next route with its siblings
+  { path: '/content/catalog/publish', methods: post },
   { path: '/content/catalog/publication', methods: read },
   { path: '/content/catalog/publication/recover', methods: post },
   { path: '/content/publication/initialize', methods: post },

@@ -19,7 +19,7 @@
     {
       "id": "P103",
       "title": "Money learning: a money policy that can be published, and one credit rule online and offline (**amendment 13, E28, 2026-10-28**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
@@ -43,7 +43,7 @@
         {
           "id": "MP3",
           "kind": "LOCAL",
-          "observable": "One credit rule: the money rule (moneyRefusal) sits inside the shared credit rule (successCreditOf, src/learn/policy.ts:115–149) that the visitor's ring (src/durable-objects/DecisionRing.ts:626–640), foldRetainedDay (src/learn/fan.ts:1417) with the W24 rebuild that calls it (src/durable-objects/LearnStats.ts:1160–1167), the hourly fold (src/learn/hourly.ts:1351) and the raw grids (src/learn/report.ts:1431) all read, each given the policy published in the learn document it folds under; so online and offline refuse and credit the same outcomes, with no policy (an outcome naming a currency refused everywhere) and with one (credited everywhere in its currency), on both hosts. Today the ring alone applies the rule (DecisionRing.ts:626) and the offline folds weigh value with no currency check (creditWeight, policy.ts:109–113): REPRODUCED, foldRetainedDay credits the EUR purchase the ring refuses (_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18), so the report and a rebuild credit revenue that live learning refused.",
+          "observable": "One credit rule: the money rule (moneyRefusal) sits inside the shared credit rule (successCreditOf, src/learn/policy.ts:115–149) that the visitor's ring (src/durable-objects/DecisionRing.ts:626–640), foldRetainedDay (src/learn/fan.ts:1417) with the W24 rebuild that calls it (src/durable-objects/LearnStats.ts:1160–1167), the hourly fold (src/learn/hourly.ts:1351) and the raw grids (src/learn/report.ts:1431) all read, each reading the policy the outcome was decided under, carried on its record from the producer's own learn read (never the learn document in force when it is folded, R-P576, R-P588); so online and offline refuse and credit the same outcomes, with no policy (an outcome naming a currency refused everywhere) and with one (credited everywhere in its currency), when a policy is published between an hour's outcomes and its fold, and when the SDK retries an outcome (the same event id) on either path, before or after a publication: the retry is the same outcome, credited once live and folded once, under its first stamp, and the hour's fold and the day build as they would without it, on both hosts (R-P594). Today, besides the money rule, a retry on the direct path is a second outcome: its admission stamp differs, so live learning credits it twice and the hour's fold refuses with conflicting rows under one logical id (S50/specifier/REPORT-46cb4300.md). Today the ring alone applies the rule (DecisionRing.ts:626) and the offline folds weigh value with no currency check (creditWeight, policy.ts:109–113): REPRODUCED, foldRetainedDay credits the EUR purchase the ring refuses (_evidence/parity-step3/S47/engine/VERIFY.md §1 Engine 18), so the report and a rebuild credit revenue that live learning refused.",
           "proof": "The P103 acceptance command runs the tests named unit:P103.MP3 in src/units/P103/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
@@ -122,13 +122,13 @@
       "allowedPaths": [
         "src/content/kinds.ts (the learn document's money member and its validation only)",
         "src/content/types.ts (LearnConfig's money member only)",
-        "src/learn/route.ts",
-        "src/ledger/recovery.ts (the outcome's prepare body, its admit call and OutcomeRecoveryInput's money member only; R-P571 (b))",
+        "src/learn/route.ts (as before; and the direct outcome path writing its ledger row with the stamp the ring answered with, so every copy of one outcome carries the stamp live decided it under; R-P620)",
+        "src/ledger/recovery.ts (OutcomeRecoveryInput's money member; sourceOf leaving the money stamp out of the source digest; runOwnerRecovery's first-admission stamp; the prepare body and admit call only as the stamp needs; R-P571 (b), R-P588)",
         "src/learn/policy.ts",
         "src/learn/fan.ts",
-        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call only)",
-        "src/learn/hourly.ts (the hourly fold's credit only, and its recovery fingerprint naming the money policy where P103's MP3 shows a policy published between a fold's start and its recovery reachable; R-P571 (d))",
-        "src/learn/report.ts (the raw grids' credit only)",
+        "src/durable-objects/DecisionRing.ts (the outcome body's money and the one credit rule's call; the direct /outcome handler evaluating every delivery of an outcome id under the stamp it first saw, that record kept with the credited journal — bounded, charged, expired, erased, reset and failing as the journal does, preferably within the journal's own write; refused entries evicted before any credited entry under the journal's caps; R-P594, R-P604, R-P628)",
+        "src/learn/hourly.ts (the hourly fold's credit, and its reading of rows sharing a logical id keeping the earliest-born copy; not its recovery fingerprint, R-P576 R12; R-P604)",
+        "src/learn/report.ts (the raw grids' credit, and their reading of rows sharing a logical id keeping the earliest-born copy; R-P604)",
         "src/durable-objects/LearnStats.ts (the W24 rebuild's call to foldRetainedDay only)",
         "src/sdk/emit.ts",
         "public/sdk/edge-personalization.js",
@@ -138,7 +138,13 @@
         "packages/sdk/edge-personalization.js",
         "packages/sdk/edge-personalization.esm.js",
         "docs/kit/02-api-reference.md",
-        "docs/kit/03-payload-schemas.md (the learn document's money member only; R-P571 (c))"
+        "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
+        "src/ledger/records.ts (OutcomeRecord's money member and the mark of a producer-stamped record only, line-neutral above the lines kit 02 cites; R-P588, R-P653)",
+        "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money, retention and the stamp's mark; preferredCopy, the one rule every reader of rows sharing a logical id uses — the ring-stamped copy first, then the earliest-born; R-P588, R-P594, R-P629, R-P653)",
+        "src/units/W24/B2.unit.test.ts (R10 by name: the message at :634 only, saying a fully refused outcome is never credited rather than never written into the credited journal; the assertion unchanged; by the specifier; R-P620)",
+        "src/ledger/writer.ts (findById choosing the earliest-born copy among rows sharing a logical id only; R-P628)",
+        "src/routes/realtime.sdkContract.test.ts (R10 by name: the stub rings at W22.07 :2725, :2766, :2790, W26.02 :6602 and W09.05 :6643 answer with the ring's decision (decidedUnder) as the real ring does, every expectation unchanged; by the specifier; R-P653)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -176,13 +182,13 @@
         {
           "id": "RF1",
           "kind": "LOCAL",
-          "observable": "The bound, on both hosts in the harness: every step of the hourly fold and of the day report (plan, partition, leaf, merge, close, day; the open hour and the custom-policy day taking the same steps) holds at most 64 MiB at 10,000, 100,000 and 1,000,000 visitors a day, with fixed inputs per step: a partition page at most 16 MiB and 200 objects; a leaf at most 8 MiB of state and 8 MiB of rows (a leaf that would pass 8 MiB splits by visitor hash, moving only its own visitors); a merge at most 64 partials; a day one hour aggregate and the running total. A step past its bound is refused naming its step (fold_step_bound); every object of an hour is read, in pages, so no hour is truncated; the wide context of the design's T5 folds, the cells bound kept per slot at the live table's capacity (256 items, 4,096 counters, src/durable-objects/LearnStats.ts:38–39) times the policies. Measured on the prototype: at most 56 MiB at all three volumes, a leaf's peak hour 0.2–0.3 s (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §5; _evidence/parity-step3/S49/analyst-report-fold/logs/proto.jsonl V1, V2). Today one request holds the hour's rows twice, all 64 shards' rings and an inline copy of every new shard body under REPORT_LIMITS (src/learn/report.ts:27–31) and the staged-body cap (src/learn/hourly.ts:2716, :2729–2739): an hour refused above about 8,900 decisions (rawBytes, observed 16,938,953), the next hour once the rings pass 3.69 MiB (aggregateBytes), an hour at 40 visitors on cells, and past 600 objects an hour truncated (MAX_HOUR_OBJECTS, hourly.ts:78) (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §2, REPRODUCED).",
+          "observable": "The bound, on both hosts in the harness: every step of the hourly fold and of the day report (plan, partition, leaf, merge, close, day; the open hour and the custom-policy day taking the same steps — a custom-policy report request whose day is past one page is accepted as a job (202 naming the job and where its day is read: GET /v1/:tenant/learn/report for that day and that policy's digest answers 202 with its progress while the steps run and 200 with the day when they are done; the same day and policy sent again names the same job), and within a page the request answers inline as today; R-P615) holds at most 64 MiB at 10,000, 100,000 and 1,000,000 visitors a day, with fixed inputs per step: a partition page at most 16 MiB and 200 objects; a leaf at most 8 MiB of state and 8 MiB of rows (a leaf that would pass 8 MiB splits by visitor hash, moving only its own visitors); a merge at most 64 partials; a day one hour aggregate and the running total. A step past its bound is refused naming its step (fold_step_bound), and no hour is ever left unfolded without a refusal stored that names it — at a peak hour of 8,333 visitors (the 100,000-a-day peak) and of 22,000, every merge and close holds at most 64 MiB and the hour folds or is refused by name (R-P660); every object of an hour is read, in pages, so no hour is truncated; the wide context of the design's T5 folds, the cells bound kept per slot at the live table's capacity (256 items, 4,096 counters, src/durable-objects/LearnStats.ts:38–39) times the policies. Measured on the prototype: at most 56 MiB at all three volumes, a leaf's peak hour 0.2–0.3 s (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §5; _evidence/parity-step3/S49/analyst-report-fold/logs/proto.jsonl V1, V2). Today one request holds the hour's rows twice, all 64 shards' rings and an inline copy of every new shard body under REPORT_LIMITS (src/learn/report.ts:27–31) and the staged-body cap (src/learn/hourly.ts:2716, :2729–2739): an hour refused above about 8,900 decisions (rawBytes, observed 16,938,953), the next hour once the rings pass 3.69 MiB (aggregateBytes), an hour at 40 visitors on cells, and past 600 objects an hour truncated (MAX_HOUR_OBJECTS, hourly.ts:78) (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §2, REPRODUCED).",
           "proof": "The P104 acceptance command runs the tests named unit:P104.RF1 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
           "id": "RF2",
           "kind": "LOCAL",
-          "observable": "Parity, on both hosts: on the same records the staged fold at depth 0 equals today's buildHour (src/learn/hourly.ts:2555) value for value and shard for shard: the 64 shard states equal (byte-identical where the state is encoded as today's v2), the hour aggregates and the day reports equal to a relative 1e-15, duplicates counted alike, across two hours with crossing visitors, duplicates spanning pages, a filed conflict, an erasure, an expired stamp, a re-fold of a grown hour and an earlier hour folded after a later one. The prototype matched today's fold on two hours: aggregates to 1.1e-15, all 64 shard states byte-identical after hour 13, the day reports equal, duplicates 200 and 200 (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §4, _evidence/parity-step3/S49/analyst-report-fold/logs/proto.jsonl E1, REPRODUCED).",
+          "observable": "Parity, on both hosts: on the same records the staged fold at depth 0 equals today's buildHour (src/learn/hourly.ts:2555) value for value and shard for shard: the 64 shard states equal (byte-identical where the state is encoded as today's v2), the hour aggregates and the day reports equal — every count, identifier and integer exactly, and every floating sum to a relative 1e-12 (an absolute 1e-12 for a value under 1): a tree of partial sums adds in another order than today's single pass and moves only the last bits (the prototype's 1.1e-15, the design's own merge 1.6e-15), which nothing reads; parity is never bought by holding an hour's rows or an update log that grows with traffic (R-P660) — duplicates counted alike, across two hours with crossing visitors, duplicates spanning pages, a filed conflict, an erasure, an expired stamp, a re-fold of a grown hour and an earlier hour folded after a later one. The prototype matched today's fold on two hours: aggregates to 1.1e-15, all 64 shard states byte-identical after hour 13, the day reports equal, duplicates 200 and 200 (_evidence/parity-step3/S49/analyst-report-fold/DESIGN.md §4, _evidence/parity-step3/S49/analyst-report-fold/logs/proto.jsonl E1, REPRODUCED).",
           "proof": "The P104 acceptance command runs the tests named unit:P104.RF2 in src/units/P104/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
@@ -282,9 +288,16 @@
         "src/learn/report.ts",
         "src/learn/fan.ts (the ring entry's state v3 and foldRetainedDay's ring rule only)",
         "src/durable-objects/LearnStats.ts (the W24 rebuild only)",
-        "src/routes/decisions.ts (the day report's answer by slot and its ?slot= read only)",
+        "src/routes/decisions.ts (the day report's answer by slot and its ?slot= read; the custom-policy report request past a page accepted as a job and its day read by policy digest; R-P615)",
         "src/index.ts (the five-minute run's enqueue and the queue handler's fold-step messages only)",
-        "docs/kit/02-api-reference.md"
+        "docs/kit/02-api-reference.md",
+        "src/learn/hourly.test.ts (R10 by name: the 8 MiB refusal at :907–910 re-pointed to RF5's by-slot answer only; by the specifier; R-P615)",
+        "src/learn/report.test.ts (R10 by name: the 8 MiB refusal at :379–382 re-pointed to RF5's by-slot answer, and the storage double keeping custom metadata and answering a ranged text() with the requested range as R2 does; by the specifier; R-P615, R-P632)",
+        "src/units/W37/LEDGER.unit.test.ts (R10 by name: the workerd configuration declares the shipped events queue for the fold steps, the wrapper passes batches to the Worker's queue handler, and the fold legs wait, bounded, for the queue's deliveries before reading; every expectation and run limit unchanged; by the specifier; R-P615, R-P632)",
+        "src/units/W37/FIX2.unit.test.ts (R10 by name: as W37 LEDGER's; the run limit unchanged, since a catch-up enqueues every due hour in one run; by the specifier; R-P615, R-P632)",
+        "src/units/P103/LEDGER.unit.test.ts (R10 by name: the legs that call foldOpenHours and catchUp directly drive the five-minute run and drain the fold's queue instead, every expectation unchanged; by the specifier or P104's builder after P103 joins; R-P615)",
+        "src/units/_native.ts (R10 by name: an optional queue pass-through to the Worker's queue handler, absent by default; by the specifier; R-P632)",
+        "src/units/_parity.ts (R10 by name: the mounted queue double refuses a sendBatch over 100 messages as the platform does; every test using it swept; by the specifier; R-P660)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P104 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {

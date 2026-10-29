@@ -193,7 +193,9 @@
 // trees are the scratch layout (the .mjs suites, root.worker, and the console legs reading the base commit through git).
 //
 // HARNESS: src/units/_parity.ts (the mounted application, both hosts, the operator routes, the bucket double). Imports from
-// src/units/: ../_parity.
+// src/units/: ../_parity; P98 R10 (R-P569 (b)): ../P93/_catalog.
+
+import { createHash } from 'node:crypto';
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -210,6 +212,8 @@ import {
   putDocument, readTree, receiptsOf, recentSlot, replayOf, servedIn, servePage, shopperOn, storedDecisions, TENANT, UnitR2,
   type Answer, type Decision, type Documents, type Host, type LoadedSlots, type Mounted, type Shopper, type Snapshot,
 } from '../_parity';
+// P98 R10 (R-P569 (b)): objects read, held, lost and forged through their pack; a revision stored before packs.
+import { forgeObject, held, heldKeys, heldRaw, loseObject, packedObjects, storedBeforePacks } from '../P93/_catalog';
 
 // ===========================================================================
 // The fixture: P80's anchor product and images, three products of a range, and a generated range.
@@ -311,28 +315,82 @@ const storedAt = (m: Mounted, key: string): Record<string, unknown> | null => {
 };
 const SHARD = /^config-publication\/v1\/coach\/content\/shard\/([0-9a-f]{64})\.json$/;
 const shardKey = (digest: string) => `config-publication/v1/${TENANT}/content/shard/${digest}.json`;
-const shardPointersOf = (d: LoadedSlots) => ((d.document.index as { shards?: unknown } | undefined)?.shards ?? null) as Record<string, { digest?: unknown }> | null;
+type Placed = { digest?: unknown; pack?: unknown; at?: unknown; bytes?: unknown };
+const shardPointersOf = (d: LoadedSlots) => ((d.document.index as { shards?: unknown } | undefined)?.shards ?? null) as Record<string, Placed> | null;
+/**
+ * P98 R10 (R-P549, R-P551): an object a pointer with a byte range names lives in a pack
+ * (`content/pack/<digest>.pack`), its pack named by the table the pointer indexes (`pack`) or, for a part inside its
+ * shard's own pack, by that shard's place; it is read from the bucket at that range. A pointer with no range names an
+ * object of its own, read as before.
+ */
+const packKey = (digest: string) => `config-publication/v1/${TENANT}/content/pack/${digest}.pack`;
+const packOfEntry = (entry: unknown) => typeof entry === 'string' ? entry : String((entry as { digest?: unknown } | null)?.digest ?? '');
+const packBuffers = new Map<string, { raw: string; bytes: Buffer }>();
+const placedAt = (m: Mounted, pack: string, at: number, bytes: number): Record<string, unknown> | null => {
+  const key = packKey(pack), raw = m.storage.objects.get(key);
+  if (raw === undefined) return null;
+  let held = packBuffers.get(key);
+  if (!held || held.raw !== raw) { held = { raw, bytes: Buffer.from(raw, 'utf8') }; packBuffers.set(key, held); }
+  try { return JSON.parse(held.bytes.subarray(at, at + bytes).toString('utf8')) as Record<string, unknown>; } catch { return null; }
+};
+/** P98 R10: the pack a pointer with a range names (`table[pointer.pack]`, else `own`), or none for an object of its own. */
+const packOf = (pointer: Placed, table: unknown, own?: string): string | undefined =>
+  typeof pointer.at !== 'number' || typeof pointer.bytes !== 'number' ? undefined
+    : typeof pointer.pack === 'number' ? packOfEntry(Array.isArray(table) ? table[pointer.pack] : undefined) || undefined : own;
+const manifestPacks = (d: LoadedSlots) => (d.document.index as { packs?: unknown } | undefined)?.packs;
+/** A manifest pointer's object (a shard or an id shard): from its pack's range, else its own object at `ownKey`. */
+const pointedAt = (m: Mounted, d: LoadedSlots, pointer: Placed, ownKey: string) => {
+  const pack = packOf(pointer, manifestPacks(d));
+  return pack ? placedAt(m, pack, pointer.at as number, pointer.bytes as number) : storedAt(m, ownKey);
+};
 /** The manifest's index, product → pointer, or `{}` where it has none (today). */
 const productsOf = (m: Mounted, d: LoadedSlots) => {
   const shards = shardPointersOf(d);
   if (!shards) return (d.document.products ?? {}) as Record<string, { digest?: unknown; records?: unknown }>;
   const out: Record<string, { digest?: unknown; records?: unknown }> = {};
-  for (const pointer of Object.values(shards)) Object.assign(out, (storedAt(m, shardKey(String(pointer.digest)))?.products ?? {}) as object);
+  for (const pointer of Object.values(shards)) Object.assign(out, (pointedAt(m, d, pointer, shardKey(String(pointer.digest)))?.products ?? {}) as object);
   return Object.fromEntries(Object.keys(out).sort().map(p => [p, out[p]!]));
 };
-/** P93 R10: the key of the product shard that holds a product (the sharded form), or what is missing. */
-const shardOf = (m: Mounted, d: LoadedSlots, product: string) => Object.values(shardPointersOf(d) ?? {}).map(p => shardKey(String(p.digest)))
-  .find(key => Object.hasOwn((storedAt(m, key)?.products ?? {}) as object, product)) ?? `no shard holds ${product}`;
+/**
+ * P98 R10 (R-P582): the full digest a manifest pointer names its object by — its own digest for an object of its own; for
+ * one in a pack, the digest of the object stored at its place when the pointer's 32-hex prefix is that digest's, else
+ * what is wrong.
+ */
+const namedDigest = (m: Mounted, d: LoadedSlots, pointer: Placed, ownKey: string): string => {
+  if (!packOf(pointer, manifestPacks(d))) return String(pointer.digest);
+  const value = pointedAt(m, d, pointer, ownKey);
+  if (!value) return 'no object at its place';
+  const full = createHash('sha256').update(canonicalOf(value), 'utf8').digest('hex');
+  return typeof pointer.digest === 'string' && full.startsWith(pointer.digest) ? full : `not the object its pointer names (${String(pointer.digest)})`;
+};
+const canonicalOf = (v: unknown): string => Array.isArray(v) ? '[' + v.map(canonicalOf).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonicalOf((v as Record<string, unknown>)[k])).join(',') + '}' : JSON.stringify(v);
+/** P93 R10: the key of the product shard that holds a product (the sharded form), or what is missing; P98 R10: in a pack, the key it would have as its own (its full digest), as the read meter names it. */
+const shardOf = (m: Mounted, d: LoadedSlots, product: string) => Object.values(shardPointersOf(d) ?? {})
+  .filter(p => Object.hasOwn((pointedAt(m, d, p, shardKey(String(p.digest)))?.products ?? {}) as object, product))
+  .map(p => shardKey(namedDigest(m, d, p, shardKey(String(p.digest)))))[0] ?? `no shard holds ${product}`;
 /** P93 R10: the shard bucket of an id: the first two hex digits of the SHA-256 of its UTF-8 bytes (R-P487 (1)). */
 const bucketOfId = async (id: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)))][0]!.toString(16).padStart(2, '0');
 const sharedOf = (d: LoadedSlots) => ((d.document.pieces ?? []) as Array<{ id: string }>).map(p => p.id);
 const digestOf = (m: Mounted, d: LoadedSlots, product: string) => String(productsOf(m, d)[product]?.digest ?? `no pointer for ${product}`);
 const PART = /^config-publication\/v1\/coach\/content\/part\/([0-9a-f]{64})\.json$/;
+/** P98 R10 (R-P569 (b)): a load's pack, whose objects a ranged read reads. */
+const PACKED = /^config-publication\/v1\/coach\/content\/pack\/([0-9a-f]{64})\.pack$/;
 const partKey = (digest: string) => `config-publication/v1/${TENANT}/content/part/${digest}.json`;
-const partKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => PART.test(k)).sort();
-/** A product's part as stored, read through its pointer: its record ids, or what is missing. */
+/** The parts the store holds; P98 R10 (R-P569 (b)): of their own or inside a stored pack, each by the key it would have as its own. */
+const partKeys = (m: Mounted) => heldKeys(m, 'part');
+/** A product's part as stored, read through its pointer: its record ids, or what is missing (P98 R10: from its pack's range where it lives in a pack). */
 function partOf(m: Mounted, d: LoadedSlots, product: string): { ids: string[]; value: Record<string, unknown> | null; bytes: number; missing: string | null } {
-  const digest = digestOf(m, d, product), raw = m.storage.objects.get(partKey(digest));
+  const digest = digestOf(m, d, product);
+  for (const pointer of Object.values(shardPointersOf(d) ?? {})) {
+    const shard = pointedAt(m, d, pointer, shardKey(String(pointer.digest))), entry = (shard?.products as Record<string, Placed> | undefined)?.[product];
+    const pack = entry ? packOf(entry, shard?.packs, packOf(pointer, manifestPacks(d))) : undefined;
+    if (!entry || !pack) continue;
+    const value = placedAt(m, pack, entry.at as number, entry.bytes as number);
+    if (!value) return { ids: [], value: null, bytes: 0, missing: `no part object for ${product} (${digest})` };
+    return { ids: sorted(((value.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value, bytes: entry.bytes as number, missing: null };
+  }
+  const raw = m.storage.objects.get(partKey(digest));
   if (raw === undefined) return { ids: [], value: null, bytes: 0, missing: `no part object for ${product} (${digest})` };
   const value = JSON.parse(raw) as Record<string, unknown>;
   return { ids: sorted(((value.pieces ?? []) as Array<{ id: string }>).map(p => p.id)), value, bytes: new TextEncoder().encode(raw).byteLength, missing: null };
@@ -344,19 +402,21 @@ function partOf(m: Mounted, d: LoadedSlots, product: string): { ids: string[]; v
  */
 const IDS = /^config-publication\/v1\/coach\/content\/(?:ids|idshard)\/([0-9a-f]{64})\.json$/;
 const idsKey = (digest: string) => `config-publication/v1/${TENANT}/content/idshard/${digest}.json`;
-const idsKeys = (m: Mounted) => [...m.storage.objects.keys()].filter(k => IDS.test(k)).sort();
+/** The id index objects the store holds; P98 R10 (R-P569 (b)): an id shard inside a stored pack by the key it would have as its own. */
+const idsKeys = (m: Mounted) => sorted([...new Set([...[...m.storage.objects.keys()].filter(k => IDS.test(k)), ...heldKeys(m, 'idshard')])]);
 /** The id index's pointers: the sharded `index.ids` (hex2 → { digest, records }) or P86's `idIndex`; null where there is none. */
 const indexPointerOf = (d: LoadedSlots) => ((d.document.index as { ids?: unknown } | undefined)?.ids ?? d.document.idIndex ?? null) as Record<string, unknown> | null;
-/** The id shard keys the manifest names (the sharded form). */
-const idShardKeysOf = (d: LoadedSlots) => sorted(Object.values(((d.document.index as { ids?: unknown } | undefined)?.ids ?? {}) as Record<string, { digest?: unknown }>).map(p => idsKey(String(p.digest))));
+/** The id shard keys the manifest names (the sharded form); P98 R10: one in a pack by the key it would have as its own (its full digest). */
+const idShardKeysOf = (m: Mounted, d: LoadedSlots) => sorted([...new Set(Object.values(((d.document.index as { ids?: unknown } | undefined)?.ids ?? {}) as Record<string, Placed>)
+  .map(p => idsKey(namedDigest(m, d, p, idsKey(String(p.digest))))))]);
 function indexOf(m: Mounted, d: LoadedSlots): { digest: string; ids: Record<string, string> | null; value: unknown } {
   const sharded = (d.document.index as { ids?: Record<string, { digest?: unknown }> } | undefined)?.ids;
   if (sharded) {
     const ids: Record<string, string> = {};
     for (const pointer of Object.values(sharded)) {
-      const raw = m.storage.objects.get(idsKey(String(pointer.digest)));
-      if (raw === undefined) return { digest: JSON.stringify(sharded), ids: null, value: null };
-      Object.assign(ids, (JSON.parse(raw) as { ids?: Record<string, string> }).ids ?? {});
+      const shard = pointedAt(m, d, pointer as Placed, idsKey(String(pointer.digest)));
+      if (shard === null) return { digest: JSON.stringify(sharded), ids: null, value: null };
+      Object.assign(ids, (shard as { ids?: Record<string, string> }).ids ?? {});
     }
     const value = { ids: Object.fromEntries(Object.keys(ids).sort().map(id => [id, ids[id]!])) };
     return { digest: JSON.stringify(sharded), ids: value.ids, value };
@@ -382,8 +442,9 @@ function uploadedAt(m: Mounted, when: (key: string) => Date): () => void {
   Object.defineProperty(bucket, 'head', { configurable: true, writable: true, value: async (key: string) => {
     const found = await proto.head.call(m.storage, key); return found ? { ...found, uploaded: when(key) } : null;
   } });
-  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
-    const found = await proto.get.call(m.storage, key); return found ? { ...found, uploaded: when(key) } : null;
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
+    // P98 R10 (R-P569 (b)): the read's range is honoured.
+    const found = await proto.get.call(m.storage, key, options); return found ? { ...found, uploaded: when(key) } : null;
   } });
   return () => { for (const name of ['list', 'head', 'get']) Reflect.deleteProperty(bucket, name); };
 }
@@ -396,9 +457,13 @@ const readIds = (a: Answer) => sorted((((a.body.document as { pieces?: unknown }
 interface Read { key: string; bytes: number }
 async function counted<T>(m: Mounted, run: () => Promise<T>): Promise<{ result: T; reads: Read[] }> {
   const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.get, reads: Read[] = [];
-  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
-    const found = await original.call(m.storage, key);
-    if (key.startsWith('config-publication/')) reads.push({ key, bytes: found?.size ?? 0 });
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
+    const found = await original.call(m.storage, key, options);
+    // P98 R10 (R-P569 (b)): a ranged read of a pack is a read of each object inside the range, of that object's bytes.
+    const inside = PACKED.test(key) && options?.range ? packedObjects(m, PACKED.exec(key)![1]!)
+      .filter(o => o.at >= (options.range!.offset ?? 0) && o.at + o.bytes <= (options.range!.offset ?? 0) + (options.range!.length ?? Infinity)) : [];
+    if (inside.length) for (const o of inside) reads.push({ key: o.key, bytes: o.bytes });
+    else if (key.startsWith('config-publication/')) reads.push({ key, bytes: found?.size ?? 0 });
     return found;
   } });
   try { return { result: await run(), reads }; } finally { Reflect.deleteProperty(bucket, 'get'); }
@@ -418,10 +483,13 @@ async function foreignReads<T>(m: Mounted, other: string, run: () => Promise<T>)
   const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.get, foreign: string[] = [];
   const rings = m.env.DECISION_RING as unknown as { get: (name: string) => unknown }, ringGet = rings.get;
   let parts = 0;
-  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string) => {
+  Object.defineProperty(bucket, 'get', { configurable: true, writable: true, value: async (key: string, options?: { range?: { offset?: number; length?: number } }) => {
     if (key.includes(other)) foreign.push(`R2 ${key}`);
-    if (PART.test(key)) parts++;
-    return original.call(m.storage, key);
+    // P98 R10 (R-P569 (b)): a part read from its pack by range counts as a part read.
+    const inside = PACKED.test(key) && options?.range ? packedObjects(m, PACKED.exec(key)![1]!)
+      .filter(o => o.at >= (options.range!.offset ?? 0) && o.at + o.bytes <= (options.range!.offset ?? 0) + (options.range!.length ?? Infinity)) : [];
+    if (PART.test(key)) parts++; else parts += inside.filter(o => PART.test(o.key)).length;
+    return original.call(m.storage, key, options);
   } });
   rings.get = (name: string) => { if (String(name).includes(other)) foreign.push(`ring ${String(name)}`); return ringGet(name); };
   try { return { result: await run(), foreign, parts }; } finally { Reflect.deleteProperty(bucket, 'get'); rings.get = ringGet; }
@@ -690,7 +758,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const before = await loadDocument(m, 'catalog');
       const bucket = m.storage as unknown as Record<string, unknown>, original = UnitR2.prototype.put;
       Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
-        if (PART.test(key)) throw new Error('P86 fixture: the part write fails');
+        if (PART.test(key) || PACKED.test(key)) throw new Error('P86 fixture: the part write fails'); // P98 R10 (R-P569 (b)): a part is written in its load's pack
         return original.call(m.storage, key, raw, options);
       } });
       let failed: Answer;
@@ -723,7 +791,7 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
         const d = await loadDocument(m, 'catalog');
         pointers.push(Object.fromEntries(Object.entries(productsOf(m, d)).map(([p, v]) => [p, String(v.digest)])));
-        indexes.push(idShardKeysOf(d)); // P93 R10: the id shards this revision names (P86: its one id index object)
+        indexes.push(idShardKeysOf(m, d)); // P93 R10: the id shards this revision names (P86: its one id index object)
         await new Promise(resolve => setTimeout(resolve, 5));
       }
       const head = await loadDocument(m, 'catalog');
@@ -737,8 +805,8 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const kept = sorted([...new Set([...Object.values(pointers[3] ?? {}), ...Object.values(pointers[2] ?? {})])].map(partKey));
       const previousA = partKey(pointers[2]?.[A] ?? 'no pointer'), currentA = partKey(pointers[3]?.[A] ?? 'no pointer');
       const read = await productRead(m, A);
-      expect.soft({ parts: partKeys(m), firstA: m.storage.objects.has(partKey(pointers[0]?.[A] ?? 'no pointer')),
-        previousA: [previousA !== currentA, m.storage.objects.has(previousA)], read: [read.status, readIds(read)] },
+      expect.soft({ parts: partKeys(m), firstA: held(m, partKey(pointers[0]?.[A] ?? 'no pointer')),
+        previousA: [previousA !== currentA, held(m, previousA)], read: [read.status, readIds(read)] },
         `${host}: P86.CS1 — the parts are exactly those a kept revision references, the previous revision's part of ${A} kept (today no part is written)`).toEqual({
         parts: kept.length === 3 ? kept : ['three referenced parts expected', ...kept], firstA: false, previousA: [true, true], read: [200, sorted(fourOf(A).map(r => r.id))] });
       const back = await asOperator(m, 'POST', `/content/catalog/rollback/${head.revision - 1}?scope=${TENANT}`, {}, await preconditions(m));
@@ -770,7 +838,10 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       const m = await mount(host, DOCS);
       expectPublished(m, 'P86.CS1 — the tenant documents publish');
       await declareProductSlots(m);
-      expect((await importJson(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], { mode: 'merge' })).status, `${host}: PRECONDITION — three products load`).toBe(200);
+      // P98 R10 (R-P569 (b), R-P578): the kept manifest stored before packs (P93's form, planted beside the routes; before:
+      // loaded by the import), its parts objects of their own — a pack never loses one product's part alone, and a rollback
+      // across revisions in packs checks one HEAD per pack (unit:P98).
+      await storedBeforePacks(m, [...fourOf(A), ...fourOf(B), ...fourOf(C)], 'p86-catalogue', 'P86 R10: three products stored before packs');
       const kept = await loadDocument(m, 'catalog');
       const [a1] = fourOf(A) as [Rec], [b1] = fourOf(B) as [Rec];
       expect((await importJson(m, [{ ...a1, title: `${a1.title}, v2` }, { ...b1, title: `${b1.title}, v2` }], { mode: 'merge' })).status,
@@ -801,15 +872,17 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
       expect.soft([Object.keys(indexPointerOf(declared) ?? {}).length, idsKeys(m)], `${host}: P86.CS1 — no part, no index`).toEqual([0, []]);
       expect((await importJson(m, [...fourOf(A), ...fourOf(B)], { mode: 'merge' })).status, `${host}: PRECONDITION — ${A} and ${B} load`).toBe(200);
       const first = await loadDocument(m, 'catalog'), index = indexOf(m, first);
-      const pointers = Object.values(indexPointerOf(first) ?? {}) as Array<{ digest?: unknown; records?: unknown }>, addressed: boolean[] = [];
-      for (const pointer of pointers) { const raw = m.storage.objects.get(idsKey(String(pointer.digest))); addressed.push(raw !== undefined && await documentDigest(JSON.parse(raw)) === pointer.digest); }
-      expect.soft({ pointer: [pointers.length > 0 && pointers.every(p => /^[0-9a-f]{64}$/.test(String(p.digest))), pointers.reduce((n, p) => n + Number(p.records), 0)], stored: idsKeys(m),
+      // P98 R10 (R-P582): a pointer into a pack names its object by the 32-hex prefix of its digest; each named by its full digest.
+      const pointers = Object.values(indexPointerOf(first) ?? {}) as Array<Placed & { records?: unknown }>, addressed: boolean[] = [];
+      const digests = pointers.map(p => namedDigest(m, first, p, idsKey(String(p.digest))));
+      for (const digest of digests) { const raw = heldRaw(m, idsKey(digest)); addressed.push(raw !== null && await documentDigest(JSON.parse(raw)) === digest); }
+      expect.soft({ pointer: [digests.length > 0 && digests.every(d => /^[0-9a-f]{64}$/.test(d)), pointers.reduce((n, p) => n + Number(p.records), 0)], stored: idsKeys(m),
         addressed: addressed.length > 0 && addressed.every(Boolean), ids: index.ids }, `${host}: P86.CS1 — the manifest names its id shards, each at its content address, together holding every part record (today none)`).toEqual({
-        pointer: [true, 8], stored: idShardKeysOf(first), addressed: true, ids: Object.fromEntries([...fourOf(A).map(r => [r.id, A]), ...fourOf(B).map(r => [r.id, B])].sort()) });
+        pointer: [true, 8], stored: idShardKeysOf(m, first), addressed: true, ids: Object.fromEntries([...fourOf(A).map(r => [r.id, A]), ...fourOf(B).map(r => [r.id, B])].sort()) });
       // The index written before the pending head, as a part is: its write failing commits nothing and leaves nothing pending.
       const bucket = m.storage as unknown as Record<string, unknown>, put = UnitR2.prototype.put;
       Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (key: string, raw: string, options?: R2PutOptions) => {
-        if (IDS.test(key)) throw new Error('P86 fixture: the id shard write fails');
+        if (IDS.test(key) || PACKED.test(key)) throw new Error('P86 fixture: the id shard write fails'); // P98 R10 (R-P569 (b)): an id shard is written in its load's pack
         return put.call(m.storage, key, raw, options);
       } });
       let failed: Answer;
@@ -886,13 +959,13 @@ describe('unit:P86.CS1 (D2: design A, R-P405)', () => {
         const loaded = await importJson(m, records, { mode: 'merge' });
         expect(loaded.status, `${host}: PRECONDITION — the load is accepted (${show(loaded)})`).toBe(200);
         const d = await loadDocument(m, 'catalog');
-        firsts.push([partKey(digestOf(m, d, A)), idShardKeysOf(d)]);
+        firsts.push([partKey(digestOf(m, d, A)), idShardKeysOf(m, d)]);
         await new Promise(resolve => setTimeout(resolve, 5));
       }
       const head = await loadDocument(m, 'catalog');
       const purged = await asOperator(m, 'GET', `/content/catalog/revisions/${head.revision - 3}?scope=${TENANT}`);
       expect(purged.status, `${host}: PRECONDITION — the revision of ${A}'s first load was purged under the setting (${show(purged)})`).toBe(410);
-      expect.soft([m.storage.objects.has(firsts[0]![0]), firsts[0]![1].length > 0 && firsts[0]![1].every(key => m.storage.objects.has(key))],
+      expect.soft([held(m, firsts[0]![0]), firsts[0]![1].length > 0 && firsts[0]![1].every(key => held(m, key))],
         `${host}: P86.CS1 — the first load's part and index, uploaded moments ago, survive the purge of the revision naming them`).toEqual([true, true]);
       restore();
     }, 120_000);
@@ -1146,13 +1219,14 @@ describe('unit:P86.CS2 (D2: design A, R-P405)', () => {
     it(`host (${host}): R-P412 (2) — the anchor's part unreadable (lost, or a body that is not its digest's) fails the product page's decision 503 part_unavailable and never serves the shared pieces alone; a page that reads no part is served as before`, async () => {
       const m = await rangeTenant(host, 50);
       const manifest = await loadDocument(m, 'catalog'), key = partKey(digestOf(m, manifest, A));
-      expect(m.storage.objects.has(key), `${host}: PRECONDITION — ${A}'s part is stored (today there is none)`).toBe(true);
+      expect(held(m, key), `${host}: PRECONDITION — ${A}'s part is stored (today there is none)`).toBe(true);
       const s = await shopperOn(m);
       const outcome = (page: Snapshot) => [page.status, JSON.stringify(page.body).includes('part_unavailable') ? 'names part_unavailable' : `does not (${JSON.stringify(page.body).slice(0, 160)})`, carousel(page)];
-      m.storage.objects.delete(key); invalidatePublicationCache();
+      // P98 R10 (R-P569 (b)): lost as an object of its own, or its bytes where they lie in its pack; then a body not its digest's.
+      const restore = loseObject(m, key); invalidatePublicationCache();
       const lost = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-lost');
       const plain = await snapshotOf(m, s, 'pdp', {}, 'p86-cs2-plain');
-      m.storage.objects.set(key, m.storage.objects.get(partKey(digestOf(m, manifest, B)))!); invalidatePublicationCache();
+      restore(); forgeObject(m, key, partKey(digestOf(m, manifest, B))); invalidatePublicationCache();
       const forged = await snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p86-cs2-forged');
       expect.soft({ lost: outcome(lost), forged: outcome(forged), plain: [plain.status, servedIn(plain, 'pdp-modules').length > 0, carousel(plain)] },
         `${host}: P86.CS2 — 503 part_unavailable, no fallback; the page without an anchor served`).toEqual({

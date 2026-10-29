@@ -108,7 +108,7 @@ export function logicalIdentity(row: Record<string, unknown>, stream: LedgerStre
  * the online credited journal, which digests this same logical row, credits
  * them once.
  */
-export const LOGICAL_EXCLUDED_FIELDS: readonly string[] = [DELIVERY_FIELD, 'experiment', 'event_id_source'];
+export const LOGICAL_EXCLUDED_FIELDS: readonly string[] = [DELIVERY_FIELD, 'experiment', 'event_id_source', 'money', 'money_stamped_by', 'retention'];
 
 /** Compare complete JSON rows after identity validation; only top-level transport and experiment provenance are excluded. */
 export function equalLogicalRows(first: Record<string, unknown>, second: Record<string, unknown>, spend: (n?: number) => void): boolean {
@@ -337,4 +337,18 @@ export async function recordEvidenceLoss(env: LossStore, tenant: string, path: E
     await env.CACHE.put(evidenceLossKey(tenant), JSON.stringify({ version: 1, ...document }),
       { expirationTtl: Math.floor(EVIDENCE_LOSS_HORIZON_MS / 1000) });
   } catch { /* a loss counter never fails the work that lost the row, and never retries */ }
+}
+
+/**
+ * P103 (R-P604, R-P628, R-P629, R-P653): whether `a` is kept over `b`, two copies of one logical row, by the one rule every
+ * reader of such rows shares (the hourly and open hour's folds, the raw day, the W24 rebuild, `findById`): a copy whose
+ * money stamp the ring decided over one marked producer-stamped, then the earliest-born (their ledger retention births,
+ * `mergeRetention`'s rule); otherwise, ties included, the copy read first is kept.
+ */
+export function preferredCopy(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const producer = (row: Record<string, unknown>) => row.money_stamped_by === 'producer';
+  if (producer(a) !== producer(b)) return producer(b);
+  const born = (row: Record<string, unknown>) => { const stamp = (row.retention as { ledger?: { bornAt?: unknown } } | undefined)?.ledger?.bornAt; return typeof stamp === 'number' ? stamp : null; };
+  const x = born(a), y = born(b);
+  return x !== null && y !== null && x < y;
 }
