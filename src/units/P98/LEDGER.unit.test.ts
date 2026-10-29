@@ -114,6 +114,8 @@
 //     of a pack, each gap at most 256 KiB and each read at most 16 MiB; before: exactly the wanted objects).
 //   src/units/P77/LEDGER.unit.test.ts VR3's TODAY: '/content/catalog/stage POST' and '/content/catalog/publish POST' after
 //     '/content/catalog/pull POST' (R-P578 (d)).
+//   src/units/W21/B2.unit.test.ts KIT_OUTCOME_CONSENT (R-P646 (8), by name): kit 03's `experiment` row gender-neutral, the
+//     sentence it pins reads "the visitor’s enrollment and their consent" (before: "and her consent"); the rule unchanged.
 //   Retry once (R-P569 (a)), an injected failure also failing its immediate repeat: src/routes/content.test.ts CatalogR2
 //     (:564, :973), src/units/P87/LEDGER.unit.test.ts (:422, :472: two failures of the revision write) and
 //     src/services/telemetry.boundary.test.ts PublicationR2 (:571).
@@ -434,6 +436,28 @@ describe('unit:P98.LD1 (R-P549, R-P551: one pack per load; calls bounded by the 
         `${host}: P98.LD1 — the two parts, ${apart} bytes apart, read at their places (${JSON.stringify(partReads.map(r => [r.parts.length, r.bytes]))})`).toEqual({
         status: 200, read: [...parts].sort(), reads: parts.map(k => [k]).sort(), widest: true });
     }, 300_000);
+
+    // R-P646 (7): the delivery review's finding 7, by reading (content.ts IndexEdit.build appends the compaction victim's
+    // live parts under the 64 MiB cap): a load that fits on its own is never refused load_too_large for the pack it re-homes.
+    it(`host (${host}): R-P646 (7) — compaction never makes a load that fits refuse load_too_large: as many large parts as fit in 63 MiB rewritten in one load are accepted with one pack, though the table shows a pack under a quarter live still holding two large parts`, async () => {
+      const m = await mount(host, DOCS);
+      await declareProductSlots(m);
+      const created: number[] = [];
+      for (let k = 0; k <= 40; k++) created.push((await importOf(m, bigPart(k))).status);
+      expect(created.every(s => s === 200), `${host}: PRECONDITION — the 41 large parts load (${created.join(',')})`).toBe(true);
+      const rewrite = (ks: number[], title: string) => ks.map(k => ({ ...bigPart(k)[0]!, title }));
+      // V rewrites nine large parts in one pack; W rewrites seven of them again, so V keeps two of nine live.
+      expect((await importOf(m, rewrite([32, 33, 34, 35, 36, 37, 38, 39, 40], 'p98 victim'))).status, `${host}: PRECONDITION — V`).toBe(200);
+      expect((await importOf(m, rewrite([33, 34, 35, 36, 37, 38, 39], 'p98 victim rewritten'))).status, `${host}: PRECONDITION — W`).toBe(200);
+      const doc = (await loadDocument(m, 'catalog')).document, rows = ((doc.index as { packs?: Array<{ bytes: number; size: number }> } | undefined)?.packs ?? []);
+      const victim = rows.find(r => r.bytes / r.size < 0.25 && r.bytes > 3_900_000);
+      expect(victim !== undefined, `${host}: PRECONDITION — a pack under a quarter live holds two large parts (${JSON.stringify(rows.map(r => [r.bytes, r.size]))})`).toBe(true);
+      const view = indexOf(m, doc), sizes = Array.from({ length: 32 }, (_, k) => Buffer.byteLength(heldRaw(m, KEY.part(view.products[`COA-BIG${String(k).padStart(2, '0')}`]?.digest ?? 'none')) ?? '', 'utf8'));
+      let fit = 0, fitBytes = 0; while (fit < 32 && fitBytes + sizes[fit]! <= 63 * 1024 * 1024) fitBytes += sizes[fit++]!;
+      const x = await measuredLoad(m, rewrite(Array.from({ length: fit }, (_, k) => k), 'p98 under the cap beside a victim'));
+      expect.soft({ x: [x.row.status, x.row.code, x.row.puts['put pack'] ?? 0], bad: resolve(m, (await loadDocument(m, 'catalog')).document).bad },
+        `${host}: P98.LD1 — the load that fits (${fit} parts, ${fitBytes} bytes; ${show(x.answer)})`).toEqual({ x: [200, null, 1], bad: [] });
+    }, 1_800_000);
   }
 });
 
@@ -778,6 +802,33 @@ describe('unit:P98.LD4 (R-P549 §6: the 503 names the operation, the object kind
         answer: expected503(stage.meter.failed.at(-1), 'nothing_written', STORAGE_NUMBER, 'idle'), moved: 0 });
     }, 300_000);
 
+    // R-P646 (3): the delivery review's finding 3 (logs/probe2.log): a publication that is not a catalogue load (a PUT, a
+    // rollback) sends its head writes once; a 503 still names the state the store was left in.
+    it(`host (${host}): R-P646 (3) — a PUT and a rollback answer the state the store holds: a head reservation that landed and then threw answers 503 state pending (the store reads pending, nothing committed); a head commit that landed and then threw answers what the store holds (committed: the revision moved, nothing pending)`, async () => {
+      const once = (kind: 'reservation' | 'commit') => failFirst(c => c.head === kind, 1, 'land-then-throw');
+      const putCase = async (kind: 'reservation' | 'commit') => {
+        const m = await loadedTenant(host, 50), doc = (await loadDocument(m, 'catalog')).document, before = await revisionOf(m);
+        invalidatePublicationCache();
+        const put = await under(m, () => putDocument(m, 'catalog', { ...doc, removeProducts: [rangeProduct(10)] }, 'p98 state of a put'), once(kind));
+        return { answer: put.result, store: await statusOf(m), moved: (await revisionOf(m)) - before };
+      };
+      const rollbackCase = async (kind: 'reservation' | 'commit') => {
+        const m = await loadedTenant(host, 50), target = await revisionOf(m);
+        expect((await importOf(m, rangeRecords(1, 1, ' (p98 state)'))).status, `${host}: PRECONDITION — a load to roll back`).toBe(200);
+        const before = await revisionOf(m), headers = await preconditions(m);
+        invalidatePublicationCache();
+        const back = await under(m, () => asOperator(m, 'POST', `/content/catalog/rollback/${target}?scope=${TENANT}`, {}, headers), once(kind));
+        return { answer: back.result, store: await statusOf(m), moved: (await revisionOf(m)) - before };
+      };
+      const reservation = (seen: { answer: Answer; store: string; moved: number }) => [seen.answer.status, seen.answer.body.state ?? null, seen.store, seen.moved];
+      const commit = (seen: { answer: Answer; store: string; moved: number }) => [seen.answer.status === 200 || seen.answer.body.state === 'committed' ? 'answers committed'
+        : `${seen.answer.status} ${String(seen.answer.body.state ?? null)}`, seen.store, seen.moved];
+      const putReserved = await putCase('reservation'), putCommitted = await putCase('commit'), backReserved = await rollbackCase('reservation'), backCommitted = await rollbackCase('commit');
+      expect.soft({ put: { reservation: reservation(putReserved), commit: commit(putCommitted) }, rollback: { reservation: reservation(backReserved), commit: commit(backCommitted) } },
+        `${host}: P98.LD4 — the state a PUT and a rollback answer (${show(putReserved.answer)} | ${show(putCommitted.answer)})`).toEqual({
+        put: { reservation: [503, 'pending', 'pending', 0], commit: ['answers committed', 'idle', 1] }, rollback: { reservation: [503, 'pending', 'pending', 0], commit: ['answers committed', 'idle', 1] } });
+    }, 600_000);
+
     it(`host (${host}): LOCK — the absent-member refusal keeps its body byte for byte (a four-member set's priors read)`, async () => {
       const m = await mount(host, DOCS);
       m.storage.objects.clear(); m.storage.versions.clear(); m.storage.metadata.clear(); invalidatePublicationCache();
@@ -1016,6 +1067,96 @@ describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect 
           purged: 410, kept: [200, 200], ownParts: true, lost: [], reads: [] });
       } finally { restore(); }
     }, 300_000);
+
+    // R-P646 (1): the delivery review's race (S43/reviewer-p98/REPORT-861305ee.md finding 1; logs/probe-race.log,
+    // probe-race-narrow.log): a refused load leaves its pack P; while a publication's sweep runs, the same file is sent
+    // again over the revision that publication committed, and its pack is P again (the same bytes). At the review's two
+    // windows of the build's sweep (publication.ts sweepCatalogue: its listing of each directory stored before packs, the
+    // stored revisions' tables, then deleteWhileIdle's read of the head before each delete), nothing a committed revision
+    // names may be deleted: the ruled direction reuses only a pack uploaded well inside the 15-minute grace and otherwise
+    // writes the pack under a fresh key (R-P646). Every upload reads 60 minutes old.
+    for (const window of ['revisions', 'idle'] as const) {
+      it(`host (${host}): R-P646 (1) — a refused load's pack, its file sent again while a publication's sweep runs (${window === 'revisions' ? 'after the sweep lists the stored revisions' : 'after the sweep reads the head before deleting'}), is never deleted from under the revision that names it: after the sweep every object a stored revision names resolves and the product reads 200`, async () => {
+        const m = await loadedTenant(host, 300);
+        shortRetention(m);
+        const restore = uploadedAt(m, minutesAgo(60));
+        try {
+          const file = rangeRecords(400, 20), touched = new Set(Array.from({ length: 20 }, (_, i) => bucketOf(rangeProduct(400 + i))));
+          let attempt = 0;
+          const refused = await measuredLoad(m, file, { mode: 'merge' }, c => c.op === 'put' && c.cls === 'pack' ? (++attempt === 1 ? 'land-then-throw' : 'throw') : undefined);
+          const left = refused.meter.calls.find(c => c.op === 'put' && c.cls === 'pack')?.key ?? null;
+          // Publication A retitles a product in a shard the file does not touch; inside A's sweep the file is sent again.
+          const k = Array.from({ length: 300 }, (_, i) => i + 1).find(n => !touched.has(bucketOf(rangeProduct(n))))!;
+          let armed = false, fired = false, resent: Answer | null = null;
+          const headers = await preconditions(m); invalidatePublicationCache();
+          const a = await under(m, () => importOf(m, rangeRecords(k, 1, ' (p98 race)'), headers), undefined, async call => {
+            if (fired || call.phase !== 'committed') return;
+            if (call.op === 'list' && /\/content\/ids\/$/.test(call.key)) { armed = true; return; }
+            if (!armed || !(window === 'revisions' ? call.op === 'list' && /\/content\/rev\/$/.test(call.key) : call.op === 'get' && call.cls === 'head')) return;
+            fired = true;
+            resent = (await rawImport(m, file)).answer;
+          });
+          expect(fired, `${host}: PRECONDITION — the file was sent again inside the sweep (${window})`).toBe(true);
+          invalidatePublicationCache();
+          const read = await productRead(m, rangeProduct(410));
+          expect.soft({ refused: [refused.row.status, left !== null], a: a.result.status, resent: resent ? (resent as Answer).status : null,
+            lost: unique(storedRevisionValues(m).flatMap(value => resolve(m, value).bad)), read: [read.status, readIds(read)] },
+          `${host}: P98.LD6 — nothing a committed revision names deleted (${window}; the sweep deleted ${a.meter.calls.filter(c => c.op === 'delete' && left !== null && c.key.includes(left)).length ? 'the left pack' : 'no left pack'})`).toEqual({
+            refused: [503, true], a: 200, resent: 200, lost: [], read: [200, [rangeRecordId(410)]] });
+        } finally { restore(); }
+      }, 600_000);
+    }
+
+    // R-P646 (1): the same class for a rollback (finding 1's last line, by reading): its target revision is purged by a
+    // publication that committed before the rollback read its base — the rollback runs whole between that purge's read
+    // of the head and its deletion of the target's own pack. The rollback commits only what the store keeps.
+    it(`host (${host}): R-P646 (1) — a rollback whose target revision is purged concurrently (the rollback run between the purge's read of the head and its deletion of the target's pack) leaves every object a stored revision names resolvable and the product readable`, async () => {
+      const m = await loadedTenant(host, 300);
+      shortRetention(m);
+      const restore = uploadedAt(m, minutesAgo(60));
+      try {
+        const p = rangeProduct(7), q = rangeProduct(8), pause = () => new Promise(resolve => setTimeout(resolve, 5));
+        for (const suffix of [' (p98 rollback 1)', ' (p98 rollback 2)']) { expect((await importOf(m, rangeRecords(7, 1, suffix))).status, `${host}: PRECONDITION — ${p} retitled`).toBe(200); await pause(); }
+        const target = (await revisionOf(m)) - 1;
+        // Publication A (another product) purges the target: its pack (the first retitle's) only the target names.
+        let armed = false, fired = false, back: Answer | null = null;
+        const headers = await preconditions(m); invalidatePublicationCache();
+        const a = await under(m, () => importOf(m, rangeRecords(8, 1, ' (p98 rollback A)'), headers), undefined, async call => {
+          if (fired || call.phase !== 'committed') return;
+          if (call.op === 'list' && /\/content\/pack\/[0-9a-f]{64}\.pack$/.test(call.key)) { armed = true; return; }
+          if (!armed || call.op !== 'get' || call.cls !== 'head') return;
+          fired = true;
+          const base = await preconditions(m); invalidatePublicationCache();
+          back = await asOperator(m, 'POST', `/content/catalog/rollback/${target}?scope=${TENANT}`, {}, base);
+        });
+        expect(fired, `${host}: PRECONDITION — the rollback ran inside the purge of its target's pack`).toBe(true);
+        invalidatePublicationCache();
+        const read = await productRead(m, p);
+        expect.soft({ a: a.result.status, deleted: a.meter.calls.some(c => c.op === 'delete' && /\/content\/pack\//.test(c.key)), back: back ? (back as Answer).status : null,
+          lost: unique(storedRevisionValues(m).flatMap(value => resolve(m, value).bad)), read: [read.status, readIds(read)], other: (await productRead(m, q)).status },
+        `${host}: P98.LD6 — nothing a committed revision names deleted (the rollback: ${back ? show(back as Answer) : 'not run'})`).toEqual({
+          a: 200, deleted: true, back: 200, lost: [], read: [200, [rangeRecordId(7)]], other: 200 });
+      } finally { restore(); }
+    }, 600_000);
+
+    // R-P646 (2): the delivery review's finding 2 (logs/probe2.log, probe3.log): a publish adds one table row per staged
+    // pack, so the table must be brought back within its cap (reading S5: 65 rows) by the publish itself, and the manifest
+    // at 40,000 products stays within P93's 64 KB beside its shared pieces.
+    it(`host (${host}): R-P646 (2) — at 40,000 products, after 70 one-product loads, a publish of 40 one-product staged files leaves the pack table within 65 rows and the manifest within 64 KB beside its shared pieces, and so do the five loads after it`, async () => {
+      const m = await loadedTenant(host, 40000);
+      for (let k = 0; k < 70; k++) expect((await importOf(m, rangeRecords(50000 + k, 1))).status, `${host}: PRECONDITION — one-product load ${k + 1}`).toBe(200);
+      const base = await preconditions(m), stages: Answer[] = [];
+      for (let s = 0; s < 40; s++) stages.push(await stageOf(m, rangeRecords(60000 + s, 1), keyed(base)));
+      const published = await publishOf(m, stages.map(a => a.body.stage), keyed(base));
+      const measure = async () => {
+        const doc = (await loadDocument(m, 'catalog')).document, rows = packTable(doc).length;
+        return [rows <= 65 ? 'at most 65 rows' : `${rows} rows`, atMost(Buffer.byteLength(canonicalJson(doc), 'utf8') - Buffer.byteLength(canonicalJson(doc.pieces), 'utf8'), 65536)];
+      };
+      const seen = [await measure()];
+      for (let k = 0; k < 5; k++) { expect((await importOf(m, rangeRecords(70000 + k, 1))).status, `${host}: PRECONDITION — load ${k + 1} after the publish`).toBe(200); seen.push(await measure()); }
+      expect.soft({ stages: stages.filter(a => a.status !== 200).length, publish: published.status, seen }, `${host}: P98.LD6 — the table and the manifest after the publish (${JSON.stringify(seen)})`).toEqual({
+        stages: 0, publish: 200, seen: Array.from({ length: 6 }, () => ['at most 65 rows', 'at most 65536']) });
+    }, 1_800_000);
   }
 });
 
@@ -1058,6 +1199,47 @@ describe('unit:P98.LD7 (R-P545 (2), R-P549: the kits state the pack, the stages,
       kit03: { pack: true, stages: true, fileSize: true, calls: true, time: true, state: true, changed: true, collected: true, resend: [] },
       rows: { stage: true, publish: true, importNamesRefusal: true }, credential: true, gone: [] });
   });
+
+  // R-P646 (4): the delivery review's finding 4 — the write paragraph (kit 02, `Configuration PUT/PATCH, import, …`) stated
+  // the second try of every configuration write; the build tries twice only on a catalogue load (publication.ts
+  // PublicationChange.retry, publishSet's `progress.retry`).
+  it('logic: R-P646 (4) — kit 02\'s write paragraph states the second try within the request for catalogue loads only: each of its sentences that states a second try, or that one transient storage failure refuses nothing, names a catalogue load', () => {
+    const kit02 = readTree('docs/kit/02-api-reference.md');
+    const paragraph = kit02.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('Configuration PUT/PATCH, import, pull, rollback and item reset require')) ?? '';
+    const retry = paragraph.split(/(?<=[.;])\s+(?=[A-Z`(])/).filter(s => /\bsecond time\b|\btried (?:again|twice)\b|\bretried\b|\brefuses nothing\b/i.test(s));
+    expect.soft({ found: paragraph.length > 0, stated: retry.length > 0, unscoped: retry.filter(s => !/\bcatalog(?:ue)? loads?\b/i.test(s)) },
+      'P98.LD7 — the second try stated for catalogue loads only (today the paragraph states no second try)').toEqual({ found: true, stated: true, unscoped: [] });
+  });
+
+  // R-P646 (8): the review's finding 8 — two passages the work order named as gendered: kit 02's clause on each later
+  // sign-in's attempt and kit 03's `experiment` row. (R10: src/units/W21/B2.unit.test.ts KIT_OUTCOME_CONSENT pins one
+  // sentence of that row; it now names the visitor's consent without a pronoun.)
+  it('logic: R-P646 (8) — kit 02\'s clause on each later sign-in\'s attempt and kit 03\'s `experiment` row are gender-neutral', () => {
+    const gendered = (text: string) => [...text.matchAll(/\b(?:she|her|hers|herself|he|him|his|himself)\b/gi)].map(m => m[0]);
+    const flat02 = readTree('docs/kit/02-api-reference.md').replace(/\s+/g, ' '), at = flat02.indexOf('Every later sign-in gets its own attempt');
+    const clause = at < 0 ? '' : flat02.slice(at, flat02.indexOf(';', at) < 0 ? undefined : flat02.indexOf(';', at));
+    const row = readTree('docs/kit/03-payload-schemas.md').split('\n').find(line => line.startsWith('| `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`')) ?? '';
+    expect.soft({ found: [clause.length > 0, row.length > 0], kit02: gendered(clause), kit03: gendered(row) }, 'P98.LD7 — the two passages gender-neutral').toEqual({
+      found: [true, true], kit02: [], kit03: [] });
+  });
+
+  // R-P646 (5): the review's finding 5 — kit 03 stated the prototype's cold page (about 105 KB at 40,000 products); the
+  // build reads 88,912 bytes there (the review's measurement, both hosts). The kit's figure is checked against the page
+  // this file measures (LD3's scale run), not pinned: every byte figure the paragraph states for the page at 40,000
+  // products, but the 120 KB bound the work order names, is within 1% of it.
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P646 (5) — kit 03 states the cold page at 40,000 products as measured: a byte figure its paragraph on the product page's reads gives for 40,000 products is within 1% of the bytes the page reads cold here, and none is another`, async () => {
+      const run = await scale(host);
+      expect(run.page40000 !== null, `${host}: PRECONDITION — the page at 40,000 measured (${run.refused})`).toBe(true);
+      const measured = run.page40000!.bytes, kit03 = readTree('docs/kit/03-payload-schemas.md');
+      const paragraph = kit03.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('A product page reads only its own product\'s records')) ?? '';
+      const at40000 = paragraph.split(/(?<=[.;])\s+(?=[A-Z`(])/).filter(s => /\b40,000 products\b/.test(s));
+      const figures = at40000.flatMap(s => [...s.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*(KiB|KB|kB|bytes|B)\b/g)].map(m => Number(m[1]!.replace(/,/g, '')) * (m[2] === 'KiB' ? 1024 : /^(?:KB|kB)$/.test(m[2]!) ? 1000 : 1)))
+        .filter(f => f !== 122880 && f !== 120000);
+      expect.soft({ found: paragraph.length > 0, matched: figures.some(f => Math.abs(f - measured) <= 0.01 * measured), other: figures.filter(f => Math.abs(f - measured) > 0.01 * measured) },
+        `${host}: P98.LD7 — kit 03's cold page against ${measured} bytes measured (stated: ${JSON.stringify(figures)})`).toEqual({ found: true, matched: true, other: [] });
+    }, 1_800_000);
+  }
 });
 
 // ===========================================================================
