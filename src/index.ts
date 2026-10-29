@@ -5,6 +5,7 @@ import { runMonitor } from '@/ops/monitor';
 import { runWarehouses } from '@/ledger/warehouse';
 import { consumeSynthetic, SYNTHETIC_HEADER } from '@/ops/synthetic';
 import { read } from '@/config/versionedStore';
+import { backfillPublication } from '@/config/publication';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
 import type { LearnConfig } from '@/content/types';
 import type { TenantId } from '@/tenancy/tenant';
@@ -304,6 +305,11 @@ export default {
         // then fold the open hour into its working aggregate (lane E6).
         for (const tenant of tenants) {
           ctx.waitUntil((async () => {
+            // P102 (E27): an existing tenant's head gains its members' metadata and its serving copy without a
+            // publication, here and never on a shopper's read; it cannot fail or hold back the folds below.
+            await backfillPublication(env, tenant).then(
+              (wrote) => { if (wrote.head || wrote.copy) console.log('publication backfill; head/copy', Number(wrote.head), Number(wrote.copy)); },
+              () => { console.error('publication backfill pending'); });
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
             // Lane E6: the run's storage calls are counted against one budget, the catch-up's
             // RUN_BUDGET: what the catch-up spends, the open hour's folds may not. Each call is

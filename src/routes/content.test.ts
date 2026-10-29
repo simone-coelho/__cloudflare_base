@@ -1504,7 +1504,7 @@ describe('W14.04 explicit human-approved enrichment publication', () => {
       expect(JSON.parse(f.storage.objects.get(proposalKey)!)).toEqual(evidence.proposal);
       expect(await (await f.call(`/${evidence.proposal.id}`)).json()).toMatchObject({ published: false, review: evidence.review });
       expect(await (await f.call(`/${evidence.proposal.id}/export`)).json()).toMatchObject({ published: false });
-      expect(f.storage.objects.size).toBe(22); // Two six-kind initialized sets, two evidence objects and two new immutable documents/sets.
+      expect(f.storage.objects.size).toBe(24); // Two six-kind initialized sets, two evidence objects, two new immutable documents/sets and one serving copy per tenant (P102, R-P570 (a)).
     } finally { remote.mockRestore(); }
   });
 
