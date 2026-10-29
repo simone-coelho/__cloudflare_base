@@ -3171,9 +3171,9 @@ it('W03.02 retains granted exact destinations and document revisions, rejecting 
       // tenant's set root and the member's revisions (src/config/publication.ts:126-131).
       const written = publication ? CONTENT_KIND : REFLEX_KIND;
       const set = `config-publication/v2/${publicationScope(written, scope)}/`, revisions = `config-publication/v1/${scope}/${written.name}/`;
-      expect(result.calls.filter(([op]) => op === 'STORAGE.put')).toEqual([
+      expect(result.calls.filter(([op, key]) => op === 'STORAGE.put' && key !== set + 'serving.json')).toEqual([ // P102 (R-P570 (a)): and the serving copy's one put, below
         ['STORAGE.put', set + 'head.json'], ['STORAGE.put', revisions + 'rev/2.json'], ['STORAGE.put', set + 'set/2.json'], ['STORAGE.put', set + 'head.json'],
-      ]);
+      ]); expect(result.calls.filter(([op, key]) => op === 'STORAGE.put' && key === set + 'serving.json')).toEqual([['STORAGE.put', set + 'serving.json']]);
       expect(result.calls.filter(([op]) => op.startsWith('STORAGE.')).every(([, key]) => key!.startsWith(set) || key!.startsWith(revisions))).toBe(true);
       // R10 witness (baseline-52 #29; LANE-LOG.md:40): no call leaves the publication. The retained catalog registry
       // advisory reads this tenant's Reflex document through it (readRevisionForMutation,
