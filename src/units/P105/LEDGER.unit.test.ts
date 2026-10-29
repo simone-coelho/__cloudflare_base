@@ -105,33 +105,30 @@
 //   R10. The 409 (R-P644 (7)): the move is a set publication, so an operator publication that
 //       meets it is refused 409 publication_conflict, at most once per tenant: optimistic
 //       concurrency, the publication's documented contract, accepted. No leg pins it.
-//   R11. The override list (R-P644 (6), AL7 proposed): measured at 78 ms a KV call with lane
-//       E4's copy expired, the per-event read (FeatureVariableManager.getUserOverrides via
-//       getSessionFeatureVariables, RealtimeSegmentEngine.ts:1032, every personalization read
-//       and every action that changes her segments or stage, session host only) makes 1 + N
-//       sequential calls: 0 overrides 1 call 82 ms; 10, 11 calls 869 ms; 100, 101 calls
-//       7,963 ms; 1,000, 1,001 calls 78,842 ms (logs/p4-overrides-base.log). It grows, so it
-//       joins P105 as AL7 (the work order needs the criterion and its paths). Two facts for
-//       the lead: no route writes an override (setUserOverride's only callers,
-//       RealtimeSegmentEngine.setFeatureVariableOverride and removeFeatureVariableOverride,
-//       have no caller), and the read's result reaches no answer (enhancedFeatureVariables is
-//       consumed by nothing; the update and the personalization read carry
-//       personalizationConfig.featureVariables, built from decisions). AL7 therefore pins the
-//       read's cost only (at most one override read, no list, at any count) and no applied
-//       override. Paths it needs: src/services/FeatureVariableManager.ts (the read and the
-//       writes), src/services/RealtimeSegmentEngine.ts (getPersonalizationConfig's call,
-//       :1032), and, for a new representation, src/identity/erase.ts and
-//       src/routes/identity.ts (erasure and the identity export read `override:<id>:`).
-//       R10 it would need, measured on the sketch's AL7 change (one document per shopper):
-//       src/connectors/AudienceStore.memory.test.ts "E4 a shopper's feature-variable overrides"
-//       (:99-118 at c7ea560c; its `toHaveLength(1)` counts the override list once per
-//       OVERRIDES_LIST_MS, the copy AL7 removes): after, the same probes make at most one
-//       override read each and no list; a set or a removal through this isolate is applied at
-//       once (unchanged). src/services/telemetry.boundary.test.ts ("retains feature overrides
-//       and fallback results without dynamic feature/error labels", :470-473): its fault is
-//       injected at `cache.list`, which a read of one document never makes, so its expected
-//       "Error fetching user overrides" line is not logged; after, the same fault at the read
-//       of the shopper's override document, the three log lines unchanged.
+//   R11. The override read (AL7, ruled at the cause by R-P652): measured at 78 ms a KV call with
+//       lane E4's copy expired, the per-event read (FeatureVariableManager.getUserOverrides via
+//       getSessionFeatureVariables, RealtimeSegmentEngine.ts:1032: every personalization read and
+//       every action that changes her segments or stage, session host only) made 1 + N sequential
+//       calls: 0 overrides 1 call 82 ms; 10, 11 calls 869 ms; 100, 101 calls 7,963 ms; 1,000,
+//       1,001 calls 78,842 ms (logs/p4-overrides-base.log). No route writes an override and no
+//       answer used the result (enhancedFeatureVariables consumed by nothing), so the read leaves
+//       the request path; override records that exist are still erased and exported. AL7 pins, on
+//       both hosts at 0, 10, 100 and 1,000 overrides, a personalization read with no override read
+//       and no KV list, and locks the export and the erasure of her override records.
+//       R10s of R-P652, before → after:
+//       - src/connectors/AudienceStore.memory.test.ts, "E4 a shopper's feature-variable overrides".
+//         Before: the per-event probes (getSessionFeatureVariables) listed the override records
+//         once per OVERRIDES_LIST_MS, an override set through this isolate applied by the next
+//         probe and its removal by the next, a direct getUserOverrides listing KV once; it imported
+//         OVERRIDES_LIST_MS and forgetListedOverrides. After, what remains once the request path no
+//         longer reads overrides: the direct reads (getFeatureVariables, getUserOverrides) each list
+//         KV once per read with no copy between them, and read a set or a removal through this
+//         isolate at once; the copy's exports are no longer imported (the build may remove them).
+//         Green today and on the sketch.
+//       - src/services/telemetry.boundary.test.ts (:470-473): not edited. Its fault at `cache.list`
+//         reaches the direct getUserOverrides, which stays (the read leaves the request path only),
+//         so its three log lines are unchanged: measured green on the sketch (logs/r3-*). Round 2
+//         named it only against that round's one-document sketch; the grant is unused.
 //   GREEN-AT-SPEC: AL5's five lock legs pass today and on the sketch (measured).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
@@ -261,6 +258,7 @@ import type { ReflexConfig } from '@/reflex/core';
 import { configRoutes } from '@/routes/config';
 import { contentRoutes } from '@/routes/content';
 import { decisionRoutes } from '@/routes/decisions';
+import { identityRoutes } from '@/routes/identity';
 import { operatorRoutes } from '@/routes/operator';
 import realtimeRoutes from '@/routes/realtime';
 import { tenantMiddleware } from '@/tenancy/middleware';
@@ -348,6 +346,7 @@ function appOf(env: Env): WorkerApp {
   app.route('/config', configRoutes);
   app.route('/content', contentRoutes);
   app.route('/realtime', realtimeRoutes);
+  app.route('/v1', identityRoutes);
   app.route('/v1', decisionRoutes);
   const fetch = async (request: Request) => app.fetch(request, env,
     { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext);
@@ -1217,50 +1216,58 @@ describe('unit:P105.AL6', () => {
 });
 
 // ===========================================================================
-// unit:P105.AL7 (proposed by R-P644 (6)) — the shopper's feature-variable override list.
+// unit:P105.AL7 — the shopper override read removed from the visitor's path (R-P652).
 // ===========================================================================
 
 /** The five feature keys the engine reads variables for (FeatureVariableManager getDefaultFeatureKeys). */
 const FEATURES = ['hero_module', 'plp_sort', 'complete_the_look', 'promo_banner', 'journey_message'];
-/** An override read: a KV read of the shopper's override records (their list or a record). */
-const overrideReads = (w: World, from: number, subject: string) =>
-  w.trace.slice(from).filter(c => c.binding === 'CACHE' && READS.has(c.method) && c.key.includes(`override:${subject}:`)).map(named);
-/** `GET /realtime/personalization/:userId`, the read that applies her overrides on the session host (RealtimeSegmentEngine getPersonalizationConfig). */
-async function personalizationRead(w: World, s: Shopper): Promise<{ status: number; reads: string[] }> {
+/** Her override records, written through the store's own write (FeatureVariableManager.setUserOverride; no route writes one). */
+async function overridesFor(w: World, s: Shopper, n: number): Promise<string[]> {
+  const overrides = new FeatureVariableManager(w.m.env, TENANT as TenantId);
+  for (let i = 0; i < n; i++) await overrides.setUserOverride({ userId: s.subject, featureKey: FEATURES[i % FEATURES.length]!, variableKey: `p105_var_${i}`, value: `v${i}` } as Parameters<FeatureVariableManager['setUserOverride']>[0]);
+  return [...w.m.cache.data.keys()].filter(key => key.startsWith(`override:${s.subject}:`)).sort();
+}
+/** `GET /realtime/personalization/:userId` (src/routes/realtime.ts:575): her override reads (a KV read of `override:<her id>:`) and every KV list it made. */
+async function personalizationRead(w: World, s: Shopper): Promise<{ status: number; overrideReads: string[]; kvLists: string[] }> {
   const from = w.trace.length;
   const response = await w.app.fetch(new Request(`https://shop.invalid/realtime/personalization/${s.subject}`, { headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability } }));
   await response.text();
   await settle(w.m, w.app);
-  return { status: response.status, reads: overrideReads(w, from, s.subject) };
+  const caused = w.trace.slice(from);
+  return { status: response.status, overrideReads: caused.filter(c => c.binding === 'CACHE' && READS.has(c.method) && c.key.includes(`override:${s.subject}:`)).map(named),
+    kvLists: caused.filter(c => c.binding === 'CACHE' && c.method === 'list').map(named) };
 }
 
-describe('unit:P105.AL7 (proposed by R-P644 (6))', () => {
-  for (const n of [10, 100, 1000]) {
-    it(`host (session): at ${n} feature-variable overrides for the shopper (written through FeatureVariableManager.setUserOverride, the store's own write), the personalization read, ${STEP_MS / 1000} s after her last (lane E4's ten-second copy crossed), makes at most one override read whatever the count and lists no KV`, async () => {
-      const w = await world('session');
+describe('unit:P105.AL7', () => {
+  for (const host of HOSTS) for (const n of [0, 10, 100, 1000]) {
+    it(`host (${host}): with ${n} override records for the shopper (written through FeatureVariableManager.setUserOverride, the store's own write; no route writes one), her personalization read (GET /realtime/personalization/:userId) makes no override read and lists no KV, at once and ${STEP_MS / 1000} s on (lane E4's ten-second copy crossed)`, async () => {
+      const w = await world(host);
+      await movedEmpty(w);
       const s = await shopperOn(w.m);
-      expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, 'PRECONDITION: her view is accepted').toBe(200);
+      expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, `PRECONDITION (${host}): her view is accepted`).toBe(200);
       await settle(w.m, w.app);
-      const overrides = new FeatureVariableManager(w.m.env, TENANT as TenantId);
-      for (let i = 0; i < n; i++) await overrides.setUserOverride({ userId: s.subject, featureKey: FEATURES[i % FEATURES.length]!, variableKey: `p105_var_${i}`, value: `v${i}` } as Parameters<FeatureVariableManager['setUserOverride']>[0]);
-      expect((await personalizationRead(w, s)).status, 'PRECONDITION: her personalization read answers').toBe(200);
+      expect((await overridesFor(w, s, n)).length, `PRECONDITION (${host}): her ${n} override records are stored`).toBe(n);
+      const first = await personalizationRead(w, s);
       advanceClock(STEP_MS);
-      const read = await personalizationRead(w, s);
-      expect({ status: read.status, atMostOne: read.reads.length <= 1, lists: read.reads.filter(r => r.startsWith('CACHE.list')) },
-        `session: P105.AL7 — at ${n} overrides the personalization read makes at most one override read and no KV list (${read.reads.length}: ${read.reads.slice(0, 3).join(', ')}${read.reads.length > 3 ? ', …' : ''})`)
-        .toEqual({ status: 200, atMostOne: true, lists: [] });
+      const later = await personalizationRead(w, s);
+      expect({ status: [first.status, later.status], overrideReads: [...first.overrideReads, ...later.overrideReads], kvLists: [...first.kvLists, ...later.kvLists] },
+        `${host}: P105.AL7 — at ${n} overrides her personalization read makes no override read and no KV list (${first.overrideReads.length + later.overrideReads.length} override reads: ${[...first.overrideReads, ...later.overrideReads].slice(0, 3).join(', ')}${first.overrideReads.length + later.overrideReads.length > 3 ? ', …' : ''})`)
+        .toEqual({ status: [200, 200], overrideReads: [], kvLists: [] });
     }, 300_000);
   }
 
-  it('host (do): LOCK — the object host\'s personalization read makes no override read at 1,000 overrides (it never applies them, ShopperReflex.ts: featureVariables from its decisions)', async () => {
-    const w = await world('do');
-    const s = await shopperOn(w.m);
-    expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, 'PRECONDITION: her view is accepted').toBe(200);
-    await settle(w.m, w.app);
-    const overrides = new FeatureVariableManager(w.m.env, TENANT as TenantId);
-    for (let i = 0; i < 1000; i++) await overrides.setUserOverride({ userId: s.subject, featureKey: FEATURES[i % FEATURES.length]!, variableKey: `p105_var_${i}`, value: `v${i}` } as Parameters<FeatureVariableManager['setUserOverride']>[0]);
-    advanceClock(STEP_MS);
-    const read = await personalizationRead(w, s);
-    expect({ status: read.status, reads: read.reads }, 'do: P105.AL7 — LOCK: no override read on the object host').toEqual({ status: 200, reads: [] });
-  }, 300_000);
+  for (const host of HOSTS) {
+    it(`host (${host}): LOCK — her override records that exist are still exported and erased with her other records, as today (POST /v1/:tenant/identity/export and /identity/erase; src/routes/identity.ts, src/identity/erase.ts)`, async () => {
+      const w = await world(host);
+      const s = await shopperOn(w.m);
+      expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, `PRECONDITION (${host}): her view is accepted`).toBe(200);
+      await settle(w.m, w.app);
+      const keys = await overridesFor(w, s, 3);
+      expect(keys.length, `PRECONDITION (${host}): her three override records are stored`).toBe(3);
+      const exported = await operator(w, 'POST', `/v1/${TENANT}/identity/export`, { visitorId: s.subject }), text = JSON.stringify(exported.body);
+      expect({ status: exported.status, exported: keys.filter(key => text.includes(key)) }, `${host}: P105.AL7 — LOCK: the identity export answers each of her override records`).toEqual({ status: 200, exported: keys });
+      const erased = await operator(w, 'POST', `/v1/${TENANT}/identity/erase`, { visitorId: s.subject });
+      expect({ status: erased.status, left: keys.filter(key => w.m.cache.data.has(key)) }, `${host}: P105.AL7 — LOCK: her erasure removes each of her override records`).toEqual({ status: 200, left: [] });
+    }, 120_000);
+  }
 });

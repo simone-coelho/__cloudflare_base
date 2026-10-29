@@ -25,7 +25,7 @@ import { DEFAULT_REFLEX_CONFIG } from '@/reflex/core';
 import { MockSegmentProvider } from './SegmentProvider';
 import { MockAudienceAuthoring } from './AudienceAuthoring';
 import { getConnectors } from '@/connectors';
-import { FeatureVariableManager, OVERRIDES_LIST_MS, forgetListedOverrides } from '@/services/FeatureVariableManager';
+import { FeatureVariableManager } from '@/services/FeatureVariableManager';
 import { forgetRememberedDatafiles } from '@/services/OptimizelyService';
 import { ownerEnvironment, runOwnerOperation } from '@/identity/sessionAuthority';
 
@@ -84,7 +84,7 @@ const elsewhere = (cache: KV, storage: R2) => env(Object.create(cache) as KV, Ob
 const memberReads = (storage: R2, tenant: string) => storage.calls.filter(c => c.startsWith(`get:config-publication/v1/${tenant}/audiences/rev/`)).length;
 
 let now = 5_000_000;
-beforeEach(() => { invalidatePublicationCache(); forgetListedOverrides(); forgetRememberedDatafiles(); now = 5_000_000; vi.spyOn(Date, 'now').mockImplementation(() => now); });
+beforeEach(() => { invalidatePublicationCache(); forgetRememberedDatafiles(); now = 5_000_000; vi.spyOn(Date, 'now').mockImplementation(() => now); });
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe('E4 the tenant\'s published audiences', () => {
@@ -148,21 +148,20 @@ describe('E4 the tenant\'s published audiences', () => {
 });
 
 describe('E4 a shopper\'s feature-variable overrides', () => {
-  it('are listed once per OVERRIDES_LIST_MS for the per-event probes; a set or a removal through this isolate is seen at once', async () => {
+  // R10 (P105 AL7, R-P652): the visitor's per-event override read is gone from the request path (no route writes an
+  // override and no answer used one), and with it the per-event probes' remembered list (OVERRIDES_LIST_MS). What
+  // remains are the direct reads, which ask KV on each read and read a set or a removal through this isolate at once.
+  it('are read from KV by each direct read, with no copy between them; a set or a removal through this isolate is read at once', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined); vi.spyOn(console, 'log').mockImplementation(() => undefined);
-    const cache = new KV(), e = env(cache);
-    const session = { userId: 'visitor', segments: [], attributes: {}, metadata: { firstSeen: 0, lastSeen: 0, sessionCount: 1, engagementScore: 0, lastSegmentUpdate: 0 },
-      preferences: { trackingConsent: true, personalizationEnabled: true, cookieConsent: true } } as never;
-    const probes = () => new FeatureVariableManager(e, 'oh').getSessionFeatureVariables(session);
-    await probes(); await probes();
-    expect(cache.calls.filter(c => c.startsWith('list:t:oh:override:'))).toHaveLength(1);
+    const cache = new KV(), e = env(cache), manager = new FeatureVariableManager(e, 'oh');
+    const read = () => manager.getFeatureVariables('visitor', {}, ['hero_content']);
+    const listed = () => cache.calls.filter(c => c.startsWith('list:t:oh:override:')).length;
+    await read(); await read();
+    expect(listed()).toBe(2);
     await new FeatureVariableManager(e, 'oh').setUserOverride({ userId: 'visitor', featureKey: 'hero_content', variableKey: 'title', value: 'pinned' });
-    expect((await probes()).hero_content).toMatchObject({ source: 'override', variables: { title: 'pinned' } });
+    expect((await read()).hero_content).toMatchObject({ source: 'override', variables: { title: 'pinned' } });
     await new FeatureVariableManager(e, 'oh').removeUserOverride('visitor', 'hero_content', 'title');
-    expect((await probes()).hero_content?.source).not.toBe('override');
-    now += OVERRIDES_LIST_MS;
-    await probes();
-    // Every other read (a direct getUserOverrides, analytics) still asks KV each time.
+    expect((await read()).hero_content?.source).not.toBe('override');
     const before = cache.calls.length;
     await new FeatureVariableManager(e, 'oh').getUserOverrides('visitor');
     expect(cache.calls.slice(before).filter(c => c.startsWith('list:'))).toHaveLength(1);
