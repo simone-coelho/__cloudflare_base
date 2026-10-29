@@ -192,7 +192,7 @@ One per reward-bearing event, written after the response.
 | `products` | The products the event named (`productId`, `sku`, or each of `items[].id`); a purchase credits the content that featured one of them, except in a slot whose own attribution policy is `module-tied` ([where a page conversion lands](#where-a-page-conversion-lands)) |
 | `session_id`, `visitor_id`, `brand`, `arm`, `ts` | As on the decision |
 | `customer_id` | Your identifier for the shopper that the event carried (`customerId`), beside `visitor_id`, under tracking consent; absent when the event carried none |
-| `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`: the experiment this outcome's VISITOR is enrolled in, resolved from her persistent enrollment anchor when the outcome was recorded, so an outcome is attributable to her assignment whether or not a served piece matched it. The producer stamps the outcome with the visitor’s enrollment and her consent at the moment it is recorded, so an outcome recorded while personalization is off says `ineligible`; an outcome recorded on a path that does not stamp carries no block at all. `reason` says why: `personalization_consent`, or `anchor_unavailable` when her enrollment anchor could not be read at that moment. `saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number. Absent on records written before enrollment was persistent, and on a visitor whose enrollment could not be resolved |
+| `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`: the experiment this outcome's VISITOR is enrolled in, resolved from their persistent enrollment anchor when the outcome was recorded, so an outcome is attributable to their assignment whether or not a served piece matched it. The producer stamps the outcome with the visitor’s enrollment and her consent at the moment it is recorded, so an outcome recorded while personalization is off says `ineligible`; an outcome recorded on a path that does not stamp carries no block at all. `reason` says why: `personalization_consent`, or `anchor_unavailable` when their enrollment anchor could not be read at that moment. `saltVersion` is exact on any learn history the platform still stores, however long, and `null` only where that stored history cannot establish it — never a smaller number. Absent on records written before enrollment was persistent, and on a visitor whose enrollment could not be resolved |
 
 The outcome record is the admitted source and never changes after it is captured: how the outcome was
 credited is itemised on the attribution record the visitor's ring derives when it credits it, never on
@@ -386,15 +386,28 @@ pack included. A pack is kept while any stored revision's `packs` table names it
 never one uploaded less than 15 minutes ago (a load in flight may have just written it), reading the tables
 and the listing of packs alone, never a shard; it removes a revision's packs before the revision, and where its
 work budget runs out leaves the revision for the next publication, so an object it has not resolved is never
-lost to it. It deletes nothing while the publication head holds a pending publication, and a load that finds
-its pack already stored checks it again once it holds the head and writes it again if it was collected. The
-pack of a load that was refused after its pack was written, or of a stage never published, is named by no
-revision, and the purge collects it once it is 15 minutes old. A pack the table shows under a quarter live, or
-the one with the fewest live bytes once the table passes 64 packs, has its live objects moved into a later
-load's pack. A rollback checks, by one HEAD each, the packs it would bring back that the revision in force does
+lost to it. It deletes nothing while the publication head holds a pending publication or one committed after
+its own. A load that finds its pack already stored (an attempt of its own that landed, or the same file over
+the same base before it) takes that pack only where the store took it less than 10 minutes ago, and otherwise
+writes its pack under a key of its own, so it never names a pack the purge may already have listed; once it
+holds the head it checks its pack again (writing it again where it was collected) and gives its publication up,
+writing nothing, where the pack is 14 minutes old or more. The pack of a load that was refused after its pack
+was written, or of a stage never published, is named by no revision, and the purge collects it once it is 15
+minutes old. A pack the table shows under a quarter live has its live objects moved into the next writing
+load's pack, and each writing load, and each publish of staged files, moves as many more packs, fewest live
+bytes first, as keep the table within 65 packs once its own pack and its stages' packs enter it. A load moves
+only packs whose live objects fit beside its own within its 64 MiB, so
+moving them never refuses a load that fits on its own; where even the smallest does not fit, the table passes
+65 packs until a later load moves them. A rollback checks, by one HEAD each, the packs it would bring back that the revision in force does
 not name, so it counts packs, not parts (and the objects stored before packs that it would bring back, one by
 one): one the store no longer holds is refused `410` with `code: "part_missing"`, naming it, and a rollback
-needing more than 900 such checks is refused `413` with `code: "rollback_too_large"` and their count.
+needing more than 900 such checks is refused `413` with `code: "rollback_too_large"` and their count. Under the
+`configuration` retention setting, a rollback to a revision the purge may remove while it runs (two or more
+behind the revision in force and replaced longer ago than the setting, within 5 minutes) names nothing only
+that revision names: it reads the shards, id shards and parts of the revision that differ from the revision in
+force and writes them into its own pack, as a load of the difference; any other rollback names what the
+revision names, and gives its publication up, writing nothing (`409`), where the revision passes the setting
+before the rollback holds the head.
 
 A catalog stored in parts before this index, with one `products` map and one `idIndex` in its manifest, is
 read by every reader as it is; its next PUT, import, pull or rollback writes the sharded index into one pack,
@@ -434,7 +447,11 @@ refuses `409` with `code: "stage_stale"` a stage staged over another revision, `
 shared pieces) loaded by two stages, and, across the stages as within one file, `422` with `record_moved`,
 `id_in_part` or `id_shared`: a record a stage moves out of a product another stage carries leaves that product's
 part, and one moved out of a product no stage carries is refused `record_moved`. The parts stay in the stages'
-packs, which the revision's `packs` table names. Measured in the harness: 40,000 products in eight files staged
+packs, which the revision's `packs` table names. Publish a stage within 10 minutes of staging it: the purge may
+collect a stage never published from 15 minutes, so the publish refuses a stage stored 10 minutes ago or more
+`410` with `code: "stage_missing"` too, and gives its publication up, writing nothing, where one is 14 minutes
+old once it holds the head. The same file staged over the same base takes the stage's pack while it is younger
+than 10 minutes, and otherwise writes a pack of its own, with another `stage` id. Measured in the harness: 40,000 products in eight files staged
 in parallel and published once make 135 storage calls in all (about 10 to 15 seconds projected on the hosted
 stamps, to be measured there), and the same 40,000 retitled 152.
 
@@ -451,8 +468,8 @@ see it.
 A product page reads only its own product's records: its decision reads the head, the set, the content, slots,
 learn and reflex revisions and, when the page has a slot declared `scope: 'anchor'` and the request names a
 product as `ctx.anchor`, that product's shard and its one part, eight reads, the same at 50 or 100,000
-products, the shard and the part each read by its byte range in its pack (about 105 KB in all at 40,000
-products); a warm isolate reads neither the shard nor the part again (each is held per isolate by its digest).
+products, the shard and the part each read by its byte range in its pack (88,912 bytes in all at 40,000
+products, measured in the harness); a warm isolate reads neither the shard nor the part again (each is held per isolate by its digest).
 A page with no such slot, no anchor or an anchor in a shard the index does not list reads no shard, an anchor
 its shard does not hold reads the shard and no part, and the scoped slot decides as it does with no
 candidates. A shard or part the store no longer holds fails the page `503` with `code: "part_unavailable"`,

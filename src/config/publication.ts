@@ -701,8 +701,13 @@ async function createExact(storage: R2Bucket, key: string, value: unknown, retry
  * a head that holds this request's intent (`mine`) is the write having landed; a head another request wrote since is a
  * lost race (false: 409, as today); only a head still at `etag` is written once more, against that same etag. Where
  * even that cannot be established, the failure says the publication may be pending (recover it).
+ *
+ * R-P646 (LD4): a publication that is not a catalogue load (`retry` false: a PUT, a PATCH, a rollback, an item reset,
+ * any kind) sends the write once, as before, and on a throw reads the head the same way, only to name the state its
+ * 503 left: `landed` where the head holds its intent, `before` where the head is still at `etag`.
  */
-async function casHead(storage: R2Bucket, scope: string, body: string, etag: string, mine: (head: Head) => boolean): Promise<boolean> {
+async function casHead(storage: R2Bucket, scope: string, body: string, etag: string, mine: (head: Head) => boolean,
+  retry = true, states: { landed: PublicationState; before: PublicationState } = { landed: 'pending', before: 'nothing_written' }): Promise<boolean> {
   const settle = async (failure: unknown): Promise<'mine' | 'theirs' | 'unchanged'> => {
     if (failure instanceof HTTPException) throw failure;
     let now: Loaded | null;
@@ -712,6 +717,7 @@ async function casHead(storage: R2Bucket, scope: string, body: string, etag: str
   try { return await put(storage, headKey(scope), body, etag); }
   catch (first) {
     const after = await settle(first);
+    if (!retry && after !== 'theirs') throw stated(first, after === 'mine' ? states.landed : states.before);
     if (after !== 'unchanged') return after === 'mine';
     try { return await put(storage, headKey(scope), body, etag); }
     catch (second) { const now = await settle(second); if (now === 'unchanged') throw second; return now === 'mine'; }
@@ -1091,41 +1097,94 @@ async function putPack(storage: R2Bucket, key: string, sealed: SealedPack): Prom
     required(result && result.key === key && result.size === sealed.bytes); return true;
   } catch (error) { throw storageFailure(error, 'put', key); }
 }
-function packHead(storage: R2Bucket, key: string): Promise<{ size: number; sha256: string | undefined } | null> {
+/** P98: a stored pack as its HEAD answers it: its size, the digest its metadata names and when the store took it (ms; none where unanswered). */
+interface PackHeld { size: number; sha256: string | undefined; uploaded?: number }
+function packHead(storage: R2Bucket, key: string): Promise<PackHeld | null> {
   return again(async () => {
-    let held: { size?: unknown; customMetadata?: Record<string, string> } | null;
-    try { held = await storage.head(key) as { size?: unknown; customMetadata?: Record<string, string> } | null; } catch (error) { throw transientFailure(error, 'head', key); }
+    let held: { size?: unknown; customMetadata?: Record<string, string>; uploaded?: unknown } | null;
+    try { held = await storage.head(key) as { size?: unknown; customMetadata?: Record<string, string>; uploaded?: unknown } | null; } catch (error) { throw transientFailure(error, 'head', key); }
     try {
       if (held === null) return null;
       required(held && integer(held.size));
-      return { size: held.size as number, sha256: held.customMetadata?.sha256 };
+      const uploaded = held.uploaded instanceof Date && Number.isFinite(held.uploaded.getTime()) ? held.uploaded.getTime() : undefined;
+      return { size: held.size as number, sha256: held.customMetadata?.sha256, ...(uploaded === undefined ? {} : { uploaded }) };
     } catch (error) { throw storageFailure(error, 'head', key); }
   });
 }
+// P98 (LD6, R-P646): the fence between a load and the purge. The purge deletes a pack no stored revision names once the
+// store took it ATTACHMENT_GRACE_MS (15 minutes) ago or more, deciding from one listing. A request that names a pack
+// already stored (its own landed attempt, the same file sent again, a stage it publishes) therefore takes it only while
+// the store took it less than the grace less PACK_ADOPT_MARGIN_MS ago (10 minutes): a purge cannot list it as
+// collectable until 5 minutes after the request found it, and a request's run is far shorter (a Worker invocation's CPU
+// time is capped at 5 minutes at the platform's highest setting, 30 seconds by default, and a load's work between that
+// HEAD and its reservation is one exact-create and one compare-and-set). Older, the load writes its pack under a fresh
+// key (`freshPack`), which no listing taken before can hold. Once the head holds the request's intent the fence is
+// checked again (`holdPack`): the pack must still be younger than the grace less PACK_CLOCK_MS (one minute, for the
+// store's clock and the Worker's to differ), else the request abandons its reservation and names nothing. A purge that
+// listed the pack before that check therefore found it younger than the grace and keeps it; one that listed it after
+// finds the head holding the request's intent, or its revision committed since the purge's own (`deleteWhileIdle`),
+// and stops. A HEAD that answers no upload time (R2 always answers one) is taken as the moment of the HEAD.
+const PACK_ADOPT_MARGIN_MS = 5 * 60_000, PACK_CLOCK_MS = 60_000;
+const packAdoptable = (uploaded: number, now: number) => now - uploaded < ATTACHMENT_GRACE_MS - PACK_ADOPT_MARGIN_MS;
+const packFenced = (uploaded: number, now: number) => now - uploaded < ATTACHMENT_GRACE_MS - PACK_CLOCK_MS;
+/** P98 (R-P646): the same pack's objects at the same places, followed by a value no pointer names, so its digest and key are its own. */
+async function freshPack(sealed: SealedPack): Promise<SealedPack> {
+  const body = sealed.body + canonical({ fresh: crypto.randomUUID() }), raw = encoder.encode(body);
+  return { body, digest: hex(await crypto.subtle.digest('SHA-256', raw)), bytes: raw.byteLength, objects: sealed.objects };
+}
+/** P98: a pack a request wrote or took (`adopted`), and when the store took it (ms, by the Worker's clock where it wrote it). */
+export interface WrittenPack { pack: SealedPack; adopted: boolean; uploaded: number }
 /**
  * P98: write a sealed pack with the store's exact-create, tried twice (`again`). A pack already stored under its digest
  * with its size and digest in its metadata is the same pack — an earlier attempt that landed, or the same file sent
- * again over the same base — and is adopted; anything else there is a conflict. Answers which it was, so a request
- * that adopted a pack heads it again once it holds the head (`ensurePack`, LD6).
+ * again over the same base — and is adopted while the store took it less than 10 minutes ago (`packAdoptable`); one
+ * older is left to the purge and the pack is written under a fresh key (`freshPack`); anything else there is a conflict.
+ * Answers the pack written (its digest the one the index must name) and whether it was adopted.
  */
-export async function writePack(env: Env, scope: string, sealed: SealedPack): Promise<'created' | 'adopted'> {
-  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), key = packKey(home, sealed.digest);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (await again(() => putPack(storage, key, sealed))) return 'created';
+export async function writePack(env: Env, scope: string, sealed: SealedPack): Promise<WrittenPack> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
+  let pack = sealed;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const key = packKey(home, pack.digest), before = Date.now();
+    if (await again(() => putPack(storage, key, pack))) return { pack, adopted: false, uploaded: before };
     const held = await packHead(storage, key);
-    if (held) { if (held.size !== sealed.bytes || held.sha256 !== sealed.digest) throw conflict(); return 'adopted'; }
     // Collected between the create and the HEAD: written once more.
+    if (!held) continue;
+    if (held.size !== pack.bytes || held.sha256 !== pack.digest) throw conflict();
+    const uploaded = held.uploaded ?? Date.now();
+    if (packAdoptable(uploaded, Date.now())) return { pack, adopted: true, uploaded };
+    pack = await freshPack(sealed);
   }
   throw conflict();
 }
 /**
- * P98 (LD6): a pack a request adopted, checked again once the request holds the head: the purge never deletes while a
- * pending set is held, so a pack still stored now is kept; one collected in between is written again.
+ * P98 (LD6, R-P646): the fence, checked once the request holds the head (its `reserved` step). A pack it adopted is
+ * headed again and, where the purge collected it in between, written again under the same key (the index names it);
+ * then the pack must be younger than the grace less a minute (`packFenced`). A pack past it is a request that ran too
+ * long to name it safely: refused 503, so the publication abandons its reservation and nothing is written.
  */
-export async function ensurePack(env: Env, scope: string, sealed: SealedPack): Promise<void> {
-  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
-  if (await headStored(storage, packKey(home, sealed.digest))) return;
-  await writePack(env, scope, sealed);
+export async function holdPack(env: Env, scope: string, written: WrittenPack): Promise<void> {
+  const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope), key = packKey(home, written.pack.digest);
+  let uploaded = written.uploaded;
+  if (written.adopted) {
+    const held = await packHead(storage, key);
+    if (!held) {
+      const before = Date.now();
+      if (await again(() => putPack(storage, key, written.pack))) uploaded = before;
+      else {
+        const found = await packHead(storage, key);
+        if (!found || found.size !== written.pack.bytes || found.sha256 !== written.pack.digest) throw conflict();
+        uploaded = found.uploaded ?? Date.now();
+      }
+    } else uploaded = held.uploaded ?? uploaded;
+  }
+  if (!packFenced(uploaded, Date.now())) throw packPastFence(key);
+}
+/** P98 (R-P646): a pack, or a stage's pack, a request can no longer name: the purge may collect it. */
+function packPastFence(key: string): PublicationError {
+  const error = new PublicationError('The pack this publication names was stored 14 minutes ago or more, so the purge may collect it before the publication commits; nothing was written; send the file again', 503, 'publication_unavailable');
+  error.failure = { operation: 'head', objectKind: objectKindOf(key) };
+  return error;
 }
 /**
  * P98: the bytes [at, at + bytes) of a pack by one ranged read, or null where the pack is not stored. A store that
@@ -1169,10 +1228,16 @@ export const STAGE_DIRECTORY_MAX_BYTES = 8 * 1024 * 1024;
  * P98 (C2): a stored pack's size and the digest its metadata names, by one HEAD (tried twice), or null where the store
  * holds no such pack: the publish of staged files checks each stage's pack this way, and the pack table counts its size.
  */
-export async function catalogPackHeld(env: Env, scope: string, pack: string): Promise<{ size: number; sha256: string | undefined } | null> {
+export async function catalogPackHeld(env: Env, scope: string, pack: string): Promise<PackHeld | null> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
   return HASH.test(pack) ? packHead(storage, packKey(home, pack)) : null;
 }
+/**
+ * P98 (C2, R-P646): whether a publish may name a stage's pack, by when the store took it (the fence above): one taken
+ * less than 10 minutes ago when the publish plans, less than 14 once it holds the head. An unanswered time is now.
+ */
+export const stagePackNameable = (held: { uploaded?: number }, reserved: boolean, now = Date.now()) =>
+  held.uploaded === undefined || (reserved ? packFenced : packAdoptable)(held.uploaded, now);
 /** P98 (C2): a stage's directory by its place in its pack, its canonical value hashing to `hash`; null where the store cannot produce it. */
 export async function readStageDirectory(env: Env, scope: string, hash: string, address: PackAddress): Promise<unknown> {
   const storage = storageOf(env), home = publicationScope({ name: 'content' }, scope);
@@ -1246,8 +1311,8 @@ async function finish(storage: R2Bucket, loaded: Loaded, authorize?: () => Promi
   await authorize?.();
   // P98 (LD2): the commit is the head's compare-and-set, never sent again blindly: one that landed and then threw is
   // found committed by the read of the head that follows.
-  const landed = retry ? await casHead(storage, set.scope, serialized(next), loaded.etag, head => !!head.committed && head.committed.revision >= set.revision)
-    : await put(storage, headKey(set.scope), serialized(next), loaded.etag);
+  const landed = await casHead(storage, set.scope, serialized(next), loaded.etag, head => !!head.committed && head.committed.revision >= set.revision,
+    retry, { landed: 'committed', before: 'pending' });
   if (landed && progress) progress.state = 'committed';
   const after = await requiredHead(storage, set.scope); required(after.head.committed);
   if (after.head.committed.revision < set.revision) throw conflict();
@@ -1349,8 +1414,8 @@ export async function publishSet(env: Env, changes: PublicationChange[], meta: W
       const next = await sealed({ schema: 'configuration-head/v1' as const, scope, committed: identityOf(base), pending: { set, documents } });
       await meta.authorize?.();
       // P98 (LD2): the reservation is the head's compare-and-set, never sent again blindly (`casHead`).
-      if (!await (progress.retry ? casHead(storage, scope, serialized(next), loaded.etag, head => head.pending?.set.digest === set.digest)
-        : put(storage, headKey(scope), serialized(next), loaded.etag))) throw conflict();
+      if (!await casHead(storage, scope, serialized(next), loaded.etag, head => head.pending?.set.digest === set.digest,
+        progress.retry, { landed: 'pending', before: 'nothing_written' })) throw conflict();
       progress.state = 'pending';
       const reservation = await requiredHead(storage, scope); if (reservation.head.pending?.set.digest !== set.digest) throw conflict();
       try { for (const change of changes) await change.reserved?.(); }
@@ -1676,6 +1741,28 @@ async function eachListed(storage: R2Bucket, work: PurgeWork, options: R2ListOpt
     if (page.truncated && !cursor) throw new PurgeStopped();
   }
 }
+/**
+ * P98 (LD6, R-P646): whether a rollback may name what revision `n` of the catalogue names, by the test `purgeByPolicy`
+ * makes before it removes a revision and what only that revision names, read against `set` (the set the rollback is
+ * published over: a purge running beside it reads a set no later) and a clock later than the purge's: the
+ * configuration retention setting set, `n` two or more behind the catalogue revision in force, and its successor
+ * published longer ago than the setting's duration (a successor the set's index no longer lists, long ago). When it
+ * plans, the rollback reads the clock 5 minutes ahead (`PACK_ADOPT_MARGIN_MS`, the fence's margin); once it holds the
+ * head, one minute ahead (`PACK_CLOCK_MS`): a purge that removes `n` decided so before the rollback reserved, with a
+ * clock that read earlier.
+ */
+export async function catalogueRevisionNameable(env: Env, scope: string, set: PublicationPin, n: number, reserved: boolean, now = Date.now()): Promise<boolean> {
+  let durationMs: number;
+  try {
+    const policy = (await import('@/retention')).configurationRetention(env, set.scope);
+    if (!policy) return true;
+    durationMs = policy.durationMs;
+  } catch { return true; }
+  const ref = set.refs[member({ name: 'content' }, scope)];
+  if (!ref || n > ref.revision - 2) return true;
+  const successor = ref.index.find(entry => entry.revision === n + 1)?.at;
+  return successor !== undefined && now + (reserved ? PACK_CLOCK_MS : PACK_ADOPT_MARGIN_MS) - successor <= durationMs;
+}
 /** W38 B4: does this tenant set the configuration-revision retention setting? Never throws. */
 async function purgesConfiguration(env: Env, tenant: string): Promise<boolean> {
   try { return (await import('@/retention')).configurationRetention(env, tenant) !== null; } catch { return false; }
@@ -1726,7 +1813,7 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
           const table = packTableOf(value);
           const orphans = table ? table.filter(row => !others.some(other => packTableOf(other)?.some(peer => peer.digest === row.digest))).map(row => packKey(ref.scope, row.digest))
             : await orphansOf(storage, work, ref.scope, value, others);
-          await sweep(storage, work, orphans, now - ATTACHMENT_GRACE_MS);
+          await sweep(storage, work, orphans, now - ATTACHMENT_GRACE_MS, identityOf(set));
         }
       }
       spend(work);
@@ -1737,7 +1824,7 @@ async function purgeByPolicy(env: Env, storage: R2Bucket, scope: string, set: Pu
     // names one, its objects stored before packs.
     const content = set.refs[member({ name: 'content' }, scope)];
     if (content && catalogue && typeof catalogue === 'object' && ((catalogue as { index?: unknown }).index || (catalogue as { products?: unknown }).products)) {
-      await sweepCatalogue(storage, work, scope, content, values, now);
+      await sweepCatalogue(storage, work, scope, content, values, now, identityOf(set));
     }
   } catch { /* whatever this publication did not reach stays retained */ }
 }
@@ -1765,11 +1852,12 @@ const LEGACY_DIRECTORIES = ['part', 'shard', 'idshard', 'ids'] as const;
  * load's or stage's pack, a stage never published, a pack only purged revisions named) is deleted once uploaded
  * ATTACHMENT_GRACE_MS ago or more; no shard is read. Once no stored revision names an object stored before packs, those
  * objects (P86's and P93's parts, shards, id shards and id indexes; l3's leftovers among them) are deleted likewise, a
- * directory at a time. Every deletion call is made only while the head holds no pending set (`deleteWhileIdle`), so a
- * pack a load or a stage in flight reuses is never collected under it. Stops (keeping everything not yet deleted) on
- * the budget or any failure.
+ * directory at a time. Every deletion call is made only while the head holds no pending set and still holds the
+ * publication this purge runs for (`deleteWhileIdle`), so a pack a load or a stage in flight names is never collected
+ * under it (with the fence at `holdPack`, R-P646). Stops (keeping everything not yet deleted) on the budget or any
+ * failure.
  */
-async function sweepCatalogue(storage: R2Bucket, work: PurgeWork, scope: string, ref: Ref, values: Map<string, unknown>, now: number): Promise<void> {
+async function sweepCatalogue(storage: R2Bucket, work: PurgeWork, scope: string, ref: Ref, values: Map<string, unknown>, now: number, committed: Identity): Promise<void> {
   const cutoff = now - ATTACHMENT_GRACE_MS, content = 'config-publication/v1/' + scope + '/content/';
   const uploadedBefore = (object: { uploaded?: unknown }) => { const at = object.uploaded instanceof Date ? object.uploaded.getTime() : NaN; return Number.isFinite(at) && at < cutoff; };
   const packs = new Map<string, string>();
@@ -1794,22 +1882,26 @@ async function sweepCatalogue(storage: R2Bucket, work: PurgeWork, scope: string,
     for (const entry of packTableOf(value) ?? []) packs.delete(entry.digest);
     if (namesLegacy(value)) legacyNamed = true;
   }
-  await deleteWhileIdle(storage, work, scope, [...packs.values()]);
+  await deleteWhileIdle(storage, work, scope, [...packs.values()], committed);
   if (legacyNamed) return;
   for (const dir of legacyHeld) {
     const old: string[] = [];
     await eachListed(storage, work, { prefix: content + dir + '/' }, page => {
       for (const object of page.objects as Array<{ key: string; uploaded?: unknown }>) if (uploadedBefore(object)) old.push(object.key);
     });
-    await deleteWhileIdle(storage, work, scope, old);
+    await deleteWhileIdle(storage, work, scope, old, committed);
   }
 }
-/** P98 (LD6): delete keys 1,000 to a call, each call only while the head holds no pending set (a load or stage in flight may reuse one). */
-async function deleteWhileIdle(storage: R2Bucket, work: PurgeWork, scope: string, keys: readonly string[]): Promise<void> {
+/**
+ * P98 (LD6): delete keys 1,000 to a call, each call only while the head holds no pending set (a load or stage in flight
+ * may name one) and still holds the publication this purge runs for (R-P646: one committed since may name what this
+ * purge's reading of the stored revisions did not see).
+ */
+async function deleteWhileIdle(storage: R2Bucket, work: PurgeWork, scope: string, keys: readonly string[], committed: Identity): Promise<void> {
   for (let i = 0; i < keys.length; i += 1000) {
     spend(work);
-    const head = await readObject(storage, headKey(scope));
-    if (!head || (head.value as { pending?: unknown } | null)?.pending !== null) throw new PurgeStopped();
+    const head = await readObject(storage, headKey(scope)), value = head?.value as { pending?: unknown; committed?: unknown } | null | undefined;
+    if (!value || value.pending !== null || canonical(value.committed ?? null) !== canonical(committed)) throw new PurgeStopped();
     spend(work); await storage.delete(keys.slice(i, i + 1000));
   }
 }
@@ -1924,7 +2016,7 @@ async function orphansOf(storage: R2Bucket, work: PurgeWork, scope: string, valu
  * the listing — one call per object for a few, else the directory in pages of
  * 1,000 — and the deletions go 1,000 to a call, all within the purge's budget.
  */
-async function sweep(storage: R2Bucket, work: PurgeWork, keys: readonly string[], cutoff: number): Promise<void> {
+async function sweep(storage: R2Bucket, work: PurgeWork, keys: readonly string[], cutoff: number, committed: Identity): Promise<void> {
   // P98 (LD6): packs are deleted only while the head holds no pending set (`deleteWhileIdle`).
   const scope = /^config-publication\/v1\/([^/]+)\/content\/pack\//.exec(keys.find(key => /\/content\/pack\//.test(key)) ?? '')?.[1];
   const groups = new Map<string, Set<string>>();
@@ -1942,7 +2034,7 @@ async function sweep(storage: R2Bucket, work: PurgeWork, keys: readonly string[]
       return pending.size === 0;
     });
   }
-  if (scope) { await deleteWhileIdle(storage, work, scope, old); return; }
+  if (scope) { await deleteWhileIdle(storage, work, scope, old, committed); return; }
   for (let i = 0; i < old.length; i += 1000) { spend(work); await storage.delete(old.slice(i, i + 1000)); }
 }
 /** P86 (R-P424): the pending-publication grace: an attachment younger than this is never purged. */
