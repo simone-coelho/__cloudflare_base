@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P103",
+  "workOrderHash": "sha256:1b6f9354fbb125c2d083c41ce8f58e5f1d5cacfc365d9453af82f2de6b2d9efe",
+  "artifact": {
+    "revision": "c1de77ae95929b1fb1ac0055b8576d0a120ed04b",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p103-joined-b merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p103-build at 0fbdd005, specification merged through e6ff11dc.\n- src/ledger/delivery.ts: preferredCopy (the ring-stamped copy first, then the earliest-born), applied by the folds, the raw day and the rebuild through ReportRowIdentity, and by findById directly.\n- src/learn/route.ts: RING_DECISION_BOUND_MS (1,000 ms) aborts the ring call at the bound; a decision after the bound is ignored; money_stamped_by: 'producer' whenever the ring gave no decision.\n- src/learn/fan.ts, hourly.ts, policy.ts, report.ts; src/ledger/records.ts, recovery.ts, writer.ts; src/durable-objects/DecisionRing.ts; src/routes/realtime.ts; src/sdk/emit.ts; src/content/kinds.ts, types.ts: the stamp carried on every copy.\n- Kits 02 and 03 state the rule; the six SDK bundles regenerated.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S50/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S50/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P103/implementer/REPORT.md",
+      "git commits on rem/p103-joined-b up to c1de77ae"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S50/reviewer-p103/logs/p103.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S50/gate-r1/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P103/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-29T19:50:03.602Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}
