@@ -97,7 +97,8 @@
 //     `heldKeys` read the objects the store holds, of their own or inside a stored pack (by the key each would have as
 //     its own); `loseObject` deletes an object of its own and loses a packed one's bytes where they lie (a pack never loses
 //     one object alone), `forgeObject` gives either a body that is not its digest's; `storedBeforePacks` plants P93's
-//     form. A pointer without a range reads exactly as before.
+//     form; `metered` also answers each read of a pack (`ranged`: its bytes and the objects inside), and `readAsWanted`
+//     with `READ_GAP`/`READ_SPAN` reads a class's objects in R-P599's form. A pointer without a range reads as before.
 //   src/units/P86/LEDGER.unit.test.ts: `productsOf`, `shardOf`, `partOf`, `idShardKeysOf` and `indexOf` read through the
 //     pack (`shardOf` and `idShardKeysOf` name a packed object by the key it would have as its own); `partKeys` and
 //     `idsKeys` list the objects held, of their own or in a pack; the meters `counted`, `foreignReads` and `uploadedAt`
@@ -108,12 +109,20 @@
 //     `heldRaw`, `heldKeys` and `loseObject`; the shard write fault also fails the pack's PUT; the purge's attachments
 //     include the packs and its budget fault the pack's DELETE; CS1's 5% in its structural form (R-P578 (a): the manifest
 //     less its pack table within 5% of the 5,000 one less its table, the table at most 65 rows); CS5's rollback leg on
-//     revisions stored before packs (planted; before: loaded by the import), where a rollback checks object by object.
+//     revisions stored before packs (planted; before: loaded by the import), where a rollback checks object by object;
+//     CS3 leg 1's reads in R-P599's form (every wanted object read; any other only between two wanted objects of one read
+//     of a pack, each gap at most 256 KiB and each read at most 16 MiB; before: exactly the wanted objects).
 //   src/units/P77/LEDGER.unit.test.ts VR3's TODAY: '/content/catalog/stage POST' and '/content/catalog/publish POST' after
 //     '/content/catalog/pull POST' (R-P578 (d)).
 //   Retry once (R-P569 (a)), an injected failure also failing its immediate repeat: src/routes/content.test.ts CatalogR2
 //     (:564, :973), src/units/P87/LEDGER.unit.test.ts (:422, :472: two failures of the revision write) and
 //     src/services/telemetry.boundary.test.ts PublicationR2 (:571).
+//
+// CROSS-BATCH (R-P619): P99 (a2c64938) also R10s src/units/_parity.ts UnitR2 — its `list` — beside this ticket's `get` and
+// `head`. P99 owns the purge at P93's 512-object scale: LD6's R-P597 lock plants 53 products so the purge finishes within
+// its budget. P102's CR3 read list (src/units/P102/LEDGER.unit.test.ts:663–674) and its re-pointing of P93.CS2 go through
+// P93's `metered` and `readClasses`, which this ticket changes (a read of a pack counts as a read of each object wholly
+// inside its range; `metered` also answers `ranged`).
 //
 // DEFERRALS: LV1 (lane L21 on the pair's next release, one pair host at a time: 40,000 products staged in parallel and
 // published once, timed against 30 s; the refusal rate over the lane's loads; a page's cold bytes against 120 KB; l3's
@@ -142,7 +151,7 @@ import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
 
 import { asOperator, expectPublished, HOSTS, loadDocument, MODULES, mount, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT, UnitR2, type Answer, type Host,
   type Mounted } from '../_parity';
-import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, classOf, declareProductSlots, DOCS, DOCS_WITH_CART, image, indexOf, KEY, metered, OTHER_IMAGES, preconditions,
+import { A, ANCHOR_IMAGES, BLACK, bucketOf, carousel, CAROUSEL, classOf, declareProductSlots, DOCS, DOCS_WITH_CART, heldRaw, image, indexOf, KEY, metered, OTHER_IMAGES, preconditions,
   productRead, rangeProduct, rangeRecordId, rangeRecords, READ_GAP, readAsWanted, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, storedRevisionValues, unique,
   withinCaps, type Rec } from '../P93/_catalog';
 import { stamp } from '../P87/_stamp';
@@ -354,7 +363,7 @@ describe('unit:P98.LD1 (R-P549, R-P551: one pack per load; calls bounded by the 
         steps: STEPS, page: [200, SERVED_FOR_BLACK], read: 200 });
     }, 600_000);
 
-    it(`host (${host}): a pack is at most 64 MiB — a load whose pack would pass it (36 parts of about 1.9 MiB rewritten) is refused 413 load_too_large, nothing written; the four 2 MiB refusals answer as today (part_too_large, index_shard_too_large, id_index_too_large, manifest_too_large), nothing written`, async () => {
+    it(`host (${host}): a pack is at most 64 MiB — a load whose pack would pass it (36 parts of about 1.9 MiB rewritten) is refused 413 load_too_large, nothing written, and the same load naming as many as fit in 63 MiB (32, about 62 MiB) is accepted with one pack; the four 2 MiB refusals answer as today (part_too_large, index_shard_too_large, id_index_too_large, manifest_too_large), nothing written`, async () => {
       const refusal = async (m: Mounted, records: unknown[]) => {
         expect(withinCaps(records), 'PRECONDITION: the refused load is within the import\'s caps').toBe(true);
         const before = await revisionOf(m), { row } = await measuredLoad(m, records);
@@ -367,6 +376,14 @@ describe('unit:P98.LD1 (R-P549, R-P551: one pack per load; calls bounded by the 
       for (let k = 0; k < BIG_PARTS; k++) { const records = bigPart(k); expect(withinCaps(records), 'PRECONDITION: one large part is within the import\'s caps').toBe(true); loaded.push((await importOf(big, records)).status); }
       expect(loaded.every(s => s === 200), `${host}: PRECONDITION — the ${BIG_PARTS} large parts load (${loaded.join(',')})`).toBe(true);
       const tooLarge = await refusal(big, Array.from({ length: BIG_PARTS }, (_, k) => ({ ...bigPart(k)[0]!, title: 'retitled to rewrite the part' })));
+      // R-P619: pinned from below too — the same load naming as many of the large parts as fit in 63 MiB (their stored
+      // bytes summed in order; 32 of them, about 62 MiB, measured on 7b6ea990, 33 passing 64 MiB by 63 bytes) is accepted with one pack.
+      const bigView = indexOf(big, (await loadDocument(big, 'catalog')).document);
+      const sizes = Array.from({ length: BIG_PARTS }, (_, k) => Buffer.byteLength(heldRaw(big, KEY.part(bigView.products[`COA-BIG${String(k).padStart(2, '0')}`]?.digest ?? 'none')) ?? '', 'utf8'));
+      let fit = 0, fitBytes = 0; while (fit < BIG_PARTS && fitBytes + sizes[fit]! <= 63 * 1024 * 1024) fitBytes += sizes[fit++]!;
+      expect(fitBytes > 60 * 1024 * 1024, `${host}: PRECONDITION — the large parts that fit in 63 MiB hold more than 60 MiB (${fit} parts, ${fitBytes} bytes)`).toBe(true);
+      const underCap = await measuredLoad(big, Array.from({ length: fit }, (_, k) => ({ ...bigPart(k)[0]!, title: 'retitled under the cap' })));
+      const underBytes = underCap.meter.calls.filter(c => c.op === 'put' && c.cls === 'pack' && !c.failed).map(c => c.bytes);
       // part_too_large: one product's part past 2 MiB across two loads.
       const part = await mount(host, DOCS);
       await declareProductSlots(part);
@@ -391,27 +408,30 @@ describe('unit:P98.LD1 (R-P549, R-P551: one pack per load; calls bounded by the 
       await declareProductSlots(manifest);
       expect((await importOf(manifest, sharedRecords(0))).status, `${host}: PRECONDITION — the first 6,000 shared pieces load`).toBe(200);
       const manifestRefused = await refusal(manifest, sharedRecords(6000));
-      expect.soft({ tooLarge, partRefused, shardRefused, idRefused, manifestRefused }, `${host}: P98.LD1 — the caps (today a load has no cap of its own: ${JSON.stringify(tooLarge)})`).toEqual({
-        tooLarge: [413, 'load_too_large', {}, true], partRefused: [413, 'part_too_large', {}, true], shardRefused: [413, 'index_shard_too_large', {}, true],
+      expect.soft({ tooLarge, underCap: [underCap.row.status, underCap.row.puts['put pack'] ?? 0], partRefused, shardRefused, idRefused, manifestRefused },
+        `${host}: P98.LD1 — the caps (today a load has no cap of its own: ${JSON.stringify(tooLarge)}; ${fit} parts, ${fitBytes} bytes, under the cap: pack ${JSON.stringify(underBytes)} bytes)`).toEqual({
+        tooLarge: [413, 'load_too_large', {}, true], underCap: [200, 1], partRefused: [413, 'part_too_large', {}, true], shardRefused: [413, 'index_shard_too_large', {}, true],
         idRefused: [413, 'id_index_too_large', {}, true], manifestRefused: [413, 'manifest_too_large', {}, true] });
     }, 1_800_000);
 
-    // R-P602: each object inside the pack addressed by its byte range — a load reads its parts at their places, merging
-    // neighbours only across gaps of at most 256 KiB (publication.ts PACK_GAP; DESIGN.md §124), so two wanted parts further
-    // apart are two reads, never one read carrying the bytes between them. 2,000 products in one load put products 1 and
-    // 1,001 about 320 KB apart in its pack.
-    it(`host (${host}): R-P602 — at 2,000 products a load retitling two products 1,000 apart reads their parts as two one-part reads of the pack, never one read spanning more than 256 KiB between wanted objects`, async () => {
+    // R-P602, R-P619: each object inside the pack addressed by its byte range — a load reads its parts at their places,
+    // merging neighbours only across gaps of at most 256 KiB (publication.ts PACK_GAP; DESIGN.md §124), so two wanted parts
+    // further apart are two reads, never one read carrying the bytes between them. 2,000 products in one load; the second
+    // product is the first whose part starts more than 256 KiB after product 1's ends, so any wider gap rule merges the two.
+    it(`host (${host}): R-P602 — at 2,000 products a load retitling product 1 and the first product whose part lies more than 256 KiB after it reads their two parts as two one-part reads of the pack, never one read spanning more than 256 KiB between wanted objects`, async () => {
       const m = await loadedTenant(host, 2000);
-      const view = indexOf(m, (await loadDocument(m, 'catalog')).document), products = [rangeProduct(1), rangeProduct(1001)];
+      const view = indexOf(m, (await loadDocument(m, 'catalog')).document), first = view.products[rangeProduct(1)]?.place;
+      const n = first ? Array.from({ length: 1999 }, (_, i) => i + 2).find(k => { const p = view.products[rangeProduct(k)]?.place; return !!p && p.pack === first.pack && p.at - (first.at + first.bytes) > READ_GAP; }) : undefined;
+      const products = [rangeProduct(1), rangeProduct(n ?? 2000)];
       const places = products.map(p => view.products[p]?.place), parts = products.map(p => KEY.part(view.products[p]?.digest ?? `no pointer for ${p}`));
       const apart = places[0] && places[1] && places[0].pack === places[1].pack ? places[1].at - (places[0].at + places[0].bytes) : null;
-      expect(apart !== null && apart > READ_GAP, `${host}: PRECONDITION — the two parts lie in one pack more than 256 KiB apart (${apart === null ? 'today: no part in a pack' : `${apart} bytes`})`).toBe(true);
+      expect(n !== undefined && apart !== null && apart > READ_GAP, `${host}: PRECONDITION — a part lies in product 1's pack more than 256 KiB after it (${apart === null ? 'today: no part in a pack' : `${products[1]} at ${apart} bytes`})`).toBe(true);
       const wanted = [...unique(products.map(p => KEY.shard(view.shards[bucketOf(p)]?.digest ?? `no shard for ${p}`))), ...parts];
-      const run = await metered(m, () => importOf(m, [...rangeRecords(1, 1, ', retitled'), ...rangeRecords(1001, 1, ', retitled')]));
+      const run = await metered(m, () => importOf(m, [...rangeRecords(1, 1, ', retitled'), ...rangeRecords(n!, 1, ', retitled')]));
       const partReads = run.ranged.filter(r => r.objects.some(o => classOf(o.key) === 'part'))
         .map(r => ({ parts: r.objects.filter(o => classOf(o.key) === 'part').map(o => o.key), bytes: r.to - r.from }));
       expect.soft({ status: run.result.status, read: readAsWanted(run, 'part', wanted), reads: partReads.map(r => r.parts).sort(), widest: Math.max(0, ...partReads.map(r => r.bytes)) <= READ_GAP },
-        `${host}: P98.LD1 — the two parts read at their places (${JSON.stringify(partReads.map(r => [r.parts.length, r.bytes]))})`).toEqual({
+        `${host}: P98.LD1 — the two parts, ${apart} bytes apart, read at their places (${JSON.stringify(partReads.map(r => [r.parts.length, r.bytes]))})`).toEqual({
         status: 200, read: [...parts].sort(), reads: parts.map(k => [k]).sort(), widest: true });
     }, 300_000);
   }
@@ -642,6 +662,38 @@ describe('unit:P98.LD3 (R-P549: the page reads its shard and part from the pack 
       const read = await productRead(m, swapped!.product);
       expect.soft([read.status, read.body.code ?? (JSON.stringify(read.body).includes('part_unavailable') ? 'part_unavailable' : null), readIds(read).includes(rangeRecordId(Number(swapped!.other.slice(5))))],
         `${host}: P98.LD3 — an altered shard refused as today (${show(read)})`).toEqual([503, 'part_unavailable', false]);
+    }, 300_000);
+
+    // R-P619 (restoring R-P578 (b)'s other two objects, dropped at fd88de38 without a ruling): today (publication.ts
+    // readCatalogPart :674–684, readCatalogIdShard :863–870) a part and an id shard are each checked against the digest
+    // their pointer names, so an altered body is refused 503 part_unavailable or id_index_unavailable; read from a pack by
+    // its range, each is refused the same.
+    it(`host (${host}): LOCK (R-P578 (b), R-P619) — integrity is not traded for size: a part or an id shard whose stored bytes are altered (the same length, still JSON) is refused as today, read from a pack by its range as from an object of its own — the anchor's page 503 part_unavailable for its part (one title altered); a load needing the id shard 503 id_index_unavailable (one id's product altered)`, async () => {
+      const alter = (m: Mounted, key: string, place: { pack: string; at: number; bytes: number } | undefined, change: (text: string) => string) => {
+        const where = place ? KEY.pack(place.pack) : key, raw = m.storage.objects.get(where);
+        if (raw === undefined) return `no stored object at ${where}`;
+        const bytes = Buffer.from(raw, 'utf8'), at = place?.at ?? 0, length = place?.bytes ?? bytes.length;
+        const before = bytes.subarray(at, at + length).toString('utf8'), after = change(before);
+        if (after === before || Buffer.byteLength(after, 'utf8') !== length) return `the alteration did not apply to ${where}`;
+        bytes.write(after, at, 'utf8'); m.storage.objects.set(where, bytes.toString('utf8')); invalidatePublicationCache();
+        return 'altered';
+      };
+      // The anchor's part: one title.
+      const mp = await loadedTenant(host, 50), vp = indexOf(mp, (await loadDocument(mp, 'catalog')).document), pointer = vp.products[A];
+      const part = alter(mp, KEY.part(pointer?.digest ?? 'none'), pointer?.place, t => t.replace('(on-model)', '(on-modeL)'));
+      const s = await shopperOn(mp);
+      invalidatePublicationCache();
+      const page = await snapshotOf(mp, s, 'pdp', { anchor: A, variant: BLACK }, 'p98-integrity-part');
+      // An id shard a load reads (the bucket of a new record's id): one id's product.
+      const mi = await loadedTenant(host, 50), vi = indexOf(mi, (await loadDocument(mi, 'catalog')).document);
+      let k = 900; while (!Object.hasOwn(vi.idShards, bucketOf(rangeRecordId(k)))) k++;
+      const idBucket = bucketOf(rangeRecordId(k));
+      const idshard = alter(mi, KEY.idshard(vi.idShards[idBucket]!.digest), vi.places?.idShards[idBucket],
+        t => t.replace(/"(COA-[A-Z0-9-]*)[0-9A-Z]"(?=[,}])/, (whole, stem: string) => `"${stem}${whole.at(-2) === 'X' ? 'Y' : 'X'}"`));
+      const load = await importOf(mi, rangeRecords(k, 1));
+      expect.soft({ part: [part, page.status, JSON.stringify(page.body).includes('part_unavailable'), carousel(page)], idshard: [idshard, load.status, load.body.code ?? null] },
+        `${host}: P98.LD3 — an altered part or id shard refused as today (${show(load)})`).toEqual({
+        part: ['altered', 503, true, []], idshard: ['altered', 503, 'id_index_unavailable'] });
     }, 300_000);
   }
 
