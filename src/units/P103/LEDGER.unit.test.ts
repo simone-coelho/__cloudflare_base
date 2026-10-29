@@ -84,7 +84,9 @@
 //      member), the one observable a type has without a compile error today.
 //   R11 The policy rides the outcome's recovery input (src/ledger/recovery.ts OutcomeRecoveryInput, persisted with the
 //      operation), so an alarm that completes the outcome later carries the policy the action prepared (ruled, R-P571 (b):
-//      the grant names OutcomeRecoveryInput's money member).
+//      the grant names OutcomeRecoveryInput's money member). R-P604 (1): MP2's carried-copy legs drive the copy a behaviour
+//      capture carried, admitted by the shopper's alarm (settleCarriedOutcome → runOwnerRecovery, recovery.ts:398) after
+//      the action's own outcome admission is refused once (P65's lever, P65/LEDGER.unit.test.ts:399-407, :604-617).
 //   R12 (R-P571 (d)) A policy published between an hourly fold's start and its recovery CANNOT make the offline credits
 //      differ from live, and the fold's recovery fingerprint must not name the policy. The fold computes every shard and the
 //      hour's aggregate in one pass under the learn document it read at its start (src/index.ts:307 reads it; src/learn/
@@ -104,7 +106,10 @@
 //      and the day it publishes, the raw day and the W24 rebuild. "The policy live learning took it under" is the one the
 //      outcome's producer read: prepareOutcomeAdmission's learn read at the action on the managed path, outcomeToLearning's
 //      on the direct path. A row recorded before P103 names none and is read under no policy, which is what live learning
-//      applied to it (no producer passed one before P103). The work order rules the carrier (R-P594): the policy rides on
+//      applied to it (no producer passed one before P103); R-P604 (2): MP3's pre-P103 legs write the rows as that producer
+//      wrote them (the record with no money member to enqueueOutcome and fanOutcome, route.ts :225-229 at d5d8581c) and fold
+//      them after EUR is published. R-P604 (7): MP3 also takes R-P576's own second case, EUR then the policy removed,
+//      beside EUR then GBP. The work order rules the carrier (R-P594): the policy rides on
 //      the outcome's record from the producer's own learn read, and every fold reads the record's; the legs observe what is
 //      credited. The sketch (S50/specifier/scratch/sketch/apply.py) does so, and nothing re-reads a historic learn document
 //      (P99's purge of old revisions cannot reach it).
@@ -121,13 +126,34 @@
 //      ring's credited journal both include (src/ledger/delivery.ts LOGICAL_EXCLUDED_FIELDS :111; DecisionRing.ts
 //      creditedDigest :735-739), so today the retry is credited again live and the hour's fold refuses "conflicting rows
 //      under one logical id" (the raw day 500, the rebuild 503). The sketch: the logical comparison leaves out `retention`
-//      and `money` (a retry's processing stamps; the first row read is kept: ledger keys sort by write time, writer.ts :85),
-//      and the ring takes every delivery of an outcome id under the stamp it first saw (a bounded record beside the credited
-//      journal), so an all-refused outcome's retry meets the same refusal (W24.R1.04's words) whatever is published since.
+//      and `money` (a retry's processing stamps), and the ring takes every delivery of an outcome id under the stamp it first
+//      saw. CORRECTED (R-P604 (3)): ledger keys do NOT sort by write time — a key is ts36(min)-ts36(max)-batchId over the
+//      client event times of its batch (writer.ts:85, records.ts:409-411), so a retry batched with an older event sorts
+//      before its first delivery; every reader of rows sharing a logical id keeps the earliest-born copy (mergeRetention's
+//      rule, retention.ts:126-133: ReportRowIdentity, report.ts, which the raw day, the rebuild's loadDay and the hourly and
+//      open hour's loadHourRecords all read through), never the first read. MP3's ordering legs are the reviewer's probe 5.
+//   R15 (R-P604 (4), (5)) The ring's first-stamp record is kept within the credited journal's own entries and write: a
+//      credited outcome's entry names the stamp it was credited under (the journal's one put, so learn.test.ts W22.04 :1308
+//      and W22.08 :1436 stand), and an outcome nothing credited and some slot refused for money gets an entry marked
+//      refused, which recognizes no repeat (W24.R1.04: its redelivery meets the same refusal by name) — the one put where
+//      none is written today, since nothing else remembers what it was refused under. So the record is erased by /erase
+//      and reset by /reset with the journal, bounded by its byte cap and charged to totalBound, expired by its alarm, and a
+//      failed write is the journal's (swallowed). MP3's five LOCKED legs per host drive each (the byte cap through 1,500
+//      outcomes refused for money with isEventNonce's longest nonce). The idBytes check is unreachable: the longest stable
+//      outcome id is 64 + 11 + 200 + 128 + 128 + 8 separators, about 540 bytes, below RING_LIMITS.idBytes (2,048), so it
+//      has no leg.
 //
+// P104 (E29, the report fold, rem/spec-p104): its RF6 leans on these MP3 legs as locks for its staged fold, behind a
+// PRECONDITION naming P103, and R-P604 (3)'s earliest-born rule carries into every reader its fold adds.
 // DEFERRED: LV1 (lane L21, the pair's next release: a EUR policy published on a pair tenant, an SDK purchase naming EUR
 // credited live and in the day's report; another currency refused by name live and absent from the report).
-// RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6).
+// RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6); an outcome whose
+// credits fail to deliver is not journalled (W22 D1.02), so a retry of it after a publication is taken under the retry's
+// stamp; the refused entries share the journal's caps (4,096 rows, 256 KiB) with the credited ones; MEASURED, for a
+// ruling: under a ledger retention basis of `occurred` both copies of a retried outcome are born at its event's time, so
+// the earliest-born rule ties, keeps the first read and the folds credit the retry's stamp (575/230 against live refusal,
+// S50/specifier/logs/probe-occurred-sketch.log); carrying the stamp the ring took the outcome under onto the direct
+// path's ledger row (the ring answering it, route.ts enqueueing after the ring) would make both copies agree.
 //
 // LOCKS (MP6 and the gate): W24 B1, B2, LEDGER (R1.02, R1.04, R2, R5), P16, P33, W26, P94, W25, src/sdk/emit.test.ts,
 // W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
@@ -138,6 +164,8 @@
 // adding lines above them moves: the build keeps those edits line-neutral or re-points the citations in kit 02 (granted).
 // Round 3 (S50/specifier/logs/full-sketch-r3.json) fails only on the same environment files, on P68.KT1 before the two
 // line-neutral edits (then 8/8) and once on P76.FA1's timing under a load average near 40 (then 8/8). No R10 is needed.
+// Round 5 (logs/locks-r5.json, 35 files incl. learn.test.ts W22.04/W22.08, W24 B1/B2/LEDGER, W22, W30, P64, P65, P68):
+// 778/780 on the sketch — W40.P4 (scratch environment) and W14.07 (native timing under load; 1/1 alone).
 //
 // HARNESS: src/units/_parity.ts (the mounted app over the real Durable Object classes, both hosts; shopperOn, asOperator,
 // putDocument, learned). Imports from src/units/: ../_parity. NEW EXPORTS IMPORTED: none. Tenant ids only; no network.
@@ -153,19 +181,28 @@ import { initializePublicationSet, invalidatePublicationCache, type PublicationB
 import { read } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, LEARN_KIND, SLOTS_KIND, validateLearnConfig } from '@/content/kinds';
 import type { LearnConfig } from '@/content/types';
-import { SHOPPER_HEADER } from '@/identity/sessionCapability';
-import type { MoneyPolicy } from '@/learn/fan';
+import { RING_LIMITS, type DecisionRing } from '@/durable-objects/DecisionRing';
+import * as authority from '@/identity/sessionAuthority';
+import { SessionAccessError, SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { resetVisitorRing } from '@/ledger/erasure';
+import { enqueueOutcome } from '@/ledger/enqueue';
+import { outcomeFromAction, type OutcomeRecord } from '@/ledger/records';
+import { fanOutcome, ringName, type MoneyPolicy } from '@/learn/fan';
 import { catchUp, foldOpenHours, HOUR_MS, RUN_BUDGET } from '@/learn/hourly';
+import { DEFAULT_POLICY } from '@/learn/policy';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
+import { slotConfigsOf } from '@/learn/route';
+import { DEFAULT_STATS } from '@/learn/stats';
 import { REFLEX_KIND, reflexScopeForTenant } from '@/reflex/configStore';
+import { captureRetention } from '@/retention';
 import { createCore } from '@/sdk/core';
 import { createEmit } from '@/sdk/emit';
 import { createListen } from '@/sdk/listen';
 import { testHost } from '@/sdk/testHost';
 
 import {
-  asOperator, BRAND, errorsOf, expectPublished, HOSTS, learned, mount, PAGE_VIEW, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, TENANT,
-  type Answer, type Host, type Mounted, type Shopper,
+  asOperator, BRAND, errorsOf, expectPublished, HOSTS, learned, mount, PAGE_VIEW, putDocument, readTree, REFLEX_DOCUMENT, shopperOn, storedOutcomes, TENANT,
+  type Answer, type Host, type Mounted, type Registry, type Shopper,
 } from '../_parity';
 
 // ---------------------------------------------------------------------------
@@ -451,6 +488,35 @@ describe('unit:P103.MP2', () => {
         .toEqual({ attributed: 3, money: 'none', [HERO]: 'taken', [STORY]: 'taken', [TEASER]: 'reward', [BANNER]: 'taken' });
     }, 60_000);
   }
+
+  // R-P604 (1): the managed path's carried copy — the outcome its behaviour capture carried, admitted by the shopper's
+  // alarm (settleCarriedOutcome → runOwnerRecovery, src/ledger/recovery.ts:398) when the action's own outcome admission
+  // was refused, with P65's lever (src/units/P65/LEDGER.unit.test.ts:399-407, :604-617).
+  for (const host of HOSTS) {
+    it(`host (${host}, managed recovery, the carried copy): with a policy of EUR, an EUR purchase whose own admission is refused once and which the alarm admits from its behaviour capture's carried copy is credited on the revenue and the margin slot, and its ledger row carries the EUR policy`, async () => {
+      const m = await mount(host, docs(EUR_REFUSE), { recovery: true });
+      expectPublished(m, 'P103.MP2 — the home page and a learn document with the money policy EUR/refuse publish');
+      const answers = tapRing(m);
+      const s = await servedShopper(m, `${host}, the carried copy`);
+      let refused = 0;
+      const original = authority.admitOwnedRecovery;
+      const spy = vi.spyOn(authority, 'admitOwnedRecovery').mockImplementation(((input, options) => {
+        if (input.kind === 'outcome' && !refused) { refused++; return Promise.reject(new SessionAccessError()); }
+        return original(input, options);
+      }) as typeof original);
+      let sent: Awaited<ReturnType<typeof act>>;
+      try { sent = await act(m, s, purchase(575, 230, 'EUR')); await m.drainLedger(); } finally { spy.mockRestore(); }
+      expect([refused, sent.status, typeof told(answers, sent.eventId)], `${host}: PRECONDITION — the outcome's own admission was refused once, the purchase answered, and no ring answer yet`).toEqual([1, 200, 'string']);
+      const owner = m.shoppers.get([...m.shoppers.keys()].find(name => name.includes(s.grant.subject))!)!;
+      await (owner.object as unknown as { alarm: () => Promise<void> }).alarm();
+      await m.drain(); await m.drainLedger();
+      const rows = storedOutcomes(m, s.grant.subject).filter(row => row.event_id === sent.eventId);
+      expect({ told: told(answers, sent.eventId), live: await liveCredits(m), rows: rows.map(row => (row as { money?: unknown }).money ?? 'no money member') },
+        `${host}: P103.MP2 (R-P604) — the copy the alarm admits carries the policy the action prepared: credited 575 and 230 live, and its ledger row names EUR (a stamp made in admitPreparedOutcome never reaches the carried copy)`)
+        .toEqual({ told: { attributed: 3, money: 'none', [HERO]: 'taken', [STORY]: 'taken', [TEASER]: 'reward', [BANNER]: 'taken' },
+          live: { [HERO]: 575, [STORY]: 230, [TEASER]: 0, [BANNER]: 1 }, rows: [EUR_REFUSE] });
+    }, 60_000);
+  }
 });
 
 // ===========================================================================
@@ -463,6 +529,18 @@ describe('unit:P103.MP3', () => {
     none: { slots: { [HERO]: 295, [STORY]: 118, [TEASER]: 375, [BANNER]: 3 }, credits: 6 },
     EUR: { slots: { [HERO]: 575 + 295, [STORY]: 230 + 118, [TEASER]: 575 + 375, [BANNER]: 3 }, credits: 9 },
   } as const;
+  /** One event as the pre-P103 producer took it: its record, with no money member, to the ledger and to the ring. */
+  async function preP103(m: Mounted, s: Shopper, event: Event): Promise<string> {
+    const eventId = crypto.randomUUID(), ts = Date.now();
+    const outcome = outcomeFromAction({ type: event.type, userId: s.grant.subject, sessionId: s.grant.sessionId, timestamp: ts, eventId,
+      eventIdSource: 'provided', data: event.data } as never, TENANT, BRAND) as OutcomeRecord;
+    outcome.retention = captureRetention(m.env as never, TENANT, ts);
+    const learn = await learnInForce(m);
+    await Promise.all([enqueueOutcome(m.env, outcome), fanOutcome(m.env, TENANT, outcome, DEFAULT_POLICY, BRAND, slotConfigsOf(learn),
+      { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS })]);
+    await m.drain();
+    return eventId;
+  }
   type Credited = { slots: Record<Slot, number>; credits: number | string };
   /** Each path's credits, or what it answered instead (a refused day is an observation, never a precondition). */
   type Observed = Record<'live' | 'openHour' | 'hourly' | 'raw', Credited | string> & { rebuild: { slots: Record<Slot, number> } | string };
@@ -476,10 +554,20 @@ describe('unit:P103.MP3', () => {
    */
   /** The day every MP3 leg but R-P588's takes. */
   const DAY = (): Event[] => [purchase(575, 230, 'EUR'), purchase(495, 198, 'GBP'), purchase(295, 118), addToBag(575, 'EUR'), addToBag(375), purchase(99, 40, 'EUR', UNKNOWN_PRODUCT)];
-  /** After the publication: the SDK's retries of the day's events (by index, the same wire body) and new events. */
-  interface After { retry: number[]; fresh: Event[] }
+  /**
+   * After the publication: events 20 s older than the day's first (R-P604 (3): batched with the retries, so their ledger
+   * object sorts before the first delivery's), the SDK's retries of the day's events (by index, the same wire body) and
+   * new events.
+   */
+  interface After { older?: Event[]; retry: number[]; fresh: Event[] }
+  /**
+   * `producer: 'pre-P103'` (R-P604 (2)): the day's outcomes are written as the producer before P103 wrote them, with no
+   * money member: the record the action route builds (outcomeFromAction, its retention stamp) handed to the ledger
+   * (enqueueOutcome) and to the visitor's ring (fanOutcome with the document's policy and configurations, and no money),
+   * exactly src/learn/route.ts outcomeToLearning's direct branch at d5d8581c (:225-229) beside realtime.ts :404.
+   */
   async function dayAlike(host: Host, taken: MoneyPolicy | undefined, folded: MoneyPolicy | undefined, recovery = true,
-    day: Event[] = DAY(), after: After = { retry: [], fresh: [] }): Promise<Observed> {
+    day: Event[] = DAY(), after: After = { retry: [], fresh: [] }, producer: 'route' | 'pre-P103' = 'route'): Promise<Observed> {
     const clock = fixedHour();
     try {
       const m = await mount(host, docs(taken), { recovery });
@@ -488,15 +576,27 @@ describe('unit:P103.MP3', () => {
       const s = await servedShopper(m, `${host}, ${taken?.currency ?? 'none'}`);
       const ids: string[] = [], wires: Array<{ eventId: string; wire: string }> = [];
       for (const event of day) {
+        if (producer === 'pre-P103') { ids.push(await preP103(m, s, event)); continue; }
         const sent = await act(m, s, event);
         expect(sent.status, `${host}: PRECONDITION — the ${event.type} is accepted: ${JSON.stringify(sent.body).slice(0, 200)}`).toBe(200);
         ids.push(sent.eventId); wires.push(sent);
       }
       await m.drainLedger();
+      if (producer === 'pre-P103') {
+        const rows = storedOutcomes(m, s.grant.subject);
+        expect(rows.map(row => 'money' in row), `${host}: PRECONDITION — the rows are written as the producer before P103 wrote them, with no money member`).toEqual(day.map(() => false));
+      }
 
       if (JSON.stringify(folded ?? null) !== JSON.stringify(taken ?? null)) {
         const republished = await putDocument(m, 'learn', learnOf(folded), 'p103 policy published after the outcomes, before the fold');
         expect(republished.status, `${host}: PRECONDITION — the policy ${folded?.currency ?? 'removed'} publishes after the outcomes: ${JSON.stringify(republished.body).slice(0, 200)}`).toBe(200);
+      }
+      // R-P604 (3): events older than the day's first, sent with the retries so they share the retries' ledger batch.
+      const firstAt = wires.length ? (JSON.parse(wires[0]!.wire) as { timestamp: number }).timestamp : Date.now();
+      for (const event of after.older ?? []) {
+        const eventId = crypto.randomUUID();
+        const older = await send(m, s, JSON.stringify({ ...event, source: 'sdk', userId: s.grant.subject, sessionId: s.grant.sessionId, timestamp: firstAt - 20_000, eventId }), eventId);
+        expect(older.status, `${host}: PRECONDITION — the event 20 s older is accepted: ${JSON.stringify(older.body).slice(0, 200)}`).toBe(200);
       }
       // R-P588: the SDK retries an event the platform already took, with its first event id and time, after the publication.
       for (const index of after.retry) {
@@ -579,6 +679,115 @@ describe('unit:P103.MP3', () => {
         .toEqual(alike(RETRIED));
     }, 90_000);
   }
+
+  // R-P576 (7): the second case as R-P576 named it, the policy removed: outcomes taken under EUR stay credited under EUR.
+  for (const host of HOSTS) for (const path of ['managed recovery', 'direct'] as const) {
+    it(`host (${host}, ${path}): outcomes taken under EUR, then the money policy removed, then the hour folded, the day read and rebuilt: the report credits what live learning credited`, async () => {
+      expect(await dayAlike(host, EUR_REFUSE, undefined, path === 'managed recovery'),
+        `${host}, ${path}: P103.MP3 (R-P576, R-P604) — outcomes live learning took under EUR are folded under EUR, though no policy is in force when the fold runs (a fold that applies a record's stamp only while a policy is in force refuses them)`)
+        .toEqual(alike(EXPECTED.EUR));
+    }, 90_000);
+  }
+
+  // R-P604 (2): rows from before P103 name no money policy and are read as none, live and offline, whatever is published.
+  for (const host of HOSTS) {
+    it(`host (${host}, direct): rows written as the producer before P103 wrote them, with no money member, folded after EUR is published, are read as no policy, live and in the hour folded, the day read and rebuilt`, async () => {
+      expect(await dayAlike(host, undefined, EUR_REFUSE, false, DAY(), { retry: [], fresh: [] }, 'pre-P103'),
+        `${host}: P103.MP3 (R-P604) — a row from before P103 was taken under no policy, which is what live learning applied to it: every fold reads it so, though EUR is in force when it runs (a member-less row read under the policy in force credits its EUR outcomes)`)
+        .toEqual(alike(EXPECTED.none));
+    }, 90_000);
+  }
+
+  // R-P604 (3): the reviewer's probe 5 — the retry batched with an event 20 s older, so its ledger object sorts first.
+  const ORDERED = { slots: { [HERO]: 0, [STORY]: 0, [TEASER]: 0, [BANNER]: 1 }, credits: 1 };
+  for (const host of HOSTS) {
+    it(`host (${host}, direct): the SDK's retry of an EUR purchase taken under no policy, sent after EUR is published in one batch with an event 20 s older (its ledger object sorting before the first delivery's), is folded as live learning took it: every reader keeps the earliest-born copy`, async () => {
+      expect(await dayAlike(host, undefined, EUR_REFUSE, false, [purchase(575, 230, 'EUR')], { older: [addToBag(375)], retry: [0], fresh: [] }),
+        `${host}: P103.MP3 (R-P604) — the copy every fold keeps of an outcome delivered twice is the earliest-born (mergeRetention's rule), never the first read: the purchase stays refused on the money slots and counts once on the unit slot (the older add to bag precedes every decision and credits nothing)`)
+        .toEqual(alike(ORDERED));
+    }, 90_000);
+  }
+
+  // R-P604 (4), (5): the ring's record of each outcome's first stamp is kept like the credited journal beside it.
+  /** A direct-path world: the shopper served, an EUR purchase (counted on the unit slot) and an EUR add to bag (refused for money) taken under no policy. */
+  async function stampedRing(host: Host): Promise<{ m: Mounted; s: Shopper; ring: Registry; ids: string[]; names: () => string[] }> {
+    const m = await mount(host, docs(), { recovery: false });
+    expectPublished(m, 'P103.MP3 — the home page and a learn document without money publish');
+    const s = await servedShopper(m, `${host}, the first-stamp record`);
+    const ids: string[] = [];
+    for (const event of [purchase(575, 230, 'EUR'), addToBag(575, 'EUR')]) {
+      const sent = await act(m, s, event);
+      expect(sent.status, `${host}: PRECONDITION — the ${event.type} is accepted`).toBe(200);
+      ids.push(sent.eventId);
+    }
+    await m.drainLedger();
+    const ring = m.rings.get(ringName(TENANT, s.grant.subject));
+    expect(ring, `${host}: PRECONDITION — the visitor's ring exists`).toBeTruthy();
+    /** The event ids of hers that anything the ring stores still names. */
+    const names = () => { const held = JSON.stringify([...ring!.data.entries()]); return ids.filter(id => held.includes(id)); };
+    return { m, s, ring: ring!, ids, names };
+  }
+  const ringFetch = (m: Mounted, s: Shopper, path: string, body?: unknown) => m.env.DECISION_RING!.get(m.env.DECISION_RING!.idFromName(ringName(TENANT, s.grant.subject)))
+    .fetch(`https://learn${path}`, { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+
+  for (const host of HOSTS) {
+    it(`host (${host}, direct): LOCKED — the visitor's erasure (resetVisitorRing, the ring's /erase) leaves nothing in her ring naming an outcome she took`, async () => {
+      const { m, s, names } = await stampedRing(host);
+      expect(await resetVisitorRing(m.env, TENANT, s.grant.subject), `${host}: PRECONDITION — her ring is erased`).toBe('reset');
+      expect(names(), `${host}: P103.MP3 (R-P604) — the first-stamp record is erased with the credited journal: nothing of her outcomes is left`).toEqual([]);
+    }, 60_000);
+
+    it(`host (${host}, direct): LOCKED — the ring's /reset, with durable recovery switched on since, leaves nothing naming an outcome she took`, async () => {
+      const { m, s, names } = await stampedRing(host);
+      // A deployment that turned durable recovery on: /reset then deletes the ring and the journal by name (DecisionRing.ts /reset).
+      (m.env as unknown as Record<string, unknown>).LEDGER_RECOVERY_ENABLED = 'true';
+      const reset = await ringFetch(m, s, '/reset');
+      expect(reset.status, `${host}: PRECONDITION — the ring is reset`).toBe(200);
+      expect(names(), `${host}: P103.MP3 (R-P604) — the first-stamp record is reset with the credited journal`).toEqual([]);
+    }, 60_000);
+
+    it(`host (${host}, direct): LOCKED — the ring's alarm, past the ring's horizon, expires the first-stamp record with the credited journal`, async () => {
+      const { ring, names } = await stampedRing(host);
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        vi.setSystemTime(Date.now() + 8 * 86_400_000);
+        await (ring.object as unknown as DecisionRing).alarm();
+        expect(names(), `${host}: P103.MP3 (R-P604) — past the ring's seven-day horizon (RING_MAX_AGE_MS) the alarm leaves nothing naming her outcomes`).toEqual([]);
+      } finally { vi.useRealTimers(); }
+    }, 60_000);
+
+    it(`host (${host}, direct): LOCKED — a storage write the ring fails while taking an outcome is handled as the credited journal's failed write: the outcome is still taken and answered`, async () => {
+      const { m, s, ring } = await stampedRing(host);
+      const answers = tapRing(m);
+      const original = ring.data.set.bind(ring.data);
+      ring.data.set = () => { throw new Error('injected: storage write refused'); };
+      let sent: Awaited<ReturnType<typeof act>>;
+      try { sent = await act(m, s, purchase(295, 118)); await m.drainLedger(); } finally { ring.data.set = original; }
+      expect({ status: sent.status, told: told(answers, sent.eventId), banner: (await liveCredits(m))[BANNER] },
+        `${host}: P103.MP3 (R-P604) — a failed write of the ring's own record never loses the outcome: it is credited and answered as when the journal's write fails`)
+        .toEqual({ status: 200, told: { attributed: 3, money: 'none', [HERO]: 'taken', [STORY]: 'taken', [TEASER]: 'reward', [BANNER]: 'taken' }, banner: 2 });
+    }, 60_000);
+
+    it(`host (${host}, direct): LOCKED — after many outcomes refused for money, what the ring keeps of them stays within the credited journal's byte cap and the ring's total bound`, async () => {
+      const { m, s, ring } = await stampedRing(host);
+      const learn = await learnInForce(m);
+      // 1,500 EUR adds to bag under no policy, each refused for money on every money slot, each with a 128-character nonce
+      // (isEventNonce's longest), straight to the producer's ring call (fanOutcome), as the direct path makes it.
+      for (let n = 0; n < 1500; n++) {
+        const ts = Date.now(), eventId = `p103-bound-${n}-`.padEnd(128, 'x');
+        const outcome = outcomeFromAction({ type: 'add_to_cart', userId: s.grant.subject, sessionId: s.grant.sessionId, timestamp: ts, eventId,
+          eventIdSource: 'provided', data: { productId: BAG, price: 575, quantity: 1, currency: 'EUR' } } as never, TENANT, BRAND) as OutcomeRecord;
+        outcome.retention = captureRetention(m.env as never, TENANT, ts);
+        await fanOutcome(m.env, TENANT, outcome, DEFAULT_POLICY, BRAND, slotConfigsOf(learn), { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS });
+      }
+      const sizes = [...ring.data.entries()].map(([key, value]) => [key, new TextEncoder().encode(JSON.stringify(value)).length] as const);
+      const memory = sizes.filter(([key]) => key !== 'ring' && key !== 'creditGeneration').reduce((n, [, b]) => n + b, 0);
+      const total = sizes.reduce((n, [key, b]) => n + new TextEncoder().encode(key).length + b, 0);
+      expect({ memory: memory <= 256 * 1024, total: total <= RING_LIMITS.totalBytes },
+        `${host}: P103.MP3 (R-P604) — the ring's record of outcomes it took is bounded as the credited journal is (CREDITED_MAX_BYTES, 256 KiB, DecisionRing.ts:132) and charged to its total bound (RING_LIMITS.totalBytes): ${JSON.stringify(sizes).slice(0, 300)}`)
+        .toEqual({ memory: true, total: true });
+    }, 180_000);
+  }
 });
 
 // ===========================================================================
@@ -658,6 +867,10 @@ describe('unit:P103.MP5', () => {
     const money = units.filter(u => /money polic|`money`|money_policy_unset/.test(u));
     const any = (test: (u: string) => boolean) => money.some(test);
     const sentences = money.flatMap(u => u.split(/(?<=[.;])\s+(?=[A-Z`(])/));
+    /** A sentence negating what it says (R-P604 (6)). */
+    const negated = (x: string) => /\b(never|not|cannot|can't|no longer)\b/i.test(x);
+    const says = (test: (x: string) => boolean) => sentences.some(x => test(x) && !negated(x));
+    const denies = (test: (x: string) => boolean) => sentences.some(x => test(x) && negated(x));
     const flat = text.replace(/\s+/g, ' ');
     const schemas = readTree('docs/kit/03-payload-schemas.md');
     const learnSection = schemas.slice(schemas.indexOf('\n## The learn document'));
@@ -665,16 +878,23 @@ describe('unit:P103.MP5', () => {
     const facts = {
       // How to publish it: the learn document's `money` member, its two fields and their two words.
       member: any(u => /`money`/.test(u) && /PUT \/content\/learn|learn document/i.test(u) && /`currency`/.test(u) && /`nonpositive`/.test(u) && /\brefuse\b/.test(u) && /\bcredit\b/.test(u)),
+      // R-P604 (6): each fact is stated by a sentence that does not negate it, and no sentence of the money paragraphs says
+      // its opposite, so a paragraph saying the opposite of the built behaviour is refused (the reviewer still reads them).
       // The values are the tenant's own (kept from today's paragraph).
-      tenantPublishes: any(u => /publish/i.test(u) && /\b(tenant|customer)/i.test(u) && /\bown\b|invents?\b/i.test(u) && /`money`|money policy/.test(u)),
+      tenantPublishes: says(x => /(tenant|customer)['’]s own|invents none|invents no\b/i.test(x))
+        && !sentences.some(x => /platform invents (its|the) own|platform['’]s own values|never publish|(cannot|can't|does not|do not) publish/i.test(x)),
       // Without a policy: a revenue or margin slot refuses an outcome declaring a currency, by name (W24.R2's facts, kept).
-      refusedWithout: any(u => /money_policy_unset/.test(u) && /\b(revenue|margin)\b/.test(u) && /(until|without|no) (a )?money policy/i.test(u) && /declares? a currency/i.test(u)),
+      refusedWithout: any(u => /money_policy_unset/.test(u) && /\b(revenue|margin)\b/.test(u) && /(until|without|no) (a )?money policy/i.test(u) && /declares? a currency/i.test(u))
+        && !denies(x => /refus/i.test(x) && /money_policy_unset|(until|without) (a )?money policy/i.test(x)),
       // With a policy: an outcome declaring another currency is refused (a sentence that is not the no-policy one).
-      refusedWithPolicy: sentences.some(x => /refus/i.test(x) && /(another|other|different) currency|currency other than/i.test(x) && /polic|published/i.test(x) && !/\buntil\b|\bwithout\b/i.test(x)),
+      refusedWithPolicy: says(x => /refus/i.test(x) && /(another|other|different) currency|currency other than/i.test(x) && /polic|published/i.test(x) && !/\buntil\b|\bwithout\b/i.test(x))
+        && !denies(x => /refus/i.test(x) && /(another|other|different) currency|currency other than/i.test(x)),
       // Named: the receipt's `code` is the currency the outcome declared (kept).
-      namedByCurrency: any(u => /`code`/.test(u) && /currency the outcome declared|declared currency/i.test(u)),
-      liveAndReportAlike: any(u => /\b(live|online)\b/i.test(u) && /\b(report|offline|fold|rebuild)/i.test(u) && /\b(same|exactly|alike|identical)\b/i.test(u) && /currenc|money/i.test(u)),
-      sdkOnlyWhenNamed: any(u => /\bSDK\b/.test(u) && /data layer/i.test(u) && /currency/i.test(u) && /\bonly when\b|\bonly if\b|names none|names no currency/i.test(u) && !/always carries a currency/.test(u)),
+      namedByCurrency: any(u => /`code`/.test(u) && /currency the outcome declared|declared currency/i.test(u)) && !denies(x => /`code`/.test(x)),
+      liveAndReportAlike: says(x => /\b(live|online)\b/i.test(x) && /\b(report|offline|fold|rebuild)/i.test(x) && /\b(same|exactly|alike|identical)\b/i.test(x))
+        && !denies(x => /\b(live|online)\b/i.test(x) && /\b(report|offline|fold|rebuild)/i.test(x)),
+      sdkOnlyWhenNamed: says(x => /\bSDK\b/.test(x) && /data layer/i.test(x) && /currency/i.test(x) && /\bonly (when|if)\b/i.test(x) && !/USD|names no currency|names none/.test(x))
+        && !sentences.some(x => /\bSDK\b/.test(x) && /USD|always carries a currency|always sends/.test(x)),
       goneNoneCanBePublished: !/none can be published yet/.test(flat) && !/money policy cannot be published yet/i.test(flat),
       goneSdkAlwaysUsd: !/always carries a currency/.test(flat) && !/`USD` when the data layer names none/.test(flat),
       // Kit 03's learn-document table (its `## The learn document` section): a row naming the `money` member, its two
