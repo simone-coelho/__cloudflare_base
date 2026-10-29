@@ -761,8 +761,10 @@ const KIT_STALE_CONSENT = 'Consent is not readable at record time';
 
 const KIT_SALT_VERSION =
   '`saltVersion` counts the distinct salts this tenant has published up to the pinned revision, and is `null` where the published history the platform can read does not reach the first one.';
+// P98 R10 (R-P646 (8), by name): kit 03's `experiment` row is gender-neutral, so the sentence names the visitor's consent
+// without a pronoun (before: "and her consent"); the rule it states is unchanged.
 const KIT_OUTCOME_CONSENT =
-  'The producer stamps the outcome with the visitor’s enrollment and her consent at the moment it is recorded, so an outcome recorded while personalization is off says `ineligible`; an outcome recorded on a path that does not stamp carries no block at all.';
+  'The producer stamps the outcome with the visitor’s enrollment and their consent at the moment it is recorded, so an outcome recorded while personalization is off says `ineligible`; an outcome recorded on a path that does not stamp carries no block at all.';
 const KIT_COUNTER_FLOOR =
   '`enrollment_anchor_unavailable` is a lower bound: concurrent anchor failures can collapse into one increment, so read it as a floor and never as an exact count.';
 const KIT_EXPORT_BACKFILL =
