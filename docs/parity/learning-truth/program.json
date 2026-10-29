@@ -139,11 +139,12 @@
         "packages/sdk/edge-personalization.esm.js",
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md (the learn document's money member and the outcome record's money stamp only; R-P571 (c), R-P588)",
-        "src/ledger/records.ts (OutcomeRecord's money member only, line-neutral above the lines kit 02 cites; R-P588)",
+        "src/ledger/records.ts (OutcomeRecord's money member and the mark of a producer-stamped record only, line-neutral above the lines kit 02 cites; R-P588, R-P653)",
         "src/routes/realtime.ts (the direct outcome branch's stamp only, line-neutral; R-P588)",
-        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money and retention only; R-P588, R-P594)",
+        "src/ledger/delivery.ts (LOGICAL_EXCLUDED_FIELDS gains money, retention and the stamp's mark; preferredCopy, the one rule every reader of rows sharing a logical id uses — the ring-stamped copy first, then the earliest-born; R-P588, R-P594, R-P629, R-P653)",
         "src/units/W24/B2.unit.test.ts (R10 by name: the message at :634 only, saying a fully refused outcome is never credited rather than never written into the credited journal; the assertion unchanged; by the specifier; R-P620)",
-        "src/ledger/writer.ts (findById choosing the earliest-born copy among rows sharing a logical id only; R-P628)"
+        "src/ledger/writer.ts (findById choosing the earliest-born copy among rows sharing a logical id only; R-P628)",
+        "src/routes/realtime.sdkContract.test.ts (R10 by name: the stub rings at W22.07 :2725, :2766, :2790, W26.02 :6602 and W09.05 :6643 answer with the ring's decision (decidedUnder) as the real ring does, every expectation unchanged; by the specifier; R-P653)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P103 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
