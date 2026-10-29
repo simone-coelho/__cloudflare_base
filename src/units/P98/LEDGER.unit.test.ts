@@ -88,6 +88,14 @@
 //      file, a load, the import or the catalogue and a 503, a refusal, a timeout or a failure also tells the reader to send
 //      it again (re-send, resend, sent again, resubmit, try or retry the file or load again). Kit 03 may keep a true sentence
 //      naming files of 200 to 300 products (P93.CS7's lock reads one; no R10 on that file is granted).
+//   S12 R-P659's "a write may write more than one pack, each ≤ 64 MiB" is read as: a second pack only for what the write
+//      moves (the table's 65 rows) or copies (a rollback's difference); a load's own objects past 64 MiB stay refused 413
+//      `load_too_large` (LD1), the 900 checks of a rollback stay P93.CS5's bound (R-P659 (4) is about bytes), and a write
+//      that needs no second pack writes one (`PUBLICATION_WRITES`, the R-P646 (7) leg's `[200, null, 1]`). "The
+//      rollback's target near purge" is R-P659's adopted design (b7f3ed6f `catalogueRevisionNameable`): the retention
+//      setting set, the target two behind, and its successor's age within the 5-minute margin of the setting. The fences'
+//      clock (R-P659 (5)) is moved as the request sends its head reservation, Date alone faked and still running, and the
+//      store answers upload times by that clock (`storeClock`); no leg waits.
 //
 // THE R10s (granted by name, R-P551, R-P569, R-P578, R-P582), before → after, every expectation unchanged:
 //   src/units/_parity.ts UnitR2 (:171–195): `get(key)` → `get(key, { range })` answers the range's bytes with the
