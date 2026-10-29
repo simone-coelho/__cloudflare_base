@@ -121,6 +121,9 @@
 // header reading 3 and "Imports from src/units/: ../_parity"; P94's header R2 ("at their forward to the shopper's
 // object") and its imports line.
 //
+// R10 (R-P570 (c), P102's, by name): `contentOf` also deletes sources.trips (P102 CR4's per-trip times); reading R4's
+// read pin (FV1: every first-answer read under `config-publication/`, the serving copy's included) unchanged.
+//
 // R10 (R-P601, by name): src/index.api-boundary.test.ts's __fixture_expired_choice (:345), one clock read for chosenAt and
 // expiresAt; every expectation unchanged; the W07.05 block green at the join.
 //
@@ -569,7 +572,8 @@ function contentOf(body: Record<string, unknown>): Record<string, unknown> {
   const out = structuredClone(body);
   delete out.session; delete out.armRequest; delete out.pageInstance; delete out.ts;
   const sources = out.sources as Record<string, unknown> | undefined;
-  if (sources) { delete sources.timings; delete sources.sessionParts; }
+  // P102 R10 (R-P570 (c), by name): sources.trips, the documents stage's storage trips (P102 CR4), is a time like sources.timings.
+  if (sources) { delete sources.timings; delete sources.sessionParts; delete sources.trips; }
   out.decisions = ((out.decisions ?? []) as Array<Record<string, unknown>>).map(decision => {
     const { decisionId, renderOffer, ...rest } = decision;
     return { ...rest, decisionId: decisionId !== undefined, renderOffer: renderOffer !== undefined };

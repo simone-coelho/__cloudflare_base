@@ -29,7 +29,8 @@
 //     naming the shard and its count: the ticket's CS3); `manifest_too_large` driven by the shared pieces alone; the
 //     manifest's bytes equal within 5% at 5,000, 40,000 and 100,000 products and at most 64 KB beside the shared
 //     pieces.                                                                                                      CS1, CS3
-//   2 The page reads head, set, the four revisions, the anchor's shard and part (8 reads) at N = 50, 5,000, 40,000 and
+//   2 The page reads head, set, the four revisions, the anchor's shard and part (8 reads; P102 R10, R-P570: the head, the
+//     serving copy, the shard and the part by its range in its pack, 4 reads) at N = 50, 5,000, 40,000 and
 //     100,000; warm no shard and no part; none where none is needed; a listed-but-absent anchor reads the shard alone;
 //     a lost shard or part 503 `part_unavailable`.                                                                    CS2
 //   3 The loads read the shards of the products they name, their parts, and only the id shards of ids whose place can
@@ -91,7 +92,7 @@ import {
 } from '../_parity';
 import {
   A, ANCHOR_IMAGES, B, BLACK, bucketOf, bytesOf, C, carousel, CAROUSEL, catalogue, classOf, declareProductSlots, DOCS, DOCS_WITH_CART, fourOf, heldKeys, heldRaw, image,
-  importJson, KEY, LEARN, loseObject, metered, MODULE_IDS, namedBy, objectKeys, OTHER_IMAGES, preconditions, productRead, pull, rangeProduct, rangeRecordId,
+  importJson, KEY, LEARN, loseObject, metered, MODULE_IDS, namedBy, objectKeys, OTHER_IMAGES, placedKey, placedReadClasses, preconditions, productRead, pull, rangeProduct, rangeRecordId,
   rangeRecords, rangeTenant, readAsWanted, readClasses, readIds, SERVED_FOR_BLACK, shardRead, SHOTS, show, snapshotOf, sorted, storedBeforePacks, touched, unique, UNKNOWN, withinCaps,
   type IndexView, type Op, type Rec,
 } from './_catalog';
@@ -106,9 +107,14 @@ function expectedParts(n: number): Map<string, string[]> {
   for (let k = 1; k <= n; k++) parts.set(rangeProduct(k), [rangeRecordId(k)]);
   return parts;
 }
-/** Reading 2's read list as P102 re-points it (E27, CR3; R10 by name): the head and the serving copy, the anchor's shard and its part, once each. */
+/**
+ * Reading 2's read list as P102 re-points it (E27, CR3; R10 by name): the head and the serving copy, the anchor's shard
+ * and its part, once each; P102 R10 onto P98's pack reads (R-P570 (d)): a shard or part inside a pack is read by its
+ * range in that pack (placedKey), one of its own as its own object.
+ */
 const pageReads = (view: IndexView, anchor = A) => sorted(['head', `config-publication/v2/${TENANT}/serving.json`,
-  KEY.shard(view.shards[bucketOf(anchor)]?.digest ?? `no shard for ${anchor}`), KEY.part(view.products[anchor]?.digest ?? `no pointer for ${anchor}`)]);
+  placedKey(KEY.shard(view.shards[bucketOf(anchor)]?.digest ?? `no shard for ${anchor}`), view.places?.shards[bucketOf(anchor)]),
+  placedKey(KEY.part(view.products[anchor]?.digest ?? `no pointer for ${anchor}`), view.products[anchor]?.place)]);
 const shardOrPart = (reads: string[]) => reads.filter(r => ['shard', 'idshard', 'part'].includes(classOf(r)));
 /** Whether an error of the answer names each word as a word (a shard's two hex digits are not matched inside a number or a digest). */
 const names = (a: Answer, ...words: string[]) => errorsOf(a).some(e => words.every(w => new RegExp(`(^|[^0-9A-Za-z])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^0-9A-Za-z]|$)`).test(e)));
@@ -189,7 +195,7 @@ async function verification(host: Host, sizes: readonly number[]): Promise<Verif
     const cold = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p93-verify-cold'));
     const warm = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p93-verify-warm'));
     out.at[loaded] = { products: Object.keys(view.products).length, largestShard: Math.max(0, ...shardSizes(m, view)), reads,
-      page: [cold.result.status, carousel(cold.result), readClasses(cold.ops), shardOrPart(readClasses(warm.ops))], expectedPage: pageReads(view) };
+      page: [cold.result.status, carousel(cold.result), placedReadClasses(cold), shardOrPart(readClasses(warm.ops))], expectedPage: pageReads(view) };
   }
   out.shared = documentBytes((await loadDocument(m, 'catalog')).document.pieces);
   out.seconds = Math.round((Date.now() - started) / 1000);
@@ -202,7 +208,7 @@ const capacityOf = (run: Verification, n: number) => {
 };
 const capacityExpected = (n: number) => ({ products: n + 3, largestShard: 'at most 2 MiB', reads: [1, Math.floor(n / 2), n].map(k => [200, [rangeRecordId(k)]]) });
 const pageOf = (run: Verification, n: number) => run.at[n] ? { page: run.at[n]!.page } : `not reached (${run.refused ?? 'no refusal'})`;
-const pageExpected = (run: Verification, n: number) => ({ page: [200, SERVED_FOR_BLACK, run.at[n]?.expectedPage ?? 'the 8 reads at this size', []] });
+const pageExpected = (run: Verification, n: number) => ({ page: [200, SERVED_FOR_BLACK, run.at[n]?.expectedPage ?? 'the 4 reads at this size', []] });
 
 // ===========================================================================
 // unit:P93.CS1 — capacity: the sharded index, and the range at 40,000 and 100,000 products
@@ -291,12 +297,12 @@ describe('unit:P93.CS1 (R-P487: 256 shards by SHA-256 of the product id and of t
 });
 
 // ===========================================================================
-// unit:P93.CS2 — the page: head, set, the four revisions, the anchor's shard and its part
+// unit:P93.CS2 — the page: the head, the serving copy (P102), the anchor's shard and its part
 // ===========================================================================
 
-describe('unit:P93.CS2 (R-P487 (9): 8 reads at any size)', () => {
+describe('unit:P93.CS2 (R-P487 (9): the same reads at any size; P102, R-P570: 4)', () => {
   for (const host of HOSTS) {
-    it(`host (${host}): at N = 50 and N = 5,000 the anchor's page reads exactly the head, the serving copy, the anchor's shard and the anchor's part, once each (P102, R-P570 (a)), and serves P80's carousel; warm (the shard and the part cached per isolate by digest) it reads no shard and no part`, async () => {
+    it(`host (${host}): at N = 50 and N = 5,000 the anchor's page reads exactly the head, the serving copy, the anchor's shard and the anchor's part, once each, the shard and the part each by its range in its pack (P102, R-P570 (a), (d)), and serves P80's carousel; warm (the shard and the part cached per isolate by digest) it reads no shard and no part`, async () => {
       const seen: Record<number, unknown> = {}, wanted: Record<number, unknown> = {};
       for (const n of [50, 5000]) {
         const m = await rangeTenant(host, n);
@@ -306,20 +312,20 @@ describe('unit:P93.CS2 (R-P487 (9): 8 reads at any size)', () => {
         invalidatePublicationCache();
         const cold = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p93-cs2-cold'));
         const warm = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p93-cs2-warm'));
-        seen[n] = { status: cold.result.status, served: carousel(cold.result), reads: readClasses(cold.ops), warm: [carousel(warm.result), shardOrPart(readClasses(warm.ops))] };
+        seen[n] = { status: cold.result.status, served: carousel(cold.result), reads: placedReadClasses(cold), warm: [carousel(warm.result), shardOrPart(readClasses(warm.ops))] };
         wanted[n] = { status: 200, served: SERVED_FOR_BLACK, reads: pageReads(view), warm: [SERVED_FOR_BLACK, []] };
       }
       expect.soft(seen, `${host}: P93.CS2 — 4 reads at each size, the same classes`).toEqual(wanted);
     }, 600_000);
   }
 
-  it('host (session): at N = 40,000 and N = 100,000 the anchor\'s page reads the same 8 objects (its shard and its part at that size) and serves P80\'s carousel; warm it reads no shard and no part', async () => {
+  it('host (session): at N = 40,000 and N = 100,000 the anchor\'s page reads the same 4 objects (its shard and its part at that size, by their ranges in their packs) and serves P80\'s carousel; warm it reads no shard and no part', async () => {
     const run = await verified('session');
     expect.soft([pageOf(run, 40000), pageOf(run, 100000)], `session: P93.CS2 — the page at 40,000 and 100,000 products (today the catalogue stops at about 20,250: ${run.refused})`)
       .toEqual([pageExpected(run, 40000), pageExpected(run, 100000)]);
   }, 1_800_000);
 
-  it('host (do): at N = 40,000 the anchor\'s page reads the same 8 objects and serves P80\'s carousel; warm it reads no shard and no part', async () => {
+  it('host (do): at N = 40,000 the anchor\'s page reads the same 4 objects and serves P80\'s carousel; warm it reads no shard and no part', async () => {
     const run = await verified('do');
     expect.soft(pageOf(run, 40000), `do: P93.CS2 — the page at 40,000 products (today: ${run.refused})`).toEqual(pageExpected(run, 40000));
   }, 1_800_000);
@@ -581,7 +587,8 @@ describe('unit:P93.CS4 (R-P487 (9), R-P490 (1), (3): the migration needs no oper
       invalidatePublicationCache();
       const page = await metered(m, () => snapshotOf(m, s, 'pdp', { anchor: A, variant: BLACK }, 'p93-cs4-one-level'));
       const read = await productRead(m, A);
-      expect.soft({ form: level.view.form, page: [page.result.status, carousel(page.result), readClasses(page.ops)], read: [read.status, readIds(read)] },
+      // P102 R10 onto P98's pack reads (R-P570 (d)): the one-level part, an object of its own (planted), is read as its own.
+      expect.soft({ form: level.view.form, page: [page.result.status, carousel(page.result), placedReadClasses(page)], read: [read.status, readIds(read)] },
         `${host}: P93.CS4 — LOCK: the one-level catalogue served as P86 serves it`).toEqual({
         form: 'one-level', page: [200, SERVED_FOR_BLACK, sorted(['head', `config-publication/v2/${TENANT}/serving.json`, KEY.part(parts.get(A)!)])],
         read: [200, sorted(ANCHOR_IMAGES.map(r => r.id))] });
@@ -888,7 +895,7 @@ describe('unit:P93.CS6 (R-P487 (4), (7), R-P490 (2): the reads and the readers t
 // ===========================================================================
 
 describe('unit:P93.CS7 (R-P487: the kits)', () => {
-  it('logic: kits 03 and 02 state the sharded index (`index`, `sha256-hex2`, 256 product shards by the SHA-256 of the product id and id shards by the record id), the product page\'s 8 reads, the caps with their 413 names (`index_shard_too_large`, `id_index_too_large`, `manifest_too_large` from the shared pieces, `rollback_too_large` past 900 checks), the `removeProducts` list, the migration needing nothing of the operator, and the chunking advice (files of about 200 to 300 products); kit 02\'s GET row names the `shard=` read; today\'s one-level sentences are gone', () => {
+  it('logic: kits 03 and 02 state the sharded index (`index`, `sha256-hex2`, 256 product shards by the SHA-256 of the product id and id shards by the record id), the product page\'s 4 reads (P102, R-P667), the caps with their 413 names (`index_shard_too_large`, `id_index_too_large`, `manifest_too_large` from the shared pieces, `rollback_too_large` past 900 checks), the `removeProducts` list, the migration needing nothing of the operator, and the chunking advice (files of about 200 to 300 products); kit 02\'s GET row names the `shard=` read; today\'s one-level sentences are gone', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md'), kit03 = readTree('docs/kit/03-payload-schemas.md');
     const paragraphs = (text: string) => text.split(/\n\s*\n/).map(p => p.split('\n').join(' '));
     const has = (text: string, ...words: Array<string | RegExp>) => paragraphs(text).some(p => words.every(w => typeof w === 'string' ? p.includes(w) : w.test(p)));
@@ -899,7 +906,7 @@ describe('unit:P93.CS7 (R-P487: the kits)', () => {
       index: has(kit03, /`index`/, /sha256-hex2/, /\b256\b/, /\bshards?\b/),
       productKey: has(kit03, /SHA-256/, /\bshard\b/, /\bproduct\b/),
       idShards: has(kit03, /\bid shards?\b/, /\brecord id\b/, /SHA-256|keyed the same way/),
-      page: has(kit03, /\b(?:8|eight) reads\b/, /\bshard\b/, /\bpart\b/),
+      page: has(kit03, /\b(?:4|four) reads\b/, /\bshard\b/, /\bpart\b/), // P102 R10 (R-P667, by name): before, 8|eight reads
       shardCap: has(kit03, /\bindex_shard_too_large\b/, /\b413\b/, /\bshard\b/),
       idCap: has(kit03, /\bid_index_too_large\b/, /\b413\b/, /\bid shard\b/),
       manifestCap: has(kit03, /\bmanifest_too_large\b/, /\bshared pieces\b/),
