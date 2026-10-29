@@ -70,7 +70,11 @@
 //     `_` and `-` (or the class A-Za-z0-9_-), a UUID qualifying, 400 'Invalid page instance', the first request named;
 //     R-P612 (F2): the 400 stated for every decision path ("every", "all" or "each" path, route or request), and no `401`
 //     anywhere in the row.
-//   9 PI3, R-P590 (the residual of a6690521 ruled IN): kit 02's first-request paragraph (:337, "**A new visitor's first
+//   9 (R-P648 replaces the clause rules below with the table: kit 02's first-request paragraph is followed by a table of
+//     the first request's refusals, exactly a malformed `arm` 400 `Invalid arm member`, a malformed `pageInstance` 400
+//     `Invalid page instance`, any other failure 401 `Shopper session unavailable`, in any order; and no sentence of the
+//     paragraph gives 401 to every failure without a qualifier word or a reference to the table — a light guard, the
+//     reviewer reading the sentence at delivery.) Before R-P648: PI3, R-P590 (the residual of a6690521 ruled IN): kit 02's first-request paragraph (:337, "**A new visitor's first
 //     request.**") names the refusals answered 400 there — a malformed `arm` member and a malformed page-view id — and 401
 //     for every other failure, and none of its sentences still says any failure is 401. The facts, not the words, sentence by
 //     sentence as P97.FV4 splits the paragraph, so they hold beside the sentences P97 rewrites in it (rem/p97-build c54f1524).
@@ -130,7 +134,15 @@
 // only, the door writing first, the row without `_` and `-`. Green as F5 rules: :337's "except …" clause, the true
 // sentence on the session's own failures, and "Elsewhere every failure is `401`" after the 400s (a qualified 401). The
 // P97 merge (c54f1524 + the sketch with the P97 import anchor + both kit edits): P101 18/18; P97, P13, P76, P96 74/74.
-// R-P639 (the review S46/reviewer-spec/REPORT-24ca3c1c.md; logs r3-*): the qualifier judged within the 401's own clause —
+// R-P648 (the review S46/reviewer-spec/REPORT-61156b69.md; logs r4-*): the paragraph's facts become data — the table after
+// the paragraph, pinned row by row (what it refuses, its status, its error), and a light prose guard (reading 9 as amended).
+// Today 10 RED as before (the block after the paragraph is the Body context table; the blanket sentence); the sketch with
+// the table (sketches/apply.cjs kittable) 18/18 twice; beside the table the reviewer's okexceptfor, okapartfrom, okunless,
+// okotherthan, okbutfor, okeveryother, kdexcept, kdallfail and kdelsewhere 18/18 (and kdbutnothing, which the light guard
+// leaves to the reviewer's reading); RED: a status wrong (the page-view id 401), an error wrong, the arm's row missing, a
+// fourth row, no table, the table beside a kept "any failure is `401`"; the merge with rem/integration 62ac913d (P97
+// landed) P101 18/18, P97 51/51, P13 13/13, P96 11/11, P76 FA1's session leg flaky there with or without the sketch.
+// R-P639 (the review S46/reviewer-spec/REPORT-24ca3c1c.md; logs r3-*), superseded by R-P648: the qualifier judged within the 401's own clause —
 // today 10 RED as before; the sketch 18/18 twice; the P97 merge 18/18; the reviewer's kdblanketother (a stray "other" in the
 // allow-list's parenthesis beside a kept "any failure is `401`"), kdanswers and kdrefusedwith RED on noBlanket401 and
 // rest401; kdpi401, kdpi401two, kitdoorblanket and kitdoornopage RED; kdexcept, kdallfail and kdelsewhere green.
@@ -435,37 +447,39 @@ describe('unit:P101.PI3 (E26)', () => {
       .toEqual({ bound: true, alphabet: true, uuid: true, refusal: true, firstRequest: true, everyPath: true, no401: true });
   });
 
-  it('logic: R-P590, R-P612 — kit 02\'s first-request paragraph names the refusals answered 400 on a new visitor\'s first request (a malformed `arm` member; a malformed page-view id, whose clause carries 400 and no 401) and 401 for every other failure, and no sentence of it gives 401 to every failure unqualified (facts, not words, clause by clause, holding beside the sentences P97 rewrites in the paragraph)', () => {
-    const paragraph = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/).map(p => p.split('\n').join(' '))
-      .find(p => p.startsWith('**A new visitor\'s first request.**')) ?? '';
-    expect(paragraph.length > 0, 'PRECONDITION: kit 02 carries the first-request paragraph (docs/kit/02-api-reference.md:337)').toBe(true);
-    /** Sentence by sentence, as P97.FV4 splits the same paragraph. */
-    const sentences = paragraph.split(/(?<=[.!?])\s+(?=[A-Z*`])/);
-    /** R-P612 (F2): a sentence cut into clauses at its commas, semicolons and colons and before "and", "but", "except", "while", "whereas". */
-    const clauses = sentences.flatMap(s => s.split(/[;,:]|\s(?=(?:and|but|except|while|whereas)\s)/i));
-    const namesArm = (c: string) => /`arm`|\barm member\b|Invalid arm member/i.test(c);
-    const namesId = (c: string) => /`pageInstance`|\bpage-view id\b|\bpage instance\b/i.test(c);
-    /**
-     * R-P612 (F5), R-P639: each clause carrying `401`, judged within its own clause: qualified (it gives the 401 to the rest,
-     * not to every failure) when the clause itself carries a qualifier ("any other failure", "elsewhere"), or when a later
-     * clause of the same part of its sentence (between semicolons and colons) opens with an exception ("…, except …",
-     * "…, but …"). A qualifier word elsewhere in the sentence does not qualify it.
-     */
-    const QUALIFIER = /\b(?:other|else|elsewhere|rest|otherwise|except|unless|apart from|besides|but)\b/i;
-    const EXCEPTION = /^\s*(?:except|but|unless|apart from|besides|other than|save)\b/i;
-    const clauses401 = sentences.flatMap(s => s.split(/[;:]/).flatMap(part => {
-      const own = part.split(/,|\s(?=(?:and|but|except|while|whereas)\s)/i);
-      return own.flatMap((c, i) => /\b401\b/.test(c) ? [{ clause: c, qualified: QUALIFIER.test(c) || own.slice(i + 1).some(later => EXCEPTION.test(later)) }] : []);
-    }));
-    /** A clause giving 401 to every failure: "any", "every", "all" or "a" failure, refusal or error, then the 401 (a verb between, never another subject). */
-    const BLANKET = /\b(?:any|every|all|a)\s+(?:failures?|refusals?|errors?)\s+(?:is\s+|are\s+)?(?:(?:refused|answered|answers?|gets?|returns?|receives?)\s+)?(?:with\s+|as\s+|by\s+)?`?401\b/i;
-    const facts = {
-      arm400: clauses.some(c => namesArm(c) && /\b400\b/.test(c)),
-      pageInstance400: clauses.some(c => namesId(c) && /\b400\b/.test(c)) && !clauses.some(c => namesId(c) && /\b401\b/.test(c)),
-      rest401: clauses401.some(c => c.qualified),
-      noBlanket401: !clauses401.some(c => BLANKET.test(c.clause) && !c.qualified),
+  it('logic: R-P590, R-P648 — kit 02\'s first-request paragraph is followed by the table of a new visitor\'s first-request refusals, exactly three rows: a malformed `arm` member 400 `Invalid arm member`, a malformed `pageInstance` 400 `Invalid page instance`, any other failure 401 `Shopper session unavailable`; and no sentence of the paragraph gives 401 to every failure unqualified without referring to that table', () => {
+    const blocks = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/);
+    const at = blocks.findIndex(p => p.startsWith('**A new visitor\'s first request.**'));
+    expect(at >= 0, 'PRECONDITION: kit 02 carries the first-request paragraph (docs/kit/02-api-reference.md:337)').toBe(true);
+    const paragraph = blocks[at]!.split('\n').join(' ');
+    // (a) The table: the block right after the paragraph, its data rows (the header and the |---| line set aside), each read
+    // as what it refuses (the arm, the page-view id, or any other failure), its one status and its error, in any order.
+    const table = (blocks[at + 1] ?? '').split('\n').filter(l => l.trim().startsWith('|'));
+    const data = table.slice(2).filter(l => !/^\|[\s:|-]+\|?$/.test(l.trim()));
+    const ERRORS = ['Invalid arm member', 'Invalid page instance', 'Shopper session unavailable'];
+    const rowOf = (line: string) => {
+      const cells = line.split('|').slice(1, -1).map(c => c.trim());
+      const what = cells[0] ?? '';
+      const subject = /`arm`|\barm member\b/i.test(what) ? 'a malformed arm' : /`pageInstance`|\bpage-view id\b|\bpage instance\b/i.test(what) ? 'a malformed pageInstance'
+        : /\b(?:other|else|rest|otherwise)\b/i.test(what) ? 'any other failure' : `unrecognized: ${what}`;
+      // The status and the error read from the cells after the first (the first says what is refused, and may name a bound).
+      const rest = cells.slice(1).join(' | ');
+      const statuses = rest.match(/\b[1-5]\d\d\b/g) ?? [];
+      const errors = ERRORS.filter(e => rest.includes(e));
+      return [subject, statuses.length === 1 ? Number(statuses[0]) : `statuses ${statuses.join(',') || 'none'}`, errors.length === 1 ? errors[0] : `errors ${errors.join(',') || 'none'}`];
     };
-    expect.soft(facts, `P101.PI3 — the first-request paragraph names its 400 refusals (a malformed arm, a malformed page-view id) and 401 for the rest (today: "${sentences.filter(s => /\b401\b/.test(s)).join(' ').slice(0, 400)}")`)
-      .toEqual({ arm400: true, pageInstance400: true, rest401: true, noBlanket401: true });
+    const rows = data.map(rowOf).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+    expect.soft(rows, `P101.PI3 — R-P648: the table after the first-request paragraph (today the block after it: "${(blocks[at + 1] ?? '').split('\n')[0]}")`).toEqual([
+      ['a malformed arm', 400, 'Invalid arm member'],
+      ['a malformed pageInstance', 400, 'Invalid page instance'],
+      ['any other failure', 401, 'Shopper session unavailable'],
+    ]);
+    // (b) The light prose guard: a sentence giving 401 to every failure ("any", "every", "all" or "a" failure, refusal or
+    // error, then the 401 after at most a verb) carries a qualifier or refers to the table. The reviewer reads the
+    // sentence at delivery (PI3's proof).
+    const sentences = paragraph.split(/(?<=[.!?])\s+(?=[A-Z*`])/);
+    const BLANKET = /\b(?:any|every|all|a)\s+(?:failures?|refusals?|errors?)\s+(?:is\s+|are\s+)?(?:(?:refused|answered|answers?|gets?|returns?|receives?)\s+)?(?:with\s+|as\s+|by\s+)?`?401\b/i;
+    const OUT = /\b(?:other|else|elsewhere|rest|otherwise|except|unless|apart from|besides|but|table|below|listed|as follows)\b/i;
+    expect.soft(sentences.filter(s => BLANKET.test(s) && !OUT.test(s)), 'P101.PI3 — R-P648: no sentence of the paragraph gives 401 to every failure unqualified without referring to the table').toEqual([]);
   });
 });
