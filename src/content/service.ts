@@ -1438,7 +1438,8 @@ export async function withAnchorPart(env: Env, scope: string, catalog: ContentCa
   const pointer = catalogParted(catalog) && typeof anchor === 'string' && pageSlots.some(slot => slot.scope === 'anchor')
     ? await catalogPartPointer(env, scope, catalog, anchor) : undefined;
   if (!pointer) return catalog;
-  const part = await readCatalogPart(env, scope, pointer.digest);
+  // P98: a part inside a pack is read by its range there, the shard having answered its place.
+  const part = await readCatalogPart(env, scope, pointer.digest, pointer.address);
   return { ...catalog, pieces: [...catalog.pieces, ...(part.pieces as ContentPiece[])] };
 }
 
@@ -1573,7 +1574,7 @@ export async function admitCarouselExposure(env: Env, input: { tenant: string; s
     // P93: the product's pointer through its shard on a sharded catalogue, read like its part.
     try {
       const pointer = await catalogPartPointer(env, tenant, catalog, beacon.product);
-      if (pointer) candidates = [...candidates, ...((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[])];
+      if (pointer) candidates = [...candidates, ...((await readCatalogPart(env, tenant, pointer.digest, pointer.address)).pieces as ContentPiece[])];
     } catch (error) { if (error instanceof SessionAccessError) throw error; return ignored('unavailable'); }
   }
   const pieces = new Set(candidates.filter(piece => piece.slotTypes.includes(beacon.slot)).map(piece => piece.id));

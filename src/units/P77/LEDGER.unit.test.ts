@@ -293,7 +293,7 @@ describe('unit:P77.VR2', () => {
 // unit:P77.VR3 — nothing else in the customer boundary changes; the vocabulary keeps operator authority
 // ===========================================================================
 
-/** Today's customer boundary (src/customerBoundary.ts CUSTOMER_ROUTES at the integration head 1ad38ac1), path and methods. */
+/** Today's customer boundary (src/customerBoundary.ts CUSTOMER_ROUTES at the integration head 1ad38ac1), path and methods; P98 R10 (R-P569 (c)): the catalogue's stage and publish doors added. */
 const TODAY = [
   '/health/live GET,HEAD', '/health/ready GET,HEAD', '/api-info GET,HEAD', '/geo GET,HEAD', '/auth/login POST', '/auth/oidc/start POST',
   '/auth/oidc/callback/:tenant GET', '/auth/oidc/complete POST', '/auth/users/:id/federation GET,PUT,DELETE', '/auth/refresh POST', '/auth/logout POST',
@@ -304,7 +304,7 @@ const TODAY = [
   '/operator/audiences/:key/rename POST', '/operator/audiences/:key/pin POST', '/operator/audiences/:key/prune POST', '/config/reflex GET,HEAD,PUT,PATCH',
   '/config/reflex/history GET,HEAD', '/config/reflex/revisions/:n GET,HEAD', '/config/reflex/validate POST', '/config/reflex/rollback/:n POST',
   '/content/:kind GET,HEAD,PUT', '/content/:kind/history GET,HEAD', '/content/:kind/revisions/:n GET,HEAD', '/content/:kind/validate POST',
-  '/content/:kind/rollback/:n POST', '/content/catalog/import POST', '/content/catalog/pull POST', '/content/catalog/publication GET,HEAD',
+  '/content/:kind/rollback/:n POST', '/content/catalog/import POST', '/content/catalog/pull POST', '/content/catalog/stage POST', '/content/catalog/publish POST', '/content/catalog/publication GET,HEAD',
   '/content/catalog/publication/recover POST', '/content/publication/initialize POST', '/content/publication/complete POST',
   '/content/catalog/enrichment/proposals POST', '/content/catalog/enrichment/proposals/generate POST', '/content/catalog/enrichment/proposals/:id GET,HEAD',
   '/content/catalog/enrichment/proposals/:id/export GET,HEAD', '/content/catalog/enrichment/proposals/:id/review POST',
