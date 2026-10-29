@@ -1850,6 +1850,16 @@ export function validateContextVocabulary(raw: unknown): ValidationResult<Contex
   return { ok: true, value: structuredClone(raw) as unknown as ContextVocabulary };
 }
 
+/** P103: the learn document's money member, `{ currency, nonpositive }`: every error names `money`. */
+function moneyPolicyErrors(m: unknown): string[] {
+  if (!isRecord(m)) return [`money: ${shown(m)} is not a money policy; an object { currency, nonpositive }`];
+  const errors: string[] = [];
+  for (const key of Object.keys(m)) if (key !== 'currency' && key !== 'nonpositive') errors.push(`money.${key}: not a member of the money policy (currency, nonpositive)`);
+  if (typeof m.currency !== 'string' || !/^[A-Z]{3}$/.test(m.currency)) errors.push(`money.currency: ${shown(m.currency)} is not a currency code of three upper-case letters`);
+  if (m.nonpositive !== 'refuse' && m.nonpositive !== 'credit') errors.push(`money.nonpositive: ${shown(m.nonpositive)} is not refuse or credit`);
+  return errors;
+}
+
 function validateRetainedLearn(candidate: unknown, historical = true): ValidationResult<LearnConfig> {
   const errors: string[] = [];
   if (!isRecord(candidate)) return { ok: false, errors: ['learn: must be an object'] };
@@ -1964,6 +1974,12 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
     if (!refused.length) evidenceFloors = Object.fromEntries(Object.entries(candidate.evidenceFloors as Record<string, number>));
     else if (!historical) errors.push(...refused);
   }
+  let money: LearnConfig['money'];
+  if (candidate.money !== undefined) {
+    const refused = moneyPolicyErrors(candidate.money);
+    if (!refused.length) money = { currency: (candidate.money as Record<string, string>).currency!, nonpositive: (candidate.money as Record<string, 'refuse' | 'credit'>).nonpositive! };
+    else if (!historical) errors.push(...refused);
+  }
   let slots: LearnConfig['slots'];
   if (candidate.slots !== undefined) {
     if (!isRecord(candidate.slots)) errors.push('slots: object of slot → dials');
@@ -2071,6 +2087,7 @@ function validateRetainedLearn(candidate: unknown, historical = true): Validatio
       ...(slots ? { slots } : {}),
       ...(contextVocabulary ? { contextVocabulary } : {}),
       ...(evidenceFloors ? { evidenceFloors } : {}),
+      ...(money ? { money } : {}),
     },
   };
 }

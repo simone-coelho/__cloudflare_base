@@ -18,7 +18,7 @@ import type { OutcomeRecoveryInput, RecoveryOptions, RecoveryReceipt } from '@/l
 import { recordEvidenceLoss } from '@/ledger/delivery';
 import { DEFAULT_POLICY, type AttributionPolicy } from './policy';
 import { DEFAULT_STATS, type AttributionContract } from './stats';
-import { fanOutcome, reportLearningIncomplete, type SlotLearnConfig } from './fan';
+import { fanOutcome, reportLearningIncomplete, type MoneyPolicy, type SlotLearnConfig } from './fan';
 import { admitOwnedRecovery, afterOwnerAnswer, ownerOperationActive } from '@/identity/sessionAuthority';
 
 /**
@@ -130,7 +130,7 @@ export async function prepareOutcomeAdmission(env: Env, scope: string, outcome: 
   const rev = await readRevision(env, LEARN_KIND, scope);
   const learn = rev?.value ?? DEFAULT_LEARN;
   return { kind: 'outcome', tenant: scope, subject: outcome.visitor_id, brand: outcome.brand, outcome,
-    policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS } };
+    policy: brandPolicyOf(learn), configs: slotConfigsOf(learn), defaultConfig: { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS }, ...(learn.money ? { money: learn.money } : {}) };
 }
 
 /**
@@ -178,6 +178,13 @@ export async function outcomePreparationFailed(env: Env, scope: string): Promise
 }
 
 /**
+ * P103 (R-P629): how long the direct path waits for the visitor's ring to decide an outcome before it writes the
+ * outcome's ledger record under its own learn read, marked producer-stamped. At the bound the ring call is aborted, as
+ * `readRing`'s is at `RING_READ_BUDGET_MS`, so nothing that drains the calls an action started waits on it.
+ */
+export const RING_DECISION_BOUND_MS = 1_000;
+
+/**
  * An outcome into the learning loop for its scope. Resolves without throwing.
  *
  * P59 (amendment 5): with durable recovery on and `answerAtAdmission`, it resolves
@@ -210,9 +217,14 @@ export async function outcomePreparationFailed(env: Env, scope: string): Promise
  *
  * P65 (amendment 7): with durable recovery on, these are the preparation and the
  * admission above, in that order; the action route calls them apart.
+ *
+ * P103 (R-P620, R-P629): without durable recovery, `enqueue` is the producer's
+ * hand-off of the outcome's ledger record, made once the ring has decided the
+ * outcome or `RING_DECISION_BOUND_MS` has passed, so the record carries the money
+ * stamp the ring decided it under.
  */
 export async function outcomeToLearning(env: Env, scope: string, outcome: OutcomeRecord,
-  options?: Pick<RecoveryOptions, 'answerAtAdmission'> & { onAdmitted?: () => void }): Promise<void> {
+  options?: Pick<RecoveryOptions, 'answerAtAdmission'> & { onAdmitted?: () => void; enqueue?: (outcome: OutcomeRecord) => Promise<void> }): Promise<void> {
   if (env.LEDGER_RECOVERY_ENABLED === 'true') {
     let input: OutcomeRecoveryInput;
     try { input = await prepareOutcomeAdmission(env, scope, outcome); }
@@ -220,15 +232,36 @@ export async function outcomeToLearning(env: Env, scope: string, outcome: Outcom
     await admitPreparedOutcome(input, options);
     return;
   }
-  try {
-    const rev = await readRevision(env, LEARN_KIND, scope);
-    const learn = rev?.value ?? DEFAULT_LEARN;
-    // P33 (S4F-C6): the ring receives the brand-wide policy and each slot's own
-    // attribution policy on that slot's configuration, its one carrier there.
-    const result = await fanOutcome(env, scope, outcome, brandPolicyOf(learn), outcome.brand, slotConfigsOf(learn),
-      { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS });
-    reportLearningIncomplete('outcome', result);
-  } catch {
+  // P103 (R-P588): the producer's one learn read stamps the outcome with the money policy in force; the ring decides
+  // it under that stamp (or, for a later delivery of the same outcome, under the stamp it first decided it under) and
+  // answers the stamp it decided under, which the ledger record then carries (R-P620): ring, then the record. Whenever
+  // no ring decided this delivery (the bound passed, the call failed, the answer named no decision, or the learn read
+  // failed before any ring was asked), the record carries this request's own stamp, marked producer-stamped (R-P653).
+  const withMoney = (money: MoneyPolicy | null | undefined, mark?: 'producer'): OutcomeRecord => {
+    const record: OutcomeRecord = { ...outcome };
+    delete record.money; delete record.money_stamped_by;
+    if (money) record.money = money;
+    if (mark) record.money_stamped_by = mark;
+    return record;
+  };
+  let learn: LearnConfig;
+  try { learn = (await readRevision(env, LEARN_KIND, scope))?.value ?? DEFAULT_LEARN; }
+  catch {
     reportLearningIncomplete('outcome', null);
+    await options?.enqueue?.(withMoney(undefined, 'producer'));
+    return;
   }
+  const stamped = withMoney(learn.money);
+  let decided: MoneyPolicy | null | undefined, late = false, timer: ReturnType<typeof setTimeout> | undefined;
+  const abort = new AbortController();
+  // P33 (S4F-C6): the ring receives the brand-wide policy and each slot's own
+  // attribution policy on that slot's configuration, its one carrier there.
+  const fanned = fanOutcome(env, scope, stamped, brandPolicyOf(learn), outcome.brand, slotConfigsOf(learn),
+    { reward: 'click', objective: 'unit', stats: learn.stats ?? DEFAULT_STATS }, undefined, undefined, undefined,
+    stamp => { if (!late) decided = stamp; }, abort.signal)
+    .then(result => reportLearningIncomplete('outcome', result), () => reportLearningIncomplete('outcome', null));
+  // P103 (R-P629, R-P663): the bound aborts the ring call, as `readRingWithOutcome` does, and stops waiting for it.
+  const bound = new Promise<void>(resolve => { timer = setTimeout(() => { late = true; abort.abort(); resolve(); }, RING_DECISION_BOUND_MS); });
+  try { await Promise.race([fanned, bound]); } finally { clearTimeout(timer); }
+  await options?.enqueue?.(decided === undefined ? withMoney(learn.money, 'producer') : withMoney(decided));
 }

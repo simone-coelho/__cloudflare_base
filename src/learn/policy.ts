@@ -113,6 +113,64 @@ export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefine
 }
 
 /**
+ * W24 R1.02 (F19 §5.3 "the currency is never read and a refund never
+ * subtracts"; document 35 §5 row W24 :426 "revenue/margin/currency/refund
+ * behavior"): the tenant's published money policy — WHAT the numbers on an
+ * outcome mean when a slot learns money.
+ *
+ * The VALUES are the customer's business and data-science owners' (D09,
+ * W24.P1.01): which currency the counters are in and how another one converts,
+ * whether a refund subtracts from the objective it credited, and what a
+ * nonpositive value means. None of them is the platform's to invent, so until
+ * one is published this is ABSENT and the platform refuses the outcomes it
+ * would have to guess about, naming the refusal rather than silently adding,
+ * dropping or subtracting.
+ */
+export interface MoneyPolicy {
+  /** The currency the slot's money counters are in. An outcome in another one needs a declared conversion. */
+  currency: string;
+  /** What a value at or below zero means for the objective it would credit. */
+  nonpositive: 'refuse' | 'credit';
+}
+/** W24 R1.02: money the platform will not weigh, and why. */
+export interface MoneyRefusal { code?: string; reason: 'money_policy_unset' }
+
+/**
+ * W24 R1.02: may this outcome be weighed in the objective's own unit? Null when
+ * there is nothing to decide — a unit objective counts events, not money — and
+ * otherwise a named refusal whenever answering would take a policy VALUE nobody
+ * has published. General: it names no currency, no rate and no refund rule of
+ * its own, and every one of them comes from `policy` when a tenant publishes it.
+ */
+export function moneyRefusal(objective: 'unit' | 'revenue' | 'margin' | undefined,
+  outcome: Pick<OutcomeRecord, 'value' | 'margin' | 'currency'>, policy?: MoneyPolicy | null): MoneyRefusal | null {
+  if (!objective || objective === 'unit') return null;
+  const declared = typeof outcome.currency === 'string' && outcome.currency.trim() ? outcome.currency.trim() : undefined;
+  const amount = objective === 'margin' ? outcome.margin : outcome.value;
+  const nonpositive = typeof amount === 'number' && Number.isFinite(amount) && amount <= 0;
+  if (!policy) {
+    // Nothing is published. An outcome that states its currency cannot be added
+    // to counters whose currency nobody declared, and a refund or a zero cannot
+    // be applied under a rule nobody wrote.
+    if (declared !== undefined) return { code: declared, reason: 'money_policy_unset' };
+    return nonpositive ? { reason: 'money_policy_unset' } : null;
+  }
+  // A currency other than the declared one needs a conversion rule and a rate
+  // source, which the policy does not carry: it is named, never guessed at.
+  if (declared !== undefined && declared.toUpperCase() !== policy.currency.toUpperCase()) return { code: declared, reason: 'money_policy_unset' };
+  if (nonpositive && policy.nonpositive === 'refuse') return { ...(declared !== undefined ? { code: declared } : {}), reason: 'money_policy_unset' };
+  return null;
+}
+
+/** P103: the money policy an outcome record carries, as the rule reads it; anything it cannot read whole is no policy (fail closed). */
+export function recordedMoneyPolicy(value: unknown): MoneyPolicy | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  return typeof v.currency === 'string' && /^[A-Z]{3}$/.test(v.currency) && (v.nonpositive === 'refuse' || v.nonpositive === 'credit')
+    && Object.keys(v).every(key => key === 'currency' || key === 'nonpositive') ? { currency: v.currency, nonpositive: v.nonpositive } : null;
+}
+
+/**
  * P16 (decision D1, freeze items 14 and 43): what one credit of a decision is
  * worth to its slot and the reward counter it is kept under — ONE rule, read by
  * the visitor's ring online (`DecisionRing`) and by every offline fold of the
@@ -140,7 +198,9 @@ export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefine
  * applied, online in the statistics object and in the hourly fold alike.
  */
 export function successCreditOf(success: RingEntry['successEvent'], slot: { reward: RewardType; objective?: Objective },
-  outcome: Pick<OutcomeRecord, 'type' | 'value' | 'margin'>): { reward: RewardType; weight: number } | null {
+  outcome: Pick<OutcomeRecord, 'type' | 'value' | 'margin' | 'currency' | 'money'>): { reward: RewardType; weight: number } | { refused: MoneyRefusal } | null {
+  const refused = moneyRefusal(slot.objective, outcome, recordedMoneyPolicy(outcome.money));
+  if (refused) return { refused };
   if (success === undefined) return outcome.type === slot.reward ? { reward: slot.reward, weight: creditWeight(slot.objective, outcome) } : null;
   if (success.event !== outcome.type) return null;
   const value = success.value;
