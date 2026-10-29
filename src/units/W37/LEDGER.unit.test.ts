@@ -349,6 +349,21 @@ let nativeBundle: Promise<string> | undefined;
  * (wrangler.toml [[queues.producers]] EVENT_QUEUE → "events"; [[queues.consumers]] "events": max_batch_size 100,
  * max_batch_timeout 3, max_retries 2, dead_letter_queue "events-dead-letter"), declared for the five-minute fold's legs.
  */
+/**
+ * R-P632 (R10 by name): the queue's deliveries awaited, bounded, before the stored objects are read — the stored
+ * aggregates and days unchanged across 7 s (more than two hops at the shipped max_batch_timeout of 3 s), at most 90 s.
+ */
+async function delivered(door: (path: string, body?: unknown) => Promise<Record<string, unknown>>): Promise<void> {
+  const view = async () => JSON.stringify(Object.entries({ ...await door('/objects', { prefix: 'aggregates/' }), ...await door('/objects', { prefix: 'reports/' }) })
+    .map(([key, body]) => [key, String(body).length]).sort());
+  const started = Date.now();
+  let last = await view(), since = Date.now();
+  while (Date.now() - started < 90_000 && Date.now() - since < 7_000) {
+    await new Promise(resolve => setTimeout(resolve, 1_000));
+    const now = await view();
+    if (now !== last) { last = now; since = Date.now(); }
+  }
+}
 const SHIPPED_EVENTS_QUEUE = { queueProducers: { EVENT_QUEUE: 'events' },
   queueConsumers: { events: { maxBatchSize: 100, maxBatchTimeout: 3, maxRetries: 2, deadLetterQueue: 'events-dead-letter' } } };
 async function nativeStamp(name: string, bindings: Record<string, string>, options: { queue?: boolean } = {}) {
@@ -563,7 +578,7 @@ describe('unit:W37.T2', () => {
       await stamp.door('/seed', { objects: day.objects });
       const folded = `aggregates/${ACME}/${day.date}/${new Date(day.hour).toISOString().slice(11, 13)}.json`;
       // Two closed hours per run, oldest first (src/learn/hourly.ts:1750-1800): run until the data hour is folded.
-      for (let run = 0; run < 14 && !Object.hasOwn(await stamp.door('/objects', { prefix: folded }), folded); run++) await stamp.door('/scheduled', { cron: '*/5 * * * *' });
+      for (let run = 0; run < 14 && !Object.hasOwn(await stamp.door('/objects', { prefix: folded }), folded); run++) { await stamp.door('/scheduled', { cron: '*/5 * * * *' }); await delivered(stamp.door); }
       const aggregate = JSON.parse((await stamp.door('/objects', { prefix: folded }) as Record<string, string>)[folded]!);
       expect(Object.keys(aggregate.brands).sort(), 'the fold holds both brands of acme for that hour').toEqual([ACME, OUTLET].sort());
       const reports = Object.keys(await stamp.door('/objects', { prefix: 'reports/' })).sort();

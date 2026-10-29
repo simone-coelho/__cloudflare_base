@@ -67,7 +67,10 @@
 //     second object; a filed conflict re-runs only its leaf: after the operator files it, the hour's ledger is read only at
 //     the two objects holding the conflicting id; abandoned outputs: forty minutes after a run whose first five-minute run
 //     of 14:06 was cut off at its second write of the fold's (the warehouse slice's schedule, which every run rewrites,
-//     not counted), nothing a cut-off step wrote is still stored unless a later step wrote it again (adopted).
+//     not counted), nothing a cut-off step wrote is still stored unless a later step wrote it again (adopted). A catch-up
+//     (R-P632): after six hours without a five-minute run, the runs that resume fold the six hours in no more runs than
+//     today's catch-up, which folds at most two closed hours a run (src/learn/hourly.ts catchUp, `opts.maxHours ?? 2`;
+//     src/index.ts's run passes none) — a LOCK, green today.
 //   7 A conflict is filed as today: by the operator's custom-policy POST /v1/:tenant/learn/report (src/routes/
 //     decisions.ts:2030–2043, the only surface that files one); the fold never files. Past a page that request is a job
 //     (reading 13), which files a read conflict it meets as the inline request does: RF3's newer-hour leg files at 14:20,
@@ -135,24 +138,26 @@
 //
 // MEASURED (_evidence/parity-step3/S51/specifier/logs/, serial, --no-cache, one worker, env -C the tree, --root the tree;
 // scratch trees built by scratch/bin/mk.sh from d5d8581c; the sketch is scratch/sketch/{stagedFold.ts,apply.py}):
-//   TODAY (h3-today: the worktree, rem/spec-p104 on e2024388 + this file): 41 of 43 RED for the missing behaviour, the two
-//   LOCK legs green. RF1's job leg: the custom-policy day of 20.5 MiB answers 413 rawBytes, not 202.
+//   TODAY (h3-today, c-today: the worktree + this file): 41 of 45 RED for the missing behaviour; the four LOCK legs green
+//   (RF5's old day, RF4's catch-up). RF1's job leg: the custom-policy day of 20.5 MiB answers 413 rawBytes, not 202.
 //   RF1 hour 10 of the volumes refused (the rings past 3.69 MiB), the class refused at hour 8, T5's wide hour refused
 //   (cells), the open hour refused rawBytes, the bot named report_budget_exceeded rawBytes not fold_step_bound; RF2 18
 //   differences (hour 13 above a page refused); RF3 13 differences (hour 13 refused), hour 13 never written; RF4 38 and 50
 //   re-reads, the migration's hour 13 refused; RF5 the head counts 0 of 5,060, hour 0 of T5 refused, C's day built [12];
 //   RF6 the custom-policy day credits the 400-decision-old click and not the carried-in one, PRECONDITION P103 (the money
 //   leg and R-P604's), the big rebuild 503; RF7 five of seven sentences absent.
-//   THE SKETCH (h3-sketch: staged day rebuild kit born job): 39 of 43 green, the money leg and R-P604's RED on
-//   PRECONDITION P103 alone. With P103's sketch beside it the eight RF6 legs are green on both hosts: its apply.py as of
+//   THE SKETCH (c-sketch: staged day rebuild kit born job, every due hour chained): 41 of 45 green, the money leg and
+//   R-P604's RED on PRECONDITION P103 alone. With P103's sketch beside it the eight RF6 legs are green on both hosts: its apply.py as of
 //   19:28 (scratch/sketch/p103-apply-1928.py: types kinds records policy ring journalstamp earliest fold hourly report
 //   route-prepare recovery-type recovery-stamp direct delivery; j-both) and as of 20:35, with R-P620's ringanswer
 //   (scratch/sketch/p103-apply-2035.py; h3-p103). Steps: every step ≤ 64 MiB, a
 //   page ≤ 16.0 MiB and 200 objects (f-live: volumes ≤ 23.9 MiB, partitions ≤ 16.4, the day ≤ 32.7, the rebuild ≤ 36).
 //   THE SKETCH, per leg (never committed; files and the code each leg needs):
-//     src/learn/stagedFold.ts (new): RF1–RF4 — the five-minute run plans one hour at a time (a listing cut into pages of
+//     src/learn/stagedFold.ts (new): RF1–RF4 — the five-minute run plans the oldest due hour and each close plans the next,
+//       so every due hour is folded in order through the queue without waiting for a run (a listing cut into pages of
 //       ≤ 16 MiB and ≤ 200 objects, written create-only, the state head naming it in flight; quiet hours of a stateless
-//       tenant closed in place), partition (one pack and its index per page, sections by leaf, rows checked as
+//       tenant closed in place; a quiet hour of a small state — no ledger object, at most 64 leaves — taking its bounded
+//       steps in the invocation that plans it rather than a queue hop each), partition (one pack and its index per page, sections by leaf, rows checked as
 //       ReportRowIdentity checks them and digested), leaf (its sections read by range, de-duplicated by digest in global
 //       order keeping the earliest-born copy (R-P604: the ledger stamp's bornAt, a tie keeping the first read), a conflict
 //       filed or raised; today's cleanupShard, foldableRows, hourBrands, foldShard and countMembership
@@ -205,26 +210,25 @@
 //     R-P615: the custom-policy day left as today (413) — RF1 job (j-nojob); today's raw day with its limits lifted (200
 //     inline, the bound met by constants) — RF1 job (j-lifted); a new job for every request — RF1 job at the repeat
 //     (j-newjob); the job re-run from the head as it stands, not the date's start — RF1 job at the grids (j-headstart).
+//     R-P632: one due hour a five-minute run (round 2's pace) — RF4 catch-up, six runs for six hours (c-onehour).
 //   LOCKS (the work order's learn suites, W23, W24, W26, W27, W32 B1, P33, P94 and every suite touching the fold, the day
-//     report, the rebuild or the scheduled run: 63 files, scratch/locks-all.txt), round 2 on the whole sketch (staged day
-//     rebuild kit born job) with the R10 re-forms in place (l3-sketch): 863 of 866 green; P87's packaging leg fails alike
-//     without the sketch (l3-today: the stamp workflow outside a checkout); W37 LEDGER's and FIX2's native fold legs RED
-//     (below). P103's legs (rem/spec-p103 73b059ab, round 5 and R-P620; the reviewer's note 8: its MP3 legs are locks for
-//     this fold) on P103's 20:35 sketch, alone and with this one, as committed and re-pointed: 47 of 50 green in all four
-//     runs; the three others are the parts the scratch trees leave out (sdk, kit, kit03; no packages/sdk).
-//   R10s (R-P615, by name; in this commit): src/learn/hourly.test.ts W32.03 :908–910 and src/learn/report.test.ts W32.04
+//     report, the rebuild or the scheduled run: 63 files, scratch/locks-all.txt), round 3 on the whole sketch (staged day
+//     rebuild kit born job, every due hour chained) with the R10 re-forms in place (l4-sketch): 865 of 866 green; P87's
+//     packaging leg fails alike without the sketch (l4-today: the stamp workflow outside a checkout). P103's legs
+//     (rem/spec-p103 73b059ab, round 5 and R-P620; the reviewer's note 8: its MP3 legs are locks for this fold) on P103's
+//     20:35 sketch, alone and with this one (round 2's sketch and the chained one), as committed and re-pointed: 47 of 50
+//     green in every run; the three others are the parts the scratch trees leave out (sdk, kit, kit03; no packages/sdk).
+//   R10s (R-P615, R-P632, by name): src/learn/hourly.test.ts W32.03 :908–910 and src/learn/report.test.ts W32.04
 //     :379–382, the 8 MiB refusal re-pointed to RF5's by-slot answer (a day of 2 x 150 items x 20 levels built, not
 //     refused; a canonical day of grids past 8 MiB stored, its answer without a slot within 8 MiB naming every slot, ?slot=
 //     answering the slot's items); report.test.ts's ReportR2 keeps an object's customMetadata and answers a ranged text()
 //     with its range, as R2 does (both RED today on outputBytes, green on the sketch; nothing else in the two files moves).
-//     src/units/W37/LEDGER.unit.test.ts :560 and FIX2.unit.test.ts :250 declare the shipped events queue (wrangler.toml
-//     EVENT_QUEUE → "events", its consumer's four settings) through an optional pass-through added to src/units/_native.ts,
-//     and their wrappers hand a delivered batch to the Worker's queue handler; green today, RED on the sketch: the legs
-//     read the stored aggregates right after each run, before the queue delivers (max_batch_timeout 3 s a hop). Measured
-//     on a scratch copy: with 4 s after each run LEDGER's leg is green; FIX2's needs a wait spanning a step chain (~5 hops)
-//     and more runs than its 24 (the sketch folds one hour of the lookback a run, today two) — R10 NEEDED: the two legs
-//     wait for the queue's deliveries (e.g. the stored aggregates unchanged over 2 x max_batch_timeout) with run bounds
-//     for a staged catch-up. P103's legs at :617 and :623 (73b059ab): scratch/bin/edit-r10-p103.py re-points
+//     src/units/W37/LEDGER.unit.test.ts's and FIX2.unit.test.ts's five-minute fold legs (R-P615, R-P632) declare the
+//     shipped events queue (wrangler.toml EVENT_QUEUE → "events", its consumer's four settings) through src/units/_native.ts's
+//     optional pass-through, their wrappers hand a delivered batch to the Worker's queue handler (FIX2's outage holding for
+//     it as for the scheduled run), and after each run they wait, bounded, for the queue's deliveries (the stored
+//     aggregates and days unchanged across 7 s, at most 90 s); no run limit is raised. Green today (c-w37-today) and on
+//     the sketch (c-w37-sketch2). P103's legs at :617 and :623 (73b059ab): scratch/bin/edit-r10-p103.py re-points
 //     foldOpenHours and catchUp to the Worker's five-minute run and its queue (settleMounted in ./_fold.ts), adds the three
 //     module mocks every unit importing src/index.ts carries, every expectation unchanged; measured on the scratch merge
 //     above; to be applied at P103's final sha (not in this commit: the file is not on this branch).
@@ -244,7 +248,7 @@ import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 import { BRAND, HOSTS, learned, PAGE_VIEW, putDocument, readTree, rounded, shopperOn, TENANT } from '../_parity';
 import {
   at, customDay, DATE, documents, drainBatch, drainQueue, featuredProduct, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
-  RAW_POLICY, retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, stamp, visit, visitorsOf, WIDE, writeLedger,
+  RAW_POLICY, retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, SMALL, stamp, visit, visitorsOf, WIDE, writeLedger,
   type DeliveryPlan, type Fault, type Scenario, type Stamp, type StepRecord,
 } from './_fold';
 
@@ -636,6 +640,26 @@ describe('unit:P104.RF4 (E29: a failed run resumes)', () => {
         .filter(key => s.r2.objects.has(key) && !s.r2.journal.some(j => j.key === key && !cut.has(j.step) && j.step > Math.min(...cut) && j.op === 'put'));
       expect(left, `RF4 ${host}: forty minutes on, nothing a cut-off step wrote is left unless a later step wrote it again (adopted)`).toEqual([]);
       expect(bounds(s), `RF4 ${host}: every step holds at most 64 MiB`).toEqual([]);
+    }, T);
+
+    it(`RF4 ${host}: LOCK — a catch-up after a gap of six hours takes no more five-minute runs than today's, which folds two closed hours a run`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(5, 50));
+      const s = await stamp(host, documents(), registry, 'P104.RF4 catch-up');
+      // The platform ran until 06:06: every closed hour of the lookback is folded.
+      await settleAt(s, at(6, 6));
+      // Then no five-minute run for six hours, while the ledger kept being written: hours 6 to 11, twenty visitors each.
+      const r = rng(104_401), gap = [6, 7, 8, 9, 10, 11];
+      for (const hour of gap) {
+        vi.setSystemTime(at(hour, 40));
+        writeLedger(s, ledgerObjects(rowsOf(visitorsOf(`gap${hour}-`, 20).map(id => visit(registry, id, at(hour) + Math.floor(r() * 35 * MIN), 8, r, SMALL))), 200, 'b'));
+      }
+      // The runs resume at 12:06, five minutes apart, each followed by the queue it fed.
+      let runs = 0;
+      for (; runs < 10 && gap.some(hour => aggregateOf(s, hour) === null); runs++) { await fiveMinuteRun(s, at(12, 6 + 5 * runs)); await drainQueue(s, at(12, 6 + 5 * runs)); }
+      // Witness: today's catch-up folds at most two closed hours a run (src/learn/hourly.ts catchUp, `opts.maxHours ?? 2`; src/index.ts's five-minute run passes none).
+      expect({ folded: gap.filter(hour => aggregateOf(s, hour) !== null), withinToday: runs <= Math.ceil(gap.length / 2) },
+        `RF4 ${host}: the six hours of the gap are folded within ${Math.ceil(gap.length / 2)} five-minute runs (it took ${runs})`).toEqual({ folded: gap, withinToday: true });
     }, T);
 
     it(`RF4 ${host}: a filed conflict re-runs only its own leaf — after the operator files it, hour 12's ledger is read only where the conflicting id is`, async () => {
