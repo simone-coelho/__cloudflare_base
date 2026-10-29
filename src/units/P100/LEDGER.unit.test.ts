@@ -5,6 +5,7 @@
 // ROUND 2 (R-P560, the specification review of 5997a5ae): the number adopted is never 1 (the hosts' two-salt history, R3;
 // HN2's tables 3, 3, 4, R7), each adopting browser lands on it twice before the rotation (R2'), and the browser with a
 // recorded experiment and its identifier under the site's own key joins HN1's fixture (R4).
+// R10 (R-P668): HN2's bundle LOCK re-pinned from 340cd410 to rem/integration 8d6b0dd0, whose bundles P103 lawfully regenerated.
 //
 // THE REQUIREMENT, verbatim (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md, section 2,
 // E24):
@@ -315,14 +316,14 @@ const handTable = (saltVersion: number | null) => ({ version: `p100-hand-table-$
   rows: [{ channel: 'paid_social', visitBucket: '1', layout: { mobile: null, desktop: null }, shotOrder: { mobile: SHOTS, desktop: SHOTS } }], brandRules: {} });
 /** The head script's budget (packages/sdk/package.json :36) and W40.P3's rule: less than 5 KB under it. */
 const HEAD_BUDGET = 30_720, FIVE_KB = 5_120;
-/** The two SDK bundles in their three places at 340cd410 (`git show 340cd410:<path> | sha256sum`; unchanged at 99ddcafc). */
-const SDK_BUNDLES_AT_340CD410: Record<string, string> = {
-  'public/sdk/edge-personalization.esm.js': 'de7585b2501a8718bd9e186fe1a32702e0a9c6fc23fad75e0b4e2c3cd78b25fb',
-  'public/sdk/0.2.0/edge-personalization.esm.js': 'de7585b2501a8718bd9e186fe1a32702e0a9c6fc23fad75e0b4e2c3cd78b25fb',
-  'packages/sdk/edge-personalization.esm.js': 'de7585b2501a8718bd9e186fe1a32702e0a9c6fc23fad75e0b4e2c3cd78b25fb',
-  'public/sdk/edge-personalization.js': '77b147c0517ef73e705d2bce9426faead3bc96be571eb520242c67ad1e75720e',
-  'public/sdk/0.2.0/edge-personalization.js': '77b147c0517ef73e705d2bce9426faead3bc96be571eb520242c67ad1e75720e',
-  'packages/sdk/edge-personalization.js': '77b147c0517ef73e705d2bce9426faead3bc96be571eb520242c67ad1e75720e',
+/** The two SDK bundles in their three places at 8d6b0dd0, as P103 regenerated them (`git show 8d6b0dd0:<path> | sha256sum`; R-P668). */
+const SDK_BUNDLES_AT_8D6B0DD0_P103: Record<string, string> = {
+  'public/sdk/edge-personalization.esm.js': '82435b3ffd58c136592b8f28c84531877291d4b6f82e057ddc3ccf983ba61a01',
+  'public/sdk/0.2.0/edge-personalization.esm.js': '82435b3ffd58c136592b8f28c84531877291d4b6f82e057ddc3ccf983ba61a01',
+  'packages/sdk/edge-personalization.esm.js': '82435b3ffd58c136592b8f28c84531877291d4b6f82e057ddc3ccf983ba61a01',
+  'public/sdk/edge-personalization.js': 'c653f1ea20de75b5686c4f4d3fad314c901b1065ee394ff53e599f4361d63025',
+  'public/sdk/0.2.0/edge-personalization.js': 'c653f1ea20de75b5686c4f4d3fad314c901b1065ee394ff53e599f4361d63025',
+  'packages/sdk/edge-personalization.js': 'c653f1ea20de75b5686c4f4d3fad314c901b1065ee394ff53e599f4361d63025',
 };
 const bytesOf = (path: string) => readFileSync(join(ROOT, path));
 
@@ -502,13 +503,13 @@ describe('unit:P100.HN2', () => {
       `HN2 — node scripts/build-sdk.mjs --check exits 0 over the head script and its .csp (${check.stderr.slice(0, 300)})`).toEqual([0, true, true]);
   }, LONG_MS);
 
-  it('logic: LOCK — the head script is at most its recorded budget of 30,720 bytes and less than 5 KB under it (above 25,600) in each place, the budget unchanged; the two SDK bundles are byte-equal to 340cd410\'s in each of their three places, since neither bundle reads src/sdk/head.ts', async () => {
+  it('logic: LOCK — the head script is at most its recorded budget of 30,720 bytes and less than 5 KB under it (above 25,600) in each place, the budget unchanged; the two SDK bundles are byte-equal to 8d6b0dd0\'s (P103\'s regeneration) in each of their three places, since neither bundle reads src/sdk/head.ts', async () => {
     const manifest = JSON.parse(readTree('packages/sdk/package.json')) as { sizeBudget?: Record<string, unknown> };
     expect.soft({ budget: manifest.sizeBudget?.['./edge-head.js'], sizes: HEAD_COPIES.map(copy => { const n = bytesOf(copy).length; return [copy, n <= HEAD_BUDGET && HEAD_BUDGET - n < FIVE_KB ? 'within' : n]; }) },
       `HN2 — the budget stays ${HEAD_BUDGET} bytes (packages/sdk/package.json :36) and each copy within it, less than ${FIVE_KB} bytes under it (W40.P3)`)
       .toEqual({ budget: HEAD_BUDGET, sizes: HEAD_COPIES.map(copy => [copy, 'within']) });
-    const digests = Object.keys(SDK_BUNDLES_AT_340CD410).map(path => [path, createHash('sha256').update(bytesOf(path)).digest('hex')]);
-    expect.soft(digests, 'HN2 — the two SDK bundles are byte-equal to 340cd410\'s in each of their three places').toEqual(Object.entries(SDK_BUNDLES_AT_340CD410));
+    const digests = Object.keys(SDK_BUNDLES_AT_8D6B0DD0_P103).map(path => [path, createHash('sha256').update(bytesOf(path)).digest('hex')]);
+    expect.soft(digests, 'HN2 — the two SDK bundles are byte-equal to 8d6b0dd0\'s (as P103 regenerated them) in each of their three places: P100 changes no bundle').toEqual(Object.entries(SDK_BUNDLES_AT_8D6B0DD0_P103));
     const build = await import(/* @vite-ignore */ new URL('../../../scripts/build-sdk.mjs', import.meta.url).href) as {
       SDK_TARGETS: Array<{ entry: string }>; buildSDK: (o: { root: string }) => Promise<Array<{ metafile: { outputs: Record<string, { inputs: Record<string, unknown> }> } }>> };
     const results = await build.buildSDK({ root: ROOT });
