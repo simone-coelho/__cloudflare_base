@@ -142,6 +142,21 @@
 //      outcomes refused for money with isEventNonce's longest nonce). The idBytes check is unreachable: the longest stable
 //      outcome id is 64 + 11 + 200 + 128 + 128 + 8 separators, about 540 bytes, below RING_LIMITS.idBytes (2,048), so it
 //      has no leg.
+//   R16 (R-P620) Under a ledger retention basis of `occurred` both copies of a retried outcome are born at its event's
+//      time, so the earliest-born rule ties (measured: the folds credited the retry's stamp, 575/230 against live refusal).
+//      Ruled: every copy of one outcome carries the stamp live decided it under — on the direct path the ring answers the
+//      stamp it took the outcome under and the ledger row is written with it, after the ring. MP3's occurred-basis legs
+//      (both hosts) are probe 5's retry with the tenant's retention on `occurred`. The answer's time (the direct path's
+//      answer waits for the outcome's admission, realtime.ts told()), median of 7 purchases in ms, today / the producer's
+//      stamp in parallel / ring then enqueue: session 31/33/36, do 20/18/19; with the ring's /outcome held 500 ms session
+//      534/536/531, do 521/521/517; with the queue's send held 500 ms session 526/527/536, do 513/514/519
+//      (S50/specifier/logs/timing.log). Ring then enqueue adds the shorter of the two legs: the queue send (one round trip)
+//      when the ring is slower, the ring's whole path (the ring and its statistics objects, more than one round trip:
+//      +9/+5 ms here) when the queue is slower. To bound it to one in both cases, the producer can ask the ring for the
+//      outcome's first stamp (a read of the journal, no write) beside its own learn read, then enqueue and fan in parallel.
+//      With every copy carrying the stamp the ring decided under, which copy a reader keeps no longer decides any money
+//      credit: the earliest-born rule (R-P604 (3)) stays in the sketch as the rule for whose lifetime governs, and no P103
+//      leg observes it through money (the wrong fix keeping the first read is green on these legs).
 //
 // P104 (E29, the report fold, rem/spec-p104): its RF6 leans on these MP3 legs as locks for its staged fold, behind a
 // PRECONDITION naming P103, and R-P604 (3)'s earliest-born rule carries into every reader its fold adds.
@@ -149,11 +164,7 @@
 // credited live and in the day's report; another currency refused by name live and absent from the report).
 // RESIDUALS: the meaning of a nonpositive credit is D09 (R3); money priors stay refused (D09, MP6); an outcome whose
 // credits fail to deliver is not journalled (W22 D1.02), so a retry of it after a publication is taken under the retry's
-// stamp; the refused entries share the journal's caps (4,096 rows, 256 KiB) with the credited ones; MEASURED, for a
-// ruling: under a ledger retention basis of `occurred` both copies of a retried outcome are born at its event's time, so
-// the earliest-born rule ties, keeps the first read and the folds credit the retry's stamp (575/230 against live refusal,
-// S50/specifier/logs/probe-occurred-sketch.log); carrying the stamp the ring took the outcome under onto the direct
-// path's ledger row (the ring answering it, route.ts enqueueing after the ring) would make both copies agree.
+// stamp; the refused entries share the journal's caps (4,096 rows, 256 KiB) with the credited ones.
 //
 // LOCKS (MP6 and the gate): W24 B1, B2, LEDGER (R1.02, R1.04, R2, R5), P16, P33, W26, P94, W25, src/sdk/emit.test.ts,
 // W40 LEDGER P3/P4, src/learn/hourly.test.ts, report.test.ts, objective.test.ts, P68.KT1. Measured: the whole suite under
@@ -567,11 +578,18 @@ describe('unit:P103.MP3', () => {
    * exactly src/learn/route.ts outcomeToLearning's direct branch at d5d8581c (:225-229) beside realtime.ts :404.
    */
   async function dayAlike(host: Host, taken: MoneyPolicy | undefined, folded: MoneyPolicy | undefined, recovery = true,
-    day: Event[] = DAY(), after: After = { retry: [], fresh: [] }, producer: 'route' | 'pre-P103' = 'route'): Promise<Observed> {
+    day: Event[] = DAY(), after: After = { retry: [], fresh: [] }, producer: 'route' | 'pre-P103' = 'route', basis: 'admitted' | 'occurred' = 'admitted'): Promise<Observed> {
     const clock = fixedHour();
     try {
       const m = await mount(host, docs(taken), { recovery });
       expectPublished(m, `P103.MP3 — the home page and a learn document ${taken ? `with the money policy ${taken.currency}` : 'without money'} publish`);
+      if (basis === 'occurred') {
+        // R-P620: the tenant's retention policies on the `occurred` basis — every copy of a record is born at its event's
+        // time (retentionBirth, src/retention.ts), so two deliveries of one outcome are born together.
+        const retention = JSON.parse(String((m.env as unknown as { RETENTION: string }).RETENTION)) as { tenants: Record<string, Record<string, { basis: string }>> };
+        for (const policy of Object.values(retention.tenants[TENANT]!)) policy.basis = 'occurred';
+        (m.env as unknown as { RETENTION: string }).RETENTION = JSON.stringify(retention);
+      }
       const answers = tapRing(m);
       const s = await servedShopper(m, `${host}, ${taken?.currency ?? 'none'}`);
       const ids: string[] = [], wires: Array<{ eventId: string; wire: string }> = [];
@@ -704,6 +722,16 @@ describe('unit:P103.MP3', () => {
     it(`host (${host}, direct): the SDK's retry of an EUR purchase taken under no policy, sent after EUR is published in one batch with an event 20 s older (its ledger object sorting before the first delivery's), is folded as live learning took it: every reader keeps the earliest-born copy`, async () => {
       expect(await dayAlike(host, undefined, EUR_REFUSE, false, [purchase(575, 230, 'EUR')], { older: [addToBag(375)], retry: [0], fresh: [] }),
         `${host}: P103.MP3 (R-P604) — the copy every fold keeps of an outcome delivered twice is the earliest-born (mergeRetention's rule), never the first read: the purchase stays refused on the money slots and counts once on the unit slot (the older add to bag precedes every decision and credits nothing)`)
+        .toEqual(alike(ORDERED));
+    }, 90_000);
+  }
+
+  // R-P620: the same retry with the tenant's retention on the `occurred` basis, where both copies are born at the event's
+  // time and the earliest-born rule cannot tell them apart: every copy carries the stamp live decided it under.
+  for (const host of HOSTS) {
+    it(`host (${host}, direct): with a ledger retention basis of occurred, the SDK's retry of an EUR purchase taken under no policy, sent after EUR is published in one batch with an event 20 s older, is folded as live learning took it: every copy of the outcome carries the stamp the ring decided it under`, async () => {
+      expect(await dayAlike(host, undefined, EUR_REFUSE, false, [purchase(575, 230, 'EUR')], { older: [addToBag(375)], retry: [0], fresh: [] }, 'route', 'occurred'),
+        `${host}: P103.MP3 (R-P620) — under an occurred basis the two copies are born together, so which one a fold keeps cannot decide the credit: the retry's ledger row carries the stamp the ring took it under (its first), and every fold credits as live did (a row stamped by the producer's own read, not the ring's, credits 575/230 that live refused)`)
         .toEqual(alike(ORDERED));
     }, 90_000);
   }
