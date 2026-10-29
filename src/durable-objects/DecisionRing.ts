@@ -12,7 +12,7 @@ import { parseId, type OutcomeRecord } from '@/ledger/records';
 import { loadTombstone } from '@/ledger/erasure';
 import { isLedgerMessage } from '@/ledger/writer';
 import { logicalIdentity, LOGICAL_EXCLUDED_FIELDS } from '@/ledger/delivery';
-import { attributeWindowed, successCreditOf, uncorrelatedBrandMismatches, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+import { attributeWindowed, recordedMoneyPolicy, successCreditOf, uncorrelatedBrandMismatches, type AttributionPolicy, type RingEntry } from '@/learn/policy';
 /**
  * How far back this ring reaches. Exported because it is not this object's
  * private business: the online fan-out declares it as the horizon it actually
@@ -29,7 +29,8 @@ import { attributeWindowed, successCreditOf, uncorrelatedBrandMismatches, type A
  */
 import { RING_MAX_AGE_MS } from '@/learn/stats';
 export { RING_MAX_AGE_MS };
-import { deliverStats, emptyStatsDelivery, identityPage, learningGenerations, moneyRefusal, pageScopedOf, positionRowOf, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
+import type { RewardType } from '@/ledger/records';
+import { deliverStats, emptyStatsDelivery, identityPage, learningGenerations, pageScopedOf, positionRowOf, ringEntryOf, statsName, sumStatsDeliveries, type AppendReceipt, type MoneyPolicy, type MoneyRefusal, type OutcomeReceipt, type SlotLearnConfig, type StatsDelivery } from '@/learn/fan';
 import { isCatalogueName } from '@/content/kinds';
 import { requireRetention, readRetention, mergeRetention, type RetentionStamp } from '@/retention';
 import { recoveryDigest, learningEffectId, RECOVERY_LIMITS, type LearningEffect } from '@/ledger/recovery';
@@ -131,7 +132,7 @@ async function bodyOf(request: Request): Promise<unknown> {
 const CREDITED_KEY = 'credited';
 const CREDITED_MAX_BYTES = 256 * 1024;
 const CREDITED_MAX_ROWS = 4096;
-interface CreditedOutcome { id: string; ts: number; expiresAt: number; digest?: string }
+interface CreditedOutcome { id: string; ts: number; expiresAt: number; digest?: string; money?: MoneyPolicy; refused?: true }
 
 interface Stored { ring: DecisionRecord[]; index: Array<{ id: string; ts: number; retention?: RetentionStamp; digest?: string }> }
 interface Subject { tenant: string; visitor_id: string }
@@ -302,6 +303,7 @@ export class DecisionRing {
         // W22 D1.02 (F16 §7, §2.3): a repeat is recognized BEFORE anything is
         // sent, so a redelivered outcome leaves every online counter exactly
         // where one delivery left it.
+        body.outcome = await this.serialize(() => this.firstStamped(body.outcome!));
         const repeat = await this.serialize(() => this.alreadyCredited(body.outcome!));
         const plan = await this.serialize(() => this.outcome(body.tenant!, body.brand ?? body.tenant!, body.outcome!, body.policy!, body.slotConfig ?? {}, body.defaultSlotConfig, false, moneyPolicyOf(body.money), scoped));
         if (repeat) {
@@ -311,7 +313,7 @@ export class DecisionRing {
           // sent again: nothing was, which is the whole point.
           plan.receipt.credits = sumStatsDeliveries(plan.batches.map(batch =>
             ({ ...emptyStatsDelivery(), destinations: 1, acknowledged: 1, received: batch.received, processed: batch.received })));
-          return json({ ok: true, credits: plan.receipt.attributed, receipt: plan.receipt });
+          return json({ ok: true, credits: plan.receipt.attributed, receipt: plan.receipt, decidedUnder: recordedMoneyPolicy(body.outcome!.money) });
         }
         // Attribution and fresh barriers are serialized; downstream waits must not hold /recent's lock.
         plan.receipt.credits = sumStatsDeliveries(await Promise.all(plan.batches.map(batch => {
@@ -321,15 +323,17 @@ export class DecisionRing {
         // Journalled only once the credits are actually applied: an outcome
         // whose delivery was refused or unknown may be redelivered and must be.
         // W24 R1.04: `attributed` counts the slots that were CREDITED, so an
-        // outcome every slot refused is never written into the credited journal
-        // and the same delivery arriving again meets the same per-slot refusal
-        // by name, rather than an answer claiming it was already applied. W22
+        // outcome every slot refused is never journalled as credited, and the
+        // same delivery arriving again meets the same per-slot refusal by name,
+        // rather than an answer claiming it was already applied; P103 (R-P604):
+        // one refused for money is journalled as refused, with the stamp it was
+        // refused under, which recognizes no repeat. W22
         // D1.02/D1.04 keep their meaning for outcomes that WERE credited.
         const delivered = plan.receipt.credits;
         if (plan.receipt.attributed > 0 && delivered.unknown === 0 && delivered.notAttempted === 0 && delivered.skipped === 0) {
           await this.serialize(() => this.rememberCredited(body.outcome!, body.tenant!));
-        }
-        return json({ ok: true, credits: plan.receipt.attributed, receipt: plan.receipt });
+        } else if (plan.receipt.attributed === 0 && plan.receipt.money) await this.serialize(() => this.rememberCredited(body.outcome!, body.tenant!, true));
+        return json({ ok: true, credits: plan.receipt.attributed, receipt: plan.receipt, decidedUnder: recordedMoneyPolicy(body.outcome!.money) });
       }
       case '/recent': {
         const { data: d } = await this.serialize(() => this.current());
@@ -529,7 +533,7 @@ export class DecisionRing {
     return receipt;
   }
 
-  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false, money?: MoneyPolicy | null, scoped: ReadonlySet<string> = new Set()): Promise<CreditPlan> {
+  private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed = false, _money?: MoneyPolicy | null, scoped: ReadonlySet<string> = new Set()): Promise<CreditPlan> {
     const subject = recordSubject(outcome, 'outcome');
     if (tenant !== subject.tenant || brand !== outcome.brand) throw new Error('Ring scope unavailable');
     const { data: d, cutoff } = await this.current(subject);
@@ -622,9 +626,14 @@ export class DecisionRing {
        * null for a unit objective, so a slot that counts events counts this
        * event whatever currency came with it, and the refusal is named on the
        * slot that would have weighed money it cannot read.
+       *
+       * P103 (R-P588): that rule is inside the one credit rule every offline
+       * fold reads too, under the money policy the outcome's own record carries
+       * (`_money`, a body's policy, is no longer read); it does not depend on
+       * the decision credited, so the slot's first decision asks it.
        */
-      const unweighable = moneyRefusal(config.objective, outcome, money);
-      if (unweighable) { refusedBySlot.set(slot, 'money'); moneyRefused ??= unweighable; continue; }
+      const first = successCreditOf(entryOf.get(list[0]!.decision_id)?.successEvent, config, outcome);
+      if (first && 'refused' in first) { refusedBySlot.set(slot, 'money'); moneyRefused ??= first.refused; continue; }
       /**
        * W24 R1.03 (F19 §7 gap 1, §5.1): and the slot learns against ONE reward,
        * exactly as the fold filters each hour's credits per slot. A purchase
@@ -638,7 +647,7 @@ export class DecisionRing {
       // record names in the slot's currency, kept under the slot's own reward
       // counter (`successCreditOf`, the one rule every offline fold reads too).
       const priced = list.map(c => ({ c, success: successCreditOf(entryOf.get(c.decision_id)?.successEvent, config, outcome) }));
-      const taken = priced.filter((p): p is { c: typeof p.c; success: NonNullable<typeof p.success> } => p.success !== null);
+      const taken = priced.filter((p): p is { c: typeof p.c; success: { reward: RewardType; weight: number } } => p.success !== null && !('refused' in p.success));
       if (!taken.length) { refusedBySlot.set(slot, 'reward'); continue; }
       plan.receipt.attributed += taken.length;
       // CW27: the credit is worth what the slot's objective says; a worthless credit is not sent.
@@ -713,14 +722,16 @@ export class DecisionRing {
       // Both shapes are read: this one, and the id-only one written before the
       // digest existed. An unknown member is still refused.
       if (!object(entry)) continue;
-      const shape = Object.keys(entry).sort().join(',');
+      const shape = Object.keys(entry).filter(key => key !== 'money' && key !== 'refused').sort().join(',');
+      if ((Object.hasOwn(entry, 'money') && !recordedMoneyPolicy(entry.money)) || (Object.hasOwn(entry, 'refused') && entry.refused !== true)) continue;
       if ((shape !== 'expiresAt,id,ts' && shape !== 'digest,expiresAt,id,ts')
         || typeof entry.id !== 'string' || !entry.id || bytes(entry.id) > RING_LIMITS.idBytes
         || !Number.isSafeInteger(entry.ts) || !Number.isSafeInteger(entry.expiresAt)
         || (Object.hasOwn(entry, 'digest') && (typeof entry.digest !== 'string' || !/^[a-f0-9]{64}$/.test(entry.digest)))) continue;
       if (entry.expiresAt as number <= now || now - (entry.ts as number) > RING_MAX_AGE_MS) continue;
       out.push({ id: entry.id, ts: entry.ts as number, expiresAt: entry.expiresAt as number,
-        ...(typeof entry.digest === 'string' ? { digest: entry.digest } : {}) });
+        ...(typeof entry.digest === 'string' ? { digest: entry.digest } : {}),
+        ...(Object.hasOwn(entry, 'money') ? { money: recordedMoneyPolicy(entry.money)! } : {}), ...(entry.refused === true ? { refused: true as const } : {}) });
     }
     return out;
   }
@@ -749,10 +760,21 @@ export class DecisionRing {
     // every entry of this id stops the repeat, so a redelivery met by a digest
     // failure can lose a credit it cannot tell apart, never grant one twice.
     // An entry written without a digest likewise stops every repeat of its id.
-    return (await this.creditedOutcomes()).some(entry => entry.id === id
+    return (await this.creditedOutcomes()).some(entry => !entry.refused && entry.id === id
       && (digest === null || entry.digest === undefined || entry.digest === digest));
   }
-  private async rememberCredited(outcome: OutcomeRecord, tenant: string): Promise<void> {
+  /** P103 (R-P588, R-P604): the outcome as first taken — a later delivery of its id carries the stamp its journal entry kept (no put). */
+  private async firstStamped(outcome: OutcomeRecord): Promise<OutcomeRecord> {
+    if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return outcome;
+    const digest = await this.creditedDigest(outcome);
+    const entry = (await this.creditedOutcomes()).find(e => e.id === outcome.outcome_id && (digest === null || e.digest === undefined || e.digest === digest));
+    if (!entry) return outcome;
+    const first: OutcomeRecord = { ...outcome };
+    delete first.money;
+    if (entry.money) first.money = entry.money;
+    return first;
+  }
+  private async rememberCredited(outcome: OutcomeRecord, tenant: string, refused = false): Promise<void> {
     try {
       if (logicalIdentity(outcome as unknown as Record<string, unknown>, 'outcome') !== 'stable') return;
       const id = outcome.outcome_id;
@@ -768,11 +790,17 @@ export class DecisionRing {
       // Only this record's own entry is replaced (for an id-only entry, the
       // id-only entry of this id). An id-only entry from before the digest is
       // kept: it is what still recognizes ITS repeat.
-      const entry: CreditedOutcome = digest === null ? { id, ts: outcome.ts, expiresAt } : { id, ts: outcome.ts, expiresAt, digest };
-      let kept = [...(await this.creditedOutcomes()).filter(prior => !(prior.id === id && prior.digest === entry.digest)), entry]
+      const stamp = recordedMoneyPolicy(outcome.money);
+      const entry: CreditedOutcome = { ...(digest === null ? { id, ts: outcome.ts, expiresAt } : { id, ts: outcome.ts, expiresAt, digest }),
+        ...(stamp ? { money: stamp } : {}), ...(refused ? { refused: true as const } : {}) };
+      const held = await this.creditedOutcomes();
+      if (refused && held.some(prior => prior.id === id && prior.digest === entry.digest)) return;
+      const kept = [...held.filter(prior => !(prior.id === id && prior.digest === entry.digest)), entry]
         .sort((a, b) => a.ts - b.ts);
-      if (kept.length > CREDITED_MAX_ROWS) kept = kept.slice(-CREDITED_MAX_ROWS);
-      while (kept.length && bytes(JSON.stringify(kept)) > CREDITED_MAX_BYTES) kept = kept.slice(1);
+      // P103 (R-P628): over either cap the oldest entry marked refused goes first, a credited one only when none is left.
+      const evict = () => { const refusedAt = kept.findIndex(prior => prior.refused); kept.splice(refusedAt >= 0 ? refusedAt : 0, 1); };
+      while (kept.length > CREDITED_MAX_ROWS) evict();
+      while (kept.length && bytes(JSON.stringify(kept)) > CREDITED_MAX_BYTES) evict();
       if (bytes(JSON.stringify(kept)) > RING_LIMITS.stateBytes) return;
       await this.totalBound(undefined, undefined, undefined, kept);
       await this.state.storage.put(CREDITED_KEY, kept);

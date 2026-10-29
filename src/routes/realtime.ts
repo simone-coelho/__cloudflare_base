@@ -401,8 +401,8 @@ realtimeRoutes.post('/action', async (c) => {
           // its experiment block and retention are the same as before.
           return c.env.LEDGER_RECOVERY_ENABLED === 'true'
             ? outcomeToLearning(c.env, c.get('tenant'), outcome, { answerAtAdmission: true, onAdmitted: () => { admitted = true; } })
-            : Promise.all([enqueueOutcome(c.env, outcome).then(receipt => { admitted = receipt.code === 'accepted'; }),
-              outcomeToLearning(c.env, c.get('tenant'), outcome)]);
+            : outcomeToLearning(c.env, c.get('tenant'), outcome, { enqueue: stamped => enqueueOutcome(c.env, stamped).then(receipt => { admitted = receipt.code === 'accepted'; }) });
+          // P103 (R-P620): without recovery, the record above reaches the queue once the ring has decided it, with its stamp.
         })();
         try { c.executionCtx.waitUntil(p); } catch { void p; }
         return { recordId: outcome.outcome_id, admitted: p.then(() => admitted, () => false) };

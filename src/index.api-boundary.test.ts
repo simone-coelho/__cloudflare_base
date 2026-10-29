@@ -342,7 +342,7 @@ export class ShopperReflex extends NativeShopperReflex {
     if (new URL(request.url).pathname === '/__fixture_expired_choice') {
       const saved = await this.fixtureState.storage.get('consent');
       if (!saved || saved.version !== 1) throw new Error('Missing explicit choice fixture');
-      for (const key of ['tracking', 'personalization']) saved[key] = { value: true, chosenAt: Date.now() - 30 * 86400000 - 1, expiresAt: Date.now() - 1 };
+      const expiredAt = Date.now(); /* R10 (R-P601): one clock read, so the choice keeps its exact lifetime */ for (const key of ['tracking', 'personalization']) saved[key] = { value: true, chosenAt: expiredAt - 30 * 86400000 - 1, expiresAt: expiredAt - 1 };
       await this.fixtureState.storage.put('consent', saved); this.consent = undefined;
       return new Response(null, { status: 204 });
     }

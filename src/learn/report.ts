@@ -12,9 +12,9 @@ import type { DecisionRecord, LearnConfig } from '@/content/types';
 import { hidden, loadTombstones, withoutErased } from '@/ledger/erasure';
 import { requireRetention, type RetentionEnv } from '@/retention';
 import { isProductSortKey, isLearningKey, validDecisionMeasurement, type OutcomeRecord, type RewardType } from '@/ledger/records';
-import { boundedLedgerText, equalLogicalRows, logicalIdentity } from '@/ledger/delivery';
+import { boundedLedgerText, equalLogicalRows, logicalIdentity, preferredCopy } from '@/ledger/delivery';
 import type { R2Like } from '@/ledger/writer';
-import { attribute, creditWeight, DEFAULT_POLICY, namedSlotOf, type AttributionPolicy, type RingEntry } from './policy';
+import { attribute, DEFAULT_POLICY, namedSlotOf, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, levelKeys, parentKey, recordExposure, recordSuccess, type AttributionContract, type LiftSnapshot, type StatsConfig } from './stats';
 import { attributionContractOf, policyOf, slotConfigsOf, validAttributionContract } from './route';
@@ -229,6 +229,10 @@ export class ReportRowIdentity {
       }
       return false;
     }
+    // P103 (R-P604, R-P629): copies of one logical row are kept by the one rule every reader shares (`preferredCopy`:
+    // the ring-stamped copy, then the earliest-born), never by read order; the kept object is updated in place, so a
+    // caller that already holds it reads the preferred copy.
+    if (preferredCopy(row, prior.row)) { for (const key of Object.keys(prior.row)) delete prior.row[key]; Object.assign(prior.row, row); }
     prior.count++; return false;
   }
   /** Rows excluded because their conflict is filed, in the vocabulary `duplicates` uses. */
@@ -1417,7 +1421,8 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
       const legacy = !Object.hasOwn(o, 'decision_id') && namedSlotOf(o.slot) === null;
       for (const c of attribute(o, ring, p)) {
         const reward = slotCfg[c.slot]?.reward ?? 'click';
-        if (c.reward !== reward) continue;                       // the slot learns against one reward
+        const success = successCreditOf(ring.find(d => d.id === c.decision_id)?.successEvent, { reward, objective: slotCfg[c.slot]?.objective }, o);
+        if (success === null || 'refused' in success) continue;  // P103: the one credit rule, the record's own policy
         credits += 1;
         if (legacy) legacyCredits += 1;
         // Explicit selection already proved one subject-owned target. Only
@@ -1428,7 +1433,7 @@ export function buildReport(i: ReportInput, conflictingReferences?: ReadonlySet<
           : decisionsById.get(c.decision_id)?.arm;
         const arm = (resolved === undefined ? undefined : assignmentById.get(c.decision_id)) ?? resolved ?? 'personalized';
         armCredits.set(`${c.slot}|${arm}`, (armCredits.get(`${c.slot}|${arm}`) ?? 0) + 1);
-        if (arm === 'personalized') { const w = creditWeight(slotCfg[c.slot]?.objective, o); if (w > 0) recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, w, statsCfg); }
+        if (arm === 'personalized') { const w = success.weight; if (w > 0) recordSuccess(stateOf(c.slot), c.item, c.cell, success.reward, c.ts, w, statsCfg); }
       }
     }
     policies.push({ name: p.name, policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role, credits, legacyCredits });

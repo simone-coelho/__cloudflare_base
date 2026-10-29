@@ -21,7 +21,7 @@
     {
       "id": "P98",
       "title": "Catalogue loads whose storage calls are bounded by the shards they touch, sent in parallel and published once (**amendment 13, E25, 2026-10-28; design R-P549**)",
-      "state": "ACTIVE",
+      "state": "INACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
@@ -154,7 +154,7 @@
         "docs/kit/02-api-reference.md",
         "docs/kit/03-payload-schemas.md",
         "src/units/_parity.ts (R10 by name: the R2 double's ranged get and a head answering size and metadata only, :171–195; by the specifier)",
-        "src/units/P93/_catalog.ts (R10 by name: KEY, classOf, objectKeys, indexOf, namedBy and partAt only, :88–170, read through a pack's byte ranges; by the specifier)",
+        "src/units/P93/_catalog.ts (R10 by name: KEY, classOf, objectKeys, indexOf, namedBy, partAt and the meter (metered, readClasses) read through a pack's byte ranges, and the helpers that hold, lose, forge and locate objects stored on their own or in a pack (heldRaw, held, heldKeys, loseObject, forgeObject, storedValue, storedBeforePacks, packedObjects), and readAsWanted with READ_GAP/READ_SPAN for the coalescing rule; by the specifier; R-P599, R-P602, R-P619)",
         "src/units/P86/LEDGER.unit.test.ts (R10 by name: the helpers at :300–397 and the legs at :738, :761, :819, :845, :857, :925, :981, :985, :1071, :1080, :1086, :1103, :1187, :1219 that read a shard, an id shard or a part as an object of its own read it through its pack, every expectation unchanged; by the specifier; R-P569 (b))",
         "src/customerBoundary.ts (the catalogue stage and publish doors on CUSTOMER_ROUTES only; R-P569 (c))",
         "src/units/P77/LEDGER.unit.test.ts (R10 by name: P77.VR3's route list TODAY at :300–330, the two doors added only; by the specifier; R-P569 (c))",
@@ -162,7 +162,8 @@
         "src/routes/content.test.ts (R10 by name: the single injected failures behind :564, :973, :1592 also fail their immediate repeat, every expectation unchanged; by the specifier; R-P569 (a))",
         "src/services/telemetry.boundary.test.ts (R10 by name: the single injected failure behind :571 also fails its immediate repeat, every expectation unchanged; by the specifier; R-P569 (a))",
         "src/units/P87/LEDGER.unit.test.ts (R10 by name: the single injected failures behind :431 and :482 also fail their immediate repeat, every expectation unchanged; by the specifier; R-P569 (a))",
-        "src/units/P93/LEDGER.unit.test.ts (R10 by name: the legs that read a shard, an id shard or a part as an object of its own read it through its pack (CS1–CS6 as listed in S43/specifier/logs/locks-sketch-p93p86.txt), every expectation unchanged; CS5's rollback refusal re-pointed only as R-P569 (b) says; CS1's 64 KB manifest bound at :270–275 NOT re-pointed; by the specifier)"
+        "src/units/P93/LEDGER.unit.test.ts (R10 by name: the legs that read a shard, an id shard or a part as an object of its own read it through its pack (CS1–CS6 as listed in S43/specifier/logs/locks-sketch-p93p86.txt), every expectation unchanged; CS5's rollback refusal re-pointed only as R-P569 (b) says; CS1's 64 KB manifest bound at :270–275 NOT re-pointed; by the specifier)",
+        "src/units/W21/B2.unit.test.ts (R10 by name: KIT_OUTCOME_CONSENT at :764–767 pins kit 03 :195's gender-neutral wording, the rule it pins unchanged; by the specifier; R-P646, R-P655)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P98 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
@@ -188,7 +189,7 @@
     {
       "id": "P99",
       "title": "The purge at scale (**amendment 13, E23, 2026-10-28**)",
-      "state": "INACTIVE",
+      "state": "ACTIVE",
       "executionMode": "IMPLEMENTATION",
       "authority": {
         "source": "docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md",
@@ -277,7 +278,8 @@
         "src/routes/content.ts (the learn advisory channel only: learnAdvisory and its three callers)",
         "src/content/holdout.ts (saltVersionOf only, where the reason the count is unknown is carried from it)",
         "docs/kit/02-api-reference.md",
-        "src/units/P95/LEDGER.unit.test.ts (R10 of KIT_PURGE_KEEPS at :300 and its use at :551 only, if kit 02's sentence it pins changes; by the specifier, by name)"
+        "src/units/P95/LEDGER.unit.test.ts (R10 of KIT_PURGE_KEEPS at :300 and its use at :551 only, if kit 02's sentence it pins changes; by the specifier, by name)",
+        "src/units/_parity.ts (R10 by name: the in-memory R2 double's list honouring delimiter and startAfter as R2 does, so the purge's stored-decision rule is exercised; every test using the double's list swept; by the specifier; R-P597)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P99 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
