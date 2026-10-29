@@ -65,6 +65,11 @@
 //   S6 "Uploaded" (the grace): the in-memory bucket lists every object as uploaded at time 0 (src/units/_parity.ts, outside
 //      this ticket's grant), so the LD6 legs report upload times through their own wrapper (`uploadedAt`, 14 minutes ago or
 //      16 minutes ago); elsewhere every object reads as past the grace, which the sketch measured against the locks.
+//      R-P656 (1)'s reuse window (a pack reused only when uploaded within the last 10 minutes) reads the upload time a
+//      pack's HEAD answers. The double's HEAD answers none unless a leg's `uploadedAt` names one, and the legs that adopt a
+//      pack within a request (LD2's landed-then-thrown exact-create, LD6's reused-pack leg) run so: a pack whose upload
+//      time the store does not answer reads as inside the window. The R-P656 (1) leg names the left pack's upload 12
+//      minutes ago and every other object's now.
 //   S7 The catalogue-import credential (LD2) is exercised on the parity mount (the demo profile) with a service token
 //      minted with `roles: ['catalog-import']` under the mount's own signing material; the customer profile's boundary
 //      (src/customerBoundary.ts CUSTOMER_ROUTES, granted by R-P569 (c): the two doors only) is driven by LD2's
@@ -83,6 +88,14 @@
 //      file, a load, the import or the catalogue and a 503, a refusal, a timeout or a failure also tells the reader to send
 //      it again (re-send, resend, sent again, resubmit, try or retry the file or load again). Kit 03 may keep a true sentence
 //      naming files of 200 to 300 products (P93.CS7's lock reads one; no R10 on that file is granted).
+//   S12 R-P659's "a write may write more than one pack, each ≤ 64 MiB" is read as: a second pack only for what the write
+//      moves (the table's 65 rows) or copies (a rollback's difference); a load's own objects past 64 MiB stay refused 413
+//      `load_too_large` (LD1), the 900 checks of a rollback stay P93.CS5's bound (R-P659 (4) is about bytes), and a write
+//      that needs no second pack writes one (`PUBLICATION_WRITES`, the R-P646 (7) leg's `[200, null, 1]`). "The
+//      rollback's target near purge" is R-P659's adopted design (b7f3ed6f `catalogueRevisionNameable`): the retention
+//      setting set, the target two behind, and its successor's age within the 5-minute margin of the setting. The fences'
+//      clock (R-P659 (5)) is moved as the request sends its head reservation, Date alone faked and still running, and the
+//      store answers upload times by that clock (`storeClock`); no leg waits.
 //
 // THE R10s (granted by name, R-P551, R-P569, R-P578, R-P582), before → after, every expectation unchanged:
 //   src/units/_parity.ts UnitR2 (:171–195): `get(key)` → `get(key, { range })` answers the range's bytes with the
@@ -120,6 +133,10 @@
 //     (:564, :973), src/units/P87/LEDGER.unit.test.ts (:422, :472: two failures of the revision write) and
 //     src/services/telemetry.boundary.test.ts PublicationR2 (:571).
 //
+// CROSS-BATCH (R-P656 (5)): P102's build changes the cold page's reads (the head, the serving copy, the shard, the part),
+// so the bytes LD7's R-P646 (5) leg measures at 40,000 products (88,912 B on both hosts under this round's sketch) move at
+// P102's join, and kit 03's cold-page figure must move with them or that leg is RED there. R-P656 grants P102 kit 03's
+// cold-page figure; the leg pins no number, it compares the kit with the bytes measured on the tree it runs on.
 // CROSS-BATCH (R-P619): P99 (a2c64938) also R10s src/units/_parity.ts UnitR2 — its `list` — beside this ticket's `get` and
 // `head`. P99 owns the purge at P93's 512-object scale: LD6's R-P597 lock plants 53 products so the purge finishes within
 // its budget. P102's CR3 read list (src/units/P102/LEDGER.unit.test.ts:663–674) and its re-pointing of P93.CS2 go through
@@ -913,6 +930,69 @@ async function publication(m: Mounted, what: string): Promise<void> {
   expect(a.status, `PRECONDITION: ${what} — a publication is accepted (${show(a)})`).toBe(200);
 }
 
+// ── R-P659: the clock, the store's upload times, the pack tables written ────────────────────────────────────────────
+/** 64 MiB: no pack is larger (LD1; R-P659: a write may write more than one pack, each within it). */
+const PACK_CAP = 64 * 1024 * 1024;
+/** The configuration retention setting at `durationMs` (W38 B4), as `shortRetention` sets its smallest. */
+function retentionOf(m: Mounted, durationMs: number): void {
+  const retention = JSON.parse(String(m.env.RETENTION)) as { version: number; tenants: Record<string, Record<string, unknown>> };
+  retention.tenants[TENANT]!.configuration = { id: 'p98-configuration-revisions', revision: 1, durationMs, basis: 'occurred', renewal: 'new-record-only' };
+  m.env.RETENTION = JSON.stringify(retention);
+}
+/**
+ * R-P659 (5): the store's upload times by the clock a leg moves — each object put is answered, headed, read and listed as
+ * uploaded at the clock's reading when it was put (an object put before, at this call's reading), as R2 answers them.
+ */
+function storeClock(m: Mounted): () => void {
+  const bucket = m.storage as unknown as Record<string, unknown>, saved = Object.getOwnPropertyDescriptor(bucket, 'put');
+  const since = new Date(), times = new Map<string, Date>();
+  const put = (bucket.put as (...args: unknown[]) => Promise<Record<string, unknown> | null>).bind(m.storage);
+  Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+    const at = new Date(), result = await put(...args);
+    if (!result) return result;
+    times.set(String(args[0]), at);
+    return { ...result, uploaded: at };
+  } });
+  const restoreTimes = uploadedAt(m, key => times.get(key) ?? since);
+  return () => { restoreTimes(); if (saved) Object.defineProperty(bucket, 'put', saved); else Reflect.deleteProperty(bucket, 'put'); };
+}
+/** R-P659 (5): the clock moved `ms` ahead at once (Date alone, still running; timers stay real): no real waiting. */
+function clockAhead(ms: number): void {
+  vi.useFakeTimers({ toFake: ['Date'], shouldAdvanceTime: true });
+  vi.setSystemTime(Date.now() + ms);
+}
+/** A rule that moves the clock `ms` ahead as the request sends its head reservation (before the head holds it), once. */
+function aheadAtReservation(ms: number): { rule: Rule; moved: () => boolean } {
+  let moved = false;
+  return { rule: call => { if (!moved && call.op === 'put' && call.head === 'reservation') { moved = true; clockAhead(ms); } return undefined; }, moved: () => moved };
+}
+/**
+ * R-P659 (1): every catalogue value the store is handed while installed — a content revision written, a head holding a
+ * pending one — read for its pack table's rows, and every pack's bytes: the table "at any moment", not only once committed.
+ */
+function tablesWritten(m: Mounted): { rows: Array<[string, number]>; packs: number[]; restore: () => void } {
+  const bucket = m.storage as unknown as Record<string, unknown>, saved = Object.getOwnPropertyDescriptor(bucket, 'put');
+  const put = (bucket.put as (...args: unknown[]) => Promise<unknown>).bind(m.storage);
+  const out = { rows: [] as Array<[string, number]>, packs: [] as number[], restore: () => { if (saved) Object.defineProperty(bucket, 'put', saved); else Reflect.deleteProperty(bucket, 'put'); } };
+  Object.defineProperty(bucket, 'put', { configurable: true, writable: true, value: async (...args: unknown[]) => {
+    const key = String(args[0]), body = String(args[1] ?? '');
+    if (classOf(key) === 'pack') out.packs.push(Buffer.byteLength(body, 'utf8'));
+    else if (/\/content\/rev\/[0-9]+\.json$/.test(key)) out.rows.push([key.replace(/^.*\/content\//, ''), packTable((JSON.parse(body) as { value?: Record<string, unknown> }).value ?? {}).length]);
+    else if (classOf(key) === 'head') {
+      const pending = (JSON.parse(body) as { pending?: { documents?: Array<{ kind?: string; value?: Record<string, unknown> }> } | null }).pending;
+      for (const document of pending?.documents ?? []) if (document.kind === 'content' && document.value) out.rows.push(['head (pending)', packTable(document.value).length]);
+    }
+    return put(...args);
+  } });
+  return out;
+}
+/** One product's part of about 1.6 MiB (the builder's compaction case, R-P659 (1)): 3,000 records of the range shape, all featuring product 90000 + p. */
+const bigRecords = (p: number) => Array.from({ length: 3000 }, (_, j) => ({ ...rangeRecords(1, 1)[0]!, id: `big-${p}-${j}`, customerContentId: `TAP-BIG-${p}-${j}`,
+  title: `Big product ${p} record ${j} ${'x'.repeat(400)}`, featuredProductIds: [rangeProduct(90000 + p)] }));
+/** What a refused write leaves: the head's committed identity (its If-Match), the revision, the publication's state, the content revisions stored. */
+const storeState = async (m: Mounted) => ({ ifMatch: (await preconditions(m))['If-Match'], revision: await revisionOf(m), status: await statusOf(m),
+  revisions: [...m.storage.objects.keys()].filter(k => /\/content\/rev\/[0-9]+\.json$/.test(k)).sort() });
+
 describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect what a load in flight reuses)', () => {
   for (const host of HOSTS) {
     it(`host (${host}): a refused load's pack and a stage never published are kept within the 15-minute grace and collected past it by the next publications, which read no shard and leave every pack a stored revision names`, async () => {
@@ -1107,6 +1187,33 @@ describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect 
       }, 600_000);
     }
 
+    // R-P656 (1): the reuse window ruled — a stored pack is reused only when uploaded within the last 10 minutes, the
+    // 15-minute grace less a 5-minute margin longer than any request the engine serves (the longest, a 40,000-product
+    // publish, 13–17 s). A left pack 12 minutes old is inside the grace (no purge may delete it yet) but outside that window;
+    // a margin under 3 minutes (the review's control: 0, adopting up to the grace's end) adopts it. The store
+    // answers the left pack's upload 12 minutes ago and every other object's now (reading S6); the same file over the same
+    // base packs to the same bytes, so the left key is the one a load that ignored the window would adopt (87753edc does).
+    it(`host (${host}): R-P656 (1) — a refused load's pack uploaded 12 minutes ago (inside the 15-minute grace, outside the 10-minute reuse window) is not reused: the file sent again writes its pack under a fresh key, the committed revision names that pack and not the left one, and every object it names resolves`, async () => {
+      const m = await loadedTenant(host, 300);
+      const file = rangeRecords(400, 20);
+      let attempt = 0;
+      const refused = await measuredLoad(m, file, { mode: 'merge' }, c => c.op === 'put' && c.cls === 'pack' ? (++attempt === 1 ? 'land-then-throw' : 'throw') : undefined);
+      const left = refused.meter.calls.find(c => c.op === 'put' && c.cls === 'pack')?.key ?? null;
+      expect([refused.row.status, left !== null && m.storage.objects.has(left)], `${host}: PRECONDITION — the refused load answers 503 and leaves its pack stored (${show(refused.answer)})`).toEqual([503, true]);
+      const restore = uploadedAt(m, key => key === left ? minutesAgo(12)() : new Date());
+      try {
+        const resent = await measuredLoad(m, file);
+        const written = resent.meter.calls.filter(c => c.op === 'put' && c.cls === 'pack' && !c.failed && c.key !== left).map(c => packDigest(c.key));
+        const doc = (await loadDocument(m, 'catalog')).document, named = packTable(doc);
+        invalidatePublicationCache();
+        const read = await productRead(m, rangeProduct(410));
+        expect.soft({ resent: resent.row.status, leftNamed: named.includes(packDigest(left!)), fresh: written.some(d => named.includes(d)), lost: resolve(m, doc).bad,
+          read: [read.status, readIds(read)] },
+        `${host}: P98.LD6 — a pack outside the reuse window written under a fresh key (the sent-again file's pack writes: ${JSON.stringify(resent.meter.calls.filter(c => c.op === 'put' && c.cls === 'pack').map(c => c.key === left ? 'the left key' : 'another key'))})`).toEqual({
+          resent: 200, leftNamed: false, fresh: true, lost: [], read: [200, [rangeRecordId(410)]] });
+      } finally { restore(); }
+    }, 300_000);
+
     // R-P646 (1): the same class for a rollback (finding 1's last line, by reading): its target revision is purged by a
     // publication that committed before the rollback read its base — the rollback runs whole between that purge's read
     // of the head and its deletion of the target's own pack. The rollback commits only what the store keeps.
@@ -1157,6 +1264,128 @@ describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect 
       expect.soft({ stages: stages.filter(a => a.status !== 200).length, publish: published.status, seen }, `${host}: P98.LD6 — the table and the manifest after the publish (${JSON.stringify(seen)})`).toEqual({
         stages: 0, publish: 200, seen: Array.from({ length: 6 }, () => ['at most 65 rows', 'at most 65536']) });
     }, 1_800_000);
+
+    // R-P659 (1): the builder's compaction case (S43/builder-p98/REPORT-b7f3ed6f.md residual 1, its probe `rehome-fits`):
+    // 66 loads of one ~1.6 MiB part each fill the table to its cap, then one publish names 64 one-product stages. b7f3ed6f
+    // publishes it with one pack of 66,980,371 B and the table at 98 rows until the next load. Ruled: a write may write
+    // more than one pack, each within 64 MiB, so the table never passes 65 rows at any moment. Read after every write (the
+    // head's table), and every catalogue value the store is handed (each revision written, each pending head). Reading: the
+    // 64 staged packs and the old packs' live parts (more than 64 MiB) fit 65 rows only if the publish also moves at least
+    // one stage's objects (64 stage rows + 2 packs = 66); LD2's "the publish reads no staged part" is its 8-stage case,
+    // where the table has room, so both hold at once (ca432b6c moves stage packs only when the cap asks). The fixture's
+    // live parts (about 105 MiB) are far below the bound of the build's named residual (the table may pass 65 only when
+    // every candidate pack is more than half live, over 2 GiB of live parts).
+    it(`host (${host}): R-P659 (1) — the pack table never passes 65 rows at any moment: 66 loads of one ~1.6 MiB part each, then one publish of 64 one-product stages, then three loads; after every write the head's table is within 65 rows, every catalogue value written (each revision, each pending head) names at most 65 packs, every pack is within 64 MiB, the publish answers 200 and nothing is lost`, async () => {
+      const m = await loadedTenant(host, 1);
+      expect(withinCaps(bigRecords(0)), 'PRECONDITION: one ~1.6 MiB part is within the import\'s caps').toBe(true);
+      const written = tablesWritten(m), over: string[] = [];
+      const rowsAfter = async (what: string) => { const rows = packTable((await loadDocument(m, 'catalog')).document).length; if (rows > 65) over.push(`${what}: ${rows} rows`); };
+      try {
+        const loads: number[] = [];
+        for (let p = 0; p < 66; p++) { loads.push((await importOf(m, bigRecords(p))).status); await rowsAfter(`load ${p + 1}`); }
+        expect(loads.filter(s => s !== 200).length, `${host}: PRECONDITION — the 66 large loads (${loads.join(',')})`).toBe(0);
+        const base = await preconditions(m), stages: Answer[] = [];
+        for (let s = 0; s < 64; s++) { stages.push(await stageOf(m, rangeRecords(5000 + s, 1), keyed(base))); await rowsAfter(`stage ${s + 1}`); }
+        const published = await publishOf(m, stages.map(a => a.body.stage), keyed(base));
+        await rowsAfter('the publish');
+        const after: number[] = [];
+        for (let k = 0; k < 3; k++) { after.push((await importOf(m, rangeRecords(9000 + k, 1))).status); await rowsAfter(`load ${k + 1} after the publish`); }
+        invalidatePublicationCache();
+        const reads = [(await productRead(m, rangeProduct(90003))).status, (await productRead(m, rangeProduct(5007))).status];
+        expect.soft({ stages: stages.filter(a => a.status !== 200).length, publish: [published.status, published.body.code ?? null], after, over,
+          written: atMost(Math.max(0, ...written.rows.map(([, rows]) => rows)), 65), packs: atMost(Math.max(0, ...written.packs), PACK_CAP),
+          lost: unique(storedRevisionValues(m).flatMap(value => resolve(m, value).bad)), reads },
+        `${host}: P98.LD6 — the table within 65 rows at every write (values written past 65 rows: ${JSON.stringify(written.rows.filter(([, rows]) => rows > 65).slice(0, 6))})`).toEqual({
+          stages: 0, publish: [200, null], after: [200, 200, 200], over: [], written: 'at most 65', packs: `at most ${PACK_CAP}`, lost: [], reads: [200, 200] });
+      } finally { written.restore(); }
+    }, 1_800_000);
+
+    // R-P659 (4): a rollback to a revision the purge may remove while it runs is written as a load of the difference into
+    // its own pack (b7f3ed6f, R-P646 (1)); the build bounds that copy by one 64 MiB pack and refuses a larger difference
+    // 413 (REPORT-b7f3ed6f.md residual 4). Ruled: a write may write more than one pack, each within 64 MiB, so the copy is
+    // never refused for size. The target holds 36 parts of about 1.9 MiB (reading S8), rewritten after it by two loads of
+    // 18 (each within 64 MiB); the retention setting at 4 minutes, so the target, two behind, is within the 5-minute
+    // margin of passing it (the copy, by R-P659's adopted design) and not yet purged.
+    it(`host (${host}): R-P659 (4) — a rollback whose copy of the difference passes 64 MiB (36 parts of about 1.9 MiB, the target within the margin of the retention setting) answers 200 with several packs, each within 64 MiB; the target's parts are in force and every object a stored revision names resolves`, async () => {
+      const m = await mount(host, DOCS);
+      await declareProductSlots(m);
+      retentionOf(m, 4 * 60_000);
+      const loaded: number[] = [];
+      for (let k = 0; k < BIG_PARTS; k++) loaded.push((await importOf(m, bigPart(k))).status);
+      expect(loaded.every(s => s === 200), `${host}: PRECONDITION — the ${BIG_PARTS} large parts load (${loaded.join(',')})`).toBe(true);
+      const target = await revisionOf(m), products = Array.from({ length: BIG_PARTS }, (_, k) => `COA-BIG${String(k).padStart(2, '0')}`);
+      const atTarget = indexOf(m, (await loadDocument(m, 'catalog')).document), digests = products.map(p => atTarget.products[p]?.digest ?? null);
+      const difference = digests.reduce((sum, d) => sum + Buffer.byteLength(heldRaw(m, KEY.part(d ?? 'none')) ?? '', 'utf8'), 0);
+      expect(difference > PACK_CAP, `${host}: PRECONDITION — the target's parts a copy must write pass 64 MiB (${difference} bytes)`).toBe(true);
+      for (const half of [0, 18]) {
+        const a = await importOf(m, Array.from({ length: 18 }, (_, k) => ({ ...bigPart(half + k)[0]!, title: 'p98 rewritten after the target' })));
+        expect(a.status, `${host}: PRECONDITION — parts ${half} to ${half + 17} rewritten (${show(a)})`).toBe(200);
+      }
+      const headers = await preconditions(m); invalidatePublicationCache();
+      const back = await under(m, () => asOperator(m, 'POST', `/content/catalog/rollback/${target}?scope=${TENANT}`, {}, headers));
+      const packs = back.meter.calls.filter(c => c.op === 'put' && c.cls === 'pack' && !c.failed).map(c => c.bytes);
+      invalidatePublicationCache();
+      const view = indexOf(m, (await loadDocument(m, 'catalog')).document);
+      expect.soft({ back: back.result.status, packs: [packs.length >= 2 ? 'several' : String(packs.length), atMost(Math.max(0, ...packs), PACK_CAP)],
+        notInForce: products.filter((p, i) => view.products[p]?.digest !== digests[i]), lost: unique(storedRevisionValues(m).flatMap(value => resolve(m, value).bad)),
+        reads: [(await productRead(m, products[0]!)).status, (await productRead(m, products[BIG_PARTS - 1]!)).status] },
+      `${host}: P98.LD6 — the rollback's copy of ${difference} bytes (${show(back.result)}; packs written ${JSON.stringify(packs)})`).toEqual({
+        back: 200, packs: ['several', `at most ${PACK_CAP}`], notInForce: [], lost: [], reads: [200, 200] });
+    }, 1_800_000);
+
+    // R-P659 (5): the pack fence (b7f3ed6f publication.ts holdPack): once the head holds a load's intent, its pack must have
+    // been stored less than 14 minutes ago (the 15-minute grace less a minute for the clocks), else nothing is written — a
+    // purge may already have listed it as collectable. The clock is moved 14½ minutes ahead as the load sends its head
+    // reservation (no real waiting); the store answers upload times by that clock (`storeClock`).
+    it(`host (${host}): R-P659 (5) — the pack fence: a load still running 14½ minutes after its pack was stored (the clock moved as it reserves the head) answers 503 publication_unavailable with state nothing_written; the head, the revision and the stored revisions are as before and the publication idle`, async () => {
+      const m = await loadedTenant(host, 300);
+      const restore = storeClock(m);
+      try {
+        const before = await storeState(m), ahead = aheadAtReservation(14 * 60_000 + 30_000);
+        const headers = await preconditions(m); invalidatePublicationCache();
+        const run = async () => { try { return (await under(m, () => importOf(m, rangeRecords(400, 20), headers), ahead.rule)).result; } finally { vi.useRealTimers(); } };
+        const answer = await run();
+        expect(ahead.moved(), `${host}: PRECONDITION — the load reached its head reservation (${show(answer)})`).toBe(true);
+        invalidatePublicationCache();
+        expect.soft({ answer: [answer.status, answer.body.code ?? null, answer.body.state ?? null], store: await storeState(m), bad: resolve(m, (await loadDocument(m, 'catalog')).document).bad },
+          `${host}: P98.LD6 — the pack fence (${show(answer)})`).toEqual({ answer: [503, 'publication_unavailable', 'nothing_written'], store: before, bad: [] });
+      } finally { restore(); }
+    }, 300_000);
+
+    // R-P659 (5): the rollback fence (b7f3ed6f content.ts, `held.fence` and rollbackPastRetention): a rollback to a revision
+    // within the retention setting names what that revision names, so long as the purge still cannot remove it once the
+    // head holds the rollback; a target that passes the setting before then is answered 409 and nothing is written. The
+    // setting at 20 minutes; the target two behind, its successor published just before; the clock moved 20½ minutes ahead
+    // as the rollback sends its head reservation. The same rollback on a twin tenant, the clock unmoved, answers 200.
+    it(`host (${host}): R-P659 (5) — the rollback fence: a rollback whose target passes the retention setting before the head holds it (the clock moved as it reserves) answers 409 and writes nothing — the head, the revision and the stored revisions as before, the publication idle, the product as it was; unmoved, the same rollback answers 200`, async () => {
+      const setUp = async () => {
+        const m = await loadedTenant(host, 300);
+        retentionOf(m, 20 * 60_000);
+        for (const [k, suffix] of [[7, ' (p98 fence target)'], [7, ' (p98 fence successor)'], [8, ' (p98 fence other)']] as const) {
+          const a = await importOf(m, rangeRecords(k, 1, suffix));
+          expect(a.status, `${host}: PRECONDITION — ${rangeProduct(k)} retitled (${show(a)})`).toBe(200);
+        }
+        return { m, target: (await revisionOf(m)) - 2 };
+      };
+      const rollback = async (m: Mounted, target: number, rule?: Rule) => {
+        const headers = await preconditions(m); invalidatePublicationCache();
+        return (await under(m, () => asOperator(m, 'POST', `/content/catalog/rollback/${target}?scope=${TENANT}`, {}, headers), rule)).result;
+      };
+      const twin = await setUp(), unmoved = await rollback(twin.m, twin.target);
+      const { m, target } = await setUp();
+      const restore = storeClock(m);
+      try {
+        const before = await storeState(m), ahead = aheadAtReservation(20 * 60_000 + 30_000);
+        const run = async () => { try { return await rollback(m, target, ahead.rule); } finally { vi.useRealTimers(); } };
+        const back = await run();
+        expect(ahead.moved(), `${host}: PRECONDITION — the rollback reached its head reservation (${show(back)})`).toBe(true);
+        invalidatePublicationCache();
+        const read = await productRead(m, rangeProduct(7));
+        expect.soft({ unmoved: unmoved.status, back: back.status, store: await storeState(m), product: [read.status, JSON.stringify(read.body).includes('(p98 fence successor)')],
+          bad: resolve(m, (await loadDocument(m, 'catalog')).document).bad },
+        `${host}: P98.LD6 — the rollback fence (${show(back)}; unmoved ${show(unmoved)})`).toEqual({ unmoved: 200, back: 409, store: before, product: [200, true], bad: [] });
+      } finally { restore(); }
+    }, 600_000);
   }
 });
 
@@ -1203,12 +1432,15 @@ describe('unit:P98.LD7 (R-P545 (2), R-P549: the kits state the pack, the stages,
   // R-P646 (4): the delivery review's finding 4 — the write paragraph (kit 02, `Configuration PUT/PATCH, import, …`) stated
   // the second try of every configuration write; the build tries twice only on a catalogue load (publication.ts
   // PublicationChange.retry, publishSet's `progress.retry`).
-  it('logic: R-P646 (4) — kit 02\'s write paragraph states the second try within the request for catalogue loads only: each of its sentences that states a second try, or that one transient storage failure refuses nothing, names a catalogue load', () => {
+  // R-P656 (3), (4): the passage found by what it says (a second try of a storage call), wherever it sits; scoped either by
+  // naming a catalogue load or by naming the four load doors.
+  it('logic: R-P646 (4), R-P656 (3) — kit 02 states the second try of a storage call within the request for catalogue loads only: each sentence that states a storage call tried a second time, or that one transient storage failure refuses nothing, names a catalogue load or the four load doors (import, pull, stage, publish)', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md');
-    const paragraph = kit02.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('Configuration PUT/PATCH, import, pull, rollback and item reset require')) ?? '';
-    const retry = paragraph.split(/(?<=[.;])\s+(?=[A-Z`(])/).filter(s => /\bsecond time\b|\btried (?:again|twice)\b|\bretried\b|\brefuses nothing\b/i.test(s));
-    expect.soft({ found: paragraph.length > 0, stated: retry.length > 0, unscoped: retry.filter(s => !/\bcatalog(?:ue)? loads?\b/i.test(s)) },
-      'P98.LD7 — the second try stated for catalogue loads only (today the paragraph states no second try)').toEqual({ found: true, stated: true, unscoped: [] });
+    const sentences = kit02.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/));
+    const retry = sentences.filter(s => /\bsecond time\b|\btried (?:again|twice)\b|\bretried\b|\brefuses nothing\b/i.test(s) && /\bstorage\b|\bexact-create\b|\bcompare-and-set\b/i.test(s));
+    const scoped = (s: string) => /\bcatalog(?:ue)? loads?\b/i.test(s) || [/\bimports?\b/i, /\bpulls?\b/i, /\bstages?\b/i, /\bpublish(?:es)?\b/i].every(door => door.test(s));
+    expect.soft({ stated: retry.length > 0, unscoped: retry.filter(s => !scoped(s)) },
+      'P98.LD7 — the second try stated for catalogue loads only (today kit 02 states no second try)').toEqual({ stated: true, unscoped: [] });
   });
 
   // R-P646 (8): the review's finding 8 — two passages the work order named as gendered: kit 02's clause on each later
@@ -1216,27 +1448,41 @@ describe('unit:P98.LD7 (R-P545 (2), R-P549: the kits state the pack, the stages,
   // sentence of that row; it now names the visitor's consent without a pronoun.)
   it('logic: R-P646 (8) — kit 02\'s clause on each later sign-in\'s attempt and kit 03\'s `experiment` row are gender-neutral', () => {
     const gendered = (text: string) => [...text.matchAll(/\b(?:she|her|hers|herself|he|him|his|himself)\b/gi)].map(m => m[0]);
-    const flat02 = readTree('docs/kit/02-api-reference.md').replace(/\s+/g, ' '), at = flat02.indexOf('Every later sign-in gets its own attempt');
-    const clause = at < 0 ? '' : flat02.slice(at, flat02.indexOf(';', at) < 0 ? undefined : flat02.indexOf(';', at));
-    const row = readTree('docs/kit/03-payload-schemas.md').split('\n').find(line => line.startsWith('| `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`')) ?? '';
-    expect.soft({ found: [clause.length > 0, row.length > 0], kit02: gendered(clause), kit03: gendered(row) }, 'P98.LD7 — the two passages gender-neutral').toEqual({
-      found: [true, true], kit02: [], kit03: [] });
+    // R-P656 (4): each passage found by what it says — kit 02's sentence on a later sign-in's attempt made under tracking
+    // only, and kit 03's `experiment` table rows, the outcome's among them (the ruled phrase, kit 03 :195 at 87753edc; the
+    // decision record's row at :99 is neutral already). Round 4 read the first row that opened with the block's shape, which
+    // is the decision record's, so its kit 03 half held vacuously; this one requires the outcome's row to be found.
+    const sentences02 = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/).map(p => p.split('\n').join(' ').replace(/\s+/g, ' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/));
+    const clause = sentences02.filter(s => /\bsign-in\b/.test(s) && /\battempt\b/.test(s) && /\btracking[- ]only\b/.test(s)).join(' ');
+    const rows = readTree('docs/kit/03-payload-schemas.md').split('\n').filter(line => /^\|\s*`experiment`\s*\|/.test(line));
+    expect.soft({ found: [clause.length > 0, rows.some(line => /\boutcome\b/i.test(line) && /\benrol/i.test(line))], kit02: gendered(clause), kit03: gendered(rows.join(' ')) },
+      'P98.LD7 — the two passages gender-neutral').toEqual({ found: [true, true], kit02: [], kit03: [] });
+  });
+
+  // R-P656 (2): the reuse window ruled (5 minutes' margin, so a stored pack is reused only when uploaded within the last
+  // 10 minutes) is stated in each kit, in the sentence that says when a stored pack is reused.
+  it('logic: R-P656 (2) — kits 02 and 03 each state when a stored pack is reused: within the last 10 minutes, the 15-minute grace less a 5-minute margin', () => {
+    const states = (file: string) => readTree(file).split(/\n\s*\n/).map(p => p.split('\n').join(' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/))
+      .some(s => /\b(?:reus(?:e|es|ed|ing)|adopt(?:s|ed|ing)?)\b/i.test(s) && /\bpacks?\b/i.test(s) && /\b(?:10|ten)[- ]minutes?\b|\b(?:5|five)[- ]minutes?\b/i.test(s));
+    expect.soft({ kit02: states('docs/kit/02-api-reference.md'), kit03: states('docs/kit/03-payload-schemas.md') }, 'P98.LD7 — the reuse window stated (today no kit states it)').toEqual({ kit02: true, kit03: true });
   });
 
   // R-P646 (5): the review's finding 5 — kit 03 stated the prototype's cold page (about 105 KB at 40,000 products); the
   // build reads 88,912 bytes there (the review's measurement, both hosts). The kit's figure is checked against the page
-  // this file measures (LD3's scale run), not pinned: every byte figure the paragraph states for the page at 40,000
-  // products, but the 120 KB bound the work order names, is within 1% of it.
+  // this file measures (LD3's scale run), not pinned: every byte figure kit 03 states in a sentence on a page's reads at
+  // 40,000 products, but the 120 KB bound the work order names, is within 1% of it. The figure is this harness's
+  // measurement for the generator's records (the review's observation 3); P102's reads move it (the header's CROSS-BATCH).
   for (const host of HOSTS) {
     it(`host (${host}): R-P646 (5) — kit 03 states the cold page at 40,000 products as measured: a byte figure its paragraph on the product page's reads gives for 40,000 products is within 1% of the bytes the page reads cold here, and none is another`, async () => {
       const run = await scale(host);
       expect(run.page40000 !== null, `${host}: PRECONDITION — the page at 40,000 measured (${run.refused})`).toBe(true);
       const measured = run.page40000!.bytes, kit03 = readTree('docs/kit/03-payload-schemas.md');
-      const paragraph = kit03.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('A product page reads only its own product\'s records')) ?? '';
-      const at40000 = paragraph.split(/(?<=[.;])\s+(?=[A-Z`(])/).filter(s => /\b40,000 products\b/.test(s));
+      // R-P656 (4): the sentences found by what they say — a page's reads at 40,000 products — wherever they sit.
+      const at40000 = kit03.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/))
+        .filter(s => /\b40,000 products\b/.test(s) && /\bpage\b/i.test(s) && /\breads?\b/i.test(s));
       const figures = at40000.flatMap(s => [...s.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*(KiB|KB|kB|bytes|B)\b/g)].map(m => Number(m[1]!.replace(/,/g, '')) * (m[2] === 'KiB' ? 1024 : /^(?:KB|kB)$/.test(m[2]!) ? 1000 : 1)))
         .filter(f => f !== 122880 && f !== 120000);
-      expect.soft({ found: paragraph.length > 0, matched: figures.some(f => Math.abs(f - measured) <= 0.01 * measured), other: figures.filter(f => Math.abs(f - measured) > 0.01 * measured) },
+      expect.soft({ found: at40000.length > 0, matched: figures.some(f => Math.abs(f - measured) <= 0.01 * measured), other: figures.filter(f => Math.abs(f - measured) > 0.01 * measured) },
         `${host}: P98.LD7 — kit 03's cold page against ${measured} bytes measured (stated: ${JSON.stringify(figures)})`).toEqual({ found: true, matched: true, other: [] });
     }, 1_800_000);
   }
