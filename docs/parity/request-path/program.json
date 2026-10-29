@@ -119,10 +119,16 @@
       ],
       "allowedPaths": [
         "src/connectors/AudienceStore.ts",
-        "src/config/publication.ts (the audiences kind in KINDS, OPTIONAL_MEMBERS and kindFor only)",
+        "src/config/publication.ts (the audiences kind in KINDS, OPTIONAL_MEMBERS and kindFor; the serving copy leaving the audiences member out, which a cold machine reads in the same wave as the head and the copy; R-P644)",
         "src/reflex/audienceGenerator.ts (regeneration's one batched write only)",
         "src/services/RealtimeSegmentEngine.ts (ensureAudiencesSeeded's batched seed and regeneration call only)",
-        "src/index.ts (the five-minute run's move of each provisioned tenant's audiences only)"
+        "src/index.ts (the five-minute run's move of each provisioned tenant's audiences, inside the tenant's existing job, and its reconciliation of any KV audience record written after the move into the member; R-P644)",
+        "src/routes/operator.ts (the audience routes' answers only: the store's 413 answered 413 by name, and the operator's audience list read through the publication like every other reader; R-P644)",
+        "src/index.api-boundary.test.ts (R10 by name: W01.08 :2557, :2560, :2573–2574 and W03.02 :3198 gain the tenant's publication head reads only, the KV calls unchanged; by the specifier; R-P644)",
+        "src/routes/realtime.sdkContract.test.ts (R10 by name: W22.07 :2803–2812 injects its fault at the audiences member's read after invalidatePublicationCache(), the expectation unchanged; by the specifier; R-P644)",
+        "src/connectors/AudienceStore.memory.test.ts (R10 by name: :48, :51, :68, :91, :95 test lane E4's behaviours on a tenant holding the member, as written in the P105 header; by the specifier; R-P644)",
+        "src/units/W29/LEDGER.unit.test.ts (R10 by name: W29.R2 :236–239 runs one five-minute run first, then today's detector unchanged; by the specifier; R-P644)",
+        "src/units/P102/LEDGER.unit.test.ts (R10 by name: CR2's legs run one five-minute run before asCommittedToday and expect committed 3 where 2; by the specifier or P105's builder after P102 joins; R-P644)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
