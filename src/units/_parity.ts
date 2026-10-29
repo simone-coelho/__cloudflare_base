@@ -249,7 +249,11 @@ export async function mount(host: Host, documents: Documents, options: { recover
     LEDGER_RECOVERY_ENABLED: options.recovery === false ? 'false' : 'true',
     PERSONALIZATION_WEBSOCKET: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ connections: 0 }) }) },
     DB: { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) },
-    EVENT_QUEUE: { send: async (body: unknown) => { queued.push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => { for (const message of messages) queued.push(message.body); } },
+    // As the platform's queue: a sendBatch takes at most 100 messages (R-P660, R10 by name).
+    EVENT_QUEUE: { send: async (body: unknown) => { queued.push(body); }, sendBatch: async (messages: Array<{ body: unknown }>) => {
+      if (messages.length > 100) throw new Error(`Queue sendBatch: ${messages.length} messages, more than the 100 a batch may hold`);
+      for (const message of messages) queued.push(message.body);
+    } },
   } as unknown as Env;
   env.RETENTION = JSON.stringify({ version: 1, tenants: fixtureCategories([TENANT]) });
 

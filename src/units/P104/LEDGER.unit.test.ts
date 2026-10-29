@@ -53,15 +53,20 @@
 //     its first hour's visitors returning after the splits (a purchase, within the policy's 7-day window), each hour's
 //     credits the witness's (creditedOf). "A merge at most 64 partials": nine classes grown past 8 MiB split, then an
 //     hour with visitors in all 73 leaves; a leaf is a step that reads another step's output by byte range (its sections
-//     of a page's pack, the design §4), and no step reads the outputs of more than 64 of them.
+//     of a page's pack, the design §4), and no step reads the outputs of more than 64 of them. Peak hours (R-P660): one hour
+//     of 8,333 visitors (the 100,000-a-day peak, ~362 MiB of ledger) and one of 22,000 (~956 MiB), written in batches of
+//     500 visitors as the queue writes them: the hour is folded (every object read, every decision counted) or refused by
+//     name with the refusal stored — read as the day's answer naming fold_step_bound and the hour among its missing hours
+//     (the refusal's form is the builder's) — and every step, its merges and close among them, holds at most 64 MiB.
 //   4 Parity is pinned against a COMMITTED reference (fixtures/reference.json): today's fold at d5d8581c — buildHour
 //     through the five-minute catch-up — with only its refusal budgets lifted (REPORT_LIMITS, MAX_HOUR_OBJECTS; the
 //     analyst's tree-lifted edit), run on the same records at the same times, three times identical and identical on the
 //     do host; never computed at test time, so a build that changes buildHour cannot move the reference. "The day" is the
 //     day the canonical POST builds from the hours at the scenario's last moment (its grids decay to that one time).
 //     Generation and builtAt are left out; an aggregate or a day may carry top-level members today's does not (the
-//     design's optional leafDepth); every member today's carries is equal, integers exactly, other numbers to a relative
-//     1e-15, the work order's. The leaf states are compared through what they decide — every later hour's
+//     design's optional leafDepth); every member today's carries is equal: counts, identifiers and integers exactly, a
+//     floating sum to a relative 1e-12 (an absolute 1e-12 for a value under 1) — the work order's (R-P660): a tree of
+//     partial sums adds in another order than today's single pass and moves only the last bits. The leaf states are compared through what they decide — every later hour's
 //     aggregate and the day — since their storage is the builder's (ring state v3 is in the work order's own remaining
 //     work).
 //   5 The commit's crash model: a step whose acknowledgement is lost after it finished (delivered again), a step cut
@@ -128,8 +133,9 @@
 //     /v1/:tenant/learn/report with that date in its query (the member and the digest's parameter are the builder's) —
 //     and the same day and policy sent again names the same job (every string of the first answer is in the second);
 //     that GET answers 202 while the job's steps run and 200 with { report } when they are done — read before the steps and
-//     after every delivery of the queue: 202 mid-job, its body reporting progress (the 202 answers change as steps run),
-//     every 200 the day as done — and a job is named by its day and policy: the day before, past a page by its 211
+//     after every delivery of the queue: 202 mid-job, its body reporting progress (the numbers of the 202 answers, read in
+//     order, never fall and some rise: steps done never fall), every 200 the day as done, and a job finished by a later
+//     five-minute run accepted — and a job is named by its day and policy: the day before, past a page by its 211
 //     objects, asked with the same policy, is its own job answering its own day; within a page the
 //     request answers inline as today (RF6's ring and money legs). The job's grids under the request's policy, which is
 //     the learning policy's own definition, equal the hourly fold's learning grids of the same day (exposures and credits
@@ -154,19 +160,25 @@
 //
 // MEASURED (_evidence/parity-step3/S51/specifier/logs/, serial, --no-cache, one worker, env -C the tree, --root the tree;
 // scratch trees built by scratch/bin/mk.sh from d5d8581c; the sketch is scratch/sketch/{stagedFold.ts,apply.py}):
-//   TODAY (r4-today, r6-rf7-today: the worktree + this file): 45 of 49 RED, the four LOCK legs green (RF5's old day, RF4's
-//   catch-up). Of the 45, the money leg ×2 is a LOCK behind P103 (green with P103 alone, r4-p103only): RED today on its
-//   PRECONDITION P103; the R-P604 and R-P629 legs are RED on PRECONDITION P103 and, behind it (P103 alone), for P104's
-//   own reason (the rebuild of the 19.9 MiB day 503). The rest RED for P104's missing behaviour: RF1 hour 10 of the
-//   volumes refused, the class refused at hour 8, the 73-leaf hour never reached (hour 10 not folded), T5's wide hour
-//   refused (cells), the open hour refused rawBytes, the bot named report_budget_exceeded rawBytes, the job answered 413
-//   rawBytes; RF2 and RF3 the hours above a page refused; RF4 38 and 50 re-reads, the migration's hour 13 refused; RF5
-//   the head counts 0 of 5,060, hour 0 of T5 refused, C's day built [12]; RF6 the custom-policy day crediting the
-//   400-decision-old click, the big rebuild 503; RF7 every fact absent.
-//   THE SKETCH (r5-sketch, r6-rf7-sketch: staged day rebuild kit born job): 43 of 49 green; the money leg, R-P604's and
-//   R-P629's RED on their PRECONDITION P103 alone. With P103's round-7 sketch beside it (scratch/sketch/p103-apply-r7.py,
-//   its apply.py of 22:02: R-P629's bound and producer mark, preferredCopy) the ten RF6 legs are green (r4-p103, r5-p103).
-//   Every step ≤ 64 MiB counting ArrayBuffer and Buffer memory; a page ≤ 16.0 MiB and 200 objects.
+//   TODAY (s5-today: the worktree on rem/integration e5a95f72 + this file): 49 of 53 RED, the four LOCK legs green
+//   (RF5's old day, RF4's catch-up). Of the 49, the money leg ×2 is a LOCK behind P103 (green with P103 alone,
+//   s5-p103only), RED today on its PRECONDITION P103; the R-P604 and R-P629 legs are RED on PRECONDITION P103 and, behind
+//   it (P103 alone), for P104's own reason (the rebuild of the 19.9 MiB day 503). The rest RED for P104's missing
+//   behaviour: RF1 hour 10 of the volumes refused, the class refused at hour 8, the 73-leaf hour never reached, both peak
+//   hours unfolded with no refusal named (365 MiB, 966 MiB), T5's wide hour refused (cells), the open hour refused
+//   rawBytes, the bot named report_budget_exceeded rawBytes, the job answered 413 rawBytes; RF2 and RF3 the hours above a
+//   page refused; RF4 38 and 50 re-reads, the migration's hour 13 refused; RF5 the head counts 0 of 5,060, hour 0 of T5
+//   refused, C's day built [12]; RF6 the custom-policy day crediting the 400-decision-old click, the big rebuild 503;
+//   RF7 every fact absent.
+//   THE SKETCH (s5-sketch: staged day rebuild kit born job, on e5a95f72): 47 of 53 green; the money leg, R-P604's and
+//   R-P629's RED on their PRECONDITION P103 alone. With P103's sketch beside it (scratch/sketch/p103-apply-0945.py, its
+//   round 7) all 53 are green (s5-money). Every step ≤ 64 MiB counting ArrayBuffer and Buffer memory — the peak hours'
+//   merges and close included — a page ≤ 16.0 MiB and 200 objects. THE 22,000 STALL'S CAUSE (R-P660 (7)): an hour of
+//   966 MiB at depth 0 gives each of the 64 leaves ~15 MiB of rows, past the 8 MiB a leaf may read; every leaf step was
+//   refused fold_step_bound before it read a pack, and the refusal of a closed hour was kept only in the fold's head (no
+//   aggregate, nothing on the day): the hour unfolded, nothing named. The sketch now partitions an hour at a row depth that
+//   keeps each leaf's share within 6 MiB (256 leaves at 22,000: the hour folds, its merge a tree), and the leg reads the
+//   refusal only where it is stored on the day.
 //   THE SKETCH, per leg (never committed; files and the code each leg needs):
 //     src/learn/stagedFold.ts (new): RF1–RF4 — the five-minute run plans the oldest due hour and each close plans the next,
 //       so every due hour is folded in order through the queue without waiting for a run (a listing cut into pages of
@@ -175,13 +187,12 @@
 //       steps in the invocation that plans it rather than a queue hop each), partition (one pack and its index per page, sections by leaf, rows checked as
 //       ReportRowIdentity checks them and digested), leaf (its sections read by range, de-duplicated by digest in global
 //       order keeping a ring-stamped copy over one marked producer-stamped, then the earliest-born (R-P604, R-P629: the
-//       ledger stamp's bornAt, a tie keeping the first read), each leaf logging its accumulator updates (its exposures with
-//       their global positions, its credits) so that a merge that is the hour's only one replays them in today's order —
-//       every exposure in the hour's row order, then the leaves' credits in shard order — and the hour's decayed sums are
-//       today's to the bit (R-P642's 1e-15; summing partials differed by up to 2.5e-15), a conflict
-//       filed or raised; today's cleanupShard, foldableRows, hourBrands, foldShard and countMembership
-//       unchanged; a state past 8 MiB split by visitor hash, rows past 8 MiB refused fold_step_bound), merge (≤ 64
-//       partials; within an hour the date's distinct visitors add), close (closeBrands; the aggregate written create-only
+//       ledger stamp's bornAt, a tie keeping the first read), a conflict filed or raised; today's cleanupShard,
+//       foldableRows, hourBrands, foldShard and countMembership unchanged; a state past 8 MiB split by visitor hash; the
+//       hour's rows partitioned at a row depth (R-P660) keeping each leaf's share within 6 MiB of its 8 MiB of rows, a
+//       shallower leaf of the head split for the hour, its children starting from its state filtered to their visitors;
+//       one visitor's rows past 8 MiB refused fold_step_bound), merge (the design's: partials summed with mergeStats, at
+//       most 64 a merge, in today's shard order; within an hour the date's distinct visitors add; parity to 1e-12), close (closeBrands; the aggregate written create-only
 //       or on the plan's etag, then the head CAS), resume (one listing finds the missing outputs), each fan-out sent once
 //       (a create-only marker, sent in batches of at most 100), unnamed outputs collected after 15 minutes; leaves merged in
 //       today's shard order; the open hour on the same steps never moving the
@@ -227,7 +238,12 @@
 //     leaves keeping the first copy read (firstread) — RF6 R-P629 at the open hour (120 for 575 + 120); the preferred
 //     copy kept in the hour's leaves only (houronly) — RF6 R-P629 at the rebuild; the earliest-born copy alone, a
 //     ring-stamped copy not preferred (noringpref) — RF6 R-P629 at the open hour; kit 02's paragraph with every clause
-//     negated (kitopp) — RF7 (r6-rf7-kitopp). Earlier rounds': steps but leaves that never split — RF1 split; the head
+//     negated (kitopp) — RF7 (r6-rf7-kitopp). R-P660 (round 5, logs s5-*, every control above measured again on the
+//     round-5 sketch, each RED on its legs): round 4's merge, the hour's accumulator updates replayed in one merge
+//     (replay) — RF1 the 100,000-a-day peak hour (its merge past 64 MiB); the hour's rows at the head's leaves only
+//     (norowdepth, the stall) — RF1 the 22,000-visitor hour (unfolded, nothing named); kit 02 with the reviewer's two
+//     negation-free contradictions (kitnf) — RF7 (perStepBound, bySlot; s5-rf7-kitnf); a step hiding 96 MiB in the bucket
+//     while keeping it (abput) — RF1 volumes. Earlier rounds': steps but leaves that never split — RF1 split; the head
 //     written before the aggregate — RF3 crash; a failed run started again — RF4 resume; the open hour left on today's
 //     working fold — RF1 open hour, bot; leaves merged as hours are — RF2; duplicates removed within a page only — RF2;
 //     the leaf skipping today's cleanup — RF2; an hour past a page refused — RF1 volumes; the day left as today — RF1 wide,
@@ -294,13 +310,14 @@ async function dayOf(s: Stamp, date = DATE, query = ''): Promise<{ status: numbe
   return operator(s, 'GET', `/v1/${TENANT}/learn/report?date=${date}${query}`);
 }
 
-/** Every difference between what the platform holds and what today's fold held: keys, strings, integers exact; other numbers to a relative 1e-15 (the work order's). */
+/** Every difference between what the platform holds and what today's fold held: keys, strings, counts and integers exactly; floating sums to a relative 1e-12, an absolute 1e-12 for a value under 1 (the work order's, R-P660). */
 function differences(actual: unknown, expected: unknown, path = '$', out: string[] = [], extraAllowed = false): string[] {
   if (out.length >= 12) return out;
   if (typeof expected === 'number' && typeof actual === 'number') {
-    const exact = Number.isInteger(expected) && Number.isInteger(actual) && Math.abs(expected) < 2 ** 31;
-    const rel = Math.abs(actual - expected) / Math.max(1, Math.abs(actual), Math.abs(expected));
-    if (exact ? actual !== expected : rel > 1e-15) out.push(`${path}: ${actual} where today's fold has ${expected}`);
+    const exact = Number.isInteger(expected) && Number.isInteger(actual);
+    const scale = Math.max(Math.abs(actual), Math.abs(expected));
+    const off = scale < 1 ? Math.abs(actual - expected) : Math.abs(actual - expected) / scale;
+    if (exact ? actual !== expected : off > 1e-12) out.push(`${path}: ${actual} where today's fold has ${expected}`);
     return out;
   }
   if (expected === null || actual === null || typeof expected !== 'object' || typeof actual !== 'object') {
@@ -342,6 +359,23 @@ const CENTURY = { n0: 30, tauLearnMs: 3_153_600_000_000, liftMin: 0.5, liftMax: 
  */
 const creditedOf = (rows: ReadonlyArray<DecisionRecord | OutcomeRecord>) => rows.filter((row): row is OutcomeRecord => 'outcome_id' in row)
   .filter(o => REWARD_OF[String(o.item_id).split('.')[0]!] === o.type).length;
+/** Every number an answer carries, in document order. */
+function numbersOf(value: unknown, out: number[] = []): number[] {
+  if (typeof value === 'number') out.push(value);
+  else if (value && typeof value === 'object') for (const v of Object.values(value)) numbersOf(v, out);
+  return out;
+}
+/** A job's progress across its 202 answers: the same numbers each time, none of them ever falling, at least one rising. */
+function progressMoves(bodies: unknown[]): boolean {
+  const rows = bodies.map(body => numbersOf(body));
+  if (rows.length < 2 || rows.some(row => row.length !== rows[0]!.length)) return false;
+  let rose = false;
+  for (let i = 1; i < rows.length; i++) for (let k = 0; k < rows[i]!.length; k++) {
+    if (rows[i]![k]! < rows[i - 1]![k]!) return false;
+    if (rows[i]![k]! > rows[i - 1]![k]!) rose = true;
+  }
+  return rose;
+}
 /** Every list of strings an answer carries, at any depth. */
 function listsOfStrings(value: unknown, out: string[][] = []): string[][] {
   if (Array.isArray(value)) { if (value.length && value.every(v => typeof v === 'string')) out.push(value as string[]); else for (const v of value) listsOfStrings(v, out); }
@@ -531,6 +565,35 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       expect(bounds(s), `RF1 ${host}: every step holds at most 64 MiB`).toEqual([]);
     }, T);
 
+    for (const [visitors, label] of [[8_333, 'the 100,000-a-day peak hour'], [22_000, 'a peak hour of 22,000 visitors']] as const) {
+      it(`RF1 ${host}: ${label} (${visitors.toLocaleString('en')} visitors in one hour) folds in steps of at most 64 MiB — every merge and close among them — or is refused by name with the refusal stored, never left unfolded`, async () => {
+        const registry = retentionRegistry();
+        const s = await stamp(host, documents(), registry, `P104.RF1 peak ${visitors}`);
+        const r = rng(104_500 + visitors);
+        // Written in batches of 500 visitors (as the queue writes it), so the test never holds the hour's ledger.
+        const ids = visitorsOf(`peak${visitors}-`, visitors);
+        let objects = 0, decisions = 0, bytes = 0;
+        for (let i = 0; i < ids.length; i += 500) {
+          const batch = ledgerObjects(rowsOf(ids.slice(i, i + 500).map(id => visit(registry, id, at(12) + Math.floor(r() * 35 * MIN), 22, r, FULL))), 500, `p${i}-`);
+          const facts = hourFacts(batch, 12);
+          objects += facts.objects; decisions += facts.decisions; bytes += facts.bytes;
+          writeLedger(s, batch);
+          batch.clear();
+        }
+        await settleAt(s, at(13, 6));
+        const agg = aggregateOf(s, 12) as (Json & { objects: number; objectsRead: number; brands: Record<string, { decisions: number }> }) | null;
+        const day = await dayOf(s);
+        const coverage = (day.body.report as { coverage?: { missingHours?: number[] } } | undefined)?.coverage;
+        // Folded: every object read and every decision counted. Refused: by name — the day names fold_step_bound and the hour missing.
+        const seen = agg !== null
+          ? { hour: 'folded', objects: agg.objects, objectsRead: agg.objectsRead, decisions: agg.brands[TENANT]?.decisions }
+          : { hour: 'not folded', refusedByName: stringsOf(day.body).includes('fold_step_bound') && (coverage?.missingHours ?? []).includes(12) };
+        expect(seen, `RF1 ${host}: hour 12 (${(bytes / MiB).toFixed(0)} MiB of ledger in ${objects} objects, ${decisions} decisions) is folded, or refused by name with the refusal stored (${JSON.stringify(day.body).slice(0, 160)})`)
+          .toEqual(agg !== null ? { hour: 'folded', objects, objectsRead: objects, decisions } : { hour: 'not folded', refusedByName: true });
+        expect(bounds(s), `RF1 ${host}: every step of the peak hour — its merges and its close among them — holds at most 64 MiB and reads at most a page`).toEqual([]);
+      }, T);
+    }
+
     it(`RF1 ${host}: a step past its bound is refused naming its step (fold_step_bound) — one visitor's ~30 MB of decisions in an open hour`, async () => {
       const registry = retentionRegistry();
       const s = await stamp(host, documents(), registry, 'P104.RF1 fold_step_bound');
@@ -588,15 +651,16 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
       const final = JSON.stringify(withoutIdentity(done.body.report as Json));
       const running = reads.filter(r => r.status === 202), answered = reads.filter(r => r.status === 200);
       expect({
-        // 202 while its steps run — read before any step and between them — and 200 from the first read after the last of them.
-        statuses: [...new Set(reads.map(r => r.status))].sort(),
+        // 202 while its steps run — read before any step and between them — and 200 once they are done (by the queue's
+        // deliveries or by a five-minute run after them).
+        statuses: reads.every(r => r.status === 202 || r.status === 200),
         midJob: running.some(r => r.delivered > 0),
-        // Its progress: the 202 answers report it, so they change as the steps run.
-        progress: new Set(running.map(r => JSON.stringify(r.body))).size > 1,
+        // Its progress: the 202 answers' numbers (steps done, and what they are out of) move as the steps run and never fall.
+        progress: progressMoves(running.map(r => r.body)),
         // Each 200 is the day as done, never an answer before the job is complete.
         everyDayDone: answered.every(r => JSON.stringify(withoutIdentity((r.body.report ?? {}) as Json)) === final),
       }, `RF1 ${host}: the job's read answers 202 with its progress while the steps run, then 200 with the day (${reads.length} reads over ${delivered} deliveries; 202 bodies ${JSON.stringify(running.slice(0, 3).map(r => r.body)).slice(0, 300)})`)
-        .toEqual({ statuses: [200, 202], midJob: true, progress: true, everyDayDone: true });
+        .toEqual({ statuses: true, midJob: true, progress: true, everyDayDone: true });
       const folded = (await dayOf(s)).body.report as Json & { policies?: Array<{ role: string; credits: number }> };
       const learning = gridsOf(folded, 'learning');
       // Witness: every decision of the day is an exposure; each of the 460 visits' two clicks on a hero, and the click carried in from the day before, is a credit.
@@ -1183,11 +1247,14 @@ describe('unit:P104.RF7 (E29: kit 02 states the envelope)', () => {
     // Each fact stated by a sentence that does not negate it, and no sentence of the envelope says its opposite.
     const facts = {
       perStepBound: says(x => /64\s?MiB/.test(x) && /\bstep/i.test(x) && /\bat most\b|\bholds?\b|\bwithin\b/i.test(x))
-        && !sentences.some(x => /64\s?MiB/.test(x) && /\b(refus|drop|truncat|lost)\w*/i.test(x) && /\b(traffic|hours?|tenant)\b/i.test(x)),
+        && !sentences.some(x => /64\s?MiB/.test(x) && /\b(refus|drop|truncat|lost)\w*/i.test(x) && /\b(traffic|hours?|tenant)\b/i.test(x))
+        && !sentences.some(x => /\b(more than|over|above|exceed\w*|past|beyond)\s+64\s?MiB/i.test(x))
+        && !sentences.some(x => /\b(hours?|fold)\b/i.test(x) && /\bskips?\b|\bskipped\b|\bunfolded\b/i.test(x)),
       noVolumeLimit: sentences.some(x => /no volume limit|whatever the traffic/i.test(x) && /\bfold/i.test(x) && !/\b(never|cannot|can't|no longer)\b/i.test(x))
         && !sentences.some(x => /\b(traffic|volume|busy)\b/i.test(x) && /\b(refus|drop)\w*/i.test(x) && /\b(fold|hours?|steps?)\b/i.test(x)),
       bySlot: says(x => /[?&]slot=/.test(x) && /\bparts?\b/i.test(x))
-        && !sentences.some(x => /\bday\b/i.test(x) && /in parts|part per slot|[?&]slot=/i.test(x) && (negated(x) || /only the first|first page/i.test(x))),
+        && !sentences.some(x => /\bday\b/i.test(x) && /in parts|part per slot|[?&]slot=/i.test(x) && (negated(x) || /only the first|first page/i.test(x)))
+        && !sentences.some(x => /[?&]slot=/.test(x) && /\b(every|all|each|whole)\b[^.]*\b(parts?|day)\b/i.test(x) && /\b(loads?|reads?|fetch\w*)\b/i.test(x) && !/only (that|its|the asked|one)/i.test(x)),
       pastEightMiB: says(x => /8\s?MiB/.test(x) && /\b200\b/.test(x) && /slot/i.test(x) && /in place of 413|instead of 413/.test(x))
         && !sentences.some(x => /8\s?MiB|by slot/i.test(x) && /\b413\b/.test(x) && !/in place of 413|instead of 413/.test(x)),
       coverage: says(x => /coverage/.test(x) && /(missing|incomplete|truncated)/i.test(x) && /\bnames?\b|\bsays?\b|\blists?\b/i.test(x))
