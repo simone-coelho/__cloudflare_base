@@ -936,7 +936,7 @@ function indexIdentity(held: CatalogIndex | undefined, pointer: { digest?: strin
   if (!held || !pointer) return undefined;
   const address = indexAddress(held, pointer); return address ? placeKey(address) : pointer.digest;
 }
-const rollbackPastRetention = (n: number) => new PublicationError(`Revision ${n} passed the configuration retention while the rollback ran, so the purge may remove what only it names; nothing was written; send the rollback again, and it writes what only that revision names into its own pack`, 409, 'publication_conflict');
+const rollbackPastRetention = (n: number) => new PublicationError(`Revision ${n} passed the configuration retention while the rollback ran, so the purge may remove what only it names; nothing was written; a rollback to it made now writes what only that revision names into its own pack`, 409, 'publication_conflict');
 /**
  * P98 (LD6, R-P646): a rollback to a revision the purge may remove while it runs (`catalogueRevisionNameable`) names
  * nothing only that revision names. It is published as a load of the difference over the revision in force: each

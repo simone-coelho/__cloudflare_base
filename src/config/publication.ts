@@ -1182,7 +1182,7 @@ export async function holdPack(env: Env, scope: string, written: WrittenPack): P
 }
 /** P98 (R-P646): a pack, or a stage's pack, a request can no longer name: the purge may collect it. */
 function packPastFence(key: string): PublicationError {
-  const error = new PublicationError('The pack this publication names was stored 14 minutes ago or more, so the purge may collect it before the publication commits; nothing was written; send the file again', 503, 'publication_unavailable');
+  const error = new PublicationError('The pack this publication names was stored 14 minutes ago or more, so the purge may collect it before the publication commits; nothing was written', 503, 'publication_unavailable');
   error.failure = { operation: 'head', objectKind: objectKindOf(key) };
   return error;
 }
