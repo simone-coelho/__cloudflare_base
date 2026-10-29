@@ -205,7 +205,7 @@ export interface OutcomeRecord {
    * records written before enrollment was persistent, on a visitor the platform
    * could not resolve, and on one who is not eligible for the experiment.
    */
-  experiment?: import('@/content/types').EnrollmentProvenance;
+  experiment?: import('@/content/types').EnrollmentProvenance; /** P103: the money policy in force when this outcome was taken; absent when none was published. */ money?: import('@/learn/policy').MoneyPolicy; /** P103 (R-P629): `producer` when `money` is the producer's own read, not the stamp the ring answered (past RING_DECISION_BOUND_MS, or no decision). */ money_stamped_by?: 'producer';
 }
 
 export type LedgerMessage =

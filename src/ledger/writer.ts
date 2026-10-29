@@ -14,7 +14,7 @@ import { fromTs36, hourPrefix, isProductSortRecord, isBehaviorRecord, parseId, t
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from './records';
 import { assertManagedWriteAvailable, hidden, loadTombstones } from './erasure';
-import { boundedLedgerText, byteLength, captureReceipt, CAS_RETRIES, checkedClaim, claimKey, claimText, DELIVERY_FIELD, digest, equalLogicalRows,
+import { boundedLedgerText, byteLength, captureReceipt, CAS_RETRIES, preferredCopy, checkedClaim, claimKey, claimText, DELIVERY_FIELD, digest, equalLogicalRows,
   logicalIdentity, MANAGED_BYTES, MANAGED_MARKER, MANAGED_PARTS, managedRows, readDelivery, validCarrier,
   readClaim, UUID, type DeliverySurvivors, type CaptureReceipt, type Delivery, type DeliveryCaptureReceipt, type DeliveryClaim, type DeliveryRow } from './delivery';
 
@@ -461,6 +461,7 @@ export async function findById<T extends DecisionRecord | OutcomeRecord | Produc
       if (rec[field] !== id) continue;
       if (found) {
         if (identity === 'legacy' || !equalLogicalRows(found.record as unknown as Record<string, unknown>, rec, spend)) throw lookupUnavailable();
+        if (preferredCopy(rec, found.record as unknown as Record<string, unknown>)) found = { record: rec as unknown as T, key };
       } else found = { record: rec as unknown as T, key };
     }
   }

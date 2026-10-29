@@ -118,7 +118,7 @@ export const GA4_MAPPING: DataLayerMapping = {
     const items = Array.isArray(x.items) ? (x.items as Array<Record<string, unknown>>).map((it) => ({
       productId: String(it.item_id ?? it.id ?? ''), quantity: it.quantity ?? 1, ...(it.price !== undefined ? { price: it.price } : {}),
     })) : [];
-    return { type: 'purchase', data: { orderId: String(x.transaction_id ?? ''), value: Number(x.value ?? 0), currency: x.currency ?? 'USD', items } };
+    return { type: 'purchase', data: { orderId: String(x.transaction_id ?? ''), value: Number(x.value ?? 0), ...(x.currency !== undefined && x.currency !== null ? { currency: x.currency } : {}), items } };
   },
 };
 

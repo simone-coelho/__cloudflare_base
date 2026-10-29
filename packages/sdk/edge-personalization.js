@@ -1571,7 +1571,7 @@
         quantity: it.quantity ?? 1,
         ...it.price !== void 0 ? { price: it.price } : {}
       })) : [];
-      return { type: "purchase", data: { orderId: String(x.transaction_id ?? ""), value: Number(x.value ?? 0), currency: x.currency ?? "USD", items } };
+      return { type: "purchase", data: { orderId: String(x.transaction_id ?? ""), value: Number(x.value ?? 0), ...x.currency !== void 0 && x.currency !== null ? { currency: x.currency } : {}, items } };
     }
   };
   var layerRegistries = /* @__PURE__ */ new WeakMap();

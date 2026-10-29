@@ -631,7 +631,7 @@ describe('unit:W24.R1.04', () => {
     expect({ first: refusedBySlot(firstTry) ?? absent('`refusedBySlot` on the outcome receipt', firstTry.outcome ?? {}),
       second: refusedBySlot(secondTry) ?? absent('`refusedBySlot` on the outcome receipt', secondTry.outcome ?? {}),
       series: seriesOf(only, 'story') },
-      'W24.R1.04 — an outcome every slot refused is not a credited outcome: it is never written into the credited journal, so the same delivery arriving again is refused again by name rather than answered as already applied (W22 D1.02/D1.04 keep their meaning for outcomes that WERE credited)')
+      'W24.R1.04 — an outcome every slot refused is not a credited outcome: it is never journalled as credited, so the same delivery arriving again is refused again by name rather than answered as already applied (W22 D1.02/D1.04 keep their meaning for outcomes that WERE credited; P103 R-P620: an outcome refused for money is journalled as refused, which recognizes no repeat)')
       .toEqual({ first: { story: 'money' }, second: { story: 'money' }, series: [] });
 
     // "Test old callers" (document 35 §5 row W24): the pre-W24 shape — no
