@@ -18,7 +18,8 @@
 //   whose work survives its budget, a deletion order that cannot strand, a rule that tells a count lost for good from one
 //   not yet established — never a larger budget, a sweep by hand or a kit sentence in place of the behaviour.
 //
-// TODAY (d5d8581c): src/config/publication.ts purgeByPolicy resolves a sharded revision's objects in orphansOf, one budget
+// TODAY (d5d8581c; measured again at rem/integration 3623ef57, whose purge, learn routes and cited kit lines are the same):
+// src/config/publication.ts purgeByPolicy resolves a sharded revision's objects in orphansOf, one budget
 // call per shard read, before sweep lists or deletes anything, so a revision naming 512 shards exhausts the 256-call
 // budget on every pass and is never removed (PG1); orphansOf queues a shard's key before the parts behind it and sweep
 // deletes 1,000 keys a call, so a stop between calls strands parts no stored shard reaches (PG2); saltCountCarried answers
@@ -44,6 +45,13 @@
 // ../P93/_catalog indexOf finds an object by its digest and so cannot read 1113cc75's place-only pointers: measured on
 // the scratch merge, 458 of 458 shard pointers reported missing). Measured on a scratch merge of rem/p98-build 1113cc75
 // with rem/spec-p98 8da80056 (the harness R10s P98's build reads through): see the report.
+// Round 2 (R-P597): measured again on scratch merges of rem/p98-build b7f3ed6f (rem/spec-p98 3f0fcf83 in it) and ca432b6c
+// (with rem/spec-p98 d6926bc6) with this branch. There a pointer into a pack carries its object's first 128 bits again
+// (`{ digest, pack, at, bytes, … }`); orphansOf reads every peer pointer pack-aware and STOPS the purge on a peer shard it
+// cannot read (R-P600); a stored pack is reused only if uploaded within the grace less PACK_REUSE_MARGIN_MS (R-P656), its
+// deletion only while the head is idle and unchanged. As built: the planted PG1 and PG2 legs and PG3 RED for the causes
+// above; the route-loaded PG1 and PG2 legs green (P98's packs: after P98 they are the locks). Two readings follow for a
+// build after P98 (R12, R13).
 //
 // READINGS (where the work order is silent; for the lead):
 //   R1 "On both hosts": the purge and the learn routes are the operator's path, the same on either shopper host; every
@@ -61,7 +69,7 @@
 //      missing, and at the end nothing any stored revision reaches. "Nothing is left that no stored revision names": the
 //      catalogue's object directories (part, shard, idshard, ids, pack) hold nothing a stored revision does not reach
 //      through objects the store holds (./_purge.ts namedObjects: an object of its own named by its digest, or a pack and
-//      a byte range, as P98's builds eafe219d and 1113cc75 store them; the reader holds no expected value).
+//      a byte range, as P98's builds eafe219d, 1113cc75 and b7f3ed6f store them; the reader holds no expected value).
 //   R5 PG2's revision: four product shards holding 1,200 products only that revision points at (ids chosen by the bucket
 //      rule, P93's reading 1), more than 1,000 objects, so its removal needs more than one deletion call (R2 deletes at
 //      most 1,000 keys a call) and today's order is reached within today's budget (R-P506 (3): "not reachable under the
@@ -97,6 +105,15 @@
 //      its revision's body still goes (a sketch that kept the body instead turned those four legs RED; after P98 no load
 //      writes an object of its own, so the grace no longer touches the objects stored before packs). These legs list
 //      every object as uploaded at time 0, as the double does, so the grace does not enter them.
+//   R12 "Its progress kept to the next" after P98: P98's orphansOf stops the purge on a peer shard it cannot read
+//      (R-P600, a fail-safe kept), and a revision whose removal an earlier pass began lacks shards of its own while its
+//      body stays, so no other candidate may read it as a peer before its body goes (the sketch resumes a begun removal
+//      first). Measured on the ca432b6c merge: progress kept without that leaves six of the eight (PG1 planted).
+//   R13 "Nothing is left that no stored revision names" after P98: a writing load copies the shards and id shards stored
+//      before packs into its pack and reads them there alone (publication.ts indexAddress, no fallback), so another
+//      revision names a shard or id shard object of its own only through a pointer of its own (no byte range) with its
+//      digest. Measured on the ca432b6c merge: counting a packed pointer's 128-bit prefix as naming it (orphansOf's rule
+//      for a shard named whole) leaves 510 objects no stored revision names (PG1 planted).
 //
 // THE R10 BY NAME (the work order's grant, by the specifier; not edited here — the lead rules it before the build):
 //   src/units/P95/LEDGER.unit.test.ts KIT_PURGE_KEEPS (:300), before → after:
@@ -111,6 +128,12 @@
 //     object (no `delimiter`, no `startAfter`) → R2's listing: the keys after `startAfter`; a key holding `delimiter`
 //     past the prefix rolled up into one `delimitedPrefixes` entry; at most `limit` names a page, objects and prefixes
 //     counted together; an opaque `cursor` resuming after the last name a page answered. Uploads still at time 0.
+//     Swept (R-P597) at rem/integration 3623ef57: of the 87 test files that reach ../_parity, 70 call the double's list;
+//     each ran with the double as it was and with the R10, 1,354 tests passed both ways, no status changed. No answer
+//     changed: no delivered test lists past 1,000 keys, and the only rolled-up listings (P86, P93 and P95, the purge's
+//     listing of the ledger's days, 136 calls) find the ledger empty every time, so under this double the purge's
+//     stored-decision rule is exercised by P99.PG3's bound legs alone (W38 FIX1 and LEDGER test it with doubles of their
+//     own that already list as R2 does). On the b7f3ed6f merge P98's file is 82 of 82 with the R10 and without it.
 //
 // LOCKS (the gate): P93 CS5, P95 SV1–SV5 (as amended by the R10), W38 LEDGER and FIX1 B4.x, W21 B1–B3 and LEDGER, P86,
 // src/config/versionedStore.test.ts, src/config/publication.optionalMember.test.ts, src/routes/content.test.ts, every test
