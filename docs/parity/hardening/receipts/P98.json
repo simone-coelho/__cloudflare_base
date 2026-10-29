@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "DELIVERY",
+  "ticketId": "P98",
+  "workOrderHash": "sha256:20ba688be67eeb06aa34dc0da8878d44d6482986cc5009f5e7d072752294745d",
+  "artifact": {
+    "revision": "6de32ea2e5035fda71269c57088789f1658764e2",
+    "repository": "git repository __cloudflare_base (origin github.com/simone-coelho/__cloudflare_base), branch rem/p98-joined-b merged into rem/integration, local and not pushed"
+  },
+  "implementation": {
+    "actor": "rem-implementer",
+    "evidence": [
+      "rem/p98-build at ca432b6c, specification merged through d6926bc6.\n- src/config/publication.ts: the pack writer (one pack per load, each at most 64 MiB less 64 bytes, a random tail on a filled pack before the last), the pack table capped at 65 rows by moving the packs with the fewest live bytes, stage packs included, PACK_REUSE_MARGIN_MS (a pack reused only within 10 minutes and held again under 14 once the head is held), the head moved by one compare-and-set re-sent only when unchanged, the sweep deleting only while the head holds its own publication, and the once-only migration of objects stored before packs.\n- src/routes/content.ts: the stage and publish doors (a 10-minute stage window, one publication), the rollback's copy mode and its 409 fence, an honest 503 naming the store's state, and 413 load_too_large.\n- Kits 02 and 03 state the design and its bounds.",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S43/specifier/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/S43/reviewer-spec/REPORT.md",
+      "/home/simonecoelho/rem/_evidence/parity-step3/P98/implementer/REPORT.md",
+      "git commits on rem/p98-joined-b up to 6de32ea2"
+    ]
+  },
+  "acceptance": {
+    "command": "node node_modules/vitest/vitest.mjs run src/units/P98 --minWorkers=1 --maxWorkers=1",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S43/reviewer-p98/logs-r2/p98.log"
+    ]
+  },
+  "integration": {
+    "command": "rm -f coverage/ledger-integration.json; node node_modules/vitest/vitest.mjs run src --minWorkers=1 --maxWorkers=1 --reporter=default --reporter=json --outputFile=coverage/ledger-integration.json; node scripts/remediation/score.mjs --from coverage/ledger-integration.json --check-ratchet && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check",
+    "result": "PASS",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/S43/gate-r2/gate.log"
+    ]
+  },
+  "verification": {
+    "verdict": "PASS",
+    "verifier": "rem-reviewer",
+    "evidence": [
+      "/home/simonecoelho/rem/_evidence/parity-step3/P98/reviewer/REPORT.md"
+    ]
+  },
+  "completedAt": "2026-10-29T17:50:38.781Z",
+  "deferredLiveAcceptance": [
+    {
+      "id": "LIVE1",
+      "status": "PENDING",
+      "evidence": []
+    }
+  ]
+}

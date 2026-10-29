@@ -142,7 +142,7 @@ async function partPieceOf(env: Env, tenant: string, catalog: ContentCatalog, id
     // P93: the product's pointer through its shard on a sharded catalogue.
     const pointer = entry?.products?.[0] === undefined ? undefined : await catalogPartPointer(env, tenant, catalog, entry.products[0]);
     if (!pointer) return undefined;
-    return ((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentPiece[]).find(candidate => candidate.id === id);
+    return ((await readCatalogPart(env, tenant, pointer.digest, pointer.address)).pieces as ContentPiece[]).find(candidate => candidate.id === id);
   } catch { return undefined; }
 }
 

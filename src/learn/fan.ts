@@ -163,7 +163,7 @@ export async function liftWitnessVerdict(env: Pick<Env, 'LEARN_STATS'>, tenant: 
 export const elapsedMs = (started: number): number => Math.max(0, Math.round(performance.now() - started));
 import type { ContentPiece, DecisionRecord, LearningRead, LearningReadBudgets, LiftAsOf, LiftReadOutcome, RingReadOutcome, SlotAttribution, SlotCatalog } from '@/content/types';
 import { isOffLimitsLayoutRecord, isRewardType, type OutcomeRecord } from '@/ledger/records';
-import { attribute, successCreditOf, type AttributionPolicy, type RingEntry } from './policy';
+import { attribute, recordedMoneyPolicy, successCreditOf, type AttributionPolicy, type MoneyPolicy, type MoneyRefusal, type RingEntry } from './policy';
 // The ring's own reach, read from the module that declares it and that
 // `@/durable-objects/DecisionRing` re-exports under the same name. It is read
 // from there and NOT from the ring itself because the ring imports this module:
@@ -605,55 +605,8 @@ export interface StatsDelivery extends DestinationCounts {
   received: number; processed: number; skipped: number; rowsUnknown: number; rowsNotAttempted: number; alarmsUnknown: number;
   newlyApplied?: number; alreadyApplied?: number; suppressed?: number;
 }
-/**
- * W24 R1.02 (F19 §5.3 "the currency is never read and a refund never
- * subtracts"; document 35 §5 row W24 :426 "revenue/margin/currency/refund
- * behavior"): the tenant's published money policy — WHAT the numbers on an
- * outcome mean when a slot learns money.
- *
- * The VALUES are the customer's business and data-science owners' (D09,
- * W24.P1.01): which currency the counters are in and how another one converts,
- * whether a refund subtracts from the objective it credited, and what a
- * nonpositive value means. None of them is the platform's to invent, so until
- * one is published this is ABSENT and the platform refuses the outcomes it
- * would have to guess about, naming the refusal rather than silently adding,
- * dropping or subtracting.
- */
-export interface MoneyPolicy {
-  /** The currency the slot's money counters are in. An outcome in another one needs a declared conversion. */
-  currency: string;
-  /** What a value at or below zero means for the objective it would credit. */
-  nonpositive: 'refuse' | 'credit';
-}
-/** W24 R1.02: money the platform will not weigh, and why. */
-export interface MoneyRefusal { code?: string; reason: 'money_policy_unset' }
-
-/**
- * W24 R1.02: may this outcome be weighed in the objective's own unit? Null when
- * there is nothing to decide — a unit objective counts events, not money — and
- * otherwise a named refusal whenever answering would take a policy VALUE nobody
- * has published. General: it names no currency, no rate and no refund rule of
- * its own, and every one of them comes from `policy` when a tenant publishes it.
- */
-export function moneyRefusal(objective: 'unit' | 'revenue' | 'margin' | undefined,
-  outcome: Pick<OutcomeRecord, 'value' | 'margin' | 'currency'>, policy?: MoneyPolicy | null): MoneyRefusal | null {
-  if (!objective || objective === 'unit') return null;
-  const declared = typeof outcome.currency === 'string' && outcome.currency.trim() ? outcome.currency.trim() : undefined;
-  const amount = objective === 'margin' ? outcome.margin : outcome.value;
-  const nonpositive = typeof amount === 'number' && Number.isFinite(amount) && amount <= 0;
-  if (!policy) {
-    // Nothing is published. An outcome that states its currency cannot be added
-    // to counters whose currency nobody declared, and a refund or a zero cannot
-    // be applied under a rule nobody wrote.
-    if (declared !== undefined) return { code: declared, reason: 'money_policy_unset' };
-    return nonpositive ? { reason: 'money_policy_unset' } : null;
-  }
-  // A currency other than the declared one needs a conversion rule and a rate
-  // source, which the policy does not carry: it is named, never guessed at.
-  if (declared !== undefined && declared.toUpperCase() !== policy.currency.toUpperCase()) return { code: declared, reason: 'money_policy_unset' };
-  if (nonpositive && policy.nonpositive === 'refuse') return { ...(declared !== undefined ? { code: declared } : {}), reason: 'money_policy_unset' };
-  return null;
-}
+/** W24 R1.02: the money policy and its rule live in the one credit rule's module (P103); re-exported for their readers here. */
+export { moneyRefusal, type MoneyPolicy, type MoneyRefusal } from './policy';
 
 export interface OutcomeReceipt {
   version: 1; kind: 'outcome'; received: 1; cutoffSkipped: number;
@@ -783,11 +736,11 @@ const statsComplete = (d: StatsDelivery): boolean => d.unknown === 0 && d.notAtt
 
 type Posted<T> = { state: 'acknowledged'; receipt: T } | { state: 'unknown' | 'notAttempted' };
 /** No retries: a failed HTTP/body acknowledgement can follow a committed non-idempotent write. */
-async function post<T>(ns: NS, name: string, path: string, body: unknown, validate: (body: unknown) => T | null): Promise<Posted<T>> {
+async function post<T>(ns: NS, name: string, path: string, body: unknown, validate: (body: unknown) => T | null, signal?: AbortSignal): Promise<Posted<T>> {
   if (!ns) return { state: 'notAttempted' };
   try {
     const stub = ns.get(ns.idFromName(name));
-    const response = await stub.fetch(`https://learn${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const response = await stub.fetch(`https://learn${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), ...(signal ? { signal } : {}) });
     if (!response.ok) return { state: 'unknown' };
     const accepted = validate(await response.json());
     return accepted ? { state: 'acknowledged', receipt: accepted } : { state: 'unknown' };
@@ -1291,8 +1244,13 @@ export async function fanLayoutExposure(env: Pick<Env, 'LEARN_STATS'> & Partial<
   } catch { return emptyStatsDelivery(); }
 }
 
-/** An outcome to the visitor's ring, which attributes it under the policy and forwards the credits. */
-export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null, pageScoped?: ReadonlySet<string>): Promise<LearningReceipt> {
+/**
+ * An outcome to the visitor's ring, which attributes it under the policy and forwards the credits.
+ * P103 (R-P588, R-P620): the ring decides the outcome under the money policy its record carries (`money`, this
+ * parameter, is no longer read there), and `onDecided` is told the policy it answered it decided under (null for none),
+ * only when the ring answered one; `signal` aborts the ring call (the direct path's `RING_DECISION_BOUND_MS`).
+ */
+export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & Partial<RetentionEnv> & Partial<Pick<Env, 'CACHE'>>, tenant: string, outcome: OutcomeRecord, policy: AttributionPolicy, brand: string, slotConfig: Record<string, SlotLearnConfig>, defaultSlotConfig?: SlotLearnConfig, managed?: { consentUntil: number }, money?: MoneyPolicy | null, pageScoped?: ReadonlySet<string>, onDecided?: (stamp: MoneyPolicy | null) => void, signal?: AbortSignal): Promise<LearningReceipt> {
   const out = receipt('outcome', 1);
   try {
     out.code = 'invalid';
@@ -1345,7 +1303,15 @@ export async function fanOutcome(env: Pick<Env, 'DECISION_RING' | 'STORAGE'> & P
     out.ring.notAttempted = 0; out.ring.unknown = 1;
     const ring = await post(env.DECISION_RING, ringName(tenant, outcome.visitor_id), '/outcome', { tenant, brand, outcome, policy, slotConfig, defaultSlotConfig,
       ...(money === undefined || money === null ? {} : { money }), ...pageScopedWire(scoped),
-      ...(managed ? { version: 2, consentUntil: managed.consentUntil } : {}) }, outcomeReply);
+      ...(managed ? { version: 2, consentUntil: managed.consentUntil } : {}) }, value => {
+        // P103 (R-P620, R-P653): the ring's decision is its answer's `decidedUnder`, the money policy it decided the
+        // outcome under or null for none; an answer without one, or with one that is not a policy, decided nothing.
+        if (onDecided && object(value) && value.ok === true && Object.hasOwn(value, 'decidedUnder')) {
+          const stamp = value.decidedUnder === null ? null : recordedMoneyPolicy(value.decidedUnder);
+          if (stamp !== null || value.decidedUnder === null) onDecided(stamp);
+        }
+        return outcomeReply(value);
+      }, signal);
     out.ring.unknown = 0; out.ring[ring.state] = 1;
     if (ring.state === 'acknowledged') out.outcome = ring.receipt;
   } catch { if (out.code === 'complete') out.code = 'incomplete'; }
@@ -1415,7 +1381,7 @@ export function foldRetainedDay(input: {
       // success event its record names, at its value in the slot's currency —
       // by the one rule the visitor's ring credits by (`successCreditOf`).
       const success = successCreditOf(ring.find((e) => e.id === c.decision_id)?.successEvent, input.config, o);
-      if (success === null) continue;
+      if (success === null || 'refused' in success) continue;
       const weight = success.weight;
       if (weight <= 0) continue;
       recordSuccess(stats, c.item, c.cell, success.reward, input.at, weight, input.config.stats, input.at);

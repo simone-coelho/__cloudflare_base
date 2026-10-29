@@ -797,7 +797,7 @@ async function withRecordParts(env: Env, tenant: string, catalog: ContentCatalog
     // P93: the anchor's pointer through its shard on a sharded catalogue; a shard or part that cannot be read leaves the names out.
     try {
       const pointer = await catalogPartPointer(env, tenant, catalog, anchor);
-      if (pointer) pieces.push(...((await readCatalogPart(env, tenant, pointer.digest)).pieces as ContentCatalog['pieces']));
+      if (pointer) pieces.push(...((await readCatalogPart(env, tenant, pointer.digest, pointer.address)).pieces as ContentCatalog['pieces']));
     } catch { /* names left out */ }
   }
   return { ...catalog, pieces };

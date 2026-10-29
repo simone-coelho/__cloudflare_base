@@ -172,12 +172,31 @@ export class UnitR2 {
   objects = new Map<string, string>();
   versions = new Map<string, number>();
   metadata = new Map<string, Record<string, string>>();
-  async get(key: string) {
+  /** P98 R10 (R-P551): each object's UTF-8 bytes, held while its stored string is the same one (a test may set `objects` directly). */
+  private encoded = new Map<string, { raw: string; bytes: Uint8Array }>();
+  private bytesOf(key: string, raw: string): Uint8Array {
+    const held = this.encoded.get(key);
+    if (held && held.raw === raw) return held.bytes;
+    const bytes = new TextEncoder().encode(raw); this.encoded.set(key, { raw, bytes }); return bytes;
+  }
+  async get(key: string, options?: { range?: { offset?: number; length?: number; suffix?: number } }) {
     const raw = this.objects.get(key); if (raw === undefined) return null;
+    if (options?.range) {
+      // P98 R10 (R-P551): R2's ranged read — `size` the whole object's, the body the range's bytes alone.
+      const all = this.bytesOf(key, raw), range = options.range;
+      const offset = range.suffix !== undefined ? Math.max(0, all.length - range.suffix) : range.offset ?? 0;
+      const slice = all.slice(offset, range.length === undefined ? all.length : offset + range.length);
+      return { key, etag: 'v' + this.versions.get(key), size: all.length, range: { offset, length: slice.length }, customMetadata: this.metadata.get(key),
+        body: new Response(slice).body, text: async () => new TextDecoder().decode(slice), json: async () => JSON.parse(new TextDecoder().decode(slice)) as unknown };
+    }
     return { key, etag: 'v' + this.versions.get(key), size: new TextEncoder().encode(raw).length, customMetadata: this.metadata.get(key),
       body: new Response(raw).body, text: async () => raw, json: async () => JSON.parse(raw) as unknown };
   }
-  async head(key: string) { return this.objects.has(key) ? { key } : null; }
+  /** P98 R10 (R-P551): R2's HEAD answers the object's size and its custom metadata. */
+  async head(key: string) {
+    const raw = this.objects.get(key);
+    return raw === undefined ? null : { key, etag: 'v' + this.versions.get(key), size: this.bytesOf(key, raw).length, customMetadata: this.metadata.get(key) };
+  }
   async put(key: string, raw: string, options?: R2PutOptions) {
     const old = this.objects.has(key) ? 'v' + this.versions.get(key) : null, condition = options?.onlyIf;
     const absent = condition instanceof Headers ? condition.get('If-None-Match') === '*' : condition?.etagDoesNotMatch === '*';

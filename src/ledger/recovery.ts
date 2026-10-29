@@ -49,7 +49,7 @@ export async function learningEffectId(kind: 'exposures' | 'credits', destinatio
 
 /** An outcome's durable admission input: the record, with the learning policy and configurations its scope's learn document named. */
 export type OutcomeRecoveryInput = { kind: 'outcome'; tenant: string; subject: string; brand: string; outcome: OutcomeRecord;
-  policy: AttributionPolicy; configs: Record<string, SlotLearnConfig>; defaultConfig: SlotLearnConfig };
+  policy: AttributionPolicy; configs: Record<string, SlotLearnConfig>; defaultConfig: SlotLearnConfig; money?: import('@/learn/policy').MoneyPolicy | null };
 /**
  * P65 (amendment 7, R-P124): the outcome a tracked action's behaviour capture
  * carries in its own durable admission. The action route prepares the outcome's
@@ -96,7 +96,7 @@ const categoriesOf = (input: RecoveryInput): Array<'ledger' | 'online'> => learn
 // Those never refresh its admitted lifetime: compare logical data, then reuse
 // the first complete payload and its original retention/configuration below.
 const sourceOf = (input: RecoveryInput) => ({ kind: input.kind, tenant: input.tenant, subject: input.subject, brand: input.brand,
-  rows: rowsOf(input).map(row => Object.fromEntries(Object.entries(row).filter(([key]) => key !== 'retention' && key !== 'externalRetention'))) });
+  rows: rowsOf(input).map(row => Object.fromEntries(Object.entries(row).filter(([key]) => key !== 'retention' && key !== 'externalRetention' && key !== 'money'))) });
 const chunkKey = (id: string, index: number) => `recoveryBody:${id}:${index}`;
 const metaKey = (id: string) => `recoveryOperation:${id}`;
 
@@ -192,9 +192,9 @@ export async function runOwnerRecovery(storage: DurableObjectStorage, env: Env, 
   await guard(principal, consentUntil);
   for (const row of rows) for (const category of categoriesOf(input)) requireRetention(env, row.retention?.[category], row.tenant, category);
   const occurredAt = Math.min(...rows.map(row => row.ts)), retention = retentionBirth(env, input.tenant, 'recovery', occurredAt);
-  // Only the first durable source admission captures destination lifetimes.
-  // Retries above retain the original payload; a warehouse scan cannot mint it.
+  // Only the first durable source admission captures destination lifetimes and (P103, R-P588) the outcome's money stamp; retries above retain the original payload, and a warehouse scan cannot mint either.
   for (const row of rows) if (!('externalRetention' in row)) (row as CapturedRecord & { externalRetention?: ExternalRetention }).externalRetention = externalRetentionBirths(env, row.tenant, row.ts);
+  if (input.kind === 'outcome' && input.money) input.outcome.money = input.money;
   const { prepareManaged } = await import('./enqueue');
   const payload: RecoveryPayload = { input, messages: prepareManaged(input.kind, rows) };
   payload.messages = payload.messages.map(message => ({ ...message,
