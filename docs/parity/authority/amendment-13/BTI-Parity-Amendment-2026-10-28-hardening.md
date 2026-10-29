@@ -44,12 +44,31 @@ Amendment 12's first four items are built, receipted and live-accepted (P93–P9
 
 Section 3 row 1 would gain, beside E27: "and E28, E29 added on 28 October (R-P557, R-P561) in their own programme `tapestry-parity-learning-truth`".
 
+#### E30 · The published-audience list, read once and never on a timer
+- **Authority:** the P97 delivery reviewer's cause of P61.LO3's 53 acknowledgement calls (`S41/reviewer-p97/REPORT-p61-lo3.md`, R-P603, R-P607) and the root-cause design `S52/analyst-audience/DESIGN.md`.
+  - **What happens.** On both hosts, any visitor action (and the buffered action, the segment and personalization reads) qualifies against the tenant's published audiences. It reads them as one KV list and then one get per audience, each awaited in turn (`src/connectors/AudienceStore.ts:79–84`), whenever this machine's copy is ten seconds old. The age counts from the last re-read, not the last use (`:25`, `:76`, `:86`).
+  - **What it costs** (reproduced at a5118d38):
+    - 11, 51, 201 and 1,001 calls at 10, 50, 200 and 1,000 audiences;
+    - at 78 ms a call, 0.9 s, 4 s, 16 s and 78 s on the paying action;
+    - from about 130 audiences up, every action pays, because the re-read outlasts the copy.
+  - **Past 1,000 records** the list is cut at its first page, so the 1,001st audience published never qualifies anyone.
+  - The customer path qualifies through this store on every tenant (`src/connectors/index.ts:29–37`).
+  - A defect of the shipped engine, fixed at its cause under the owner's direction of 28 October (R-P545).
+- **Done when:**
+  - **The document.** The tenant's published audiences are one document, an optional member of its configuration publication, written by every publish, archive, rename, pin and seed as one set publication.
+  - **The read.** Every qualification on both hosts reads it through the pin the action already holds: none while the publication is unchanged, one storage read after a change or on a new machine, at any number of audiences.
+  - **Writes.** A write is seen on the next action everywhere, with no timer and no KV propagation window, and no write is lost to a concurrent one.
+  - **Limits and failures.** The audiences member is bound like every publication member, 2 MiB (about 3,300 audiences of today's size), refused by name past it (R-P621). An unreadable publication fails qualification and never falls back.
+  - **The move.** Existing tenants are moved from their KV records by their first audience write and by the five-minute scheduled run, every page read. The demo's regeneration is one publication.
+  - **The flaky test.** P61.LO3 passes with the copy's old ten-second line crossed between its rounds (today 53 and 51 calls where 5 and 3 are expected).
+- **Needed by:** before a customer tenant publishes more than a handful of audiences on a hosted stamp, and before P97's gate relies on P61.LO3. Four and a half to six days (S52's estimate).
+
 #### Text corrections (no item; by name in whichever ticket next touches the file)
 Kit 03's "distinct salts" rows and gendered experiment rows; `src/content/types.ts:673–674`'s comment; kit 02's other gendered sentences; kit 02's "every other answer carries the platform's `total`" (app answers only; the Worker entry's refusals carry none); the stamps answering 404 for `edge-head.js.csp`; `scripts/latency.mjs:18`; program.json's stale `src/index.ts:67`.
 
 ## 3. The owner's decisions
 | # | Decision | Status |
 |---|---|---|
-| 1 | E25, E23, E24, E26 in force in this order (E25 first, for the December test), E27 added on 28 October (R-P553) in its own programme `tapestry-parity-first-paint`, and E28 and E29 added on 28 October (R-P557, R-P561) in the programme `tapestry-parity-learning-truth`; the owner may strike any | in force on the owner's message of 28 October, morning: "I'm not seeing any movement, action, or work. Why are we paused? What's the status?" (R-P544) |
+| 1 | E25, E23, E24, E26 in force in this order (E25 first, for the December test), E27 added on 28 October (R-P553) in its own programme `tapestry-parity-first-paint`, and E28 and E29 added on 28 October (R-P557, R-P561) in the programme `tapestry-parity-learning-truth`, and E30 added on 28 October (R-P607, R-P621) in its own programme `tapestry-parity-request-path`; the owner may strike any | in force on the owner's message of 28 October, morning: "I'm not seeing any movement, action, or work. Why are we paused? What's the status?" (R-P544) |
 | 2 | E22's design (amendment 12, P97's DC1): none of (a), (b), (c) as framed — the root cause of the new visitor's record creation found and the first answer redesigned not to wait on it (the record created asynchronously, the profile used later), the safeguards kept by design | the owner, 28 October (R-P545): "What happens during the creation of that record? Does it need to be created synchronously or can it be created asynchronously? … Nothing should take 1.4 seconds." |
 | 3 | The objects refused loads left on the pair's l3 are collected by the redesigned load and purge, not swept by hand | the owner, 28 October (R-P545): "Everything needs to be fixed. Stop proposing … solutions that are papering over or hiding the problem." |
