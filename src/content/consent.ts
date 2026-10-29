@@ -81,8 +81,19 @@ export function withConsent<T extends object>(value: T, consent: Consent): T & {
   return Object.defineProperty(value, 'consent', { value: consent, configurable: true, enumerable: false }) as T & { consent: Consent };
 }
 export function carryConsent(source: Consent, scope: { tenant: string; subject: string }, target?: Consent): Consent {
+  return carried(source, scope, target, intersectConsent);
+}
+/**
+ * P97 (R-P614): carryConsent, with a refusal the carry applies kept at the date it was made (intersectConsentDated)
+ * where carryConsent keeps the earliest choice's dates. Used by a shopper object's activation only; every other caller
+ * keeps carryConsent.
+ */
+export function carryConsentDated(source: Consent, scope: { tenant: string; subject: string }, target?: Consent): Consent {
+  return carried(source, scope, target, intersectConsentDated);
+}
+function carried(source: Consent, scope: { tenant: string; subject: string }, target: Consent | undefined, intersect: (...values: Consent[]) => Consent): Consent {
   const original = storedConsent(source);
-  const current = target?.instruction ? intersectConsent(original, target) : original;
+  const current = target?.instruction ? intersect(original, target) : original;
   if (!current.instruction) return { ...REFUSING };
   const next = { ...current.instruction, tenant: scope.tenant, subject: scope.subject, operation: undefined };
   for (const key of CONSENT_SWITCHES) if (next[key]) next[key] = { ...next[key]!, value: current[key] };
@@ -133,6 +144,27 @@ export function intersectConsent(...values: Consent[]): Consent {
     result.tracking &&= current.tracking; result.personalization &&= current.personalization;
   }
   return result;
+}
+
+/**
+ * P97 (R-P605): `intersectConsent`, with each switch the values refuse dated by when its refusal was made. Where
+ * intersectConsent keeps, for a switch, the dates of the earliest-ending choice (so no explicit deadline is ever
+ * extended), this keeps, for a switch the result refuses, the latest refusal any value's instruction holds for it, so
+ * the result says when the refusal it carries was made. A switch every value allows, a refusal no value dates and the
+ * result's booleans are exactly intersectConsent's. Used only where a carried consent is ordered against another
+ * record's choices (a rotation's carry to its replacement); every other caller keeps intersectConsent.
+ */
+export function intersectConsentDated(...values: Consent[]): Consent {
+  const result = intersectConsent(...values);
+  if (!result.instruction) return result;
+  const records = values.flatMap(v => v.instruction ? [instructionOf(v.instruction)!] : []);
+  let next: ConsentInstruction | undefined;
+  for (const k of CONSENT_SWITCHES) {
+    if (result[k] || !result.instruction[k]) continue;
+    const latest = records.flatMap(r => r[k] && r[k]!.value === false ? [r[k]!] : []).sort((a, b) => b.chosenAt - a.chosenAt)[0];
+    if (latest && latest.chosenAt !== result.instruction[k]!.chosenAt) { next ??= { ...result.instruction }; next[k] = { ...latest }; }
+  }
+  return next ? { tracking: result.tracking, personalization: result.personalization, instruction: liveInstruction(next) } : result;
 }
 
 /** Missing and legacy booleans are OFF; malformed state remains an error. */
