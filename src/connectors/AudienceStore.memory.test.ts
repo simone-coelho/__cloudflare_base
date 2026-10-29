@@ -156,12 +156,14 @@ describe('E4 a shopper\'s feature-variable overrides', () => {
     const cache = new KV(), e = env(cache), manager = new FeatureVariableManager(e, 'oh');
     const read = () => manager.getFeatureVariables('visitor', {}, ['hero_content']);
     const listed = () => cache.calls.filter(c => c.startsWith('list:t:oh:override:')).length;
-    await read(); await read();
+    const plain = (await read()).hero_content; await read();
+    expect(plain).toMatchObject({ featureKey: 'hero_content' });
     expect(listed()).toBe(2);
     await new FeatureVariableManager(e, 'oh').setUserOverride({ userId: 'visitor', featureKey: 'hero_content', variableKey: 'title', value: 'pinned' });
     expect((await read()).hero_content).toMatchObject({ source: 'override', variables: { title: 'pinned' } });
     await new FeatureVariableManager(e, 'oh').removeUserOverride('visitor', 'hero_content', 'title');
-    expect((await read()).hero_content?.source).not.toBe('override');
+    // The removal read at once: the read answers exactly what it answered before the override was set.
+    expect((await read()).hero_content).toEqual(plain);
     const before = cache.calls.length;
     await new FeatureVariableManager(e, 'oh').getUserOverrides('visitor');
     expect(cache.calls.slice(before).filter(c => c.startsWith('list:'))).toHaveLength(1);

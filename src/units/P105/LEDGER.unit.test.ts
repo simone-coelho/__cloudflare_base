@@ -3,7 +3,7 @@
 // order (programme tapestry-parity-request-path, docs/parity/request-path/program.json:
 // "The published-audience list: one document in the tenant's configuration
 // publication, read through the action's own pin, never re-read on a timer"). One
-// `describe('unit:P105.<criterion>')` per LOCAL criterion (AL1-AL6); every host leg is
+// `describe('unit:P105.<criterion>')` per LOCAL criterion (AL1-AL7); every host leg is
 // walked on both shopper hosts. LV1 is a deferred live row and gets no test.
 //
 // THE AUTHORITY, verbatim (docs/parity/authority/amendment-13/BTI-Parity-Amendment-2026-10-28-hardening.md,
@@ -59,7 +59,9 @@
 //       with an empty member; the one unrelated timed read an action makes on its own
 //       schedule, the shopper's feature-variable override read (lane E4's other ten-second
 //       copy, FeatureVariableManager OVERRIDES_LIST_MS; DESIGN.md "out of scope, noticed" 1),
-//       is counted at one call's latency where the two differ, and nothing else is.
+//       is counted at one call's latency where the two differ, and nothing else is. Since
+//       R-P652 that read leaves the request path (AL7 pins its absence on her view and on her
+//       personalization read); the allowance is kept as ratified and is unused on the sketch.
 //   R3. "An isolate holding nothing" is simulated as a new isolate: the request path's
 //       bindings replaced by new binding objects over the same data (every isolate cache
 //       is keyed by its binding, publication.ts storageIdentity, sessionAuthority.ts
@@ -113,8 +115,15 @@
 //       1,001 calls 78,842 ms (logs/p4-overrides-base.log). No route writes an override and no
 //       answer used the result (enhancedFeatureVariables consumed by nothing), so the read leaves
 //       the request path; override records that exist are still erased and exported. AL7 pins, on
-//       both hosts at 0, 10, 100 and 1,000 overrides, a personalization read with no override read
-//       and no KV list, and locks the export and the erasure of her override records.
+//       both hosts at 0, 10, 100 and 1,000 overrides, that neither her view that changes her
+//       segments (the action that builds her personalization, step 6 of processEvent) nor her
+//       personalization read (GET /realtime/personalization/:userId, at once and 25 s on) makes an
+//       override read or a KV list, and locks the export and the erasure of her override records.
+//       Clauses today (logs/r4-al7-today.log): session — override reads RED (at 10 overrides 22:
+//       11 on the view, 11 on the later read; 2,002 at 1,000), KV lists RED (the override list and
+//       the audience list); object host — override reads GREEN (the object host never read them, so
+//       this clause is a lock there), KV lists RED on `CACHE.list {"prefix":"audience:"}` alone
+//       (the unmoved audience read, AL1/AL4's cause, which the move removes). On the sketch 10/10.
 //       R10s of R-P652, before → after:
 //       - src/connectors/AudienceStore.memory.test.ts, "E4 a shopper's feature-variable overrides".
 //         Before: the per-event probes (getSessionFeatureVariables) listed the override records
@@ -123,13 +132,37 @@
 //         OVERRIDES_LIST_MS and forgetListedOverrides. After, what remains once the request path no
 //         longer reads overrides: the direct reads (getFeatureVariables, getUserOverrides) each list
 //         KV once per read with no copy between them, and read a set or a removal through this
-//         isolate at once; the copy's exports are no longer imported (the build may remove them).
-//         Green today and on the sketch.
-//       - src/services/telemetry.boundary.test.ts (:470-473): not edited. Its fault at `cache.list`
-//         reaches the direct getUserOverrides, which stays (the read leaves the request path only),
-//         so its three log lines are unchanged: measured green on the sketch (logs/r3-*). Round 2
-//         named it only against that round's one-document sketch; the grant is unused.
-//   GREEN-AT-SPEC: AL5's five lock legs pass today and on the sketch (measured).
+//         isolate at once (after the removal the read answers exactly what it answered before the
+//         set, where round 3 asked only that its source not be 'override'); it no longer imports
+//         the copy's exports. Green today and on both sketch forms (logs/r4-r10-today.log, r4-*).
+//         A condition on the build, not a collision: src/services/OptimizelyService.datafileMemory.test.ts
+//         (not granted) imports and calls forgetListedOverrides (:12, :47) and calls
+//         getSessionFeatureVariables directly (:73, eight probes, the override list filtered out of
+//         its call check), so the build keeps both exported and callable.
+//       - src/services/telemetry.boundary.test.ts ("retains feature overrides and fallback results
+//         without dynamic feature/error labels", :470-473): not edited, before = after. Its fault at
+//         `cache.list` is reached by its own direct `manager.getUserOverrides(SUBJECT)`, never by the
+//         request path, before or after; getUserOverrides stays (the grant takes the read off the
+//         request path only), and the line 'Error fetching user overrides' is logged by it alone, so
+//         no read the request path still makes can carry the same expectation. Measured green today
+//         and on the sketch (logs/r4-*). Round 2 named it against that round's one-document sketch,
+//         which made no list; the grant is unused.
+//       - COLLISION, not granted (for the lead's ruling): src/routes/realtime.sdkContract.test.ts
+//         W05.08 ("keeps preference writes necessary-only and gates populated reads/assignment
+//         under every switch combination…", :5202): on a consented personalization read the session
+//         host must call FeatureVariableManager.getSessionFeatureVariables, `expect(io.calls[3])
+//         .toHaveBeenCalled()` (spy :5157). A build that removes the call at RealtimeSegmentEngine
+//         :1032, as the grant words it, turns it RED ('expected "getSessionFeatureVariables" to be
+//         called at least once', logs/r3-locks-sketch.log and r4-*). Two consistent ways: (a) R10,
+//         before `if (host === 'session') { expect(io.calls[0]).not.toHaveBeenCalled();
+//         expect(io.calls[3]).toHaveBeenCalled(); }` → after the same with
+//         `expect(io.calls[3]).not.toHaveBeenCalled()` (the personalization read runs no override
+//         probe; the gate with consent off, `io.quiet()`, unchanged); or (b) the build keeps the call
+//         and getSessionFeatureVariables reads no override (sketch B, measured: this file 47/49 as
+//         sketch A, the two legs that need P102 aside; W05.08's file and the other override-touching
+//         files 229/229; logs/r4-sketchB-p105.log, r4-sketchB-al7-files.log).
+//   GREEN-AT-SPEC: AL5's five lock legs and AL7's two lock legs (the export and the erasure of her
+//   override records) pass today and on the sketch (measured).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
 //
@@ -162,8 +195,9 @@
 //     the head on every operation by a new handle: AL1's held state and AL2's "seen on
 //     the next action" are unchanged by it; the five-minute run's move is placed inside the
 //     tenant's existing job, as P102's backfill is (W07.04 counts the jobs).
-//   - MEASURED on P102's build c3b6031b with the P105 sketch (logs p102-sketch.log): P105 34/34,
-//     P61 44/44, P102 27/31. The four are P102.CR2's two five-minute-run legs on both hosts
+//   - MEASURED on P102's build c3b6031b with the P105 sketch: this file 49/49, P61 44/44 and P102
+//     31/31 with the CR2 R10 below applied to the scratch copy (logs/r4-p102-sketch.log); without
+//     that R10, P102 27/31 (round 1, logs p102-sketch.log). The four are P102.CR2's two five-minute-run legs on both hosts
 //     ("an existing tenant (a head without the metadata, no serving copy) … rewrites its head
 //     with the same bytes" and "a publication committed between the five-minute run's read
 //     and its write wins … (R6) …"), green on P102's build alone (p102-alone-cr2.log, 12/12).
@@ -1227,32 +1261,44 @@ async function overridesFor(w: World, s: Shopper, n: number): Promise<string[]> 
   for (let i = 0; i < n; i++) await overrides.setUserOverride({ userId: s.subject, featureKey: FEATURES[i % FEATURES.length]!, variableKey: `p105_var_${i}`, value: `v${i}` } as Parameters<FeatureVariableManager['setUserOverride']>[0]);
   return [...w.m.cache.data.keys()].filter(key => key.startsWith(`override:${s.subject}:`)).sort();
 }
-/** `GET /realtime/personalization/:userId` (src/routes/realtime.ts:575): her override reads (a KV read of `override:<her id>:`) and every KV list it made. */
-async function personalizationRead(w: World, s: Shopper): Promise<{ status: number; overrideReads: string[]; kvLists: string[] }> {
+/** What one request caused, everything it set off settled: its status and body, her override reads (a KV read of `override:<her id>:`) and every KV list. */
+interface OverrideTraffic { status: number; body: Record<string, unknown>; overrideReads: string[]; kvLists: string[] }
+async function overrideTraffic(w: World, s: Shopper, request: () => Promise<{ status: number; body: Record<string, unknown> }>): Promise<OverrideTraffic> {
   const from = w.trace.length;
-  const response = await w.app.fetch(new Request(`https://shop.invalid/realtime/personalization/${s.subject}`, { headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability } }));
-  await response.text();
+  const { status, body } = await request();
   await settle(w.m, w.app);
   const caused = w.trace.slice(from);
-  return { status: response.status, overrideReads: caused.filter(c => c.binding === 'CACHE' && READS.has(c.method) && c.key.includes(`override:${s.subject}:`)).map(named),
+  return { status, body, overrideReads: caused.filter(c => c.binding === 'CACHE' && READS.has(c.method) && c.key.includes(`override:${s.subject}:`)).map(named),
     kvLists: caused.filter(c => c.binding === 'CACHE' && c.method === 'list').map(named) };
 }
+/** Her Tabby view (POST /realtime/action): an action that changes her segments builds her personalization (RealtimeSegmentEngine processEvent, step 6). */
+const viewTraffic = (w: World, s: Shopper) => overrideTraffic(w, s, async () => { const wire = await actionWire(w.app, s, VIEW_TABBY_26); return { status: wire.status, body: wire.body }; });
+/** `GET /realtime/personalization/:userId` (src/routes/realtime.ts:575). */
+const personalizationRead = (w: World, s: Shopper) => overrideTraffic(w, s, async () => {
+  const response = await w.app.fetch(new Request(`https://shop.invalid/realtime/personalization/${s.subject}`, { headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability } }));
+  return { status: response.status, body: await response.json().catch(() => ({})) as Record<string, unknown> };
+});
+/** An audience she meets from her first Tabby view (Coach's luxe_affinity, her elevated price band), so that view changes her segments. */
+const AL7_AUDIENCE = 'p105_al7_luxe';
 
 describe('unit:P105.AL7', () => {
   for (const host of HOSTS) for (const n of [0, 10, 100, 1000]) {
-    it(`host (${host}): with ${n} override records for the shopper (written through FeatureVariableManager.setUserOverride, the store's own write; no route writes one), her personalization read (GET /realtime/personalization/:userId) makes no override read and lists no KV, at once and ${STEP_MS / 1000} s on (lane E4's ten-second copy crossed)`, async () => {
+    it(`host (${host}): with ${n} override records for the shopper (written through FeatureVariableManager.setUserOverride, the store's own write; no route writes one), neither her view that changes her segments (POST /realtime/action, the action that builds her personalization) nor her personalization read (GET /realtime/personalization/:userId), at once and ${STEP_MS / 1000} s on (lane E4's ten-second copy crossed), makes an override read or lists KV`, async () => {
       const w = await world(host);
-      await movedEmpty(w);
+      expect((await publishThrough(w, authored(LUXE, AL7_AUDIENCE))).status, `PRECONDITION (${host}): the operator publishes an audience she meets on her first view`).toBe(200);
       const s = await shopperOn(w.m);
-      expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, `PRECONDITION (${host}): her view is accepted`).toBe(200);
-      await settle(w.m, w.app);
       expect((await overridesFor(w, s, n)).length, `PRECONDITION (${host}): her ${n} override records are stored`).toBe(n);
+      const view = await viewTraffic(w, s);
+      expect({ status: view.status, segments: segmentsOf(view.body) ?? [] }, `PRECONDITION (${host}): her view is accepted and changes her segments (${AL7_AUDIENCE}), so it builds her personalization`)
+        .toMatchObject({ status: 200, segments: expect.arrayContaining([AL7_AUDIENCE]) });
       const first = await personalizationRead(w, s);
       advanceClock(STEP_MS);
       const later = await personalizationRead(w, s);
-      expect({ status: [first.status, later.status], overrideReads: [...first.overrideReads, ...later.overrideReads], kvLists: [...first.kvLists, ...later.kvLists] },
-        `${host}: P105.AL7 — at ${n} overrides her personalization read makes no override read and no KV list (${first.overrideReads.length + later.overrideReads.length} override reads: ${[...first.overrideReads, ...later.overrideReads].slice(0, 3).join(', ')}${first.overrideReads.length + later.overrideReads.length > 3 ? ', …' : ''})`)
-        .toEqual({ status: [200, 200], overrideReads: [], kvLists: [] });
+      const reads = { view: view.overrideReads, personalization: [...first.overrideReads, ...later.overrideReads] };
+      const count = reads.view.length + reads.personalization.length, sample = [...reads.view, ...reads.personalization].slice(0, 3).join(', ');
+      expect({ status: [first.status, later.status], overrideReads: reads, kvLists: { view: view.kvLists, personalization: [...first.kvLists, ...later.kvLists] } },
+        `${host}: P105.AL7 — at ${n} overrides neither her view nor her personalization read makes an override read or a KV list (${count} override reads${count ? `: ${sample}${count > 3 ? ', …' : ''}` : ''})`)
+        .toEqual({ status: [200, 200], overrideReads: { view: [], personalization: [] }, kvLists: { view: [], personalization: [] } });
     }, 300_000);
   }
 
