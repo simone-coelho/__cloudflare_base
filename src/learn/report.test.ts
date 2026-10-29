@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createHash } from 'node:crypto';
-import { buildReport, canonicalReportJson, countDayObjects, diagnosticDayReport, loadDay, presetPolicies, rawReportJson, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportUnavailableError, reportCoverage, reportKey, ringsOf, runReport, type DayReport, type ReportPolicy } from './report';
+import { buildReport, canonicalReportJson, countDayObjects, diagnosticDayReport, loadDay, presetPolicies, rawReportJson, REPORT_LIMITS, ReportBudgetExceeded, ReportInputError, ReportUnavailableError, reportCoverage, reportKey, ringsOf, runReport, writeCanonicalDay, type DayReport, type ReportPolicy } from './report';
 import * as stats from './stats';
 import { decisionRoutes } from '@/routes/decisions';
 import { windowReport } from '@/measure/window';
@@ -68,6 +68,8 @@ it('W15 saved reports preserve their exact served/rendered basis and objective r
 /** Only storage/credentials are synthetic; builders and mounted routes are real. */
 class ReportR2 {
   objects = new Map<string, string>();
+  /** An object's custom metadata, kept as R2 keeps it with the object (R-P615). */
+  metadata = new Map<string, Record<string, string>>();
   beforeRead?: (key: string) => Promise<void>;
   beforePut?: (key: string) => Promise<void>;
   puts: string[] = [];
@@ -77,7 +79,8 @@ class ReportR2 {
     if (raw === undefined) return null;
     const bytes = new TextEncoder().encode(raw), range = options?.range;
     const selected = range && 'length' in range ? bytes.slice('offset' in range ? range.offset ?? 0 : 0, (('offset' in range ? range.offset : 0) ?? 0) + (range.length ?? bytes.length)) : bytes;
-    return { etag: createHash('sha256').update(raw).digest('hex'), size: bytes.length, body: new ReadableStream<Uint8Array>({ start(c) { c.enqueue(selected); c.close(); } }), text: async () => raw, json: async () => JSON.parse(raw) as unknown };
+    return { etag: createHash('sha256').update(raw).digest('hex'), size: bytes.length, body: new ReadableStream<Uint8Array>({ start(c) { c.enqueue(selected); c.close(); } }), text: async () => new TextDecoder().decode(selected), json: async () => JSON.parse(raw) as unknown,
+      ...(this.metadata.has(key) ? { customMetadata: { ...this.metadata.get(key)! } } : {}) };
   }
   async list({ prefix }: { prefix: string }) { return { objects: [...this.objects.keys()].filter(key => key.startsWith(prefix)).sort().map(key => ({ key })), truncated: false }; }
   async put(key: string, raw: string, options?: R2PutOptions) {
@@ -96,6 +99,7 @@ class ReportR2 {
       || (onlyIf?.etagDoesNotMatch === '*' && before !== undefined)
       || (onlyIf?.etagDoesNotMatch !== undefined && onlyIf.etagDoesNotMatch !== '*' && onlyIf.etagDoesNotMatch === etag)) return null;
     this.puts.push(key); this.objects.set(key, raw);
+    if (options?.customMetadata) this.metadata.set(key, { ...options.customMetadata as Record<string, string> }); else this.metadata.delete(key);
     return { key, etag: createHash('sha256').update(raw).digest('hex'), size: new TextEncoder().encode(raw).length };
   }
 }
@@ -376,10 +380,22 @@ describe('the day report', () => {
     await expect(runReport(sparse.storage, sparse.ids, learn, null, sparse.now)).rejects.toMatchObject({ budget: 'summaryBytes' });
     expect(sparse.storage.puts).toEqual([]);
     expect((await runReport(sparse.storage, sparse.ids, learn, [], sparse.now)).holdout.hero).toHaveLength(700); expect(sparse.storage.puts).toEqual([]);
-    const fullOnly = { ...report, padding: '' };
-    fullOnly.padding = 'x'.repeat(REPORT_LIMITS.outputBytes - new TextEncoder().encode(rawReportJson(fullOnly)).length);
-    expect(new TextEncoder().encode(rawReportJson(fullOnly))).toHaveLength(REPORT_LIMITS.outputBytes);
-    expect(() => canonicalReportJson(fullOnly)).toThrow(ReportBudgetExceeded);
+    // R-P615 (R10 by name, unit:P104.RF5): a canonical day whose grids pass 8 MiB is stored and answered by slot, never refused:
+    // the day without a slot answers its head within 8 MiB naming every slot; ?slot= answers that slot's whole grid.
+    const snap = report.grids.hero!.learning!, root = Object.values(snap.items)[0]!['*']!;
+    const items = Object.fromEntries(Array.from({ length: 150 }, (_, i) => ['item' + i,
+      { '*': root, ...Object.fromEntries(Array.from({ length: 20 }, (_, j) => [String(j).padStart(2, '0') + 'x'.repeat(2046), root])) }]));
+    const wide = { ...report, grids: { ...report.grids, big: { learning: { ...snap, slot: 'big', items } }, wider: { learning: { ...snap, slot: 'wider', items } } } } as DayReport;
+    expect(new TextEncoder().encode(JSON.stringify(wide)).length).toBeGreaterThan(REPORT_LIMITS.outputBytes);
+    f.storage.objects.delete(f.key);
+    expect(await writeCanonicalDay(f.storage, f.ids, canonicalReportJson(wide), { etag: null })).toBe(true);
+    const whole = await request('?date=' + f.ids.date), wholeText = await whole.text();
+    expect({ status: whole.status, within: new TextEncoder().encode(wholeText).length <= REPORT_LIMITS.outputBytes,
+      slots: ['hero', 'big', 'wider'].filter(slot => wholeText.includes(JSON.stringify(slot))) }).toEqual({ status: 200, within: true, slots: ['hero', 'big', 'wider'] });
+    const bySlot = await request('?date=' + f.ids.date + '&slot=big&limit=500');
+    expect(bySlot.status).toBe(200);
+    const page = (await bySlot.json()) as { report: DayReport; page: { total: number } };
+    expect({ total: page.page.total, items: page.report.grids.big!.learning!.items }).toEqual({ total: 150, items: Object.fromEntries(Object.keys(items).map(item => [item, { '*': root }])) });
   });
   it('W32.03 refuses oversized or unavailable saved payloads through authenticated day and window routes without effects', async () => {
     const raw = buildReport({ tenant: 'coach', brand: 'coach', date: '2026-09-03', learning, reporting: [], learn,

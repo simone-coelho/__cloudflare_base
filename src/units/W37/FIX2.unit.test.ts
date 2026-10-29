@@ -212,9 +212,17 @@ export default {
     }
     return new Response(null, { status: 404 });
   },
+  queue(batch, env, ctx) { return worker.queue(batch, env, ctx); },
 };`;
 
-async function nativeStamp(name: string, bindings: Record<string, string>) {
+/**
+ * R-P615 (R10 by name, unit:P104.RF1): the queue binding the shipped configuration declares for the fold's steps
+ * (wrangler.toml [[queues.producers]] EVENT_QUEUE → "events"; [[queues.consumers]] "events": max_batch_size 100,
+ * max_batch_timeout 3, max_retries 2, dead_letter_queue "events-dead-letter"), declared for the five-minute fold's legs.
+ */
+const SHIPPED_EVENTS_QUEUE = { queueProducers: { EVENT_QUEUE: 'events' },
+  queueConsumers: { events: { maxBatchSize: 100, maxBatchTimeout: 3, maxRetries: 2, deadLetterQueue: 'events-dead-letter' } } };
+async function nativeStamp(name: string, bindings: Record<string, string>, options: { queue?: boolean } = {}) {
   const bundle = await bundleNativeWorker(NATIVE_WRAPPER, 'w37-fix2-native');
   const directory = nativeScratchDirectory('w37-fix2-native-');
   const runtime: NativeRuntime = await openNativeRuntime({
@@ -223,6 +231,7 @@ async function nativeStamp(name: string, bindings: Record<string, string>) {
       DECISION_RING: 'DecisionRing', LEARN_STATS: 'LearnStats', REGION_TREND: 'RegionTrend' },
     kvNamespaces: ['CACHE', 'SESSIONS'], r2Buckets: ['STORAGE'],
     bindings: { DEPLOYMENT_PROFILE: 'demo', CONNECTOR_MODE: 'mock', DECISION_SOURCE: 'mock', JWT_SECRET: SECRET, JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', ...bindings },
+    ...(options.queue ? SHIPPED_EVENTS_QUEUE : {}),
   });
   const door = async (path: string, body?: unknown) => {
     const response = await runtime.fetch(`https://w37-fix2-fixture${path}`, body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) });
@@ -238,7 +247,7 @@ async function nativeStamp(name: string, bindings: Record<string, string>) {
 
 describe('unit:W37.T2.01', () => {
   it('native: in workerd, after a nightly job during which acme-outlet\'s day write failed, the next five-minute run publishes acme-outlet\'s day, and every brand\'s day of the date ends up stored, each counting only its own brand', async () => {
-    const stamp = await nativeStamp('w37fix2t2', { REFLEX_HOST: 'do', TENANTS: registry([ACME, GLOBEX]), RETENTION: retentionFor([ACME, GLOBEX]) });
+    const stamp = await nativeStamp('w37fix2t2', { REFLEX_HOST: 'do', TENANTS: registry([ACME, GLOBEX]), RETENTION: retentionFor([ACME, GLOBEX]) }, { queue: true });
     try {
       // The runtime's clock at 12:20 UTC (forward only); the ledger day is the day before it.
       const wall = Date.now(), noon = Math.floor(wall / DAY) * DAY + 12 * HOUR + 20 * 60_000, target = noon - wall >= 5 * 60_000 ? noon : noon + DAY;

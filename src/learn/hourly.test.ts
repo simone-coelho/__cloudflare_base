@@ -905,9 +905,17 @@ describe('the hourly fold', () => {
     expect(Object.keys(reportFromHours([parentOnly], ids, learn, NOW, options).grids.hero!.learning!.slotRates)).toHaveLength(6);
     const overCells = construct(Object.fromEntries(Array.from({ length: REPORT_LIMITS.cells }, (_, i) => ['item' + i, { '*': c }])));
     expect(() => reportFromHours([overCells], ids, learn, NOW, options)).toThrow(ReportBudgetExceeded);
-    const bigOutput = construct(Object.fromEntries(Array.from({ length: 2200 }, (_, i) => ['item' + i, { ['x'.repeat(2048)]: c }])));
-    try { reportFromHours([bigOutput], ids, learn, NOW, options); throw new Error('expected output refusal'); }
-    catch (error) { expect(error).toMatchObject({ budget: 'outputBytes', limit: REPORT_LIMITS.outputBytes }); }
+    // R-P615 (R10 by name, unit:P104.RF5): a day whose grids pass 8 MiB is built, not refused for outputBytes; the stored day
+    // and the route answer it by slot. 150 items of 20 levels a slot, within the live table's 256 items and 4,096 counters.
+    const levels = Object.fromEntries(Array.from({ length: 20 }, (_, j) => [String(j).padStart(2, '0') + 'x'.repeat(2046), c]));
+    const items = Object.fromEntries(Array.from({ length: 150 }, (_, i) => ['item' + i, levels]));
+    const bigOutput: HourAggregate = { ...a, brands: { coach: { ...a.brands.coach!, computation: computationBasis(learn,
+      [{ name: 'learning', role: 'learning', policy: policy.policy }], ['hero', 'story'], a.brands.coach!.computation!.profile), policies: {
+      learning: { ...policy, stats: { hero: { ...emptyStats(), items }, story: { ...emptyStats(), items } } },
+    } } } };
+    const big = reportFromHours([bigOutput], ids, learn, NOW, options);
+    expect({ hero: Object.keys(big.grids.hero!.learning!.items).length, story: Object.keys(big.grids.story!.learning!.items).length,
+      pastOutput: new TextEncoder().encode(JSON.stringify(big)).length > REPORT_LIMITS.outputBytes }).toEqual({ hero: 150, story: 150, pastOutput: true });
     const emptyItems = construct(Object.fromEntries(Array.from({ length: 11_000 }, (_, i) => ['item' + i, {}])));
     const day = Array.from({ length: 24 }, (_, hour) => ({ ...emptyItems, hour, from: T12 - 12 * H + hour * H, to: T12 - 12 * H + (hour + 1) * H }));
     expect(() => reportFromHours(day, ids, learn, NOW, options)).toThrow(ReportBudgetExceeded);

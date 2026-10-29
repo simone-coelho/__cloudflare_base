@@ -69,7 +69,9 @@
 //     of 14:06 was cut off at its second write of the fold's (the warehouse slice's schedule, which every run rewrites,
 //     not counted), nothing a cut-off step wrote is still stored unless a later step wrote it again (adopted).
 //   7 A conflict is filed as today: by the operator's custom-policy POST /v1/:tenant/learn/report (src/routes/
-//     decisions.ts:2030–2043, the only surface that files one); the fold never files.
+//     decisions.ts:2030–2043, the only surface that files one); the fold never files. Past a page that request is a job
+//     (reading 13), which files a read conflict it meets as the inline request does: RF3's newer-hour leg files at 14:20,
+//     on a day of 28 MiB (scenario C's day is within a page at every other filing: 8.6 MiB at 13:20, P's 5.6 MiB).
 //   8 The day by slot: GET without `slot` on a day whose grids pass 8 MiB answers 200, its body within 8 MiB, naming every
 //     slot outside `grids` (the slot index; its member name is the builder's); GET ?slot=<slot> answers 200 with that
 //     slot's grid under every policy, and reads at most a quarter of the bytes the day's stored objects hold (ten slots).
@@ -101,16 +103,22 @@
 //     the first delivery's; on a day past a page (other visitors' traffic on the nine other slots), so the rebuild takes
 //     the staged steps. Live learning, the open hour's and the closed hour's fold and the rebuild credit alike: the new
 //     purchase 120, the retried one nothing (it is taken under its first stamp, P103 R-P588). P104's readers are its
-//     leaves (the hour's and the rebuild's); the raw day's ReportRowIdentity and loadHourRecords are P103's (R-P604 (3)).
+//     leaves (the hour's, the rebuild's and the custom-policy job's); the raw day's ReportRowIdentity and loadHourRecords
+//     are P103's (R-P604 (3)). Since R-P620 (P103's direct path writes its ledger row with the stamp the ring decided under)
+//     both copies carry the same money stamp, so this leg pins what is credited and no longer which copy is kept: the
+//     copies then differ only in their retention stamps, and no witness names what a fold shows of the lifetime it kept.
 //
-// NOT SPECIFIED (the witness does not determine it; for the lead): RF1's "the custom-policy day taking the same steps" at
-// volume. Past a page the custom-policy POST cannot answer the day at once if its steps are messages on the events queue
-// (RF1/RF4's remaining work; the design §4 "re-run from the head version saved at 00:00"), and neither the work order nor
-// the design says what that POST then answers or where its day is read (the rebuild answers 2xx and applies its counters
-// later; a day has no such place). Within a page it answers as today (200 with the report), which the RF6 legs read. A
-// ruling naming the answer past a page (the steps run inside the request, each measured, or an accepted job and the
-// surface its day is read on) lets the leg be written: a ~20 MiB day (past rawBytes 16 MiB) answering with every step at
-// most 64 MiB and the custom-policy grids equal to the learning grids of the hourly fold's day, the R-P604 copy rule too.
+//  13 R-P615 (RF1, the custom-policy day past a page): a custom-policy request on a day past one page (16 MiB or 200
+//     objects) answers 202, naming the job and where its day is read — read here as a string of the answer naming GET
+//     /v1/:tenant/learn/report with that date in its query (the member and the digest's parameter are the builder's) —
+//     and the same day and policy sent again names the same job (every string of the first answer is in the second);
+//     that GET answers 202 while the job's steps run and 200 with { report } when they are done; within a page the
+//     request answers inline as today (RF6's ring and money legs). The job's grids under the request's policy, which is
+//     the learning policy's own definition, equal the hourly fold's learning grids of the same day (exposures and credits
+//     per slot, item and level, rounded under a hundred-year horizon; the witness: 2 x 460 clicks and the one carried in).
+//     The fixture's visitor carried in from the day before (a hero at 23:55, clicked at 00:05, then 250 decisions at noon)
+//     tells a job re-run from the date's start (the design §4, "the head version saved at 00:00") from one re-run from
+//     the head as it stands, whose 200-entry ring no longer holds the 23:55 decision.
 //
 // ONE REPRESENTATION: the tenant (coach) of _fold.ts — ten slots on six pages, three rewards, ten pieces a slot, the
 // checkout pieces each featuring one Coach product — and the frozen producer record; every scenario's traffic, its times and its operator actions
@@ -127,17 +135,19 @@
 //
 // MEASURED (_evidence/parity-step3/S51/specifier/logs/, serial, --no-cache, one worker, env -C the tree, --root the tree;
 // scratch trees built by scratch/bin/mk.sh from d5d8581c; the sketch is scratch/sketch/{stagedFold.ts,apply.py}):
-//   TODAY (h-today: the worktree, d5d8581c + this file): 39 of 41 RED for the missing behaviour, the two LOCK legs green.
+//   TODAY (h3-today: the worktree, rem/spec-p104 on e2024388 + this file): 41 of 43 RED for the missing behaviour, the two
+//   LOCK legs green. RF1's job leg: the custom-policy day of 20.5 MiB answers 413 rawBytes, not 202.
 //   RF1 hour 10 of the volumes refused (the rings past 3.69 MiB), the class refused at hour 8, T5's wide hour refused
 //   (cells), the open hour refused rawBytes, the bot named report_budget_exceeded rawBytes not fold_step_bound; RF2 18
 //   differences (hour 13 above a page refused); RF3 13 differences (hour 13 refused), hour 13 never written; RF4 38 and 50
 //   re-reads, the migration's hour 13 refused; RF5 the head counts 0 of 5,060, hour 0 of T5 refused, C's day built [12];
 //   RF6 the custom-policy day credits the 400-decision-old click and not the carried-in one, PRECONDITION P103 (the money
 //   leg and R-P604's), the big rebuild 503; RF7 five of seven sentences absent.
-//   THE SKETCH (h-sketch: staged day rebuild kit born): 37 of 41 green, the money leg and R-P604's RED on PRECONDITION P103
-//   alone. With P103's sketch beside it (its apply.py as of 19:28, R-P604 rounds: types kinds records policy ring
-//   journalstamp earliest fold hourly report route-prepare recovery-type recovery-stamp direct delivery; copied to
-//   scratch/sketch/p103-apply-1928.py) the eight RF6 legs are green on both hosts (n-both). Steps: every step ≤ 64 MiB, a
+//   THE SKETCH (h3-sketch: staged day rebuild kit born job): 39 of 43 green, the money leg and R-P604's RED on
+//   PRECONDITION P103 alone. With P103's sketch beside it the eight RF6 legs are green on both hosts: its apply.py as of
+//   19:28 (scratch/sketch/p103-apply-1928.py: types kinds records policy ring journalstamp earliest fold hourly report
+//   route-prepare recovery-type recovery-stamp direct delivery; j-both) and as of 20:35, with R-P620's ringanswer
+//   (scratch/sketch/p103-apply-2035.py; h3-p103). Steps: every step ≤ 64 MiB, a
 //   page ≤ 16.0 MiB and 200 objects (f-live: volumes ≤ 23.9 MiB, partitions ≤ 16.4, the day ≤ 32.7, the rebuild ≤ 36).
 //   THE SKETCH, per leg (never committed; files and the code each leg needs):
 //     src/learn/stagedFold.ts (new): RF1–RF4 — the five-minute run plans one hour at a time (a listing cut into pages of
@@ -152,18 +162,26 @@
 //       (a create-only marker), unnamed outputs collected after 15 minutes; the open hour on the same steps never moving the
 //       head, its refusal naming its step; RF6 the rebuild of a day past a page planned on the same steps, each leaf
 //       keeping the earliest-born copy of a row and folding its visitors with foldRetainedDay and the day before carried in,
-//       the counters applied at the statistics object.
+//       the counters applied at the statistics object. R-P615 the custom-policy day past a page as a job (reportJob,
+//       readJob): the date re-run hour by hour on the same steps from the head's version at the date's start (a create-only
+//       record written at the date's first commit), under the learning policy and the request's, into the job's own
+//       namespace, a read conflict filed as the inline request files it, the day summed from the job's hours; collection
+//       keeps what a running job and a date's start name; the date's day published at each hour's close.
 //     src/learn/hourly.ts: RF1/RF5 the cells bound per slot and policy (256 items, 4,096 counters) in admitHours; RF5
 //       loadHours summing one hour at a time into the running statistics, reportFromHours taking them and refusing no
-//       outputBytes; the open refusal admitting `step`; the internals the steps reuse exported (stagedInternals).
+//       outputBytes; the open refusal admitting `step`; the internals the steps reuse exported (stagedInternals); loadHours
+//       reading a job's hours (jobDayFromHours).
 //     src/learn/report.ts: RF5 a day past 8 MiB stored as today's summary frame, a part index, the head and one part per
 //       slot in one object (a day within 8 MiB byte-for-byte as today), its head and slot parts read by range, the saved
-//       grid rows bounded per slot; RF6 the custom-policy day's ring: the day before carried in, 200 kept (ringAtHour).
+//       grid rows bounded per slot; a day of parts says so in its object's metadata (written with it), so one get reads a
+//       day within 8 MiB as today, and the answer without a slot carries the slot index; RF6 the custom-policy day's
+//       ring: the day before carried in, 200 kept (ringAtHour).
 //     src/learn/fan.ts: RF6 foldRetainedDay with the day before carried in and the ring of the hourly fold at the
 //       outcome's hour (the helper ringAtHour, which the sketch placed in policy.ts: the builder keeps it in fan.ts or
 //       report.ts, P104's grant). src/durable-objects/LearnStats.ts: RF6 the rebuild reads the day before; past a page it
 //       plans the staged rebuild and applies its counters on '/rebuild-apply'. src/routes/decisions.ts: RF5 the POST
-//       answering a day past 8 MiB with its head and slot index. src/index.ts: RF1/RF4 the five-minute run calls the
+//       answering a day past 8 MiB with its head and slot index; R-P615 the custom-policy request past a page answering
+//       202 with the job and its read (GET …&policy=<digest>: 202 with progress, 200 with the day). src/index.ts: RF1/RF4 the five-minute run calls the
 //       staged run (it only enqueues); the queue consumer runs fold messages (ack, or retry on a throw).
 //       docs/kit/02-api-reference.md: RF7 one paragraph before the aggregate-to-day budgets, which lose "16MiB combined
 //       aggregate JSON". The sketch adds no input cap and no new queue. P103's R-P604 readers (ReportRowIdentity,
@@ -180,30 +198,36 @@
 //     24 hours; the day left as today (cells across the day, one JSON, 413) — RF1 wide, RF5 by slot, 24 hours; the
 //     rebuild without the day before, without the 200-entry ring, or fixed alone (the custom-policy day left as today: the
 //     fix on one path only) — RF6 ring; the rebuild left as today — RF6 ×3 that do not wait on P103; kit 02 left as today
-//     — RF7. R-P604, on P103's sketch: the leaves keeping the first copy read (the probe-5 fault) — RF6 R-P604 at the
-//     open hour, 575 credited that live learning refused (n-firstread); the earliest-born copy kept in the hour's leaf
-//     only, the rebuild's leaf left on the first read (the fix on one path only) — RF6 R-P604 at the rebuild
-//     (n-houronly).
+//     — RF7. R-P604, on P103's 19:28 sketch: the leaves keeping the first copy read (the probe-5 fault) — RF6 R-P604 at
+//     the open hour, 575 credited that live learning refused (n-firstread, j-firstread); the earliest-born copy kept in
+//     the hour's leaf only (the fix on one path only) — RF6 R-P604 at the rebuild (n-houronly). On P103's 20:35 sketch
+//     (R-P620) the first-read leaves are green on R-P604's leg (k-firstread): both copies carry the stamp live decided.
+//     R-P615: the custom-policy day left as today (413) — RF1 job (j-nojob); today's raw day with its limits lifted (200
+//     inline, the bound met by constants) — RF1 job (j-lifted); a new job for every request — RF1 job at the repeat
+//     (j-newjob); the job re-run from the head as it stands, not the date's start — RF1 job at the grids (j-headstart).
 //   LOCKS (the work order's learn suites, W23, W24, W26, W27, W32 B1, P33, P94 and every suite touching the fold, the day
-//     report, the rebuild or the scheduled run: 63 files, scratch/locks-all.txt) on the sketch before `born` (which
-//     changes only which of a leaf's equal-digest copies stagedFold.ts keeps): every file green but the ones below. P87's
-//     packaging leg fails alike on an unchanged complete copy (the stamp workflow outside a checkout). P103's legs
-//     (rem/spec-p103 2da35051, the reviewer's note 8: its MP3 legs are locks for this fold) on P103's sketch with this
-//     one (p103locks-both): 27 of 30 green, as on P103's sketch alone (p103locks-alone); the three others are the parts
-//     the scratch trees leave out (sdk, kit, kit03; no packages/sdk).
-//   R10 NEEDED (the ruled behaviour, not the sketch): src/learn/hourly.test.ts :907–910 (W32.03: reportFromHours refuses a
-//     day past 8 MiB with outputBytes — RF5 answers it 200 by slot) and src/learn/report.test.ts :379–382 (W32.04:
-//     canonicalReportJson refuses a stored day past 8 MiB — RF5 stores it by slot); src/units/W37/LEDGER.unit.test.ts
-//     :549–564 and src/units/W37/FIX2.unit.test.ts :250–281 (the five-minute runs fold in workerd with no events queue
-//     declared: the steps are its messages, so the native stamp must declare the queue and its consumer and the legs
-//     wait for its delivery). A collision to rule before the build: P103's MP3 legs (src/units/P103/LEDGER.unit.test.ts
-//     at 2da35051, :517 foldOpenHours and :523 catchUp) fold by calling today's one-request functions directly, not
-//     through the five-minute run; the sketch keeps them, so they hold, but a build that turns catchUp or foldOpenHours
-//     into the staged run's planning breaks them (they would then need to drive the Worker's scheduled run and queue).
-//     Sketch artifacts, avoidable, not ruled: report.test.ts W32.05 :293, W30.02 :710, W21 :796, W32.03 :384 and
-//     index.api-boundary W01.06 count the day GET's storage reads (the sketch probes every stored day with a ranged read;
-//     a builder marking a by-slot day in the object's metadata reads a day within 8 MiB in one get as today), and W31
-//     B1's body-only double has no text() (the sketch's probe used text()).
+//     report, the rebuild or the scheduled run: 63 files, scratch/locks-all.txt), round 2 on the whole sketch (staged day
+//     rebuild kit born job) with the R10 re-forms in place (l3-sketch): 863 of 866 green; P87's packaging leg fails alike
+//     without the sketch (l3-today: the stamp workflow outside a checkout); W37 LEDGER's and FIX2's native fold legs RED
+//     (below). P103's legs (rem/spec-p103 73b059ab, round 5 and R-P620; the reviewer's note 8: its MP3 legs are locks for
+//     this fold) on P103's 20:35 sketch, alone and with this one, as committed and re-pointed: 47 of 50 green in all four
+//     runs; the three others are the parts the scratch trees leave out (sdk, kit, kit03; no packages/sdk).
+//   R10s (R-P615, by name; in this commit): src/learn/hourly.test.ts W32.03 :908–910 and src/learn/report.test.ts W32.04
+//     :379–382, the 8 MiB refusal re-pointed to RF5's by-slot answer (a day of 2 x 150 items x 20 levels built, not
+//     refused; a canonical day of grids past 8 MiB stored, its answer without a slot within 8 MiB naming every slot, ?slot=
+//     answering the slot's items); report.test.ts's ReportR2 keeps an object's customMetadata and answers a ranged text()
+//     with its range, as R2 does (both RED today on outputBytes, green on the sketch; nothing else in the two files moves).
+//     src/units/W37/LEDGER.unit.test.ts :560 and FIX2.unit.test.ts :250 declare the shipped events queue (wrangler.toml
+//     EVENT_QUEUE → "events", its consumer's four settings) through an optional pass-through added to src/units/_native.ts,
+//     and their wrappers hand a delivered batch to the Worker's queue handler; green today, RED on the sketch: the legs
+//     read the stored aggregates right after each run, before the queue delivers (max_batch_timeout 3 s a hop). Measured
+//     on a scratch copy: with 4 s after each run LEDGER's leg is green; FIX2's needs a wait spanning a step chain (~5 hops)
+//     and more runs than its 24 (the sketch folds one hour of the lookback a run, today two) — R10 NEEDED: the two legs
+//     wait for the queue's deliveries (e.g. the stored aggregates unchanged over 2 x max_batch_timeout) with run bounds
+//     for a staged catch-up. P103's legs at :617 and :623 (73b059ab): scratch/bin/edit-r10-p103.py re-points
+//     foldOpenHours and catchUp to the Worker's five-minute run and its queue (settleMounted in ./_fold.ts), adds the three
+//     module mocks every unit importing src/index.ts carries, every expectation unchanged; measured on the scratch merge
+//     above; to be applied at P103's final sha (not in this commit: the file is not on this branch).
 //
 // Imports from src/units/: ../_parity, ./_fold, ./fixtures/*.json. NO NEW EXPORT IS IMPORTED.
 
@@ -219,8 +243,8 @@ import { SHOPPER_HEADER } from '@/identity/sessionCapability';
 
 import { BRAND, HOSTS, learned, PAGE_VIEW, putDocument, readTree, rounded, shopperOn, TENANT } from '../_parity';
 import {
-  at, DATE, documents, drainBatch, drainQueue, featuredProduct, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
-  retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, stamp, visit, visitorsOf, WIDE, writeLedger,
+  at, customDay, DATE, documents, drainBatch, drainQueue, featuredProduct, fiveMinuteRun, FULL, H, hourPrefixOf, ledgerObjects, MiB, MIN, operator, overBound, overPage, play,
+  RAW_POLICY, retentionRegistry, rng, rowsOf, scenarioC, scenarioM, scenarioP, settleAt, SLOTS, stamp, visit, visitorsOf, WIDE, writeLedger,
   type DeliveryPlan, type Fault, type Scenario, type Stamp, type StepRecord,
 } from './_fold';
 
@@ -276,6 +300,27 @@ async function parity(s: Stamp, name: 'C' | 'M' | 'P', sc: Scenario, day = true)
   else found.push(...differences(withoutIdentity(read.body.report as Json), REF[name].day, 'the day', [], true));
   return found;
 }
+
+/** A statistics horizon of a hundred years (P103's fixture): decay moves nothing between sums taken minutes apart. */
+const CENTURY = { n0: 30, tauLearnMs: 3_153_600_000_000, liftMin: 0.5, liftMax: 2, nMin: 30 };
+/** Every string an answer carries, at any depth. */
+function stringsOf(value: unknown, out: string[] = []): string[] {
+  if (typeof value === 'string') out.push(value);
+  else if (value && typeof value === 'object') for (const v of Object.values(value)) stringsOf(v, out);
+  return out;
+}
+/** Where an answer says a day is read: the path of the first string naming GET /v1/:tenant/learn/report with a query. */
+function locationOf(body: unknown): string | null {
+  const found = stringsOf(body).find(x => x.includes(`/v1/${TENANT}/learn/report?`));
+  return found ? found.slice(found.indexOf(`/v1/${TENANT}/learn/report?`)) : null;
+}
+/** A day's grids under one policy: slot, item and level to its exposures (n) and credits (s), rounded. */
+function gridsOf(report: Json | undefined, policy: string): Record<string, Record<string, Record<string, [number, number]>>> {
+  const grids = (report?.grids ?? {}) as Record<string, Record<string, { items: Record<string, Record<string, { n: number; s: number }>> }>>;
+  return Object.fromEntries(Object.entries(grids).filter(([, policies]) => policies[policy]).map(([slot, policies]) => [slot, Object.fromEntries(Object.entries(policies[policy]!.items)
+    .map(([item, levels]) => [item, Object.fromEntries(Object.entries(levels).map(([level, c]) => [level, [Math.round(c.n), Math.round(c.s)] as [number, number]]))]))]));
+}
+const exposures = (grids: ReturnType<typeof gridsOf>) => Object.values(grids).reduce((n, items) => n + Object.values(items).reduce((m, levels) => m + (levels['*']?.[0] ?? 0), 0), 0);
 
 /** The steps of a run that broke the bound or read more than a page. */
 const bounds = (s: Stamp) => [...overBound(s.steps.filter(r => r.outcome !== 'cut'), BOUND), ...overPage(s.steps)];
@@ -416,6 +461,44 @@ describe('unit:P104.RF1 (E29: every step at most 64 MiB at 10,000, 100,000 and 1
         `RF1 ${host}: the leaf holding one visitor's rows past 8 MiB cannot split; the open hour names the refusal fold_step_bound and its step (${JSON.stringify(refusal)})`)
         .toEqual({ status: 'refused', code: 'fold_step_bound', namesLeaf: true });
       expect(bounds(s), `RF1 ${host}: the refusing step holds at most 64 MiB too`).toEqual([]);
+    }, T);
+
+    it(`RF1 ${host}: the custom-policy day past a page is a job on the same steps — 202 naming the job and where its day is read, the same job named again, 202 while its steps run and 200 with its day when they are done, its grids the hourly fold's learning grids, every step at most 64 MiB`, async () => {
+      const registry = retentionRegistry();
+      vi.setSystemTime(at(-1, 50));
+      const s = await stamp(host, documents({ stats: CENTURY }), registry, 'P104.RF1 custom-policy job');
+      const day = customDay(registry);
+      const facts = hourFacts(day.objects, 12);
+      expect(facts.bytes, 'the fixture: the day holds more than 16 MiB of ledger, past one page').toBeGreaterThan(16 * MiB);
+      writeLedger(s, day.previous);
+      await settleAt(s, at(0, 6));
+      writeLedger(s, day.early);
+      await settleAt(s, at(1, 6));
+      writeLedger(s, day.objects);
+      day.objects.clear();
+      await settleAt(s, day.settleAt);
+      const ask = () => operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE, policies: [RAW_POLICY] }, day.postAt);
+      const first = await ask();
+      expect(first.status, `RF1 ${host}: the custom-policy day of ${(facts.bytes / MiB).toFixed(1)} MiB is accepted as a job: ${JSON.stringify(first.body).slice(0, 200)}`).toBe(202);
+      const where = locationOf(first.body);
+      expect(where, `RF1 ${host}: the job's answer names where its day is read, GET /v1/${TENANT}/learn/report for ${DATE} (${JSON.stringify(first.body).slice(0, 200)})`)
+        .toMatch(new RegExp(`^/v1/${TENANT}/learn/report\\?(?:.*&)?date=${DATE}(?:&|$)`));
+      const again = await ask();
+      expect({ status: again.status, unnamed: stringsOf(first.body).filter(x => !stringsOf(again.body).includes(x)) },
+        `RF1 ${host}: the same day and policy sent again names the same job (${JSON.stringify(again.body).slice(0, 200)})`).toEqual({ status: 202, unnamed: [] });
+      const running = await operator(s, 'GET', where!, undefined, day.postAt);
+      expect(running.status, `RF1 ${host}: while its steps run, its day answers 202 with its progress: ${JSON.stringify(running.body).slice(0, 200)}`).toBe(202);
+      await settleAt(s, day.postAt);
+      const done = await operator(s, 'GET', where!, undefined, day.postAt);
+      expect(done.status, `RF1 ${host}: its steps done, its day answers 200: ${JSON.stringify(done.body).slice(0, 200)}`).toBe(200);
+      const folded = (await dayOf(s)).body.report as Json & { policies?: Array<{ role: string; credits: number }> };
+      const learning = gridsOf(folded, 'learning');
+      // Witness: every decision of the day is an exposure; each of the 460 visits' two clicks on a hero, and the click carried in from the day before, is a credit.
+      expect({ exposures: exposures(learning), credits: folded.policies?.find(p => p.role === 'learning')?.credits },
+        'PRECONDITION: the hourly fold\'s day counts every decision of the day and credits 2 x 460 + 1 clicks').toEqual({ exposures: facts.decisions, credits: 921 });
+      expect(gridsOf(done.body.report as Json, RAW_POLICY.name), `RF1 ${host}: the job credits what the hourly fold credits: its grids under the request's policy (the learning policy's own definition) are the learning grids of the hourly fold's day`)
+        .toEqual(learning);
+      expect(bounds(s), `RF1 ${host}: every step of the job holds at most 64 MiB and reads at most a page`).toEqual([]);
     }, T);
   }
 });
@@ -760,11 +843,11 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       expect(after, `RF6 ${host}: the rebuild credits the same`).toEqual(expected);
     }, T);
 
-    it(`RF6 ${host}: R-P604 — an SDK retry batched with an event 20 s older is folded under its earliest-born copy: the open and the closed hour and the rebuild of a day past a page credit what live learning took`, async () => {
+    it(`RF6 ${host}: R-P604 — an SDK retry batched with an event 20 s older, its copy sorting first: the open and the closed hour, the rebuild and the custom-policy day's job on a day past a page keep the earliest-born copy and credit what live learning took`, async () => {
       const registry = retentionRegistry();
       vi.setSystemTime(at(1, 50));
       // The direct outcome path (each delivery admitted again with its own stamps); P103's horizon of a hundred years.
-      const docs = documents({ stats: { n0: 30, tauLearnMs: 3_153_600_000_000, liftMin: 0.5, liftMax: 2, nMin: 30 } }, { 'checkout-upsell': { reward: 'purchase', objective: 'revenue' } });
+      const docs = documents({ stats: CENTURY }, { 'checkout-upsell': { reward: 'purchase', objective: 'revenue' } });
       const s = await stamp(host, docs, registry, 'P104.RF6 retry order', { recovery: false });
       // The day past a page: other visitors' traffic at hour 1 on the nine other slots (none on checkout-upsell), so the rebuild takes the staged steps.
       const r = rng(104_302);
@@ -824,6 +907,13 @@ describe('unit:P104.RF6 (E29: the W24 rebuild with the 200-entry ring and the pr
       expect(rebuilt.status, `RF6 ${host}: the rebuild of a ${(bytes / MiB).toFixed(1)} MiB day is accepted: ${JSON.stringify(rebuilt.body).slice(0, 200)}`).toBeLessThan(300);
       await settleAt(s, at(4, 8));
       expect(upsell(rounded(await learned(s.m), 's')), `RF6 ${host}: the rebuild keeps the earliest-born copy`).toEqual(expected);
+      const job = await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE, policies: [RAW] }, at(4, 10));
+      const where = locationOf(job.body);
+      expect({ status: job.status, where }, `RF6 ${host}: the custom-policy day of the ${(bytes / MiB).toFixed(1)} MiB day is a job naming where its day is read (R-P615): ${JSON.stringify(job.body).slice(0, 200)}`)
+        .toEqual({ status: 202, where: expect.stringMatching(new RegExp(`^/v1/${TENANT}/learn/report\\?(?:.*&)?date=${DATE}(?:&|$)`)) });
+      await settleAt(s, at(4, 10));
+      const jobDay = await operator(s, 'GET', where!, undefined, at(4, 12));
+      expect(gridCredits(jobDay.body.report as Json, 'checkout-upsell', RAW.name), `RF6 ${host}: the custom-policy day's job keeps the earliest-born copy (${jobDay.status})`).toEqual(expected);
       expect(bounds(s), `RF6 ${host}: every step holds at most 64 MiB`).toEqual([]);
     }, T);
 

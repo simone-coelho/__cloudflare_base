@@ -512,6 +512,44 @@ export async function drainQueue(s: Stamp, at: number, plan: DeliveryPlan = {}, 
   }
 }
 
+/**
+ * R-P615 (R10 by name, P103's legs): on `_parity`'s mounted platform, the real Worker's five-minute run at the moment
+ * `at`, as src/index.ts runs its fold, each message it and its steps send (captured in `m.queued`) delivered alone
+ * through the Worker's own queue handler (again when not acknowledged, at most DELIVERIES times), repeated until a run
+ * changes no stored object but the warehouse slice's schedule. The clock reads `at` during each run and delivery only.
+ */
+export async function settleMounted(m: Mounted, at: number, runs = 40): Promise<void> {
+  const app = await loadWorker(), clock = vi.spyOn(Date, 'now'), prior = clock.getMockImplementation();
+  const storage = (m.env as unknown as { STORAGE: { objects: Map<string, string> } }).STORAGE;
+  const fingerprint = () => JSON.stringify([...storage.objects].filter(([key]) => !NOISE.test(key)).sort(([a], [b]) => (a < b ? -1 : 1)));
+  const invoke = async (run: (ctx: ExecutionContext) => Promise<unknown>) => {
+    const pending: Promise<unknown>[] = [];
+    const ctx = { waitUntil: (p: Promise<unknown>) => { pending.push(p); }, passThroughOnException() { /* never */ }, props: {} } as unknown as ExecutionContext;
+    let failed = false;
+    try { await run(ctx); } catch { failed = true; }
+    while (pending.length) for (const result of await Promise.allSettled(pending.splice(0))) if (result.status === 'rejected') failed = true;
+    return !failed;
+  };
+  clock.mockImplementation(() => at);
+  try {
+    for (let i = 0; i < runs; i++) {
+      const before = fingerprint();
+      await invoke(ctx => app.scheduled({ cron: '*/5 * * * *', scheduledTime: at, noRetry() { /* never */ } }, m.env, ctx));
+      const waiting = m.queued.splice(0).map((body, n) => ({ id: `s${i}-${n}`, body, attempts: 0 }));
+      for (let n = 0; n < 20_000 && waiting.length; n++) {
+        const message = waiting.shift()!;
+        message.attempts++;
+        let acked = false, retried = false;
+        const done = await invoke(ctx => app.queue({ queue: 'events', messages: [{ id: message.id, timestamp: new Date(at), body: structuredClone(message.body), attempts: message.attempts,
+          ack: () => { acked = true; }, retry: () => { retried = true; } }], ackAll: () => { acked = true; }, retryAll: () => { retried = true; } }, m.env, ctx));
+        waiting.push(...m.queued.splice(0).map((body, k) => ({ id: `${message.id}.${n}.${k}`, body, attempts: 0 })));
+        if (!(done && acked && !retried) && message.attempts < DELIVERIES) waiting.push(message);
+      }
+      if (fingerprint() === before) break;
+    }
+  } finally { if (prior) clock.mockImplementation(prior); else clock.mockRestore(); }
+}
+
 /** wrangler.toml [[queues.consumers]] queue "events": max_batch_size = 100. */
 export const BATCH = 100;
 /**
@@ -684,6 +722,28 @@ export interface Scenario { name: string; moments: Moment[]; hours: number[] }
 
 /** The custom-policy POST (raw day): today's operator surface that files a read conflict it meets (src/routes/decisions.ts:2030–2043). */
 export const RAW_POLICY = { name: 'p104-raw', scope: 'session', match: 'direct', credit: 'last' };
+
+/**
+ * The custom-policy day past a page (RF1, R-P615): 460 visitors over hour 12, 22 decisions each on SMALL's three
+ * slots (about 20 MiB of ledger: past today's rawBytes 16 MiB and past one page), and one visitor carried in from the
+ * day before — a hero shown at 23:55 (`previous`), clicked at 00:05 (`early`), then 250 more decisions at noon, so by
+ * the evening the head's 200-entry ring no longer holds the 23:55 one and only the date's start does. Folded hour by
+ * hour (00:06, 01:06, 13:06), then the operator's custom-policy request (RAW_POLICY) at 13:10.
+ */
+export function customDay(registry: ReturnType<typeof retentionRegistry>): { previous: Map<string, string>; early: Map<string, string>; objects: Map<string, string>; settleAt: number; postAt: number } {
+  const r = rng(104_106);
+  const carry = 'custom-carry', cell = { channel: 'direct', visit_bucket: '1', region: 'US-NY' };
+  const later = Array.from({ length: 250 }, (_, k) => {
+    const slot = SMALL.slots[k % SMALL.slots.length]!;
+    return decisionRow({ visitor: carry, ts: at(12, 1) + k * 5_000, page: PAGE_OF[slot]!, slot, item: `${slot}.${k % SMALL.items}`, cell }, registry);
+  });
+  return {
+    previous: ledgerObjects([decisionRow({ visitor: carry, ts: at(-1, 55), page: 'home', slot: 'home-hero', item: 'home-hero.1', cell }, registry)], 500, 'c'),
+    early: ledgerObjects([outcomeRow({ visitor: carry, ts: at(0, 5), event: 'content_click', item: 'home-hero.1', nonce: `${carry}-click` }, registry)], 500, 'c'),
+    objects: ledgerObjects([...rowsOf(visitorsOf('custom', 460).map(id => visit(registry, id, at(12) + Math.floor(r() * 35 * MIN), 22, r, SMALL))), ...later], 500, 'b'),
+    settleAt: at(13, 6), postAt: at(13, 10),
+  };
+}
 export const fileConflicts: Action = async s => { await operator(s, 'POST', `/v1/${TENANT}/learn/report`, { date: DATE, policies: [RAW_POLICY] }); };
 export const erase = (visitorId: string): Action => async s => { await operator(s, 'POST', `/v1/${TENANT}/ledger/erasures`, { visitorId }); };
 
