@@ -11,6 +11,7 @@ import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } 
 import type { ContextVocabulary } from '@/services/visit';
 import type { DeviceClass } from '@/services/platform';
 import type { Suppression } from '@/reflex/core';
+import type { MoneyPolicy } from '@/learn/policy';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
@@ -881,6 +882,8 @@ export interface LearnConfig {
    * page has one.
    */
   evidenceFloors?: Record<string, number>;
+  /** P103: the tenant's money policy: the currency its money counters are in, and what a value at or below zero means. */
+  money?: MoneyPolicy;
 }
 
 /**

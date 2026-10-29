@@ -1349,7 +1349,7 @@ export function foldShard(state: ShardState, decs: readonly CompactDecision[], o
         // success event its record names, at its value in the slot's currency —
         // by the one rule the visitor's ring credits by (`successCreditOf`).
         const success = successCreditOf(credited?.successEvent, { reward: ctx.slotCfg[c.slot]?.reward ?? 'click', objective: ctx.slotCfg[c.slot]?.objective }, o);
-        if (success === null) continue;
+        if (success === null || 'refused' in success) continue;
         if (ctx.creditedSlots) {
           const slots = ctx.creditedSlots.get(o.brand) ?? new Set<string>();
           slots.add(c.slot); ctx.creditedSlots.set(o.brand, slots);
@@ -2063,7 +2063,7 @@ export async function loadHourRecords(r2: R2Like, tenant: string, date: string, 
   const listed = copies ? copies.listed ?? await listObjects(r2, `${tenant}/${date}/${pad2(hour)}/`) : undefined;
   const all = (listed ? [...listed.keys()] : await listKeys(r2, `${tenant}/${date}/${pad2(hour)}/`)).filter(isLearningKey).sort((a, b) => (startOf(a) < startOf(b) ? -1 : startOf(a) > startOf(b) ? 1 : a < b ? -1 : 1));
   const keys = all.slice(0, cap);
-  const decisions: CompactDecision[] = [], outcomes: OutcomeRecord[] = [];
+  const decisions: CompactDecision[] = [], outcomes: OutcomeRecord[] = [], decisionRows: DecisionRecord[] = [];
   // W30 F1.01 (W22 R124's residual): the conflicts an operator surface has
   // already FILED are excluded and counted here, exactly as the day read does,
   // instead of the fold failing closed on them for ever. A conflict that is not
@@ -2089,11 +2089,13 @@ export async function loadHourRecords(r2: R2Like, tenant: string, date: string, 
         try { rec = JSON.parse(line); } catch { throw new ReportInputError(); }
         if (visitors && objectMap(rec) && typeof rec.visitor_id === 'string') visitors.add(rec.visitor_id);
         if (!identity.admit(rec, stream)) continue;
-        if (stream === 'decision') decisions.push(compactOf(rec as DecisionRecord)); else outcomes.push(rec as OutcomeRecord);
+        if (stream === 'decision') decisionRows.push(rec as DecisionRecord); else outcomes.push(rec as OutcomeRecord);
       }
     }
     if (copies) copies.read.push({ ...(held ?? { key, etag: etagShape(obj.etag) ? obj.etag : null, size: aggregateBytes(text), text }), held: held !== undefined, visitors: [...visitors!] });
   }
+  // Compacted once every copy is read: the identity keeps a decision's preferred copy in place (P103, `preferredCopy`).
+  decisions.push(...decisionRows.map(compactOf));
   const duplicates = identity.duplicates(), conflicts = identity.conflictRows();
   return { decisions, outcomes, objects: all.length, read: keys.length, truncated: all.length > keys.length,
     source: await fingerprint(JSON.stringify([all, cap, contents])), ...(duplicates.length ? { duplicates } : {}),
