@@ -218,7 +218,19 @@ describe('unit:W29.R2', () => {
 
       await door('/publish', { tenant: TENANT, content: { version: 'w29-b1-coach-catalogue', pieces: W29_PIECES }, slots: W29_SLOTS,
         learn: W29_LEARN, priors: EMPTY_PRIORS, proposals: W29_PROPOSALS, reflex: DEFAULT_REFLEX_CONFIG });
-      const before = await state();
+      // R10 (P105, R-P644 (1)): the five-minute run moves the tenant's audiences into its publication once (P105 AL4),
+      // one set publication whose only new member is the audiences member, every other ref and object unchanged;
+      // the detector below then runs from that state, unchanged, for all three crons (the five-minute run again included).
+      const unmoved = await state();
+      await door('/scheduled', { cron: '*/5 * * * *' });
+      const movedOnce = await state();
+      const setOf = (s: State, n: number) => JSON.parse(s.objects[`config-publication/v2/${TENANT}/set/${n}.json`] ?? 'null') as { refs: Record<string, unknown> } | null;
+      expect(Object.keys(movedOnce.objects).filter(key => !(key in unmoved.objects)).sort(), 'R10 (P105): the first five-minute run adds one set and the audiences member only')
+        .toEqual([`config-publication/v1/${TENANT}/audiences/rev/1.json`, `config-publication/v2/${TENANT}/set/2.json`]);
+      const { [`audiences:${TENANT}`]: audiences, ...others } = setOf(movedOnce, 2)?.refs ?? {};
+      expect([audiences !== undefined, others], 'R10 (P105): every other member of the moved set is the unmoved set\'s').toEqual([true, setOf(unmoved, 1)?.refs]);
+      expect(Object.keys(unmoved.objects).filter(key => !key.endsWith('/head.json')).every(key => movedOnce.objects[key] === unmoved.objects[key]), 'R10 (P105): no other object changed').toBe(true);
+      const before = movedOnce;
       // The detector holds what autonomy acts on: the slots, learn and proposals members of the publication.
       expect(Object.keys(before.objects).some(key => key.startsWith(`config-publication/v2/${TENANT}/`)), 'the publication set is under the detector').toBe(true);
       for (const member of ['slots', 'learn', 'proposals']) {

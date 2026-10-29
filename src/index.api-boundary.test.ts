@@ -2532,6 +2532,17 @@ it('W01.08 customer scene refusal preserves messages and mixed ledger dispositio
   expect(scheduled.pending).toBe(2); expect(scheduled.calls.some(call => call[0] === 'CACHE.list')).toBe(true);
 });
 
+/**
+ * R10 (P105, R-P644 (1)): a tenant with no configuration publication reads and writes its audiences as KV
+ * records, as before (P105 reading R1, src/units/P105/LEDGER.unit.test.ts), after a read of its publication's head.
+ * The KV calls are returned for the exact comparison; every other call must be a read of that head.
+ */
+function audienceKvCalls(calls: string[][], tenant: string): string[][] {
+  const head = `config-publication/v2/${tenant}/head.json`;
+  expect(calls.filter(([op]) => String(op).startsWith('STORAGE.')).every(([op, key]) => op === 'STORAGE.get' && key === head)).toBe(true);
+  return calls.filter(([op]) => !String(op).startsWith('STORAGE.'));
+}
+
 it('W01.08 preserves customer scoped reads and mutations, Coach audiences and required preflights', async () => {
   for (const tenant of ['acme', 'globex']) {
     const headers = { 'X-Tenant': tenant, Authorization: 'Bearer ' + tokens[tenant === 'acme' ? 'admin' : 'globex'], 'Content-Type': 'application/json' };
@@ -2554,10 +2565,10 @@ it('W01.08 preserves customer scoped reads and mutations, Coach audiences and re
     tenantManifest: JSON.stringify({ provisioned: ['coach'], operatorGrants: { 'synthetic-acme-operator': ['coach'] } }) };
   const customer = await probe({ ...coach, profile: 'customer' });
   expect(customer.status).toBe(200); expect(JSON.parse(customer.body).audiences).toEqual([]);
-  expect(customer.calls).toEqual([['CACHE.list', 'audience:']]); expect(customer.after).toEqual(customer.before);
+  expect(audienceKvCalls(customer.calls, 'coach')).toEqual([['CACHE.list', 'audience:']]); expect(customer.after).toEqual(customer.before);
   const authored = await probe({ ...coach, profile: 'customer', authoredAudience: true });
   expect(authored.status).toBe(200); expect(JSON.parse(authored.body).audiences).toMatchObject([{ key: 'authored', name: 'Customer authored' }]);
-  expect(authored.calls).toEqual([['CACHE.list', 'audience:'], ['CACHE.get', 'audience:authored']]);
+  expect(audienceKvCalls(authored.calls, 'coach')).toEqual([['CACHE.list', 'audience:'], ['CACHE.get', 'audience:authored']]);
   expect(authored.after).toEqual(authored.before);
   const suggest = { ...coach, profile: 'customer', path: '/operator/audiences/suggest', method: 'POST', body: '{malformed' };
   assertDenied(await probe(suggest), suggest, ['get:AUTH_MODE']);
@@ -2569,7 +2580,7 @@ it('W01.08 preserves customer scoped reads and mutations, Coach audiences and re
     headers: { 'X-Tenant': 'coach', 'X-SDK-Key': 'synthetic-coach-key' },
     shopperCapability: { tenant: 'coach', subject, sessionId: 'w0108-coach-owned' } });
   expect(shopper.status).toBe(200); expect(JSON.parse(shopper.body)).toMatchObject({ userId: subject, segments: [] });
-  expect(shopper.calls).toEqual([
+  expect(audienceKvCalls(shopper.calls, 'coach')).toEqual([
     ['SHOPPER_REFLEX.idFromName', subject], ['SHOPPER_REFLEX.get', subject], ['SHOPPER_REFLEX.fetch', subject], ['SHOPPER_REFLEX.idFromName', subject],
     ['SESSIONS.get', 'session:w0108-coach-owned'], ['CACHE.list', 'audience:'], ['CACHE.get', 'audience:authored']]);
   expect(shopper.after).toEqual(shopper.before); expect(shopper.logs).toEqual([]);
@@ -3195,7 +3206,7 @@ it('W03.02 retains granted exact destinations and document revisions, rejecting 
     expect(published.status).toBe(200);
     expect(JSON.parse(published.body)).toMatchObject({ write: { success: true, notifiedUsers: 0 }, readStatus: 200,
       read: { success: true, audiences: [{ key: 'w0302', status: 'published' }] } });
-    expect(published.calls).toEqual([['CACHE.put', `t:${tenant}:audience:w0302`], ['CACHE.list', `t:${tenant}:audience:`], ['CACHE.get', `t:${tenant}:audience:w0302`]]);
+    expect(audienceKvCalls(published.calls, tenant)).toEqual([['CACHE.put', `t:${tenant}:audience:w0302`], ['CACHE.list', `t:${tenant}:audience:`], ['CACHE.get', `t:${tenant}:audience:w0302`]]);
     // R10 witness (baseline-52 #29, G17): the export lists ledger batch objects only, keys
     // `<tenant>/<yyyy-mm-dd>/<hh>/<decision|outcome>/...` (isLearningKey, src/ledger/records.ts:15, applied at
     // src/routes/decisions.ts:1254), named as the writer names a batch (src/ledger/writer.ts:85-86, one JSON row per

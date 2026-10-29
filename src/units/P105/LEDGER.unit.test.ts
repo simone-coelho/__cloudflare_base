@@ -35,7 +35,7 @@
 // export, so no export name is ruled here; the store's KV records stay
 // `audience:<key>` under the tenant's KV prefix (src/tenancy/tenant.ts TenantKV).
 //
-// READINGS (the specifier's; for the lead to confirm or rule):
+// READINGS (R1, R2, R3, R5 and R6 ratified by R-P644 (8); R4 and R7 replaced by its rulings (2) and (3)):
 //   R1. "A tenant whose set has no audiences member" (AL4) is the moved/unmoved line. A
 //       tenant with NO publication at all — no STORAGE binding, or a head storage answers
 //       absent (`publication_uninitialized`, publication.ts requiredHead / currentSet) — is
@@ -57,7 +57,7 @@
 //       exactly that, and the empty-member baseline paid it too). "Within half a call of the
 //       same action with no audiences": the baseline is the same action on the tenant moved
 //       with an empty member; the one unrelated timed read an action makes on its own
-//       schedule, the shopper's feature-variable override list (lane E4's other ten-second
+//       schedule, the shopper's feature-variable override read (lane E4's other ten-second
 //       copy, FeatureVariableManager OVERRIDES_LIST_MS; DESIGN.md "out of scope, noticed" 1),
 //       is counted at one call's latency where the two differ, and nothing else is.
 //   R3. "An isolate holding nothing" is simulated as a new isolate: the request path's
@@ -66,12 +66,10 @@
 //       ownerBindingIdentity) and the publication's serving cache emptied
 //       (`invalidatePublicationCache`). "Another isolate" (AL2, AL3) is the operator
 //       routes served over another pair of binding objects over the same data.
-//   R4. "Refused 413 document_too_large naming it": the store's refusal carries status
-//       413, code `document_too_large` and the member's name (`audiences`); the operator
-//       door answers it as src/routes/operator.ts answers every non-validation failure
-//       today (500 `Failed to publish audience` with the refusal's message in `details`),
-//       because operator.ts is not in P105's allowed paths. The door leg therefore pins
-//       "not published, nothing changed, the refusal named in the answer", not the 413.
+//   R4 (R-P644 (2), replacing the specifier's): the operator door answers the store's 413 by
+//       name — status 413, the answer naming document_too_large and the audiences member —
+//       on publish (and on rename and pin, the other doors that can grow the member);
+//       operator.ts's audience routes are granted. AL3 pins the publish door on both hosts.
 //   R5. "Every get issued at once" (AL4) is read literally: all of the unmoved read's gets
 //       are in flight together (one wave after the list's pages), not one wave per page.
 //   R6. "The kit left as today" (the brief's wrong-fix list): the work order changes no kit
@@ -82,44 +80,70 @@
 //       (the member is not a `/content/{kind}`): AL5 locks it. No kit sentence is
 //       demanded here; if the lead wants one (the member's bound, the operator door), the
 //       work order needs docs/kit/02-api-reference.md in its paths and a ruled sentence.
-//   R7. AL2's "seen on the next action" is the shopper's action (an owner operation, which
-//       reads the head by a handle of its own every time). The operator's own list read
-//       (GET /operator/audiences, operator.ts:159) is not an owner operation: its pin holds
-//       the worker's binding, the identical handle of its previous read, which
-//       publication.ts answers from its entry for up to PUBLICATION_CACHE_MS (30 s) with no
-//       storage read. Measured on the sketch: a rename by another isolate is absent from
-//       this isolate's operator list read made within 30 s. Not demanded (AL2 rules the
-//       action); named as a residual. A write through this isolate invalidates its entries
-//       and is read at once (AL2's first leg reads the operator list after each write).
+//   R7 (R-P644 (3), replacing the specifier's): the operator's audience list (GET
+//       /operator/audiences, operator.ts:159) reads through the publication like every other
+//       reader, never a held 30 s entry: another isolate's write is on the operator's next
+//       list read with no clock moved (AL2). Measured before the ruling: the worker-level read
+//       held its identical-handle entry (publication.ts pinPublication) up to 30 s.
+//   R8. The deploy window (R-P644 (4)): "any KV audience record written after the move" is
+//       told by content. A KV record that disagrees with the member — a published record
+//       absent from it or different, an archived record of a member audience — is an earlier
+//       release's write and the five-minute run reconciles it into the member, one
+//       publication per run, none when nothing disagrees. This release writes each record
+//       after its commit, so its records agree. Not told apart: a record left behind by a
+//       post-commit KV write that failed would read as an earlier release's (named; a
+//       release marker needs KV list metadata, which the harness's KV double,
+//       src/units/_parity.ts UnitKV, does not keep).
+//   R9. R-P644 (5)'s "a cold machine reads that member in the same wave as the head and the
+//       copy": the member's revision is known only from the head or the set, so a read in
+//       the head's own wave needs the member under a fixed name (a second serving object)
+//       and a pin that names the member. A decision names no audiences member and reads none:
+//       AL1 pins its one wave at 2,000 audiences on P102's build. An action's first pin is the
+//       reflex read's (src/reflex/configStore.ts, RealtimeSegmentEngine, ShopperReflex: none
+//       granted), so the action's same-wave read is not pinned here; AL1 keeps a cold
+//       action's audience read at exactly one (the member's document).
+//   R10. The 409 (R-P644 (7)): the move is a set publication, so an operator publication that
+//       meets it is refused 409 publication_conflict, at most once per tenant: optimistic
+//       concurrency, the publication's documented contract, accepted. No leg pins it.
+//   R11. The override list (R-P644 (6), AL7 proposed): measured at 78 ms a KV call with lane
+//       E4's copy expired, the per-event read (FeatureVariableManager.getUserOverrides via
+//       getSessionFeatureVariables, RealtimeSegmentEngine.ts:1032, every personalization read
+//       and every action that changes her segments or stage, session host only) makes 1 + N
+//       sequential calls: 0 overrides 1 call 82 ms; 10, 11 calls 869 ms; 100, 101 calls
+//       7,963 ms; 1,000, 1,001 calls 78,842 ms (logs/p4-overrides-base.log). It grows, so it
+//       joins P105 as AL7 (the work order needs the criterion and its paths). Two facts for
+//       the lead: no route writes an override (setUserOverride's only callers,
+//       RealtimeSegmentEngine.setFeatureVariableOverride and removeFeatureVariableOverride,
+//       have no caller), and the read's result reaches no answer (enhancedFeatureVariables is
+//       consumed by nothing; the update and the personalization read carry
+//       personalizationConfig.featureVariables, built from decisions). AL7 therefore pins the
+//       read's cost only (at most one override read, no list, at any count) and no applied
+//       override. Paths it needs: src/services/FeatureVariableManager.ts (the read and the
+//       writes), src/services/RealtimeSegmentEngine.ts (getPersonalizationConfig's call,
+//       :1032), and, for a new representation, src/identity/erase.ts and
+//       src/routes/identity.ts (erasure and the identity export read `override:<id>:`).
 //   GREEN-AT-SPEC: AL5's five lock legs pass today and on the sketch (measured).
 //
 // DEFERRED: LV1 (lane L21 on the pair's next release, the stamps read-only) — no test.
 //
 // RESIDUALS (named, not tested here):
-//   - The deploy window (DESIGN.md §7): an isolate of the previous release writing only a
-//     KV record after the tenant moved is not in the member and so is not published; the
-//     five-minute run moves only a tenant with no member. Locally untestable (two
-//     releases); LV1 should publish across a deploy.
+//   - The deploy window is reconciled by the five-minute run (AL4); a record left by a failed
+//     post-commit KV write is not told apart from an earlier release's (R8). LV1 walks a
+//     rolling release (R-P644 (4)).
 //   - "No clone of the whole list per call" (work order, remaining work 2): not observable
 //     within half a call at 1,000 audiences; the reviewer reads it.
-//   - The operator door answers a 413 refusal 500 (R4): operator.ts outside the grant.
 //   - The unmoved tenant's path may keep lane E4's ten-second copy (work order: "left only
 //     on the unmoved tenant's path or removed"): an unmoved tenant pays one KV list per ten
 //     seconds per isolate until the five-minute run moves it (one run after the deploy).
-//   - The operator's list read on a non-owner request is answered from its held entry for
-//     up to 30 s after another isolate's write (R7).
-//   - The shopper's feature-variable override list keeps lane E4's ten-second re-read on
-//     the request path (DESIGN.md "out of scope, noticed" 1; measured here as one extra
-//     call on a session-host view): the same defect class as E30, not in P105's scope.
+//   - An action's first read of the audiences member on a machine holding nothing is in the
+//     wave after the head, not the head's own (R9).
 //
 // CROSS-BATCH FACTS WITH P102 (E27; spec rem/spec-p102 02170b7d, build rem/p102-build c3b6031b):
 //   - P102's serving copy (`config-publication/v2/<scope>/serving.json`, written at every
-//     commit) holds EVERY member's envelope and is written only at or under 1 MiB
-//     (SERVING_COPY_MAX_BYTES). The audiences member is part of it: at about 619 B an
-//     audience, 1,000 audiences are about 605 KiB of the copy's 1 MiB, and from roughly
-//     1,500 audiences (less with a large catalogue) no copy is written, so a brand-new
-//     machine's first decision takes P102's two trips (CR2) instead of one (CR3). Neither
-//     work order rules which members the copy carries; the lead's ruling.
+//     commit at or under 1 MiB) held every member. R-P644 (5): it leaves the audiences member
+//     out, so a tenant with thousands of audiences keeps P102's one-wave first decision. AL1
+//     pins it at 2,000 audiences (about 1.2 MB of member), first failing today on its
+//     PRECONDITION naming P102 (R-P6). Measured on P102's build with the sketch.
 //   - A cold action names no members in P102 as built (only the decision's documents
 //     stage does), so it reads the head alone and the audiences member by its own read:
 //     AL1's "exactly one audience read (the member's document)" holds over P102. If a
@@ -140,15 +164,17 @@
 //     one with no audience included), which is a set publication: the head's bytes change,
 //     and an operator publication that meets the move is refused 409 publication_conflict
 //     (the publication's own CAS; at most once per tenant, retried by the operator with a
-//     fresh If-Match). R10 by name, for the lead, P102's file: in both legs, one
+//     fresh If-Match; accepted, R-P644 (7)). R10 granted by name (R-P644 (1)), P105's after
+//     P102 joins, not committed to P102's file now; the edit is kept as a script,
+//     _evidence/parity-step3/S53/specifier/scratch/tools/p102-cr2-r10.cjs. In both legs, one
 //     `fiveMinuteRun` (the move) before each `asCommittedToday(...)` (worlds `m` and `n`), so
 //     the run under test is the backfill alone; and the literal `committed: 2` in the R6
 //     leg becomes 3 (set 2 is the move's). Proven on P102's build with the sketch:
 //     r10-proof-p102-cr2b.log, CR2 12/12. The alternative — the move skipping a tenant with
 //     no KV record — leaves that tenant's request path listing KV, contrary to AL4.
 //
-// R10 (expectations that pin today's storage location, listed for the lead; none edited here;
-// every "after" below was run on the sketch in a scratch copy of its file and passed:
+// R10 (expectations that pinned today's storage location; granted by name by R-P644 (1) and made in
+// this commit, each "after" as written below; each was first run on the sketch in a scratch copy:
 // _evidence/parity-step3/S53/specifier/logs/r10-proof-sketch.log, r10-proof-w29-sketch.log):
 //   - W01.08 (src/index.api-boundary.test.ts:2557, :2560, :2573-2574). Before: the exact call
 //     lists `[['CACHE.list','audience:']]`, `[['CACHE.list','audience:'], ['CACHE.get','audience:authored']]`
@@ -215,6 +241,7 @@ import type { AudienceDef } from '@/connectors/types';
 import catalog from '@/data/coach-catalog.json';
 import { SEED_AUDIENCES } from '@/data/seed-audiences';
 import { SHOPPER_HEADER } from '@/identity/sessionCapability';
+import { FeatureVariableManager } from '@/services/FeatureVariableManager';
 import { EMPTY_PRIORS, PRIORS_KIND } from '@/learn/priors';
 import { operatorWrites } from '@/middleware/edgeAccess';
 import { errorHandler } from '@/middleware/error';
@@ -450,6 +477,11 @@ const publishThrough = (w: World, def: AudienceDef, opts: { app?: WorkerApp; ten
     evaluation: def.evaluation, source: 'manual', status: 'published' } }, opts);
 const verb = (w: World, key: string, action: 'rename' | 'pin' | 'prune', body: unknown = {}, opts: { app?: WorkerApp; tenant?: string } = {}) =>
   operator(w, 'POST', `/operator/audiences/${encodeURIComponent(key)}/${action}`, body, opts);
+/** The operator's list read, with every KV audience call it made. */
+async function listedReads(w: World): Promise<{ defs: AudienceDef[]; kv: string[] }> {
+  const from = w.trace.length, defs = await listedThrough(w);
+  return { defs, kv: w.trace.slice(from).filter(isKvAudience).map(named) };
+}
 async function listedThrough(w: World, opts: { app?: WorkerApp; tenant?: string } = {}): Promise<AudienceDef[]> {
   const read = await operator(w, 'GET', '/operator/audiences', undefined, opts);
   expect(read.status, `PRECONDITION (${w.host}): the operator reads the published audiences (${JSON.stringify(read.body).slice(0, 200)})`).toBe(200);
@@ -492,10 +524,10 @@ interface Measured { status: number; body: Record<string, unknown>; ms: number |
 /**
  * The one unrelated timed read an action can make on its own schedule: the shopper's
  * feature-variable override list, lane E4's other ten-second copy (FeatureVariableManager
- * OVERRIDES_LIST_MS; DESIGN.md "out of scope, noticed" 1). AL1's time bound counts each such
- * list, made by the measured action and not by its baseline, at one call's latency.
+ * OVERRIDES_LIST_MS; DESIGN.md "out of scope, noticed" 1; AL7). AL1's time bound counts each override
+ * read (its list or a record), made by the measured action and not by its baseline, at one call's latency.
  */
-const isOverrideList = (c: Traced) => c.binding === 'CACHE' && c.method === 'list' && c.key.includes('"prefix":"override:');
+const isOverrideList = (c: Traced) => c.binding === 'CACHE' && READS.has(c.method) && c.key.includes('override:');
 async function measured(w: World, send: () => Promise<Wire>, bound: number, lever = PER_CALL_MS): Promise<Measured> {
   const fromCalls = w.latency.calls.length, fromTrace = w.trace.length;
   w.latency.set(lever);
@@ -546,6 +578,36 @@ async function movedEmpty(w: World): Promise<void> {
 // unit:P105.AL1 — no audience read on a held publication; one after a change or cold.
 // ===========================================================================
 
+/**
+ * The publication's object reads while armed, each held `g` ms, in waves as P102's own read log counts them
+ * (src/units/P102/LEDGER.unit.test.ts `waves`, rem/spec-p102 02170b7d): a read that starts before the earliest end of
+ * the current wave joins it, else it opens the next.
+ */
+function publicationReads(m: Mounted, g = 20) {
+  const reads: Array<{ key: string; start: number; end: number }> = [];
+  let armed = false;
+  for (const op of ['get', 'head'] as const) {
+    const current = (m.storage as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>)[op]!;
+    Object.defineProperty(m.storage, op, { configurable: true, writable: true, value: async (...args: unknown[]) => {
+      const key = String(args[0]), counted = armed && key.startsWith('config-publication/'), start = performance.now();
+      const answer = current.apply(m.storage, args);
+      if (counted) await new Promise(resolve => setTimeout(resolve, g));
+      const out = await answer;
+      if (counted) reads.push({ key, start, end: performance.now() });
+      return out;
+    } });
+  }
+  const waves = () => {
+    const out: Array<{ end: number; keys: string[] }> = [];
+    for (const r of [...reads].sort((a, b) => a.start - b.start)) {
+      const last = out.at(-1);
+      if (last && r.start < last.end - 0.5) { last.keys.push(r.key); last.end = Math.min(last.end, r.end); } else out.push({ end: r.end, keys: [r.key] });
+    }
+    return out.map(w => w.keys.map(k => k.replace(`config-publication/v2/${TENANT}/`, '').replace(`config-publication/v1/${TENANT}/`, '')).sort());
+  };
+  return { arm: () => { armed = true; reads.length = 0; }, disarm: () => { armed = false; }, waves };
+}
+
 describe('unit:P105.AL1', () => {
   for (const host of HOSTS) for (const n of SIZES) {
     it(`host (${host}): at ${n} published audiences, under the AA2 lever (${PER_CALL_MS} ms on every remote call, customer profile), a Tabby view, a buffered action and a render acknowledgement on an isolate that holds the unchanged publication make no audience read and answer within ${MARGIN_MS} ms of the same action with no audiences, with the clock moved ${STEP_MS / 1000} s before each (the old ten-second line crossed every time); the action right after the publication changed, and a view on a new isolate, each make exactly one audience read, the member's document, and no KV list or audience get`, async () => {
@@ -592,6 +654,29 @@ describe('unit:P105.AL1', () => {
         `${host}: P105.AL1 — at ${n} audiences a view on a new isolate reads the audiences once, the member's document, and no KV list or audience get (${cold.reads.length} audience reads)`)
         .toEqual({ status: 200, audienceReads: [memberRead], kv: [] });
     }, 600_000);
+  }
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P644 (5) — at 2,000 published audiences (about 1.2 MB, past P102's 1 MiB serving copy), the serving copy leaves the audiences member out and so is written, and a new machine's first decision still reads its documents in ONE wave (the head and the serving copy together), reading no audience`, async () => {
+      const w = await world(host);
+      await new KvAudienceStore(w.m.env, TENANT as TenantId).seed(Array.from({ length: 2000 }, (_, i) => atScale(i)));
+      const committed = setRevision(w.m), copy = stored(w.m, `config-publication/v2/${TENANT}/serving.json`) as { set?: { revision?: number; refs?: Record<string, unknown> }; documents?: Record<string, unknown> } | null;
+      expect(copy ? 'written' : 'no serving copy', `PRECONDITION (P102, E27): every commit writes the scope's serving copy, config-publication/v2/${TENANT}/serving.json (P102 CR3); P102 builds before P105`).toBe('written');
+      const refs = Object.keys((stored(w.m, `config-publication/v2/${TENANT}/set/${committed}.json`) as { refs?: Record<string, unknown> } | null)?.refs ?? {});
+      expect({ current: copy!.set?.revision === committed, members: Object.keys(copy!.documents ?? {}).sort() },
+        `${host}: P105.AL1 — the serving copy of the set the 2,000 audiences committed holds every member but the audiences member`)
+        .toEqual({ current: true, members: refs.filter(key => key !== `audiences:${TENANT}`).sort() });
+      const s = await shopperOn(w.m);
+      const meter = publicationReads(w.m);
+      newIsolate(w);
+      meter.arm();
+      const page = await s.snapshot('pdp', { pageInstance: pageInstanceOf('p105-first-decision') });
+      meter.disarm();
+      const waves = meter.waves();
+      expect({ status: page.status, waves: waves.length, audienceRead: waves.flat().some(key => key.includes('audiences/')) },
+        `${host}: P105.AL1 — the new machine's first decision reads its documents in one wave and no audience (${JSON.stringify(waves)})`)
+        .toEqual({ status: 200, waves: 1, audienceRead: false });
+    }, 300_000);
   }
 
   for (const host of HOSTS) {
@@ -648,7 +733,7 @@ describe('unit:P105.AL2', () => {
         `${host}: P105.AL2 — once the tenant is moved, no action reads an audience from KV`).toEqual({ afterPublish: [], afterPin: [], afterPrune: [] });
     }, 120_000);
 
-    it(`host (${host}): through ANOTHER isolate's operator door (other binding objects over the same storage), with no clock moved, an audience published qualifies her on this isolate's next action, a rename and a pin are read renamed and pinned by this isolate's next action, and a prune stops it qualifying on the next action, with no audience read from KV`, async () => {
+    it(`host (${host}): through ANOTHER isolate's operator door (other binding objects over the same storage), with no clock moved, an audience published qualifies her on this isolate's next action, a rename and a pin are read renamed and pinned by this isolate's next action, and a prune stops it qualifying on the next action, with no audience read from KV; R-P644 (3): this isolate's operator list read names each change too, with no clock moved`, async () => {
       const w = await world(host);
       expect((await publishThrough(w, authored(VIP, 'al2_vip'))).status, `PRECONDITION (${host}): the tenant's first audience is published`).toBe(200);
       const s = await shopperOn(w.m);
@@ -658,6 +743,9 @@ describe('unit:P105.AL2', () => {
 
       const other = elsewhere(w), luxe = authored(LUXE, 'al2_luxe');
       expect((await publishThrough(w, luxe, { app: other })).status, `PRECONDITION (${host}): another isolate publishes ${luxe.key}`).toBe(200);
+      const listedAfterPublish = await listedReads(w);
+      expect({ listed: listedAfterPublish.defs.some(d => d.key === luxe.key), kv: listedAfterPublish.kv },
+        `${host}: P105.AL2 — R-P644 (3): this isolate's operator list read (GET /operator/audiences), with no clock moved, names ${luxe.key}, published by another isolate, read through the publication and from no KV`).toEqual({ listed: true, kv: [] });
       const afterPublish = await measured(w, () => actionWire(w.app, s, VIEW_TABBY_26), COLD_BOUND_MS, 0);
       expect(segmentsOf(afterPublish.body) ?? [], `${host}: P105.AL2 — this isolate's next action qualifies her for ${luxe.key}, published by another isolate, with no clock moved`).toContain(luxe.key);
 
@@ -668,6 +756,9 @@ describe('unit:P105.AL2', () => {
         expect({ readsTheChangedMember: next.reads.includes(`STORAGE.get config-publication/v1/${TENANT}/audiences/rev/${member?.revision}.json`), [field]: carried?.[field], kv: next.kv },
           `${host}: P105.AL2 — this isolate's next action reads the audiences as ${action === 'rename' ? 'renamed' : 'pinned'} elsewhere: it reads the member's revision that carries the change, from no KV (${next.reads.join(', ')})`)
           .toEqual({ readsTheChangedMember: true, [field]: value, kv: [] });
+        const listed = await listedReads(w);
+        expect({ [field]: (listed.defs.find(d => d.key === luxe.key) as Record<string, unknown> | undefined)?.[field], kv: listed.kv },
+          `${host}: P105.AL2 — R-P644 (3): and this isolate's operator list read names it ${action === 'rename' ? 'renamed' : 'pinned'} elsewhere, from no KV`).toEqual({ [field]: value, kv: [] });
       }
 
       expect((await verb(w, luxe.key, 'prune', {}, { app: other })).status, `PRECONDITION (${host}): another isolate prunes it`).toBe(200);
@@ -779,20 +870,25 @@ describe('unit:P105.AL3', () => {
       `P105.AL3 — nothing changed: the set, the member (${before.members} before) and the KV record`).toEqual({ fitWasTheMember: true, revision: before.revision, members: fit, record: false });
   }, 300_000);
 
-  it('host (worker): the same write through the operator door is not published and nothing changes, the answer naming the refusal (R4: the door answers every non-validation failure 500 today)', async () => {
-    const w = await world('session');
-    const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
-    const sample = Array.from({ length: 100 }, (_, i) => atScale(i)), perAudience = documentBytes({ version: 1, audiences: sample }) / sample.length;
-    const fit = Math.floor((PUBLICATION_MAX_BYTES - 96 * 1024) / perAudience);
-    await store.seed(Array.from({ length: fit }, (_, i) => atScale(i)));
-    const revision = setRevision(w.m);
-    const over = { ...authored(LUXE, 'al3_over'), description: 'x'.repeat(160 * 1024) };
-    const answer = await publishThrough(w, over);
-    expect({ published: answer.status === 200, namesTheRefusal: /audiences/.test(JSON.stringify(answer.body)) && /2 MiB/.test(JSON.stringify(answer.body)) },
-      `P105.AL3 — the door does not publish it and its answer names the audiences member and the 2 MiB bound (${answer.status} ${JSON.stringify(answer.body).slice(0, 300)})`).toEqual({ published: false, namesTheRefusal: true });
-    expect({ revision: setRevision(w.m), listed: (await listedThrough(w)).some(d => d.key === over.key), record: w.m.cache.data.has(`audience:${over.key}`) },
-      'P105.AL3 — and nothing changed').toEqual({ revision, listed: false, record: false });
-  }, 300_000);
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P644 (2) — the same write through the operator door (POST /operator/audiences/publish) is refused 413 by name: the answer names document_too_large and the audiences member, nothing changes (the set, the operator's list, the KV record), and her next action does not qualify it`, async () => {
+      const w = await world(host);
+      const store = new KvAudienceStore(w.m.env, TENANT as TenantId);
+      const sample = Array.from({ length: 100 }, (_, i) => atScale(i)), perAudience = documentBytes({ version: 1, audiences: sample }) / sample.length;
+      const fit = Math.floor((PUBLICATION_MAX_BYTES - 96 * 1024) / perAudience);
+      await store.seed(Array.from({ length: fit }, (_, i) => atScale(i)));
+      const revision = setRevision(w.m);
+      const over = { ...authored(LUXE, 'al3_over'), description: 'x'.repeat(160 * 1024) };
+      const answer = await publishThrough(w, over), text = JSON.stringify(answer.body);
+      expect({ status: answer.status, namesTheRefusal: text.includes('document_too_large'), namesTheMember: /audiences/.test(text) },
+        `${host}: P105.AL3 — the door answers the store's refusal 413 by name (${answer.status} ${text.slice(0, 300)})`).toEqual({ status: 413, namesTheRefusal: true, namesTheMember: true });
+      expect({ revision: setRevision(w.m), listed: (await listedThrough(w)).some(d => d.key === over.key), record: w.m.cache.data.has(`audience:${over.key}`) },
+        `${host}: P105.AL3 — and nothing changed`).toEqual({ revision, listed: false, record: false });
+      const s = await shopperOn(w.m);
+      const next = await measured(w, () => actionWire(w.app, s, VIEW_TABBY_26), COLD_BOUND_MS, 0);
+      expect({ status: next.status, qualifies: (segmentsOf(next.body) ?? []).includes(over.key) }, `${host}: P105.AL3 — her next action does not qualify the refused audience`).toEqual({ status: 200, qualifies: false });
+    }, 300_000);
+  }
 
   for (const host of HOSTS) {
     it(`host (${host}): a publication whose audiences member cannot be read fails qualification as an unreadable reflex document does (${host === 'session' ? 'the session host\'s action fails exactly as the action whose reflex document cannot be read' : 'the object host degrades to reflex-only: answered, no audience segment'}) and never falls back — not to KV, not to the list it held`, async () => {
@@ -917,6 +1013,36 @@ describe('unit:P105.AL4', () => {
     expect(segmentsOf(next.body) ?? [], 'P105.AL4 — a moved tenant\'s audiences qualify her').toEqual(expect.arrayContaining(coach.met));
     expect(next.kv, 'P105.AL4 — and the action reads no audience from KV').toEqual([]);
   }, 300_000);
+
+  for (const host of HOSTS) {
+    it(`host (${host}): R-P644 (4), the deploy window — after the move, an earlier release's KV-only writes (a publish, a prune, a rename, each record as src/connectors/AudienceStore.ts wrote it at 2a90ecf0) are read by no action, and the next five-minute run reconciles them into the member in one publication; a run with nothing to reconcile publishes nothing`, async () => {
+      const w = await world(host);
+      const kept = authored(VIP, 'dw_kept'), pruned = authored(LUXE, 'dw_pruned'), renamed = authored(VIP, 'dw_renamed');
+      for (const def of [kept, pruned, renamed]) expect((await publishThrough(w, def)).status, `PRECONDITION (${host}): the operator publishes ${def.key}`).toBe(200);
+      expect(keysOf(audiencesMember(w.m)?.audiences), `PRECONDITION (${host}): the tenant is moved, its member holds the three`).toEqual(keysOf([kept, pruned, renamed]));
+      const record = (key: string) => JSON.parse(w.m.cache.data.get(`audience:${key}`) ?? 'null') as AudienceDef;
+      const added = authored(LUXE, 'dw_added_by_old_release');
+      legacyRecord(w.m, TENANT, added);
+      legacyRecord(w.m, TENANT, { ...record(pruned.key), status: 'archived' });
+      legacyRecord(w.m, TENANT, { ...record(renamed.key), name: 'Renamed by the earlier release' });
+      const s = await shopperOn(w.m);
+      const before = await measured(w, () => actionWire(w.app, s, VIEW_TABBY_26), COLD_BOUND_MS, 0);
+      expect({ pruned: stillQualifies(before, pruned.key), added: stillQualifies(before, added.key).qualifies, kv: before.kv },
+        `${host}: P105.AL4 — before the run no action reads the earlier release's KV-only writes: the member still says what it said`).toEqual({ pruned: { segmentsNamed: true, qualifies: true }, added: false, kv: [] });
+      const revision = setRevision(w.m);
+      await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+      const member = audiencesMember(w.m);
+      expect({ publications: setRevision(w.m) - revision, member: keysOf(member?.audiences), renamed: member?.audiences.find(a => a.key === renamed.key)?.name },
+        `${host}: P105.AL4 — the next five-minute run reconciles the KV records written after the move into the member, in one publication`)
+        .toEqual({ publications: 1, member: keysOf([kept, renamed, added]), renamed: 'Renamed by the earlier release' });
+      const after = await measured(w, () => actionWire(w.app, s, VIEW_TABBY_26), COLD_BOUND_MS, 0);
+      expect({ added: stillQualifies(after, added.key), pruned: stillQualifies(after, pruned.key).qualifies, kv: after.kv },
+        `${host}: P105.AL4 — her next action qualifies the earlier release's publish and no longer its prune, from no KV`).toEqual({ added: { segmentsNamed: true, qualifies: true }, pruned: false, kv: [] });
+      const settled = setRevision(w.m);
+      await fiveMinuteRun(w, { AUTH_MODE: 'enforced' });
+      expect(setRevision(w.m) - settled, `${host}: P105.AL4 — a run with nothing to reconcile publishes nothing`).toBe(0);
+    }, 300_000);
+  }
 
   it('host (do): the five-minute scheduled run on the demo profile moves the default tenant too; after it the request path lists no audience in KV', async () => {
     const w = await world('do', { demo: true });
@@ -1078,4 +1204,53 @@ describe('unit:P105.AL6', () => {
         .toEqual({ snapshot: true, ack: true });
     }, 240_000);
   }
+});
+
+// ===========================================================================
+// unit:P105.AL7 (proposed by R-P644 (6)) — the shopper's feature-variable override list.
+// ===========================================================================
+
+/** The five feature keys the engine reads variables for (FeatureVariableManager getDefaultFeatureKeys). */
+const FEATURES = ['hero_module', 'plp_sort', 'complete_the_look', 'promo_banner', 'journey_message'];
+/** An override read: a KV read of the shopper's override records (their list or a record). */
+const overrideReads = (w: World, from: number, subject: string) =>
+  w.trace.slice(from).filter(c => c.binding === 'CACHE' && READS.has(c.method) && c.key.includes(`override:${subject}:`)).map(named);
+/** `GET /realtime/personalization/:userId`, the read that applies her overrides on the session host (RealtimeSegmentEngine getPersonalizationConfig). */
+async function personalizationRead(w: World, s: Shopper): Promise<{ status: number; reads: string[] }> {
+  const from = w.trace.length;
+  const response = await w.app.fetch(new Request(`https://shop.invalid/realtime/personalization/${s.subject}`, { headers: { 'X-Tenant': TENANT, [SHOPPER_HEADER]: s.grant.capability } }));
+  await response.text();
+  await settle(w.m, w.app);
+  return { status: response.status, reads: overrideReads(w, from, s.subject) };
+}
+
+describe('unit:P105.AL7 (proposed by R-P644 (6))', () => {
+  for (const n of [10, 100, 1000]) {
+    it(`host (session): at ${n} feature-variable overrides for the shopper (written through FeatureVariableManager.setUserOverride, the store's own write), the personalization read, ${STEP_MS / 1000} s after her last (lane E4's ten-second copy crossed), makes at most one override read whatever the count and lists no KV`, async () => {
+      const w = await world('session');
+      const s = await shopperOn(w.m);
+      expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, 'PRECONDITION: her view is accepted').toBe(200);
+      await settle(w.m, w.app);
+      const overrides = new FeatureVariableManager(w.m.env, TENANT as TenantId);
+      for (let i = 0; i < n; i++) await overrides.setUserOverride({ userId: s.subject, featureKey: FEATURES[i % FEATURES.length]!, variableKey: `p105_var_${i}`, value: `v${i}` } as Parameters<FeatureVariableManager['setUserOverride']>[0]);
+      expect((await personalizationRead(w, s)).status, 'PRECONDITION: her personalization read answers').toBe(200);
+      advanceClock(STEP_MS);
+      const read = await personalizationRead(w, s);
+      expect({ status: read.status, atMostOne: read.reads.length <= 1, lists: read.reads.filter(r => r.startsWith('CACHE.list')) },
+        `session: P105.AL7 — at ${n} overrides the personalization read makes at most one override read and no KV list (${read.reads.length}: ${read.reads.slice(0, 3).join(', ')}${read.reads.length > 3 ? ', …' : ''})`)
+        .toEqual({ status: 200, atMostOne: true, lists: [] });
+    }, 300_000);
+  }
+
+  it('host (do): LOCK — the object host\'s personalization read makes no override read at 1,000 overrides (it never applies them, ShopperReflex.ts: featureVariables from its decisions)', async () => {
+    const w = await world('do');
+    const s = await shopperOn(w.m);
+    expect((await actionWire(w.app, s, VIEW_TABBY_26)).status, 'PRECONDITION: her view is accepted').toBe(200);
+    await settle(w.m, w.app);
+    const overrides = new FeatureVariableManager(w.m.env, TENANT as TenantId);
+    for (let i = 0; i < 1000; i++) await overrides.setUserOverride({ userId: s.subject, featureKey: FEATURES[i % FEATURES.length]!, variableKey: `p105_var_${i}`, value: `v${i}` } as Parameters<FeatureVariableManager['setUserOverride']>[0]);
+    advanceClock(STEP_MS);
+    const read = await personalizationRead(w, s);
+    expect({ status: read.status, reads: read.reads }, 'do: P105.AL7 — LOCK: no override read on the object host').toEqual({ status: 200, reads: [] });
+  }, 300_000);
 });
