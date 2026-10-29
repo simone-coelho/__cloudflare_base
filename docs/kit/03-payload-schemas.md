@@ -472,10 +472,10 @@ the load's publication; `POST /content/catalog/publication/recover?scope=<tenant
 `If-Match` and `Idempotency-Key` finishes it. `state: "committed"`: the load is in force; read the catalog to
 see it.
 
-A product page reads only its own product's records: its decision reads the head, the set, the content, slots,
-learn and reflex revisions and, when the page has a slot declared `scope: 'anchor'` and the request names a
-product as `ctx.anchor`, that product's shard and its one part, eight reads, the same at 50 or 100,000
-products, the shard and the part each read by its byte range in its pack (88,912 bytes in all at 40,000
+A product page reads only its own product's records: its decision reads the head and, beside it, the serving copy
+(the set with the content, slots, learn and reflex revisions in one object) and, when the page has a slot declared
+`scope: 'anchor'` and the request names a product as `ctx.anchor`, that product's shard and its one part, four
+reads, the same at 50 or 100,000 products, the shard and the part each read by its byte range in its pack (88,912 bytes in all at 40,000
 products, measured in the harness); a warm isolate reads neither the shard nor the part again (each is held per isolate by its digest).
 A page with no such slot, no anchor or an anchor in a shard the index does not list reads no shard, an anchor
 its shard does not hold reads the shard and no part, and the scoped slot decides as it does with no
