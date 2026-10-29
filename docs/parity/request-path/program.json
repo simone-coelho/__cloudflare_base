@@ -64,6 +64,12 @@
           "proof": "The P105 acceptance command runs the tests named unit:P105.AL6 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
         },
         {
+          "id": "AL7",
+          "kind": "LOCAL",
+          "observable": "On both hosts, a visitor's personalization read makes no read of shopper overrides: today it lists the override records and reads each one in turn (src/services/RealtimeSegmentEngine.ts:1032 through src/services/FeatureVariableManager.ts), 1 + N sequential calls (measured: 11 calls at 10 overrides, 101 at 100, 1,001 at 1,000; about 0.9 s, 8 s and 79 s at 78 ms a call), while no route writes an override (setUserOverride's callers have no caller) and no answer uses the result (enhancedFeatureVariables is consumed by nothing). The read is removed from the request path; override records that exist are still erased and exported with the visitor's other records as today (src/identity/erase.ts, src/routes/identity.ts) (R-P652; S53/specifier/REPORT-a43d5d7d.md).",
+          "proof": "The P105 acceptance command runs the tests named unit:P105.AL7 in src/units/P105/LEDGER.unit.test.ts and they pass, and the program integration gate command exits 0 at the same artifact revision."
+        },
+        {
           "id": "LV1",
           "kind": "DEFERRED_LIVE",
           "observable": "Lane L21 on the pair's next release (the stamps read-only): on a pair tenant the lane may write to, with at least 200 published audiences, an action on each host after more than ten seconds' pause answers within the pair's ordinary action time and its server timing names no audience read; an audience the lane publishes qualifies its visitor on the next action, and one it prunes stops qualifying on the next.",
@@ -126,9 +132,12 @@
         "src/routes/operator.ts (the audience routes' answers only: the store's 413 answered 413 by name, and the operator's audience list read through the publication like every other reader; R-P644)",
         "src/index.api-boundary.test.ts (R10 by name: W01.08 :2557, :2560, :2573–2574 and W03.02 :3198 gain the tenant's publication head reads only, the KV calls unchanged; by the specifier; R-P644)",
         "src/routes/realtime.sdkContract.test.ts (R10 by name: W22.07 :2803–2812 injects its fault at the audiences member's read after invalidatePublicationCache(), the expectation unchanged; by the specifier; R-P644)",
-        "src/connectors/AudienceStore.memory.test.ts (R10 by name: :48, :51, :68, :91, :95 test lane E4's behaviours on a tenant holding the member, as written in the P105 header; by the specifier; R-P644)",
+        "src/connectors/AudienceStore.memory.test.ts (R10 by name: :48, :51, :68, :91, :95 test lane E4's behaviours on a tenant holding the member, as written in the P105 header; by the specifier; and lane E4's override test re-pointed to what remains of the override cache once the request path no longer reads it, before → after named; R-P644, R-P652)",
         "src/units/W29/LEDGER.unit.test.ts (R10 by name: W29.R2 :236–239 runs one five-minute run first, then today's detector unchanged; by the specifier; R-P644)",
-        "src/units/P102/LEDGER.unit.test.ts (R10 by name: CR2's legs run one five-minute run before asCommittedToday and expect committed 3 where 2; by the specifier or P105's builder after P102 joins; R-P644)"
+        "src/units/P102/LEDGER.unit.test.ts (R10 by name: CR2's legs run one five-minute run before asCommittedToday and expect committed 3 where 2; by the specifier or P105's builder after P102 joins; R-P644)",
+        "src/services/RealtimeSegmentEngine.ts (the personalization read's call to the override read at :1032 removed only; R-P652)",
+        "src/services/FeatureVariableManager.ts (the override read off the request path only; R-P652)",
+        "src/services/telemetry.boundary.test.ts (R10 by name: the fault injected at the override KV list at :470–473 re-pointed to a read the request path still makes, the expectation unchanged; by the specifier; R-P652)"
       ],
       "acceptanceCommand": "node node_modules/vitest/vitest.mjs run src/units/P105 --minWorkers=1 --maxWorkers=1",
       "specificationGate": {
