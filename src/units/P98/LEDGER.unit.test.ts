@@ -65,6 +65,11 @@
 //   S6 "Uploaded" (the grace): the in-memory bucket lists every object as uploaded at time 0 (src/units/_parity.ts, outside
 //      this ticket's grant), so the LD6 legs report upload times through their own wrapper (`uploadedAt`, 14 minutes ago or
 //      16 minutes ago); elsewhere every object reads as past the grace, which the sketch measured against the locks.
+//      R-P656 (1)'s reuse window (a pack reused only when uploaded within the last 10 minutes) reads the upload time a
+//      pack's HEAD answers. The double's HEAD answers none unless a leg's `uploadedAt` names one, and the legs that adopt a
+//      pack within a request (LD2's landed-then-thrown exact-create, LD6's reused-pack leg) run so: a pack whose upload
+//      time the store does not answer reads as inside the window. The R-P656 (1) leg names the left pack's upload 12
+//      minutes ago and every other object's now.
 //   S7 The catalogue-import credential (LD2) is exercised on the parity mount (the demo profile) with a service token
 //      minted with `roles: ['catalog-import']` under the mount's own signing material; the customer profile's boundary
 //      (src/customerBoundary.ts CUSTOMER_ROUTES, granted by R-P569 (c): the two doors only) is driven by LD2's
@@ -120,6 +125,10 @@
 //     (:564, :973), src/units/P87/LEDGER.unit.test.ts (:422, :472: two failures of the revision write) and
 //     src/services/telemetry.boundary.test.ts PublicationR2 (:571).
 //
+// CROSS-BATCH (R-P656 (5)): P102's build changes the cold page's reads (the head, the serving copy, the shard, the part),
+// so the bytes LD7's R-P646 (5) leg measures at 40,000 products (88,912 B on both hosts under this round's sketch) move at
+// P102's join, and kit 03's cold-page figure must move with them or that leg is RED there. R-P656 grants P102 kit 03's
+// cold-page figure; the leg pins no number, it compares the kit with the bytes measured on the tree it runs on.
 // CROSS-BATCH (R-P619): P99 (a2c64938) also R10s src/units/_parity.ts UnitR2 — its `list` — beside this ticket's `get` and
 // `head`. P99 owns the purge at P93's 512-object scale: LD6's R-P597 lock plants 53 products so the purge finishes within
 // its budget. P102's CR3 read list (src/units/P102/LEDGER.unit.test.ts:663–674) and its re-pointing of P93.CS2 go through
@@ -1107,6 +1116,33 @@ describe('unit:P98.LD6 (R-P549 §4: the pack-aware purge; R-P546: never collect 
       }, 600_000);
     }
 
+    // R-P656 (1): the reuse window ruled — a stored pack is reused only when uploaded within the last 10 minutes, the
+    // 15-minute grace less a 5-minute margin longer than any request the engine serves (the longest, a 40,000-product
+    // publish, 13–17 s). A left pack 12 minutes old is inside the grace (no purge may delete it yet) but outside that window;
+    // a margin under 3 minutes (the review's control: 0, adopting up to the grace's end) adopts it. The store
+    // answers the left pack's upload 12 minutes ago and every other object's now (reading S6); the same file over the same
+    // base packs to the same bytes, so the left key is the one a load that ignored the window would adopt (87753edc does).
+    it(`host (${host}): R-P656 (1) — a refused load's pack uploaded 12 minutes ago (inside the 15-minute grace, outside the 10-minute reuse window) is not reused: the file sent again writes its pack under a fresh key, the committed revision names that pack and not the left one, and every object it names resolves`, async () => {
+      const m = await loadedTenant(host, 300);
+      const file = rangeRecords(400, 20);
+      let attempt = 0;
+      const refused = await measuredLoad(m, file, { mode: 'merge' }, c => c.op === 'put' && c.cls === 'pack' ? (++attempt === 1 ? 'land-then-throw' : 'throw') : undefined);
+      const left = refused.meter.calls.find(c => c.op === 'put' && c.cls === 'pack')?.key ?? null;
+      expect([refused.row.status, left !== null && m.storage.objects.has(left)], `${host}: PRECONDITION — the refused load answers 503 and leaves its pack stored (${show(refused.answer)})`).toEqual([503, true]);
+      const restore = uploadedAt(m, key => key === left ? minutesAgo(12)() : new Date());
+      try {
+        const resent = await measuredLoad(m, file);
+        const written = resent.meter.calls.filter(c => c.op === 'put' && c.cls === 'pack' && !c.failed && c.key !== left).map(c => packDigest(c.key));
+        const doc = (await loadDocument(m, 'catalog')).document, named = packTable(doc);
+        invalidatePublicationCache();
+        const read = await productRead(m, rangeProduct(410));
+        expect.soft({ resent: resent.row.status, leftNamed: named.includes(packDigest(left!)), fresh: written.some(d => named.includes(d)), lost: resolve(m, doc).bad,
+          read: [read.status, readIds(read)] },
+        `${host}: P98.LD6 — a pack outside the reuse window written under a fresh key (the sent-again file's pack writes: ${JSON.stringify(resent.meter.calls.filter(c => c.op === 'put' && c.cls === 'pack').map(c => c.key === left ? 'the left key' : 'another key'))})`).toEqual({
+          resent: 200, leftNamed: false, fresh: true, lost: [], read: [200, [rangeRecordId(410)]] });
+      } finally { restore(); }
+    }, 300_000);
+
     // R-P646 (1): the same class for a rollback (finding 1's last line, by reading): its target revision is purged by a
     // publication that committed before the rollback read its base — the rollback runs whole between that purge's read
     // of the head and its deletion of the target's own pack. The rollback commits only what the store keeps.
@@ -1203,12 +1239,15 @@ describe('unit:P98.LD7 (R-P545 (2), R-P549: the kits state the pack, the stages,
   // R-P646 (4): the delivery review's finding 4 — the write paragraph (kit 02, `Configuration PUT/PATCH, import, …`) stated
   // the second try of every configuration write; the build tries twice only on a catalogue load (publication.ts
   // PublicationChange.retry, publishSet's `progress.retry`).
-  it('logic: R-P646 (4) — kit 02\'s write paragraph states the second try within the request for catalogue loads only: each of its sentences that states a second try, or that one transient storage failure refuses nothing, names a catalogue load', () => {
+  // R-P656 (3), (4): the passage found by what it says (a second try of a storage call), wherever it sits; scoped either by
+  // naming a catalogue load or by naming the four load doors.
+  it('logic: R-P646 (4), R-P656 (3) — kit 02 states the second try of a storage call within the request for catalogue loads only: each sentence that states a storage call tried a second time, or that one transient storage failure refuses nothing, names a catalogue load or the four load doors (import, pull, stage, publish)', () => {
     const kit02 = readTree('docs/kit/02-api-reference.md');
-    const paragraph = kit02.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('Configuration PUT/PATCH, import, pull, rollback and item reset require')) ?? '';
-    const retry = paragraph.split(/(?<=[.;])\s+(?=[A-Z`(])/).filter(s => /\bsecond time\b|\btried (?:again|twice)\b|\bretried\b|\brefuses nothing\b/i.test(s));
-    expect.soft({ found: paragraph.length > 0, stated: retry.length > 0, unscoped: retry.filter(s => !/\bcatalog(?:ue)? loads?\b/i.test(s)) },
-      'P98.LD7 — the second try stated for catalogue loads only (today the paragraph states no second try)').toEqual({ found: true, stated: true, unscoped: [] });
+    const sentences = kit02.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/));
+    const retry = sentences.filter(s => /\bsecond time\b|\btried (?:again|twice)\b|\bretried\b|\brefuses nothing\b/i.test(s) && /\bstorage\b|\bexact-create\b|\bcompare-and-set\b/i.test(s));
+    const scoped = (s: string) => /\bcatalog(?:ue)? loads?\b/i.test(s) || [/\bimports?\b/i, /\bpulls?\b/i, /\bstages?\b/i, /\bpublish(?:es)?\b/i].every(door => door.test(s));
+    expect.soft({ stated: retry.length > 0, unscoped: retry.filter(s => !scoped(s)) },
+      'P98.LD7 — the second try stated for catalogue loads only (today kit 02 states no second try)').toEqual({ stated: true, unscoped: [] });
   });
 
   // R-P646 (8): the review's finding 8 — two passages the work order named as gendered: kit 02's clause on each later
@@ -1216,27 +1255,41 @@ describe('unit:P98.LD7 (R-P545 (2), R-P549: the kits state the pack, the stages,
   // sentence of that row; it now names the visitor's consent without a pronoun.)
   it('logic: R-P646 (8) — kit 02\'s clause on each later sign-in\'s attempt and kit 03\'s `experiment` row are gender-neutral', () => {
     const gendered = (text: string) => [...text.matchAll(/\b(?:she|her|hers|herself|he|him|his|himself)\b/gi)].map(m => m[0]);
-    const flat02 = readTree('docs/kit/02-api-reference.md').replace(/\s+/g, ' '), at = flat02.indexOf('Every later sign-in gets its own attempt');
-    const clause = at < 0 ? '' : flat02.slice(at, flat02.indexOf(';', at) < 0 ? undefined : flat02.indexOf(';', at));
-    const row = readTree('docs/kit/03-payload-schemas.md').split('\n').find(line => line.startsWith('| `experiment` | `{ id, saltVersion, arm, anchorGeneration, reason? }`')) ?? '';
-    expect.soft({ found: [clause.length > 0, row.length > 0], kit02: gendered(clause), kit03: gendered(row) }, 'P98.LD7 — the two passages gender-neutral').toEqual({
-      found: [true, true], kit02: [], kit03: [] });
+    // R-P656 (4): each passage found by what it says — kit 02's sentence on a later sign-in's attempt made under tracking
+    // only, and kit 03's `experiment` table rows, the outcome's among them (the ruled phrase, kit 03 :195 at 87753edc; the
+    // decision record's row at :99 is neutral already). Round 4 read the first row that opened with the block's shape, which
+    // is the decision record's, so its kit 03 half held vacuously; this one requires the outcome's row to be found.
+    const sentences02 = readTree('docs/kit/02-api-reference.md').split(/\n\s*\n/).map(p => p.split('\n').join(' ').replace(/\s+/g, ' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/));
+    const clause = sentences02.filter(s => /\bsign-in\b/.test(s) && /\battempt\b/.test(s) && /\btracking[- ]only\b/.test(s)).join(' ');
+    const rows = readTree('docs/kit/03-payload-schemas.md').split('\n').filter(line => /^\|\s*`experiment`\s*\|/.test(line));
+    expect.soft({ found: [clause.length > 0, rows.some(line => /\boutcome\b/i.test(line) && /\benrol/i.test(line))], kit02: gendered(clause), kit03: gendered(rows.join(' ')) },
+      'P98.LD7 — the two passages gender-neutral').toEqual({ found: [true, true], kit02: [], kit03: [] });
+  });
+
+  // R-P656 (2): the reuse window ruled (5 minutes' margin, so a stored pack is reused only when uploaded within the last
+  // 10 minutes) is stated in each kit, in the sentence that says when a stored pack is reused.
+  it('logic: R-P656 (2) — kits 02 and 03 each state when a stored pack is reused: within the last 10 minutes, the 15-minute grace less a 5-minute margin', () => {
+    const states = (file: string) => readTree(file).split(/\n\s*\n/).map(p => p.split('\n').join(' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/))
+      .some(s => /\b(?:reus(?:e|es|ed|ing)|adopt(?:s|ed|ing)?)\b/i.test(s) && /\bpacks?\b/i.test(s) && /\b(?:10|ten)[- ]minutes?\b|\b(?:5|five)[- ]minutes?\b/i.test(s));
+    expect.soft({ kit02: states('docs/kit/02-api-reference.md'), kit03: states('docs/kit/03-payload-schemas.md') }, 'P98.LD7 — the reuse window stated (today no kit states it)').toEqual({ kit02: true, kit03: true });
   });
 
   // R-P646 (5): the review's finding 5 — kit 03 stated the prototype's cold page (about 105 KB at 40,000 products); the
   // build reads 88,912 bytes there (the review's measurement, both hosts). The kit's figure is checked against the page
-  // this file measures (LD3's scale run), not pinned: every byte figure the paragraph states for the page at 40,000
-  // products, but the 120 KB bound the work order names, is within 1% of it.
+  // this file measures (LD3's scale run), not pinned: every byte figure kit 03 states in a sentence on a page's reads at
+  // 40,000 products, but the 120 KB bound the work order names, is within 1% of it. The figure is this harness's
+  // measurement for the generator's records (the review's observation 3); P102's reads move it (the header's CROSS-BATCH).
   for (const host of HOSTS) {
     it(`host (${host}): R-P646 (5) — kit 03 states the cold page at 40,000 products as measured: a byte figure its paragraph on the product page's reads gives for 40,000 products is within 1% of the bytes the page reads cold here, and none is another`, async () => {
       const run = await scale(host);
       expect(run.page40000 !== null, `${host}: PRECONDITION — the page at 40,000 measured (${run.refused})`).toBe(true);
       const measured = run.page40000!.bytes, kit03 = readTree('docs/kit/03-payload-schemas.md');
-      const paragraph = kit03.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).find(p => p.startsWith('A product page reads only its own product\'s records')) ?? '';
-      const at40000 = paragraph.split(/(?<=[.;])\s+(?=[A-Z`(])/).filter(s => /\b40,000 products\b/.test(s));
+      // R-P656 (4): the sentences found by what they say — a page's reads at 40,000 products — wherever they sit.
+      const at40000 = kit03.split(/\n\s*\n/).map(p => p.split('\n').join(' ')).flatMap(p => p.split(/(?<=[.;])\s+(?=[A-Z`(])/))
+        .filter(s => /\b40,000 products\b/.test(s) && /\bpage\b/i.test(s) && /\breads?\b/i.test(s));
       const figures = at40000.flatMap(s => [...s.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*(KiB|KB|kB|bytes|B)\b/g)].map(m => Number(m[1]!.replace(/,/g, '')) * (m[2] === 'KiB' ? 1024 : /^(?:KB|kB)$/.test(m[2]!) ? 1000 : 1)))
         .filter(f => f !== 122880 && f !== 120000);
-      expect.soft({ found: paragraph.length > 0, matched: figures.some(f => Math.abs(f - measured) <= 0.01 * measured), other: figures.filter(f => Math.abs(f - measured) > 0.01 * measured) },
+      expect.soft({ found: at40000.length > 0, matched: figures.some(f => Math.abs(f - measured) <= 0.01 * measured), other: figures.filter(f => Math.abs(f - measured) > 0.01 * measured) },
         `${host}: P98.LD7 — kit 03's cold page against ${measured} bytes measured (stated: ${JSON.stringify(figures)})`).toEqual({ found: true, matched: true, other: [] });
     }, 1_800_000);
   }
