@@ -101,6 +101,13 @@
 //      session's choice answers 401); the reset is N2's.
 //   R20 (R-P601, R10 by name) src/index.api-boundary.test.ts's __fixture_expired_choice reads the clock once for
 //      chosenAt and expiresAt (two reads a millisecond apart broke the lifetime check, the W07.05 500, R-P598).
+//   R21 (R-P618) The skew bound is read from the witness the work order names, kit 02 ("a code constant kit 02
+//      states"): the sentence of kit 02 on choices on different records, their clocks and a refusal names a backticked
+//      constant and its milliseconds, and the granted product files declare that constant with that value (a numeric literal, exported or not) — no name
+//      is assumed here. A record's clock is moved by Date.now during that record's own choice (the reviewer's PROBE5
+//      form). Every leg that puts a refusal and a more permissive choice on different records keeps them beyond the bound
+//      when it means "newer" (N1's and the direct path's older refusals dated bound + 5 s back; N2's and R-P605's setup run
+//      bound + 1–2 s back), so every unit holds at once whatever bound is stated.
 //   R14 (F5) The global `fetch` replaced (each call recorded and refused) and a Cache API (`caches`, absent in Node)
 //      installed (each call recorded) from the first request until its answer.
 //
@@ -146,6 +153,13 @@
 // and P94 AD1 2 (d2), re-pointed 28/28 (d1), weakened 6 RED (d6); re-pointed on today and on step1, the same six RED on
 // their preconditions until the design lands (d3, d4). The whole suite under the sketch 4245/4272, 272/282 files; its ten
 // failing files fail alike on today's tree (the scratch layout's git legs) but P68 (h-full-sketch, h-full-today).
+// ROUND 6 (R-P618, R-P622; logs/r6-*, r6c-*): 51 tests. The skew legs (5 ms behind and ahead: the refusal holds; beyond
+// the stated bound before the Accept: the Accept holds), the kit fact naming the bound, and N2's and R-P605's choices
+// placed beyond the bound by a clock moved back (the bound itself never adjusted). 50500e94 (CONSENT_CLOCK_SKEW_MS, one
+// second) 51/51 twice; the sketch (design3.cjs: CONSENT_SKEW_MS, 1,000 ms) 51/51 twice; c42d325f (no bound) RED on the skew
+// leg and the kit fact; a00395d2 RED on those and R-P605's date. Wrong fixes RED on their own legs: exactorder (the skew
+// leg), skewnotconstant (the skew leg and the kit fact); the round-5 wrong fixes and the reviewer's controls as before
+// (logs/r6-*), the sketch's locks 307/307.
 // ROUND 5 (R-P601, R-P605; logs/r5f-*, r5g-*, r5h-*): 48 tests. N1 (switch by switch), N2 rewritten to the builder's cases
 // (detach and reset; the two-tab retry; a widening dated before the source's refusal), R-P605 (detach). The sketch
 // (design3.cjs: the record's choices kept switch by switch with their operation, the rotation guard counting the
@@ -460,6 +474,69 @@ async function linkAccount(w: World, s: Session, accountId: string): Promise<Rep
   const assertion = await hmacOf(identitySecretOf(w.m), `${TENANT}\n${s.subject}\n${accountId}\n${exp}`);
   return w.send('POST', `/v1/${TENANT}/identity/link`, shopperHeaders({ [SHOPPER_HEADER]: s.capability }), JSON.stringify({ visitorId: s.subject, accountId, source: 'login', exp, assertion }));
 }
+/** A duration as kit 02 writes it, in figures or words ("1,000 ms", "one second"). */
+const DURATION = /(\d[\d,]*(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(ms|milliseconds?|seconds?)\b/i;
+const NUMBER_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+/** The product files P97's grant names, where the bound's constant may be declared. */
+const GRANTED_SOURCES = ['src/content/consent.ts', 'src/durable-objects/ShopperReflex.ts', 'src/identity/consentContinuity.ts', 'src/identity/sessionAuthority.ts',
+  'src/routes/decisions.ts', 'src/identity/freshOwner.ts'];
+/**
+ * R-P618: the clock-skew bound between records that kit 02 states — the code constant its sentence names (backticked) and
+ * the duration it states — and the value that constant is declared with in the granted product files, a numeric literal
+ * (`const NAME = 1_000;`, exported or not): null where none (no bound, or a bound that is not a code constant). Read from
+ * the witness (the kit), never assumed.
+ */
+async function skewBound(): Promise<{ name: string | null; stated: number | null; code: number | null; sentence: string }> {
+  const sentences = readTree('docs/kit/02-api-reference.md').replace(/\s+/g, ' ').split(/(?<=[.!?])\s+(?=[A-Z*`])/);
+  const sentence = sentences.find(s => /\bclocks?\b/i.test(s) && /\brefus/i.test(s) && /`[A-Z][A-Z0-9_]{2,}`/.test(s) && DURATION.test(s)) ?? '';
+  const name = /`([A-Z][A-Z0-9_]{2,})`/.exec(sentence)?.[1] ?? null;
+  const amount = DURATION.exec(sentence);
+  const figure = amount ? NUMBER_WORDS[amount[1]!.toLowerCase()] ?? Number(amount[1]!.replace(/,/g, '')) : NaN;
+  const stated = amount ? figure * (/^se/i.test(amount[2]!) ? 1_000 : 1) : null;
+  let code: number | null = null;
+  if (name) {
+    const declared = new RegExp(`\\bconst\\s+${name}\\s*(?::\\s*number\\s*)?=\\s*(\\d[\\d_]*(?:\\.\\d+)?)\\s*;`);
+    for (const file of GRANTED_SOURCES) {
+      let source = '';
+      try { source = readTree(file); } catch { continue; }
+      const found = declared.exec(source);
+      if (found) { code = Number(found[1]!.replace(/_/g, '')); break; }
+    }
+  }
+  return { name, stated, code, sentence };
+}
+/** Runs `run` with the records' clock (Date.now) `offset` ms from the real one, or at the fixed time `at`. */
+async function atClock<T>(when: { offset: number } | { at: number }, run: () => Promise<T>): Promise<T> {
+  const real = Date.now.bind(Date);
+  const spy = vi.spyOn(Date, 'now').mockImplementation(() => 'at' in when ? when.at : real() + when.offset);
+  try { return await run(); } finally { spy.mockRestore(); }
+}
+/**
+ * R-P605, R-P618: two browsers linked to one account (two sessions of the account's object); the first session refuses
+ * both purposes and is detached `shift` ms back in time (that refusal beyond the skew bound before what follows); then
+ * the replacement accepts both, on the real clock.
+ */
+async function linkedRotation(w: World, shift: number) {
+  const set = await atClock({ offset: -shift }, async () => {
+    const browsers: Session[] = [];
+    for (let k = 0; k < 2; k++) { const d = await door(w); await w.drain(); browsers.push(sessionOf(d)!); }
+    const linked: Session[] = [];
+    for (const browser of browsers) { const l = await linkAccount(w, browser, LINKED_ACCOUNT); await w.drain(); if (sessionOf(l)) linked.push(sessionOf(l)!); }
+    const [first, other] = linked;
+    const refused = first ? await chooseConsent(w, first, SOURCE_REFUSE_ID, REFUSE, revisionOf(first)) : null;
+    const rotated = first ? await rotate(w, first, 'detach') : null;
+    await w.drain();
+    return { linked, first, other, refused, rotated };
+  });
+  const replacement = set.rotated ? sessionOf(set.rotated) : null;
+  const accepted = replacement ? await chooseConsent(w, replacement, REPLACEMENT_ACCEPT_ID, ACCEPT, revisionOf(replacement)) : null;
+  const acceptedChoice = replacement ? structuredClone(choiceOf(w, replacement.subject)) : null;
+  expect([set.linked.length, set.first?.subject === set.other?.subject, set.first?.grantId !== set.other?.grantId, set.refused?.status ?? null, set.rotated?.status ?? null,
+    typeof replacement?.capability, accepted?.status ?? null],
+  'PRECONDITION — two browsers linked to one account hold two sessions; the first refuses and is detached; the replacement accepts')
+    .toEqual([2, true, true, 200, 200, 'string', 200]);
+  return { first: set.first!, other: set.other!, replacement: replacement!, acceptedChoice };
+}
 /** The session route, POST /v1/{tenant}/identity/session, with the session held (or none: a fresh browser). */
 const sessionRoute = (w: World, s: Session | null) => w.send('POST', `/v1/${TENANT}/identity/session`, shopperHeaders(s ? { [SHOPPER_HEADER]: s.capability } : {}), '{}');
 
@@ -762,6 +839,13 @@ const COPY_FAILURES: Array<[string, '/identity/activate' | '/authority/request',
 ];
 
 describe('unit:P97.FV2 (E22, R-P547)', () => {
+  it('logic: kit 02 states the clock-skew bound between records as the code constant it names (R-P618): a sentence on choices made on different records, their clocks and a refusal names a backticked constant and its duration, and the granted product files declare that constant with that value (a numeric literal)', async () => {
+    const b = await skewBound();
+    expect.soft({ named: b.name !== null, stated: b.stated !== null, same: b.stated !== null && b.code === b.stated },
+      `P97.FV2 — kit 02 names the skew bound's code constant and the code holds the stated value (${b.name ?? 'no constant named'}: stated ${b.stated}, code ${b.code}; "${b.sentence.slice(0, 160)}")`)
+      .toEqual({ named: true, stated: true, same: true });
+  });
+
   for (const host of HOSTS) {
     it(`host (${host}): the visitor's real record is created right after the answer, outside the answer's time — with the visitor's object held ${HOLD_MS} ms from its first contact, the record does not exist when the answer arrives, and once the work after the answer is drained it holds exactly grantAuthority for the issued grant and nothing else; the visitor's next page view answers 200`, async () => {
       const w = await world(host);
@@ -947,7 +1031,7 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
         const a = await door(w); await w.drain();
         const s = sessionOf(a);
         expect([a.status, typeof s?.capability, heldBy(w, s!).keys], `${host}: PRECONDITION — the door answers and the record is created (${show(a)})`).toEqual([200, 'string', ['grantAuthority']]);
-        const older = Date.now() - 5_000;
+        const older = Date.now() - ((await skewBound()).code ?? 0) - 5_000;
         const accepted = await chooseConsent(w, s!, CHOICE_ID);
         const accept = structuredClone(recordOf(w, s!.subject)?.data.get('consent') ?? null) as { tracking?: { value?: unknown; chosenAt?: number }; operation?: { id?: unknown } } | null;
         expect([accepted.status, accept?.tracking?.value ?? null, (accept?.tracking?.chosenAt ?? 0) > older, accept?.operation?.id ?? null],
@@ -1000,7 +1084,8 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
         const trackingAt = record?.tracking?.chosenAt ?? NaN, personalizationAt = record?.personalization?.chosenAt ?? NaN;
         expect([accepted.status, again.status, record?.tracking?.value ?? null, record?.personalization?.value ?? null, personalizationAt > trackingAt],
           `${host}: PRECONDITION — the record holds an older tracking choice and a newer personalization choice (${JSON.stringify(again.body).slice(0, 160)})`).toEqual([200, 200, true, true, true]);
-        const activation = await lateActivation(w, s!, refusalChosen(s!, Date.now(), trackingAt - 5_000));
+        const bound = (await skewBound()).code ?? 0;
+        const activation = await lateActivation(w, s!, refusalChosen(s!, Date.now(), trackingAt - bound - 5_000));
         const answered = await activation.json().catch(() => ({})) as { consent?: { tracking?: unknown; personalization?: unknown } };
         await w.drain();
         const after = recordOf(w, s!.subject)?.data.get('consent') as ChoiceRecord | undefined;
@@ -1013,17 +1098,21 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
       } finally { w.stop(); }
     }, 120_000);
 
-    it(`host (${host}): a detach or a reset retried after its replacement session made a newer, more permissive choice (two tabs signing out at once) answers 200 as the first did, with the same replacement, which keeps its own newer choice; one the replacement's answer widens with a choice older than the source's — a widening the rotation itself would make — is still refused, nothing of the replacement changed (R-P601 N2; the builder's cases: a source that explicitly refused both purposes)`, async () => {
+    it(`host (${host}): a detach or a reset retried after its replacement session made a newer, more permissive choice (two tabs signing out at once) answers 200 as the first did, with the same replacement, which keeps its own newer choice; one the replacement's answer widens with a choice older than the source's — a widening the rotation itself would make — is still refused, nothing of the replacement changed (R-P601 N2; the builder's cases: a source that explicitly refused both purposes; the replacement's choice beyond the stated skew bound after the source's, R-P618)`, async () => {
+      const bound = (await skewBound()).code ?? 0;
       for (const operation of ['detach', 'reset'] as const) for (const widening of [false, true]) {
         const label = `${operation}, ${widening ? 'the replacement\'s answer widened by a choice older than the source\'s' : 'the replacement\'s newer Accept'}`;
         const w = await world(host);
         try {
           await door(w); await w.drain(); w.reset();
-          const a = await door(w); await w.drain();
-          const s = sessionOf(a);
-          const refused = await chooseConsent(w, s!, SOURCE_REFUSE_ID, REFUSE);
-          const sourceAt = (recordOf(w, s!.subject)?.data.get('consent') as ChoiceRecord | undefined)?.tracking?.chosenAt ?? NaN;
-          const first = await rotate(w, s!, operation); await w.drain();
+          const { a, s, refused, sourceAt, first } = await atClock({ offset: -(bound + 1_000) }, async () => {
+            const a = await door(w); await w.drain();
+            const s = sessionOf(a);
+            const refused = await chooseConsent(w, s!, SOURCE_REFUSE_ID, REFUSE);
+            const sourceAt = choiceOf(w, s!.subject)?.tracking?.chosenAt ?? NaN;
+            const first = await rotate(w, s!, operation); await w.drain();
+            return { a, s, refused, sourceAt, first };
+          });
           const replacement = sessionOf(first);
           expect([a.status, refused.status, first.status, typeof replacement?.capability, replacement?.subject !== s?.subject],
             `${host}: PRECONDITION — ${label}: the source refuses explicitly and the first ${operation} answers 200 with a replacement session (${show(first)})`).toEqual([200, 200, 200, 'string', true]);
@@ -1033,7 +1122,7 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
           }
           const kept = structuredClone(recordOf(w, replacement!.subject)?.data.get('consent') ?? null);
           if (widening) {
-            const older = sourceAt - 3_600_000;
+            const older = sourceAt - 3_600_000 - bound;
             w.rewrite = async (call, answer) => call.path === '/identity/activate' && call.name === ownName(replacement!.subject)
               ? Response.json({ ok: true, consent: { ...ACCEPT, instruction: { version: 1, tenant: TENANT, subject: replacement!.subject, revision: 'p97-forged-widening',
                 tracking: { value: true, chosenAt: older, expiresAt: older + CONSENT_LIFETIME_MS }, personalization: { value: true, chosenAt: older, expiresAt: older + CONSENT_LIFETIME_MS } } } })
@@ -1058,43 +1147,53 @@ describe('unit:P97.FV2 (E22, R-P547)', () => {
     it(`host (${host}): a source's newer refusal made after the replacement's choice, through another session linked to the source, and carried by the retried detach is applied (R-P605) — two browsers linked to one account (two sessions of the account's object), one session refusing both purposes, its detach, the replacement accepting both, then the other session refusing tracking, then the retry: it answers 200 with the same replacement, the replacement's tracking refused as chosen when that refusal was made, and its own Accept kept on personalization`, async () => {
       // A reset erases the source's record (eraseWithBarrier), retiring every session linked to it, so no newer choice can
       // follow it through another linked session (measured: that session's choice answers 401): the reset is N2's.
-      for (const operation of ['detach'] as const) {
+      const bound = (await skewBound()).code ?? 0;
+      const w = await world(host, docsAt(0), { linking: true });
+      try {
+        await door(w); await w.drain(); w.reset();
+        const { first, other, replacement, acceptedChoice } = await linkedRotation(w, bound + 2_000);
+        await sleep(5);
+        const newer = await chooseConsent(w, other, OTHER_REFUSE_ID, { tracking: false }, choiceOf(w, other.subject)?.revision ?? null);
+        const newerAt = choiceOf(w, other.subject)?.tracking?.chosenAt ?? NaN;
+        expect([newer.status, newerAt > (acceptedChoice?.tracking?.chosenAt ?? Infinity)],
+          `${host}: PRECONDITION — the other linked session refuses tracking after the replacement's Accept (${JSON.stringify(newer.body).slice(0, 160)})`).toEqual([200, true]);
+        const retry = await rotate(w, first, 'detach'); await w.drain();
+        const again = sessionOf(retry);
+        const after = choiceOf(w, replacement.subject);
+        const next = await nextSnapshot(w, replacement); await w.drain();
+        const consent = (next.body.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
+        expect.soft({ retry: retry.status, same: again ? [again.subject, again.sessionId, again.grantId] : null,
+          tracking: [after?.tracking?.value ?? null, after?.tracking?.chosenAt ?? null], personalization: after?.personalization ?? null, next: [next.status, consent?.tracking ?? null, next.body.arm ?? null] },
+        `${host}: P97.FV2 — detach: the source's newer refusal the retry carries is applied, dated when it was made (${newerAt}; the replacement's Accept at ${acceptedChoice?.tracking?.chosenAt}), the replacement's own Accept kept on personalization (${show(retry)})`)
+          .toEqual({ retry: 200, same: [replacement.subject, replacement.sessionId, replacement.grantId], tracking: [false, newerAt],
+            personalization: acceptedChoice?.personalization ?? null, next: [200, false, 'default'] });
+      } finally { w.stop(); }
+    }, 240_000);
+
+    it(`host (${host}): choices on different records are ordered no more finely than their clocks can be trusted (R-P618) — in R-P605's world, the other linked session's refusal of tracking made after the replacement's Accept with its record's clock 5 ms behind and 5 ms ahead holds either way (the retried detach answers 200, the replacement's tracking refused, its personalization Accept kept, the next decision refused); a refusal dated clearly beyond the stated bound before the Accept leaves the Accept (the replacement's tracking still its Accept, the next decision as the Accept allows)`, async () => {
+      const bound = (await skewBound()).code ?? 0;
+      for (const [label, offset, holds] of [['the other record\'s clock 5 ms behind', -5, true], ['the other record\'s clock 5 ms ahead', 5, true],
+        ['the refusal clearly beyond the stated bound, before the Accept', -(bound + 1_000), false]] as Array<[string, number, boolean]>) {
         const w = await world(host, docsAt(0), { linking: true });
         try {
           await door(w); await w.drain(); w.reset();
-          const browsers: Session[] = [];
-          for (let k = 0; k < 2; k++) { const d = await door(w); await w.drain(); browsers.push(sessionOf(d)!); }
-          const linked: Session[] = [];
-          for (const browser of browsers) { const l = await linkAccount(w, browser, LINKED_ACCOUNT); await w.drain(); if (sessionOf(l)) linked.push(sessionOf(l)!); }
-          const [first, other] = linked;
-          expect([linked.length, first?.subject === other?.subject, first?.grantId !== other?.grantId],
-            `${host}: PRECONDITION — ${operation}: two browsers linked to one account hold two sessions of the account's object`).toEqual([2, true, true]);
-          const refused = await chooseConsent(w, first!, SOURCE_REFUSE_ID, REFUSE, revisionOf(first!));
-          const sourceRefusedAt = choiceOf(w, first!.subject)?.tracking?.chosenAt ?? NaN;
-          const rotated = await rotate(w, first!, operation); await w.drain();
-          const replacement = sessionOf(rotated);
-          expect([refused.status, rotated.status, typeof replacement?.capability], `${host}: PRECONDITION — ${operation}: the account's session refuses explicitly and its ${operation} answers 200 with a replacement (${show(rotated)})`)
-            .toEqual([200, 200, 'string']);
-          const accepted = await chooseConsent(w, replacement!, REPLACEMENT_ACCEPT_ID, ACCEPT, revisionOf(replacement!));
-          const acceptedChoice = structuredClone(choiceOf(w, replacement!.subject));
-          await sleep(5);
-          const newer = await chooseConsent(w, other!, OTHER_REFUSE_ID, { tracking: false }, choiceOf(w, other!.subject)?.revision ?? null);
-          const newerAt = choiceOf(w, other!.subject)?.tracking?.chosenAt ?? NaN;
-          expect([accepted.status, newer.status, newerAt > (acceptedChoice?.tracking?.chosenAt ?? Infinity)],
-            `${host}: PRECONDITION — ${operation}: the replacement accepts, then the other linked session refuses tracking, later (${JSON.stringify(newer.body).slice(0, 160)})`).toEqual([200, 200, true]);
-          const retry = await rotate(w, first!, operation); await w.drain();
-          const again = sessionOf(retry);
-          const after = choiceOf(w, replacement!.subject);
-          const next = await nextSnapshot(w, replacement!); await w.drain();
+          const { first, other, replacement, acceptedChoice } = await linkedRotation(w, bound + 2_000);
+          const acceptedAt = acceptedChoice?.tracking?.chosenAt ?? NaN;
+          await sleep(20);
+          const newer = await atClock({ at: acceptedAt + offset }, () => chooseConsent(w, other, OTHER_REFUSE_ID, { tracking: false }, choiceOf(w, other.subject)?.revision ?? null));
+          const refusalAt = choiceOf(w, other.subject)?.tracking?.chosenAt ?? NaN;
+          expect([newer.status, refusalAt - acceptedAt], `${host}: PRECONDITION — ${label}: the other linked session's refusal is stamped ${offset} ms from the replacement's Accept (${JSON.stringify(newer.body).slice(0, 160)})`)
+            .toEqual([200, offset]);
+          const retry = await rotate(w, first, 'detach'); await w.drain();
+          const after = choiceOf(w, replacement.subject);
+          const next = await nextSnapshot(w, replacement); await w.drain();
           const consent = (next.body.sources as { consent?: { tracking?: unknown } } | undefined)?.consent;
-          expect.soft({ retry: retry.status, same: again ? [again.subject, again.sessionId, again.grantId] : null,
-            tracking: [after?.tracking?.value ?? null, after?.tracking?.chosenAt ?? null], personalization: after?.personalization ?? null, next: [next.status, consent?.tracking ?? null, next.body.arm ?? null] },
-          `${host}: P97.FV2 — ${operation}: the source's newer refusal the retry carries is applied, dated when it was made (${newerAt}; the replacement's Accept at ${acceptedChoice?.tracking?.chosenAt}, the source's first refusal at ${sourceRefusedAt}), the replacement's own Accept kept on personalization (${show(retry)})`)
-            .toEqual({ retry: 200, same: [replacement!.subject, replacement!.sessionId, replacement!.grantId], tracking: [false, newerAt],
-              personalization: acceptedChoice?.personalization ?? null, next: [200, false, 'default'] });
+          expect.soft({ retry: retry.status, tracking: holds ? after?.tracking?.value ?? null : after?.tracking ?? null, personalization: after?.personalization ?? null, next: [next.status, consent?.tracking ?? null] },
+            `${host}: P97.FV2 — ${label}: ${holds ? 'within the stated bound the refusal holds, whichever clock reads later' : 'beyond the stated bound the newer choice, the Accept, holds'} (bound ${bound} ms; ${show(retry)})`)
+            .toEqual({ retry: 200, tracking: holds ? false : acceptedChoice?.tracking ?? null, personalization: acceptedChoice?.personalization ?? null, next: [200, !holds] });
         } finally { w.stop(); }
       }
-    }, 240_000);
+    }, 360_000);
 
     it(`host (${host}): LOCK — a newer explicit refusal still applies (R-P583 (c)): the visitor accepting, then refusing both purposes by a newer explicit choice before the record's creation lands: once drained, the creation answered and the record's consent is the newer refusal (its switches and its operation), the same refusal sent again answers 200, and the next decision is refused on the default arm (W05.10's repeat activation and W35.04's retried detach are their own locks)`, async () => {
       const w = await world(host);
