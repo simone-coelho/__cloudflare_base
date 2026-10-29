@@ -417,8 +417,13 @@ export const RECOVERY = JSON.stringify({ version: 1, sourceQueue: 'events', dead
 /** Deliveries of one message before the platform gives up on it (wrangler.toml [[queues.consumers]] max_retries = 2). */
 export const DELIVERIES = 3;
 
-export async function stamp(host: Host, documents: Documents, registry: ReturnType<typeof retentionRegistry>, what: string): Promise<Stamp> {
-  const m = await mount(host, documents);
+/**
+ * The mounted platform on `host` with the harness's store and queue. `recovery: false` is the direct outcome path
+ * (LEDGER_RECOVERY_ENABLED 'false': src/learn/route.ts outcomeToLearning beside the ledger's enqueue), where each
+ * delivery of an event is admitted again with its own processing stamps; the default is _parity's managed path.
+ */
+export async function stamp(host: Host, documents: Documents, registry: ReturnType<typeof retentionRegistry>, what: string, options: { recovery?: boolean } = {}): Promise<Stamp> {
+  const m = await mount(host, documents, options);
   expectPublished(m, what);
   const r2 = new FoldR2();
   for (const [key, body] of m.storage.objects) r2.seed(key, body, m.storage.metadata.get(key));
@@ -505,6 +510,27 @@ export async function drainQueue(s: Stamp, at: number, plan: DeliveryPlan = {}, 
     } else result = await deliver();
     if (!result.acked && message.attempts < DELIVERIES) s.queue.push(message);
   }
+}
+
+/** wrangler.toml [[queues.consumers]] queue "events": max_batch_size = 100. */
+export const BATCH = 100;
+/**
+ * The messages waiting delivered TOGETHER, in one batch of at most BATCH, in the order sent, as the platform batches
+ * them (the ledger then writes one object per batch, hour and stream); a message the step does not acknowledge, or
+ * whose step threw or was cut off, is delivered again alone (drainQueue).
+ */
+export async function drainBatch(s: Stamp, at: number): Promise<void> {
+  vi.setSystemTime(at);
+  const app = await loadWorker();
+  const messages = s.queue.splice(0, BATCH);
+  const acked = new Set<string>(), retried = new Set<string>();
+  for (const message of messages) message.attempts++;
+  const batch = { queue: 'events', messages: messages.map(message => ({ id: message.id, timestamp: new Date(at), body: structuredClone(message.body), attempts: message.attempts,
+    ack: () => { acked.add(message.id); }, retry: () => { retried.add(message.id); } })),
+    ackAll: () => { for (const message of messages) acked.add(message.id); }, retryAll: () => { for (const message of messages) retried.add(message.id); } };
+  const { record } = await step(s, 'queue', `batch of ${messages.length} messages`, ctx => app.queue(batch, s.env, ctx));
+  for (const message of messages) if (!(acked.has(message.id) && !retried.has(message.id) && record.outcome === 'done') && message.attempts < DELIVERIES) s.queue.push(message);
+  await drainQueue(s, at);
 }
 
 /**
